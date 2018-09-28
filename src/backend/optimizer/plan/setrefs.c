@@ -827,13 +827,11 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 				if (cdb_expr_requires_full_eval((Node *)plan->targetlist))
 					return cdb_insert_result_node(root, plan, rtoffset);
 
-				/* recursively process the subplan */
-				/* GPDB_90_MERGE_FIXME: How about rowmarks here? Do we need to stash them
-				 * in TableFunctionScan? */
 				/* Need to look up the subquery's RelOptInfo, since we need its subroot */
 				rel = find_base_rel(root, tplan->scan.scanrelid);
 				Assert(rel->subplan == subplan);
 
+				/* recursively process the subplan */
 				plan->lefttree = set_plan_references(rel->subroot, subplan);
 
 				/* adjust for the new range table offset */

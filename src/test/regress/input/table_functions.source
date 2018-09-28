@@ -465,6 +465,9 @@ explain analyze SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hell
 -- Test for an old bug in aggregate planning - this used to crash.
 select count(*) from multiset_5(table(select * from example)) s ;
 
+-- Test for 'select for update'
+select count(*) from multiset_5(table(select * from example for update)) s ;
+
 -- ===========================================
 -- Test invalid use of table value expressions
 -- ===========================================
