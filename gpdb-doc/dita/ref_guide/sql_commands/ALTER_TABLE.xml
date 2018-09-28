@@ -219,12 +219,12 @@ ALTER TABLE <varname>name</varname>
                                         target table must already contain all the same columns as
                                         the parent (it could have additional columns, too). The
                                         columns must have matching data types, and if they have
-                                                <codeph>NOT</codeph><codeph>NULL</codeph>
-                                        constraints in the parent then they must also have
-                                                <codeph>NOT NULL</codeph> constraints in the child.
-                                        There must also be matching child-table constraints for all
-                                                <codeph>CHECK</codeph> constraints of the
-                                        parent.</li>
+                                                <codeph>NOT NULL</codeph> constraints in the parent
+                                        then they must also have <codeph>NOT NULL</codeph>
+                                        constraints in the child. There must also be matching
+                                        child-table constraints for all <codeph>CHECK</codeph>
+                                        constraints of the parent. Neither the target table nor the
+                                        parent table may be replicated tables.</li>
                                 <li id="ay137262"><b>OWNER</b> — Changes the owner of the table,
                                         sequence, or view to the specified user. </li>
                                 <li id="ay137271"><b>SET TABLESPACE</b> — Changes the table's
@@ -586,7 +586,9 @@ ALTER TABLE <varname>name</varname>
                                                 You can exchange a table where the table data is
                                                 stored in the database. For example, the table is
                                                 created with the <codeph>CREATE TABLE</codeph>
-                                                command. </pd>
+                                                command. The table must have the same number of
+                                                columns, column order, column names, column types,
+                                                and distribution policy as the parent table.</pd>
                                         <pd>With the <codeph>EXCHANGE PARTITION</codeph> clause, you
                                                 can also exchange a readable external table (created
                                                 with the <codeph>CREATE EXTERNAL TABLE</codeph>
@@ -757,7 +759,7 @@ ALTER TABLE <varname>name</varname>
                                 can recurse only for <codeph>CHECK</codeph> constraints.</p>
                         <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
                                 data is changed on a partitioned table that contains a leaf child
-                                partition that has been exchanged to use an external table
+                                partition that has been exchanged to use an external table.
                                 Otherwise, an error is returned.<ul id="ul_hcw_mrn_qs">
                                         <li>Adding or dropping a column.</li>
                                         <li>Changing the data type of column.</li>

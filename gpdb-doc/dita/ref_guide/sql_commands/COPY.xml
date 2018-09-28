@@ -58,13 +58,15 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         either the absolute path or the <codeph>&lt;SEG_DATA_DIR></codeph> string literal. When the
           <codeph>COPY</codeph> operation is run, the segment IDs and the paths of the segment data
         directories are substituted for the string literal values. </p>
+      <p>Using <codeph>COPY TO</codeph> with a replicated table (<codeph>DISTRIBUTED
+          REPLICATED</codeph>) as source creates a file with rows from a single segment so that the
+        target file contains no duplicate rows. Using <codeph>COPY TO</codeph> with the <codeph>ON
+          SEGMENT</codeph> clause with a replicated table as source creates target files on segment
+        hosts containing all table rows.</p>
       <p>The <codeph>ON SEGMENT</codeph> clause allows you to copy table data to files on segment
         hosts for use in operations such as migrating data between clusters or performing a backup.
         Segment data created by the <codeph>ON SEGMENT</codeph> clause can be restored by tools such
         as <codeph>gpfdist</codeph>, which is useful for high speed data loading. </p>
-      <p>Using <codeph>COPY</codeph> with <codeph>ON SEGMENT</codeph> with a replicated table
-          (<codeph>DISTRIBUTED REPLICATED</codeph>) creates target files on all segments containing
-        all table rows.  </p>
       <note type="warning"> Use of the <codeph>ON SEGMENT</codeph> clause is recommended for expert
         users only.</note>
       <p>When <codeph>STDIN</codeph> or <codeph>STDOUT</codeph> is specified, data is transmitted

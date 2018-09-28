@@ -162,14 +162,15 @@
         type, the rows are distributed based on a round-robin or random distribution. To ensure an
         even distribution of data in your Greenplum Database system, you want to choose a
         distribution key that is unique for each record, or if that is not possible, then choose
-          <codeph>DISTRIBUTED RANDOMLY</codeph>. If the <codeph>DISTRIBUTED REPLICATED</codeph>
-        clause is supplied, Greenplum Database distributes all rows of the table to all segments in
-        the Greenplum Database system. This option can be used in applications where user-defined
-        functions must execute on the segments and require access to all rows of the table or, in
-        some cases, to eliminate the requirement to broadcast the table in order to improve query
-        performance. The <codeph>DISTRIBUTED REPLICATED</codeph> clause cannot be used with the
-          <codeph>PARTITION BY</codeph> clause or the <codeph>INHERITS</codeph> clause. A replicated
-        table also cannot be inherited by another table.</p>
+          <codeph>DISTRIBUTED RANDOMLY</codeph>. </p>
+      <p>If the <codeph>DISTRIBUTED REPLICATED</codeph> clause is supplied, Greenplum Database
+        distributes all rows of the table to all segments in the Greenplum Database system. This
+        option can be used in cases where user-defined functions must execute on the segments, and
+        the functions require access to all rows of the table. Replicated functions can also be used
+        to improve query performance by preventing broadcast motions for the table. The
+          <codeph>DISTRIBUTED REPLICATED</codeph> clause cannot be used with the <codeph>PARTITION
+          BY</codeph> clause or the <codeph>INHERITS</codeph> clause. A replicated table also cannot
+        be inherited by another table.</p>
       <p>The <codeph>PARTITION BY</codeph> clause allows you to divide the table into multiple
         sub-tables (or parts) that, taken together, make up the parent table and share its schema.
         Though the sub-tables exist as independent tables, the Greenplum Database restricts their
@@ -489,12 +490,14 @@
                     <cmdname>DISTRIBUTED BY</cmdname> clause is not specified as part of the table
                   creation command, the command fails.</li>
               </ul></p></pd>
-          <pd>For information about the <codeph>gp_create_table_random_default_distribution</codeph>
-            parameter, see "Server Configuration Parameters."</pd>
+          <pd>For more information about setting the default table distribution policy, see <xref
+              href="../config_params/guc-list.xml#gp_create_table_random_default_distribution"
+              type="section" format="dita"
+                ><codeph>gp_create_table_random_default_distribution</codeph></xref>. </pd>
           <pd>The <codeph>DISTRIBUTED REPLICATED</codeph> clause replicates the entire table to all
             Greenplum Database segment instances. It can be used when it is necessary to execute
-            user-defined functions at the segments that require access to all rows in the table, or
-            to prevent broadcast motions in order to improve query performance. </pd>
+            user-defined functions on segments when the functions require access to all rows in the
+            table, or to improve query performance by preventing broadcast motions. </pd>
         </plentry>
         <plentry id="part_by">
           <pt>PARTITION BY</pt>
