@@ -113,11 +113,6 @@ DROP TABLE IF EXISTS stat_heap5.stat_part_heap_t5 CASCADE;
 DROP TABLE IF EXISTS stat_heap6.stat_heap_t6 CASCADE;
 DROP TABLE IF EXISTS stat_heap6.stat_part_heap_t6 CASCADE;
 
--- This one's interesting:
---    No match found in new cluster for old relation with OID 173472 in database "regression": "public.sales_1_prt_bb_pkey" which is an index on "public.newpart"
---    No match found in old cluster for new relation with OID 556718 in database "regression": "public.newpart_pkey" which is an index on "public.newpart"
-DROP TABLE IF EXISTS public.newpart CASCADE;
-
 -- This view definition changes after upgrade.
 DROP VIEW IF EXISTS v_xpect_triangle_de CASCADE;
 

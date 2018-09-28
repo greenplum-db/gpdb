@@ -19,6 +19,7 @@
 #include "catalog/pg_namespace.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbvars.h"
+#include "commands/defrem.h"
 #include "commands/extension.h"
 #include "miscadmin.h"
 #include "utils/array.h"
@@ -51,6 +52,8 @@ Datum		create_empty_extension(PG_FUNCTION_ARGS);
 
 Datum		set_next_pg_namespace_oid(PG_FUNCTION_ARGS);
 
+Datum		generate_index_name_for_constraint(PG_FUNCTION_ARGS);
+
 PG_FUNCTION_INFO_V1(set_next_pg_type_oid);
 PG_FUNCTION_INFO_V1(set_next_array_pg_type_oid);
 PG_FUNCTION_INFO_V1(set_next_toast_pg_type_oid);
@@ -65,6 +68,8 @@ PG_FUNCTION_INFO_V1(set_next_pg_authid_oid);
 PG_FUNCTION_INFO_V1(create_empty_extension);
 
 PG_FUNCTION_INFO_V1(set_next_pg_namespace_oid);
+
+PG_FUNCTION_INFO_V1(generate_index_name_for_constraint);
 
 Datum
 set_next_pg_type_oid(PG_FUNCTION_ARGS)
@@ -243,4 +248,24 @@ set_next_pg_namespace_oid(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_VOID();
+}
+
+Datum
+generate_index_name_for_constraint(PG_FUNCTION_ARGS)
+{
+	char *tablename = GET_STR(PG_GETARG_TEXT_P(0));
+	Oid namespaceId = PG_GETARG_OID(1);
+	bool isExclusion = PG_GETARG_BOOL(2);
+	bool isPrimary = PG_GETARG_BOOL(3);
+	char *colnames = GET_STR(PG_GETARG_TEXT_P(4));
+
+	char *indexname;
+	if (isPrimary)
+		indexname = ChooseRelationName(tablename, NULL, "pkey", namespaceId);
+	else if (isExclusion)
+		indexname = ChooseRelationName(tablename, colnames, "excl", namespaceId);
+	else
+		indexname = ChooseRelationName(tablename, colnames, "key", namespaceId);
+
+	PG_RETURN_TEXT_P(cstring_to_text(indexname));
 }

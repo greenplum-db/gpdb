@@ -97,7 +97,12 @@ install_support_functions_in_new_db(const char *db_name)
 							  "RETURNS VOID "
 							  "AS '$libdir/pg_upgrade_support' "
 							  "LANGUAGE C STRICT;"));
-
+	PQclear(executeQueryOrDie(conn,
+							  "CREATE OR REPLACE FUNCTION "
+							  "binary_upgrade.generate_index_name_for_constraint(TEXT, OID, BOOL, BOOL, TEXT) "
+							  "RETURNS TEXT "
+							  "AS '$libdir/pg_upgrade_support' "
+							  "LANGUAGE C STRICT;"));
 	PQfinish(conn);
 }
 
