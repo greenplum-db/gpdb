@@ -64,7 +64,7 @@ test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 olap_group olap_window_se
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
-test: partition partition1 partition_indexing parruleord
+test: partition partition1 partition_indexing parruleord partition_with_user_defined_function
 # 'partition_locking' gets confused if other backends run concurrently and
 # hold locks.
 test: partition_locking

@@ -202,28 +202,6 @@ CreateExecutorState(void)
 	return estate;
 }
 
-/*
- * freeDynamicTableScanInfo
- *   Free the space for DynamicTableScanInfo.
- */
-static void
-freeDynamicTableScanInfo(DynamicTableScanInfo *scanInfo)
-{
-	Assert(scanInfo != NULL);
-	
-	if (scanInfo->partsMetadata != NIL)
-	{
-		list_free_deep(scanInfo->partsMetadata);
-	}
-	
-	if (scanInfo->numSelectorsPerScanId != NIL)
-	{
-		list_free(scanInfo->numSelectorsPerScanId);
-	}
-
-	pfree(scanInfo);
-}
-
 /* ----------------
  *		FreeExecutorState
  *
@@ -268,14 +246,7 @@ FreeExecutorState(EState *estate)
 		estate->dispatcherState = NULL;
 	}
 
-	/*
-	 * Free dynamicTableScanInfo.
-	 */
-	if (estate->dynamicTableScanInfo != NULL)
-	{
-		freeDynamicTableScanInfo(estate->dynamicTableScanInfo);
-		estate->dynamicTableScanInfo = NULL;
-	}
+	estate->dynamicTableScanInfo = NULL;
 
 	/*
 	 * Greenplum: release partition-related resources (esp. TupleDesc ref counts).
