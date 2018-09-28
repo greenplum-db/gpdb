@@ -23,6 +23,7 @@ os:
 language: c
 sudo: false
 
+cache: ccache
 git:
   submodules: false
 
@@ -117,3 +118,5 @@ notifications:
       - releng@pivotal.io
     on_success: change
     on_failure: always
+
+after_script: ccache -s
