@@ -1818,7 +1818,7 @@ curl_not_compiled_error(void)
 }
 
 URL_FILE *
-url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, int *response_code, const char **response_string)
+url_curl_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 {
 	curl_not_compiled_error();
 	return NULL; /* keep compiler quiet */
