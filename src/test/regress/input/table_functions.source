@@ -466,7 +466,9 @@ explain analyze SELECT * FROM multiset_5( TABLE( SELECT count(*)::integer, 'hell
 select count(*) from multiset_5(table(select * from example)) s ;
 
 -- Test for 'select for update'
+begin;
 select count(*) from multiset_5(table(select * from example for update)) s ;
+abort;
 
 -- ===========================================
 -- Test invalid use of table value expressions
