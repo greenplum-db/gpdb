@@ -210,6 +210,9 @@ typedef struct
 
 	RelType		reltype;
 
+	/* index that backs a primary key / unique / exclusion contraint */
+	bool		is_constraint_index;
+
 	/* Extra information for append-only tables */
 	AOSegInfo  *aosegments;
 	AOCSSegInfo *aocssegments;

@@ -120,7 +120,8 @@ gen_db_file_maps(DbInfo *old_db, DbInfo *new_db,
 		if (strcmp(old_rel->nspname, new_rel->nspname) != 0 ||
 			((GET_MAJOR_VERSION(old_cluster.major_version) >= 900 ||
 			  strcmp(old_rel->nspname, "pg_toast") != 0) &&
-			 strcmp(old_rel->relname, new_rel->relname) != 0))
+			((!old_rel->is_constraint_index) &&
+			 strcmp(old_rel->relname, new_rel->relname) != 0)))
 			pg_log(PG_FATAL, "Mismatch of relation names in database \"%s\": "
 				   "old name \"%s.%s\", new name \"%s.%s\"\n",
 				   old_db->db_name, old_rel->nspname, old_rel->relname,
@@ -352,7 +353,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 				i_relname,
 				i_oid,
 				i_relfilenode,
-				i_reltablespace;
+				i_reltablespace,
+				i_conoid;
 	char		query[QUERY_ALLOC];
 
 	char		relstorage;
@@ -492,13 +494,15 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	snprintf(query, sizeof(query),
 			 "SELECT c.oid, n.nspname, c.relname, "
 			 "  c.relstorage, c.relkind, "
-			 "	c.relfilenode, c.reltablespace, %s "
+			 "	c.relfilenode, c.reltablespace, %s, ct.oid conoid "
 			 "FROM info_rels i JOIN pg_catalog.pg_class c "
 			 "		ON i.reloid = c.oid "
 			 "  JOIN pg_catalog.pg_namespace n "
 			 "	   ON c.relnamespace = n.oid "
 			 "  LEFT OUTER JOIN pg_catalog.pg_tablespace t "
 			 "	   ON c.reltablespace = t.oid "
+			 "  LEFT OUTER JOIN pg_catalog.pg_constraint ct "
+			 "	   ON i.reloid = ct.conindid "
 	/* we preserve pg_class.oid so we sort by it to match old/new */
 			 "ORDER BY 1;",
 	/*
@@ -522,6 +526,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	i_relfilenode = PQfnumber(res, "relfilenode");
 	i_reltablespace = PQfnumber(res, "reltablespace");
 	i_spclocation = PQfnumber(res, "spclocation");
+	i_conoid = PQfnumber(res, "conoid");
 
 	for (relnum = 0; relnum < ntups; relnum++)
 	{
@@ -553,6 +558,8 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 		curr->relstorage = relstorage;
 
 		relkind = PQgetvalue(res, relnum, i_relkind) [0];
+
+		curr->is_constraint_index = PQgetvalue(res, relnum, i_conoid) [0] != NULL;
 
 		/*
 		 * RELSTORAGE_AOROWS and RELSTORAGE_AOCOLS. The structure of append

@@ -282,6 +282,14 @@ static bool binary_upgrade_set_type_oids_by_rel_oid(Archive *fout,
 static void binary_upgrade_set_pg_class_oids(Archive *fout,
 								 PQExpBuffer upgrade_buffer,
 								 Oid pg_class_oid, bool is_index);
+static void binary_upgrade_set_pg_class_oids_for_con_index(Archive *fout,
+														   PQExpBuffer upgrade_buffer,
+														   Oid pg_class_oid,
+														   char *gen_index_query);
+static void binary_upgrade_set_pg_class_oids_helper(Archive *fout,
+													PQExpBuffer upgrade_buffer,
+													Oid pg_class_oid, bool is_index,
+													char *gen_index_query);
 static const char *getAttrName(int attrnum, TableInfo *tblInfo);
 static const char *fmtCopyColumnList(const TableInfo *ti, PQExpBuffer buffer);
 static char *get_synchronized_snapshot(Archive *fout);
@@ -3180,9 +3188,27 @@ binary_upgrade_set_type_oids_by_rel_oid(Archive *fout,
 }
 
 static void
+binary_upgrade_set_pg_class_oids_for_con_index(Archive *fout,
+											   PQExpBuffer upgrade_buffer, Oid pg_class_oid,
+											   char *gen_index_query)
+{
+	binary_upgrade_set_pg_class_oids_helper(
+		fout, upgrade_buffer, pg_class_oid, true, gen_index_query);
+}
+
+static void
 binary_upgrade_set_pg_class_oids(Archive *fout,
 								 PQExpBuffer upgrade_buffer, Oid pg_class_oid,
 								 bool is_index)
+{
+	binary_upgrade_set_pg_class_oids_helper(
+		fout, upgrade_buffer, pg_class_oid, is_index, NULL);
+}
+
+static void
+binary_upgrade_set_pg_class_oids_helper(Archive *fout,
+										PQExpBuffer upgrade_buffer, Oid pg_class_oid,
+										bool is_index, char *gen_index_query)
 {
 	PQExpBuffer upgrade_query = createPQExpBuffer();
 	PGresult   *upgrade_res;
@@ -3259,9 +3285,14 @@ binary_upgrade_set_pg_class_oids(Archive *fout,
 	}
 	else
 	{
-		appendPQExpBuffer(upgrade_buffer,
-						  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
-						  pg_class_oid, pg_class_relnamespace, pg_class_relname);
+		if (gen_index_query)
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid,\n\t%s::text);\n",
+							  pg_class_oid, pg_class_relnamespace, gen_index_query);
+		else
+			appendPQExpBuffer(upgrade_buffer,
+							  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
+							  pg_class_oid, pg_class_relnamespace, pg_class_relname);
 
 		/*
 		 * If this is a bitmap index, we need to preserve the oid of the aux
@@ -13779,9 +13810,9 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 						Oid part_oid = atooid(PQgetvalue(partres, i, 0));
 
 						binary_upgrade_set_pg_class_oids(fout, q, part_oid, false);
+						binary_upgrade_set_type_oids_by_rel_oid(fout, q, part_oid);
 					}
 				}
-
 				PQclear(partres);
 				destroyPQExpBuffer(partquery);
 			}
@@ -14699,7 +14730,33 @@ dumpConstraint(Archive *fout, ConstraintInfo *coninfo)
 						  coninfo->dobj.name);
 
 		if (binary_upgrade)
-			binary_upgrade_set_pg_class_oids(fout, q, indxinfo->dobj.catId.oid, true);
+		{
+			PQExpBuffer genindq;
+			genindq = createPQExpBuffer();
+			Assert(indxinfo->dobj.namespace);
+			appendPQExpBuffer(genindq, "binary_upgrade.generate_index_name_for_constraint('%s'::text, '%u'::pg_catalog.oid, %s, %s, ",
+							  tbinfo->dobj.name, indxinfo->dobj.namespace->dobj.catId.oid,
+							  coninfo->contype == 'x' ? "true" : "false",
+							  coninfo->contype == 'p' ? "true" : "false");
+			appendPQExpBuffer(genindq,"'");
+			for (k = 0; k < indxinfo->indnkeys; k++)
+			{
+				int			indkey = (int) indxinfo->indkeys[k];
+				const char *attname;
+
+				if (indkey == InvalidAttrNumber)
+					break;
+				attname = getAttrName(indkey, tbinfo);
+
+				appendPQExpBuffer(genindq, "%s%s",
+								  (k == 0) ? "" : "_",
+								  fmtId(attname));
+			}
+			appendPQExpBuffer(genindq,"'::text");
+			appendPQExpBuffer(genindq, ")");
+			binary_upgrade_set_pg_class_oids_for_con_index(fout, q, indxinfo->dobj.catId.oid, genindq->data);
+			destroyPQExpBuffer(genindq);
+		}
 
 		appendPQExpBuffer(q, "ALTER TABLE ONLY %s\n",
 						  fmtId(tbinfo->dobj.name));
