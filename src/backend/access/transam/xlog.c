@@ -5419,6 +5419,13 @@ StartupXLOG(void)
 						  &backupFromStandby))
 	{
 		/*
+		 * Archive recovery was requested, and thanks to the backup label
+		 * file, we know how far we need to replay to reach consistency. Enter
+		 * archive recovery directly.
+		 */
+		InArchiveRecovery = true;
+
+		/*
 		 * Currently, it is assumed that a backup file exists iff a base backup
 		 * has been performed and then the recovery.conf file is generated, thus
 		 * standby mode has to be requested
@@ -6357,7 +6364,7 @@ StartupXLOG(void)
 		writeTimeLineHistory(ThisTimeLineID, recoveryTargetTLI,
 							 EndRecPtr, "standby promoted");
 
-		XLogFileCopy(endLogSegNo, curFileTLI, endLogSegNo);
+		XLogFileCopy(endLogSegNo, xlogreader->readPageTLI, endLogSegNo);
 	}
 
 	/* Save the selected TimeLineID in shared memory, too */
@@ -10465,22 +10472,9 @@ WaitForWALToBecomeAvailable(XLogRecPtr RecPtr, bool randAccess,
 	 * values for "check trigger", "rescan timelines", and "sleep" states,
 	 * those actions are taken when reading from the previous source fails, as
 	 * part of advancing to the next state.
-	 *
-	 * GPDB_93_MERGE_FIXME: In GPDB, currently with no work load running on
-	 * primary, mirror goes in tight loop reading xlog files and switching
-	 * between XLOG_FROM_PG_XLOG to XLOG_FROM_STREAM and back to
-	 * XLOG_FROM_PG_XLOG. This causes 100% cpu utilization on mirror for idle
-	 * primaries. Intended behavior is wait in XLOG_FROM_STREAM for more xlog to
-	 * arrive and receive signal from walreceiver to move forward. So, to
-	 * suppress the behavior for now as GPDB doesn't support archive recovery,
-	 * nor anyone expects to drops xlog files into pg_xlog directory, adding
-	 * code to not move currentSource to XLOG_FROM_PG_XLOG. Once it reaches
-	 * XLOG_FROM_STREAM, stays in XLOG_FROM_STREAM and waits for walreceiver
-	 * correctly. Need to find why GPDB is facing this issue and not upstream.
-	 *
 	 *-------
 	 */
-	if (!InArchiveRecovery && currentSource != XLOG_FROM_STREAM)
+	if (!InArchiveRecovery)
 		currentSource = XLOG_FROM_PG_XLOG;
 	else if (currentSource == 0)
 		currentSource = XLOG_FROM_ARCHIVE;
