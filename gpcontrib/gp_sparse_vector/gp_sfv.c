@@ -168,10 +168,18 @@ gp_extract_feature_histogram_errout(char *msg) {
 }
 
 SvecType *classify_document(char **features, int num_features, char **document, int num_words, int allocate) {
-	static float8 *histogram=NULL;
+	float8 *histogram = NULL;
         ENTRY item, *found_item;
 	int i;
 	SvecType *output_sfv; //Output SFV in a sparse vector datatype
+
+	/*
+	 * We need to palloc the histogram array first, since the error cleanup
+	 * process on memory pressure allocation failure won't be able to handle
+	 * the malloc'ed ordinals array below. Should ordinals fail to allocate
+	 * however, then the invoked ereport() will clean up histogram.
+	 */
+	histogram = (float8 *) palloc0(sizeof(float8) * num_features);
 
 	/*
 	 * On saving the state between calls:
@@ -194,20 +202,21 @@ SvecType *classify_document(char **features, int num_features, char **document, 
 #ifdef VERBOSE
 		elog(NOTICE,"Classify_document allocating..., Number of features = %d\n",num_features);
 #endif
-		(void) hdestroy();
-		ordinals    = (int *)malloc(sizeof(int)*num_features); //Need to use malloc so that hdestroy() can be called.
+		/*
+		 * Calling hdestroy() isn't guaranteed to free any memory allocated
+		 * for the items, the details are implementation specific. Best case
+		 * is that the item keys are free'd, while the item data pointers are
+		 * never freed. The proper solution here is to move this to using a
+		 * dynahash and properly manage the memory, but that remains a TODO
+		 * for a rainy day still.
+		 */
+		hdestroy();
+		/* Need to use malloc so that hdestroy() can be called */
+		ordinals = (int *) malloc(sizeof(int) * num_features);
 		if (!ordinals)
 			ereport(ERROR,
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("out of memory")));
-
-		histogram = (float8 *)malloc(sizeof(float8)*num_features); //Use malloc because pallocs are cleaned up between queries
-		if (!histogram) {
-			free(ordinals);
-			ereport(ERROR,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-		}
 
 		for (i=0; i<num_features; i++) {
 			ordinals[i] = i;
@@ -218,21 +227,39 @@ SvecType *classify_document(char **features, int num_features, char **document, 
 			if (features[i] != NULL) {
 		  		item.key = strdup(features[i]);
 				if (!item.key)
+				{
+					hdestroy();
+					free(ordinals);
 					ereport(ERROR,
 							(errcode(ERRCODE_OUT_OF_MEMORY),
 							 errmsg("out of memory")));
-		  		item.data = (void *)(&(ordinals[i]));
-		  		(void) hsearch(item,ENTER);
+				}
+
+				/* If the hash table has the entry already */
+				if (hsearch(item, FIND) != NULL)
+					free(item.key);
+				else
+				{
+					item.data = (void *)(&(ordinals[i]));
+
+					/*
+					 * If the ENTER action returns NULL it means that we are
+					 * out of memory and need to error out of this, cleaning
+					 * up as best as we can.
+					 */
+					if (hsearch(item,ENTER) == NULL)
+					{
+						hdestroy();
+						free(item.key);
+						free(ordinals);
+						ereport(ERROR,
+								(errcode(ERRCODE_OUT_OF_MEMORY),
+								 errmsg("out of memory")));
+					}
+				}
 			}
 		}
 	}
-
-	/*
-	 * For all items in the document, probe hash table to find matches.  When we 
-	 * find one, increment the counter at the appropriate ordinal.
-	 */
-	for (i=0;i<num_features;i++) //Zero out the found count array for this document
-		histogram[i]=0;
 
 	for (i=0;i<num_words;i++) {
 		if (document[i] != NULL)
