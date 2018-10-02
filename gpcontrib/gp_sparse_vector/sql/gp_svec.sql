@@ -13,7 +13,7 @@ SELECT a,b::float8[] cross_product_equals FROM (SELECT a,b FROM test) foo WHERE 
 DROP TABLE IF EXISTS test2;
 CREATE TABLE test2 AS SELECT * FROM test DISTRIBUTED BY (a);
 -- Test the plus operator (should be 9 rows)
-SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2 ORDER BY t1.a;
+SELECT (t1.b+t2.b)::float8[] cross_product_sum FROM test t1, test2 t2;
 
 -- Test ORDER BY
 SELECT (t1.b+t2.b)::float8[] cross_product_sum, l2norm(t1.b+t2.b) l2norm, (t1.b+t2.b) sparse_vector FROM test t1, test2 t2 ORDER BY 3;
@@ -70,7 +70,6 @@ SELECT ('{1,2,3,4}:{3,4,5,6}'::svec)::float8[]  -  ('{1,2,3,4}:{3,4,5,6}'::svec)
 DROP TABLE IF EXISTS pivot_test;
 CREATE TABLE pivot_test(a float8) distributed randomly;
 INSERT INTO pivot_test VALUES (0),(1),(NULL),(2),(3);
-SELECT array_agg(a) FROM pivot_test;
 SELECT l1norm(array_agg(a)) FROM pivot_test;
 DROP TABLE IF EXISTS pivot_test;
 -- Answer should be 5
