@@ -226,13 +226,7 @@ double *sdata_to_float8arr(SparseData sdata) {
 			errmsg("data type of SparseData is not FLOAT64")));
 	}
 
-	if ((array = (double *)palloc(sizeof(double)*(sdata->total_value_count)))
-			== NULL)
-	{
-		ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			errmsg("Error allocating memory for array\n")));
-	}
-
+	array = (double *) palloc(sizeof(double) * sdata->total_value_count);
 	iptr = sdata->index->data;
 	aptr = 0;
 	for (int i=0; i<sdata->unique_value_count; i++) {

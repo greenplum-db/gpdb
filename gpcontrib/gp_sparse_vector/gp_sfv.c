@@ -196,7 +196,18 @@ SvecType *classify_document(char **features, int num_features, char **document, 
 #endif
 		(void) hdestroy();
 		ordinals    = (int *)malloc(sizeof(int)*num_features); //Need to use malloc so that hdestroy() can be called.
+		if (!ordinals)
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
+
 		histogram = (float8 *)malloc(sizeof(float8)*num_features); //Use malloc because pallocs are cleaned up between queries
+		if (!histogram) {
+			free(ordinals);
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
+		}
 
 		for (i=0; i<num_features; i++) {
 			ordinals[i] = i;
@@ -206,6 +217,10 @@ SvecType *classify_document(char **features, int num_features, char **document, 
 		for (i=0; i<num_features; i++) {
 			if (features[i] != NULL) {
 		  		item.key = strdup(features[i]);
+				if (!item.key)
+					ereport(ERROR,
+							(errcode(ERRCODE_OUT_OF_MEMORY),
+							 errmsg("out of memory")));
 		  		item.data = (void *)(&(ordinals[i]));
 		  		(void) hsearch(item,ENTER);
 			}
