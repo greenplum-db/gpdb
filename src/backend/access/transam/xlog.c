@@ -4586,6 +4586,9 @@ XLogReadRecoveryCommandFile(int emode)
 						RECOVERY_COMMAND_FILE)));
 	}
 
+	/* Enable fetching from archive recovery area */
+	ArchiveRecoveryRequested = true;
+
 	FreeConfigVariables(head);
 }
 
