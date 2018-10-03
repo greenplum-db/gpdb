@@ -6384,17 +6384,6 @@ StartupXLOG(void)
 		exitArchiveRecovery(xlogreader->readPageTLI, endLogSegNo);
 
 	/*
-	 * Recovery command file must be deleted during promotion to prevent
-	 * StartupXLOG from incorrectly concluding that we are still a standby.
-	 * This could happen if the promoted standby goes through a restart.
-	 */
-	if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
-	{
-		elog(LOG, "pg_control state is DB_IN_STANDBY_PROMOTED hence renaming recovery file");
-		renameRecoveryFile();
-	}
-
-	/*
 	 * Prepare to write WAL starting at EndOfLog position, and init xlog
 	 * buffer cache using the block containing the last record from the
 	 * previous incarnation.
