@@ -6555,6 +6555,7 @@ static void
 get_rule_expr(Node *node, deparse_context *context,
 			  bool showimplicit)
 {
+	elog(LOG, "Executing line %d in get_rule_expr", __LINE__);
 	StringInfo	buf = context->buf;
 
 	if (node == NULL)

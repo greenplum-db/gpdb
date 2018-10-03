@@ -641,7 +641,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	 * as optimizer settings etc.
      */
 	ExplainOpenGroup("Settings", "Settings", true, es);
-	
+
 	if (queryDesc->plannedstmt->planGen == PLANGEN_PLANNER)
 		ExplainProperty("Optimizer", "legacy query optimizer", false, es);
 #ifdef USE_ORCA
@@ -706,6 +706,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 void
 ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 {
+
 	EState     *estate = queryDesc->estate;
 	Bitmapset  *rels_used = NULL;
 
@@ -2163,19 +2164,23 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (plan->initPlan)
 		ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", es, planstate->state->es_sliceTable);
 
+	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 	/* lefttree */
-	if (outerPlan(plan) && !skip_outer)
+	if (outerPlanState(planstate) && !skip_outer)
 	{
+		elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 		ExplainNode(outerPlanState(planstate), ancestors,
 					"Outer", NULL, es);
 	}
     else if (skip_outer)
     {
+		elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 		appendStringInfoSpaces(es->str, es->indent * 2);
 		appendStringInfo(es->str, "  ->  ");
 		appendStringInfoString(es->str, skip_outer_msg);
 		appendStringInfo(es->str, "\n");
     }
+	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 
 	/* righttree */
 	if (innerPlanState(planstate))
@@ -2222,6 +2227,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
+	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 
 	/* subPlan-s */
 	if (planstate->subPlan)
@@ -2233,6 +2239,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		ancestors = list_delete_first(ancestors);
 		ExplainCloseGroup("Plans", "Plans", false, es);
 	}
+	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 
 	/* in text format, undo whatever indentation we added */
 	if (es->format == EXPLAIN_FORMAT_TEXT)
@@ -2243,6 +2250,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					  true, es);
 
 	es->currentSlice = save_currentSlice;
+	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 }
 
 /*

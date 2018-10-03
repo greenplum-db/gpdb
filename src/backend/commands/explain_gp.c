@@ -440,6 +440,8 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
+	elog(DEBUG1, showstatctx == NULL ? "showstatctx is NULL" : "showstatctx is not null");
+
 	Insist(planstate && planstate->instrument && showstatctx);
 
 	memset(&ctx, 0, sizeof(ctx));
@@ -1806,7 +1808,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
-			
+
 			resetStringInfo(extraData);
 
 			cdbexplain_formatExtraText(extraData,
@@ -1971,7 +1973,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
     {
         CdbExplain_SliceSummary *ss = &showstatctx->slices[sliceIndex];
         CdbExplain_DispatchSummary *ds = &ss->dispatchSummary;
-        
+
         flag = es->str->len;
         if (es->format == EXPLAIN_FORMAT_TEXT)
         {
@@ -1982,7 +1984,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
 
             appendStringInfoString(es->str, "  ");
         }
-        else 
+        else
         {
             ExplainOpenGroup("Slice", NULL, true, es);
             ExplainPropertyInteger("Slice", sliceIndex, es);
@@ -2152,10 +2154,10 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
             int workers = 1;
             cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), peakMemoryUsage);
 			peakMemoryUsage = kb(peakMemoryUsage);
-			
+
             if (ss->memory_accounting_global_peak.vcnt == 1)
             {
-                
+
                 if (es->format == EXPLAIN_FORMAT_TEXT)
                 {
                     const char *seg = segbuf;
@@ -2177,7 +2179,7 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                                      "  Peak memory: %s%s.",
                                      maxbuf,
                                      seg);
-                } 
+                }
                 else
                 {
                     ExplainPropertyInteger("Global Peak Memory", ss->memory_accounting_global_peak.vmax, es);
