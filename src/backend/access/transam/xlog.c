@@ -541,24 +541,6 @@ static XLogCtlData *XLogCtl = NULL;
  */
 static ControlFileData *ControlFile = NULL;
 
-typedef struct ControlFileWatch
-{
-	bool		watcherInitialized;
-	XLogRecPtr	current_checkPointLoc;		/* current last check point record ptr */
-	XLogRecPtr	current_prevCheckPointLoc;  /* current previous check point record ptr */
-	XLogRecPtr	current_checkPointCopy_redo;
-								/* current checkpointCopy value for
-								 * next RecPtr available when we began to
-								 * create CheckPoint (i.e. REDO start point) */
-
-} ControlFileWatch;
-
-
-/*
- * We keep the watcher in shared memory.
- */
-static ControlFileWatch *ControlFileWatcher = NULL;
-
 /*
  * Macros for managing XLogInsert state.  In most cases, the calling routine
  * has local copies of XLogCtl->Insert and/or XLogCtl->Insert->curridx,
@@ -717,9 +699,6 @@ static void CleanupBackupHistory(void);
 static void UpdateMinRecoveryPoint(XLogRecPtr lsn, bool force);
 static XLogRecord *ReadRecord(XLogReaderState *xlogreader, XLogRecPtr RecPtr,
 		   int emode, bool fetching_ckpt);
-static void ControlFileWatcherSaveInitial(void);
-static void ControlFileWatcherCheckForChange(void);
-static bool XLogGetWriteAndFlushedLoc(XLogRecPtr *writeLoc, XLogRecPtr *flushedLoc);
 static XLogRecPtr XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId headerXid);
 static void CheckRecoveryConsistency(void);
 static XLogRecord *ReadCheckpointRecord(XLogReaderState *xlogreader,
@@ -3572,64 +3551,6 @@ rescanLatestTimeLine(void)
 	return true;
 }
 
-static void
-ControlFileWatcherSaveInitial(void)
-{
-	ControlFileWatcher->current_checkPointLoc = ControlFile->checkPoint;
-	ControlFileWatcher->current_prevCheckPointLoc = ControlFile->prevCheckPoint;
-	ControlFileWatcher->current_checkPointCopy_redo = ControlFile->checkPointCopy.redo;
-
-	if (Debug_print_control_checkpoints)
-		elog(LOG,"pg_control checkpoint: initial values (checkpoint loc %s, previous loc %s, copy's redo loc %s)",
-			 XLogLocationToString_Long(ControlFile->checkPoint),
-			 XLogLocationToString2_Long(ControlFile->prevCheckPoint),
-			 XLogLocationToString3_Long(ControlFile->checkPointCopy.redo));
-
-	ControlFileWatcher->watcherInitialized = true;
-}
-
-static void
-ControlFileWatcherCheckForChange(void)
-{
-	XLogRecPtr  writeLoc;
-	XLogRecPtr  flushedLoc;
-
-	if (ControlFileWatcher->current_checkPointLoc != ControlFile->checkPoint ||
-		ControlFileWatcher->current_prevCheckPointLoc != ControlFile->prevCheckPoint ||
-		ControlFileWatcher->current_checkPointCopy_redo != ControlFile->checkPointCopy.redo)
-	{
-		ControlFileWatcher->current_checkPointLoc = ControlFile->checkPoint;
-		ControlFileWatcher->current_prevCheckPointLoc = ControlFile->prevCheckPoint;
-		ControlFileWatcher->current_checkPointCopy_redo = ControlFile->checkPointCopy.redo;
-
-		if (XLogGetWriteAndFlushedLoc(&writeLoc, &flushedLoc))
-		{
-			bool problem = (flushedLoc <= ControlFile->checkPoint);
-			if (problem)
-				elog(PANIC,"Checkpoint location %s for pg_control file is not flushed (write loc %s, flushed loc is %s)",
-				     XLogLocationToString_Long(ControlFile->checkPoint),
-				     XLogLocationToString2_Long(writeLoc),
-				     XLogLocationToString3_Long(flushedLoc));
-
-			if (Debug_print_control_checkpoints)
-				elog(LOG,"pg_control checkpoint: change (checkpoint loc %s, previous loc %s, copy's redo loc %s, write loc %s, flushed loc %s)",
-					 XLogLocationToString_Long(ControlFile->checkPoint),
-					 XLogLocationToString2_Long(ControlFile->prevCheckPoint),
-					 XLogLocationToString3_Long(ControlFile->checkPointCopy.redo),
-					 XLogLocationToString4_Long(writeLoc),
-					 XLogLocationToString5_Long(flushedLoc));
-		}
-		else
-		{
-			if (Debug_print_control_checkpoints)
-				elog(LOG,"pg_control checkpoint: change (checkpoint loc %s, previous loc %s, copy's redo loc %s)",
-					 XLogLocationToString_Long(ControlFile->checkPoint),
-					 XLogLocationToString2_Long(ControlFile->prevCheckPoint),
-					 XLogLocationToString3_Long(ControlFile->checkPointCopy.redo));
-		}
-	}
-}
-
 /*
  * I/O routines for pg_control
  *
@@ -3726,8 +3647,6 @@ WriteControlFile(void)
 		ereport(PANIC,
 				(errcode_for_file_access(),
 				 errmsg("could not close control file: %m")));
-
-	ControlFileWatcherSaveInitial();
 }
 
 static void
@@ -3915,29 +3834,6 @@ ReadControlFile(void)
 	/* Make the initdb settings visible as GUC variables, too */
 	SetConfigOption("data_checksums", DataChecksumsEnabled() ? "yes" : "no",
 					PGC_INTERNAL, PGC_S_OVERRIDE);
-
-	if (!ControlFileWatcher->watcherInitialized)
-	{
-		ControlFileWatcherSaveInitial();
-	}
-	else
-	{
-		ControlFileWatcherCheckForChange();
-	}
-}
-
-static bool
-XLogGetWriteAndFlushedLoc(XLogRecPtr *writeLoc, XLogRecPtr *flushedLoc)
-{
-	/* use volatile pointer to prevent code rearrangement */
-	volatile XLogCtlData *xlogctl = XLogCtl;
-
-	SpinLockAcquire(&xlogctl->info_lck);
-	*writeLoc = xlogctl->LogwrtResult.Write;
-	*flushedLoc = xlogctl->LogwrtResult.Flush;
-	SpinLockRelease(&xlogctl->info_lck);
-
-	return (*writeLoc != 0);
 }
 
 void
@@ -3980,10 +3876,6 @@ UpdateControlFile(void)
 		ereport(PANIC,
 				(errcode_for_file_access(),
 				 errmsg("could not close control file: %m")));
-
-	Assert (ControlFileWatcher->watcherInitialized);
-	if (!InRecovery)
-		ControlFileWatcherCheckForChange();
 }
 
 /*
@@ -4138,22 +4030,18 @@ XLOGShmemSize(void)
 void
 XLOGShmemInit(void)
 {
-	bool		foundCFile,
-				foundXLog,
-				foundCFileWatcher;
+	bool		foundCFile, foundXLog;
 	char	   *allocptr;
 
 	ControlFile = (ControlFileData *)
 		ShmemInitStruct("Control File", sizeof(ControlFileData), &foundCFile);
-	ControlFileWatcher = (ControlFileWatch *)
-		ShmemInitStruct("Control File Watcher", sizeof(ControlFileWatch), &foundCFileWatcher);
 	XLogCtl = (XLogCtlData *)
 		ShmemInitStruct("XLOG Ctl", XLOGShmemSize(), &foundXLog);
 
-	if (foundCFile || foundXLog || foundCFileWatcher)
+	if (foundCFile || foundXLog)
 	{
 		/* both should be present or neither */
-		Assert(foundCFile && foundXLog && foundCFileWatcher);
+		Assert(foundCFile && foundXLog);
 		return;
 	}
 
