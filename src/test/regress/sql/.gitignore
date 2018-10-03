@@ -8,6 +8,7 @@
 /misc.sql
 /security_label.sql
 /tablespace.sql
+/oid_wraparound.sql
 
 sreh.sql
 upg2.sql

@@ -41,3 +41,4 @@ autovacuum-template0.out
 rpt_tpch.out
 session_reset.out
 dropdb_check_shared_buffer_cache.out
+/oid_wraparound.out

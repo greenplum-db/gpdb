@@ -1,0 +1,116 @@
+-- Create a new database to be certain that we'll be able to create objects with
+-- the Oids specified in this test. We have tighter control when we don't have
+-- to deal with leftover objects in the regression database.
+DROP DATABASE IF EXISTS oid_wraparound;
+CREATE DATABASE oid_wraparound;
+\c oid_wraparound
+-- Create the functions that we will be using to set and observe the Oid counter
+-- on the master and the segments.
+CREATE OR REPLACE FUNCTION gp_set_next_oid_master(new_oid Oid)
+	RETURNS VOID
+	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
+	LANGUAGE C EXECUTE ON MASTER;
+CREATE OR REPLACE FUNCTION gp_set_next_oid_segments(new_oid Oid)
+	RETURNS VOID
+	AS '@abs_builddir@/regress.so', 'gp_set_next_oid'
+	LANGUAGE C EXECUTE ON ALL SEGMENTS;
+CREATE OR REPLACE FUNCTION gp_get_next_oid_master()
+	RETURNS OID
+	AS '@abs_builddir@/regress.so', 'gp_get_next_oid'
+	LANGUAGE C EXECUTE ON MASTER;
+CREATE OR REPLACE FUNCTION gp_get_next_oid_segments()
+	RETURNS SETOF OID
+	AS '@abs_builddir@/regress.so', 'gp_get_next_oid'
+	LANGUAGE C EXECUTE ON ALL SEGMENTS;
+-- Scenario 1: QD is at 16384 while QE is at 4 billion
+SELECT gp_set_next_oid_master(16384);
+ gp_set_next_oid_master 
+------------------------
+ 
+(1 row)
+
+SELECT gp_set_next_oid_segments(4290000000);
+ gp_set_next_oid_segments 
+--------------------------
+ 
+ 
+ 
+(3 rows)
+
+-- We expect the QE to fast-forward to 16384
+SELECT gp_get_next_oid_master();
+ gp_get_next_oid_master 
+------------------------
+                  16384
+(1 row)
+
+SELECT gp_get_next_oid_segments();
+ gp_get_next_oid_segments 
+--------------------------
+               4290000000
+               4290000000
+               4290000000
+(3 rows)
+
+CREATE TABLE oid_wraparound_table (a int);
+DROP TABLE oid_wraparound_table;
+SELECT gp_get_next_oid_master();
+ gp_get_next_oid_master 
+------------------------
+                  16387
+(1 row)
+
+SELECT gp_get_next_oid_segments();
+ gp_get_next_oid_segments 
+--------------------------
+                    16384
+                    16384
+                    16384
+(3 rows)
+
+-- Scenario 2: QD is at 4 billion while QE is at 16384
+SELECT gp_set_next_oid_master(4290000000);
+ gp_set_next_oid_master 
+------------------------
+ 
+(1 row)
+
+SELECT gp_set_next_oid_segments(16384);
+ gp_set_next_oid_segments 
+--------------------------
+ 
+ 
+ 
+(3 rows)
+
+-- We expect the QE to increment once to 16385 and the QD should
+-- fast-forward to 16388
+SELECT gp_get_next_oid_master();
+ gp_get_next_oid_master 
+------------------------
+             4290000000
+(1 row)
+
+SELECT gp_get_next_oid_segments();
+ gp_get_next_oid_segments 
+--------------------------
+                    16384
+                    16384
+                    16384
+(3 rows)
+
+CREATE TABLE oid_wraparound_table_other AS SELECT 1 AS a;
+SELECT gp_get_next_oid_master();
+ gp_get_next_oid_master 
+------------------------
+                  16388
+(1 row)
+
+SELECT gp_get_next_oid_segments();
+ gp_get_next_oid_segments 
+--------------------------
+                    16385
+                    16385
+                    16385
+(3 rows)
+

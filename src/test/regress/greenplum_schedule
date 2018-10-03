@@ -224,6 +224,11 @@ test: psql_gp_commands pg_resetxlog dropdb_check_shared_buffer_cache
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
 
+# This cannot run in parallel because other tests could increment the Oid
+# counters and make the Oid counter observations hardcoded in the answer file
+# incorrect.
+test: oid_wraparound
+
 # fts_recovery_in_progresss uses fault injectors to simulate FTS fault states,
 # hence it should be run in isolation.
 test: fts_recovery_in_progress

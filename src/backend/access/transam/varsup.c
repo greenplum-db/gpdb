@@ -584,20 +584,43 @@ GetNewObjectId(void)
 }
 
 /*
- * AdvanceObjectId -- advance object id counter for QE nodes
+ * AdvanceObjectId -- advance object id counter for QD and QE nodes
  *
- * The QD provides the preassigned OID to the QE nodes which will be
- * used as the relation's OID. QE nodes do not use this OID as the
- * relfilenode value anymore so the OID counter is not
- * incremented. This function forcefully increments the QE node's OID
- * counter to be about the same as the OID provided by the QD node.
+ * When advancing the Oid counter of a QD, it should only be for the purpose
+ * of syncing Oid counters logically compared with the numeric maximum Oid
+ * counter value among the primary segments.
+ *
+ * When advancing the Oid counter of a QE, the QD provides the preassigned OID
+ * to the QE nodes which will be used as the relation's OID. QE nodes do not
+ * use this OID as the relfilenode value anymore so the OID counter is not
+ * incremented. This function forcefully increments the QE node's OID counter
+ * to be about the same as the OID provided by the QD node.
  */
 void
 AdvanceObjectId(Oid newOid)
 {
 	LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
 
-	while(GetNewObjectIdUnderLock() <= newOid);
+	if (OidFollowsNextOid(newOid))
+	{
+		int32 nextOidDifference = (int32)(newOid - ShmemVariableCache->nextOid);
+
+		/*
+		 * We directly set the nextOid counter to the given OID instead of
+		 * doing incremental calls to GetNewObjectIdUnderLock(). Update the
+		 * oidCount to VAR_OID_PREFETCH and create an xlog if we have
+		 * exhausted the current oidCount. We should always be moving forward
+		 * and never backwards.
+		 */
+		ShmemVariableCache->nextOid = newOid;
+		if (nextOidDifference >= ShmemVariableCache->oidCount)
+		{
+			XLogPutNextOid(ShmemVariableCache->nextOid + VAR_OID_PREFETCH);
+			ShmemVariableCache->oidCount = VAR_OID_PREFETCH;
+		}
+		else
+			ShmemVariableCache->oidCount -= nextOidDifference;
+	}
 
 	LWLockRelease(OidGenLock);
 }
@@ -654,4 +677,16 @@ GetNewSegRelfilenode(void)
 	LWLockRelease(RelfilenodeGenLock);
 
 	return result;
+}
+
+/*
+ * Is the given Oid logically > ShmemVariableCache->nextOid?
+ */
+bool
+OidFollowsNextOid(Oid id)
+{
+	int32		diff;
+
+	diff = (int32) (id - ShmemVariableCache->nextOid);
+	return (diff > 0);
 }

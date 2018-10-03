@@ -98,6 +98,10 @@ extern Datum gp_execute_on_server(PG_FUNCTION_ARGS);
 /* Check shared buffer cache for a database Oid */
 extern Datum check_shared_buffer_cache_for_dboid(PG_FUNCTION_ARGS);
 
+/* oid wraparound tests */
+extern void gp_set_next_oid(PG_FUNCTION_ARGS);
+extern Datum gp_get_next_oid(PG_FUNCTION_ARGS);
+
 /* Triggers */
 
 typedef struct
@@ -2043,4 +2047,24 @@ check_shared_buffer_cache_for_dboid(PG_FUNCTION_ARGS)
 	}
 
 	PG_RETURN_BOOL(false);
+}
+
+PG_FUNCTION_INFO_V1(gp_set_next_oid);
+void
+gp_set_next_oid(PG_FUNCTION_ARGS)
+{
+	Oid new_oid = PG_GETARG_OID(0);
+
+	LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
+
+	ShmemVariableCache->nextOid = new_oid;
+
+	LWLockRelease(OidGenLock);
+}
+
+PG_FUNCTION_INFO_V1(gp_get_next_oid);
+Datum
+gp_get_next_oid(PG_FUNCTION_ARGS)
+{
+	PG_RETURN_OID(ShmemVariableCache->nextOid);
 }
