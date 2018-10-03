@@ -3937,7 +3937,7 @@ XLogGetWriteAndFlushedLoc(XLogRecPtr *writeLoc, XLogRecPtr *flushedLoc)
 	*flushedLoc = xlogctl->LogwrtResult.Flush;
 	SpinLockRelease(&xlogctl->info_lck);
 
-	return (writeLoc != 0);
+	return (*writeLoc != 0);
 }
 
 void
