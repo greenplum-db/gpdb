@@ -4586,6 +4586,9 @@ XLogReadRecoveryCommandFile(int emode)
 						RECOVERY_COMMAND_FILE)));
 	}
 
+	/* Enable fetching from archive recovery area */
+	ArchiveRecoveryRequested = true;
+
 	FreeConfigVariables(head);
 }
 
@@ -5371,10 +5374,6 @@ StartupXLOG(void)
 	strncpy(XLogCtl->archiveCleanupCommand,
 			archiveCleanupCommand ? archiveCleanupCommand : "",
 			sizeof(XLogCtl->archiveCleanupCommand));
-
-	if (StandbyModeRequested)
-		ereport(LOG,
-				(errmsg("entering standby mode")));
 
 	if (ArchiveRecoveryRequested)
 	{
