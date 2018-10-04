@@ -1,9 +1,10 @@
+UNIT_TEST_HELPER_DIR=$(top_builddir)/src/test/unit/helpers
 MOCK_DIR=$(top_builddir)/src/test/unit/mock
 CMOCKERY_DIR=$(top_builddir)/src/test/unit/cmockery
 CMOCKERY_OBJS=$(CMOCKERY_DIR)/cmockery.o
 override CFLAGS+= -w $(PTHREAD_CFLAGS)
 
-override CPPFLAGS+= -I$(CMOCKERY_DIR)
+override CPPFLAGS+= -I$(CMOCKERY_DIR) -I$(UNIT_TEST_HELPER_DIR)
 
 $(MOCK_DIR)/%_mock.c: $(abs_top_srcdir)/src/%.c
 	@echo mocking $<

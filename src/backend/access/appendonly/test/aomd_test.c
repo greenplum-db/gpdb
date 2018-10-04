@@ -162,8 +162,7 @@ test_mdunlink_co_no_file_exists(void **state)
 	mdunlink_ao(PATH_TO_DATA_FILE);
 
 	// called 1 time checking column
-	assert_true(num_unlink_called == 0);
-	return;
+	assert_int_equal(num_unlink_called, 0);
 }
 
 /* concurrency = 1 max_column = 4 */
@@ -182,9 +181,8 @@ test_mdunlink_co_4_columns_1_concurrency(void **state)
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
 
-	assert_true(num_unlink_called == 4);
+	assert_int_equal(num_unlink_called, 4);
 	assert_true(unlink_passing);
-	return;
 }
 
 /* concurrency = 1,5 max_column = 3 */
@@ -206,9 +204,8 @@ test_mdunlink_co_3_columns_2_concurrency(void **state)
 	file_present[(2*AOTupleId_MultiplierSegmentFileNum) + 5] = true;
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
-	assert_true(num_unlink_called == 6);
+	assert_int_equal(num_unlink_called, 6);
 	assert_true(unlink_passing);
-	return;
 }
 
 void
@@ -221,9 +218,8 @@ test_mdunlink_co_all_columns_full_concurrency(void **state)
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
 
-	assert_true(num_unlink_called == MaxHeapAttributeNumber * MAX_AOREL_CONCURRENCY);
+	assert_int_equal(num_unlink_called, MaxHeapAttributeNumber * MAX_AOREL_CONCURRENCY);
 	assert_true(unlink_passing);
-	return;
 }
 
 void
@@ -234,9 +230,8 @@ test_mdunlink_co_one_columns_one_concurrency(void **state)
 	file_present[1] = true;
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
-	assert_true(num_unlink_called == 1);
+	assert_int_equal(num_unlink_called, 1);
 	assert_true(unlink_passing);
-	return;
 }
 
 void
@@ -248,9 +243,8 @@ test_mdunlink_co_one_columns_full_concurrency(void **state)
 		file_present[filenum] = true;
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
-	assert_true(num_unlink_called == 127);
+	assert_int_equal(num_unlink_called, 127);
 	assert_true(unlink_passing);
-	return;
 }
 
 int

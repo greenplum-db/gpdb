@@ -1338,6 +1338,42 @@ master_standby_dbid(void)
 	return dbid;
 }
 
+bool
+does_segment_exist(int16 dbid)
+{
+	HeapTuple                tuple;
+	Relation                 rel;
+	ScanKeyData              scankey;
+	SysScanDesc              scan;
+	bool segment_exists;
+
+	/*
+	 * Can only run on a master node, this restriction is due to the reliance
+	 * on the gp_segment_configuration table.  This may be able to be relaxed
+	 * by switching to a different method of checking.
+	 */
+	if (!IS_QUERY_DISPATCHER())
+		elog(ERROR, "does_segment_exist() executed on execution segment");
+
+	rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
+
+	/* SELECT * FROM gp_segment_configuration WHERE dbid = :1 */
+	ScanKeyInit(&scankey,
+	            Anum_gp_segment_configuration_dbid,
+	            BTEqualStrategyNumber, F_INT2EQ,
+	            Int16GetDatum(dbid));
+	scan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
+	                          SnapshotNow, 1, &scankey);
+	tuple = systable_getnext(scan);
+
+	segment_exists = HeapTupleIsValid(tuple);
+
+	systable_endscan(scan);
+	heap_close(rel, NoLock);
+
+	return segment_exists;
+}
+
 CdbComponentDatabaseInfo *
 dbid_get_dbinfo(int16 dbid)
 {

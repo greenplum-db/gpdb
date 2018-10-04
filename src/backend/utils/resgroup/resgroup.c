@@ -3892,7 +3892,6 @@ groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 
 /*
  * Parse cpuset to bitset
- * if onlyCheck is true, the function only check whether cpuset is valid
  * If cpuset is "1,3-5", Bitmapset 1,3,4,5 are set.
  */
 Bitmapset *

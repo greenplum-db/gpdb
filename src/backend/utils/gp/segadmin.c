@@ -488,10 +488,8 @@ gp_add_segment(PG_FUNCTION_ARGS)
 static void
 remove_segment(int16 pridbid, int16 mirdbid)
 {
-	seginfo    *i;
-
-	/* Check that we're removing a mirror, not a primary */
-	i = get_seginfo(mirdbid);
+	if (!does_segment_exist(mirdbid))
+		elog(ERROR, "could not find configuration entry for dbid %i", mirdbid);
 
 	remove_segment_config(mirdbid);
 }

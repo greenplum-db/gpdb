@@ -23,14 +23,14 @@ test__AppendOnlyVisimapEntry_GetFirstRowNum(void **state)
 	expected = 0;
 
 	result = AppendOnlyVisimapEntry_GetFirstRowNum(NULL, tupleId);
-	assert_true(result == expected);
+	assert_int_equal(result, expected);
 
 	/* test to make sure we can go above INT32_MAX */
 	AOTupleIdInit_rowNum(tupleId, 3000000000);
 	expected = 2999975936;
 
 	result = AppendOnlyVisimapEntry_GetFirstRowNum(NULL, tupleId);
-	assert_true(result == expected);
+	assert_int_equal(result, expected);
 }
 
 void
