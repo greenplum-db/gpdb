@@ -6,38 +6,41 @@
     <body>
         <p>When Greenplum Database High Availability is enabled, there are two types of segment
             instances: <i>primary</i> and <i>mirror</i>. Each primary segment has one corresponding
-            mirror segment. A primary segment receives requests from the master to make changes to
-            the segment's database and then replicates those changes to the corresponding mirror. If
-            a primary segment becomes unavailable, database queries fail over to the mirror
-            segment.</p>
+            mirror segment. A primary segment instance receives requests from the master to make
+            changes to the segment data and then replicates those changes to the corresponding
+            mirror. If a primary segment becomes unavailable, database queries fail over to the
+            mirror segment.</p>
         <p>If segment mirroring is not enabled, the Greenplum Database system shuts down if a
-            segment instance fails. Administrators manually recover all failed segments before
-            Greenplum Database operations resume.</p>
-        <p>When a segment mirroring is enabled for an existing system, the primary segment instances
-            continue provide service to users while a snapshot of the primary segments are taken.
+            segment instance fails. Administrators must manually recover all failed segments before
+            Greenplum Database operations can resume.</p>
+        <p>When segment mirroring is enabled for an existing system, the primary segment instances
+            continue to provide service to users while a snapshot of the primary segments are taken.
             While the snapshots are taken and deployed on the mirror segment instances, changes to
             the primary segment are also recorded. After the snapshot has been deployed on the
-            mirror segment, the mirror segment is synchronized and kept up to date using Write-Ahead
+            mirror segment, the mirror segment is synchronized and kept current using Write-Ahead
             Logging (WAL)-based streaming replication. Greenplum Database WAL replication uses the
                 <codeph>walsender</codeph> and <codeph>walreceiver</codeph> replication processes.
             The <codeph>walsender</codeph> process is a primary segment process. The
                 <codeph>walreceiver</codeph> is a mirror segment process. </p>
-        <p>When database changes occur, the WAL logs that capture the changes are copied to the
-            mirror segment to keep it current with the primary segments. During WAL replication,
-            database changes are written to WAL logs before being applied, to ensure data integrity
-            for any in-process operations. </p>
+        <p>When database changes occur, the logs that capture the changes are streamed to the mirror
+            segment to keep it current with the corresponding primary segments. During WAL
+            replication, database changes are written to the logs before being applied, to ensure
+            data integrity for any in-process operations. </p>
         <p>When Greenplum Database detects a primary segment failure, the WAL replication process
             stops and the mirror segment automatically starts as the active primary segment. If a
             mirror segment fails or becomes inaccessible while the primary is active, the primary
-            segment tracks database changes in WAL logs that are applied to the mirror when it is
+            segment tracks database changes in logs that are applied to the mirror when it is
             recovered. For information about segment fault detection and the recovery process, see
                 <xref href="g-detecting-a-failed-segment.xml#topic9"/>. </p>
         <p>These Greenplum Database system catalog tables contain mirroring and replication
             information. <ul id="ul_nn3_yjm_rdb">
-                <li>The catalog table <codeph>gp_segment_configuration</codeph> contains the current
-                    configuration and state of primary and mirror segment instances and the master
-                    and standby master instance. </li>
-                <li>The catalog view <codeph>gp_stat_replication</codeph> contains metadata of the
+                <li>The catalog table <codeph><xref
+                            href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml#topic1"
+                        /></codeph> contains the current configuration and state of primary and
+                    mirror segment instances and the master and standby master instance. </li>
+                <li>The catalog view <codeph><xref
+                            href="../../../ref_guide/system_catalogs/gp_stat_replication.xml#topic1"
+                        /></codeph> contains replication statistics of the
                         <codeph>walsender</codeph> processes that are used for Greenplum Database
                     master and segment mirroring.</li>
             </ul></p>

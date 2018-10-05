@@ -21,10 +21,10 @@
       <title id="iw157552">About Segment Mirroring</title>
       <p>When you deploy your Greenplum Database system, you can configure <i>mirror</i> segment
         instances. Mirror segments allow database queries to fail over to a backup segment if the
-        primary segment becomes unavailable. The mirror segment is kept up to date by a transaction
-        log replication process, which synchronizes the data between the primary and mirror
-        instances. Mirroring is strongly recommended for production systems<ph otherprops="pivotal">
-          and required for Pivotal support</ph>. </p>
+        primary segment becomes unavailable. The mirror segment is kept current by a transaction log
+        replication process, which synchronizes the data between the primary and mirror instances.
+        Mirroring is strongly recommended for production systems<ph otherprops="pivotal"> and
+          required for Pivotal support</ph>. </p>
       <p>As a best practice, the secondary (mirror) segment instance must always reside on a
         different host than its primary segment instance to protect against a single host failure.
         In virtualized environments, the secondary (mirror) segment must always reside on a
@@ -66,8 +66,8 @@
       <p>You can also optionally deploy a backup or mirror of the master instance on a separate host
         from the master host. The backup master instance (the <i>standby master</i>) serves as a
           <i>warm standby</i> in the event that the primary master host becomes non-operational. The
-        standby master is kept up to date by a transaction log replication process, which
-        synchronizes the data between the primary and standby master.</p>
+        standby master is kept current by a transaction log replication process, which synchronizes
+        the data between the primary and standby master.</p>
       <p>If the primary master fails, the log replication process stops, and the standby master can
         be activated in its place. The switchover does not happen automatically, but must be
         triggered externally. Upon activation of the standby master, the replicated logs are used to

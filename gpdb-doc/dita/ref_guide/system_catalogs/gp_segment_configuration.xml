@@ -28,7 +28,7 @@
             </entry>
             <entry colname="col2">smallint</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The unique identifier of a segment (or master) instance.</entry>
+            <entry colname="col4">Unique identifier of a segment (or master) instance.</entry>
           </row>
           <row>
             <entry colname="col1">
