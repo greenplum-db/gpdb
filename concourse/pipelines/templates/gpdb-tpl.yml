@@ -106,7 +106,6 @@ groups:
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_ud_start
-  - regression_tests_pxf
   - regression_tests_gphdfs_hadoop_centos
   - regression_tests_gphdfs_mapr_centos
 {% endif %}
@@ -291,7 +290,6 @@ groups:
 - name: UD
   jobs:
   - gate_ud_start
-  - regression_tests_pxf
   - regression_tests_gphdfs_hadoop_centos
   - regression_tests_gphdfs_mapr_centos
   - compile_gpdb_centos6
@@ -453,20 +451,6 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
-{% if "UD" in test_sections %}
-- name: pxf_src
-  type: git
-  source:
-    branch: {{pxf-git-branch}}
-    uri: {{pxf-git-remote}}
-
-- name: centos6-gpdb-dev-pxf-hdp
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb-pxf-dev
-    tag: centos6-hdp-server
-
-{% endif %}
 {% if "ubuntu16" in os_types %}
 - name: debian_release
   type: git
@@ -558,17 +542,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release_candidates/bin_gpdb_sles11/gpdb6/((rc-build-type))/bin_gpdb.tar.gz
-
-{% endif %}
-{% if "UD" in test_sections %}
-- name: pxf_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{pxf-aws-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: pxf_artifacts/prod/gpdb_branch_master/stable/pxf.tar.gz
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -2166,28 +2139,6 @@ jobs:
       passed:
       - compile_gpdb_centos6
 
-- name: regression_tests_pxf
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-    - get: pxf_tarball
-      trigger: [[ test_trigger ]]
-    - get: pxf_src
-    - get: centos6-gpdb-dev-pxf-hdp
-  - task: test_pxf
-    file: pxf_src/concourse/tasks/test_pxf.yml
-    image: centos6-gpdb-dev-pxf-hdp
-    params:
-      GROUP: smoke
-      HADOOP_CLIENT: HDP
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
 - name: regression_tests_gphdfs_hadoop_centos
   plan:
   - aggregate:
@@ -2436,7 +2387,6 @@ jobs:
       - walrep_2
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
-      - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
@@ -2468,7 +2418,6 @@ jobs:
       - walrep_2
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
-      - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
