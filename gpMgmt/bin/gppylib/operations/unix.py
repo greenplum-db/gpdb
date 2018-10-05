@@ -182,7 +182,13 @@ class CleanSharedMem(Operation):
             for item in pool.getCompletedItems():
                 result = item.get_results()
 
-                if result.rc != 0:
+                # This code is usually called after a GPDB segment has
+                # been terminated.  In that case, it is possible that
+                # the shared memory has already been freed by the
+                # time we are called to clean up.  Due to this race
+                # condition, it is possible to get an `ipcrm: invalid
+                # id1` error from ipcrm.  We, therefore, ignore it.
+                if result.rc != 0 and not result.stderr.startswith("ipcrm: invalid id"):
                     raise Exception('Unable to clean up shared memory for segment: (%s)' % (result.stderr))
         finally:
             pool.haltWork()
