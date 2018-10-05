@@ -1942,3 +1942,67 @@ SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_
 (6 rows)
 
 reset optimizer_analyze_root_partition;
+-- Test incremental analyze on a partitioned table with different storage type and compression algorithm
+DROP TABLE IF EXISTS incr_analyze_test;
+NOTICE:  table "incr_analyze_test" does not exist, skipping
+CREATE TABLE incr_analyze_test (
+    a integer,
+    b character varying,
+    c date
+)
+WITH (appendonly=true, compresslevel=5, orientation=row, compresstype=zlib) DISTRIBUTED BY (a) PARTITION BY RANGE(c)
+          (
+          START ('2018-01-01'::date) END ('2018-01-02'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_1', appendonly=true, compresslevel=3, orientation=column, compresstype=ZLIB ),
+          START ('2018-01-02'::date) END ('2018-01-03'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_2', appendonly=true, compresslevel=1, orientation=column, compresstype=RLE_TYPE ),
+          START ('2018-01-03'::date) END ('2018-01-04'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_3', appendonly=true, compresslevel=1, orientation=column, compresstype=QUICKLZ ),
+          START ('2018-01-04'::date) END ('2018-01-05'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_4', appendonly=true, compresslevel=1, orientation=row, compresstype=ZLIB ),
+          START ('2018-01-05'::date) END ('2018-01-06'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_5', appendonly=true, compresslevel=1, orientation=row, compresstype=QUICKLZ ),
+          START ('2018-01-06'::date) END ('2018-01-07'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_6', appendonly=false)
+          );
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_1" for table "incr_analyze_test"
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_2" for table "incr_analyze_test"
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_3" for table "incr_analyze_test"
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_4" for table "incr_analyze_test"
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_5" for table "incr_analyze_test"
+NOTICE:  CREATE TABLE will create partition "incr_analyze_test_1_prt_6" for table "incr_analyze_test"
+INSERT INTO incr_analyze_test VALUES (1, 'a', '2018-01-01');
+ANALYZE incr_analyze_test;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'incr_analyze_test%' ORDER BY attname,tablename;
+         tablename         | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
+---------------------------+---------+-----------+------------+------------------+-------------------+------------------
+ incr_analyze_test         | a       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_1 | a       |         0 |         -1 |                  |                   | 
+ incr_analyze_test         | b       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_1 | b       |         0 |         -1 |                  |                   | 
+ incr_analyze_test         | c       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_1 | c       |         0 |         -1 |                  |                   | 
+(6 rows)
+
+INSERT INTO incr_analyze_test SELECT s, md5(s::varchar), '2018-01-02' FROM generate_series(1, 1000) AS s;
+ANALYZE incr_analyze_test_1_prt_2;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'incr_analyze_test%' ORDER BY attname,tablename;
+         tablename         | attname | null_frac | n_distinct | most_common_vals | most_common_freqs |                                                                            histogram_bounds                                                                            
+---------------------------+---------+-----------+------------+------------------+-------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ incr_analyze_test         | a       |         0 |         -1 |                  |                   | {1,500,750,1000}
+ incr_analyze_test_1_prt_1 | a       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_2 | a       |         0 |         -1 |                  |                   | {1,250,500,750,1000}
+ incr_analyze_test         | b       |         0 |         -1 |                  |                   | {00411460f7c92d2124a67ea0f4cb5f85,819f46e52c25763a55cc642422644317,c20ad4d76fe97759aa27a0c99bff6710,ffeabd223de0d4eacb9a3e6e53e5448d}
+ incr_analyze_test_1_prt_1 | b       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_2 | b       |         0 |         -1 |                  |                   | {00411460f7c92d2124a67ea0f4cb5f85,3a0772443a0739141292a5429b952fe6,819f46e52c25763a55cc642422644317,c20ad4d76fe97759aa27a0c99bff6710,ffeabd223de0d4eacb9a3e6e53e5448d}
+ incr_analyze_test         | c       |         0 |          2 | {01-02-2018}     | {0.999001}        | 
+ incr_analyze_test_1_prt_1 | c       |         0 |         -1 |                  |                   | 
+ incr_analyze_test_1_prt_2 | c       |         0 |          1 | {01-02-2018}     | {1}               | 
+(9 rows)
+
+SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analyze_test%' ORDER BY relname;
+          relname          | relpages | reltuples 
+---------------------------+----------+-----------
+ incr_analyze_test         |        4 |      1001
+ incr_analyze_test_1_prt_1 |        1 |         1
+ incr_analyze_test_1_prt_2 |        3 |      1000
+ incr_analyze_test_1_prt_3 |        1 |         0
+ incr_analyze_test_1_prt_4 |        1 |         0
+ incr_analyze_test_1_prt_5 |        1 |         0
+ incr_analyze_test_1_prt_6 |        1 |         0
+(7 rows)
+

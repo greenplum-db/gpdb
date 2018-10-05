@@ -272,9 +272,12 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	Assert(fstotal);
 	/**
 	 * The planner doesn't understand AO's blocks, so need this method to try to fudge up a number for
-	 * the planner. 
+	 * the planner.
 	 */
-	*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
+	if (fstotal->totalbytes > 0)
+	{
+		*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
+	}
 
 	AppendOnlyVisimap_Init(&visimap,
 						   rel->rd_appendonly->visimaprelid,

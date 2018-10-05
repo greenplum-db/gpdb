@@ -772,3 +772,27 @@ ANALYZE foo_1_prt_1;
 ANALYZE foo_1_prt_2;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
 reset optimizer_analyze_root_partition;
+-- Test incremental analyze on a partitioned table with different storage type and compression algorithm
+DROP TABLE IF EXISTS incr_analyze_test;
+CREATE TABLE incr_analyze_test (
+    a integer,
+    b character varying,
+    c date
+)
+WITH (appendonly=true, compresslevel=5, orientation=row, compresstype=zlib) DISTRIBUTED BY (a) PARTITION BY RANGE(c)
+          (
+          START ('2018-01-01'::date) END ('2018-01-02'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_1', appendonly=true, compresslevel=3, orientation=column, compresstype=ZLIB ),
+          START ('2018-01-02'::date) END ('2018-01-03'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_2', appendonly=true, compresslevel=1, orientation=column, compresstype=RLE_TYPE ),
+          START ('2018-01-03'::date) END ('2018-01-04'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_3', appendonly=true, compresslevel=1, orientation=column, compresstype=QUICKLZ ),
+          START ('2018-01-04'::date) END ('2018-01-05'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_4', appendonly=true, compresslevel=1, orientation=row, compresstype=ZLIB ),
+          START ('2018-01-05'::date) END ('2018-01-06'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_5', appendonly=true, compresslevel=1, orientation=row, compresstype=QUICKLZ ),
+          START ('2018-01-06'::date) END ('2018-01-07'::date) EVERY ('1 day'::interval) WITH (tablename='incr_analyze_test_1_prt_6', appendonly=false)
+          );
+
+INSERT INTO incr_analyze_test VALUES (1, 'a', '2018-01-01');
+ANALYZE incr_analyze_test;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'incr_analyze_test%' ORDER BY attname,tablename;
+INSERT INTO incr_analyze_test SELECT s, md5(s::varchar), '2018-01-02' FROM generate_series(1, 1000) AS s;
+ANALYZE incr_analyze_test_1_prt_2;
+SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'incr_analyze_test%' ORDER BY attname,tablename;
+SELECT relname, relpages, reltuples FROM pg_class WHERE relname LIKE 'incr_analyze_test%' ORDER BY relname;
