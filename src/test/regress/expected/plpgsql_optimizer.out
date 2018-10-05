@@ -1576,121 +1576,101 @@ insert into PLine values ('PL.001', '-0', 'Central call', 'PS.base.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.002', '-101', '', 'PS.base.ta2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.003', '-102', '', 'PS.base.ta3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.004', '-103', '', 'PS.base.ta5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.005', '-104', '', 'PS.base.ta6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.006', '-106', '', 'PS.base.tb2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.007', '-108', '', 'PS.base.tb3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.008', '-109', '', 'PS.base.tb4');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.009', '-121', '', 'PS.base.tb5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.010', '-122', '', 'PS.base.tb6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.015', '-134', '', 'PS.first.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.016', '-137', '', 'PS.first.ta3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.017', '-139', '', 'PS.first.ta4');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.018', '-362', '', 'PS.first.tb1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.019', '-363', '', 'PS.first.tb2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.020', '-364', '', 'PS.first.tb3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.021', '-365', '', 'PS.first.tb5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.022', '-367', '', 'PS.first.tb6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.028', '-501', 'Fax entrance', 'PS.base.ta2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.029', '-502', 'Fax first floor', 'PS.first.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 --
 -- Buy some phones, plug them into the wall and patch the
@@ -1700,28 +1680,24 @@ insert into PHone values ('PH.hc001', 'Hicom standard', 'WS.001.1a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta1' where slotname = 'PS.base.a1';
 insert into PHone values ('PH.hc002', 'Hicom standard', 'WS.002.1a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta5' where slotname = 'PS.base.b1';
 insert into PHone values ('PH.hc003', 'Hicom standard', 'WS.002.2a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.tb2' where slotname = 'PS.base.b3';
 insert into PHone values ('PH.fax001', 'Canon fax', 'WS.001.2a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta2' where slotname = 'PS.base.a3';
 --
@@ -1733,7 +1709,6 @@ ERROR:  function cannot execute on a QE slice because it issues a non-SELECT sta
 CONTEXT:  SQL statement "insert into HSlot (slotname, hubname, slotno, slotlink)
 		values ('HS.dummy', hname, i, '')"
 PL/pgSQL function tg_hub_adjustslots(character,integer,integer) line 11 at SQL statement
-SQL statement "SELECT tg_hub_adjustslots(new.name, 0, new.nslots)"
 PL/pgSQL function tg_hub_a() line 7 at assignment
 insert into System values ('orion', 'PC');
 insert into IFace values ('IF', 'orion', 'eth0', 'WS.002.1b');
@@ -4568,7 +4543,6 @@ SAVEPOINT a;
 select error2('nonexistent.stuffs');
 ERROR:  schema "nonexistent" does not exist
 CONTEXT:  SQL function "error1" statement 1
-SQL statement "SELECT error1(p_name_table)"
 PL/pgSQL function error2(text) line 3 at RETURN
 ROLLBACK TO a;
 select error2('public.stuffs');

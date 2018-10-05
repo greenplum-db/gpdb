@@ -69,21 +69,50 @@ preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundP
 /**
  * Normalize query before planning.
  */
-Query *normalize_query(Query *query)
+Query *
+normalize_query(Query *query)
 {
 #ifdef USE_ASSERT_CHECKING
 	Query *qcopy = (Query *) copyObject(query);
 #endif
 
-	/**
+	/*
 	 * Normalize the jointree
 	 */
 	Query *res = (Query *) normalize_query_jointree_mutator((Node *) query, NULL);
 
-	/**
-	 * MPP-12635 Replace all instances of single row returning volatile (sirv) functions
+	/*
+	 * MPP-12635 Replace all instances of single row returning volatile (sirv)
+	 * functions.
+	 *
+	 * Only do the transformation on the target list for INSERT/UPDATE/DELETE
+	 * and CREATE TABLE AS commands; there's no need to complicate simple
+	 * queries like "SELECT function()", which would be executed on the QD
+	 * anyway.
 	 */
-	res = (Query *) replace_sirv_functions_mutator((Node *) res, NULL);
+	if (res->commandType != CMD_SELECT || res->isCTAS)
+	{
+		if (safe_to_replace_sirvf_tle(res))
+		{
+			for (int tleOffset = 0; tleOffset < list_length(res->targetList); tleOffset++)
+			{
+				replace_sirvf_tle(res, tleOffset + 1);
+			}
+		}
+	}
+
+	/*
+	 * Find sirv functions in the range table entries and replace them
+	 */
+	if (safe_to_replace_sirvf_rte(res))
+	{
+		for (int rteOffset = 0; rteOffset < list_length(res->rtable); rteOffset++)
+		{
+			replace_sirvf_rte(res, rteOffset + 1);
+		}
+	}
+
+	res = query_tree_mutator(res, replace_sirv_functions_mutator, NULL, 0);
 
 #ifdef USE_ASSERT_CHECKING
 	Assert(equal(qcopy, query) && "Normalization should not modify original query object");
