@@ -29,6 +29,12 @@
 #define NUM_CHECKPOINT_SYNC_TIMEOUT 60
 
 /*
+ * This value is used as divisor to split a sec, used to speficy sleep time
+ * waiting between retries for checkpoint to make through to mirror.
+ */
+#define WAITS_PER_SEC 5
+
+/*
  * Not all the FSM and VM changes are WAL-logged and its OK if they are out of
  * date. So it is OK to skip them for consistency check.
  *
@@ -215,7 +221,7 @@ sync_wait(void)
 	ckpt_lsn = GetRedoRecPtr();
 
 	retry = 0;
-	while (retry < NUM_CHECKPOINT_SYNC_TIMEOUT)
+	while (retry < NUM_CHECKPOINT_SYNC_TIMEOUT * WAITS_PER_SEC)
 	{
 		int			i;
 
@@ -224,9 +230,15 @@ sync_wait(void)
 		LWLockAcquire(SyncRepLock, LW_SHARED);
 		for (i = 0; i < max_wal_senders; i++)
 		{
+			/* fail early in-case primary and mirror are not in sync */
 			if (WalSndCtl->walsnds[i].pid == 0
-				|| WalSndCtl->walsnds[i].state != WALSNDSTATE_STREAMING
-				|| WalSndCtl->walsnds[i].apply < ckpt_lsn)
+				|| WalSndCtl->walsnds[i].state != WALSNDSTATE_STREAMING)
+			{
+				elog(NOTICE, "primary and mirror not in sync");
+				return false;
+			}
+
+			if (WalSndCtl->walsnds[i].apply < ckpt_lsn)
 				break;
 		}
 		LWLockRelease(SyncRepLock);
@@ -238,7 +250,7 @@ sync_wait(void)
 		if (i == max_wal_senders)
 			return true;
 
-		pg_usleep(1000000 /* 1 second */);
+		pg_usleep(1000000 / WAITS_PER_SEC);
 		retry++;
 	}
 
