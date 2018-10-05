@@ -69,11 +69,13 @@
   <topic id="topic65" xml:lang="en">
     <title>Deciding on a Table Partitioning Strategy</title>
     <body>
-      <p>Not all tables are good candidates for partitioning. If the answer is <i>yes</i> to all or
-        most of the following questions, table partitioning is a viable database design strategy for
-        improving query performance. If the answer is <i>no</i> to most of the following questions,
-        table partitioning is not the right solution for that table. Test your design strategy to
-        ensure that query performance improves as expected.</p>
+      <p>Greenplum Database does not support partitioning replicated tables (<codeph>DISTRIBUTED
+          REPLICATED</codeph>). Not all hash-distributed or randomly distributed tables are good
+        candidates for partitioning. If the answer is <i>yes</i> to all or most of the following
+        questions, table partitioning is a viable database design strategy for improving query
+        performance. If the answer is <i>no</i> to most of the following questions, table
+        partitioning is not the right solution for that table. Test your design strategy to ensure
+        that query performance improves as expected.</p>
       <ul id="ul_jpc_2wy_sp">
         <li id="im148863"><b>Is the table large enough?</b> Large fact tables are good candidates
           for table partitioning. If you have millions or billions of records in a table, you may
@@ -117,7 +119,7 @@
         and city, and there are 1,000 days of data and 1,000 cities, the total number of partitions
         is one million. Column-oriented tables store each column in a physical table, so if this
         table has 100 columns, the system would be required to manage 100 million files for the
-        table.</note>
+        table, for each segment.</note>
       <p>Before settling on a multi-level partitioning strategy, consider a single level partition
         with bitmap indexes. Indexes slow down data loads, so performance testing with your data and
         schema is recommended to decide on the best strategy. </p>
@@ -336,6 +338,8 @@ GRANT SELECT ON sales TO guest;
           partitioning columns. A unique index can omit the partitioning columns; however, it is
           enforced only on the parts of the partitioned table, not on the partitioned table as a
           whole.</p>
+        <p>Tables created with the <codeph>DISTRIBUTED REPLICATED</codeph> distribution policy
+          cannot be partitioned. </p>
         <p>GPORCA, the Greenplum next generation query optimizer, supports uniform multi-level
           partitioned tables. If GPORCA is enabled (the default) and the multi-level partitioned
           table is not uniform, Greenplum Database executes queries against the table with the
@@ -701,6 +705,7 @@ WITH TABLE jan12;
           ensure that the data in table that you are exchanging for an existing partition is valid
           against the constraints on the partition. Otherwise, queries against the partitioned table
           might return incorrect results.</note>
+        <p>You cannot exchange a partition with a replicated table. </p>
         <p>The Greenplum Database server configuration parameter
             <codeph>gp_enable_exchange_default_partition</codeph> controls availability of the
             <codeph>EXCHANGE DEFAULT PARTITION</codeph> clause. The default value for the parameter
