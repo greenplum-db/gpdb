@@ -974,7 +974,7 @@ getDnsCachedAddress(char *name, int port, int elevel, bool use_cache)
 	 */
 	if (!use_cache || (use_cache && e == NULL))
 	{
-		MemoryContext oldContext;
+		MemoryContext oldContext = NULL;
 		int			ret;
 		char		portNumberStr[32];
 		char	   *service;
