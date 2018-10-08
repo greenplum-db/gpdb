@@ -1993,7 +1993,7 @@ UPDATE gp_distribution_policy
         return (' , '.join(name_list), ' , '.join(oid_list))
 
     def perform_expansion(self):
-        """Performs the actual table re-organiations"""
+        """Performs the actual table re-organizations"""
         expansionStart = datetime.datetime.now()
 
         # setup a threadpool
@@ -2014,11 +2014,15 @@ UPDATE gp_distribution_policy
         sql = "SELECT * FROM %s.%s WHERE status = 'NOT STARTED' ORDER BY rank" % (gpexpand_schema, status_detail_table)
         cursor = dbconn.execSQL(self.conn, sql)
 
+        # get the total number of primaries in the cluster after expansion
+        # we need it to update the numsegments column in gp_distribution_policy before redistribution
+        num_segments_after_expansion = len(self.gparray.segmentPairs)
+
         for row in cursor:
             self.logger.debug(row)
             name = "name"
             tbl = ExpandTable(options=self.options, row=row)
-            cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options)
+            cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options, num_segments=num_segments_after_expansion)
             self.queue.addCommand(cmd)
 
         table_expand_error = False
@@ -2269,7 +2273,7 @@ class ExpandTable():
         dbconn.execSQL(status_conn, sql)
         status_conn.commit()
 
-    def expand(self, table_conn, cancel_flag):
+    def expand(self, table_conn, cancel_flag, num_segments):
         foo = self.distrib_policy_names.strip()
         new_storage_options = ''
         if self.storage_options:
@@ -2278,19 +2282,22 @@ class ExpandTable():
         (schema_name, table_name) = self.fq_name.split('.')
 
         logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), foo.decode('utf-8')))
-        # logger.info("Storage options for table %s is %s" % (self.fq_name, self.storage_options))
 
+        # The UPDATE query below updates the numsegments value on the master only.
+        # The following ALTER TABLE query updates the segment values as part of the redistribution process.
+        sql = """UPDATE gp_distribution_policy SET numsegments=%d WHERE localoid=%d; """ % (
+                num_segments, self.table_oid)
         if self.distrib_policy_type.strip() == 'r':
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
                 schema_name, table_name, new_storage_options)
         elif foo == "" or foo == "None" or foo is None:
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
                 schema_name, table_name, new_storage_options)
         else:
             dist_cols = foo.split(',')
             dist_cols = ['"%s"' % x.strip() for x in dist_cols]
             dist_cols = ','.join(dist_cols)
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
                 schema_name, table_name, new_storage_options, dist_cols)
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
@@ -2406,10 +2413,11 @@ class ExecuteSQLStatementsCommand(SQLCommand):
 
 # -----------------------------------------------
 class ExpandCommand(SQLCommand):
-    def __init__(self, name, status_url, table, options):
+    def __init__(self, name, status_url, table, options, num_segments):
         self.status_url = status_url
         self.table = table
         self.options = options
+        self.num_segments = num_segments
         self.cmdStr = "Expand %s.%s" % (table.dbname, table.fq_name)
         self.table_url = copy.deepcopy(status_url)
         self.table_url.pgdb = table.dbname
@@ -2426,7 +2434,7 @@ class ExpandCommand(SQLCommand):
 
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
-            table_conn = dbconn.connect(self.table_url, encoding='UTF8')
+            table_conn = dbconn.connect(self.table_url, encoding='UTF8', allowSystemTableMods=True) # need to modify gp_distribution_policy
         except DatabaseError, ex:
             if self.options.verbose:
                 logger.exception(ex)
@@ -2461,7 +2469,7 @@ class ExpandCommand(SQLCommand):
                 if not self.options.simple_progress:
                     self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
 
-                table_exp_success = self.table.expand(table_conn, self.cancel_flag)
+                table_exp_success = self.table.expand(table_conn, self.cancel_flag, self.num_segments)
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
