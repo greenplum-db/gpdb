@@ -2274,14 +2274,14 @@ class ExpandTable():
         status_conn.commit()
 
     def expand(self, table_conn, cancel_flag, num_segments):
-        foo = self.distrib_policy_names.strip()
+        policy_names = self.distrib_policy_names.strip()
         new_storage_options = ''
         if self.storage_options:
             new_storage_options = ',' + self.storage_options
 
         (schema_name, table_name) = self.fq_name.split('.')
 
-        logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), foo.decode('utf-8')))
+        logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), policy_names.decode('utf-8')))
 
         # The UPDATE query below updates the numsegments value on the master only.
         # The following ALTER TABLE query updates the segment values as part of the redistribution process.
@@ -2290,11 +2290,11 @@ class ExpandTable():
         if self.distrib_policy_type.strip() == 'r':
             sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
                 schema_name, table_name, new_storage_options)
-        elif foo == "" or foo == "None" or foo is None:
+        elif policy_names == "" or policy_names == "None" or policy_names is None:
             sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
                 schema_name, table_name, new_storage_options)
         else:
-            dist_cols = foo.split(',')
+            dist_cols = policy_names.split(',')
             dist_cols = ['"%s"' % x.strip() for x in dist_cols]
             dist_cols = ','.join(dist_cols)
             sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
