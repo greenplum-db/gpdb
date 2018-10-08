@@ -56,7 +56,7 @@ p   |p             |0      |s   |u
 p   |p             |1      |s   |u     
 p   |p             |2      |s   |u     
 (8 rows)
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -84,7 +84,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -112,7 +112,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -140,7 +140,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -168,7 +168,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -196,7 +196,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
