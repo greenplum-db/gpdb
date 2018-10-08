@@ -203,7 +203,7 @@ int			Debug_dtm_action_target = DEBUG_DTM_ACTION_TARGET_DEFAULT;
 
 int			Debug_dtm_action_protocol = DEBUG_DTM_ACTION_PROTOCOL_DEFAULT;
 
-#define DEBUG_DTM_ACTION_SEGMENT_DEFAULT 1
+#define DEBUG_DTM_ACTION_SEGMENT_DEFAULT -2
 #define DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT 0
 
 int			Debug_dtm_action_segment = DEBUG_DTM_ACTION_SEGMENT_DEFAULT;
@@ -3067,7 +3067,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_dtm_action_segment,
-		DEBUG_DTM_ACTION_SEGMENT_DEFAULT, 0, 1000,
+		DEBUG_DTM_ACTION_SEGMENT_DEFAULT, -2, 1000,
 		NULL, NULL, NULL
 	},
 
