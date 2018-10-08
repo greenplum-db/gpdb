@@ -693,7 +693,7 @@
         </p>
         <p>Changing the distribution policy of a table to <codeph>DISTRIBUTED
             REPLICATED</codeph> or from <codeph>DISTRIBUTED REPLICATED</codeph>
-          automatically redistributes the table.</p>
+          automatically redistributes the table data.</p>
       </body>
     </topic>
     <topic id="topic58" xml:lang="en">
@@ -710,7 +710,7 @@
         </p>
         <p>Changing the distribution policy of a table to <codeph>DISTRIBUTED
             REPLICATED</codeph> or from <codeph>DISTRIBUTED REPLICATED</codeph>
-          always redistributes the table, even when you use
+          always redistributes the table data, even when you use
             <codeph>REORGANIZE=FALSE</codeph>.</p>
       </body>
     </topic>

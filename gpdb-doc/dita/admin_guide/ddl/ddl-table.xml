@@ -211,7 +211,7 @@
             types are not eligible as Greenplum Database distribution key columns. If a table does
             not have an eligible column, Greenplum Database distributes the rows randomly or in
             round-robin fashion. </p>
-          <p>Replicated tables have no distribution key since every row is distributed to every
+          <p>Replicated tables have no distribution key because every row is distributed to every
             Greenplum Database segment instance.</p>
           <p>To ensure even distribution of hash-distributed data, choose a distribution key that is
             unique for each record. If that is not possible, choose <codeph>DISTRIBUTED
