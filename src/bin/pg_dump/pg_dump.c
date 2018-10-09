@@ -272,8 +272,9 @@ static int	dumpBlobs(Archive *fout, void *arg);
 static void dumpDatabase(Archive *AH);
 static void dumpEncoding(Archive *AH);
 static void dumpStdStrings(Archive *AH);
-static void binary_upgrade_set_namespace_oid(PQExpBuffer upgrade_buffer,
-								Oid pg_namespace_oid, char *namespacename);
+static void binary_upgrade_set_namespace_oid(Archive *fout,
+								PQExpBuffer upgrade_buffer,
+								Oid pg_namespace_oid);
 static void binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 								PQExpBuffer upgrade_buffer, Oid pg_type_oid,
 								Oid pg_type_ns_oid, char *pg_type_name);
@@ -3077,14 +3078,27 @@ dumpBlobs(Archive *fout, void *arg __attribute__((unused)))
 }
 
 static void
-binary_upgrade_set_namespace_oid(PQExpBuffer upgrade_buffer,
-								 Oid pg_namespace_oid, char *namespacename)
+binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
+								 Oid pg_namespace_oid)
 {
+	PQExpBuffer	upgrade_query = createPQExpBuffer();
+	PGresult   *upgrade_res;
+	char	   *pg_nspname;
+
+	appendPQExpBuffer(upgrade_query,
+					  "SELECT nspname "
+					  "FROM pg_catalog.pg_namespace "
+					  "WHERE oid = '%u'::pg_catalog.oid;", pg_namespace_oid);
+	upgrade_res = ExecuteSqlQueryForSingleRow(fout, upgrade_query->data);
+	pg_nspname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "nspname"));
+
 	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_namespace oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 	 "SELECT binary_upgrade.set_next_pg_namespace_oid('%u'::pg_catalog.oid, "
 													 "$$%s$$::text);\n\n",
-					  pg_namespace_oid, namespacename);
+					  pg_namespace_oid, pg_nspname);
+	PQclear(upgrade_res);
+	destroyPQExpBuffer(upgrade_query);
 }
 
 static void
@@ -8067,7 +8081,7 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 	appendPQExpBuffer(delq, "DROP SCHEMA %s;\n", qnspname);
 
 	if (binary_upgrade)
-		binary_upgrade_set_namespace_oid(q, nspinfo->dobj.catId.oid, qnspname);
+		binary_upgrade_set_namespace_oid(fout, q, nspinfo->dobj.catId.oid);
 
 	appendPQExpBuffer(q, "CREATE SCHEMA %s;\n", qnspname);
 
