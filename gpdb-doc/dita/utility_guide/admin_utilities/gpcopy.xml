@@ -319,9 +319,9 @@
                 <plentry>
                     <pt>--on-segment-threshold <varname>int</varname></pt>
                     <pd>Specifies the number of rows that determines when <codeph>gpcopy</codeph>
-                        copies a table using the Greenplum Database host and destination master
-                        instead of the host and destination segment instances. The default value is
-                        10000 rows. If a table contains 10000 rows or less, the table is copied
+                        copies a table using the Greenplum Database source and destination master
+                        instead of the source and destination segment instances. The default value
+                        is 10000 rows. If a table contains 10000 rows or less, the table is copied
                         using the Greenplum Database master. </pd>
                     <pd>The value <codeph>-1</codeph> disables copying tables using the master. All
                         tables are copied using the segment instances.</pd>
