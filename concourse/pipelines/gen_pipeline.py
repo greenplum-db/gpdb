@@ -178,9 +178,8 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p %s \\\n' % os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
+        msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \\\n'
         msg += '    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \\\n'
-        msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
         msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
         msg += '    -v gpdb-git-branch=%s \n' % suggested_git_branch()
 
