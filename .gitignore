@@ -61,3 +61,4 @@ lib*.pc
 /Debug/
 /Release/
 /CMakeLists.txt
+/.idea/
