@@ -558,9 +558,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	if (into)
 		eflags |= GetIntoRelEFlags(into);
 
-
-			queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(
-			queryDesc->plannedstmt);
+	queryDesc->plannedstmt->query_mem = ResourceManagerGetQueryMemoryLimit(queryDesc->plannedstmt);
 
 	/* call ExecutorStart to prepare the plan for execution */
 	ExecutorStart(queryDesc, eflags);
@@ -706,7 +704,6 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 void
 ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 {
-
 	EState     *estate = queryDesc->estate;
 	Bitmapset  *rels_used = NULL;
 
@@ -1800,6 +1797,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (es->verbose)
 		show_plan_tlist(planstate, ancestors, es);
 
+	elog(DEBUG2, "Plan nodeTag is %d", nodeTag(plan));
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1941,8 +1939,9 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			 * hashqualclauses instead of hashclauses.
 			 */
 			List *cond_to_show = hash_join->hashclauses;
-			if (list_length(hash_join->hashqualclauses) > 0)
+			if (list_length(hash_join->hashqualclauses) > 0) {
 				cond_to_show = hash_join->hashqualclauses;
+			}
 
 			show_upper_qual(cond_to_show,
 							"Hash Cond", planstate, ancestors, es);
@@ -2164,24 +2163,19 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (plan->initPlan)
 		ExplainSubPlans(planstate->initPlan, ancestors, "InitPlan", es, planstate->state->es_sliceTable);
 
-	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 	/* lefttree */
 	if (outerPlanState(planstate) && !skip_outer)
 	{
-		elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 		ExplainNode(outerPlanState(planstate), ancestors,
 					"Outer", NULL, es);
 	}
     else if (skip_outer)
     {
-		elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 		appendStringInfoSpaces(es->str, es->indent * 2);
 		appendStringInfo(es->str, "  ->  ");
 		appendStringInfoString(es->str, skip_outer_msg);
 		appendStringInfo(es->str, "\n");
     }
-	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
-
 	/* righttree */
 	if (innerPlanState(planstate))
 		ExplainNode(innerPlanState(planstate), ancestors,
@@ -2227,8 +2221,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		default:
 			break;
 	}
-	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
-
 	/* subPlan-s */
 	if (planstate->subPlan)
 		ExplainSubPlans(planstate->subPlan, ancestors, "SubPlan", es, NULL);
@@ -2239,7 +2231,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		ancestors = list_delete_first(ancestors);
 		ExplainCloseGroup("Plans", "Plans", false, es);
 	}
-	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 
 	/* in text format, undo whatever indentation we added */
 	if (es->format == EXPLAIN_FORMAT_TEXT)
@@ -2250,7 +2241,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 					  true, es);
 
 	es->currentSlice = save_currentSlice;
-	elog(LOG, "Executing line %d in ExplainNode", __LINE__);
 }
 
 /*

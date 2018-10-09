@@ -440,8 +440,6 @@ cdbexplain_localExecStats(struct PlanState *planstate,
 
 	Assert(Gp_role != GP_ROLE_EXECUTE);
 
-	elog(DEBUG1, showstatctx == NULL ? "showstatctx is NULL" : "showstatctx is not null");
-
 	Insist(planstate && planstate->instrument && showstatctx);
 
 	memset(&ctx, 0, sizeof(ctx));

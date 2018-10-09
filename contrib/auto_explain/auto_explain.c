@@ -17,8 +17,10 @@
 #include "commands/explain.h"
 #include "executor/instrument.h"
 #include "utils/guc.h"
-#include "cdb/cdbexplain.h"
+#include "cdb/cdbvars.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbexplain.h"
+
 
 PG_MODULE_MAGIC;
 
@@ -183,23 +185,20 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
 	if (auto_explain_enabled())
 	{
-		/* Enable per-node instrumentation if log_analyze is required. */
-		if (auto_explain_log_analyze && (eflags & EXEC_FLAG_EXPLAIN_ONLY) == 0)
-		{
+		instr_time starttime;
+		INSTR_TIME_SET_CURRENT(starttime);
+		queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
+
+		/* Set instrumentation flags according to the settings of auto_explain */
+		if (auto_explain_log_analyze && !(eflags & EXEC_FLAG_EXPLAIN_ONLY)) {
+			queryDesc->instrument_options |= INSTRUMENT_CDB;
 			if (auto_explain_log_timing)
 				queryDesc->instrument_options |= INSTRUMENT_TIMER;
 			else
 				queryDesc->instrument_options |= INSTRUMENT_ROWS;
-
-			if (auto_explain_log_buffers)
-				queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
-
-			queryDesc->instrument_options |= INSTRUMENT_CDB;
 		}
-
-		instr_time starttime;
-		INSTR_TIME_SET_CURRENT(starttime);
-		queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
+		if (auto_explain_log_buffers)
+			queryDesc->instrument_options |= INSTRUMENT_BUFFERS;
 	}
 
 	if (prev_ExecutorStart)
@@ -207,21 +206,16 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	else
 		standard_ExecutorStart(queryDesc, eflags);
 
+	/*
+	 * Setup instrumentation (CDB, TIMER and all other present in options)
+	 * in the per-query memory context
+	 */
 	if (auto_explain_enabled())
 	{
-		/*
-		 * Set up to track total elapsed time in ExecutorRun.  Make sure the
-		 * space is allocated in the per-query context so it will go away at
-		 * ExecutorEnd.
-		 */
-		if (queryDesc->totaltime == NULL)
-		{
-			MemoryContext oldcxt;
-
-			oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
-			queryDesc->totaltime = InstrAlloc(1, INSTRUMENT_ALL);
-			MemoryContextSwitchTo(oldcxt);
-		}
+		int instrument_options = INSTRUMENT_CDB | INSTRUMENT_TIMER | queryDesc->instrument_options;
+		MemoryContext oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
+		queryDesc->totaltime = InstrAlloc(1, instrument_options);
+		MemoryContextSwitchTo(oldcxt);
 	}
 }
 
@@ -257,6 +251,10 @@ explain_ExecutorFinish(QueryDesc *queryDesc)
 	nesting_level++;
 	PG_TRY();
 	{
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults) {
+			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
+		}
+
 		if (prev_ExecutorFinish)
 			prev_ExecutorFinish(queryDesc);
 		else
@@ -277,16 +275,13 @@ explain_ExecutorFinish(QueryDesc *queryDesc)
 static void
 explain_ExecutorEnd(QueryDesc *queryDesc)
 {
-	if (queryDesc->totaltime && auto_explain_enabled()) {
-		/*
-		 * Make sure stats accumulation is done.  (Note: it's okay if several
-		 * levels of hook all do this.)
-		 */
-		// InstrEndLoop(queryDesc->totaltime);
+	if (auto_explain_enabled() && queryDesc->totaltime)
+	{
+		InstrEndLoop(queryDesc->totaltime);
 
-		/* Log plan if duration is exceeded. */
-		// double msec = queryDesc->totaltime->total * 1000.0;
-		if (1) // msec >= auto_explain_log_min_duration)
+		/* Log plan on master node if duration is exceeded */
+		double msec = queryDesc->totaltime->total * 1000.0;
+		if (GpIdentity.segindex == MASTER_CONTENT_ID && (int)msec >= auto_explain_log_min_duration)
 		{
 			ExplainState es;
 
@@ -296,10 +291,6 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			es.buffers = (es.analyze && auto_explain_log_buffers);
 			es.timing = (es.analyze && auto_explain_log_timing);
 			es.format = auto_explain_log_format;
-
-			if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults) {
-				cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
-			}
 
 			ExplainBeginOutput(&es);
 			ExplainQueryText(&es, queryDesc);
@@ -323,18 +314,17 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			 * reported.  This isn't ideal but trying to do it here would
 			 * often result in duplication.
 			 */
-			// ereport(LOG,
-			// 		(errmsg("duration: %.3f ms  plan:\n%s",
-			// 				msec, es.str->data),
-			// 		 errhidestmt(true)));
+			ereport(
+				LOG,
+				(errmsg("duration: %.3f ms  plan:\n%s", msec, es.str->data), errhidestmt(true))
+			);
 
 			pfree(es.str->data);
 		}
 	}
 
-	if (prev_ExecutorEnd) {
+	if (prev_ExecutorEnd)
 		prev_ExecutorEnd(queryDesc);
-	}
 	else
 		standard_ExecutorEnd(queryDesc);
 }

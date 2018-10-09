@@ -740,8 +740,8 @@ static void MetaTrackAddUpdInternal(Oid			classid,
 } /* end MetaTrackAddUpdInternal */
 
 
-void MetaTrackAddObject(Oid		classid, 
-						Oid		objoid, 
+void MetaTrackAddObject(Oid		classid,
+						Oid		objoid,
 						Oid		relowner,
 						char*	actionname,
 						char*	subtype)
@@ -770,8 +770,8 @@ void MetaTrackAddObject(Oid		classid,
 
 } /* end MetaTrackAddObject */
 
-void MetaTrackUpdObject(Oid		classid, 
-						Oid		objoid, 
+void MetaTrackUpdObject(Oid		classid,
+						Oid		objoid,
 						Oid		relowner,
 						char*	actionname,
 						char*	subtype)
@@ -843,14 +843,14 @@ void MetaTrackUpdObject(Oid		classid,
 
 	/* add it if it didn't already exist */
 	if (!ii)
-		MetaTrackAddObject(classid, 
-						   objoid, 
+		MetaTrackAddObject(classid,
+						   objoid,
 						   relowner,
 						   actionname,
 						   subtype);
 
 } /* end MetaTrackUpdObject */
-void MetaTrackDropObject(Oid		classid, 
+void MetaTrackDropObject(Oid		classid,
 						 Oid		objoid)
 {
 	HeapTuple	tuple;
@@ -1802,11 +1802,11 @@ heap_create_with_catalog(const char *relname,
 		}
 
 		/* MPP-7576: don't track internal namespace tables */
-		switch (relnamespace) 
+		switch (relnamespace)
 		{
 			case PG_CATALOG_NAMESPACE:
 				/* MPP-7773: don't track objects in system namespace
-				 * if modifying system tables (eg during upgrade)  
+				 * if modifying system tables (eg during upgrade)
 				 */
 				if (allowSystemTableMods)
 					doIt = false;
