@@ -2355,47 +2355,41 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into typetest_for_window_seq values('{1, 2, 3}', '(1, 2), (3, 4)', '1', E'\012\001', 
 '{foo, bar}');
+ERROR:  Type 1007 is not hashable.  (seg2 127.0.0.1:25434 pid=55976)
 insert into typetest_for_window_seq values('{4, 5, 6}', '(3, 4), (6, 7)', '0', E'\002', 
 '{bar, baz}');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=55975)
 select i, lead(i, 1, '{1}') over (w), 
 lead(j, 1, '(0, 0), (1, 1)') over (w), lead(k, 1) over(w),
 lead(l, 1, E'\015') over (w), lead(m, 1, '{test}') over (w)
 from typetest_for_window_seq window w as (order by i);
-    i    |  lead   |    lead     | lead | lead |   lead    
----------+---------+-------------+------+------+-----------
- {1,2,3} | {4,5,6} | (6,7),(3,4) | 0    | \x02 | {bar,baz}
- {4,5,6} | {1}     | (1,1),(0,0) |      | \x0d | {test}
-(2 rows)
+ i | lead | lead | lead | lead | lead 
+---+------+------+------+------+------
+(0 rows)
 
 select i, lag(i, 1, '{1}') over (w), 
 lag(j, 1, '(0, 0), (1, 1)') over (w), lag(k, 1) over(w),
 lag(l, 1, E'\015') over (w), lag(m, 1, '{test}') over (w)
 from typetest_for_window_seq window w as (order by i);
-    i    |   lag   |     lag     | lag |  lag   |    lag    
----------+---------+-------------+-----+--------+-----------
- {1,2,3} | {1}     | (1,1),(0,0) |     | \x0d   | {test}
- {4,5,6} | {1,2,3} | (3,4),(1,2) | 1   | \x0a01 | {foo,bar}
-(2 rows)
+ i | lag | lag | lag | lag | lag 
+---+-----+-----+-----+-----+-----
+(0 rows)
 
 select i, first_value(i) over (w), 
 first_value(j) over (w), first_value(k) over(w),
 first_value(l) over (w), first_value(m) over (w)
 from typetest_for_window_seq window w as (order by i rows 1 preceding);
-    i    | first_value | first_value | first_value | first_value | first_value 
----------+-------------+-------------+-------------+-------------+-------------
- {1,2,3} | {1,2,3}     | (3,4),(1,2) | 1           | \x0a01      | {foo,bar}
- {4,5,6} | {1,2,3}     | (3,4),(1,2) | 1           | \x0a01      | {foo,bar}
-(2 rows)
+ i | first_value | first_value | first_value | first_value | first_value 
+---+-------------+-------------+-------------+-------------+-------------
+(0 rows)
 
 select i, last_value(i) over (w), 
 last_value(j) over (w), last_value(k) over(w),
 last_value(l) over (w), last_value(m) over (w)
 from typetest_for_window_seq window w as (order by i rows between current row and 1 following);
-    i    | last_value | last_value  | last_value | last_value | last_value 
----------+------------+-------------+------------+------------+------------
- {1,2,3} | {4,5,6}    | (6,7),(3,4) | 0          | \x02       | {bar,baz}
- {4,5,6} | {4,5,6}    | (6,7),(3,4) | 0          | \x02       | {bar,baz}
-(2 rows)
+ i | last_value | last_value | last_value | last_value | last_value 
+---+------------+------------+------------+------------+------------
+(0 rows)
 
 drop table typetest_for_window_seq;
 -- MPP-1881

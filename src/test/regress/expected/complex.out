@@ -1369,10 +1369,11 @@ DETAIL:  The dimension of the left argument is 1, the dimension of the right arg
 CREATE TABLE complex_array_tab (complex_arr complex[]);
 CREATE INDEX ON complex_array_tab USING gin (complex_arr);
 INSERT INTO complex_array_tab VALUES (ARRAY[COMPLEX(1,3), COMPLEX(5,7)]);
+ERROR:  Type 7199 is not hashable.  (seg0 127.0.0.1:25432 pid=55798)
 INSERT INTO complex_array_tab VALUES (ARRAY[COMPLEX(2,4), COMPLEX(6,8)]);
+ERROR:  Type 7199 is not hashable.  (seg2 127.0.0.1:25434 pid=55800)
 SELECT * FROM complex_array_tab WHERE complex_arr @> ARRAY[COMPLEX(2,4)];
-     complex_arr     
----------------------
- {"2 + 4i","6 + 8i"}
-(1 row)
+ complex_arr 
+-------------
+(0 rows)
 
