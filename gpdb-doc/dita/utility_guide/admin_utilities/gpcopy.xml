@@ -322,10 +322,10 @@
                         copies a table using the Greenplum Database host and destination master
                         instead of the host and destination segment instances. The default value is
                         10000 rows. If a table contains 10000 rows or less, the table is copied
-                        using Greenplum Database master. </pd>
+                        using the Greenplum Database master. </pd>
                     <pd>The value <codeph>-1</codeph> disables copying tables using the master. All
                         tables are copied using the segment instances.</pd>
-                    <pd>For smaller tables, coping tables using the Greenplum Database master is
+                    <pd>For smaller tables, copying tables using the Greenplum Database master is
                         more efficient than using segment instances.</pd>
                 </plentry>
                 <plentry>
