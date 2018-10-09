@@ -60,6 +60,7 @@ parseCommandLine(int argc, char *argv[])
 		{"progress", no_argument, NULL, 2},
 		{"add-checksum", no_argument, NULL, 3},
 		{"remove-checksum", no_argument, NULL, 4},
+		{"socketdir", required_argument, NULL, 's'},
 
 		{NULL, 0, NULL, 0}
 	};
@@ -112,7 +113,7 @@ parseCommandLine(int argc, char *argv[])
 	if ((log_opts.internal = fopen_priv(INTERNAL_LOG_FILE, "a")) == NULL)
 		pg_log(PG_FATAL, "cannot write to log file %s\n", INTERNAL_LOG_FILE);
 
-	while ((option = getopt_long(argc, argv, "d:D:b:B:cj:ko:O:p:P:ru:v",
+	while ((option = getopt_long(argc, argv, "d:D:b:B:cj:ko:O:p:P:rs:u:v",
 								 long_options, &optindex)) != -1)
 	{
 		switch (option)
@@ -178,6 +179,10 @@ parseCommandLine(int argc, char *argv[])
 
 			case 'r':
 				log_opts.retain = true;
+				break;
+
+			case 's':
+				user_opts.socketdir = pg_strdup(optarg);
 				break;
 
 			case 'u':
@@ -285,6 +290,7 @@ Options:\n\
   -p, --old-port=OLDPORT        old cluster port number (default %d)\n\
   -P, --new-port=NEWPORT        new cluster port number (default %d)\n\
   -r, --retain                  retain SQL and log files after success\n\
+  -s, --socketdir=DIR           socket directory during upgrades (default CWD)\n\
   -u, --user=NAME               cluster superuser (default \"%s\")\n\
   -v, --verbose                 enable verbose internal logging\n\
   -V, --version                 display version information, then exit\n\
@@ -455,10 +461,18 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
 	{
 		if (!live_check)
 		{
-			/* Use the current directory for the socket */
-			cluster->sockdir = pg_malloc(MAXPGPATH);
-			if (!getcwd(cluster->sockdir, MAXPGPATH))
-				pg_log(PG_FATAL, "cannot find current directory\n");
+			if (user_opts.socketdir)
+				cluster->sockdir = user_opts.socketdir;
+			else
+			{
+				/*
+				 * If the user hasn't requested a specific path, use the
+				 * current directory for the socket
+				 */
+				cluster->sockdir = pg_malloc(MAXPGPATH);
+				if (!getcwd(cluster->sockdir, MAXPGPATH))
+					pg_log(PG_FATAL, "cannot find current directory\n");
+			}
 		}
 		else
 		{

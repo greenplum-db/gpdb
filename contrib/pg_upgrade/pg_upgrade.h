@@ -427,6 +427,8 @@ typedef struct
 	bool		progress;
 	segmentMode	segment_mode;
 	checksumMode checksum_mode;
+	char	   *socketdir;		/* directory to use for sockets, NULL means
+								 * using the default of CWD */
 
 } UserOpts;
 
