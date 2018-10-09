@@ -2042,6 +2042,15 @@ select count(*) from multiset_5(table(select * from example)) s ;
     10
 (1 row)
 
+-- Test for 'select for update'
+begin;
+select count(*) from multiset_5(table(select * from example for update)) s ;
+ count 
+-------
+    10
+(1 row)
+
+abort;
 -- ===========================================
 -- Test invalid use of table value expressions
 -- ===========================================
