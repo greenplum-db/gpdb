@@ -286,6 +286,7 @@
 #define run_test(f) _run_test(#f, f, NULL, UNIT_TEST_FUNCTION_TYPE_TEST, NULL)
 
 // Initializes a UnitTest structure.
+#define unit_test_with_prefix(prefix, f) { #prefix#f, f, UNIT_TEST_FUNCTION_TYPE_TEST }
 #define unit_test(f) { #f, f, UNIT_TEST_FUNCTION_TYPE_TEST }
 #define unit_test_setup(test, setup) \
     { #test "_" #setup, setup, UNIT_TEST_FUNCTION_TYPE_SETUP }
