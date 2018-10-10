@@ -3043,3 +3043,38 @@ AND ft.id = dt1.id;
      4
 (1 row)
 
+-- Test colocated equijoins on coerced distribution keys
+CREATE TABLE coercejoin (a varchar(10), b varchar(10)) DISTRIBUTED BY (a);
+-- Positive test, the join should be colocated as the implicit cast from the
+-- parse rewrite is a relabeling (varchar::text).
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
+                 QUERY PLAN
+--------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((a.a)::text = (b.a)::text)
+         ->  Seq Scan on coercejoin a
+         ->  Hash
+               ->  Seq Scan on coercejoin b
+ Optimizer: legacy query optimizer
+(7 rows)
+
+-- Negative test, the join should not be colocated since the cast is a coercion
+-- which cannot guarantee that the coerced value would hash to the same segment
+-- as the uncoerced tuple.
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric;
+                            QUERY PLAN
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Join
+         Hash Cond: ((a.a)::numeric = (b.a)::numeric)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: (a.a)::numeric
+               ->  Seq Scan on coercejoin a
+         ->  Hash
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: (b.a)::numeric
+                     ->  Seq Scan on coercejoin b
+ Optimizer: legacy query optimizer
+(11 rows)
+

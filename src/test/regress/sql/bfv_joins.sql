@@ -173,3 +173,13 @@ SELECT count(*)
 FROM mpp25537_facttable1 ft, mpp25537_dimdate dt, mpp25537_dimtabl1 dt1
 WHERE ft.wk_id = dt.wk_id
 AND ft.id = dt1.id;
+
+-- Test colocated equijoins on coerced distribution keys
+CREATE TABLE coercejoin (a varchar(10), b varchar(10)) DISTRIBUTED BY (a);
+-- Positive test, the join should be colocated as the implicit cast from the
+-- parse rewrite is a relabeling (varchar::text).
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
+-- Negative test, the join should not be colocated since the cast is a coercion
+-- which cannot guarantee that the coerced value would hash to the same segment
+-- as the uncoerced tuple.
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric;
