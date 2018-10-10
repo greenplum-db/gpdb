@@ -1022,17 +1022,12 @@ addRangeTableEntry(ParseState *pstate,
 		{
 			Oid relid;
 			
-			relid = RangeVarGetRelid(relation, lockmode, true);
-			if (relid == InvalidOid)
-				elog(ERROR, "Got Invalid RelationId of %s", relation->relname);
+			relid = RangeVarGetRelid(relation, lockmode, false);
 			
 			rel = try_heap_open(relid, NoLock, true);
 			if (!rel)
 				elog(ERROR, "open relation(%u) fail", relid);
-			if (locking->strength >= LCS_FORNOKEYUPDATE)
-				lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
-			else
-				lockmode = RowShareLock;
+			lockmode = IsSystemRelation(rel) ? RowExclusiveLock : ExclusiveLock;
 			heap_close(rel, NoLock);
 		}
 		nowait = locking->noWait;
