@@ -317,10 +317,17 @@ static bool TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot
 				if (get_typtype(att_type) == 'd')
 					att_type = getBaseType(att_type);
 
-				/* CdbHash treats all array-types as ANYARRAYOID, it doesn't know how to hash
-				 * the individual types (why is this ?) */
-				if (typeIsArrayType(att_type))
-					att_type = ANYARRAYOID;
+				/*
+				 * FIXME: Fix the hashing for array dataypes. Previously if
+				 * the attribute was an array type such as numeric[], float[]
+				 * etc, the OID for those attributes would be considered as
+				 * ANYARRAYOID instead of their original type. This would
+				 * enable the hashDatum() to hash the data for that particular
+				 * attribute since it only knows how to hash ANYARRAYOID. But
+				 * this resulted in incorrect behavior. So for now disallow
+				 * all attributes which are array types from being hashed
+				 * until the hashDatum() is fixed.
+				 */
 
 				cdbhash(hash, hAttr, att_type);
 			}

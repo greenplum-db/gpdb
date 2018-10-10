@@ -539,7 +539,7 @@ WHERE l.id % r.id = 0
 GROUP BY l.id
 ORDER BY l.id;
 
--- Array types are GPDB hashable
+-- Array types are not GPDB hashable
 CREATE TEMP TABLE text_array_table (t text[]) DISTRIBUTED BY ( t );
 INSERT INTO text_array_table VALUES ('{foo}');
 

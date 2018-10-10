@@ -795,11 +795,17 @@ SELECT * FROM test_copy_on_segment_nocol;
 
 CREATE TABLE test_copy_on_segment_array (a int[], b text) DISTRIBUTED BY (a);
 INSERT INTO test_copy_on_segment_array VALUES ('{1,2,3}', 'sd');
+ERROR:  Type 1007 is not hashable.  (seg2 127.0.0.1:25434 pid=60241)
 INSERT INTO test_copy_on_segment_array VALUES ('{2,2,3}', 'fg');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 INSERT INTO test_copy_on_segment_array VALUES ('{3,2,1}', 'hj');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 INSERT INTO test_copy_on_segment_array VALUES ('{233,2,1}', 'hj');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 INSERT INTO test_copy_on_segment_array VALUES ('{666,2,1}', 'hj');
+ERROR:  Type 1007 is not hashable.  (seg2 127.0.0.1:25434 pid=60241)
 INSERT INTO test_copy_on_segment_array VALUES ('{3,555,1}', 'hj');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 COPY test_copy_on_segment_array TO '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
 CREATE TABLE test_copy_on_segment_array_1 (a int[], b text) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_array_1 FROM '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
@@ -810,11 +816,17 @@ SELECT * FROM test_copy_on_segment_array EXCEPT SELECT * FROM test_copy_on_segme
 
 CREATE TABLE test_copy_on_segment_2dim_array (a int[][]) DISTRIBUTED BY (a);
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,2,3},{2,5,9}}');
+ERROR:  Type 1007 is not hashable.  (seg0 127.0.0.1:25432 pid=60239)
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,8,3},{2,5,9}}');
+ERROR:  Type 1007 is not hashable.  (seg2 127.0.0.1:25434 pid=60241)
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,9,3},{2,9,9}}');
+ERROR:  Type 1007 is not hashable.  (seg0 127.0.0.1:25432 pid=60239)
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,3,3},{2,6,9}}');
+ERROR:  Type 1007 is not hashable.  (seg2 127.0.0.1:25434 pid=60241)
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,233,3},{2,5,9}}');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,666,3},{2,555,9}}');
+ERROR:  Type 1007 is not hashable.  (seg1 127.0.0.1:25433 pid=60240)
 COPY test_copy_on_segment_2dim_array TO '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
 CREATE TABLE test_copy_on_segment_2dim_array_1 (a int[][]) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_2dim_array_1 FROM '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
