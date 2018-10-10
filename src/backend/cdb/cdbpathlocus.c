@@ -230,9 +230,6 @@ cdb_build_distribution_pathkeys(PlannerInfo *root,
 	List	   *retval = NIL;
 	List	   *eq = list_make1(makeString("="));
 	int			i;
-	bool		isAppendChildRelation = false;
-
-	isAppendChildRelation = (rel->reloptkind == RELOPT_OTHER_MEMBER_REL);
 
 	for (i = 0; i < nattrs; ++i)
 	{
