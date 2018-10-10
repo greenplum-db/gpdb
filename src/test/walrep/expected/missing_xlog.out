@@ -32,8 +32,8 @@ create or replace function checkpoint_and_wait_for_replication_replay (retries i
 $$
 declare
 	i int;
-	checkpoint_locs text[];
-	replay_locs text[];
+	checkpoint_locs pg_lsn[];
+	replay_locs pg_lsn[];
 	failed_for_segment text[];
 	r record;
 	all_caught_up bool;
@@ -62,11 +62,8 @@ begin
 	loop
 		all_caught_up = true;
 		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
-			-- PostgreSQL 9.4 got a pg_lsn datatype that we could
-			-- use here, once we merge up to 9.4. Till then using
-			-- GPDB type gpxlogloc.
 			replay_locs[r.gp_segment_id] = r.loc;
-			if ('(' || r.loc || ')')::gpxlogloc < ('(' || checkpoint_locs[r.gp_segment_id] || ')')::gpxlogloc then
+			if r.loc < checkpoint_locs[r.gp_segment_id] then
 				all_caught_up = false;
 				failed_for_segment[r.gp_segment_id] = 1;
 			else
