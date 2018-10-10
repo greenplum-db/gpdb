@@ -195,6 +195,52 @@ execute myprep;
 execute myprep;
 execute myprep;
 
+-- Test that pl/pgsql simple expressions are not considered a
+-- oneoffPlan.  We validate this by ensuring that a simple expression
+-- involving a stable function is planned only once and the same plan
+-- is re-executed for each tuple.  The NOTICE in the immutable
+-- function allows us to detect when it is executed.  We assume that
+-- the planner folds immutablefunc() into a const.
+CREATE FUNCTION immutablefunc() RETURNS int2
+LANGUAGE plpgsql IMMUTABLE STRICT AS
+$$
+BEGIN
+	raise notice 'immutablefunc executed';
+	return 42;
+END
+$$;
+CREATE FUNCTION stablenow (dummy int2) RETURNS timestamp
+LANGUAGE plpgsql STABLE STRICT AS
+$fn$
+BEGIN
+	return now();
+END
+$fn$;
+
+CREATE FUNCTION volatilefunc(a int) RETURNS int
+LANGUAGE plpgsql VOLATILE STRICT AS
+$fn$
+DECLARE
+  t timestamp;
+BEGIN
+	t := stablenow(immutablefunc());
+	if date_part('month', t) > a then
+		return 0;
+	else
+		return 1;
+	end if;
+END
+$fn$;
+CREATE TABLE oneoffplantest (a int) distributed by (a);
+INSERT INTO oneoffplantest VALUES (0), (0), (0);
+
+-- Plan for the following query should be cached such that the call to
+-- immutablefun() is folded into a const.  Note that all the
+-- statements within volatilefunc() are pl/pgsql simple expressions.
+-- Their plans should NOT be classified as oneoffPlan and should be
+-- cached.  So we expect the NOTICE to be printed only once,
+-- regardless of the number of tuples in the table.
+select volatilefunc(a) from oneoffplantest;
 
 -- Test agg on top of join subquery on partition table with ORDER-BY clause
 CREATE TABLE bfv_planner_t1 (a int, b int, c int) distributed by (c);

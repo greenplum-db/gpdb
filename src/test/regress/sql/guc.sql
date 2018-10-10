@@ -242,13 +242,6 @@ set work_mem = '1MB';
 
 select myfunc(0), current_setting('work_mem');
 
--- In GPDB, the plan looks somewhat different from what you get on
--- PostgreSQL, so that the current_setting() in previous query is
--- evaluated before myfunc(0), and therefore it shows the old value,
--- '3 MB'. Query again to show that the myfunc(0) call actually changed
--- the setting.
-select current_setting('work_mem');
-
 set work_mem = '3MB';
 
 -- it should roll back on error, though

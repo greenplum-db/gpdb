@@ -126,3 +126,42 @@ select has_account_type('select * from (select simple_sql_function(i) from all_t
 -- 'Executor' account. We also expect one main 'Executor' account per slice, so
 -- expect '12' total Executor accounts
 select has_account_type('select * from (select simple_sql_function(i) from all_tuples_on_seg0) a, (select simple_sql_function(i) from all_tuples_on_seg0) b', 'Executor');
+
+create or replace function oneoff_plan_func(a integer)
+returns integer AS
+$$
+BEGIN
+if date_part('month', now()) + 1 > a then
+   return 0;
+else
+   return 1;
+end if;
+END
+$$ LANGUAGE 'plpgsql' stable;
+
+-- The oneoff_plan_func calls the stable function "now()".  Normally,
+-- GPDB will agressively evaluate stable functions in the planner, at
+-- the cost of being required to regenerate a plan during every
+-- execution.  The benefit of this is partition elimination because
+-- partition elimination is done inside the planner, by evaluating
+-- stable functions we can avoid costly full table scans on tables
+-- that will yield no tuples.  However, in the case of simple
+-- expressions in pl/pgsql the resulting plan will never do partition
+-- elimination.  In cases where we will end up with simple
+-- expressions, we can prevent the planner from evaluating stable
+-- functions in order for it to create a reusable plan.  A reusable
+-- plan will be cached and reused for subsequent executions of
+-- oneoff_plan_func.
+
+-- Two planners, one for each evaluated statement block in oneoff_plan_func will
+-- be executed on seg0.  Because seg0 is the only segment having tuples, no
+-- other segment will create a plan.
+select has_account_type('select oneoff_plan_func(i) from all_tuples_on_seg0', 'Planner');
+
+-- Both plans will have been cached during previous executions will be reused,
+-- therefore, we expect the output to be 0.
+select has_account_type('select oneoff_plan_func(i) from all_tuples_on_seg0', 'Planner');
+
+-- We expect only three Executor accounts, one per segment, because
+-- simple expressions in pl/pgsql should not need a full executor.
+select has_account_type('select oneoff_plan_func(i) from all_tuples_on_seg0', 'Executor');

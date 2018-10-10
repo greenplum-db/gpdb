@@ -32,3 +32,11 @@ get_first_subplan(PlannedStmt *plannedStmt)
 {
 	return (Plan *)list_nth(plannedStmt->subplans, 0);
 }
+
+TargetEntry *
+get_target_entry_from_root_plan_node(PlannedStmt *plannedstmt)
+{
+	Result *result_node = (Result*) plannedstmt->planTree;
+	List *tlist = result_node->plan.targetlist;
+	return list_nth(tlist, 0);
+}

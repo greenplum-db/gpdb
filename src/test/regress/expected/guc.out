@@ -691,7 +691,7 @@ CONTEXT:  SQL statement "set local work_mem = '2MB'"
 PL/pgSQL function myfunc(integer) line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
- 2MB    | 3MB
+ 2MB    | 2MB
 (1 row)
 
 set work_mem = '3MB';
@@ -713,18 +713,7 @@ CONTEXT:  SQL statement "set work_mem = '2MB'"
 PL/pgSQL function myfunc(integer) line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
- 2MB    | 3MB
-(1 row)
-
--- In GPDB, the plan looks somewhat different from what you get on
--- PostgreSQL, so that the current_setting() in previous query is
--- evaluated before myfunc(0), and therefore it shows the old value,
--- '3 MB'. Query again to show that the myfunc(0) call actually changed
--- the setting.
-select current_setting('work_mem');
- current_setting 
------------------
- 2MB
+ 2MB    | 2MB
 (1 row)
 
 set work_mem = '3MB';
@@ -761,7 +750,7 @@ CONTEXT:  SQL statement "set work_mem = '2MB'"
 PL/pgSQL function myfunc(integer) line 3 at SQL statement
  myfunc | current_setting 
 --------+-----------------
- 2MB    | 3MB
+ 2MB    | 2MB
 (1 row)
 
 -- Normally, CREATE FUNCTION should complain about invalid values in

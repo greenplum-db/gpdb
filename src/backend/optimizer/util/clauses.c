@@ -67,6 +67,7 @@ typedef struct
 	List	   *active_fns;
 	Node	   *case_val;
 	bool		estimate;
+	bool		eval_stable_functions;
 	bool		recurse_queries; /* recurse into query structures */
 	bool		recurse_sublink_testexpr; /* recurse into sublink test expressions */
 	Size        max_size; /* max constant binary size in bytes, 0: no restrictions */
@@ -150,6 +151,10 @@ static Node *substitute_actual_srf_parameters_mutator(Node *node,
 static bool tlist_matches_coltypelist(List *tlist, List *coltypelist);
 static bool contain_grouping_clause_walker(Node *node, void *context);
 
+/*
+ * Greenplum specific functions
+ */
+static bool should_eval_stable_functions(PlannerInfo *root);
 
 /*****************************************************************************
  *		OPERATOR clause functions
@@ -2433,6 +2438,8 @@ fold_constants(PlannerInfo *root, Query *q, ParamListInfo boundParams, Size max_
 
 	context.max_size = max_size;
 	
+	context.eval_stable_functions = should_eval_stable_functions(root);
+
 	return (Query *) query_or_expression_tree_mutator
 						(
 						(Node *) q,
@@ -2568,6 +2575,7 @@ eval_const_expressions(PlannerInfo *root, Node *node)
 	context.recurse_queries = false; /* do not recurse into query structures */
 	context.recurse_sublink_testexpr = true;
 	context.max_size = 0;
+	context.eval_stable_functions = should_eval_stable_functions(root);
 
 	return eval_const_expressions_mutator(node, &context);
 }
@@ -4479,18 +4487,9 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
 		 /* okay */ ;
 	else if (context->estimate && funcform->provolatile == PROVOLATILE_STABLE)
 		 /* okay */ ;
-	else if (context->root && context->root->glob && funcform->provolatile == PROVOLATILE_STABLE)
+	else if (context->eval_stable_functions && funcform->provolatile == PROVOLATILE_STABLE)
 	{
-		/*
-		 * okay, but we cannot reuse this plan
-		 *
-		 * Explanation: in GPDB, unlike in upstream, we go ahead and evaluate
-		 * stable functions in any case. But it means that the plan is only
-		 * good for this execution, and will need to be re-planned on next one.
-		 * For GPDB, that's considered a good tradeoff, as typical queries are
-		 * long running, and evaluating the stable functions aggressively can
-		 * allow partition pruning to happen, which can be a big win.
-		 */
+		/* okay, but we cannot reuse this plan */
 		context->root->glob->oneoffPlan = true;
 	}
 	else
@@ -5728,4 +5727,31 @@ tlist_matches_coltypelist(List *tlist, List *coltypelist)
 		return false;			/* too few tlist items */
 
 	return true;
+}
+
+/*
+ * If this expression is part of a query, and the query isn't a simple
+ * "SELECT foo()" style query with no actual tables involved, then we
+ * also aggressively evaluate stable functions, in addition to immutable
+ * ones. Such plans cannot be reused, and therefore need to be re-planned
+ * on every execution, but it can be a big win if it allows partition
+ * elimination to happen. That's considered a good tradeoff in GPDB, as
+ * typical queries are long-running.
+ */
+static bool
+should_eval_stable_functions(PlannerInfo *root)
+{
+	/*
+	 * Without PlannerGlobal, we cannot mark the plan as a `oneoffPlan`
+	 */
+	if (root == NULL) return false;
+	if (root->glob == NULL) return false;
+
+	/*
+	 * If the query has no range table, then there is no reason to need to
+	 * pre-evaluate stable functions, as the output cannot be used as part
+	 * of static partition elimination, unless the query is part of a
+	 * subquery.
+	 */
+	return root->parse->rtable || root->query_level > 1;
 }
