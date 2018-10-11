@@ -10,14 +10,17 @@
 #define SERVER_APPLICATION_RECEIVE_BUF_SIZE 65536
 char* receiveBuffer = NULL;
 
-void handleIncomingConnection(int fd);
+static void handleIncomingConnection(int fd);
+static void usage(void);
 
-void usage()
+static void
+usage(void)
 {
 	fprintf(stdout, "usage: gpnetbenchServer -p PORT [-h]\n");
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
 	int socketFd;
 	int clientFd;
@@ -130,7 +133,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void handleIncomingConnection(int fd)
+static void
+handleIncomingConnection(int fd)
 {
 	ssize_t bytes;
 
