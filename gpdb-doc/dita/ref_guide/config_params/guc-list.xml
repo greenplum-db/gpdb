@@ -91,6 +91,7 @@
             <li>
               <xref href="#default_tablespace"/>
             </li>
+            <li><xref href="#default_text_search_config" format="dita"/></li>
             <li>
               <xref href="#default_transaction_isolation"/>
             </li>
@@ -1649,6 +1650,39 @@
             <row>
               <entry colname="col1">name of a tablespace</entry>
               <entry colname="col2">unset</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="default_text_search_config">
+    <title>default_text_search_config</title>
+    <body>
+      <p>Selects the text search configuration that is used by those variants of the text search
+        functions that do not have an explicit argument specifying the configuration. See <xref
+          href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/> for further information. The
+        built-in default is <codeph>pg_catalog.simple</codeph>, but <codeph>initdb</codeph> will
+        initialize the configuration file with a setting that corresponds to the chosen
+          <codeph>lc_ctype</codeph> locale, if a configuration matching that locale can be
+        identified.</p>
+      <table id="table_enc_3mb_lfb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">The name of a text search configuration.</entry>
+              <entry colname="col2"><codeph>pg_catalog.simple</codeph></entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

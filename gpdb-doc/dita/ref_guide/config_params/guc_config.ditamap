@@ -53,6 +53,7 @@
             <topicref href="guc-list.xml#debug_print_slice_table"/>
             <topicref href="guc-list.xml#default_statistics_target"/>
             <topicref href="guc-list.xml#default_tablespace"/>
+            <topicref href="guc-list.xml#default_text_search_config"/>
             <topicref href="guc-list.xml#default_transaction_isolation"/>
             <topicref href="guc-list.xml#default_transaction_read_only"/>
             <topicref href="guc-list.xml#dynamic_library_path"/>

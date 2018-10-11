@@ -328,7 +328,7 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_control" type="section">optimizer_control</xref>
             </p>
-            <p><xref href="guc-list.xml#optimizer_enable_associativit" type="section"
+            <p><xref href="guc-list.xml#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref></p>
             <p><xref href="guc-list.xml#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref></p>

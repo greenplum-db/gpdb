@@ -48,6 +48,7 @@
         <topicref href="distribution.xml"/>
         <topicref href="dml.xml" navtitle="Managing Data" id="dml"/>
         <topicref href="query/query.ditamap" navtitle="Querying Data" format="ditamap"/>
+        <topicref href="textsearch/textsearch.ditamap" navtitle="Full Text Search" format="ditamap"/>
         <topicref href="external/external-tables.ditamap" navtitle="Working with External Data"
             format="ditamap"/>
         <topicref href="load/load.ditamap" navtitle="Loading and Unloading Data" format="ditamap"/>

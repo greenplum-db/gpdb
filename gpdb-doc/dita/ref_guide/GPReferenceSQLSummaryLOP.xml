@@ -177,6 +177,34 @@
 		<codeblock conref="sql_commands/ALTER_TABLESPACE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TABLESPACE.xml"/> for more
 			information.</p>
+		<section>
+			<title>ALTER TEXT SEARCH CONFIGURATION</title>
+		</section>
+	    <p conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
+  		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
+  		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/> for more
+  		information.</p>
+		<section>
+			<title>ALTER TEXT SEARCH DICTIONARY</title>
+		</section>
+		<p conref="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/> for more
+			information.</p>
+		<section>
+			<title>ALTER TEXT SEARCH PARSER</title>
+		</section>
+		<p conref="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/> for more
+			information.</p>
+		<section>
+			<title>ALTER TEXT SEARCH TEMPLATE</title>
+		</section>
+		<p conref="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/> for more
+			information.</p>
 		<section id="ae1903781">
 			<title>ALTER TYPE</title>
 		</section>
@@ -446,6 +474,34 @@
 		<codeblock conref="sql_commands/CREATE_TABLESPACE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TABLESPACE.xml"/> for more
 			information.</p>
+		<section>
+			<title>CREATE TEXT SEARCH CONFIGURATION</title>
+		</section>
+		<p conref="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml"/> for more
+			information.</p>
+		<section>
+			<title>CREATE TEXT SEARCH DICTIONARY</title>
+		</section>
+		<p conref="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml"/> for more
+			information.</p>
+		<section>
+			<title>CREATE TEXT SEARCH PARSER</title>
+		</section>
+		<p conref="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/> for more
+			information.</p>
+		<section>
+			<title>CREATE TEXT SEARCH TEMPLATE</title>
+		</section>
+		<p conref="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml"/> for more
+			information.</p>
 		<section id="ae1904701">
 			<title>CREATE TYPE</title>
 		</section>
@@ -695,6 +751,34 @@
 		<p conref="sql_commands/DROP_TABLESPACE.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/DROP_TABLESPACE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_TABLESPACE.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP TEXT SEARCH CONFIGURATION</title>
+		</section>
+		<p conref="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP TEXT SEARCH DICTIONARY</title>
+		</section>
+		<p conref="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP TEXT SEARCH PARSER</title>
+		</section>
+		<p conref="sql_commands/DROP_TEXT_SEARCH_PARSER.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_PARSER.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_PARSER.xml"/> for more
+			information.</p>
+		<section>
+			<title>DROP TEXT SEARCH TEMPLATE</title>
+		</section>
+		<p conref="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/> for more
 			information.</p>
 		<section id="ae1904947">
 			<title>DROP TYPE</title>

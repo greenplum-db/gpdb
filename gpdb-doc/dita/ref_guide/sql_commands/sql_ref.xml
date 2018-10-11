@@ -24,9 +24,6 @@
       <li id="ad142907">
         <xref href="./ALTER_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
       </li>
-      <li id="ad142882">
-        <xref href="./ALTER_FILESPACE.xml#topic1" type="topic" format="dita"/>
-      </li>
       <li id="ad142539">
         <xref href="./ALTER_FOREIGN_DATA_WRAPPER.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -79,6 +76,14 @@
       <li id="ad140311">
         <xref href="./ALTER_TABLESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="alter-ts-config">
+        <xref href="./ALTER_TEXT_SEARCH_CONFIGURATION.xml" type="topic" format="dita"/>
+      </li>
+      <li id="alter-ts-dictionary">
+        <xref href="./ALTER_TEXT_SEARCH_DICTIONARY.xml" type="topic" format="dita"/>
+      </li>
+      <li><xref href="ALTER_TEXT_SEARCH_PARSER.xml#topic1"/></li>
+      <li><xref href="ALTER_TEXT_SEARCH_TEMPLATE.xml#topic1"/></li>
       <li id="ad140319">
         <xref href="./ALTER_TYPE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -193,6 +198,10 @@
       <li id="ad139933">
         <xref href="./CREATE_TABLESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li><xref href="CREATE_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></li>
+      <li><xref href="CREATE_TEXT_SEARCH_DICTIONARY.xml#topic1"/></li>
+      <li><xref href="CREATE_TEXT_SEARCH_PARSER.xml#topic1"/></li>
+      <li><xref href="CREATE_TEXT_SEARCH_TEMPLATE.xml#topic1"/></li>
       <li id="ad140521">
         <xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -236,9 +245,6 @@
       </li>
       <li id="ad140689">
         <xref href="./DROP_EXTERNAL_TABLE.xml#topic1" type="topic" format="dita"/>
-      </li>
-      <li id="ad142899">
-        <xref href="./DROP_FILESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad142785">
         <xref href="./DROP_FOREIGN_DATA_WRAPPER.xml#topic1" type="topic" format="dita"/>
@@ -300,6 +306,10 @@
       <li id="ad140726">
         <xref href="./DROP_TABLESPACE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li><xref href="DROP_TEXT_SEARCH_CONFIGURATION.xml#topic1"/></li>
+      <li><xref href="DROP_TEXT_SEARCH_DICTIONARY.xml#topic1"/></li>
+      <li><xref href="DROP_TEXT_SEARCH_PARSER.xml#topic1"/></li>
+      <li><xref href="DROP_TEXT_SEARCH_TEMPLATE.xml#topic1"/></li>
       <li id="ad140734">
         <xref href="./DROP_TYPE.xml#topic1" type="topic" format="dita"/>
       </li>
