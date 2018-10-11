@@ -6705,6 +6705,13 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node)
 					List	   *hashExpr;
 					Plan	*new_subplan;
 
+					if (Gp_role == GP_ROLE_UTILITY)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 errmsg("Cannot update distribution key columns in utility mode")));
+					}
+
 					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte, rti);
 					hashExpr = getExprListFromTargetList(new_subplan->targetlist,
 														 targetPolicy->nattrs,
