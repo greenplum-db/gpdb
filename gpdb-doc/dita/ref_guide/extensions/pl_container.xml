@@ -669,10 +669,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <li><codeph>plpy.execute(stmt)</codeph> - Executes the query string <codeph>stmt</codeph>
           and returns query result in a list of dictionary objects. To be able to access the result
           fields ensure your query returns named fields.</li>
-        <li><codeph>plpy.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
+        <li><codeph>plpy.prepare(stmt[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types, if you have
           parameter references in the query.</li>
-        <li><codeph>plpy.execute(plan, ,[, argtypes])</codeph> - Executes a prepared plan.</li>
+        <li><codeph>plpy.execute(plan[, argtypes])</codeph> - Executes a prepared plan.</li>
         <li><codeph>plpy.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum Database
           log.</li>
         <li><codeph>plpy.log(msg)</codeph> - Sends a LOG message to the Greenplum Database log.</li>
@@ -701,8 +701,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         constructing ad-hoc queries. <ul id="ul_jwf_nd2_kfb">
           <li><codeph>plpy.quote_literal(string)</codeph> - Returns the string quoted to be used as
             a string literal in an SQL statement string. Embedded single-quotes and backslashes are
-            properly doubled. <codeph>quote_literal</codeph> returns null on null input (empty
-            input). If the argument might be null, <codeph>quote_nullable</codeph> might be more
+            properly doubled. <codeph>quote_literal()</codeph> returns null on null input (empty
+            input). If the argument might be null, <codeph>quote_nullable()</codeph> might be more
             appropriate.</li>
           <li><codeph>plpy.quote_nullable(string)</codeph> Returns the string quoted to be used as a
             string literal in an SQL statement string. If the argument is null, returns
@@ -744,10 +744,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <li><codeph>pg.spi.exec(stmt)</codeph> - Executes the query string <codeph>stmt</codeph> and
           returns query result in R data.frame. To be able to access the result fields make sure
           your query returns named fields.</li>
-        <li><codeph>pg.spi.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
+        <li><codeph>pg.spi.prepare(stmt[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types if you have
           parameter references in the query.</li>
-        <li><codeph>pg.spi.execp(plan, ,[, argtypes])</codeph> - Execute a prepared plan.</li>
+        <li><codeph>pg.spi.execp(plan[, argtypes])</codeph> - Execute a prepared plan.</li>
         <li><codeph>pg.spi.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum Database
           log.</li>
         <li><codeph>pg.spi.log(msg)</codeph> - Sends a LOG message to the Greenplum Database
