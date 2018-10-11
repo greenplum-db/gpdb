@@ -184,8 +184,11 @@ make_export(char *name, const char *value, StringInfo buf)
 
 	for ( ; 0 != (ch = *value); value++)
 	{
-		if (ch == '\'' || ch == '\\')
+		if (ch == '\\'){
 			appendStringInfoChar(buf, '\\');
+		}else if(ch == '\''){
+			appendStringInfo(buf, "\'\\\'");
+		}
 
 		appendStringInfoChar(buf, ch);
 	}
@@ -216,6 +219,7 @@ make_command(const char *cmd, extvar_t *ev)
 	make_export("GP_SEG_PORT", ev->GP_SEG_PORT, &buf);
 	make_export("GP_SESSION_ID", ev->GP_SESSION_ID, &buf);
 	make_export("GP_SEGMENT_COUNT", ev->GP_SEGMENT_COUNT, &buf);
+	make_export("GP_QUERY_STRING", ev->GP_QUERY_STRING, &buf);
 
 	/* hadoop env var */
 	make_export("GP_HADOOP_CONN_JARDIR", ev->GP_HADOOP_CONN_JARDIR, &buf);

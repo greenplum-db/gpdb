@@ -87,6 +87,7 @@ DROP EXTERNAL TABLE IF EXISTS exttab_txs_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_udfs_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_udfs_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_views_3;
+DROP EXTERNAL WEB TABLE table_env;
 
 DROP VIEW IF EXISTS exttab_views_3;
 
@@ -106,6 +107,11 @@ select * from check_ps;
 select * from check_env;
 
 -- end_ignore
+CREATE EXTERNAL WEB TABLE table_env (name TEXT, val TEXT )
+  EXECUTE E'env' ON SEGMENT 0
+  FORMAT 'TEXT' (DELIMITER '=');
+SELECT name, val FROM table_env WHERE name LIKE 'GP_QUERY%' ORDER BY name ASC;
+
 -- --------------------------------------
 -- some negative tests
 -- --------------------------------------

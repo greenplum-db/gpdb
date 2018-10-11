@@ -34,6 +34,7 @@
 #include "postgres.h"
 
 #include <fstream/gfile.h>
+#include <tcop/tcopprot.h>
 
 #include "funcapi.h"
 #include "access/fileam.h"
@@ -2506,6 +2507,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	extvar->GP_HADOOP_CONN_JARDIR = gp_hadoop_connector_jardir;
 	extvar->GP_HADOOP_CONN_VERSION = gp_hadoop_connector_version;
 	extvar->GP_HADOOP_HOME = gp_hadoop_home;
+	extvar->GP_QUERY_STRING = debug_query_string;
 
 	if (NULL != params)
 	{
