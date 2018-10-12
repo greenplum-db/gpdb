@@ -40,6 +40,8 @@
 #include "executor/spi.h"
 #include "port/atomics.h"
 #include "parser/parse_expr.h"
+#include "storage/bufmgr.h"
+#include "storage/buf_internals.h"
 #include "libpq/auth.h"
 #include "libpq/hba.h"
 #include "utils/builtins.h"
@@ -92,6 +94,9 @@ extern Datum check_auth_time_constraints(PG_FUNCTION_ARGS);
 /* XID wraparound */
 extern Datum test_consume_xids(PG_FUNCTION_ARGS);
 extern Datum gp_execute_on_server(PG_FUNCTION_ARGS);
+
+/* Check shared buffer cache for a database Oid */
+extern Datum check_shared_buffer_cache_for_dboid(PG_FUNCTION_ARGS);
 
 /* Triggers */
 
@@ -2015,4 +2020,27 @@ gp_execute_on_server(PG_FUNCTION_ARGS)
 	}
 	else
 		PG_RETURN_BOOL(true);
+}
+
+/*
+ * Check if the shared buffer cache contains any pages that have the specified
+ * database OID in their buffer tag. Return true if an entry is found, else
+ * return false.
+ */
+PG_FUNCTION_INFO_V1(check_shared_buffer_cache_for_dboid);
+Datum
+check_shared_buffer_cache_for_dboid(PG_FUNCTION_ARGS)
+{
+	Oid databaseOid = PG_GETARG_OID(0);
+	int i;
+
+	for (i = 0; i < NBuffers; i++)
+	{
+		volatile BufferDesc *bufHdr = &BufferDescriptors[i];
+
+		if (bufHdr->tag.rnode.dbNode == databaseOid)
+			PG_RETURN_BOOL(true);
+	}
+
+	PG_RETURN_BOOL(false);
 }

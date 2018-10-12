@@ -219,7 +219,7 @@ test: metadata_track
 test: workfile_mgr_test
 test: session_reset
 
-test: psql_gp_commands pg_resetxlog
+test: psql_gp_commands pg_resetxlog dropdb_check_shared_buffer_cache
 
 # Check for shmem leak for instrumentation slots
 test: instr_in_shmem_verify
