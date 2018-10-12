@@ -1542,15 +1542,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		noRowRequested = "(No row requested) ";
 	}
 
-	/* Time from start of query on qDisp to this worker's first result row */
-	if (!(INSTR_TIME_IS_ZERO(instr->firststart)))
-	{
-		INSTR_TIME_SET_ZERO(timediff);
-		INSTR_TIME_ACCUM_DIFF(timediff, instr->firststart, ctx->querystarttime);
-		cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-		appendStringInfo(es->str, ", start offset by %s", startbuf);
-	}
-
 	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
 		&& planstate->type == T_MotionState)
 	{
