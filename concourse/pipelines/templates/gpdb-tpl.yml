@@ -391,6 +391,15 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
 
+- name: icw-gporca-dump
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{test-data-bucket-name}}
+    secret_access_key: {{bucket-secret-access-key}}
+    region_name: {{aws-region}}
+    versioned_file: icw/dump.sql.xz
+
 {% endif %}
 {% if "aix7" in os_types %}
 - name: aix_environments
@@ -1160,6 +1169,10 @@ jobs:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
+      DUMP_DB: "true"
+  - put: icw-gporca-dump
+    params:
+      file: sqldump/dump.sql.xz
 
 - name: icw_gporca_centos6_gpos_memory
   plan:
@@ -2498,8 +2511,8 @@ jobs:
 {% endif %}
 
 ## ======================================================================
-##    __      _                 _                 
-##   /__\_  _| |_ ___ _ __  ___(_) ___  _ __  ___ 
+##    __      _                 _
+##   /__\_  _| |_ ___ _ __  ___(_) ___  _ __  ___
 ##  /_\ \ \/ / __/ _ \ '_ \/ __| |/ _ \| '_ \/ __|
 ## //__  >  <| ||  __/ | | \__ \ | (_) | | | \__ \
 ## \__/ /_/\_\\__\___|_| |_|___/_|\___/|_| |_|___/
