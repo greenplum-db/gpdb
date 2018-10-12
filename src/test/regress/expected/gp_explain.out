@@ -284,9 +284,9 @@ set gp_enable_explain_allstat=on;
 explain analyze SELECT * FROM explaintest;
                                                           QUERY PLAN                                                           
 -------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4) (actual time=0.384..0.593 rows=5 loops=2)
-   ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4) (actual time=0.022..0.024 rows=2 loops=2)
-         allstat: seg_firststart_total_ntuples/seg0_1.023 ms_0.041 ms_3/seg1_1.308 ms_0.048 ms_5/seg2_1.063 ms_0.031 ms_2//end
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4) (actual time=0.266..0.384 rows=5 loops=2)
+   ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4) (actual time=0.011..0.013 rows=2 loops=2)
+         allstat: seg_firststart_total_ntuples/seg0_0.745 ms_0.028 ms_3/seg1_0.640 ms_0.025 ms_5/seg2_0.997 ms_0.019 ms_2//end
    (slice0)    Executor memory: 322K bytes.
    (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
  Memory used:  128000kB
