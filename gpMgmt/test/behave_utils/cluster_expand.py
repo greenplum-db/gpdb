@@ -65,20 +65,20 @@ class Gpexpand:
 
     def initialize_segments(self):
         input_files = sorted(glob.glob('%s/gpexpand_inputfile*' % self.working_directory))
-        run_gpcommand(self.context, "gpexpand -D %s -i %s" % (self.database, input_files[-1]))
+        return run_gpcommand(self.context, "gpexpand -D %s -i %s" % (self.database, input_files[-1]))
 
-    def redistribute(self, duration=False, endtime=False):
+    def redistribute(self, duration, endtime):
         # Can flake with "[ERROR]:-End time occurs in the past"
         # if duration is set too low.
-        if duration:
-            flags = " --duration 00:00:02"
-        elif endtime:
+        if endtime:
             newtime = datetime.now() + timedelta(seconds=2)
             flags = " --end \"%s\"" % newtime.strftime("%Y-%m-%d %H:%M:%S")
+        elif duration:
+            flags = " --duration %s" % duration
         else:
             flags = ""
 
-        run_gpcommand(self.context, "gpexpand %s" % flags)
+        return run_gpcommand(self.context, "gpexpand -D %s %s" % (self.database, flags))
 
 
 if __name__ == '__main__':

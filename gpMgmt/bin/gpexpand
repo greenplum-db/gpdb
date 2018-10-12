@@ -211,7 +211,7 @@ def validate_options(options, args, parser):
         parser.exit()
 
     if not os.path.exists(options.master_data_directory):
-        logger.error('Master data directory does not exist.')
+        logger.error('Master data directory %s does not exist.' % options.master_data_directory)
         parser.exit()
 
     if options.database and (options.database.lower() == 'template0'

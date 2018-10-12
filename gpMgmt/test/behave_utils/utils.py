@@ -112,6 +112,8 @@ def run_gpcommand(context, command, cmd_prefix=''):
     context.stdout_message = result.stdout
     context.error_message = result.stderr
 
+    return (result.rc, result.stderr, result.stdout)
+
 
 def run_gpcommand_async(context, command):
     cmd = Command(name='run %s' % command, cmdStr='$GPHOME/bin/%s' % (command))
