@@ -100,6 +100,9 @@ void
 InstrStopNode(Instrumentation *instr, uint64 nTuples)
 {
 	instr_time	endtime;
+	instr_time	startime;
+
+	startime = instr->starttime;
 
 	/* count the returned tuples */
 	instr->tuplecount += nTuples;
@@ -127,10 +130,8 @@ InstrStopNode(Instrumentation *instr, uint64 nTuples)
 		instr->running = true;
 		instr->firsttuple = INSTR_TIME_GET_DOUBLE(instr->counter);
 		/* CDB: save this start time as the first start */
-		instr->firststart = instr->starttime;
+		instr->firststart = startime;
 	}
-
-	INSTR_TIME_SET_ZERO(instr->starttime);
 }
 
 /* Finish a run cycle for a plan node */

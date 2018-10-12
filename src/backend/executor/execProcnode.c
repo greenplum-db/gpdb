@@ -963,7 +963,7 @@ ExecProcNode(PlanState *node)
 		ExecReScan(node);		/* let ReScan handle this */
 
 	if (node->instrument)
-		INSTR_START_NODE(node->instrument);
+		InstrStartNode(node->instrument);
 
 	if(!node->fHadSentGpmon)
 		CheckSendPlanStateGpmonPkt(node);
@@ -1181,7 +1181,7 @@ ExecProcNode(PlanState *node)
 	}
 
 	if (node->instrument)
-		INSTR_STOP_NODE(node->instrument, TupIsNull(result) ? 0 : 1);
+		InstrStopNode(node->instrument, TupIsNull(result) ? 0 : 1);
 
 	if (node->plan)
 		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
