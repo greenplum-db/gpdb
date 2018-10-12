@@ -91,47 +91,6 @@ extern void InstrStartNode(Instrumentation *instr);
 extern void InstrStopNode(Instrumentation *instr, uint64 nTuples);
 extern void InstrEndLoop(Instrumentation *instr);
 
-/*
- * GPDB Note: Macro INSTR_START_NODE replaces InstrStartNode in ExecProcNode for
- * performance benefits, other files keep using InstrStartNode. Pay attention
- * to keep InstrStartNode/INSTR_START_NODE synchronized when modifying this macro.
- */
-#define INSTR_START_NODE(instr) do {											\
-	if ((instr)->need_timer) {													\
-		if (INSTR_TIME_IS_ZERO((instr)->starttime))								\
-			INSTR_TIME_SET_CURRENT((instr)->starttime);							\
-		else																	\
-			elog(DEBUG2, "INSTR_START_NODE called twice in a row");				\
-	}																			\
-} while(0)
-
-/*
- * GPDB Note: Macro INSTR_STOP_NODE replaces InstrStopNode in ExecProcNode for
- * performance benefits, other files keep using InstrStopNode. Pay attention
- * to keep InstrStopNode/INSTR_STOP_NODE synchronized when modifying this macro.
- */
-#define INSTR_STOP_NODE(instr, nTuples) do {									\
-	(instr)->tuplecount += (nTuples);											\
-	if ((instr)->need_timer)													\
-	{																			\
-		instr_time endtime;														\
-		if (INSTR_TIME_IS_ZERO((instr)->starttime))								\
-		{																		\
-			elog(DEBUG2, "INSTR_STOP_NODE called without start");				\
-			break;																\
-		}																		\
-		INSTR_TIME_SET_CURRENT(endtime);										\
-		INSTR_TIME_ACCUM_DIFF((instr)->counter, endtime, (instr)->starttime);	\
-		INSTR_TIME_SET_ZERO((instr)->starttime);								\
-	}																			\
-	if (!(instr)->running)														\
-	{																			\
-		(instr)->running = true;												\
-		(instr)->firsttuple = INSTR_TIME_GET_DOUBLE((instr)->counter);			\
-		(instr)->firststart = (instr)->starttime;								\
-	}																			\
-} while(0)
-
 #define GP_INSTRUMENT_OPTS (gp_enable_query_metrics ? INSTRUMENT_ROWS : INSTRUMENT_NONE)
 
 /* Greenplum query metrics */
