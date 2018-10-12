@@ -2458,7 +2458,7 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 	{
 		num_distinct = CDouble(form_pg_stats->stadistinct);
 	}
-	num_distinct = num_distinct.Ceil();
+	num_distinct = num_distinct.Ceil() - null_ndv;
 
 	BOOL is_dummy_stats = false;
 	// most common values and their frequencies extracted from the pg_statistic
@@ -2592,9 +2592,9 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 		// there will be remaining tuples if the merged histogram and the NULLS do not cover
 		// the total number of distinct values
 		if ((1 - CStatistics::Epsilon > num_freq_buckets + null_freq) &&
-			(0 < num_distinct - num_ndv_buckets - null_ndv))
+			(0 < num_distinct - num_ndv_buckets))
 		{
-			distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets - null_ndv));
+			distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets));
 			freq_remaining = std::max(CDouble(0.0), (1 - num_freq_buckets - null_freq));
 		}
 	}
