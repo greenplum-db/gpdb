@@ -704,12 +704,12 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             properly doubled. <codeph>quote_literal()</codeph> returns null on null input (empty
             input). If the argument might be null, <codeph>quote_nullable()</codeph> might be more
             appropriate.</li>
-          <li><codeph>plpy.quote_nullable(string)</codeph> Returns the string quoted to be used as a
-            string literal in an SQL statement string. If the argument is null, returns
+          <li><codeph>plpy.quote_nullable(string)</codeph> - Returns the string quoted to be used as
+            a string literal in an SQL statement string. If the argument is null, returns
               <codeph>NULL</codeph>. Embedded single-quotes and backslashes are properly
             doubled.</li>
           <li>
-            <codeph>plpy.quote_ident(string)</codeph> Returns the string quoted to be used as an
+            <codeph>plpy.quote_ident(string)</codeph> - Returns the string quoted to be used as an
             identifier in an SQL statement string. Quotes are added only if necessary (for example,
             if the string contains non-identifier characters or would be case-folded). Embedded
             quotes are properly doubled. </li>
