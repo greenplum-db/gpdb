@@ -8,10 +8,10 @@
 Song G, Qu W, Liu X, et al. Approximate Calculation of Window Aggregate Functions via Global Random Sample[J]. Data Science & Engineering, 2018(2):1-12.
 
 
-##范围：
+## 范围：
 该版本的代码仅对avg进行了优化，其他函数的优化正在继续修改代码。
 
-##使用方法
+## 使用方法
 (1)使用gpconfig -c enable_sample -v * 指定是否采样， 1 表示采样，0表示不采样
 (2)使用gpconfig -c sample_percent -v * 指定采样率
 
