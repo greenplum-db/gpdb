@@ -2730,6 +2730,15 @@ typedef struct WindowAggState
 	TupleTableSlot *agg_row_slot;
 	TupleTableSlot *temp_slot_1;
 	TupleTableSlot *temp_slot_2;
+
+	/*
+	 * sample pos  by sgx
+	 */
+	int64	samindex[1000]; //sample index, recursive used to save memory 
+	int numindex;
+	int indexheadpos;
+	//end by sgx
+
 } WindowAggState;
 
 /* ----------------

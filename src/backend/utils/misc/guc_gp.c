@@ -422,6 +422,8 @@ int			optimizer_penalize_broadcast_threshold;
 double		optimizer_cost_threshold;
 double		optimizer_nestloop_factor;
 double		optimizer_sort_factor;
+/* added by qww for windows sample */
+double		sample_percent;
 
 /* Optimizer hints */
 int			optimizer_join_arity_for_associativity_commutativity;
@@ -454,6 +456,8 @@ bool		optimizer_replicated_table_insert;
 
 /* GUCs for slice table*/
 int			gp_max_slices;
+/* added by qww for windows sample */
+int 		enable_sample;
 
 /* System Information */
 static int	gp_server_version_num;
@@ -4298,6 +4302,18 @@ struct config_int ConfigureNamesInt_gp[] =
 		0, 0, INT_MAX, NULL, NULL
 	},
 
+
+	/* added by qww */
+	{
+		{"enable_sample", PGC_USERSET, PRESET_OPTIONS,
+			gettext_noop("sample methods"),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&enable_sample,
+		0, 0, INT_MAX, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, 0, 0, 0, NULL, NULL
@@ -4487,6 +4503,17 @@ struct config_real ConfigureNamesReal_gp[] =
 		&optimizer_sort_factor,
 		1.0, 0.0, DBL_MAX,
 		NULL, NULL, NULL
+	},
+
+	/* added by qww */
+	{
+		{"sample_percent", PGC_USERSET, PRESET_OPTIONS,
+			gettext_noop("sample methods"),
+			NULL,
+			GUC_NOT_IN_SAMPLE
+		},
+		&sample_percent,
+		0, 0, INT_MAX, NULL, NULL
 	},
 
 	/* End-of-list marker */
