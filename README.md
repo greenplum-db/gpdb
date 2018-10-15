@@ -13,6 +13,7 @@ Song G, Qu W, Liu X, et al. Approximate Calculation of Window Aggregate Function
 
 ## 使用方法
 (1)使用gpconfig -c enable_sample -v * 指定是否采样， 1 表示采样，0表示不采样
+
 (2)使用gpconfig -c sample_percent -v * 指定采样率
 
 
