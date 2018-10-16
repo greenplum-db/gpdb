@@ -216,15 +216,13 @@ extern ModifyTable *make_modifytable(PlannerInfo *root,
 				 List *rowMarks, int epqParam);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
-						   int numCols, 
-						   AttrNumber *sortColIdx, Oid *sortOperators,
 						   double limit_tuples);
 extern Plan *add_agg_cost(PlannerInfo *root, Plan *plan, 
 		 List *tlist, List *qual,
 		 AggStrategy aggstrategy, 
 		 bool streaming, 
-		 int numGroupCols, AttrNumber *grpColIdx,
-		 long numGroups, int num_nullcols,
+		 int numGroupCols,
+		 long numGroups,
 		 const AggClauseCosts *aggcosts);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
 

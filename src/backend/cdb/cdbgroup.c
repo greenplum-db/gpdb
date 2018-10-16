@@ -4880,8 +4880,8 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 		add_agg_cost(NULL, &input_dummy,
 					 ctx->sub_tlist, (List *) root->parse->havingQual,
 					 AGG_HASHED, false,
-					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0,
+					 ctx->numGroupCols,
+					 numGroups,
 					 ctx->agg_costs);
 	}
 	else
@@ -4891,23 +4891,20 @@ cost_1phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			/* PlainAgg */
 			add_agg_cost(NULL, &input_dummy,
 						 ctx->sub_tlist, (List *) root->parse->havingQual,
-						 AGG_PLAIN, false,
-						 0, NULL,
-						 1, 0,
-						 ctx->agg_costs);
+						 AGG_PLAIN, false, 0, 1, ctx->agg_costs);
 		}
 		else
 		{
 			/* GroupAgg */
 			if (!is_sorted)
 			{
-				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
+				add_sort_cost(NULL, &input_dummy, -1.0);
 			}
 			add_agg_cost(NULL, &input_dummy,
 						 ctx->sub_tlist, (List *) root->parse->havingQual,
 						 AGG_SORTED, false,
-						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0,
+						 ctx->numGroupCols,
+						 numGroups,
 						 ctx->agg_costs);
 		}
 
@@ -4993,8 +4990,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 		add_agg_cost(NULL, &input_dummy,
 					 NIL, NIL,	/* Don't know preliminary tlist, qual IS NIL */
 					 AGG_HASHED, root->config->gp_hashagg_streambottom,
-					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0,
+					 ctx->numGroupCols,
+					 numGroups,
 					 ctx->agg_costs);
 
 		if (gp_hashagg_streambottom)
@@ -5011,8 +5008,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 						 NIL, NIL,	/* Don't know preliminary tlist, qual IS
 									 * NIL */
 						 AGG_PLAIN, false,
-						 0, NULL,
-						 1, 0,
+						 0,
+						 1,
 						 ctx->agg_costs);
 		}
 		else
@@ -5020,14 +5017,14 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			/* Preliminary GroupAgg */
 			if (!is_sorted)
 			{
-				add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
+				add_sort_cost(NULL, &input_dummy, -1.0);
 			}
 			add_agg_cost(NULL, &input_dummy,
 						 NIL, NIL,	/* Don't know preliminary tlist, qual IS
 									 * NIL */
 						 AGG_SORTED, false,
-						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0,
+						 ctx->numGroupCols,
+						 numGroups,
 						 ctx->agg_costs);
 		}
 
@@ -5087,8 +5084,8 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 		add_agg_cost(NULL, &input_dummy,
 					 NIL, NIL,	/* Don't know tlist or qual */
 					 AGG_HASHED, false,
-					 ctx->numGroupCols, ctx->groupColIdx,
-					 numGroups, 0,
+					 ctx->numGroupCols,
+					 numGroups,
 					 ctx->agg_costs);
 	}
 	else
@@ -5099,19 +5096,19 @@ cost_2phase_aggregation(PlannerInfo *root, MppGroupContext *ctx, AggPlanInfo *in
 			add_agg_cost(NULL, &input_dummy,
 						 NIL, NIL,	/* Don't know tlist or qual */
 						 AGG_PLAIN, false,
-						 0, NULL,
-						 1, 0,
+						 0,
+						 1,
 						 ctx->agg_costs);
 		}
 		else
 		{
 			/* GroupAgg */
-			add_sort_cost(NULL, &input_dummy, ctx->numGroupCols, NULL, NULL, -1.0);
+			add_sort_cost(NULL, &input_dummy, -1.0);
 			add_agg_cost(NULL, &input_dummy,
 						 NIL, NIL,	/* Don't know tlist or qual */
 						 AGG_SORTED, false,
-						 ctx->numGroupCols, ctx->groupColIdx,
-						 numGroups, 0,
+						 ctx->numGroupCols,
+						 numGroups,
 						 ctx->agg_costs);
 		}
 	}
@@ -5575,7 +5572,7 @@ incremental_sort_cost(double rows, int width, int numKeyCols)
 	dummy.plan_rows = rows;
 	dummy.plan_width = width;
 
-	add_sort_cost(NULL, &dummy, numKeyCols, NULL, NULL, -1.0);
+	add_sort_cost(NULL, &dummy, -1.0);
 
 	return dummy.total_cost;
 }
@@ -5596,8 +5593,8 @@ incremental_agg_cost(double rows, int width, AggStrategy strategy,
 	add_agg_cost(NULL, &dummy,
 				 NULL, NULL,
 				 strategy, false,
-				 numGroupCols, NULL,
-				 numGroups, 0, aggcosts);
+				 numGroupCols,
+				 numGroups, aggcosts);
 
 	return dummy.total_cost;
 }

@@ -5152,8 +5152,7 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
 	Plan	   *plan = &node->plan;
 
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
-	plan = add_sort_cost(root, plan, numCols, sortColIdx, sortOperators,
-						 limit_tuples);
+	plan = add_sort_cost(root, plan, limit_tuples);
 
 	plan->targetlist = cdbpullup_targetlist(lefttree,
 				 cdbpullup_exprHasSubplanRef((Expr *) lefttree->targetlist));
@@ -5188,14 +5187,9 @@ make_sort(PlannerInfo *root, Plan *lefttree, int numCols,
  * that root may be NULL (e.g. when called outside make_sort).
  */
 Plan *
-add_sort_cost(PlannerInfo *root, Plan *input, int numCols,
-			  AttrNumber *sortColIdx, Oid *sortOperators, double limit_tuples)
+add_sort_cost(PlannerInfo *root, Plan *input, double limit_tuples)
 {
 	Path		sort_path;		/* dummy for result of cost_sort */
-
-	UnusedArg(numCols);
-	UnusedArg(sortColIdx);
-	UnusedArg(sortOperators);
 
 	cost_sort(&sort_path, root, NIL,
 			  input->total_cost,
@@ -5900,9 +5894,7 @@ make_agg(PlannerInfo *root, List *tlist, List *qual,
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
 
 	add_agg_cost(root, plan, tlist, qual, aggstrategy, streaming,
-				 numGroupCols, grpColIdx,
-				 numGroups, num_nullcols,
-				 aggcosts);
+				 numGroupCols, numGroups, aggcosts);
 
 	plan->qual = qual;
 	plan->targetlist = tlist;
@@ -5915,30 +5907,25 @@ make_agg(PlannerInfo *root, List *tlist, List *qual,
 	return node;
 }
 
-/* add_agg_cost -- basic routine to accumulate Agg cost into a
+/*
+ * add_agg_cost -- basic routine to accumulate Agg cost into a
  * plan node representing the input cost.
  *
- * Unused arguments (e.g., streaming, grpColIdx, num_nullcols)
- * are included to allow for future improvements to aggregate
- * costing.  Note that root may be NULL (e.g., when called from
- * outside make_agg).
+ * Note that root may be NULL (e.g., when called from * outside make_agg).
  */
 Plan *
 add_agg_cost(PlannerInfo *root, Plan *plan,
 			 List *tlist, List *qual,
 			 AggStrategy aggstrategy,
 			 bool streaming,
-			 int numGroupCols, AttrNumber *grpColIdx,
-			 long numGroups, int num_nullcols,
+			 int numGroupCols,
+			 long numGroups,
 			 const AggClauseCosts *aggcosts)
 {
 	Path		agg_path;		/* dummy for result of cost_agg */
 	QualCost	qual_cost;
 	HashAggTableSizes hash_info;
 	double entrywidth;
-
-	UnusedArg(grpColIdx);
-	UnusedArg(num_nullcols);
 
     /* Solution for MPP-11942
      * Before this fix, we calculated the width from the sub_tlist which
