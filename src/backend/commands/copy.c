@@ -2410,7 +2410,6 @@ CopyToDispatch(CopyState cstate)
 	int			attr_count;
 	Form_pg_attribute *attr;
 	CdbCopy    *cdbCopy;
-	StringInfoData cdbcopy_err;
 	uint64		processed = 0;
 
 	tupDesc = cstate->rel->rd_att;
@@ -2427,9 +2426,6 @@ CopyToDispatch(CopyState cstate)
 	cdbCopy->hasReplicatedTable = GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy);
 
 	/* XXX: lock all partitions */
-
-	/* allocate memory for error and copy strings */
-	initStringInfo(&cdbcopy_err);
 
 	/*
 	 * Start a COPY command in every db of every segment in Greenplum Database.
@@ -2538,13 +2534,12 @@ CopyToDispatch(CopyState cstate)
 	PG_CATCH();
 	{
 		MemoryContext oldcontext = MemoryContextSwitchTo(cstate->copycontext);
-		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		cdbCopyAbort(cdbCopy);
 
 		ereport(LOG,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("%s", cdbcopy_err.data)));
+				 errmsg("%s", cdbCopy->err_msg.data)));
 
 		MemoryContextSwitchTo(oldcontext);
 		PG_RE_THROW();
@@ -2568,9 +2563,8 @@ CopyToDispatch(CopyState cstate)
 	if (cdbCopy->io_errors)
 		ereport(ERROR,
 				(errcode(ERRCODE_IO_ERROR),
-				 errmsg("%s", cdbcopy_err.data)));
+				 errmsg("%s", cdbCopy->err_msg.data)));
 
-	pfree(cdbcopy_err.data);
 	pfree(cdbCopy);
 
 	return processed;

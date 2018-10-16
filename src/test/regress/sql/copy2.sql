@@ -275,3 +275,12 @@ DROP FUNCTION truncate_in_subxact();
 DROP TABLE x, y;
 DROP FUNCTION fn_x_before();
 DROP FUNCTION fn_x_after();
+
+create extension if not exists gp_inject_fault;
+create table copy2_test_segment_failure(a int, b int) with (appendonly=true);
+-- insert data to only segment 1 to make the test stable
+insert into copy2_test_segment_failure select i,i from generate_series(4,4)i;
+-- inject fault to fail copy on segment 1
+select gp_inject_fault_infinite('appendonly_beginscan', 'error', 2);
+copy copy2_test_segment_failure (a, b) to STDOUT;
+select gp_inject_fault_infinite('appendonly_beginscan', 'reset', 2);

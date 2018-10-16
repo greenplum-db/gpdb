@@ -148,6 +148,8 @@ FI_IDENT(AppendOnlyInsert, "appendonly_insert")
 FI_IDENT(AppendOnlyDelete, "appendonly_delete")
 /* inject fault before an append-only update */
 FI_IDENT(AppendOnlyUpdate, "appendonly_update")
+/* inject fault before an append-only beginscan */
+FI_IDENT(AppendOnlyBeginScan, "appendonly_beginscan")
 /* inject fault before creating an appendonly hash entry*/
 FI_IDENT(BeforeCreatingAnAOHashEntry, "before_creating_an_ao_hash_entry")
 /* inject fault in append-only compression function */
