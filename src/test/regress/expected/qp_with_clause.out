@@ -442,6 +442,64 @@ from country,city where country.capital = city.id) FOO where FOO.CNT is not null
   12 | India              | New Delhi
 (12 rows)
 
+-- following two query after set enable_seqscan=off is test for issue:
+-- https://github.com/greenplum-db/gpdb/issues/5475
+set enable_seqscan=off;
+with diversecountries as
+(select country.code,country.name,country.capital,d.CNT
+ from country, 
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000)
+select * from
+(
+select
+(select max(CNT) from diversecountries where  diversecountries.code = country.code) CNT,country.name COUNTRY,city.name CAPITAL
+from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
+ cnt |      country       |     capital      
+-----+--------------------+------------------
+   7 | Denmark            | Kobenhavn
+  12 | Russian Federation | Moscow
+   8 | Australia          | Canberra
+  11 | South Africa       | Pretoria
+  12 | India              | New Delhi
+   8 | Myanmar            | Rangoon (Yangon)
+  10 | Iran               | Teheran
+   8 | Italy              | Roma
+   8 | Austria            | Wien
+  12 | Canada             | Ottawa
+  12 | China              | Peking
+  12 | United States      | Washington
+(12 rows)
+
+select * from
+(
+select
+(select max(CNT) from
+(select country.code,country.name,country.capital,d.CNT
+ from country, 
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000) as diversecountries
+where  diversecountries.code = country.code) CNT,country.name COUNTRY,city.name CAPITAL
+from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
+ cnt |      country       |     capital      
+-----+--------------------+------------------
+  12 | India              | New Delhi
+   8 | Australia          | Canberra
+  11 | South Africa       | Pretoria
+   8 | Myanmar            | Rangoon (Yangon)
+  12 | Russian Federation | Moscow
+   7 | Denmark            | Kobenhavn
+   8 | Italy              | Roma
+  10 | Iran               | Teheran
+   8 | Austria            | Wien
+  12 | Canada             | Ottawa
+  12 | China              | Peking
+  12 | United States      | Washington
+(12 rows)
+
+set enable_seqscan=DEFAULT;
 --queries Using a CTE in the HAVING clause
 with notdiversecountries as
 (select country.code,country.name,country.capital,d.CNT

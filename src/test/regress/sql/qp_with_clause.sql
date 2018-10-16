@@ -5493,6 +5493,37 @@ select
 from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
 
 
+-- following two query after set enable_seqscan=off is test for issue:
+-- https://github.com/greenplum-db/gpdb/issues/5475
+set enable_seqscan=off;
+
+with diversecountries as
+(select country.code,country.name,country.capital,d.CNT
+ from country, 
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000)
+select * from
+(
+select
+(select max(CNT) from diversecountries where  diversecountries.code = country.code) CNT,country.name COUNTRY,city.name CAPITAL
+from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
+
+select * from
+(
+select
+(select max(CNT) from
+(select country.code,country.name,country.capital,d.CNT
+ from country, 
+ (select countrylanguage.countrycode,count(*) as CNT from countrylanguage group by countrycode
+  HAVING count(*) > 6) d
+ where d.countrycode = country.code and country.gnp > 100000) as diversecountries
+where  diversecountries.code = country.code) CNT,country.name COUNTRY,city.name CAPITAL
+from country,city where country.capital = city.id) FOO where FOO.CNT is not null;
+
+set enable_seqscan=DEFAULT;
+
+
 --queries Using a CTE in the HAVING clause
 
 with notdiversecountries as

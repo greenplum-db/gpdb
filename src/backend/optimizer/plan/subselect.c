@@ -413,10 +413,16 @@ get_first_col_type(Plan *plan, Oid *coltype, int32 *coltypmod,
 
 /**
  * Returns true if query refers to a distributed table.
+ *
+ * Support whether the function should run recursively
  */
-static bool QueryHasDistributedRelation(Query *q)
+static bool QueryHasDistributedRelation(PlannerInfo *root, Query *q, bool recur)
 {
 	ListCell   *rt = NULL;
+       ListCell   *ct = NULL;
+       CommonTableExpr *cte = NULL;
+       Index           levelsup;
+       PlannerInfo *cteroot;
 
 	foreach(rt, q->rtable)
 	{
@@ -433,6 +439,28 @@ static bool QueryHasDistributedRelation(Query *q)
 			}
 			pfree(policy);
 		}
+               if (rte->rtekind == RTE_CTE && recur)
+               {
+                               levelsup = rte->ctelevelsup;
+                               cteroot = root;
+                               while (levelsup-- > 0)
+                               {
+                                       cteroot = cteroot->parent_root;
+                                       if (!cteroot || !cteroot->parse)                   /* shouldn't happen */
+                                               continue;
+                                       foreach(ct, cteroot->parse->cteList)
+                                       {
+                                               cte = (CommonTableExpr *) lfirst(ct);
+                                               if (strcmp(cte->ctename, rte->ctename) == 0)
+                                                       break;
+                                       }
+                               }
+			      if (cte != NULL && IsA(cte->ctequery, Query))
+					return QueryHasDistributedRelation(root, (Query*) cte->ctequery, recur);
+
+               }
+               if (rte->rtekind == RTE_SUBQUERY && recur)
+                       return QueryHasDistributedRelation(root, rte->subquery, recur);
 	}
 	return false;
 }
@@ -575,7 +603,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 
 	if ((Gp_role == GP_ROLE_DISPATCH)
 			&& IsSubqueryMultiLevelCorrelated(subquery)
-			&& QueryHasDistributedRelation(subquery))
+			&& QueryHasDistributedRelation(root, subquery, false))
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -584,7 +612,7 @@ make_subplan(PlannerInfo *root, Query *orig_subquery, SubLinkType subLinkType,
 
 	if ((Gp_role == GP_ROLE_DISPATCH)
 			&& IsSubqueryCorrelated(subquery)
-			&& QueryHasDistributedRelation(subquery))
+			&& QueryHasDistributedRelation(root, subquery, true))
 	{
 		/*
 		 * Generate the plan for the subquery with certain options disabled.
