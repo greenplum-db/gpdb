@@ -2052,6 +2052,7 @@ def _create_cluster(context, master_host, segment_host_list):
     testcluster.create_cluster(with_mirrors=False)
     context.gpexpand_mirrors_enabled = False
 
+@then('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 @given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
     _create_cluster(context, master_host, segment_host_list)
@@ -2311,6 +2312,7 @@ def impl(context, hostnames):
     reset_hosts(hosts, context.working_directory)
     reset_hosts(hosts, context.temp_base_dir)
 
+@then('the database is killed on hosts "{hostnames}"')
 @given('the database is killed on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
