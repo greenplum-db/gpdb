@@ -44,6 +44,9 @@ static const struct config_enum_entry format_options[] = {
 /* Current nesting depth of ExecutorRun calls */
 static int	nesting_level = 0;
 
+/* Indicator of an ANALYZE query. In this case, auto_explain should be disabled */
+static bool is_analyze_query = false;
+
 /* Saved hook values in case of unload */
 static ExecutorStart_hook_type prev_ExecutorStart = NULL;
 static ExecutorRun_hook_type prev_ExecutorRun = NULL;
@@ -51,7 +54,7 @@ static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 
 #define auto_explain_enabled() \
-	(auto_explain_log_min_duration >= 0 && \
+	(!is_analyze_query && auto_explain_log_min_duration >= 0 && \
 	 (nesting_level == 0 || auto_explain_log_nested_statements))
 
 void		_PG_init(void);
@@ -183,6 +186,9 @@ _PG_fini(void)
 static void
 explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
+	is_analyze_query = ((eflags & EXEC_FLAG_ANALYZE) != 0);
+	elog(DEBUG1, "is_analyze_query=%d", (int)is_analyze_query);
+
 	if (auto_explain_enabled())
 	{
 		instr_time starttime;
@@ -251,10 +257,6 @@ explain_ExecutorFinish(QueryDesc *queryDesc)
 	nesting_level++;
 	PG_TRY();
 	{
-		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults) {
-			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
-		}
-
 		if (prev_ExecutorFinish)
 			prev_ExecutorFinish(queryDesc);
 		else
@@ -278,6 +280,10 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 	if (auto_explain_enabled() && queryDesc->totaltime)
 	{
 		InstrEndLoop(queryDesc->totaltime);
+
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults) {
+			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
+		}
 
 		/* Log plan on master node if duration is exceeded */
 		double msec = queryDesc->totaltime->total * 1000.0;
