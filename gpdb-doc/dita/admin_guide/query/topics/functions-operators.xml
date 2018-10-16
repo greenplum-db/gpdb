@@ -512,7 +512,7 @@ SELECT foo();</codeblock>
                         <row>
                             <entry colname="col1">
                                 <xref format="html"
-                                    href="http://www.postgresql.org/docs/9.1/interactive/functions-xml.html"
+                                    href="https://www.postgresql.org/docs/9.1/static/functions-xml.html"
                                     scope="external">XML Functions</xref> and function-like
                                 expressions </entry>
                             <entry colname="col2"/>
