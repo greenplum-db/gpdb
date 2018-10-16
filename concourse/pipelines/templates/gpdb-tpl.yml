@@ -2014,7 +2014,7 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
-    - get: icw-gporca-dump
+    - get: icw_gporca_centos6_dump
   - put: terraform
     params:
       <<: *ccp_default_params
