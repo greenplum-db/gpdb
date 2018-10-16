@@ -232,8 +232,8 @@ Feature: expand the cluster by adding more segments
         And the user runs psql with "-c 'CREATE TABLE public.redistribute (i int) DISTRIBUTED BY (i)'" against database "gptest"
         And the user runs psql with "-c 'INSERT INTO public.redistribute SELECT generate_series(1, 10000)'" against database "gptest"
         And distribution information from table "public.redistribute" with data in "gptest" is saved
-        # currently using snowflake-simple-database-dump which should be replaced with icw-gporca-dump once gpexpand works with a dump of ICW
-        And the user runs psql with "-f /home/gpadmin/icw-gporca-dump/dump.sql" against database "gptest"
+        # currently using snowflake-simple-database-dump which should be replaced with icw_gporca_centos6_dump once gpexpand works with a dump of ICW
+        And the user runs psql with "-f /home/gpadmin/sqldump/dump.sql" against database "gptest"
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1,sdw2,sdw3"
         And the new host "sdw2,sdw3" is ready to go

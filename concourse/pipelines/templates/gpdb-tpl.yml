@@ -1974,7 +1974,7 @@ jobs:
     - get: centos-gpdb-dev-6
     - get: icw_gporca_centos6_dump
       passed: [gate_icw_end]
-    - get: snowflake-simple-database-dump
+    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1988,7 +1988,7 @@ jobs:
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     image: centos-gpdb-dev-6
-    input_mapping: {icw_gporca_centos6_dump: snowflake-simple-database-dump} # remove once icw_gporca_centos6_dump works with gpexpand
+    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
@@ -2014,7 +2014,7 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
-    - get: icw_gporca_centos6_dump
+    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2030,6 +2030,7 @@ jobs:
   - task: pre_run_test_setup
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
+    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
