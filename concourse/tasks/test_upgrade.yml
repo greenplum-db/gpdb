@@ -1,0 +1,26 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: toolsmiths/ccp
+    tag: "7"
+
+inputs:
+- name: terraform
+- name: ccp_src
+- name: cluster_env_files
+- name: gpdb_src
+- name: bin_gpdb_centos6
+- name: sqldump
+
+run:
+  path: gpdb_src/concourse/scripts/test_upgrade.bash
+  args:
+    - bin_gpdb_centos6
+    - sqldump/dump.sql.xz
+
+params:
+  DEBUG_UPGRADE: ""
+  NUMBER_OF_NODES: 2
