@@ -90,6 +90,7 @@
 		<topicref href="ref_guide/sql_commands/ALTER_SCHEMA.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_SEQUENCE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_TABLE.xml"/>
+    <topicref href="ref_guide/sql_commands/ALTER_TABLESPACE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/>
     <topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/>
     <topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/>
