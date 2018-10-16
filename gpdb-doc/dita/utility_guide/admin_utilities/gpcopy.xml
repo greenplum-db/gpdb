@@ -98,13 +98,6 @@
                 You must configure the system to use resource groups and create filespaces for the
                 tablespaces. </p>
         </section>
-        <section>
-            <title>Limitation for the Source and Destination Systems</title>
-            <p dir="ltr" id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
-                    <codeph>gpcopy</codeph> utility supports copying only between source and
-                destination Greenplum Database systems with the same number of segment instances.
-            </p>
-        </section>
         <section id="section6">
             <title>Options</title>
             <parml>

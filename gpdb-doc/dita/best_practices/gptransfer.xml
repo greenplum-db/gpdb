@@ -6,23 +6,21 @@
     Greenplum Database metadata and data from one Greenplum database to another.</shortdesc>
   <body>
     <!-- conref'ing to content from admin_guide. -->
-    <note conref="../admin_guide/managing/gptransfer.xml#note1"/>
-    <p conref="../admin_guide/managing/gptransfer.xml#intro1"/>
-    <p conref="../admin_guide/managing/gptransfer.xml#intro2"/>
-    <p conref="../admin_guide/managing/gptransfer.xml#intro3"/>
-    <p conref="../admin_guide/managing/gptransfer.xml#intro4"/>
-
-    <section conref="../admin_guide/managing/gptransfer.xml#prereqs"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#whatgptdoes"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#fastslow"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#batch"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#prephosts"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#limitations"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#fulltblmode"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#locking"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#validation"/>
-    <section conref="../admin_guide/managing/gptransfer.xml#failedtran"/>
-
+    <note conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/note1"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/intro1"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/intro2"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/intro3"/>
+    <p conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/intro4"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/prereqs"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/whatgptdoes"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/fastslow"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/batch"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/prephosts"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/limitations"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/fulltblmode"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/locking"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/validation"/>
+    <section conref="../admin_guide/managing/gptransfer.xml#topic_gptransfer/failedtran"/>
     <section>
       <title>Best Practices</title>
       <p><codeph>gptransfer</codeph> creates a configuration that allows transferring large amounts
@@ -32,8 +30,8 @@
         smaller tables. </p>
       <ol>
         <li>Before you begin to transfer data, replicate the schema or schemas from the source
-          cluster to the destination cluster. Options for copying the
-            schema include:<ul id="ul_q1y_1hh_1s">
+          cluster to the destination cluster. Options for copying the schema include:<ul
+            id="ul_q1y_1hh_1s">
             <li>Use the PostgreSQL <codeph>pg_dump</codeph> or <codeph>pg_dumpall</codeph> utility
               with the <codeph>–-schema-only</codeph> option.</li>
             <li>DDL scripts, or any other method for recreating schema in the destination

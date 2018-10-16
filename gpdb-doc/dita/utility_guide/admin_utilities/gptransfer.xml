@@ -8,7 +8,7 @@
         <p>The <codeph>gptransfer</codeph> utility copies objects from databases in a source
             Greenplum Database system to databases in a destination Greenplum Database system. </p>
         <!-- conref'ing to content from admin_guide. -->
-        <note conref="../../admin_guide/managing/gptransfer.xml#note1"/>
+        <note conref="../../admin_guide/managing/gptransfer.xml#topic_gptransfer/note1"/>
         <section id="section2">
             <title>Synopsis</title>
             <codeblock><b>gptransfer</b>
@@ -159,8 +159,8 @@
                     <codeph>gptransfer</codeph> command line increases the <codeph>gpfdist</codeph>
                 logging level.</p>
             <p>The <codeph>gptransfer</codeph> utility does not move configuration files such as
-                    <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set up
-                the destination system configuration separately. </p>
+                    <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>. You must set
+                up the destination system configuration separately. </p>
             <p>The <codeph>gptransfer</codeph> utility does not move external objects such as
                 Greenplum Database extensions, third party jar files, and shared object files. You
                 must install the external objects separately. </p>
@@ -218,11 +218,11 @@
             <sectiondiv><b>Validating Table Data with SHA-256</b>
                 <p>Validating table data with SHA-256 (specifying the option
                         <codeph>--validate=sha256</codeph>) requires the Greenplum Database pgcrypto
-                    extension. <ph otherprops="pivotal">The extension is included with Pivotal Greenplum 5.x. When copying
-                    data from a supported Pivotal Greenplum 4.3.x system, the extension package must
-                    be installed on the 4.3.x system. You do not need to run
-                        <codeph>pgcrypto.sql</codeph> to install the pgcrypto functions in a
-                    Greenplum 4.3.x database.</ph></p></sectiondiv>
+                    extension. <ph otherprops="pivotal">The extension is included with Pivotal
+                        Greenplum 5.x. When copying data from a supported Pivotal Greenplum 4.3.x
+                        system, the extension package must be installed on the 4.3.x system. You do
+                        not need to run <codeph>pgcrypto.sql</codeph> to install the pgcrypto
+                        functions in a Greenplum 4.3.x database.</ph></p></sectiondiv>
         </section>
         <section id="section6">
             <title>Options</title>
@@ -245,10 +245,10 @@
                     <pt>--batch-size=<varname>batch_size</varname></pt>
                     <pd>Sets the maximum number of tables that <codeph>gptransfer</codeph>
                         concurrently copies to the destination database. If not specified, the
-                        default is 2. The maximum is 10.<note>If the order of the transfer is
-                            important, specify a value of 1. The tables are transferred sequentially
-                            based on the order specified in the <codeph>-t</codeph> and
-                                <codeph>-f</codeph> options.</note></pd>
+                        default is 2. The maximum is 10.
+                        <note>If the order of the transfer is important, specify a value of 1. The
+                            tables are transferred sequentially based on the order specified in the
+                                <codeph>-t</codeph> and <codeph>-f</codeph> options.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>-d <varname>database</varname></pt>
@@ -260,11 +260,10 @@
                                 (<codeph>/<varname>RE_pattern</varname>/</codeph>). If you use a
                         regular expression, the name must be enclosed in double quotes ("). This
                         example <codeph>-d "demo/.*/"</codeph> specifies all databases in the
-                        Greenplum Database installation that begin with
-                            <codeph>demo</codeph>.<note>Note the following two examples for the
-                                <codeph>-d</codeph> option are equivalent. They both specify a set
-                            of databases that begins with <codeph>demo</codeph> and ends with zero
-                            or more
+                        Greenplum Database installation that begin with <codeph>demo</codeph>.
+                        <note>Note the following two examples for the <codeph>-d</codeph> option are
+                            equivalent. They both specify a set of databases that begins with
+                                <codeph>demo</codeph> and ends with zero or more
                             digits.<codeblock>-d "demo/[0-9]*/"
 -d "/demo[0-9]*/"</codeblock></note></pd>
                     <pd>If the source database does not exist, <codeph>gptransfer</codeph> returns
@@ -413,12 +412,12 @@
                                     <codeph>-d</codeph>, <codeph>--dest-database</codeph>,
                                         <codeph>--drop</codeph>, <codeph>-F</codeph>,
                                         <codeph>--full</codeph>, <codeph>--schema-only</codeph>,
-                                        <codeph>-T</codeph>, <codeph>-t</codeph>.<note>If a
-                                        destination table is not empty or the data in the source or
-                                        destination table changes during a transfer operation (rows
-                                        are inserted or deleted), the table row count validation
-                                        fails due to row count mismatch. <p>If the destination table
-                                            is not empty, you can specify the
+                                        <codeph>-T</codeph>, <codeph>-t</codeph>.
+                                    <note>If a destination table is not empty or the data in the
+                                        source or destination table changes during a transfer
+                                        operation (rows are inserted or deleted), the table row
+                                        count validation fails due to row count mismatch. <p>If the
+                                            destination table is not empty, you can specify the
                                                 <codeph>-truncate</codeph> option to truncate the
                                             table before the transfer operation.</p><p>You can
                                             specify the <codeph>-x</codeph> option to acquire
@@ -536,13 +535,13 @@
                         moved. </pd>
                     <pd>If a database exists in the destination system, besides the default
                         postgres, template0 and template1 databases, <codeph>gptransfer</codeph>
-                        returns an error and quits. <note>The <codeph>--full</codeph> option is
-                            recommended only when the databases contain a large number of tables
-                            with large amounts of data. Because of the overhead required to set up
-                            parallel transfers, the utility is not recommended when the databases
-                            contain tables with small amounts of data. For more information, see
-                                <xref href="#topic1/section4" format="dita"
-                        >Notes</xref>.</note></pd>
+                        returns an error and quits.
+                        <note>The <codeph>--full</codeph> option is recommended only when the
+                            databases contain a large number of tables with large amounts of data.
+                            Because of the overhead required to set up parallel transfers, the
+                            utility is not recommended when the databases contain tables with small
+                            amounts of data. For more information, see <xref href="#topic1/section4"
+                                format="dita">Notes</xref>.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>--gpfdist-verbose</pt>
@@ -615,8 +614,8 @@
                         is transferred.</pd>
                     <pd>Not valid with the <codeph>--partition-transfer</codeph>,
                             <codeph>--partition-transfer-non-partition-target</codeph>, or
-                            <codeph>--truncate</codeph> options.<note>Because of the overhead
-                            required to set up parallel transfers, the
+                            <codeph>--truncate</codeph> options.
+                        <note>Because of the overhead required to set up parallel transfers, the
                                 <codeph>--schema-only</codeph> option is not recommended when
                             transferring information for a large number of tables. For more
                             information, see <xref href="#topic1/section4" format="dita"
@@ -666,9 +665,9 @@ sdw4,192.0.2.4</codeblock>
                 <plentry>
                     <pt>--source-user=<varname>source_user</varname></pt>
                     <pd>User ID that is used to connect to the source Greenplum Database system. If
-                        not specified, the default is the user
-                                gpadmin.<note><codeph>gptransfer</codeph> creates external tables
-                            with the <codeph>execute</codeph> protocol, so the
+                        not specified, the default is the user gpadmin.
+                        <note><codeph>gptransfer</codeph> creates external tables with the
+                                <codeph>execute</codeph> protocol, so the
                                 <codeph>--source_user</codeph> that you specify must have superuser
                             privileges.</note></pd>
                 </plentry>
@@ -770,9 +769,9 @@ sdw4,192.0.2.4</codeblock>
                             <codeph>failed_migrated_tables_</codeph><varname>yyyymmdd_hhmmss</varname><codeph>.txt</codeph>.
                         The <varname>yyyymmdd_hhmmss</varname> is a time stamp when the
                             <codeph>gptransfer</codeph> process was started. The file is created in
-                        the directory where <codeph>gptransfer</codeph> is executed. <note>The file
-                            contains the table names where validation failed or other errors
-                            occurred during table migration.</note></pd>
+                        the directory where <codeph>gptransfer</codeph> is executed.
+                        <note>The file contains the table names where validation failed or other
+                            errors occurred during table migration.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>-v | --verbose</pt>

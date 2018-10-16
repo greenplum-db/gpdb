@@ -64,15 +64,10 @@
     <body>
       <p><codeph>gpcopy</codeph> cannot copy data from one database to another in the same Greenplum
         Database system. The destination system must be a separate Greenplum Database cluster.</p>
-      <p dir="ltr" id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
-          <codeph>gpcopy</codeph> utility supports copying only between source and destination
-        Greenplum Database systems with the same number of segments. If you need to transfer data to
-        a Greenplum Database system having a different number of segments, you must use
-          <codeph>gptransfer</codeph> instead. See <xref href="gptransfer.xml#topic_gptransfer"
-        />.</p>
       <p>If you are copying data between Greenplum Database clusters having different versions, each
         cluster must have <codeph>gpcopy</codeph> installed locally. <codeph>gpcopy</codeph> is
-        installed with Pivotal Greenplum Database starting with versions 5.9.0 and 4.3.26.0.</p>
+        installed with Pivotal Greenplum Database starting with versions 5.9.0. For Greenplum
+        Database 4.3.x, <codeph>gpcopy</codeph> is supported for versions 4.3.26.0 and later.</p>
       <p><codeph>gpcopy</codeph> transfers data from user databases only; the
           <codeph>postgres</codeph>, <codeph>template0</codeph>, and <codeph>template1</codeph>
         databases cannot be transferred. Administrators must transfer configuration files manually
@@ -189,10 +184,11 @@
               destination tables to validate the data transfer (<codeph>--validate count</codeph>
               option). The other <codeph>gpcopy</codeph> options specify the source and destination
               Greenplum Database system master hosts, ports, and the User ID to use to connect to
-              the Greenplum Database systems.<note>While the example command performs a full system
-                copy, consider migrating only portions of the your data at a time, so that you can
-                reduce downtime while addressing table errors or validation failures that may occur
-                during the copy operation.</note></p></li>
+              the Greenplum Database systems.
+              <note>While the example command performs a full system copy, consider migrating only
+                portions of the your data at a time, so that you can reduce downtime while
+                addressing table errors or validation failures that may occur during the copy
+                operation.</note></p></li>
           <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
             as <systemoutput>postgresql.conf</systemoutput> and
               <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
@@ -304,10 +300,11 @@ ORDER BY 4 DESC LIMIT 5;
               successfully copying and validating the table data in the destination system. The
               other <codeph>gpcopy</codeph> options specify the source and destination Greenplum
               Database system master hosts, ports, and the User ID to use to connect to the
-              Greenplum Database systems.<note>While the example command performs a full system
-                copy, consider migrating only portions of the your data at a time, so that you can
-                reduce downtime while addressing table errors or validation failures that may occur
-                during the copy operation.</note></p></li>
+              Greenplum Database systems.
+              <note>While the example command performs a full system copy, consider migrating only
+                portions of the your data at a time, so that you can reduce downtime while
+                addressing table errors or validation failures that may occur during the copy
+                operation.</note></p></li>
           <li>The <systemoutput>gpcopy</systemoutput> utility does not copy configuration files such
             as <systemoutput>postgresql.conf</systemoutput> and
               <systemoutput>pg_hba.conf</systemoutput>. You must set up the destination system
