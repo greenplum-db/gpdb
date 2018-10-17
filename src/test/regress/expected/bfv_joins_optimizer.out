@@ -3043,3 +3043,38 @@ AND ft.id = dt1.id;
      4
 (1 row)
 
+-- Test colocated equijoins on coerced distribution keys
+CREATE TABLE coercejoin (a varchar(10), b varchar(10)) DISTRIBUTED BY (a);
+-- Positive test, the join should be colocated as the implicit cast from the
+-- parse rewrite is a relabeling (varchar::text).
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
+                                   QUERY PLAN                                    
+---------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..862.00 rows=1 width=36)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=36)
+         Hash Cond: public.coercejoin.a::text = public.coercejoin.a::text
+         ->  Table Scan on coercejoin  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=18)
+               ->  Table Scan on coercejoin  (cost=0.00..431.00 rows=1 width=18)
+ Optimizer status: PQO version 3.2.0
+(7 rows)
+
+-- Negative test, the join should not be colocated since the cast is a coercion
+-- which cannot guarantee that the coerced value would hash to the same segment
+-- as the uncoerced tuple.
+EXPLAIN SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric;
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..862.00 rows=1 width=36)
+   ->  Hash Join  (cost=0.00..862.00 rows=1 width=36)
+         Hash Cond: public.coercejoin.a::numeric = public.coercejoin.a::numeric
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+               Hash Key: public.coercejoin.a::numeric
+               ->  Table Scan on coercejoin  (cost=0.00..431.00 rows=1 width=18)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=18)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=18)
+                     Hash Key: public.coercejoin.a::numeric
+                     ->  Table Scan on coercejoin  (cost=0.00..431.00 rows=1 width=18)
+ Optimizer status: PQO version 3.2.0
+(11 rows)
+

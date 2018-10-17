@@ -1156,6 +1156,9 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 	EquivalenceClass *eclass;
 	int			strategy;
 	ListCell   *lc;
+	Oid			lefttype;
+	Oid			righttype;
+	Oid			exprtype;
 
 	/* Get the expr's data type. */
 	typeoid = exprType(expr);
@@ -1178,7 +1181,46 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 		if (strategy)
 			break;
 	}
-	eclass = get_eclass_for_sort_expr(root, (Expr *) expr, typeoid, mergeopfamilies, 0);
+
+	/*
+	 * Get the equality operator's operand type. It might be different from the
+	 * original datatype, if the datatype itself doesn't have an equivalence
+	 * operator, but relies on casts. For example with two varchars, "a = b" uses
+	 * the text equals operator, i.e. "a::text = b::text".
+	 */
+	op_input_types(eqopoid, &lefttype, &righttype);
+	Assert(lefttype == righttype);
+
+	/* If this type is a domain type, get its base type. */
+	if (get_typtype(lefttype) == 'd')
+		lefttype = getBaseType(lefttype);
+
+	/*
+	 * Ensure to expose the expected type to make equal comparisons of the EC
+	 * work when colocation of joins are considered. This is required in 5X
+	 * and not master, since the below steps are performed during equivalence
+	 * class canonicalization introduced in later upstream versions than 8.3
+	 * which 5X is based on.
+	 */
+	exprtype = exprType((Node *) expr);
+
+	if (IsPolymorphicType(lefttype))
+		lefttype = exprtype;
+
+	if (lefttype != exprtype)
+	{
+		while (expr && IsA(expr, RelabelType))
+			expr = (Node *) ((RelabelType *) expr)->arg;
+
+		if (exprType((Node *) expr) != lefttype)
+			expr = (Node *) makeRelabelType((Expr *) expr, lefttype, -1,
+											COERCE_IMPLICIT_CAST);
+	}
+
+	eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
+									  lefttype,
+									  mergeopfamilies,
+									  0);
 	if (!canonical)
 		pk = makePathKey(eclass, opfamily, strategy, false);
 	else
