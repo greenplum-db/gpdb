@@ -21,7 +21,6 @@
 #include "cdb/cdbdisp.h"
 #include "cdb/cdbexplain.h"
 
-
 PG_MODULE_MAGIC;
 
 /* GUC variables */
@@ -76,8 +75,8 @@ _PG_init(void)
 {
 	/* Define custom GUC variables. */
 	DefineCustomIntVariable("auto_explain.log_min_duration",
-		 "Sets the minimum execution time above which plans will be logged.",
-						 "Zero prints all plans. -1 turns this feature off.",
+							"Sets the minimum execution time above which plans will be logged.",
+							"Zero prints all plans. -1 turns this feature off.",
 							&auto_explain_log_min_duration,
 							-1,
 							-1, INT_MAX / 1000,
@@ -189,12 +188,14 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	if (auto_explain_enabled())
 	{
 		/* We always track execution time to compare it with log_min_duration */
-		instr_time starttime;
+		instr_time	starttime;
+
 		INSTR_TIME_SET_CURRENT(starttime);
 		auto_explain_showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
 
 		/* Set instrumentation flags according to the settings of auto_explain */
-		if (auto_explain_log_analyze && !(eflags & EXEC_FLAG_EXPLAIN_ONLY)) {
+		if (auto_explain_log_analyze && !(eflags & EXEC_FLAG_EXPLAIN_ONLY))
+		{
 			queryDesc->instrument_options |= INSTRUMENT_CDB;
 			if (auto_explain_log_timing)
 				queryDesc->instrument_options |= INSTRUMENT_TIMER;
@@ -211,13 +212,14 @@ explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		standard_ExecutorStart(queryDesc, eflags);
 
 	/*
-	 * Setup instrumentation (CDB, TIMER and all other present in options)
-	 * in the per-query memory context
+	 * Setup instrumentation (CDB, TIMER and all other present in options) in
+	 * the per-query memory context
 	 */
 	if (auto_explain_enabled())
 	{
-		int instrument_options = INSTRUMENT_CDB | INSTRUMENT_TIMER | queryDesc->instrument_options;
+		int			instrument_options = INSTRUMENT_CDB | INSTRUMENT_TIMER | queryDesc->instrument_options;
 		MemoryContext oldcxt = MemoryContextSwitchTo(queryDesc->estate->es_query_cxt);
+
 		queryDesc->totaltime = InstrAlloc(1, instrument_options);
 		MemoryContextSwitchTo(oldcxt);
 	}
@@ -279,13 +281,15 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 	{
 		InstrEndLoop(queryDesc->totaltime);
 
-		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults) {
+		if (queryDesc->estate->dispatcherState && queryDesc->estate->dispatcherState->primaryResults)
+		{
 			cdbdisp_checkDispatchResult(queryDesc->estate->dispatcherState, DISPATCH_WAIT_NONE);
 		}
 
 		/* Log plan on master node if duration is exceeded */
-		double msec = queryDesc->totaltime->total * 1000.0;
-		if (GpIdentity.segindex == MASTER_CONTENT_ID && (int)msec >= auto_explain_log_min_duration)
+		double		msec = queryDesc->totaltime->total * 1000.0;
+
+		if (GpIdentity.segindex == MASTER_CONTENT_ID && (int) msec >= auto_explain_log_min_duration)
 		{
 			ExplainState es;
 
@@ -299,10 +303,11 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			ExplainBeginOutput(&es);
 			ExplainQueryText(&es, queryDesc);
 			ExplainPrintPlan(&es, queryDesc, auto_explain_showstatctx);
-			if (es.analyze) {
+			if (es.analyze)
+			{
 				cdbexplain_showExecStatsEnd(
-					queryDesc->plannedstmt, auto_explain_showstatctx, queryDesc->estate, &es
-				);
+											queryDesc->plannedstmt, auto_explain_showstatctx, queryDesc->estate, &es
+					);
 			}
 			ExplainEndOutput(&es);
 
@@ -324,9 +329,9 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			 * often result in duplication.
 			 */
 			ereport(
-				LOG,
-				(errmsg("duration: %.3f ms  plan:\n%s", msec, es.str->data), errhidestmt(true))
-			);
+					LOG,
+					(errmsg("duration: %.3f ms  plan:\n%s", msec, es.str->data), errhidestmt(true))
+				);
 
 			pfree(es.str->data);
 		}
