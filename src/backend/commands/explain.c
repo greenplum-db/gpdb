@@ -1797,7 +1797,6 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	if (es->verbose)
 		show_plan_tlist(planstate, ancestors, es);
 
-	elog(DEBUG2, "Plan nodeTag is %d", nodeTag(plan));
 	/* quals, sort keys, etc */
 	switch (nodeTag(plan))
 	{
@@ -1939,9 +1938,8 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			 * hashqualclauses instead of hashclauses.
 			 */
 			List *cond_to_show = hash_join->hashclauses;
-			if (list_length(hash_join->hashqualclauses) > 0) {
+			if (list_length(hash_join->hashqualclauses) > 0)
 				cond_to_show = hash_join->hashqualclauses;
-			}
 
 			show_upper_qual(cond_to_show,
 							"Hash Cond", planstate, ancestors, es);

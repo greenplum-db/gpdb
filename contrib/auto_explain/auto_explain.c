@@ -187,10 +187,10 @@ static void
 explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
 	is_analyze_query = ((eflags & EXEC_FLAG_ANALYZE) != 0);
-	elog(DEBUG1, "is_analyze_query=%d", (int)is_analyze_query);
 
 	if (auto_explain_enabled())
 	{
+		/* We always track execution time to compare it with log_min_duration */
 		instr_time starttime;
 		INSTR_TIME_SET_CURRENT(starttime);
 		queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
