@@ -1712,6 +1712,8 @@ appendonly_beginscan(Relation relation,
 	int			segfile_count;
 	FileSegInfo **seginfo;
 
+	SIMPLE_FAULT_INJECTOR(AppendOnlyBeginScan);
+
 	seginfo = GetAllFileSegInfo(relation,
 								appendOnlyMetaDataSnapshot, &segfile_count);
 

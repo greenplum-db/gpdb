@@ -305,6 +305,7 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 					{
 						appendStringInfo(&(c->err_msg), "Error from segment %d: %s\n",
 										 source_seg, PQresultErrorMessage(res));
+						c->io_errors = true;
 						first_error = false;
 					}
 
