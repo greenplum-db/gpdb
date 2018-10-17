@@ -17,6 +17,7 @@
 
 #include "executor/instrument.h"        /* instr_time */
 #include "cdb/cdbpublic.h"              /* CdbExplain_Agg */
+#include "commands/explain.h"           /* ExplainState */
 
 struct CdbDispatchResults;              /* #include "cdb/cdbdispatchresult.h" */
 struct EState;                          /* #include "nodes/execnodes.h" */
@@ -119,6 +120,27 @@ cdbexplain_recvExecStats(struct PlanState              *planstate,
 struct CdbExplain_ShowStatCtx *
 cdbexplain_showExecStatsBegin(struct QueryDesc *queryDesc,
                               instr_time        querystarttime);
+
+/*
+ * cdbexplain_showExecStatsEnd
+ *	  Called by qDisp process to format the overall statistics for a query
+ *	  into the caller's buffer.
+ *
+ * 'ctx' is the CdbExplain_ShowStatCtx object which was created by a call to
+ *		cdbexplain_showExecStatsBegin() and contains statistics which have
+ *		been accumulated over a series of calls to cdbexplain_showExecStats().
+ *		Invalid on return (it is freed).
+ *
+ * This doesn't free the CdbExplain_ShowStatCtx object or buffers, because
+ * they will be free'd shortly by the end of statement anyway.
+ */
+void
+cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
+							struct CdbExplain_ShowStatCtx *showstatctx,
+							struct EState *estate,
+							ExplainState *es);
+
+
 
 
 

@@ -323,12 +323,6 @@ typedef struct CdbExplain_LocalStatCtx
 } CdbExplain_LocalStatCtx;
 
 
-static void
-cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
-							struct CdbExplain_ShowStatCtx  *showstatctx,
-                            struct EState                  *estate,
-							ExplainState *es);
-
 static void cdbexplain_showExecStats(struct PlanState *planstate,
 									 ExplainState *es);
 static CdbVisitOpt cdbexplain_localStatWalker(PlanState *planstate,
@@ -1886,7 +1880,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
  * This doesn't free the CdbExplain_ShowStatCtx object or buffers, because
  * they will be free'd shortly by the end of statement anyway.
  */
-static void
+void
 cdbexplain_showExecStatsEnd(struct PlannedStmt *stmt,
 							struct CdbExplain_ShowStatCtx *showstatctx,
 							struct EState *estate,

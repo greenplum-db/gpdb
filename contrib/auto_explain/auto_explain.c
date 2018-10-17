@@ -301,6 +301,11 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 			ExplainBeginOutput(&es);
 			ExplainQueryText(&es, queryDesc);
 			ExplainPrintPlan(&es, queryDesc);
+			if (es.analyze) {
+				cdbexplain_showExecStatsEnd(
+					queryDesc->plannedstmt, queryDesc->showstatctx, queryDesc->estate, &es
+				);
+			}
 			ExplainEndOutput(&es);
 
 			/* Remove last line break */
