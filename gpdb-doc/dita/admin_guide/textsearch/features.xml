@@ -9,11 +9,11 @@
       text search.</p>
     <section id="manipulating-documents">
       <title>Manipulating Documents</title>
-      <p><xref href="controlling.xml#parsing-documents" format="dita"/> showed
-        how raw textual documents can be converted into
-          <codeph>tsvector</codeph> values. Greenplum Database also provides
-        functions and operators that can be used to manipulate documents that
-        are already in <codeph>tsvector</codeph> form.</p>
+      <p><xref href="controlling.xml#controlling/parsing-documents"/> showed how
+        raw textual documents can be converted into <codeph>tsvector</codeph>
+        values. Greenplum Database also provides functions and operators that
+        can be used to manipulate documents that are already in
+          <codeph>tsvector</codeph> form.</p>
       <dl>
         <dlentry>
           <dt><codeph>tsvector || tsvector</codeph></dt>
@@ -70,7 +70,7 @@
     </section>
     <section>
       <title>Manipulating Queries</title>
-      <p><xref href="controlling.xml#parsing-queries" format="dita"/> showed how
+      <p><xref href="controlling.xml#controlling/parsing-queries"/> showed how
         raw textual queries can be converted into <codeph>tsquery</codeph>
         values. Greenplum Database also provides functions and operators that
         can be used to manipulate queries that are already in
@@ -139,10 +139,9 @@ SELECT numnode('foo &amp; bar'::tsquery);
           <codeph>nyc</codeph>, <codeph>gotham</codeph>) or narrow the search to
         direct the user to some hot topic. There is some overlap in
         functionality between this feature and thesaurus dictionaries (<xref
-          href="dictionaries.xml#thesaurus-dictionary" format="dita"/>).
-        However, you can modify a set of rewrite rules on-the-fly without
-        reindexing, whereas updating a thesaurus requires reindexing to be
-        effective.</p>
+          href="dictionaries.xml#dictionaries/thesaurus-dictionary"/>). However,
+        you can modify a set of rewrite rules on-the-fly without reindexing,
+        whereas updating a thesaurus requires reindexing to be effective.</p>
       <dl>
         <dlentry>
           <dt><codeph>ts_rewrite(<i>query</i> tsquery, <i>target</i> tsquery, <i>substitute</i>

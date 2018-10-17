@@ -158,12 +158,12 @@ SELECT ts_lexize('public.simple_dict','The');
       <title>Synonym Dictionary</title>
       <p>This dictionary template is used to create dictionaries that replace a
         word with a synonym. Phrases are not supported—use the thesaurus
-        template (<xref href="#thesaurus-dictionary" format="dita"/>) for that.
-        A synonym dictionary can be used to overcome linguistic problems, for
-        example, to prevent an English stemmer dictionary from reducing the word
-        "Paris" to "pari". It is enough to have a <codeph>Paris paris</codeph>
-        line in the synonym dictionary and put it before the
-          <codeph>english_stem</codeph> dictionary. For example:</p>
+        template (<xref href="#dictionaries/thesaurus-dictionary" format="dita"
+        />) for that. A synonym dictionary can be used to overcome linguistic
+        problems, for example, to prevent an English stemmer dictionary from
+        reducing the word "Paris" to "pari". It is enough to have a
+          <codeph>Paris paris</codeph> line in the synonym dictionary and put it
+        before the <codeph>english_stem</codeph> dictionary. For example:</p>
       <codeblock>SELECT * FROM ts_debug('english', 'Paris');
    alias   |   description   | token |  dictionaries  |  dictionary  | lexemes 
 -----------+-----------------+-------+----------------+--------------+---------
@@ -199,8 +199,8 @@ SELECT * FROM ts_debug('english', 'Paris');
         asterisk is ignored when the entry is used in
           <codeph>to_tsvector()</codeph>, but when it is used in
           <codeph>to_tsquery()</codeph>, the result will be a query item with
-        the prefix match marker (see <xref
-          href="controlling.xml#parsing-queries" format="dita"/>). For example,
+        the prefix match marker (see<xref
+          href="controlling.xml#controlling/parsing-queries"/>). For example,
         suppose we have these entries in
           <codeph>$SHAREDIR/tsearch_data/synonym_sample.syn</codeph>:</p>
       <codeblock>postgres pgsql postgresql pgsql postgre pgsql 

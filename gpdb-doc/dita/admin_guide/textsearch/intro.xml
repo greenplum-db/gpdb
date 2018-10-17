@@ -72,8 +72,8 @@
       and operators available for these data types (<xref
         href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
       which is the match operator <codeph>@@</codeph>, which we introduce in <xref
-        href="#basic-text-matching" format="dita"/>. Full text searches can be accelerated using
-      indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
+        href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated
+      using indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
     <section>
       <title>What is a Document?</title>
       <p>A <i>document</i> is the unit of searching in a full text search system; for example, a

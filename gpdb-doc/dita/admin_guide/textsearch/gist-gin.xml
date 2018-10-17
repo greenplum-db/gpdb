@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="gist-gin">
-  <title>GiST and Gin Index Types</title>
+  <title>GiST and GIN Index Types</title>
   <shortdesc>This topic describes and compares the Greenplum Database index types that are used for
     full text searching.</shortdesc>
   <body>

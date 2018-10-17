@@ -99,7 +99,7 @@ ALTER TEXT SEARCH CONFIGURATION public.english
         list).</p>
       <p>The word <codeph>The</codeph> was recognized by the
           <codeph>english_ispell</codeph> dictionary as a stop word (<xref
-          href="dictionaries.xml#stop-words" format="dita"/>) and will not be
+          href="dictionaries.xml#dictionaries/stop-words"/>) and will not be
         indexed. The spaces are discarded too, since the configuration provides
         no dictionaries at all for them.</p>
       <p>You can reduce the width of the output by explicitly specifying which columns you want to

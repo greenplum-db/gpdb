@@ -66,11 +66,13 @@
   || setweight(to_tsvector(coalesce(keyword,'')), 'B') 
   || setweight(to_tsvector(coalesce(abstract,'')), 'C') 
   || setweight(to_tsvector(coalesce(body,'')), 'D');</codeblock>
-      <p id="p_xn1_lqb_lfb">Here we have used <codeph>setweight</codeph> to label the source of each
-        lexeme in the finished <codeph>tsvector</codeph>, and then merged the labeled
-          <codeph>tsvector</codeph> values using the <codeph>tsvector</codeph> concatenation
-        operator <codeph>||</codeph>. (<xref href="features.xml#manipulating-documents"
-          format="dita"/> gives details about these operations.)</p>
+      <p id="p_xn1_lqb_lfb">Here we have used <codeph>setweight</codeph> to
+        label the source of each lexeme in the finished
+          <codeph>tsvector</codeph>, and then merged the labeled
+          <codeph>tsvector</codeph> values using the <codeph>tsvector</codeph>
+        concatenation operator <codeph>||</codeph>. (<xref
+          href="features.xml#features"/> gives details about these
+        operations.)</p>
     </section>
     <section id="parsing-queries">
       <title>Parsing Queries</title>
@@ -86,12 +88,12 @@
         parentheses. In other words, the input to <codeph>to_tsquery</codeph>
         must already follow the general rules for <codeph>tsquery</codeph>
         input, as described in <xref
-          href="../../ref_guide/data_types.xml#text-search-types"/>. The
-        difference is that while basic <codeph>tsquery</codeph> input takes the
-        tokens at face value, <codeph>to_tsquery</codeph> normalizes each token
-        to a lexeme using the specified or default configuration, and discards
-        any tokens that are stop words according to the configuration. For
-        example:</p>
+          href="../../ref_guide/data_types.xml#topic1/text-search-types"/>.
+        The difference is that while basic <codeph>tsquery</codeph> input takes
+        the tokens at face value, <codeph>to_tsquery</codeph> normalizes each
+        token to a lexeme using the specified or default configuration, and
+        discards any tokens that are stop words according to the configuration.
+        For example:</p>
       <codeblock>SELECT to_tsquery('english', 'The &amp; Fat &amp; Rats');
   to_tsquery   
 ---------------
