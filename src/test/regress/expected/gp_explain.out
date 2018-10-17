@@ -36,9 +36,7 @@ EXPLAIN ANALYZE SELECT * FROM explaintest;
                                                                QUERY PLAN                                                               
 ----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4)
-   Rows out:  10 rows at destination with 0.332 ms to first row, 0.345 ms to end, start offset by 0.283 ms.
    ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4)
-         Rows out:  Avg 3.3 rows x 3 workers.  Max 5 rows (seg1) with 0.015 ms to first row, 0.018 ms to end, start offset by 0.543 ms.
  Slice statistics:
    (slice0)    Executor memory: 318K bytes.
    (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).

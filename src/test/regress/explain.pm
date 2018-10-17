@@ -556,106 +556,12 @@ sub analyze_node
 #            print "short fixup: $node->{short}\n\n\n";
         }
 
+        if (exists($node->{child}))
         {
-            if ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*end)/i)
-            {
-
-                my @ggg =
-                    ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*end)/i);
-
-#                print join('*', @ggg), "\n";
-
-                my $tt = $ggg[0];
-
-                $node->{to_end} = $tt;
-
-                $parse_ctx->{alltimes}->{$tt} = 1;
-
-                if (exists($parse_ctx->{h_to_end}->{$tt}))
-                {
-                    push @{$parse_ctx->{h_to_end}->{$tt}}, '"'. $node->{id} .'"';
-                }
-                else
-                {
-                    $parse_ctx->{h_to_end}->{$tt} = ['"'. $node->{id} . '"'];
-                }
-
-
-
-            }
-            if ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*first\s*row)/i)
-            {
-
-                my @ggg =
-                    ($node->{txt} =~ m/(\d+(\.\d*)?)(\s*ms\s*to\s*first\s*row)/i);
-
-#                print join('*', @ggg), "\n";
-
-                my $tt = $ggg[0];
-
-                $node->{to_first} = $tt;
-
-                $parse_ctx->{alltimes}->{$tt} = 1;
-
-                if (exists($parse_ctx->{h_to_first}->{$tt}))
-                {
-                    push @{$parse_ctx->{h_to_first}->{$tt}}, '"' . $node->{id} . '"' ;
-                }
-                else
-                {
-                    $parse_ctx->{h_to_first}->{$tt} = [ '"' . $node->{id} . '"'];
-                }
-
-            }
-
-            if ($node->{txt} =~ m/start offset by (\d+(\.\d*)?)(\s*ms)/i)
-            {
-
-                my @ggg =
-                    ($node->{txt} =~ m/start offset by (\d+(\.\d*)?)(\s*ms)/i);
-
-#                print join('*', @ggg), "\n";
-
-                my $tt = $ggg[0];
-
-                $node->{to_startoff} = $tt;
-
-                $parse_ctx->{allstarttimes}->{$tt} = 1;
-
-                if (exists($parse_ctx->{h_to_startoff}->{$tt}))
-                {
-                    push @{$parse_ctx->{h_to_startoff}->{$tt}}, '"'. $node->{id} .'"';
-                }
-                else
-                {
-                    $parse_ctx->{h_to_startoff}->{$tt} = ['"'. $node->{id} . '"'];
-                }
-            }
-
-            if (exists($node->{to_end}))
-            {
-                $node->{total_time} =
-                    (exists($node->{to_first})) ?
-                    ($node->{to_end} - $node->{to_first}) :
-                    $node->{to_end};
-            }
-
-
+            delete $node->{child}
+            unless (defined($node->{child}) && scalar(@{$node->{child}}));
         }
-
-        if (1)
-        {
-            if (exists($node->{child}))
-            {
-                delete $node->{child}
-                  unless (defined($node->{child})
-                          && scalar(@{$node->{child}}));
-            }
-        }
-
-
     }
-
 }
 
 sub parse_node
@@ -1013,18 +919,10 @@ sub run
         my $id = 0;
 
         $parse_ctx->{alltimes} = {};
-        $parse_ctx->{h_to_end} = {};
-        $parse_ctx->{h_to_first} = {};
 
-        $parse_ctx->{allstarttimes} = {};
-        $parse_ctx->{h_to_startoff} = {};
         $parse_ctx->{explain_analyze_stats} = {};
 
         my $plantree = parse_node(\$id, $parse_ctx, 0, $pr);
-
-#        my @timelist = sort {$a <=> $b} keys (%{$parse_ctx->{alltimes}});
-        my @timelist = sort {$a <=> $b} keys (%{$parse_ctx->{allstarttimes}});
-
 
         if (defined($glob_prune))
         {
@@ -1036,8 +934,6 @@ sub run
                 treeMap($plantree, undef, $map_expr);
 
                 # additional statistics
-                $map_expr = 'delete $node->{to_startoff};';
-                treeMap($plantree, undef, $map_expr);
                 $map_expr = 'delete $node->{total_time};';
                 treeMap($plantree, undef, $map_expr);
                 $map_expr = 'delete $node->{statistics};';
@@ -1152,11 +1048,6 @@ sub run
         {
             doDataDump($plantree);
         }
-        if ($glob_optn =~ m/dot|graph/i)
-        {
-            dodotfile($plantree, \@timelist, $qqq, $parse_ctx,
-                      $glob_direction);
-        }
         if ($glob_optn =~ m/operator/i)
         {
             doOperatorDump($plantree);
@@ -1185,9 +1076,6 @@ sub run
             open (STDOUT, ">$tmpnam" ) or die "can't open STDOUT: $!";
 
             select STDOUT; $| = 1;      # make unbuffered
-
-            dodotfile($plantree, \@timelist, $qqq, $parse_ctx,
-                      $glob_direction);
 
             close STDOUT;
             open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
@@ -1606,120 +1494,6 @@ sub label_fixup
     }
 }
 
-# find rows out information
-sub get_rows_out
-{
-    my ($node, $ctx, $edge) = @_;
-
-    return
-        unless ($node->{txt} =~ m/(Rows out\:)|(\(cost\=.*\s+rows=.*\s+width\=.*\))/);
-
-    my $long = ($edge =~ m/long|med/i);
-
-    if ($node->{txt} =~ m/Rows out\:\s+Avg.*\s+rows\s+x\s+.*\s+workers/)
-    {
-        if (!$long)
-        {
-            # short result
-            my @foo =
-                ($node->{txt} =~
-                 m/Rows out\:\s+Avg\s+(.*)\s+rows\s+x\s+(.*)\s+workers/);
-
-            goto L_get_est unless (2 == scalar(@foo));
-
-            # calculate row count as avg x num workers
-            $node->{rows_out} = $foo[0] * $foo[1];
-        }
-        else
-        {
-            my @foo =
-                ($node->{txt} =~
-                 m/Rows out\:\s+(Avg.*workers)/);
-
-            goto L_get_est unless (1 == scalar(@foo));
-
-            # just print the string
-            $node->{rows_out} = $foo[0];
-
-            if ($edge =~ m/med/i)
-            {
-                $node->{rows_out} =~ s/Avg\s+//;
-                $node->{rows_out} =~ s/rows\s+//;
-                $node->{rows_out} =~ s/\s*workers\s*//;
-            }
-
-        }
-    }
-    elsif ($node->{txt} =~ m/Rows out\:\s+.*\s+rows/)
-    {
-        my @foo =
-            ($node->{txt} =~
-             m/Rows out\:\s+(.*)\s+rows/);
-
-        goto L_get_est unless (1 == scalar(@foo));
-
-        $node->{rows_out} = $foo[0];
-    }
-
-    if (
-        exists($node->{rows_out}) &&
-        length($node->{rows_out})
-        )
-    {
-        if (
-            ($node->{rows_out} !~ m/avg/i) &&
-            ($node->{rows_out} =~ m/x/))
-        {
-            my @foo = ($node->{rows_out} =~ m/(x.*)$/);
-
-            my $tail = $foo[0];
-
-            @foo = ($node->{rows_out} =~ m/(.*)\s+x.*/);
-
-            my $head = $foo[0];
-
-            if (defined($tail) && defined($head))
-            {
-                $head = human_num($head);
-
-                $node->{rows_out} = $head . " " . $tail;
-            }
-
-        }
-        elsif ($node->{rows_out} =~ m/^\d+$/)
-        {
-            $node->{rows_out} = human_num($node->{rows_out});
-        }
-    }
-
-L_get_est:
-
-    # add row estimates
-    if ($long &&
-        ($node->{txt} =~ m/\(cost\=.*\s+rows=.*\s+width\=.*\)/))
-    {
-        my @foo = ($node->{txt} =~ m/cost\=.*\s+rows=(\d+)\s+width\=.*/);
-
-        if (scalar(@foo))
-        {
-            require POSIX;
-
-            my $esti = $foo[0];
-
-            $esti = human_num($esti);
-
-            unless (exists($node->{rows_out}) &&
-                    length($node->{rows_out}))
-            {
-                $node->{rows_out} = "";
-            }
-
-            $node->{rows_out} .= " (est $esti)";
-        }
-    }
-
-} # end get_rows_out
-
 sub calc_color_rank
 {
     my $ctx = shift;
@@ -1836,14 +1610,6 @@ sub dodotfile
             'label_fixup($node, $ctx); ',
             undef,
             $ctx);
-
-    if (defined($glob_edge) && length($glob_edge))
-    {
-        treeMap($plantree,
-                'get_rows_out($node, $ctx, $glob_edge); ',
-                undef,
-                $ctx);
-    }
 
     my $dotimeline = $glob_timeline;
 
@@ -2099,12 +1865,6 @@ sub makedotfile
         print $outfh "}\n";
 
         print $outfh "node [shape=box];\n";
-
-        while ( my ($kk, $vv) = each(%{$parse_ctx->{h_to_startoff}}))
-        {
-            print $outfh '{ rank = same; ' . $kk . '; ' . join("; ", @{$vv}) . "; }\n";
-        }
-
     }
 
     print $outfh "rankdir=$direction;\n";

@@ -3128,11 +3128,9 @@ explain analyze select reltablespace  from pg_class where oid = (select reltoast
 ------------------------------------------------------------------------------------------------------------------------------------
  Index Scan using pg_class_oid_index on pg_class  (cost=200.27..400.54 rows=1 width=4)
    Index Cond: oid = $0
-   Rows out:  1 rows with 0.025 ms to first row, 0.026 ms to end, start offset by 0.042 ms.
    InitPlan 1 (returns $0)
      ->  Index Scan using pg_class_relname_nsp_index on pg_class pg_class_1  (cost=0.00..200.27 rows=1 width=4)
            Index Cond: relname = 'tbl_8205'::name
-           Rows out:  1 rows with 0.010 ms to first row, 0.012 ms to end of 2 scans, start offset by 0.044 ms.
  Slice statistics:
    (slice0)    Executor memory: 113K bytes.
    (slice1)    Executor memory: 113K bytes.
@@ -3823,14 +3821,10 @@ explain analyze select count(*) from qp_misc_jiras.test_heap;
                                                                          QUERY PLAN                                                                         
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
  Aggregate  (cost=1176.32..1176.33 rows=1 width=8)
-   Rows out:  1 rows with 16 ms to end, start offset by 0.333 ms.
    ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=1176.25..1176.30 rows=1 width=8)
-         Rows out:  3 rows at destination with 16 ms to end, start offset by 0.334 ms.
          ->  Aggregate  (cost=1176.25..1176.26 rows=1 width=8)
-               Rows out:  Avg 1.0 rows x 3 workers.  Max 1 rows (seg0) with 15 ms to end, start offset by 0.621 ms.
                allstat: seg_firststart_total_ntuples/seg0_0.621 ms_15 ms_1/seg1_0.621 ms_15 ms_1/seg2_0.634 ms_15 ms_1//end
                ->  Seq Scan on test_heap  (cost=0.00..961.00 rows=28700 width=0)
-                     Rows out:  Avg 33333.7 rows x 3 workers.  Max 33350 rows (seg0) with 0.035 ms to first row, 7.878 ms to end, start offset by 0.622 ms.
                      allstat: seg_firststart_total_ntuples/seg0_0.622 ms_7.878 ms_33350/seg1_0.622 ms_7.850 ms_33336/seg2_0.634 ms_7.866 ms_33315//end
  Slice statistics:
    (slice0)    Executor memory: 382K bytes.
@@ -3956,26 +3950,21 @@ explain analyze select * from qp_misc_jiras.r,qp_misc_jiras.s where r.a=s.b;
                                                                           QUERY PLAN                                                                          
 --------------------------------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)  (cost=25.50..73.50 rows=1000 width=16)
-   Rows out:  1000 rows at destination with 78 ms to first row, 127 ms to end, start offset by 0.204 ms.
    ->  Hash Join  (cost=25.50..73.50 rows=334 width=16)
          Hash Cond: s.b = r.a
-         Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 86 ms to first row, 126 ms to end, start offset by 0.434 ms.
          Executor memory:  11K bytes avg, 11K bytes max (seg1).
          Work_mem used:  11K bytes avg, 11K bytes max (seg1). Workfile: (0 spilling, 0 reused)
          (seg1)   Hash chain length 1.0 avg, 1 max, using 342 of 8388619 buckets.
          allstat: seg_firststart_total_ntuples/seg0_0.408 ms_116 ms_321/seg1_0.434 ms_126 ms_342/seg2_0.446 ms_119 ms_337//end
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..33.00 rows=334 width=8)
                Hash Key: s.b
-               Rows out:  Avg 333.3 rows x 3 workers at destination.  Max 342 rows (seg1) with 0.114 ms to first row, 0.177 ms to end, start offset by 86 ms.
                allstat: seg_firststart_total_ntuples/seg0_78 ms_0.142 ms_321/seg1_86 ms_0.177 ms_342/seg2_80 ms_0.135 ms_337//end
                ->  Seq Scan on s  (cost=0.00..13.00 rows=334 width=8)
-                     Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 1.982 ms to first row, 2.023 ms to end, start offset by 2.147 ms.
                      allstat: seg_firststart_total_ntuples/seg0_0.822 ms_2.413 ms_321/seg1_2.147 ms_2.023 ms_342/seg2_2.115 ms_1.947 ms_337//end
          ->  Hash  (cost=13.00..13.00 rows=334 width=8)
                Rows in:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 0.247 ms to end, start offset by 86 ms.
                allstat: seg_firststart_total_ntuples/seg0_78 ms_0.215 ms_321/seg1_86 ms_0.247 ms_342/seg2_80 ms_0.173 ms_337//end
                ->  Seq Scan on r  (cost=0.00..13.00 rows=334 width=8)
-                     Rows out:  Avg 333.3 rows x 3 workers.  Max 342 rows (seg1) with 0.048 ms to first row, 0.099 ms to end, start offset by 86 ms.
                      allstat: seg_firststart_total_ntuples/seg0_78 ms_0.073 ms_321/seg1_86 ms_0.099 ms_342/seg2_80 ms_0.065 ms_337//end
  Slice statistics:
    (slice0)    Executor memory: 267K bytes.
