@@ -6,6 +6,8 @@ TRANSFER_DIR_ABSOLUTE_PATH=$(pwd)/${TRANSFER_DIR}
 COMPILED_BITS_FILENAME=${COMPILED_BITS_FILENAME:="compiled_bits_ubuntu16.tar.gz"}
 
 function build_external_depends() {
+    # fix the /root/.ccache missing issue during build
+    mkdir -p /root/.ccache && touch  /root/.ccache/ccache.conf
     pushd gpdb_src/depends
     ./configure
     make
