@@ -154,6 +154,22 @@ main(int argc, char **argv)
 
 		create_new_objects();
 	}
+	else
+	{
+		/*
+		 * In a segment, the data directory already contains all the objects,
+		 * because the segment is initialized by taking a physical copy of the
+		 * upgraded QD data directory. The auxiliary AO tables - containing
+		 * information about the segment files, are different in each server,
+		 * however. So we still need to restore those separately on each
+		 * server.
+		 */
+		start_postmaster(&new_cluster, true);
+
+		restore_aosegment_tables();
+
+		stop_postmaster(false);
+	}
 
 	/*
 	 * In a segment, the data directory already contains all the objects,
