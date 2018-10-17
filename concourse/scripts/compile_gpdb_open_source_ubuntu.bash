@@ -9,28 +9,28 @@ function build_external_depends() {
     # fix the /root/.ccache missing issue during build
     mkdir -p /root/.ccache && touch  /root/.ccache/ccache.conf
     pushd gpdb_src/depends
-    ./configure
-    make
+        ./configure
+        make
     popd
 }
 
 function install_external_depends() {
     pushd gpdb_src/depends
-    make install
+        make install
     popd
 }
 
 function build_gpdb() {
     build_external_depends
     pushd gpdb_src
-    CWD=$(pwd)
-    LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --with-gssapi --with-perl --with-libxml \
-      --with-python \
-      --with-libraries=${CWD}/depends/build/lib \
-      --with-includes=${CWD}/depends/build/include \
-      --prefix=${GREENPLUM_INSTALL_DIR}
-    make -j4
-    LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
+        CWD=$(pwd)
+        LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --with-gssapi --with-perl --with-libxml \
+          --with-python \
+          --with-libraries=${CWD}/depends/build/lib \
+          --with-includes=${CWD}/depends/build/include \
+          --prefix=${GREENPLUM_INSTALL_DIR}
+        make -j4
+        LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
     popd
     install_external_depends
 }
