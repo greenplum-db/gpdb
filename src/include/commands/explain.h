@@ -77,7 +77,7 @@ extern void ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into,
 			   ExplainState *es,
 			   const char *queryString, ParamListInfo params);
 
-extern void ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc);
+extern void ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc, struct CdbExplain_ShowStatCtx *showstatctx);
 
 extern void ExplainQueryText(ExplainState *es, QueryDesc *queryDesc);
 

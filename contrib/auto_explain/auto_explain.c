@@ -44,8 +44,8 @@ static const struct config_enum_entry format_options[] = {
 /* Current nesting depth of ExecutorRun calls */
 static int	nesting_level = 0;
 
-/* Indicator of an ANALYZE query. In this case, auto_explain should be disabled */
-static bool is_analyze_query = false;
+/* A CdbExplain_ShowStatCtx object for auto_explain */
+struct CdbExplain_ShowStatCtx *auto_explain_showstatctx = NULL;
 
 /* Saved hook values in case of unload */
 static ExecutorStart_hook_type prev_ExecutorStart = NULL;
@@ -54,7 +54,7 @@ static ExecutorFinish_hook_type prev_ExecutorFinish = NULL;
 static ExecutorEnd_hook_type prev_ExecutorEnd = NULL;
 
 #define auto_explain_enabled() \
-	(!is_analyze_query && auto_explain_log_min_duration >= 0 && \
+	(auto_explain_log_min_duration >= 0 && \
 	 (nesting_level == 0 || auto_explain_log_nested_statements))
 
 void		_PG_init(void);
@@ -186,14 +186,12 @@ _PG_fini(void)
 static void
 explain_ExecutorStart(QueryDesc *queryDesc, int eflags)
 {
-	is_analyze_query = ((eflags & EXEC_FLAG_ANALYZE) != 0);
-
 	if (auto_explain_enabled())
 	{
 		/* We always track execution time to compare it with log_min_duration */
 		instr_time starttime;
 		INSTR_TIME_SET_CURRENT(starttime);
-		queryDesc->showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
+		auto_explain_showstatctx = cdbexplain_showExecStatsBegin(queryDesc, starttime);
 
 		/* Set instrumentation flags according to the settings of auto_explain */
 		if (auto_explain_log_analyze && !(eflags & EXEC_FLAG_EXPLAIN_ONLY)) {
@@ -300,10 +298,10 @@ explain_ExecutorEnd(QueryDesc *queryDesc)
 
 			ExplainBeginOutput(&es);
 			ExplainQueryText(&es, queryDesc);
-			ExplainPrintPlan(&es, queryDesc);
+			ExplainPrintPlan(&es, queryDesc, auto_explain_showstatctx);
 			if (es.analyze) {
 				cdbexplain_showExecStatsEnd(
-					queryDesc->plannedstmt, queryDesc->showstatctx, queryDesc->estate, &es
+					queryDesc->plannedstmt, auto_explain_showstatctx, queryDesc->estate, &es
 				);
 			}
 			ExplainEndOutput(&es);

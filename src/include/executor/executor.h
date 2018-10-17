@@ -55,8 +55,6 @@ struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
  * WITH/WITHOUT_OIDS tell the executor to emit tuples with or without space
  * for OIDs, respectively.	These are currently used only for CREATE TABLE AS.
  * If neither is set, the plan may or may not produce tuples including OIDs.
- *
- * ANALYZE indicates that the plan tree is under EXPLAIN ANALYZE
  */
 #define EXEC_FLAG_EXPLAIN_ONLY	0x0001	/* EXPLAIN, no ANALYZE */
 #define EXEC_FLAG_REWIND		0x0002	/* expect rescan */
@@ -66,7 +64,6 @@ struct ChunkTransportState;             /* #include "cdb/cdbinterconnect.h" */
 #define EXEC_FLAG_WITH_OIDS		0x0020	/* force OIDs in returned tuples */
 #define EXEC_FLAG_WITHOUT_OIDS	0x0040	/* force no OIDs in returned tuples */
 #define EXEC_FLAG_WITH_NO_DATA	0x0080	/* rel scannability doesn't matter */
-#define EXEC_FLAG_ANALYZE		0x8000  /* EXPLAIN ANALYZE */
 
 
 /*
@@ -197,7 +194,7 @@ extern TupleTableSlot *ExecFilterJunk(JunkFilter *junkfilter,
  * prototypes from functions in execMain.c
  */
 
-/* AttrMap
+/* AttrMap	
  *
  * A mapping of attribute numbers from one relation to another.
  * Both relations must have the same number of live (non-dropped)
@@ -215,22 +212,22 @@ extern TupleTableSlot *ExecFilterJunk(JunkFilter *junkfilter,
  *				(and in the "other" relation)
  * attr_max		maximum attribute number in map; live attribute
  *				numbers in "other" range from 1 to attr_max.
- *				This is less than or equal to the number of
+ *				This is less than or equal to the number of 
  *              attributes in "other" which may have any number
  *				of trailing holes.
  * attr_count	number of attributes (live or holes) in "base".
  *				One less than the number elements in attr_map,
  *				since attr_map[0]is always 0.
- * attr_map[i]	attr number in "other" corresponding to attr
+ * attr_map[i]	attr number in "other" corresponding to attr 
  *				number i in "base", or 0 if the attribute is
- *				a hole.  (Note, however, attr_map[0] == 0.
+ *				a hole.  (Note, however, attr_map[0] == 0.  
  *				It is wasted to allow us to use attr numbers
- *				as indexes.  Zero in attr_map stands for "no
+ *				as indexes.  Zero in attr_map stands for "no 
  *				live attribute".)
  *
  * To discard an AttrMap, just pfree it.
  */
-typedef struct AttrMap
+typedef struct AttrMap 
 {
 	int live_count;
 	int attr_max;
@@ -327,7 +324,7 @@ extern Datum GetAttributeByName(HeapTupleHeader tuple, const char *attname,
 extern void init_fcache(Oid foid, Oid input_collation, FuncExprState *fcache,
 			MemoryContext fcacheCxt, bool needDescForSets);
 extern ExprDoneCond ExecEvalFuncArgs(FunctionCallInfo fcinfo,
-									 List *argList,
+									 List *argList, 
 									 ExprContext *econtext);
 extern Tuplestorestate *ExecMakeTableFunctionResult(ExprState *funcexpr,
 							ExprContext *econtext,

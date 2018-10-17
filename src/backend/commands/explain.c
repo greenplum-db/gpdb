@@ -552,7 +552,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 
 	/* Select execution options */
 	if (es->analyze)
-		eflags = EXEC_FLAG_ANALYZE;
+		eflags = 0;				/* default run-to-completion flags */
 	else
 		eflags = EXEC_FLAG_EXPLAIN_ONLY;
 	if (into)
@@ -591,7 +591,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
 	ExplainOpenGroup("Query", NULL, true, es);
 
 	/* Create textual dump of plan tree */
-	ExplainPrintPlan(es, queryDesc);
+	ExplainPrintPlan(es, queryDesc, queryDesc->showstatctx);
 
 	/* Print info about runtime of triggers */
 	if (es->analyze)
@@ -702,7 +702,7 @@ ExplainOnePlan(PlannedStmt *plannedstmt, IntoClause *into, ExplainState *es,
  * NB: will not work on utility statements
  */
 void
-ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
+ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc, struct CdbExplain_ShowStatCtx *showstatctx)
 {
 	EState     *estate = queryDesc->estate;
 	Bitmapset  *rels_used = NULL;
@@ -710,7 +710,7 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	Assert(queryDesc->plannedstmt != NULL);
 	es->pstmt = queryDesc->plannedstmt;
 	es->rtable = queryDesc->plannedstmt->rtable;
-	es->showstatctx = queryDesc->showstatctx;
+	es->showstatctx = showstatctx;
 
 	/* CDB: Find slice table entry for the root slice. */
 	es->currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
