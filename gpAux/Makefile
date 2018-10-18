@@ -1015,11 +1015,6 @@ else
 endif
 endif
 
-ifneq "$(BLD_ARCH)" "aix7_ppc_64"
-	# Copy glider stack trace capture tool
-	-cp -rp $(BLD_THIRDPARTY_BIN_DIR)/glider $(INSTLOC)/sbin/
-endif
-
 ifeq "$(BLD_ARCH)" "win32"
 	# Copy kfw dlls
 	cp -rp $(BLD_TOP)/ext/win32/kfw-3-2-2/lib/*dll $(INSTLOC)/lib/
