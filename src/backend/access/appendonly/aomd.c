@@ -209,19 +209,21 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
  *   Heap Tables: contiguous extensions, no upper bound
  *   AO Tables: non contiguous extensions [.1 - .127]
  *   CO Tables: non contiguous extensions
- *          [  .1 - .127] for first column
- *          [.129 - .255] for second column
- *          [.257 - .283] for third column
+ *          [  .1 - .127] for first column;  .0 reserved for utility and alter
+ *          [.129 - .255] for second column; .128 reserved for utility and alter
+ *          [.257 - .283] for third column;  .256 reserved for utility and alter
  *          etc
  *
  *  Algorithm is coded with the assumption for CO tables that for a given
- *  concurrency level either all columns have the file or none.
+ *  concurrency level, the relfiles exist OR stop existing for all columns thereafter.
+ *  For instance, if .2 exists, then .(2 + 128N) MIGHT exist for N=1.  But if it does
+ *  not exist for N=1, then it doesn't exist for N>=2.
  *
  *  1) Finds for which concurrency levels the table has files. This is
  *     calculated based off the first column. It performs 127
  *     (MAX_AOREL_CONCURRENCY) unlink().
- *  2) Iterates over the single column and deletes all concurrency level files.
- *     For AO tables this will exit fast.
+ *  2) Iterates over a concurrency level, unlinking all files for each column.  It uses
+ *     the above assumption to stop and proceed to the next concurrency level.
  */
 void
 mdunlink_ao(const char *path)
@@ -281,29 +283,23 @@ mdunlink_ao(const char *path)
 		return;
 	}
 
-	for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
+	for (int i = 0; i < segNumberArraySize; i++)
 	{
-		bool finished = false;
-		for (int i = 0; i < segNumberArraySize; i++)
+		for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
 		{
 			sprintf(segpath_suffix_position, ".%u",
-					colnum*AOTupleId_MultiplierSegmentFileNum + segNumberArray[i]);
+					colnum * AOTupleId_MultiplierSegmentFileNum + segNumberArray[i]);
 			if (unlink(segpath) != 0)
 			{
 				/* ENOENT is expected after the end of the extensions */
 				if (errno != ENOENT)
 					ereport(WARNING,
 							(errcode_for_file_access(),
-							 errmsg("could not remove file \"%s\": %m", segpath)));
+									errmsg("could not remove file \"%s\": %m", segpath)));
 				else
-				{
-					finished = true;
 					break;
-				}
 			}
 		}
-		if (finished)
-			break;
 	}
 
 	pfree(segpath);
@@ -464,14 +460,14 @@ copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, cha
 	if (segNumberArraySize == 0)
 		return;
 
-	for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
+
+	for (int concurrency_index = 0; concurrency_index < segNumberArraySize;
+			concurrency_index++)
 	{
-		bool finished = false;
-		for (int concurrency_index = 0; concurrency_index < segNumberArraySize;
-			 concurrency_index++)
+		for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
 		{
 			int suffix =
-				colnum*AOTupleId_MultiplierSegmentFileNum + segNumberArray[concurrency_index];
+					colnum * AOTupleId_MultiplierSegmentFileNum + segNumberArray[concurrency_index];
 			sprintf(srcsegpath, "%s.%u", srcpath, suffix);
 			if (access(srcsegpath, F_OK) != 0)
 			{
@@ -479,14 +475,11 @@ copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, cha
 				if (errno != ENOENT)
 					ereport(ERROR,
 							(errcode_for_file_access(),
-							 errmsg("access failed for file \"%s\": %m", srcsegpath)));
-				finished = true;
+									errmsg("access failed for file \"%s\": %m", srcsegpath)));
 				break;
 			}
 			sprintf(dstsegpath, "%s.%u", dstpath, suffix);
 			copy_file(srcsegpath, dstsegpath, dst, suffix, use_wal);
 		}
-		if (finished)
-			break;
 	}
 }

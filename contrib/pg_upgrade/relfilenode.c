@@ -13,6 +13,7 @@
 
 #include "catalog/pg_class.h"
 #include "access/appendonlytid.h"
+#include "access/appendonlywriter.h"
 #include "access/htup_details.h"
 #include "access/transam.h"
 
@@ -398,7 +399,7 @@ transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map)
 	 * XXX We have the segment numbers in memory; we could stop at the highest
 	 * one instead of looping through 127 times for every table.
 	 */
-	for (segno = 1; segno < AOTupleId_MultiplierSegmentFileNum; segno++)
+	for (segno = 1; segno < MAX_AOREL_CONCURRENCY; segno++)
 	{
 		if (!transfer_relfile_segment(segno, pageConverter, map, ""))
 			continue;
@@ -411,6 +412,18 @@ transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map)
 	if (segNumberArraySize == 0)
 		return;
 
+	for (int i = 0; i < segNumberArraySize; i++)
+	{
+		for (colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
+		{
+			segno = colnum * AOTupleId_MultiplierSegmentFileNum + segNumberArray[i];
+			if (!transfer_relfile_segment(segno, pageConverter, map, ""))
+				break;
+		}
+	}
+
+
+	/*
 	for (colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
 	{
 		bool finished = false;
@@ -428,4 +441,5 @@ transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map)
 		if (finished)
 			break;
 	}
+	 */
 }
