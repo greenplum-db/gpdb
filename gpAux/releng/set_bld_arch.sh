@@ -25,7 +25,12 @@ case "`uname -s`" in
             ;;
         esac
     fi
+    if [ -f /etc/lsb-release ]; then
+       UBUNTU_CODENAME=$(grep DISTRIB_RELEASE /etc/lsb-release | awk -F '=' '{print $2}' | tr -d '.')
+       BLD_ARCH_HOST=ubuntu${UBUNTU_CODENAME}_amd64
+    fi
     ;;
+
 
     SunOS)
     BLD_ARCH_HOST="sol`uname -r | awk -F. ' {print $2}'`_`isainfo | awk ' {print $1}' | sed -e s/amd64/x86_64/ | sed -e s/sparcv9/sparc_64/`"
