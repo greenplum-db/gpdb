@@ -108,8 +108,6 @@ MemoryAccountIdType mainNestedExecutorAccount= MEMORY_OWNER_TYPE_Undefined;
  ******************************************************
  * Internal methods declarations
  */
-static void
-CheckMemoryAccountingLeak(void);
 
 static void
 InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit,
@@ -249,7 +247,6 @@ MemoryAccounting_Reset()
 		Assert(MemoryAccountMemoryContext->firstchild == NULL);
 
 		AdvanceMemoryAccountingGeneration();
-		CheckMemoryAccountingLeak();
 
 		/* Outstanding balance will come from either the rollover or the shared chunk header account */
 		Assert((RolloverMemoryAccount->allocated - RolloverMemoryAccount->freed) +
@@ -835,17 +832,6 @@ CreateMemoryAccountImpl(long maxLimit, MemoryOwnerType ownerType, MemoryAccountI
 	MemoryContextSwitchTo(oldContext);
 
 	return newAccount->id;
-}
-
-/*
- * CheckMemoryAccountingLeak
- *		Checks for leaks (i.e., memory accounts with balance) after everything
- *		is reset.
- */
-static void
-CheckMemoryAccountingLeak()
-{
-	/* Just an API. Not yet implemented. */
 }
 
 /*
