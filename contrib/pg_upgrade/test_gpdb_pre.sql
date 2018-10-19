@@ -3,8 +3,6 @@
 -- exist at the time of running upgrades. If objects are to be manipulated
 -- in other databases, make sure to change to the correct database first.
 
-DROP DATABASE IF EXISTS isolation2test;
-
 \c regression;
 
 -- Greenplum pg_upgrade doesn't support indexes on partitions since they can't
