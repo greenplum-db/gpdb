@@ -9,11 +9,9 @@
 #include "catalog/pg_tablespace.h"
 
 #define PATH_TO_DATA_FILE "/tmp/md_test/1234"
-/*
- * Note (MaxHeapAttributeNumber + 1) represents the maximum number of columns
- * we can have in a table.
- */
-static bool file_present[MAX_AOREL_CONCURRENCY * (MaxHeapAttributeNumber + 1)];
+
+#define MAX_SEGNO_FILES (MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber)
+static bool file_present[MAX_SEGNO_FILES];
 static int num_unlink_called = 0;
 static bool unlink_passing = true;
 
@@ -221,10 +219,10 @@ test_mdunlink_co_all_columns_full_concurrency(void **state)
 	mdunlink_ao(PATH_TO_DATA_FILE);
 
 	/*
-	 * note num_unlink_called is one less than total files because .0 is NOT unlinked
-	 *    by mdunlink_ao()
+	 * Note num_unlink_called is one less than total files because .0 is NOT unlinked
+	 * by mdunlink_ao()
 	 */
-	assert_true(num_unlink_called == (MAX_AOREL_CONCURRENCY * (MaxHeapAttributeNumber + 1)) - 1);
+	assert_true(num_unlink_called == (MAX_SEGNO_FILES - 1));
 	assert_true(unlink_passing);
 	return;
 }
