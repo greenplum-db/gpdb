@@ -1531,12 +1531,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		return;
 
 	Assert(instr != NULL);
-	const char *noRowRequested = "";
-
-	if (!instr->running)
-	{
-		noRowRequested = "(No row requested) ";
-	}
 
 	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
 		&& planstate->type == T_MotionState)
