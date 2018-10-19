@@ -1482,16 +1482,15 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
     {
         appendStringInfo(buf,
                          "Hash chain length"
-                         " %.1f avg, %.0f max, using %d of %d buckets.  ",
+                         " %.1f avg, %.0f max, using %d of %d buckets.",
                          cdbexplain_agg_avg(&stats->chainlength),
                          stats->chainlength.vmax,
                          stats->chainlength.vcnt,
                          total_buckets);
         if (hashtable->nbatch > stats->nonemptybatches)
             appendStringInfo(buf,
-                             "Skipped %d empty batches.",
+                             "  Skipped %d empty batches.",
                              hashtable->nbatch - stats->nonemptybatches);
-        appendStringInfoChar(buf, '\n');
     }
 }                               /* ExecHashTableExplainEnd */
 

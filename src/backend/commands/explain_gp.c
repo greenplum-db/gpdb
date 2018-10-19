@@ -1353,7 +1353,8 @@ cdbexplain_formatExtraText(StringInfo str,
 					appendStringInfoChar(str, ' ');
 			}
 			appendBinaryStringInfo(str, cp, dp - cp);
-			appendStringInfoChar(str, '\n');
+			if (nlp)
+				appendStringInfoChar(str, '\n');
 		}
 
 		if (!nlp)
@@ -1774,37 +1775,42 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 	}
 
-	bool haveExtraText = false;
-	StringInfo extraData = makeStringInfo();
+	bool 			haveExtraText = false;
+	StringInfoData	extraData;
+
+	initStringInfo(&extraData);
+
 	for (i = 0; i < ns->ninst; i++)
 	{
 		CdbExplain_StatInst *nsi = &ns->insts[i];
 
 		if (nsi->bnotes < nsi->enotes)
 		{
-			if (!haveExtraText) {
+			if (!haveExtraText)
+			{
 				ExplainOpenGroup("Extra Text", "Extra Text", false, es);
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
 			
-			resetStringInfo(extraData);
+			resetStringInfo(&extraData);
 
-			cdbexplain_formatExtraText(extraData,
+			cdbexplain_formatExtraText(&extraData,
 									   0,
 									   (ns->ninst == 1) ? -1
 									   : ns->segindex0 + i,
 									   ctx->extratextbuf.data + nsi->bnotes,
 									   nsi->enotes - nsi->bnotes);
-			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData->data);
+			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData.data);
 		}
 	}
 
-	if (haveExtraText) {
-		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
+	if (haveExtraText)
+	{
 		ExplainCloseGroup("Segment", NULL, true, es);
+		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
 	}
-	pfree(extraData);
+	pfree(extraData.data);
 
 	/*
 	 * Dump stats for all workers.
