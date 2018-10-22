@@ -1352,6 +1352,16 @@ begin;
 SELECT SUM(a) FROM dml_heap_pt_r;
 SELECT SUM(b) FROM dml_heap_pt_r;
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
+
+-- Temporary workaround to make the error reported by the following
+-- update statement deterministic.  Without the savepoint, a QE reader
+-- may continue performing its part of the plan even after its writer
+-- has finished aborting the transaction.  This would lead to
+-- occasional "relation not found for OID ..." errors because the
+-- default partition would have been dropped as part of writer's abort
+-- processing.
+SAVEPOINT sp1;
+
 UPDATE dml_heap_pt_r SET a = DEFAULT, b = DEFAULT;
 SELECT SUM(a) FROM dml_heap_pt_r;
 SELECT SUM(b) FROM dml_heap_pt_r;
@@ -1417,6 +1427,16 @@ SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
 SELECT dml_heap_pt_s.a + 10 FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a ORDER BY 1 LIMIT 1;
 SELECT * FROM dml_heap_pt_r WHERE a = 1;
 ALTER TABLE dml_heap_pt_r ADD DEFAULT partition def;
+
+-- Temporary workaround to make the error reported by the following
+-- update statement deterministic.  Without the savepoint, a QE reader
+-- may continue performing its part of the plan even after its writer
+-- has finished aborting the transaction.  This would lead to
+-- occasional "relation not found for OID ..." errors because the
+-- default partition would have been dropped as part of writer's abort
+-- processing.
+SAVEPOINT sp1;
+
 UPDATE dml_heap_pt_r SET a = dml_heap_pt_s.a + 10 ,b = NULL FROM dml_heap_pt_s WHERE dml_heap_pt_r.a + 2= dml_heap_pt_s.b;
 SELECT * FROM dml_heap_pt_r WHERE a = 11 ORDER BY 1,2;
 SELECT COUNT(*) FROM dml_heap_pt_r WHERE b is NULL;
