@@ -5360,14 +5360,14 @@ select_gp_replication_config_files(const char *configdir, const char *progname)
 	else if (configdir)
 	{
 		fname = malloc(strlen(configdir)
-					   + strlen(GP_REPLICATION_CONFIG_FILENAME) + 2);
+					   + strlen(PG_AUTOCONF_FILENAME) + 2);
 		if (!fname)
 		{
 			ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
 						    errmsg("out of memory")));
 		}
 
-		sprintf(fname, "%s/%s", configdir, GP_REPLICATION_CONFIG_FILENAME);
+		sprintf(fname, "%s/%s", configdir, PG_AUTOCONF_FILENAME);
 	}
 	else
 	{
