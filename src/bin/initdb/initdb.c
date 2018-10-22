@@ -259,7 +259,7 @@ static bool mkdatadir(const char *subdir);
 static void set_input(char **dest, char *filename);
 static void check_input(char *path);
 static void write_version_file(char *extrapath);
-static void set_null_conf(const char *conf_name);
+static void set_null_conf(void);
 static void test_config_settings(void);
 static void setup_config(void);
 static void bootstrap_template1(void);
@@ -1169,12 +1169,12 @@ write_version_file(char *extrapath)
  * a test backend
  */
 static void
-set_null_conf(const char *conf_name)
+set_null_conf(void)
 {
 	FILE	   *conf_file;
 	char	   *path;
 
-	path = psprintf("%s/%s", pg_data, conf_name);
+	path = psprintf("%s/postgresql.conf", pg_data);
 	conf_file = fopen(path, PG_BINARY_W);
 	if (conf_file == NULL)
 	{
@@ -3689,8 +3689,7 @@ initialize_data_directory(void)
 	write_version_file(NULL);
 
 	/* Select suitable configuration settings */
-	set_null_conf("postgresql.conf");
-
+	set_null_conf();
 	test_config_settings();
 
 	/* Now create all the text config files */
