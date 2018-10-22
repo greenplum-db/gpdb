@@ -305,10 +305,3 @@
  * set by ALTER SYSTEM command.
  */
 #define PG_AUTOCONF_FILENAME		"postgresql.auto.conf"
-
-/*
- * Greenplum replication configuration file name.
- * This file will be used to store values of replication GUCs
- * set by set_gp_replication_config()
- */
-#define GP_REPLICATION_CONFIG_FILENAME "gp_replication.conf"

@@ -709,8 +709,6 @@ extern List *gp_guc_list_show(GucSource excluding, List *guclist);
 extern struct config_generic *find_option(const char *name,
 				bool create_placeholders, int elevel);
 
-extern char  *gp_replication_config_filename;
-
 extern bool select_gp_replication_config_files(const char *configdir, const char *progname);
 
 extern void set_gp_replication_config(const char *name, const char *value);

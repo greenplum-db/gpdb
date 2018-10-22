@@ -12,7 +12,6 @@
 
 static bool check_result(const char *expected_result);
 static void setup_test(void);
-static void cleanup_test(void);
 
 void
 test__set_gp_replication_config_synchronous_standby_names_to_empty(void **state)
@@ -22,8 +21,6 @@ test__set_gp_replication_config_synchronous_standby_names_to_empty(void **state)
 	set_gp_replication_config("synchronous_standby_names", "");
 
 	assert_true(check_result("synchronous_standby_names = ''"));
-
-	cleanup_test();
 }
 
 void
@@ -34,8 +31,6 @@ test__set_gp_replication_config_synchronous_standby_names_to_star(void **state)
 	set_gp_replication_config("synchronous_standby_names", "*");
 
 	assert_true(check_result("synchronous_standby_names = '*'"));
-
-	cleanup_test();
 }
 
 void
@@ -55,8 +50,6 @@ test__set_gp_replication_config_synchronous_standby_names_to_null(void **state)
 	 * it should be removed
 	 */
 	assert_false(check_result("synchronous_standby_names = '*'"));
-
-	cleanup_test();
 }
 
 void
@@ -80,59 +73,6 @@ test__set_gp_replication_config_new_guc_to_null(void **state)
 	 */
 	assert_true(check_result("synchronous_standby_names = '*'"));
 	assert_false(check_result("gp_select_invisible = false"));
-
-	cleanup_test();
-}
-
-void
-test__validate_gp_replication_conf_option(void **state)
-{
-	struct config_generic *record;
-	build_guc_variables();
-
-	/*
-	 * PGC_BOOL
-	 */
-	record = find_option("optimizer", false, LOG);
-
-	PG_TRY();
-	{
-		validate_gp_replication_conf_option(record, "should output fatal", ERROR);
-		fail();
-	}
-	PG_CATCH();
-	{
-	}
-	PG_END_TRY();
-
-	assert_true(validate_gp_replication_conf_option(record, "true", NOTICE));
-	assert_false(validate_gp_replication_conf_option(record, "should output fatal", NOTICE));
-
-	/*
-	 * PGC_INT
-	 */
-	record = find_option("max_connections", false, LOG);
-	assert_true(validate_gp_replication_conf_option(record, "10", NOTICE));
-	assert_false(validate_gp_replication_conf_option(record, "-10", NOTICE));
-
-	/*
-	 * PGC_REAL
-	 */
-	record = find_option("cursor_tuple_fraction", false, LOG);
-	assert_true(validate_gp_replication_conf_option(record, "0.0", NOTICE));
-	assert_false(validate_gp_replication_conf_option(record, "2.0", NOTICE));
-
-	/*
-	 * PGC_STRING
-	 */
-	char valid_name[NAMEDATALEN];
-	char invalid_name[NAMEDATALEN + 10];
-	sprintf(valid_name, "%0*d", sizeof(valid_name)-1, 0);
-	sprintf(invalid_name, "%0*d", sizeof(invalid_name)-1, 0);
-
-	record = find_option("client_encoding", false, LOG);
-	assert_true(validate_gp_replication_conf_option(record, valid_name, NOTICE));
-	assert_false(validate_gp_replication_conf_option(record, invalid_name, NOTICE));
 }
 
 static void
@@ -147,14 +87,7 @@ setup_test(void)
 	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 
-	gp_replication_config_filename = "/tmp/test_gp_replication.conf";
 	build_guc_variables();
-}
-
-static void
-cleanup_test(void)
-{
-	unlink(gp_replication_config_filename);
 }
 
 static bool
@@ -195,7 +128,6 @@ main(int argc, char* argv[])
 		unit_test(test__set_gp_replication_config_synchronous_standby_names_to_star),
 		unit_test(test__set_gp_replication_config_synchronous_standby_names_to_null),
 		unit_test(test__set_gp_replication_config_new_guc_to_null),
-		unit_test(test__validate_gp_replication_conf_option)
 	};
 
 	MemoryContextInit();

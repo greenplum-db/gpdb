@@ -161,11 +161,6 @@ ProcessConfigFile(GucContext context)
 		goto cleanup_list;
 	}
 
-	Assert(gp_replication_config_filename);
-
-	if (!ParseConfigFile(gp_replication_config_filename, NULL, true, 0, elevel, &head, &tail))
-		goto cleanup_list;
-
 	/*
 	 * Parse the PG_AUTOCONF_FILENAME file, if present, after the main file
 	 * to replace any parameters set by ALTER SYSTEM command.  Because this
