@@ -413,7 +413,7 @@ DETAIL:  No plan has been computed for required properties
 
 SELECT count_index_scans('EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: SIRV functions
+DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  No plan has been computed for required properties
 CONTEXT:  SQL statement "EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"
@@ -460,7 +460,7 @@ DETAIL:  No plan has been computed for required properties
 
 SELECT count_index_scans('EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: SIRV functions
+DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  No plan has been computed for required properties
 CONTEXT:  SQL statement "EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"

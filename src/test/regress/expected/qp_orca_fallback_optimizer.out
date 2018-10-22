@@ -7,7 +7,7 @@ CREATE TABLE constr_tab ( a int check (a>0) , b int, c int, d int, CHECK (a+b>5)
 set optimizer_enable_dml_constraints = off;
 explain insert into constr_tab values (1,2,3);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: INSERT with constraints
+DETAIL:  Feature not supported: INSERT with constraints
                        QUERY PLAN                       
 --------------------------------------------------------
  Insert on constr_tab  (cost=0.00..0.01 rows=1 width=0)
@@ -34,7 +34,7 @@ INSERT INTO constr_tab VALUES(1,5,3,4);
 set optimizer_enable_dml_constraints=off;
 explain update constr_tab set a = 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: UPDATE with constraints
+DETAIL:  Feature not supported: UPDATE with constraints
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
@@ -47,7 +47,7 @@ DETAIL:  Feature not supported by the Pivotal Query Optimizer: UPDATE with const
 
 explain update constr_tab set b = 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: UPDATE with constraints
+DETAIL:  Feature not supported: UPDATE with constraints
                            QUERY PLAN                            
 -----------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
@@ -74,7 +74,7 @@ INSERT INTO constr_tab VALUES(1,5,3,4);
 set optimizer_enable_dml_constraints=off;
 explain update constr_tab set a = 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: UPDATE with constraints
+DETAIL:  Feature not supported: UPDATE with constraints
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
@@ -89,14 +89,14 @@ DROP TABLE IF EXISTS constr_tab;
 CREATE TABLE constr_tab ( a int NOT NULL, b int NOT NULL, c int NOT NULL, d int NOT NULL) DISTRIBUTED BY (a,b);
 INSERT INTO constr_tab VALUES(1,5,3,4);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: INSERT with constraints
+DETAIL:  Feature not supported: INSERT with constraints
 INSERT INTO constr_tab VALUES(1,5,3,4);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: INSERT with constraints
+DETAIL:  Feature not supported: INSERT with constraints
 set optimizer_enable_dml_constraints=off;
 explain update constr_tab set b = 10;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: UPDATE with constraints
+DETAIL:  Feature not supported: UPDATE with constraints
                                        QUERY PLAN                                        
 -----------------------------------------------------------------------------------------
  Update on constr_tab  (cost=0.00..1.01 rows=1 width=22)
@@ -144,21 +144,21 @@ NOTICE:  CREATE TABLE will create partition "homer_1_prt_2_2_prt_2" for table "h
 INSERT INTO homer VALUES (1,0,40),(2,1,43),(3,2,41),(4,3,44);
 SELECT * FROM ONLY homer;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
  a | b | c 
 ---+---+---
 (0 rows)
 
 SELECT * FROM ONLY homer_1_prt_1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
  a | b | c 
 ---+---+---
 (0 rows)
 
 UPDATE ONLY homer SET c = c + 1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
 SELECT * FROM homer;
  a | b | c  
 ---+---+----
@@ -170,7 +170,7 @@ SELECT * FROM homer;
 
 DELETE FROM ONLY homer WHERE a = 3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
 SELECT * FROM homer;
  a | b | c  
 ---+---+----
@@ -195,7 +195,7 @@ EXPLAIN SELECT * FROM ext_table_no_fallback;
 
 EXPLAIN SELECT * FROM ONLY ext_table_no_fallback;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
                                        QUERY PLAN
 -----------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..11000.00 rows=1000000 width=8)
@@ -205,7 +205,7 @@ DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM 
 
 EXPLAIN INSERT INTO heap_t1 SELECT * FROM ONLY ext_table_no_fallback;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: ONLY in the FROM clause
+DETAIL:  Feature not supported: ONLY in the FROM clause
                                            QUERY PLAN
 -------------------------------------------------------------------------------------------------
  Insert on heap_t1  (cost=0.00..11000.00 rows=333334 width=8)

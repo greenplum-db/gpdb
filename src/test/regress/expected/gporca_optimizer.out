@@ -40,7 +40,7 @@ set optimizer_trace_fallback = on;
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: Multiple Distinct Qualified Aggregates are disabled in the optimizer
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  sum | count 
 -----+-------
  210 |     7
@@ -8026,10 +8026,10 @@ NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_3
 NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_4" for table "multilevel_p_1_prt_bb_2"
 insert into orca.multilevel_p values (1,1), (100,200);
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: Multi-level partitioned tables with non-uniform partitioning structure
+DETAIL:  Feature not supported: Multi-level partitioned tables with non-uniform partitioning structure
 select * from orca.multilevel_p;
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: Multi-level partitioned tables with non-uniform partitioning structure
+DETAIL:  Feature not supported: Multi-level partitioned tables with non-uniform partitioning structure
   a  |  b  
 -----+-----
    1 |   1
@@ -10426,9 +10426,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-LOG:  2018-03-29 10:22:52:869837 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
+LOG:  2018-03-29 10:22:52:869837 PDT,THD000,NOTICE,"Feature not supported: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: Cube
+DETAIL:  Feature not supported: Cube
 LOG:  Planner produced plan :0
                                                                    QUERY PLAN                                                                   
 ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -10597,9 +10597,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
+LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
 INFO:  GPORCA failed to produce a plan, falling back to planner
-DETAIL:  Feature not supported by the Pivotal Query Optimizer: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
+DETAIL:  Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
 LOG:  Planner produced plan :0
 LOG:  Computing Scalar Stats : column a
 reset client_min_messages;
