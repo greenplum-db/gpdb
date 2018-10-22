@@ -4295,7 +4295,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	 * postmaster/postmaster.c (the option sets should not conflict) and with
 	 * the common help() function in main/main.c.
 	 */
-	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:m:lN:nOo:Pp:r:S:sTt:Uv:W:y:-:")) != -1)
+	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMm:N:nOo:Pp:r:S:sTt:Uv:W:y:-:")) != -1)
 	{
 		switch (flag)
 		{
@@ -4363,6 +4363,17 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'l':
 				SetConfigOption("ssl", "true", ctx, gucsource);
+				break;
+
+			case 'M':
+				/* Undocumented flag used for mutating a directory that was a copy of a
+				 * master data directory and needs to now be a segment directory. Only
+				 * use on the first time the segment is started, and only use in
+				 * utility mode, as changes will be destructive, and will assume that
+				 * the segment has never participated in a distributed
+				 * transaction.*/
+				if (secure)
+					ConvertMasterDataDirToSegment = true;
 				break;
 
 			case 'm':

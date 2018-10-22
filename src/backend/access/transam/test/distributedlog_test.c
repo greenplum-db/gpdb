@@ -187,6 +187,78 @@ test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound(void **stat
 	IsBinaryUpgrade = false;
 }
 
+void
+test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage(void **state)
+{
+	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
+	TransactionId nextXid = FirstNormalTransactionId + 10;
+
+	setup(nextXid);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(oldestActiveXid));
+	will_return(SimpleLruZeroPage, 0);
+
+	ConvertMasterDataDirToSegment = true;
+
+	/* Run the function. */
+	DistributedLog_Startup(oldestActiveXid, nextXid);
+
+	ConvertMasterDataDirToSegment = false;
+}
+
+void
+test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages(void **state)
+{
+	TransactionId oldestActiveXid = FirstNormalTransactionId + 1;
+	TransactionId nextXid = FirstNormalTransactionId + ENTRIES_PER_PAGE * 2;
+
+	setup(nextXid);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(oldestActiveXid));
+	will_return(SimpleLruZeroPage, 0);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(oldestActiveXid) + 1);
+	will_return(SimpleLruZeroPage, 0);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(nextXid));
+	will_return(SimpleLruZeroPage, 0);
+
+	ConvertMasterDataDirToSegment = true;
+
+	/* Run the function. */
+	DistributedLog_Startup(oldestActiveXid, nextXid);
+
+	ConvertMasterDataDirToSegment = false;
+}
+
+void
+test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogWithTransactionIdWraparound(void **state)
+{
+	TransactionId oldestActiveXid = MaxTransactionId;
+	TransactionId nextXid = MaxTransactionId + 10;
+
+	setup(nextXid);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(oldestActiveXid));
+	will_return(SimpleLruZeroPage, 0);
+
+	expect_value(SimpleLruZeroPage, ctl, DistributedLogCtl);
+	expect_value(SimpleLruZeroPage, pageno, TransactionIdToPage(nextXid));
+	will_return(SimpleLruZeroPage, 0);
+
+	ConvertMasterDataDirToSegment = true;
+
+	/* Run the function. */
+	DistributedLog_Startup(oldestActiveXid, nextXid);
+
+	ConvertMasterDataDirToSegment = false;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -196,7 +268,10 @@ main(int argc, char* argv[])
 		unit_test(test_DistributedLog_Startup_MPP_20426),
 		unit_test(test_BinaryUpgradeZeroesOutDistributedLogWithTransactionIdWraparound),
 		unit_test(test_BinaryUpgradeZeroesOutDistributedLogFittingOnThreePages),
-		unit_test(test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage)
+		unit_test(test_BinaryUpgradeZeroesOutDistributedLogFittingOnSinglePage),
+		unit_test(test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogWithTransactionIdWraparound),
+		unit_test(test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnThreePages),
+		unit_test(test_ConvertMasterDataDirToSegmentZeroesOutDistributedLogFittingOnSinglePage)
 	};
 	return run_tests(tests);
 }

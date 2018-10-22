@@ -2272,9 +2272,13 @@ def impl(context, hostnames):
                       remoteHost=host)
         cmd.run(validateAfter=True)
 
-@given('a temporary directory to expand into')
-def impl(context):
-    context.temp_base_dir = tempfile.mkdtemp(dir='/tmp')
+@given('a temporary directory under "{tmp_base_dir}" to expand into')
+def impl(context, tmp_base_dir):
+    if not tmp_base_dir:
+        raise Exception("tmp_base_dir cannot be empty")
+    if not os.path.exists(tmp_base_dir):
+        os.mkdir(tmp_base_dir)
+    context.temp_base_dir = tempfile.mkdtemp(dir=tmp_base_dir)
 
 @given('the new host "{hostnames}" is ready to go')
 def impl(context, hostnames):

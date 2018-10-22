@@ -186,9 +186,9 @@ class PgCtlBackendOptions(CmdArgs):
 
     def set_special(self, special):
         """
-        @param special: special mode (none, 'upgrade' or 'maintenance')
+        @param special: special mode (none, 'upgrade', 'maintenance', 'convertMasterDataDirToSegment')
         """
-        opt = {None:None, 'upgrade':'-U', 'maintenance':'-m'}[special]
+        opt = {None:None, 'upgrade':'-U', 'maintenance':'-m', 'convertMasterDataDirToSegment':'-M'}[special]
         if opt: self.append(opt)
         return self
 

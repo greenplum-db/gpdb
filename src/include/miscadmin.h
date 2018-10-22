@@ -195,6 +195,7 @@ extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
 extern bool IsBackgroundWorker;
 extern bool IsBinaryUpgrade;
+extern bool ConvertMasterDataDirToSegment;
 
 extern bool ExitOnAnyError;
 
