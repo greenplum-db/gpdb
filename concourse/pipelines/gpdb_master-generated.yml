@@ -377,7 +377,7 @@ resources:
   type: docker-image
   source:
     repository: pivotaldata/ubuntu-gpdb-dev
-    tag: '16.04_gcc_6_3'
+    tag: '16.04'
 
 - name: ubuntu-gpdb-debian-dev-16
   type: docker-image
