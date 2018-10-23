@@ -912,18 +912,14 @@ ArchiveEntry(Archive *AHX,
 	newToc->dumpId = dumpId;
 	newToc->section = section;
 
-/*
- * GPDB_92_MERGE_FIXEME: can owner or dropStmt be NULL??  upstream pg_dump
- * doesn't guard against NULL pointer in owner nor dropStmt
- */
 	newToc->tag = pg_strdup(tag);
 	newToc->namespace = namespace ? pg_strdup(namespace) : NULL;
 	newToc->tablespace = tablespace ? pg_strdup(tablespace) : NULL;
-	newToc->owner = owner ? pg_strdup(owner) : NULL;
+	newToc->owner = owner;
 	newToc->withOids = withOids;
 	newToc->desc = pg_strdup(desc);
 	newToc->defn = pg_strdup(defn);
-	newToc->dropStmt = dropStmt ? pg_strdup(dropStmt) : NULL;
+	newToc->dropStmt = dropStmt;
 	newToc->copyStmt = copyStmt ? pg_strdup(copyStmt) : NULL;
 
 	if (nDeps > 0)
