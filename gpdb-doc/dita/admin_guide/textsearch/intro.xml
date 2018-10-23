@@ -7,15 +7,24 @@
     search.</shortdesc>
   <body>
     <p>Full Text Searching (or just "text search") provides the capability to identify
-      natural-language <i>documents</i> that satisfy a <i>query</i>, and optionally to sort them by
-      relevance to the query.  The most common type of search is to find all documents containing
-      given <i>query terms</i> and return them in order of their <i>similarity</i> to the query.
-      Notions of query and similarity are very flexible and depend on the specific application. The
+      natural-language <i>documents</i> that satisfy a <i>query</i>, and optionally to rank them by
+      relevance to the query. The most common type of search is to find all documents containing
+      given <i>query terms</i> and return them in order of their <i>similarity</i> to the query. </p>
+    <p>Greenplum Database provides a data type <codeph>tsvector</codeph> to store preprocessed
+      documents, and a data type <codeph>tsquery</codeph> to store processed queries (<xref
+        href="../../ref_guide/data_types.xml#topic1/text-search-types"/>). There are many functions
+      and operators available for these data types (<xref
+        href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
+      which is the match operator <codeph>@@</codeph>, which we introduce in <xref
+        href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated
+      using indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
+    <p>Notions of query and similarity are very flexible and depend on the specific application. The
       simplest search considers query as a set of words and similarity as the frequency of query
-      words in the document.</p>
-    <p>Textual search operators have existed in databases for years. Greenplum Database has ~, ~*,
-        <codeph>LIKE</codeph>, and <codeph>ILIKE</codeph> operators for textual data types, but they
-      lack many essential properties required by modern information systems:</p>
+      words in the document. </p>
+    <p>Greenplum Database supports the standard text matching operators <codeph>~</codeph>,
+        <codeph>~*</codeph>, <codeph>LIKE</codeph>, and <codeph>ILIKE</codeph> for textual data
+      types, but these operators lack many essential properties required for searching
+      documents:</p>
     <ul id="ul_py4_m5t_kfb">
       <li>There is no linguistic support, even for English. Regular expressions are not sufficient
         because they cannot easily handle derived words, e.g., <codeph>satisfies</codeph> and
@@ -66,14 +75,6 @@
       <li>Map different variations of a word to a canonical form using an Ispell dictionary.</li>
       <li>Map different variations of a word to a canonical form using Snowball stemmer rules.</li>
     </ul>
-    <p>A data type <codeph>tsvector</codeph> is provided for storing preprocessed documents, along
-      with a type <codeph>tsquery</codeph> for representing processed queries (<xref
-        href="../../ref_guide/data_types.xml#topic1/text-search-types"/>). There are many functions
-      and operators available for these data types (<xref
-        href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
-      which is the match operator <codeph>@@</codeph>, which we introduce in <xref
-        href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated
-      using indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
     <section>
       <title>What is a Document?</title>
       <p>A <i>document</i> is the unit of searching in a full text search system; for example, a

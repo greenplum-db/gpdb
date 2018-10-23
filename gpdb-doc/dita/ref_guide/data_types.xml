@@ -419,7 +419,7 @@
         see the Pivotal GPText documentation.</p>
     </section>
     <section id="text-search-types">
-      <title>Text Search Types</title>
+      <title>Text Search Data Types</title>
       <p>Greenplum Database provides two data types that are designed to support
         full text search, which is the activity of searching through a
         collection of natural-language <i>documents</i> to locate those that
