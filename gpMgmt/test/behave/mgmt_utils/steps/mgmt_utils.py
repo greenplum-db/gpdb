@@ -2089,11 +2089,15 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
         if num_of_hosts != len(hosts):
             raise Exception("Incorrect amount of hosts. number of hosts:%s\nhostnames: %s" % (num_of_hosts, hosts))
 
-    temp_base_dir = context.temp_base_dir
-    primary_dir = os.path.join(temp_base_dir, 'data', 'primary')
+    base_dir = "/tmp"
+    if hasattr(context, "temp_base_dir"):
+        base_dir = context.temp_base_dir
+    elif hasattr(context, "working_directory"):
+        base_dir = context.working_directory
+    primary_dir = os.path.join(base_dir, 'data', 'primary')
     mirror_dir = ''
     if context.gpexpand_mirrors_enabled:
-        mirror_dir = os.path.join(temp_base_dir, 'data', 'mirror')
+        mirror_dir = os.path.join(base_dir, 'data', 'mirror')
 
     directory_pairs = []
     # we need to create the tuples for the interview to work.
@@ -2112,10 +2116,10 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
 def impl(context):
     map(os.remove, glob.glob("gpexpand_inputfile*"))
 
-@when('the user runs gpexpand with the latest gpexpand_inputfile')
-def impl(context):
+@when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
+def impl(context, additional_params=''):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    ret_code, std_err, std_out = gpexpand.initialize_segments()
+    ret_code, std_err, std_out = gpexpand.initialize_segments(additional_params)
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
@@ -2264,10 +2268,14 @@ def impl(context, num_of_segments):
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
-    temp_base_dir = context.temp_base_dir
+    base_dir = "/tmp"
+    if hasattr(context, "temp_base_dir"):
+        base_dir = context.temp_base_dir
+    elif hasattr(context, "working_directory"):
+        base_dir = context.working_directory
     for host in hosts:
         cmd = Command(name='create data directories for expansion',
-                      cmdStr="mkdir -p %s/data/primary; mkdir -p %s/data/mirror" % (temp_base_dir, temp_base_dir),
+                      cmdStr="mkdir -p %s/data/primary; mkdir -p %s/data/mirror" % (base_dir, base_dir),
                       ctxt=REMOTE,
                       remoteHost=host)
         cmd.run(validateAfter=True)
@@ -2283,8 +2291,10 @@ def impl(context, tmp_base_dir):
 @given('the new host "{hostnames}" is ready to go')
 def impl(context, hostnames):
     hosts = hostnames.split(',')
-    reset_hosts(hosts, context.working_directory)
-    reset_hosts(hosts, context.temp_base_dir)
+    if hasattr(context, "working_directory"):
+        reset_hosts(hosts, context.working_directory)
+    if hasattr(context, "temp_base_dir"):
+        reset_hosts(hosts, context.temp_base_dir)
 
 @then('the database is killed on hosts "{hostnames}"')
 @given('the database is killed on hosts "{hostnames}"')

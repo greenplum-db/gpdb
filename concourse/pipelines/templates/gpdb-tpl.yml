@@ -407,15 +407,6 @@ resources:
       region_name: {{aws-region}}
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
-
-- name: snowflake-simple-database-dump # remove this resource in favor of icw_gporca_centos6_dump once gpexpand works with a dump of ICW
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{test-data-bucket-name}}
-    secret_access_key: {{bucket-secret-access-key}}
-    region_name: {{aws-region}}
-    versioned_file: snowflake-simple-database/dump.sql.xz
 {% endif %}
 {% if "aix7" in os_types %}
 - name: aix_environments
@@ -1924,7 +1915,6 @@ jobs:
     - get: centos-gpdb-dev-6
     - get: icw_gporca_centos6_dump
       passed: [gate_icw_end]
-    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1938,7 +1928,7 @@ jobs:
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     image: centos-gpdb-dev-6
-    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
+    input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
@@ -1964,7 +1954,7 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
-    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
+    - get: icw_gporca_centos6_dump
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1980,7 +1970,7 @@ jobs:
   - task: pre_run_test_setup
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
+    input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6

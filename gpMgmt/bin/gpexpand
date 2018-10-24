@@ -2779,9 +2779,9 @@ def main(options, args, parser):
             if not _gp_expand.validate_unalterable_tables():
                 raise ValidationError()
             if _gp_expand.check_unique_indexes():
-                logger.info("Tables with unique indexes exist.  Until these tables are successfully")
-                logger.info("redistributed, unique constraints may be violated.  For more information")
-                logger.info("on this issue, see the Greenplum Database Administrator Guide")
+                logger.warn("Tables with unique indexes exist.  Until these tables are successfully")
+                logger.warn("redistributed, unique constraints may be violated.  For more information")
+                logger.warn("on this issue, see the Greenplum Database Administrator Guide")
                 if not options.silent:
                     if not ask_yesno(None, "Would you like to continue with System Expansion", 'N'):
                         raise ValidationError()
