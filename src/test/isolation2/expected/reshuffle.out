@@ -1,0 +1,2497 @@
+set allow_system_table_mods=true;
+SET
+
+-- hash distributed heap table
+create table thash_reshuffle(a int, b int) distributed by (a);
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='thash_reshuffle'::regclass;
+UPDATE 1
+
+insert into thash_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from thash_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+29: begin;
+BEGIN
+29&: insert into thash_reshuffle values (101), (102), (103);  <waiting ...>
+
+30: begin;
+BEGIN
+30&: update thash_reshuffle set b = 102 where a = 1 or a = 2 or a = 3;  <waiting ...>
+
+31: begin;
+BEGIN
+31&: delete from thash_reshuffle where a = 4 or a = 5 or a = 6;  <waiting ...>
+
+1: abort;
+ABORT
+-- test reshuffle can abort
+
+29<:  <... completed>
+INSERT 3
+29:abort;
+ABORT
+29q: ... <quitting>
+
+30<:  <... completed>
+UPDATE 3
+30:abort;
+ABORT
+30q: ... <quitting>
+
+31<:  <... completed>
+DELETE 3
+31:abort;
+ABORT
+31q: ... <quitting>
+
+select * from thash_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_reshuffle set with (reshuffle);
+ALTER
+
+32: begin;
+BEGIN
+32&: alter table thash_reshuffle set with (reshuffle);  <waiting ...>
+
+select * from thash_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: commit;
+COMMIT
+1q: ... <quitting>
+
+32<:  <... completed>
+ERROR:  Do not need to reshuffle
+32:abort;
+ABORT
+32q: ... <quitting>
+
+select * from thash_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_reshuffle;
+DROP
+
+-- random distributed heap table
+create table trand_reshuffle(a int, b int) distributed randomly;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trand_reshuffle'::regclass;
+UPDATE 1
+
+insert into trand_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trand_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: commit;
+COMMIT
+2q: ... <quitting>
+
+select * from trand_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_reshuffle;
+DROP
+
+-- replicated heap table
+create table trep_reshuffle(a int, b int) distributed replicated;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trep_reshuffle'::regclass;
+UPDATE 1
+
+create language plpythonu;
+CREATE
+create function update_on_segment(tabname text, segid int) returns boolean as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) conn.query("set allow_system_table_mods = true") conn.query("update gp_distribution_policy set numsegments = 2 where localoid = '%s'::regclass" % tabname) conn.close() 
+return True $$ LANGUAGE plpythonu;
+CREATE
+
+create function select_on_segment(sql text, segid int) returns table (like trep_reshuffle) as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) r = conn.query(sql).getresult() conn.close() 
+return r $$ LANGUAGE plpythonu;
+CREATE
+
+update gp_distribution_policy set numsegments = 2 where localoid = 'trep_reshuffle'::regclass;
+UPDATE 1
+select update_on_segment('trep_reshuffle', 0);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_reshuffle', 1);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_reshuffle', 2);
+update_on_segment
+-----------------
+t                
+(1 row)
+insert into trep_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trep_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trep_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trep_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_reshuffle set with (reshuffle);
+ALTER
+
+select * from trep_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: commit;
+COMMIT
+3q: ... <quitting>
+
+select * from trep_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_reshuffle', 2);
+select_on_segment
+-----------------
+(1,1)            
+(2,2)            
+(3,3)            
+(4,4)            
+(5,5)            
+(6,6)            
+(7,7)            
+(8,8)            
+(9,9)            
+(10,10)          
+(10 rows)
+
+drop function update_on_segment(text, int);
+DROP
+drop function select_on_segment(text, int);
+DROP
+drop table trep_reshuffle;
+DROP
+
+drop language plpythonu;
+DROP
+
+-- hash distributed heap table partition
+create table thash_part_reshuffle(a int, b int) distributed by (a) partition by list(b) (partition thash_part_reshuffle_1 values(1), partition thash_part_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_reshuffle_1_prt_thash_part_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_reshuffle_1_prt_thash_part_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into thash_part_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from thash_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+4: begin;
+BEGIN
+4: alter table thash_part_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+4: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from thash_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+4: begin;
+BEGIN
+4: alter table thash_part_reshuffle set with (reshuffle);
+ALTER
+
+select * from thash_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+4: commit;
+COMMIT
+4q: ... <quitting>
+
+select * from thash_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_part_reshuffle;
+DROP
+
+-- random distributed heap table
+create table trand_part_reshuffle(a int, b int) distributed randomly partition by list(b) (partition trand_part_reshuffle_1 values(1), partition trand_part_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_reshuffle_1_prt_trand_part_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_reshuffle_1_prt_trand_part_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into trand_part_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from trand_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+5: begin;
+BEGIN
+5: alter table trand_part_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+5: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+5: begin;
+BEGIN
+5: alter table trand_part_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+5: commit;
+COMMIT
+5q: ... <quitting>
+
+select * from trand_part_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_part_reshuffle;
+DROP
+
+-- hash distributed heap table ao
+create table thash_ao_reshuffle(a int, b int) with (appendonly=true) distributed by (a);
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='thash_ao_reshuffle'::regclass;
+UPDATE 1
+
+insert into thash_ao_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from thash_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_ao_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from thash_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_ao_reshuffle set with (reshuffle);
+ALTER
+
+select * from thash_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: commit;
+COMMIT
+1q: ... <quitting>
+
+select * from thash_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_ao_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_ao_reshuffle;
+DROP
+
+-- random distributed heap table ao
+create table trand_ao_reshuffle(a int, b int) with (appendonly=true) distributed randomly;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trand_ao_reshuffle'::regclass;
+UPDATE 1
+
+insert into trand_ao_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trand_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_ao_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_ao_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: commit;
+COMMIT
+2q: ... <quitting>
+
+select * from trand_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_ao_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_ao_reshuffle;
+DROP
+
+-- replicated heap table ao
+create table trep_ao_reshuffle(a int, b int) with (appendonly=true) distributed replicated;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trep_ao_reshuffle'::regclass;
+UPDATE 1
+
+create language plpythonu;
+CREATE
+create function update_on_segment(tabname text, segid int) returns boolean as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) conn.query("set allow_system_table_mods = true") conn.query("update gp_distribution_policy set numsegments = 2 where localoid = '%s'::regclass" % tabname) conn.close() 
+return True $$ LANGUAGE plpythonu;
+CREATE
+
+create function select_on_segment(sql text, segid int) returns table (like trep_ao_reshuffle) as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) r = conn.query(sql).getresult() conn.close() 
+return r $$ LANGUAGE plpythonu;
+CREATE
+
+update gp_distribution_policy set numsegments = 2 where localoid = 'trep_ao_reshuffle'::regclass;
+UPDATE 1
+select update_on_segment('trep_ao_reshuffle', 0);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_ao_reshuffle', 1);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_ao_reshuffle', 2);
+update_on_segment
+-----------------
+t                
+(1 row)
+insert into trep_ao_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trep_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_ao_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_ao_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trep_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_ao_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trep_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_ao_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_ao_reshuffle set with (reshuffle);
+ALTER
+
+select * from trep_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_ao_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: commit;
+COMMIT
+3q: ... <quitting>
+
+select * from trep_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_ao_reshuffle', 2);
+select_on_segment
+-----------------
+(1,1)            
+(2,2)            
+(3,3)            
+(4,4)            
+(5,5)            
+(6,6)            
+(7,7)            
+(8,8)            
+(9,9)            
+(10,10)          
+(10 rows)
+
+drop function update_on_segment(text, int);
+DROP
+drop function select_on_segment(text, int);
+DROP
+drop table trep_ao_reshuffle;
+DROP
+
+drop language plpythonu;
+DROP
+
+-- hash distributed heap table ao partition
+create table thash_part_ao_reshuffle(a int, b int) with (appendonly=true) distributed by (a) partition by list(b) (partition thash_part_ao_reshuffle_1 values(1), partition thash_part_ao_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_ao_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_ao_reshuffle_1_prt_thash_part_ao_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_ao_reshuffle_1_prt_thash_part_ao_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_ao_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into thash_part_ao_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from thash_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_part_ao_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from thash_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_part_ao_reshuffle set with (reshuffle);
+ALTER
+
+select * from thash_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: commit;
+COMMIT
+1q: ... <quitting>
+
+select * from thash_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_ao_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_part_ao_reshuffle;
+DROP
+
+-- random distributed heap table ao partiton
+create table trand_part_ao_reshuffle(a int, b int) with (appendonly=true) distributed randomly partition by list(b) (partition trand_part_ao_reshuffle_1 values(1), partition trand_part_ao_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_ao_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_ao_reshuffle_1_prt_trand_part_ao_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_ao_reshuffle_1_prt_trand_part_ao_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_ao_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into trand_part_ao_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from trand_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_part_ao_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_part_ao_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_ao_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: commit;
+COMMIT
+2q: ... <quitting>
+
+select * from trand_part_ao_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_ao_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_part_ao_reshuffle;
+DROP
+
+-- hash distributed heap table
+create table thash_aoco_reshuffle(a int, b int) with (appendonly=true) distributed by (a);
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='thash_aoco_reshuffle'::regclass;
+UPDATE 1
+
+insert into thash_aoco_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from thash_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_aoco_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from thash_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_aoco_reshuffle set with (reshuffle);
+ALTER
+
+select * from thash_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: commit;
+COMMIT
+1q: ... <quitting>
+
+select * from thash_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from thash_aoco_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_aoco_reshuffle;
+DROP
+
+-- random distributed heap table
+create table trand_aoco_reshuffle(a int, b int) with (appendonly=true, orientation=column) distributed randomly;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trand_aoco_reshuffle'::regclass;
+UPDATE 1
+
+insert into trand_aoco_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trand_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_aoco_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_aoco_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: commit;
+COMMIT
+2q: ... <quitting>
+
+select * from trand_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select 2 in (select gp_segment_id from trand_aoco_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_aoco_reshuffle;
+DROP
+
+-- replicated heap table
+create table trep_aoco_reshuffle(a int, b int) with (appendonly=true, orientation=column) distributed replicated;
+CREATE
+update gp_distribution_policy  set numsegments=2 where localoid='trep_aoco_reshuffle'::regclass;
+UPDATE 1
+
+create language plpythonu;
+CREATE
+create function update_on_segment(tabname text, segid int) returns boolean as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) conn.query("set allow_system_table_mods = true") conn.query("update gp_distribution_policy set numsegments = 2 where localoid = '%s'::regclass" % tabname) conn.close() 
+return True $$ LANGUAGE plpythonu;
+CREATE
+
+create function select_on_segment(sql text, segid int) returns table (like trep_aoco_reshuffle) as $$ import pygresql.pg as pg conn = pg.connect(dbname='isolation2test') port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0] conn.close() 
+conn = pg.connect(dbname='isolation2test', opt='-c gp_session_role=utility', port=port) r = conn.query(sql).getresult() conn.close() 
+return r $$ LANGUAGE plpythonu;
+CREATE
+
+update gp_distribution_policy set numsegments = 2 where localoid = 'trep_aoco_reshuffle'::regclass;
+UPDATE 1
+select update_on_segment('trep_aoco_reshuffle', 0);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_aoco_reshuffle', 1);
+update_on_segment
+-----------------
+t                
+(1 row)
+select update_on_segment('trep_aoco_reshuffle', 2);
+update_on_segment
+-----------------
+t                
+(1 row)
+insert into trep_aoco_reshuffle select i,i from generate_series(1,10) i;
+INSERT 10
+
+select * from trep_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_aoco_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_aoco_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trep_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_aoco_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trep_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_aoco_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: begin;
+BEGIN
+3: alter table trep_aoco_reshuffle set with (reshuffle);
+ALTER
+
+select * from trep_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_aoco_reshuffle', 2);
+select_on_segment
+-----------------
+(0 rows)
+
+3: commit;
+COMMIT
+3q: ... <quitting>
+
+select * from trep_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+(10 rows)
+select select_on_segment('select * from trep_aoco_reshuffle', 2);
+select_on_segment
+-----------------
+(1,1)            
+(2,2)            
+(3,3)            
+(4,4)            
+(5,5)            
+(6,6)            
+(7,7)            
+(8,8)            
+(9,9)            
+(10,10)          
+(10 rows)
+
+drop function update_on_segment(text, int);
+DROP
+drop function select_on_segment(text, int);
+DROP
+drop table trep_aoco_reshuffle;
+DROP
+
+drop language plpythonu;
+DROP
+
+-- hash distributed heap table
+create table thash_part_aoco_reshuffle(a int, b int) with (appendonly=true, orientation=column) distributed by (a) partition by list(b) (partition thash_part_aoco_reshuffle_1 values(1), partition thash_part_aoco_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_aoco_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_aoco_reshuffle_1_prt_thash_part_aoco_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_aoco_reshuffle_1_prt_thash_part_aoco_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='thash_part_aoco_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into thash_part_aoco_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from thash_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_part_aoco_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from thash_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from thash_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: begin;
+BEGIN
+1: alter table thash_part_aoco_reshuffle set with (reshuffle);
+ALTER
+
+select * from thash_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+1: commit;
+COMMIT
+1q: ... <quitting>
+
+select * from thash_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from thash_part_aoco_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table thash_part_aoco_reshuffle;
+DROP
+
+-- random distributed heap table
+create table trand_part_aoco_reshuffle(a int, b int) with (appendonly=true, orientation=column) distributed randomly partition by list(b) (partition trand_part_aoco_reshuffle_1 values(1), partition trand_part_aoco_reshuffle_2 values(2), default partition other);
+CREATE
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_aoco_reshuffle'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_aoco_reshuffle_1_prt_trand_part_aoco_reshuffle_1'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_aoco_reshuffle_1_prt_trand_part_aoco_reshuffle_2'::regclass;
+UPDATE 1
+update gp_distribution_policy set numsegments=2 where localoid='trand_part_aoco_reshuffle_1_prt_other'::regclass;
+UPDATE 1
+
+insert into trand_part_aoco_reshuffle select i,i from generate_series(1,20) i;
+INSERT 20
+
+select * from trand_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_part_aoco_reshuffle set with (reshuffle);
+ALTER
+
+-- since alter reshuffle transaction has not committed
+-- the other transaction can access the table, but
+-- can only see tuples from seg0, seg1.
+select * from trand_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: abort;
+ABORT
+-- test reshuffle can abort
+
+select * from trand_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: begin;
+BEGIN
+2: alter table trand_part_aoco_reshuffle set with (reshuffle);
+ALTER
+
+select * from trand_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_aoco_reshuffle) as check;
+check
+-----
+f    
+(1 row)
+
+2: commit;
+COMMIT
+2q: ... <quitting>
+
+select * from trand_part_aoco_reshuffle order by a, b;
+a |b 
+--+--
+1 |1 
+2 |2 
+3 |3 
+4 |4 
+5 |5 
+6 |6 
+7 |7 
+8 |8 
+9 |9 
+10|10
+11|11
+12|12
+13|13
+14|14
+15|15
+16|16
+17|17
+18|18
+19|19
+20|20
+(20 rows)
+select 2 in (select gp_segment_id from trand_part_aoco_reshuffle) as check;
+check
+-----
+t    
+(1 row)
+
+drop table trand_part_aoco_reshuffle;
+DROP
+

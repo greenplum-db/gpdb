@@ -4030,6 +4030,13 @@ AlterTableGetLockLevel(List *cmds)
 
 				/* GPDB additions */
 			case AT_SetDistributedBy:
+				/*
+				 * With catalog MVCC introduced in postgres9.4,
+				 * we could allow access to the tables while their
+				 * data are being redistributed.
+				 */
+				cmd_lockmode = ExclusiveLock;
+				break;
 			case AT_PartAdd:
 			case AT_PartAddForSplit:
 			case AT_PartAlter:

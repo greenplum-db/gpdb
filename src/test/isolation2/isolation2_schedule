@@ -1,3 +1,6 @@
+#test set-distributedby-access
+test: reshuffle 
+
 # test update hash col under utility mode
 test: update_hash_col_utilitymode
 
