@@ -468,17 +468,8 @@ select f1 from t1;
 -- Check that arrays of composites are safely detoasted when needed
 
 create temp table src (f1 text);
--- start_ignore
--- GPDB_94_MERGE_FIXME: ORCA currently creates an incorrect plan for this
--- query. See https://github.com/greenplum-db/gpdb/issues/5930. Disable
--- ORCA to silence the failure, until that's fixed.
-set optimizer=off;
--- end_ignore
 insert into src
   select string_agg(random()::text,'') from generate_series(1,10000);
--- start_ignore
-reset optimizer;
--- end_ignore
 create type textandtext as (c1 text, c2 text);
 create temp table dest (f1 textandtext[]);
 insert into dest select array[row(f1,f1)::textandtext] from src;
