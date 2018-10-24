@@ -1119,13 +1119,19 @@ readFileFromDDBoost(struct ddboost_options *dd_options)
 	}
 	if (strstr(ddboostFile, "-?[0-9]+")) {
 
-		char* searchFile = getFileWithRegex(dd_options, ddboostFile);
+		char* filenameRegex;
+		filenameRegex = malloc(strlen(ddboostFile) + 2);
+		strcpy(filenameRegex, ddboostFile);
+		strcat(filenameRegex, "$");
+
+		char* searchFile = getFileWithRegex(dd_options, filenameRegex);
 		if (searchFile == NULL) {
-			mpp_err_msg(logError, progname, "File pattern %s not found on DDboost\n", ddboostFile);
+			mpp_err_msg(logError, progname, "File pattern %s not found on DDboost\n", filenameRegex);
 			return -1;
 		}
 		ddboostFile = searchFile;
 		mpp_err_msg("DEBUG", progname, "Found file %s\n", ddboostFile);
+		free(filenameRegex);
 	}
 
 	err = readFromDDFileToOutput(ddboostFile, dd_options->ddboost_storage_unit);
