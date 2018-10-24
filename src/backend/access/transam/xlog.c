@@ -6391,8 +6391,6 @@ StartupXLOG(void)
 		/* Activate recovery in standby mode */
 		StandbyMode = true;
 
-		Assert(backupEndRequired);
-
 		/*
 		 * When a backup_label file is present, we want to roll forward from
 		 * the checkpoint it identifies, rather than using pg_control.
@@ -11107,20 +11105,12 @@ read_backup_label(XLogRecPtr *checkPointLoc, bool *backupEndRequired,
 		/* Streaming backup method is only supported */
 		if (strcmp(backuptype, "streamed") == 0)
 			*backupEndRequired = true;
-		else
-			ereport(FATAL,
-					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-					 errmsg("invalid data in file \"%s\"", BACKUP_LABEL_FILE)));
-
 	}
 
 	if (fscanf(lfp, "BACKUP FROM: %19s\n", backupfrom) == 1)
 	{
-		/* Backup from standby is not supported */
-		if (strcmp(backupfrom, "master") != 0)
-			ereport(FATAL,
-					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-					 errmsg("invalid data in file \"%s\"", BACKUP_LABEL_FILE)));
+		if (strcmp(backupfrom, "standby") == 0)
+			*backupFromStandby = true;
 	}
 
 	if (ferror(lfp) || FreeFile(lfp))
