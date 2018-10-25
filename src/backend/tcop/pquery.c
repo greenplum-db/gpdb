@@ -276,7 +276,7 @@ ProcessQuery(Portal portal,
 	 */
 	if (Gp_role == GP_ROLE_EXECUTE &&
 		queryDesc->plannedstmt &&
-		queryDesc->plannedstmt->intoClause)
+		queryDesc->plannedstmt->intoClause != NULL)
 		eflag = GetIntoRelEFlags(queryDesc->plannedstmt->intoClause);
 
 	ExecutorStart(queryDesc, eflag);
@@ -385,7 +385,7 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (query->commandType == CMD_SELECT &&
 					query->utilityStmt == NULL &&
-					!query->isCTAS)
+					query->intoClauseType == INTOCLAUSE_NONE)
 				{
 					if (query->hasModifyingCTE)
 						return PORTAL_ONE_MOD_WITH;
@@ -410,7 +410,8 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (pstmt->commandType == CMD_SELECT &&
 					pstmt->utilityStmt == NULL &&
-					pstmt->intoClause == NULL)
+					pstmt->intoClause == NULL &&
+					pstmt->copyIntoClause == NULL)
 				{
 					if (pstmt->hasModifyingCTE)
 						return PORTAL_ONE_MOD_WITH;
@@ -522,7 +523,7 @@ FetchStatementTargetList(Node *stmt)
 		{
 			if (query->commandType == CMD_SELECT &&
 				query->utilityStmt == NULL &&
-				!query->isCTAS)
+				query->intoClauseType == INTOCLAUSE_NONE)
 				return query->targetList;
 			if (query->returningList)
 				return query->returningList;
@@ -535,7 +536,8 @@ FetchStatementTargetList(Node *stmt)
 
 		if (pstmt->commandType == CMD_SELECT &&
 			pstmt->utilityStmt == NULL &&
-			pstmt->intoClause == NULL)
+			pstmt->intoClause == NULL &&
+			pstmt->copyIntoClause == NULL)
 			return pstmt->planTree->targetlist;
 		if (pstmt->hasReturning)
 			return pstmt->planTree->targetlist;

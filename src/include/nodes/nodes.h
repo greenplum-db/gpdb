@@ -232,6 +232,7 @@ typedef enum NodeTag
 	T_JoinExpr,
 	T_FromExpr,
 	T_IntoClause,
+	T_CopyIntoClause,
 	T_Flow,
 	T_Grouping,
 	T_GroupId,

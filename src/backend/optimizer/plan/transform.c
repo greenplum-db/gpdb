@@ -89,7 +89,7 @@ normalize_query(Query *query)
 	 * queries like "SELECT function()", which would be executed on the QD
 	 * anyway.
 	 */
-	if (res->commandType != CMD_SELECT || res->isCTAS)
+	if (res->commandType != CMD_SELECT || res->intoClauseType != INTOCLAUSE_NONE)
 	{
 		if (safe_to_replace_sirvf_tle(res))
 		{

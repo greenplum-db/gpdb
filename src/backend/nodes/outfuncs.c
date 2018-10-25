@@ -322,6 +322,7 @@ _outPlannedStmt(StringInfo str, const PlannedStmt *node)
 
 	WRITE_UINT64_FIELD(query_mem);
 	WRITE_NODE_FIELD(intoClause);
+	WRITE_NODE_FIELD(copyIntoClause);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1327,6 +1328,19 @@ _outIntoClause(StringInfo str, const IntoClause *node)
 	WRITE_NODE_FIELD(viewQuery);
 	WRITE_BOOL_FIELD(skipData);
 	WRITE_NODE_FIELD(distributedBy);
+}
+
+static void
+_outCopyIntoClause(StringInfo str, const CopyIntoClause *node)
+{
+	WRITE_NODE_TYPE("COPYINTOCLAUSE");
+
+	WRITE_NODE_FIELD(attlist);
+	WRITE_BOOL_FIELD(is_program);
+	WRITE_STRING_FIELD(filename);
+	WRITE_NODE_FIELD(options);
+	WRITE_NODE_FIELD(ao_segnos);
+
 }
 
 static void
@@ -3774,7 +3788,7 @@ _outQuery(StringInfo str, const Query *node)
 	WRITE_NODE_FIELD(rowMarks);
 	WRITE_NODE_FIELD(setOperations);
 	WRITE_NODE_FIELD(constraintDeps);
-	WRITE_BOOL_FIELD(isCTAS);
+	WRITE_BOOL_FIELD(intoClauseType);
 	WRITE_BOOL_FIELD(needReshuffle);
 
 	/* Don't serialize policy */
@@ -4836,6 +4850,9 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_IntoClause:
 				_outIntoClause(str, obj);
+				break;
+			case T_CopyIntoClause:
+				_outCopyIntoClause(str, obj);
 				break;
 			case T_Var:
 				_outVar(str, obj);

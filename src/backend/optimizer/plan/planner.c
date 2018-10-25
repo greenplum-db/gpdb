@@ -2680,7 +2680,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	 */
 	if ((parse->distinctClause || parse->sortClause) &&
 		(root->config->honor_order_by || !root->parent_root) &&
-		!parse->isCTAS &&
+		parse->intoClauseType == INTOCLAUSE_NONE &&
 		/*
 		 * GPDB_84_MERGE_FIXME: Does this do the right thing, if you have a
 		 * SELECT DISTINCT query as argument to a table function?

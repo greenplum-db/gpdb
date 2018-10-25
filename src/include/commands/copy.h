@@ -34,7 +34,6 @@ typedef enum CopyDest
 } CopyDest;
 
 /* CopyStateData is private in commands/copy.c */
-typedef struct CopyStateData *CopyState;
 typedef int (*copy_data_source_cb) (void *outbuf, int datasize, void *extra);
 
 /*
@@ -283,6 +282,17 @@ typedef struct CopyStateData
 /* end Greenplum Database specific variables */
 } CopyStateData;
 
+typedef struct CopyStateData *CopyState;
+
+/* DestReceiver for COPY (SELECT) TO */
+typedef struct
+{
+	DestReceiver pub;			/* publicly-known function pointers */
+	CopyState	cstate;			/* CopyStateData for the command */
+	QueryDesc  *queryDesc;		/* QueryDesc for the copy*/
+	uint64		processed;		/* # of tuples processed */
+} DR_copy;
+
 /*
  * Some platforms like macOS (since Yosemite) already define 64 bit versions
  * of htonl and nhohl so we need to guard against redefinition.
@@ -303,6 +313,9 @@ extern CopyState BeginCopyFrom(Relation rel, const char *filename,
 			  bool is_program, copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
 			  List *attnamelist, List *options, List *ao_segnos);
+extern CopyState
+BeginCopyToOnSegment(QueryDesc *queryDesc);
+extern void EndCopyToOnSegment(CopyState cstate);
 extern CopyState BeginCopyToForExternalTable(Relation extrel, List *options);
 extern void EndCopyFrom(CopyState cstate);
 extern bool NextCopyFrom(CopyState cstate, ExprContext *econtext,

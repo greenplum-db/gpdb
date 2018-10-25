@@ -278,7 +278,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	{
 		case CMD_SELECT:
 			/* If the query comes from 'CREAT TABLE AS' or 'SELECT INTO' */
-			if (query->isCTAS)
+			if (query->intoClauseType != INTOCLAUSE_NONE)
 			{
 				List	   *hashExpr;
 				ListCell   *exp1;
@@ -443,14 +443,14 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 								strcat(columns, "???");
 
 						}
-
-						ereport(NOTICE,
-								(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-								 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "
-										"named '%s' as the Greenplum Database data distribution key for this "
-										"table. ", columns),
-								 errhint("The 'DISTRIBUTED BY' clause determines the distribution of data."
-										 " Make sure column(s) chosen are the optimal data distribution key to minimize skew.")));
+						if (query->intoClauseType == INTOCLAUSE_CTAS)
+							ereport(NOTICE,
+									(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
+									 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "
+											"named '%s' as the Greenplum Database data distribution key for this "
+											"table. ", columns),
+									 errhint("The 'DISTRIBUTED BY' clause determines the distribution of data."
+											 " Make sure column(s) chosen are the optimal data distribution key to minimize skew.")));
 					}
 				}
 

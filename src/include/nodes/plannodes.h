@@ -20,6 +20,7 @@
 #include "access/sdir.h"
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
+#include "parsenodes.h"
 
 typedef struct DirectDispatchInfo
 {
@@ -143,6 +144,7 @@ typedef struct PlannedStmt
 	 * to be dispatched to QEs.
 	 */
 	IntoClause *intoClause;
+	CopyIntoClause *copyIntoClause;
 } PlannedStmt;
 
 /*

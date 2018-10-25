@@ -686,7 +686,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	{
 		Assert(list_length(tlist) == 1);
 		Query *query = (Query *) linitial(tlist);
-		query->isCTAS = true;
+		query->intoClauseType = INTOCLAUSE_CTAS;
 	}
 
 	/* Release snapshot if we got one */

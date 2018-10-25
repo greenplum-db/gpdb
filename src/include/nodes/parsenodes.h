@@ -88,6 +88,12 @@ typedef uint32 AclMode;			/* a bitmask of privilege bits */
  *	Query Tree
  *****************************************************************************/
 
+typedef uint8 IntoClauseType;
+
+#define INTOCLAUSE_NONE	0
+#define INTOCLAUSE_CTAS	1
+#define INTOCLAUSE_COPY	2
+
 /*
  * Query -
  *	  Parse analysis turns all statements into a Query tree
@@ -187,7 +193,7 @@ typedef struct Query
 	 * GPDB: Used to indicate this query is part of CTAS so that its plan would
 	 * always be dispatched in parallel.
 	 */
-	bool		isCTAS;
+	IntoClauseType	intoClauseType;
 
 	/*
 	 *  Do we need to reshuffle data, we use an UpdateStmt
@@ -197,7 +203,6 @@ typedef struct Query
 	bool	   needReshuffle;
 
 } Query;
-
 
 /****************************************************************************
  *	Supporting data structures for Parse Trees

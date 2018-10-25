@@ -25,6 +25,7 @@
 #include <sys/wait.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <commands/copy.h>
 
 #include "access/heapam.h"
 #include "access/htup_details.h"
@@ -76,13 +77,7 @@
 #define ISOCTAL(c) (((c) >= '0') && ((c) <= '7'))
 #define OCTVALUE(c) ((c) - '0')
 
-/* DestReceiver for COPY (SELECT) TO */
-typedef struct
-{
-	DestReceiver pub;			/* publicly-known function pointers */
-	CopyState	cstate;			/* CopyStateData for the command */
-	uint64		processed;		/* # of tuples processed */
-} DR_copy;
+
 
 
 /*
@@ -155,17 +150,19 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 /* non-export function prototypes */
 static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-		  const char *queryString, List *attnamelist, List *options);
+			const char *queryString, List *attnamelist, List *options,
+		   TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
-			const char *filename, bool is_program, List *attnamelist,
-			List *options, bool skip_ext_partition);
-static void EndCopyTo(CopyState cstate);
+							 const char *filename, bool is_program, List *attnamelist,
+							 List *options, bool skip_ext_partition);
+static void EndCopyTo(CopyState cstate, uint64 *processed);
 static uint64 DoCopyTo(CopyState cstate);
 static uint64 CopyToDispatch(CopyState cstate);
 static uint64 CopyTo(CopyState cstate);
 static uint64 CopyFrom(CopyState cstate);
 static uint64 CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt);
+static uint64 CopyToQueryOnSegment(CopyState cstate);
 static void CopyFromInsertBatch(CopyState cstate, EState *estate,
 					CommandId mycid, int hi_options,
 					ResultRelInfo *resultRelInfo, TupleTableSlot *myslot,
@@ -247,6 +244,8 @@ static void cdbFlushInsertBatches(List *resultRels,
 					  int hi_options,
 					  TupleTableSlot *baseSlot,
 					  int firstBufferedLineNo);
+CopyIntoClause*
+MakeCopyIntoClause(CopyStmt *stmt);
 
 /* ==========================================================================
  * The following macros aid in major refactoring of data processing code (in
@@ -1131,7 +1130,12 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 			cstate->partitions = stmt->partitions;
 
 			if (Gp_role == GP_ROLE_DISPATCH && cstate->on_segment)
-				*processed = CopyDispatchOnSegment(cstate, stmt);
+			{
+				if (cstate->rel)
+					*processed = CopyDispatchOnSegment(cstate, stmt);
+				else
+					*processed = CopyToQueryOnSegment(cstate);
+			}
 			else
 				*processed = DoCopyTo(cstate);	/* copy from database to file */
 		}
@@ -1146,9 +1150,8 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 		}
 		PG_END_TRY();
 
-		EndCopyTo(cstate);
+		EndCopyTo(cstate, processed);
 	}
-
 	/*
 	 * Close the relation.  If reading, we can release the AccessShareLock we
 	 * got; if writing, we should hold the lock until end of transaction to
@@ -1729,10 +1732,10 @@ BeginCopy(bool is_from,
 		  Node *raw_query,
 		  const char *queryString,
 		  List *attnamelist,
-		  List *options)
+		  List *options,
+		  TupleDesc tupDesc)
 {
 	CopyState	cstate;
-	TupleDesc	tupDesc;
 	int			num_phys_attrs;
 	MemoryContext oldcontext;
 
@@ -1758,6 +1761,7 @@ BeginCopy(bool is_from,
 					   0, /* pass correct value when COPY supports no delim */
 					   true);
 
+
 	/* Process the source/target relation or query */
 	if (rel)
 	{
@@ -1774,7 +1778,7 @@ BeginCopy(bool is_from,
 					 errmsg("table \"%s\" does not have OIDs",
 							RelationGetRelationName(cstate->rel))));
 	}
-	else
+	else if(raw_query)
 	{
 		List	   *rewritten;
 		Query	   *query;
@@ -1809,6 +1813,13 @@ BeginCopy(bool is_from,
 
 		query = (Query *) linitial(rewritten);
 
+
+		if (cstate->on_segment)
+		{
+			if (IsA(query, Query))
+				query->intoClauseType = INTOCLAUSE_COPY;
+
+		}
 		/* Query mustn't use INTO, either */
 		if (query->utilityStmt != NULL &&
 			IsA(query->utilityStmt, CreateTableAsStmt))
@@ -1839,6 +1850,9 @@ BeginCopy(bool is_from,
 											InvalidSnapshot,
 											dest, NULL,
 											GP_INSTRUMENT_OPTS);
+		if (cstate->on_segment)
+			cstate->queryDesc->plannedstmt->copyIntoClause =
+					MakeCopyIntoClause(glob_copystmt);
 
 		if (gp_enable_gpperfmon && Gp_role == GP_ROLE_DISPATCH)
 		{
@@ -2152,6 +2166,178 @@ EndCopy(CopyState cstate)
 	pfree(cstate);
 }
 
+CopyIntoClause*
+MakeCopyIntoClause(CopyStmt *stmt)
+{
+	CopyIntoClause *copyIntoClause;
+	copyIntoClause = makeNode(CopyIntoClause);
+
+	copyIntoClause->type = T_CopyIntoClause;
+	copyIntoClause->is_program = stmt->is_program;
+	copyIntoClause->ao_segnos = stmt->ao_segnos;
+	copyIntoClause->filename = stmt->filename;
+	copyIntoClause->options = stmt->options;
+	copyIntoClause->attlist = stmt->attlist;
+
+	return copyIntoClause;
+}
+
+CopyState
+BeginCopyToOnSegment(QueryDesc *queryDesc)
+{
+	CopyState	cstate;
+	MemoryContext oldcontext;
+	ListCell   *cur;
+
+	TupleDesc	tupDesc;
+	int			num_phys_attrs;
+	Form_pg_attribute *attr;
+	char	   *filename;
+	CopyIntoClause *copyIntoClause;
+
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	copyIntoClause = queryDesc->plannedstmt->copyIntoClause;
+	tupDesc = queryDesc->tupDesc;
+	cstate = BeginCopy(false, NULL, NULL, NULL, copyIntoClause->attlist,
+					   copyIntoClause->options, tupDesc);
+	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+
+	cstate->null_print_client = cstate->null_print;		/* default */
+
+	/* We use fe_msgbuf as a per-row buffer regardless of copy_dest */
+	cstate->fe_msgbuf = makeStringInfo();
+
+	{
+		cstate->filename = pstrdup(copyIntoClause->filename);
+		cstate->is_program = copyIntoClause->is_program;
+
+		if (cstate->on_segment)
+			MangleCopyFileName(cstate);
+		filename = cstate->filename;
+
+		if (cstate->is_program)
+		{
+			cstate->program_pipes = open_program_pipes(cstate->filename, true);
+			cstate->copy_file = fdopen(cstate->program_pipes->pipes[0], PG_BINARY_W);
+
+			if (cstate->copy_file == NULL)
+				ereport(ERROR,
+						(errmsg("could not execute command \"%s\": %m",
+								cstate->filename)));
+		}
+		else
+		{
+			mode_t oumask; /* Pre-existing umask value */
+			struct stat st;
+
+			/*
+			 * Prevent write to relative path ... too easy to shoot oneself in
+			 * the foot by overwriting a database file ...
+			 */
+			if (!is_absolute_path(filename))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_NAME),
+								errmsg("relative path not allowed for COPY to file")));
+
+			oumask = umask(S_IWGRP | S_IWOTH);
+			cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
+			umask(oumask);
+			if (cstate->copy_file == NULL)
+				ereport(ERROR,
+						(errcode_for_file_access(),
+								errmsg("could not open file \"%s\" for writing: %m", filename)));
+
+			// Increase buffer size to improve performance  (cmcdevitt)
+			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
+
+			fstat(fileno(cstate->copy_file), &st);
+			if (S_ISDIR(st.st_mode))
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+								errmsg("\"%s\" is a directory", filename)));
+		}
+	}
+
+	attr = tupDesc->attrs;
+	num_phys_attrs = tupDesc->natts;
+	/* Get info about the columns we need to process. */
+	cstate->out_functions = (FmgrInfo *) palloc(num_phys_attrs * sizeof(FmgrInfo));
+	foreach(cur, cstate->attnumlist)
+	{
+		int			attnum = lfirst_int(cur);
+		Oid			out_func_oid;
+		bool		isvarlena;
+
+		if (cstate->binary)
+			getTypeBinaryOutputInfo(attr[attnum - 1]->atttypid,
+									&out_func_oid,
+									&isvarlena);
+		else
+			getTypeOutputInfo(attr[attnum - 1]->atttypid,
+							  &out_func_oid,
+							  &isvarlena);
+		fmgr_info(out_func_oid, &cstate->out_functions[attnum - 1]);
+	}
+
+	/*
+	 * Create a temporary memory context that we can reset once per row to
+	 * recover palloc'd memory.  This avoids any problems with leaks inside
+	 * datatype output routines, and should be faster than retail pfree's
+	 * anyway.  (We don't need a whole econtext as CopyFrom does.)
+	 */
+	cstate->rowcontext = AllocSetContextCreate(CurrentMemoryContext,
+											   "COPY TO",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
+
+	if (cstate->binary)
+	{
+		/* Generate header for a binary copy */
+		int32		tmp;
+
+		/* Signature */
+		CopySendData(cstate, BinarySignature, 11);
+		/* Flags field */
+		tmp = 0;
+		if (cstate->oids)
+			tmp |= (1 << 16);
+		CopySendInt32(cstate, tmp);
+		/* No header extension */
+		tmp = 0;
+		CopySendInt32(cstate, tmp);
+	}
+	else
+	{
+		/* if a header has been requested send the line */
+		if (cstate->header_line)
+		{
+			bool		hdr_delim = false;
+
+			foreach(cur, cstate->attnumlist)
+			{
+				int			attnum = lfirst_int(cur);
+				char	   *colname;
+
+				if (hdr_delim)
+					CopySendChar(cstate, cstate->delim[0]);
+				hdr_delim = true;
+
+				colname = NameStr(attr[attnum - 1]->attname);
+
+				CopyAttributeOutCSV(cstate, colname, false,
+									list_length(cstate->attnumlist) == 1);
+			}
+
+			CopySendEndOfRow(cstate);
+		}
+	}
+
+	MemoryContextSwitchTo(oldcontext);
+	return cstate;
+}
+
 /*
  * Setup CopyState to read tuples from a table or a query for COPY TO.
  */
@@ -2209,7 +2395,7 @@ BeginCopyTo(Relation rel,
 				 errhint("Try the COPY (SELECT ...) TO variant.")));
 	}
 
-	cstate = BeginCopy(false, rel, query, queryString, attnamelist, options);
+	cstate = BeginCopy(false, rel, query, queryString, attnamelist, options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	cstate->skip_ext_partition = skip_ext_partition;
@@ -2239,17 +2425,6 @@ BeginCopyTo(Relation rel,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("COPY ignores external partition(s)")));
 		}
-	}
-
-	if (rel == NULL && cstate->on_segment)
-	{
-		/*
-		 * Report error because COPY ON SEGMENT doesn't know the data
-		 * location of the result of SELECT query.
-		 */
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'.")));
 	}
 
 	bool		pipe = (filename == NULL || (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment));
@@ -2336,7 +2511,7 @@ BeginCopyToForExternalTable(Relation extrel, List *options)
 
 	Assert(RelationIsExternal(extrel));
 
-	cstate = BeginCopy(false, extrel, NULL, NULL, NIL, options);
+	cstate = BeginCopy(false, extrel, NULL, NULL, NIL, options, NULL);
 	cstate->dispatch_mode = COPY_DIRECT;
 
 	/*
@@ -2418,17 +2593,37 @@ DoCopyTo(CopyState cstate)
 	return processed;
 }
 
+void EndCopyToOnSegment(CopyState cstate)
+{
+	Assert(Gp_role == GP_ROLE_EXECUTE);
+
+	if (cstate->binary)
+	{
+		/* Generate trailer for a binary copy */
+		CopySendInt16(cstate, -1);
+
+		/* Need to flush out the trailer */
+		CopySendEndOfRow(cstate);
+	}
+
+	MemoryContextDelete(cstate->rowcontext);
+
+	EndCopy(cstate);
+}
+
 /*
  * Clean up storage and release resources for COPY TO.
  */
 static void
-EndCopyTo(CopyState cstate)
+EndCopyTo(CopyState cstate, uint64 *processed)
 {
 	if (cstate->queryDesc != NULL)
 	{
 		/* Close down the query and free resources. */
 		ExecutorFinish(cstate->queryDesc);
 		ExecutorEnd(cstate->queryDesc);
+		if (cstate->queryDesc->es_processed > 0)
+			*processed = cstate->queryDesc->es_processed;
 		FreeQueryDesc(cstate->queryDesc);
 		PopActiveSnapshot();
 	}
@@ -2598,6 +2793,16 @@ CopyToDispatch(CopyState cstate)
 	pfree(cdbCopy);
 
 	return processed;
+}
+
+static uint64
+CopyToQueryOnSegment(CopyState cstate)
+{
+	Assert(Gp_role != GP_ROLE_EXECUTE);
+
+	/* run the plan --- the dest receiver will send tuples */
+	ExecutorRun(cstate->queryDesc, ForwardScanDirection, 0L);
+	return 0;
 }
 
 /*
@@ -4266,7 +4471,7 @@ BeginCopyFrom(Relation rel,
 	MemoryContext oldcontext;
 	bool		volatile_defexprs;
 
-	cstate = BeginCopy(true, rel, NULL, NULL, attnamelist, options);
+	cstate = BeginCopy(true, rel, NULL, NULL, attnamelist, options, NULL);
 	oldcontext = MemoryContextSwitchTo(cstate->copycontext);
 
 	/*
@@ -6858,7 +7063,10 @@ truncateEolStr(char *str, EolType eol_type)
 static void
 copy_dest_startup(DestReceiver *self __attribute__((unused)), int operation __attribute__((unused)), TupleDesc typeinfo __attribute__((unused)))
 {
-	/* no-op */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		return;
+	DR_copy    *myState = (DR_copy *) self;
+	myState->cstate = BeginCopyToOnSegment(myState->queryDesc);
 }
 
 /*
@@ -6884,7 +7092,10 @@ copy_dest_receive(TupleTableSlot *slot, DestReceiver *self)
 static void
 copy_dest_shutdown(DestReceiver *self __attribute__((unused)))
 {
-	/* no-op */
+	if (Gp_role == GP_ROLE_DISPATCH)
+		return;
+	DR_copy    *myState = (DR_copy *) self;
+	EndCopyToOnSegment(myState->cstate);
 }
 
 /*

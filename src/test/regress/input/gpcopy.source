@@ -687,7 +687,7 @@ SELECT * FROM segment_reject_limit_from;
 COPY segment_reject_limit_from to STDOUT on segment;
 COPY segment_reject_limit_from to PROGRAM STDOUT;
 
--- 'COPY (SELECT ...) TO' doesn't support 'ON SEGMENT'
+-- 'COPY (SELECT ...) TO' has supported 'ON SEGMENT'
 COPY (SELECT * FROM segment_reject_limit_from) TO '/tmp/segment_reject_limit<SEGID>.csv' ON SEGMENT;
 
 -- SREH is not supported by COPY TO.
@@ -780,6 +780,10 @@ COPY test_copy_on_segment_nocol TO '/tmp/valid_filename_nocol<SEGID>.txt' ON SEG
 COPY test_copy_on_segment_nocol FROM '/tmp/valid_filename_nocol<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_on_segment_nocol;
 
+COPY (select * from test_copy_on_segment_nocol) TO '/tmp/valid_filename_nocol<SEGID>.txt' ON SEGMENT;
+COPY test_copy_on_segment_nocol FROM '/tmp/valid_filename_nocol<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_nocol;
+
 CREATE TABLE test_copy_on_segment_array (a int[], b text) DISTRIBUTED BY (a);
 INSERT INTO test_copy_on_segment_array VALUES ('{1,2,3}', 'sd');
 INSERT INTO test_copy_on_segment_array VALUES ('{2,2,3}', 'fg');
@@ -793,6 +797,11 @@ CREATE TABLE test_copy_on_segment_array_1 (a int[], b text) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_array_1 FROM '/tmp/valid_filename_array<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_on_segment_array EXCEPT SELECT * FROM test_copy_on_segment_array_1;
 
+delete from test_copy_on_segment_array_1;
+COPY (select * from test_copy_on_segment_array) TO '/tmp/valid_filename_array_select<SEGID>.txt' ON SEGMENT;
+COPY test_copy_on_segment_array_1 FROM '/tmp/valid_filename_array_select<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_array EXCEPT SELECT * FROM test_copy_on_segment_array_1;
+
 CREATE TABLE test_copy_on_segment_2dim_array (a int[][]) DISTRIBUTED BY (a);
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,2,3},{2,5,9}}');
 INSERT INTO test_copy_on_segment_2dim_array VALUES ('{{1,8,3},{2,5,9}}');
@@ -804,6 +813,11 @@ COPY test_copy_on_segment_2dim_array TO '/tmp/valid_filename_2dim_array<SEGID>.t
 
 CREATE TABLE test_copy_on_segment_2dim_array_1 (a int[][]) DISTRIBUTED BY (a);
 COPY test_copy_on_segment_2dim_array_1 FROM '/tmp/valid_filename_2dim_array<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_on_segment_2dim_array EXCEPT SELECT * FROM test_copy_on_segment_2dim_array_1;
+
+delete from test_copy_on_segment_2dim_array_1;
+COPY (select * from test_copy_on_segment_2dim_array) TO '/tmp/valid_filename_2dim_array_select<SEGID>.txt' ON SEGMENT;
+COPY test_copy_on_segment_2dim_array_1 FROM '/tmp/valid_filename_2dim_array_select<SEGID>.txt' ON SEGMENT;
 SELECT * FROM test_copy_on_segment_2dim_array EXCEPT SELECT * FROM test_copy_on_segment_2dim_array_1;
 
 CREATE TABLE test_copy_on_segment (a int, b text, c text) DISTRIBUTED BY (b);
@@ -841,6 +855,29 @@ CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_witho
 COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
 
+COPY (select * from test_copy_on_segment) TO '/tmp/invalid_filename_select.txt' ON SEGMENT;
+COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.txt' ON SEGMENT;
+COPY (select * from test_copy_on_segment) TO '/tmp/valid_filename_select<SEGID>.bin' ON SEGMENT BINARY;
+COPY test_copy_on_segment TO '/tmp/valid_filename_select<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER;
+COPY test_copy_on_segment_withoids TO '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' FORCE QUOTE a,b,c ESCAPE E'\\' NULL '\N' DELIMITER ',';
+
+delete from test_copy_from_on_segment_txt;
+COPY test_copy_from_on_segment_txt FROM '/tmp/invalid_filename_select.txt' ON SEGMENT;
+COPY test_copy_from_on_segment_txt FROM '/tmp/valid_filename_select<SEGID>.txt' ON SEGMENT;
+SELECT * FROM test_copy_from_on_segment_txt ORDER BY a;
+
+delete from test_copy_from_on_segment_binary;
+COPY test_copy_from_on_segment_binary FROM '/tmp/valid_filename_select<SEGID>.bin' ON SEGMENT BINARY;
+SELECT * FROM test_copy_from_on_segment_binary ORDER BY a;
+
+delete from test_copy_from_on_segment_csv;
+COPY test_copy_from_on_segment_csv FROM '/tmp/valid_filename_select<SEGID>.csv' WITH ON SEGMENT CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' HEADER;
+SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
+
+delete from  test_copy_from_on_segment_withoids;
+COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename_select<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',';
+SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
+
 CREATE TABLE onek_copy_onsegment (
     unique1     int4,
     unique2     int4,
@@ -865,6 +902,13 @@ COPY onek_copy_onsegment TO '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt'
 
 CREATE TABLE onek_copy_from_onsegment (LIKE onek_copy_onsegment);
 COPY onek_copy_from_onsegment FROM '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
+SELECT * FROM onek_copy_onsegment EXCEPT SELECT * FROM onek_copy_from_onsegment;
+SELECT count(*) FROM onek_copy_from_onsegment;
+
+COPY (select * from onek_copy_onsegment) TO '/tmp/valid_filename_onek_copy_onsegment_select<SEGID>.txt' ON SEGMENT;
+
+delete from onek_copy_from_onsegment;
+COPY onek_copy_from_onsegment FROM '/tmp/valid_filename_onek_copy_onsegment_select<SEGID>.txt' ON SEGMENT;
 SELECT * FROM onek_copy_onsegment EXCEPT SELECT * FROM onek_copy_from_onsegment;
 SELECT count(*) FROM onek_copy_from_onsegment;
 
@@ -896,6 +940,9 @@ DROP TABLE IF EXISTS LINEITEM_2;
 DROP TABLE IF EXISTS LINEITEM_3;
 DROP TABLE IF EXISTS LINEITEM_4;
 DROP TABLE IF EXISTS LINEITEM_5;
+DROP TABLE IF EXISTS LINEITEM_6;
+DROP TABLE IF EXISTS LINEITEM_7;
+DROP TABLE IF EXISTS LINEITEM_8;
 -- end_ignore
 CREATE TABLE LINEITEM ( L_ORDERKEY INTEGER NOT NULL,
 L_PARTKEY INTEGER NOT NULL,
@@ -923,11 +970,15 @@ CREATE TABLE LINEITEM_2 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_3 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_4 (LIKE LINEITEM);
 CREATE TABLE LINEITEM_5 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_6 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_7 (LIKE LINEITEM);
+CREATE TABLE LINEITEM_8 (LIKE LINEITEM);
 
 COPY LINEITEM FROM '@abs_srcdir@/data/lineitem.csv' WITH DELIMITER '|' CSV;
 SELECT COUNT(*) FROM LINEITEM;
 COPY LINEITEM TO '/tmp/lineitem.csv' CSV;
 COPY LINEITEM TO '/tmp/lineitem_s<SEGID>.csv' ON SEGMENT CSV;
+COPY (select * from LINEITEM) TO '/tmp/lineitem_qs<SEGID>.csv' ON SEGMENT CSV;
 
 COPY LINEITEM_1 FROM '/tmp/lineitem.csv' CSV;
 SELECT COUNT(*) FROM LINEITEM_1;
@@ -937,20 +988,34 @@ COPY LINEITEM_2 FROM '/tmp/lineitem_s<SEGID>.csv' ON SEGMENT CSV;
 SELECT COUNT(*) FROM LINEITEM_2;
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_2;
 
-COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
-COPY LINEITEM_3 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_3 FROM '/tmp/lineitem_qs<SEGID>.csv' ON SEGMENT CSV;
 SELECT COUNT(*) FROM LINEITEM_3;
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_3;
 
-COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
-COPY LINEITEM_4 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_4 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
 SELECT COUNT(*) FROM LINEITEM_4;
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_4;
 
-\COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program_client.csv' CSV;
-\COPY LINEITEM_5 FROM PROGRAM 'cat /tmp/lineitem_program_client.csv' CSV;
+COPY (select * from LINEITEM) TO PROGRAM 'cat > /tmp/lineitem_program.csv' CSV;
+COPY LINEITEM_5 FROM PROGRAM 'cat /tmp/lineitem_program.csv' CSV;
 SELECT COUNT(*) FROM LINEITEM_5;
 SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_5;
+
+COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM_6 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM LINEITEM_6;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_6;
+
+COPY (select * from LINEITEM) TO PROGRAM 'cat > /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+COPY LINEITEM_7 FROM PROGRAM 'cat /tmp/lineitem_program<SEGID>.csv' ON SEGMENT CSV;
+SELECT COUNT(*) FROM LINEITEM_7;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_7;
+
+\COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program_client.csv' CSV;
+\COPY LINEITEM_8 FROM PROGRAM 'cat /tmp/lineitem_program_client.csv' CSV;
+SELECT COUNT(*) FROM LINEITEM_8;
+SELECT * FROM LINEITEM EXCEPT SELECT * FROM LINEITEM_8;
 
 --Test for `COPY FROM ON SEGMENT` checking the distribution key restriction 
 -- start_matchsubs
@@ -1063,6 +1128,7 @@ CREATE TABLE COPY_TO_PROGRAM_ERROR(dir text);
 
 COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo && echo "error" >&2 && exit 255';
 COPY COPY_TO_PROGRAM_ERROR TO PROGRAM 'echo <SEGID>&& echo "error" >&2 && exit 255' on segment;
+COPY (SELECT * FROM COPY_TO_PROGRAM_ERROR) TO PROGRAM 'echo <SEGID>&& echo "error" >&2 && exit 255' on segment;
 
 CREATE TABLE COPY_FROM_PROGRAM_ERROR(a int);
 

@@ -106,6 +106,18 @@ typedef struct IntoClause
 	Node       *distributedBy;  /* GPDB: columns to distribubte the data on. */
 } IntoClause;
 
+typedef struct CopyIntoClause
+{
+	NodeTag		type;
+
+	List	   *attlist;		/* List of column names (as Strings), or NIL
+								 * for all columns */
+	bool		is_program;		/* is 'filename' a program to popen? */
+	char	   *filename;		/* filename, or NULL for STDIN/STDOUT */
+	List	   *options;		/* List of DefElem nodes */
+	List	   *ao_segnos;		/* AO segno map */
+} CopyIntoClause;
+
 
 /* ----------------------------------------------------------------
  *					node types for executable expressions

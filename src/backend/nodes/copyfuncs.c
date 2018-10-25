@@ -131,6 +131,7 @@ _copyPlannedStmt(const PlannedStmt *from)
 	COPY_SCALAR_FIELD(query_mem);
 
 	COPY_NODE_FIELD(intoClause);
+	COPY_NODE_FIELD(copyIntoClause);
 
 	return newnode;
 }
@@ -1509,6 +1510,23 @@ _copyIntoClause(const IntoClause *from)
 	COPY_NODE_FIELD(viewQuery);
 	COPY_SCALAR_FIELD(skipData);
 	COPY_NODE_FIELD(distributedBy);
+
+	return newnode;
+}
+
+/*
+ * _copyIntoClause
+ */
+static CopyIntoClause *
+_copyCopyIntoClause(const CopyIntoClause *from)
+{
+	CopyIntoClause *newnode = makeNode(CopyIntoClause);
+
+	COPY_NODE_FIELD(attlist);
+	COPY_SCALAR_FIELD(is_program);
+	COPY_STRING_FIELD(filename);
+	COPY_NODE_FIELD(options);
+	COPY_NODE_FIELD(ao_segnos);
 
 	return newnode;
 }
@@ -3167,7 +3185,7 @@ _copyQuery(const Query *from)
 	COPY_NODE_FIELD(setOperations);
 	COPY_NODE_FIELD(constraintDeps);
 	COPY_NODE_FIELD(intoPolicy);
-	COPY_SCALAR_FIELD(isCTAS);
+	COPY_SCALAR_FIELD(intoClauseType);
 	COPY_SCALAR_FIELD(needReshuffle);
 
 	return newnode;
@@ -5293,6 +5311,9 @@ copyObject(const void *from)
 			break;
 		case T_IntoClause:
 			retval = _copyIntoClause(from);
+			break;
+		case T_CopyIntoClause:
+			retval = _copyCopyIntoClause(from);
 			break;
 		case T_Var:
 			retval = _copyVar(from);

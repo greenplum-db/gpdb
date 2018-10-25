@@ -56,6 +56,7 @@
 #include "catalog/pg_attribute_encoding.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
+#include "commands/copy.h"
 #include "commands/createas.h"
 #include "commands/matview.h"
 #include "commands/tablecmds.h" /* XXX: temp for get_parts() */
@@ -2062,6 +2063,11 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 	 */
 	if (queryDesc->plannedstmt->intoClause != NULL)
 		intorel_initplan(queryDesc, eflags);
+	else if(queryDesc->plannedstmt->copyIntoClause != NULL)
+	{
+		queryDesc->dest = CreateCopyDestReceiver();
+		((DR_copy*)queryDesc->dest)->queryDesc = queryDesc;
+	}
 
 	if (DEBUG1 >= log_min_messages)
 			{
@@ -4680,7 +4686,7 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 	cxt.estate = estate;
 	cxt.currentSliceId = 0;
 
-	if (stmt->intoClause != NULL)
+	if (stmt->intoClause != NULL || stmt->copyIntoClause != NULL)
 	{
 		Slice	   *currentSlice = (Slice *) linitial(sliceTable->slices);
 		int			numsegments;
