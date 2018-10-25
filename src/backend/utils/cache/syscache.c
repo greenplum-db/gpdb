@@ -71,6 +71,7 @@
 #include "catalog/pg_type.h"
 #include "catalog/pg_user_mapping.h"
 #include "catalog/pg_resgroup.h"
+#include "catalog/pg_extprotocol.h"
 #include "utils/rel.h"
 #include "utils/catcache.h"
 #include "utils/syscache.h"
@@ -417,6 +418,17 @@ static const struct cachedesc cacheinfo[] = {
 			0
 		},
 		8
+	},
+	{ExtprotocolRelationId,		/* EXTPROTOCOLOID */
+		ExtprotocolOidIndexId,
+		1,
+		{
+			ObjectIdAttributeNumber,
+			0,
+			0,
+			0
+		},
+		128
 	},
 	{ForeignDataWrapperRelationId,		/* FOREIGNDATAWRAPPERNAME */
 		ForeignDataWrapperNameIndexId,
