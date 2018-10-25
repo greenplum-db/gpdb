@@ -256,7 +256,7 @@ Feature: expand the cluster by adding more segments
         Then gpexpand should return a return code of 0
         And verify that the cluster has 1 new segments
         And all the segments are running
-        And check segment conf: postgresql.conf pg_hba.conf
+        And check segment conf: postgresql.conf
         And verify that the master pid has not been changed
 
     @gpexpand_no_mirrors
@@ -336,3 +336,26 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand against database "gptest" to redistribute
         # Temporarily comment the verifys until redistribute is fixed. This allows us to commit a resource to get a dump of the ICW dump for other tests to use
         # Then distribution information from table "public.redistribute" with data in "gptest" is verified against saved data
+
+    @gpexpand_no_mirrors
+    @gpexpand_rollback
+    Scenario: inject a fail and test if rollback is ok
+        Given a working directory of the test as '/tmp/gpexpand_behave'
+        And the database is killed on hosts "mdw,sdw1"
+        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
+        And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And database "gptest" exists
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the gp_segment_configuration have been saved
+        And the number of segments have been saved
+        And set fault inject "gpexpand rollback test fault injection"
+        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
+        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        Then gpexpand should return a return code of 3
+        And verify that the cluster has 1 new segments
+        And run rollback with database "gptest"
+        And verify the gp_segment_configuration has been restored
+        And unset fault inject

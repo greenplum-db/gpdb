@@ -80,6 +80,8 @@ class Gpexpand:
 
         return run_gpcommand(self.context, "gpexpand -D %s %s" % (self.database, flags))
 
+    def rollback(self):
+        return run_gpcommand(self.context, "gpexpand -D %s -r" % (self.database))
 
 if __name__ == '__main__':
     gpexpand = Gpexpand()
