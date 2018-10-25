@@ -1,0 +1,15 @@
+-- start_matchsubs
+-- # Remove all successful
+-- m/INFO:  Success.*\.c:\d+/
+-- s/\d+/###/
+-- end_matchsubs
+--start_ignore
+CREATE EXTENSION IF NOT EXISTS test_planner;
+--end_ignore
+SELECT test_planner();
+ test_planner 
+--------------
+ 
+(1 row)
+
+DROP EXTENSION test_planner;
