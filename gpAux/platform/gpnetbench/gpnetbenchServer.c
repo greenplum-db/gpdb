@@ -16,7 +16,7 @@ static void usage(void);
 static void
 usage(void)
 {
-	fprintf(stdout, "usage: gpnetbenchServer -p PORT [-h]\n");
+	printf("usage: gpnetbenchServer -p PORT\n");
 }
 
 int
@@ -36,13 +36,9 @@ main(int argc, char** argv)
 	{
 		switch (c)
 		{
-			case 'h':
-				usage();
-				return 1;
 			case 'p':
 				serverPort = atoi(optarg);
 				break;
-			case '?':
 			default:
 				usage();
 				return 1;
@@ -51,7 +47,7 @@ main(int argc, char** argv)
 
 	if (!serverPort)
 	{
-		fprintf(stdout, "-p port not specified\n");
+		fprintf(stderr, "-p port not specified\n");
 		usage();
 		return 1;
 	}
@@ -59,7 +55,7 @@ main(int argc, char** argv)
 	receiveBuffer = malloc(SERVER_APPLICATION_RECEIVE_BUF_SIZE);
 	if (!receiveBuffer)
 	{
-		fprintf(stdout, "failed allocating memory for application receive buffer\n");
+		fprintf(stderr, "failed allocating memory for application receive buffer\n");
 		return 1;
 	}
 
