@@ -366,11 +366,11 @@ $SomeTag$Dianne's horse$SomeTag$</codeblock>
                         only takes input arguments that are constant values. The function is
                         supported if it can be changed to require no input arguments.</li>
                 </ul></sectiondiv>
-            <sectiondiv><b>Using EXECUTE ON attributes</b><p>A function that executes queries to
-                    access tables can only execute on the master, except that a function that
-                    executes only <codeph>SELECT</codeph> queries on replicated tables can run on
-                    segments. If the function accesses a hash-distributed table or a randomly
-                    distributed table, the function should be defined with the <codeph>EXECUTE ON
+            <sectiondiv><b>Using EXECUTE ON attributes</b><p>Most functions that execute queries to
+                    access tables can only execute on the master. However, functions that execute
+                    only <codeph>SELECT</codeph> queries on replicated tables can run on segments.
+                    If the function accesses a hash-distributed table or a randomly distributed
+                    table, the function should be defined with the <codeph>EXECUTE ON
                         MASTER</codeph> attribute. Otherwise, the function might return incorrect
                     results when the function is used in a complicated query. Without the attribute,
                     planner optimization might determine it would be beneficial to push the function
