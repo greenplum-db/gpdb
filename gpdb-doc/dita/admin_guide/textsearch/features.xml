@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="features">
-  <title>Additional Features</title>
+  <title>Additional Text Search Features</title>
   <shortdesc>Greenplum Database has additional functions and operators you can
     use to manipulate search and query vectors, and to rewite search queries. </shortdesc>
   <body>
-    <p>This section describes additional functions and operators that are useful in connection with
-      text search.</p>
+    <p>This section contains the following subtopics:</p>
+    <ul id="ul_tyj_lyw_4fb">
+      <li><xref href="#features/manipulating-documents" format="dita"/></li>
+      <li><xref href="#features/manipulate_queries" format="dita"/></li>
+      <li><xref href="#features/rewriting" format="dita"/></li>
+      <li><xref href="#features/statistics" format="dita"/></li>
+    </ul>
     <section id="manipulating-documents">
       <title>Manipulating Documents</title>
       <p><xref href="controlling.xml#controlling/parsing-documents"/> showed how
@@ -68,7 +73,7 @@
         </dlentry>
       </dl>
     </section>
-    <section>
+    <section id="manipulate_queries">
       <title>Manipulating Queries</title>
       <p><xref href="controlling.xml#controlling/parsing-queries"/> showed how
         raw textual queries can be converted into <codeph>tsquery</codeph>
@@ -95,11 +100,13 @@
           </dd>
         </dlentry>
         <dlentry>
-          <dt><codeph>numnode(<i>query</i> tsquery) returns integer</codeph></dt>
+          <dt><codeph>numnode(<i>query</i> tsquery) returns
+            integer</codeph></dt>
           <dd>
-            <p>Returns the number of nodes (lexemes plus operators) in a tsquery. This function is
-              useful to determine if the <b>query</b> is meaningful (returns > 0), or contains only
-              stop words (returns 0). Examples:</p>
+            <p>Returns the number of nodes (lexemes plus operators) in a
+              tsquery. This function is useful to determine if the <b>query</b>
+              is meaningful (returns > 0), or contains only stop words (returns
+              0). Examples:</p>
             <codeblock>SELECT numnode(plainto_tsquery('the any'));
 NOTICE:  query contains only stopword(s) or doesn't contain lexeme(s), ignored
  numnode
@@ -115,9 +122,10 @@ SELECT numnode('foo &amp; bar'::tsquery);
         <dlentry>
           <dt><codeph>querytree(<i>query</i> tsquery) returns text</codeph></dt>
           <dd>
-            <p>Returns the portion of a tsquery that can be used for searching an index. This
-              function is useful for detecting unindexable queries, for example those containing
-              only stop words or only negated terms. For example:</p>
+            <p>Returns the portion of a tsquery that can be used for searching
+              an index. This function is useful for detecting unindexable
+              queries, for example those containing only stop words or only
+              negated terms. For example:</p>
             <codeblock>SELECT querytree(to_tsquery('!defined'));
  querytree
 -----------
@@ -126,8 +134,8 @@ SELECT numnode('foo &amp; bar'::tsquery);
         </dlentry>
       </dl>
     </section>
-    <section>
-      <title>Query Rewriting</title>
+    <section id="rewriting">
+      <title>Rewriting Queries</title>
       <p>The <codeph>ts_rewrite</codeph> family of functions search a given
           <codeph>tsquery</codeph> for occurrences of a target subquery, and
         replace each occurrence with a substitute subquery. In essence this
@@ -144,12 +152,13 @@ SELECT numnode('foo &amp; bar'::tsquery);
         whereas updating a thesaurus requires reindexing to be effective.</p>
       <dl>
         <dlentry>
-          <dt><codeph>ts_rewrite(<i>query</i> tsquery, <i>target</i> tsquery, <i>substitute</i>
-              tsquery) returns tsquery</codeph></dt>
+          <dt><codeph>ts_rewrite(<i>query</i> tsquery, <i>target</i> tsquery,
+                <i>substitute</i> tsquery) returns tsquery</codeph></dt>
           <dd>
-            <p>This form of <codeph>ts_rewrite</codeph> simply applies a single rewrite rule:
-                  <codeph><i>target</i></codeph> is replaced by <codeph><i>substitute</i></codeph>
-              wherever it appears in <codeph><i>query</i></codeph>. For example:</p>
+            <p>This form of <codeph>ts_rewrite</codeph> simply applies a single
+              rewrite rule: <codeph><i>target</i></codeph> is replaced by
+                  <codeph><i>substitute</i></codeph> wherever it appears in
+                  <codeph><i>query</i></codeph>. For example:</p>
             <codeblock>SELECT ts_rewrite('a &amp; b'::tsquery, 'a'::tsquery, 'c'::tsquery);
  ts_rewrite
 ------------
@@ -157,16 +166,18 @@ SELECT numnode('foo &amp; bar'::tsquery);
           </dd>
         </dlentry>
         <dlentry>
-          <dt><codeph>ts_rewrite(<i>query</i> tsquery, <i>select</i> text) returns
-            tsquery</codeph></dt>
+          <dt><codeph>ts_rewrite(<i>query</i> tsquery, <i>select</i> text)
+              returns tsquery</codeph></dt>
           <dd>
             <p>This form of <codeph>ts_rewrite</codeph> accepts a starting
-                <codeph><i>query</i></codeph> and a SQL <codeph><i>select</i></codeph> command,
-              which is given as a text string. The <codeph><i>select</i></codeph> must yield two
-              columns of <codeph>tsquery</codeph> type. For each row of the
-                <codeph><i>select</i></codeph> result, occurrences of the first column value (the
-              target) are replaced by the second column value (the substitute) within the current
-                  <codeph><i>query</i></codeph> value. For example:</p>
+                  <codeph><i>query</i></codeph> and a SQL
+                <codeph><i>select</i></codeph> command, which is given as a text
+              string. The <codeph><i>select</i></codeph> must yield two columns
+              of <codeph>tsquery</codeph> type. For each row of the
+                  <codeph><i>select</i></codeph> result, occurrences of the
+              first column value (the target) are replaced by the second column
+              value (the substitute) within the current
+                <codeph><i>query</i></codeph> value. For example:</p>
             <codeblock>CREATE TABLE aliases (id int, t tsquery, s tsquery);
 INSERT INTO aliases VALUES('a', 'c');
 
@@ -174,9 +185,10 @@ SELECT ts_rewrite('a &amp; b'::tsquery, 'SELECT t,s FROM aliases');
  ts_rewrite
 ------------
  'b' &amp; 'c'</codeblock>
-            <p>Note that when multiple rewrite rules are applied in this way, the order of
-              application can be important; so in practice you will want the source query to
-                <codeph>ORDER BY</codeph> some ordering key.</p>
+            <p>Note that when multiple rewrite rules are applied in this way,
+              the order of application can be important; so in practice you will
+              want the source query to <codeph>ORDER BY</codeph> some ordering
+              key.</p>
           </dd>
         </dlentry>
       </dl>
@@ -198,10 +210,11 @@ SELECT ts_rewrite(to_tsquery('supernovae &amp; crab'), 'SELECT t, s FROM aliases
                  ts_rewrite                  
 ---------------------------------------------
  'crab' &amp; ( 'supernova' | 'sn' &amp; !'nebula' )</codeblock>
-      <p>Rewriting can be slow when there are many rewriting rules, since it checks every rule for a
-        possible match. To filter out obvious non-candidate rules we can use the containment
-        operators for the <codeph>tsquery</codeph> type. In the example below, we select only those
-        rules which might match the original query:</p>
+      <p>Rewriting can be slow when there are many rewriting rules, since it
+        checks every rule for a possible match. To filter out obvious
+        non-candidate rules we can use the containment operators for the
+          <codeph>tsquery</codeph> type. In the example below, we select only
+        those rules which might match the original query:</p>
       <codeblock>SELECT ts_rewrite('a &amp; b'::tsquery,
                   'SELECT t,s FROM aliases WHERE ''a &amp; b''::tsquery @> t');
  ts_rewrite
@@ -276,30 +289,34 @@ CREATE TRIGGER tsvectorupdate BEFORE INSERT OR UPDATE
         do this is likely to lead to problems such as search results changing after a dump and
         reload.</p>
     </section>
-    <section>
+    <section id="statistics">
       <title>Gathering Document Statistics</title>
-      <p>The function <codeph>ts_stat</codeph> is useful for checking your configuration and for
-        finding stop-word candidates.</p>
+      <p>The function <codeph>ts_stat</codeph> is useful for checking your
+        configuration and for finding stop-word candidates.</p>
       <codeblock>ts_stat(<i>sqlquery</i> text, [ <i>weights</i> text, ]
         OUT <i>word</i> text, OUT <i>ndoc</i> integer,
         OUT <i>nentry</i> integer) returns setof record</codeblock>
-      <p><codeph><i>sqlquery</i></codeph> is a text value containing an SQL query which must return
-        a single <codeph>tsvector</codeph> column. <codeph>ts_stat</codeph> executes the query and
-        returns statistics about each distinct lexeme (word) contained in the
+      <p><codeph><i>sqlquery</i></codeph> is a text value containing an SQL
+        query which must return a single <codeph>tsvector</codeph> column.
+          <codeph>ts_stat</codeph> executes the query and returns statistics
+        about each distinct lexeme (word) contained in the
           <codeph>tsvector</codeph> data. The columns returned are</p>
       <ul id="ul_rwg_ml5_kfb">
         <li><codeph><i>word</i> text</codeph> — the value of a lexeme</li>
-        <li><codeph><i>ndoc</i> integer</codeph> — number of documents (<codeph>tsvector</codeph>s)
-          the word occurred in</li>
-        <li><codeph><i>nentry</i> integer</codeph> — total number of occurrences of the word</li>
+        <li><codeph><i>ndoc</i> integer</codeph> — number of documents
+            (<codeph>tsvector</codeph>s) the word occurred in</li>
+        <li><codeph><i>nentry</i> integer</codeph> — total number of occurrences
+          of the word</li>
       </ul>
-      <p>If weights is supplied, only occurrences having one of those weights are counted.</p>
-      <p>For example, to find the ten most frequent words in a document collection:</p>
+      <p>If weights is supplied, only occurrences having one of those weights
+        are counted.</p>
+      <p>For example, to find the ten most frequent words in a document
+        collection:</p>
       <codeblock>SELECT * FROM ts_stat('SELECT vector FROM apod')
 ORDER BY nentry DESC, ndoc DESC, word
 LIMIT 10;</codeblock>
-      <p>The same, but counting only word occurrences with weight <codeph>A</codeph> or
-          <codeph>B</codeph>:</p>
+      <p>The same, but counting only word occurrences with weight
+          <codeph>A</codeph> or <codeph>B</codeph>:</p>
       <codeblock>SELECT * FROM ts_stat('SELECT vector FROM apod', 'ab')
 ORDER BY nentry DESC, ndoc DESC, word
 LIMIT 10;</codeblock>

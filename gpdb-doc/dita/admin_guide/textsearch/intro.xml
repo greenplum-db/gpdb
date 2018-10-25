@@ -1,81 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="intro">
-  <title>Introduction to Full Text Search</title>
-  <shortdesc>This topic provides an overview of Greenplum Database full text search, the match
-    operator used in basic text search expressions, and configuration objects used to customize text
-    search.</shortdesc>
+  <title>About Full Text Search</title>
+  <shortdesc>This topic provides an overview of Greenplum Database full text search, basic text
+    search expressions, configuring, and customizing text search. Greenplum Database full text
+    search is compared with Pivotal GPText. </shortdesc>
   <body>
-    <p>Full Text Searching (or just "text search") provides the capability to identify
-      natural-language <i>documents</i> that satisfy a <i>query</i>, and optionally to rank them by
-      relevance to the query. The most common type of search is to find all documents containing
-      given <i>query terms</i> and return them in order of their <i>similarity</i> to the query. </p>
-    <p>Greenplum Database provides a data type <codeph>tsvector</codeph> to store preprocessed
-      documents, and a data type <codeph>tsquery</codeph> to store processed queries (<xref
-        href="../../ref_guide/data_types.xml#topic1/text-search-types"/>). There are many functions
-      and operators available for these data types (<xref
-        href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
-      which is the match operator <codeph>@@</codeph>, which we introduce in <xref
-        href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated
-      using indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
-    <p>Notions of query and similarity are very flexible and depend on the specific application. The
-      simplest search considers query as a set of words and similarity as the frequency of query
-      words in the document. </p>
-    <p>Greenplum Database supports the standard text matching operators <codeph>~</codeph>,
-        <codeph>~*</codeph>, <codeph>LIKE</codeph>, and <codeph>ILIKE</codeph> for textual data
-      types, but these operators lack many essential properties required for searching
-      documents:</p>
-    <ul id="ul_py4_m5t_kfb">
-      <li>There is no linguistic support, even for English. Regular expressions are not sufficient
-        because they cannot easily handle derived words, e.g., <codeph>satisfies</codeph> and
-          <codeph>satisfy</codeph>. You might miss documents that contain
-        <codeph>satisfies</codeph>, although you probably would like to find them when searching for
-          <codeph>satisfy</codeph>. It is possible to use OR to search for multiple derived forms,
-        but this is tedious and error-prone (some words can have several thousand derivatives).</li>
-      <li>
-        <p>They provide no ordering (ranking) of search results, which makes them ineffective when
-          thousands of matching documents are found.</p>
-      </li>
-      <li>
-        <p>They tend to be slow because there is no index support, so they must process all
-          documents for every search.</p>
-      </li>
+    <p>This section contains the following subtopics:</p>
+    <ul id="ul_djv_rww_4fb">
+      <li><xref href="#intro/document" format="dita"/></li>
+      <li><xref href="#intro/basic-text-matching" format="dita"/></li>
+      <li><xref href="#intro/configurations" format="dita"/></li>
+      <li><xref href="#intro/gptext" format="dita"/></li>
     </ul>
-    <p>Full text indexing allows documents to be preprocessed and an index saved for later rapid
-      searching. Preprocessing includes:</p>
-    <ul id="ul_qy4_m5t_kfb">
-      <li><b>Parsing documents into tokens.</b> It is useful to identify various classes of tokens,
-        e.g., numbers, words, complex words, email addresses, so that they can be processed
-        differently. In principle token classes depend on the specific application, but for most
-        purposes it is adequate to use a predefined set of classes. Greenplum Database uses a
-          <i>parser</i> to perform this step. A standard parser is provided, and custom parsers can
-        be created for specific needs.</li>
-      <li><b>Converting tokens into lexemes.</b> A lexeme is a string, just like a token, but it has
-        been <i>normalized</i> so that different forms of the same word are made alike. For example,
-        normalization almost always includes folding upper-case letters to lower-case, and often
-        involves removal of suffixes (such as s or es in English). This allows searches to find
-        variant forms of the same word, without tediously entering all the possible variants. Also,
-        this step typically eliminates <i>stop words</i>, which are words that are so common that
-        they are useless for searching. (In short, then, tokens are raw fragments of the document
-        text, while lexemes are words that are believed useful for indexing and searching.)
-        Greenplum Database uses <i>dictionaries</i> to perform this step. Various standard
-        dictionaries are provided, and custom ones can be created for specific needs.</li>
-      <li><b>Storing preprocessed documents optimized for searching.</b> For example, each document
-        can be represented as a sorted array of normalized lexemes. Along with the lexemes it is
-        often desirable to store positional information to use for <i>proximity ranking</i>, so that
-        a document that contains a more "dense" region of query words is assigned a higher rank than
-        one with scattered query words.</li>
-    </ul>
-    <p>Dictionaries allow fine-grained control over how tokens are normalized. With appropriate
-      dictionaries, you can:</p>
-    <ul id="ul_ry4_m5t_kfb">
-      <li>Define stop words that should not be indexed.</li>
-      <li>Map synonyms to a single word using Ispell.</li>
-      <li>Map phrases to a single word using a thesaurus.</li>
-      <li>Map different variations of a word to a canonical form using an Ispell dictionary.</li>
-      <li>Map different variations of a word to a canonical form using Snowball stemmer rules.</li>
-    </ul>
-    <section>
+    <section id="section_dm1_www_4fb">
+      <p>Full Text Searching (or just "text search") provides the capability to identify
+        natural-language <i>documents</i> that satisfy a <i>query</i>, and optionally to rank them
+        by relevance to the query. The most common type of search is to find all documents
+        containing given <i>query terms</i> and return them in order of their <i>similarity</i> to
+        the query. </p>
+      <p>Greenplum Database provides a data type <codeph>tsvector</codeph> to store preprocessed
+        documents, and a data type <codeph>tsquery</codeph> to store processed queries (<xref
+          href="../../ref_guide/data_types.xml#topic1/text-search-types"/>). There are many
+        functions and operators available for these data types (<xref
+          href="../../ref_guide/function-summary.xml#topic_vpj_ss1_lfb"/>), the most important of
+        which is the match operator <codeph>@@</codeph>, which we introduce in <xref
+          href="#intro/basic-text-matching" format="dita"/>. Full text searches can be accelerated
+        using indexes (<xref href="gist-gin.xml#gist-gin"/>).</p>
+      <p>Notions of query and similarity are very flexible and depend on the specific application.
+        The simplest search considers query as a set of words and similarity as the frequency of
+        query words in the document. </p>
+      <p>Greenplum Database supports the standard text matching operators <codeph>~</codeph>,
+          <codeph>~*</codeph>, <codeph>LIKE</codeph>, and <codeph>ILIKE</codeph> for textual data
+        types, but these operators lack many essential properties required for searching
+        documents:</p>
+      <ul id="ul_py4_m5t_kfb">
+        <li>There is no linguistic support, even for English. Regular expressions are not sufficient
+          because they cannot easily handle derived words, e.g., <codeph>satisfies</codeph> and
+            <codeph>satisfy</codeph>. You might miss documents that contain
+            <codeph>satisfies</codeph>, although you probably would like to find them when searching
+          for <codeph>satisfy</codeph>. It is possible to use OR to search for multiple derived
+          forms, but this is tedious and error-prone (some words can have several thousand
+          derivatives).</li>
+        <li>
+          <p>They provide no ordering (ranking) of search results, which makes them ineffective when
+            thousands of matching documents are found.</p>
+        </li>
+        <li>
+          <p>They tend to be slow because there is no index support, so they must process all
+            documents for every search.</p>
+        </li>
+      </ul>
+      <p>Full text indexing allows documents to be preprocessed and an index saved for later rapid
+        searching. Preprocessing includes:</p>
+      <ul id="ul_qy4_m5t_kfb">
+        <li><b>Parsing documents into tokens.</b> It is useful to identify various classes of
+          tokens, e.g., numbers, words, complex words, email addresses, so that they can be
+          processed differently. In principle token classes depend on the specific application, but
+          for most purposes it is adequate to use a predefined set of classes. Greenplum Database
+          uses a <i>parser</i> to perform this step. A standard parser is provided, and custom
+          parsers can be created for specific needs.</li>
+        <li><b>Converting tokens into lexemes.</b> A lexeme is a string, just like a token, but it
+          has been <i>normalized</i> so that different forms of the same word are made alike. For
+          example, normalization almost always includes folding upper-case letters to lower-case,
+          and often involves removal of suffixes (such as s or es in English). This allows searches
+          to find variant forms of the same word, without tediously entering all the possible
+          variants. Also, this step typically eliminates <i>stop words</i>, which are words that are
+          so common that they are useless for searching. (In short, then, tokens are raw fragments
+          of the document text, while lexemes are words that are believed useful for indexing and
+          searching.) Greenplum Database uses <i>dictionaries</i> to perform this step. Various
+          standard dictionaries are provided, and custom ones can be created for specific
+          needs.</li>
+        <li><b>Storing preprocessed documents optimized for searching.</b> For example, each
+          document can be represented as a sorted array of normalized lexemes. Along with the
+          lexemes it is often desirable to store positional information to use for <i>proximity
+            ranking</i>, so that a document that contains a more "dense" region of query words is
+          assigned a higher rank than one with scattered query words.</li>
+      </ul>
+      <p>Dictionaries allow fine-grained control over how tokens are normalized. With appropriate
+        dictionaries, you can:</p>
+      <ul id="ul_ry4_m5t_kfb">
+        <li>Define stop words that should not be indexed.</li>
+        <li>Map synonyms to a single word using Ispell.</li>
+        <li>Map phrases to a single word using a thesaurus.</li>
+        <li>Map different variations of a word to a canonical form using an Ispell dictionary.</li>
+        <li>Map different variations of a word to a canonical form using Snowball stemmer
+          rules.</li>
+      </ul>
+    </section>
+    <section id="document">
       <title>What is a Document?</title>
       <p>A <i>document</i> is the unit of searching in a full text search system; for example, a
         magazine article or email message. The text search engine must be able to parse documents
@@ -158,7 +171,7 @@ text @@ text</codeblock>
         equivalent to <codeph>to_tsvector(x) @@ y</codeph>. The form <codeph>text @@ text</codeph>
         is equivalent to <codeph>to_tsvector(x) @@ plainto_tsquery(y)</codeph>.</p>
     </section>
-    <section>
+    <section id="configurations">
       <title>Configurations</title>
       <p>The above are all simple text search examples. As mentioned before, full text search
         functionality includes the ability to do many more things: skip indexing certain words (stop
@@ -200,6 +213,47 @@ text @@ text</codeblock>
         templates, no special privilege is needed to create a new dictionary or configuration.
         Examples of creating custom dictionaries and configurations appear later in this
         chapter.</p>
+    </section>
+  <section id="gptext">
+    <title>Comparing Greenplum Database Text Search with Pivotal GPText</title>
+      <p>Greenplum Database text search is PostgreSQL text search ported to the Greenplum Database
+        MPP platform. Pivotal also offers Pivotal GPText, which integrates Greenplum Database with
+        the Apache Solr text search platform. GPText installs an Apache Solr cluster alongside your
+        Greenplum Database cluster and provides Greenplum Database functions you can use to create
+        Solr indexes, query them, and receive results in the database session.</p>
+      <p>Both of these systems provide powerful, enterprise-quality document indexing and searching
+        services. Greenplum Database text search is immediately available to you, with no need to
+        install and maintain additional software. If it meets your applications' requirements, you
+        should use it. </p>
+      <p>GPText, with Solr, has many capabilities that are not available with Greenplum Database
+        text search. In particular, GPText is better for advanced text analysis applications.
+        Following are some of the advantages and capabilities available to you when you use GPText
+        for text search applications.</p>
+      <ul id="ul_ywm_fg1_nfb">
+        <li>The Apache Solr cluster can be scaled separately from the database. Solr nodes can be
+          deployed on the Greenplum Database hosts or on seperate hosts on the network. </li>
+        <li>Indexing and search workloads can be moved out of Greenplum Database to Solr to maintain
+          database query performance.</li>
+        <li>GPText creates Solr indexes that are split into <i>shards</i>, one per Greenplum
+          Database segment, so the advantages of the Greenplum Database MPP architecture are
+          extended to text search workloads.</li>
+        <li>Indexing and searching documents with Solr is very fast and can be scaled by adding more
+          Solr nodes to the cluster.</li>
+        <li>Document content can be stored in Greenplum Database tables, in the Solr index, or both. </li>
+        <li>Through GPText, Solr can index documents stored as text in Greenplum Database tables, as
+          well as documents in external stores accessible using HTTP, FTP, S3, or HDFS URLs.</li>
+        <li>Solr automatically recognizes most rich document formats and indexes document content
+          and metadata separately.</li>
+        <li>Solr indexes are highly customizable. You can customize the text analysis chain down to
+          the field level.</li>
+        <li>In addition to the large number of languages, tokenizers, and filters available from the
+          Apache project, GPText provides a social media tokenizer, an international text tokenizer,
+          and a universal query parser that understands several common text search syntaxes.</li>
+        <li>The GPText API supports advanced text analysis tools, such as facetting, named entity
+          recognition (NER), and parts of speech (POS) recognition.</li>
+      </ul>
+      <p>See the <xref href="https://gptext.docs.pivotal.io" format="html" scope="external">GPText
+          Documentation web site</xref> for more information about GPText. </p>
     </section>
   </body>
 </topic>

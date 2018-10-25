@@ -1,13 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="tables-indexes">
-  <title>Tables and Indexes</title>
+  <title>Searching Text in Database Tables</title>
   <shortdesc>This topic shows how to use text search operators to search database tables and how to
     create indexes to speed up text searches.</shortdesc>
   <body>
     <p>The examples in the previous section illustrated full text matching using simple constant
       strings. This section shows how to search table data, optionally using indexes.</p>
-    <section>
+    <p>This section contains the following subtopics: </p>
+    <ul id="ul_vng_jxw_4fb">
+      <li><xref href="#tables-indexes/searching" format="dita"/></li>
+      <li><xref href="#tables-indexes/indexes" format="dita"/></li>
+    </ul>
+    <section id="searching">
       <title>Searching a Table</title>
       <p>It is possible to do a full text search without an index. A simple query to print the
           <codeph>title</codeph> of each row that contains the word <codeph>friend</codeph> in its
@@ -39,19 +44,19 @@ LIMIT 10;</codeblock>
         approach too slow, except perhaps for occasional ad-hoc searches. Practical use of text
         searching usually requires creating an index.</p>
     </section>
-    <section>
+    <section id="indexes">
       <title>Creating Indexes</title>
       <p>We can create a GIN index (<xref href="gist-gin.xml#gist-gin"/>) to speed up text
         searches:</p>
       <codeblock>CREATE INDEX pgweb_idx ON pgweb USING gin(to_tsvector('english', body));</codeblock>
       <p>Notice that the two-argument version of <codeph>to_tsvector</codeph> is used. Only text
         search functions that specify a configuration name can be used in expression indexes. This
-        is because the index contents must be unaffected by  <xref
-          href="../../ref_guide/config_params/guc-list.xml#default_text_search_config"/>. If they were affected,
-        the index contents might be inconsistent because different entries could contain
-          <codeph>tsvector</codeph>s that were created with different text search configurations,
-        and there would be no way to guess which was which. It would be impossible to dump and
-        restore such an index correctly.</p>
+        is because the index contents must be unaffected by <xref
+          href="../../ref_guide/config_params/guc-list.xml#default_text_search_config"/>. If they
+        were affected, the index contents might be inconsistent because different entries could
+        contain <codeph>tsvector</codeph>s that were created with different text search
+        configurations, and there would be no way to guess which was which. It would be impossible
+        to dump and restore such an index correctly.</p>
       <p>Because the two-argument version of <codeph>to_tsvector</codeph> was used in the index
         above, only a query reference that uses the two-argument version of
           <codeph>to_tsvector</codeph> with the same configuration name will use that index. That
@@ -81,10 +86,11 @@ UPDATE pgweb SET textsearchable_index_col =
       <p>Now we are ready to perform a fast full text search:</p>
       <codeblock>SELECT title FROM pgweb WHERE textsearchable_index_col @@ to_tsquery('create &amp; table') 
 ORDER BY last_mod_date DESC LIMIT 10;</codeblock>
-      <p otherprops="op-hidden">When using a separate column to store the <codeph>tsvector</codeph> representation, it is
-        necessary to create a trigger to keep the <codeph>tsvector</codeph> column current anytime
-        title or body changes. <xref href="features.xml#triggers-for-automatic-updates"
-          format="dita"/> explains how to do that.</p>
+      <p otherprops="op-hidden">When using a separate column to store the <codeph>tsvector</codeph>
+        representation, it is necessary to create a trigger to keep the <codeph>tsvector</codeph>
+        column current anytime title or body changes. <xref
+          href="features.xml#triggers-for-automatic-updates" format="dita"/> explains how to do
+        that.</p>
       <p>One advantage of the separate-column approach over an expression index is that it is not
         necessary to explicitly specify the text search configuration in queries in order to make
         use of the index. As shown in the example above, the query can depend on

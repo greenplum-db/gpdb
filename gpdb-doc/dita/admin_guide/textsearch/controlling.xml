@@ -12,6 +12,13 @@
       documents with respect to their relevance to the query. It's also important to be able to
       display the results nicely. Greenplum Database provides support for all of these
       functions.</p>
+    <p>This topic contains the following subtopics:</p>
+    <ul id="ul_pnw_xxw_4fb">
+      <li><xref href="#controlling/parsing-documents" format="dita"/></li>
+      <li><xref href="#controlling/parsing-queries" format="dita"/></li>
+      <li><xref href="#controlling/ranking" format="dita"/></li>
+      <li><xref href="#controlling/highlighting" format="dita"/></li>
+    </ul>
     <section id="parsing-documents">
       <title>Parsing Documents</title>
       <p>Greenplum Database provides the function <codeph>to_tsvector</codeph> for converting a
@@ -139,80 +146,94 @@
  'fat' &amp; 'rat' &amp; 'c'</codeblock>
       <p>Here, all the input punctuation was discarded as being space symbols.</p>
     </section>
-    <section>
+    <section id="ranking">
       <title>Ranking Search Results</title>
-      <p>Ranking attempts to measure how relevant documents are to a particular query, so that when
-        there are many matches the most relevant ones can be shown first. Greenplum Database
-        provides two predefined ranking functions, which take into account lexical, proximity, and
-        structural information; that is, they consider how often the query terms appear in the
-        document, how close together the terms are in the document, and how important is the part of
-        the document where they occur. However, the concept of relevancy is vague and very
-        application-specific. Different applications might require additional information for
-        ranking, e.g., document modification time. The built-in ranking functions are only examples.
-        You can write your own ranking functions and/or combine their results with additional
-        factors to fit your specific needs.</p>
+      <p>Ranking attempts to measure how relevant documents are to a particular
+        query, so that when there are many matches the most relevant ones can be
+        shown first. Greenplum Database provides two predefined ranking
+        functions, which take into account lexical, proximity, and structural
+        information; that is, they consider how often the query terms appear in
+        the document, how close together the terms are in the document, and how
+        important is the part of the document where they occur. However, the
+        concept of relevancy is vague and very application-specific. Different
+        applications might require additional information for ranking, e.g.,
+        document modification time. The built-in ranking functions are only
+        examples. You can write your own ranking functions and/or combine their
+        results with additional factors to fit your specific needs.</p>
       <p>The two ranking functions currently available are:</p>
       <dl>
         <dlentry>
-          <dt><codeph>ts_rank([ <i>weights</i> float4[], ] <i>vector</i> tsvector, <i>query</i>
-              tsquery [, <i>normalization</i> integer ]) returns float4</codeph></dt>
+          <dt><codeph>ts_rank([ <i>weights</i> float4[], ] <i>vector</i>
+              tsvector, <i>query</i> tsquery [, <i>normalization</i> integer ])
+              returns float4</codeph></dt>
           <dd>
-            <p>Ranks vectors based on the frequency of their matching lexemes.</p>
+            <p>Ranks vectors based on the frequency of their matching
+              lexemes.</p>
           </dd>
         </dlentry>
         <dlentry>
-          <dt><codeph>ts_rank_cd([ <i>weights</i> float4[], ] <i>vector</i> tsvector, <i>query</i>
-              tsquery [, <i>normalization</i> integer ]) returns float4</codeph></dt>
+          <dt><codeph>ts_rank_cd([ <i>weights</i> float4[], ] <i>vector</i>
+              tsvector, <i>query</i> tsquery [, <i>normalization</i> integer ])
+              returns float4</codeph></dt>
           <dd>
-            <p>This function computes the <i>cover density</i> ranking for the given document vector
-              and query, as described in Clarke, Cormack, and Tudhope's "Relevance Ranking for One
-              to Three Term Queries" in the journal "Information Processing and Management", 1999.
-              Cover density is similar to <codeph>ts_rank</codeph> ranking except that the proximity
-              of matching lexemes to each other is taken into consideration.</p>
+            <p>This function computes the <i>cover density</i> ranking for the
+              given document vector and query, as described in Clarke, Cormack,
+              and Tudhope's "Relevance Ranking for One to Three Term Queries" in
+              the journal "Information Processing and Management", 1999. Cover
+              density is similar to <codeph>ts_rank</codeph> ranking except that
+              the proximity of matching lexemes to each other is taken into
+              consideration.</p>
             <p>This function requires lexeme positional information to perform
               its calculation. Therefore, it ignores any "stripped" lexemes in
               the <codeph>tsvector</codeph>. If there are no unstripped lexemes
-              in the input, the result will be zero. (See  <xref
+              in the input, the result will be zero. (See <xref
                 href="features.xml#features/manipulating-documents"/> for more
               information about the <codeph>strip</codeph> function and
               positional information in <codeph>tsvector</codeph>s.)</p>
           </dd>
         </dlentry>
       </dl>
-      <p>For both these functions, the optional <codeph><i>weights</i></codeph> argument offers the
-        ability to weigh word instances more or less heavily depending on how they are labeled. The
-        weight arrays specify how heavily to weigh each category of word, in the order:</p>
+      <p>For both these functions, the optional <codeph><i>weights</i></codeph>
+        argument offers the ability to weigh word instances more or less heavily
+        depending on how they are labeled. The weight arrays specify how heavily
+        to weigh each category of word, in the order:</p>
       <codeblock>{D-weight, C-weight, B-weight, A-weight}</codeblock>
-      <p>If no <codeph><i>weights</i></codeph> are provided, then these defaults are used:</p>
+      <p>If no <codeph><i>weights</i></codeph> are provided, then these defaults
+        are used:</p>
       <codeblock>{0.1, 0.2, 0.4, 1.0}</codeblock>
-      <p>Typically weights are used to mark words from special areas of the document, like the title
-        or an initial abstract, so they can be treated with more or less importance than words in
-        the document body.</p>
-      <p>Since a longer document has a greater chance of containing a query term it is reasonable to
-        take into account document size, e.g., a hundred-word document with five instances of a
-        search word is probably more relevant than a thousand-word document with five instances.
-        Both ranking functions take an integer <codeph><i>normalization</i></codeph> option that
-        specifies whether and how a document's length should impact its rank. The integer option
-        controls several behaviors, so it is a bit mask: you can specify one or more behaviors using
-          <codeph>|</codeph> (for example, <codeph>2|4</codeph>).</p>
+      <p>Typically weights are used to mark words from special areas of the
+        document, like the title or an initial abstract, so they can be treated
+        with more or less importance than words in the document body.</p>
+      <p>Since a longer document has a greater chance of containing a query term
+        it is reasonable to take into account document size, e.g., a
+        hundred-word document with five instances of a search word is probably
+        more relevant than a thousand-word document with five instances. Both
+        ranking functions take an integer <codeph><i>normalization</i></codeph>
+        option that specifies whether and how a document's length should impact
+        its rank. The integer option controls several behaviors, so it is a bit
+        mask: you can specify one or more behaviors using <codeph>|</codeph>
+        (for example, <codeph>2|4</codeph>).</p>
       <ul id="ul_zbv_y25_kfb">
         <li>0 (the default) ignores the document length</li>
         <li>1 divides the rank by 1 + the logarithm of the document length</li>
         <li>2 divides the rank by the document length</li>
-        <li>4 divides the rank by the mean harmonic distance between extents (this is implemented
-          only by <codeph>ts_rank_cd</codeph>)</li>
+        <li>4 divides the rank by the mean harmonic distance between extents
+          (this is implemented only by <codeph>ts_rank_cd</codeph>)</li>
         <li>8 divides the rank by the number of unique words in document</li>
-        <li>16 divides the rank by 1 + the logarithm of the number of unique words in document</li>
+        <li>16 divides the rank by 1 + the logarithm of the number of unique
+          words in document</li>
         <li>32 divides the rank by itself + 1</li>
       </ul>
-      <p>If more than one flag bit is specified, the transformations are applied in the order
-        listed.</p>
-      <p>It is important to note that the ranking functions do not use any global information, so it
-        is impossible to produce a fair normalization to 1% or 100% as sometimes desired.
-        Normalization option <codeph>32 (rank/(rank+1))</codeph> can be applied to scale all ranks
-        into the range zero to one, but of course this is just a cosmetic change; it will not affect
-        the ordering of the search results.</p>
-      <p>Here is an example that selects only the ten highest-ranked matches:</p>
+      <p>If more than one flag bit is specified, the transformations are applied
+        in the order listed.</p>
+      <p>It is important to note that the ranking functions do not use any
+        global information, so it is impossible to produce a fair normalization
+        to 1% or 100% as sometimes desired. Normalization option <codeph>32
+          (rank/(rank+1))</codeph> can be applied to scale all ranks into the
+        range zero to one, but of course this is just a cosmetic change; it will
+        not affect the ordering of the search results.</p>
+      <p>Here is an example that selects only the ten highest-ranked
+        matches:</p>
       <codeblock>SELECT title, ts_rank_cd(textsearch, query) AS rank
 FROM apod, to_tsquery('neutrino|(dark &amp; matter)') query
 WHERE query @@ textsearch
@@ -248,46 +269,56 @@ LIMIT 10;
  Hot Gas and Dark Matter                       | 0.617195790024749
  Ice Fishing for Cosmic Neutrinos              | 0.615384618911517
  Weak Lensing Distorts the Universe            | 0.450010798361481</codeblock>
-      <p>Ranking can be expensive since it requires consulting the tsvector of each matching
-        document, which can be I/O bound and therefore slow. Unfortunately, it is almost impossible
-        to avoid since practical queries often result in large numbers of matches.</p>
+      <p>Ranking can be expensive since it requires consulting the tsvector of
+        each matching document, which can be I/O bound and therefore slow.
+        Unfortunately, it is almost impossible to avoid since practical queries
+        often result in large numbers of matches.</p>
     </section>
-    <section>
+    <section id="highlighting">
       <title>Highlighting Results</title>
-      <p>To present search results it is ideal to show a part of each document and how it is related
-        to the query. Usually, search engines show fragments of the document with marked search
-        terms. Greenplum Database provides a function <codeph>ts_headline</codeph> that implements
-        this functionality.</p>
+      <p>To present search results it is ideal to show a part of each document
+        and how it is related to the query. Usually, search engines show
+        fragments of the document with marked search terms. Greenplum Database
+        provides a function <codeph>ts_headline</codeph> that implements this
+        functionality.</p>
       <codeblock>ts_headline([<i>config</i> regconfig, ] <i>document</i> text, <i>query</i> tsquery [, <i>options</i> text ]) returns text</codeblock>
-      <p><codeph>ts_headline</codeph> accepts a document along with a query, and returns an excerpt
-        from the document in which terms from the query are highlighted. The configuration to be
-        used to parse the document can be specified by <codeph><i>config</i></codeph>; if
-            <codeph><i>config</i></codeph> is omitted, the
+      <p><codeph>ts_headline</codeph> accepts a document along with a query, and
+        returns an excerpt from the document in which terms from the query are
+        highlighted. The configuration to be used to parse the document can be
+        specified by <codeph><i>config</i></codeph>; if
+          <codeph><i>config</i></codeph> is omitted, the
           <codeph>default_text_search_config</codeph> configuration is used.</p>
-      <p>If an <codeph><i>options</i></codeph> string is specified it must consist of a
-        comma-separated list of one or more <codeph><i>option=value</i></codeph> pairs. The
-        available options are:</p>
+      <p>If an <codeph><i>options</i></codeph> string is specified it must
+        consist of a comma-separated list of one or more
+            <codeph><i>option=value</i></codeph> pairs. The available options
+        are:</p>
       <ul id="ul_ndr_bh5_kfb">
-        <li><codeph>StartSel</codeph>, <codeph>StopSel</codeph>: the strings with which to delimit
-          query words appearing in the document, to distinguish them from other excerpted words. You
-          must double-quote these strings if they contain spaces or commas.</li>
-        <li><codeph>MaxWords</codeph>, <codeph>MinWords</codeph>: these numbers determine the
-          longest and shortest headlines to output.</li>
-        <li><codeph>ShortWord</codeph>: words of this length or less will be dropped at the start
-          and end of a headline. The default value of three eliminates common English articles.</li>
-        <li><codeph>HighlightAll</codeph>: Boolean flag; if <codeph>true</codeph> the whole document
-          will be used as the headline, ignoring the preceding three parameters.</li>
-        <li><codeph>MaxFragments</codeph>: maximum number of text excerpts or fragments to display.
-          The default value of zero selects a non-fragment-oriented headline generation method. A
-          value greater than zero selects fragment-based headline generation. This method finds text
-          fragments with as many query words as possible and stretches those fragments around the
-          query words. As a result query words are close to the middle of each fragment and have
-          words on each side. Each fragment will be of at most <codeph>MaxWords</codeph> and words
-          of length <codeph>ShortWord</codeph> or less are dropped at the start and end of each
-          fragment. If not all query words are found in the document, then a single fragment of the
-          first <codeph>MinWords</codeph> in the document will be displayed.</li>
-        <li><codeph>FragmentDelimiter</codeph>: When more than one fragment is displayed, the
-          fragments will be separated by this string.</li>
+        <li><codeph>StartSel</codeph>, <codeph>StopSel</codeph>: the strings
+          with which to delimit query words appearing in the document, to
+          distinguish them from other excerpted words. You must double-quote
+          these strings if they contain spaces or commas.</li>
+        <li><codeph>MaxWords</codeph>, <codeph>MinWords</codeph>: these numbers
+          determine the longest and shortest headlines to output.</li>
+        <li><codeph>ShortWord</codeph>: words of this length or less will be
+          dropped at the start and end of a headline. The default value of three
+          eliminates common English articles.</li>
+        <li><codeph>HighlightAll</codeph>: Boolean flag; if
+            <codeph>true</codeph> the whole document will be used as the
+          headline, ignoring the preceding three parameters.</li>
+        <li><codeph>MaxFragments</codeph>: maximum number of text excerpts or
+          fragments to display. The default value of zero selects a
+          non-fragment-oriented headline generation method. A value greater than
+          zero selects fragment-based headline generation. This method finds
+          text fragments with as many query words as possible and stretches
+          those fragments around the query words. As a result query words are
+          close to the middle of each fragment and have words on each side. Each
+          fragment will be of at most <codeph>MaxWords</codeph> and words of
+          length <codeph>ShortWord</codeph> or less are dropped at the start and
+          end of each fragment. If not all query words are found in the
+          document, then a single fragment of the first
+            <codeph>MinWords</codeph> in the document will be displayed.</li>
+        <li><codeph>FragmentDelimiter</codeph>: When more than one fragment is
+          displayed, the fragments will be separated by this string.</li>
       </ul>
       <p>Any unspecified options receive these defaults:</p>
       <codeblock>StartSel=&lt;b>, StopSel=&lt;/b>,
@@ -318,10 +349,12 @@ query.',
  containing given &lt;query> terms
  and return them in order of their &lt;similarity> to the
  &lt;query>.</codeblock>
-      <p><codeph>ts_headline</codeph> uses the original document, not a <codeph>tsvector</codeph>
-        summary, so it can be slow and should be used with care. A typical mistake is to call
-          <codeph>ts_headline</codeph> for <i>every</i> matching document when only ten documents
-        are to be shown. SQL subqueries can help; here is an example:</p>
+      <p><codeph>ts_headline</codeph> uses the original document, not a
+          <codeph>tsvector</codeph> summary, so it can be slow and should be
+        used with care. A typical mistake is to call
+          <codeph>ts_headline</codeph> for <i>every</i> matching document when
+        only ten documents are to be shown. SQL subqueries can help; here is an
+        example:</p>
       <codeblock>SELECT id, ts_headline(body, q), rank
 FROM (SELECT id, body, q, ts_rank_cd(ti, q) AS rank
       FROM apod, to_tsquery('stars') q

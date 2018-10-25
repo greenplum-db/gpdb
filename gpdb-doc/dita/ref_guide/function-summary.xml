@@ -1381,8 +1381,7 @@ SELECT sum(myvalue) FROM mymatrix;
       </table>
       <note>All the text search functions that accept an optional <codeph>regconfig</codeph>
         argument will use the configuration specified by <xref
-          href="https://www.postgresql.org/docs/9.4/static/runtime-config-client.html#GUC-DEFAULT-TEXT-SEARCH-CONFIG"
-          format="html" scope="external">default_text_search_config</xref> when that argument is
+          href="config_params/guc-list.xml#default_text_search_config"/> when that argument is
         omitted.</note>
       <p>The functions in  the following table are listed separately because they are not usually
         used in everyday text searching operations. They are helpful for development and debugging

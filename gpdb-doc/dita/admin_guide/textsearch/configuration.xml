@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="configuration">
-  <title>Configuration Example</title>
-  <shortdesc>This topic shows how to create a customized search configuration to
-    process document and query text. </shortdesc>
+  <title>Text Search Configuration Example</title>
+  <shortdesc>This topic shows how to create a customized text search
+    configuration to process document and query text. </shortdesc>
   <body>
     <p>A text search configuration specifies all options necessary to transform
       a document into a <codeph>tsvector</codeph>: the parser to use to break

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="parsers">
-  <title>Parsers</title>
+  <title>Text Search Parsers</title>
   <shortdesc>This topic describes the types of tokens the Greenplum Database
     text search parser produces from raw text.  </shortdesc>
   <body>
