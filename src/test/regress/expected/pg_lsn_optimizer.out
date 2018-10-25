@@ -75,26 +75,26 @@ SELECT DISTINCT (i || '/' || j)::pg_lsn f
                                                                  QUERY PLAN                                                                 
 --------------------------------------------------------------------------------------------------------------------------------------------
  GroupAggregate
-   Group Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
+   Group Key: (((((generate_series_1.generate_series)::text || '/'::text) || (generate_series_2.generate_series)::text))::pg_lsn)
    ->  Sort
-         Sort Key: (((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn)
+         Sort Key: (((((generate_series_1.generate_series)::text || '/'::text) || (generate_series_2.generate_series)::text))::pg_lsn)
          ->  HashAggregate
-               Group Key: ((((generate_series_2.generate_series)::text || '/'::text) || (generate_series_1.generate_series)::text))::pg_lsn
+               Group Key: ((((generate_series_1.generate_series)::text || '/'::text) || (generate_series_2.generate_series)::text))::pg_lsn
                ->  Result
                      ->  Nested Loop
                            Join Filter: true
                            ->  Nested Loop
                                  Join Filter: true
                                  ->  Result
-                                       Filter: (generate_series_2.generate_series <= 10)
+                                       Filter: ((generate_series_2.generate_series > 0) AND (generate_series_2.generate_series <= 10))
                                        ->  Function Scan on generate_series generate_series_2
                                  ->  Result
-                                       Filter: ((generate_series_1.generate_series > 0) AND (generate_series_1.generate_series <= 10))
+                                       Filter: (generate_series_1.generate_series <= 10)
                                        ->  Materialize
                                              ->  Function Scan on generate_series generate_series_1
                            ->  Materialize
                                  ->  Function Scan on generate_series
- Optimizer: PQO version 3.1.0
+ Optimizer: PQO version 3.8.0
 (21 rows)
 
 SELECT DISTINCT (i || '/' || j)::pg_lsn f
