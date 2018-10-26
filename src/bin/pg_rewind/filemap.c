@@ -19,7 +19,6 @@
 #include "logging.h"
 #include "pg_rewind.h"
 
-#include "common/string.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_tablespace.h"
 #include "storage/fd.h"
@@ -49,6 +48,18 @@ filemap_create(void)
 
 	Assert(filemap == NULL);
 	filemap = map;
+}
+
+static bool
+endswith(const char *haystack, const char *needle)
+{
+	int needlelen = strlen(needle);
+	int haystacklen = strlen(haystack);
+
+	if (haystacklen < needlelen)
+		return false;
+
+	return strcmp(&haystack[haystacklen - needlelen], needle) == 0;
 }
 
 /*
@@ -171,7 +182,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 				 * An exception: PG_VERSIONs should be identical, but avoid
 				 * overwriting it for paranoia.
 				 */
-				if (pg_str_endswith(path, "PG_VERSION"))
+				if (endswith(path, "PG_VERSION"))
 				{
 					action = FILE_ACTION_NONE;
 					oldsize = statbuf.st_size;
@@ -600,7 +611,7 @@ isRelDataFile(const char *path)
 		}
 		else
 		{
-			nmatch = sscanf(path, "pg_tblspc/%u/" TABLESPACE_VERSION_DIRECTORY "/%u/%u.%u",
+			nmatch = sscanf(path, "pg_tblspc/%u/" GP_TABLESPACE_VERSION_DIRECTORY "/%u/%u.%u",
 							&rnode.spcNode, &rnode.dbNode, &rnode.relNode,
 							&segNo);
 			if (nmatch == 3 || nmatch == 4)

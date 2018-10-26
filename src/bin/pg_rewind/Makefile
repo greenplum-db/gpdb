@@ -21,10 +21,10 @@ PG_LIBS = $(libpq_pgport)
 override CPPFLAGS := -I$(libpq_srcdir) -DFRONTEND $(CPPFLAGS)
 
 OBJS	= pg_rewind.o parsexlog.o xlogreader.o datapagemap.o timeline.o \
-	fetch.o file_ops.o copy_fetch.o libpq_fetch.o filemap.o logging.o \
+	fetch.o file_ops.o copy_fetch.o libpq_fetch.o filemap.o logging.o compat.o \
 	$(WIN32RES)
 
-EXTRA_CLEAN = xlogreader.c
+EXTRA_CLEAN = xlogreader.c compact.c
 
 all: pg_rewind
 
@@ -32,6 +32,10 @@ pg_rewind: $(OBJS) | submake-libpq submake-libpgport
 	$(CC) $(CFLAGS) $^ $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 xlogreader.c: % : $(top_srcdir)/src/backend/access/transam/%
+	rm -f $@ && $(LN_S) $< .
+
+# compat.c is symlinked from the PostgreSQL sources.
+compat.c: % : $(top_srcdir)/contrib/pg_xlogdump/%
 	rm -f $@ && $(LN_S) $< .
 
 install: all installdirs

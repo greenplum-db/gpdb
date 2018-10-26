@@ -8,7 +8,6 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres_fe.h"
-
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
@@ -24,8 +23,8 @@
 #include "access/xlog_internal.h"
 #include "catalog/catversion.h"
 #include "catalog/pg_control.h"
-#include "common/restricted_token.h"
 #include "getopt_long.h"
+#include "utils/palloc.h"
 #include "storage/bufpage.h"
 
 static void usage(const char *progname);
@@ -113,7 +112,7 @@ main(int argc, char **argv)
 		}
 		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
 		{
-			puts("pg_rewind (PostgreSQL) " PG_VERSION);
+			puts("pg_rewind (Greenplum Database) " PG_VERSION);
 			exit(0);
 		}
 	}
@@ -194,8 +193,6 @@ main(int argc, char **argv)
 				progname);
 	}
 #endif
-
-	get_restricted_token(progname);
 
 	/* Connect to remote server */
 	if (connstr_source)
@@ -603,7 +600,7 @@ syncTargetDirectory(const char *argv0)
 
 	/* locate initdb binary */
 	if ((ret = find_other_exec(argv0, "initdb",
-							   "initdb (PostgreSQL) " PG_VERSION "\n",
+							   "initdb (Greenplum Database) " PG_VERSION "\n",
 							   exec_path)) < 0)
 	{
 		char        full_path[MAXPGPATH];

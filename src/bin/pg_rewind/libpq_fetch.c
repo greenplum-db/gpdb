@@ -29,7 +29,7 @@
 #include "libpq-fe.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_type.h"
-#include "fe_utils/connect.h"
+
 
 static PGconn *conn = NULL;
 
@@ -59,7 +59,8 @@ libpqConnect(const char *connstr)
 
 	pg_log(PG_PROGRESS, "connected to server\n");
 
-	res = PQexec(conn, ALWAYS_SECURE_SEARCH_PATH_SQL);
+	/* Secure connection by enforcing search_path */
+	res = PQexec(conn, "SELECT pg_catalog.set_config('search_path', '', false)");
 	if (PQresultStatus(res) != PGRES_TUPLES_OK)
 		pg_fatal("could not clear search_path: %s",
 				 PQresultErrorMessage(res));
