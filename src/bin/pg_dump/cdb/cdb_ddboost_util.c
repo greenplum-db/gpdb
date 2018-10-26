@@ -1109,35 +1109,36 @@ cleanup:
 int
 readFileFromDDBoost(struct ddboost_options *dd_options)
 {
-	char	   *ddboostFile = Safe_strdup(dd_options->from_file);
+	char	   *inputFile = Safe_strdup(dd_options->from_file);
+	char	   *ddboostFile;
 	int			err = 0;
 
-	if (!ddboostFile)
+	if (!inputFile)
 	{
 		mpp_err_msg(logError, progname, "Destination file on DDboost not specified\n");
 		return -1;
 	}
-	if (strstr(ddboostFile, "-?[0-9]+")) {
+	if (strstr(inputFile, "-?[0-9]+"))
+	{
+		PQExpBuffer filenameRegex = createPQExpBuffer();
+		appendPQExpBuffer(filenameRegex, "%s", inputFile);
+		appendPQExpBuffer(filenameRegex, "$");
 
-		char* filenameRegex;
-		filenameRegex = malloc(strlen(ddboostFile) + 2);
-		strcpy(filenameRegex, ddboostFile);
-		strcat(filenameRegex, "$");
-
-		char* searchFile = getFileWithRegex(dd_options, filenameRegex);
-		if (searchFile == NULL) {
-			mpp_err_msg(logError, progname, "File pattern %s not found on DDboost\n", filenameRegex);
+		ddboostFile = getFileWithRegex(dd_options, filenameRegex->data);
+		if (ddboostFile == NULL) {
+			mpp_err_msg(logError, progname, "File pattern %s not found on DDboost\n", inputFile);
 			return -1;
 		}
-		ddboostFile = searchFile;
 		mpp_err_msg("DEBUG", progname, "Found file %s\n", ddboostFile);
-		free(filenameRegex);
+
+		destroyPQExpBuffer(filenameRegex);
+	} else {
+		ddboostFile = Safe_strdup(dd_options->from_file);
 	}
-
 	err = readFromDDFileToOutput(ddboostFile, dd_options->ddboost_storage_unit);
-	if (ddboostFile)
-		free(ddboostFile);
 
+	free(inputFile);
+	free(ddboostFile);
 	return err;
 
 }
