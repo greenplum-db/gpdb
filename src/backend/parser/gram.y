@@ -9907,11 +9907,11 @@ RenameStmt: ALTER AGGREGATE func_name aggr_args RENAME TO name
 					n->missing_ok = false;
 					$$ = (Node *)n;
 				}
-			| ALTER PROTOCOL name RENAME TO name
+			| ALTER PROTOCOL any_name RENAME TO name
 				{
 					RenameStmt *n = makeNode(RenameStmt);
 					n->renameType = OBJECT_EXTPROTOCOL;
-					n->subname = $3;
+					n->object = $3;
 					n->newname = $6;
 					$$ = (Node *)n;
 				}

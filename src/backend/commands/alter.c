@@ -348,37 +348,6 @@ ExecRenameStmt_internal(RenameStmt *stmt)
 			return RenameType(stmt);
 
 		case OBJECT_EXTPROTOCOL:
-			{
-				Relation catalog;
-				ScanKeyData scankey;
-				SysScanDesc scan;
-				HeapTuple tup;
-				Oid objectId;
-				const char *oldname;
-
-				oldname = stmt->subname;
-				catalog = heap_open(ExtprotocolRelationId, RowExclusiveLock);
-				ScanKeyInit(&scankey,
-										Anum_pg_extprotocol_ptcname,
-										BTEqualStrategyNumber, F_NAMEEQ,
-										CStringGetDatum(oldname));
-				scan = systable_beginscan(catalog, ExtprotocolPtcnameIndexId, true,
-										NULL, 1, &scankey);
-				tup = systable_getnext(scan);
-				if (!HeapTupleIsValid(tup))
-					ereport(ERROR,
-						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						errmsg("protocol \"%s\" does not exist",
-							oldname)));
-				objectId = HeapTupleGetOid(tup);
-				systable_endscan(scan);
-				AlterObjectRename_internal(catalog,
-										objectId,
-										stmt->newname);
-				heap_close(catalog, RowExclusiveLock);
-				return objectId;
-			}
-
 		case OBJECT_AGGREGATE:
 		case OBJECT_COLLATION:
 		case OBJECT_CONVERSION:
