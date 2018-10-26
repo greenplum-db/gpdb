@@ -14,19 +14,20 @@
 
 #include "postgres.h"
 
-#include "nodes/memnodes.h"
-#include "inttypes.h"
-#include "utils/palloc.h"
-#include "utils/memutils.h"
-#include "nodes/plannodes.h"
+#include "access/xact.h"
 #include "cdb/cdbdef.h"
 #include "cdb/cdbvars.h"
-#include "access/xact.h"
+#include "commands/explain.h"
+#include "inttypes.h"
 #include "miscadmin.h"
-#include "utils/vmem_tracker.h"
-#include "utils/memaccounting_private.h"
-#include "utils/gp_alloc.h"
+#include "nodes/memnodes.h"
+#include "nodes/plannodes.h"
 #include "utils/ext_alloc.h"
+#include "utils/gp_alloc.h"
+#include "utils/memaccounting_private.h"
+#include "utils/memutils.h"
+#include "utils/palloc.h"
+#include "utils/vmem_tracker.h"
 
 #define MEMORY_REPORT_FILE_NAME_LENGTH 255
 #define SHORT_LIVING_MEMORY_ACCOUNT_ARRAY_INIT_LEN 64
@@ -41,6 +42,12 @@ typedef struct MemoryAccountSerializerCxt
 	/* Prefix to add before each line */
 	char *prefix;
 } MemoryAccountSerializerCxt;
+
+typedef struct MemoryAccountExplainContext
+{
+	int				count;
+	ExplainState   *es;
+} MemoryAccountExplainContext;
 
 /*
  * A tree representation of the memory account array.
@@ -125,7 +132,7 @@ static void
 AdvanceMemoryAccountingGeneration(void);
 
 static void
-MemoryAccounting_ToString(MemoryAccountTree *root, StringInfoData *str, uint32 indentation);
+MemoryAccounting_ToExplain(MemoryAccountTree *root, ExplainState *es);
 
 static void
 InitMemoryAccounting(void);
@@ -144,7 +151,7 @@ MemoryAccountTreeWalkKids(MemoryAccountTree *memoryAccountTreeNode,
 		uint32 *totalWalked, uint32 parentWalkSerial);
 
 static CdbVisitOpt
-MemoryAccountToString(MemoryAccountTree *memoryAccount, void *context,
+MemoryAccountToExplain(MemoryAccountTree *memoryAccount, void *context,
 		uint32 depth, uint32 parentWalkSerial, uint32 curWalkSerial);
 
 static CdbVisitOpt
@@ -439,35 +446,15 @@ MemoryAccounting_Serialize(StringInfoData *buffer)
 }
 
 /*
- * MemoryAccounting_PrettyPrint
- *    Prints (using elog-WARNING) the current memory accounting tree. Useful debugging
- *    tool from inside gdb.
- */
-void
-MemoryAccounting_PrettyPrint()
-{
-	StringInfoData memBuf;
-	initStringInfo(&memBuf);
-
-	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Undefined],
-			shortLivingMemoryAccountArray->allAccounts, shortLivingMemoryAccountArray->accountCount);
-
-	MemoryAccounting_ToString(&tree[MEMORY_OWNER_TYPE_LogicalRoot], &memBuf, 0);
-
-	elog(WARNING, "%s\n", memBuf.data);
-
-	pfree(memBuf.data);
-}
-
-/*
  * MemoryAccounting_CombinedAccountArrayToString
  *    Converts a unified array of long and short living accounts to string.
  */
 void
-MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
-		MemoryAccountIdType accountCount, StringInfoData *str, uint32 indentation)
+MemoryAccounting_CombinedAccountArrayToExplain(void *accountArrayBytes,
+		MemoryAccountIdType accountCount, void *explainstate)
 {
 	MemoryAccount *combinedArray = (MemoryAccount *) accountArrayBytes;
+	ExplainState *es = (ExplainState *) explainstate;
 	/* 1 extra account pointer to reserve for undefined account */
 	MemoryAccount **combinedArrayOfPointers = palloc(sizeof(MemoryAccount *) * (accountCount + 1));
 	combinedArrayOfPointers[MEMORY_OWNER_TYPE_Undefined] = NULL;
@@ -479,7 +466,7 @@ MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
 	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&combinedArrayOfPointers[MEMORY_OWNER_TYPE_Undefined],
 			&combinedArrayOfPointers[MEMORY_OWNER_TYPE_START_SHORT_LIVING], accountCount - MEMORY_OWNER_TYPE_END_LONG_LIVING);
 
-	MemoryAccounting_ToString(&tree[MEMORY_OWNER_TYPE_LogicalRoot], str, indentation);
+	MemoryAccounting_ToExplain(&tree[MEMORY_OWNER_TYPE_LogicalRoot], es);
 
 	pfree(tree);
 	pfree(combinedArrayOfPointers);
@@ -1018,46 +1005,82 @@ MemoryAccountTreeWalkKids(MemoryAccountTree *memoryAccountTreeNode,
 	return CdbVisit_Walk;
 }
 
-/**
- * MemoryAccountToString:
- * 		A visitor function that can convert a memory account to string.
- * 		Called repeatedly from the walker to convert the entire tree to string
- * 		through MemoryAccountTreeToString.
+/*
+ * MemoryAccountToExplain:
+ * 		A visitor function for converting a memory account to EXPLAIN output
  *
- * memoryAccount: The memory account which will be represented as string
- * context: context information to pass between successive function call
- * depth: The depth in the tree for current node. Used to generate indentation.
- * parentWalkSerial: parent node's "walk serial". Not used right now. Part
- * 		of the uniform "walker" function prototype
- * curWalkSerial: current node's "walk serial". Not used right now. Part
- * 		of the uniform "walker" function prototype
+ * The function is called repeatedly from the walker to convert the entire
+ * tree to EXPLAIN output via MemoryAccountTreeToExplain.
  */
 static CdbVisitOpt
-MemoryAccountToString(MemoryAccountTree *memoryAccountTreeNode, void *context, uint32 depth,
-		uint32 parentWalkSerial, uint32 curWalkSerial)
+MemoryAccountToExplain(MemoryAccountTree *memoryAccountTreeNode, void *context,
+					   uint32 depth, uint32 parentWalkSerial, uint32 curWalkSerial)
 {
-	if (memoryAccountTreeNode == NULL) return CdbVisit_Walk;
+	MemoryAccount	*account;
+	MemoryAccountExplainContext	*ctx;
+	const char		*owner;
 
-	MemoryAccount *memoryAccount = memoryAccountTreeNode->account;
+	if (memoryAccountTreeNode == NULL)
+		return CdbVisit_Walk;
 
-	if (memoryAccount->ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool) return CdbVisit_Walk;
+	account = memoryAccountTreeNode->account;
 
-	MemoryAccountSerializerCxt *memAccountCxt = (MemoryAccountSerializerCxt*) context;
+	if (account->ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool)
+		return CdbVisit_Walk;
 
-	appendStringInfoSpaces(memAccountCxt->buffer, 2 * depth);
+	ctx = (MemoryAccountExplainContext *) context;
+	ctx->es->indent = depth;
 
-	Assert(memoryAccount->peak >= MemoryAccounting_GetBalance(memoryAccount));
-	/* We print only integer valued memory consumption, in standard GPDB KB unit */
-	appendStringInfo(memAccountCxt->buffer, "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: " UINT64_FORMAT " bytes.",
-			MemoryAccounting_GetOwnerName(memoryAccount->ownerType),
-			memoryAccount->peak, MemoryAccounting_GetBalance(memoryAccount), memoryAccount->maxLimit);
-	if (memoryAccount->relinquishedMemory > 0)
-		appendStringInfo(memAccountCxt->buffer, " Relinquished Memory: " UINT64_FORMAT " bytes. ", memoryAccount->relinquishedMemory);
-	if (memoryAccount->acquiredMemory > 0)
-		appendStringInfo(memAccountCxt->buffer, " Acquired Additional Memory: " UINT64_FORMAT " bytes.", memoryAccount->acquiredMemory);
-	appendStringInfo(memAccountCxt->buffer, "\n");
+	Assert(account->peak >= MemoryAccounting_GetBalance(account));
 
-	memAccountCxt->memoryAccountCount++;
+	owner = MemoryAccounting_GetOwnerName(account->ownerType);
+
+	if (ctx->es->format == EXPLAIN_FORMAT_TEXT)
+	{
+		appendStringInfoSpaces(ctx->es->str, 2 * depth);
+
+		/*
+		 * We print only integer valued memory consumption, in standard GPDB
+		 * KB unit,
+		 */
+		appendStringInfo(ctx->es->str,
+						 "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: " UINT64_FORMAT " bytes.",
+						 owner,
+						 account->peak,
+						 MemoryAccounting_GetBalance(account),
+						 account->maxLimit);
+
+		if (account->relinquishedMemory > 0)
+			appendStringInfo(ctx->es->str,
+							 " Relinquished Memory: " UINT64_FORMAT " bytes. ",
+							 account->relinquishedMemory);
+
+		if (account->acquiredMemory > 0)
+			appendStringInfo(ctx->es->str,
+							 " Acquired Additional Memory: " UINT64_FORMAT " bytes.",
+							 account->acquiredMemory);
+
+		appendStringInfo(ctx->es->str, "\n");
+	}
+	else
+	{
+		ExplainOpenGroup(owner, owner, true, ctx->es);
+		ExplainPropertyLong("Peak", account->peak, ctx->es);
+		ExplainPropertyLong("Current", MemoryAccounting_GetBalance(account), ctx->es);
+		ExplainPropertyLong("Quota", account->maxLimit, ctx->es);
+
+		if (account->relinquishedMemory > 0)
+			ExplainPropertyLong("Relinquished Memory",
+								account->relinquishedMemory, ctx->es);
+
+		if (account->acquiredMemory > 0)
+			ExplainPropertyLong("Acquired Additional Memory",
+								account->acquiredMemory, ctx->es);
+
+		ExplainCloseGroup(owner, owner, true, ctx->es);
+	}
+
+	ctx->count++;
 
 	return CdbVisit_Walk;
 }
@@ -1288,24 +1311,28 @@ PsuedoAccountsToCSV(StringInfoData *str, char *prefix)
 }
 
 /*
- * MemoryAccounting_ToString
- *		Converts a memory account tree rooted at "root" to string using tree
- *		walker and repeated calls of MemoryAccountToString
+ * MemoryAccounting_ToExplain
+ *		Converts a memory account tree rooted at "root" to EXPLAIN output
  *
- * root: The root of the tree (used recursively)
- * str: The output buffer
- * indentation: The indentation of the root
+ * Output is generated using tree walker and repeated calls of
+ * MemoryAccountToExplain.
  */
 static void
-MemoryAccounting_ToString(MemoryAccountTree *root, StringInfoData *str, uint32 indentation)
+MemoryAccounting_ToExplain(MemoryAccountTree *root, ExplainState *es)
 {
-	MemoryAccountSerializerCxt cxt;
-	cxt.buffer = str;
-	cxt.memoryAccountCount = 0;
-	cxt.prefix = NULL;
+	MemoryAccountExplainContext	ctx;
+	uint32				totalWalked;
+	int 				prev_indent;
 
-	uint32 totalWalked = 0;
-	MemoryAccountTreeWalkNode(root, MemoryAccountToString, &cxt, 0 + indentation, &totalWalked, totalWalked);
+	totalWalked = 0;
+	prev_indent = es->indent;
+
+	ctx.es = es;
+	ctx.count = 0;
+
+	MemoryAccountTreeWalkNode(root, MemoryAccountToExplain, &ctx, ctx.es->indent + 1, &totalWalked, totalWalked);
+
+	es->indent = prev_indent;
 }
 
 /*

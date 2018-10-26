@@ -896,11 +896,11 @@ test__MemoryAccounting_Serialize__Validate(void **state)
 
 
 /*
- * Tests if the MemoryAccounting_CombinedAccountArrayToString of the memory accounting tree
+ * Tests if the MemoryAccounting_CombinedAccountArrayToExplain of the memory accounting tree
  *  produces expected output
  */
 void
-test__MemoryAccounting_CombinedAccountArrayToString__Validate(void **state)
+test__MemoryAccounting_CombinedAccountArrayToExplain__Validate(void **state)
 {
 	StringInfoData serializedBytes;
 	initStringInfoOfSize(&serializedBytes, MAX_OUTPUT_BUFFER_SIZE);
@@ -919,15 +919,15 @@ test__MemoryAccounting_CombinedAccountArrayToString__Validate(void **state)
 
 	uint32 totalSerialized = MemoryAccounting_Serialize(&serializedBytes);
 
-	char *templateString = "Root: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  Top: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
-    X_Hash: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-      X_Sort: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-      X_SeqScan: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  X_Alien: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  MemAcc: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
-  Rollover: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  SharedHeader: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n";
+	char *templateString = "  Root: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    Top: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
+      X_Hash: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+        X_Sort: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+        X_SeqScan: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    X_Alien: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    MemAcc: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
+    Rollover: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    SharedHeader: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n";
 
 	char		buf[MAX_OUTPUT_BUFFER_SIZE];
 
@@ -936,12 +936,16 @@ test__MemoryAccounting_CombinedAccountArrayToString__Validate(void **state)
 			MemoryAccountMemoryAccount->peak, MemoryAccountMemoryAccount->allocated - MemoryAccountMemoryAccount->freed,
 			SharedChunkHeadersMemoryAccount->peak, SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed);
 
-	MemoryAccounting_CombinedAccountArrayToString(serializedBytes.data, totalSerialized, &str, 0);
+	ExplainState es;
+	ExplainInitState(&es);
+	es.str = &str;
+
+	MemoryAccounting_CombinedAccountArrayToExplain(serializedBytes.data, totalSerialized, &es);
 
 	size_t newTopBalance = topAccount->allocated - topAccount->freed;
 	size_t newTopPeak = topAccount->peak;
 
-    assert_true(strcmp(str.data, buf) == 0);
+    assert_true(strcmp(es.str->data, buf) == 0);
 
     pfree(serializedBytes.data);
 	pfree(str.data);
@@ -1044,21 +1048,21 @@ test__MemoryAccounting_GetBalance__Validate(void **state)
 }
 
 /*
- * Tests if the MemoryAccounting_ToString is correctly converting
+ * Tests if the MemoryAccounting_ToExplain is correctly converting
  * a memory accounting tree to string
  */
 void
-test__MemoryAccounting_ToString__Validate(void **state)
+test__MemoryAccounting_ToExplain__Validate(void **state)
 {
 	char *templateString =
-"Root: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  Top: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
-    X_Agg: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
-  X_Alien: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  MemAcc: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
-  Rollover: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
-    X_Hash: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  SharedHeader: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n";
+"  Root: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    Top: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
+      X_Agg: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
+    X_Alien: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    MemAcc: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
+    Rollover: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n\
+      X_Hash: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
+    SharedHeader: Peak/Cur %" PRIu64 "/%" PRIu64 " bytes. Quota: 0 bytes.\n";
 
 	MemoryAccountIdType oldAccountId = CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Hash, ActiveMemoryAccountId);
 	/* Make oldAccountId obsolete */
@@ -1085,13 +1089,13 @@ test__MemoryAccounting_ToString__Validate(void **state)
 	pfree(dummy2);
 	pfree(dummy3);
 
-	StringInfoData buffer;
-	initStringInfoOfSize(&buffer, MAX_OUTPUT_BUFFER_SIZE);
-
 	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Undefined],
 			shortLivingMemoryAccountArray->allAccounts, shortLivingMemoryAccountArray->accountCount);
 
-	MemoryAccounting_ToString(&tree[MEMORY_OWNER_TYPE_LogicalRoot], &buffer, 0 /* Indentation */);
+	ExplainState es;
+	ExplainInitState(&es);
+
+	MemoryAccounting_ToExplain(&tree[MEMORY_OWNER_TYPE_LogicalRoot], &es);
 
 	char		buf[MAX_OUTPUT_BUFFER_SIZE];
 	snprintf(buf, sizeof(buf), templateString,
@@ -1101,10 +1105,9 @@ test__MemoryAccounting_ToString__Validate(void **state)
 			rollover->peak, (rollover->allocated - rollover->freed), /* Rollover */
 			SharedChunkHeadersMemoryAccount->peak, (SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed) /* SharedChunkHeadersMemoryAccount */);
 
-    assert_true(strcmp(buffer.data, buf) == 0);
+    assert_true(strcmp(es.str->data, buf) == 0);
 
     pfree(tree);
-    pfree(buffer.data);
     pfree(newAccount1);
     pfree(newAccount2);
 }
@@ -1161,60 +1164,6 @@ memory: X_Hash, 8, 7, 0, %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n";
 			MemoryAccountMemoryAccount->peak, MemoryAccountMemoryAccount->allocated, MemoryAccountMemoryAccount->freed, MemoryAccountMemoryAccount->allocated - MemoryAccountMemoryAccount->freed,
 			topAccount->peak, topAccount->allocated, topAccount->freed, topAccount->allocated - topAccount->freed,
 			newAccount->peak, newAccount->allocated, newAccount->freed, newAccount->allocated - newAccount->freed);
-
-	/* Restore hacked counters */
-	topAccount->freed = hackedFreed;
-
-    assert_true(strcmp(outputBuffer.data, buf) == 0);
-
-	pfree(dummy1);
-	pfree(dummy2);
-    pfree(newAccount);
-}
-
-/*
- * Tests if the MemoryAccounting_PrettyPrint is generating the correct
- * string representation of the memory accounting tree before printing.
- */
-void
-test__MemoryAccounting_PrettyPrint__GeneratesCorrectString(void **state)
-{
-
-	char *templateString = "Root: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  Top: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
-    X_Hash: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
-  X_Alien: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  MemAcc: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\
-  Rollover: Peak/Cur 0/0 bytes. Quota: 0 bytes.\n\
-  SharedHeader: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: 0 bytes.\n\n";
-
-	/* ActiveMemoryAccount should be Top at this point */
-	MemoryAccount *newAccount = MemoryAccounting_ConvertIdToAccount(
-			CreateMemoryAccountImpl(0, MEMORY_OWNER_TYPE_Exec_Hash, ActiveMemoryAccountId));
-	MemoryAccount *topAccount = MemoryAccounting_ConvertIdToAccount(liveAccountStartId);
-
-	void * dummy1 = palloc(NEW_ALLOC_SIZE);
-
-	MemoryAccountIdType oldAccountId = MemoryAccounting_SwitchAccount(newAccount->id);
-
-	void * dummy2 = palloc(NEW_ALLOC_SIZE);
-	void * dummy3 = palloc(NEW_ALLOC_SIZE);
-	MemoryAccounting_SwitchAccount(oldAccountId);
-
-	/* Now free in Hash account, although Hash is no longer Active */
-	pfree(dummy3);
-
-	MemoryAccounting_PrettyPrint();
-
-	char		buf[MAX_OUTPUT_BUFFER_SIZE];
-	/* Hack to discount "tree" free in MemoryAccounting_SaveToLog which we did not count when walked the tree */
-	uint64 hackedFreed = topAccount->freed;
-	topAccount->freed = 0;
-	snprintf(buf, sizeof(buf), templateString,
-			topAccount->peak, topAccount->allocated - topAccount->freed,
-			newAccount->peak, newAccount->allocated - newAccount->freed,
-			MemoryAccountMemoryAccount->peak, MemoryAccountMemoryAccount->allocated - MemoryAccountMemoryAccount->freed,
-			SharedChunkHeadersMemoryAccount->peak, SharedChunkHeadersMemoryAccount->allocated - SharedChunkHeadersMemoryAccount->freed);
 
 	/* Restore hacked counters */
 	topAccount->freed = hackedFreed;
@@ -1421,11 +1370,10 @@ main(int argc, char* argv[])
 		unit_test_setup_teardown(test__MemoryAccounting_GetGlobalPeak__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_GetAccountPeakBalance__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_GetBalance__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
-		unit_test_setup_teardown(test__MemoryAccounting_ToString__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
+		unit_test_setup_teardown(test__MemoryAccounting_ToExplain__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToLog__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_SaveToFile__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
-		unit_test_setup_teardown(test__MemoryAccounting_PrettyPrint__GeneratesCorrectString, SetupMemoryDataStructures, TeardownMemoryDataStructures),
-		unit_test_setup_teardown(test__MemoryAccounting_CombinedAccountArrayToString__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
+		unit_test_setup_teardown(test__MemoryAccounting_CombinedAccountArrayToExplain__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__ConvertIdToUniversalArrayIndex__Validate, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_GetAccountCurrentBalance__ResetPeakBalance, SetupMemoryDataStructures, TeardownMemoryDataStructures),
 		unit_test_setup_teardown(test__MemoryAccounting_Optimizer_Oustanding_Balance_Rollover, SetupMemoryDataStructures, TeardownMemoryDataStructures),

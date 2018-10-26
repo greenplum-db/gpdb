@@ -1539,17 +1539,25 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		Motion	   *pMotion = (Motion *) planstate->plan;
 		int			curSliceId = pMotion->motionID;
 
-		/*
-		 * FIXME: Only displayed in text format
-		 * [#159442827]
-		 */
 		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
 		{
-			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
+			if (es->format == EXPLAIN_FORMAT_TEXT)
+			{
+				appendStringInfoSpaces(es->str, es->indent * 2);
+				appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
+			}
+			else
+			{
+				ExplainOpenGroup("MemoryAccounting", NULL, false, es);
+				ExplainPropertyInteger("Slice", curSliceId, es);
+				ExplainPropertyInteger("Segment", iWorker, es);
+			}
 
-			MemoryAccounting_CombinedAccountArrayToString(ctx->slices[curSliceId].memoryAccounts[iWorker],
-														  ctx->slices[curSliceId].memoryAccountCount[iWorker], es->str, es->indent + 1);
+			MemoryAccounting_CombinedAccountArrayToExplain(ctx->slices[curSliceId].memoryAccounts[iWorker],
+														   ctx->slices[curSliceId].memoryAccountCount[iWorker],
+														   es);
+			if (es->format != EXPLAIN_FORMAT_TEXT)
+				ExplainCloseGroup("MemoryAccounting", NULL, false, es);
 		}
 	}
 

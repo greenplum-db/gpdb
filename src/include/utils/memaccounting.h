@@ -217,8 +217,9 @@ extern uint64
 MemoryAccounting_GetGlobalPeak(void);
 
 extern void
-MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
-		MemoryAccountIdType accountCount, StringInfoData *str, uint32 indentation);
+MemoryAccounting_CombinedAccountArrayToExplain(void *accountArrayBytes,
+											  MemoryAccountIdType accountCount,
+											  void *es);
 
 extern void
 MemoryAccounting_SaveToFile(int currentSliceId);
