@@ -92,6 +92,7 @@ DROP EXTERNAL TABLE IF EXISTS exttab_views_3;
 DROP VIEW IF EXISTS exttab_views_3;
 
 DROP PROTOCOL IF EXISTS demoprot_untrusted;
+DROP PROTOCOL IF EXISTS demoprot_untrusted2;
 
 drop external web table if exists check_ps;
 CREATE EXTERNAL WEB TABLE check_ps (x text)
@@ -192,6 +193,9 @@ CREATE TRUSTED PROTOCOL demoprot (readfunc = 'read_from_file', writefunc = 'writ
 CREATE PROTOCOL demoprot_untrusted (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
 ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2;
 ALTER PROTOCOL demoprot_untrusted2 RENAME TO demoprot_untrusted;
+CREATE PROTOCOL demoprot_untrusted2 (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
+ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2; -- should failed
+ALTER PROTOCOL demoprot_untrustedx RENAME TO demoprot_untrusted2; --should failed
 
 CREATE ROLE extprotu NOSUPERUSER;
 SET SESSION AUTHORIZATION extprotu;

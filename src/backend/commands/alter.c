@@ -92,6 +92,9 @@ report_name_conflict(Oid classId, const char *name)
 		case LanguageRelationId:
 			msgfmt = gettext_noop("language \"%s\" already exists");
 			break;
+		case ExtprotocolRelationId:
+			msgfmt = gettext_noop("protocol \"%s\" already exists");
+			break;
 		default:
 			elog(ERROR, "unsupported object class %u", classId);
 			break;

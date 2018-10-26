@@ -430,6 +430,17 @@ static const struct cachedesc cacheinfo[] = {
 		},
 		128
 	},
+	{ExtprotocolRelationId,		/* EXTPROTOCOLNAME */
+		ExtprotocolPtcnameIndexId,
+		1,
+		{
+			Anum_pg_extprotocol_ptcname,
+			0,
+			0,
+			0
+		},
+		128
+	},
 	{ForeignDataWrapperRelationId,		/* FOREIGNDATAWRAPPERNAME */
 		ForeignDataWrapperNameIndexId,
 		1,

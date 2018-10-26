@@ -236,6 +236,11 @@ CREATE TRUSTED PROTOCOL demoprot (readfunc = 'read_from_file', writefunc = 'writ
 CREATE PROTOCOL demoprot_untrusted (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
 ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2;
 ALTER PROTOCOL demoprot_untrusted2 RENAME TO demoprot_untrusted;
+CREATE PROTOCOL demoprot_untrusted2 (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
+ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2; -- should failed
+ERROR:  protocol "demoprot_untrusted2" already exists
+ALTER PROTOCOL demoprot_untrustedx RENAME TO demoprot_untrusted2; --should failed
+ERROR:  protocol "demoprot_untrustedx" does not exist
 CREATE ROLE extprotu NOSUPERUSER;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET SESSION AUTHORIZATION extprotu;
