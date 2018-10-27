@@ -255,6 +255,8 @@ FI_IDENT(CreateGangInProgress, "create_gang_in_progress")
 FI_IDENT(DecreaseToastMaxChunkSize, "decrease_toast_max_chunk_size")
 /* inject fault to let cleanupGang return false */
 FI_IDENT(CleanupQE, "cleanup_qe")
+/* inject fault after a writer has cancelled a reader during abort transaction */
+FI_IDENT(CancelledReaderDuringAbort, "cancelled_reader_during_abort")
 #endif
 
 /*

@@ -4185,7 +4185,6 @@ PostmasterStateMachine(void)
 	}
 }
 
-
 /*
  * Send a signal to a postmaster child process
  *

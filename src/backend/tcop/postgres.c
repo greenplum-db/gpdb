@@ -94,6 +94,7 @@
 #include "cdb/cdbgang.h"
 #include "cdb/ml_ipc.h"
 #include "utils/guc.h"
+#include "utils/sharedsnapshot.h"
 #include "access/twophase.h"
 #include "postmaster/backoff.h"
 #include "utils/resource_manager.h"
@@ -236,6 +237,7 @@ static bool RecoveryConflictRetryable = true;
 static ProcSignalReason RecoveryConflictReason;
 
 static DtxContextInfo TempDtxContextInfo = DtxContextInfo_StaticInit;
+static bool HandlingWriterCancelRequest = false;
 
 extern void CheckForQDMirroringWork(void);
 
@@ -1052,7 +1054,7 @@ exec_mpp_query(const char *query_string,
 	QueryDispatchDesc *ddesc = NULL;
 	CmdType		commandType = CMD_UNKNOWN;
 	SliceTable *sliceTable = NULL;
-	Slice      *slice = NULL;
+	Slice      *currentSlice = NULL;
 	ParamListInfo paramLI = NULL;
 
 	Assert(Gp_role == GP_ROLE_EXECUTE);
@@ -1146,14 +1148,14 @@ exec_mpp_query(const char *query_string,
 			/* Identify slice to execute */
 			foreach(lc, sliceTable->slices)
 			{
-				slice = (Slice *)lfirst(lc);
-				if (bms_is_member(qe_identifier, slice->processesMap))
+				currentSlice = (Slice *)lfirst(lc);
+				if (bms_is_member(qe_identifier, currentSlice->processesMap))
 					break;
 			}
 
-			sliceTable->localSlice = slice->sliceIndex;
+			sliceTable->localSlice = currentSlice->sliceIndex;
 
-			Assert(IsA(slice, Slice));
+			Assert(IsA(currentSlice, Slice));
 
 			/* Set global sliceid variable for elog. */
 			currentSliceId = sliceTable->localSlice;
@@ -1185,10 +1187,10 @@ exec_mpp_query(const char *query_string,
 
         commandType = plan->commandType;
 	}
-	if ( slice )
+	if ( currentSlice )
 	{
 		/* Non root slices don't need update privileges. */
-		if (sliceTable->localSlice != slice->rootIndex)
+		if (sliceTable->localSlice != currentSlice->rootIndex)
 		{
 			ListCell       *rtcell;
 			RangeTblEntry  *rte;
@@ -1303,6 +1305,21 @@ exec_mpp_query(const char *query_string,
 
 		/* Make sure we are in a transaction command */
 		start_xact_command();
+
+		/*
+		 * In a query plan there can be at the most one writer that executes
+		 * the root slice.  All other slices are executed by readers.  If
+		 * readers exist in our plan, we capture that information in the
+		 * transaction state, to be used later during abort.  In case of a
+		 * read-only command, no slice should have gangType as PRIMARY_WRITER.
+		 * We can skip the overhead of walking through proc array during abort
+		 * if the command is read-only.
+		 */
+		if (sliceTable && list_length(sliceTable->slices) > 1 && Gp_is_writer &&
+			currentSlice->gangType == GANGTYPE_PRIMARY_WRITER)
+			SetCurrentTransactionUsesReaders();
+		else
+			ResetCurrentTransactionUsesReaders();
 
 		/* If we got a cancel signal in parsing or prior command, quit */
 		CHECK_FOR_INTERRUPTS();
@@ -3871,9 +3888,23 @@ ProcessInterrupts(const char* filename, int lineno)
 			DisableCatchupInterrupt();
 
 			if (Gp_role == GP_ROLE_EXECUTE)
+			{
+				HandlingWriterCancelRequest =
+					!Gp_is_writer && SharedLocalSnapshotSlot &&
+					SharedLocalSnapshotSlot->writerSentCancel;
+				/*
+				 * Do not send the error message back to QD if the writer
+				 * asked us to cancel the query.  Otherwise, if QD receives
+				 * "canceling MPP operation" error before the error reported
+				 * by the writer, the writer's error will not be reported to
+				 * the client.
+				 */
+				if (HandlingWriterCancelRequest)
+					whereToSendOutput = DestNone;
 				ereport(ERROR,
 						(errcode(ERRCODE_GP_OPERATION_CANCELED),
 						 errmsg("canceling MPP operation")));
+			}
 			else if (HasCancelMessage())
 			{
 				char   *buffer = palloc0(MAX_CANCEL_MSG);
@@ -4967,6 +4998,16 @@ PostgresMain(int argc, char *argv[],
 
 		/* Report the error to the client and/or server log */
 		EmitErrorReport();
+		if (HandlingWriterCancelRequest)
+		{
+			/*
+			 * Restore CommandDest so that any error from now on will be
+			 * delivered back to QD.
+			 */
+			Assert(!Gp_is_writer);
+			whereToSendOutput = DestRemote;
+			HandlingWriterCancelRequest = false;
+		}
 
 		/*
 		 * Make sure debug_query_string gets reset before we possibly clobber

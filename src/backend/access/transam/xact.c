@@ -183,6 +183,7 @@ typedef struct TransactionStateData
 	bool		startedInRecovery;		/* did we start in recovery? */
 	bool		didLogXid;		/* has xid been included in WAL record? */
 	bool		executorSaysXactDoesWrites;	/* GP executor says xact does writes */
+	bool		xactUsesReaders; /* signal readers to cancel query execution before abort */
 	struct TransactionStateData *parent;		/* back link to parent */
 
 	struct TransactionStateData *fastLink;        /* back link to jump to parent for efficient search */
@@ -220,6 +221,7 @@ static TransactionStateData TopTransactionStateData = {
 	false,						/* startedInRecovery */
 	false,						/* didLogXid */
 	false,						/* executorSaysXactDoesWrites */
+	false,						/* xactUsesReaders */
 	NULL						/* link to parent state block */
 };
 
@@ -3229,6 +3231,7 @@ AbortTransaction(void)
 	AtAbort_Notify();
 	AtEOXact_RelationMap(false);
 	AtAbort_Twophase();
+	AtAbort_Readers();
 
 	/*
 	 * Advertise the fact that we aborted in pg_clog (assuming that we got as
@@ -5867,6 +5870,30 @@ xactGetCommittedChildren(TransactionId **ptr)
 		*ptr = s->childXids;
 
 	return s->nChildXids;
+}
+
+/*
+ * Mark this transaction as using QE reader. This is used during abort to
+ * signal readers to cancel query execution before marking this transaction
+ * aborted.
+ */
+void
+SetCurrentTransactionUsesReaders(void)
+{
+	Assert(Gp_is_writer);
+	CurrentTransactionState->xactUsesReaders = true;
+}
+
+bool
+GetCurrentTransactionUsesReaders(void)
+{
+	return CurrentTransactionState->xactUsesReaders;
+}
+
+void
+ResetCurrentTransactionUsesReaders(void)
+{
+	CurrentTransactionState->xactUsesReaders = false;
 }
 
 /*
