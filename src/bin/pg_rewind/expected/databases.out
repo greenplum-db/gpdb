@@ -1,0 +1,25 @@
+Master initialized.
+Master running.
+CREATE DATABASE inmaster;
+CREATE DATABASE
+Standby initialized and running.
+CREATE DATABASE beforepromotion
+CREATE DATABASE
+Standby promoted.
+CREATE DATABASE master_afterpromotion
+CREATE DATABASE
+CREATE DATABASE standby_afterpromotion
+CREATE DATABASE
+Running pg_rewind...
+Old master restarted after rewind.
+SELECT datname from pg_database
+        datname         
+------------------------
+ template1
+ template0
+ postgres
+ inmaster
+ beforepromotion
+ standby_afterpromotion
+(6 rows)
+

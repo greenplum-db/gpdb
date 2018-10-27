@@ -26,6 +26,9 @@ OBJS	= pg_rewind.o parsexlog.o xlogreader.o datapagemap.o timeline.o \
 
 EXTRA_CLEAN = xlogreader.c compact.c
 
+REGRESS = basictest extrafiles databases pg_xlog_symlink
+REGRESS_OPTS=--use-existing --launcher=./launcher
+
 all: pg_rewind
 
 pg_rewind: $(OBJS) | submake-libpq submake-libpgport
@@ -51,8 +54,23 @@ clean distclean maintainer-clean:
 	rm -f pg_rewind$(X) $(OBJS) xlogreader.c
 	rm -rf tmp_check
 
-check:
-	$(prove_check)
+# GPDB_95_MERGE_FIXME: 9.4 version of tests were used instead of 9.5 since 9.5
+# once have dependency on common TAP framework functions which are not yet
+# present in GPDB. When 9.5 is fully merged, retire these 9.4 related tests and
+# use the TAP tests instead.
 
-installcheck:
-	$(prove_installcheck)
+check-local:
+	echo "Running tests against local data directory, in copy-mode"
+	bindir=$(bindir) TEST_SUITE="local" $(MAKE) pg_regress_installcheck
+
+check-remote:
+	echo "Running tests against a running standby, via libpq"
+	bindir=$(bindir) TEST_SUITE="remote" $(MAKE) pg_regress_installcheck
+
+check-both: check-local check-remote
+
+# against installed postmaster
+pg_regress_installcheck:
+	$(pg_regress_installcheck) $(REGRESS_OPTS) $(REGRESS)
+
+installcheck: check-both
