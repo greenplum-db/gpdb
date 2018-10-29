@@ -1459,8 +1459,8 @@ CQueryMutators::ConvertToDerivedTable
 	new_query->rtable = gpdb::LAppend(new_query->rtable, rte);
 //	new_query->intoClause = origIntoClause;
 	new_query->intoPolicy = into_policy;
-	new_query->isCTAS = derived_table_query->isCTAS;
-	derived_table_query->isCTAS = false;
+	new_query->intoClauseType = derived_table_query->intoClauseType;
+	derived_table_query->intoClauseType = INTOCLAUSE_NONE;
 
 	FromExpr *fromexpr = MakeNode(FromExpr);
 	fromexpr->quals = NULL;
