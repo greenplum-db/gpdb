@@ -711,8 +711,12 @@ ExplainPrintPlan(ExplainState *es, QueryDesc *queryDesc)
 	/* CDB: Find slice table entry for the root slice. */
 	es->currentSlice = getCurrentSlice(estate, LocallyExecutingSliceIndex(estate));
 
-	/* Get local stats if root slice was executed here in the qDisp. */
-	if (es->analyze)
+	/*
+	 * Get local stats if root slice was executed here in the qDisp, as long
+	 * as we haven't already gathered the statistics. This can happen when an
+	 * executor hook generates EXPLAIN output.
+	 */
+	if (es->analyze && !es->showstatctx->stats_gathered)
 	{
 		if (!es->currentSlice || sliceRunsOnQD(es->currentSlice))
 			cdbexplain_localExecStats(queryDesc->planstate, es->showstatctx);

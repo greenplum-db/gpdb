@@ -240,6 +240,7 @@ typedef struct CdbExplain_ShowStatCtx
 	double		workmemused_max;
 	double		workmemwanted_max;
 
+	bool		stats_gathered;
 	/* Per-slice statistics are deposited in this SliceSummary array */
 	int			nslice;			/* num of slots in slices array */
 	CdbExplain_SliceSummary *slices;	/* -> array[0..nslice-1] of
@@ -772,6 +773,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 
 	/* Transfer worker counts to SliceSummary. */
 	showstatctx->slices[sliceIndex].dispatchSummary = ds;
+
+	/* Signal that we've gathered all the statistics */
+	showstatctx->stats_gathered = true;
 
 	/* Clean up. */
 	if (ctx.msgptrs)
@@ -1877,6 +1881,21 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	}
 }								/* cdbexplain_showExecStats */
 
+/*
+ *	ExplainPrintExecStatsEnd
+ *			External API wrapper for cdbexplain_showExecStatsEnd
+ *
+ * This is an externally exposed wrapper for cdbexplain_showExecStatsEnd such
+ * that extensions, such as auto_explain, can leverage the Greenplum specific
+ * parts of the EXPLAIN machiner.
+ */
+void
+ExplainPrintExecStatsEnd(ExplainState *es, QueryDesc *queryDesc)
+{
+	cdbexplain_showExecStatsEnd(queryDesc->plannedstmt,
+								queryDesc->showstatctx,
+								queryDesc->estate, es);
+}
 
 /*
  * cdbexplain_showExecStatsEnd

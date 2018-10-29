@@ -97,4 +97,6 @@ extern void ExplainPropertyLong(const char *qlabel, long value,
 extern void ExplainPropertyFloat(const char *qlabel, double value, int ndigits,
 					 ExplainState *es);
 
+extern void ExplainPrintExecStatsEnd(ExplainState *es, QueryDesc *queryDesc);
+
 #endif   /* EXPLAIN_H */
