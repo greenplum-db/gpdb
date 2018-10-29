@@ -4,7 +4,7 @@
  *	  Routines dealing with TupleTableSlots.  These are used for resource
  *	  management associated with tuples (eg, releasing buffer pins for
  *	  tuples in disk buffers, or freeing the memory occupied by transient
- *	  tuples).	Slots also provide access abstraction that lets us implement
+ *	  tuples).  Slots also provide access abstraction that lets us implement
  *	  "virtual" tuples to reduce data-copying overhead.
  *
  *	  Routines dealing with the type information for tuples. Currently,
@@ -12,7 +12,7 @@
  *	  This information is needed by routines manipulating tuples
  *	  (getattribute, formtuple, etc.).
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -334,7 +334,7 @@ ExecSetSlotDescriptor(TupleTableSlot *slot,		/* slot to change */
  * Another case where it is 'false' is when the referenced tuple is held
  * in a tuple table slot belonging to a lower-level executor Proc node.
  * In this case the lower-level slot retains ownership and responsibility
- * for eventually releasing the tuple.	When this method is used, we must
+ * for eventually releasing the tuple.  When this method is used, we must
  * be certain that the upper-level Proc node will lose interest in the tuple
  * sooner than the lower-level one does!  If you're not certain, copy the
  * lower-level tuple with heap_copytuple and let the upper-level table
@@ -462,30 +462,21 @@ ExecStoreMinimalTuple(MemTuple mtup,
  *		ExecFetchSlotTupleDatum
  *			Fetch the slot's tuple as a composite-type Datum.
  *
- *		We convert the slot's contents to local physical-tuple form,
- *		and fill in the Datum header fields.  Note that the result
- *		always points to storage owned by the slot.
+ *		The result is always freshly palloc'd in the caller's memory context.
  * --------------------------------
  */
 Datum
 ExecFetchSlotTupleDatum(TupleTableSlot *slot)
 {
 	HeapTuple	tup;
-	HeapTupleHeader td;
 	TupleDesc	tupdesc;
 
-	/* Make sure we can scribble on the slot contents ...
-	 * GPDB: ExecFetchSlotHeapTuple() replaces the Postgres call to
-	 * ExecMaterializeSlot() due to restructuring of the code around
-	 * memtuple support */
+	/* Fetch slot's contents in regular-physical-tuple form */
 	tup = ExecFetchSlotHeapTuple(slot);
-	/* ... and set up the composite-Datum header fields, in case not done */
-	td = tup->t_data;
 	tupdesc = slot->tts_tupleDescriptor;
-	HeapTupleHeaderSetDatumLength(td, tup->t_len);
-	HeapTupleHeaderSetTypeId(td, tupdesc->tdtypeid);
-	HeapTupleHeaderSetTypMod(td, tupdesc->tdtypmod);
-	return PointerGetDatum(td);
+
+	/* Convert to Datum form */
+	return heap_copy_tuple_as_datum(tup, tupdesc);
 }
 
 /* --------------------------------
@@ -728,7 +719,7 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
  *			Fetch the slot's minimal physical tuple.
  *
  *		If the slot contains a virtual tuple, we convert it to minimal
- *		physical form.	The slot retains ownership of the minimal tuple.
+ *		physical form.  The slot retains ownership of the minimal tuple.
  *		If it contains a regular tuple we convert to minimal form and store
  *		that in addition to the regular tuple (not instead of, because
  *		callers may hold pointers to Datums within the regular tuple).
@@ -980,7 +971,7 @@ void ExecModifyMemTuple(TupleTableSlot *slot, Datum *values, bool *isnull, bool 
  *		ExecInit{Result,Scan,Extra}TupleSlot
  *
  *		These are convenience routines to initialize the specified slot
- *		in nodes inheriting the appropriate state.	ExecInitExtraTupleSlot
+ *		in nodes inheriting the appropriate state.  ExecInitExtraTupleSlot
  *		is used for initializing special-purpose slots.
  * --------------------------------
  */
@@ -1308,6 +1299,66 @@ BuildTupleFromCStrings(AttInMetadata *attinmeta, char **values)
 
 	return tuple;
 }
+
+/*
+ * HeapTupleHeaderGetDatum - convert a HeapTupleHeader pointer to a Datum.
+ *
+ * This must *not* get applied to an on-disk tuple; the tuple should be
+ * freshly made by heap_form_tuple or some wrapper routine for it (such as
+ * BuildTupleFromCStrings).  Be sure also that the tupledesc used to build
+ * the tuple has a properly "blessed" rowtype.
+ *
+ * Formerly this was a macro equivalent to PointerGetDatum, relying on the
+ * fact that heap_form_tuple fills in the appropriate tuple header fields
+ * for a composite Datum.  However, we now require that composite Datums not
+ * contain any external TOAST pointers.  We do not want heap_form_tuple itself
+ * to enforce that; more specifically, the rule applies only to actual Datums
+ * and not to HeapTuple structures.  Therefore, HeapTupleHeaderGetDatum is
+ * now a function that detects whether there are externally-toasted fields
+ * and constructs a new tuple with inlined fields if so.  We still need
+ * heap_form_tuple to insert the Datum header fields, because otherwise this
+ * code would have no way to obtain a tupledesc for the tuple.
+ *
+ * Note that if we do build a new tuple, it's palloc'd in the current
+ * memory context.  Beware of code that changes context between the initial
+ * heap_form_tuple/etc call and calling HeapTuple(Header)GetDatum.
+ *
+ * For performance-critical callers, it could be worthwhile to take extra
+ * steps to ensure that there aren't TOAST pointers in the output of
+ * heap_form_tuple to begin with.  It's likely however that the costs of the
+ * typcache lookup and tuple disassembly/reassembly are swamped by TOAST
+ * dereference costs, so that the benefits of such extra effort would be
+ * minimal.
+ *
+ * XXX it would likely be better to create wrapper functions that produce
+ * a composite Datum from the field values in one step.  However, there's
+ * enough code using the existing APIs that we couldn't get rid of this
+ * hack anytime soon.
+ */
+Datum
+HeapTupleHeaderGetDatum(HeapTupleHeader tuple)
+{
+	Datum		result;
+	TupleDesc	tupDesc;
+
+	/* No work if there are no external TOAST pointers in the tuple */
+	if (!HeapTupleHeaderHasExternal(tuple))
+		return PointerGetDatum(tuple);
+
+	/* Use the type data saved by heap_form_tuple to look up the rowtype */
+	tupDesc = lookup_rowtype_tupdesc(HeapTupleHeaderGetTypeId(tuple),
+									 HeapTupleHeaderGetTypMod(tuple));
+
+	/* And do the flattening */
+	result = toast_flatten_tuple_to_datum(tuple,
+										HeapTupleHeaderGetDatumLength(tuple),
+										  tupDesc);
+
+	ReleaseTupleDesc(tupDesc);
+
+	return result;
+}
+
 
 /*
  * Functions for sending tuples to the frontend (or other specified destination)

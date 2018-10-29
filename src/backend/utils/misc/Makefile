@@ -18,6 +18,7 @@ SUBDIRS     := fstream
 override CPPFLAGS := -I. -I$(srcdir) $(CPPFLAGS)
 
 OBJS = guc.o help_config.o pg_rusage.o ps_status.o rbtree.o \
+       gpexpand.o \
        faultinjector.o testutils.o uriparser.o \
        bitstream.o bitmap_compression.o guc_gp.o zlib_wrapper.o backend_cancel.o \
        superuser.o timeout.o tzparser.o

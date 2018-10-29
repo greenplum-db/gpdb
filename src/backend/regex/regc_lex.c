@@ -2,7 +2,7 @@
  * lexical analyzer
  * This file is #included by regcomp.c.
  *
- * Copyright (c) 1998, 1999 Henry Spencer.	All rights reserved.
+ * Copyright (c) 1998, 1999 Henry Spencer.  All rights reserved.
  *
  * Development of this software was funded, in part, by Cray Research Inc.,
  * UUNET Communications Services Inc., Sun Microsystems Inc., and Scriptics
@@ -716,10 +716,10 @@ static int						/* not actually used, but convenient for RETV */
 lexescape(struct vars * v)
 {
 	chr			c;
-	static chr	alert[] = {
+	static const chr alert[] = {
 		CHR('a'), CHR('l'), CHR('e'), CHR('r'), CHR('t')
 	};
-	static chr	esc[] = {
+	static const chr esc[] = {
 		CHR('E'), CHR('S'), CHR('C')
 	};
 	const chr  *save;

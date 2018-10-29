@@ -402,6 +402,7 @@ set optimizer_trace_fallback = TRUE;
 SELECT owner, property FROM GistTable1 
  WHERE property IS NULL;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
             owner            | property 
 -----------------------------+----------
  A. Gent                     | 
@@ -412,7 +413,9 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 SELECT count_index_scans('EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
 CONTEXT:  SQL statement "EXPLAIN SELECT owner, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"
 PL/Python function "count_index_scans"
  count_index_scans 
@@ -446,6 +449,7 @@ SELECT id, property FROM GistTable1
  ORDER BY id
  ;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  id | property 
 ----+----------
   8 | 
@@ -456,7 +460,9 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 SELECT count_index_scans('EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;');
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: SIRV functions
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
 CONTEXT:  SQL statement "EXPLAIN SELECT id, property FROM GistTable1 WHERE property IS NULL ORDER BY id;"
 PL/Python function "count_index_scans"
  count_index_scans 

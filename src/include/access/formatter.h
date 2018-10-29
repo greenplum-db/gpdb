@@ -16,6 +16,7 @@
 #ifndef FORMATTER_H
 #define FORMATTER_H
 
+#include "access/htup.h"
 #include "access/tupdesc.h"
 #include "lib/stringinfo.h"
 #include "mb/pg_wchar.h"

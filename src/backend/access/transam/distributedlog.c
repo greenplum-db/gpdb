@@ -93,10 +93,6 @@ typedef struct DistributedLogShmem
 
 static DistributedLogShmem *DistributedLogShared = NULL;
 
-static void DistributedLog_SetCommitted(TransactionId localXid,
-							DistributedTransactionTimeStamp dtxStartTime,
-							DistributedTransactionId distribXid,
-							bool isRedo);
 static int	DistributedLog_ZeroPage(int page, bool writeXlog);
 static void DistributedLog_Truncate(TransactionId oldestXmin);
 static bool DistributedLog_PagePrecedes(int page1, int page2);
@@ -301,66 +297,41 @@ DistributedLog_GetOldestXmin(TransactionId oldestLocalXmin)
 	}
 	LWLockRelease(DistributedLogControlLock);
 
-	Assert(TransactionIdFollowsOrEquals(oldestLocalXmin, result));
-	elogif(Debug_print_full_dtm, LOG, "oldestXmin is '%d'", result);
+	elogif(Debug_print_full_dtm, LOG, "oldestXmin is '%u'", result);
+
+	/*
+	 * Like in DistributedLog_AdvanceOldestXmin(), the shared oldestXmin
+	 * might already have been advanced past oldestLocalXmin.
+	 */
+	if (TransactionIdFollows(result, oldestLocalXmin))
+		result = oldestLocalXmin;
 
 	return result;
 }
 
 /*
- * Record that a distributed transaction and its possible sub-transactions
- * committed, in the distributed log.
- */
-void
-DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
-								DistributedTransactionTimeStamp	distribTimeStamp,
-								DistributedTransactionId distribXid,
-								bool isRedo)
-{
-	int			i;
-
-	if (!IS_QUERY_DISPATCHER())
-	{
-		/*
-		 * GPDB_84_MERGE_FIXME: This is a naive implementation, not very efficient.
-		 * Should update the list of transaction one distributed clog page at a time.
-		 * Similar to how we do for the clog now, since commit 06da3c570.
-		 */
-		DistributedLog_SetCommitted(xid,
-									distribTimeStamp,
-									distribXid,
-									isRedo);
-		for (i = 0; i < nxids; i++)
-		{
-			DistributedLog_SetCommitted(xids[i],
-										distribTimeStamp,
-										distribXid,
-										isRedo);
-		}
-	}
-}
-
-
-/*
- * Record that a distributed transaction committed in the distributed log.
+ * Record that a distributed transaction committed in the distributed log for
+ * all transaction ids on a single page. This function is similar to clog
+ * function TransactionIdSetTreeStatus().
  */
 static void
-DistributedLog_SetCommitted(
-	TransactionId 						localXid,
+DistributedLog_SetCommittedWithinAPage(
+	int                                 numLocIds,
+	TransactionId 						*localXid,
 	DistributedTransactionTimeStamp		distribTimeStamp,
 	DistributedTransactionId 			distribXid,
 	bool								isRedo)
 {
-	Assert(TransactionIdIsValid(localXid));
-	Assert(!IS_QUERY_DISPATCHER());
-
-	int			page = TransactionIdToPage(localXid);
-	int			entryno = TransactionIdToEntry(localXid);
-	int			slotno;
-
+	int page;
+	int slotno;
 	DistributedLogEntry *ptr;
 
-	bool alreadyThere = false;
+	Assert(!IS_QUERY_DISPATCHER());
+	Assert(numLocIds > 0);
+	Assert(localXid != NULL);
+	Assert(TransactionIdIsValid(localXid[0]));
+
+	page = TransactionIdToPage(localXid[0]);
 
 	LWLockAcquire(DistributedLogControlLock, LW_EXCLUSIVE);
 
@@ -378,38 +349,99 @@ DistributedLog_SetCommitted(
 		}
 	}
 
-	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid);
+	slotno = SimpleLruReadPage(DistributedLogCtl, page, true, localXid[0]);
 	ptr = (DistributedLogEntry *) DistributedLogCtl->shared->page_buffer[slotno];
-	ptr += entryno;
 
-	if (ptr->distribTimeStamp != 0 || ptr->distribXid != 0)
+	for (int i = 0; i < numLocIds; i++)
 	{
-		if (ptr->distribTimeStamp != distribTimeStamp)
-			elog(ERROR,
-			     "Current distributed timestamp = %u does not match input timestamp = %u for local xid = %u in distributed log (page = %d, entryno = %d)",
-			     ptr->distribTimeStamp, distribTimeStamp, localXid, page, entryno);
+		bool alreadyThere = false;
+		Assert(TransactionIdToPage(localXid[i]) == page);
+		Assert(TransactionIdIsValid(localXid[i]));
 
-		if (ptr->distribXid != distribXid)
-			elog(ERROR,
-			     "Current distributed xid = %u does not match input distributed xid = %u for local xid = %u in distributed log (page = %d, entryno = %d)",
-			     ptr->distribXid, distribXid, localXid, page, entryno);
+		int	entryno = TransactionIdToEntry(localXid[i]);
 
-		alreadyThere = true;
-	}
-	else
-	{
-		ptr->distribTimeStamp = distribTimeStamp;
-		ptr->distribXid = distribXid;
+		if (ptr[entryno].distribTimeStamp != 0 || ptr[entryno].distribXid != 0)
+		{
+			if (ptr[entryno].distribTimeStamp != distribTimeStamp)
+				elog(ERROR,
+					 "Current distributed timestamp = %u does not match input timestamp = %u for local xid = %u in distributed log (page = %d, entryno = %d)",
+					 ptr[entryno].distribTimeStamp, distribTimeStamp,
+					 localXid[i], page, entryno);
 
-		DistributedLogCtl->shared->page_dirty[slotno] = true;
+			if (ptr[entryno].distribXid != distribXid)
+				elog(ERROR,
+					 "Current distributed xid = %u does not match input distributed xid = %u for local xid = %u in distributed log (page = %d, entryno = %d)",
+					 ptr[entryno].distribXid, distribXid, localXid[i], page, entryno);
+
+			alreadyThere = true;
+		}
+		else
+		{
+			ptr[entryno].distribTimeStamp = distribTimeStamp;
+			ptr[entryno].distribXid = distribXid;
+
+			DistributedLogCtl->shared->page_dirty[slotno] = true;
+		}
+
+		elog((Debug_print_full_dtm ? LOG : DEBUG5),
+			 "DistributedLog_SetCommitted with local xid = %d (page = %d, entryno = %d) and distributed transaction xid = %u (timestamp = %u) status = %s",
+			 localXid[i], page, entryno, distribXid, distribTimeStamp,
+			 (alreadyThere ? "already there" : "set"));
 	}
 
 	LWLockRelease(DistributedLogControlLock);
+}
 
-	elog((Debug_print_full_dtm ? LOG : DEBUG5),
-		 "DistributedLog_SetCommitted with local xid = %d (page = %d, entryno = %d) and distributed transaction xid = %u (timestamp = %u) status = %s",
-		 localXid, page, entryno, distribXid, distribTimeStamp,
-		 (alreadyThere ? "already there" : "set"));
+/*
+ * Set committed for a bunch of transactions, chunking in the separate DLOG
+ * pages involved. This function is similar to clog function
+ * TransactionIdSetTreeStatus().
+ */
+static void
+DistributedLog_SetCommittedByPages(int nsubxids, TransactionId *subxids,
+								   DistributedTransactionTimeStamp distribTimeStamp,
+								   DistributedTransactionId distribXid,
+								   bool isRedo)
+{
+	int			i = 0;
+
+	while (i < nsubxids)
+	{
+		int	num_on_page = 0;
+		/* This points in subxids array the start of transaction ids on a given page */
+		int start_of_range = i;
+		int pageno = TransactionIdToPage(subxids[start_of_range]);
+
+		while (TransactionIdToPage(subxids[i]) == pageno && i < nsubxids)
+		{
+			num_on_page++;
+			i++;
+		}
+
+		DistributedLog_SetCommittedWithinAPage(num_on_page, subxids + start_of_range,
+											   distribTimeStamp, distribXid, isRedo);
+	}
+}
+
+/*
+ * Record that a distributed transaction and its possible sub-transactions
+ * committed, in the distributed log.
+ */
+void
+DistributedLog_SetCommittedTree(TransactionId xid, int nxids, TransactionId *xids,
+								DistributedTransactionTimeStamp	distribTimeStamp,
+								DistributedTransactionId distribXid,
+								bool isRedo)
+{
+	if (!IS_QUERY_DISPATCHER())
+	{
+		DistributedLog_SetCommittedWithinAPage(1, &xid, distribTimeStamp,
+											   distribXid, isRedo);
+
+		/* add entry for sub-transaction page at time */
+		DistributedLog_SetCommittedByPages(nxids, xids, distribTimeStamp,
+										   distribXid, isRedo);
+	}
 }
 
 /*
@@ -703,6 +735,42 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 	 * Initialize our idea of the latest page number.
 	 */
 	DistributedLogCtl->shared->latest_page_number = endPage;
+
+	/*
+	 * In situations where new segments' data directories are copied from the
+	 * master (such as binary upgrade), the distributed logs inherited by the
+	 * segment will be incomplete. This is because master doesn't maintain these
+	 * logs past their initial creation. In these cases (and these cases only!),
+	 * we need to initialize and zero out log pages in memory for the range of
+	 * active XIDs.
+	 *
+	 * TODO: Turn off distributed logging during binary upgrade to avoid the
+	 * issue mentioned above.
+	 *
+	 * TODO: Do this same thing during the first segment startup after cluster
+	 * expansion, which has the same problem. Make sure that this code never
+	 * runs during regular segment operation.
+	 */
+	if (IsBinaryUpgrade)
+	{
+		int currentPage = startPage;
+
+		/*
+		 * The below loop has a defined exit condition as long as our pages are
+		 * within a sane range.
+		 */
+		Assert(currentPage <= TransactionIdToPage(MaxTransactionId));
+		Assert(endPage <= TransactionIdToPage(MaxTransactionId));
+
+		do
+		{
+			if (currentPage > TransactionIdToPage(MaxTransactionId))
+				currentPage = 0;
+
+			DistributedLog_ZeroPage(currentPage, false);
+		}
+		while (currentPage++ != endPage);
+	}
 
 	/*
 	 * Zero out the remainder of the current DistributedLog page.  Under normal

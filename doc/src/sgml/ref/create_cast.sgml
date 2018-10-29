@@ -1,6 +1,10 @@
 <!-- doc/src/sgml/ref/create_cast.sgml -->
 
 <refentry id="SQL-CREATECAST">
+ <indexterm zone="sql-createcast">
+  <primary>CREATE CAST</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>CREATE CAST</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -11,10 +15,6 @@
   <refname>CREATE CAST</refname>
   <refpurpose>define a new cast</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-createcast">
-  <primary>CREATE CAST</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -329,17 +329,6 @@ SELECT CAST ( 2 AS numeric ) + 4.0;
    should think twice about whether it's a good idea.  (A small number of
    the built-in types do indeed have different behaviors for conversions,
    mostly because of requirements of the SQL standard.)
-  </para>
-
-  <para>
-   Prior to <productname>PostgreSQL</> 7.3, every function that had
-   the same name as a data type, returned that data type, and took one
-   argument of a different type was automatically a cast function.
-   This convention has been abandoned in face of the introduction of
-   schemas and to be able to represent binary-coercible casts in the
-   system catalogs.  The built-in cast functions still follow this naming
-   scheme, but they have to be shown as casts in the system catalog
-   <structname>pg_cast</> as well.
   </para>
 
   <para>

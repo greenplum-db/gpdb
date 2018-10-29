@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/describe.h
  */
@@ -22,7 +22,7 @@ extern bool describeFunctions(const char *functypes, const char *pattern, bool v
 extern bool describeTypes(const char *pattern, bool verbose, bool showSystem);
 
 /* \do */
-extern bool describeOperators(const char *pattern, bool showSystem);
+extern bool describeOperators(const char *pattern, bool verbose, bool showSystem);
 
 /* \du, \dg */
 extern bool describeRoles(const char *pattern, bool verbose);

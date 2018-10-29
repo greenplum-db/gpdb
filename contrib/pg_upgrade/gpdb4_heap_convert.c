@@ -13,6 +13,14 @@
 #include "storage/checksum.h"
 
 /*
+ * GPDB_94_MERGE_FIXME: VARSIZE_ANY_EXHDR() contains a TrapMacro, with
+ * assertions enabled. But TrapMacro is not defined in FRONTEND
+ */
+#ifndef TrapMacro
+#define TrapMacro(condition, errorType) ((void) assert(!(condition)), 0)
+#endif
+
+/*
  * Page format version that we convert to.
  * (14 is hardcoded here, rather than using PG_PAGE_LAYOUT_VERSION, because
  * that's the format this routine converts to at the moment. If the "current"

@@ -87,7 +87,6 @@
           href="#topic_ojn_r2s_dw" format="dita"/> for PL/Container configuration information.</p>
       <p>You cannot by default restrict the number of executing PL/Container container instances,
         nor can you restrict the total amount of memory or CPU resources that they consume.</p>
-
     </body>
     <topic id="topic_resgroup">
       <title>Using Resource Groups to Manage PL/Container Resources</title>
@@ -98,30 +97,25 @@
           resource groups, refer to <xref href="../../admin_guide/workload_mgmt_resgroups.xml"
             format="dita" scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
             Administrator Guide</cite>.</p>
-
         <note>If you do not explicitly configure resource groups for a PL/Container runtime, its
           container instances are limited only by system resources. The containers may consume
           resources at the expense of the Greenplum Database server.</note>
-
         <p>Resource groups for external components such as PL/Container use Linux control groups
           (cgroups) to manage component-level use of memory and CPU resources. When you manage
           PL/Container resources with resource groups, you configure both a memory limit and a CPU
           limit that Greenplum Database applies to all container instances that share the same
           PL/Container runtime configuration.</p>
-
         <p>When you create a resource group to manage the resources of a PL/Container runtime, you
           must specify <codeph>MEMORY_AUDITOR=cgroup</codeph> and <codeph>CONCURRENCY=0</codeph> in
           addition to the required CPU and memory limits. For example, the following command creates
           a resource group named <codeph>plpy_run1_rg</codeph> for a PL/Container runtime:
           <codeblock>CREATE RESOURCE GROUP plpy_run1_rg WITH (MEMORY_AUDITOR=cgroup, CONCURRENCY=0,
      CPU_RATE_LIMIT=10, MEMORY_LIMIT=10);</codeblock></p>
-
         <p>PL/Container does not use the <codeph>MEMORY_SHARED_QUOTA</codeph> and
             <codeph>MEMORY_SPILL_RATIO</codeph> resource group memory limits. Refer to the
               <codeph><xref href="../../ref_guide/sql_commands/CREATE_RESOURCE_GROUP.xml"
               format="dita" scope="peer">CREATE RESOURCE GROUP</xref></codeph> reference page for
           detailed information about this SQL command.</p>
-
         <p>You can create one or more resource groups to manage your running PL/Container instances.
           After you create a resource group for PL/Container, you assign the resource group to one
           or more PL/Container runtimes. You make this assignment using the <codeph>groupid</codeph>
@@ -136,7 +130,6 @@
 --------------+----------
  plpy_run1_rg |   16391
 (1 row)</codeblock></p>
-
         <p>You assign a resource group to a PL/Container runtime configuration by specifying the
             <codeph>-s resource_group_id=<varname>rg_groupid</varname></codeph> option to the
             <codeph>plcontainer runtime-add</codeph> (new runtime) or <codeph>plcontainer
@@ -144,12 +137,10 @@
             <codeph>plpy_run1_rg</codeph> resource group to a new PL/Container runtime named
             <codeph>python_run1</codeph>:
           <codeblock>plcontainer runtime-add -r python_run1 -i pivotaldata/plcontainer_python_shared:devel -l python -s resource_group_id=16391</codeblock></p>
-
         <p>You can also assign a resource group to a PL/Container runtime using the
             <codeph>plcontainer runtime-edit</codeph> command. For information about the
             <codeph>plcontainer</codeph> command, see <xref href="#topic_rw3_52s_dw" format="dita"
           />.</p>
-
         <p>After you assign a resource group to a PL/Container runtime, all container instances that
           share the same runtime configuration are subject to the memory limit and the CPU limit
           that you configured for the group. If you decrease the memory limit of a PL/Container
@@ -180,10 +171,11 @@
               as described in <xref
                 href="../../admin_guide/workload_mgmt_resgroups.xml#topic71717999" format="dita"
                 scope="peer">Using Resource Groups</xref> in the <cite>Greenplum Database
-                Administrator Guide</cite>.<note>If you have previously configured and enabled
-                resource groups in your deployment, ensure that the Greenplum Database resource
-                group <codeph>gpdb.conf</codeph> cgroups configuration file includes a
-                  <codeph>memory { }</codeph> block as described in the previous link.</note></li>
+                Administrator Guide</cite>.
+              <note>If you have previously configured and enabled resource groups in your
+                deployment, ensure that the Greenplum Database resource group
+                  <codeph>gpdb.conf</codeph> cgroups configuration file includes a <codeph>memory {
+                  }</codeph> block as described in the previous link.</note></li>
             <li>Analyze the resource usage of your Greenplum Database deployment. Determine the
               percentage of resource group CPU and memory resources that you want to allocate to
               PL/Container Docker containers.</li>
@@ -267,11 +259,11 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
             supported Linux OS kernel version is 3.10. RHEL 7.x and CentOS 7.x use this kernel
             version.</p><p>RHEL or CentOS 6.6+ - Minimum supported Linux OS kernel version
             2.6.32-431</p><p>You can check your kernel version with the command <codeph>uname
-              -r</codeph></p><note>The Red Hat provided, maintained, and supported version of Docker
-            is only available on RHEL 7. Red Hat does not recommend running any version of Docker on
-            any RHEL 6 releases. Docker feature developments are tied to RHEL7.x infrastructure
-            components for kernel, devicemapper (thin provisioning, direct lvm), sVirt and
-            systemd.</note></li>
+              -r</codeph></p>
+          <note>The Red Hat provided, maintained, and supported version of Docker is only available
+            on RHEL 7. Red Hat does not recommend running any version of Docker on any RHEL 6
+            releases. Docker feature developments are tied to RHEL7.x infrastructure components for
+            kernel, devicemapper (thin provisioning, direct lvm), sVirt and systemd.</note></li>
       </ul>
       <ul id="ul_b5j_kzp_dw">
         <li>Docker is installed on Greenplum Database hosts (master, primary and all standby
@@ -394,8 +386,6 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           UDFs that are required.</p>
       </body>
     </topic>
-
-
     <topic id="topic_upg110" otherprops="pivotal">
       <title>Upgrading from PL/Container 1.1</title>
       <body>
@@ -436,7 +426,6 @@ plcontainer runtime-replace -r r_run1 -i pivotaldata/plcontainer_r_shared:devel 
           your PL/Container runtime configuration.</note>
       </body>
     </topic>
-
     <topic id="topic_i2t_v2n_sbb" otherprops="oss-only">
       <title>Building and Installing the PL/Container Language Extension</title>
       <!--oss only conent-->
@@ -680,10 +669,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <li><codeph>plpy.execute(stmt)</codeph> - Executes the query string <codeph>stmt</codeph>
           and returns query result in a list of dictionary objects. To be able to access the result
           fields ensure your query returns named fields.</li>
-        <li><codeph>plpy.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
+        <li><codeph>plpy.prepare(stmt[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types, if you have
           parameter references in the query.</li>
-        <li><codeph>plpy.execute(plan, ,[, argtypes])</codeph> - Executes a prepared plan.</li>
+        <li><codeph>plpy.execute(plan[, argtypes])</codeph> - Executes a prepared plan.</li>
         <li><codeph>plpy.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum Database
           log.</li>
         <li><codeph>plpy.log(msg)</codeph> - Sends a LOG message to the Greenplum Database log.</li>
@@ -706,6 +695,28 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           documentation for additional information about
           <codeph>plpy.subtransaction()</codeph>.</li>
       </ul>
+      <p>If an error of level ERROR or FATAL is raised in a nested Python function call, the message
+        includes the list of enclosing functions.</p>
+      <p>The Python language container supports these string quoting functions that are useful when
+        constructing ad-hoc queries. <ul id="ul_jwf_nd2_kfb">
+          <li><codeph>plpy.quote_literal(string)</codeph> - Returns the string quoted to be used as
+            a string literal in an SQL statement string. Embedded single-quotes and backslashes are
+            properly doubled. <codeph>quote_literal()</codeph> returns null on null input (empty
+            input). If the argument might be null, <codeph>quote_nullable()</codeph> might be more
+            appropriate.</li>
+          <li><codeph>plpy.quote_nullable(string)</codeph> - Returns the string quoted to be used as
+            a string literal in an SQL statement string. If the argument is null, returns
+              <codeph>NULL</codeph>. Embedded single-quotes and backslashes are properly
+            doubled.</li>
+          <li>
+            <codeph>plpy.quote_ident(string)</codeph> - Returns the string quoted to be used as an
+            identifier in an SQL statement string. Quotes are added only if necessary (for example,
+            if the string contains non-identifier characters or would be case-folded). Embedded
+            quotes are properly doubled. </li>
+        </ul></p>
+      <p>When returning text from a PL/Python function, PL/Container converts a Python unicode
+        object to text in the database encoding. If the conversion cannot be performed, an error is
+        returned.</p>
       <p>PL/Container does not support this Greenplum Database PL/Python feature:<ul
           id="ul_qzd_1w5_ncb">
           <li> Multi-dimensional arrays.</li>
@@ -733,10 +744,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         <li><codeph>pg.spi.exec(stmt)</codeph> - Executes the query string <codeph>stmt</codeph> and
           returns query result in R data.frame. To be able to access the result fields make sure
           your query returns named fields.</li>
-        <li><codeph>pg.spi.prepare(stmt,[, argtypes])</codeph> - Prepares the execution plan for a
+        <li><codeph>pg.spi.prepare(stmt[, argtypes])</codeph> - Prepares the execution plan for a
           query. It is called with a query string and a list of parameter types if you have
           parameter references in the query.</li>
-        <li><codeph>pg.spi.execp(plan, ,[, argtypes])</codeph> - Execute a prepared plan.</li>
+        <li><codeph>pg.spi.execp(plan[, argtypes])</codeph> - Execute a prepared plan.</li>
         <li><codeph>pg.spi.debug(msg)</codeph> - Sends a DEBUG2 message to the Greenplum Database
           log.</li>
         <li><codeph>pg.spi.log(msg)</codeph> - Sends a LOG message to the Greenplum Database
@@ -959,9 +970,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd>If needed, you can specify other shared directories. The utility returns an
                     error if the specified <varname>container-dir</varname> is the same as the one
                     that is added by the utility, or if you specify multiple shared volumes with the
-                    same <varname>container-dir</varname>.<note type="warning">Allowing read-write
-                      access to a host directory requires special considerations.<ul
-                        id="ul_ibw_gvk_kcb">
+                    same <varname>container-dir</varname>.
+                    <note type="warning">Allowing read-write access to a host directory requires
+                      special considerations.<ul id="ul_ibw_gvk_kcb">
                         <li>When specifying read-write access to host directory, ensure that the
                           specified host directory has the correct permissions. </li>
                         <li>When running PL/Container user-defined functions, multiple concurrent
@@ -1186,9 +1197,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                   <pd><codeph>command</codeph> element for the R
                     language.<codeblock>&lt;command>/clientdir/rclient.sh&lt;/command></codeblock></pd>
                   <pd>You should modify the value only if you build a custom container and want to
-                    implement some additional initialization logic before the container
-                      starts.<note>This element cannot be set with the <codeph>plcontainer</codeph>
-                      utility. You can update the configuration file with the <codeph>plcontainer
+                    implement some additional initialization logic before the container starts.
+                    <note>This element cannot be set with the <codeph>plcontainer</codeph> utility.
+                      You can update the configuration file with the <codeph>plcontainer
                         runtime-edit</codeph> command.</note></pd>
                 </plentry>
                 <plentry>
@@ -1212,9 +1223,9 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                     attribute of the <codeph>shared_directory</codeph> elements must be unique. For
                     example, a <codeph>runtime</codeph> element cannot have two
                       <codeph>shared_directory</codeph> elements with attribute
-                      <codeph>container="/clientdir"</codeph>. <note type="warning">Allowing
-                      read-write access to a host directory requires special consideration.<ul
-                        id="ul_vzb_dvk_kcb">
+                      <codeph>container="/clientdir"</codeph>.
+                    <note type="warning">Allowing read-write access to a host directory requires
+                      special consideration.<ul id="ul_vzb_dvk_kcb">
                         <li>When specifying read-write access to host directory, ensure that the
                           specified host directory has the correct permissions. </li>
                         <li>When running PL/Container user-defined functions, multiple concurrent
@@ -1356,9 +1367,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
                 href="../config_params/guc-list.xml#gp_vmem_idle_resource_timeout"
                 >gp_vmem_idle_resource_timeout</xref></codeph>. Controlling the idle time might help
             with Docker container reuse and avoid the overhead of creating and starting a Docker
-              container.<note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph>
-              value, might affect performance due to resource issues. The parameter also controls
-              the freeing of Greenplum Database resources other than Docker containers.</note></li>
+            container.
+            <note type="warning">Changing <codeph>gp_vmem_idle_resource_timeout</codeph> value,
+              might affect performance due to resource issues. The parameter also controls the
+              freeing of Greenplum Database resources other than Docker containers.</note></li>
           <li>If a PL/Container Docker container exceeds the maximum allowed memory, it is
             terminated and an out of memory warning is displayed. On Red Hat 6 or CentOS 6 systems
             that are configured with Docker version 1.7.1, the out of memory warning is also
@@ -1407,10 +1419,10 @@ $$ LANGUAGE plcontainer;</codeblock></p>
             </ul><p>When testing or troubleshooting a PL/Container UDF, you can change the Greenplum
               Database log level with the <codeph>SET</codeph> command. You can set the parameter in
               the session before you run your PL/Container UDF. This example sets the log level to
-                <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock><note>The
-              parameter <codeph>log_min_messages</codeph> controls both the Greenplum Database and
-              PL/Container logging, increasing the log level might affect Greenplum Database
-              performance even if a PL/Container UDF is not running.</note></li>
+                <codeph>debug1</codeph>.</p><codeblock>SET log_min_messages='debug1' ;</codeblock>
+            <note>The parameter <codeph>log_min_messages</codeph> controls both the Greenplum
+              Database and PL/Container logging, increasing the log level might affect Greenplum
+              Database performance even if a PL/Container UDF is not running.</note></li>
         </ul>
       </body>
     </topic>

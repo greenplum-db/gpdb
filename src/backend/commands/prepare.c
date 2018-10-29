@@ -7,7 +7,7 @@
  * accessed via the extended FE/BE query protocol.
  *
  *
- * Copyright (c) 2002-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/commands/prepare.c
@@ -184,7 +184,7 @@ PrepareQuery(PrepareStmt *stmt, const char *queryString)
  * ExecuteQuery --- implement the 'EXECUTE' utility statement.
  *
  * This code also supports CREATE TABLE ... AS EXECUTE.  That case is
- * indicated by passing a non-null intoClause.	The DestReceiver is already
+ * indicated by passing a non-null intoClause.  The DestReceiver is already
  * set up correctly for CREATE TABLE AS, but we still have to make a few
  * other adjustments here.
  *
@@ -221,7 +221,7 @@ ExecuteQuery(ExecuteStmt *stmt, IntoClause *intoClause,
 	{
 		/*
 		 * Need an EState to evaluate parameters; must not delete it till end
-		 * of query, in case parameters are pass-by-reference.	Note that the
+		 * of query, in case parameters are pass-by-reference.  Note that the
 		 * passed-in "params" could possibly be referenced in the parameter
 		 * expressions.
 		 */
@@ -552,7 +552,7 @@ FetchPreparedStatementResultDesc(PreparedStatement *stmt)
 
 /*
  * Given a prepared statement that returns tuples, extract the query
- * targetlist.	Returns NIL if the statement doesn't have a determinable
+ * targetlist.  Returns NIL if the statement doesn't have a determinable
  * targetlist.
  *
  * Note: this is pretty ugly, but since it's only used in corner cases like
@@ -686,7 +686,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es,
 	{
 		/*
 		 * Need an EState to evaluate parameters; must not delete it till end
-		 * of query, in case parameters are pass-by-reference.	Note that the
+		 * of query, in case parameters are pass-by-reference.  Note that the
 		 * passed-in "params" could possibly be referenced in the parameter
 		 * expressions.
 		 */
@@ -707,7 +707,7 @@ ExplainExecuteQuery(ExecuteStmt *execstmt, IntoClause *into, ExplainState *es,
 		PlannedStmt *pstmt = (PlannedStmt *) lfirst(p);
 
 		if (IsA(pstmt, PlannedStmt))
-			ExplainOnePlan(pstmt, into, es, query_string, paramLI);
+			ExplainOnePlan(pstmt, into, es, query_string, paramLI, NULL);
 		else
 			ExplainOneUtility((Node *) pstmt, into, es, query_string, paramLI);
 

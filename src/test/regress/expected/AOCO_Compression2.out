@@ -165,7 +165,6 @@ Checksum: t
 Indexes:
     "co_crtb_with_strg_dir_and_col_ref_1_idx_bitmap" bitmap (a1)
     "co_crtb_with_strg_dir_and_col_ref_1_idx_btree" btree (a9)
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -432,7 +431,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
     "co_cr_sub_partzlib8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_cr_sub_partzlib8192_1_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -558,7 +556,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_cr_sub_partzlib8192_1_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
 Inherits: co_cr_sub_partzlib8192_1_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -622,7 +619,6 @@ Indexes:
 Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -694,7 +690,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_cr_sub_partzlib8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_cr_sub_partzlib8192_1_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib
 
@@ -895,7 +890,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -1024,7 +1018,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "co_cr_sub_partzlib8192_1_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -1091,7 +1084,6 @@ Indexes:
 Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -1162,7 +1154,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_p2_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_cr_sub_partzlib8192_1_2_1_prt_p2_check" CHECK (a2 = 'M    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_p2
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib
 
@@ -1225,7 +1216,6 @@ Check constraints:
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "co_cr_sub_partzlib8192_1_2_1_prt_p1_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_cr_sub_partzlib8192_1_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -1444,7 +1434,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
     "co_wt_sub_partrle_type8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_wt_sub_partrle_type8192_1_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -1567,7 +1556,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_wt_sub_partrle_type8192_1_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
 Inherits: co_wt_sub_partrle_type8192_1_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib, compresslevel=1
 
@@ -1631,7 +1619,6 @@ Indexes:
 Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -1703,7 +1690,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "co_wt_sub_partrle_type8192_1_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_wt_sub_partrle_type8192_1_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib
 
@@ -1901,7 +1887,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -2027,7 +2012,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "co_wt_sub_partrle_type8192_1_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -2094,7 +2078,6 @@ Indexes:
 Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -2165,7 +2148,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib
 
@@ -2228,7 +2210,6 @@ Check constraints:
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "co_wt_sub_partrle_type8192_1_2_1_prt_p2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: co_wt_sub_partrle_type8192_1_2_1_prt_p2
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192
 
@@ -2450,7 +2431,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
     "ao_wt_sub_partzlib8192_5_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: ao_wt_sub_partzlib8192_5_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -2573,7 +2553,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "ao_wt_sub_partzlib8192_5_1_prt_new_p_check" CHECK (a1 >= 5050 AND a1 < 6051)
 Inherits: ao_wt_sub_partzlib8192_5_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column, compresstype=zlib, compresslevel=1
 
@@ -2640,7 +2619,6 @@ Indexes:
 Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_df_p_2_prt_sp2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -2715,7 +2693,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_1_prt_1_2_prt_sp1_check" CHECK (a2 = 'M    '::bpchar)
     "ao_wt_sub_partzlib8192_5_1_prt_1_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: ao_wt_sub_partzlib8192_5_1_prt_1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib
 
@@ -2916,7 +2893,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -3045,7 +3021,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_2_prt_3_check" CHECK (a1 >= 1001 AND a1 < 2001)
     "ao_wt_sub_partzlib8192_5_2_1_prt_new_p_check" CHECK (a2 = 'C    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_new_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -3115,7 +3090,6 @@ Indexes:
 Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_df_p_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_df_p
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -3189,7 +3163,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_2_prt_2_check" CHECK (a1 >= 1 AND a1 < 1001)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p1_check" CHECK (a2 = 'M    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_p1
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib
 
@@ -3255,7 +3228,6 @@ Check constraints:
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_2_prt_splita_check" CHECK (a1 >= 3001 AND a1 < 4000)
     "ao_wt_sub_partzlib8192_5_2_1_prt_p2_check" CHECK (a2 = 'F    '::bpchar)
 Inherits: ao_wt_sub_partzlib8192_5_2_1_prt_p2
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=5, blocksize=8192
 
@@ -3397,7 +3369,6 @@ Checksum: t
 Indexes:
     "ao_crtb_with_row_zlib_8192_1_idx_bitmap" bitmap (a1)
     "ao_crtb_with_row_zlib_8192_1_idx_btree" btree (a9)
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=row, compresstype=zlib, compresslevel=1, blocksize=8192
 
@@ -3842,7 +3813,6 @@ CREATE TABLE co_create_type_rle_type_8192_4
  a5     | varchar_rle_type   |                                                                             | plain   |              | rle_type         | 4                 | 8192       | 
  a6     | timestamp_rle_type |                                                                             | plain   |              | rle_type         | 4                 | 8192       | 
 Checksum: t
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -3897,7 +3867,6 @@ Alter type int_rle_type set default encoding (compresstype=zlib,compresslevel=1)
  a6              | timestamp_rle_type |                                                                             | plain   |              | rle_type         | 4                 | 8192       | 
  new_cl          | int_rle_type       | default '5'::int_rle_type                                                   | plain   |              | zlib             | 1                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true, orientation=column
 
@@ -3935,7 +3904,6 @@ get_ao_compression_ratio('mpp17012_compress_test2');
  col3   | character varying |           | extended |              | zlib             | 5                 | 32768      | 
  col4   | character(44)     |           | extended |              | zlib             | 5                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (col1)
 Options: appendonly=true, orientation=column
 

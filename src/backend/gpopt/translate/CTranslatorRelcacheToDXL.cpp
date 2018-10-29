@@ -919,6 +919,11 @@ CTranslatorRelcacheToDXL::GetRelDistribution
 		return IMDRelation::EreldistrMasterOnly;
 	}
 
+	if (POLICYTYPE_REPLICATED == gp_policy->ptype)
+	{
+		return IMDRelation::EreldistrReplicated;
+	}
+
 	if (POLICYTYPE_PARTITIONED == gp_policy->ptype)
 	{
 		if (0 == gp_policy->nattrs)
@@ -1955,11 +1960,11 @@ CTranslatorRelcacheToDXL::RetrieveAgg
 	
 	// GPDB does not support splitting of ordered aggs and aggs without a
 	// combine function
-	BOOL is_splittable = !is_ordered && gpdb::AggHasCombineFunc(agg_oid);
+	BOOL is_splittable = !is_ordered && gpdb::IsAggPartialCapable(agg_oid);
 	
 	// cannot use hash agg for ordered aggs or aggs without a combine func
 	// due to the fact that hashAgg may spill
-	BOOL is_hash_agg_capable = !is_ordered && gpdb::AggHasCombineFunc(agg_oid);
+	BOOL is_hash_agg_capable = !is_ordered && gpdb::IsAggPartialCapable(agg_oid);
 
 	CMDAggregateGPDB *pmdagg = GPOS_NEW(mp) CMDAggregateGPDB
 											(
@@ -2309,7 +2314,7 @@ CTranslatorRelcacheToDXL::RetrieveRelStats
 		BlockNumber pg_attribute_unused() pages = 0;
 		double pg_attribute_unused() allvisfrac = 0.0;
 		GpPolicy *gp_policy = gpdb::GetDistributionPolicy(rel);
-		if (!gp_policy ||gp_policy->ptype != POLICYTYPE_PARTITIONED)
+		if (!gp_policy || (gp_policy->ptype != POLICYTYPE_PARTITIONED && gp_policy->ptype != POLICYTYPE_REPLICATED))
 		{
 			gpdb::EstimateRelationSize(rel, NULL, &pages, &num_rows, &allvisfrac);
 		}
@@ -2452,7 +2457,7 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 	if (form_pg_stats->stadistinct < 0)
 	{
 		GPOS_ASSERT(form_pg_stats->stadistinct > -1.01);
-		num_distinct = num_rows * CDouble(-form_pg_stats->stadistinct);
+		num_distinct = num_rows * (1 - null_freq ) * CDouble(-form_pg_stats->stadistinct);
 	}
 	else
 	{
@@ -2592,9 +2597,9 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 		// there will be remaining tuples if the merged histogram and the NULLS do not cover
 		// the total number of distinct values
 		if ((1 - CStatistics::Epsilon > num_freq_buckets + null_freq) &&
-			(0 < num_distinct - num_ndv_buckets - null_ndv))
+			(0 < num_distinct - num_ndv_buckets))
 		{
-			distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets - null_ndv));
+			distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets));
 			freq_remaining = std::max(CDouble(0.0), (1 - num_freq_buckets - null_freq));
 		}
 	}

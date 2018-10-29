@@ -3,7 +3,7 @@
  *
  *		Object access hooks.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  */
 
@@ -12,7 +12,7 @@
 
 /*
  * Object access hooks are intended to be called just before or just after
- * performing certain actions on a SQL object.	This is intended as
+ * performing certain actions on a SQL object.  This is intended as
  * infrastructure for security or logging pluggins.
  *
  * OAT_POST_CREATE should be invoked just after the object is created.
@@ -24,8 +24,8 @@
  *
  * OAT_POST_ALTER should be invoked just after the object is altered,
  * but before the command counter is incremented.  An extension using the
- * hook can use SnapshotNow and SnapshotSelf to get the old and new
- * versions of the tuple.
+ * hook can use a current MVCC snapshot to get the old version of the tuple,
+ * and can use SnapshotSelf to get the new version of the tuple.
  *
  * OAT_NAMESPACE_SEARCH should be invoked prior to object name lookup under
  * a particular namespace. This event is equivalent to usage permission
@@ -45,7 +45,7 @@ typedef enum ObjectAccessType
 	OAT_DROP,
 	OAT_POST_ALTER,
 	OAT_NAMESPACE_SEARCH,
-	OAT_FUNCTION_EXECUTE,
+	OAT_FUNCTION_EXECUTE
 } ObjectAccessType;
 
 /*

@@ -366,7 +366,6 @@ Distributed by: (empid)
  region       | character varying(20) |           | extended |              | 
 Child tables: t26002_t1_1_prt_2,
               t26002_t1_1_prt_outlying_years
-Has OIDs: no
 Distributed by: (empid)
 Partition by: (year)
 
@@ -385,7 +384,6 @@ Child tables: t26002_t1_1_prt_2_2_prt_asia,
               t26002_t1_1_prt_2_2_prt_europe,
               t26002_t1_1_prt_2_2_prt_other_regions,
               t26002_t1_1_prt_2_2_prt_usa
-Has OIDs: no
 Distributed by: (empid)
 Partition by: (region, departmentid)
 
@@ -401,7 +399,6 @@ Check constraints:
     "t26002_t1_1_prt_2_2_prt_asia_check" CHECK (region::text = 'asia'::text AND departmentid = 3)
     "t26002_t1_1_prt_2_check" CHECK (year >= 2012 AND year < 2015)
 Inherits: t26002_t1_1_prt_2
-Has OIDs: no
 Distributed by: (empid)
 
 /*
@@ -430,7 +427,6 @@ Distributed by: (empid)
  departmentid | integer               |           | plain    |              | 
  year         | integer               |           | plain    |              | 
  region       | character varying(20) |           | extended |              | 
-Has OIDs: no
 Distributed by: (empid)
 
 -- CLEANUP

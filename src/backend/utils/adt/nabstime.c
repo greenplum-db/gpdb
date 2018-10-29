@@ -5,7 +5,7 @@
  *	  Functions for the built-in type "RelativeTime".
  *	  Functions for the built-in type "TimeInterval".
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -100,15 +100,7 @@ abstime2tm(AbsoluteTime _time, int *tzp, struct pg_tm * tm, char **tzn)
 	pg_time_t	time = (pg_time_t) _time;
 	struct pg_tm *tx;
 
-	/*
-	 * If HasCTZSet is true then we have a brute force time zone specified. Go
-	 * ahead and rotate to the local time zone since we will later bypass any
-	 * calls which adjust the tm fields.
-	 */
-	if (HasCTZSet && (tzp != NULL))
-		time -= CTimeZone;
-
-	if (!HasCTZSet && tzp != NULL)
+	if (tzp != NULL)
 		tx = pg_localtime(&time, session_timezone);
 	else
 		tx = pg_gmtime(&time);
@@ -126,41 +118,23 @@ abstime2tm(AbsoluteTime _time, int *tzp, struct pg_tm * tm, char **tzn)
 
 	if (tzp != NULL)
 	{
-		/*
-		 * We have a brute force time zone per SQL99? Then use it without
-		 * change since we have already rotated to the time zone.
-		 */
-		if (HasCTZSet)
-		{
-			*tzp = CTimeZone;
-			tm->tm_gmtoff = CTimeZone;
-			tm->tm_isdst = 0;
-			tm->tm_zone = NULL;
-			if (tzn != NULL)
-				*tzn = NULL;
-		}
-		else
-		{
-			*tzp = -tm->tm_gmtoff;		/* tm_gmtoff is Sun/DEC-ism */
+		*tzp = -tm->tm_gmtoff;	/* tm_gmtoff is Sun/DEC-ism */
 
+		/*
+		 * XXX FreeBSD man pages indicate that this should work - tgl 97/04/23
+		 */
+		if (tzn != NULL)
+		{
 			/*
-			 * XXX FreeBSD man pages indicate that this should work - tgl
-			 * 97/04/23
+			 * Copy no more than MAXTZLEN bytes of timezone to tzn, in case it
+			 * contains an error message, which doesn't fit in the buffer
 			 */
-			if (tzn != NULL)
-			{
-				/*
-				 * Copy no more than MAXTZLEN bytes of timezone to tzn, in
-				 * case it contains an error message, which doesn't fit in the
-				 * buffer
-				 */
-				StrNCpy(*tzn, tm->tm_zone, MAXTZLEN + 1);
-				if (strlen(tm->tm_zone) > MAXTZLEN)
-					ereport(WARNING,
-							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("invalid time zone name: \"%s\"",
-									tm->tm_zone)));
-			}
+			StrNCpy(*tzn, tm->tm_zone, MAXTZLEN + 1);
+			if (strlen(tm->tm_zone) > MAXTZLEN)
+				ereport(WARNING,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid time zone name: \"%s\"",
+								tm->tm_zone)));
 		}
 	}
 	else
@@ -199,7 +173,7 @@ tm2abstime(struct pg_tm * tm, int tz)
 	sec = tm->tm_sec + tz + (tm->tm_min + (day * HOURS_PER_DAY + tm->tm_hour) * MINS_PER_HOUR) * SECS_PER_MINUTE;
 
 	/*
-	 * check for overflow.	We need a little slop here because the H/M/S plus
+	 * check for overflow.  We need a little slop here because the H/M/S plus
 	 * TZ offset could add up to more than 1 day.
 	 */
 	if ((day >= MAX_DAYNUM - 10 && sec < 0) ||
@@ -1164,7 +1138,7 @@ tintervalsame(PG_FUNCTION_ARGS)
  * 1. The interval length computations overflow at 2^31 seconds, causing
  * intervals longer than that to sort oddly compared to those shorter.
  * 2. infinity and minus infinity (NOEND_ABSTIME and NOSTART_ABSTIME) are
- * just ordinary integers.	Since this code doesn't handle them specially,
+ * just ordinary integers.  Since this code doesn't handle them specially,
  * it's possible for [a b] to be considered longer than [c infinity] for
  * finite abstimes a, b, c.  In combination with the previous point, the
  * interval [-infinity infinity] is treated as being shorter than many finite

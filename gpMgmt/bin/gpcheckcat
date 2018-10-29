@@ -1854,8 +1854,7 @@ def checkPGClass():
     logger.info('-----------------------------------')
     logger.info('Checking pg_class ...')
     qry = '''
-    SELECT relname, relkind, tc.oid as oid,
-           reltoastrelid, reltoastidxid
+    SELECT relname, relkind, tc.oid as oid
     FROM   pg_class tc left outer join
            pg_attribute ta on (tc.oid = ta.attrelid)
     WHERE  ta.attrelid is NULL
@@ -2204,9 +2203,7 @@ def checkOwners():
       left join pg_appendonly ao on (c.oid = ao.segrelid or
                                      c.oid = ao.blkdirrelid or
                                      c.oid = ao.blkdiridxid)
-      left join pg_class t on (t.reltoastidxid = c.oid)
       left join pg_class o on (o.oid = ao.relid or
-                               o.reltoastrelid = t.oid or
                                o.reltoastrelid = c.oid)
       join pg_authid a on (a.oid = r.relowner)
       join pg_authid m on (m.oid = coalesce(o.relowner, c.relowner))

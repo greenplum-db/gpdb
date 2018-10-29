@@ -9203,92 +9203,92 @@ and country.indepyear > 1900
  region              | text             |           | extended | 
 View definition:
  WITH longlivingregions AS (
-         SELECT foo."REGION_POP", 
-            foo."REGION_GNP", 
-            foo."REGION_LIFETIME", 
-            foo.region, 
+         SELECT foo."REGION_POP",
+            foo."REGION_GNP",
+            foo."REGION_LIFETIME",
+            foo.region,
             count(DISTINCT countrylanguage.language) AS lang_count
-           FROM ( SELECT sum(country_1.population) AS "REGION_POP", 
-                    sum(country_1.gnp) AS "REGION_GNP", 
-                    avg(country_1.lifeexpectancy) AS "REGION_LIFETIME", 
+           FROM ( SELECT sum(country_1.population) AS "REGION_POP",
+                    sum(country_1.gnp) AS "REGION_GNP",
+                    avg(country_1.lifeexpectancy) AS "REGION_LIFETIME",
                     country_1.region
                    FROM country country_1
-                  GROUP BY country_1.region) foo, 
-            countrylanguage, 
+                  GROUP BY country_1.region) foo,
+            countrylanguage,
             country
           WHERE country.code = countrylanguage.countrycode AND foo.region = country.region
           GROUP BY foo.region, foo."REGION_POP", foo."REGION_GNP", foo."REGION_LIFETIME"
         ), denseregions AS (
-         SELECT foo."REGION_POP", 
-            foo."REGION_GNP", 
-            foo.region, 
-            count(DISTINCT countrylanguage.language) AS lang_count, 
+         SELECT foo."REGION_POP",
+            foo."REGION_GNP",
+            foo.region,
+            count(DISTINCT countrylanguage.language) AS lang_count,
             sum(country.surfacearea) AS "REGION_SURFACE_AREA"
-           FROM ( SELECT sum(country_1.population) AS "REGION_POP", 
-                    sum(country_1.gnp) AS "REGION_GNP", 
+           FROM ( SELECT sum(country_1.population) AS "REGION_POP",
+                    sum(country_1.gnp) AS "REGION_GNP",
                     country_1.region
                    FROM country country_1
-                  GROUP BY country_1.region) foo, 
-            countrylanguage, 
+                  GROUP BY country_1.region) foo,
+            countrylanguage,
             country
           WHERE country.code = countrylanguage.countrycode AND foo.region = country.region AND foo."REGION_POP" <> 0
           GROUP BY foo.region, foo."REGION_POP", foo."REGION_GNP"
           ORDER BY sum(country.surfacearea) / foo."REGION_POP"::numeric DESC
         ), allcountrystats AS (
-         SELECT country.code, 
-            country.name, 
-            count(DISTINCT city.id) AS city_cnt, 
+         SELECT country.code,
+            country.name,
+            count(DISTINCT city.id) AS city_cnt,
             count(DISTINCT countrylanguage.language) AS lang_cnt
-           FROM country, 
-            city, 
+           FROM country,
+            city,
             countrylanguage
           WHERE country.code = city.countrycode AND country.code = countrylanguage.countrycode
           GROUP BY country.code, country.name
         )
-        (         SELECT allcountrystats.city_cnt, 
-                    allcountrystats.lang_cnt, 
-                    allcountrystats.name, 
-                    denseregions."REGION_SURFACE_AREA", 
-                    longlivingregions."REGION_LIFETIME", 
-                    longlivingregions."REGION_POP", 
-                    longlivingregions.lang_count, 
-                    longlivingregions."REGION_GNP", 
-                    longlivingregions.region
-                   FROM longlivingregions, 
-                    denseregions, 
-                    allcountrystats, 
-                    country
-                  WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1800 AND country.indepyear <= 1850
-        UNION ALL 
-                 SELECT allcountrystats.city_cnt, 
-                    allcountrystats.lang_cnt, 
-                    allcountrystats.name, 
-                    denseregions."REGION_SURFACE_AREA", 
-                    longlivingregions."REGION_LIFETIME", 
-                    longlivingregions."REGION_POP", 
-                    longlivingregions.lang_count, 
-                    longlivingregions."REGION_GNP", 
-                    longlivingregions.region
-                   FROM longlivingregions, 
-                    denseregions, 
-                    allcountrystats, 
-                    country
-                  WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1850 AND country.indepyear <= 1900)
-UNION ALL 
-         SELECT allcountrystats.city_cnt, 
-            allcountrystats.lang_cnt, 
-            allcountrystats.name, 
-            denseregions."REGION_SURFACE_AREA", 
-            longlivingregions."REGION_LIFETIME", 
-            longlivingregions."REGION_POP", 
-            longlivingregions.lang_count, 
-            longlivingregions."REGION_GNP", 
-            longlivingregions.region
-           FROM longlivingregions, 
-            denseregions, 
-            allcountrystats, 
-            country
-          WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear > 1900;
+ SELECT allcountrystats.city_cnt,
+    allcountrystats.lang_cnt,
+    allcountrystats.name,
+    denseregions."REGION_SURFACE_AREA",
+    longlivingregions."REGION_LIFETIME",
+    longlivingregions."REGION_POP",
+    longlivingregions.lang_count,
+    longlivingregions."REGION_GNP",
+    longlivingregions.region
+   FROM longlivingregions,
+    denseregions,
+    allcountrystats,
+    country
+  WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1800 AND country.indepyear <= 1850
+UNION ALL
+ SELECT allcountrystats.city_cnt,
+    allcountrystats.lang_cnt,
+    allcountrystats.name,
+    denseregions."REGION_SURFACE_AREA",
+    longlivingregions."REGION_LIFETIME",
+    longlivingregions."REGION_POP",
+    longlivingregions.lang_count,
+    longlivingregions."REGION_GNP",
+    longlivingregions.region
+   FROM longlivingregions,
+    denseregions,
+    allcountrystats,
+    country
+  WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear >= 1850 AND country.indepyear <= 1900
+UNION ALL
+ SELECT allcountrystats.city_cnt,
+    allcountrystats.lang_cnt,
+    allcountrystats.name,
+    denseregions."REGION_SURFACE_AREA",
+    longlivingregions."REGION_LIFETIME",
+    longlivingregions."REGION_POP",
+    longlivingregions.lang_count,
+    longlivingregions."REGION_GNP",
+    longlivingregions.region
+   FROM longlivingregions,
+    denseregions,
+    allcountrystats,
+    country
+  WHERE longlivingregions.region = denseregions.region AND allcountrystats.code = country.code AND country.region = longlivingregions.region AND country.indepyear > 1900;
 
 select city_cnt,lang_cnt,name,region from view_with_shared_scans order by name LIMIT 50;
  city_cnt | lang_cnt |                 name                  |          region           

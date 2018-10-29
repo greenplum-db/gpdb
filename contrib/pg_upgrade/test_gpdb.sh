@@ -21,6 +21,8 @@ NEW_DATADIR=
 DEMOCLUSTER_OPTS=
 PGUPGRADE_OPTS=
 
+DUMP_OPTS=
+
 # The normal ICW run has a gpcheckcat call, so allow this testrunner to skip
 # running it in case it was just executed to save time.
 gpcheckcat=1
@@ -30,10 +32,10 @@ gpcheckcat=1
 # a failure.
 mirrors=0
 
-# Smoketesting pg_upgrade is done by just upgrading the QD without diffing the
-# results. This is *NOT* a test of whether pg_upgrade can successfully upgrade
-# a cluster but a test intended to catch when objects aren't properly handled
-# in pg_dump/pg_upgrade wrt Oid synchronization
+# Smoketesting pg_upgrade is done by just upgrading the QD and checking the
+# resulting schema. This is *NOT* a test of whether pg_upgrade can successfully
+# upgrade a cluster but a test intended to catch when objects aren't properly
+# handled in pg_dump/pg_upgrade wrt Oid synchronization
 smoketest=0
 
 # For debugging purposes it can be handy to keep the temporary directory around
@@ -61,6 +63,8 @@ realpath()
 
 restore_cluster()
 {
+	status=$?
+
 	pushd $base_dir
 	# Reset the pg_control files from the old cluster which were renamed
 	# .old by pg_upgrade to avoid booting up an upgraded cluster.
@@ -75,8 +79,9 @@ restore_cluster()
 		rm -f lalshell
 	fi
 
-	# Remove the temporary cluster, and associated files, if requested
-	if (( !$retain_tempdir )) ; then
+	# Remove the temporary cluster, and associated files. Keep things around if
+	# there was a failure, or if -r is passed.
+	if (( ! $retain_tempdir && ! $status )) ; then
 		# If we are asked to blow away the temp root, echo any potential error
 		# files to the output channel to aid debugging
 		find ${temp_root} -type f -name "*.txt" | grep -v share |
@@ -101,6 +106,13 @@ check_vacuum_worked()
 {
 	local datadir=$1
 	local contentid=$2
+
+
+	# GPDB_94_MERGE_FIXME: This test doesn't work in 9.4 anymore, because
+	# freezing no longer resets 'xmin', it just sets a new flag in the
+	# tuple header to indicate that the row is frozen. See upstream commit
+	# 37484ad2aa. Need to find a new way to verify this.
+	return 0;
 
 	echo "Verifying VACUUM FREEZE using gp_segment_configuration xmins..."
 
@@ -182,7 +194,7 @@ usage()
 	echo " -k           Add checksums to new cluster"
 	echo " -K           Remove checksums during upgrade"
 	echo " -m           Upgrade mirrors"
-	echo " -r           Retain temporary installation after test"
+	echo " -r           Retain temporary installation after test, even on success"
 	exit 0
 }
 
@@ -207,7 +219,7 @@ diff_and_exit() {
 	gpstart -a ${args}
 
 	echo -n 'Dumping database schema after upgrade... '
-	PGOPTIONS="${pgopts}" ${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump2.sql"
+	PGOPTIONS="${pgopts}" ${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump2.sql"
 	echo done
 
 	gpstop -a ${args}
@@ -225,8 +237,9 @@ diff_and_exit() {
 		exit 0
 	fi
 
-	# To aid debugging in pipelines, print the diff to stdout
-	diff -du "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
+	# To aid debugging in pipelines, print the diff to stdout. Ignore
+	# whitespace, as above, to avoid misdirecting the troubleshooter.
+	diff -wdu "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
 	echo "Error: before and after dumps differ"
 	exit 1
 }
@@ -246,6 +259,7 @@ while getopts ":o:b:sCkKmr" opt; do
 			;;
 		s )
 			smoketest=1
+			DUMP_OPTS+=' --schema-only'
 			;;
 		C )
 			gpcheckcat=0
@@ -326,7 +340,7 @@ if (( $gpcheckcat )) ; then
 fi
 
 echo -n 'Dumping database schema before upgrade... '
-${NEW_BINDIR}/pg_dumpall --schema-only -f "$temp_root/dump1.sql"
+${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump1.sql"
 echo done
 
 gpstop -a

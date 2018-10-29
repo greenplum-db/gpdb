@@ -624,17 +624,6 @@ select '1'::text in (select '1'::name union all select '1'::name);
 (1 row)
 
 --
--- Check sane behavior with nested IN SubLinks
---
-select * from int4_tbl where
-  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
-  (select ten from tenk1 b);
- f1 
-----
-  0
-(1 row)
-
---
 -- Check for incorrect optimization when IN subquery contains a SRF
 --
 set enable_hashjoin to 0;
@@ -693,3 +682,131 @@ where a.thousand = b.thousand
                    and not exists ( select 1 from tenk1 d
                                     where a.thousand = d.thousand ) );
 ERROR:  correlated subquery with skip-level correlations is not supported
+--
+-- Check that nested sub-selects are not pulled up if they contain volatiles
+--
+explain (verbose, costs off)
+  select x, x from
+    (select (select current_database()) as x from (values(1),(2)) v(y)) ss;
+              QUERY PLAN              
+--------------------------------------
+ Values Scan on "*VALUES*"
+   Output: $0, $1
+   InitPlan 1 (returns $0)
+     ->  Result
+           Output: 'regression'::name
+   InitPlan 2 (returns $1)
+     ->  Result
+           Output: 'regression'::name
+ Optimizer: legacy query optimizer
+(9 rows)
+
+explain (verbose, costs off)
+  select x, x from
+    (select (select random()) as x from (values(1),(2)) v(y)) ss;
+            QUERY PLAN             
+-----------------------------------
+ Subquery Scan on ss
+   Output: ss.x, ss.x
+   ->  Values Scan on "*VALUES*"
+         Output: $0
+         InitPlan 1 (returns $0)
+           ->  Result
+                 Output: random()
+ Optimizer: legacy query optimizer
+(8 rows)
+
+explain (verbose, costs off)
+  select x, x from
+    (select (select current_database() where y=y) as x from (values(1),(2)) v(y)) ss;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Values Scan on "*VALUES*"
+   Output: (SubPlan 1), (SubPlan 2)
+   SubPlan 1
+     ->  Result
+           Output: 'regression'::name
+           One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
+   SubPlan 2
+     ->  Result
+           Output: 'regression'::name
+           One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
+ Optimizer: legacy query optimizer
+(11 rows)
+
+explain (verbose, costs off)
+  select x, x from
+    (select (select random() where y=y) as x from (values(1),(2)) v(y)) ss;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Subquery Scan on ss
+   Output: ss.x, ss.x
+   ->  Values Scan on "*VALUES*"
+         Output: (SubPlan 1)
+         SubPlan 1
+           ->  Result
+                 Output: random()
+                 One-Time Filter: ("*VALUES*".column1 = "*VALUES*".column1)
+ Optimizer: legacy query optimizer
+(9 rows)
+
+--
+-- Check we behave sanely in corner case of empty SELECT list (bug #8648)
+--
+create temp table nocolumns();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+select exists(select * from nocolumns);
+ exists 
+--------
+ f
+(1 row)
+
+--
+-- Check sane behavior with nested IN SubLinks
+-- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
+--
+explain (verbose, costs off)
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)
+   Output: int4_tbl.f1
+   ->  HashAggregate
+         Output: int4_tbl.f1
+         Group Key: (int4_tbl.ctid)::bigint, int4_tbl.gp_segment_id
+         ->  Result
+               Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id, (int4_tbl.ctid)::bigint
+               ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                     Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id
+                     Hash Key: int4_tbl.ctid
+                     ->  Hash Join
+                           Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id
+                           Hash Cond: (b.ten = CASE WHEN (hashed SubPlan 1) THEN int4_tbl.f1 ELSE NULL::integer END)
+                           ->  Seq Scan on public.tenk1 b
+                                 Output: b.ten, b.unique1
+                           ->  Hash
+                                 Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                       Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id
+                                       ->  Seq Scan on public.int4_tbl
+                                             Output: int4_tbl.f1, int4_tbl.ctid, int4_tbl.gp_segment_id
+                           SubPlan 1  (slice3; segments: 3)
+                             ->  Materialize
+                                   Output: a.unique1
+                                   ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                         Output: a.unique1
+                                         ->  Seq Scan on public.tenk1 a
+                                               Output: a.unique1
+ Optimizer: legacy query optimizer
+(29 rows)
+
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+ f1 
+----
+  0
+(1 row)
+

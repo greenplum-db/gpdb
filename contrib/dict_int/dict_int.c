@@ -3,7 +3,7 @@
  * dict_int.c
  *	  Text search dictionary for integers
  *
- * Copyright (c) 2007-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/dict_int/dict_int.c
@@ -26,10 +26,7 @@ typedef struct
 
 
 PG_FUNCTION_INFO_V1(dintdict_init);
-Datum		dintdict_init(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(dintdict_lexize);
-Datum		dintdict_lexize(PG_FUNCTION_ARGS);
 
 Datum
 dintdict_init(PG_FUNCTION_ARGS)

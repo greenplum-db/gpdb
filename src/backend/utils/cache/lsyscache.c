@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -203,13 +203,13 @@ get_opfamily_member(Oid opfamily, Oid lefttype, Oid righttype,
  * (This indicates that the operator is not a valid ordering operator.)
  *
  * Note: the operator could be registered in multiple families, for example
- * if someone were to build a "reverse sort" opfamily.	This would result in
+ * if someone were to build a "reverse sort" opfamily.  This would result in
  * uncertainty as to whether "ORDER BY USING op" would default to NULLS FIRST
  * or NULLS LAST, as well as inefficient planning due to failure to match up
  * pathkeys that should be the same.  So we want a determinate result here.
  * Because of the way the syscache search works, we'll use the interpretation
  * associated with the opfamily with smallest OID, which is probably
- * determinate enough.	Since there is no longer any particularly good reason
+ * determinate enough.  Since there is no longer any particularly good reason
  * to build reverse-sort opfamilies, it doesn't seem worth expending any
  * additional effort on ensuring consistency.
  */
@@ -463,7 +463,7 @@ get_ordering_op_for_equality_op(Oid opno, bool use_lhs_type)
  *
  * The planner currently uses simple equal() tests to compare the lists
  * returned by this function, which makes the list order relevant, though
- * strictly speaking it should not be.	Because of the way syscache list
+ * strictly speaking it should not be.  Because of the way syscache list
  * searches are handled, in normal operation the result will be sorted by OID
  * so everything works fine.  If running with system index usage disabled,
  * the result ordering is unspecified and hence the planner might fail to
@@ -1018,15 +1018,16 @@ get_atttypetypmodcoll(Oid relid, AttrNumber attnum,
 	HeapTuple	tp;
 	Form_pg_attribute att_tup;
 
-    /* CDB: Get type for sysattr even if relid is no good (e.g. SubqueryScan) */
-    if (attnum < 0 &&
-        attnum > FirstLowInvalidHeapAttributeNumber)
-    {
-        att_tup = SystemAttributeDefinition(attnum, true);
-	    *typid = att_tup->atttypid;
-	    *typmod = att_tup->atttypmod;
-        return;
-    }
+	/* CDB: Get type for sysattr even if relid is no good (e.g. SubqueryScan) */
+	if (attnum < 0 &&
+		attnum > FirstLowInvalidHeapAttributeNumber)
+	{
+		att_tup = SystemAttributeDefinition(attnum, true);
+		*typid = att_tup->atttypid;
+		*typmod = att_tup->atttypmod;
+		*collid = att_tup->attcollation;
+		return;
+	}
 
 	tp = SearchSysCache2(ATTNUM,
 						 ObjectIdGetDatum(relid),
@@ -1282,7 +1283,7 @@ op_mergejoinable(Oid opno, Oid inputtype)
  *
  * In some cases (currently only array_eq), hashjoinability depends on the
  * specific input data type the operator is invoked for, so that must be
- * passed as well.	We currently assume that only one input's type is needed
+ * passed as well.  We currently assume that only one input's type is needed
  * to check this --- by convention, pass the left input's data type.
  */
 bool
@@ -1465,7 +1466,7 @@ get_trigger_name(Oid triggerid)
 				ObjectIdGetDatum(triggerid));
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tp = systable_getnext(sscan);
 	if (HeapTupleIsValid(tp))
@@ -1498,7 +1499,7 @@ get_trigger_relid(Oid triggerid)
 				ObjectIdGetDatum(triggerid));
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tp = systable_getnext(sscan);
 	if (HeapTupleIsValid(tp))
@@ -1527,7 +1528,7 @@ get_trigger_funcid(Oid triggerid)
 				ObjectIdGetDatum(triggerid));
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tp = systable_getnext(sscan);
 	if (HeapTupleIsValid(tp))
@@ -1557,7 +1558,7 @@ get_trigger_type(Oid triggerid)
 				ObjectIdGetDatum(triggerid));
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tp = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tp))
@@ -1589,7 +1590,7 @@ trigger_enabled(Oid triggerid)
 				ObjectIdGetDatum(triggerid));
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tp = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tp))
@@ -1789,26 +1790,39 @@ is_agg_ordered(Oid aggid)
 }
 
 /*
- * has_agg_combinefunc
- *		Given aggregate id, check if it is has a combine function
+ * is_agg_partial_capable
+ *		Given aggregate id, check if it can be used in 2-phase aggregation.
+ *
+ * It must have a combine function, and if the transition type is 'internal',
+ * also serial/deserial functions.
  */
 bool
-has_agg_combinefunc(Oid aggid)
+is_agg_partial_capable(Oid aggid)
 {
 	HeapTuple	aggTuple;
 	Form_pg_aggregate aggform;
-	bool		has_combinefunc;
+	bool		result = true;
 
 	aggTuple = SearchSysCache1(AGGFNOID,
 							   ObjectIdGetDatum(aggid));
 	if (!HeapTupleIsValid(aggTuple))
 		elog(ERROR, "cache lookup failed for aggregate %u", aggid);
 	aggform = (Form_pg_aggregate) GETSTRUCT(aggTuple);
-	has_combinefunc = (aggform->aggcombinefn != InvalidOid);
+
+	if (aggform->aggcombinefn == InvalidOid)
+		result = false;
+	else if (aggform->aggtranstype == INTERNALOID)
+	{
+		if (aggform->aggserialfn == InvalidOid ||
+			aggform->aggdeserialfn == InvalidOid)
+		{
+			result = false;
+		}
+	}
 
 	ReleaseSysCache(aggTuple);
 
-	return has_combinefunc;
+	return result;
 }
 
 /*
@@ -2431,7 +2445,7 @@ get_typbyval(Oid typid)
  *		A two-fer: given the type OID, return both typlen and typbyval.
  *
  *		Since both pieces of info are needed to know how to copy a Datum,
- *		many places need both.	Might as well get them with one cache lookup
+ *		many places need both.  Might as well get them with one cache lookup
  *		instead of two.  Also, this routine raises an error instead of
  *		returning a bogus value when given a bad type OID.
  */
@@ -3680,7 +3694,7 @@ trigger_exists(Oid oid)
 
 	rel = heap_open(TriggerRelationId, AccessShareLock);
 	sscan = systable_beginscan(rel, TriggerOidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	result = (systable_getnext(sscan) != NULL);
 
@@ -3702,20 +3716,14 @@ get_relation_keys(Oid relid)
 
 	// lookup unique constraints for relation from the catalog table
 	ScanKeyData skey[1];
-	ScanKeyInit(&skey[0], Anum_pg_constraint_conrelid, BTEqualStrategyNumber, F_OIDEQ, relid);
 
 	Relation rel = heap_open(ConstraintRelationId, AccessShareLock);
-	SysScanDesc scan = systable_beginscan
-						(
-						rel, 
-						ConstraintRelidIndexId, 
-						true, 
-						SnapshotNow, 
-						1, 
-						skey
-						);
-	
-	HeapTuple	htup = NULL;
+	SysScanDesc scan;
+	HeapTuple	htup;
+
+	ScanKeyInit(&skey[0], Anum_pg_constraint_conrelid, BTEqualStrategyNumber, F_OIDEQ, relid);
+	scan = systable_beginscan(rel, ConstraintRelidIndexId, true,
+							  NULL, 1, skey);
 
 	while (HeapTupleIsValid(htup = systable_getnext(scan)))
 	{
@@ -3816,7 +3824,7 @@ get_check_constraint_oids(Oid oidRel)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(oidRel));
 	sscan = systable_beginscan(conrel, ConstraintRelidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	while (HeapTupleIsValid(htup = systable_getnext(sscan)))
 	{
@@ -4011,7 +4019,7 @@ get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt)
 
 	/* XXX: There is no index for this, so this is slow! */
 	sscan = systable_beginscan(pg_amop, InvalidOid, false,
-							   SnapshotNow, 4, scankey);
+							   NULL, 4, scankey);
 
 	/* XXX: There can be multiple results. Arbitrarily use the first one */
 	while (HeapTupleIsValid(ht = systable_getnext(sscan)))
@@ -4056,7 +4064,7 @@ has_subclass_slow(Oid relationId)
 
 	/* no index on inhparent */
 	sscan = systable_beginscan(rel, InvalidOid, false,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	result = (systable_getnext(sscan) != NULL);
 

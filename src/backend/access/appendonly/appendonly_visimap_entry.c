@@ -146,7 +146,7 @@ AppendOnlyVisiMapEnty_ReadData(
 
 	if (BitmapDecompress_HasError(&decompressState))
 	{
-		elog(ERROR, "error occured during visimap bitmap decompression");
+		elog(ERROR, "error occurred during visimap bitmap decompression");
 	}
 
 	bms_free(visiMapEntry->bitmap);

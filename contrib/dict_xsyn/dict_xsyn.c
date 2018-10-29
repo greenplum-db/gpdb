@@ -3,7 +3,7 @@
  * dict_xsyn.c
  *	  Extended synonym dictionary
  *
- * Copyright (c) 2007-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2007-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  contrib/dict_xsyn/dict_xsyn.c
@@ -40,10 +40,7 @@ typedef struct
 
 
 PG_FUNCTION_INFO_V1(dxsyn_init);
-Datum		dxsyn_init(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(dxsyn_lexize);
-Datum		dxsyn_lexize(PG_FUNCTION_ARGS);
 
 static char *
 find_word(char *in, char **end)

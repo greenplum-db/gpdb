@@ -21,7 +21,6 @@
 #include "storage/ipc.h"		/* For proc_exit_inprogress */
 #include "tcop/tcopprot.h"
 #include "cdb/cdbdisp.h"
-#include "cdb/cdbdisp_thread.h"
 #include "cdb/cdbdisp_async.h"
 #include "cdb/cdbdispatchresult.h"
 #include "executor/execUtils.h"
@@ -56,7 +55,7 @@ static void destroy_dispatcher_handle(dispatcher_handle_t *h);
  */
 CdbDispatchDirectDesc default_dispatch_direct_desc = {false, 0, {0}};
 
-static DispatcherInternalFuncs *pDispatchFuncs = NULL;
+static DispatcherInternalFuncs *pDispatchFuncs = &DispatcherAsyncFuncs;
 
 /*
  * cdbdisp_dispatchToGang:
@@ -64,9 +63,7 @@ static DispatcherInternalFuncs *pDispatchFuncs = NULL;
  * specified by the gang parameter. cancelOnError indicates whether an error
  * occurring on one of the qExec segdbs should cause all still-executing commands to cancel
  * on other qExecs. Normally this would be true. The commands are sent over the libpq
- * connections that were established during cdblink_setup.	They are run inside of threads.
- * The number of segdbs handled by any one thread is determined by the
- * guc variable gp_connections_per_thread.
+ * connections that were established during cdblink_setup.
  *
  * The caller must provide a CdbDispatchResults object having available
  * resultArray slots sufficient for the number of QEs to be dispatched:
@@ -98,20 +95,13 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 	Assert(gp && gp->size > 0);
 	Assert(dispatchResults && dispatchResults->resultArray);
 
-	/*
-	 * WIP: will use a function pointer for implementation later, currently
-	 * just use an internal function to move dispatch thread related code into
-	 * a separate file.
-	 */
 	(pDispatchFuncs->dispatchToGang) (ds, gp, sliceIndex);
-
-	markCurrentGxactDispatched();
 }
 
 /*
  * For asynchronous dispatcher, we have to wait all dispatch to finish before we move on to query execution,
  * otherwise we may get into a deadlock situation, e.g, gather motion node waiting for data,
- * while segments waiting for plan. This is skipped in threaded dispatcher as data is sent in blocking style.
+ * while segments waiting for plan.
  */
 void
 cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds)
@@ -428,22 +418,6 @@ cdbdisp_getWaitSocketFd(CdbDispatcherState *ds)
 	if (pDispatchFuncs == NULL || pDispatchFuncs->getWaitSocketFd == NULL)
 		return -1;
 	return (pDispatchFuncs->getWaitSocketFd) (ds);
-}
-
-void
-cdbdisp_onProcExit(void)
-{
-	if (pDispatchFuncs != NULL && pDispatchFuncs->procExitCallBack != NULL)
-		(pDispatchFuncs->procExitCallBack) ();
-}
-
-void
-cdbdisp_setAsync(bool async)
-{
-	if (async)
-		pDispatchFuncs = &DispatcherAsyncFuncs;
-	else
-		pDispatchFuncs = &DispatcherSyncFuncs;
 }
 
 dispatcher_handle_t *

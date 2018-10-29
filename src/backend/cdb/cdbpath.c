@@ -13,6 +13,7 @@
  */
 #include "postgres.h"
 
+#include "access/skey.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"	/* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"	/* INT8OID */

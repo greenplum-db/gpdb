@@ -140,11 +140,11 @@ setup_test(void)
 {
 	will_return(superuser, true);
 
-	expect_any(LWLockAcquire, lockid);
+	expect_any(LWLockAcquire, l);
 	expect_any(LWLockAcquire, mode);
-	will_be_called(LWLockAcquire);
+	will_return(LWLockAcquire, true);
 
-	expect_any(LWLockRelease, lockid);
+	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 
 	gp_replication_config_filename = "/tmp/test_gp_replication.conf";

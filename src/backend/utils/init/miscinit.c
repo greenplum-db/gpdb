@@ -3,7 +3,7 @@
  * miscinit.c
  *	  miscellaneous initialization support stuff
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -45,6 +45,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "utils/builtins.h"
+#include "utils/gdd.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/resgroup.h"
@@ -65,7 +66,7 @@ static List *lock_files = NIL;
  *
  * NOTE: "ignoring system indexes" means we do not use the system indexes
  * for lookups (either in hardwired catalog accesses or in planner-generated
- * plans).	We do, however, still update the indexes when a catalog
+ * plans).  We do, however, still update the indexes when a catalog
  * modification is made.
  * ----------------------------------------------------------------
  */
@@ -121,77 +122,6 @@ ChangeToDataDir(void)
 				(errcode_for_file_access(),
 				 errmsg("could not change directory to \"%s\": %m",
 						DataDir)));
-}
-
-/*
- * If the given pathname isn't already absolute, make it so, interpreting
- * it relative to the current working directory.
- *
- * Also canonicalizes the path.  The result is always a malloc'd copy.
- *
- * Note: interpretation of relative-path arguments during postmaster startup
- * should happen before doing ChangeToDataDir(), else the user will probably
- * not like the results.
- */
-char *
-make_absolute_path(const char *path)
-{
-	char	   *new;
-
-	/* Returning null for null input is convenient for some callers */
-	if (path == NULL)
-		return NULL;
-
-	if (!is_absolute_path(path))
-	{
-		char	   *buf;
-		size_t		buflen;
-
-		buflen = MAXPGPATH;
-		for (;;)
-		{
-			buf = malloc(buflen);
-			if (!buf)
-				ereport(FATAL,
-						(errcode(ERRCODE_OUT_OF_MEMORY),
-						 errmsg("out of memory")));
-
-			if (getcwd(buf, buflen))
-				break;
-			else if (errno == ERANGE)
-			{
-				free(buf);
-				buflen *= 2;
-				continue;
-			}
-			else
-			{
-				free(buf);
-				elog(FATAL, "could not get current working directory: %m");
-			}
-		}
-
-		new = malloc(strlen(buf) + strlen(path) + 2);
-		if (!new)
-			ereport(FATAL,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-		sprintf(new, "%s/%s", buf, path);
-		free(buf);
-	}
-	else
-	{
-		new = strdup(path);
-		if (!new)
-			ereport(FATAL,
-					(errcode(ERRCODE_OUT_OF_MEMORY),
-					 errmsg("out of memory")));
-	}
-
-	/* Make sure punctuation is canonical, too */
-	canonicalize_path(new);
-
-	return new;
 }
 
 
@@ -323,7 +253,7 @@ GetAuthenticatedUserId(void)
  * Currently there are two valid bits in SecurityRestrictionContext:
  *
  * SECURITY_LOCAL_USERID_CHANGE indicates that we are inside an operation
- * that is temporarily changing CurrentUserId via these functions.	This is
+ * that is temporarily changing CurrentUserId via these functions.  This is
  * needed to indicate that the actual value of CurrentUserId is not in sync
  * with guc.c's internal state, so SET ROLE has to be disallowed.
  *
@@ -344,7 +274,7 @@ GetAuthenticatedUserId(void)
  * ever throw any kind of error.  This is because they are used by
  * StartTransaction and AbortTransaction to save/restore the settings,
  * and during the first transaction within a backend, the value to be saved
- * and perhaps restored is indeed invalid.	We have to be able to get
+ * and perhaps restored is indeed invalid.  We have to be able to get
  * through AbortTransaction without asserting in case InitPostgres fails.
  */
 void
@@ -384,7 +314,7 @@ InSecurityRestrictedOperation(void)
 /*
  * These are obsolete versions of Get/SetUserIdAndSecContext that are
  * only provided for bug-compatibility with some rather dubious code in
- * pljava.	We allow the userid to be set, but only when not inside a
+ * pljava.  We allow the userid to be set, but only when not inside a
  * security restriction context.
  */
 void
@@ -487,7 +417,7 @@ InitializeSessionUserId(const char *rolename)
 		 * Check connection limit for this role.
 		 *
 		 * There is a race condition here --- we create our PGPROC before
-		 * checking for other PGPROCs.	If two backends did this at about the
+		 * checking for other PGPROCs.  If two backends did this at about the
 		 * same time, they might both think they were over the limit, while
 		 * ideally one should succeed and one fail.  Getting that to work
 		 * exactly seems more trouble than it is worth, however; instead we
@@ -538,7 +468,9 @@ InitializeSessionUserIdStandalone(void)
 	 * workers, and in background workers.
 	 */
 	AssertState(!IsUnderPostmaster || IsAutoVacuumWorkerProcess() || IsBackgroundWorker
-				|| am_startup || (am_ftshandler && am_mirror));
+				|| am_startup
+				|| (am_ftshandler && am_mirror)
+				|| am_global_deadlock_detector);
 
 	/* call only once */
 	AssertState(!OidIsValid(AuthenticatedUserId));
@@ -607,7 +539,7 @@ GetCurrentRoleId(void)
  * Change Role ID while running (SET ROLE)
  *
  * If roleid is InvalidOid, we are doing SET ROLE NONE: revert to the
- * session user authorization.	In this case the is_superuser argument
+ * session user authorization.  In this case the is_superuser argument
  * is ignored.
  *
  * When roleid is not InvalidOid, the caller must have checked whether
@@ -681,7 +613,7 @@ GetUserNameFromId(Oid roleid)
  * ($DATADIR/postmaster.pid) and Unix-socket-file lockfiles ($SOCKFILE.lock).
  * Both kinds of files contain the same info initially, although we can add
  * more information to a data-directory lockfile after it's created, using
- * AddToDataDirLockFile().	See miscadmin.h for documentation of the contents
+ * AddToDataDirLockFile().  See miscadmin.h for documentation of the contents
  * of these lockfiles.
  *
  * On successful lockfile creation, a proc_exit callback to remove the
@@ -770,7 +702,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		my_gp_pid = 0;
 
 	/*
-	 * We need a loop here because of race conditions.	But don't loop forever
+	 * We need a loop here because of race conditions.  But don't loop forever
 	 * (for example, a non-writable $PGDATA directory might cause a failure
 	 * that won't go away).  100 tries seems like plenty.
 	 */
@@ -779,7 +711,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		/*
 		 * Try to create the lock file --- O_EXCL makes this atomic.
 		 *
-		 * Think not to make the file protection weaker than 0600.	See
+		 * Think not to make the file protection weaker than 0600.  See
 		 * comments below.
 		 */
 		fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0600);
@@ -847,7 +779,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		 * implies that the existing process has a different userid than we
 		 * do, which means it cannot be a competing postmaster.  A postmaster
 		 * cannot successfully attach to a data directory owned by a userid
-		 * other than its own.	(This is now checked directly in
+		 * other than its own.  (This is now checked directly in
 		 * checkDataDir(), but has been true for a long time because of the
 		 * restriction that the data directory isn't group- or
 		 * world-accessible.)  Also, since we create the lockfiles mode 600,
@@ -929,9 +861,9 @@ CreateLockFile(const char *filename, bool amPostmaster,
 		}
 
 		/*
-		 * No, the creating process did not exist.	However, it could be that
+		 * No, the creating process did not exist.  However, it could be that
 		 * the postmaster crashed (or more likely was kill -9'd by a clueless
-		 * admin) but has left orphan backends behind.	Check for this by
+		 * admin) but has left orphan backends behind.  Check for this by
 		 * looking to see if there is an associated shmem segment that is
 		 * still in use.
 		 *
@@ -972,7 +904,7 @@ CreateLockFile(const char *filename, bool amPostmaster,
 
 		/*
 		 * Looks like nobody's home.  Unlink the file and try again to create
-		 * it.	Need a loop because of possible race condition against other
+		 * it.  Need a loop because of possible race condition against other
 		 * would-be creators.
 		 */
 		if (unlink(filename) < 0)
@@ -986,8 +918,8 @@ CreateLockFile(const char *filename, bool amPostmaster,
 	}
 
 	/*
-	 * Successfully created the file, now fill it.	See comment in miscadmin.h
-	 * about the contents.	Note that we write the same first five lines into
+	 * Successfully created the file, now fill it.  See comment in miscadmin.h
+	 * about the contents.  Note that we write the same first five lines into
 	 * both datadir and socket lockfiles; although more stuff may get added to
 	 * the datadir lockfile later.
 	 */
@@ -1315,6 +1247,7 @@ ValidatePgVersion(const char *path)
  * GUC variables: lists of library names to be preloaded at postmaster
  * start and at backend start
  */
+char	   *session_preload_libraries_string = NULL;
 char	   *shared_preload_libraries_string = NULL;
 char	   *local_preload_libraries_string = NULL;
 
@@ -1332,7 +1265,6 @@ load_libraries(const char *libraries, const char *gucname, bool restricted)
 {
 	char	   *rawstring;
 	List	   *elemlist;
-	int			elevel;
 	ListCell   *l;
 
 	if (libraries == NULL || libraries[0] == '\0')
@@ -1354,18 +1286,6 @@ load_libraries(const char *libraries, const char *gucname, bool restricted)
 		return;
 	}
 
-	/*
-	 * Choose notice level: avoid repeat messages when re-loading a library
-	 * that was preloaded into the postmaster.	(Only possible in EXEC_BACKEND
-	 * configurations)
-	 */
-#ifdef EXEC_BACKEND
-	if (IsUnderPostmaster && process_shared_preload_libraries_in_progress)
-		elevel = DEBUG2;
-	else
-#endif
-		elevel = LOG;
-
 	foreach(l, elemlist)
 	{
 		char	   *tok = (char *) lfirst(l);
@@ -1378,14 +1298,12 @@ load_libraries(const char *libraries, const char *gucname, bool restricted)
 		{
 			char	   *expanded;
 
-			expanded = palloc(strlen("$libdir/plugins/") + strlen(filename) + 1);
-			strcpy(expanded, "$libdir/plugins/");
-			strcat(expanded, filename);
+			expanded = psprintf("$libdir/plugins/%s", filename);
 			pfree(filename);
 			filename = expanded;
 		}
 		load_file(filename, restricted);
-		ereport(elevel,
+		ereport(DEBUG1,
 				(errmsg("loaded library \"%s\"", filename)));
 		pfree(filename);
 	}
@@ -1411,8 +1329,11 @@ process_shared_preload_libraries(void)
  * process any libraries that should be preloaded at backend start
  */
 void
-process_local_preload_libraries(void)
+process_session_preload_libraries(void)
 {
+	load_libraries(session_preload_libraries_string,
+				   "session_preload_libraries",
+				   false);
 	load_libraries(local_preload_libraries_string,
 				   "local_preload_libraries",
 				   true);

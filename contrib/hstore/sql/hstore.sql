@@ -331,10 +331,14 @@ set enable_seqscan=off;
 select count(*) from testhstore where h #># 'p=>1';
 select count(*) from testhstore where h = 'pos=>98, line=>371, node=>CBA, indexed=>t';
 
--- json
+-- json and jsonb
 select hstore_to_json('"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4');
 select cast( hstore  '"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4' as json);
 select hstore_to_json_loose('"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4');
+
+select hstore_to_jsonb('"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4');
+select cast( hstore  '"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4' as jsonb);
+select hstore_to_jsonb_loose('"a key" =>1, b => t, c => null, d=> 12345, e => 012345, f=> 1.234, g=> 2.345e+4');
 
 -- GPDB: use a replicated table, so that the json_agg() below will see the
 -- rows in the same order the rows are inserted in. With a non-replicated
@@ -346,4 +350,3 @@ insert into test_json_agg values ('rec1','"a key" =>1, b => t, c => null, d=> 12
        ('rec2','"a key" =>2, b => f, c => "null", d=> -12345, e => 012345.6, f=> -1.234, g=> 0.345e-4');
 select json_agg(q) from test_json_agg q;
 select json_agg(q) from (select f1, hstore_to_json_loose(f2) as f2 from test_json_agg) q;
-

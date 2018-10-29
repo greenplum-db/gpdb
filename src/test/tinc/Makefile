@@ -59,8 +59,3 @@ gpexpand_2:
 	$(TESTER) $(DISCOVER) \
 	-s mpp/gpdb/tests/utilities/gpexpand \
 	-q tags=part2
-
-# mpp interconnect test
-mpp_interconnect:
-	$(TESTER) $(DISCOVER) -t tincrepo/mpp/gpdb/tests \
-	-s dispatch/interconnect

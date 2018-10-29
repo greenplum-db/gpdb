@@ -33,11 +33,11 @@
  *
  * Note: since pg_amproc functions are indexed by (lefttype, righttype)
  * it is possible to associate a BTSORTSUPPORT function with a cross-type
- * comparison.	This could sensibly be used to provide a fast comparator
+ * comparison.  This could sensibly be used to provide a fast comparator
  * function for such cases, but probably not any other acceleration method.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/sortsupport.h

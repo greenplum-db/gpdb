@@ -4,7 +4,7 @@
  *	  routines for fast build of inverted index
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -187,7 +187,7 @@ ginInsertBAEntry(BuildAccumulator *accum,
  * Since the entries are being inserted into a balanced binary tree, you
  * might think that the order of insertion wouldn't be critical, but it turns
  * out that inserting the entries in sorted order results in a lot of
- * rebalancing operations and is slow.	To prevent this, we attempt to insert
+ * rebalancing operations and is slow.  To prevent this, we attempt to insert
  * the nodes in an order that will produce a nearly-balanced tree if the input
  * is in fact sorted.
  *

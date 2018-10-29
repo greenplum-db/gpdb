@@ -292,49 +292,74 @@ cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist)
 	{
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(lc);
 		Expr	   *key = (Expr *) em->em_expr;
+		ListCell *lc_tle;
 
 		/* A constant is OK regardless of the target list */
 		if (em->em_is_const)
 			return key;
 
-		if (targetlist)
+		/*-------
+		 * Try to find this EC member in the target list.
+		 *
+		 * We do the search in a very lenient way:
+		 *
+		 * 1. Ignore RelabelType nodes on top of both sides, like
+		 *    tlist_member_ignore_relabel() does.
+		 * 2. Ignore varnoold/varoattno fields in Var nodes, like
+		 *    tlist_member_match_var() does.
+		 * 3. Also Accept "naked" targetlists, without TargetEntry nodes
+		 *
+		 * Unfortunately, neither tlist_member_ignore_relabel() nor
+		 * tlist_member_match_var() does exactly what we need.
+		 *-------
+		 */
+		while (IsA(key, RelabelType))
+			key = (Expr *) ((RelabelType *) key)->arg;
+
+		foreach(lc_tle, targetlist)
 		{
-			/* Ignore possible RelabelType node atop the PathKey expr. */
-			if (IsA(key, RelabelType))
-				key = ((RelabelType *) key)->arg;
+			Node	   *tlexpr = lfirst(lc_tle);
 
-			/* Check if targetlist is a List of TargetEntry */
-			if (IsA(linitial(targetlist), TargetEntry))
+			/*
+			 * Check if targetlist is a List of TargetEntry. (Planner's
+			 * RelOptInfo targetlists don't have TargetEntry nodes.)
+			 */
+			if (IsA(tlexpr, TargetEntry))
+				tlexpr = (Node *) ((TargetEntry *) tlexpr)->expr;
+
+			/* ignore RelabelType nodes on both sides */
+			while (tlexpr && IsA(tlexpr, RelabelType))
+				tlexpr = (Node *) ((RelabelType *) tlexpr)->arg;
+
+			if (IsA(key, Var))
 			{
-				TargetEntry *tle;
-
-				tle = tlist_member_ignore_relabel((Node *) key, targetlist);
-				if (tle)
-					return key;
-			}
-			/* Planner's RelOptInfo targetlists don't have TargetEntry nodes */
-			else
-			{
-				ListCell   *tcell;
-
-				foreach(tcell, targetlist)
+				if (IsA(tlexpr, Var))
 				{
-					Expr	   *expr = (Expr *) lfirst(tcell);
+					Var		   *keyvar = (Var *) key;
+					Var		   *tlvar = (Var *) tlexpr;
 
-					if (IsA(expr, RelabelType))
-						expr = ((RelabelType *) expr)->arg;
-
-					if (equal(expr, key))
+					if (keyvar->varno == tlvar->varno &&
+						keyvar->varattno == tlvar->varattno &&
+						keyvar->varlevelsup == tlvar->varlevelsup)
 						return key;
 				}
 			}
-
-			/* Return this item if all referenced Vars are in targetlist. */
-			if (!IsA(key, Var) &&
-				!cdbpullup_missingVarWalker((Node *) key, targetlist))
+			else
 			{
-				return key;
+				/* ignore RelabelType nodes on both sides */
+				while (key && IsA(key, RelabelType))
+					key = (Expr *) ((RelabelType *) key)->arg;
+
+				if (equal(tlexpr, key))
+					return key;
 			}
+		}
+
+		/* Return this item if all referenced Vars are in targetlist. */
+		if (!IsA(key, Var) &&
+			!cdbpullup_missingVarWalker((Node *) key, targetlist))
+		{
+			return key;
 		}
 	}
 

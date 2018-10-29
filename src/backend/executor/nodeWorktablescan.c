@@ -3,7 +3,7 @@
  * nodeWorktablescan.c
  *	  routines to handle WorkTableScan nodes.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -87,7 +87,7 @@ ExecWorkTableScan(WorkTableScanState *node)
 {
 	/*
 	 * On the first call, find the ancestor RecursiveUnion's state via the
-	 * Param slot reserved for it.	(We can't do this during node init because
+	 * Param slot reserved for it.  (We can't do this during node init because
 	 * there are corner cases where we'll get the init call before the
 	 * RecursiveUnion does.)
 	 */

@@ -176,10 +176,8 @@ main(int argc, char *argv[])
 
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "gang test");
 	Gp_role = GP_ROLE_DISPATCH;
-	GpIdentity.numsegments = TOTOAL_SEGMENTS;
 	GpIdentity.dbid = 1;
 	GpIdentity.segindex = -1;
-	gp_connections_per_thread = 64;
 
 	Port		procport;
 

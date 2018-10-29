@@ -3,7 +3,7 @@
  * hashpage.c
  *	  Hash table page management code for the Postgres hash access method
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -49,7 +49,7 @@ static void _hash_splitbucket(Relation rel, Buffer metabuf,
  * of the locking rules).  However, we can skip taking lmgr locks when the
  * index is local to the current backend (ie, either temp or new in the
  * current transaction).  No one else can see it, so there's no reason to
- * take locks.	We still take buffer-level locks, but not lmgr locks.
+ * take locks.  We still take buffer-level locks, but not lmgr locks.
  */
 #define USELOCKING(rel)		(!RELATION_IS_LOCAL(rel))
 
@@ -140,7 +140,7 @@ _hash_getbuf(Relation rel, BlockNumber blkno, int access, int flags)
  *
  *		This must be used only to fetch pages that are known to be before
  *		the index's filesystem EOF, but are to be filled from scratch.
- *		_hash_pageinit() is applied automatically.	Otherwise it has
+ *		_hash_pageinit() is applied automatically.  Otherwise it has
  *		effects similar to _hash_getbuf() with access = HASH_WRITE.
  *
  *		When this routine returns, a write lock is set on the
@@ -348,7 +348,7 @@ _hash_metapinit(Relation rel, double num_tuples, ForkNumber forkNum)
 	/*
 	 * Determine the target fill factor (in tuples per bucket) for this index.
 	 * The idea is to make the fill factor correspond to pages about as full
-	 * as the user-settable fillfactor parameter says.	We can compute it
+	 * as the user-settable fillfactor parameter says.  We can compute it
 	 * exactly since the index datatype (i.e. uint32 hash key) is fixed-width.
 	 */
 	data_width = sizeof(uint32);
@@ -381,7 +381,7 @@ _hash_metapinit(Relation rel, double num_tuples, ForkNumber forkNum)
 	/*
 	 * We initialize the metapage, the first N bucket pages, and the first
 	 * bitmap page in sequence, using _hash_getnewbuf to cause smgrextend()
-	 * calls to occur.	This ensures that the smgr level has the right idea of
+	 * calls to occur.  This ensures that the smgr level has the right idea of
 	 * the physical index length.
 	 */
 	metabuf = _hash_getnewbuf(rel, HASH_METAPAGE, forkNum);
@@ -549,7 +549,7 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 
 	/*
 	 * Determine which bucket is to be split, and attempt to lock the old
-	 * bucket.	If we can't get the lock, give up.
+	 * bucket.  If we can't get the lock, give up.
 	 *
 	 * The lock protects us against other backends, but not against our own
 	 * backend.  Must check for active scans separately.
@@ -607,7 +607,7 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	}
 
 	/*
-	 * Okay to proceed with split.	Update the metapage bucket mapping info.
+	 * Okay to proceed with split.  Update the metapage bucket mapping info.
 	 *
 	 * Since we are scribbling on the metapage data right in the shared
 	 * buffer, any failure in this next little bit leaves us with a big
@@ -645,7 +645,7 @@ _hash_expandtable(Relation rel, Buffer metabuf)
 	 * Copy bucket mapping info now; this saves re-accessing the meta page
 	 * inside _hash_splitbucket's inner loop.  Note that once we drop the
 	 * split lock, other splits could begin, so these values might be out of
-	 * date before _hash_splitbucket finishes.	That's okay, since all it
+	 * date before _hash_splitbucket finishes.  That's okay, since all it
 	 * needs is to tell which of these two buckets to map hashkeys into.
 	 */
 	maxbucket = metap->hashm_maxbucket;
@@ -880,7 +880,7 @@ _hash_splitbucket(Relation rel,
 
 	/*
 	 * We're at the end of the old bucket chain, so we're done partitioning
-	 * the tuples.	Before quitting, call _hash_squeezebucket to ensure the
+	 * the tuples.  Before quitting, call _hash_squeezebucket to ensure the
 	 * tuples remaining in the old bucket (including the overflow pages) are
 	 * packed as tightly as possible.  The new bucket is already tight.
 	 */

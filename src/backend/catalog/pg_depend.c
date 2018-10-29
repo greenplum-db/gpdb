@@ -3,7 +3,7 @@
  * pg_depend.c
  *	  routines to support manipulation of the pg_depend relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -50,7 +50,7 @@ recordDependencyOn(const ObjectAddress *depender,
 
 /*
  * Record multiple dependencies (of the same kind) for a single dependent
- * object.	This has a little less overhead than recording each separately.
+ * object.  This has a little less overhead than recording each separately.
  */
 void
 recordMultipleDependencies(const ObjectAddress *depender,
@@ -186,7 +186,7 @@ recordDependencyOnCurrentExtension(const ObjectAddress *object,
  * (possibly with some differences from before).
  *
  * If skipExtensionDeps is true, we do not delete any dependencies that
- * show that the given object is a member of an extension.	This avoids
+ * show that the given object is a member of an extension.  This avoids
  * needing a lot of extra logic to fetch and recreate that dependency.
  */
 long
@@ -211,7 +211,7 @@ deleteDependencyRecordsFor(Oid classId, Oid objectId,
 				ObjectIdGetDatum(objectId));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -261,7 +261,7 @@ deleteDependencyRecordsForClass(Oid classId, Oid objectId,
 				ObjectIdGetDatum(objectId));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -343,7 +343,7 @@ changeDependencyFor(Oid classId, Oid objectId,
 				ObjectIdGetDatum(objectId));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid((tup = systable_getnext(scan))))
 	{
@@ -407,7 +407,7 @@ isObjectPinned(const ObjectAddress *object, Relation rel)
 				ObjectIdGetDatum(object->objectId));
 
 	scan = systable_beginscan(rel, DependReferenceIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	/*
 	 * Since we won't generate additional pg_depend entries for pinned
@@ -467,7 +467,7 @@ getExtensionOfObject(Oid classId, Oid objectId)
 				ObjectIdGetDatum(objectId));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid((tup = systable_getnext(scan))))
 	{
@@ -492,7 +492,7 @@ getExtensionOfObject(Oid classId, Oid objectId)
  * Detect whether a sequence is marked as "owned" by a column
  *
  * An ownership marker is an AUTO dependency from the sequence to the
- * column.	If we find one, store the identity of the owning column
+ * column.  If we find one, store the identity of the owning column
  * into *tableId and *colId and return TRUE; else return FALSE.
  *
  * Note: if there's more than one such pg_depend entry then you get
@@ -520,7 +520,7 @@ sequenceIsOwned(Oid seqId, Oid *tableId, int32 *colId)
 				ObjectIdGetDatum(seqId));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid((tup = systable_getnext(scan))))
 	{
@@ -580,7 +580,7 @@ getOwnedSequences(Oid relid)
 				ObjectIdGetDatum(relid));
 
 	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
-							  SnapshotNow, 2, key);
+							  NULL, 2, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -643,7 +643,7 @@ get_constraint_index(Oid constraintId)
 				Int32GetDatum(0));
 
 	scan = systable_beginscan(depRel, DependReferenceIndexId, true,
-							  SnapshotNow, 3, key);
+							  NULL, 3, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -701,7 +701,7 @@ get_index_constraint(Oid indexId)
 				Int32GetDatum(0));
 
 	scan = systable_beginscan(depRel, DependDependerIndexId, true,
-							  SnapshotNow, 3, key);
+							  NULL, 3, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{

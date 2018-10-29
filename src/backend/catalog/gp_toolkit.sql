@@ -541,7 +541,7 @@ GRANT SELECT ON TABLE gp_toolkit.gp_pgdatabase_invalid TO public;
 --        gp_toolkit.gp_skew_details_t
 --
 -- @doc:
---        Type to accomodate skew details
+--        Type to accommodate skew details
 --
 --------------------------------------------------------------------------------
 CREATE TYPE gp_toolkit.gp_skew_details_t
@@ -642,7 +642,7 @@ GRANT EXECUTE ON FUNCTION gp_toolkit.gp_skew_details(oid) TO public;
 --        gp_toolkit.gp_skew_analysis_t
 --
 -- @doc:
---        Type to accomodate skew analysis
+--        Type to accommodate skew analysis
 --
 --------------------------------------------------------------------------------
 CREATE TYPE gp_toolkit.gp_skew_analysis_t
@@ -1819,7 +1819,7 @@ GRANT SELECT ON gp_toolkit.gp_resgroup_status TO public;
 -- AO/CO diagnostics functions
 --------------------------------------------------------------------------------
 
-CREATE FUNCTION gp_toolkit.__gp_aoseg_history(oid)
+CREATE FUNCTION gp_toolkit.__gp_aoseg_history(regclass)
 RETURNS TABLE(gp_tid tid,
     gp_xmin integer,
     gp_xmin_status text,
@@ -1840,9 +1840,9 @@ RETURNS TABLE(gp_tid tid,
     state smallint)
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_history_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_history(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_history(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aocsseg(oid)
+CREATE FUNCTION gp_toolkit.__gp_aocsseg(regclass)
 RETURNS TABLE(gp_tid tid,
     segno integer,
     column_num smallint,
@@ -1855,24 +1855,9 @@ RETURNS TABLE(gp_tid tid,
     state smallint)
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aocsseg_name(text)
-RETURNS TABLE (gp_tid tid,
-    segno integer,
-    column_num smallint,
-    physical_segno integer,
-    tupcount bigint,
-    eof bigint,
-    eof_uncompressed bigint,
-    modcount bigint,
-    formatversion smallint,
-    state smallint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aocsseg_name_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_name(text) TO public;
-
-CREATE FUNCTION gp_toolkit.__gp_aocsseg_history(oid)
+CREATE FUNCTION gp_toolkit.__gp_aocsseg_history(regclass)
 RETURNS TABLE(gp_tid tid,
     gp_xmin integer,
     gp_xmin_status text,
@@ -1895,58 +1880,34 @@ RETURNS TABLE(gp_tid tid,
     state smallint)
 AS '$libdir/gp_ao_co_diagnostics' , 'gp_aocsseg_history_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_history(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aocsseg_history(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aovisimap(oid)
+CREATE FUNCTION gp_toolkit.__gp_aovisimap(regclass)
 RETURNS TABLE (tid tid,
     segno int,
     row_num bigint)
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_wrapper'
 LANGUAGE C IMMUTABLE;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aovisimap_name(text)
-RETURNS TABLE (tid tid,
-    segno integer,
-    row_num bigint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_name_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_name(text) TO public;
-
-CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_info(oid)
+CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_info(regclass)
 RETURNS TABLE (segno integer,
     hidden_tupcount bigint,
     total_tupcount bigint)
 AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_hidden_info_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_hidden_info(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_hidden_info(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_info_name(text)
-RETURNS TABLE (segno integer,
-    hidden_tupcount bigint,
-    total_tupcount bigint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_hidden_info_name_wrapper'
-LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_hidden_info_name(text) TO public;
-
-CREATE FUNCTION gp_toolkit.__gp_aovisimap_entry(oid)
+CREATE FUNCTION gp_toolkit.__gp_aovisimap_entry(regclass)
 RETURNS TABLE(segno integer,
     first_row_num bigint,
     hidden_tupcount int,
     bitmap text)
 AS '$libdir/gp_ao_co_diagnostics','gp_aovisimap_entry_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_entry(oid) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_entry(regclass) TO public;
 
-CREATE FUNCTION gp_toolkit.__gp_aovisimap_entry_name(text)
-RETURNS TABLE(segno integer,
-    first_row_num bigint,
-    hidden_tupcount int,
-    bitmap text)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aovisimap_entry_name_wrapper' LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aovisimap_entry_name(text) TO public;
-
-CREATE FUNCTION gp_toolkit.__gp_aoseg_name(text)
+CREATE FUNCTION gp_toolkit.__gp_aoseg(regclass)
 RETURNS TABLE (segno integer, eof bigint,
     tupcount bigint,
     varblockcount bigint,
@@ -1954,9 +1915,9 @@ RETURNS TABLE (segno integer, eof bigint,
     modcount bigint,
     formatversion smallint,
     state smallint)
-AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_name_wrapper'
+AS '$libdir/gp_ao_co_diagnostics', 'gp_aoseg_wrapper'
 LANGUAGE C STRICT;
-GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg_name(text) TO public;
+GRANT EXECUTE ON FUNCTION gp_toolkit.__gp_aoseg(regclass) TO public;
 
 CREATE TYPE gp_toolkit.__gp_aovisimap_hidden_t AS (seg int, hidden bigint, total bigint);
 CREATE FUNCTION gp_toolkit.__gp_aovisimap_hidden_typed(oid)

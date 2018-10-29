@@ -4,7 +4,7 @@
  *	   Hardware-dependent implementation of spinlocks.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -19,6 +19,7 @@
 #include <unistd.h>
 
 #include "storage/s_lock.h"
+#include "storage/barrier.h"
 
 slock_t		dummy_spinlock;
 
@@ -78,20 +79,15 @@ s_lock(volatile slock_t *lock, const char *file, int line)
 	 *
 	 * We time out and declare error after NUM_DELAYS delays (thus, exactly
 	 * that many tries).  With the given settings, this will usually take 2 or
-	 * so minutes.	It seems better to fix the total number of tries (and thus
+	 * so minutes.  It seems better to fix the total number of tries (and thus
 	 * the probability of unintended failure) than to fix the total time
 	 * spent.
-	 *
-	 * The pg_usleep() delays are measured in milliseconds because 1 msec is a
-	 * common resolution limit at the OS level for newer platforms. On older
-	 * platforms the resolution limit is usually 10 msec, in which case the
-	 * total delay before timeout will be a bit more.
 	 */
 #define MIN_SPINS_PER_DELAY 10
 #define MAX_SPINS_PER_DELAY 1000
 #define NUM_DELAYS			1000
-#define MIN_DELAY_MSEC		1
-#define MAX_DELAY_MSEC		1000
+#define MIN_DELAY_USEC		1000L
+#define MAX_DELAY_USEC		1000000L
 
 	int			spins = 0;
 	int			delays = 0;
@@ -109,9 +105,9 @@ s_lock(volatile slock_t *lock, const char *file, int line)
 				s_lock_stuck(lock, file, line);
 
 			if (cur_delay == 0) /* first time to delay? */
-				cur_delay = MIN_DELAY_MSEC;
+				cur_delay = MIN_DELAY_USEC;
 
-			pg_usleep(cur_delay * 1000L);
+			pg_usleep(cur_delay);
 
 #if defined(S_LOCK_TEST)
 			fprintf(stdout, "*");
@@ -122,8 +118,8 @@ s_lock(volatile slock_t *lock, const char *file, int line)
 			cur_delay += (int) (cur_delay *
 					  ((double) random() / (double) MAX_RANDOM_VALUE) + 0.5);
 			/* wrap back to minimum delay when max is exceeded */
-			if (cur_delay > MAX_DELAY_MSEC)
-				cur_delay = MIN_DELAY_MSEC;
+			if (cur_delay > MAX_DELAY_USEC)
+				cur_delay = MIN_DELAY_USEC;
 
 			spins = 0;
 		}
@@ -141,7 +137,7 @@ s_lock(volatile slock_t *lock, const char *file, int line)
 	 * Note: spins_per_delay is local within our current process. We want to
 	 * average these observations across multiple backends, since it's
 	 * relatively rare for this function to even get entered, and so a single
-	 * backend might not live long enough to converge on a good value.	That
+	 * backend might not live long enough to converge on a good value.  That
 	 * is handled by the two routines below.
 	 */
 	if (cur_delay == 0)
@@ -181,7 +177,7 @@ recompute_spins_per_delay(int shared_spins_per_delay)
 	/*
 	 * We use an exponential moving average with a relatively slow adaption
 	 * rate, so that noise in any one backend's result won't affect the shared
-	 * value too much.	As long as both inputs are within the allowed range,
+	 * value too much.  As long as both inputs are within the allowed range,
 	 * the result must be too, so we need not worry about clamping the result.
 	 *
 	 * We deliberately truncate rather than rounding; this is so that single
@@ -252,36 +248,6 @@ _success:						\n\
 	);
 }
 #endif   /* __m68k__ && !__linux__ */
-#else							/* not __GNUC__ */
-
-/*
- * All non gcc
- */
-
-
-#if defined(sun3)
-static void
-tas_dummy()						/* really means: extern int tas(slock_t
-								 * *lock); */
-{
-	asm("LLA0:");
-	asm("   .data");
-	asm("   .text");
-	asm("|#PROC# 04");
-	asm("   .globl  _tas");
-	asm("_tas:");
-	asm("|#PROLOGUE# 1");
-	asm("   movel   sp@(0x4),a0");
-	asm("   tas a0@");
-	asm("   beq LLA1");
-	asm("   moveq   #-128,d0");
-	asm("   rts");
-	asm("LLA1:");
-	asm("   moveq   #0,d0");
-	asm("   rts");
-	asm("   .data");
-}
-#endif   /* sun3 */
 #endif   /* not __GNUC__ */
 #endif   /* HAVE_SPINLOCKS */
 

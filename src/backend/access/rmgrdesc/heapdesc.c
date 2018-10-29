@@ -3,7 +3,7 @@
  * heapdesc.c
  *	  rmgr descriptor routines for access/heap/heapam.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -29,15 +29,15 @@ static void
 out_infobits(StringInfo buf, uint8 infobits)
 {
 	if (infobits & XLHL_XMAX_IS_MULTI)
-		appendStringInfo(buf, "IS_MULTI ");
+		appendStringInfoString(buf, "IS_MULTI ");
 	if (infobits & XLHL_XMAX_LOCK_ONLY)
-		appendStringInfo(buf, "LOCK_ONLY ");
+		appendStringInfoString(buf, "LOCK_ONLY ");
 	if (infobits & XLHL_XMAX_EXCL_LOCK)
-		appendStringInfo(buf, "EXCL_LOCK ");
+		appendStringInfoString(buf, "EXCL_LOCK ");
 	if (infobits & XLHL_XMAX_KEYSHR_LOCK)
-		appendStringInfo(buf, "KEYSHR_LOCK ");
+		appendStringInfoString(buf, "KEYSHR_LOCK ");
 	if (infobits & XLHL_KEYS_UPDATED)
-		appendStringInfo(buf, "KEYS_UPDATED ");
+		appendStringInfoString(buf, "KEYS_UPDATED ");
 }
 
 void
@@ -53,16 +53,16 @@ heap_desc(StringInfo buf, XLogRecord *record)
 		xl_heap_insert *xlrec = (xl_heap_insert *) rec;
 
 		if (xl_info & XLOG_HEAP_INIT_PAGE)
-			appendStringInfo(buf, "insert(init): ");
+			appendStringInfoString(buf, "insert(init): ");
 		else
-			appendStringInfo(buf, "insert: ");
+			appendStringInfoString(buf, "insert: ");
 		out_target(buf, &(xlrec->target));
 	}
 	else if (info == XLOG_HEAP_DELETE)
 	{
 		xl_heap_delete *xlrec = (xl_heap_delete *) rec;
 
-		appendStringInfo(buf, "delete: ");
+		appendStringInfoString(buf, "delete: ");
 		out_target(buf, &(xlrec->target));
 		appendStringInfoChar(buf, ' ');
 		out_infobits(buf, xlrec->infobits_set);
@@ -72,9 +72,9 @@ heap_desc(StringInfo buf, XLogRecord *record)
 		xl_heap_update *xlrec = (xl_heap_update *) rec;
 
 		if (xl_info & XLOG_HEAP_INIT_PAGE)
-			appendStringInfo(buf, "update(init): ");
+			appendStringInfoString(buf, "update(init): ");
 		else
-			appendStringInfo(buf, "update: ");
+			appendStringInfoString(buf, "update: ");
 		out_target(buf, &(xlrec->target));
 		appendStringInfo(buf, " xmax %u ", xlrec->old_xmax);
 		out_infobits(buf, xlrec->old_infobits_set);
@@ -88,9 +88,9 @@ heap_desc(StringInfo buf, XLogRecord *record)
 		xl_heap_update *xlrec = (xl_heap_update *) rec;
 
 		if (xl_info & XLOG_HEAP_INIT_PAGE)		/* can this case happen? */
-			appendStringInfo(buf, "hot_update(init): ");
+			appendStringInfoString(buf, "hot_update(init): ");
 		else
-			appendStringInfo(buf, "hot_update: ");
+			appendStringInfoString(buf, "hot_update: ");
 		out_target(buf, &(xlrec->target));
 		appendStringInfo(buf, " xmax %u ", xlrec->old_xmax);
 		out_infobits(buf, xlrec->old_infobits_set);
@@ -121,11 +121,11 @@ heap_desc(StringInfo buf, XLogRecord *record)
 	{
 		xl_heap_inplace *xlrec = (xl_heap_inplace *) rec;
 
-		appendStringInfo(buf, "inplace: ");
+		appendStringInfoString(buf, "inplace: ");
 		out_target(buf, &(xlrec->target));
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }
 
 void
@@ -136,16 +136,7 @@ heap2_desc(StringInfo buf, XLogRecord *record)
 	uint8		info = xl_info & ~XLR_INFO_MASK;
 
 	info &= XLOG_HEAP_OPMASK;
-	if (info == XLOG_HEAP2_FREEZE)
-	{
-		xl_heap_freeze *xlrec = (xl_heap_freeze *) rec;
-
-		appendStringInfo(buf, "freeze: rel %u/%u/%u; blk %u; cutoff xid %u multi %u",
-						 xlrec->node.spcNode, xlrec->node.dbNode,
-						 xlrec->node.relNode, xlrec->block,
-						 xlrec->cutoff_xid, xlrec->cutoff_multi);
-	}
-	else if (info == XLOG_HEAP2_CLEAN)
+	if (info == XLOG_HEAP2_CLEAN)
 	{
 		xl_heap_clean *xlrec = (xl_heap_clean *) rec;
 
@@ -153,6 +144,19 @@ heap2_desc(StringInfo buf, XLogRecord *record)
 						 xlrec->node.spcNode, xlrec->node.dbNode,
 						 xlrec->node.relNode, xlrec->block,
 						 xlrec->latestRemovedXid);
+	}
+	else if (info == XLOG_HEAP2_FREEZE_PAGE)
+	{
+		xl_heap_freeze_page *xlrec = (xl_heap_freeze_page *) rec;
+
+		appendStringInfo(buf, "freeze_page: rel %u/%u/%u; blk %u; cutoff xid %u ntuples %u",
+						 xlrec->node.spcNode, xlrec->node.dbNode,
+						 xlrec->node.relNode, xlrec->block,
+						 xlrec->cutoff_xid, xlrec->ntuples);
+	}
+	else if (info == XLOG_HEAP2_REWRITE)
+	{
+		appendStringInfoString(buf, "heap rewrite:");
 	}
 	else if (info == XLOG_HEAP2_CLEANUP_INFO)
 	{
@@ -174,9 +178,9 @@ heap2_desc(StringInfo buf, XLogRecord *record)
 		xl_heap_multi_insert *xlrec = (xl_heap_multi_insert *) rec;
 
 		if (xl_info & XLOG_HEAP_INIT_PAGE)
-			appendStringInfo(buf, "multi-insert (init): ");
+			appendStringInfoString(buf, "multi-insert (init): ");
 		else
-			appendStringInfo(buf, "multi-insert: ");
+			appendStringInfoString(buf, "multi-insert: ");
 		appendStringInfo(buf, "rel %u/%u/%u; blk %u; %d tuples",
 				xlrec->node.spcNode, xlrec->node.dbNode, xlrec->node.relNode,
 						 xlrec->blkno, xlrec->ntuples);
@@ -189,6 +193,15 @@ heap2_desc(StringInfo buf, XLogRecord *record)
 						 xlrec->infobits_set);
 		out_target(buf, &(xlrec->target));
 	}
+	else if (info == XLOG_HEAP2_NEW_CID)
+	{
+		xl_heap_new_cid *xlrec = (xl_heap_new_cid *) rec;
+
+		appendStringInfo(buf, "new_cid: ");
+		out_target(buf, &(xlrec->target));
+		appendStringInfo(buf, "; cmin: %u, cmax: %u, combo: %u",
+						 xlrec->cmin, xlrec->cmax, xlrec->combocid);
+	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

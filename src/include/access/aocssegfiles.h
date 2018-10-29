@@ -142,13 +142,6 @@ extern AOCSFileSegInfo **GetAllAOCSFileSegInfo(Relation prel,
 					  Snapshot appendOnlyMetaDataSnapshot,
 					  int *totalseg);
 
-extern AOCSFileSegInfo **GetAllAOCSFileSegInfo_pg_aocsseg_rel(
-									 int numOfColumsn,
-									 char *relationName,
-									 Relation pg_aocsseg_rel,
-									 Snapshot appendOnlyMetaDataSnapshot,
-									 int32 *totalseg);
-
 extern void FreeAllAOCSSegFileInfo(AOCSFileSegInfo **allAOCSSegInfo, int totalSegFiles);
 
 extern int64 GetAOCSTotalBytes(
@@ -167,7 +160,7 @@ extern void AOCSFileSegInfoAddVpe(
 extern void AOCSFileSegInfoAddCount(Relation prel, int32 segno, int64 tupadded, int64 varblockadded, int64 modcount_added);
 extern void ClearAOCSFileSegInfo(Relation prel, int segno, FileSegInfoState newState);
 extern void SetAOCSFileSegInfoState(Relation parentrel, int segno, FileSegInfoState newState);
-extern Datum gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
-extern Datum aocol_compression_ratio_internal(Relation parentrel);
+extern int64 gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot);
+extern float8 aocol_compression_ratio_internal(Relation parentrel);
 
 #endif

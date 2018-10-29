@@ -264,10 +264,6 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 	segdbDesc->identifier = identifier;
 	segdbDesc->isWriter = isWriter;
 
-	/* Connection error info */
-	segdbDesc->errcode = 0;
-	initPQExpBuffer(&segdbDesc->error_message);
-
 	MemoryContextSwitchTo(oldContext);
 	return segdbDesc;
 }
@@ -280,162 +276,12 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 
 	cdbconn_disconnect(segdbDesc);
 
-	/* Free the error message buffer. */
-	segdbDesc->errcode = 0;
-	termPQExpBuffer(&segdbDesc->error_message);
-
 	if (segdbDesc->whoami != NULL)
 	{
 		pfree(segdbDesc->whoami);
 		segdbDesc->whoami = NULL;
 	}
 }								/* cdbconn_termSegmentDescriptor */
-
-/*
- * Connect to a QE as a client via libpq. Returns a PGconn object in
- * segdbDesc->conn which can be tested for connection status.
- */
-void
-cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-				  const char *gpqeid,
-				  const char *options)
-{
-#define MAX_KEYWORDS 10
-#define MAX_INT_STRING_LEN 20
-	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
-	const char *keywords[MAX_KEYWORDS];
-	const char *values[MAX_KEYWORDS];
-	char		portstr[MAX_INT_STRING_LEN];
-	char		timeoutstr[MAX_INT_STRING_LEN];
-	int			nkeywords = 0;
-
-	keywords[nkeywords] = "gpqeid";
-	values[nkeywords] = gpqeid;
-	nkeywords++;
-
-	/*
-	 * Build the connection string
-	 */
-	if (options)
-	{
-		keywords[nkeywords] = "options";
-		values[nkeywords] = options;
-		nkeywords++;
-	}
-
-	/*
-	 * For entry DB connection, we make sure both "hostaddr" and "host" are
-	 * empty string. Or else, it will fall back to environment variables and
-	 * won't use domain socket in function connectDBStart.
-	 *
-	 * For other QE connections, we set "hostaddr". "host" is not used.
-	 */
-	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
-		IS_QUERY_DISPATCHER())
-	{
-		keywords[nkeywords] = "hostaddr";
-		values[nkeywords] = "";
-		nkeywords++;
-	}
-	else
-	{
-		Assert(cdbinfo->hostip != NULL);
-		keywords[nkeywords] = "hostaddr";
-		values[nkeywords] = cdbinfo->hostip;
-		nkeywords++;
-	}
-
-	keywords[nkeywords] = "host";
-	values[nkeywords] = "";
-	nkeywords++;
-
-	snprintf(portstr, sizeof(portstr), "%u", cdbinfo->port);
-	keywords[nkeywords] = "port";
-	values[nkeywords] = portstr;
-	nkeywords++;
-
-	if (MyProcPort->database_name)
-	{
-		keywords[nkeywords] = "dbname";
-		values[nkeywords] = MyProcPort->database_name;
-		nkeywords++;
-	}
-
-	Assert(MyProcPort->user_name);
-	keywords[nkeywords] = "user";
-	values[nkeywords] = MyProcPort->user_name;
-	nkeywords++;
-
-	snprintf(timeoutstr, sizeof(timeoutstr), "%d", gp_segment_connect_timeout);
-	keywords[nkeywords] = "connect_timeout";
-	values[nkeywords] = timeoutstr;
-	nkeywords++;
-
-	keywords[nkeywords] = NULL;
-	values[nkeywords] = NULL;
-
-	Assert(nkeywords < MAX_KEYWORDS);
-
-	/*
-	 * Call libpq to connect
-	 */
-	segdbDesc->conn = PQconnectdbParams(keywords, values, false);
-
-	/*
-	 * Check for connection failure.
-	 */
-	if (PQstatus(segdbDesc->conn) == CONNECTION_BAD)
-	{
-		if (!segdbDesc->errcode)
-			segdbDesc->errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
-
-		appendPQExpBuffer(&segdbDesc->error_message, "%s", PQerrorMessage(segdbDesc->conn));
-
-		/* Don't use elog, it's not thread-safe */
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			write_log("%s\n", segdbDesc->error_message.data);
-
-		PQfinish(segdbDesc->conn);
-		segdbDesc->conn = NULL;
-	}
-
-	/*
-	 * Successfully connected.
-	 */
-	else
-	{
-		PQsetNoticeReceiver(segdbDesc->conn, &MPPnoticeReceiver, segdbDesc);
-
-		/*
-		 * Command the QE to initialize its motion layer. Wait for it to
-		 * respond giving us the TCP port number where it listens for
-		 * connections from the gang below.
-		 */
-		segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
-		segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
-		if (segdbDesc->motionListener == 0)
-		{
-			segdbDesc->errcode = ERRCODE_INTERNAL_ERROR;
-			appendPQExpBuffer(&segdbDesc->error_message,
-							  "Internal error: No motion listener port");
-
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("%s\n", segdbDesc->error_message.data);
-
-			PQfinish(segdbDesc->conn);
-			segdbDesc->conn = NULL;
-		}
-		else
-		{
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("Connected to %s motionListener=%u/%u with options: %s\n",
-						  segdbDesc->whoami,
-						  (segdbDesc->motionListener & 0x0ffff),
-						  ((segdbDesc->motionListener >> 16) & 0x0ffff),
-						  options);
-		}
-	}
-}
 
 /*
  * Establish socket connection via libpq.
@@ -642,14 +488,6 @@ bool
 cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc)
 {
 	return (PQstatus(segdbDesc->conn) == CONNECTION_OK);
-}
-
-/* Reset error message buffer */
-void
-cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
-{
-	segdbDesc->errcode = 0;
-	resetPQExpBuffer(&segdbDesc->error_message);
 }
 
 /*

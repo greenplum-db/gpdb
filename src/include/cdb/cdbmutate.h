@@ -53,13 +53,6 @@ extern Plan *replace_shareinput_targetlists(PlannerInfo *root, Plan *plan);
 extern Plan *apply_shareinput_xslice(Plan *plan, PlannerInfo *root);
 extern void assign_plannode_id(PlannedStmt *stmt);
 
-extern bool isAnyColChangedByUpdate(PlannerInfo *root,
-						Index targetvarno,
-						RangeTblEntry *rte,
-						List *targetlist,
-						int nattrs,
-						AttrNumber *attrs);
-
 extern List *getExprListFromTargetList(List *tlist, int numCols, AttrNumber *colIdx,
 									   bool useExecutorVarFormat);
 extern void remove_unused_initplans(Plan *plan, PlannerInfo *root);
@@ -77,7 +70,8 @@ extern void request_explicit_motion(Plan *plan, Index resultRelationIdx, List *r
 extern void sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 									GpPolicy **targetPolicy, List **hashExpr);
 extern SplitUpdate *make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan,
-									 RangeTblEntry *rte, Index resultRelationsIdx);
+				 RangeTblEntry *rte);
+extern Reshuffle *make_reshuffle(PlannerInfo *root, Plan *subplan, RangeTblEntry *rte, Index resultRelationsIdx);
 
 
 #endif   /* CDBMUTATE_H */

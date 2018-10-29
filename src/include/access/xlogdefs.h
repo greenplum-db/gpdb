@@ -4,7 +4,7 @@
  * Postgres transaction log manager record pointer and
  * timeline number definitions
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/xlogdefs.h
@@ -49,7 +49,7 @@ typedef uint32 TimeLineID;
  *	read those buffers except during crash recovery or if wal_level != minimal,
  *	it is a win to use it in all cases where we sync on each write().  We could
  *	allow O_DIRECT with fsync(), but it is unclear if fsync() could process
- *	writes not buffered in the kernel.	Also, O_DIRECT is never enough to force
+ *	writes not buffered in the kernel.  Also, O_DIRECT is never enough to force
  *	data to the drives, it merely tries to bypass the kernel cache, so we still
  *	need O_SYNC/O_DSYNC.
  */
@@ -62,7 +62,7 @@ typedef uint32 TimeLineID;
 /*
  * This chunk of hackery attempts to determine which file sync methods
  * are available on the current platform, and to choose an appropriate
- * default method.	We assume that fsync() is always available, and that
+ * default method.  We assume that fsync() is always available, and that
  * configure determined whether fdatasync() is.
  */
 #if defined(O_SYNC)
@@ -91,16 +91,6 @@ typedef uint32 TimeLineID;
 #define DEFAULT_SYNC_METHOD		SYNC_METHOD_FDATASYNC
 #else
 #define DEFAULT_SYNC_METHOD		SYNC_METHOD_FSYNC
-#endif
-
-/*
- * Limitation of buffer-alignment for direct IO depends on OS and filesystem,
- * but XLOG_BLCKSZ is assumed to be enough for it.
- */
-#ifdef O_DIRECT
-#define ALIGNOF_XLOG_BUFFER		XLOG_BLCKSZ
-#else
-#define ALIGNOF_XLOG_BUFFER		ALIGNOF_BUFFER
 #endif
 
 #endif   /* XLOG_DEFS_H */

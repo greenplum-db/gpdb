@@ -3,7 +3,7 @@
  * objectaddress.c
  *	  functions for working with ObjectAddresses
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -108,7 +108,7 @@ typedef struct
 										 * class? */
 } ObjectPropertyType;
 
-static ObjectPropertyType ObjectProperty[] =
+static const ObjectPropertyType ObjectProperty[] =
 {
 	{
 		CastRelationId,
@@ -448,7 +448,7 @@ static ObjectAddress get_object_address_type(ObjectType objtype,
 						List *objname, bool missing_ok);
 static ObjectAddress get_object_address_opcf(ObjectType objtype, List *objname,
 						List *objargs, bool missing_ok);
-static ObjectPropertyType *get_object_property_data(Oid class_id);
+static const ObjectPropertyType *get_object_property_data(Oid class_id);
 
 static void getRelationDescription(StringInfo buffer, Oid relid);
 static void getOpFamilyDescription(StringInfo buffer, Oid opfid);
@@ -467,7 +467,7 @@ static void getRelationIdentity(StringInfo buffer, Oid relid);
  * sub-object is looked up, the parent object will be locked instead.
  *
  * If the object is a relation or a child object of a relation (e.g. an
- * attribute or contraint), the relation is also opened and *relp receives
+ * attribute or constraint), the relation is also opened and *relp receives
  * the open relcache entry pointer; otherwise, *relp is set to NULL.  This
  * is a bit grotty but it makes life simpler, since the caller will
  * typically need the relcache entry too.  Caller must close the relcache
@@ -475,9 +475,20 @@ static void getRelationIdentity(StringInfo buffer, Oid relid);
  * if the target object is the relation itself or an attribute, but for other
  * child objects, only AccessShareLock is acquired on the relation.
  *
+ * If the object is not found, an error is thrown, unless missing_ok is
+ * true.  In this case, no lock is acquired, relp is set to NULL, and the
+ * returned address has objectId set to InvalidOid.
+ *
  * We don't currently provide a function to release the locks acquired here;
  * typically, the lock must be held until commit to guard against a concurrent
  * drop operation.
+ *
+ * Note: If the object is not found, we don't give any indication of the
+ * reason.  (It might have been a missing schema if the name was qualified, or
+ * an inexistant type name in case of a cast, function or operator; etc).
+ * Currently there is only one caller that might be interested in such info, so
+ * we don't spend much effort here.  If more callers start to care, it might be
+ * better to add some support for that in this function.
  */
 ObjectAddress
 get_object_address(ObjectType objtype, List *objname, List *objargs,
@@ -599,9 +610,11 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 				{
 					TypeName   *sourcetype = (TypeName *) linitial(objname);
 					TypeName   *targettype = (TypeName *) linitial(objargs);
-					Oid			sourcetypeid = typenameTypeId(NULL, sourcetype);
-					Oid			targettypeid = typenameTypeId(NULL, targettype);
+					Oid			sourcetypeid;
+					Oid			targettypeid;
 
+					sourcetypeid = LookupTypeNameOid(NULL, sourcetype, missing_ok);
+					targettypeid = LookupTypeNameOid(NULL, targettype, missing_ok);
 					address.classId = CastRelationId;
 					address.objectId =
 						get_cast_oid(sourcetypeid, targettypeid, missing_ok);
@@ -681,7 +694,7 @@ get_object_address(ObjectType objtype, List *objname, List *objargs,
 
 		/*
 		 * If we're dealing with a relation or attribute, then the relation is
-		 * already locked.	Otherwise, we lock it now.
+		 * already locked.  Otherwise, we lock it now.
 		 */
 		if (address.classId != RelationRelationId)
 		{
@@ -988,26 +1001,31 @@ get_object_address_relobject(ObjectType objtype, List *objname,
 
 		/* Extract relation name and open relation. */
 		relname = list_truncate(list_copy(objname), nnames - 1);
-		relation = heap_openrv(makeRangeVarFromNameList(relname),
-							   AccessShareLock);
-		reloid = RelationGetRelid(relation);
+		relation = heap_openrv_extended(makeRangeVarFromNameList(relname),
+										AccessShareLock,
+										missing_ok);
+
+		reloid = relation ? RelationGetRelid(relation) : InvalidOid;
 
 		switch (objtype)
 		{
 			case OBJECT_RULE:
 				address.classId = RewriteRelationId;
-				address.objectId = get_rewrite_oid(reloid, depname, missing_ok);
+				address.objectId = relation ?
+					get_rewrite_oid(reloid, depname, missing_ok) : InvalidOid;
 				address.objectSubId = 0;
 				break;
 			case OBJECT_TRIGGER:
 				address.classId = TriggerRelationId;
-				address.objectId = get_trigger_oid(reloid, depname, missing_ok);
+				address.objectId = relation ?
+					get_trigger_oid(reloid, depname, missing_ok) : InvalidOid;
 				address.objectSubId = 0;
 				break;
 			case OBJECT_CONSTRAINT:
 				address.classId = ConstraintRelationId;
-				address.objectId =
-					get_relation_constraint_oid(reloid, depname, missing_ok);
+				address.objectId = relation ?
+					get_relation_constraint_oid(reloid, depname, missing_ok) :
+					InvalidOid;
 				address.objectSubId = 0;
 				break;
 			default:
@@ -1021,7 +1039,9 @@ get_object_address_relobject(ObjectType objtype, List *objname,
 		/* Avoid relcache leak when object not found. */
 		if (!OidIsValid(address.objectId))
 		{
-			heap_close(relation, AccessShareLock);
+			if (relation != NULL)
+				heap_close(relation, AccessShareLock);
+
 			relation = NULL;	/* department of accident prevention */
 			return address;
 		}
@@ -1054,6 +1074,7 @@ get_object_address_attribute(ObjectType objtype, List *objname,
 				 errmsg("column name must be qualified")));
 	attname = strVal(lfirst(list_tail(objname)));
 	relname = list_truncate(list_copy(objname), list_length(objname) - 1);
+	/* XXX no missing_ok support here */
 	relation = relation_openrv(makeRangeVarFromNameList(relname), lockmode);
 	reloid = RelationGetRelid(relation);
 
@@ -1070,6 +1091,7 @@ get_object_address_attribute(ObjectType objtype, List *objname,
 		address.classId = RelationRelationId;
 		address.objectId = InvalidOid;
 		address.objectSubId = InvalidAttrNumber;
+		relation_close(relation, lockmode);
 		return address;
 	}
 
@@ -1098,7 +1120,7 @@ get_object_address_type(ObjectType objtype,
 	address.objectId = InvalidOid;
 	address.objectSubId = 0;
 
-	tup = LookupTypeName(NULL, typename, NULL);
+	tup = LookupTypeName(NULL, typename, NULL, missing_ok);
 	if (!HeapTupleIsValid(tup))
 	{
 		if (!missing_ok)
@@ -1135,6 +1157,7 @@ get_object_address_opcf(ObjectType objtype,
 	ObjectAddress address;
 
 	Assert(list_length(objargs) == 1);
+	/* XXX no missing_ok support here */
 	amoid = get_am_oid(strVal(linitial(objargs)), false);
 
 	switch (objtype)
@@ -1351,7 +1374,7 @@ get_object_namespace(const ObjectAddress *address)
 	HeapTuple	tuple;
 	bool		isnull;
 	Oid			oid;
-	ObjectPropertyType *property;
+	const ObjectPropertyType *property;
 
 	/* If not owned by a namespace, just return InvalidOid. */
 	property = get_object_property_data(address->classId);
@@ -1383,7 +1406,7 @@ get_object_namespace(const ObjectAddress *address)
 Oid
 get_object_oid_index(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->oid_index_oid;
 }
@@ -1391,7 +1414,7 @@ get_object_oid_index(Oid class_id)
 int
 get_object_catcache_oid(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->oid_catcache_id;
 }
@@ -1399,7 +1422,7 @@ get_object_catcache_oid(Oid class_id)
 int
 get_object_catcache_name(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->name_catcache_id;
 }
@@ -1407,7 +1430,7 @@ get_object_catcache_name(Oid class_id)
 AttrNumber
 get_object_attnum_name(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->attnum_name;
 }
@@ -1415,7 +1438,7 @@ get_object_attnum_name(Oid class_id)
 AttrNumber
 get_object_attnum_namespace(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->attnum_namespace;
 }
@@ -1423,7 +1446,7 @@ get_object_attnum_namespace(Oid class_id)
 AttrNumber
 get_object_attnum_owner(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->attnum_owner;
 }
@@ -1431,7 +1454,7 @@ get_object_attnum_owner(Oid class_id)
 AttrNumber
 get_object_attnum_acl(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->attnum_acl;
 }
@@ -1439,7 +1462,7 @@ get_object_attnum_acl(Oid class_id)
 AclObjectKind
 get_object_aclkind(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->acl_kind;
 }
@@ -1447,7 +1470,7 @@ get_object_aclkind(Oid class_id)
 bool
 get_object_namensp_unique(Oid class_id)
 {
-	ObjectPropertyType *prop = get_object_property_data(class_id);
+	const ObjectPropertyType *prop = get_object_property_data(class_id);
 
 	return prop->is_nsp_name_unique;
 }
@@ -1473,10 +1496,10 @@ is_objectclass_supported(Oid class_id)
 /*
  * Find ObjectProperty structure by class_id.
  */
-static ObjectPropertyType *
+static const ObjectPropertyType *
 get_object_property_data(Oid class_id)
 {
-	static ObjectPropertyType *prop_last = NULL;
+	static const ObjectPropertyType *prop_last = NULL;
 	int			index;
 
 	/*
@@ -1535,7 +1558,7 @@ get_catalog_object_by_oid(Relation catalog, Oid objectId)
 					ObjectIdGetDatum(objectId));
 
 		scan = systable_beginscan(catalog, oidIndexId, true,
-								  SnapshotNow, 1, &skey);
+								  NULL, 1, &skey);
 		tuple = systable_getnext(scan);
 		if (!HeapTupleIsValid(tuple))
 		{
@@ -1598,7 +1621,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				rcscan = systable_beginscan(castDesc, CastOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(rcscan);
 
@@ -1698,7 +1721,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				adscan = systable_beginscan(attrdefDesc, AttrDefaultOidIndexId,
-											true, SnapshotNow, 1, skey);
+											true, NULL, 1, skey);
 
 				tup = systable_getnext(adscan);
 
@@ -1804,7 +1827,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				amscan = systable_beginscan(amopDesc, AccessMethodOperatorOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(amscan);
 
@@ -1854,7 +1877,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				amscan = systable_beginscan(amprocDesc, AccessMethodProcedureOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(amscan);
 
@@ -1902,7 +1925,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				rcscan = systable_beginscan(ruleDesc, RewriteOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(rcscan);
 
@@ -1937,7 +1960,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				tgscan = systable_beginscan(trigDesc, TriggerOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(tgscan);
 
@@ -2118,7 +2141,7 @@ getObjectDescription(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				rcscan = systable_beginscan(defaclrel, DefaultAclOidIndexId,
-											true, SnapshotNow, 1, skey);
+											true, NULL, 1, skey);
 
 				tup = systable_getnext(rcscan);
 
@@ -2523,15 +2546,15 @@ getObjectTypeDescription(const ObjectAddress *object)
 			break;
 
 		case OCLASS_TYPE:
-			appendStringInfo(&buffer, "type");
+			appendStringInfoString(&buffer, "type");
 			break;
 
 		case OCLASS_CAST:
-			appendStringInfo(&buffer, "cast");
+			appendStringInfoString(&buffer, "cast");
 			break;
 
 		case OCLASS_COLLATION:
-			appendStringInfo(&buffer, "collation");
+			appendStringInfoString(&buffer, "collation");
 			break;
 
 		case OCLASS_CONSTRAINT:
@@ -2539,103 +2562,103 @@ getObjectTypeDescription(const ObjectAddress *object)
 			break;
 
 		case OCLASS_CONVERSION:
-			appendStringInfo(&buffer, "conversion");
+			appendStringInfoString(&buffer, "conversion");
 			break;
 
 		case OCLASS_DEFAULT:
-			appendStringInfo(&buffer, "default value");
+			appendStringInfoString(&buffer, "default value");
 			break;
 
 		case OCLASS_LANGUAGE:
-			appendStringInfo(&buffer, "language");
+			appendStringInfoString(&buffer, "language");
 			break;
 
 		case OCLASS_LARGEOBJECT:
-			appendStringInfo(&buffer, "large object");
+			appendStringInfoString(&buffer, "large object");
 			break;
 
 		case OCLASS_OPERATOR:
-			appendStringInfo(&buffer, "operator");
+			appendStringInfoString(&buffer, "operator");
 			break;
 
 		case OCLASS_OPCLASS:
-			appendStringInfo(&buffer, "operator class");
+			appendStringInfoString(&buffer, "operator class");
 			break;
 
 		case OCLASS_OPFAMILY:
-			appendStringInfo(&buffer, "operator family");
+			appendStringInfoString(&buffer, "operator family");
 			break;
 
 		case OCLASS_AMOP:
-			appendStringInfo(&buffer, "operator of access method");
+			appendStringInfoString(&buffer, "operator of access method");
 			break;
 
 		case OCLASS_AMPROC:
-			appendStringInfo(&buffer, "function of access method");
+			appendStringInfoString(&buffer, "function of access method");
 			break;
 
 		case OCLASS_REWRITE:
-			appendStringInfo(&buffer, "rule");
+			appendStringInfoString(&buffer, "rule");
 			break;
 
 		case OCLASS_TRIGGER:
-			appendStringInfo(&buffer, "trigger");
+			appendStringInfoString(&buffer, "trigger");
 			break;
 
 		case OCLASS_SCHEMA:
-			appendStringInfo(&buffer, "schema");
+			appendStringInfoString(&buffer, "schema");
 			break;
 
 		case OCLASS_TSPARSER:
-			appendStringInfo(&buffer, "text search parser");
+			appendStringInfoString(&buffer, "text search parser");
 			break;
 
 		case OCLASS_TSDICT:
-			appendStringInfo(&buffer, "text search dictionary");
+			appendStringInfoString(&buffer, "text search dictionary");
 			break;
 
 		case OCLASS_TSTEMPLATE:
-			appendStringInfo(&buffer, "text search template");
+			appendStringInfoString(&buffer, "text search template");
 			break;
 
 		case OCLASS_TSCONFIG:
-			appendStringInfo(&buffer, "text search configuration");
+			appendStringInfoString(&buffer, "text search configuration");
 			break;
 
 		case OCLASS_ROLE:
-			appendStringInfo(&buffer, "role");
+			appendStringInfoString(&buffer, "role");
 			break;
 
 		case OCLASS_DATABASE:
-			appendStringInfo(&buffer, "database");
+			appendStringInfoString(&buffer, "database");
 			break;
 
 		case OCLASS_TBLSPACE:
-			appendStringInfo(&buffer, "tablespace");
+			appendStringInfoString(&buffer, "tablespace");
 			break;
 
 		case OCLASS_FDW:
-			appendStringInfo(&buffer, "foreign-data wrapper");
+			appendStringInfoString(&buffer, "foreign-data wrapper");
 			break;
 
 		case OCLASS_FOREIGN_SERVER:
-			appendStringInfo(&buffer, "server");
+			appendStringInfoString(&buffer, "server");
 			break;
 
 		case OCLASS_USER_MAPPING:
-			appendStringInfo(&buffer, "user mapping");
+			appendStringInfoString(&buffer, "user mapping");
 			break;
 
 		case OCLASS_DEFACL:
-			appendStringInfo(&buffer, "default acl");
+			appendStringInfoString(&buffer, "default acl");
 			break;
 
 		case OCLASS_EXTENSION:
-			appendStringInfo(&buffer, "extension");
+			appendStringInfoString(&buffer, "extension");
 			break;
 
 		case OCLASS_EVENT_TRIGGER:
-			appendStringInfo(&buffer, "event trigger");
+			appendStringInfoString(&buffer, "event trigger");
 			break;
 
 		default:
@@ -2664,37 +2687,37 @@ getRelationTypeDescription(StringInfo buffer, Oid relid, int32 objectSubId)
 	switch (relForm->relkind)
 	{
 		case RELKIND_RELATION:
-			appendStringInfo(buffer, "table");
+			appendStringInfoString(buffer, "table");
 			break;
 		case RELKIND_INDEX:
-			appendStringInfo(buffer, "index");
+			appendStringInfoString(buffer, "index");
 			break;
 		case RELKIND_SEQUENCE:
-			appendStringInfo(buffer, "sequence");
+			appendStringInfoString(buffer, "sequence");
 			break;
 		case RELKIND_TOASTVALUE:
-			appendStringInfo(buffer, "toast table");
+			appendStringInfoString(buffer, "toast table");
 			break;
 		case RELKIND_VIEW:
-			appendStringInfo(buffer, "view");
+			appendStringInfoString(buffer, "view");
 			break;
 		case RELKIND_MATVIEW:
-			appendStringInfo(buffer, "materialized view");
+			appendStringInfoString(buffer, "materialized view");
 			break;
 		case RELKIND_COMPOSITE_TYPE:
-			appendStringInfo(buffer, "composite type");
+			appendStringInfoString(buffer, "composite type");
 			break;
 		case RELKIND_FOREIGN_TABLE:
-			appendStringInfo(buffer, "foreign table");
+			appendStringInfoString(buffer, "foreign table");
 			break;
 		default:
 			/* shouldn't get here */
-			appendStringInfo(buffer, "relation");
+			appendStringInfoString(buffer, "relation");
 			break;
 	}
 
 	if (objectSubId != 0)
-		appendStringInfo(buffer, " column");
+		appendStringInfoString(buffer, " column");
 
 	ReleaseSysCache(relTup);
 }
@@ -2742,9 +2765,9 @@ getProcedureTypeDescription(StringInfo buffer, Oid procid)
 	procForm = (Form_pg_proc) GETSTRUCT(procTup);
 
 	if (procForm->proisagg)
-		appendStringInfo(buffer, "aggregate");
+		appendStringInfoString(buffer, "aggregate");
 	else
-		appendStringInfo(buffer, "function");
+		appendStringInfoString(buffer, "function");
 
 	ReleaseSysCache(procTup);
 }
@@ -2777,13 +2800,13 @@ getObjectIdentity(const ObjectAddress *object)
 			break;
 
 		case OCLASS_PROC:
-			appendStringInfo(&buffer, "%s",
-							 format_procedure_qualified(object->objectId));
+			appendStringInfoString(&buffer,
+							   format_procedure_qualified(object->objectId));
 			break;
 
 		case OCLASS_TYPE:
-			appendStringInfo(&buffer, "%s",
-							 format_type_be_qualified(object->objectId));
+			appendStringInfoString(&buffer,
+								 format_type_be_qualified(object->objectId));
 			break;
 
 		case OCLASS_CAST:
@@ -2876,8 +2899,8 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for conversion %u",
 						 object->objectId);
 				conForm = (Form_pg_conversion) GETSTRUCT(conTup);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(NameStr(conForm->conname)));
+				appendStringInfoString(&buffer,
+								quote_identifier(NameStr(conForm->conname)));
 				ReleaseSysCache(conTup);
 				break;
 			}
@@ -2900,7 +2923,7 @@ getObjectIdentity(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				adscan = systable_beginscan(attrdefDesc, AttrDefaultOidIndexId,
-											true, SnapshotNow, 1, skey);
+											true, NULL, 1, skey);
 
 				tup = systable_getnext(adscan);
 
@@ -2933,7 +2956,7 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for language %u",
 						 object->objectId);
 				langForm = (Form_pg_language) GETSTRUCT(langTup);
-				appendStringInfo(&buffer, "%s",
+				appendStringInfoString(&buffer,
 							   quote_identifier(NameStr(langForm->lanname)));
 				ReleaseSysCache(langTup);
 				break;
@@ -2944,8 +2967,8 @@ getObjectIdentity(const ObjectAddress *object)
 			break;
 
 		case OCLASS_OPERATOR:
-			appendStringInfo(&buffer, "%s",
-							 format_operator_qualified(object->objectId));
+			appendStringInfoString(&buffer,
+								format_operator_qualified(object->objectId));
 			break;
 
 		case OCLASS_OPCLASS:
@@ -2971,9 +2994,8 @@ getObjectIdentity(const ObjectAddress *object)
 						 opcForm->opcmethod);
 				amForm = (Form_pg_am) GETSTRUCT(amTup);
 
-				appendStringInfo(&buffer,
-								 "%s",
-								 quote_qualified_identifier(schema,
+				appendStringInfoString(&buffer,
+									   quote_qualified_identifier(schema,
 												 NameStr(opcForm->opcname)));
 				appendStringInfo(&buffer, " for %s",
 								 quote_identifier(NameStr(amForm->amname)));
@@ -3005,7 +3027,7 @@ getObjectIdentity(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				amscan = systable_beginscan(amopDesc, AccessMethodOperatorOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(amscan);
 
@@ -3049,7 +3071,7 @@ getObjectIdentity(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				amscan = systable_beginscan(amprocDesc, AccessMethodProcedureOidIndexId, true,
-											SnapshotNow, 1, skey);
+											NULL, 1, skey);
 
 				tup = systable_getnext(amscan);
 
@@ -3131,8 +3153,8 @@ getObjectIdentity(const ObjectAddress *object)
 				if (!nspname)
 					elog(ERROR, "cache lookup failed for namespace %u",
 						 object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(nspname));
+				appendStringInfoString(&buffer,
+									   quote_identifier(nspname));
 				break;
 			}
 
@@ -3140,6 +3162,7 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	tup;
 				Form_pg_ts_parser formParser;
+				char	   *schema;
 
 				tup = SearchSysCache1(TSPARSEROID,
 									  ObjectIdGetDatum(object->objectId));
@@ -3147,8 +3170,10 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for text search parser %u",
 						 object->objectId);
 				formParser = (Form_pg_ts_parser) GETSTRUCT(tup);
-				appendStringInfo(&buffer, "%s",
-							 quote_identifier(NameStr(formParser->prsname)));
+				schema = get_namespace_name(formParser->prsnamespace);
+				appendStringInfoString(&buffer,
+									   quote_qualified_identifier(schema,
+											  NameStr(formParser->prsname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -3157,6 +3182,7 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	tup;
 				Form_pg_ts_dict formDict;
+				char	   *schema;
 
 				tup = SearchSysCache1(TSDICTOID,
 									  ObjectIdGetDatum(object->objectId));
@@ -3164,8 +3190,10 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for text search dictionary %u",
 						 object->objectId);
 				formDict = (Form_pg_ts_dict) GETSTRUCT(tup);
-				appendStringInfo(&buffer, "%s",
-							  quote_identifier(NameStr(formDict->dictname)));
+				schema = get_namespace_name(formDict->dictnamespace);
+				appendStringInfoString(&buffer,
+									   quote_qualified_identifier(schema,
+											   NameStr(formDict->dictname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -3174,6 +3202,7 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	tup;
 				Form_pg_ts_template formTmpl;
+				char	   *schema;
 
 				tup = SearchSysCache1(TSTEMPLATEOID,
 									  ObjectIdGetDatum(object->objectId));
@@ -3181,8 +3210,11 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for text search template %u",
 						 object->objectId);
 				formTmpl = (Form_pg_ts_template) GETSTRUCT(tup);
-				appendStringInfo(&buffer, "%s",
-							  quote_identifier(NameStr(formTmpl->tmplname)));
+				schema = get_namespace_name(formTmpl->tmplnamespace);
+				appendStringInfoString(&buffer,
+									   quote_qualified_identifier(schema,
+											   NameStr(formTmpl->tmplname)));
+				pfree(schema);
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -3191,6 +3223,7 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	tup;
 				Form_pg_ts_config formCfg;
+				char	   *schema;
 
 				tup = SearchSysCache1(TSCONFIGOID,
 									  ObjectIdGetDatum(object->objectId));
@@ -3198,8 +3231,10 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for text search configuration %u",
 						 object->objectId);
 				formCfg = (Form_pg_ts_config) GETSTRUCT(tup);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(NameStr(formCfg->cfgname)));
+				schema = get_namespace_name(formCfg->cfgnamespace);
+				appendStringInfoString(&buffer,
+									   quote_qualified_identifier(schema,
+												 NameStr(formCfg->cfgname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -3209,8 +3244,8 @@ getObjectIdentity(const ObjectAddress *object)
 				char	   *username;
 
 				username = GetUserNameFromId(object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(username));
+				appendStringInfoString(&buffer,
+									   quote_identifier(username));
 				break;
 			}
 
@@ -3222,8 +3257,8 @@ getObjectIdentity(const ObjectAddress *object)
 				if (!datname)
 					elog(ERROR, "cache lookup failed for database %u",
 						 object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(datname));
+				appendStringInfoString(&buffer,
+									   quote_identifier(datname));
 				break;
 			}
 
@@ -3235,8 +3270,8 @@ getObjectIdentity(const ObjectAddress *object)
 				if (!tblspace)
 					elog(ERROR, "cache lookup failed for tablespace %u",
 						 object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(tblspace));
+				appendStringInfoString(&buffer,
+									   quote_identifier(tblspace));
 				break;
 			}
 
@@ -3245,8 +3280,7 @@ getObjectIdentity(const ObjectAddress *object)
 				ForeignDataWrapper *fdw;
 
 				fdw = GetForeignDataWrapper(object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(fdw->fdwname));
+				appendStringInfoString(&buffer, quote_identifier(fdw->fdwname));
 				break;
 			}
 
@@ -3255,8 +3289,8 @@ getObjectIdentity(const ObjectAddress *object)
 				ForeignServer *srv;
 
 				srv = GetForeignServer(object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(srv->servername));
+				appendStringInfoString(&buffer,
+									   quote_identifier(srv->servername));
 				break;
 			}
 
@@ -3281,7 +3315,7 @@ getObjectIdentity(const ObjectAddress *object)
 				else
 					usename = "public";
 
-				appendStringInfo(&buffer, "%s", usename);
+				appendStringInfoString(&buffer, usename);
 				break;
 			}
 
@@ -3302,7 +3336,7 @@ getObjectIdentity(const ObjectAddress *object)
 							ObjectIdGetDatum(object->objectId));
 
 				rcscan = systable_beginscan(defaclrel, DefaultAclOidIndexId,
-											true, SnapshotNow, 1, skey);
+											true, NULL, 1, skey);
 
 				tup = systable_getnext(rcscan);
 
@@ -3359,8 +3393,7 @@ getObjectIdentity(const ObjectAddress *object)
 				if (!extname)
 					elog(ERROR, "cache lookup failed for extension %u",
 						 object->objectId);
-				appendStringInfo(&buffer, "%s",
-								 quote_identifier(extname));
+				appendStringInfoString(&buffer, quote_identifier(extname));
 				break;
 			}
 
@@ -3375,7 +3408,7 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for event trigger %u",
 						 object->objectId);
 				trigForm = (Form_pg_event_trigger) GETSTRUCT(tup);
-				appendStringInfo(&buffer, "%s",
+				appendStringInfoString(&buffer,
 							   quote_identifier(NameStr(trigForm->evtname)));
 				ReleaseSysCache(tup);
 				break;
@@ -3440,9 +3473,9 @@ getRelationIdentity(StringInfo buffer, Oid relid)
 	relForm = (Form_pg_class) GETSTRUCT(relTup);
 
 	schema = get_namespace_name(relForm->relnamespace);
-	appendStringInfo(buffer, "%s",
-					 quote_qualified_identifier(schema,
-												NameStr(relForm->relname)));
+	appendStringInfoString(buffer,
+						   quote_qualified_identifier(schema,
+												 NameStr(relForm->relname)));
 
 	ReleaseSysCache(relTup);
 }

@@ -6,46 +6,15 @@
 #include "../xlog.c"
 
 void
-test_GetXLogCleanUpToForMaster(void **state)
-{
-	XLogRecPtr pointer = {0};
-	XLogSegNo  actual_logSegNo = 0;
-
-	GpIdentity.segindex = MASTER_CONTENT_ID;
-
-	will_return(WalSndCtlGetXLogCleanUpTo, &pointer);
-
-	/*
-	 * Make the KeepLogSeg return immediately
-	 */
-	wal_keep_segments = 0;
-
-	GetXLogCleanUpTo(pointer, &actual_logSegNo);
-}
-
-void
-test_GetXLogCleanUpToForSegments(void **state)
-{
-	XLogRecPtr pointer = {0};
-	XLogSegNo  actual_logSegNo = 0;
-
-	GpIdentity.segindex = 0; // not master
-
-	will_return(WalSndCtlGetXLogCleanUpTo, &pointer);
-
-	/*
-	 * Make the KeepLogSeg return immediately
-	 */
-	wal_keep_segments = 0;
-
-	GetXLogCleanUpTo(pointer, &actual_logSegNo);
-}
-
-void
 test_KeepLogSeg(void **state)
 {
 	XLogRecPtr recptr;
 	XLogSegNo  _logSegNo;
+	XLogCtlData xlogctl;
+
+	xlogctl.replicationSlotMinLSN = InvalidXLogRecPtr;
+	SpinLockInit(&xlogctl.info_lck);
+	XLogCtl = &xlogctl;
 
 	/*
 	 * 64 segments per Xlog logical file.
@@ -151,7 +120,7 @@ test_KeepLogSeg(void **state)
 	wal_keep_segments = -1;
 
 	KeepLogSeg(recptr, &_logSegNo);
-	assert_int_equal(_logSegNo, 1);
+	assert_int_equal(_logSegNo, 9*XLogSegmentsPerXLogId + 45);
 	/************************************************/
 }
 
@@ -162,8 +131,6 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test_KeepLogSeg)
-		, unit_test(test_GetXLogCleanUpToForMaster)
-		, unit_test(test_GetXLogCleanUpToForSegments)
 	};
 	return run_tests(tests);
 }

@@ -3,7 +3,7 @@
  * dfmgr.c
  *	  Dynamic function manager code.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -132,7 +132,7 @@ load_external_function(char *filename, char *funcname,
 
 /*
  * This function loads a shlib file without looking up any particular
- * function in it.	If the same shlib has previously been loaded,
+ * function in it.  If the same shlib has previously been loaded,
  * unload and reload it.
  *
  * When 'restricted' is true, only libraries in the presumed-secure
@@ -172,7 +172,7 @@ lookup_external_function(void *filehandle, char *funcname)
 
 /*
  * Load the specified dynamic-link library file, unless it already is
- * loaded.	Return the pg_dl* handle for the file.
+ * loaded.  Return the pg_dl* handle for the file.
  *
  * Note: libname is expected to be an exact name for the library file.
  */
@@ -426,7 +426,7 @@ incompatible_module_error(const char *libname,
 	}
 
 	if (details.len == 0)
-		appendStringInfo(&details,
+		appendStringInfoString(&details,
 			  _("Magic block has unexpected length or padding difference."));
 
 	ereport(ERROR,
@@ -527,7 +527,7 @@ file_exists(const char *name)
  * If name contains a slash, check if the file exists, if so return
  * the name.  Else (no slash) try to expand using search path (see
  * find_in_dynamic_libpath below); if that works, return the fully
- * expanded file name.	If the previous failed, append DLSUFFIX and
+ * expanded file name.  If the previous failed, append DLSUFFIX and
  * try again.  If all fails, just return the original name.
  *
  * The result will always be freshly palloc'd.
@@ -557,9 +557,7 @@ expand_dynamic_library_name(const char *name)
 		pfree(full);
 	}
 
-	new = palloc(strlen(name) + strlen(DLSUFFIX) + 1);
-	strcpy(new, name);
-	strcat(new, DLSUFFIX);
+	new = psprintf("%s%s", name, DLSUFFIX);
 
 	if (!have_slash)
 	{
@@ -608,7 +606,6 @@ static char *
 substitute_libpath_macro(const char *name)
 {
 	const char *sep_ptr;
-	char	   *ret;
 
 	AssertArg(name != NULL);
 
@@ -626,12 +623,7 @@ substitute_libpath_macro(const char *name)
 				 errmsg("invalid macro name in dynamic library path: %s",
 						name)));
 
-	ret = palloc(strlen(pkglib_path) + strlen(sep_ptr) + 1);
-
-	strcpy(ret, pkglib_path);
-	strcat(ret, sep_ptr);
-
-	return ret;
+	return psprintf("%s%s", pkglib_path, sep_ptr);
 }
 
 

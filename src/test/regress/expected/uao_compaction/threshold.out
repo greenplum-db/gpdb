@@ -13,7 +13,7 @@ SELECT COUNT(*) FROM uao_threshold;
     97
 (1 row)
 
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -22,7 +22,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 -- 97 visible tuples, no vacuum
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -30,7 +30,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 
 DELETE FROM uao_threshold WHERE a < 12;
 DELETE 8
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -39,7 +39,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 -- 89 visible tuples, do vacuum
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1
@@ -49,7 +49,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 -- no invisible tuples, no vacuum
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1
@@ -58,7 +58,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 
 DELETE FROM uao_threshold WHERE a < 15;
 DELETE 3
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1
@@ -68,7 +68,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 -- 3 invisible tuples, no vacuum
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1
@@ -81,7 +81,7 @@ SET
 -- 3 invisible tuples, do vacuum
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |       86 |     1
@@ -92,7 +92,7 @@ INSERT INTO uao_threshold SELECT i as a, i as b, 'hello world' as c FROM generat
 INSERT 0 101
 DELETE FROM uao_threshold WHERE a > 100 and a < 175;
 DELETE 74
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      187 |     1
@@ -101,7 +101,7 @@ SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
 
 VACUUM uao_threshold;
 VACUUM
-SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg_name('uao_threshold');
+SELECT segno, tupcount, state FROM gp_toolkit.__gp_aoseg('uao_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1

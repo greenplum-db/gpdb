@@ -192,6 +192,9 @@ test_list(int segindex, int segtotal, int xid, int fragtotal, char *expected[], 
 	/* prepare the input list */
 	List	   *list = prepare_fragment_list(fragtotal, segindex, segtotal, xid);
 
+	if (list && xid != InvalidDistributedTransactionId)
+		will_return(getgpsegmentCount, segtotal);
+
 	/* filter the list */
 	List	   *filtered = filter_fragments_for_segment(list);
 
@@ -219,7 +222,6 @@ static List *
 prepare_fragment_list(int fragtotal, int segindex, int segtotal, int xid)
 {
 	GpIdentity.segindex = segindex;
-	GpIdentity.numsegments = segtotal;
 
 	if (fragtotal > 0)
 		will_return(getDistributedTransactionId, xid);

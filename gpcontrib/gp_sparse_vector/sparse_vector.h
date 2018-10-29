@@ -97,14 +97,6 @@ static inline SparseData sdata_from_svec(SvecType *svec)
 	return(sdata);
 }
 
-static inline void printout_svec(SvecType *svec, char *msg, int stop);
-static inline void printout_svec(SvecType *svec, char *msg, int stop)
-{
-	printout_sdata((SparseData)SVEC_SDATAPTR(svec), msg, stop);
-	elog(NOTICE,"len,dimension=%d,%d",VARSIZE(svec),svec->dimension);
-}
-
-
 char *svec_out_internal(SvecType *svec);
 SvecType *svec_from_sparsedata(SparseData sdata,bool trim);
 ArrayType *svec_return_array_internal(SvecType *svec);

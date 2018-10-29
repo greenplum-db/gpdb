@@ -42,17 +42,6 @@ typedef struct SegmentDatabaseDescriptor
 	 * established connection to the segment database.
 	 */
 	PGconn				   *conn;		
-	
-	/*
-	 * Error info saved when connection cannot be established.
-	 * ERRCODE_xxx (sqlstate encoded as an int) of first error, or 0.
-	 *
-	 * errcode and error_message are only used in threaded implementation.
-	 */
-    int                     errcode;
-
-    /* message text; '\n' at end */
-	PQExpBufferData         error_message;
 
     /*
      * Connection info saved at most recent PQconnectdb.
@@ -77,11 +66,6 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Connect to a QE as a client via libpq. */
 void
-cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-				  const char *gpqeid,
-				  const char *options);
-
-void
 cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 					   const char *gpqeid,
 					   const char *options);
@@ -103,9 +87,6 @@ bool cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Return if it's a connection OK */
 bool cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc);
-
-/* Reset error message buffer */
-void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Set the slice index for error messages related to this QE. */
 void cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex);

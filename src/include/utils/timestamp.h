@@ -3,7 +3,7 @@
  * timestamp.h
  *	  Definitions for the SQL "timestamp" and "interval" types.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/timestamp.h
@@ -136,6 +136,10 @@ extern Datum timestamp_gt_timestamptz(PG_FUNCTION_ARGS);
 extern Datum timestamp_ge_timestamptz(PG_FUNCTION_ARGS);
 extern Datum timestamp_cmp_timestamptz(PG_FUNCTION_ARGS);
 
+extern Datum make_timestamp(PG_FUNCTION_ARGS);
+extern Datum make_timestamptz(PG_FUNCTION_ARGS);
+extern Datum make_timestamptz_at_timezone(PG_FUNCTION_ARGS);
+
 extern Datum timestamptz_eq_timestamp(PG_FUNCTION_ARGS);
 extern Datum timestamptz_ne_timestamp(PG_FUNCTION_ARGS);
 extern Datum timestamptz_lt_timestamp(PG_FUNCTION_ARGS);
@@ -169,6 +173,7 @@ extern Datum interval_justify_days(PG_FUNCTION_ARGS);
 extern float8 interval_li_fraction(Interval *x, Interval *x0, Interval *x1, 
 								   bool *eq_bounds, bool *eq_abscissas);
 extern Interval *interval_li_value(float8 f, Interval *y0, Interval *y1);
+extern Datum make_interval(PG_FUNCTION_ARGS);
 
 extern Datum timestamp_trunc(PG_FUNCTION_ARGS);
 extern Datum interval_trunc(PG_FUNCTION_ARGS);

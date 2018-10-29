@@ -4,7 +4,7 @@
  *	  POSTGRES define and remove utility definitions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/defrem.h
@@ -23,7 +23,8 @@ struct HTAB;  /* utils/hsearch.h */
 extern void RemoveObjects(DropStmt *stmt);
 
 /* commands/indexcmds.c */
-extern Oid DefineIndex(IndexStmt *stmt,
+extern Oid DefineIndex(Oid relationId,
+			IndexStmt *stmt,
 			Oid indexRelationId,
 			bool is_alter_table,
 			bool check_rights,
@@ -44,7 +45,6 @@ extern char *ChooseIndexName(const char *tabname, Oid namespaceId,
 				bool primary, bool isconstraint);
 extern List *ChooseIndexColumnNames(List *indexElems);
 extern bool CheckIndexCompatible(Oid oldId,
-					 RangeVar *heapRelation,
 					 char *accessMethodName,
 					 List *attributeList,
 					 List *exclusionOpNames);
@@ -74,6 +74,17 @@ extern void IsThereFunctionInNamespace(const char *proname, int pronargs,
 						   oidvector *proargtypes, Oid nspOid);
 extern void ExecuteDoStmt(DoStmt *stmt);
 extern Oid	get_cast_oid(Oid sourcetypeid, Oid targettypeid, bool missing_ok);
+extern void interpret_function_parameter_list(List *parameters,
+								  Oid languageOid,
+								  bool is_aggregate,
+								  const char *queryString,
+								  oidvector **parameterTypes,
+								  ArrayType **allParameterTypes,
+								  ArrayType **parameterModes,
+								  ArrayType **parameterNames,
+								  List **parameterDefaults,
+								  Oid *variadicArgType,
+								  Oid *requiredResultType);
 
 /* commands/operatorcmds.c */
 extern Oid	DefineOperator(List *names, List *parameters);
@@ -81,7 +92,7 @@ extern void RemoveOperatorById(Oid operOid);
 
 /* commands/aggregatecmds.c */
 extern Oid DefineAggregate(List *name, List *args, bool oldstyle,
-							List *parameters, bool ordered, const char *queryString);
+						   List *parameters, const char *queryString);
 
 /* commands/opclasscmds.c */
 extern Oid	DefineOpClass(CreateOpClassStmt *stmt);

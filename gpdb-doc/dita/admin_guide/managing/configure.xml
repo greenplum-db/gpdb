@@ -1220,9 +1220,6 @@
                   <codeph>gp_cached_segworkers_threshold</codeph>
                 </p>
                 <p>
-                  <codeph>gp_connections_per_thread</codeph>
-                </p>
-                <p>
                   <codeph>gp_enable_direct_dispatch</codeph>
                 </p>
               </stentry>

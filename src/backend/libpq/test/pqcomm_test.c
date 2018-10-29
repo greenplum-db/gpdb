@@ -33,7 +33,7 @@ static int test_accept_socket;
  *    - errno is not changed
  */
 void
-test__internal_flush_succesfulSend(void **state)
+test__internal_flush_successfulSend(void **state)
 {
 	int			result;
 
@@ -165,7 +165,7 @@ test__StreamConnection_set_SNDTIMEO_AF_INET(void **state)
 	struct timeval timeout;
 	int timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
-	/* Check that getsockopt ran succesfully */
+	/* Check that getsockopt ran successfully */
 	assert_int_equal(result, 0);
 	/* Check that the timeout is actually set */
 	assert_int_equal(timeout.tv_sec, SOCKET_TIMEOUT_SECONDS);
@@ -194,7 +194,7 @@ test__StreamConnection_set_SNDTIMEO_AF_UNIX(void **state)
 	int timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
 
-	/* Check that getsockopt ran succesfully */
+	/* Check that getsockopt ran successfully */
 	assert_int_equal(result, 0);
 	/* Check that the timeout is actually set */
 	assert_int_equal(timeout.tv_sec, SOCKET_TIMEOUT_SECONDS);
@@ -224,7 +224,7 @@ test__StreamConnection_set_SNDTIMEO_segment(void **state)
 	int timeout_len = sizeof(timeout);
 	result = getsockopt(port->sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, &timeout_len);
 
-	/* Check that getsockopt ran succesfully */
+	/* Check that getsockopt ran successfully */
 	assert_int_equal(result, 0);
 	/* Check that the timeout is NOT actually set */
 	assert_int_equal(timeout.tv_sec, 0);
@@ -239,7 +239,7 @@ main(int argc, char* argv[])
 	cmockery_parse_arguments(argc, argv);
 
 	const UnitTest tests[] = {
-		unit_test(test__internal_flush_succesfulSend),
+		unit_test(test__internal_flush_successfulSend),
 		unit_test(test__internal_flush_failedSendEINTR),
 		unit_test(test__internal_flush_failedSendEPIPE),
 		unit_test(test__StreamConnection_set_SNDTIMEO_AF_INET),

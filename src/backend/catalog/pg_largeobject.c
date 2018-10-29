@@ -3,7 +3,7 @@
  * pg_largeobject.c
  *	  routines to support manipulation of the pg_largeobject relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -76,7 +76,7 @@ LargeObjectCreate(Oid loid)
 }
 
 /*
- * Drop a large object having the given LO identifier.	Both the data pages
+ * Drop a large object having the given LO identifier.  Both the data pages
  * and metadata must be dropped.
  */
 void
@@ -104,7 +104,7 @@ LargeObjectDrop(Oid loid)
 
 	scan = systable_beginscan(pg_lo_meta,
 							  LargeObjectMetadataOidIndexId, true,
-							  SnapshotNow, 1, skey);
+							  NULL, 1, skey);
 
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
@@ -126,7 +126,7 @@ LargeObjectDrop(Oid loid)
 
 	scan = systable_beginscan(pg_largeobject,
 							  LargeObjectLOidPNIndexId, true,
-							  SnapshotNow, 1, skey);
+							  NULL, 1, skey);
 	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
 		simple_heap_delete(pg_largeobject, &tuple->t_self);
@@ -145,11 +145,11 @@ LargeObjectDrop(Oid loid)
  * We don't use the system cache for large object metadata, for fear of
  * using too much local memory.
  *
- * This function always scans the system catalog using SnapshotNow, so it
- * should not be used when a large object is opened in read-only mode (because
- * large objects opened in read only mode are supposed to be viewed relative
- * to the caller's snapshot, whereas in read-write mode they are relative to
- * SnapshotNow).
+ * This function always scans the system catalog using an up-to-date snapshot,
+ * so it should not be used when a large object is opened in read-only mode
+ * (because large objects opened in read only mode are supposed to be viewed
+ * relative to the caller's snapshot, whereas in read-write mode they are
+ * relative to a current snapshot).
  */
 bool
 LargeObjectExists(Oid loid)
@@ -170,7 +170,7 @@ LargeObjectExists(Oid loid)
 
 	sd = systable_beginscan(pg_lo_meta,
 							LargeObjectMetadataOidIndexId, true,
-							SnapshotNow, 1, skey);
+							NULL, 1, skey);
 
 	tuple = systable_getnext(sd);
 	if (HeapTupleIsValid(tuple))

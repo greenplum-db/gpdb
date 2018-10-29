@@ -137,3 +137,8 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
 
 -- github issues 5795. explain fails previously.
 explain SELECT * from information_schema.key_column_usage;
+
+-- github issue 5794.
+set gp_enable_explain_allstat=on;
+explain analyze SELECT * FROM explaintest;
+set gp_enable_explain_allstat=DEFAULT;

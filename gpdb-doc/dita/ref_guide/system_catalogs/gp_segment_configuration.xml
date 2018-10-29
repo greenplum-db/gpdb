@@ -5,7 +5,7 @@
   <title id="fr163961">gp_segment_configuration</title>
   <body>
     <p>The <codeph>gp_segment_configuration</codeph> table contains information about mirroring and
-      segment configuration.</p>
+      segment instance configuration.</p>
     <table id="fr163962">
       <title>pg_catalog.gp_segment_configuration</title>
       <tgroup cols="4">
@@ -28,7 +28,7 @@
             </entry>
             <entry colname="col2">smallint</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The unique identifier of a segment (or master) instance.</entry>
+            <entry colname="col4">Unique identifier of a segment (or master) instance.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -38,7 +38,7 @@
             <entry colname="col3"/>
             <entry colname="col4">The content identifier for a segment instance. A primary segment
               instance and its corresponding mirror will always have the same content
-                identifier.<p>For a segment the value is from 0-<i>N-1</i>, where <i>N</i> is the
+                identifier.<p>For a segment the value is from 0 to <i>N</i>-1, where <i>N</i> is the
                 number of primary segments in the system.</p><p>For the master, the value is always
                 -1.</p></entry>
           </row>
@@ -49,7 +49,7 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">The role that a segment is currently running as. Values are
-                <codeph>p</codeph> (primary) or <codeph>m </codeph>(mirror). </entry>
+                <codeph>p</codeph> (primary) or <codeph>m</codeph>(mirror). </entry>
           </row>
           <row>
             <entry colname="col1">
@@ -58,7 +58,7 @@
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">The role that a segment was originally assigned at initialization
-              time. Values are <codeph>p</codeph> (primary) or <codeph>m </codeph>(mirror).</entry>
+              time. Values are <codeph>p</codeph> (primary) or <codeph>m</codeph> (mirror).</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -66,9 +66,9 @@
             </entry>
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The synchronization status of a segment with its mirror copy.
-              Values are <codeph>s</codeph> (synchronized), <codeph>c</codeph> (change logging), or
-                <codeph>r</codeph> (resyncing).</entry>
+            <entry colname="col4">The synchronization status of a segment instance with its mirror
+              copy. Values are <codeph>s</codeph> (synchronized) or <codeph>n</codeph> (not
+              synchronized).</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -76,8 +76,8 @@
             </entry>
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The fault status of a segment. Values are <codeph>u</codeph> (up)
-              or <codeph>d</codeph> (down).</entry>
+            <entry colname="col4">The fault status of a segment instance. Values are
+                <codeph>u</codeph> (up) or <codeph>d</codeph> (down).</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -102,18 +102,17 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The hostname used to access a particular segment on a segment
-              host. This value may be the same as <codeph>hostname</codeph> in systems upgraded from
-              3.x or on systems that do not have per-interface hostnames configured.</entry>
+            <entry colname="col4">The hostname used to access a particular segment instance on a
+              segment host. This value may be the same as <codeph>hostname</codeph> on systems that
+              do not have per-interface hostnames configured.</entry>
           </row>
           <row>
             <entry colname="col1">
-              <codeph>replication_port</codeph>
+              <codeph>datadir</codeph>
             </entry>
-            <entry colname="col2">integer</entry>
+            <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">The TCP port the file block replication process is using to keep
-              primary and mirror segments synchronized.</entry>
+            <entry colname="col4">Segment instance data directory.</entry>
           </row>
         </tbody>
       </tgroup>

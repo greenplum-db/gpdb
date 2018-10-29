@@ -202,6 +202,7 @@ CREATE AGGREGATE wrongreturntype (float8)
 );
 
 
+
 -- Negative test: "ordered aggregate prefunc is not supported"
 create ordered aggregate should_error(integer,integer,text) (
    stype = aggtype[],

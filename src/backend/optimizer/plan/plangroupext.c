@@ -575,7 +575,8 @@ make_aggs_for_rollup(PlannerInfo *root,
 	 * Append-Aggs.
 	 */
 	if (context->agg_costs->numOrderedAggs == 0 &&
-		!context->agg_costs->missing_combinefunc)
+		!context->agg_costs->hasNonCombine &&
+		!context->agg_costs->hasNonSerial)
 		result_plan = make_list_aggs_for_rollup(root, context, lefttree);
 	else
 		result_plan = make_append_aggs_for_rollup(root, context, lefttree);

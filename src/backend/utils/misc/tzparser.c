@@ -4,14 +4,14 @@
  *	  Functions for parsing timezone offset files
  *
  * Note: this code is invoked from the check_hook for the GUC variable
- * timezone_abbreviations.	Therefore, it should report problems using
+ * timezone_abbreviations.  Therefore, it should report problems using
  * GUC_check_errmsg() and related functions, and try to avoid throwing
  * elog(ERROR).  This is not completely bulletproof at present --- in
  * particular out-of-memory will throw an error.  Could probably fix with
  * PG_TRY if necessary.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -197,7 +197,7 @@ addToArray(tzEntry **base, int *arraysize, int n,
 
 	/*
 	 * Search the array for a duplicate; as a useful side effect, the array is
-	 * maintained in sorted order.	We use strcmp() to ensure we match the
+	 * maintained in sorted order.  We use strcmp() to ensure we match the
 	 * sort order datetime.c expects.
 	 */
 	arrayptr = *base;

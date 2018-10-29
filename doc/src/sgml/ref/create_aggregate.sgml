@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-CREATEAGGREGATE">
+ <indexterm zone="sql-createaggregate">
+  <primary>CREATE AGGREGATE</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>CREATE AGGREGATE</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -15,13 +19,9 @@ PostgreSQL documentation
   <refpurpose>define a new aggregate function</refpurpose>
  </refnamediv>
 
- <indexterm zone="sql-createaggregate">
-  <primary>CREATE AGGREGATE</primary>
- </indexterm>
-
  <refsynopsisdiv>
 <synopsis>
-CREATE AGGREGATE <replaceable class="parameter">name</replaceable> ( [ <replaceable class="parameter">argmode</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ) (
+CREATE AGGREGATE <replaceable class="parameter">name</replaceable> ( [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ) (
     SFUNC = <replaceable class="PARAMETER">sfunc</replaceable>,
     STYPE = <replaceable class="PARAMETER">state_data_type</replaceable>
     [ , SSPACE = <replaceable class="PARAMETER">state_data_size</replaceable> ]
@@ -36,12 +36,13 @@ CREATE AGGREGATE <replaceable class="parameter">name</replaceable> ( [ <replacea
     [ , MSTYPE = <replaceable class="PARAMETER">mstate_data_type</replaceable> ]
     [ , MSSPACE = <replaceable class="PARAMETER">mstate_data_size</replaceable> ]
     [ , MFINALFUNC = <replaceable class="PARAMETER">mffunc</replaceable> ]
+    [ , MFINALFUNC_EXTRA ]
     [ , MINITCOND = <replaceable class="PARAMETER">minitial_condition</replaceable> ]
     [ , SORTOP = <replaceable class="PARAMETER">sort_operator</replaceable> ]
 )
 
-CREATE AGGREGATE <replaceable class="parameter">name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ]
-                        ORDER BY [ <replaceable class="parameter">argmode</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ) (
+CREATE AGGREGATE <replaceable class="parameter">name</replaceable> ( [ [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ]
+                        ORDER BY [ <replaceable class="parameter">argmode</replaceable> ] [ <replaceable class="parameter">argname</replaceable> ] <replaceable class="parameter">arg_data_type</replaceable> [ , ... ] ) (
     SFUNC = <replaceable class="PARAMETER">sfunc</replaceable>,
     STYPE = <replaceable class="PARAMETER">state_data_type</replaceable>
     [ , SSPACE = <replaceable class="PARAMETER">state_data_size</replaceable> ]
@@ -72,6 +73,7 @@ CREATE AGGREGATE <replaceable class="PARAMETER">name</replaceable> (
     [ , MSTYPE = <replaceable class="PARAMETER">state_data_type</replaceable> ]
     [ , MSSPACE = <replaceable class="PARAMETER">state_data_size</replaceable> ]
     [ , MFINALFUNC = <replaceable class="PARAMETER">ffunc</replaceable> ]
+    [ , MFINALFUNC_EXTRA ]
     [ , MINITCOND = <replaceable class="PARAMETER">initial_condition</replaceable> ]
     [ , SORTOP = <replaceable class="PARAMETER">sort_operator</replaceable> ]
 )
@@ -205,7 +207,7 @@ CREATE AGGREGATE <replaceable class="PARAMETER">name</replaceable> (
    as described in <xref linkend="xaggr-moving-aggregates">.  This requires
    specifying the <literal>MSFUNC</>, <literal>MINVFUNC</>,
    and <literal>MSTYPE</> parameters, and optionally
-   the <literal>MSPACE</>, <literal>MFINALFUNC</>,
+   the <literal>MSPACE</>, <literal>MFINALFUNC</>, <literal>MFINALFUNC_EXTRA</>,
    and <literal>MINITCOND</> parameters.  Except for <literal>MINVFUNC</>,
    these parameters work like the corresponding simple-aggregate parameters
    without <literal>M</>; they define a separate implementation of the
@@ -287,6 +289,16 @@ SELECT col FROM tab ORDER BY col USING sortop LIMIT 1;
     </listitem>
    </varlistentry>
 
+   <varlistentry>
+    <term><replaceable class="parameter">argname</replaceable></term>
+
+    <listitem>
+     <para>
+      The name of an argument.  This is currently only useful for
+      documentation purposes.  If omitted, the argument has no name.
+     </para>
+    </listitem>
+   </varlistentry>
 
    <varlistentry>
     <term><replaceable class="PARAMETER">arg_data_type</replaceable></term>
@@ -497,9 +509,11 @@ SELECT col FROM tab ORDER BY col USING sortop LIMIT 1;
       The name of the final function called to compute the aggregate's
       result after all input rows have been traversed, when using
       moving-aggregate mode.  This works the same as <replaceable>ffunc</>,
-      except that its input type is <replaceable>mstate_data_type</>.
+      except that its first argument's type
+      is <replaceable>mstate_data_type</> and extra dummy arguments are
+      specified by writing <literal>MFINALFUNC_EXTRA</>.
       The aggregate result type determined by <replaceable>mffunc</>
-      and <replaceable>mstate_data_type</> must match that determined by the
+      or <replaceable>mstate_data_type</> must match that determined by the
       aggregate's regular implementation.
      </para>
     </listitem>

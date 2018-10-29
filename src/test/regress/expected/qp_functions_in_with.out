@@ -1,4 +1,11 @@
-set search_path='qp_funcs_in_contexts';
+-- Create our own copies of these test tables in our own
+-- schema (see qp_functions_in_contexts_setup.sql)
+CREATE SCHEMA qp_funcs_in_with;
+set search_path='qp_funcs_in_with', 'qp_funcs_in_contexts';
+CREATE TABLE foo (a int, b int);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+CREATE TABLE bar (c int, d int);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
 -- @description function_in_with_0.sql
 WITH v(a, b) AS (SELECT func1_nosql_vol(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
  a | b 
@@ -490,12 +497,12 @@ WITH v(a, b) AS (SELECT func1_sql_setint_imm(a), b FROM foo WHERE b < 5) SELECT 
 
 -- @description function_in_with_11.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_12.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(a), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_15.sql
@@ -3448,62 +3455,62 @@ WITH v(a, b) AS (SELECT func1_sql_setint_imm(func2_sql_int_imm(a)), b FROM foo W
 
 -- @description function_in_with_withfunc2_110.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_111.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_112.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_113.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_114.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_115.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_120.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_121.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_122.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_nosql_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_123.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_124.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_125.sql
 WITH v(a, b) AS (SELECT func1_read_setint_sql_stb(func2_sql_int_imm(a)), b FROM foo WHERE b < 5) SELECT v1.a, v2.b FROM v AS v1, v AS v2 WHERE v1.a < v2.a order by v1.a, v2.b;  
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_with.bar"  (seg0 slice2 172.17.0.6:25432 pid=118068)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_with_withfunc2_150.sql

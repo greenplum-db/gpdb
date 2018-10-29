@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="APP-CREATEUSER">
+ <indexterm zone="app-createuser">
+  <primary>createuser</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle><application>createuser</application></refentrytitle>
   <manvolnum>1</manvolnum>
@@ -14,10 +18,6 @@ PostgreSQL documentation
   <refname>createuser</refname>
   <refpurpose>define a new <productname>PostgreSQL</productname> user account</refpurpose>
  </refnamediv>
-
- <indexterm zone="app-createuser">
-  <primary>createuser</primary>
- </indexterm>
 
  <refsynopsisdiv>
   <cmdsynopsis>
@@ -127,6 +127,19 @@ PostgreSQL documentation
         Encrypts the user's password stored in the database. If not
         specified, the default password behavior is used.
        </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-g <replaceable class="parameter">role</replaceable></></term>
+      <term><option>--role=<replaceable class="parameter">role</replaceable></></term>
+      <listitem>
+       <para>
+         Indicates role to which this role will be added immediately as a new
+         member. Multiple roles to which this role will be added as a member
+         can be specified by writing multiple
+         <option>-g</> switches.
+         </para>
       </listitem>
      </varlistentry>
 

@@ -349,10 +349,6 @@ static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 static void explain_partition_selector(PartitionSelector *ps,
 						   PlanState *parentstate,
 						   List *ancestors, ExplainState *es);
-static void show_grouping_keys(PlanState *planstate, int numCols,
-							   AttrNumber *subplanColIdx,
-							   const char  *qlabel,
-							   List *ancestors, ExplainState *es);
 static void
 gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                              struct EState *estate,
@@ -1351,7 +1347,8 @@ cdbexplain_formatExtraText(StringInfo str,
 					appendStringInfoChar(str, ' ');
 			}
 			appendBinaryStringInfo(str, cp, dp - cp);
-			appendStringInfoChar(str, '\n');
+			if (nlp)
+				appendStringInfoChar(str, '\n');
 		}
 
 		if (!nlp)
@@ -1396,7 +1393,7 @@ cdbexplain_formatMemory(char *outbuf, int bufsize, double bytes)
  *		seconds: [input] a value representing no. of seconds to be written to outbuf
  */
 static void
-cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds)
+cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds, bool unit)
 {
 	Assert(outbuf != NULL && "CDBEXPLAIN: char buffer is null");
 	Assert(bufsize > 0 && "CDBEXPLAIN: size of char buffer is zero");
@@ -1406,9 +1403,9 @@ cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds)
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
 #endif							/* USE_ASSERT_CHECKING */
-	snprintf(outbuf, bufsize, "%.*f ms",
+	snprintf(outbuf, bufsize, "%.*f%s",
 			 (ms < 10.0 && ms != 0.0 && ms > -10.0) ? 3 : 0,
-			 ms);
+			 ms, (unit ? " ms" : ""));
 
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
@@ -1529,21 +1526,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		return;
 
 	Assert(instr != NULL);
-	const char *noRowRequested = "";
-
-	if (!instr->running)
-	{
-		noRowRequested = "(No row requested) ";
-	}
-
-	/* Time from start of query on qDisp to this worker's first result row */
-	if (!(INSTR_TIME_IS_ZERO(instr->firststart)))
-	{
-		INSTR_TIME_SET_ZERO(timediff);
-		INSTR_TIME_ACCUM_DIFF(timediff, instr->firststart, ctx->querystarttime);
-		cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-		appendStringInfo(es->str, ", start offset by %s", startbuf);
-	}
 
 	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
 		&& planstate->type == T_MotionState)
@@ -1787,48 +1769,48 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 	}
 
-	bool haveExtraText = false;
-	StringInfo extraData = makeStringInfo();
+	bool 			haveExtraText = false;
+	StringInfoData	extraData;
+
+	initStringInfo(&extraData);
+
 	for (i = 0; i < ns->ninst; i++)
 	{
 		CdbExplain_StatInst *nsi = &ns->insts[i];
 
 		if (nsi->bnotes < nsi->enotes)
 		{
-			if (!haveExtraText) {
+			if (!haveExtraText)
+			{
 				ExplainOpenGroup("Extra Text", "Extra Text", false, es);
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
 
-			resetStringInfo(extraData);
+			resetStringInfo(&extraData);
 
-			cdbexplain_formatExtraText(extraData,
+			cdbexplain_formatExtraText(&extraData,
 									   0,
 									   (ns->ninst == 1) ? -1
 									   : ns->segindex0 + i,
 									   ctx->extratextbuf.data + nsi->bnotes,
 									   nsi->enotes - nsi->bnotes);
-			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData->data);
+			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData.data);
 		}
 	}
 
-	if (haveExtraText) {
-		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
+	if (haveExtraText)
+	{
 		ExplainCloseGroup("Segment", NULL, true, es);
+		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
 	}
-	pfree(extraData);
+	pfree(extraData.data);
 
 	/*
 	 * Dump stats for all workers.
 	 */
 	if (gp_enable_explain_allstat && ns->segindex0 >= 0 && ns->ninst > 0)
 	{
-
-		/*
-		 * FIXME: Only displyed on TEXT format
-		 * [#159443819]
-		 */
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			/*
@@ -1838,22 +1820,27 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfoString(es->str,
 								   "allstat: seg_firststart_total_ntuples");
+		}
+		else
+			ExplainOpenGroup("Allstat", "Allstat", true, es);
 
-			for (i = 0; i < ns->ninst; i++)
+		for (i = 0; i < ns->ninst; i++)
+		{
+			CdbExplain_StatInst *nsi = &ns->insts[i];
+
+			if (INSTR_TIME_IS_ZERO(nsi->firststart))
+				continue;
+
+			/* Time from start of query on qDisp to worker's first result row */
+			INSTR_TIME_SET_ZERO(timediff);
+			INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
+
+			if (es->format == EXPLAIN_FORMAT_TEXT)
 			{
-				CdbExplain_StatInst *nsi = &ns->insts[i];
-
-				if (INSTR_TIME_IS_ZERO(nsi->firststart))
-				{
-					continue;
-				}
-
-				/* Time from start of query on qDisp to worker's first result row */
-				INSTR_TIME_SET_ZERO(timediff);
-				INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
-				cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf), nsi->total);
-
+				cdbexplain_formatSeconds(startbuf, sizeof(startbuf),
+										 INSTR_TIME_GET_DOUBLE(timediff), true);
+				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf),
+										 nsi->total, true);
 				appendStringInfo(es->str,
 								 "/seg%d_%s_%s_%.0f",
 								 ns->segindex0 + i,
@@ -1861,8 +1848,26 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 								 totalbuf,
 								 nsi->ntuples);
 			}
-			appendStringInfoString(es->str, "//end\n");
+			else
+			{
+				cdbexplain_formatSeconds(startbuf, sizeof(startbuf),
+										 INSTR_TIME_GET_DOUBLE(timediff), false);
+				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf),
+										 nsi->total, false);
+
+				ExplainOpenGroup("Segment", NULL, false, es);
+				ExplainPropertyInteger("Segment index", ns->segindex0 + i, es);
+				ExplainPropertyText("Time To First Result", startbuf, es);
+				ExplainPropertyText("Time To Total Result", totalbuf, es);
+				ExplainPropertyFloat("Tuples", nsi->ntuples, 1, es);
+				ExplainCloseGroup("Segment", NULL, false, es);
+			}
 		}
+
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+			appendStringInfoString(es->str, "//end\n");
+		else
+			ExplainCloseGroup("Allstat", "Allstat", true, es);
 	}
 }								/* cdbexplain_showExecStats */
 
@@ -2407,74 +2412,4 @@ explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
 
 		ExplainPropertyStringInfo("Partitions selected", es, "%d (out of %d)", nPartsSelected, nPartsTotal);
 	}
-}
-
-/*
- * Show GROUP BY keys for an Agg or Group node.
- */
-static void
-show_grouping_keys(PlanState *planstate, int nkeys, AttrNumber *subplanColIdx,
-                   const char *qlabel, List *ancestors, ExplainState *es)
-{
-	Plan	   *plan = planstate->plan;
-	PlanState  *subplanstate = outerPlanState(planstate);
-	Plan	   *subplan = subplanstate->plan;
-    List	   *context;
-	List	   *result = NIL;
-    char	   *exprstr;
-    bool		useprefix;
-    int			keyno;
-	int         num_null_cols = 0;
-	int         rollup_gs_times = 0;
-
-    if (nkeys <= 0)
-		return;
-
-	/* Set up deparse context */
-	context = deparse_context_for_planstate((Node *) subplanstate,
-											ancestors,
-											es->rtable,
-											es->rtable_names);
-	useprefix = (list_length(es->rtable) > 1 || es->verbose);
-
-	if (IsA(plan, Agg))
-	{
-		num_null_cols = ((Agg*)plan)->numNullCols;
-		rollup_gs_times = ((Agg*)plan)->rollupGSTimes;
-	}
-
-    for (keyno = 0; keyno < nkeys - num_null_cols; keyno++)
-    {
-	    /* find key expression in tlist */
-	    AttrNumber      keyresno = subplanColIdx[keyno];
-	    TargetEntry    *target = get_tle_by_resno(subplan->targetlist, keyresno);
-
-	    if (!target)
-		    elog(ERROR, "no tlist entry for key %d", keyresno);
-
-		if (IsA(target->expr, Grouping))
-		{
-			/* Append "grouping" explicitly. */
-			exprstr = "grouping";
-		}
-		else if (IsA(target->expr, GroupId))
-		{
-			/* Append "groupid" explicitly. */
-			exprstr = "groupid";
-		}
-		else
-			/* Deparse the expression, showing any top-level cast */
-			exprstr = deparse_expression((Node *) target->expr, context,
-										 useprefix, true);
-
-		result = lappend(result, exprstr);
-    }
-
-	ExplainPropertyList(qlabel, result, es);
-
-	/*
-	 * GPDB_90_MERGE_FIXME: handle rollup times printing
-	 * if (rollup_gs_times > 1)
-	 *	appendStringInfo(es->str, " (%d times)", rollup_gs_times);
-	 */
 }

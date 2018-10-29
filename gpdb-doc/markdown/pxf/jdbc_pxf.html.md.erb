@@ -31,9 +31,12 @@ This section describes how to use the PXF JDBC connector to access data in an ex
 
 Before you access an external SQL database using the PXF JDBC connector, ensure that:
 
-- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Managing PXF](instcfg_pxf.html) for PXF initialization, configuration, and startup information.
+- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
+
+The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC JAR file(s), ensure that:
+
 - You have installed the JDBC driver JAR files for the external SQL database in the same location on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version.
 - You have added the file system locations of the external SQL database JDBC JAR files to `$GPHOME/pxf/conf/pxf-public.classpath` and restarted PXF on each segment host. See [PXF JAR Dependencies](using_pxf.html#profile-dependencies) for additional information.
 

@@ -1,0 +1,20 @@
+---
+title: About the PXF Installation Directories
+---
+
+PXF is installed on your master node when you install Greenplum Database. You install PXF on your Greenplum Database segment hosts when you invoke the `gpseginstall` command.
+
+The following PXF files and directories are installed in your Greenplum Database cluster. These files/directories are relative to the PXF installation directory `$GPHOME/pxf`:
+
+| Directory                      | Description                                                                                                                                                                                                                                |
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `apache-tomcat`      | The PXF tomcat directory.  |
+| `bin`                 | The PXF script and executable directory.                                                                                                                                                                                                                       |
+| `conf`                | The PXF configuration directory. This directory contains the `pxf-env.sh`, `pxf-public.classpath`, `pxf-private.classpath` and `pxf-profiles.xml` configuration files. |
+| `conf-templates`                | Configuration templates for PXF. |
+| `lib`                 | The PXF library directory.                                                                                                                                                                                                                       |
+| `logs`, | The PXF log file directory. Includes `pxf-service.log` and Tomcat-related logs including `catalina.out`. The log directory and log files are readable only by the `gpadmin` user.
+| `pxf-service`         | After initializing PXF, the PXF service instance directory.                                                                                                                                                                                                              |
+| `run`         | After starting PXF, the PXF run directory. Includes a PXF catalina process id file.                                                                                                                                                                                                              |
+| `tomcat-templates` | Tomcat templates for PXF.                                                                          |
+

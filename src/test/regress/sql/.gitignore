@@ -8,6 +8,7 @@
 /misc.sql
 /security_label.sql
 /tablespace.sql
+/oid_wraparound.sql
 
 sreh.sql
 upg2.sql
@@ -39,3 +40,4 @@ partition_ddl.sql
 autovacuum-template0.sql
 rpt_tpch.sql
 session_reset.sql
+dropdb_check_shared_buffer_cache.sql

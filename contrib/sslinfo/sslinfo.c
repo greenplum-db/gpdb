@@ -22,18 +22,9 @@
 PG_MODULE_MAGIC;
 
 
-Datum		ssl_is_used(PG_FUNCTION_ARGS);
-Datum		ssl_version(PG_FUNCTION_ARGS);
-Datum		ssl_cipher(PG_FUNCTION_ARGS);
-Datum		ssl_client_cert_present(PG_FUNCTION_ARGS);
-Datum		ssl_client_serial(PG_FUNCTION_ARGS);
-Datum		ssl_client_dn_field(PG_FUNCTION_ARGS);
-Datum		ssl_issuer_field(PG_FUNCTION_ARGS);
-Datum		ssl_client_dn(PG_FUNCTION_ARGS);
-Datum		ssl_issuer_dn(PG_FUNCTION_ARGS);
-Datum		X509_NAME_field_to_text(X509_NAME *name, text *fieldName);
-Datum		X509_NAME_to_text(X509_NAME *name);
-Datum		ASN1_STRING_to_text(ASN1_STRING *str);
+static Datum X509_NAME_field_to_text(X509_NAME *name, text *fieldName);
+static Datum X509_NAME_to_text(X509_NAME *name);
+static Datum ASN1_STRING_to_text(ASN1_STRING *str);
 
 
 /*
@@ -51,7 +42,7 @@ ssl_is_used(PG_FUNCTION_ARGS)
 
 
 /*
- * Returns SSL cipher currently in use.
+ * Returns SSL version currently in use.
  */
 PG_FUNCTION_INFO_V1(ssl_version);
 Datum
@@ -77,7 +68,7 @@ ssl_cipher(PG_FUNCTION_ARGS)
 
 
 /*
- * Indicates whether current client have provided a certificate
+ * Indicates whether current client provided a certificate
  *
  * Function has no arguments.  Returns bool.  True if current session
  * is SSL session and client certificate is verified, otherwise false.
@@ -132,13 +123,13 @@ ssl_client_serial(PG_FUNCTION_ARGS)
  * current database encoding if possible.  Any invalid characters are
  * replaced by question marks.
  *
- * Parameter: str - OpenSSL ASN1_STRING structure.	Memory management
+ * Parameter: str - OpenSSL ASN1_STRING structure.  Memory management
  * of this structure is responsibility of caller.
  *
  * Returns Datum, which can be directly returned from a C language SQL
  * function.
  */
-Datum
+static Datum
 ASN1_STRING_to_text(ASN1_STRING *str)
 {
 	BIO		   *membuf;
@@ -157,10 +148,7 @@ ASN1_STRING_to_text(ASN1_STRING *str)
 	nullterm = '\0';
 	BIO_write(membuf, &nullterm, 1);
 	size = BIO_get_mem_data(membuf, &sp);
-	dp = (char *) pg_do_encoding_conversion((unsigned char *) sp,
-											size - 1,
-											PG_UTF8,
-											GetDatabaseEncoding());
+	dp = pg_any_to_server(sp, size - 1, PG_UTF8);
 	result = cstring_to_text(dp);
 	if (dp != sp)
 		pfree(dp);
@@ -182,7 +170,7 @@ ASN1_STRING_to_text(ASN1_STRING *str)
  * Returns result of ASN1_STRING_to_text applied to appropriate
  * part of name
  */
-Datum
+static Datum
 X509_NAME_field_to_text(X509_NAME *name, text *fieldName)
 {
 	char	   *string_fieldname;
@@ -287,7 +275,7 @@ ssl_issuer_field(PG_FUNCTION_ARGS)
  * Returns: text datum which contains string representation of
  * X509_NAME
  */
-Datum
+static Datum
 X509_NAME_to_text(X509_NAME *name)
 {
 	BIO		   *membuf = BIO_new(BIO_s_mem());
@@ -322,10 +310,7 @@ X509_NAME_to_text(X509_NAME *name)
 	nullterm = '\0';
 	BIO_write(membuf, &nullterm, 1);
 	size = BIO_get_mem_data(membuf, &sp);
-	dp = (char *) pg_do_encoding_conversion((unsigned char *) sp,
-											size - 1,
-											PG_UTF8,
-											GetDatabaseEncoding());
+	dp = pg_any_to_server(sp, size - 1, PG_UTF8);
 	result = cstring_to_text(dp);
 	if (dp != sp)
 		pfree(dp);

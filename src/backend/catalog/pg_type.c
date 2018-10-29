@@ -3,7 +3,7 @@
  * pg_type.c
  *	  routines to support manipulation of the pg_type relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -17,6 +17,7 @@
 #include "access/heapam.h"
 #include "access/htup_details.h"
 #include "access/xact.h"
+#include "catalog/binary_upgrade.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
 #include "catalog/objectaccess.h"
@@ -421,7 +422,7 @@ TypeCreateWithOptions(Oid newTypeOid,
 	if (HeapTupleIsValid(tup))
 	{
 		/*
-		 * check that the type is not already defined.	It may exist as a
+		 * check that the type is not already defined.  It may exist as a
 		 * shell type, however.
 		 */
 		if (((Form_pg_type) GETSTRUCT(tup))->typisdefined)

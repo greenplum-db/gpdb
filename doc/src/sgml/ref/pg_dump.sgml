@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="APP-PGDUMP">
+ <indexterm zone="app-pgdump">
+  <primary>pg_dump</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>pg_dump</refentrytitle>
   <manvolnum>1</manvolnum>
@@ -17,10 +21,6 @@ PostgreSQL documentation
    extract a <productname>PostgreSQL</productname> database into a script file or other archive file
   </refpurpose>
  </refnamediv>
-
- <indexterm zone="app-pgdump">
-  <primary>pg_dump</primary>
- </indexterm>
 
  <refsynopsisdiv>
   <cmdsynopsis>
@@ -145,7 +145,8 @@ PostgreSQL documentation
        <para>
         Output commands to clean (drop)
         database objects prior to outputting the commands for creating them.
-        (Restore might generate some harmless error messages, if any objects
+        (Unless <option>--if-exists</> is also specified,
+        restore might generate some harmless error messages, if any objects
         were not present in the destination database.)
        </para>
 
@@ -311,7 +312,7 @@ PostgreSQL documentation
         make sure that nobody deletes them and makes them go away while the dump is running.
         If another client then requests an exclusive lock on a table, that lock will not be
         granted but will be queued waiting for the shared lock of the master process to be
-        released.. Consequently any other access to the table will not be granted either and
+        released. Consequently any other access to the table will not be granted either and
         will queue after the exclusive lock request. This includes the worker process trying
         to dump the table. Without any precautions this would be a classic deadlock situation.
         To detect this conflict, the <application>pg_dump</> worker process requests another
@@ -646,6 +647,17 @@ PostgreSQL documentation
         However, since this option generates a separate command for each row,
         an error in reloading a row causes only that row to be lost rather
         than the entire table contents.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--if-exists</option></term>
+      <listitem>
+       <para>
+        Use conditional commands (i.e. add an <literal>IF EXISTS</literal>
+        clause) when cleaning database objects.  This option is not valid
+        unless <option>--clean</> is also specified.
        </para>
       </listitem>
      </varlistentry>
@@ -1231,7 +1243,7 @@ CREATE DATABASE foo WITH TEMPLATE template0;
    like
 
 <screen>
-<prompt>$</prompt> <userinput>pg_dump -t '"MixedCaseName"' mydb &gt; mytab.sql</userinput>
+<prompt>$</prompt> <userinput>pg_dump -t "\"MixedCaseName\"" mydb &gt; mytab.sql</userinput>
 </screen></para>
 
  </refsect1>

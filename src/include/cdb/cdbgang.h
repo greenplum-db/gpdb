@@ -16,11 +16,6 @@
 
 #include "cdb/cdbutil.h"
 #include "executor/execdesc.h"
-#ifdef WIN32
-#include "pthread-win32.h"
-#else
-#include <pthread.h>
-#endif
 #include "utils/faultinjector.h"
 #include "utils/portal.h"
 
@@ -65,6 +60,17 @@ extern int host_segments;
 extern MemoryContext GangContext;
 extern Gang *CurrentGangCreating;
 
+/*
+ * cdbgang_createGang:
+ *
+ * Creates a new gang by logging on a session to each segDB involved.
+ *
+ * call this function in GangContext memory context.
+ * elog ERROR or return a non-NULL gang.
+ */
+extern Gang *
+cdbgang_createGang(List *segments, SegmentType segmentType);
+
 extern const char *gangTypeToString(GangType type);
 
 extern void setupCdbProcessList(Slice *slice);
@@ -92,31 +98,6 @@ bool build_gpqeid_param(char *buf, int bufsz, bool is_writer, int identifier, in
 
 char *makeOptions(void);
 extern bool segment_failure_due_to_recovery(const char *error_message);
-
-/*
- * DisconnectAndDestroyIdleQEs()
- *
- * This routine is used when a session has been idle for a while (waiting for the
- * client to send us SQL to execute). The idea is to consume less resources while sitting idle.
- *
- * The expectation is that if the session is logged on, but nobody is sending us work to do,
- * we want to free up whatever resources we can. Usually it means there is a human being at the
- * other end of the connection, and that person has walked away from their terminal, or just hasn't
- * decided what to do next. We could be idle for a very long time (many hours).
- *
- * Of course, freeing QEs means that the next time the user does send in an SQL statement,
- * we need to allocate QEs (at least the writer QEs) to do anything. This entails extra work,
- * so we don't want to do this if we don't think the session has gone idle.
- *
- * Only call these routines from an idle session.
- *
- * This routine is also called from the sigalarm signal handler (hopefully that is safe to do).
- */
-#ifdef WIN32
-extern int gp_pthread_create(DWORD *thread, void *(*start_routine)(void *), void *arg, const char *caller);
-#else
-extern int gp_pthread_create(pthread_t *thread, void *(*start_routine)(void *), void *arg, const char *caller);
-#endif
 
 /*
  * cdbgang_parse_gpqeid_params
@@ -158,7 +139,6 @@ typedef struct CdbProcess
 
 typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);
 
-extern void cdbgang_setAsync(bool async);
 extern void cdbgang_resetPrimaryWriterGang(void);
 extern void cdbgang_decreaseNumReaderGang(void);
 #endif   /* _CDBGANG_H_ */

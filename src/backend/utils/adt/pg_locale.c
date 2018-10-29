@@ -2,7 +2,7 @@
  *
  * PostgreSQL locale utilities
  *
- * Portions Copyright (c) 2002-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2002-2014, PostgreSQL Global Development Group
  *
  * src/backend/utils/adt/pg_locale.c
  *
@@ -20,12 +20,12 @@
  *
  * The other categories, LC_MONETARY, LC_NUMERIC, and LC_TIME are also
  * settable at run-time.  However, we don't actually set those locale
- * categories permanently.	This would have bizarre effects like no
+ * categories permanently.  This would have bizarre effects like no
  * longer accepting standard floating-point literals in some locales.
  * Instead, we only set the locales briefly when needed, cache the
  * required information obtained from localeconv(), and set them back.
  * The cached information is only used by the formatting functions
- * (to_char, etc.) and the money type.	For the user, this should all be
+ * (to_char, etc.) and the money type.  For the user, this should all be
  * transparent.
  *
  * !!! NOW HEAR THIS !!!
@@ -39,7 +39,7 @@
  *				fail = true;
  *			setlocale(category, save);
  * DOES NOT WORK RELIABLY: on some platforms the second setlocale() call
- * will change the memory save is pointing at.	To do this sort of thing
+ * will change the memory save is pointing at.  To do this sort of thing
  * safely, you *must* pstrdup what setlocale returns the first time.
  *
  * FYI, The Open Group locale standard is defined here:
@@ -140,14 +140,16 @@ static char *IsoLocaleName(const char *);		/* MSVC specific */
 /*
  * pg_perm_setlocale
  *
- * This is identical to the libc function setlocale(), with the addition
- * that if the operation is successful, the corresponding LC_XXX environment
- * variable is set to match.  By setting the environment variable, we ensure
- * that any subsequent use of setlocale(..., "") will preserve the settings
- * made through this routine.  Of course, LC_ALL must also be unset to fully
- * ensure that, but that has to be done elsewhere after all the individual
- * LC_XXX variables have been set correctly.  (Thank you Perl for making this
- * kluge necessary.)
+ * This wraps the libc function setlocale(), with two additions.  First, when
+ * changing LC_CTYPE, update gettext's encoding for the current message
+ * domain.  GNU gettext automatically tracks LC_CTYPE on most platforms, but
+ * not on Windows.  Second, if the operation is successful, the corresponding
+ * LC_XXX environment variable is set to match.  By setting the environment
+ * variable, we ensure that any subsequent use of setlocale(..., "") will
+ * preserve the settings made through this routine.  Of course, LC_ALL must
+ * also be unset to fully ensure that, but that has to be done elsewhere after
+ * all the individual LC_XXX variables have been set correctly.  (Thank you
+ * Perl for making this kluge necessary.)
  */
 char *
 pg_perm_setlocale(int category, const char *locale)
@@ -180,6 +182,22 @@ pg_perm_setlocale(int category, const char *locale)
 
 	if (result == NULL)
 		return result;			/* fall out immediately on failure */
+
+	/*
+	 * Use the right encoding in translated messages.  Under ENABLE_NLS, let
+	 * pg_bind_textdomain_codeset() figure it out.  Under !ENABLE_NLS, message
+	 * format strings are ASCII, but database-encoding strings may enter the
+	 * message via %s.  This makes the overall message encoding equal to the
+	 * database encoding.
+	 */
+	if (category == LC_CTYPE)
+	{
+#ifdef ENABLE_NLS
+		SetMessageEncoding(pg_bind_textdomain_codeset(textdomain(NULL)));
+#else
+		SetMessageEncoding(GetDatabaseEncoding());
+#endif
+	}
 
 	switch (category)
 	{
@@ -234,7 +252,7 @@ pg_perm_setlocale(int category, const char *locale)
  * Is the locale name valid for the locale category?
  *
  * If successful, and canonname isn't NULL, a palloc'd copy of the locale's
- * canonical name is stored there.	This is especially useful for figuring out
+ * canonical name is stored there.  This is especially useful for figuring out
  * what locale name "" means (ie, the server environment value).  (Actually,
  * it seems that on most implementations that's the only thing it's good for;
  * we could wish that setlocale gave back a canonically spelled version of
@@ -277,7 +295,7 @@ check_locale(int category, const char *locale, char **canonname)
  *
  * For most locale categories, the assign hook doesn't actually set the locale
  * permanently, just reset flags so that the next use will cache the
- * appropriate values.	(See explanation at the top of this file.)
+ * appropriate values.  (See explanation at the top of this file.)
  *
  * Note: we accept value = "" as selecting the postmaster's environment
  * value, whatever it was (so long as the environment setting is legal).
@@ -409,9 +427,7 @@ db_encoding_strdup(int encoding, const char *str)
 	char	   *mstr;
 
 	/* convert the string to the database encoding */
-	pstr = (char *) pg_do_encoding_conversion(
-										  (unsigned char *) str, strlen(str),
-											encoding, GetDatabaseEncoding());
+	pstr = pg_any_to_server(str, strlen(str), encoding);
 	mstr = strdup(pstr);
 	if (pstr != str)
 		pfree(pstr);
@@ -572,35 +588,32 @@ strftime_win32(char *dst, size_t dstlen, const wchar_t *format, const struct tm 
 {
 	size_t		len;
 	wchar_t		wbuf[MAX_L10N_DATA];
-	int			encoding;
-
-	encoding = GetDatabaseEncoding();
 
 	len = wcsftime(wbuf, MAX_L10N_DATA, format, tm);
 	if (len == 0)
-
+	{
 		/*
 		 * strftime call failed - return 0 with the contents of dst
 		 * unspecified
 		 */
 		return 0;
+	}
 
 	len = WideCharToMultiByte(CP_UTF8, 0, wbuf, len, dst, dstlen, NULL, NULL);
 	if (len == 0)
-		elog(ERROR,
-		"could not convert string to UTF-8: error code %lu", GetLastError());
+		elog(ERROR, "could not convert string to UTF-8: error code %lu",
+			 GetLastError());
 
 	dst[len] = '\0';
-	if (encoding != PG_UTF8)
+	if (GetDatabaseEncoding() != PG_UTF8)
 	{
-		char	   *convstr =
-		(char *) pg_do_encoding_conversion((unsigned char *) dst,
-										   len, PG_UTF8, encoding);
+		char	   *convstr = pg_any_to_server(dst, len, PG_UTF8);
 
-		if (dst != convstr)
+		if (convstr != dst)
 		{
 			strlcpy(dst, convstr, dstlen);
 			len = strlen(dst);
+			pfree(convstr);
 		}
 	}
 
@@ -730,13 +743,13 @@ cache_locale_time(void)
  * Convert a Windows setlocale() argument to a Unix-style one.
  *
  * Regardless of platform, we install message catalogs under a Unix-style
- * LL[_CC][.ENCODING][@VARIANT] naming convention.	Only LC_MESSAGES settings
+ * LL[_CC][.ENCODING][@VARIANT] naming convention.  Only LC_MESSAGES settings
  * following that style will elicit localized interface strings.
  *
  * Before Visual Studio 2012 (msvcr110.dll), Windows setlocale() accepted "C"
  * (but not "c") and strings of the form <Language>[_<Country>][.<CodePage>],
  * case-insensitive.  setlocale() returns the fully-qualified form; for
- * example, setlocale("thaI") returns "Thai_Thailand.874".	Internally,
+ * example, setlocale("thaI") returns "Thai_Thailand.874".  Internally,
  * setlocale() and _create_locale() select a "locale identifier"[1] and store
  * it in an undocumented _locale_t field.  From that LCID, we can retrieve the
  * ISO 639 language and the ISO 3166 country.  Character encoding does not
@@ -747,12 +760,12 @@ cache_locale_time(void)
  * Studio 2012, setlocale() accepts locale names in addition to the strings it
  * accepted historically.  It does not standardize them; setlocale("Th-tH")
  * returns "Th-tH".  setlocale(category, "") still returns a traditional
- * string.	Furthermore, msvcr110.dll changed the undocumented _locale_t
+ * string.  Furthermore, msvcr110.dll changed the undocumented _locale_t
  * content to carry locale names instead of locale identifiers.
  *
  * MinGW headers declare _create_locale(), but msvcrt.dll lacks that symbol.
  * IsoLocaleName() always fails in a MinGW-built postgres.exe, so only
- * Unix-style values of the lc_messages GUC can elicit localized messages.	In
+ * Unix-style values of the lc_messages GUC can elicit localized messages.  In
  * particular, every lc_messages setting that initdb can select automatically
  * will yield only C-locale messages.  XXX This could be fixed by running the
  * fully-qualified locale name through a lookup table.
@@ -796,7 +809,7 @@ IsoLocaleName(const char *winlocname)
 		 * need not standardize letter case here.  So long as we do not ship
 		 * message catalogs for which it would matter, we also need not
 		 * translate the script/variant portion, e.g. uz-Cyrl-UZ to
-		 * uz_UZ@cyrillic.	Simply replace the hyphen with an underscore.
+		 * uz_UZ@cyrillic.  Simply replace the hyphen with an underscore.
 		 *
 		 * Note that the locale name can be less-specific than the value we
 		 * would derive under earlier Visual Studio releases.  For example,
@@ -851,7 +864,7 @@ IsoLocaleName(const char *winlocname)
  * could fail if the locale is C, so str_tolower() shouldn't call it
  * in that case.
  *
- * Note that we currently lack any way to flush the cache.	Since we don't
+ * Note that we currently lack any way to flush the cache.  Since we don't
  * support ALTER COLLATION, this is OK.  The worst case is that someone
  * drops a collation, and a useless cache entry hangs around in existing
  * backends.
@@ -1045,7 +1058,7 @@ report_newlocale_failure(const char *localename)
 
 
 /*
- * Create a locale_t from a collation OID.	Results are cached for the
+ * Create a locale_t from a collation OID.  Results are cached for the
  * lifetime of the backend.  Thus, do not free the result with freelocale().
  *
  * As a special optimization, the default/database collation returns 0.
@@ -1232,7 +1245,7 @@ wchar2char(char *to, const wchar_t *from, size_t tolen, pg_locale_t locale)
  * This has almost the API of mbstowcs_l(), except that *from need not be
  * null-terminated; instead, the number of input bytes is specified as
  * fromlen.  Also, we ereport() rather than returning -1 for invalid
- * input encoding.	tolen is the maximum number of wchar_t's to store at *to.
+ * input encoding.  tolen is the maximum number of wchar_t's to store at *to.
  * The output will be zero-terminated iff there is room.
  */
 size_t

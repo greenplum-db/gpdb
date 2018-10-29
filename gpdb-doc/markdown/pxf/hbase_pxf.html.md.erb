@@ -12,9 +12,9 @@ This section describes how to use the PXF HBase connector.
 
 Before working with HBase table data, ensure that you have:
 
-- Installed and configured an HBase client on each Greenplum Database segment host. Refer to [Installing and Configuring Clients for PXF](client_instcfg.html).
+- You have copied `$GPHOME/pxf/lib/pxf-hbase-*.jar` to each node in your HBase cluster, and that the location of this PXF JAR file is in the `$HBASE_CLASSPATH`. This configuration is required for the PXF HBase connector to support filter pushdown.
 
-- Initialized PXF on your Greenplum Database segment hosts, and started PXF on each host. See [Configuring, Initializing, and Starting PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- Initialized PXF on your Greenplum Database segment hosts, and started PXF on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 
 ## <a id="hbase_primer"></a>HBase Primer
 
@@ -185,3 +185,5 @@ CREATE EXTERNAL TABLE <table_name> (recordkey bytea, ... )
 ```
 
 After you have created the external table, you can use the `recordkey` in a `WHERE` clause to filter the HBase table on a range of row key values.
+
+**Note**: To enable filter pushdown on the `recordkey`, define the field as `text`.

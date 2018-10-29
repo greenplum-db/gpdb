@@ -19,11 +19,11 @@
  *
  * During hot standby, we also keep a list of XIDs representing transactions
  * that are known to be running in the master (or more precisely, were running
- * as of the current point in the WAL stream).	This list is kept in the
+ * as of the current point in the WAL stream).  This list is kept in the
  * KnownAssignedXids array, and is updated by watching the sequence of
  * arriving XIDs.  This is necessary because if we leave those XIDs out of
  * snapshots taken for standby queries, then they will appear to be already
- * complete, leading to MVCC failures.	Note that in hot standby, the PGPROC
+ * complete, leading to MVCC failures.  Note that in hot standby, the PGPROC
  * array represents standby processes, which by definition are not running
  * transactions that have XIDs.
  *
@@ -32,7 +32,7 @@
  * happen, it would tie up KnownAssignedXids indefinitely, so we protect
  * ourselves by pruning the array when a valid list of running XIDs arrives.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -51,6 +51,7 @@
 #include "access/transam.h"
 #include "access/xact.h"
 #include "access/twophase.h"
+#include "catalog/catalog.h"
 #include "miscadmin.h"
 #include "port/atomics.h"
 #include "storage/proc.h"
@@ -58,6 +59,7 @@
 #include "storage/spin.h"
 #include "utils/builtins.h"
 #include "utils/combocid.h"
+#include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
 #include "utils/guc.h"
@@ -93,6 +95,11 @@ typedef struct ProcArrayStruct
 	 * lock to read it.
 	 */
 	TransactionId lastOverflowedXid;
+
+	/* oldest xmin of any replication slot */
+	TransactionId replication_slot_xmin;
+	/* oldest catalog xmin of any replication slot */
+	TransactionId replication_slot_catalog_xmin;
 
 	/*
 	 * We declare pgprocnos[] as 1 entry because C wants a fixed-size array,
@@ -241,6 +248,7 @@ CreateSharedProcArray(void)
 		 */
 		procArray->numProcs = 0;
 		procArray->maxProcs = PROCARRAY_MAXPROCS;
+		procArray->replication_slot_xmin = InvalidTransactionId;
 		procArray->maxKnownAssignedXids = TOTAL_MAX_CACHED_SUBXIDS;
 		procArray->numKnownAssignedXids = 0;
 		procArray->tailKnownAssignedXids = 0;
@@ -284,7 +292,7 @@ ProcArrayAdd(PGPROC *proc)
 	if (arrayP->numProcs >= arrayP->maxProcs)
 	{
 		/*
-		 * Ooops, no room.	(This really shouldn't happen, since there is a
+		 * Ooops, no room.  (This really shouldn't happen, since there is a
 		 * fixed supply of PGPROC structs too, and so we should have failed
 		 * earlier.)
 		 */
@@ -360,6 +368,14 @@ ProcArrayRemove(PGPROC *proc, TransactionId latestXid)
 		Assert(!TransactionIdIsValid(allPgXact[proc->pgprocno].xid));
 	}
 
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		DistributedTransactionId gxid = allTmGxact[proc->pgprocno].gxid;
+		if (InvalidDistributedTransactionId != gxid &&
+			TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
+			ShmemVariableCache->latestCompletedDxid = gxid;
+	}
+
 	for (index = 0; index < arrayP->numProcs; index++)
 	{
 		if (arrayP->pgprocnos[index] == proc->pgprocno)
@@ -385,6 +401,11 @@ void
 ProcArrayEndGxact(void)
 {
 	Assert(LWLockHeldByMe(ProcArrayLock));
+	DistributedTransactionId gxid = MyTmGxact->gxid;
+
+	if (InvalidDistributedTransactionId != gxid &&
+		TransactionIdPrecedes(ShmemVariableCache->latestCompletedDxid, gxid))
+		ShmemVariableCache->latestCompletedDxid = gxid;
 	initGxact(MyTmGxact);
 }
 
@@ -573,6 +594,29 @@ ClearTransactionFromPgProc_UnderLock(PGPROC *proc, bool commit)
 }
 
 /*
+ * ProcArrayInitRecovery -- initialize recovery xid mgmt environment
+ *
+ * Remember up to where the startup process initialized the CLOG and subtrans
+ * so we can ensure it's initialized gaplessly up to the point where necessary
+ * while in recovery.
+ */
+void
+ProcArrayInitRecovery(TransactionId initializedUptoXID)
+{
+	Assert(standbyState == STANDBY_INITIALIZED);
+	Assert(TransactionIdIsNormal(initializedUptoXID));
+
+	/*
+	 * we set latestObservedXid to the xid SUBTRANS has been initialized upto,
+	 * so we can extend it from that point onwards in
+	 * RecordKnownAssignedTransactionIds, and when we get consistent in
+	 * ProcArrayApplyRecoveryInfo().
+	 */
+	latestObservedXid = initializedUptoXID;
+	TransactionIdRetreat(latestObservedXid);
+}
+
+/*
  * ProcArrayApplyRecoveryInfo -- apply recovery info about xids
  *
  * Takes us through 3 states: Initialized, Pending and Ready.
@@ -667,7 +711,10 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 	Assert(standbyState == STANDBY_INITIALIZED);
 
 	/*
-	 * OK, we need to initialise from the RunningTransactionsData record
+	 * OK, we need to initialise from the RunningTransactionsData record.
+	 *
+	 * NB: this can be reached at least twice, so make sure new code can deal
+	 * with that.
 	 */
 
 	/*
@@ -739,20 +786,38 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 	pfree(xids);
 
 	/*
+	 * latestObservedXid is at least set to the point where SUBTRANS was
+	 * started up to (c.f. ProcArrayInitRecovery()) or to the biggest xid
+	 * RecordKnownAssignedTransactionIds() was called for.  Initialize
+	 * subtrans from thereon, up to nextXid - 1.
+	 *
+	 * We need to duplicate parts of RecordKnownAssignedTransactionId() here,
+	 * because we've just added xids to the known assigned xids machinery that
+	 * haven't gone through RecordKnownAssignedTransactionId().
+	 */
+	Assert(TransactionIdIsNormal(latestObservedXid));
+	TransactionIdAdvance(latestObservedXid);
+	while (TransactionIdPrecedes(latestObservedXid, running->nextXid))
+	{
+		ExtendSUBTRANS(latestObservedXid);
+		TransactionIdAdvance(latestObservedXid);
+	}
+	TransactionIdRetreat(latestObservedXid);	/* = running->nextXid - 1 */
+
+	/* ----------
 	 * Now we've got the running xids we need to set the global values that
 	 * are used to track snapshots as they evolve further.
 	 *
-	 * - latestCompletedXid which will be the xmax for snapshots -
-	 * lastOverflowedXid which shows whether snapshots overflow - nextXid
+	 * - latestCompletedXid which will be the xmax for snapshots
+	 * - lastOverflowedXid which shows whether snapshots overflow
+	 * - nextXid
 	 *
 	 * If the snapshot overflowed, then we still initialise with what we know,
 	 * but the recovery snapshot isn't fully valid yet because we know there
 	 * are some subxids missing. We don't know the specific subxids that are
 	 * missing, so conservatively assume the last one is latestObservedXid.
+	 * ----------
 	 */
-	latestObservedXid = running->nextXid;
-	TransactionIdRetreat(latestObservedXid);
-
 	if (running->subxid_overflow)
 	{
 		standbyState = STANDBY_SNAPSHOT_PENDING;
@@ -784,7 +849,7 @@ ProcArrayApplyRecoveryInfo(RunningTransactions running)
 	 * ShmemVariableCache->nextXid must be beyond any observed xid.
 	 *
 	 * We don't expect anyone else to modify nextXid, hence we don't need to
-	 * hold a lock while examining it.	We still acquire the lock to modify
+	 * hold a lock while examining it.  We still acquire the lock to modify
 	 * it, though.
 	 */
 	nextXid = latestObservedXid;
@@ -847,6 +912,10 @@ ProcArrayApplyXidAssignment(TransactionId topxid,
 	 */
 	for (i = 0; i < nsubxids; i++)
 		SubTransSetParent(subxids[i], topxid, false);
+
+	/* KnownAssignedXids isn't maintained yet, so we're done for now */
+	if (standbyState == STANDBY_INITIALIZED)
+		return;
 
 	/*
 	 * Uses same locking as transaction commit
@@ -1199,18 +1268,22 @@ HasSerializableBackends(bool allDbs)
  * GetOldestXmin -- returns oldest transaction that was running
  *					when any current transaction was started.
  *
- * If allDbs is TRUE then all backends are considered; if allDbs is FALSE
- * then only backends running in my own database are considered.
+ * If rel is NULL or a shared relation, all backends are considered, otherwise
+ * only backends running in this database are considered.
  *
- * This is used by VACUUM to decide which deleted tuples must be preserved
- * in a table.	allDbs = TRUE is needed for shared relations, but allDbs =
- * FALSE is sufficient for non-shared relations, since only backends in my
- * own database could ever see the tuples in them.	Also, we can ignore
- * concurrently running lazy VACUUMs because (a) they must be working on other
- * tables, and (b) they don't need to do snapshot-based lookups.
+ * If ignoreVacuum is TRUE then backends with the PROC_IN_VACUUM flag set are
+ * ignored.
  *
- * This is also used to determine where to truncate pg_subtrans.  allDbs
- * must be TRUE for that case, and ignoreVacuum FALSE.
+ * This is used by VACUUM to decide which deleted tuples must be preserved in
+ * the passed in table. For shared relations backends in all databases must be
+ * considered, but for non-shared relations that's not required, since only
+ * backends in my own database could ever see the tuples in them. Also, we can
+ * ignore concurrently running lazy VACUUMs because (a) they must be working
+ * on other tables, and (b) they don't need to do snapshot-based lookups.
+ *
+ * This is also used to determine where to truncate pg_subtrans.  For that
+ * backends in all databases have to be considered, so rel = NULL has to be
+ * passed in.
  *
  * Note: we include all currently running xids in the set of considered xids.
  * This ensures that if a just-started xact has not yet set its snapshot,
@@ -1221,7 +1294,7 @@ HasSerializableBackends(bool allDbs)
  * backwards on repeated calls. The calculated value is conservative, so that
  * anything older is definitely not considered as running by anyone anymore,
  * but the exact value calculated depends on a number of things. For example,
- * if allDbs is FALSE and there are no transactions running in the current
+ * if rel = NULL and there are no transactions running in the current
  * database, GetOldestXmin() returns latestCompletedXid. If a transaction
  * begins after that, its xmin will include in-progress transactions in other
  * databases that started earlier, so another call will return a lower value.
@@ -1247,11 +1320,11 @@ HasSerializableBackends(bool allDbs)
  * distributed log will include everything.
  */
 TransactionId
-GetOldestXmin(bool allDbs, bool ignoreVacuum)
+GetOldestXmin(Relation rel, bool ignoreVacuum)
 {
 	TransactionId result;
 
-	result = GetLocalOldestXmin(allDbs, ignoreVacuum);
+	result = GetLocalOldestXmin(rel, ignoreVacuum);
 
 	/*
 	 * In QD node, all distributed transactions have an entry in the proc array,
@@ -1280,11 +1353,22 @@ GetOldestXmin(bool allDbs, bool ignoreVacuum)
  * distributed transactions into account.
  */
 TransactionId
-GetLocalOldestXmin(bool allDbs, bool ignoreVacuum)
+GetLocalOldestXmin(Relation rel, bool ignoreVacuum)
 {
 	ProcArrayStruct *arrayP = procArray;
 	TransactionId result;
 	int			index;
+	bool		allDbs;
+
+	volatile TransactionId replication_slot_xmin = InvalidTransactionId;
+	volatile TransactionId replication_slot_catalog_xmin = InvalidTransactionId;
+
+	/*
+	 * If we're not computing a relation specific limit, or if a shared
+	 * relation has been passed in, backends in all databases have to be
+	 * considered.
+	 */
+	allDbs = rel == NULL || rel->rd_rel->relisshared;
 
 	/* Cannot look for individual databases during recovery */
 	Assert(allDbs || !RecoveryInProgress());
@@ -1306,6 +1390,13 @@ GetLocalOldestXmin(bool allDbs, bool ignoreVacuum)
 		int			pgprocno = arrayP->pgprocnos[index];
 		volatile PGPROC *proc = &allProcs[pgprocno];
 		volatile PGXACT *pgxact = &allPgXact[pgprocno];
+
+		/*
+		 * Backend is doing logical decoding which manages xmin separately,
+		 * check below.
+		 */
+		if (pgxact->vacuumFlags & PROC_IN_LOGICAL_DECODING)
+			continue;
 
 #if 0
 		if (ignoreVacuum && (pgxact->vacuumFlags & PROC_IN_VACUUM))
@@ -1337,6 +1428,10 @@ GetLocalOldestXmin(bool allDbs, bool ignoreVacuum)
 				result = xid;
 		}
 	}
+
+	/* fetch into volatile var while ProcArrayLock is held */
+	replication_slot_xmin = procArray->replication_slot_xmin;
+	replication_slot_catalog_xmin = procArray->replication_slot_catalog_xmin;
 
 	if (RecoveryInProgress())
 	{
@@ -1377,6 +1472,25 @@ GetLocalOldestXmin(bool allDbs, bool ignoreVacuum)
 		if (!TransactionIdIsNormal(result))
 			result = FirstNormalTransactionId;
 	}
+
+	/*
+	 * Check whether there are replication slots requiring an older xmin.
+	 */
+	if (TransactionIdIsValid(replication_slot_xmin) &&
+		NormalTransactionIdPrecedes(replication_slot_xmin, result))
+		result = replication_slot_xmin;
+
+	/*
+	 * After locks have been released and defer_cleanup_age has been applied,
+	 * check whether we need to back up further to make logical decoding
+	 * possible. We need to do so if we're computing the global limit (rel =
+	 * NULL) or if the passed relation is a catalog relation of some kind.
+	 */
+	if ((rel == NULL ||
+		 RelationIsAccessibleInLogicalDecoding(rel)) &&
+		TransactionIdIsValid(replication_slot_catalog_xmin) &&
+		NormalTransactionIdPrecedes(replication_slot_catalog_xmin, result))
+		result = replication_slot_catalog_xmin;
 
 	return result;
 }
@@ -1781,14 +1895,7 @@ CreateDistributedSnapshot(DistributedSnapshot *ds)
 	if (*shmNumCommittedGxacts != 0)
 		elog(ERROR, "Create distributed snapshot before DTM recovery finish");
 
-	xmin = LastDistributedTransactionId;
-
-	/*
-	 * This is analogous to the code in GetSnapshotData() (which calls
-	 * ReadNewTransactionId(), the distributed-xmax of a transaction is the
-	 * last distributed-xmax available
-	 */
-	xmax = getMaxDistributedXid();
+	xmin = xmax = ShmemVariableCache->latestCompletedDxid + 1;
 
 	/*
 	 * initialize for calculation with xmax, the calculation for this is on
@@ -1954,6 +2061,8 @@ GetMaxSnapshotSubxidCount(void)
  *		RecentGlobalXmin: the global xmin (oldest TransactionXmin across all
  *			running transactions, except those running LAZY VACUUM).  This is
  *			the same computation done by GetOldestXmin(true, true).
+ *		RecentGlobalDataXmin: the global xmin for non-catalog tables
+ *			>= RecentGlobalXmin
  *
  * Note: this function should probably not be called with an argument that's
  * not statically allocated (see xip allocation below).
@@ -1969,6 +2078,8 @@ GetSnapshotData(Snapshot snapshot)
 	int			count = 0;
 	int			subcount = 0;
 	bool		suboverflowed = false;
+	volatile TransactionId replication_slot_xmin = InvalidTransactionId;
+	volatile TransactionId replication_slot_catalog_xmin = InvalidTransactionId;
 
 	Assert(snapshot != NULL);
 
@@ -2349,6 +2460,13 @@ GetSnapshotData(Snapshot snapshot)
 			volatile PGXACT *pgxact = &allPgXact[pgprocno];
 			TransactionId xid;
 
+			/*
+			 * Backend is doing logical decoding which manages xmin
+			 * separately, check below.
+			 */
+			if (pgxact->vacuumFlags & PROC_IN_LOGICAL_DECODING)
+				continue;
+
 #if 0 /* Upstream code not applicable to GPDB, why explained in vacuumStatement_Relation */
 			/* Ignore procs running LAZY VACUUM */
 			if (pgxact->vacuumFlags & PROC_IN_VACUUM)
@@ -2394,7 +2512,7 @@ GetSnapshotData(Snapshot snapshot)
 			 * do that much work while holding the ProcArrayLock.
 			 *
 			 * The other backend can add more subxids concurrently, but cannot
-			 * remove any.	Hence it's important to fetch nxids just once.
+			 * remove any.  Hence it's important to fetch nxids just once.
 			 * Should be safe to use memcpy, though.  (We needn't worry about
 			 * missing any xids added concurrently, because they must postdate
 			 * xmax.)
@@ -2460,6 +2578,11 @@ GetSnapshotData(Snapshot snapshot)
 			suboverflowed = true;
 	}
 
+
+	/* fetch into volatile var while ProcArrayLock is held */
+	replication_slot_xmin = procArray->replication_slot_xmin;
+	replication_slot_catalog_xmin = procArray->replication_slot_catalog_xmin;
+
 	if (!TransactionIdIsValid(MyPgXact->xmin))
 	{
 		/* Not that these values are not set atomically. However,
@@ -2521,6 +2644,23 @@ GetSnapshotData(Snapshot snapshot)
 	RecentGlobalXmin = globalxmin - vacuum_defer_cleanup_age;
 	if (!TransactionIdIsNormal(RecentGlobalXmin))
 		RecentGlobalXmin = FirstNormalTransactionId;
+
+	/* Check whether there's a replication slot requiring an older xmin. */
+	if (TransactionIdIsValid(replication_slot_xmin) &&
+		NormalTransactionIdPrecedes(replication_slot_xmin, RecentGlobalXmin))
+		RecentGlobalXmin = replication_slot_xmin;
+
+	/* Non-catalog tables can be vacuumed if older than this xid */
+	RecentGlobalDataXmin = RecentGlobalXmin;
+
+	/*
+	 * Check whether there's a replication slot requiring an older catalog
+	 * xmin.
+	 */
+	if (TransactionIdIsNormal(replication_slot_catalog_xmin) &&
+		NormalTransactionIdPrecedes(replication_slot_catalog_xmin, RecentGlobalXmin))
+		RecentGlobalXmin = replication_slot_catalog_xmin;
+
 	RecentXmin = xmin;
 
 	snapshot->xmin = xmin;
@@ -2641,9 +2781,11 @@ ProcArrayInstallImportedXmin(TransactionId xmin, TransactionId sourcexid)
  * Similar to GetSnapshotData but returns more information. We include
  * all PGXACTs with an assigned TransactionId, even VACUUM processes.
  *
- * We acquire XidGenLock, but the caller is responsible for releasing it.
- * This ensures that no new XIDs enter the proc array until the caller has
- * WAL-logged this snapshot, and releases the lock.
+ * We acquire XidGenLock and ProcArrayLock, but the caller is responsible for
+ * releasing them. Acquiring XidGenLock ensures that no new XIDs enter the proc
+ * array until the caller has WAL-logged this snapshot, and releases the
+ * lock. Acquiring ProcArrayLock ensures that no transactions commit until the
+ * lock is released.
  *
  * The returned data structure is statically allocated; caller should not
  * modify it, and must not assume it is valid past the next call.
@@ -2778,6 +2920,15 @@ GetRunningTransactionData(void)
 		}
 	}
 
+	/*
+	 * It's important *not* to include the limits set by slots here because
+	 * snapbuild.c uses oldestRunningXid to manage its xmin horizon. If those
+	 * were to be included here the initial value could never increase because
+	 * of a circular dependency where slots only increase their limits when
+	 * running xacts increases oldestRunningXid and running xacts only
+	 * increases if slots do.
+	 */
+
 	CurrentRunningXacts->xcnt = count - subcount;
 	CurrentRunningXacts->subxcnt = subcount;
 	CurrentRunningXacts->subxid_overflow = suboverflowed;
@@ -2785,12 +2936,11 @@ GetRunningTransactionData(void)
 	CurrentRunningXacts->oldestRunningXid = oldestRunningXid;
 	CurrentRunningXacts->latestCompletedXid = latestCompletedXid;
 
-	/* We don't release XidGenLock here, the caller is responsible for that */
-	LWLockRelease(ProcArrayLock);
-
 	Assert(TransactionIdIsValid(CurrentRunningXacts->nextXid));
 	Assert(TransactionIdIsValid(CurrentRunningXacts->oldestRunningXid));
 	Assert(TransactionIdIsNormal(CurrentRunningXacts->latestCompletedXid));
+
+	/* We don't release the locks here, the caller is responsible for that */
 
 	return CurrentRunningXacts;
 }
@@ -2858,6 +3008,92 @@ GetOldestActiveTransactionId(void)
 	LWLockRelease(ProcArrayLock);
 
 	return oldestRunningXid;
+}
+
+/*
+ * GetOldestSafeDecodingTransactionId -- lowest xid not affected by vacuum
+ *
+ * Returns the oldest xid that we can guarantee not to have been affected by
+ * vacuum, i.e. no rows >= that xid have been vacuumed away unless the
+ * transaction aborted. Note that the value can (and most of the time will) be
+ * much more conservative than what really has been affected by vacuum, but we
+ * currently don't have better data available.
+ *
+ * This is useful to initialize the cutoff xid after which a new changeset
+ * extraction replication slot can start decoding changes.
+ *
+ * Must be called with ProcArrayLock held either shared or exclusively,
+ * although most callers will want to use exclusive mode since it is expected
+ * that the caller will immediately use the xid to peg the xmin horizon.
+ */
+TransactionId
+GetOldestSafeDecodingTransactionId(void)
+{
+	ProcArrayStruct *arrayP = procArray;
+	TransactionId oldestSafeXid;
+	int			index;
+	bool		recovery_in_progress = RecoveryInProgress();
+
+	Assert(LWLockHeldByMe(ProcArrayLock));
+
+	/*
+	 * Acquire XidGenLock, so no transactions can acquire an xid while we're
+	 * running. If no transaction with xid were running concurrently a new xid
+	 * could influence the RecentXmin et al.
+	 *
+	 * We initialize the computation to nextXid since that's guaranteed to be
+	 * a safe, albeit pessimal, value.
+	 */
+	LWLockAcquire(XidGenLock, LW_SHARED);
+	oldestSafeXid = ShmemVariableCache->nextXid;
+
+	/*
+	 * If there's already a slot pegging the xmin horizon, we can start with
+	 * that value, it's guaranteed to be safe since it's computed by this
+	 * routine initally and has been enforced since.
+	 */
+	if (TransactionIdIsValid(procArray->replication_slot_catalog_xmin) &&
+		TransactionIdPrecedes(procArray->replication_slot_catalog_xmin,
+							  oldestSafeXid))
+		oldestSafeXid = procArray->replication_slot_catalog_xmin;
+
+	/*
+	 * If we're not in recovery, we walk over the procarray and collect the
+	 * lowest xid. Since we're called with ProcArrayLock held and have
+	 * acquired XidGenLock, no entries can vanish concurrently, since
+	 * PGXACT->xid is only set with XidGenLock held and only cleared with
+	 * ProcArrayLock held.
+	 *
+	 * In recovery we can't lower the safe value besides what we've computed
+	 * above, so we'll have to wait a bit longer there. We unfortunately can
+	 * *not* use KnownAssignedXidsGetOldestXmin() since the KnownAssignedXids
+	 * machinery can miss values and return an older value than is safe.
+	 */
+	if (!recovery_in_progress)
+	{
+		/*
+		 * Spin over procArray collecting all min(PGXACT->xid)
+		 */
+		for (index = 0; index < arrayP->numProcs; index++)
+		{
+			int			pgprocno = arrayP->pgprocnos[index];
+			volatile PGXACT *pgxact = &allPgXact[pgprocno];
+			TransactionId xid;
+
+			/* Fetch xid just once - see GetNewTransactionId */
+			xid = pgxact->xid;
+
+			if (!TransactionIdIsNormal(xid))
+				continue;
+
+			if (TransactionIdPrecedes(xid, oldestSafeXid))
+				oldestSafeXid = xid;
+		}
+	}
+
+	LWLockRelease(XidGenLock);
+
+	return oldestSafeXid;
 }
 
 /*
@@ -3064,7 +3300,7 @@ BackendPidGetProc(int pid)
  * Only main transaction Ids are considered.  This function is mainly
  * useful for determining what backend owns a lock.
  *
- * Beware that not every xact has an XID assigned.	However, as long as you
+ * Beware that not every xact has an XID assigned.  However, as long as you
  * only call this using an XID found on disk, you're safe.
  */
 int
@@ -3128,7 +3364,7 @@ IsBackendPid(int pid)
  * some snapshot we have.  Since we examine the procarray with only shared
  * lock, there are race conditions: a backend could set its xmin just after
  * we look.  Indeed, on multiprocessors with weak memory ordering, the
- * other backend could have set its xmin *before* we look.	We know however
+ * other backend could have set its xmin *before* we look.  We know however
  * that such a backend must have held shared ProcArrayLock overlapping our
  * own hold of ProcArrayLock, else we would see its xmin update.  Therefore,
  * any snapshot the other backend is taking concurrently with our scan cannot
@@ -3366,9 +3602,9 @@ MinimumActiveBackends(int min)
 		volatile PGXACT *pgxact = &allPgXact[pgprocno];
 
 		/*
-		 * Since we're not holding a lock, need to check that the pointer is
-		 * valid. Someone holding the lock could have incremented numProcs
-		 * already, but not yet inserted a valid pointer to the array.
+		 * Since we're not holding a lock, need to be prepared to deal with
+		 * garbage, as someone could have incremented numPucs but not yet
+		 * filled the structure.
 		 *
 		 * If someone just decremented numProcs, 'proc' could also point to a
 		 * PGPROC entry that's no longer in the array. It still points to a
@@ -3376,9 +3612,6 @@ MinimumActiveBackends(int min)
 		 * free list and are recycled. Its contents are nonsense in that case,
 		 * but that's acceptable for this function.
 		 */
-		if (proc == NULL)
-			continue;
-
 		if (proc == MyProc)
 			continue;			/* do not count myself */
 		if (pgxact->xid == InvalidTransactionId)
@@ -3582,6 +3815,50 @@ CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
 	return true;				/* timed out, still conflicts */
 }
 
+/*
+ * ProcArraySetReplicationSlotXmin
+ *
+ * Install limits to future computations of the xmin horizon to prevent vacuum
+ * and HOT pruning from removing affected rows still needed by clients with
+ * replicaton slots.
+ */
+void
+ProcArraySetReplicationSlotXmin(TransactionId xmin, TransactionId catalog_xmin,
+								bool already_locked)
+{
+	Assert(!already_locked || LWLockHeldByMe(ProcArrayLock));
+
+	if (!already_locked)
+		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+
+	procArray->replication_slot_xmin = xmin;
+	procArray->replication_slot_catalog_xmin = catalog_xmin;
+
+	if (!already_locked)
+		LWLockRelease(ProcArrayLock);
+}
+
+/*
+ * ProcArrayGetReplicationSlotXmin
+ *
+ * Return the current slot xmin limits. That's useful to be able to remove
+ * data that's older than those limits.
+ */
+void
+ProcArrayGetReplicationSlotXmin(TransactionId *xmin,
+								TransactionId *catalog_xmin)
+{
+	LWLockAcquire(ProcArrayLock, LW_SHARED);
+
+	if (xmin != NULL)
+		*xmin = procArray->replication_slot_xmin;
+
+	if (catalog_xmin != NULL)
+		*catalog_xmin = procArray->replication_slot_catalog_xmin;
+
+	LWLockRelease(ProcArrayLock);
+}
+
 
 #define XidCacheRemove(i) \
 	do { \
@@ -3593,7 +3870,7 @@ CountOtherDBBackends(Oid databaseId, int *nbackends, int *nprepared)
  * XidCacheRemoveRunningXids
  *
  * Remove a bunch of TransactionIds from the list of known-running
- * subtransactions for my backend.	Both the specified xid and those in
+ * subtransactions for my backend.  Both the specified xid and those in
  * the xids[] array (of length nxids) are removed from the subxids cache.
  * latestXid must be the latest XID among the group.
  */
@@ -3730,7 +4007,7 @@ FindProcByGpSessionId(long gp_session_id)
  * treated as running by standby transactions, even though they are not in
  * the standby server's PGXACT array.
  *
- * We record all XIDs that we know have been assigned.	That includes all the
+ * We record all XIDs that we know have been assigned.  That includes all the
  * XIDs seen in WAL records, plus all unobserved XIDs that we can deduce have
  * been assigned.  We can deduce the existence of unobserved XIDs because we
  * know XIDs are assigned in sequence, with no gaps.  The KnownAssignedXids
@@ -3739,7 +4016,7 @@ FindProcByGpSessionId(long gp_session_id)
  *
  * During hot standby we do not fret too much about the distinction between
  * top-level XIDs and subtransaction XIDs. We store both together in the
- * KnownAssignedXids list.	In backends, this is copied into snapshots in
+ * KnownAssignedXids list.  In backends, this is copied into snapshots in
  * GetSnapshotData(), taking advantage of the fact that XidInMVCCSnapshot()
  * doesn't care about the distinction either.  Subtransaction XIDs are
  * effectively treated as top-level XIDs and in the typical case pg_subtrans
@@ -3790,17 +4067,10 @@ RecordKnownAssignedTransactionIds(TransactionId xid)
 {
 	Assert(standbyState >= STANDBY_INITIALIZED);
 	Assert(TransactionIdIsValid(xid));
+	Assert(TransactionIdIsValid(latestObservedXid));
 
 	elog(trace_recovery(DEBUG4), "record known xact %u latestObservedXid %u",
 		 xid, latestObservedXid);
-
-	/*
-	 * If the KnownAssignedXids machinery isn't up yet, do nothing.
-	 */
-	if (standbyState <= STANDBY_INITIALIZED)
-		return;
-
-	Assert(TransactionIdIsValid(latestObservedXid));
 
 	/*
 	 * When a newly observed xid arrives, it is frequently the case that it is
@@ -3812,22 +4082,34 @@ RecordKnownAssignedTransactionIds(TransactionId xid)
 		TransactionId next_expected_xid;
 
 		/*
-		 * Extend clog and subtrans like we do in GetNewTransactionId() during
-		 * normal operation using individual extend steps. Typical case
-		 * requires almost no activity.
+		 * Extend subtrans like we do in GetNewTransactionId() during normal
+		 * operation using individual extend steps. Note that we do not need
+		 * to extend clog since its extensions are WAL logged.
+		 *
+		 * This part has to be done regardless of standbyState since we
+		 * immediately start assigning subtransactions to their toplevel
+		 * transactions.
 		 */
 		next_expected_xid = latestObservedXid;
-		TransactionIdAdvance(next_expected_xid);
-		while (TransactionIdPrecedesOrEquals(next_expected_xid, xid))
+		while (TransactionIdPrecedes(next_expected_xid, xid))
 		{
-			ExtendCLOG(next_expected_xid);
-			ExtendSUBTRANS(next_expected_xid);
-
 			TransactionIdAdvance(next_expected_xid);
+			ExtendSUBTRANS(next_expected_xid);
+		}
+		Assert(next_expected_xid == xid);
+
+		/*
+		 * If the KnownAssignedXids machinery isn't up yet, there's nothing
+		 * more to do since we don't track assigned xids yet.
+		 */
+		if (standbyState <= STANDBY_INITIALIZED)
+		{
+			latestObservedXid = xid;
+			return;
 		}
 
 		/*
-		 * Add the new xids onto the KnownAssignedXids array.
+		 * Add (latestObservedXid, xid] onto the KnownAssignedXids array.
 		 */
 		next_expected_xid = latestObservedXid;
 		TransactionIdAdvance(next_expected_xid);
@@ -3949,14 +4231,14 @@ ExpireOldKnownAssignedTransactionIds(TransactionId xid)
  * must hold shared ProcArrayLock to examine the array.  To remove XIDs from
  * the array, the startup process must hold ProcArrayLock exclusively, for
  * the usual transactional reasons (compare commit/abort of a transaction
- * during normal running).	Compressing unused entries out of the array
+ * during normal running).  Compressing unused entries out of the array
  * likewise requires exclusive lock.  To add XIDs to the array, we just insert
  * them into slots to the right of the head pointer and then advance the head
  * pointer.  This wouldn't require any lock at all, except that on machines
  * with weak memory ordering we need to be careful that other processors
  * see the array element changes before they see the head pointer change.
  * We handle this by using a spinlock to protect reads and writes of the
- * head/tail pointers.	(We could dispense with the spinlock if we were to
+ * head/tail pointers.  (We could dispense with the spinlock if we were to
  * create suitable memory access barrier primitives and use those instead.)
  * The spinlock must be taken to read or write the head/tail pointers unless
  * the caller holds ProcArrayLock exclusively.
@@ -4053,7 +4335,7 @@ KnownAssignedXidsCompress(bool force)
  * If exclusive_lock is true then caller already holds ProcArrayLock in
  * exclusive mode, so we need no extra locking here.  Else caller holds no
  * lock, so we need to be sure we maintain sufficient interlocks against
- * concurrent readers.	(Only the startup process ever calls this, so no need
+ * concurrent readers.  (Only the startup process ever calls this, so no need
  * to worry about concurrent writers.)
  */
 static void
@@ -4099,7 +4381,7 @@ KnownAssignedXidsAdd(TransactionId from_xid, TransactionId to_xid,
 	Assert(tail >= 0 && tail < pArray->maxKnownAssignedXids);
 
 	/*
-	 * Verify that insertions occur in TransactionId sequence.	Note that even
+	 * Verify that insertions occur in TransactionId sequence.  Note that even
 	 * if the last existing element is marked invalid, it must still have a
 	 * correctly sequenced XID value.
 	 */
@@ -4202,7 +4484,7 @@ KnownAssignedXidsSearch(TransactionId xid, bool remove)
 	}
 
 	/*
-	 * Standard binary search.	Note we can ignore the KnownAssignedXidsValid
+	 * Standard binary search.  Note we can ignore the KnownAssignedXidsValid
 	 * array here, since even invalid entries will contain sorted XIDs.
 	 */
 	first = tail;

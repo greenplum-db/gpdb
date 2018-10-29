@@ -9,7 +9,7 @@
  *
  * An NFA contains one or more states, numbered 0..N-1.  There is an initial
  * state, as well as a final state --- reaching the final state denotes
- * successful matching of an input string.	Each state except the final one
+ * successful matching of an input string.  Each state except the final one
  * has some out-arcs that lead to successor states, each arc being labeled
  * with a color that represents one or more concrete character codes.
  * (The colors of a state's out-arcs need not be distinct, since this is an
@@ -17,7 +17,7 @@
  * line and start/end of string.  Colors are numbered 0..C-1, but note that
  * color 0 is "white" (all unused characters) and can generally be ignored.
  *
- * Portions Copyright (c) 2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2013-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1998, 1999 Henry Spencer
  *
  * IDENTIFICATION

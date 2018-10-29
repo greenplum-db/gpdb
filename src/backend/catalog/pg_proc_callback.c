@@ -60,7 +60,7 @@ deleteProcCallbacks(Oid profnoid)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(profnoid));
 	scan = systable_beginscan(rel, ProcCallbackProfnoidPromethodIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 		simple_heap_delete(rel, &tup->t_self);
@@ -149,7 +149,7 @@ lookupProcCallback(Oid profnoid, char promethod)
 				BTEqualStrategyNumber, F_CHAREQ,
 				CharGetDatum(promethod));
 	scan = systable_beginscan(rel, ProcCallbackProfnoidPromethodIndexId, true,
-							  SnapshotNow, 2, skey);
+							  NULL, 2, skey);
 	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
 	{

@@ -3,7 +3,7 @@
  *
  *	main source file
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
  *	contrib/pg_upgrade/pg_upgrade.c
  */
@@ -16,13 +16,12 @@
  *	oids are the same between old and new clusters.  This is important
  *	because toast oids are stored as toast pointers in user tables.
  *
- *	FYI, while pg_class.oid and pg_class.relfilenode are initially the same
- *	in a cluster, but they can diverge due to CLUSTER, REINDEX, or VACUUM
- *	FULL.  The new cluster will have matching pg_class.oid and
- *	pg_class.relfilenode values and be based on the old oid value.  This can
- *	cause the old and new pg_class.relfilenode values to differ.  In summary,
- *	old and new pg_class.oid and new pg_class.relfilenode will have the
- *	same value, and old pg_class.relfilenode might differ.
+ *	While pg_class.oid and pg_class.relfilenode are initially the same
+ *	in a cluster, they can diverge due to CLUSTER, REINDEX, or VACUUM
+ *	FULL.  In the new cluster, pg_class.oid and pg_class.relfilenode will
+ *	be the same and will match the old pg_class.oid value.  Because of
+ *	this, old/new pg_class.relfilenode values will not match if CLUSTER,
+ *	REINDEX, or VACUUM FULL have been performed in the old cluster.
  *
  *	We control all assignments of pg_type.oid because these oids are stored
  *	in user composite type values.
@@ -146,16 +145,26 @@ main(int argc, char **argv)
 	/* New now using xids of the old system */
 
 	/* -- NEW -- */
+	start_postmaster(&new_cluster, true);
+
 	if (user_opts.segment_mode == DISPATCHER)
 	{
-		start_postmaster(&new_cluster, true);
-
 		prepare_new_databases();
 
 		create_new_objects();
-
-		stop_postmaster(false);
 	}
+
+	/*
+	 * In a segment, the data directory already contains all the objects,
+	 * because the segment is initialized by taking a physical copy of the
+	 * upgraded QD data directory. The auxiliary AO tables - containing
+	 * information about the segment files, are different in each server,
+	 * however. So we still need to restore those separately on each
+	 * server.
+	 */
+	restore_aosegment_tables();
+
+	stop_postmaster(false);
 
 	/*
 	 * Most failures happen in create_new_objects(), which has completed at
@@ -397,8 +406,8 @@ setup(char *argv0, bool *live_check)
 		else
 		{
 			if (!user_opts.check)
-				pg_log(PG_FATAL, "There seems to be a postmaster servicing the old cluster.\n"
-					   "Please shutdown that postmaster and try again.\n");
+				pg_fatal("There seems to be a postmaster servicing the old cluster.\n"
+						 "Please shutdown that postmaster and try again.\n");
 			else
 				*live_check = true;
 		}
@@ -410,13 +419,13 @@ setup(char *argv0, bool *live_check)
 		if (start_postmaster(&new_cluster, false))
 			stop_postmaster(false);
 		else
-			pg_log(PG_FATAL, "There seems to be a postmaster servicing the new cluster.\n"
-				   "Please shutdown that postmaster and try again.\n");
+			pg_fatal("There seems to be a postmaster servicing the new cluster.\n"
+					 "Please shutdown that postmaster and try again.\n");
 	}
 
 	/* get path to pg_upgrade executable */
 	if (find_my_exec(argv0, exec_path) < 0)
-		pg_log(PG_FATAL, "Could not get path name to pg_upgrade: %s\n", getErrorText(errno));
+		pg_fatal("Could not get path name to pg_upgrade: %s\n", getErrorText(errno));
 
 	/* Trim off program name and keep just path */
 	*last_dir_separator(exec_path) = '\0';
@@ -432,13 +441,20 @@ prepare_new_cluster(void)
 	 * It would make more sense to freeze after loading the schema, but that
 	 * would cause us to lose the frozenids restored by the load. We use
 	 * --analyze so autovacuum doesn't update statistics later
+	 *
+	 * GPDB: after we've copied the master data directory to the segments,
+	 * AO tables can't be analyzed because their aoseg tuple counts don't match
+	 * those on disk. We therefore skip this step for segments.
 	 */
-	prep_status("Analyzing all rows in the new cluster");
-	exec_prog(UTILITY_LOG_FILE, NULL, true,
-			  "PGOPTIONS='-c gp_session_role=utility' \"%s/vacuumdb\" %s --all --analyze %s",
-			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
-			  log_opts.verbose ? "--verbose" : "");
-	check_ok();
+	if (user_opts.segment_mode == DISPATCHER)
+	{
+		prep_status("Analyzing all rows in the new cluster");
+		exec_prog(UTILITY_LOG_FILE, NULL, true,
+				  "PGOPTIONS='-c gp_session_role=utility' \"%s/vacuumdb\" %s --all --analyze %s",
+				  new_cluster.bindir, cluster_conn_opts(&new_cluster),
+				  log_opts.verbose ? "--verbose" : "");
+		check_ok();
+	}
 
 	/*
 	 * We do freeze after analyze so pg_statistic is also frozen. template0 is
@@ -563,8 +579,6 @@ create_new_objects(void)
 	end_progress_output();
 	check_ok();
 
-	restore_aosegment_tables();
-
 	/*
 	 * We don't have minmxids for databases or relations in pre-9.3
 	 * clusters, so set those after we have restored the schema.
@@ -606,7 +620,7 @@ remove_new_subdir(char *subdir, bool rmtopdir)
 
 	snprintf(new_path, sizeof(new_path), "%s/%s", new_cluster.pgdata, subdir);
 	if (!rmtree(new_path, rmtopdir))
-		pg_log(PG_FATAL, "could not delete directory \"%s\"\n", new_path);
+		pg_fatal("could not delete directory \"%s\"\n", new_path);
 
 	check_ok();
 }

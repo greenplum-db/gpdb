@@ -104,7 +104,7 @@ a few thousand entries can be much faster than retail insertion.  (The win
 comes mainly from not having to do multiple searches/insertions when the
 same key appears in multiple new heap tuples.)
 
-Key entries are nominally of the same IndexEntry format as used in other
+Key entries are nominally of the same IndexTuple format as used in other
 index types, but since a leaf key entry typically refers to multiple heap
 tuples, there are significant differences.  (See GinFormTuple, which works
 by building a "normal" index tuple and then modifying it.)  The points to
@@ -135,15 +135,15 @@ same category of null entry are merged into one index entry just as happens
 with ordinary key entries.
 
 * In a key entry at the btree leaf level, at the next SHORTALIGN boundary,
-there is an array of zero or more ItemPointers, which store the heap tuple
-TIDs for which the indexable items contain this key.  This is called the
-"posting list".  The TIDs in a posting list must appear in sorted order.
-If the list would be too big for the index tuple to fit on an index page,
-the ItemPointers are pushed out to a separate posting page or pages, and
-none appear in the key entry itself.  The separate pages are called a
-"posting tree"; they are organized as a btree of ItemPointer values.
-Note that in either case, the ItemPointers associated with a key can
-easily be read out in sorted order; this is relied on by the scan
+there is a list of item pointers, in compressed format (see Posting List
+Compression section), pointing to the heap tuples for which the indexable
+items contain this key. This is called the "posting list".
+
+If the list would be too big for the index tuple to fit on an index page, the
+ItemPointers are pushed out to a separate posting page or pages, and none
+appear in the key entry itself.  The separate pages are called a "posting
+tree" (see below); Note that in either case, the ItemPointers associated with
+a key can easily be read out in sorted order; this is relied on by the scan
 algorithms.
 
 * The index tuple header fields of a leaf key entry are abused as follows:
@@ -163,6 +163,11 @@ algorithms.
 
 * The posting list can be accessed with GinGetPosting(itup)
 
+* If GinITupIsCompressed(itup), the posting list is stored in compressed
+  format. Otherwise it is just an array of ItemPointers. New tuples are always
+  stored in compressed format, uncompressed items can be present if the
+  database was migrated from 9.3 or earlier version.
+
 2) Posting tree case:
 
 * ItemPointerGetBlockNumber(&itup->t_tid) contains the index block number
@@ -176,7 +181,7 @@ algorithms.
   GinSetPostingTree macro.
 
 * If IndexTupleHasNulls(itup) is true, the null category byte can be
-  accessed/set with GinGetNullCategory(itup) / GinSetNullCategory(itup,c)
+  accessed/set with GinGetNullCategory(itup,gs) / GinSetNullCategory(itup,gs,c)
 
 * The posting list is not present and must not be accessed.
 
@@ -209,6 +214,145 @@ the entries for that tuple.  (Thus, a heap tuple whose entries do not all
 fit on one pending-list page must have those pages to itself, even if this
 results in wasting much of the space on the preceding page and the last
 page for the tuple.)
+
+Posting tree
+------------
+
+If a posting list is too large to store in-line in a key entry, a posting tree
+is created. A posting tree is a B-tree structure, where the ItemPointer is
+used as the key.
+
+Internal posting tree pages use the standard PageHeader and the same "opaque"
+struct as other GIN page, but do not contain regular index tuples. Instead,
+the contents of the page is an array of PostingItem structs. Each PostingItem
+consists of the block number of the child page, and the right bound of that
+child page, as an ItemPointer. The right bound of the page is stored right
+after the page header, before the PostingItem array.
+
+Posting tree leaf pages also use the standard PageHeader and opaque struct,
+and the right bound of the page is stored right after the page header, but
+the page content comprises of a number of compressed posting lists. The
+compressed posting lists are stored one after each other, between page header
+and pd_lower. The space between pd_lower and pd_upper is unused, which allows
+full-page images of posting tree leaf pages to skip the unused space in middle
+(buffer_std = true in XLogRecData).
+
+The item pointers are stored in a number of independent compressed posting
+lists (also called segments), instead of one big one, to make random access
+to a given item pointer faster: to find an item in a compressed list, you
+have to read the list from the beginning, but when the items are split into
+multiple lists, you can first skip over to the list containing the item you're
+looking for, and read only that segment. Also, an update only needs to
+re-encode the affected segment.
+
+Posting List Compression
+------------------------
+
+To fit as many item pointers on a page as possible, posting tree leaf pages
+and posting lists stored inline in entry tree leaf tuples use a lightweight
+form of compression. We take advantage of the fact that the item pointers
+are stored in sorted order. Instead of storing the block and offset number of
+each item pointer separately, we store the difference from the previous item.
+That in itself doesn't do much, but it allows us to use so-called varbyte
+encoding to compress them.
+
+Varbyte encoding is a method to encode integers, allowing smaller numbers to
+take less space at the cost of larger numbers. Each integer is represented by
+variable number of bytes. High bit of each byte in varbyte encoding determines
+whether the next byte is still part of this number. Therefore, to read a single
+varbyte encoded number, you have to read bytes until you find a byte with the
+high bit not set.
+
+When encoding, the block and offset number forming the item pointer are
+combined into a single integer. The offset number is stored in the 11 low
+bits (see MaxHeapTuplesPerPageBits in ginpostinglist.c), and the block number
+is stored in the higher bits. That requires 43 bits in total, which
+conveniently fits in at most 6 bytes.
+
+A compressed posting list is passed around and stored on disk in a
+PackedPostingList struct. The first item in the list is stored uncompressed
+as a regular ItemPointerData, followed by the length of the list in bytes,
+followed by the packed items.
+
+Concurrency
+-----------
+
+The entry tree and each posting tree is a B-tree, with right-links connecting
+sibling pages at the same level. This is the same structure that is used in
+the regular B-tree indexam (invented by Lehman & Yao), but we don't support
+scanning a GIN trees backwards, so we don't need left-links.
+
+To avoid deadlocks, B-tree pages must always be locked in the same order:
+left to right, and bottom to top. When searching, the tree is traversed from
+top to bottom, so the lock on the parent page must be released before
+descending to the next level. Concurrent page splits move the keyspace to
+right, so after following a downlink, the page actually containing the key
+we're looking for might be somewhere to the right of the page we landed on.
+In that case, we follow the right-links until we find the page we're looking
+for.
+
+To delete a page, the page's left sibling, the target page, and its parent,
+are locked in that order, and the page is marked as deleted. However, a
+concurrent search might already have read a pointer to the page, and might be
+just about to follow it. A page can be reached via the right-link of its left
+sibling, or via its downlink in the parent.
+
+To prevent a backend from reaching a deleted page via a right-link, when
+following a right-link the lock on the previous page is not released until
+the lock on next page has been acquired.
+
+The downlink is more tricky. A search descending the tree must release the
+lock on the parent page before locking the child, or it could deadlock with
+a concurrent split of the child page; a page split locks the parent, while
+already holding a lock on the child page. However, posting trees are only
+fully searched from left to right, starting from the leftmost leaf. (The
+tree-structure is only needed by insertions, to quickly find the correct
+insert location). So as long as we don't delete the leftmost page on each
+level, a search can never follow a downlink to page that's about to be
+deleted.
+
+The previous paragraph's reasoning only applies to searches, and only to
+posting trees. To protect from inserters following a downlink to a deleted
+page, vacuum simply locks out all concurrent insertions to the posting tree,
+by holding a super-exclusive lock on the posting tree root. Inserters hold a
+pin on the root page, but searches do not, so while new searches cannot begin
+while root page is locked, any already-in-progress scans can continue
+concurrently with vacuum. In the entry tree, we never delete pages.
+
+(This is quite different from the mechanism the btree indexam uses to make
+page-deletions safe; it stamps the deleted pages with an XID and keeps the
+deleted pages around with the right-link intact until all concurrent scans
+have finished.)
+
+Compatibility
+-------------
+
+Compression of TIDs was introduced in 9.4. Some GIN indexes could remain in
+uncompressed format because of pg_upgrade from 9.3 or earlier versions.
+For compatibility, old uncompressed format is also supported. Following
+rules are used to handle it:
+
+* GIN_ITUP_COMPRESSED flag marks index tuples that contain a posting list.
+This flag is stored in high bit of ItemPointerGetBlockNumber(&itup->t_tid).
+Use GinItupIsCompressed(itup) to check the flag.
+
+* Posting tree pages in the new format are marked with the GIN_COMPRESSED flag.
+  Macros GinPageIsCompressed(page) and GinPageSetCompressed(page) are used to
+  check and set this flag.
+
+* All scan operations check format of posting list add use corresponding code
+to read its content.
+
+* When updating an index tuple containing an uncompressed posting list, it
+will be replaced with new index tuple containing a compressed list.
+
+* When updating an uncompressed posting tree leaf page, it's compressed.
+
+* If vacuum finds some dead TIDs in uncompressed posting lists, they are
+converted into compressed posting lists. This assumes that the compressed
+posting list fits in the space occupied by the uncompressed list. IOW, we
+assume that the compressed version of the page, with the dead items removed,
+takes less space than the old uncompressed version.
 
 Limitations
 -----------

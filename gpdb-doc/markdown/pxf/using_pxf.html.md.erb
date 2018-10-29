@@ -109,19 +109,19 @@ PXF accesses data sources using different connectors, and filter pushdown suppor
 
 PXF filter pushdown can be used with these data types:
 
-- `INT`, array of `INT`
+- `INT`
 - `FLOAT`
 - `NUMERIC`
 - `BOOL`
-- `CHAR`, `TEXT`, array of `TEXT`
-- `DATE`, `TIMESTAMP`.
+- `CHAR`, `TEXT`
+- `DATE`, `TIMESTAMP` (JDBC connector only)
 
 PXF filter pushdown can be used with these operators:
 
 - `<`, `<=`, `>=`, `>`
 - `<>`, `=`
-- `IN`
-- `LIKE` (only for `TEXT` fields).
+- `IN` operator on arrays of `INT` and `TEXT`
+- `LIKE` (only for `TEXT` fields) (JDBC connector only)
 
 To summarize, all of the following criteria must be met for filter pushdown to occur:
 

@@ -98,7 +98,7 @@ ExtProtocolCreate(const char *protocolName,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(protocolName));
 	scan = systable_beginscan(rel, ExtprotocolPtcnameIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))
 		ereport(ERROR,
@@ -292,7 +292,7 @@ LookupExtProtocolFunction(const char *prot_name,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(prot_name));
 	scan = systable_beginscan(rel, ExtprotocolPtcnameIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tup = systable_getnext(scan);
 
 	if (!HeapTupleIsValid(tup))
@@ -355,7 +355,7 @@ get_extprotocol_oid(const char *prot_name, bool missing_ok)
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(prot_name));
 	scan = systable_beginscan(rel, ExtprotocolPtcnameIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tup = systable_getnext(scan);
 
 	if (HeapTupleIsValid(tup))
@@ -393,7 +393,7 @@ ExtProtocolGetNameByOid(Oid protOid)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(protOid));
 	scan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tup = systable_getnext(scan);
 	if (!HeapTupleIsValid(tup))
 		elog(ERROR, "protocol %u could not be found", protOid);

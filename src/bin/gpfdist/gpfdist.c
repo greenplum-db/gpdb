@@ -3587,10 +3587,21 @@ int gpfdist_init(int argc, const char* const argv[])
 	 */
 
 #ifndef WIN32
-	char* wd = getenv("GPFDIST_WATCHDOG_TIMER");
+	char	   *wd = getenv("GPFDIST_WATCHDOG_TIMER");
+	char	   *endptr;
+	long		val;
+
 	if (wd != NULL)
 	{
-		gcb.wdtimer = atoi(wd);
+		val = strtol(wd, &endptr, 10);
+
+		if (errno || endptr == wd || val > INT_MAX)
+		{
+			fprintf(stderr, "incorrect watchdog timer: %s\n", strerror(errno));
+			return -1;
+		}
+
+		gcb.wdtimer = (int) val;
 		if (gcb.wdtimer > 0)
 		{
 			gprintln(NULL, "Watchdog enabled, abort in %d seconds if no activity", gcb.wdtimer);
@@ -3612,7 +3623,8 @@ int gpfdist_run()
 
 int main(int argc, const char* const argv[])
 {
-	gpfdist_init(argc, argv);
+	if (gpfdist_init(argc, argv) == -1)
+		gfatal(NULL, "Initialization failed");
 	return gpfdist_run();
 }
 
@@ -3779,7 +3791,8 @@ int main(int argc, const char* const argv[])
 	srv_ret = StartServiceCtrlDispatcher(ServiceTable);
 	if (0 == srv_ret) /* program is being run as a Windows console application */
 	{
-		gpfdist_init(argc, argv);
+		if (gpfdist_init(argc, argv) == -1)
+			gfatal(NULL, "Initialization failed");
 		main_ret = gpfdist_run();
 	}
 
@@ -4345,10 +4358,15 @@ pcalloc_safe(request_t *r, apr_pool_t *pool, apr_size_t size, const char *fmt, .
 #ifndef WIN32
 static void* watchdog_thread(void* p)
 {
-	while(apr_time_now() < shutdown_time)
+	apr_time_t		duration;
+
+	do
 	{
-		sleep(1);
-	}
+		/* apr_time_now is defined in microseconds since epoch */
+		duration = apr_time_sec(shutdown_time - apr_time_now());
+		if (duration > 0)
+			(void)sleep(duration);
+	} while(apr_time_now() < shutdown_time);
 	gprintln(NULL, "Watchdog timer expired, abort gpfdist");
 	abort();
 }

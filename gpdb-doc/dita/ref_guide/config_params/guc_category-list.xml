@@ -1269,6 +1269,10 @@
                 >gp_external_enable_exec</xref>
             </p>
             <p>
+              <xref href="guc-list.xml#gp_external_enable_filter_pushdown" type="section"
+                >gp_external_enable_filter_pushdown</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_external_max_segs" type="section"
                 >gp_external_max_segs</xref>
             </p>
@@ -1462,10 +1466,6 @@
               <p>
                 <xref href="guc-list.xml#gp_cached_segworkers_threshold" type="section"
                   >gp_cached_segworkers_threshold</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_connections_per_thread" type="section"
-                  >gp_connections_per_thread</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#gp_enable_direct_dispatch" type="section"

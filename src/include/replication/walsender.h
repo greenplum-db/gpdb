@@ -3,7 +3,7 @@
  * walsender.h
  *	  Exports from replication/walsender.c.
  *
- * Portions Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *
  * src/include/replication/walsender.h
  *
@@ -20,9 +20,9 @@
 /* global state */
 extern bool am_walsender;
 extern bool am_cascading_walsender;
-extern volatile sig_atomic_t walsender_ready_to_stop;
-
+extern bool am_db_walsender;
 extern bool wake_wal_senders;
+extern volatile sig_atomic_t walsender_ready_to_stop;
 
 /* user-settable parameters */
 extern int	max_wal_senders;

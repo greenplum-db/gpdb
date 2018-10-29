@@ -2,7 +2,7 @@
 #
 # Makefile for src/bin/initdb
 #
-# Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/bin/initdb/Makefile
@@ -58,7 +58,13 @@ uninstall:
 
 clean distclean maintainer-clean:
 	rm -f initdb$(X) $(OBJS) encnames.c localtime.c
-
+	rm -rf tmp_check
 
 # ensure that changes in datadir propagate into object file
 initdb.o: initdb.c $(top_builddir)/src/Makefile.global
+
+check: all
+	$(prove_check)
+
+installcheck:
+	$(prove_installcheck)

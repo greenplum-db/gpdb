@@ -30,14 +30,12 @@
 #include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgang_async.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/resowner.h"
 
 static int	getPollTimeout(const struct timeval *startTS);
-static Gang *createGang_async(List *segments, SegmentType segmentType);
-
-CreateGangFunc pCreateGangFuncAsync = createGang_async;
 
 /*
  * Creates a new gang by logging on a session to each segDB involved.
@@ -45,8 +43,8 @@ CreateGangFunc pCreateGangFuncAsync = createGang_async;
  * call this function in GangContext memory context.
  * elog ERROR or return a non-NULL gang.
  */
-static Gang *
-createGang_async(List *segments, SegmentType segmentType)
+Gang *
+cdbgang_createGang_async(List *segments, SegmentType segmentType)
 {
 	PostgresPollingStatusType	*pollingStatus = NULL;
 	SegmentDatabaseDescriptor	*segdbDesc = NULL;

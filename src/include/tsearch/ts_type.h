@@ -3,7 +3,7 @@
  * ts_type.h
  *	  Definitions for the tsvector and tsquery types
  *
- * Copyright (c) 1998-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2014, PostgreSQL Global Development Group
  *
  * src/include/tsearch/ts_type.h
  *
@@ -13,6 +13,7 @@
 #define _PG_TSTYPE_H_
 
 #include "fmgr.h"
+#include "utils/memutils.h"
 #include "utils/pg_crc.h"
 
 
@@ -244,6 +245,8 @@ typedef TSQueryData *TSQuery;
  * QueryItems, and lenofoperand is the total length of all operands
  */
 #define COMPUTESIZE(size, lenofoperand) ( HDRSIZETQ + (size) * sizeof(QueryItem) + (lenofoperand) )
+#define TSQUERY_TOO_BIG(size, lenofoperand) \
+	((size) > (MaxAllocSize - HDRSIZETQ - (lenofoperand)) / sizeof(QueryItem))
 
 /* Returns a pointer to the first QueryItem in a TSQuery */
 #define GETQUERY(x)  ((QueryItem*)( (char*)(x)+HDRSIZETQ ))

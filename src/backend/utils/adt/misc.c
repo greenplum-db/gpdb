@@ -3,7 +3,7 @@
  * misc.c
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -20,11 +20,11 @@
 #include <math.h>
 #include <unistd.h>
 
+#include "access/sysattr.h"
 #include "catalog/catalog.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "commands/dbcommands.h"
-#include "common/relpath.h"
 #include "funcapi.h"
 #include "miscadmin.h"
 #include "parser/keywords.h"
@@ -97,7 +97,7 @@ pg_signal_backend(int pid, int sig, char *msg)
 	/*
 	 * BackendPidGetProc returns NULL if the pid isn't valid; but by the time
 	 * we reach kill(), a process for which we get a valid proc here might
-	 * have terminated on its own.	There's no way to acquire a lock on an
+	 * have terminated on its own.  There's no way to acquire a lock on an
 	 * arbitrary process to prevent that. But since so far all the callers of
 	 * this mechanism involve some request for ending the process anyway, that
 	 * it might end on its own first is not a problem.
@@ -133,7 +133,7 @@ pg_signal_backend(int pid, int sig, char *msg)
 	 * recycled for a new process, before reaching here?  Then we'd be trying
 	 * to kill the wrong thing.  Seems near impossible when sequential pid
 	 * assignment and wraparound is used.  Perhaps it could happen on a system
-	 * where pid re-use is randomized.	That race condition possibility seems
+	 * where pid re-use is randomized.  That race condition possibility seems
 	 * too unlikely to worry about.
 	 */
 
@@ -153,7 +153,7 @@ pg_signal_backend(int pid, int sig, char *msg)
 }
 
 /*
- * Signal to cancel a backend process.	This is allowed if you are superuser or
+ * Signal to cancel a backend process.  This is allowed if you are superuser or
  * have the same role as the process being canceled.
  */
 Datum
@@ -288,11 +288,6 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 
 		fctx = palloc(sizeof(ts_db_fctx));
 
-		/*
-		 * size = tablespace dirname length + dir sep char + oid + terminator
-		 */
-		fctx->location = (char *) palloc(9 + 1 + OIDCHARS + 1 +
-										 strlen(tablespace_version_directory()) + 1);
 		if (tablespaceOid == GLOBALTABLESPACE_OID)
 		{
 			fctx->dirdesc = NULL;
@@ -302,10 +297,10 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 		else
 		{
 			if (tablespaceOid == DEFAULTTABLESPACE_OID)
-				sprintf(fctx->location, "base");
+				fctx->location = psprintf("base");
 			else
-				sprintf(fctx->location, "pg_tblspc/%u/%s", tablespaceOid,
-						tablespace_version_directory());
+				fctx->location = psprintf("pg_tblspc/%u/%s", tablespaceOid,
+										  tablespace_version_directory());
 
 			fctx->dirdesc = AllocateDir(fctx->location);
 
@@ -343,9 +338,7 @@ pg_tablespace_databases(PG_FUNCTION_ARGS)
 
 		/* if database subdir is empty, don't report tablespace as used */
 
-		/* size = path length + dir sep char + file name + terminator */
-		subdir = palloc(strlen(fctx->location) + 1 + strlen(de->d_name) + 1);
-		sprintf(subdir, "%s/%s", fctx->location, de->d_name);
+		subdir = psprintf("%s/%s", fctx->location, de->d_name);
 		dirdesc = AllocateDir(subdir);
 		while ((de = ReadDir(dirdesc, subdir)) != NULL)
 		{
@@ -379,7 +372,7 @@ pg_tablespace_location(PG_FUNCTION_ARGS)
 
 	/*
 	 * It's useful to apply this function to pg_class.reltablespace, wherein
-	 * zero means "the database's default tablespace".	So, rather than
+	 * zero means "the database's default tablespace".  So, rather than
 	 * throwing an error for zero, we choose to assume that's what is meant.
 	 */
 	if (tablespaceOid == InvalidOid)
@@ -430,16 +423,16 @@ pg_sleep(PG_FUNCTION_ARGS)
 	float8		endtime;
 
 	/*
-	 * We break the requested sleep into segments of no more than 1 second, to
-	 * put an upper bound on how long it will take us to respond to a cancel
-	 * or die interrupt.  (Note that pg_usleep is interruptible by signals on
-	 * some platforms but not others.)	Also, this method avoids exposing
-	 * pg_usleep's upper bound on allowed delays.
+	 * We sleep using WaitLatch, to ensure that we'll wake up promptly if an
+	 * important signal (such as SIGALRM or SIGINT) arrives.  Because
+	 * WaitLatch's upper limit of delay is INT_MAX milliseconds, and the user
+	 * might ask for more than that, we sleep for at most 10 minutes and then
+	 * loop.
 	 *
 	 * By computing the intended stop time initially, we avoid accumulation of
-	 * extra delay across multiple sleeps.	This also ensures we won't delay
-	 * less than the specified time if pg_usleep is interrupted by other
-	 * signals such as SIGHUP.
+	 * extra delay across multiple sleeps.  This also ensures we won't delay
+	 * less than the specified time when WaitLatch is terminated early by a
+	 * non-query-cancelling signal such as SIGHUP.
 	 */
 
 #ifdef HAVE_INT64_TIMESTAMP
@@ -453,15 +446,22 @@ pg_sleep(PG_FUNCTION_ARGS)
 	for (;;)
 	{
 		float8		delay;
+		long		delay_ms;
 
 		CHECK_FOR_INTERRUPTS();
+
 		delay = endtime - GetNowFloat();
-		if (delay >= 1.0)
-			pg_usleep(1000000L);
+		if (delay >= 600.0)
+			delay_ms = 600000;
 		else if (delay > 0.0)
-			pg_usleep((long) ceil(delay * 1000000.0));
+			delay_ms = (long) ceil(delay * 1000.0);
 		else
 			break;
+
+		(void) WaitLatch(&MyProc->procLatch,
+						 WL_LATCH_SET | WL_TIMEOUT,
+						 delay_ms);
+		ResetLatch(&MyProc->procLatch);
 	}
 
 	PG_RETURN_VOID();
@@ -586,18 +586,14 @@ pg_relation_is_updatable(PG_FUNCTION_ARGS)
 	Oid			reloid = PG_GETARG_OID(0);
 	bool		include_triggers = PG_GETARG_BOOL(1);
 
-	PG_RETURN_INT32(relation_is_updatable(reloid, include_triggers));
+	PG_RETURN_INT32(relation_is_updatable(reloid, include_triggers, NULL));
 }
 
 /*
  * pg_column_is_updatable - determine whether a column is updatable
  *
- * Currently we just check whether the column's relation is updatable.
- * Eventually we might allow views to have some updatable and some
- * non-updatable columns.
- *
- * Also, this function encapsulates the decision about just what
- * information_schema.columns.is_updatable actually means.	It's not clear
+ * This function encapsulates the decision about just what
+ * information_schema.columns.is_updatable actually means.  It's not clear
  * whether deletability of the column's relation should be required, so
  * we want that decision in C code where we could change it without initdb.
  */
@@ -606,6 +602,7 @@ pg_column_is_updatable(PG_FUNCTION_ARGS)
 {
 	Oid			reloid = PG_GETARG_OID(0);
 	AttrNumber	attnum = PG_GETARG_INT16(1);
+	AttrNumber	col = attnum - FirstLowInvalidHeapAttributeNumber;
 	bool		include_triggers = PG_GETARG_BOOL(2);
 	int			events;
 
@@ -613,7 +610,8 @@ pg_column_is_updatable(PG_FUNCTION_ARGS)
 	if (attnum <= 0)
 		PG_RETURN_BOOL(false);
 
-	events = relation_is_updatable(reloid, include_triggers);
+	events = relation_is_updatable(reloid, include_triggers,
+								   bms_make_singleton(col));
 
 	/* We require both updatability and deletability of the relation */
 #define REQ_EVENTS ((1 << CMD_UPDATE) | (1 << CMD_DELETE))

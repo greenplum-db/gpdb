@@ -5,7 +5,7 @@
  *
  * Original coding 1998, Jan Wieck.  Heavily revised 2003, Tom Lane.
  *
- * Copyright (c) 1998-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2014, PostgreSQL Global Development Group
  *
  * src/include/utils/numeric.h
  *
@@ -65,6 +65,7 @@ extern int16 *numeric_digits(Numeric num);
 extern int numeric_len(Numeric num);
 int32		numeric_maximum_size(int32 typmod);
 extern char *numeric_out_sci(Numeric num, int scale);
+extern char *numeric_normalize(Numeric num);
 
 /* GPDB-specific additions */
 extern Numeric numeric_force_long_format(Numeric num);

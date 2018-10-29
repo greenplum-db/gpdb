@@ -7,7 +7,7 @@
  *	AccessExclusiveLocks and starting snapshots for Hot Standby mode.
  *	Plus conflict recovery processing.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -43,7 +43,7 @@ static void ResolveRecoveryConflictWithVirtualXIDs(VirtualTransactionId *waitlis
 									   ProcSignalReason reason);
 static void ResolveRecoveryConflictWithLock(Oid dbOid, Oid relOid);
 static void SendRecoveryConflictWithBufferPin(ProcSignalReason reason);
-static void LogCurrentRunningXacts(RunningTransactions CurrRunningXacts);
+static XLogRecPtr LogCurrentRunningXacts(RunningTransactions CurrRunningXacts);
 static void LogAccessExclusiveLocks(int nlocks, xl_standby_lock *locks);
 
 
@@ -131,7 +131,7 @@ GetStandbyLimitTime(void)
 
 	/*
 	 * The cutoff time is the last WAL data receipt time plus the appropriate
-	 * delay variable.	Delay of -1 means wait forever.
+	 * delay variable.  Delay of -1 means wait forever.
 	 */
 	GetXLogReceiptTime(&rtime, &fromStream);
 	if (fromStream)
@@ -486,7 +486,7 @@ SendRecoveryConflictWithBufferPin(ProcSignalReason reason)
  * determine whether an actual deadlock condition is present: the lock we
  * need to wait for might be unrelated to any held by the Startup process.
  * Sooner or later, this mechanism should get ripped out in favor of somehow
- * accounting for buffer locks in DeadLockCheck().	However, errors here
+ * accounting for buffer locks in DeadLockCheck().  However, errors here
  * seem to be very low-probability in practice, so for now it's not worth
  * the trouble.
  */
@@ -811,7 +811,9 @@ standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
 
 /*
  * Log details of the current snapshot to WAL. This allows the snapshot state
- * to be reconstructed on the standby.
+ * to be reconstructed on the standby and for logical decoding.
+ *
+ * This is used for Hot Standby as follows:
  *
  * We can move directly to STANDBY_SNAPSHOT_READY at startup if we
  * start from a shutdown checkpoint because we know nothing was running
@@ -864,10 +866,19 @@ standby_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record)
  * currently running xids, performed by StandbyReleaseOldLocks().
  * Zero xids should no longer be possible, but we may be replaying WAL
  * from a time when they were possible.
+ *
+ * For logical decoding only the running xacts information is needed;
+ * there's no need to look at the locking information, but it's logged anyway,
+ * as there's no independent knob to just enable logical decoding. For
+ * details of how this is used, check snapbuild.c's introductory comment.
+ *
+ *
+ * Returns the RecPtr of the last inserted record.
  */
-void
+XLogRecPtr
 LogStandbySnapshot(void)
 {
+	XLogRecPtr	recptr;
 	RunningTransactions running;
 	xl_standby_lock *locks;
 	int			nlocks;
@@ -887,9 +898,32 @@ LogStandbySnapshot(void)
 	 * record we write, because standby will open up when it sees this.
 	 */
 	running = GetRunningTransactionData();
-	LogCurrentRunningXacts(running);
+
+	/*
+	 * GetRunningTransactionData() acquired ProcArrayLock, we must release it.
+	 * For Hot Standby this can be done before inserting the WAL record
+	 * because ProcArrayApplyRecoveryInfo() rechecks the commit status using
+	 * the clog. For logical decoding, though, the lock can't be released
+	 * early because the clog might be "in the future" from the POV of the
+	 * historic snapshot. This would allow for situations where we're waiting
+	 * for the end of a transaction listed in the xl_running_xacts record
+	 * which, according to the WAL, has committed before the xl_running_xacts
+	 * record. Fortunately this routine isn't executed frequently, and it's
+	 * only a shared lock.
+	 */
+	if (wal_level < WAL_LEVEL_LOGICAL)
+		LWLockRelease(ProcArrayLock);
+
+	recptr = LogCurrentRunningXacts(running);
+
+	/* Release lock if we kept it longer ... */
+	if (wal_level >= WAL_LEVEL_LOGICAL)
+		LWLockRelease(ProcArrayLock);
+
 	/* GetRunningTransactionData() acquired XidGenLock, we must release it */
 	LWLockRelease(XidGenLock);
+
+	return recptr;
 }
 
 /*
@@ -900,7 +934,7 @@ LogStandbySnapshot(void)
  * is a contiguous chunk of memory and never exists fully until it is
  * assembled in WAL.
  */
-static void
+static XLogRecPtr
 LogCurrentRunningXacts(RunningTransactions CurrRunningXacts)
 {
 	xl_running_xacts xlrec;
@@ -950,6 +984,19 @@ LogCurrentRunningXacts(RunningTransactions CurrRunningXacts)
 			 CurrRunningXacts->oldestRunningXid,
 			 CurrRunningXacts->latestCompletedXid,
 			 CurrRunningXacts->nextXid);
+
+	/*
+	 * Ensure running_xacts information is synced to disk not too far in the
+	 * future. We don't want to stall anything though (i.e. use XLogFlush()),
+	 * so we let the wal writer do it during normal operation.
+	 * XLogSetAsyncXactLSN() conveniently will mark the LSN as to-be-synced
+	 * and nudge the WALWriter into action if sleeping. Check
+	 * XLogBackgroundFlush() for details why a record might not be flushed
+	 * without it.
+	 */
+	XLogSetAsyncXactLSN(recptr);
+
+	return recptr;
 }
 
 /*

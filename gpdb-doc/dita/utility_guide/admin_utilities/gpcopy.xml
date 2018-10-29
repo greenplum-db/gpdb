@@ -32,6 +32,7 @@
    [<b>--source-host</b> <varname>source_host</varname> [<b>--source-port</b> <varname>source_port</varname>]
    [<b>--source-user</b> <varname>source_user</varname>]]
    [<b>--no-compression</b>]
+   [<b>--on-segment-threshold</b> <varname>int</varname>]
    [<b>--jobs</b> <varname>int</varname>]
    [<b>--quiet</b> | <b>--debug</b>]
 
@@ -97,11 +98,6 @@
                 You must configure the system to use resource groups and create filespaces for the
                 tablespaces. </p>
         </section>
-        <section><title>Limitation for the Source and Destination Systems</title><p dir="ltr"
-                id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
-                    <codeph>gpcopy</codeph> utility supports copying only between source and
-                destination Greenplum Database systems with the same number of segment instances.
-            </p></section>
         <section id="section6">
             <title>Options</title>
             <parml>
@@ -304,14 +300,26 @@
                     <pd>The utility does not support table data distribution checking when copying a
                         partitioned table that is defined with a leaf table that is an external
                         table or if a leaf table is defined with a distribution policy that is
-                        different from the root partitioned table. <note type="warning">Before you
-                            perform a <codeph>gpcopy</codeph> operation with the
-                                <codeph>--no-distribution-check</codeph> option, ensure that you
-                            have a backup of the destination database and that the distribution
+                        different from the root partitioned table.
+                        <note type="warning">Before you perform a <codeph>gpcopy</codeph> operation
+                            with the <codeph>--no-distribution-check</codeph> option, ensure that
+                            you have a backup of the destination database and that the distribution
                             policies of the tables that are being copied are the same in the source
                             and destination database. Copying data into segment instances with
                             incorrect data distribution can cause incorrect query results and can
                             cause database corruption.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>--on-segment-threshold <varname>int</varname></pt>
+                    <pd>Specifies the number of rows that determines when <codeph>gpcopy</codeph>
+                        copies a table using the Greenplum Database source and destination master
+                        instead of the source and destination segment instances. The default value
+                        is 10000 rows. If a table contains 10000 rows or less, the table is copied
+                        using the Greenplum Database master. </pd>
+                    <pd>The value <codeph>-1</codeph> disables copying tables using the master. All
+                        tables are copied using the segment instances.</pd>
+                    <pd>For smaller tables, copying tables using the Greenplum Database master is
+                        more efficient than using segment instances.</pd>
                 </plentry>
                 <plentry>
                     <pt>--quiet</pt>

@@ -15,10 +15,14 @@ create extension if not exists gp_inject_fault;
 -- no down segment in the beginning
 select count(*) from gp_segment_configuration where status = 'd';
 
+-- probe to make sure when we call gp_request_fts_probe_scan() next
+-- time below, don't overlap with auto-trigger of FTS scans by FTS
+-- process. As if that happens, due to race condition will not trigger
+-- the fault and fail the test.
+select gp_request_fts_probe_scan();
 -- trigger a DNS error
 select gp_inject_fault_infinite('get_dns_cached_address', 'skip', 1);
 select gp_request_fts_probe_scan();
-select gp_wait_until_triggered_fault('get_dns_cached_address', 1, 1);
 select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
 
 -- verify a fts failover happens

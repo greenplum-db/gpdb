@@ -15,6 +15,7 @@ void write_log(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
 extern "C" {
 #include "c.h"
 #include "cdb/cdbvars.h"
+extern int getgpsegmentCount(void);
 }
 #endif
 
@@ -35,7 +36,7 @@ S3Params InitConfig(const string& urlWithOptions) {
     s3ext_segnum = 1;
 #else
     s3ext_segid = GpIdentity.segindex;
-    s3ext_segnum = GpIdentity.numsegments;
+    s3ext_segnum = getgpsegmentCount();
 #endif
 
     if (s3ext_segid == -1 && s3ext_segnum > 0) {

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -913,7 +913,7 @@ CopyLoadRawBuf(CopyState cstate)
  * we also support copying the output of an arbitrary SELECT query.
  *
  * If <pipe> is false, transfer is between the table and the file named
- * <filename>.	Otherwise, transfer is between the table and our regular
+ * <filename>.  Otherwise, transfer is between the table and our regular
  * input/output stream. The latter could be either stdin/stdout or a
  * socket, depending on whether we're running under Postmaster control.
  *
@@ -973,12 +973,6 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 					 errhint("Anyone can COPY to stdout or from stdin. "
 						   "psql's \\copy command also works for anyone.")));
 	}
-
-	/* GPDB_91_MERGE_FIXME: why not ? */
-	if (stmt->is_program && stmt->filename == NULL)
-		ereport(ERROR,
-				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("STDIN/STDOUT not allowed with PROGRAM")));
 
 	if (stmt->relation)
 	{
@@ -1322,6 +1316,20 @@ ProcessCopyOptions(CopyState cstate,
 						 errmsg("argument to option \"%s\" must be a list of column names",
 								defel->defname)));
 		}
+		else if (strcmp(defel->defname, "force_null") == 0)
+		{
+			if (cstate->force_null)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+			if (defel->arg && IsA(defel->arg, List))
+				cstate->force_null = (List *) defel->arg;
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("argument to option \"%s\" must be a list of column names",
+								defel->defname)));
+		}
 		else if (strcmp(defel->defname, "convert_selectively") == 0)
 		{
 			/*
@@ -1542,6 +1550,17 @@ ProcessCopyOptions(CopyState cstate,
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				errmsg("force not null only available for data loading, not unloading")));
+
+	/* Check force_null */
+	if (!cstate->csv_mode && cstate->force_null != NIL)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("COPY force null available only in CSV mode")));
+
+	if (cstate->force_null != NIL && !is_from)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("COPY force null only available using COPY FROM")));
 
 	/* Don't allow the delimiter to appear in the null string. */
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL)
@@ -1770,7 +1789,7 @@ BeginCopy(bool is_from,
 					 errmsg("COPY (SELECT) WITH OIDS is not supported")));
 
 		/*
-		 * Run parse analysis and rewrite.	Note this also acquires sufficient
+		 * Run parse analysis and rewrite.  Note this also acquires sufficient
 		 * locks on the source table(s).
 		 *
 		 * Because the parser and planner tend to scribble on their input, we
@@ -1901,6 +1920,28 @@ BeginCopy(bool is_from,
 		}
 	}
 
+	/* Convert FORCE NULL name list to per-column flags, check validity */
+	cstate->force_null_flags = (bool *) palloc0(num_phys_attrs * sizeof(bool));
+	if (cstate->force_null)
+	{
+		List	   *attnums;
+		ListCell   *cur;
+
+		attnums = CopyGetAttnums(tupDesc, cstate->rel, cstate->force_null);
+
+		foreach(cur, attnums)
+		{
+			int			attnum = lfirst_int(cur);
+
+			if (!list_member_int(cstate->attnumlist, attnum))
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_COLUMN_REFERENCE),
+					errmsg("FORCE NULL column \"%s\" not referenced by COPY",
+						   NameStr(tupDesc->attrs[attnum - 1]->attname))));
+			cstate->force_null_flags[attnum - 1] = true;
+		}
+	}
+
 	/* Convert convert_selectively name list to per-column flags */
 	if (cstate->convert_selectively)
 	{
@@ -1978,8 +2019,7 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 	CdbPgResults pgresults = {0};
 	int			i;
 	uint64		processed = 0;
-	int			rejected = 0; /* GPDB_91_MERGE_FIXME: should be uint64! */
-
+	uint64		rejected = 0;
 	dispatchStmt = copyObject((Node *) stmt);
 
 	/* add in partitions for dispatch */
@@ -2410,7 +2450,6 @@ CopyToDispatch(CopyState cstate)
 	int			attr_count;
 	Form_pg_attribute *attr;
 	CdbCopy    *cdbCopy;
-	StringInfoData cdbcopy_err;
 	uint64		processed = 0;
 
 	tupDesc = cstate->rel->rd_att;
@@ -2427,9 +2466,6 @@ CopyToDispatch(CopyState cstate)
 	cdbCopy->hasReplicatedTable = GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy);
 
 	/* XXX: lock all partitions */
-
-	/* allocate memory for error and copy strings */
-	initStringInfo(&cdbcopy_err);
 
 	/*
 	 * Start a COPY command in every db of every segment in Greenplum Database.
@@ -2531,6 +2567,8 @@ CopyToDispatch(CopyState cstate)
 			}
 		} while(!done);
 
+		cdbCopyEnd(cdbCopy, NULL, NULL);
+
 		/* now it's safe to destroy the whole dispatcher state */
 		CdbDispatchCopyEnd(cdbCopy);
 	}
@@ -2538,13 +2576,8 @@ CopyToDispatch(CopyState cstate)
 	PG_CATCH();
 	{
 		MemoryContext oldcontext = MemoryContextSwitchTo(cstate->copycontext);
-		appendBinaryStringInfo(&cdbcopy_err, cdbCopy->err_msg.data, cdbCopy->err_msg.len);
 
 		cdbCopyAbort(cdbCopy);
-
-		ereport(LOG,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("%s", cdbcopy_err.data)));
 
 		MemoryContextSwitchTo(oldcontext);
 		PG_RE_THROW();
@@ -2562,15 +2595,6 @@ CopyToDispatch(CopyState cstate)
 	/* we can throw the error now if QueryCancelPending was set previously */
 	CHECK_FOR_INTERRUPTS();
 
-	/*
-	 * report all accumulated errors back to the client.
-	 */
-	if (cdbCopy->io_errors)
-		ereport(ERROR,
-				(errcode(ERRCODE_IO_ERROR),
-				 errmsg("%s", cdbcopy_err.data)));
-
-	pfree(cdbcopy_err.data);
 	pfree(cdbCopy);
 
 	return processed;
@@ -2625,7 +2649,7 @@ CopyTo(CopyState cstate)
 	 * Create a temporary memory context that we can reset once per row to
 	 * recover palloc'd memory.  This avoids any problems with leaks inside
 	 * datatype output routines, and should be faster than retail pfree's
-	 * anyway.	(We don't need a whole econtext as CopyFrom does.)
+	 * anyway.  (We don't need a whole econtext as CopyFrom does.)
 	 */
 	cstate->rowcontext = AllocSetContextCreate(CurrentMemoryContext,
 											   "COPY TO",
@@ -2713,10 +2737,10 @@ CopyTo(CopyState cstate)
 		/* For replicated table, choose only one segment to scan data */
 		if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment &&
 				GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy) &&
-				gp_session_id % GpIdentity.numsegments != GpIdentity.segindex)
+				gp_session_id % getgpsegmentCount() != GpIdentity.segindex)
 		{
 			MemoryContextDelete(cstate->rowcontext);
-			return 0; /* GPDB_91_MERGE_FIXME: does this make sense? */
+			return 0;
 		}
 
 		foreach(lc, target_rels)
@@ -3588,8 +3612,8 @@ CopyFrom(CopyState cstate)
 		{
 			/*
 			 * Reset the per-tuple exprcontext. We can only do this if the
-			 * tuple buffer is empty (calling the context the per-tuple memory
-			 * context is a bit of a misnomer now
+			 * tuple buffer is empty. (Calling the context the per-tuple
+			 * memory context is a bit of a misnomer now.)
 			 */
 			ResetPerTupleExprContext(estate);
 		}
@@ -3997,16 +4021,17 @@ CopyFrom(CopyState cstate)
 	 */
 	if (cstate->dispatch_mode == COPY_DISPATCH)
 	{
-		int64			total_completed_from_qes;
-		int			total_rejected_from_qes;
+		int64		total_completed_from_qes;
+		int64		total_rejected_from_qes;
 
-		total_rejected_from_qes = cdbCopyEndAndFetchRejectNum(cdbCopy, &total_completed_from_qes, NULL);
-
+		cdbCopyEnd(cdbCopy,
+				   &total_completed_from_qes,
+				   &total_rejected_from_qes);
 		if (cstate->cdbsreh)
 		{
 			/* emit a NOTICE with number of rejected rows */
-			int			total_rejected = 0;
-			int total_rejected_from_qd = cstate->cdbsreh->rejectcount;
+			uint64		total_rejected = 0;
+			uint64		total_rejected_from_qd = cstate->cdbsreh->rejectcount;
 
 			/*
 			 * If error log has been requested, then we send the row to the segment
@@ -4308,18 +4333,34 @@ BeginCopyFrom(Relation rel,
 		{
 			/* attribute is NOT to be copied from input */
 			/* use default value if one exists */
-			Node	   *defexpr = build_column_default(cstate->rel, attnum);
+			Expr	   *defexpr = (Expr *) build_column_default(cstate->rel,
+																attnum);
 
 			if (defexpr != NULL)
 			{
-				/* Initialize expressions in copycontext. */
-				defexprs[num_defaults] = ExecInitExpr(
-								 expression_planner((Expr *) defexpr), NULL);
+				/* Run the expression through planner */
+				defexpr = expression_planner(defexpr);
+
+				/* Initialize executable expression in copycontext */
+				defexprs[num_defaults] = ExecInitExpr(defexpr, NULL);
 				defmap[num_defaults] = attnum - 1;
 				num_defaults++;
 
+				/*
+				 * If a default expression looks at the table being loaded,
+				 * then it could give the wrong answer when using
+				 * multi-insert. Since database access can be dynamic this is
+				 * hard to test for exactly, so we use the much wider test of
+				 * whether the default expression is volatile. We allow for
+				 * the special case of when the default expression is the
+				 * nextval() of a sequence which in this specific case is
+				 * known to be safe for use with the multi-insert
+				 * optimisation. Hence we use this special case function
+				 * checker rather than the standard check for
+				 * contain_volatile_functions().
+				 */
 				if (!volatile_defexprs)
-					volatile_defexprs = contain_volatile_functions(defexpr);
+					volatile_defexprs = contain_volatile_functions_not_nextval((Node *) defexpr);
 			}
 		}
 	}
@@ -4864,11 +4905,28 @@ NextCopyFromX(CopyState cstate, ExprContext *econtext,
 				continue;
 			}
 
-			if (cstate->csv_mode && string == NULL &&
-				cstate->force_notnull_flags[m])
+			if (cstate->csv_mode)
 			{
-				/* Go ahead and read the NULL string */
-				string = cstate->null_print;
+				if (string == NULL &&
+					cstate->force_notnull_flags[m])
+				{
+					/*
+					 * FORCE_NOT_NULL option is set and column is NULL -
+					 * convert it to the NULL string.
+					 */
+					string = cstate->null_print;
+				}
+				else if (string != NULL && cstate->force_null_flags[m]
+						 && strcmp(string, cstate->null_print) == 0)
+				{
+					/*
+					 * FORCE_NULL option is set and column matches the NULL
+					 * string. It must have been quoted, or otherwise the
+					 * string would already have been set to NULL. Convert it
+					 * to NULL as specified.
+					 */
+					string = NULL;
+				}
 			}
 
 			cstate->cur_attname = NameStr(attr[m]->attname);
@@ -5315,13 +5373,6 @@ SendCopyFromForwardedTuple(CopyState cstate,
 				{
 					int32		len;
 					char	   *ptr;
-
-					/*
-					 * GPDB_91_MERGE_FIXME: do we need to worry about toasted datums here?
-					 * In theory, I suppose you could have a default value that gets evaluated
-					 * in the master, and the default value comes from another table as a toast
-					 * pointer.
-					 */
 
 					/* For simplicity, varlen's are always transmitted in "long" format */
 					len = VARSIZE(values[i]);
@@ -6445,7 +6496,7 @@ CopyAttributeOutText(CopyState cstate, char *string)
 	/*
 	 * We have to grovel through the string searching for control characters
 	 * and instances of the delimiter character.  In most cases, though, these
-	 * are infrequent.	To avoid overhead from calling CopySendData once per
+	 * are infrequent.  To avoid overhead from calling CopySendData once per
 	 * character, we dump out all characters between escaped characters in a
 	 * single call.  The loop invariant is that the data from "start" to "ptr"
 	 * can be sent literally, but hasn't yet been.

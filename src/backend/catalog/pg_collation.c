@@ -3,7 +3,7 @@
  * pg_collation.c
  *	  routines to support manipulation of the pg_collation relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -218,7 +218,7 @@ RemoveCollationById(Oid collationOid)
 				ObjectIdGetDatum(collationOid));
 
 	scandesc = systable_beginscan(rel, CollationOidIndexId, true,
-								  SnapshotNow, 1, &scanKeyData);
+								  NULL, 1, &scanKeyData);
 
 	tuple = systable_getnext(scandesc);
 

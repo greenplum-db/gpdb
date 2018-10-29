@@ -81,7 +81,6 @@
             <topicref href="guc-list.xml#gp_cached_segworkers_threshold"/>
             <topicref href="guc-list.xml#gp_command_count"/>
             <topicref href="guc-list.xml#gp_connection_send_timeout"/>
-            <topicref href="guc-list.xml#gp_connections_per_thread"/>
             <topicref href="guc-list.xml#gp_content"/>
             <topicref href="guc-list.xml#gp_create_table_random_default_distribution"/>
             <topicref href="guc-list.xml#gp_dbid"/>

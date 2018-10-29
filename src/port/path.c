@@ -3,7 +3,7 @@
  * path.c
  *	  portable path handling routines
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -13,7 +13,11 @@
  *-------------------------------------------------------------------------
  */
 
-#include "c.h"
+#ifndef FRONTEND
+#include "postgres.h"
+#else
+#include "postgres_fe.h"
+#endif
 
 #include <ctype.h>
 #include <sys/stat.h>
@@ -76,7 +80,7 @@ static void trim_trailing_separator(char *path);
 /*
  * skip_drive
  *
- * On Windows, a path may begin with "C:" or "//network/".	Advance over
+ * On Windows, a path may begin with "C:" or "//network/".  Advance over
  * this and point to the effective start of the path.
  */
 #ifdef WIN32
@@ -309,7 +313,7 @@ canonicalize_path(char *path)
 	 * Remove any trailing uses of "." and process ".." ourselves
 	 *
 	 * Note that "/../.." should reduce to just "/", while "../.." has to be
-	 * kept as-is.	In the latter case we put back mistakenly trimmed ".."
+	 * kept as-is.  In the latter case we put back mistakenly trimmed ".."
 	 * components below.  Also note that we want a Windows drive spec to be
 	 * visible to trim_directory(), but it's not part of the logic that's
 	 * looking at the name components; hence distinction between path and
@@ -584,6 +588,114 @@ make_relative_path(char *ret_path, const char *target_path,
 no_match:
 	strlcpy(ret_path, target_path, MAXPGPATH);
 	canonicalize_path(ret_path);
+}
+
+
+/*
+ * make_absolute_path
+ *
+ * If the given pathname isn't already absolute, make it so, interpreting
+ * it relative to the current working directory.
+ *
+ * Also canonicalizes the path.  The result is always a malloc'd copy.
+ *
+ * In backend, failure cases result in ereport(ERROR); in frontend,
+ * we write a complaint on stderr and return NULL.
+ *
+ * Note: interpretation of relative-path arguments during postmaster startup
+ * should happen before doing ChangeToDataDir(), else the user will probably
+ * not like the results.
+ */
+char *
+make_absolute_path(const char *path)
+{
+	char	   *new;
+
+	/* Returning null for null input is convenient for some callers */
+	if (path == NULL)
+		return NULL;
+
+	if (!is_absolute_path(path))
+	{
+		char	   *buf;
+		size_t		buflen;
+
+		buflen = MAXPGPATH;
+		for (;;)
+		{
+			buf = malloc(buflen);
+			if (!buf)
+			{
+#ifndef FRONTEND
+				ereport(ERROR,
+						(errcode(ERRCODE_OUT_OF_MEMORY),
+						 errmsg("out of memory")));
+#else
+				fprintf(stderr, _("out of memory\n"));
+				return NULL;
+#endif
+			}
+
+			if (getcwd(buf, buflen))
+				break;
+			else if (errno == ERANGE)
+			{
+				free(buf);
+				buflen *= 2;
+				continue;
+			}
+			else
+			{
+				int			save_errno = errno;
+
+				free(buf);
+				errno = save_errno;
+#ifndef FRONTEND
+				elog(ERROR, "could not get current working directory: %m");
+#else
+				fprintf(stderr, _("could not get current working directory: %s\n"),
+						strerror(errno));
+				return NULL;
+#endif
+			}
+		}
+
+		new = malloc(strlen(buf) + strlen(path) + 2);
+		if (!new)
+		{
+			free(buf);
+#ifndef FRONTEND
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
+#else
+			fprintf(stderr, _("out of memory\n"));
+			return NULL;
+#endif
+		}
+		sprintf(new, "%s/%s", buf, path);
+		free(buf);
+	}
+	else
+	{
+		new = strdup(path);
+		if (!new)
+		{
+#ifndef FRONTEND
+			ereport(ERROR,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("out of memory")));
+#else
+			fprintf(stderr, _("out of memory\n"));
+			return NULL;
+#endif
+		}
+	}
+
+	/* Make sure punctuation is canonical, too */
+	canonicalize_path(new);
+
+	return new;
 }
 
 

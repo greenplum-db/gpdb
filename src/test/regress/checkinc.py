@@ -84,7 +84,8 @@ fileset = {
     'xlocale.h':             [],
     # snowball/libstemmer/header.h includes "api.h", without specifying
     # a path. Don't be alarmed by that.
-    'api.h': []
+    'api.h':                 [],
+    'valgrind/memcheck.h':   []
 }
 
 

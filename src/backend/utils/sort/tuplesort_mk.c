@@ -2552,7 +2552,8 @@ dumptuples_mk(Tuplesortstate_mk *state, bool alltuples)
 }
 
 /*
- * Put pos at the begining of the tuplesort.  Create pos->work_tape if necessary
+ * Put pos at the beginning of the tuplesort.  Create pos->work_tape if
+ * necessary.
  */
 void
 tuplesort_rescan_pos_mk(Tuplesortstate_mk *state, TuplesortPos_mk *pos)

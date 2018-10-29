@@ -9,7 +9,7 @@
  * See utils/resowner/README for more info.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -101,6 +101,11 @@ typedef struct ResourceOwnerData
 	int			nfiles;			/* number of owned temporary files */
 	File	   *files;			/* dynamically allocated array */
 	int			maxfiles;		/* currently allocated array size */
+
+	/* We have built-in support for remembering dynamic shmem segments */
+	int			ndsms;			/* number of owned shmem segments */
+	dsm_segment **dsms;			/* dynamically allocated array */
+	int			maxdsms;		/* currently allocated array size */
 }	ResourceOwnerData;
 
 
@@ -135,6 +140,7 @@ static void PrintPlanCacheLeakWarning(CachedPlan *plan);
 static void PrintTupleDescLeakWarning(TupleDesc tupdesc);
 static void PrintSnapshotLeakWarning(Snapshot snapshot);
 static void PrintFileLeakWarning(File file);
+static void PrintDSMLeakWarning(dsm_segment *seg);
 
 
 /*****************************************************************************
@@ -174,7 +180,7 @@ ResourceOwnerCreate(ResourceOwner parent, const char *name)
  *		but don't delete the owner objects themselves.
  *
  * Note that this executes just one phase of release, and so typically
- * must be called three times.	We do it this way because (a) we want to
+ * must be called three times.  We do it this way because (a) we want to
  * do all the recursion separately for each phase, thereby preserving
  * the needed order of operations; and (b) xact.c may have other operations
  * to do between the phases.
@@ -257,7 +263,7 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 		 *
 		 * During a commit, there shouldn't be any remaining pins --- that
 		 * would indicate failure to clean up the executor correctly --- so
-		 * issue warnings.	In the abort case, just clean up quietly.
+		 * issue warnings.  In the abort case, just clean up quietly.
 		 *
 		 * We are careful to do the releasing back-to-front, so as to avoid
 		 * O(N^2) behavior in ResourceOwnerForgetBuffer().
@@ -282,6 +288,21 @@ ResourceOwnerReleaseInternal(ResourceOwner owner,
 			if (isCommit)
 				PrintRelCacheLeakWarning(owner->relrefs[owner->nrelrefs - 1]);
 			RelationClose(owner->relrefs[owner->nrelrefs - 1]);
+		}
+
+		/*
+		 * Release dynamic shared memory segments.  Note that dsm_detach()
+		 * will remove the segment from my list, so I just have to iterate
+		 * until there are none.
+		 *
+		 * As in the preceding cases, warn if there are leftover at commit
+		 * time.
+		 */
+		while (owner->ndsms > 0)
+		{
+			if (isCommit)
+				PrintDSMLeakWarning(owner->dsms[owner->ndsms - 1]);
+			dsm_detach(owner->dsms[owner->ndsms - 1]);
 		}
 	}
 	else if (phase == RESOURCE_RELEASE_LOCKS)
@@ -422,6 +443,7 @@ ResourceOwnerDelete(ResourceOwner owner)
 	Assert(owner->ncatrefs == 0);
 	Assert(owner->ncatlistrefs == 0);
 	Assert(owner->nrelrefs == 0);
+	Assert(owner->ndsms == 0);
 	Assert(owner->nplanrefs == 0);
 	Assert(owner->ntupdescs == 0);
 	Assert(owner->nsnapshots == 0);
@@ -437,7 +459,7 @@ ResourceOwnerDelete(ResourceOwner owner)
 	/*
 	 * We delink the owner from its parent before deleting it, so that if
 	 * there's an error we won't have deleted/busted owners still attached to
-	 * the owner tree.	Better a leak than a crash.
+	 * the owner tree.  Better a leak than a crash.
 	 */
 	ResourceOwnerNewParent(owner, NULL);
 
@@ -458,6 +480,8 @@ ResourceOwnerDelete(ResourceOwner owner)
 		pfree(owner->snapshots);
 	if (owner->files)
 		pfree(owner->files);
+	if (owner->dsms)
+		pfree(owner->dsms);
 
 	pfree(owner);
 }
@@ -629,7 +653,7 @@ ResourceOwnerForgetBuffer(ResourceOwner owner, Buffer buffer)
 
 		/*
 		 * Scan back-to-front because it's more likely we are releasing a
-		 * recently pinned buffer.	This isn't always the case of course, but
+		 * recently pinned buffer.  This isn't always the case of course, but
 		 * it's the way to bet.
 		 */
 		for (i = nb1; i >= 0; i--)
@@ -1249,6 +1273,91 @@ PrintFileLeakWarning(File file)
 	elog(WARNING,
 		 "temporary file leak: File %d still referenced",
 		 file);
+}
+
+/*
+ * Make sure there is room for at least one more entry in a ResourceOwner's
+ * dynamic shmem segment reference array.
+ *
+ * This is separate from actually inserting an entry because if we run out
+ * of memory, it's critical to do so *before* acquiring the resource.
+ */
+void
+ResourceOwnerEnlargeDSMs(ResourceOwner owner)
+{
+	int			newmax;
+
+	if (owner->ndsms < owner->maxdsms)
+		return;					/* nothing to do */
+
+	if (owner->dsms == NULL)
+	{
+		newmax = 16;
+		owner->dsms = (dsm_segment **)
+			MemoryContextAlloc(TopMemoryContext,
+							   newmax * sizeof(dsm_segment *));
+		owner->maxdsms = newmax;
+	}
+	else
+	{
+		newmax = owner->maxdsms * 2;
+		owner->dsms = (dsm_segment **)
+			repalloc(owner->dsms, newmax * sizeof(dsm_segment *));
+		owner->maxdsms = newmax;
+	}
+}
+
+/*
+ * Remember that a dynamic shmem segment is owned by a ResourceOwner
+ *
+ * Caller must have previously done ResourceOwnerEnlargeDSMs()
+ */
+void
+ResourceOwnerRememberDSM(ResourceOwner owner, dsm_segment *seg)
+{
+	Assert(owner->ndsms < owner->maxdsms);
+	owner->dsms[owner->ndsms] = seg;
+	owner->ndsms++;
+}
+
+/*
+ * Forget that a dynamic shmem segment is owned by a ResourceOwner
+ */
+void
+ResourceOwnerForgetDSM(ResourceOwner owner, dsm_segment *seg)
+{
+	dsm_segment **dsms = owner->dsms;
+	int			ns1 = owner->ndsms - 1;
+	int			i;
+
+	for (i = ns1; i >= 0; i--)
+	{
+		if (dsms[i] == seg)
+		{
+			while (i < ns1)
+			{
+				dsms[i] = dsms[i + 1];
+				i++;
+			}
+			owner->ndsms = ns1;
+			return;
+		}
+	}
+	elog(ERROR,
+		 "dynamic shared memory segment %u is not owned by resource owner %s",
+		 dsm_segment_handle(seg), owner->name);
+}
+
+
+/*
+ * Debugging subroutine
+ */
+static void
+PrintDSMLeakWarning(dsm_segment *seg)
+{
+	elog(WARNING,
+		 "dynamic shared memory leak: segment %u still referenced",
+		 dsm_segment_handle(seg));
 }
 
 /*

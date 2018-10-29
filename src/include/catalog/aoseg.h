@@ -17,6 +17,8 @@
 #ifndef AOSEG_H
 #define AOSEG_H
 
+#include "storage/lock.h"
+
 /*
  * aoseg.c prototypes
  */

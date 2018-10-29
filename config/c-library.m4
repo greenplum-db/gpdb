@@ -18,7 +18,8 @@ res = _timezone / 60;
   [pgac_cv_var_int_timezone=yes],
   [pgac_cv_var_int_timezone=no])])
 if test x"$pgac_cv_var_int_timezone" = xyes ; then
-  AC_DEFINE(HAVE_INT_TIMEZONE,, [Define to 1 if you have the global variable 'int timezone'.])
+  AC_DEFINE(HAVE_INT_TIMEZONE, 1,
+            [Define to 1 if you have the global variable 'int timezone'.])
 fi])# PGAC_VAR_INT_TIMEZONE
 
 
@@ -68,7 +69,8 @@ gettimeofday(tp,tzp);],
 [pgac_cv_func_gettimeofday_1arg=no],
 [pgac_cv_func_gettimeofday_1arg=yes])])
 if test x"$pgac_cv_func_gettimeofday_1arg" = xyes ; then
-  AC_DEFINE(GETTIMEOFDAY_1ARG,, [Define to 1 if gettimeofday() takes only 1 argument.])
+  AC_DEFINE(GETTIMEOFDAY_1ARG, 1,
+            [Define to 1 if gettimeofday() takes only 1 argument.])
 fi
 AH_VERBATIM(GETTIMEOFDAY_1ARG_,
 [@%:@ifdef GETTIMEOFDAY_1ARG
@@ -95,7 +97,8 @@ getpwuid_r(uid, space, buf, bufsize, result);],
 [pgac_cv_func_getpwuid_r_5arg=yes],
 [pgac_cv_func_getpwuid_r_5arg=no])])
 if test x"$pgac_cv_func_getpwuid_r_5arg" = xyes ; then
-  AC_DEFINE(GETPWUID_R_5ARG,, [Define to 1 if getpwuid_r() takes a 5th argument.])
+  AC_DEFINE(GETPWUID_R_5ARG, 1,
+            [Define to 1 if getpwuid_r() takes a 5th argument.])
 fi
 ])# PGAC_FUNC_GETPWUID_R_5ARG
 
@@ -117,7 +120,8 @@ int strerror_r();
 [pgac_cv_func_strerror_r_int=yes],
 [pgac_cv_func_strerror_r_int=no])])
 if test x"$pgac_cv_func_strerror_r_int" = xyes ; then
-  AC_DEFINE(STRERROR_R_INT,, [Define to 1 if strerror_r() returns a int.])
+  AC_DEFINE(STRERROR_R_INT, 1,
+            [Define to 1 if strerror_r() returns a int.])
 fi
 ])# PGAC_FUNC_STRERROR_R_INT
 
@@ -210,7 +214,8 @@ sigaction(0, &act, &oact);],
 [pgac_cv_func_posix_signals=yes],
 [pgac_cv_func_posix_signals=no])])
 if test x"$pgac_cv_func_posix_signals" = xyes ; then
-  AC_DEFINE(HAVE_POSIX_SIGNALS,, [Define to 1 if you have the POSIX signal interface.])
+  AC_DEFINE(HAVE_POSIX_SIGNALS, 1,
+            [Define to 1 if you have the POSIX signal interface.])
 fi
 HAVE_POSIX_SIGNALS=$pgac_cv_func_posix_signals
 AC_SUBST(HAVE_POSIX_SIGNALS)])# PGAC_FUNC_POSIX_SIGNALS
@@ -268,16 +273,16 @@ case $pgac_cv_snprintf_long_long_int_format in
 esac])# PGAC_FUNC_SNPRINTF_LONG_LONG_INT_FORMAT
 
 
-# PGAC_FUNC_PRINTF_ARG_CONTROL
+# PGAC_FUNC_SNPRINTF_ARG_CONTROL
 # ---------------------------------------
-# Determine if printf supports %1$ argument selection, e.g. %5$ selects
-# the fifth argument after the printf print string.
+# Determine if snprintf supports %1$ argument selection, e.g. %5$ selects
+# the fifth argument after the printf format string.
 # This is not in the C99 standard, but in the Single Unix Specification (SUS).
 # It is used in our language translation strings.
 #
-AC_DEFUN([PGAC_FUNC_PRINTF_ARG_CONTROL],
-[AC_MSG_CHECKING([whether printf supports argument control])
-AC_CACHE_VAL(pgac_cv_printf_arg_control,
+AC_DEFUN([PGAC_FUNC_SNPRINTF_ARG_CONTROL],
+[AC_MSG_CHECKING([whether snprintf supports argument control])
+AC_CACHE_VAL(pgac_cv_snprintf_arg_control,
 [AC_TRY_RUN([#include <stdio.h>
 #include <string.h>
 
@@ -291,12 +296,48 @@ int main()
     return 1;
   return 0;
 }],
-[pgac_cv_printf_arg_control=yes],
-[pgac_cv_printf_arg_control=no],
-[pgac_cv_printf_arg_control=cross])
+[pgac_cv_snprintf_arg_control=yes],
+[pgac_cv_snprintf_arg_control=no],
+[pgac_cv_snprintf_arg_control=cross])
 ])dnl AC_CACHE_VAL
-AC_MSG_RESULT([$pgac_cv_printf_arg_control])
-])# PGAC_FUNC_PRINTF_ARG_CONTROL
+AC_MSG_RESULT([$pgac_cv_snprintf_arg_control])
+])# PGAC_FUNC_SNPRINTF_ARG_CONTROL
+
+# PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT
+# ---------------------------------------
+# Determine if snprintf supports the z length modifier for printing
+# size_t-sized variables. That's supported by C99 and POSIX but not
+# all platforms play ball, so we must test whether it's working.
+#
+AC_DEFUN([PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT],
+[AC_MSG_CHECKING([whether snprintf supports the %z modifier])
+AC_CACHE_VAL(pgac_cv_snprintf_size_t_support,
+[AC_TRY_RUN([#include <stdio.h>
+#include <string.h>
+
+int main()
+{
+  char bufz[100];
+  char buf64[100];
+
+  /*
+   * Print the largest unsigned number fitting in a size_t using both %zu
+   * and the previously-determined format for 64-bit integers.  Note that
+   * we don't run this code unless we know snprintf handles 64-bit ints.
+   */
+  bufz[0] = '\0';  /* in case snprintf fails to emit anything */
+  snprintf(bufz, sizeof(bufz), "%zu", ~((size_t) 0));
+  snprintf(buf64, sizeof(buf64), UINT64_FORMAT, (PG_INT64_TYPE) ~((size_t) 0));
+  if (strcmp(bufz, buf64) != 0)
+    return 1;
+  return 0;
+}],
+[pgac_cv_snprintf_size_t_support=yes],
+[pgac_cv_snprintf_size_t_support=no],
+[pgac_cv_snprintf_size_t_support=cross])
+])dnl AC_CACHE_VAL
+AC_MSG_RESULT([$pgac_cv_snprintf_size_t_support])
+])# PGAC_FUNC_SNPRINTF_SIZE_T_SUPPORT
 
 
 # PGAC_TYPE_LOCALE_T

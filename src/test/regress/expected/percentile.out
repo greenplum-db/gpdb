@@ -511,13 +511,13 @@ select * from percv;
 (11 rows)
 
 select pg_get_viewdef('percv');
-                                                          pg_get_viewdef                                                          
-----------------------------------------------------------------------------------------------------------------------------------
-  SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY ((perct.a / 10))::double precision) AS percentile_cont, +
-     MEDIAN(perct.a) AS "median",                                                                                                +
-     percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc                           +
-    FROM perct                                                                                                                   +
-   GROUP BY perct.b                                                                                                              +
+                                                         pg_get_viewdef                                                          
+---------------------------------------------------------------------------------------------------------------------------------
+  SELECT percentile_cont((0.4)::double precision) WITHIN GROUP (ORDER BY ((perct.a / 10))::double precision) AS percentile_cont,+
+     MEDIAN(perct.a) AS "median",                                                                                               +
+     percentile_disc((0.51)::double precision) WITHIN GROUP (ORDER BY perct.a DESC) AS percentile_disc                          +
+    FROM perct                                                                                                                  +
+   GROUP BY perct.b                                                                                                             +
    ORDER BY perct.b;
 (1 row)
 
@@ -629,7 +629,12 @@ LINE 1: select percentile_cont(0.8) within group (order by a, a + 1,...
 HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- set-returning
 select generate_series(1, 2), median(a) from perct;
-ERROR:  set-valued function called in context that cannot accept a set
+ generate_series | median 
+-----------------+--------
+               1 |   50.5
+               2 |   50.5
+(2 rows)
+
 -- GROUPING SETS
 select median(a) from perct group by grouping sets((), (b));
  median 

@@ -7263,6 +7263,37 @@ $$
 --ctas with a function returning record
 
 DROP TABLE countries_results;
+
+
+--
+-- SIRV that returns a composite type. Test referencing the individual
+-- fields in WHERE clause.
+--
+CREATE TYPE address AS (street text, name text);
+
+CREATE TABLE inserted_addresses OF address;
+
+CREATE TABLE testfunc_seen_streets (street text);
+
+CREATE OR REPLACE FUNCTION testfunc(street text) RETURNS address AS
+$$
+declare
+  r address;
+begin
+  INSERT INTO testfunc_seen_streets VALUES (street);
+
+  r.street = street;
+  r.name = NULL;
+  return r;
+end;
+$$ LANGUAGE plpgsql VOLATILE;
+
+INSERT INTO inserted_addresses SELECT street, name FROM testfunc('Wall Street') WHERE name IS NOT NULL;
+INSERT INTO inserted_addresses SELECT street, name FROM testfunc('Abbey Road') WHERE street IS NOT NULL;
+
+SELECT * FROM inserted_addresses;
+SELECT * FROM testfunc_seen_streets;
+
 -- ----------------------------------------------------------------------
 -- Test: teardown.sql
 -- ----------------------------------------------------------------------

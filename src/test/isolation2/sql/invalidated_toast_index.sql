@@ -24,10 +24,9 @@ INSERT INTO toastable_heap VALUES(repeat('A',100000), repeat('B',100001), 2);
 *U: SET allow_system_table_mods = true;
 *U: UPDATE pg_index
         SET indisvalid = false
-        FROM pg_class heap, pg_class toast
-        WHERE indexrelid = toast.reltoastidxid
-          AND toast.oid  = heap.reltoastrelid
-          AND heap.oid   = 'toastable_heap'::regclass;
+        FROM pg_class heap
+        WHERE indrelid = heap.reltoastrelid
+          AND heap.oid = 'toastable_heap'::regclass;
 -- end_ignore
 
 -- Fetch, slice, save, and delete should all fail.

@@ -14,6 +14,8 @@
 #ifndef AOVISIMAP_H
 #define AOVISIMAP_H
 
+#include "storage/lock.h"
+
 /*
  * Macros to the attribute number for each attribute
  * in the AO visimap relation.

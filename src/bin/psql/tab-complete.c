@@ -3,7 +3,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/tab-complete.c
  */
@@ -88,7 +88,7 @@ typedef struct SchemaQuery
 
 	/*
 	 * Selection condition --- only rows meeting this condition are candidates
-	 * to display.	If catname mentions multiple tables, include the necessary
+	 * to display.  If catname mentions multiple tables, include the necessary
 	 * join condition here.  For example, "c.relkind = 'r'". Write NULL (not
 	 * an empty string) if not needed.
 	 */
@@ -371,47 +371,12 @@ static const SchemaQuery Query_for_list_of_constraints_with_schema = {
 	NULL
 };
 
-/* The bit masks for the following three functions come from
- * src/include/catalog/pg_trigger.h.
- */
-static const SchemaQuery Query_for_list_of_insertables = {
-	/* catname */
-	"pg_catalog.pg_class c",
-	/* selcondition */
-	"(c.relkind = 'r' OR (c.relkind = 'v' AND c.relhastriggers AND EXISTS "
-	"(SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = c.oid AND t.tgtype & (1 << 2) <> 0)))",
-	/* viscondition */
-	"pg_catalog.pg_table_is_visible(c.oid)",
-	/* namespace */
-	"c.relnamespace",
-	/* result */
-	"pg_catalog.quote_ident(c.relname)",
-	/* qualresult */
-	NULL
-};
-
-static const SchemaQuery Query_for_list_of_deletables = {
-	/* catname */
-	"pg_catalog.pg_class c",
-	/* selcondition */
-	"(c.relkind = 'r' OR (c.relkind = 'v' AND c.relhastriggers AND EXISTS "
-	"(SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = c.oid AND t.tgtype & (1 << 3) <> 0)))",
-	/* viscondition */
-	"pg_catalog.pg_table_is_visible(c.oid)",
-	/* namespace */
-	"c.relnamespace",
-	/* result */
-	"pg_catalog.quote_ident(c.relname)",
-	/* qualresult */
-	NULL
-};
-
+/* Relations supporting INSERT, UPDATE or DELETE */
 static const SchemaQuery Query_for_list_of_updatables = {
 	/* catname */
 	"pg_catalog.pg_class c",
 	/* selcondition */
-	"(c.relkind = 'r' OR (c.relkind = 'v' AND c.relhastriggers AND EXISTS "
-	"(SELECT 1 FROM pg_catalog.pg_trigger t WHERE t.tgrelid = c.oid AND t.tgtype & (1 << 4) <> 0)))",
+	"c.relkind IN ('r', 'f', 'v')",
 	/* viscondition */
 	"pg_catalog.pg_table_is_visible(c.oid)",
 	/* namespace */
@@ -518,7 +483,7 @@ static const SchemaQuery Query_for_list_of_matviews = {
  * restricted to names matching a partially entered name.  In these queries,
  * the first %s will be replaced by the text entered so far (suitably escaped
  * to become a SQL literal string).  %d will be replaced by the length of the
- * string (in unescaped form).	A second and third %s, if present, will be
+ * string (in unescaped form).  A second and third %s, if present, will be
  * replaced by a suitably-escaped version of the string provided in
  * completion_info_charp.  A fourth and fifth %s are similarly replaced by
  * completion_info_charp2.
@@ -577,6 +542,12 @@ static const SchemaQuery Query_for_list_of_matviews = {
 #define Query_for_list_of_schemas \
 "SELECT pg_catalog.quote_ident(nspname) FROM pg_catalog.pg_namespace "\
 " WHERE substring(pg_catalog.quote_ident(nspname),1,%d)='%s'"
+
+#define Query_for_list_of_alter_system_set_vars \
+"SELECT name FROM "\
+" (SELECT pg_catalog.lower(name) AS name FROM pg_catalog.pg_settings "\
+"  WHERE context != 'internal') ss "\
+" WHERE substring(name,1,%d)='%s'"
 
 #define Query_for_list_of_set_vars \
 "SELECT name FROM "\
@@ -750,6 +721,11 @@ static const SchemaQuery Query_for_list_of_matviews = {
 "   FROM pg_catalog.pg_prepared_statements "\
 "  WHERE substring(pg_catalog.quote_ident(name),1,%d)='%s'"
 
+#define Query_for_list_of_event_triggers \
+" SELECT pg_catalog.quote_ident(evtname) "\
+"   FROM pg_catalog.pg_event_trigger "\
+"  WHERE substring(pg_catalog.quote_ident(evtname),1,%d)='%s'"
+
 /*
  * This is a list of all "things" in Pgsql, which can show up after CREATE or
  * DROP; and there is also a query to get a list of them.
@@ -782,6 +758,7 @@ static const pgsql_thing_t words_after_create[] = {
 	{"DATABASE", Query_for_list_of_databases},
 	{"DICTIONARY", Query_for_list_of_ts_dictionaries, NULL, THING_NO_SHOW},
 	{"DOMAIN", NULL, &Query_for_list_of_domains},
+	{"EVENT TRIGGER", NULL, NULL},
 	{"EXTENSION", Query_for_list_of_extensions},
 	{"FOREIGN DATA WRAPPER", NULL, NULL},
 	{"FOREIGN TABLE", NULL, NULL},
@@ -818,7 +795,7 @@ static const pgsql_thing_t words_after_create[] = {
 
 
 /* Forward declaration of functions */
-static char **psql_completion(char *text, int start, int end);
+static char **psql_completion(const char *text, int start, int end);
 static char *create_command_generator(const char *text, int state);
 static char *drop_command_generator(const char *text, int state);
 static char *complete_from_query(const char *text, int state);
@@ -827,7 +804,7 @@ static char *_complete_from_query(int is_schema_query,
 					 const char *text, int state);
 static char *complete_from_list(const char *text, int state);
 static char *complete_from_const(const char *text, int state);
-static char **complete_from_variables(char *text,
+static char **complete_from_variables(const char *text,
 						const char *prefix, const char *suffix);
 static char *complete_from_files(const char *text, int state);
 
@@ -849,7 +826,7 @@ void
 initialize_readline(void)
 {
 	rl_readline_name = (char *) pset.progname;
-	rl_attempted_completion_function = (void *) psql_completion;
+	rl_attempted_completion_function = psql_completion;
 
 	rl_basic_word_break_characters = WORD_BREAKS;
 
@@ -871,7 +848,7 @@ initialize_readline(void)
  * completion_matches() function, so we don't have to worry about it.
  */
 static char **
-psql_completion(char *text, int start, int end)
+psql_completion(const char *text, int start, int end)
 {
 	/* This is the variable we'll return. */
 	char	  **matches = NULL;
@@ -902,7 +879,7 @@ psql_completion(char *text, int start, int end)
 		"\\a", "\\connect", "\\conninfo", "\\C", "\\cd", "\\copy", "\\copyright",
 		"\\d", "\\da", "\\db", "\\dc", "\\dC", "\\dd", "\\dD", "\\des", "\\det", "\\deu", "\\dew", "\\df",
 		"\\dF", "\\dFd", "\\dFp", "\\dFt", "\\dg", "\\di", "\\dl", "\\dL",
-		"\\dn", "\\do", "\\dp", "\\drds", "\\ds", "\\dS", "\\dt", "\\dT", "\\dv", "\\du",
+		"\\dn", "\\do", "\\dp", "\\drds", "\\ds", "\\dS", "\\dt", "\\dT", "\\dv", "\\du", "\\dx",
 		"\\e", "\\echo", "\\ef", "\\encoding",
 		"\\f", "\\g", "\\gset", "\\h", "\\help", "\\H", "\\i", "\\ir", "\\l",
 		"\\lo_import", "\\lo_export", "\\lo_list", "\\lo_unlink",
@@ -971,9 +948,9 @@ psql_completion(char *text, int start, int end)
 	{
 		static const char *const list_ALTER[] =
 		{"AGGREGATE", "COLLATION", "CONVERSION", "DATABASE", "DEFAULT PRIVILEGES", "DOMAIN",
-			"EXTENSION", "FOREIGN DATA WRAPPER", "FOREIGN TABLE", "FUNCTION",
+			"EVENT TRIGGER", "EXTENSION", "FOREIGN DATA WRAPPER", "FOREIGN TABLE", "FUNCTION",
 			"GROUP", "INDEX", "LANGUAGE", "LARGE OBJECT", "MATERIALIZED VIEW", "OPERATOR",
-			"ROLE", "RULE", "SCHEMA", "SERVER", "SEQUENCE", "TABLE",
+			"ROLE", "RULE", "SCHEMA", "SERVER", "SEQUENCE", "SYSTEM SET", "TABLE",
 			"TABLESPACE", "TEXT SEARCH", "TRIGGER", "TYPE",
 		"USER", "USER MAPPING FOR", "VIEW", NULL};
 
@@ -1038,6 +1015,37 @@ psql_completion(char *text, int start, int end)
 		{"RESET", "SET", "OWNER TO", "RENAME TO", "CONNECTION LIMIT", NULL};
 
 		COMPLETE_WITH_LIST(list_ALTERDATABASE);
+	}
+
+	/* ALTER EVENT TRIGGER */
+	else if (pg_strcasecmp(prev3_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev2_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev_wd, "TRIGGER") == 0)
+	{
+		COMPLETE_WITH_QUERY(Query_for_list_of_event_triggers);
+	}
+
+	/* ALTER EVENT TRIGGER <name> */
+	else if (pg_strcasecmp(prev4_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev3_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev2_wd, "TRIGGER") == 0)
+	{
+		static const char *const list_ALTER_EVENT_TRIGGER[] =
+		{"DISABLE", "ENABLE", "OWNER TO", "RENAME TO", NULL};
+
+		COMPLETE_WITH_LIST(list_ALTER_EVENT_TRIGGER);
+	}
+
+	/* ALTER EVENT TRIGGER <name> ENABLE */
+	else if (pg_strcasecmp(prev5_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev4_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev3_wd, "TRIGGER") == 0 &&
+			 pg_strcasecmp(prev_wd, "ENABLE") == 0)
+	{
+		static const char *const list_ALTER_EVENT_TRIGGER_ENABLE[] =
+		{"REPLICA", "ALWAYS", NULL};
+
+		COMPLETE_WITH_LIST(list_ALTER_EVENT_TRIGGER_ENABLE);
 	}
 
 	/* ALTER EXTENSION <name> */
@@ -1306,6 +1314,11 @@ psql_completion(char *text, int start, int end)
 
 		COMPLETE_WITH_LIST(list_ALTER_SERVER);
 	}
+	/* ALTER SYSTEM SET <name> */
+	else if (pg_strcasecmp(prev3_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev2_wd, "SYSTEM") == 0 &&
+			 pg_strcasecmp(prev_wd, "SET") == 0)
+		COMPLETE_WITH_QUERY(Query_for_list_of_alter_system_set_vars);
 	/* ALTER VIEW <name> */
 	else if (pg_strcasecmp(prev3_wd, "ALTER") == 0 &&
 			 pg_strcasecmp(prev2_wd, "VIEW") == 0)
@@ -1366,7 +1379,8 @@ psql_completion(char *text, int start, int end)
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_tables, NULL);
 
 	/* ALTER TRIGGER <name> ON <name> */
-	else if (pg_strcasecmp(prev4_wd, "TRIGGER") == 0 &&
+	else if (pg_strcasecmp(prev5_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev4_wd, "TRIGGER") == 0 &&
 			 pg_strcasecmp(prev2_wd, "ON") == 0)
 		COMPLETE_WITH_CONST("RENAME TO");
 
@@ -1379,7 +1393,7 @@ psql_completion(char *text, int start, int end)
 		static const char *const list_ALTER2[] =
 		{"ADD", "ALTER", "CLUSTER ON", "DISABLE", "DROP", "ENABLE", "INHERIT",
 			"NO INHERIT", "RENAME", "RESET", "OWNER TO", "SET",
-		"VALIDATE CONSTRAINT", NULL};
+		"VALIDATE CONSTRAINT", "REPLICA IDENTITY", NULL};
 
 		COMPLETE_WITH_LIST(list_ALTER2);
 	}
@@ -1624,13 +1638,42 @@ psql_completion(char *text, int start, int end)
 
 		COMPLETE_WITH_LIST(list_TABLEOPTIONS);
 	}
+	else if (pg_strcasecmp(prev4_wd, "REPLICA") == 0 &&
+			 pg_strcasecmp(prev3_wd, "IDENTITY") == 0 &&
+			 pg_strcasecmp(prev2_wd, "USING") == 0 &&
+			 pg_strcasecmp(prev_wd, "INDEX") == 0)
+	{
+		completion_info_charp = prev5_wd;
+		COMPLETE_WITH_QUERY(Query_for_index_of_table);
+	}
+	else if (pg_strcasecmp(prev5_wd, "TABLE") == 0 &&
+			 pg_strcasecmp(prev3_wd, "REPLICA") == 0 &&
+			 pg_strcasecmp(prev2_wd, "IDENTITY") == 0 &&
+			 pg_strcasecmp(prev_wd, "USING") == 0)
+	{
+		COMPLETE_WITH_CONST("INDEX");
+	}
+	else if (pg_strcasecmp(prev4_wd, "TABLE") == 0 &&
+			 pg_strcasecmp(prev2_wd, "REPLICA") == 0 &&
+			 pg_strcasecmp(prev_wd, "IDENTITY") == 0)
+	{
+		static const char *const list_REPLICAID[] =
+		{"FULL", "NOTHING", "DEFAULT", "USING", NULL};
 
-	/* ALTER TABLESPACE <foo> with RENAME TO, OWNER TO, SET, RESET */
+		COMPLETE_WITH_LIST(list_REPLICAID);
+	}
+	else if (pg_strcasecmp(prev3_wd, "TABLE") == 0 &&
+			 pg_strcasecmp(prev_wd, "REPLICA") == 0)
+	{
+		COMPLETE_WITH_CONST("IDENTITY");
+	}
+
+	/* ALTER TABLESPACE <foo> with RENAME TO, OWNER TO, SET, RESET, MOVE */
 	else if (pg_strcasecmp(prev3_wd, "ALTER") == 0 &&
 			 pg_strcasecmp(prev2_wd, "TABLESPACE") == 0)
 	{
 		static const char *const list_ALTERTSPC[] =
-		{"RENAME TO", "OWNER TO", "SET", "RESET", NULL};
+		{"RENAME TO", "OWNER TO", "SET", "RESET", "MOVE", NULL};
 
 		COMPLETE_WITH_LIST(list_ALTERTSPC);
 	}
@@ -1651,6 +1694,27 @@ psql_completion(char *text, int start, int end)
 		{"seq_page_cost", "random_page_cost", NULL};
 
 		COMPLETE_WITH_LIST(list_TABLESPACEOPTIONS);
+	}
+	/* ALTER TABLESPACE <foo> MOVE ALL|TABLES|INDEXES|MATERIALIZED VIEWS */
+	else if (pg_strcasecmp(prev4_wd, "ALTER") == 0 &&
+			 pg_strcasecmp(prev3_wd, "TABLESPACE") == 0 &&
+			 pg_strcasecmp(prev_wd, "MOVE") == 0)
+	{
+		static const char *const list_TABLESPACEMOVETARGETS[] =
+		{"ALL", "TABLES", "INDEXES", "MATERIALIZED VIEWS", NULL};
+
+		COMPLETE_WITH_LIST(list_TABLESPACEMOVETARGETS);
+	}
+	else if ((pg_strcasecmp(prev4_wd, "TABLESPACE") == 0 &&
+			  pg_strcasecmp(prev2_wd, "MOVE") == 0) ||
+			 (pg_strcasecmp(prev5_wd, "TABLESPACE") == 0 &&
+			  pg_strcasecmp(prev3_wd, "MOVE") == 0 &&
+			  pg_strcasecmp(prev2_wd, "MATERIALIZED") == 0))
+	{
+		static const char *const list_TABLESPACEMOVEOPTIONS[] =
+		{"OWNED BY", "TO", NULL};
+
+		COMPLETE_WITH_LIST(list_TABLESPACEMOVEOPTIONS);
 	}
 
 	/* ALTER TEXT SEARCH */
@@ -1858,7 +1922,7 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev_wd, "ON") == 0)
 	{
 		static const char *const list_COMMENT[] =
-		{"CAST", "COLLATION", "CONVERSION", "DATABASE", "EXTENSION",
+		{"CAST", "COLLATION", "CONVERSION", "DATABASE", "EVENT TRIGGER", "EXTENSION",
 			"FOREIGN DATA WRAPPER", "FOREIGN TABLE",
 			"SERVER", "INDEX", "LANGUAGE", "RULE", "SCHEMA", "SEQUENCE",
 			"TABLE", "TYPE", "VIEW", "MATERIALIZED VIEW", "COLUMN", "AGGREGATE", "FUNCTION",
@@ -1912,6 +1976,13 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev_wd, "VIEW") == 0)
 	{
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_matviews, NULL);
+	}
+	else if (pg_strcasecmp(prev4_wd, "COMMENT") == 0 &&
+			 pg_strcasecmp(prev3_wd, "ON") == 0 &&
+			 pg_strcasecmp(prev2_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev_wd, "TRIGGER") == 0)
+	{
+		COMPLETE_WITH_QUERY(Query_for_list_of_event_triggers);
 	}
 	else if ((pg_strcasecmp(prev4_wd, "COMMENT") == 0 &&
 			  pg_strcasecmp(prev3_wd, "ON") == 0) ||
@@ -2352,6 +2423,27 @@ psql_completion(char *text, int start, int end)
 			 pg_strcasecmp(prev_wd, "AS") == 0)
 		COMPLETE_WITH_CONST("SELECT");
 
+/* CREATE EVENT TRIGGER */
+	else if (pg_strcasecmp(prev2_wd, "CREATE") == 0 &&
+			 pg_strcasecmp(prev_wd, "EVENT") == 0)
+		COMPLETE_WITH_CONST("TRIGGER");
+	/* Complete CREATE EVENT TRIGGER <name> with ON */
+	else if (pg_strcasecmp(prev4_wd, "CREATE") == 0 &&
+			 pg_strcasecmp(prev3_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev2_wd, "TRIGGER") == 0)
+		COMPLETE_WITH_CONST("ON");
+	/* Complete CREATE EVENT TRIGGER <name> ON with event_type */
+	else if (pg_strcasecmp(prev5_wd, "CREATE") == 0 &&
+			 pg_strcasecmp(prev4_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev3_wd, "TRIGGER") == 0 &&
+			 pg_strcasecmp(prev_wd, "ON") == 0)
+	{
+		static const char *const list_CREATE_EVENT_TRIGGER_ON[] =
+		{"ddl_command_start", "ddl_command_end", "sql_drop", NULL};
+
+		COMPLETE_WITH_LIST(list_CREATE_EVENT_TRIGGER_ON);
+	}
+
 /* DECLARE */
 	else if (pg_strcasecmp(prev2_wd, "DECLARE") == 0)
 	{
@@ -2386,7 +2478,7 @@ psql_completion(char *text, int start, int end)
 	/* Complete DELETE FROM with a list of tables */
 	else if (pg_strcasecmp(prev2_wd, "DELETE") == 0 &&
 			 pg_strcasecmp(prev_wd, "FROM") == 0)
-		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_deletables, NULL);
+		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_updatables, NULL);
 	/* Complete DELETE FROM <table> */
 	else if (pg_strcasecmp(prev3_wd, "DELETE") == 0 &&
 			 pg_strcasecmp(prev2_wd, "FROM") == 0)
@@ -2402,7 +2494,7 @@ psql_completion(char *text, int start, int end)
 	else if (pg_strcasecmp(prev_wd, "DISCARD") == 0)
 	{
 		static const char *const list_DISCARD[] =
-		{"ALL", "PLANS", "TEMP", NULL};
+		{"ALL", "PLANS", "SEQUENCES", "TEMP", NULL};
 
 		COMPLETE_WITH_LIST(list_DISCARD);
 	}
@@ -2444,6 +2536,9 @@ psql_completion(char *text, int start, int end)
 			 (pg_strcasecmp(prev4_wd, "DROP") == 0 &&
 			  pg_strcasecmp(prev3_wd, "AGGREGATE") == 0 &&
 			  prev_wd[strlen(prev_wd) - 1] == ')') ||
+			 (pg_strcasecmp(prev4_wd, "DROP") == 0 &&
+			  pg_strcasecmp(prev3_wd, "EVENT") == 0 &&
+			  pg_strcasecmp(prev2_wd, "TRIGGER") == 0) ||
 			 (pg_strcasecmp(prev5_wd, "DROP") == 0 &&
 			  pg_strcasecmp(prev4_wd, "FOREIGN") == 0 &&
 			  pg_strcasecmp(prev3_wd, "DATA") == 0 &&
@@ -2516,6 +2611,19 @@ psql_completion(char *text, int start, int end)
 		COMPLETE_WITH_LIST(list_ALTERTEXTSEARCH);
 	}
 
+	/* DROP EVENT TRIGGER */
+	else if (pg_strcasecmp(prev2_wd, "DROP") == 0 &&
+			 pg_strcasecmp(prev_wd, "EVENT") == 0)
+	{
+		COMPLETE_WITH_CONST("TRIGGER");
+	}
+	else if (pg_strcasecmp(prev3_wd, "DROP") == 0 &&
+			 pg_strcasecmp(prev2_wd, "EVENT") == 0 &&
+			 pg_strcasecmp(prev_wd, "TRIGGER") == 0)
+	{
+		COMPLETE_WITH_QUERY(Query_for_list_of_event_triggers);
+	}
+
 /* EXECUTE, but not EXECUTE embedded in other commands */
 	else if (pg_strcasecmp(prev_wd, "EXECUTE") == 0 &&
 			 prev2_wd[0] == '\0')
@@ -2578,8 +2686,9 @@ psql_completion(char *text, int start, int end)
 	 * but we may as well tab-complete both: perhaps some users prefer one
 	 * variant or the other.
 	 */
-	else if (pg_strcasecmp(prev3_wd, "FETCH") == 0 ||
-			 pg_strcasecmp(prev3_wd, "MOVE") == 0)
+	else if ((pg_strcasecmp(prev3_wd, "FETCH") == 0 ||
+			  pg_strcasecmp(prev3_wd, "MOVE") == 0) &&
+			 pg_strcasecmp(prev_wd, "TO") != 0)
 	{
 		static const char *const list_FROMIN[] =
 		{"FROM", "IN", NULL};
@@ -2756,7 +2865,7 @@ psql_completion(char *text, int start, int end)
 	/* Complete INSERT INTO with table names */
 	else if (pg_strcasecmp(prev2_wd, "INSERT") == 0 &&
 			 pg_strcasecmp(prev_wd, "INTO") == 0)
-		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_insertables, NULL);
+		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_updatables, NULL);
 	/* Complete "INSERT INTO <table> (" with attribute names */
 	else if (pg_strcasecmp(prev4_wd, "INSERT") == 0 &&
 			 pg_strcasecmp(prev3_wd, "INTO") == 0 &&
@@ -2898,11 +3007,22 @@ psql_completion(char *text, int start, int end)
 	else if (pg_strcasecmp(prev3_wd, "REFRESH") == 0 &&
 			 pg_strcasecmp(prev2_wd, "MATERIALIZED") == 0 &&
 			 pg_strcasecmp(prev_wd, "VIEW") == 0)
+		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_matviews,
+								   " UNION SELECT 'CONCURRENTLY'");
+	else if (pg_strcasecmp(prev4_wd, "REFRESH") == 0 &&
+			 pg_strcasecmp(prev3_wd, "MATERIALIZED") == 0 &&
+			 pg_strcasecmp(prev2_wd, "VIEW") == 0 &&
+			 pg_strcasecmp(prev_wd, "CONCURRENTLY") == 0)
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_matviews, NULL);
 	else if (pg_strcasecmp(prev4_wd, "REFRESH") == 0 &&
 			 pg_strcasecmp(prev3_wd, "MATERIALIZED") == 0 &&
 			 pg_strcasecmp(prev2_wd, "VIEW") == 0)
 		COMPLETE_WITH_CONST("WITH");
+	else if (pg_strcasecmp(prev5_wd, "REFRESH") == 0 &&
+			 pg_strcasecmp(prev4_wd, "MATERIALIZED") == 0 &&
+			 pg_strcasecmp(prev3_wd, "VIEW") == 0 &&
+			 pg_strcasecmp(prev2_wd, "CONCURRENTLY") == 0)
+		COMPLETE_WITH_CONST("WITH DATA");
 	else if (pg_strcasecmp(prev5_wd, "REFRESH") == 0 &&
 			 pg_strcasecmp(prev4_wd, "MATERIALIZED") == 0 &&
 			 pg_strcasecmp(prev3_wd, "VIEW") == 0 &&
@@ -2913,6 +3033,12 @@ psql_completion(char *text, int start, int end)
 
 		COMPLETE_WITH_LIST(list_WITH_DATA);
 	}
+	else if (pg_strcasecmp(prev6_wd, "REFRESH") == 0 &&
+			 pg_strcasecmp(prev5_wd, "MATERIALIZED") == 0 &&
+			 pg_strcasecmp(prev4_wd, "VIEW") == 0 &&
+			 pg_strcasecmp(prev3_wd, "CONCURRENTLY") == 0 &&
+			 pg_strcasecmp(prev_wd, "WITH") == 0)
+		COMPLETE_WITH_CONST("DATA");
 	else if (pg_strcasecmp(prev6_wd, "REFRESH") == 0 &&
 			 pg_strcasecmp(prev5_wd, "MATERIALIZED") == 0 &&
 			 pg_strcasecmp(prev4_wd, "VIEW") == 0 &&
@@ -3333,6 +3459,8 @@ psql_completion(char *text, int start, int end)
 		COMPLETE_WITH_QUERY(Query_for_list_of_roles);
 	else if (strncmp(prev_wd, "\\dv", strlen("\\dv")) == 0)
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_views, NULL);
+	else if (strncmp(prev_wd, "\\dx", strlen("\\dx")) == 0)
+		COMPLETE_WITH_QUERY(Query_for_list_of_extensions);
 	else if (strncmp(prev_wd, "\\dm", strlen("\\dm")) == 0)
 		COMPLETE_WITH_SCHEMA_QUERY(Query_for_list_of_matviews, NULL);
 
@@ -3352,9 +3480,10 @@ psql_completion(char *text, int start, int end)
 	else if (strcmp(prev_wd, "\\pset") == 0)
 	{
 		static const char *const my_list[] =
-		{"format", "border", "expanded",
-			"null", "fieldsep", "tuples_only", "title", "tableattr",
-		"linestyle", "pager", "recordsep", NULL};
+		{"border", "columns", "expanded", "fieldsep", "fieldsep_zero",
+			"footer", "format", "linestyle", "null", "numericlocale",
+			"pager", "recordsep", "recordsep_zero", "tableattr", "title",
+		"tuples_only", NULL};
 
 		COMPLETE_WITH_LIST_CS(my_list);
 	}
@@ -3389,7 +3518,8 @@ psql_completion(char *text, int start, int end)
 			 strcmp(prev_wd, "\\ir") == 0 || strcmp(prev_wd, "\\include_relative") == 0 ||
 			 strcmp(prev_wd, "\\o") == 0 || strcmp(prev_wd, "\\out") == 0 ||
 			 strcmp(prev_wd, "\\s") == 0 ||
-			 strcmp(prev_wd, "\\w") == 0 || strcmp(prev_wd, "\\write") == 0
+			 strcmp(prev_wd, "\\w") == 0 || strcmp(prev_wd, "\\write") == 0 ||
+			 strcmp(prev_wd, "\\lo_import") == 0
 		)
 	{
 		completion_charp = "\\";
@@ -3621,7 +3751,7 @@ _complete_from_query(int is_schema_query, const char *text, int state)
 
 			/*
 			 * When fetching relation names, suppress system catalogs unless
-			 * the input-so-far begins with "pg_" or "gp_".	This is a compromise
+			 * the input-so-far begins with "pg_" or "gp_".	 This is a compromise
 			 * between not offering system catalogs for completion at all, and
 			 * having them swamp the result when the input is just "p".
 			 */
@@ -3630,8 +3760,8 @@ _complete_from_query(int is_schema_query, const char *text, int state)
 				strncmp(text, "pg_", 3) != 0 &&
 				strncmp(text, "gp_", 3) != 0)
 			{
-				appendPQExpBuffer(&query_buffer,
-								  " AND c.relnamespace <> (SELECT oid FROM"
+				appendPQExpBufferStr(&query_buffer,
+									 " AND c.relnamespace <> (SELECT oid FROM"
 				   " pg_catalog.pg_namespace WHERE nspname = 'pg_catalog')");
 			}
 
@@ -3830,10 +3960,9 @@ complete_from_const(const char *text, int state)
  * to support quoting usages.
  */
 static char **
-complete_from_variables(char *text, const char *prefix, const char *suffix)
+complete_from_variables(const char *text, const char *prefix, const char *suffix)
 {
 	char	  **matches;
-	int			overhead = strlen(prefix) + strlen(suffix) + 1;
 	char	  **varnames;
 	int			nvars = 0;
 	int			maxvars = 100;
@@ -3844,8 +3973,6 @@ complete_from_variables(char *text, const char *prefix, const char *suffix)
 
 	for (ptr = pset.vars->next; ptr; ptr = ptr->next)
 	{
-		char	   *buffer;
-
 		if (nvars >= maxvars)
 		{
 			maxvars *= 2;
@@ -3858,9 +3985,7 @@ complete_from_variables(char *text, const char *prefix, const char *suffix)
 			}
 		}
 
-		buffer = (char *) pg_malloc(strlen(ptr->name) + overhead);
-		sprintf(buffer, "%s%s%s", prefix, ptr->name, suffix);
-		varnames[nvars++] = buffer;
+		varnames[nvars++] = psprintf("%s%s%s", prefix, ptr->name, suffix);
 	}
 
 	varnames[nvars] = NULL;
@@ -4000,7 +4125,7 @@ exec_query(const char *query)
 
 
 /*
- * Return the nwords word(s) before point.	Words are returned right to left,
+ * Return the nwords word(s) before point.  Words are returned right to left,
  * that is, previous_words[0] gets the last word before point.
  * If we run out of words, remaining array elements are set to empty strings.
  * Each array element is filled with a malloc'd string.

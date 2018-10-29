@@ -13,6 +13,8 @@
 #ifndef GDD_H
 #define GDD_H
 
+extern bool am_global_deadlock_detector;
+
 extern int global_deadlock_detector_start(void);
 
 extern int gp_global_deadlock_detector_period;

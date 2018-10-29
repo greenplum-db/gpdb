@@ -4,7 +4,7 @@ SELECT test_send();
 SELECT test_disconnect();
 
 -- Wait until number of replication sessions drop to 0 or timeout
--- occurs. Returns false if timeout occured.
+-- occurs. Returns false if timeout occurred.
 create function check_and_wait_for_replication(
    timeout int)
 returns boolean as
@@ -42,8 +42,8 @@ SELECT test_disconnect();
 SELECT check_and_wait_for_replication(10);
 
 -- create table and store current_xlog_location.
-create TEMP table tmp(startpoint text);
-CREATE FUNCTION select_tmp() RETURNS text AS $$
+create TEMP table tmp(startpoint pg_lsn) distributed randomly;
+CREATE FUNCTION select_tmp() RETURNS pg_lsn AS $$
 select startpoint from tmp;
 $$ LANGUAGE SQL;
 insert into tmp select pg_current_xlog_location();

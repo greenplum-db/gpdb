@@ -118,7 +118,7 @@
   </topic>
   <topic id="arch_interconnect" xml:lang="en">
     <title id="iw157520">About the Greenplum Interconnect</title>
-    <shortdesc>The interconect is the networking layer of the Greenplum Database
+    <shortdesc>The interconnect is the networking layer of the Greenplum Database
       architecture.</shortdesc>
     <body>
       <p>The <i>interconnect</i> refers to the inter-process communication between segments and the

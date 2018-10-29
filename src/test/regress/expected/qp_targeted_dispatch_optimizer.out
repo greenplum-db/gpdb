@@ -131,7 +131,7 @@ INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL 
 savepoint s;
 ERROR:  SAVEPOINT can only be used in transaction blocks
 abort;
-NOTICE:  there is no transaction in progress
+WARNING:  there is no transaction in progress
 --start_ignore
 Drop table key_value_table cascade;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents

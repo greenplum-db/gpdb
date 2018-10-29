@@ -5,33 +5,30 @@
   <shortdesc>This topic describes how to use the <codeph>gptransfer</codeph> utility to transfer
     data between databases.</shortdesc>
   <body>
-    <note id="note1" otherprops="pivotal">Greenplum Database provides two utilities for migrating data
-      between Greenplum Database installations, <codeph>gpcopy</codeph> and
-      <codeph>gptransfer</codeph>. Use <codeph>gpcopy</codeph> to migrate data
-      to a Greenplum Database cluster version 5.9.0 and later when the destination
-      Greenplum installation has the same number of segments as the source installation.
-      Use the <codeph>gptransfer</codeph> utility to migrate data between Greenplum
-      Database installations running software version 5.8.0 or earlier, or when you
-      migrate data between Greenplum Database installations with differing numbers
-      of segments (any versions).</note>
-    <p id="intro1">The <codeph>gptransfer</codeph> migration utility transfers Greenplum Database metadata and
-      data from one Greenplum database to another Greenplum database, allowing you to migrate the
-      entire contents of a database, or just selected tables, to another database. The source and
-      destination databases may be in the same or a different cluster. Data is transferred in
-      parallel across all the segments, using the <codeph>gpfdist</codeph> data loading utility to
-      attain the highest transfer rates. </p>
+    <note id="note1" otherprops="pivotal">Greenplum Database provides two utilities for migrating
+      data between Greenplum Database installations, <codeph>gpcopy</codeph> and
+        <codeph>gptransfer</codeph>. Use <codeph>gpcopy</codeph> to migrate data to a Greenplum
+      Database cluster version 5.9.0 and later. Use the <codeph>gptransfer</codeph> utility to
+      migrate data between Greenplum Database installations running software version 5.8.0 or
+      earlier.</note>
+    <p id="intro1">The <codeph>gptransfer</codeph> migration utility transfers Greenplum Database
+      metadata and data from one Greenplum database to another Greenplum database, allowing you to
+      migrate the entire contents of a database, or just selected tables, to another database. The
+      source and destination databases may be in the same or a different cluster. Data is
+      transferred in parallel across all the segments, using the <codeph>gpfdist</codeph> data
+      loading utility to attain the highest transfer rates. </p>
     <p id="intro2"><codeph>gptransfer</codeph> handles the setup and execution of the data transfer.
       Participating clusters must already exist, have network access between all hosts in both
       clusters, and have certificate-authenticated ssh access between all hosts in both clusters. </p>
-    <p id="intro3">The interface includes options to transfer one or more full databases, or one or more
-      database tables. A full database transfer includes the database schema, table data, indexes,
-      views, roles, user-defined functions, and resource queues. Configuration files, including
-        <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>, must be transferred
-      manually by an administrator. Extensions installed in the database with
-      <codeph>gppkg</codeph>, such as MADlib, must be installed in the destination database by an
+    <p id="intro3">The interface includes options to transfer one or more full databases, or one or
+      more database tables. A full database transfer includes the database schema, table data,
+      indexes, views, roles, user-defined functions, and resource queues. Configuration files,
+      including <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph>, must be
+      transferred manually by an administrator. Extensions installed in the database with
+        <codeph>gppkg</codeph>, such as MADlib, must be installed in the destination database by an
       administrator. </p>
-    <p id="intro4">See the <cite>Greenplum Database Utility Guide</cite> for complete syntax and usage
-      information for the <codeph>gptransfer</codeph> utility. </p>
+    <p id="intro4">See the <cite>Greenplum Database Utility Guide</cite> for complete syntax and
+      usage information for the <codeph>gptransfer</codeph> utility. </p>
     <section id="prereqs">
       <title>Prerequisites</title>
       <ul id="ul_wkb_xqd_cp">
@@ -181,7 +178,8 @@ host2_name,host2_ipaddr
         template1. If <codeph>gptransfer</codeph> finds a database on the destination it fails with
         a message like the
         following:<codeblock>[ERROR]:- gptransfer: error: --full option specified but tables exist on destination system</codeblock></p>
-      <p><note>The <codeph>--full</codeph> option cannot be specified with the <codeph>-t</codeph>,
+      <p>
+        <note>The <codeph>--full</codeph> option cannot be specified with the <codeph>-t</codeph>,
             <codeph>-d</codeph>, <codeph>-f</codeph>, or <codeph>--partition-transfer</codeph>
           options.</note>To copy tables individually, specify the tables using either the
           <codeph>-t</codeph> command-line option (one option per table) or by using the

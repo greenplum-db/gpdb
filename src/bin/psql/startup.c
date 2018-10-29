@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/startup.c
  */
@@ -111,8 +111,6 @@ main(int argc, char *argv[])
 	setvbuf(stderr, NULL, _IONBF, 0);
 #endif
 
-	setup_cancel_handler();
-
 	pset.progname = get_progname(argv[0]);
 
 	pset.db = NULL;
@@ -120,6 +118,7 @@ main(int argc, char *argv[])
 	pset.encoding = PQenv2encoding();
 	pset.queryFout = stdout;
 	pset.queryFoutPipe = false;
+	pset.copyStream = NULL;
 	pset.cur_cmd_source = stdin;
 	pset.cur_cmd_interactive = false;
 
@@ -162,12 +161,9 @@ main(int argc, char *argv[])
 	}
 
 	/* Bail out if -1 was specified but will be ignored. */
-	if (options.single_txn && options.action != ACT_FILE)
+	if (options.single_txn && options.action != ACT_FILE && options.action == ACT_NOTHING)
 	{
-		if (options.action == ACT_NOTHING)
-			fprintf(stderr, _("%s: -1 can only be used in non-interactive mode\n"), pset.progname);
-		else
-			fprintf(stderr, _("%s: -1 is incompatible with -c and -l\n"), pset.progname);
+		fprintf(stderr, _("%s: -1 can only be used in non-interactive mode\n"), pset.progname);
 		exit(EXIT_FAILURE);
 	}
 
@@ -187,12 +183,8 @@ main(int argc, char *argv[])
 	if (options.username == NULL)
 		password_prompt = pg_strdup(_("Password: "));
 	else
-	{
-		password_prompt = pg_malloc(strlen(_("Password for user %s: ")) - 2 +
-									strlen(options.username) + 1);
-		sprintf(password_prompt, _("Password for user %s: "),
-				options.username);
-	}
+		password_prompt = psprintf(_("Password for user %s: "),
+								   options.username);
 
 	if (pset.getPassword == TRI_YES)
 		password = simple_prompt(password_prompt, 100, false);
@@ -248,6 +240,8 @@ main(int argc, char *argv[])
 		PQfinish(pset.db);
 		exit(EXIT_BADCONN);
 	}
+
+	setup_cancel_handler();
 
 	PQsetNoticeProcessor(pset.db, NoticeProcessor, NULL);
 
@@ -393,8 +387,6 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 	};
 
 	int			optindex;
-	extern char *optarg;
-	extern int	optind;
 	int			c;
 
 	memset(options, 0, sizeof *options);
@@ -561,7 +553,7 @@ parse_psql_options(int argc, char *argv[], struct adhoc_opts * options)
 				break;
 			case '?':
 				/* Actual help option given */
-				if (strcmp(argv[optind - 1], "-?") == 0 || strcmp(argv[optind - 1], "--help") == 0)
+				if (strcmp(argv[optind - 1], "--help") == 0 || strcmp(argv[optind - 1], "-?") == 0)
 				{
 					usage();
 					exit(EXIT_SUCCESS);
@@ -612,7 +604,12 @@ process_psqlrc(char *argv0)
 	char		etc_path[MAXPGPATH];
 	char	   *envrc = getenv("PSQLRC");
 
-	find_my_exec(argv0, my_exec_path);
+	if (find_my_exec(argv0, my_exec_path) < 0)
+	{
+		fprintf(stderr, _("%s: could not find own program executable\n"), argv0);
+		exit(EXIT_FAILURE);
+	}
+
 	get_etc_path(my_exec_path, etc_path);
 
 	snprintf(rc_file, MAXPGPATH, "%s/%s", etc_path, SYSPSQLRC);
@@ -645,10 +642,8 @@ process_psqlrc_file(char *filename)
 #define R_OK 4
 #endif
 
-	psqlrc_minor = pg_malloc(strlen(filename) + 1 + strlen(PG_VERSION) + 1);
-	sprintf(psqlrc_minor, "%s-%s", filename, PG_VERSION);
-	psqlrc_major = pg_malloc(strlen(filename) + 1 + strlen(PG_MAJORVERSION) + 1);
-	sprintf(psqlrc_major, "%s-%s", filename, PG_MAJORVERSION);
+	psqlrc_minor = psprintf("%s-%s", filename, PG_VERSION);
+	psqlrc_major = psprintf("%s-%s", filename, PG_MAJORVERSION);
 
 	/* check for minor version first, then major, then no version */
 	if (access(psqlrc_minor, R_OK) == 0)

@@ -151,6 +151,7 @@ typedef enum MemoryOwnerType
 	MEMORY_OWNER_TYPE_Exec_PartitionSelector,
 	MEMORY_OWNER_TYPE_Exec_RecursiveUnion,
 	MEMORY_OWNER_TYPE_Exec_CteScan,
+	MEMORY_OWNER_TYPE_Exec_Reshuffle,
 	MEMORY_OWNER_TYPE_Exec_WorkTableScan,
 	MEMORY_OWNER_TYPE_Exec_ForeignScan,
 	MEMORY_OWNER_TYPE_Exec_NestedExecutor,

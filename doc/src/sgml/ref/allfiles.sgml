@@ -31,6 +31,7 @@ Complete list of usable sgml source files in this directory.
 <!ENTITY alterSchema        SYSTEM "alter_schema.sgml">
 <!ENTITY alterServer        SYSTEM "alter_server.sgml">
 <!ENTITY alterSequence      SYSTEM "alter_sequence.sgml">
+<!ENTITY alterSystem        SYSTEM "alter_system.sgml">
 <!ENTITY alterTable         SYSTEM "alter_table.sgml">
 <!ENTITY alterTableSpace    SYSTEM "alter_tablespace.sgml">
 <!ENTITY alterTSConfig      SYSTEM "alter_tsconfig.sgml">
@@ -185,6 +186,7 @@ Complete list of usable sgml source files in this directory.
 <!ENTITY pgDumpall          SYSTEM "pg_dumpall.sgml">
 <!ENTITY pgIsready          SYSTEM "pg_isready.sgml">
 <!ENTITY pgReceivexlog      SYSTEM "pg_receivexlog.sgml">
+<!ENTITY pgRecvlogical      SYSTEM "pg_recvlogical.sgml">
 <!ENTITY pgResetxlog        SYSTEM "pg_resetxlog.sgml">
 <!ENTITY pgRestore          SYSTEM "pg_restore.sgml">
 <!ENTITY postgres           SYSTEM "postgres-ref.sgml">

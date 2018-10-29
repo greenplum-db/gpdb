@@ -3,14 +3,14 @@
  * pg_wchar.h
  *	  multibyte-character support
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/mb/pg_wchar.h
  *
  *	NOTES
  *		This is used both by the backend and by libpq, but should not be
- *		included by libpq client programs.	In particular, a libpq client
+ *		included by libpq client programs.  In particular, a libpq client
  *		should not assume that the encoding IDs used by the version of libpq
  *		it's linked to match up with the IDs declared here.
  *
@@ -45,13 +45,13 @@ typedef unsigned int pg_wchar;
  * MULE Internal Encoding (MIC)
  *
  * This encoding follows the design used within XEmacs; it is meant to
- * subsume many externally-defined character sets.	Each character includes
+ * subsume many externally-defined character sets.  Each character includes
  * identification of the character set it belongs to, so the encoding is
  * general but somewhat bulky.
  *
  * Currently PostgreSQL supports 5 types of MULE character sets:
  *
- * 1) 1-byte ASCII characters.	Each byte is below 0x80.
+ * 1) 1-byte ASCII characters.  Each byte is below 0x80.
  *
  * 2) "Official" single byte charsets such as ISO-8859-1 (Latin1).
  *	  Each MULE character consists of 2 bytes: LC1 + C1, where LC1 is
@@ -65,7 +65,7 @@ typedef unsigned int pg_wchar;
  *	  LCPRV1 is either 0x9a (if LC12 is in the range 0xa0 to 0xdf)
  *	  or 0x9b (if LC12 is in the range 0xe0 to 0xef).
  *
- * 4) "Official" multibyte charsets such as JIS X0208.	Each MULE
+ * 4) "Official" multibyte charsets such as JIS X0208.  Each MULE
  *	  character consists of 3 bytes: LC2 + C1 + C2, where LC2 is
  *	  an identifier for the charset (in the range 0x90 to 0x99) and C1
  *	  and C2 form the character code (each in the range 0xa0 to 0xff).
@@ -273,7 +273,7 @@ typedef enum pg_enc
 	/* PG_ENCODING_BE_LAST points to the above entry */
 
 	/* followings are for client encoding only */
-	PG_SJIS,					/* Shift JIS (Winindows-932) */
+	PG_SJIS,					/* Shift JIS (Windows-932) */
 	PG_BIG5,					/* Big5 (Windows-950) */
 	PG_GBK,						/* GBK (Windows-936) */
 	PG_UHC,						/* UHC (Windows-949) */
@@ -303,33 +303,23 @@ typedef enum pg_enc
 #define PG_VALID_FE_ENCODING(_enc)	PG_VALID_ENCODING(_enc)
 
 /*
- * Encoding names with all aliases
- */
-typedef struct pg_encname
-{
-	char	   *name;
-	pg_enc		encoding;
-} pg_encname;
-
-extern pg_encname pg_encname_tbl[];
-extern unsigned int pg_encname_tbl_sz;
-
-/*
- * Careful:
+ * Table for mapping an encoding number to official encoding name and
+ * possibly other subsidiary data.  Be careful to check encoding number
+ * before accessing a table entry!
  *
  * if (PG_VALID_ENCODING(encoding))
  *		pg_enc2name_tbl[ encoding ];
  */
 typedef struct pg_enc2name
 {
-	char	   *name;
+	const char *name;
 	pg_enc		encoding;
 #ifdef WIN32
 	unsigned	codepage;		/* codepage for WIN32 */
 #endif
 } pg_enc2name;
 
-extern pg_enc2name pg_enc2name_tbl[];
+extern const pg_enc2name pg_enc2name_tbl[];
 
 /*
  * Encoding names for gettext
@@ -340,7 +330,7 @@ typedef struct pg_enc2gettext
 	const char *name;
 } pg_enc2gettext;
 
-extern pg_enc2gettext pg_enc2gettext_tbl[];
+extern const pg_enc2gettext pg_enc2gettext_tbl[];
 
 /*
  * pg_wchar stuff
@@ -373,7 +363,7 @@ typedef struct
 	int			maxmblen;		/* max bytes for a char in this encoding */
 } pg_wchar_tbl;
 
-extern pg_wchar_tbl pg_wchar_table[];
+extern const pg_wchar_tbl pg_wchar_table[];
 
 /*
  * UTF-8 to local code conversion map
@@ -441,8 +431,6 @@ extern int	pg_valid_server_encoding_id(int encoding);
  * Remaining functions are not considered part of libpq's API, though many
  * of them do exist inside libpq.
  */
-extern pg_encname *pg_char_to_encname_struct(const char *name);
-
 extern int	pg_mb2wchar(const char *from, pg_wchar *to);
 extern int	pg_mb2wchar_with_len(const char *from, pg_wchar *to, int len);
 extern int pg_encoding_mb2wchar_with_len(int encoding,
@@ -481,8 +469,12 @@ extern const char *pg_get_client_encoding_name(void);
 extern void SetDatabaseEncoding(int encoding);
 extern int	GetDatabaseEncoding(void);
 extern const char *GetDatabaseEncodingName(void);
-extern int	GetPlatformEncoding(void);
-extern void pg_bind_textdomain_codeset(const char *domainname);
+extern void SetMessageEncoding(int encoding);
+extern int	GetMessageEncoding(void);
+
+#ifdef ENABLE_NLS
+extern int	pg_bind_textdomain_codeset(const char *domainname);
+#endif
 
 extern int	pg_valid_client_encoding(const char *name);
 extern int	pg_valid_server_encoding(const char *name);
@@ -544,7 +536,7 @@ extern void mic2latin_with_table(const unsigned char *mic, unsigned char *p,
 extern bool pg_utf8_islegal(const unsigned char *source, int length);
 
 #ifdef WIN32
-extern WCHAR *pgwin32_toUTF16(const char *str, int len, int *utf16len);
+extern WCHAR *pgwin32_message_to_UTF16(const char *str, int len, int *utf16len);
 #endif
 
 #endif   /* PG_WCHAR_H */

@@ -3,7 +3,7 @@
  * nodeIndexonlyscan.c
  *	  Routines to support index-only scans
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -88,15 +88,31 @@ IndexOnlyNext(IndexOnlyScanState *node)
 		 * Note on Memory Ordering Effects: visibilitymap_test does not lock
 		 * the visibility map buffer, and therefore the result we read here
 		 * could be slightly stale.  However, it can't be stale enough to
-		 * matter.	It suffices to show that (1) there is a read barrier
-		 * between the time we read the index TID and the time we test the
-		 * visibility map; and (2) there is a write barrier between the time
-		 * some other concurrent process clears the visibility map bit and the
-		 * time it inserts the index TID.  Since acquiring or releasing a
-		 * LWLock interposes a full barrier, this is easy to show: (1) is
-		 * satisfied by the release of the index buffer content lock after
-		 * reading the TID; and (2) is satisfied by the acquisition of the
-		 * buffer content lock in order to insert the TID.
+		 * matter.
+		 *
+		 * We need to detect clearing a VM bit due to an insert right away,
+		 * because the tuple is present in the index page but not visible. The
+		 * reading of the TID by this scan (using a shared lock on the index
+		 * buffer) is serialized with the insert of the TID into the index
+		 * (using an exclusive lock on the index buffer). Because the VM bit
+		 * is cleared before updating the index, and locking/unlocking of the
+		 * index page acts as a full memory barrier, we are sure to see the
+		 * cleared bit if we see a recently-inserted TID.
+		 *
+		 * Deletes do not update the index page (only VACUUM will clear out
+		 * the TID), so the clearing of the VM bit by a delete is not
+		 * serialized with this test below, and we may see a value that is
+		 * significantly stale. However, we don't care about the delete right
+		 * away, because the tuple is still visible until the deleting
+		 * transaction commits or the statement ends (if it's our
+		 * transaction). In either case, the lock on the VM buffer will have
+		 * been released (acting as a write barrier) after clearing the
+		 * bit. And for us to have a snapshot that includes the deleting
+		 * transaction (making the tuple invisible), we must have acquired
+		 * ProcArrayLock after that time, acting as a read barrier.
+		 *
+		 * It's worth going through this complexity to avoid needing to lock
+		 * the VM buffer, which could cause significant contention.
 		 */
 		if (!visibilitymap_test(scandesc->heapRelation,
 								ItemPointerGetBlockNumber(tid),
@@ -113,7 +129,7 @@ IndexOnlyNext(IndexOnlyScanState *node)
 			/*
 			 * Only MVCC snapshots are supported here, so there should be no
 			 * need to keep following the HOT chain once a visible entry has
-			 * been found.	If we did want to allow that, we'd need to keep
+			 * been found.  If we did want to allow that, we'd need to keep
 			 * more state to remember not to call index_getnext_tid next time.
 			 */
 			if (scandesc->xs_continue_hot)
@@ -122,7 +138,7 @@ IndexOnlyNext(IndexOnlyScanState *node)
 			/*
 			 * Note: at this point we are holding a pin on the heap page, as
 			 * recorded in scandesc->xs_cbuf.  We could release that pin now,
-			 * but it's not clear whether it's a win to do so.	The next index
+			 * but it's not clear whether it's a win to do so.  The next index
 			 * entry might require a visit to the same heap page.
 			 */
 		}

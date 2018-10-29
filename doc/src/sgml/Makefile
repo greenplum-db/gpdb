@@ -100,6 +100,7 @@ draft: postgres.sgml $(ALMOSTALLSGML) stylesheet.dsl
 html: html-stamp
 
 html-stamp: postgres.sgml $(ALLSGML) stylesheet.dsl
+	$(MAKE) check-tabs
 	$(MKDIR_P) html
 	$(JADE.html.call) -i include-index $<
 	cp $(srcdir)/stylesheet.css html/
@@ -214,48 +215,39 @@ JADE.text = $(JADE) $(JADEFLAGS) $(SGMLINCLUDE) $(CATALOG) -d stylesheet.dsl -i 
 ICONV = iconv
 LYNX = lynx
 
-# The release notes may contain non-ASCII characters (for contributor
-# names), which lynx converts to the encoding determined by the
-# current locale.  The get output that is deterministic and easily
-# readable by everyone, we make lynx produce LATIN1 and then convert
-# that to ASCII with transliteration for the non-ASCII characters.
-# Official releases are currently built on FreeBSD, which has limited
+# The documentation may contain non-ASCII characters (mostly for
+# contributor names), which lynx converts to the encoding determined
+# by the current locale.  To get text output that is deterministic and
+# easily readable by everyone, we make lynx produce LATIN1 and then
+# convert that to ASCII with transliteration for the non-ASCII characters.
+# Official releases were historically built on FreeBSD, which has limited
 # locale support and is very picky about locale name spelling.  The
 # below has been finely tuned to run on FreeBSD and Linux/glibc.
-INSTALL HISTORY regress_README: % : %.html
+INSTALL: % : %.html
 	$(PERL) -p -e 's/<H(1|2)$$/<H\1 align=center/g' $< | LC_ALL=en_US.ISO8859-1 $(LYNX) -force_html -dump -nolist -stdin | $(ICONV) -f latin1 -t us-ascii//TRANSLIT > $@
 
 INSTALL.html: standalone-install.sgml installation.sgml version.sgml
 	$(JADE.text) -V nochunks standalone-install.sgml installation.sgml > $@
-
-HISTORY.html: generate_history.pl $(wildcard $(srcdir)/release*.sgml)
-	$(PERL) $< "$(srcdir)" release.sgml >tempfile_HISTORY.sgml
-	$(JADE.text) -V nochunks tempfile_HISTORY.sgml > $@
-	rm tempfile_HISTORY.sgml
-
-regress_README.html: regress.sgml
-	( echo '<!DOCTYPE chapter PUBLIC "-//OASIS//DTD DocBook V4.2//EN" ['; \
-	  echo '<!ENTITY % standalone-ignore "IGNORE">'; \
-	  echo '<!ENTITY % standalone-include "INCLUDE"> ]>'; \
-	  cat $< ) >tempfile_regress_README.sgml
-	$(JADE.text) -V nochunks tempfile_regress_README.sgml > $@
-	rm tempfile_regress_README.sgml
 
 
 ##
 ## XSLT processing
 ##
 
-# For obscure reasons, gmake 3.81 complains about circular dependencies
+# For obscure reasons, GNU make 3.81 complains about circular dependencies
 # if we try to do "make all" in a VPATH build without the explicit
-# $(srcdir) on the postgres.sgml dependency in this rule.  gmake bug?
+# $(srcdir) on the postgres.sgml dependency in this rule.  GNU make bug?
 postgres.xml: $(srcdir)/postgres.sgml $(ALMOSTALLSGML)
-	$(OSX) -D. -x lower $< >postgres.xmltmp
-	$(PERL) -p -e 's/\[(amp|copy|egrave|gt|lt|mdash|nbsp|ouml|pi|quot|uuml) *\]/\&\1;/g;' \
+	$(OSX) -D. -x lower -i include-xslt-index $< >postgres.xmltmp
+	$(PERL) -p -e 's/\[(aacute|acirc|aelig|agrave|amp|aring|atilde|auml|bull|copy|eacute|egrave|gt|iacute|lt|mdash|nbsp|ntilde|oacute|ocirc|oslash|ouml|pi|quot|scaron|uuml) *\]/\&\1;/gi;' \
 	           -e '$$_ .= qq{<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">\n} if $$. == 1;' \
 	  <postgres.xmltmp > $@
 	rm postgres.xmltmp
 # ' hello Emacs
+
+ifeq ($(STYLE),website)
+XSLTPROC_HTML_FLAGS += --param website.stylesheet 1
+endif
 
 xslthtml: xslthtml-stamp
 
@@ -267,11 +259,23 @@ xslthtml-stamp: stylesheet.xsl postgres.xml
 htmlhelp: stylesheet-hh.xsl postgres.xml
 	$(XSLTPROC) $(XSLTPROCFLAGS) $^
 
-%-A4.fo: stylesheet-fo.xsl %.xml
+%-A4.fo.tmp: stylesheet-fo.xsl %.xml
 	$(XSLTPROC) $(XSLTPROCFLAGS) --stringparam paper.type A4 -o $@ $^
 
-%-US.fo: stylesheet-fo.xsl %.xml
+%-US.fo.tmp: stylesheet-fo.xsl %.xml
 	$(XSLTPROC) $(XSLTPROCFLAGS) --stringparam paper.type USletter -o $@ $^
+
+FOP = fop
+XMLLINT = xmllint
+
+# reformat FO output so that locations of errors are easier to find
+%.fo: %.fo.tmp
+	$(XMLLINT) --format --output $@ $^
+
+.SECONDARY: postgres-A4.fo postgres-US.fo
+
+%-fop.pdf: %.fo
+	$(FOP) -fo $< -pdf $@
 
 epub: postgres.epub
 postgres.epub: postgres.xml
@@ -301,7 +305,7 @@ MAKEINFO = makeinfo
 ##
 
 # Quick syntax check without style processing
-check maintainer-check: postgres.sgml $(ALMOSTALLSGML) check-tabs
+check: postgres.sgml $(ALMOSTALLSGML) check-tabs
 	$(NSGMLS) $(SPFLAGS) $(SGMLINCLUDE) -s $<
 
 
@@ -376,13 +380,13 @@ check-tabs:
 # This allows removing some files from the distribution tarballs while
 # keeping the dependencies satisfied.
 .SECONDARY: postgres.xml $(GENERATED_SGML) HTML.index
-.SECONDARY: INSTALL.html HISTORY.html regress_README.html
+.SECONDARY: INSTALL.html
 .SECONDARY: %-A4.tex-ps %-US.tex-ps %-A4.tex-pdf %-US.tex-pdf
 
 clean:
 # text --- these are shipped, but not in this directory
-	rm -f INSTALL HISTORY regress_README
-	rm -f INSTALL.html HISTORY.html regress_README.html
+	rm -f INSTALL
+	rm -f INSTALL.html
 # single-page output
 	rm -f postgres.html postgres.txt
 # print
@@ -390,7 +394,7 @@ clean:
 # index
 	rm -f HTML.index $(GENERATED_SGML)
 # XSLT
-	rm -f postgres.xml postgres.xmltmp htmlhelp.hhp toc.hhc index.hhk *.fo
+	rm -f postgres.xml postgres.xmltmp htmlhelp.hhp toc.hhc index.hhk *.fo *.fo.tmp
 # EPUB
 	rm -f postgres.epub
 # Texinfo

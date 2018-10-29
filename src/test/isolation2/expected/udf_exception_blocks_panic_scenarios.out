@@ -39,6 +39,25 @@
 -- m/transaction -\d+/
 -- s/transaction -\d+/transaction/
 -- end_matchsubs
+
+-- skip FTS probes always
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE
+SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+gp_inject_fault_infinite
+------------------------
+t                       
+(1 row)
+SELECT gp_request_fts_probe_scan();
+gp_request_fts_probe_scan
+-------------------------
+t                        
+(1 row)
+select gp_wait_until_triggered_fault('fts_probe', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
 CREATE OR REPLACE FUNCTION test_excep (arg INTEGER) RETURNS INTEGER AS $$ DECLARE res INTEGER; /* in func */ BEGIN /* in func */ res := 100 / arg; /* in func */ RETURN res; /* in func */ EXCEPTION /* in func */ WHEN division_by_zero /* in func */ THEN  RETURN 999; /* in func */ END; /* in func */ $$ LANGUAGE plpgsql;
 CREATE
 
@@ -56,7 +75,7 @@ p   |p             |0      |s   |u
 p   |p             |1      |s   |u     
 p   |p             |2      |s   |u     
 (8 rows)
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -84,7 +103,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -112,7 +131,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -140,7 +159,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -168,7 +187,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -196,7 +215,7 @@ LINE 1: select * from employees;
                       ^
 --
 --
-SET debug_dtm_action_segment=1;
+SET debug_dtm_action_segment=0;
 SET
 SET debug_dtm_action_target=protocol;
 SET
@@ -222,3 +241,9 @@ select * from employees;
 ERROR:  relation "employees" does not exist
 LINE 1: select * from employees;
                       ^
+
+SELECT gp_inject_fault('fts_probe', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)

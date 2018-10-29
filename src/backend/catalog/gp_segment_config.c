@@ -41,7 +41,7 @@ gp_segment_config_has_mirrors()
 				CharGetDatum('m'));
 
 	scan = systable_beginscan(rel, InvalidOid, false,
-							  SnapshotNow, 2, scankey);
+							  NULL, 2, scankey);
 
 	tuple = systable_getnext(scan);
 	mirrors_exist = HeapTupleIsValid(tuple);

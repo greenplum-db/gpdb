@@ -20,7 +20,7 @@
  * point, but for now that seems useless complexity.
  *
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/nodes/tidbitmap.c
@@ -91,7 +91,7 @@ struct TIDBitmap
 
 /*
  * When iterating over a bitmap in sorted order, a TBMIterator is used to
- * track our progress.	There can be several iterators scanning the same
+ * track our progress.  There can be several iterators scanning the same
  * bitmap concurrently.  Note that the bitmap becomes read-only as soon as
  * any iterator is created.
  */
@@ -388,7 +388,7 @@ tbm_union_page(TIDBitmap *a, const PagetableEntry *bpage)
 	if (bpage->ischunk)
 	{
 		/* Scan b's chunk, mark each indicated page lossy in a */
-		for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
+		for (wordnum = 0; wordnum < WORDS_PER_CHUNK; wordnum++)
 		{
 			tbm_bitmapword w = bpage->words[wordnum];
 
@@ -502,7 +502,7 @@ tbm_intersect_page(TIDBitmap *a, PagetableEntry *apage, const TIDBitmap *b)
 		/* Scan each bit in chunk, try to clear */
 		bool		candelete = true;
 
-		for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
+		for (wordnum = 0; wordnum < WORDS_PER_CHUNK; wordnum++)
 		{
 			tbm_bitmapword w = apage->words[wordnum];
 
@@ -1011,7 +1011,7 @@ tbm_find_pageentry(const TIDBitmap *tbm, BlockNumber pageno)
  *
  * If new, the entry is marked as an exact (non-chunk) entry.
  *
- * This may cause the table to exceed the desired memory size.	It is
+ * This may cause the table to exceed the desired memory size.  It is
  * up to the caller to call tbm_lossify() at the next safe point if so.
  */
 static PagetableEntry *
@@ -1091,7 +1091,7 @@ tbm_page_is_lossy(const TIDBitmap *tbm, BlockNumber pageno)
 /*
  * tbm_mark_page_lossy - mark the page number as lossily stored
  *
- * This may cause the table to exceed the desired memory size.	It is
+ * This may cause the table to exceed the desired memory size.  It is
  * up to the caller to call tbm_lossify() at the next safe point if so.
  */
 static void
@@ -1112,7 +1112,7 @@ tbm_mark_page_lossy(TIDBitmap *tbm, BlockNumber pageno)
 	chunk_pageno = pageno - bitno;
 
 	/*
-	 * Remove any extant non-lossy entry for the page.	If the page is its own
+	 * Remove any extant non-lossy entry for the page.  If the page is its own
 	 * chunk header, however, we skip this and handle the case below.
 	 */
 	if (bitno != 0)
@@ -1178,7 +1178,7 @@ tbm_lossify(TIDBitmap *tbm)
 	 *
 	 * Since we are called as soon as nentries exceeds maxentries, we should
 	 * push nentries down to significantly less than maxentries, or else we'll
-	 * just end up doing this again very soon.	We shoot for maxentries/2.
+	 * just end up doing this again very soon.  We shoot for maxentries/2.
 	 */
 	Assert(!tbm->iterating);
 	Assert(tbm->status == TBM_HASH);

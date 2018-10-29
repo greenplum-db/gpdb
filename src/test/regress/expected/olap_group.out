@@ -2871,8 +2871,8 @@ create view cube_view as select cn,vn,grouping(vn,cn) from sale group by cube(cn
  vn       | integer |           | plain   | 
  grouping | bigint  |           | plain   | 
 View definition:
- SELECT sale.cn, 
-    sale.vn, 
+ SELECT sale.cn,
+    sale.vn,
     grouping(sale.vn, sale.cn) AS "grouping"
    FROM sale
   GROUP BY CUBE (sale.cn, sale.vn);
@@ -2887,9 +2887,9 @@ create view rollup_view as select cn,vn,pn,grouping(cn,vn,pn) from sale group by
  pn       | integer |           | plain   | 
  grouping | bigint  |           | plain   | 
 View definition:
- SELECT sale.cn, 
-    sale.vn, 
-    sale.pn, 
+ SELECT sale.cn,
+    sale.vn,
+    sale.pn,
     grouping(sale.cn, sale.vn, sale.pn) AS "grouping"
    FROM sale
   GROUP BY sale.vn, sale.pn, ROLLUP (sale.cn);
@@ -2903,8 +2903,8 @@ create view gs_view as select cn,vn,grouping(vn,cn) from sale group by grouping 
  vn       | integer |           | plain   | 
  grouping | bigint  |           | plain   | 
 View definition:
- SELECT sale.cn, 
-    sale.vn, 
+ SELECT sale.cn,
+    sale.vn,
     grouping(sale.vn, sale.cn) AS "grouping"
    FROM sale
   GROUP BY GROUPING SETS ((sale.vn), (sale.cn), (), ((sale.cn), (sale.vn)));

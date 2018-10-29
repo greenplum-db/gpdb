@@ -31,11 +31,6 @@ typedef enum
 } ResGroupCompType;
 
 #define RESGROUP_ROOT_ID (InvalidOid)
-/*
- * If group id is RESGROUP_COMPROOT_ID, it will build the root path of comp,
- * which is the parent directory of gpdb
- */
-#define RESGROUP_COMPROOT_ID (-1)
 
 /*
  * Default cpuset group is a group manages the cpu cores which not belong to
@@ -73,5 +68,6 @@ extern int ResGroupOps_GetCpuCores(void);
 extern int ResGroupOps_GetTotalMemory(void);
 extern void ResGroupOps_SetCpuSet(Oid group, const char *cpuset);
 extern void ResGroupOps_GetCpuSet(Oid group, char *cpuset, int len);
+float ResGroupOps_ConvertCpuUsageToPercent(int64 usage, int64 duration);
 
 #endif   /* RES_GROUP_OPS_H */

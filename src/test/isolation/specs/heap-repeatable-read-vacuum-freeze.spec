@@ -9,11 +9,51 @@ setup
 {
     CREATE TABLE heaptest (i INT, j INT);
     INSERT INTO heaptest SELECT i, i FROM generate_series(0, 9) i;
+
+    -- Helper function to get the xmin, xmax, and infomask bits for each row
+    -- in the heaptest table, from every segment. This depends on the
+    -- 'pageinspect' contrib module.
+    CREATE FUNCTION show_heaptest_flags(
+        OUT contentid integer,
+        OUT ctid tid,
+        OUT t_xmin xid,
+        OUT t_xmax xid,
+        OUT xmin_kind text,
+        OUT xmax_kind text
+    ) RETURNS SETOF record AS $$
+
+        select current_setting('gp_contentid')::integer,
+	       t_ctid,
+	       t_xmin,
+	       t_xmax,
+	       -- Decode the HEAP_XMIN_* and HEAP_XMAX_* flags.
+	       -- NOTE: this doesn't cover all the combinations, just enough
+               -- for this test.
+	       CASE WHEN (t_infomask & 768) = 768 THEN 'FrozenXid'     -- HEAP_XMIN_FROZEN
+	            WHEN (t_infomask & 512) = 512 THEN 'InvalidXid'    -- HEAP_XMIN_INVALID
+		    ELSE 'NormalXid' END,
+	       CASE WHEN t_xmax = 0 THEN 'InvalidXid' ELSE 'NormalXid' END
+	  from heap_page_items(
+             CASE WHEN pg_relation_size('heaptest') > 0 THEN get_raw_page('heaptest', 0)
+                  ELSE NULL END
+          )
+
+     $$ LANGUAGE sql EXECUTE ON ALL SEGMENTS;
+
+    -- show the contents of heaptest table, including invisible rows,
+    -- and the xmin/xmax status of each row.
+    CREATE VIEW show_heaptest_content AS
+      SELECT v.xmin_kind, v.xmax_kind, heaptest.*
+        FROM show_heaptest_flags() v
+        FULL OUTER JOIN heaptest ON heaptest.gp_segment_id = v.contentid AND
+        heaptest.ctid = v.ctid;
 }
 
 teardown
 {
+    DROP VIEW show_heaptest_content;
     DROP TABLE IF EXISTS heaptest;
+    DROP FUNCTION show_heaptest_flags();
 }
 
 session "s1"
@@ -27,64 +67,13 @@ session "s2"
 step "s2begin" { SET Debug_print_full_dtm=on; BEGIN ISOLATION LEVEL REPEATABLE READ;
 		 SELECT 123 AS "establish snapshot"; }
 step "s2select" {
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 }
 step "s2abort" { ABORT; }
 
 session "s3"
-step "s3selectinvisible" { 
-    SET Debug_print_full_dtm=on; 
-    SET gp_select_invisible=TRUE;
-
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
-}
-step "s3checkrelfrozenxidwithxmin" {
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmin))) AS xmin
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmin)) > 2
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmin < relfrozenxid )
-}
-step "s3checkrelfrozenxidwithxmax" {
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmax))) AS xmax
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmax)) != 0
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmax < relfrozenxid )
+step "s3select" {
+    SELECT * from show_heaptest_content ORDER BY i;
 }
 
 session "s4"
@@ -105,7 +94,7 @@ step "s4abort"  { ABORT; }
 # xmax as invalid and make the deleted tuple visible to everyone. Also, make
 # sure relfrozenxid in pg_class after vacuum freeze is not set to freezelimit
 # locally but actually reflects the lowest xmax it was able to freeze till.
-permutation "s2begin" "s1delete" "s1setfreezeminage" "s1vacuumfreeze" "s2select" "s1select" "s2abort" "s3selectinvisible" "s3checkrelfrozenxidwithxmax" "s1vacuumfreeze" "s3selectinvisible" "s3checkrelfrozenxidwithxmax"
+permutation "s2begin" "s1delete" "s1setfreezeminage" "s1vacuumfreeze" "s2select" "s1select" "s2abort" "s3select" "s1vacuumfreeze" "s3select"
 
 # Intent of this permutation is to validate xmax freezing is correctly
 # continuing to work, when deleting transaction is aborted.
@@ -129,4 +118,4 @@ permutation "s4begin" "s4delete" "s4abort" "s1setfreezeminage" "s1vacuumfreeze" 
 # additional tuples after vacuum freeze. Also, make sure relfrozenxid in
 # pg_class after vacuum freeze is not set to freezelimit locally but actually
 # reflects the lowest xmin it was able to freeze till.
-permutation "s2begin" "s1insert" "s1setfreezeminage" "s1vacuumfreeze" "s2select" "s1select" "s2abort" "s2select" "s3checkrelfrozenxidwithxmin" "s1vacuumfreeze" "s2select" "s3checkrelfrozenxidwithxmin"
+permutation "s2begin" "s1insert" "s1setfreezeminage" "s1vacuumfreeze" "s2select" "s1select" "s2abort" "s2select" "s3select" "s1vacuumfreeze" "s2select" "s3select"

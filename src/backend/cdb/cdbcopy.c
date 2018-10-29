@@ -5,6 +5,42 @@
  * 	 routines are called from the backend COPY command whenever MPP is in the
  * 	 default dispatch mode.
  *
+ * Usage:
+ *
+ * CdbCopy cdbCopy = makeCdbCopy();
+ *
+ * PG_TRY();
+ * {
+ *     cdbCopyStart(cdbCopy, ...);
+ *
+ *     // process each row
+ *     while (...)
+ *     {
+ *         cdbCopyGetData(cdbCopy, ...)
+ *         or
+ *         cdbCopySendData(cdbCopy, ...)
+ *     }
+ *     cdbCopyEnd(cdbCopy);
+ * }
+ * PG_CATCH();
+ * {
+ *     cdbCopyAbort(cdbCopy);
+ * }
+ * PG_END_TRY();
+ *
+ *
+ * makeCdbCopy() creates a struct to hold information about the on-going COPY.
+ * It does not change the state of the connection yet.
+ *
+ * cdbCopyStart() puts the connections in the gang into COPY mode. If an error
+ * occurs during or after cdbCopyStart(), you must call cdbCopyAbort() to reset
+ * the connections to normal state!
+ *
+ * cdbCopyGetData() and cdbCopySendData() call libpq's PQgetCopyData() and
+ * PQputCopyData(), respectively. If an error occurs, it is thrown with ereport().
+ *
+ * When you're done, call cdbCopyEnd().
+ *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
@@ -35,6 +71,10 @@
 
 #include <poll.h>
 
+static void cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
+				   int64 *total_rows_completed_p,
+				   int64 *total_rows_rejected_p);
+
 static Gang *
 getCdbCopyPrimaryGang(CdbCopy *c)
 {
@@ -52,14 +92,12 @@ CdbCopy *
 makeCdbCopy(bool is_copy_in)
 {
 	CdbCopy    *c;
-	int			seg;
 
 	c = palloc0(sizeof(CdbCopy));
 
 	/* fresh start */
 	c->total_segs = 0;
 	c->mirror_map = NULL;
-	c->io_errors = false;
 	c->copy_in = is_copy_in;
 	c->skip_ext_partition = false;
 	c->outseglist = NIL;
@@ -67,22 +105,11 @@ makeCdbCopy(bool is_copy_in)
 	c->ao_segnos = NIL;
 	c->hasReplicatedTable = false;
 	c->dispatcherState = NULL;
-	initStringInfo(&(c->err_msg));
-	initStringInfo(&(c->err_context));
 	initStringInfo(&(c->copy_out_buf));
 
 	/* init total_segs */
 	c->total_segs = getgpsegmentCount();
 	c->aotupcounts = NULL;
-
-	/* Initialize the state of each segment database */
-	c->segdb_state = (SegDbState **) palloc((c->total_segs) * sizeof(SegDbState *));
-
-	for (seg = 0; seg < c->total_segs; seg++)
-	{
-		c->segdb_state[seg] = (SegDbState *) palloc(2 * sizeof(SegDbState));
-		c->segdb_state[seg][0] = SEGDB_IDLE;	/* Primary can't be OUT */
-	}
 
 	/* init seg list for copy out */
 	if (!c->copy_in)
@@ -105,12 +132,7 @@ makeCdbCopy(bool is_copy_in)
 void
 cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
 {
-	int			seg;
-
-	/* clean err message */
-	c->err_msg.len = 0;
-	c->err_msg.data[0] = '\0';
-	c->err_msg.cursor = 0;
+	int			flags;
 
 	stmt = copyObject(stmt);
 
@@ -132,16 +154,13 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
 													 GP_POLICY_ALL_NUMSEGMENTS);
 	}
 
-	CdbDispatchCopyStart(c, (Node *)stmt,
-				(c->copy_in ? DF_NEED_TWO_PHASE | DF_WITH_SNAPSHOT : DF_WITH_SNAPSHOT) | DF_CANCEL_ON_ERROR);	
+	flags = DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR;
+	if (c->copy_in)
+		flags |= DF_NEED_TWO_PHASE;
+
+	CdbDispatchCopyStart(c, (Node *) stmt, flags);
 
 	SIMPLE_FAULT_INJECTOR(CdbCopyStartAfterDispatch);
-
-	/* fill in CdbCopy structure */
-	for (seg = 0; seg < c->total_segs; seg++)
-	{
-		c->segdb_state[seg][0] = SEGDB_COPY;	/* we be jammin! */
-	}
 }
 
 /*
@@ -174,11 +193,6 @@ cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer,
 	Gang	   *gp;
 	int			result;
 
-	/* clean err message */
-	c->err_msg.len = 0;
-	c->err_msg.data[0] = '\0';
-	c->err_msg.cursor = 0;
-
 	/*
 	 * NOTE!! note that another DELIM was added, for the buf_converted in the
 	 * code above. I didn't do it because it's broken right now
@@ -194,16 +208,18 @@ cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer,
 	if (result != 1)
 	{
 		if (result == 0)
-			appendStringInfo(&(c->err_msg),
-							 "Failed to send data to segment %d, attempt blocked\n",
-							 target_seg);
-
-		if (result == -1)
-			appendStringInfo(&(c->err_msg),
-							 "Failed to send data to segment %d: %s\n",
-							 target_seg, PQerrorMessage(q->conn));
-
-		c->io_errors = true;
+		{
+			/* We don't use blocking mode, so this shouldn't happen */
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					 errmsg("could not send COPY data to segment %d, attempt blocked",
+							target_seg)));
+		}
+		else
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					 errmsg("could not send COPY data to segment %d: %s",
+							target_seg, PQerrorMessage(q->conn))));
 	}
 }
 
@@ -217,19 +233,10 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 {
 	SegmentDatabaseDescriptor *q;
 	Gang	   *gp;
-	PGresult   *res;
 	int			nbytes;
-	bool		first_error = true;
-
-	/* clean err message */
-	c->err_msg.len = 0;
-	c->err_msg.data[0] = '\0';
-	c->err_msg.cursor = 0;
 
 	/* clean out buf data */
-	c->copy_out_buf.len = 0;
-	c->copy_out_buf.data[0] = '\0';
-	c->copy_out_buf.cursor = 0;
+	resetStringInfo(&c->copy_out_buf);
 
 	gp = getCdbCopyPrimaryGang(c);
 
@@ -291,46 +298,25 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 			/*
 			 * DONE -- Got all the data rows from this segment, or a cancel
 			 * request.
+			 *
+			 * Remove the segment that completed sending data, from the list
+			 * of in-progress segments.
+			 *
+			 * Note: After PQgetCopyData() returns -1, you need to call
+			 * PGgetResult() to get any possible errors. But we don't do that
+			 * here. That's done later, in the call to cdbCopyEnd() (or
+			 * cdbCopyAbort(), if something went wrong.)
 			 */
 			else if (nbytes == -1)
 			{
-				/*
-				 * Fetch any error status existing on completion of the COPY
-				 * command.
-				 */
-				while (NULL != (res = PQgetResult(q->conn)))
-				{
-					/* if the COPY command had an error */
-					if (PQresultStatus(res) == PGRES_FATAL_ERROR && first_error)
-					{
-						appendStringInfo(&(c->err_msg), "Error from segment %d: %s\n",
-										 source_seg, PQresultErrorMessage(res));
-						first_error = false;
-					}
-
-					if (res->numCompleted > 0)
-					{
-						*rows_processed += res->numCompleted;
-					}
-
-					/* free the PGresult object */
-					PQclear(res);
-				}
-
-				/*
-				 * remove the segment that completed sending data from the
-				 * list
-				 */
 				c->outseglist = list_delete_int(c->outseglist, source_seg);
 
-				/* no more segments with data on the list. we are done */
 				if (list_length(c->outseglist) == 0)
-					return true;	/* done */
+					return true;	/* all segments are done */
 
-				/* start over from first seg as we just changes the seg list */
+				/* start over from first seg as we just changed the seg list */
 				break;
 			}
-
 			/*
 			 * ERROR!
 			 */
@@ -341,39 +327,16 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 				 * try again, exit with error.
 				 */
 				if (nbytes == 0)
-					appendStringInfo(&(c->err_msg),
-									 "Failed to get data from segment %d, attempt blocked\n",
-									 source_seg);
+					ereport(ERROR,
+							(errcode(ERRCODE_IO_ERROR),
+							 errmsg("could not send COPY data to segment %d, attempt blocked",
+									source_seg)));
 
 				if (nbytes == -2)
-				{
-					/* GPDB_91_MERGE_FIXME: How should we handle errors here? We used
-					 * to append them to err_msg, but that doesn't seem right. Surely
-					 * we should ereport()? I put in just a quick elog() for now..
-					 */
-					elog(ERROR, "could not dispatch COPY: %s", PQerrorMessage(q->conn));
-					appendStringInfo(&(c->err_msg),
-									 "Failed to get data from segment %d: %s\n",
-									 source_seg, PQerrorMessage(q->conn));
-
-					/*
-					 * remove the segment that completed sending data from the
-					 * list
-					 */
-					c->outseglist = list_delete_int(c->outseglist, source_seg);
-
-					/* no more segments with data on the list. we are done */
-					if (list_length(c->outseglist) == 0)
-						return true;	/* done */
-
-					/*
-					 * start over from first seg as we just changes the seg
-					 * list
-					 */
-					break;
-				}
-
-				c->io_errors = true;
+					ereport(ERROR,
+							(errcode(ERRCODE_IO_ERROR),
+							 errmsg("could not receive COPY data from segment %d: %s",
+									source_seg, PQerrorMessage(q->conn))));
 			}
 		}
 
@@ -385,54 +348,125 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 }
 
 /*
- * Process the results from segments after sending the end of copy command.
+ * Commands to end the cdbCopy.
+ *
+ * If an error occurrs, or if an error is reported by one of the segments,
+ * cdbCopyEnd() throws it with ereport(), after closing the COPY and cleaning
+ * up any resources associated with it.
+ *
+ * cdbCopyAbort() usually does not throw an error. It is used in error-recovery
+ * codepaths, typically in a PG_CATCH() block, and the caller is about to
+ * re-throw the original error that caused the abortion.
  */
-static ErrorData *
-processCopyEndResults(CdbCopy *c,
-					  SegmentDatabaseDescriptor **db_descriptors,
-					  int *results,
-					  int size,
-					  SegmentDatabaseDescriptor **failedSegDBs,
-					  bool *err_header,
-					  int *failed_count,
-					  int *total_rows_rejected,
-					  int64 *total_rows_completed)
+void
+cdbCopyAbort(CdbCopy *c)
 {
-	SegmentDatabaseDescriptor *q;
-	int			seg;
-	PGresult   *res;
-	struct pollfd	*pollRead = (struct pollfd *) palloc(sizeof(struct pollfd));
-	int			segment_rows_rejected = 0;	/* num of rows rejected by this QE */
-	int			segment_rows_completed = 0; /* num of rows completed by this
-											 * QE */
+	cdbCopyEndInternal(c, "aborting COPY in QE due to error in QD",
+					   NULL, NULL);
+}
+
+/*
+ * End the copy command on all segment databases,
+ * and fetch the total number of rows completed by all QEs
+ */
+void
+cdbCopyEnd(CdbCopy *c,
+		   int64 *total_rows_completed_p,
+		   int64 *total_rows_rejected_p)
+{
+	CHECK_FOR_INTERRUPTS();
+
+	cdbCopyEndInternal(c, NULL,
+					   total_rows_completed_p,
+					   total_rows_rejected_p);
+}
+
+static void
+cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
+				   int64 *total_rows_completed_p,
+				   int64 *total_rows_rejected_p)
+{
+	Gang	   *gp;
+	int			num_bad_connections = 0;
+	int64		total_rows_completed = 0;	/* total num rows completed by all
+											 * QEs */
+	int64		total_rows_rejected = 0;	/* total num rows rejected by all
+											 * QEs */
 	ErrorData *first_error = NULL;
+	int			seg;
+	struct pollfd	*pollRead;
+	bool		io_errors = false;
+	StringInfoData io_err_msg;
 
-	for (seg = 0; seg < size; seg++)
+	initStringInfo(&io_err_msg);
+
+	/*
+	 * Don't try to end a copy that already ended with the destruction of the
+	 * writer gang. We know that this has happened if the CdbCopy's
+	 * primary_writer is NULL.
+	 *
+	 * GPDB_91_MERGE_FIXME: ugh, this is nasty. We shouldn't be calling
+	 * cdbCopyEnd twice on the same CdbCopy in the first place!
+	 */
+	gp = getCdbCopyPrimaryGang(c);
+	if (!gp)
 	{
-		int			result = results[seg];
+		if (total_rows_completed_p != NULL)
+			*total_rows_completed_p = 0;
+		if (total_rows_rejected_p != NULL)
+			*total_rows_completed_p = -1;
+		return;
+	}
 
-		q = db_descriptors[seg];
-
-		/* get command end status */
-		if (result == 0)
+	/*
+	 * In COPY in mode, call PQputCopyEnd() to tell the segments that we're done.
+	 */
+	if (c->copy_in)
+	{
+		for (seg = 0; seg < gp->size; seg++)
 		{
-			/* attempt blocked */
+			SegmentDatabaseDescriptor *q = gp->db_descriptors[seg];
+			int			result;
 
-			/*
-			 * CDB TODO: Can this occur?  The libpq documentation says, "this
-			 * case is only possible if the connection is in nonblocking
-			 * mode... wait for write-ready and try again", i.e., the proper
-			 * response would be to retry, not error out.
-			 */
-			if (!(*err_header))
-				appendStringInfo(&(c->err_msg),
-								 "Failed to complete COPY on the following:\n");
-			*err_header = true;
+			elog(DEBUG1, "PQputCopyEnd seg %d    ", q->segindex);
+			/* end this COPY command */
+			result = PQputCopyEnd(q->conn, abort_msg);
 
-			appendStringInfo(&(c->err_msg), "primary segment %d, dbid %d, attempt blocked\n",
-							 seg, q->segment_database_info->dbid);
-			c->io_errors = true;
+			/* get command end status */
+			if (result == -1)
+			{
+				/* error */
+				appendStringInfo(&io_err_msg,
+								 "Failed to send end-of-copy to segment %d: %s",
+								 seg, PQerrorMessage(q->conn));
+				io_errors = true;
+			}
+			if (result == 0)
+			{
+				/* attempt blocked */
+
+				/*
+				 * CDB TODO: Can this occur?  The libpq documentation says, "this
+				 * case is only possible if the connection is in nonblocking
+				 * mode... wait for write-ready and try again", i.e., the proper
+				 * response would be to retry, not error out.
+				 */
+				appendStringInfo(&io_err_msg,
+								 "primary segment %d, dbid %d, attempt blocked\n",
+								 seg, q->segment_database_info->dbid);
+				io_errors = true;
+			}
 		}
+	}
+
+	pollRead = (struct pollfd *) palloc(sizeof(struct pollfd));
+	for (seg = 0; seg < gp->size; seg++)
+	{
+		SegmentDatabaseDescriptor *q = gp->db_descriptors[seg];
+		int			result;
+		PGresult   *res;
+		int64		segment_rows_completed = 0; /* # of rows completed by this QE */
+		int64		segment_rows_rejected = 0;	/* # of rows rejected by this QE */
 
 		pollRead->fd = PQsocket(q->conn);
 		pollRead->events = POLLIN;
@@ -548,153 +582,79 @@ processCopyEndResults(CdbCopy *c,
 				segment_rows_completed = res->numCompleted;
 
 			/* Get AO tuple counts */
-			c->aotupcounts = PQprocessAoTupCounts(c->partitions, c->aotupcounts, res->aotupcounts, res->naotupcounts);
+			c->aotupcounts = PQprocessAoTupCounts(c->partitions, c->aotupcounts,
+												  res->aotupcounts, res->naotupcounts);
 			/* free the PGresult object */
 			PQclear(res);
 		}
 		RESUME_INTERRUPTS();
 
-		/* Finished with this segment db. */
-		c->segdb_state[seg][0] = SEGDB_DONE;
-
 		/*
-		 * add number of rows rejected from this segment to the total of
-		 * rejected rows. Only count from primary segs.
+		 * add up the number of rows completed and rejected from this segment
+		 * to the totals. Only count from primary segs.
 		 */
 		if (segment_rows_rejected > 0)
-			*total_rows_rejected += segment_rows_rejected;
-
-		segment_rows_rejected = 0;
-
-		/*
-		 * add number of rows completed from this segment to the total of
-		 * completed rows. Only count from primary segs
-		 */
-		if ((NULL != total_rows_completed) && (segment_rows_completed > 0))
-			*total_rows_completed += segment_rows_completed;
-
-		segment_rows_completed = 0;
+			total_rows_rejected += segment_rows_rejected;
+		if (segment_rows_completed > 0)
+			total_rows_completed += segment_rows_completed;
 
 		/* Lost the connection? */
 		if (PQstatus(q->conn) == CONNECTION_BAD)
 		{
-			if (!*(err_header))
-				appendStringInfo(&(c->err_msg),
-								 "ERROR - Failed to complete COPY on the following:\n");
-			*err_header = true;
-
 			/* command error */
-			c->io_errors = true;
-			appendStringInfo(&(c->err_msg), "Primary segment %d, dbid %d, with error: %s\n",
-							 seg, q->segment_database_info->dbid, PQerrorMessage(q->conn));
+			io_errors = true;
+			appendStringInfo(&io_err_msg,
+							 "Primary segment %d, dbid %d, with error: %s\n",
+							 seg, q->segment_database_info->dbid,
+							 PQerrorMessage(q->conn));
 
 			/* Free the PGconn object. */
 			PQfinish(q->conn);
 			q->conn = NULL;
 
 			/* Let FTS deal with it! */
-			failedSegDBs[*failed_count] = q;
-			(*failed_count)++;
+			num_bad_connections++;
 		}
 	}
-
-	return first_error;
-}
-
-int
-cdbCopyAbort(CdbCopy *c)
-{
-	return cdbCopyEndAndFetchRejectNum(c, NULL,
-									   "aborting COPY in QE due to error in QD");
-}
-
-/*
- * End the copy command on all segment databases,
- * and fetch the total number of rows completed by all QEs
- * 
- * GPDB_91_MERGE_FIXME: we allow % value to be specified as segment reject
- * limit, however, the total rejected rows is not allowed to be > INT_MAX.
- */
-int
-cdbCopyEndAndFetchRejectNum(CdbCopy *c, int64 *total_rows_completed, char *abort_msg)
-{
-	SegmentDatabaseDescriptor *q;
-	SegmentDatabaseDescriptor **failedSegDBs;
-	Gang	   *gp;
-	int		   *results;		/* final result of COPY command execution */
-	int			seg;
-
-	int			failed_count = 0;
-	int			total_rows_rejected = 0;	/* total num rows rejected by all
-											 * QEs */
-	bool		err_header = false;
-	struct SegmentDatabaseDescriptor **db_descriptors;
-	int			size;
-	ErrorData *edata;
-
-	/*
-	 * Don't try to end a copy that already ended with the destruction of the
-	 * writer gang. We know that this has happened if the CdbCopy's
-	 * primary_writer is NULL.
-	 *
-	 * GPDB_91_MERGE_FIXME: ugh, this is nasty. We shouldn't be calling
-	 * cdbCopyEnd twice on the same CdbCopy in the first place!
-	 */
-	gp = getCdbCopyPrimaryGang(c);
-	if (!gp)
-		return -1;
-
-	/* clean err message */
-	c->err_msg.len = 0;
-	c->err_msg.data[0] = '\0';
-	c->err_msg.cursor = 0;
-
-	/* allocate a failed segment database pointer array */
-	failedSegDBs = (SegmentDatabaseDescriptor **) palloc(c->total_segs * 2 * sizeof(SegmentDatabaseDescriptor *));
-
-	db_descriptors = gp->db_descriptors;
-	size = gp->size;
-
-	/* results from each segment */
-	results = (int *) palloc0(sizeof(int) * size);
-
-	for (seg = 0; seg < size; seg++)
-	{
-		q = db_descriptors[seg];
-		elog(DEBUG1, "PQputCopyEnd seg %d    ", q->segindex);
-		/* end this COPY command */
-		results[seg] = PQputCopyEnd(q->conn, abort_msg);
-	}
-
-	if (NULL != total_rows_completed)
-		*total_rows_completed = 0;
-
-	edata = processCopyEndResults(c, db_descriptors, results, size,
-								  failedSegDBs, &err_header,
-								  &failed_count, &total_rows_rejected,
-								  total_rows_completed);
 
 	CdbDispatchCopyEnd(c);
 
 	/* If lost contact with segment db, try to reconnect. */
-	if (failed_count > 0)
+	if (num_bad_connections > 0)
 	{
-		elog(LOG, "%s", c->err_msg.data);
+		elog(LOG, "error occurred while ending COPY: %s", io_err_msg.data);
 		elog(LOG, "COPY signals FTS to probe segments");
+
 		SendPostmasterSignal(PMSIGNAL_WAKEN_FTS);
 		DisconnectAndDestroyAllGangs(true);
+
 		ereport(ERROR,
-				(errmsg_internal("MPP detected %d segment failures, system is reconnected", failed_count),
-				 errSendAlert(true)));
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 (errmsg("MPP detected %d segment failures, system is reconnected",
+						 num_bad_connections),
+				  errSendAlert(true))));
 	}
 
-	pfree(results);
-	pfree(failedSegDBs);
+	/*
+	 * Unless we are aborting the COPY, report any errors with ereport()
+	 */
+	if (!abort_msg)
+	{
+		/* errors reported by the segments */
+		if (first_error)
+			ReThrowError(first_error);
 
-	/* If we are aborting the COPY, ignore errors sent by the server. */
-	if (edata && !abort_msg)
-		ReThrowError(edata);
+		/* errors that occurred in the COPY itself */
+		if (io_errors)
+			ereport(ERROR,
+					(errcode(ERRCODE_IO_ERROR),
+					 errmsg("could not complete COPY on some segments"),
+					 errdetail("%s", io_err_msg.data)));
+	}
 
-	return total_rows_rejected;
+	if (total_rows_completed_p != NULL)
+		*total_rows_completed_p = total_rows_completed;
+	if (total_rows_rejected_p != NULL)
+		*total_rows_rejected_p = total_rows_rejected;
+	return;
 }
-

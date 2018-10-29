@@ -26,15 +26,6 @@ PG_FUNCTION_INFO_V1(gbt_intv_distance);
 PG_FUNCTION_INFO_V1(gbt_intv_penalty);
 PG_FUNCTION_INFO_V1(gbt_intv_same);
 
-Datum		gbt_intv_compress(PG_FUNCTION_ARGS);
-Datum		gbt_intv_decompress(PG_FUNCTION_ARGS);
-Datum		gbt_intv_union(PG_FUNCTION_ARGS);
-Datum		gbt_intv_picksplit(PG_FUNCTION_ARGS);
-Datum		gbt_intv_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_intv_distance(PG_FUNCTION_ARGS);
-Datum		gbt_intv_penalty(PG_FUNCTION_ARGS);
-Datum		gbt_intv_same(PG_FUNCTION_ARGS);
-
 
 static bool
 gbt_intvgt(const void *a, const void *b)
@@ -95,8 +86,10 @@ gbt_intv_dist(const void *a, const void *b)
 
 /*
  * INTERVALSIZE should be the actual size-on-disk of an Interval, as shown
- * in pg_type.	This might be less than sizeof(Interval) if the compiler
- * insists on adding alignment padding at the end of the struct.
+ * in pg_type.  This might be less than sizeof(Interval) if the compiler
+ * insists on adding alignment padding at the end of the struct.  (Note:
+ * this concern is obsolete with the current definition of Interval, but
+ * was real before a separate "day" field was added to it.)
  */
 #define INTERVALSIZE 16
 
@@ -104,6 +97,7 @@ static const gbtree_ninfo tinfo =
 {
 	gbt_t_intv,
 	sizeof(Interval),
+	32,							/* sizeof(gbtreekey32) */
 	gbt_intvgt,
 	gbt_intvge,
 	gbt_intveq,
@@ -129,7 +123,6 @@ abs_interval(Interval *a)
 }
 
 PG_FUNCTION_INFO_V1(interval_dist);
-Datum		interval_dist(PG_FUNCTION_ARGS);
 Datum
 interval_dist(PG_FUNCTION_ARGS)
 {

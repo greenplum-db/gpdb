@@ -1,5 +1,9 @@
 <!-- doc/src/sgml/ref/set_constraints.sgml -->
 <refentry id="SQL-SET-CONSTRAINTS">
+ <indexterm zone="sql-set-constraints">
+  <primary>SET CONSTRAINTS</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>SET CONSTRAINTS</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -10,10 +14,6 @@
   <refname>SET CONSTRAINTS</refname>
   <refpurpose>set constraint check timing for the current transaction</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-set-constraints">
-  <primary>SET CONSTRAINTS</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -99,10 +99,8 @@ SET CONSTRAINTS { ALL | <replaceable class="parameter">name</replaceable> [, ...
 
   <para>
    This command only alters the behavior of constraints within the
-   current transaction. Thus, if you execute this command outside of a
-   transaction block
-   (<command>BEGIN</command>/<command>COMMIT</command> pair), it will
-   not appear to have any effect.
+   current transaction.  Issuing this outside of a transaction block
+   emits a warning and otherwise has no effect.
   </para>
  </refsect1>
 

@@ -3,7 +3,7 @@
  * socket.c
  *	  Microsoft Windows Win32 Socket Functions
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/port/win32/socket.c
@@ -132,7 +132,7 @@ int
 pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 {
 	static HANDLE waitevent = INVALID_HANDLE_VALUE;
-	static SOCKET current_socket = -1;
+	static SOCKET current_socket = INVALID_SOCKET;
 	static int	isUDP = 0;
 	HANDLE		events[2];
 	int			r;
@@ -151,7 +151,7 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 				(errmsg_internal("could not reset socket waiting event: error code %lu", GetLastError())));
 
 	/*
-	 * Track whether socket is UDP or not.	(NB: most likely, this is both
+	 * Track whether socket is UDP or not.  (NB: most likely, this is both
 	 * useless and wrong; there is no reason to think that the behavior of
 	 * WSAEventSelect is different for TCP and UDP.)
 	 */
@@ -160,7 +160,7 @@ pgwin32_waitforsinglesocket(SOCKET s, int what, int timeout)
 	current_socket = s;
 
 	/*
-	 * Attach event to socket.	NOTE: we must detach it again before
+	 * Attach event to socket.  NOTE: we must detach it again before
 	 * returning, since other bits of code may try to attach other events to
 	 * the socket.
 	 */

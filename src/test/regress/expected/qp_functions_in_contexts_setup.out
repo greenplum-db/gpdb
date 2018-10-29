@@ -6,10 +6,15 @@
 --
 create schema qp_funcs_in_contexts;
 set search_path='qp_funcs_in_contexts';
+-- The test functions rely on these tables, but we don't create them here.
+-- Instead, each test that uses the below functions, have to create their
+-- own copies of these, so that they don't interfere with each other.
+/*
 CREATE TABLE foo (a int, b int);
 INSERT INTO foo select i, i+1 from generate_series(1,10) i;
 CREATE TABLE bar (c int, d int);
 INSERT INTO bar select i, i+1 from generate_series(1,10) i;
+*/
 -- Create test functions
 -- func1 IMMUTABLE
 CREATE FUNCTION func1_nosql_imm(x int) RETURNS int AS $$

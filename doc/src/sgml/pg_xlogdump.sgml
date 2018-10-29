@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="pgxlogdump">
+ <indexterm zone="pgxlogdump">
+  <primary>pg_xlogdump</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle><application>pg_xlogdump</application></refentrytitle>
   <manvolnum>1</manvolnum>
@@ -14,10 +18,6 @@ PostgreSQL documentation
   <refname>pg_xlogdump</refname>
   <refpurpose>Display a human-readable rendering of the write-ahead log of a <productname>PostgreSQL</productname> database cluster</refpurpose>
  </refnamediv>
-
- <indexterm zone="pgxlogdump">
-  <primary>pg_xlogdump</primary>
- </indexterm>
 
  <refsynopsisdiv>
   <cmdsynopsis>
@@ -87,6 +87,17 @@ PostgreSQL documentation
        <para>
         Stop reading at the specified log position, instead of reading to the
         end of the log stream.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>-f</option></term>
+      <term><option>--follow</option></term>
+      <listitem>
+       <para>
+        After reaching the end of valid WAL, keep polling once per second for
+        new WAL to appear.
        </para>
       </listitem>
      </varlistentry>

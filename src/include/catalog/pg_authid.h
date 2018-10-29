@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_authid.h
@@ -28,8 +28,8 @@
 /*
  * The CATALOG definition has to refer to the type of "rolvaliduntil" as
  * "timestamptz" (lower case) so that bootstrap mode recognizes it.  But
- * the C header files define this type as TimestampTz.	Since the field is
- * potentially-null and therefore cannot be accessed directly from C code,
+ * the C header files define this type as TimestampTz.  Since the field is
+ * potentially-null and therefore can't be accessed directly from C code,
  * there is no particular need for the C struct definition to show the
  * field type as TimestampTz --- instead we just make it int.
  */

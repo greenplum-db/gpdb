@@ -347,7 +347,7 @@ _bitmap_findnexttids(BMBatchWords *words, BMIterateResult *result,
 /*
  * _bitmap_intesect() is dead code because streaming intersects
  * PagetableEntry structures, not raw batch words. It's possible we may
- * want to intersect batches later though -- it would definately improve
+ * want to intersect batches later though -- it would definitely improve
  * streaming of intersections.
  */
 
@@ -791,38 +791,6 @@ _bitmap_begin_iterate(BMBatchWords *words, BMIterateResult *result)
 	result->lastScanWordNo = words->startNo;
 	result->numOfTids = 0;
 	result->nextTidLoc = 0;
-}
-
-
-/*
- * _bitmap_log_newpage() -- log a new page.
- *
- * This function is called before writing a new buffer.
- */
-void
-_bitmap_log_newpage(Relation rel, uint8 info, Buffer buf)
-{
-	Page page;
-
-	xl_bm_newpage		xlNewPage;
-	XLogRecPtr			recptr;
-	XLogRecData			rdata[1];
-
-	page = BufferGetPage(buf);
-
-	xlNewPage.bm_node = rel->rd_node;
-	xlNewPage.bm_new_blkno = BufferGetBlockNumber(buf);
-
-	elog(DEBUG1, "_bitmap_log_newpage: blkno=%d", xlNewPage.bm_new_blkno);
-
-	rdata[0].buffer = InvalidBuffer;
-	rdata[0].data = (char *)&xlNewPage;
-	rdata[0].len = sizeof(xl_bm_newpage);
-	rdata[0].next = NULL;
-			
-	recptr = XLogInsert(RM_BITMAP_ID, info, rdata);
-
-	PageSetLSN(page, recptr);
 }
 
 /*

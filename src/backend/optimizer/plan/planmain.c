@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,19 +22,17 @@
  */
 #include "postgres.h"
 
-#include "miscadmin.h"
-#include "optimizer/cost.h"
+#include "optimizer/orclauses.h"
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/placeholder.h"
 #include "optimizer/planmain.h"
-#include "optimizer/tlist.h"
-#include "utils/selfuncs.h"
 
 #include "catalog/pg_proc.h"
 #include "cdb/cdbpath.h"        /* cdbpath_rows() */
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
+#include "optimizer/cost.h"
 
 static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
 
@@ -44,78 +42,51 @@ static Bitmapset *distcols_in_groupclause(List *gc, Bitmapset *bms);
  *	  which may involve joins but not any fancier features.
  *
  * Since query_planner does not handle the toplevel processing (grouping,
- * sorting, etc) it cannot select the best path by itself.	It selects
- * two paths: the cheapest path that produces all the required tuples,
- * independent of any ordering considerations, and the cheapest path that
- * produces the expected fraction of the required tuples in the required
- * ordering, if there is a path that is cheaper for this than just sorting
- * the output of the cheapest overall path.  The caller (grouping_planner)
- * will make the final decision about which to use.
+ * sorting, etc) it cannot select the best path by itself.  Instead, it
+ * returns the RelOptInfo for the top level of joining, and the caller
+ * (grouping_planner) can choose one of the surviving paths for the rel.
+ * Normally it would choose either the rel's cheapest path, or the cheapest
+ * path for the desired sort order.
  *
- * Input parameters:
  * root describes the query to plan
  * tlist is the target list the query should produce
  *		(this is NOT necessarily root->parse->targetList!)
- * tuple_fraction is the fraction of tuples we expect will be retrieved
- * limit_tuples is a hard limit on number of tuples to retrieve,
- *		or -1 if no limit
  * qp_callback is a function to compute query_pathkeys once it's safe to do so
  * qp_extra is optional extra data to pass to qp_callback
- *
- * Output parameters:
- * *cheapest_path receives the overall-cheapest path for the query
- * *sorted_path receives the cheapest presorted path for the query,
- *				if any (NULL if there is no useful presorted path)
- * *num_groups receives the estimated number of groups, or 1 if query
- *				does not use grouping
  *
  * Note: the PlannerInfo node also includes a query_pathkeys field, which
  * tells query_planner the sort order that is desired in the final output
  * plan.  This value is *not* available at call time, but is computed by
  * qp_callback once we have completed merging the query's equivalence classes.
  * (We cannot construct canonical pathkeys until that's done.)
- *
- * tuple_fraction is interpreted as follows:
- *	  0: expect all tuples to be retrieved (normal case)
- *	  0 < tuple_fraction < 1: expect the given fraction of tuples available
- *		from the plan to be retrieved
- *	  tuple_fraction >= 1: tuple_fraction is the absolute number of tuples
- *		expected to be retrieved (ie, a LIMIT specification)
- * Note that a nonzero tuple_fraction could come from outer context; it is
- * therefore not redundant with limit_tuples.  We use limit_tuples to determine
- * whether a bounded sort can be used at runtime.
  */
-void
+RelOptInfo *
 query_planner(PlannerInfo *root, List *tlist,
-			  double tuple_fraction, double limit_tuples,
-			  query_pathkeys_callback qp_callback, void *qp_extra,
-			  Path **cheapest_path, Path **sorted_path,
-			  double *num_groups)
+			  query_pathkeys_callback qp_callback, void *qp_extra)
 {
 	Query	   *parse = root->parse;
 	List	   *joinlist;
 	RelOptInfo *final_rel;
-	Path	   *cheapestpath;
-	Path	   *sortedpath;
 	Index		rti;
 	double		total_pages;
 
-	/* Make tuple_fraction, limit_tuples accessible to lower-level routines */
-	root->tuple_fraction = tuple_fraction;
-	root->limit_tuples = limit_tuples;
-
-	*num_groups = 1;			/* default result */
-
 	/*
 	 * If the query has an empty join tree, then it's something easy like
-	 * "SELECT 2+2;" or "INSERT ... VALUES()".	Fall through quickly.
+	 * "SELECT 2+2;" or "INSERT ... VALUES()".  Fall through quickly.
 	 */
 	if (parse->jointree->fromlist == NIL)
 	{
-		/* We need a trivial path result */
-		*cheapest_path = (Path *)
-			create_result_path((List *) parse->jointree->quals);
-		*sorted_path = NULL;
+		Path	   *result_path;
+
+		/* We need a dummy joinrel to describe the empty set of baserels */
+		final_rel = build_empty_join_rel(root);
+
+		/* The only path for it is a trivial Result path */
+		result_path = (Path *) create_result_path((List *) parse->jointree->quals);
+		add_path(final_rel, result_path);
+
+		/* Select cheapest path (pretty easy in this case...) */
+		set_cheapest(final_rel);
 
 		/*
 		 * We still are required to call qp_callback, in case it's something
@@ -130,13 +101,13 @@ query_planner(PlannerInfo *root, List *tlist,
 			exec_location = check_execute_on_functions((Node *) parse->targetList);
 
 			if (exec_location == PROEXECLOCATION_MASTER)
-				CdbPathLocus_MakeEntry(&(*cheapest_path)->locus);
+				CdbPathLocus_MakeEntry(&result_path->locus);
 			else if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
-				CdbPathLocus_MakeStrewn(&(*cheapest_path)->locus,
+				CdbPathLocus_MakeStrewn(&result_path->locus,
 										GP_POLICY_ALL_NUMSEGMENTS);
 		}
 
-		return;
+		return final_rel;
 	}
 
 	/*
@@ -181,7 +152,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	/*
 	 * Examine the targetlist and join tree, adding entries to baserel
 	 * targetlists for all referenced Vars, and generating PlaceHolderInfo
-	 * entries for all referenced PlaceHolderVars.	Restrict and join clauses
+	 * entries for all referenced PlaceHolderVars.  Restrict and join clauses
 	 * are added to appropriate lists belonging to the mentioned relations. We
 	 * also build EquivalenceClasses for provably equivalent expressions. The
 	 * SpecialJoinInfo list is also built to hold information about join order
@@ -195,12 +166,6 @@ query_planner(PlannerInfo *root, List *tlist,
 	find_lateral_references(root);
 
 	joinlist = deconstruct_jointree(root);
-
-	/*
-	 * Create the LateralJoinInfo list now that we have finalized
-	 * PlaceHolderVar eval levels.
-	 */
-	create_lateral_join_info(root);
 
 	/*
 	 * Reconsider any postponed outer-join quals now that we have built up
@@ -217,7 +182,7 @@ query_planner(PlannerInfo *root, List *tlist,
 
 	/*
 	 * If we formed any equivalence classes, generate additional restriction
-	 * clauses as appropriate.	(Implied join clauses are formed on-the-fly
+	 * clauses as appropriate.  (Implied join clauses are formed on-the-fly
 	 * later.)
 	 */
 	generate_base_implied_equalities(root);
@@ -232,7 +197,7 @@ query_planner(PlannerInfo *root, List *tlist,
 	/*
 	 * Examine any "placeholder" expressions generated during subquery pullup.
 	 * Make sure that the Vars they need are marked as needed at the relevant
-	 * join level.	This must be done before join removal because it might
+	 * join level.  This must be done before join removal because it might
 	 * cause Vars or placeholders to be needed above a join when they weren't
 	 * so marked before.
 	 */
@@ -251,6 +216,19 @@ query_planner(PlannerInfo *root, List *tlist,
 	 * placeholder is evaluatable at a base rel.
 	 */
 	add_placeholders_to_base_rels(root);
+
+	/*
+	 * Create the LateralJoinInfo list now that we have finalized
+	 * PlaceHolderVar eval levels and made any necessary additions to the
+	 * lateral_vars lists for lateral references within PlaceHolderVars.
+	 */
+	create_lateral_join_info(root);
+
+	/*
+	 * Look for join OR clauses that we can extract single-relation
+	 * restriction OR clauses from.
+	 */
+	extract_restriction_or_clauses(root);
 
 	/*
 	 * We should now have size estimates for every actual table involved in
@@ -286,171 +264,13 @@ query_planner(PlannerInfo *root, List *tlist,
 	 */
 	final_rel = make_one_rel(root, joinlist);
 
+	/* Check that we got at least one usable path */
 	if (!final_rel || !final_rel->cheapest_total_path ||
 		final_rel->cheapest_total_path->param_info != NULL)
 		elog(ERROR, "failed to construct the join relation");
 	Insist(final_rel->cheapest_startup_path);
 
-	/*
-	 * If there's grouping going on, estimate the number of result groups. We
-	 * couldn't do this any earlier because it depends on relation size
-	 * estimates that were set up above.
-	 *
-	 * Then convert tuple_fraction to fractional form if it is absolute, and
-	 * adjust it based on the knowledge that grouping_planner will be doing
-	 * grouping or aggregation work with our result.
-	 *
-	 * This introduces some undesirable coupling between this code and
-	 * grouping_planner, but the alternatives seem even uglier; we couldn't
-	 * pass back completed paths without making these decisions here.
-	 */
-	if (parse->groupClause)
-	{
-		List	   *groupExprs;
-
-		groupExprs = get_grouplist_exprs(parse->groupClause,
-										 parse->targetList);
-		if (groupExprs == NULL)
-			*num_groups = 1;
-		else
-			*num_groups = estimate_num_groups(root,
-											  groupExprs,
-											  final_rel->rows);
-
-		/*
-		 * In GROUP BY mode, an absolute LIMIT is relative to the number of
-		 * groups not the number of tuples.  If the caller gave us a fraction,
-		 * keep it as-is.  (In both cases, we are effectively assuming that
-		 * all the groups are about the same size.)
-		 */
-		if (tuple_fraction >= 1.0)
-			tuple_fraction /= *num_groups;
-
-		/*
-		 * If both GROUP BY and ORDER BY are specified, we will need two
-		 * levels of sort --- and, therefore, certainly need to read all the
-		 * tuples --- unless ORDER BY is a subset of GROUP BY.  Likewise if we
-		 * have both DISTINCT and GROUP BY.
-		 */
-		if (!pathkeys_contained_in(root->sort_pathkeys, root->group_pathkeys) ||
-			!pathkeys_contained_in(root->distinct_pathkeys, root->group_pathkeys))
-			tuple_fraction = 0.0;
-		/* GPDB_84_MERGE_FIXME: Are we missing the condition on window_pathkeys on
-		 * purpose? */
-
-		/* In any case, limit_tuples shouldn't be specified here */
-		Assert(limit_tuples < 0);
-	}
-	else if (parse->hasAggs || root->hasHavingQual)
-	{
-		/*
-		 * Ungrouped aggregate will certainly want to read all the tuples, and
-		 * it will deliver a single result row (so leave *num_groups 1).
-		 */
-		tuple_fraction = 0.0;
-
-		/* limit_tuples shouldn't be specified here */
-		Assert(limit_tuples < 0);
-	}
-	else if (parse->distinctClause)
-	{
-		/*
-		 * Since there was no grouping or aggregation, it's reasonable to
-		 * assume the UNIQUE filter has effects comparable to GROUP BY. Return
-		 * the estimated number of output rows for use by caller. (If DISTINCT
-		 * is used with grouping, we ignore its effects for rowcount
-		 * estimation purposes; this amounts to assuming the grouped rows are
-		 * distinct already.)
-		 */
-		List	   *distinctExprs;
-
-		distinctExprs = get_sortgrouplist_exprs(parse->distinctClause,
-												parse->targetList);
-		*num_groups = estimate_num_groups(root,
-										  distinctExprs,
-										  final_rel->rows);
-
-		/*
-		 * Adjust tuple_fraction the same way as for GROUP BY, too.
-		 */
-		if (tuple_fraction >= 1.0)
-			tuple_fraction /= *num_groups;
-
-		/* limit_tuples shouldn't be specified here */
-		Assert(limit_tuples < 0);
-	}
-	else
-	{
-		/*
-		 * Plain non-grouped, non-aggregated query: an absolute tuple fraction
-		 * can be divided by the number of tuples.
-		 */
-		if (tuple_fraction >= 1.0)
-			tuple_fraction /= final_rel->rows;
-	}
-
-	/*
-	 * Pick out the cheapest-total path and the cheapest presorted path for
-	 * the requested pathkeys (if there is one).  We should take the tuple
-	 * fraction into account when selecting the cheapest presorted path, but
-	 * not when selecting the cheapest-total path, since if we have to sort
-	 * then we'll have to fetch all the tuples.  (But there's a special case:
-	 * if query_pathkeys is NIL, meaning order doesn't matter, then the
-	 * "cheapest presorted" path will be the cheapest overall for the tuple
-	 * fraction.)
-	 *
-	 * The cheapest-total path is also the one to use if grouping_planner
-	 * decides to use hashed aggregation, so we return it separately even if
-	 * this routine thinks the presorted path is the winner.
-	 */
-	cheapestpath = final_rel->cheapest_total_path;
-
-	sortedpath =
-		get_cheapest_fractional_path_for_pathkeys(final_rel->pathlist,
-												  root->query_pathkeys,
-												  NULL,
-												  tuple_fraction);
-
-	/* Don't return same path in both guises; just wastes effort */
-	if (sortedpath == cheapestpath)
-		sortedpath = NULL;
-
-	/*
-	 * Forget about the presorted path if it would be cheaper to sort the
-	 * cheapest-total path.  Here we need consider only the behavior at the
-	 * tuple fraction point.
-	 */
-	if (sortedpath)
-	{
-		Path		sort_path;	/* dummy for result of cost_sort */
-
-		if (root->query_pathkeys == NIL ||
-			pathkeys_contained_in(root->query_pathkeys,
-								  cheapestpath->pathkeys))
-		{
-			/* No sort needed for cheapest path */
-			sort_path.startup_cost = cheapestpath->startup_cost;
-			sort_path.total_cost = cheapestpath->total_cost;
-		}
-		else
-		{
-			/* Figure cost for sorting */
-			cost_sort(&sort_path, root, root->query_pathkeys,
-					  cheapestpath->total_cost,
-					  cheapestpath->rows, final_rel->width,
-					  0.0, work_mem, limit_tuples);
-		}
-
-		if (compare_fractional_path_costs(sortedpath, &sort_path,
-										  tuple_fraction) > 0)
-		{
-			/* Presorted path is a loser */
-			sortedpath = NULL;
-		}
-	}
-
-	*cheapest_path = cheapestpath;
-	*sorted_path = sortedpath;
+	return final_rel;
 }
 
 /*

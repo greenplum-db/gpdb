@@ -49,7 +49,6 @@ create table t1 (a int, b int) distributed by (a);
  a      | integer |           | plain   |              | none             | 0                 | 32768      | 
  b      | integer |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=true, orientation=column
 
@@ -72,7 +71,6 @@ create table t2 (a int, b varchar, c text) distributed by (a);
  b      | character varying |           | extended |              | none             | 0                 | 8192       | 
  c      | text              |           | extended |              | none             | 0                 | 8192       | 
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=true, blocksize=8192, orientation=column
 
@@ -84,7 +82,6 @@ create table t3 (a int, b float) with (appendonly=false)
 --------+------------------+-----------+---------+--------------+-------------
  a      | integer          |           | plain   |              | 
  b      | double precision |           | plain   |              | 
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=false
 
@@ -157,7 +154,6 @@ Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=true, compresslevel=2
 
@@ -185,7 +181,6 @@ create table t2 (
  c      | integer          |           | plain    |              | rle_type         | 2                 | 32768      | 
  d      | text             |           | extended |              | zlib             | 2                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: orientation=column, appendonly=true, compresslevel=2
 
@@ -574,7 +569,6 @@ create table co8 (a int, b float) distributed by (a);
  a      | integer          |           | plain   |              | none             | 0                 | 32768      | 
  b      | double precision |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=true, orientation=column
 
@@ -612,7 +606,6 @@ Compression Type: zlib
 Compression Level: 2
 Block Size: 32768
 Checksum: t
-Has OIDs: no
 Distributed by: (a)
 Options: appendonly=true, compresslevel=2
 
@@ -640,7 +633,6 @@ create table co9 (x int, y float) distributed by (x);
  x      | integer          |           | plain   |              | none             | 0                 | 32768      | 
  y      | double precision |           | plain   |              | none             | 0                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (x)
 Options: appendonly=true, orientation=column
 
@@ -863,7 +855,6 @@ Format options: delimiter '	' null '\N' escape '\'
 External options: {}
 External location: file:///tmp/test.txt
 Execute on: all segments
-Has OIDs: no
 
 create external table ext_error_logging_off (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
@@ -882,7 +873,6 @@ External options: {}
 External location: file:///tmp/test.txt
 Execute on: all segments
 Segment reject limit: 100 rows
-Has OIDs: no
 
 create external table ext_t2 (a int, b int)
     location ('file:///tmp/test.txt') format 'text'
@@ -902,7 +892,6 @@ External location: file:///tmp/test.txt
 Execute on: all segments
 Segment reject limit: 100 rows
 Error Log in File
-Has OIDs: no
 
 -- Make sure gp_default_storage_options GUC value is set in newly created cdbgangs
 -- after previous idle cdbgang is stopped

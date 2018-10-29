@@ -603,19 +603,6 @@ MemTuple memtuple_form_to(
 			continue;
 		}
 
-		if (attr->attlen == -1 &&
-				attr->attalign == 'd' &&
-				attr->attndims == 0 &&
-				!VARATT_IS_EXTENDED(DatumGetPointer(values[i])))
-		{
-			if (old_values == NULL)
-				old_values = (Datum *)palloc0(pbind->tupdesc->natts * sizeof(Datum));
-			old_values[i] = values[i];
-			values[i] = toast_flatten_tuple_attribute(values[i], attr->atttypid, attr->atttypmod);
-			if (values[i] == old_values[i])
-				old_values[i] = 0;
-		}
-
 		if (attr->attlen == -1 && VARATT_IS_EXTERNAL(DatumGetPointer(values[i])))
 		{
 			if(inline_toast)

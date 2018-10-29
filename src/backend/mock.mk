@@ -35,17 +35,6 @@ EXCL_OBJS=\
 # of the test programs. Feel free to link them back (i.e. remove them from
 # this exclusion list) as needed.
 EXCL_OBJS+=\
-	src/backend/access/gin/gininsert.o \
-	src/backend/access/gin/ginxlog.o \
-	src/backend/access/gin/ginentrypage.o \
-	src/backend/access/gin/gindatapage.o \
-	src/backend/access/gin/ginbtree.o \
-	src/backend/access/gin/ginscan.o \
-	src/backend/access/gin/ginget.o \
-	src/backend/access/gin/ginvacuum.o \
-	src/backend/access/gin/ginarrayproc.o \
-	src/backend/access/gin/ginbulk.o \
-	src/backend/access/gin/ginfast.o \
 	src/backend/access/hash/hash.o \
 	src/backend/access/hash/hashsearch.o \
 	\

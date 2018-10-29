@@ -235,7 +235,7 @@ typedef struct TMGXACT
 	bool						directTransaction;
 	uint16						directTransactionContentId;
 	bool						writerGangLost;
-	bool						gxidDispatched;
+
 }	TMGXACT;
 
 typedef struct TMGXACTSTATUS
@@ -259,7 +259,6 @@ typedef struct TMGALLXACTSTATUS
 typedef struct TmControlBlock
 {
 	LWLockId					ControlLock;
-	slock_t 					ControlSeqnoLock;
 
 	bool						recoverred;
 	DistributedTransactionTimeStamp	distribTimeStamp;
@@ -281,6 +280,7 @@ extern DtxContext DistributedTransactionContext;
 /* state variables for how much of the log file has been flushed */
 extern volatile bool *shmDtmStarted;
 extern volatile DistributedTransactionTimeStamp *shmDistribTimeStamp;
+extern volatile DistributedTransactionId *shmGIDSeq;
 extern uint32 *shmNextSnapshotId;
 extern TMGXACT_LOG *shmCommittedGxactArray;
 extern volatile int *shmNumCommittedGxacts;
@@ -303,7 +303,6 @@ extern void getDtxLogInfo(TMGXACT_LOG *gxact_log);
 extern bool notifyCommittedDtxTransactionIsNeeded(void);
 extern void notifyCommittedDtxTransaction(void);
 extern void	rollbackDtxTransaction(void);
-extern DistributedTransactionId getMaxDistributedXid(void);
 
 extern bool includeInCheckpointIsNeeded(TMGXACT *gxact);
 extern void insertingDistributedCommitted(void);
@@ -353,6 +352,4 @@ extern void markCurrentGxactWriterGangLost(void);
 
 extern bool currentGxactWriterGangLost(void);
 
-extern bool isSafeToRecreateWriter(void);
-extern void markCurrentGxactDispatched(void);
 #endif   /* CDBTM_H */

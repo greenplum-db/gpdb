@@ -2,7 +2,7 @@
 #
 # Makefile for the postgres backend
 #
-# Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/backend/Makefile
@@ -75,36 +75,26 @@ endif
 
 ifeq ($(PORTNAME), cygwin)
 
-postgres: $(OBJS) postgres.def libpostgres.a
-	$(DLLTOOL) --dllname $@$(X) --output-exp $@.exp --def postgres.def
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) -o $@$(X) -Wl,--base-file,$@.base $@.exp $(call expand_subsys,$(OBJS)) $(LIBS)
-	$(DLLTOOL) --dllname $@$(X) --base-file $@.base --output-exp $@.exp --def postgres.def
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) -Wl,--stack,$(WIN32_STACK_RLIMIT) -o $@$(X) $@.exp $(call expand_subsys,$(OBJS)) $(LIBS)
-	rm -f $@.exp $@.base
+postgres: $(OBJS)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) $(export_dynamic) -Wl,--stack,$(WIN32_STACK_RLIMIT) -Wl,--export-all-symbols -Wl,--out-implib=libpostgres.a $(call expand_subsys,$^) $(LIBS) -o $@
 
-postgres.def: $(OBJS)
-	$(DLLTOOL) --export-all --output-def $@ $(call expand_subsys,$^)
+# There is no correct way to write a rule that generates two files.
+# Rules with two targets don't have that meaning, they are merely
+# shorthand for two otherwise separate rules.  To be safe for parallel
+# make, we must chain the dependencies like this.  The semicolon is
+# important, otherwise make will choose some built-in rule.
 
-libpostgres.a: postgres.def
-	$(DLLTOOL) --dllname postgres.exe --def postgres.def --output-lib $@
+libpostgres.a: postgres ;
 
 endif # cygwin
 
 ifeq ($(PORTNAME), win32)
 LIBS += -lsecur32
 
-postgres: $(OBJS) postgres.def libpostgres.a $(WIN32RES)
-	$(DLLTOOL) --dllname $@$(X) --output-exp $@.exp --def postgres.def
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) -o $@$(X) -Wl,--base-file,$@.base $@.exp $(call expand_subsys,$(OBJS)) $(WIN32RES) $(LIBS)
-	$(DLLTOOL) --dllname $@$(X) --base-file $@.base --output-exp $@.exp --def postgres.def
-	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) -Wl,--stack=$(WIN32_STACK_RLIMIT) -o $@$(X) $@.exp $(call expand_subsys,$(OBJS)) $(WIN32RES) $(LIBS)
-	rm -f $@.exp $@.base
+postgres: $(OBJS) $(WIN32RES)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $(LDFLAGS_EX) -Wl,--stack=$(WIN32_STACK_RLIMIT) -Wl,--export-all-symbols -Wl,--out-implib=libpostgres.a $(call expand_subsys,$(OBJS)) $(WIN32RES) $(LIBS) -o $@$(X)
 
-postgres.def: $(OBJS)
-	$(DLLTOOL) --export-all --output-def $@ $(call expand_subsys,$^)
-
-libpostgres.a: postgres.def
-	$(DLLTOOL) --dllname postgres.exe --def postgres.def --output-lib $@
+libpostgres.a: postgres ;
 
 endif # win32
 
@@ -311,10 +301,10 @@ clean:
 		$(top_builddir)/src/include/utils/fmgroids.h \
 		$(top_builddir)/src/include/utils/probes.h
 ifeq ($(PORTNAME), cygwin)
-	rm -f postgres.dll postgres.def libpostgres.a
+	rm -f postgres.dll libpostgres.a
 endif
 ifeq ($(PORTNAME), win32)
-	rm -f postgres.dll postgres.def libpostgres.a $(WIN32RES)
+	rm -f postgres.dll libpostgres.a $(WIN32RES)
 endif
 
 distclean: clean

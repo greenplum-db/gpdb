@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_constraint.h
@@ -39,7 +39,7 @@ CATALOG(pg_constraint,2606)
 	 * relations.  This is partly for backwards compatibility with past
 	 * Postgres practice, and partly because we don't want to have to obtain a
 	 * global lock to generate a globally unique name for a nameless
-	 * constraint.	We associate a namespace with constraint names only for
+	 * constraint.  We associate a namespace with constraint names only for
 	 * SQL-spec compatibility.
 	 */
 	NameData	conname;		/* name of this constraint */
@@ -58,7 +58,7 @@ CATALOG(pg_constraint,2606)
 
 	/*
 	 * contypid links to the pg_type row for a domain if this is a domain
-	 * constraint.	Otherwise it's 0.
+	 * constraint.  Otherwise it's 0.
 	 *
 	 * For SQL-style global ASSERTIONs, both conrelid and contypid would be
 	 * zero. This is not presently supported, however.
@@ -77,7 +77,7 @@ CATALOG(pg_constraint,2606)
 
 	/*
 	 * These fields, plus confkey, are only meaningful for a foreign-key
-	 * constraint.	Otherwise confrelid is 0 and the char fields are spaces.
+	 * constraint.  Otherwise confrelid is 0 and the char fields are spaces.
 	 */
 	Oid			confrelid;		/* relation referenced by foreign key */
 	char		confupdtype;	/* foreign key's ON UPDATE action */
@@ -261,6 +261,7 @@ extern void AlterConstraintNamespaces(Oid ownerId, Oid oldNspId,
  */
 extern bool ConstraintGetPrimaryKeyOf(Oid relid, AttrNumber attno, 
 					Oid *pkrelid, AttrNumber *pkattno);
+extern void get_constraint_relation_oids(Oid constraint_oid, Oid *conrelid, Oid *confrelid);
 extern Oid	get_relation_constraint_oid(Oid relid, const char *conname, bool missing_ok);
 extern Oid	get_domain_constraint_oid(Oid typid, const char *conname, bool missing_ok);
 

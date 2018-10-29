@@ -3,7 +3,7 @@
  * smgrdesc.c
  *	  rmgr descriptor routines for catalog/storage.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -16,7 +16,6 @@
 
 #include "catalog/catalog.h"
 #include "catalog/storage_xlog.h"
-#include "common/relpath.h"
 
 
 void
@@ -43,5 +42,5 @@ smgr_desc(StringInfo buf, XLogRecord *record)
 		pfree(path);
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

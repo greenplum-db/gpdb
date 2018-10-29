@@ -8,14 +8,15 @@
  *
  * This module is essentially the same as the backend's StringInfo data type,
  * but it is intended for use in frontend libpq and client applications.
- * Thus, it does not rely on palloc() nor elog().
+ * Thus, it does not rely on palloc() nor elog(), nor psprintf.c which
+ * will exit() on error.
  *
  * It does rely on vsnprintf(); if configure finds that libc doesn't provide
  * a usable vsnprintf(), then a copy of our own implementation of it will
  * be linked into libpq.
  *
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/interfaces/libpq/pqexpbuffer.c
@@ -169,7 +170,7 @@ resetPQExpBuffer(PQExpBuffer str)
  * Make sure there is enough space for 'needed' more bytes in the buffer
  * ('needed' does not include the terminating null).
  *
- * Returns 1 if OK, 0 if failed to enlarge buffer.	(In the latter case
+ * Returns 1 if OK, 0 if failed to enlarge buffer.  (In the latter case
  * the buffer is left in "broken" state.)
  */
 int
@@ -183,7 +184,7 @@ enlargePQExpBuffer(PQExpBuffer str, size_t needed)
 
 	/*
 	 * Guard against ridiculous "needed" values, which can occur if we're fed
-	 * bogus data.	Without this, we can get an overflow or infinite loop in
+	 * bogus data.  Without this, we can get an overflow or infinite loop in
 	 * the following.
 	 */
 	if (needed >= ((size_t) INT_MAX - str->len))
@@ -210,7 +211,7 @@ enlargePQExpBuffer(PQExpBuffer str, size_t needed)
 
 	/*
 	 * Clamp to INT_MAX in case we went past it.  Note we are assuming here
-	 * that INT_MAX <= UINT_MAX/2, else the above loop could overflow.	We
+	 * that INT_MAX <= UINT_MAX/2, else the above loop could overflow.  We
 	 * will still have newlen >= needed.
 	 */
 	if (newlen > (size_t) INT_MAX)
@@ -231,7 +232,7 @@ enlargePQExpBuffer(PQExpBuffer str, size_t needed)
 /*
  * printfPQExpBuffer
  * Format text data under the control of fmt (an sprintf-like format string)
- * and insert it into str.	More space is allocated to str if necessary.
+ * and insert it into str.  More space is allocated to str if necessary.
  * This is a convenience routine that does the same thing as
  * resetPQExpBuffer() followed by appendPQExpBuffer().
  */
@@ -239,45 +240,20 @@ void
 printfPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 {
 	va_list		args;
-	size_t		avail;
-	int			nprinted;
+	bool		done;
 
 	resetPQExpBuffer(str);
 
 	if (PQExpBufferBroken(str))
 		return;					/* already failed */
 
-	for (;;)
+	/* Loop in case we have to retry after enlarging the buffer. */
+	do
 	{
-		/*
-		 * Try to format the given string into the available space; but if
-		 * there's hardly any space, don't bother trying, just fall through to
-		 * enlarge the buffer first.
-		 */
-		if (str->maxlen > str->len + 16)
-		{
-			avail = str->maxlen - str->len - 1;
-			va_start(args, fmt);
-			nprinted = vsnprintf(str->data + str->len, avail,
-								 fmt, args);
-			va_end(args);
-
-			/*
-			 * Note: some versions of vsnprintf return the number of chars
-			 * actually stored, but at least one returns -1 on failure. Be
-			 * conservative about believing whether the print worked.
-			 */
-			if (nprinted >= 0 && nprinted < (int) avail - 1)
-			{
-				/* Success.  Note nprinted does not include trailing null. */
-				str->len += nprinted;
-				break;
-			}
-		}
-		/* Double the buffer size and try again. */
-		if (!enlargePQExpBuffer(str, str->maxlen))
-			return;				/* oops, out of memory */
-	}
+		va_start(args, fmt);
+		done = appendPQExpBufferVA(str, fmt, args);
+		va_end(args);
+	} while (!done);
 }
 
 /*
@@ -292,71 +268,118 @@ void
 appendPQExpBuffer(PQExpBuffer str, const char *fmt,...)
 {
 	va_list		args;
-
-	va_start(args, fmt);
-    appendPQExpBufferVA(str, fmt, args);
-	va_end(args);
-}
-
-/*
- * appendPQExpBufferVA
- *
- * A version of appendPQExpBuffer() that takes a va_list instead of '...'.
- * The caller must do va_start(args, x) before calling, and va_end(args)
- * afterwards.
- */
-void
-appendPQExpBufferVA(PQExpBuffer str, const char *fmt, va_list args)
-{
-    va_list     saveargs;
-	size_t		avail;
-	int			nprinted;
-
-#ifdef __va_copy
-    __va_copy(saveargs, args);
-#else
-    saveargs = args;
-#endif
+	bool		done;
 
 	if (PQExpBufferBroken(str))
 		return;					/* already failed */
 
-	for (;;)
+	/* Loop in case we have to retry after enlarging the buffer. */
+	do
+	{
+		va_start(args, fmt);
+		done = appendPQExpBufferVA(str, fmt, args);
+		va_end(args);
+	} while (!done);
+}
+
+/*
+ * appendPQExpBufferVA
+ * Shared guts of printfPQExpBuffer/appendPQExpBuffer.
+ * Attempt to format data and append it to str.  Returns true if done
+ * (either successful or hard failure), false if need to retry.
+ */
+bool
+appendPQExpBufferVA(PQExpBuffer str, const char *fmt, va_list args)
+{
+	size_t		avail;
+	size_t		needed;
+	int			nprinted;
+
+	/*
+	 * Try to format the given string into the available space; but if there's
+	 * hardly any space, don't bother trying, just enlarge the buffer first.
+	 */
+	if (str->maxlen > str->len + 16)
 	{
 		/*
-		 * Try to format the given string into the available space; but if
-		 * there's hardly any space, don't bother trying, just fall through to
-		 * enlarge the buffer first.
+		 * Note: we intentionally leave one byte unused, as a guard against
+		 * old broken versions of vsnprintf.
 		 */
-		if (str->maxlen > str->len + 16)
+		avail = str->maxlen - str->len - 1;
+
+		errno = 0;
+
+		nprinted = vsnprintf(str->data + str->len, avail, fmt, args);
+
+		/*
+		 * If vsnprintf reports an error other than ENOMEM, fail.
+		 */
+		if (nprinted < 0 && errno != 0 && errno != ENOMEM)
 		{
-			avail = str->maxlen - str->len - 1;
-			nprinted = vsnprintf(str->data + str->len, avail,
-								 fmt, args);
-
-			/*
-			 * Note: some versions of vsnprintf return the number of chars
-			 * actually stored, but at least one returns -1 on failure. Be
-			 * conservative about believing whether the print worked.
-			 */
-			if (nprinted >= 0 && nprinted < (int) avail - 1)
-			{
-				/* Success.  Note nprinted does not include trailing null. */
-				str->len += nprinted;
-				break;
-			}
+			markPQExpBufferBroken(str);
+			return true;
 		}
-		/* Double the buffer size and try again. */
-		if (!enlargePQExpBuffer(str, str->maxlen))
-			return;				/* oops, out of memory */
 
-#ifdef __va_copy
-        __va_copy(args, saveargs);
-#else
-        args = saveargs;
-#endif
+		/*
+		 * Note: some versions of vsnprintf return the number of chars
+		 * actually stored, not the total space needed as C99 specifies.  And
+		 * at least one returns -1 on failure.  Be conservative about
+		 * believing whether the print worked.
+		 */
+		if (nprinted >= 0 && (size_t) nprinted < avail - 1)
+		{
+			/* Success.  Note nprinted does not include trailing null. */
+			str->len += nprinted;
+			return true;
+		}
 
-    }
+		if (nprinted >= 0 && (size_t) nprinted > avail)
+		{
+			/*
+			 * This appears to be a C99-compliant vsnprintf, so believe its
+			 * estimate of the required space. (If it's wrong, the logic will
+			 * still work, but we may loop multiple times.)  Note that the
+			 * space needed should be only nprinted+1 bytes, but we'd better
+			 * allocate one more than that so that the test above will succeed
+			 * next time.
+			 *
+			 * In the corner case where the required space just barely
+			 * overflows, fail.
+			 */
+			if (nprinted > INT_MAX - 2)
+			{
+				markPQExpBufferBroken(str);
+				return true;
+			}
+			needed = nprinted + 2;
+		}
+		else
+		{
+			/*
+			 * Buffer overrun, and we don't know how much space is needed.
+			 * Estimate twice the previous buffer size, but not more than
+			 * INT_MAX.
+			 */
+			if (avail >= INT_MAX / 2)
+				needed = INT_MAX;
+			else
+				needed = avail * 2;
+		}
+	}
+	else
+	{
+		/*
+		 * We have to guess at how much to enlarge, since we're skipping the
+		 * formatting work.
+		 */
+		needed = 32;
+	}
+
+	/* Increase the buffer size and try again. */
+	if (!enlargePQExpBuffer(str, needed))
+		return true;			/* oops, out of memory */
+
+	return false;
 }
 
 /*

@@ -5,7 +5,7 @@
  *
  * All the actual insertion logic is in spgdoinsert.c.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -45,10 +45,17 @@ spgistBuildCallback(Relation index, ItemPointer tupleId, Datum *values,
 	/* Work in temp context, and reset it after each tuple */
 	oldCtx = MemoryContextSwitchTo(buildstate->tmpCtx);
 
-	/* No concurrent insertions can be happening, so failure is unexpected */
-	if (!spgdoinsert(index, &buildstate->spgstate, tupleId,
-					 *values, *isnull))
-		elog(ERROR, "unexpected spgdoinsert() failure");
+	/*
+	 * Even though no concurrent insertions can be happening, we still might
+	 * get a buffer-locking failure due to bgwriter or checkpointer taking a
+	 * lock on some buffer.  So we need to be willing to retry.  We can flush
+	 * any temp data when retrying.
+	 */
+	while (!spgdoinsert(index, &buildstate->spgstate, tupleId,
+						*values, *isnull))
+	{
+		MemoryContextReset(buildstate->tmpCtx);
+	}
 
 	MemoryContextSwitchTo(oldCtx);
 	MemoryContextReset(buildstate->tmpCtx);
@@ -156,13 +163,13 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	page = (Page) palloc(BLCKSZ);
 	SpGistInitMetapage(page);
 
-	/* Write the page.	If archiving/streaming, XLOG it. */
+	/* Write the page.  If archiving/streaming, XLOG it. */
 	PageSetChecksumInplace(page, SPGIST_METAPAGE_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_METAPAGE_BLKNO,
 			  (char *) page, true);
 	if (XLogIsNeeded())
 		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_METAPAGE_BLKNO, page);
+					SPGIST_METAPAGE_BLKNO, page, false);
 
 	/* Likewise for the root page. */
 	SpGistInitPage(page, SPGIST_LEAF);
@@ -172,7 +179,7 @@ spgbuildempty(PG_FUNCTION_ARGS)
 			  (char *) page, true);
 	if (XLogIsNeeded())
 		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_ROOT_BLKNO, page);
+					SPGIST_ROOT_BLKNO, page, true);
 
 	/* Likewise for the null-tuples root page. */
 	SpGistInitPage(page, SPGIST_LEAF | SPGIST_NULLS);
@@ -182,7 +189,7 @@ spgbuildempty(PG_FUNCTION_ARGS)
 			  (char *) page, true);
 	if (XLogIsNeeded())
 		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_NULL_BLKNO, page);
+					SPGIST_NULL_BLKNO, page, true);
 
 	/*
 	 * An immediate sync is required even if we xlog'd the pages, because the
@@ -225,7 +232,7 @@ spginsert(PG_FUNCTION_ARGS)
 	/*
 	 * We might have to repeat spgdoinsert() multiple times, if conflicts
 	 * occur with concurrent insertions.  If so, reset the insertCtx each time
-	 * to avoid cumulative memory consumption.	That means we also have to
+	 * to avoid cumulative memory consumption.  That means we also have to
 	 * redo initSpGistState(), but it's cheap enough not to matter.
 	 */
 	while (!spgdoinsert(index, &spgstate, ht_ctid, *values, *isnull))

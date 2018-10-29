@@ -10,7 +10,7 @@
  * And contributors:
  * Nabil Sayegh <postgresql@e-trolley.de>
  *
- * Copyright (c) 2002-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2014, PostgreSQL Global Development Group
  *
  * Permission to use, copy, modify, and distribute this software and its
  * documentation for any purpose, without fee, and without a written agreement
@@ -1340,7 +1340,7 @@ build_tuplestore_recursively(char *key_fld,
 		for (i = 0; i < proc; i++)
 		{
 			/* initialize branch for this pass */
-			appendStringInfo(&branchstr, "%s", branch);
+			appendStringInfoString(&branchstr, branch);
 			appendStringInfo(&chk_branchstr, "%s%s%s", branch_delim, branch, branch_delim);
 
 			/* get the next sql result tuple */

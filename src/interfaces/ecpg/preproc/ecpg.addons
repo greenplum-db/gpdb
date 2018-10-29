@@ -296,7 +296,7 @@ ECPG: DeclareCursorStmtDECLAREcursor_namecursor_optionsCURSORopt_holdFORSelectSt
 		struct cursor *ptr, *this;
 		char *cursor_marker = $2[0] == ':' ? mm_strdup("$0") : mm_strdup($2);
 		char *comment, *c1, *c2;
-		int (* strcmp_fn)(const char *, const char *) = ($2[0] == ':' ? strcmp : pg_strcasecmp);
+		int (* strcmp_fn)(const char *, const char *) = (($2[0] == ':' || $2[0] == '"') ? strcmp : pg_strcasecmp);
 
 		for (ptr = cur; ptr != NULL; ptr = ptr->next)
 		{
@@ -383,9 +383,9 @@ ECPG: opt_array_boundsopt_array_bounds'['']' block
 		$$.index1 = $1.index1;
 		$$.index2 = $1.index2;
 		if (strcmp($1.index1, "-1") == 0)
-			$$.index1 = strdup($3);
+			$$.index1 = mm_strdup($3);
 		else if (strcmp($1.index2, "-1") == 0)
-			$$.index2 = strdup($3);
+			$$.index2 = mm_strdup($3);
 		$$.str = cat_str(4, $1.str, mm_strdup("["), $3, mm_strdup("]"));
 	}
 ECPG: opt_array_bounds

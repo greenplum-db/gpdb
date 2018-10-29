@@ -3,7 +3,7 @@
  * spgdesc.c
  *	  rmgr descriptor routines for access/spgist/spgxlog.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -65,7 +65,7 @@ spg_desc(StringInfo buf, XLogRecord *record)
 			break;
 		case XLOG_SPGIST_PICKSPLIT:
 			out_target(buf, ((spgxlogPickSplit *) rec)->node);
-			appendStringInfo(buf, "split leaf page");
+			appendStringInfoString(buf, "split leaf page");
 			break;
 		case XLOG_SPGIST_VACUUM_LEAF:
 			out_target(buf, ((spgxlogVacuumLeaf *) rec)->node);

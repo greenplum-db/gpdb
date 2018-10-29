@@ -3,7 +3,7 @@
  * timestamp.c
  *	  Functions for the built-in SQL types "timestamp" and "interval".
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -67,7 +67,6 @@ typedef struct
 
 
 static TimeOffset time2t(const int hour, const int min, const int sec, const fsec_t fsec);
-static void EncodeSpecialTimestamp(Timestamp dt, char *str);
 static Timestamp dt2local(Timestamp dt, int timezone);
 static void AdjustTimestampForTypmod(Timestamp *time, int32 typmod);
 static void AdjustIntervalForTypmod(Interval *interval, int32 typmod);
@@ -128,15 +127,12 @@ anytimestamp_typmodin(bool istz, ArrayType *ta)
 static char *
 anytimestamp_typmodout(bool istz, int32 typmod)
 {
-	char	   *res = (char *) palloc(64);
 	const char *tz = istz ? " with time zone" : " without time zone";
 
 	if (typmod >= 0)
-		snprintf(res, 64, "(%d)%s", (int) typmod, tz);
+		return psprintf("(%d)%s", (int) typmod, tz);
 	else
-		snprintf(res, 64, "%s", tz);
-
-	return res;
+		return psprintf("%s", tz);
 }
 
 
@@ -739,7 +735,7 @@ AdjustTimestampForTypmod(Timestamp *time, int32 typmod)
 		 * Note: this round-to-nearest code is not completely consistent about
 		 * rounding values that are exactly halfway between integral values.
 		 * On most platforms, rint() will implement round-to-nearest-even, but
-		 * the integer code always rounds up (away from zero).	Is it worth
+		 * the integer code always rounds up (away from zero).  Is it worth
 		 * trying to be consistent?
 		 */
 #ifdef HAVE_INT64_TIMESTAMP
@@ -829,6 +825,240 @@ timestamptz_in(PG_FUNCTION_ARGS)
 	AdjustTimestampForTypmod(&result, typmod);
 
 	PG_RETURN_TIMESTAMPTZ(result);
+}
+
+/*
+ * Try to parse a timezone specification, and return its timezone offset value
+ * if it's acceptable.  Otherwise, an error is thrown.
+ */
+static int
+parse_sane_timezone(struct pg_tm * tm, text *zone)
+{
+	char		tzname[TZ_STRLEN_MAX + 1];
+	int			rt;
+	int			tz;
+
+	text_to_cstring_buffer(zone, tzname, sizeof(tzname));
+
+	/*
+	 * Look up the requested timezone.  First we try to interpret it as a
+	 * numeric timezone specification; if DecodeTimezone decides it doesn't
+	 * like the format, we look in the date token table (to handle cases like
+	 * "EST"), and if that also fails, we look in the timezone database (to
+	 * handle cases like "America/New_York").  (This matches the order in
+	 * which timestamp input checks the cases; it's important because the
+	 * timezone database unwisely uses a few zone names that are identical to
+	 * offset abbreviations.)
+	 *
+	 * Note pg_tzset happily parses numeric input that DecodeTimezone would
+	 * reject.  To avoid having it accept input that would otherwise be seen
+	 * as invalid, it's enough to disallow having a digit in the first
+	 * position of our input string.
+	 */
+	if (isdigit((unsigned char) *tzname))
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("invalid input syntax for numeric time zone: \"%s\"",
+						tzname),
+				 errhint("Numeric time zones must have \"-\" or \"+\" as first character.")));
+
+	rt = DecodeTimezone(tzname, &tz);
+	if (rt != 0)
+	{
+		char	   *lowzone;
+		int			type,
+					val;
+
+		if (rt == DTERR_TZDISP_OVERFLOW)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				   errmsg("numeric time zone \"%s\" out of range", tzname)));
+		else if (rt != DTERR_BAD_FORMAT)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("time zone \"%s\" not recognized", tzname)));
+
+		lowzone = downcase_truncate_identifier(tzname,
+											   strlen(tzname),
+											   false);
+		type = DecodeSpecial(0, lowzone, &val);
+
+		if (type == TZ || type == DTZ)
+			tz = val * MINS_PER_HOUR;
+		else
+		{
+			pg_tz	   *tzp;
+
+			tzp = pg_tzset(tzname);
+
+			if (tzp)
+				tz = DetermineTimeZoneOffset(tm, tzp);
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("time zone \"%s\" not recognized", tzname)));
+		}
+	}
+
+	return tz;
+}
+
+/*
+ * make_timestamp_internal
+ *		workhorse for make_timestamp and make_timestamptz
+ */
+static Timestamp
+make_timestamp_internal(int year, int month, int day,
+						int hour, int min, double sec)
+{
+	struct pg_tm tm;
+	TimeOffset	date;
+	TimeOffset	time;
+	int			dterr;
+	Timestamp	result;
+
+	tm.tm_year = year;
+	tm.tm_mon = month;
+	tm.tm_mday = day;
+
+	/*
+	 * Note: we'll reject zero or negative year values.  Perhaps negatives
+	 * should be allowed to represent BC years?
+	 */
+	dterr = ValidateDate(DTK_DATE_M, false, false, false, &tm);
+
+	if (dterr != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_FIELD_OVERFLOW),
+				 errmsg("date field value out of range: %d-%02d-%02d",
+						year, month, day)));
+
+	if (!IS_VALID_JULIAN(tm.tm_year, tm.tm_mon, tm.tm_mday))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("date out of range: %d-%02d-%02d",
+						year, month, day)));
+
+	date = date2j(tm.tm_year, tm.tm_mon, tm.tm_mday) - POSTGRES_EPOCH_JDATE;
+
+	/*
+	 * This should match the checks in DecodeTimeOnly, except that since we're
+	 * dealing with a float "sec" value, we also explicitly reject NaN.  (An
+	 * infinity input should get rejected by the range comparisons, but we
+	 * can't be sure how those will treat a NaN.)
+	 */
+	if (hour < 0 || min < 0 || min > MINS_PER_HOUR - 1 ||
+		isnan(sec) ||
+		sec < 0 || sec > SECS_PER_MINUTE ||
+		hour > HOURS_PER_DAY ||
+	/* test for > 24:00:00 */
+		(hour == HOURS_PER_DAY && (min > 0 || sec > 0)))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_FIELD_OVERFLOW),
+				 errmsg("time field value out of range: %d:%02d:%02g",
+						hour, min, sec)));
+
+	/* This should match tm2time */
+#ifdef HAVE_INT64_TIMESTAMP
+	time = (((hour * MINS_PER_HOUR + min) * SECS_PER_MINUTE)
+			* USECS_PER_SEC) + rint(sec * USECS_PER_SEC);
+
+	result = date * USECS_PER_DAY + time;
+	/* check for major overflow */
+	if ((result - time) / USECS_PER_DAY != date)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("timestamp out of range: %d-%02d-%02d %d:%02d:%02g",
+						year, month, day,
+						hour, min, sec)));
+
+	/* check for just-barely overflow (okay except time-of-day wraps) */
+	/* caution: we want to allow 1999-12-31 24:00:00 */
+	if ((result < 0 && date > 0) ||
+		(result > 0 && date < -1))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("timestamp out of range: %d-%02d-%02d %d:%02d:%02g",
+						year, month, day,
+						hour, min, sec)));
+#else
+	time = ((hour * MINS_PER_HOUR + min) * SECS_PER_MINUTE) + sec;
+	result = date * SECS_PER_DAY + time;
+#endif
+
+	return result;
+}
+
+/*
+ * make_timestamp() - timestamp constructor
+ */
+Datum
+make_timestamp(PG_FUNCTION_ARGS)
+{
+	int32		year = PG_GETARG_INT32(0);
+	int32		month = PG_GETARG_INT32(1);
+	int32		mday = PG_GETARG_INT32(2);
+	int32		hour = PG_GETARG_INT32(3);
+	int32		min = PG_GETARG_INT32(4);
+	float8		sec = PG_GETARG_FLOAT8(5);
+	Timestamp	result;
+
+	result = make_timestamp_internal(year, month, mday,
+									 hour, min, sec);
+
+	PG_RETURN_TIMESTAMP(result);
+}
+
+/*
+ * make_timestamptz() - timestamp with time zone constructor
+ */
+Datum
+make_timestamptz(PG_FUNCTION_ARGS)
+{
+	int32		year = PG_GETARG_INT32(0);
+	int32		month = PG_GETARG_INT32(1);
+	int32		mday = PG_GETARG_INT32(2);
+	int32		hour = PG_GETARG_INT32(3);
+	int32		min = PG_GETARG_INT32(4);
+	float8		sec = PG_GETARG_FLOAT8(5);
+	Timestamp	result;
+
+	result = make_timestamp_internal(year, month, mday,
+									 hour, min, sec);
+
+	PG_RETURN_TIMESTAMPTZ(timestamp2timestamptz(result));
+}
+
+/*
+ * Construct a timestamp with time zone.
+ *		As above, but the time zone is specified as seventh argument.
+ */
+Datum
+make_timestamptz_at_timezone(PG_FUNCTION_ARGS)
+{
+	int32		year = PG_GETARG_INT32(0);
+	int32		month = PG_GETARG_INT32(1);
+	int32		mday = PG_GETARG_INT32(2);
+	int32		hour = PG_GETARG_INT32(3);
+	int32		min = PG_GETARG_INT32(4);
+	float8		sec = PG_GETARG_FLOAT8(5);
+	text	   *zone = PG_GETARG_TEXT_PP(6);
+	Timestamp	timestamp;
+	struct pg_tm tt;
+	int			tz;
+	fsec_t		fsec;
+
+	timestamp = make_timestamp_internal(year, month, mday,
+										hour, min, sec);
+
+	if (timestamp2tm(timestamp, NULL, &tt, &fsec, NULL, NULL) != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("timestamp out of range")));
+
+	tz = parse_sane_timezone(&tt, zone);
+
+	PG_RETURN_TIMESTAMPTZ((TimestampTz) dt2local(timestamp, -tz));
 }
 
 /* timestamptz_out()
@@ -1111,7 +1341,7 @@ interval_send(PG_FUNCTION_ARGS)
 
 /*
  * The interval typmod stores a "range" in its high 16 bits and a "precision"
- * in its low 16 bits.	Both contribute to defining the resolution of the
+ * in its low 16 bits.  Both contribute to defining the resolution of the
  * type.  Range addresses resolution granules larger than one second, and
  * precision specifies resolution below one second.  This representation can
  * express all SQL standard resolutions, but we implement them all in terms of
@@ -1319,7 +1549,7 @@ interval_transform(PG_FUNCTION_ARGS)
 
 		/*
 		 * Temporally-smaller fields occupy higher positions in the range
-		 * bitmap.	Since only the temporally-smallest bit matters for length
+		 * bitmap.  Since only the temporally-smallest bit matters for length
 		 * coercion purposes, we compare the last-set bits in the ranges.
 		 * Precision, which is to say, sub-second precision, only affects
 		 * ranges that include SECOND.
@@ -1408,7 +1638,7 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 		 * that fields to the right of the last one specified are zeroed out,
 		 * but those to the left of it remain valid.  Thus for example there
 		 * is no operational difference between INTERVAL YEAR TO MONTH and
-		 * INTERVAL MONTH.	In some cases we could meaningfully enforce that
+		 * INTERVAL MONTH.  In some cases we could meaningfully enforce that
 		 * higher-order fields are zero; for example INTERVAL DAY could reject
 		 * nonzero "month" field.  However that seems a bit pointless when we
 		 * can't do it consistently.  (We cannot enforce a range limit on the
@@ -1418,9 +1648,9 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 		 *
 		 * Note: before PG 8.4 we interpreted a limited set of fields as
 		 * actually causing a "modulo" operation on a given value, potentially
-		 * losing high-order as well as low-order information.	But there is
+		 * losing high-order as well as low-order information.  But there is
 		 * no support for such behavior in the standard, and it seems fairly
-		 * undesirable on data consistency grounds anyway.	Now we only
+		 * undesirable on data consistency grounds anyway.  Now we only
 		 * perform truncation or rounding of low-order fields.
 		 */
 		if (range == INTERVAL_FULL_RANGE)
@@ -1540,7 +1770,7 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 			/*
 			 * Note: this round-to-nearest code is not completely consistent
 			 * about rounding values that are exactly halfway between integral
-			 * values.	On most platforms, rint() will implement
+			 * values.  On most platforms, rint() will implement
 			 * round-to-nearest-even, but the integer code always rounds up
 			 * (away from zero).  Is it worth trying to be consistent?
 			 */
@@ -1568,11 +1798,49 @@ AdjustIntervalForTypmod(Interval *interval, int32 typmod)
 	}
 }
 
+/*
+ * make_interval - numeric Interval constructor
+ */
+Datum
+make_interval(PG_FUNCTION_ARGS)
+{
+	int32		years = PG_GETARG_INT32(0);
+	int32		months = PG_GETARG_INT32(1);
+	int32		weeks = PG_GETARG_INT32(2);
+	int32		days = PG_GETARG_INT32(3);
+	int32		hours = PG_GETARG_INT32(4);
+	int32		mins = PG_GETARG_INT32(5);
+	double		secs = PG_GETARG_FLOAT8(6);
+	Interval   *result;
+
+	/*
+	 * Reject out-of-range inputs.  We really ought to check the integer
+	 * inputs as well, but it's not entirely clear what limits to apply.
+	 */
+	if (isinf(secs) || isnan(secs))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+
+	result = (Interval *) palloc(sizeof(Interval));
+	result->month = years * MONTHS_PER_YEAR + months;
+	result->day = weeks * 7 + days;
+
+	secs += hours * (double) SECS_PER_HOUR + mins * (double) SECS_PER_MINUTE;
+
+#ifdef HAVE_INT64_TIMESTAMP
+	result->time = (int64) (secs * USECS_PER_SEC);
+#else
+	result->time = secs;
+#endif
+
+	PG_RETURN_INTERVAL_P(result);
+}
 
 /* EncodeSpecialTimestamp()
  * Convert reserved timestamp data type to string.
  */
-static void
+void
 EncodeSpecialTimestamp(Timestamp dt, char *str)
 {
 	if (TIMESTAMP_IS_NOBEGIN(dt))
@@ -1794,7 +2062,7 @@ timestamptz_to_time_t(TimestampTz t)
  * Produce a C-string representation of a TimestampTz.
  *
  * This is mostly for use in emitting messages.  The primary difference
- * from timestamptz_out is that we force the output format to ISO.	Note
+ * from timestamptz_out is that we force the output format to ISO.  Note
  * also that the result is in a static buffer, not pstrdup'd.
  */
 const char *
@@ -1852,8 +2120,7 @@ dt2time(Timestamp jd, int *hour, int *min, int *sec, fsec_t *fsec)
  *	 0 on success
  *	-1 on out of range
  *
- * If attimezone is NULL, the global timezone (including possibly brute forced
- * timezone) will be used.
+ * If attimezone is NULL, the global timezone setting will be used.
  */
 int
 timestamp2tm(Timestamp dt, int *tzp, struct pg_tm * tm, fsec_t *fsec, const char **tzn, pg_tz *attimezone)
@@ -1862,19 +2129,9 @@ timestamp2tm(Timestamp dt, int *tzp, struct pg_tm * tm, fsec_t *fsec, const char
 	Timestamp	time;
 	pg_time_t	utime;
 
-	/*
-	 * If HasCTZSet is true then we have a brute force time zone specified. Go
-	 * ahead and rotate to the local time zone since we will later bypass any
-	 * calls which adjust the tm fields.
-	 */
-	if (attimezone == NULL && HasCTZSet && tzp != NULL)
-	{
-#ifdef HAVE_INT64_TIMESTAMP
-		dt -= CTimeZone * USECS_PER_SEC;
-#else
-		dt -= CTimeZone;
-#endif
-	}
+	/* Use session timezone if caller asks for default */
+	if (attimezone == NULL)
+		attimezone = session_timezone;
 
 #ifdef HAVE_INT64_TIMESTAMP
 	time = dt;
@@ -1944,27 +2201,12 @@ recalc_t:
 	}
 
 	/*
-	 * We have a brute force time zone per SQL99? Then use it without change
-	 * since we have already rotated to the time zone.
-	 */
-	if (attimezone == NULL && HasCTZSet)
-	{
-		*tzp = CTimeZone;
-		tm->tm_isdst = 0;
-		tm->tm_gmtoff = CTimeZone;
-		tm->tm_zone = NULL;
-		if (tzn != NULL)
-			*tzn = NULL;
-		return 0;
-	}
-
-	/*
 	 * If the time falls within the range of pg_time_t, use pg_localtime() to
 	 * rotate to the local time zone.
 	 *
 	 * First, convert to an integral timestamp, avoiding possibly
 	 * platform-specific roundoff-in-wrong-direction errors, and adjust to
-	 * Unix epoch.	Then see if we can convert to pg_time_t without loss. This
+	 * Unix epoch.  Then see if we can convert to pg_time_t without loss. This
 	 * coding avoids hardwiring any assumptions about the width of pg_time_t,
 	 * so it should behave sanely on machines without int64.
 	 */
@@ -1978,8 +2220,7 @@ recalc_t:
 	utime = (pg_time_t) dt;
 	if ((Timestamp) utime == dt)
 	{
-		struct pg_tm *tx = pg_localtime(&utime,
-								 attimezone ? attimezone : session_timezone);
+		struct pg_tm *tx = pg_localtime(&utime, attimezone);
 
 		tm->tm_year = tx->tm_year + 1900;
 		tm->tm_mon = tx->tm_mon + 1;
@@ -2078,7 +2319,11 @@ interval2tm(Interval span, struct pg_tm * tm, fsec_t *fsec)
 #ifdef HAVE_INT64_TIMESTAMP
 	tfrac = time / USECS_PER_HOUR;
 	time -= tfrac * USECS_PER_HOUR;
-	tm->tm_hour = tfrac;		/* could overflow ... */
+	tm->tm_hour = tfrac;
+	if (!SAMESIGN(tm->tm_hour, tfrac))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 	tfrac = time / USECS_PER_MINUTE;
 	time -= tfrac * USECS_PER_MINUTE;
 	tm->tm_min = tfrac;
@@ -2109,7 +2354,11 @@ recalc:
 int
 tm2interval(struct pg_tm * tm, fsec_t fsec, Interval *span)
 {
-	span->month = tm->tm_year * MONTHS_PER_YEAR + tm->tm_mon;
+	double		total_months = (double) tm->tm_year * MONTHS_PER_YEAR + tm->tm_mon;
+
+	if (total_months > INT_MAX || total_months < INT_MIN)
+		return -1;
+	span->month = total_months;
 	span->day = tm->tm_mday;
 #ifdef HAVE_INT64_TIMESTAMP
 	span->time = (((((tm->tm_hour * INT64CONST(60)) +
@@ -3304,8 +3553,21 @@ interval_um(PG_FUNCTION_ARGS)
 	result = (Interval *) palloc(sizeof(Interval));
 
 	result->time = -interval->time;
+	/* overflow check copied from int4um */
+	if (interval->time != 0 && SAMESIGN(result->time, interval->time))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 	result->day = -interval->day;
+	if (interval->day != 0 && SAMESIGN(result->day, interval->day))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 	result->month = -interval->month;
+	if (interval->month != 0 && SAMESIGN(result->month, interval->month))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 
 	PG_RETURN_INTERVAL_P(result);
 }
@@ -3350,8 +3612,26 @@ interval_pl(PG_FUNCTION_ARGS)
 	result = (Interval *) palloc(sizeof(Interval));
 
 	result->month = span1->month + span2->month;
+	/* overflow check copied from int4pl */
+	if (SAMESIGN(span1->month, span2->month) &&
+		!SAMESIGN(result->month, span1->month))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+
 	result->day = span1->day + span2->day;
+	if (SAMESIGN(span1->day, span2->day) &&
+		!SAMESIGN(result->day, span1->day))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+
 	result->time = span1->time + span2->time;
+	if (SAMESIGN(span1->time, span2->time) &&
+		!SAMESIGN(result->time, span1->time))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
 
 	PG_RETURN_INTERVAL_P(result);
 }
@@ -3402,15 +3682,27 @@ interval_mul(PG_FUNCTION_ARGS)
 	Interval   *span = PG_GETARG_INTERVAL_P(0);
 	float8		factor = PG_GETARG_FLOAT8(1);
 	double		month_remainder_days,
-				sec_remainder;
+				sec_remainder,
+				result_double;
 	int32		orig_month = span->month,
 				orig_day = span->day;
 	Interval   *result;
 
 	result = (Interval *) palloc(sizeof(Interval));
 
-	result->month = (int32) (span->month * factor);
-	result->day = (int32) (span->day * factor);
+	result_double = span->month * factor;
+	if (result_double > INT_MAX || result_double < INT_MIN)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	result->month = (int32) result_double;
+
+	result_double = span->day * factor;
+	if (result_double > INT_MAX || result_double < INT_MIN)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	result->day = (int32) result_double;
 
 	/*
 	 * The above correctly handles the whole-number part of the month and day
@@ -3450,7 +3742,12 @@ interval_mul(PG_FUNCTION_ARGS)
 	/* cascade units down */
 	result->day += (int32) month_remainder_days;
 #ifdef HAVE_INT64_TIMESTAMP
-	result->time = rint(span->time * factor + sec_remainder * USECS_PER_SEC);
+	result_double = rint(span->time * factor + sec_remainder * USECS_PER_SEC);
+	if (result_double > PG_INT64_MAX || result_double < PG_INT64_MIN)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("interval out of range")));
+	result->time = (int64) result_double;
 #else
 	result->time = span->time * factor + sec_remainder;
 #endif
@@ -5286,7 +5583,7 @@ timestamp_zone(PG_FUNCTION_ARGS)
 		PG_RETURN_TIMESTAMPTZ(timestamp);
 
 	/*
-	 * Look up the requested timezone.	First we look in the date token table
+	 * Look up the requested timezone.  First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's
@@ -5459,7 +5756,7 @@ timestamptz_zone(PG_FUNCTION_ARGS)
 		PG_RETURN_TIMESTAMP(timestamp);
 
 	/*
-	 * Look up the requested timezone.	First we look in the date token table
+	 * Look up the requested timezone.  First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's

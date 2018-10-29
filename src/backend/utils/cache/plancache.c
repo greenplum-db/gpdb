@@ -11,7 +11,7 @@
  * The logic for choosing generic or custom plans is in choose_custom_plan,
  * which see for comments.
  *
- * Cache invalidation is driven off sinval events.	Any CachedPlanSource
+ * Cache invalidation is driven off sinval events.  Any CachedPlanSource
  * that matches the event is marked invalid, as is its generic CachedPlan
  * if it has one.  When (and if) the next demand for a cached plan occurs,
  * parse analysis and rewrite is repeated to build a new valid query tree,
@@ -27,7 +27,7 @@
  * caller to notice changes and cope with them.
  *
  * Currently, we track exactly the dependencies of plans on relations and
- * user-defined functions.	On relcache invalidation events or pg_proc
+ * user-defined functions.  On relcache invalidation events or pg_proc
  * syscache invalidation events, we invalidate just those plans that depend
  * on the particular object being modified.  (Note: this scheme assumes
  * that any table modification that requires replanning will generate a
@@ -37,7 +37,7 @@
  * be infrequent enough that more-detailed tracking is not worth the effort.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -54,6 +54,7 @@
 #include "executor/executor.h"
 #include "executor/spi.h"
 #include "nodes/nodeFuncs.h"
+#include "optimizer/cost.h"
 #include "optimizer/planmain.h"
 #include "optimizer/prep.h"
 #include "parser/analyze.h"
@@ -92,7 +93,7 @@ static CachedPlan *BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 static bool choose_custom_plan(CachedPlanSource *plansource,
 				   ParamListInfo boundParams,
 				   IntoClause *intoClause);
-static double cached_plan_cost(CachedPlan *plan);
+static double cached_plan_cost(CachedPlan *plan, bool include_planner);
 static void AcquireExecutorLocks(List *stmt_list, bool acquire);
 static void AcquirePlannerLocks(List *stmt_list, bool acquire);
 static void ScanQueryForLocks(Query *parsetree, bool acquire);
@@ -124,7 +125,7 @@ InitPlanCache(void)
  * CreateCachedPlan: initially create a plan cache entry.
  *
  * Creation of a cached plan is divided into two steps, CreateCachedPlan and
- * CompleteCachedPlan.	CreateCachedPlan should be called after running the
+ * CompleteCachedPlan.  CreateCachedPlan should be called after running the
  * query through raw_parser, but before doing parse analysis and rewrite;
  * CompleteCachedPlan is called after that.  The reason for this arrangement
  * is that it can save one round of copying of the raw parse tree, since
@@ -220,7 +221,7 @@ CreateCachedPlan(Node *raw_parse_tree,
  * in that context.
  *
  * A one-shot plan cannot be saved or copied, since we make no effort to
- * preserve the raw parse tree unmodified.	There is also no support for
+ * preserve the raw parse tree unmodified.  There is also no support for
  * invalidation, so plan use must be completed in the current transaction,
  * and DDL that might invalidate the querytree_list must be avoided as well.
  *
@@ -277,13 +278,13 @@ CreateOneShotCachedPlan(Node *raw_parse_tree,
  * CompleteCachedPlan: second step of creating a plan cache entry.
  *
  * Pass in the analyzed-and-rewritten form of the query, as well as the
- * required subsidiary data about parameters and such.	All passed values will
+ * required subsidiary data about parameters and such.  All passed values will
  * be copied into the CachedPlanSource's memory, except as specified below.
  * After this is called, GetCachedPlan can be called to obtain a plan, and
  * optionally the CachedPlanSource can be saved using SaveCachedPlan.
  *
  * If querytree_context is not NULL, the querytree_list must be stored in that
- * context (but the other parameters need not be).	The querytree_list is not
+ * context (but the other parameters need not be).  The querytree_list is not
  * copied, rather the given context is kept as the initial query_context of
  * the CachedPlanSource.  (It should have been created as a child of the
  * caller's working memory context, but it will now be reparented to belong
@@ -378,7 +379,7 @@ CompleteCachedPlan(CachedPlanSource *plansource,
 								   &plansource->invalItems);
 
 		/*
-		 * Also save the current search_path in the query_context.	(This
+		 * Also save the current search_path in the query_context.  (This
 		 * should not generate much extra cruft either, since almost certainly
 		 * the path is already valid.)	Again, we don't really need this for
 		 * one-shot plans; and we *must* skip this for transaction control
@@ -426,7 +427,7 @@ CompleteCachedPlan(CachedPlanSource *plansource,
  * This is guaranteed not to throw error, except for the caller-error case
  * of trying to save a one-shot plan.  Callers typically depend on that
  * since this is called just before or just after adding a pointer to the
- * CachedPlanSource to some permanent data structure of their own.	Up until
+ * CachedPlanSource to some permanent data structure of their own.  Up until
  * this is done, a CachedPlanSource is just transient data that will go away
  * automatically on transaction abort.
  */
@@ -447,13 +448,13 @@ SaveCachedPlan(CachedPlanSource *plansource)
 	 * plans from the CachedPlanSource.  If there is a generic plan, moving it
 	 * into CacheMemoryContext would be pretty risky since it's unclear
 	 * whether the caller has taken suitable care with making references
-	 * long-lived.	Best thing to do seems to be to discard the plan.
+	 * long-lived.  Best thing to do seems to be to discard the plan.
 	 */
 	ReleaseGenericPlan(plansource);
 
 	/*
 	 * Reparent the source memory context under CacheMemoryContext so that it
-	 * will live indefinitely.	The query_context follows along since it's
+	 * will live indefinitely.  The query_context follows along since it's
 	 * already a child of the other one.
 	 */
 	MemoryContextSetParent(plansource->context, CacheMemoryContext);
@@ -471,7 +472,7 @@ SaveCachedPlan(CachedPlanSource *plansource)
  * DropCachedPlan: destroy a cached plan.
  *
  * Actually this only destroys the CachedPlanSource: any referenced CachedPlan
- * is released, but not destroyed until its refcount goes to zero.	That
+ * is released, but not destroyed until its refcount goes to zero.  That
  * handles the situation where DropCachedPlan is called while the plan is
  * still in use.
  */
@@ -624,7 +625,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 	plansource->search_path = NULL;
 
 	/*
-	 * Free the query_context.	We don't really expect MemoryContextDelete to
+	 * Free the query_context.  We don't really expect MemoryContextDelete to
 	 * fail, but just in case, make sure the CachedPlanSource is left in a
 	 * reasonably sane state.  (The generic plan won't get unlinked yet, but
 	 * that's acceptable.)
@@ -693,7 +694,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 		PopActiveSnapshot();
 
 	/*
-	 * Check or update the result tupdesc.	XXX should we use a weaker
+	 * Check or update the result tupdesc.  XXX should we use a weaker
 	 * condition than equalTupleDescs() here?
 	 *
 	 * We assume the parameter types didn't change from the first time, so no
@@ -748,7 +749,7 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 							   &plansource->invalItems);
 
 	/*
-	 * Also save the current search_path in the query_context.	(This should
+	 * Also save the current search_path in the query_context.  (This should
 	 * not generate much extra cruft either, since almost certainly the path
 	 * is already valid.)
 	 */
@@ -885,7 +886,7 @@ BuildCachedPlan(CachedPlanSource *plansource, List *qlist,
 	 * we ought to be holding sufficient locks to prevent any invalidation.
 	 * However, if we're building a custom plan after having built and
 	 * rejected a generic plan, it's possible to reach here with is_valid
-	 * false due to an invalidation while making the generic plan.	In theory
+	 * false due to an invalidation while making the generic plan.  In theory
 	 * the invalidation must be a false positive, perhaps a consequence of an
 	 * sinval reset event or the CLOBBER_CACHE_ALWAYS debug code.  But for
 	 * safety, let's treat it as real and redo the RevalidateCachedQuery call.
@@ -1040,15 +1041,16 @@ choose_custom_plan(CachedPlanSource *plansource, ParamListInfo boundParams, Into
 	avg_custom_cost = plansource->total_custom_cost / plansource->num_custom_plans;
 
 	/*
-	 * Prefer generic plan if it's less than 10% more expensive than average
-	 * custom plan.  This threshold is a bit arbitrary; it'd be better if we
-	 * had some means of comparing planning time to the estimated runtime cost
-	 * differential.
+	 * Prefer generic plan if it's less expensive than the average custom
+	 * plan.  (Because we include a charge for cost of planning in the
+	 * custom-plan costs, this means the generic plan only has to be less
+	 * expensive than the execution cost plus replan cost of the custom
+	 * plans.)
 	 *
 	 * Note that if generic_cost is -1 (indicating we've not yet determined
 	 * the generic plan cost), we'll always prefer generic at this point.
 	 */
-	if (plansource->generic_cost < avg_custom_cost * 1.1)
+	if (plansource->generic_cost < avg_custom_cost)
 		return false;
 
 	return true;
@@ -1056,9 +1058,13 @@ choose_custom_plan(CachedPlanSource *plansource, ParamListInfo boundParams, Into
 
 /*
  * cached_plan_cost: calculate estimated cost of a plan
+ *
+ * If include_planner is true, also include the estimated cost of constructing
+ * the plan.  (We must factor that into the cost of using a custom plan, but
+ * we don't count it for a generic plan.)
  */
 static double
-cached_plan_cost(CachedPlan *plan)
+cached_plan_cost(CachedPlan *plan, bool include_planner)
 {
 	double		result = 0;
 	ListCell   *lc;
@@ -1071,6 +1077,34 @@ cached_plan_cost(CachedPlan *plan)
 			continue;			/* Ignore utility statements */
 
 		result += plannedstmt->planTree->total_cost;
+
+		if (include_planner)
+		{
+			/*
+			 * Currently we use a very crude estimate of planning effort based
+			 * on the number of relations in the finished plan's rangetable.
+			 * Join planning effort actually scales much worse than linearly
+			 * in the number of relations --- but only until the join collapse
+			 * limits kick in.  Also, while inheritance child relations surely
+			 * add to planning effort, they don't make the join situation
+			 * worse.  So the actual shape of the planning cost curve versus
+			 * number of relations isn't all that obvious.  It will take
+			 * considerable work to arrive at a less crude estimate, and for
+			 * now it's not clear that's worth doing.
+			 *
+			 * The other big difficulty here is that we don't have any very
+			 * good model of how planning cost compares to execution costs.
+			 * The current multiplier of 1000 * cpu_operator_cost is probably
+			 * on the low side, but we'll try this for awhile before making a
+			 * more aggressive correction.
+			 *
+			 * If we ever do write a more complicated estimator, it should
+			 * probably live in src/backend/optimizer/ not here.
+			 */
+			int			nrelations = list_length(plannedstmt->rtable);
+
+			result += 1000.0 * cpu_operator_cost * (nrelations + 1);
+		}
 	}
 
 	return result;
@@ -1154,7 +1188,7 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
 								MemoryContextGetParent(plansource->context));
 			}
 			/* Update generic_cost whenever we make a new generic plan */
-			plansource->generic_cost = cached_plan_cost(plan);
+			plansource->generic_cost = cached_plan_cost(plan, false);
 
 			/*
 			 * If, based on the now-known value of generic_cost, we'd not have
@@ -1169,7 +1203,7 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
 
 			/*
 			 * If we choose to plan again, we need to re-copy the query_list,
-			 * since the planner probably scribbled on it.	We can force
+			 * since the planner probably scribbled on it.  We can force
 			 * BuildCachedPlan to do that by passing NIL.
 			 */
 			qlist = NIL;
@@ -1183,7 +1217,7 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
 		/* Accumulate total costs of custom plans, but 'ware overflow */
 		if (plansource->num_custom_plans < INT_MAX)
 		{
-			plansource->total_custom_cost += cached_plan_cost(plan);
+			plansource->total_custom_cost += cached_plan_cost(plan, true);
 			plansource->num_custom_plans++;
 		}
 	}
@@ -1219,7 +1253,7 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
  *
  * Note: useResOwner = false is used for releasing references that are in
  * persistent data structures, such as the parent CachedPlanSource or a
- * Portal.	Transient references should be protected by a resource owner.
+ * Portal.  Transient references should be protected by a resource owner.
  */
 void
 ReleaseCachedPlan(CachedPlan *plan, bool useResOwner)
@@ -1283,7 +1317,7 @@ CachedPlanSetParentContext(CachedPlanSource *plansource,
  *
  * This is a convenience routine that does the equivalent of
  * CreateCachedPlan + CompleteCachedPlan, using the data stored in the
- * input CachedPlanSource.	The result is therefore "unsaved" (regardless
+ * input CachedPlanSource.  The result is therefore "unsaved" (regardless
  * of the state of the source), and we don't copy any generic plan either.
  * The result will be currently valid, or not, the same as the source.
  */
@@ -1437,7 +1471,7 @@ AcquireExecutorLocks(List *stmt_list, bool acquire)
 		{
 			/*
 			 * Ignore utility statements, except those (such as EXPLAIN) that
-			 * contain a parsed-but-not-planned query.	Note: it's okay to use
+			 * contain a parsed-but-not-planned query.  Note: it's okay to use
 			 * ScanQueryForLocks, even though the query hasn't been through
 			 * rule rewriting, because rewriting doesn't change the query
 			 * representation.
@@ -1689,7 +1723,7 @@ plan_list_is_oneoff(List *stmt_list)
 
 /*
  * PlanCacheComputeResultDesc: given a list of analyzed-and-rewritten Queries,
- * determine the result tupledesc it will produce.	Returns NULL if the
+ * determine the result tupledesc it will produce.  Returns NULL if the
  * execution will not return tuples.
  *
  * Note: the result is created or copied into current memory context.

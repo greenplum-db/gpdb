@@ -276,7 +276,7 @@ drop table t;
 :explain select * from r2 a left join d2 b using (c1, c2);
 :explain select * from r2 a left join r2 b using (c1);
 :explain select * from r2 a left join r2 b using (c1, c2);
-
+:explain select * from t1, t2 where t1.c1 > any (select max(t2.c1) from t2 where t2.c2 = t1.c2) and t2.c1 > any(select max(c1) from t1 where t1.c2 = t2.c2);
 --
 -- insert
 --

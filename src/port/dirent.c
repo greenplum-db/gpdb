@@ -3,7 +3,7 @@
  * dirent.c
  *	  opendir/readdir/closedir for win32/msvc
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -105,15 +105,19 @@ readdir(DIR *d)
 	strcpy(d->ret.d_name, fd.cFileName);		/* Both strings are MAX_PATH
 												 * long */
 	d->ret.d_namlen = strlen(d->ret.d_name);
+
 	return &d->ret;
 }
 
 int
 closedir(DIR *d)
 {
+	int			ret = 0;
+
 	if (d->handle != INVALID_HANDLE_VALUE)
-		FindClose(d->handle);
+		ret = !FindClose(d->handle);
 	free(d->dirname);
 	free(d);
-	return 0;
+
+	return ret;
 }

@@ -4,7 +4,7 @@
  *	  private declarations for GiST -- declarations related to the
  *	  internal implementation of GiST, not the public API
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/access/gist_private.h
@@ -21,6 +21,21 @@
 #include "storage/buffile.h"
 #include "utils/rbtree.h"
 #include "utils/hsearch.h"
+
+/*
+ * Maximum number of "halves" a page can be split into in one operation.
+ * Typically a split produces 2 halves, but can be more if keys have very
+ * different lengths, or when inserting multiple keys in one operation (as
+ * when inserting downlinks to an internal node).  There is no theoretical
+ * limit on this, but in practice if you get more than a handful page halves
+ * in one split, there's something wrong with the opclass implementation.
+ * GIST_MAX_SPLIT_PAGES is an arbitrary limit on that, used to size some
+ * local arrays used during split.  Note that there is also a limit on the
+ * number of buffers that can be held locked at a time, MAX_SIMUL_LWLOCKS,
+ * so if you raise this higher than that limit, you'll just get a different
+ * error.
+ */
+#define GIST_MAX_SPLIT_PAGES		75
 
 /* Buffer lock modes */
 #define GIST_SHARE	BUFFER_LOCK_SHARE

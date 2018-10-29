@@ -44,6 +44,9 @@
 #include "cdb/cdbconn.h"
 #include "cdb/cdbfts.h"
 #include "storage/ipc.h"
+#include "postmaster/fts.h"
+#include "catalog/namespace.h"
+#include "utils/gpexpand.h"
 
 #define MAX_CACHED_1_GANGS 1
 
@@ -73,11 +76,13 @@ static HTAB *hostSegsHashTableInit(void);
 
 static HTAB *segment_ip_cache_htab = NULL;
 
-struct segment_ip_cache_entry
+int numsegmentsFromQD = -1;
+
+typedef struct SegIpEntry
 {
 	char		key[NAMEDATALEN];
 	char		hostinfo[NI_MAXHOST];
-};
+} SegIpEntry;
 
 typedef struct HostSegsEntry
 {
@@ -162,7 +167,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	gp_seg_config_rel = heap_open(GpSegmentConfigRelationId, AccessShareLock);
 
-	gp_seg_config_scan = heap_beginscan(gp_seg_config_rel, SnapshotNow, 0, NULL);
+	gp_seg_config_scan = heap_beginscan_catalog(gp_seg_config_rel, 0, NULL);
 
 	while (HeapTupleIsValid(gp_seg_config_tuple = heap_getnext(gp_seg_config_scan, ForwardScanDirection)))
 	{
@@ -366,17 +371,6 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	}
 
 	/*
-	 * Validate that gp_numsegments == segment_databases->total_segment_dbs
-	 */
-	if (getgpsegmentCount() != component_databases->total_segments)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_DATA_EXCEPTION),
-				 errmsg("Greenplum Database number of segments inconsistency: count is %d from pg_catalog.%s table, but %d from cdbcomponent_getCdbComponents()",
-						getgpsegmentCount(), GpIdRelationName, component_databases->total_segments)));
-	}
-
-	/*
 	 * Now validate that our identity is present in the entry databases
 	 */
 	for (i = 0; i < component_databases->total_entry_dbs; i++)
@@ -398,11 +392,11 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 	/*
 	 * Now validate that the segindexes for the segment databases are between
-	 * 0 and (GpIdentity.numsegments - 1) inclusive, and that we hit them all.
+	 * 0 and (numsegments - 1) inclusive, and that we hit them all.
 	 * Since it's sorted, this is relatively easy.
 	 */
 	x = 0;
-	for (i = 0; i < getgpsegmentCount(); i++)
+	for (i = 0; i < component_databases->total_segments; i++)
 	{
 		int			this_segindex = -1;
 
@@ -418,7 +412,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_EXCEPTION),
 						 errmsg("Content values not valid in %s table.  They must be in the range 0 to %d inclusive",
-								GpSegmentConfigRelationName, getgpsegmentCount() - 1)));
+								GpSegmentConfigRelationName, component_databases->total_segments - 1)));
 			}
 		}
 		if (this_segindex != i)
@@ -426,7 +420,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_EXCEPTION),
 					 errmsg("Content values not valid in %s table.  They must be in the range 0 to %d inclusive",
-							GpSegmentConfigRelationName, getgpsegmentCount() - 1)));
+							GpSegmentConfigRelationName, component_databases->total_segments - 1)));
 		}
 	}
 
@@ -536,6 +530,56 @@ cdbcomponent_cleanupIdleQEs(bool includeWriter)
 	return;
 }
 
+/* 
+ * This function is called when current global transaction is set,
+ * the snapshot of segments info will not changed within a global
+ * transaction
+ */
+void
+cdbcomponent_updateCdbComponents(void)
+{
+	uint8 ftsVersion= getFtsVersion();
+	int expandVersion = GetGpExpandVersion();
+
+	PG_TRY();
+	{
+		if (cdb_component_dbs == NULL)
+		{
+			cdb_component_dbs = getCdbComponentInfo(true);
+			cdb_component_dbs->fts_version = ftsVersion;
+			cdb_component_dbs->expand_version = GetGpExpandVersion();
+		}
+		else if ((cdb_component_dbs->fts_version != ftsVersion ||
+				 cdb_component_dbs->expand_version != expandVersion))
+		{
+			if (TempNamespaceOidIsValid())
+			{
+				/*
+				 * Do not update here, otherwise, temp files will be lost 
+				 * in segments;
+				 */
+			}
+			else
+			{
+				ELOG_DISPATCHER_DEBUG("FTS rescanned, get new component databases info.");
+				cdbcomponent_destroyCdbComponents();
+				cdb_component_dbs = getCdbComponentInfo(true);
+				cdb_component_dbs->fts_version = ftsVersion;
+				cdb_component_dbs->expand_version = expandVersion;
+			}
+		}
+	}
+	PG_CATCH();
+	{
+		FtsNotifyProber();
+
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	Assert(cdb_component_dbs->numActiveQEs == 0);
+}
+
 /*
  * cdbcomponent_getCdbComponents 
  *
@@ -546,38 +590,14 @@ cdbcomponent_cleanupIdleQEs(bool includeWriter)
 CdbComponentDatabases *
 cdbcomponent_getCdbComponents(bool DNSLookupAsError)
 {
-	uint8	ftsVersion = getFtsVersion();
-
 	PG_TRY();
 	{
 		if (cdb_component_dbs == NULL)
 		{
 			cdb_component_dbs = getCdbComponentInfo(DNSLookupAsError);
-			cdb_component_dbs->fts_version = ftsVersion;
+			cdb_component_dbs->fts_version = getFtsVersion();
+			cdb_component_dbs->expand_version = GetGpExpandVersion();
 		}
-		else if (cdb_component_dbs->fts_version != ftsVersion)
-		{
-			/*
-			 * A fts version change don't always means a segment is
-			 * down. A mirror InSync status change also change fts
-			 * version, so we need to be careful of destroying exist
-			 * cdb_component_dbs.
-			 *
-			 *
-			 * * A query should has a unique cdb_component_dbs between
-			 * 	 slices and inside slices. 
-			 * * If it's not safe to recycle current writer, use current
-			 *   cdb_component_dbs.
-			 */
-			if (cdb_component_dbs->numActiveQEs == 0 && isSafeToRecreateWriter())
-			{
-				ELOG_DISPATCHER_DEBUG("FTS rescanned, get new component databases info.");
-				cdbcomponent_destroyCdbComponents();
-				cdb_component_dbs = getCdbComponentInfo(DNSLookupAsError);
-				cdb_component_dbs->fts_version = ftsVersion;
-			}
-		}
-
 	}
 	PG_CATCH();
 	{
@@ -707,7 +727,7 @@ cleanupQE(SegmentDatabaseDescriptor *segdbDesc)
 		return false;
 
 	/* if segment is down, the gang can not be reused */
-	if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
+	if (FtsIsSegmentDown(segdbDesc->segment_database_info))
 		return false; 
 
 	/* If a reader exceed the cached memory limitation, destroy it */
@@ -940,33 +960,41 @@ CdbComponentDatabaseInfoCompare(const void *p1, const void *p2)
  * The keys are all NAMEDATALEN long.
  */
 static char *
-getDnsCachedAddress(char *name, int port, int elevel)
+getDnsCachedAddress(char *name, int port, int elevel, bool use_cache)
 {
-	struct segment_ip_cache_entry *e;
+	SegIpEntry	   *e = NULL;
+	char			hostinfo[NI_MAXHOST];
 
-	if (segment_ip_cache_htab == NULL)
+	if (use_cache)
 	{
-		HASHCTL		hash_ctl;
+		if (segment_ip_cache_htab == NULL)
+		{
+			HASHCTL		hash_ctl;
 
-		MemSet(&hash_ctl, 0, sizeof(hash_ctl));
+			MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 
-		hash_ctl.keysize = NAMEDATALEN + 1;
-		hash_ctl.entrysize = sizeof(struct segment_ip_cache_entry);
+			hash_ctl.keysize = NAMEDATALEN + 1;
+			hash_ctl.entrysize = sizeof(SegIpEntry);
 
-		segment_ip_cache_htab = hash_create("segment_dns_cache",
-											256,
-											&hash_ctl,
-											HASH_ELEM);
-		Assert(segment_ip_cache_htab != NULL);
+			segment_ip_cache_htab = hash_create("segment_dns_cache",
+												256, &hash_ctl, HASH_ELEM);
+		}
+		else
+		{
+			e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+										   name, HASH_FIND, NULL);
+			if (e != NULL)
+				return e->hostinfo;
+		}
 	}
 
-	e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-													  name, HASH_FIND, NULL);
-
-	/* not in our cache, we've got to actually do the name lookup. */
-	if (e == NULL)
+	/*
+	 * The name is either not in our cache, or we've been instructed to not
+	 * use the cache. Perform the name lookup.
+	 */
+	if (!use_cache || (use_cache && e == NULL))
 	{
-		MemoryContext oldContext;
+		MemoryContext oldContext = NULL;
 		int			ret;
 		char		portNumberStr[32];
 		char	   *service;
@@ -1006,7 +1034,8 @@ getDnsCachedAddress(char *name, int port, int elevel)
 		}
 
 		/* save in the cache context */
-		oldContext = MemoryContextSwitchTo(TopMemoryContext);
+		if (use_cache)
+			oldContext = MemoryContextSwitchTo(TopMemoryContext);
 
 		for (addr = addrs; addr; addr = addr->ai_next)
 		{
@@ -1017,21 +1046,19 @@ getDnsCachedAddress(char *name, int port, int elevel)
 #endif
 			if (addr->ai_family == AF_INET) /* IPv4 address */
 			{
-				char		hostinfo[NI_MAXHOST];
-
+				memset(hostinfo, 0, sizeof(hostinfo));
 				pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
 								   hostinfo, sizeof(hostinfo),
 								   NULL, 0,
 								   NI_NUMERICHOST);
 
-				/* INSERT INTO OUR CACHE HTAB HERE */
-
-				e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-																  name,
-																  HASH_ENTER,
-																  NULL);
-				Assert(e != NULL);
-				memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+				if (use_cache)
+				{
+					/* Insert into our cache htab */
+					e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+												   name, HASH_ENTER, NULL);
+					memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+				}
 
 				break;
 			}
@@ -1047,123 +1074,52 @@ getDnsCachedAddress(char *name, int port, int elevel)
 		 * we'd only want to use the IPv6 address if there isn't an IPv4
 		 * address.  All we really need to do is test this.
 		 */
-		if (e == NULL && addrs->ai_family == AF_INET6)
+		if (((!use_cache && !hostinfo) || (use_cache && e == NULL))
+			&& addrs->ai_family == AF_INET6)
 		{
 			char		hostinfo[NI_MAXHOST];
 
 			addr = addrs;
-
-
-
-			pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
-							   hostinfo, sizeof(hostinfo),
-							   NULL, 0,
-							   NI_NUMERICHOST);
-
-			/* INSERT INTO OUR CACHE HTAB HERE */
-
-			e = (struct segment_ip_cache_entry *) hash_search(segment_ip_cache_htab,
-															  name,
-															  HASH_ENTER,
-															  NULL);
-			Assert(e != NULL);
-			memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
-
-		}
-#endif
-
-		MemoryContextSwitchTo(oldContext);
-
-		pg_freeaddrinfo_all(hint.ai_family, addrs);
-	}
-
-	/* return a pointer to our cache. */
-	return e->hostinfo;
-}
-
-/*
- * getDnsAddress
- *
- * same as getDnsCachedAddress, but without caching. Looks like the
- * non-cached version was used inline inside of cdbgang.c, and since
- * it is needed now elsewhere, it is factored out to this routine.
- */
-char *
-getDnsAddress(char *hostname, int port, int elevel)
-{
-	int			ret;
-	char		portNumberStr[32];
-	char	   *service;
-	char	   *result = NULL;
-	struct addrinfo *addrs = NULL,
-			   *addr;
-	struct addrinfo hint;
-
-	/* Initialize hint structure */
-	MemSet(&hint, 0, sizeof(hint));
-	hint.ai_socktype = SOCK_STREAM;
-	hint.ai_family = AF_UNSPEC;
-
-	snprintf(portNumberStr, sizeof(portNumberStr), "%d", port);
-	service = portNumberStr;
-
-	ret = pg_getaddrinfo_all(hostname, service, &hint, &addrs);
-	if (ret || !addrs)
-	{
-		if (addrs)
-			pg_freeaddrinfo_all(hint.ai_family, addrs);
-		ereport(elevel,
-				(errmsg("could not translate host name \"%s\", port \"%d\" to address: %s",
-						hostname, port, gai_strerror(ret))));
-	}
-	for (addr = addrs; addr; addr = addr->ai_next)
-	{
-#ifdef HAVE_UNIX_SOCKETS
-		/* Ignore AF_UNIX sockets, if any are returned. */
-		if (addr->ai_family == AF_UNIX)
-			continue;
-#endif
-		if (addr->ai_family == AF_INET) /* IPv4 address */
-		{
-			char		hostinfo[NI_MAXHOST];
-
 			/* Get a text representation of the IP address */
 			pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
 							   hostinfo, sizeof(hostinfo),
 							   NULL, 0,
 							   NI_NUMERICHOST);
-			result = pstrdup(hostinfo);
-			break;
+
+			if (use_cache)
+			{
+				/* Insert into our cache htab */
+				e = (SegIpEntry *) hash_search(segment_ip_cache_htab,
+											   name, HASH_ENTER, NULL);
+				memcpy(e->hostinfo, hostinfo, sizeof(hostinfo));
+			}
 		}
-	}
-
-#ifdef HAVE_IPV6
-
-	/*
-	 * IPv6 should would work fine, we'd just need to make sure all the data
-	 * structures are big enough for the IPv6 address.  And on some broken
-	 * systems, you can get an IPv6 address, but not be able to bind to it
-	 * because IPv6 is disabled or missing in the kernel, so we'd only want to
-	 * use the IPv6 address if there isn't an IPv4 address.  All we really
-	 * need to do is test this.
-	 */
-	if (result == NULL && addrs->ai_family == AF_INET6)
-	{
-		char		hostinfo[NI_MAXHOST];
-
-		addr = addrs;
-		/* Get a text representation of the IP address */
-		pg_getnameinfo_all((struct sockaddr_storage *) addr->ai_addr, addr->ai_addrlen,
-						   hostinfo, sizeof(hostinfo),
-						   NULL, 0,
-						   NI_NUMERICHOST);
-		result = pstrdup(hostinfo);
-	}
 #endif
 
-	pg_freeaddrinfo_all(hint.ai_family, addrs);
+		if (use_cache)
+			MemoryContextSwitchTo(oldContext);
 
-	return result;
+		pg_freeaddrinfo_all(hint.ai_family, addrs);
+	}
+
+	/* return a pointer to our cache. */
+	if (use_cache)
+		return e->hostinfo;
+
+	return pstrdup(hostinfo);
+}
+
+/*
+ * getDnsAddress
+ *
+ * same as getDnsCachedAddress, but without using the cache. A non-cached
+ * version was used inline inside of cdbgang.c, and since it is needed now
+ * elsewhere, it is available externally.
+ */
+char *
+getDnsAddress(char *hostname, int port, int elevel)
+{
+	return getDnsCachedAddress(hostname, port, elevel, false);
 }
 
 
@@ -1199,7 +1155,7 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	 * add an entry, using the first the "address" and then the "hostname" as
 	 * fallback.
 	 */
-	name = getDnsCachedAddress(c->address, c->port, elevel);
+	name = getDnsCachedAddress(c->address, c->port, elevel, true);
 
 	if (name)
 	{
@@ -1208,7 +1164,7 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	}
 
 	/* now the hostname. */
-	name = getDnsCachedAddress(c->hostname, c->port, elevel);
+	name = getDnsCachedAddress(c->hostname, c->port, elevel, true);
 	if (name)
 	{
 		c->hostaddrs[0] = pstrdup(name);
@@ -1320,7 +1276,7 @@ master_standby_dbid(void)
 				CharGetDatum(GP_SEGMENT_CONFIGURATION_ROLE_MIRROR));
 	/* no index */
 	scan = systable_beginscan(rel, InvalidOid, false,
-							  SnapshotNow, 2, scankey);
+							  NULL, 2, scankey);
 
 	tup = systable_getnext(scan);
 
@@ -1363,7 +1319,7 @@ dbid_get_dbinfo(int16 dbid)
 				BTEqualStrategyNumber, F_INT2EQ,
 				Int16GetDatum(dbid));
 	scan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
-							  SnapshotNow, 1, &scankey);
+							  NULL, 1, &scankey);
 
 	tuple = systable_getnext(scan);
 	if (HeapTupleIsValid(tuple))
@@ -1500,7 +1456,7 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 					BTEqualStrategyNumber, F_CHAREQ,
 					CharGetDatum(role));
 		scan = systable_beginscan(rel, GpSegmentConfigContentPreferred_roleIndexId, true,
-								  SnapshotNow, 2, scankey);
+								  NULL, 2, scankey);
 	}
 	else
 	{
@@ -1518,7 +1474,7 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 					CharGetDatum(role));
 		/* no index */
 		scan = systable_beginscan(rel, InvalidOid, false,
-								  SnapshotNow, 2, scankey);
+								  NULL, 2, scankey);
 	}
 
 	tup = systable_getnext(scan);
@@ -1534,28 +1490,6 @@ contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRo
 	heap_close(rel, AccessShareLock);
 
 	return dbid;
-}
-
-/*
- * Returns the number of segments
- */
-int
-getgpsegmentCount(void)
-{
-	if (Gp_role == GP_ROLE_UTILITY)
-	{
-		if (GpIdentity.numsegments <= 0)
-		{
-			elog(DEBUG5, "getgpsegmentCount called when Gp_role == utility, returning zero segments.");
-			return 0;
-		}
-
-		elog(DEBUG1, "getgpsegmentCount called when Gp_role == utility, but is relying on gp_id info");
-	}
-
-	verifyGpIdentityIsSet();
-	Assert(GpIdentity.numsegments > 0);
-	return GpIdentity.numsegments;
 }
 
 List *
@@ -1575,3 +1509,19 @@ cdbcomponent_getCdbComponentsList(void)
 	return segments;
 }
 
+/*
+ * return the number of total segments for current snapshot of
+ * segments info
+ */
+int
+getgpsegmentCount(void)
+{
+	int32 numsegments = -1;
+
+	if (Gp_role == GP_ROLE_DISPATCH)
+		numsegments = cdbcomponent_getCdbComponents(true)->total_segments;
+	else if (Gp_role == GP_ROLE_EXECUTE)
+		numsegments = numsegmentsFromQD;
+
+	return numsegments;
+}

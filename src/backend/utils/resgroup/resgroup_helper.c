@@ -38,14 +38,14 @@ typedef struct ResGroupStatCtx
 	ResGroupStat groups[1];
 } ResGroupStatCtx;
 
-static void calcCpuUsage(StringInfoData *str, int ncores,
+static void calcCpuUsage(StringInfoData *str,
 						 int64 usageBegin, TimestampTz timestampBegin,
 						 int64 usageEnd, TimestampTz timestampEnd);
 static void getResUsage(ResGroupStatCtx *ctx, Oid inGroupId);
 static void dumpResGroupInfo(StringInfo str);
 
 static void
-calcCpuUsage(StringInfoData *str, int ncores,
+calcCpuUsage(StringInfoData *str,
 			 int64 usageBegin, TimestampTz timestampBegin,
 			 int64 usageEnd, TimestampTz timestampEnd)
 {
@@ -60,18 +60,9 @@ calcCpuUsage(StringInfoData *str, int ncores,
 
 	duration = secs * 1000000 + usecs;
 
-	/*
-	 * usage is the cpu time (nano seconds) obtained by this group
-	 * in the time duration (micro seconds), so cpu time on one core
-	 * can be calculated as:
-	 *
-	 *     usage / 1000 / duration / ncores
-	 *
-	 * To convert it to percentange we should multiple 100%.
-	 */
 	appendStringInfo(str, "\"%d\":%.2f",
 					 GpIdentity.segindex,
-					 (usage / 10.0 / duration / ncores));
+					 ResGroupOps_ConvertCpuUsageToPercent(usage, duration));
 }
 
 /*
@@ -89,13 +80,10 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 {
 	int64 *usages;
 	TimestampTz *timestamps;
-	int ncores;
 	int i, j;
 
 	usages = palloc(sizeof(*usages) * ctx->nGroups);
 	timestamps = palloc(sizeof(*timestamps) * ctx->nGroups);
-
-	ncores = ResGroupOps_GetCpuCores();
 
 	for (j = 0; j < ctx->nGroups; j++)
 	{
@@ -156,7 +144,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 									 GpIdentity.segindex, DatumGetCString(d));
 
 					appendStringInfo(row->cpuUsage, "{");
-					calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
+					calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
 								 ResGroupOps_GetCpuUsage(groupId),
 								 GetCurrentTimestamp());
 				}
@@ -190,7 +178,7 @@ getResUsage(ResGroupStatCtx *ctx, Oid inGroupId)
 			appendStringInfo(row->memUsage, "\"%d\":%s",
 							 GpIdentity.segindex, DatumGetCString(d));
 
-			calcCpuUsage(row->cpuUsage, ncores, usages[j], timestamps[j],
+			calcCpuUsage(row->cpuUsage, usages[j], timestamps[j],
 						 ResGroupOps_GetCpuUsage(groupId),
 						 GetCurrentTimestamp());
 		}
@@ -260,7 +248,7 @@ pg_resgroup_get_status(PG_FUNCTION_ARGS)
 			pg_resgroup_rel = heap_open(ResGroupRelationId, ExclusiveLock);
 
 			sscan = systable_beginscan(pg_resgroup_rel, InvalidOid, false,
-									   SnapshotNow, 0, NULL);
+									   NULL, 0, NULL);
 			while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 			{
 				Oid oid = ObjectIdGetDatum(HeapTupleGetOid(tuple));

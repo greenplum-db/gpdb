@@ -7,7 +7,6 @@
       <topicref href="topics/g-overview-of-high-availability-in-greenplum-database.xml" type="topic">
          <topicref href="topics/g-overview-of-segment-mirroring.xml" type="topic"/>
          <topicref href="topics/g-overview-of-master-mirroring.xml" type="topic"/>
-         <topicref href="topics/g-overview-of-fault-detection-and-recovery.xml" type="topic"/>
       </topicref>
       <topicref href="topics/g-enabling-mirroring-in-greenplum-database.xml" type="topic">
          <topicref href="topics/g-enabling-segment-mirroring.xml" type="topic"/>

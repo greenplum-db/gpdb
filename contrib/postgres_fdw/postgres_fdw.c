@@ -3,7 +3,7 @@
  * postgres_fdw.c
  *		  Foreign-data wrapper for remote PostgreSQL servers
  *
- * Portions Copyright (c) 2012-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/postgres_fdw/postgres_fdw.c
@@ -90,7 +90,7 @@ typedef struct PgFdwRelationInfo
  * 2) Integer list of attribute numbers retrieved by the SELECT
  *
  * These items are indexed with the enum FdwScanPrivateIndex, so an item
- * can be fetched with list_nth().	For example, to get the SELECT statement:
+ * can be fetched with list_nth().  For example, to get the SELECT statement:
  *		sql = strVal(list_nth(fdw_private, FdwScanPrivateSelectSql));
  */
 enum FdwScanPrivateIndex
@@ -108,7 +108,7 @@ enum FdwScanPrivateIndex
  * 1) INSERT/UPDATE/DELETE statement text to be sent to the remote server
  * 2) Integer list of target attribute numbers for INSERT/UPDATE
  *	  (NIL for a DELETE)
- * 3) Boolean flag showing if there's a RETURNING clause
+ * 3) Boolean flag showing if the remote query has a RETURNING clause
  * 4) Integer list of attribute numbers retrieved by RETURNING, if any
  */
 enum FdwModifyPrivateIndex
@@ -228,8 +228,6 @@ typedef struct
 /*
  * SQL functions
  */
-extern Datum postgres_fdw_handler(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(postgres_fdw_handler);
 
 /*
@@ -426,8 +424,8 @@ postgresGetForeignRelSize(PlannerInfo *root,
 
 	/*
 	 * If the table or the server is configured to use remote estimates,
-	 * identify which user to do remote access as during planning.	This
-	 * should match what ExecCheckRTEPerms() does.	If we fail due to lack of
+	 * identify which user to do remote access as during planning.  This
+	 * should match what ExecCheckRTEPerms() does.  If we fail due to lack of
 	 * permissions, the query would have failed at runtime anyway.
 	 */
 	if (fpinfo->use_remote_estimate)
@@ -444,12 +442,12 @@ postgresGetForeignRelSize(PlannerInfo *root,
 	 * Identify which baserestrictinfo clauses can be sent to the remote
 	 * server and which can't.
 	 */
-	classifyConditions(root, baserel,
+	classifyConditions(root, baserel, baserel->baserestrictinfo,
 					   &fpinfo->remote_conds, &fpinfo->local_conds);
 
 	/*
 	 * Identify which attributes will need to be retrieved from the remote
-	 * server.	These include all attrs needed for joins or final output, plus
+	 * server.  These include all attrs needed for joins or final output, plus
 	 * all attrs used in the local_conds.  (Note: if we end up using a
 	 * parameterized scan, it's possible that some of the join clauses will be
 	 * sent to the remote and thus we wouldn't really need to retrieve the
@@ -489,7 +487,7 @@ postgresGetForeignRelSize(PlannerInfo *root,
 	if (fpinfo->use_remote_estimate)
 	{
 		/*
-		 * Get cost/size estimates with help of remote server.	Save the
+		 * Get cost/size estimates with help of remote server.  Save the
 		 * values in fpinfo so we don't need to do it again to generate the
 		 * basic foreign path.
 		 */
@@ -540,13 +538,7 @@ postgresGetForeignPaths(PlannerInfo *root,
 {
 	PgFdwRelationInfo *fpinfo = (PgFdwRelationInfo *) baserel->fdw_private;
 	ForeignPath *path;
-	Relids		lateral_referencers;
-	List	   *join_quals;
-	Relids		required_outer;
-	double		rows;
-	int			width;
-	Cost		startup_cost;
-	Cost		total_cost;
+	List	   *ppi_list;
 	ListCell   *lc;
 
 	/*
@@ -574,70 +566,57 @@ postgresGetForeignPaths(PlannerInfo *root,
 		return;
 
 	/*
-	 * As a crude first hack, we consider each available join clause and try
-	 * to make a parameterized path using just that clause.  Later we should
-	 * consider combinations of clauses, probably.
+	 * Thumb through all join clauses for the rel to identify which outer
+	 * relations could supply one or more safe-to-send-to-remote join clauses.
+	 * We'll build a parameterized path for each such outer relation.
+	 *
+	 * It's convenient to manage this by representing each candidate outer
+	 * relation by the ParamPathInfo node for it.  We can then use the
+	 * ppi_clauses list in the ParamPathInfo node directly as a list of the
+	 * interesting join clauses for that rel.  This takes care of the
+	 * possibility that there are multiple safe join clauses for such a rel,
+	 * and also ensures that we account for unsafe join clauses that we'll
+	 * still have to enforce locally (since the parameterized-path machinery
+	 * insists that we handle all movable clauses).
 	 */
-
-	/*
-	 * If there are any rels that have LATERAL references to this one, we
-	 * cannot use join quals referencing them as remote quals for this one,
-	 * since such rels would have to be on the inside not the outside of a
-	 * nestloop join relative to this one.	Create a Relids set listing all
-	 * such rels, for use in checks of potential join clauses.
-	 */
-	lateral_referencers = NULL;
-	foreach(lc, root->lateral_info_list)
-	{
-		LateralJoinInfo *ljinfo = (LateralJoinInfo *) lfirst(lc);
-
-		if (bms_is_member(baserel->relid, ljinfo->lateral_lhs))
-			lateral_referencers = bms_add_member(lateral_referencers,
-												 ljinfo->lateral_rhs);
-	}
-
-	/* Scan the rel's join clauses */
+	ppi_list = NIL;
 	foreach(lc, baserel->joininfo)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+		Relids		required_outer;
+		ParamPathInfo *param_info;
 
 		/* Check if clause can be moved to this rel */
-		if (!join_clause_is_movable_to(rinfo, baserel->relid))
-			continue;
-
-		/* Not useful if it conflicts with any LATERAL references */
-		if (bms_overlap(rinfo->clause_relids, lateral_referencers))
+		if (!join_clause_is_movable_to(rinfo, baserel))
 			continue;
 
 		/* See if it is safe to send to remote */
 		if (!is_foreign_expr(root, baserel, rinfo->clause))
 			continue;
 
-		/*
-		 * OK, get a cost estimate from the remote, and make a path.
-		 */
-		join_quals = list_make1(rinfo);
-		estimate_path_cost_size(root, baserel, join_quals,
-								&rows, &width,
-								&startup_cost, &total_cost);
-
-		/* Must calculate required outer rels for this path */
+		/* Calculate required outer rels for the resulting path */
 		required_outer = bms_union(rinfo->clause_relids,
 								   baserel->lateral_relids);
 		/* We do not want the foreign rel itself listed in required_outer */
 		required_outer = bms_del_member(required_outer, baserel->relid);
-		/* Enforce convention that required_outer is exactly NULL if empty */
-		if (bms_is_empty(required_outer))
-			required_outer = NULL;
 
-		path = create_foreignscan_path(root, baserel,
-									   rows,
-									   startup_cost,
-									   total_cost,
-									   NIL,		/* no pathkeys */
-									   required_outer,
-									   NIL);	/* no fdw_private list */
-		add_path(baserel, (Path *) path);
+		/*
+		 * required_outer probably can't be empty here, but if it were, we
+		 * couldn't make a parameterized path.
+		 */
+		if (bms_is_empty(required_outer))
+			continue;
+
+		/* Get the ParamPathInfo */
+		param_info = get_baserel_parampathinfo(root, baserel,
+											   required_outer);
+		Assert(param_info != NULL);
+
+		/*
+		 * Add it to list unless we already have it.  Testing pointer equality
+		 * is OK since get_baserel_parampathinfo won't make duplicates.
+		 */
+		ppi_list = list_append_unique_ptr(ppi_list, param_info);
 	}
 
 	/*
@@ -651,8 +630,8 @@ postgresGetForeignPaths(PlannerInfo *root,
 		 * We repeatedly scan the eclass list looking for column references
 		 * (or expressions) belonging to the foreign rel.  Each time we find
 		 * one, we generate a list of equivalence joinclauses for it, and then
-		 * try to make those into foreign paths.  Repeat till there are no
-		 * more candidate EC members.
+		 * see if any are safe to send to the remote.  Repeat till there are
+		 * no more candidate EC members.
 		 */
 		ec_member_foreign_arg arg;
 
@@ -667,7 +646,7 @@ postgresGetForeignPaths(PlannerInfo *root,
 															 baserel,
 												   ec_member_matches_foreign,
 															 (void *) &arg,
-														lateral_referencers);
+											   baserel->lateral_referencers);
 
 			/* Done if there are no more expressions in the foreign rel */
 			if (arg.current == NULL)
@@ -680,46 +659,70 @@ postgresGetForeignPaths(PlannerInfo *root,
 			foreach(lc, clauses)
 			{
 				RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+				Relids		required_outer;
+				ParamPathInfo *param_info;
 
 				/* Check if clause can be moved to this rel */
-				if (!join_clause_is_movable_to(rinfo, baserel->relid))
+				if (!join_clause_is_movable_to(rinfo, baserel))
 					continue;
-
-				/* Shouldn't conflict with any LATERAL references */
-				Assert(!bms_overlap(rinfo->clause_relids, lateral_referencers));
 
 				/* See if it is safe to send to remote */
 				if (!is_foreign_expr(root, baserel, rinfo->clause))
 					continue;
 
-				/*
-				 * OK, get a cost estimate from the remote, and make a path.
-				 */
-				join_quals = list_make1(rinfo);
-				estimate_path_cost_size(root, baserel, join_quals,
-										&rows, &width,
-										&startup_cost, &total_cost);
-
-				/* Must calculate required outer rels for this path */
+				/* Calculate required outer rels for the resulting path */
 				required_outer = bms_union(rinfo->clause_relids,
 										   baserel->lateral_relids);
 				required_outer = bms_del_member(required_outer, baserel->relid);
 				if (bms_is_empty(required_outer))
-					required_outer = NULL;
+					continue;
 
-				path = create_foreignscan_path(root, baserel,
-											   rows,
-											   startup_cost,
-											   total_cost,
-											   NIL,		/* no pathkeys */
-											   required_outer,
-											   NIL);	/* no fdw_private */
-				add_path(baserel, (Path *) path);
+				/* Get the ParamPathInfo */
+				param_info = get_baserel_parampathinfo(root, baserel,
+													   required_outer);
+				Assert(param_info != NULL);
+
+				/* Add it to list unless we already have it */
+				ppi_list = list_append_unique_ptr(ppi_list, param_info);
 			}
 
 			/* Try again, now ignoring the expression we found this time */
 			arg.already_used = lappend(arg.already_used, arg.current);
 		}
+	}
+
+	/*
+	 * Now build a path for each useful outer relation.
+	 */
+	foreach(lc, ppi_list)
+	{
+		ParamPathInfo *param_info = (ParamPathInfo *) lfirst(lc);
+		double		rows;
+		int			width;
+		Cost		startup_cost;
+		Cost		total_cost;
+
+		/* Get a cost estimate from the remote */
+		estimate_path_cost_size(root, baserel,
+								param_info->ppi_clauses,
+								&rows, &width,
+								&startup_cost, &total_cost);
+
+		/*
+		 * ppi_rows currently won't get looked at by anything, but still we
+		 * may as well ensure that it matches our idea of the rowcount.
+		 */
+		param_info->ppi_rows = rows;
+
+		/* Make the path */
+		path = create_foreignscan_path(root, baserel,
+									   rows,
+									   startup_cost,
+									   total_cost,
+									   NIL,		/* no pathkeys */
+									   param_info->ppi_req_outer,
+									   NIL);	/* no fdw_private list */
+		add_path(baserel, (Path *) path);
 	}
 }
 
@@ -748,16 +751,15 @@ postgresGetForeignPlan(PlannerInfo *root,
 	/*
 	 * Separate the scan_clauses into those that can be executed remotely and
 	 * those that can't.  baserestrictinfo clauses that were previously
-	 * determined to be safe or unsafe by classifyClauses are shown in
+	 * determined to be safe or unsafe by classifyConditions are shown in
 	 * fpinfo->remote_conds and fpinfo->local_conds.  Anything else in the
-	 * scan_clauses list should be a join clause that was found safe by
-	 * postgresGetForeignPaths.
+	 * scan_clauses list will be a join clause, which we have to check for
+	 * remote-safety.
 	 *
-	 * Note: for clauses extracted from EquivalenceClasses, it's possible that
-	 * what we get here is a different representation of the clause than what
-	 * postgresGetForeignPaths saw; for example we might get a commuted
-	 * version of the clause.  So we can't insist on simple equality as we do
-	 * for the baserestrictinfo clauses.
+	 * Note: the join clauses we see here should be the exact same ones
+	 * previously examined by postgresGetForeignPaths.  Possibly it'd be worth
+	 * passing forward the classification work done then, rather than
+	 * repeating it here.
 	 *
 	 * This code must match "extract_actual_clauses(scan_clauses, false)"
 	 * except for the additional decision about remote versus local execution.
@@ -779,11 +781,10 @@ postgresGetForeignPlan(PlannerInfo *root,
 			remote_conds = lappend(remote_conds, rinfo);
 		else if (list_member_ptr(fpinfo->local_conds, rinfo))
 			local_exprs = lappend(local_exprs, rinfo->clause);
-		else
-		{
-			Assert(is_foreign_expr(root, baserel, rinfo->clause));
+		else if (is_foreign_expr(root, baserel, rinfo->clause))
 			remote_conds = lappend(remote_conds, rinfo);
-		}
+		else
+			local_exprs = lappend(local_exprs, rinfo->clause);
 	}
 
 	/*
@@ -812,7 +813,7 @@ postgresGetForeignPlan(PlannerInfo *root,
 		 root->parse->commandType == CMD_DELETE))
 	{
 		/* Relation is UPDATE/DELETE target, so use FOR UPDATE */
-		appendStringInfo(&sql, " FOR UPDATE");
+		appendStringInfoString(&sql, " FOR UPDATE");
 	}
 	else
 	{
@@ -833,11 +834,11 @@ postgresGetForeignPlan(PlannerInfo *root,
 			{
 				case LCS_FORKEYSHARE:
 				case LCS_FORSHARE:
-					appendStringInfo(&sql, " FOR SHARE");
+					appendStringInfoString(&sql, " FOR SHARE");
 					break;
 				case LCS_FORNOKEYUPDATE:
 				case LCS_FORUPDATE:
-					appendStringInfo(&sql, " FOR UPDATE");
+					appendStringInfoString(&sql, " FOR UPDATE");
 					break;
 			}
 		}
@@ -897,7 +898,7 @@ postgresBeginForeignScan(ForeignScanState *node, int eflags)
 	node->fdw_state = (void *) fsstate;
 
 	/*
-	 * Identify which user to do the remote access as.	This should match what
+	 * Identify which user to do the remote access as.  This should match what
 	 * ExecCheckRTEPerms() does.
 	 */
 	rte = rt_fetch(fsplan->scan.scanrelid, estate->es_range_table);
@@ -961,7 +962,7 @@ postgresBeginForeignScan(ForeignScanState *node, int eflags)
 	 * Prepare remote-parameter expressions for evaluation.  (Note: in
 	 * practice, we expect that all these expressions will be just Params, so
 	 * we could possibly do something more efficient than using the full
-	 * expression-eval machinery for this.	But probably there would be little
+	 * expression-eval machinery for this.  But probably there would be little
 	 * benefit, and it'd require postgres_fdw to know more than is desirable
 	 * about Param evaluation.)
 	 */
@@ -1037,8 +1038,8 @@ postgresReScanForeignScan(ForeignScanState *node)
 
 	/*
 	 * If any internal parameters affecting this node have changed, we'd
-	 * better destroy and recreate the cursor.	Otherwise, rewinding it should
-	 * be good enough.	If we've only fetched zero or one batch, we needn't
+	 * better destroy and recreate the cursor.  Otherwise, rewinding it should
+	 * be good enough.  If we've only fetched zero or one batch, we needn't
 	 * even rewind the cursor, just rescan what we have.
 	 */
 	if (node->ss.ps.chgParam != NULL)
@@ -1065,7 +1066,7 @@ postgresReScanForeignScan(ForeignScanState *node)
 	 */
 	res = PQexec(fsstate->conn, sql);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		pgfdw_report_error(ERROR, res, true, sql);
+		pgfdw_report_error(ERROR, res, fsstate->conn, true, sql);
 	PQclear(res);
 
 	/* Now force a fresh FETCH. */
@@ -1144,9 +1145,9 @@ postgresAddForeignUpdateTargets(Query *parsetree,
  * Note: currently, the plan tree generated for UPDATE/DELETE will always
  * include a ForeignScan that retrieves ctids (using SELECT FOR UPDATE)
  * and then the ModifyTable node will have to execute individual remote
- * UPDATE/DELETE commands.	If there are no local conditions or joins
+ * UPDATE/DELETE commands.  If there are no local conditions or joins
  * needed, it'd be better to let the scan node do UPDATE/DELETE RETURNING
- * and then do nothing at ModifyTable.	Room for future optimization ...
+ * and then do nothing at ModifyTable.  Room for future optimization ...
  */
 static List *
 postgresPlanForeignModify(PlannerInfo *root,
@@ -1243,7 +1244,7 @@ postgresPlanForeignModify(PlannerInfo *root,
 	 */
 	return list_make4(makeString(sql.data),
 					  targetAttrs,
-					  makeInteger((returningList != NIL)),
+					  makeInteger((retrieved_attrs != NIL)),
 					  retrieved_attrs);
 }
 
@@ -1284,7 +1285,7 @@ postgresBeginForeignModify(ModifyTableState *mtstate,
 	fmstate->rel = rel;
 
 	/*
-	 * Identify which user to do the remote access as.	This should match what
+	 * Identify which user to do the remote access as.  This should match what
 	 * ExecCheckRTEPerms() does.
 	 */
 	rte = rt_fetch(resultRelInfo->ri_RangeTableIndex, estate->es_range_table);
@@ -1399,7 +1400,7 @@ postgresExecForeignInsert(EState *estate,
 						 0);
 	if (PQresultStatus(res) !=
 		(fmstate->has_returning ? PGRES_TUPLES_OK : PGRES_COMMAND_OK))
-		pgfdw_report_error(ERROR, res, true, fmstate->query);
+		pgfdw_report_error(ERROR, res, fmstate->conn, true, fmstate->query);
 
 	/* Check number of rows affected, and fetch RETURNING tuple if any */
 	if (fmstate->has_returning)
@@ -1469,7 +1470,7 @@ postgresExecForeignUpdate(EState *estate,
 						 0);
 	if (PQresultStatus(res) !=
 		(fmstate->has_returning ? PGRES_TUPLES_OK : PGRES_COMMAND_OK))
-		pgfdw_report_error(ERROR, res, true, fmstate->query);
+		pgfdw_report_error(ERROR, res, fmstate->conn, true, fmstate->query);
 
 	/* Check number of rows affected, and fetch RETURNING tuple if any */
 	if (fmstate->has_returning)
@@ -1539,7 +1540,7 @@ postgresExecForeignDelete(EState *estate,
 						 0);
 	if (PQresultStatus(res) !=
 		(fmstate->has_returning ? PGRES_TUPLES_OK : PGRES_COMMAND_OK))
-		pgfdw_report_error(ERROR, res, true, fmstate->query);
+		pgfdw_report_error(ERROR, res, fmstate->conn, true, fmstate->query);
 
 	/* Check number of rows affected, and fetch RETURNING tuple if any */
 	if (fmstate->has_returning)
@@ -1588,7 +1589,7 @@ postgresEndForeignModify(EState *estate,
 		 */
 		res = PQexec(fmstate->conn, sql);
 		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			pgfdw_report_error(ERROR, res, true, sql);
+			pgfdw_report_error(ERROR, res, fmstate->conn, true, sql);
 		PQclear(res);
 		fmstate->p_name = NULL;
 	}
@@ -1714,9 +1715,20 @@ estimate_path_cost_size(PlannerInfo *root,
 	 */
 	if (fpinfo->use_remote_estimate)
 	{
+		List	   *remote_join_conds;
+		List	   *local_join_conds;
 		StringInfoData sql;
 		List	   *retrieved_attrs;
 		PGconn	   *conn;
+		Selectivity local_sel;
+		QualCost	local_cost;
+
+		/*
+		 * join_conds might contain both clauses that are safe to send across,
+		 * and clauses that aren't.
+		 */
+		classifyConditions(root, baserel, join_conds,
+						   &remote_join_conds, &local_join_conds);
 
 		/*
 		 * Construct EXPLAIN query including the desired SELECT, FROM, and
@@ -1730,8 +1742,8 @@ estimate_path_cost_size(PlannerInfo *root,
 		if (fpinfo->remote_conds)
 			appendWhereClause(&sql, root, baserel, fpinfo->remote_conds,
 							  true, NULL);
-		if (join_conds)
-			appendWhereClause(&sql, root, baserel, join_conds,
+		if (remote_join_conds)
+			appendWhereClause(&sql, root, baserel, remote_join_conds,
 							  (fpinfo->remote_conds == NIL), NULL);
 
 		/* Get the remote estimate */
@@ -1742,12 +1754,22 @@ estimate_path_cost_size(PlannerInfo *root,
 
 		retrieved_rows = rows;
 
-		/* Factor in the selectivity of the local_conds */
-		rows = clamp_row_est(rows * fpinfo->local_conds_sel);
+		/* Factor in the selectivity of the locally-checked quals */
+		local_sel = clauselist_selectivity(root,
+										   local_join_conds,
+										   baserel->relid,
+										   JOIN_INNER,
+										   NULL);
+		local_sel *= fpinfo->local_conds_sel;
 
-		/* Add in the eval cost of the local_conds */
+		rows = clamp_row_est(rows * local_sel);
+
+		/* Add in the eval cost of the locally-checked quals */
 		startup_cost += fpinfo->local_conds_cost.startup;
 		total_cost += fpinfo->local_conds_cost.per_tuple * retrieved_rows;
+		cost_qual_eval(&local_cost, local_join_conds, root);
+		startup_cost += local_cost.startup;
+		total_cost += local_cost.per_tuple * retrieved_rows;
 	}
 	else
 	{
@@ -1825,10 +1847,10 @@ get_remote_estimate(const char *sql, PGconn *conn,
 		 */
 		res = PQexec(conn, sql);
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
-			pgfdw_report_error(ERROR, res, false, sql);
+			pgfdw_report_error(ERROR, res, conn, false, sql);
 
 		/*
-		 * Extract cost numbers for topmost plan node.	Note we search for a
+		 * Extract cost numbers for topmost plan node.  Note we search for a
 		 * left paren from the end of the line to avoid being confused by
 		 * other uses of parentheses.
 		 */
@@ -1950,7 +1972,7 @@ create_cursor(ForeignScanState *node)
 	 * Notice that we pass NULL for paramTypes, thus forcing the remote server
 	 * to infer types for all parameters.  Since we explicitly cast every
 	 * parameter (see deparse.c), the "inference" is trivial and will produce
-	 * the desired result.	This allows us to avoid assuming that the remote
+	 * the desired result.  This allows us to avoid assuming that the remote
 	 * server has the same OIDs we do for the parameters' types.
 	 *
 	 * We don't use a PG_TRY block here, so be careful not to throw error
@@ -1959,7 +1981,7 @@ create_cursor(ForeignScanState *node)
 	res = PQexecParams(conn, buf.data, numParams, NULL, values,
 					   NULL, NULL, 0);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		pgfdw_report_error(ERROR, res, true, fsstate->query);
+		pgfdw_report_error(ERROR, res, conn, true, fsstate->query);
 	PQclear(res);
 
 	/* Mark the cursor as created, and show no tuples have been retrieved */
@@ -2010,7 +2032,7 @@ fetch_more_data(ForeignScanState *node)
 		res = PQexec(conn, sql);
 		/* On error, report the original query, not the FETCH. */
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
-			pgfdw_report_error(ERROR, res, false, fsstate->query);
+			pgfdw_report_error(ERROR, res, conn, false, fsstate->query);
 
 		/* Convert the data into HeapTuples */
 		numrows = PQntuples(res);
@@ -2059,7 +2081,7 @@ fetch_more_data(ForeignScanState *node)
  * user-visible computations.
  *
  * We use the equivalent of a function SET option to allow the settings to
- * persist only until the caller calls reset_transmission_modes().	If an
+ * persist only until the caller calls reset_transmission_modes().  If an
  * error is thrown in between, guc.c will take care of undoing the settings.
  *
  * The return value is the nestlevel that must be passed to
@@ -2071,7 +2093,7 @@ set_transmission_modes(void)
 	int			nestlevel = NewGUCNestLevel();
 
 	/*
-	 * The values set here should match what pg_dump does.	See also
+	 * The values set here should match what pg_dump does.  See also
 	 * configure_remote_session in connection.c.
 	 */
 	if (DateStyle != USE_ISO_DATES)
@@ -2116,7 +2138,7 @@ close_cursor(PGconn *conn, unsigned int cursor_number)
 	 */
 	res = PQexec(conn, sql);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		pgfdw_report_error(ERROR, res, true, sql);
+		pgfdw_report_error(ERROR, res, conn, true, sql);
 	PQclear(res);
 }
 
@@ -2153,7 +2175,7 @@ prepare_foreign_modify(PgFdwModifyState *fmstate)
 					NULL);
 
 	if (PQresultStatus(res) != PGRES_COMMAND_OK)
-		pgfdw_report_error(ERROR, res, true, fmstate->query);
+		pgfdw_report_error(ERROR, res, fmstate->conn, true, fmstate->query);
 	PQclear(res);
 
 	/* This action shows that the prepare has been done. */
@@ -2277,7 +2299,7 @@ postgresAnalyzeForeignTable(Relation relation,
 	*func = postgresAcquireSampleRowsFunc;
 
 	/*
-	 * Now we have to get the number of pages.	It's annoying that the ANALYZE
+	 * Now we have to get the number of pages.  It's annoying that the ANALYZE
 	 * API requires us to return that now, because it forces some duplication
 	 * of effort between this routine and postgresAcquireSampleRowsFunc.  But
 	 * it's probably not worth redefining that API at this point.
@@ -2303,7 +2325,7 @@ postgresAnalyzeForeignTable(Relation relation,
 	{
 		res = PQexec(conn, sql.data);
 		if (PQresultStatus(res) != PGRES_TUPLES_OK)
-			pgfdw_report_error(ERROR, res, false, sql.data);
+			pgfdw_report_error(ERROR, res, conn, false, sql.data);
 
 		if (PQntuples(res) != 1 || PQnfields(res) != 1)
 			elog(ERROR, "unexpected result from deparseAnalyzeSizeSql query");
@@ -2334,7 +2356,7 @@ postgresAnalyzeForeignTable(Relation relation,
  * which must have at least targrows entries.
  * The actual number of rows selected is returned as the function result.
  * We also count the total number of rows in the table and return it into
- * *totalrows.	Note that *totaldeadrows is always set to 0.
+ * *totalrows.  Note that *totaldeadrows is always set to 0.
  *
  * Note that the returned list of rows is not always in order by physical
  * position in the table.  Therefore, correlation estimates derived later
@@ -2397,7 +2419,7 @@ postgresAcquireSampleRowsFunc(Relation relation, int elevel,
 	{
 		res = PQexec(conn, sql.data);
 		if (PQresultStatus(res) != PGRES_COMMAND_OK)
-			pgfdw_report_error(ERROR, res, false, sql.data);
+			pgfdw_report_error(ERROR, res, conn, false, sql.data);
 		PQclear(res);
 		res = NULL;
 
@@ -2428,7 +2450,7 @@ postgresAcquireSampleRowsFunc(Relation relation, int elevel,
 			res = PQexec(conn, fetch_sql);
 			/* On error, report the original query, not the FETCH. */
 			if (PQresultStatus(res) != PGRES_TUPLES_OK)
-				pgfdw_report_error(ERROR, res, false, sql.data);
+				pgfdw_report_error(ERROR, res, conn, false, sql.data);
 
 			/* Process whatever we got. */
 			numrows = PQntuples(res);
@@ -2665,7 +2687,7 @@ make_tuple_from_result_row(PGresult *res,
 
 /*
  * Callback function which is called when error occurs during column value
- * conversion.	Print names of column and relation.
+ * conversion.  Print names of column and relation.
  */
 static void
 conversion_error_callback(void *arg)

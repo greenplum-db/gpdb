@@ -559,8 +559,7 @@ insert into bar2 values(2,2,2);
 insert into bar2 values(3,3,3);
 insert into bar2 values(4,4,4);
 update bar set f2 = f2 + 100 where f1 in (select f1 from foo);
-SELECT relname, bar.* FROM bar, pg_class where bar.tableoid = pg_class.oid
-order by 1,2;
+select tableoid::regclass::text as relname, bar.* from bar order by 1,2;
  relname | f1 | f2  
 ---------+----+-----
  bar     |  1 | 101
@@ -571,6 +570,24 @@ order by 1,2;
  bar2    |  2 | 102
  bar2    |  3 | 103
  bar2    |  4 |   4
+(8 rows)
+
+-- Check UPDATE with inherited target and an appendrel subquery
+update bar set f2 = f2 + 100
+from
+  ( select f1 from foo union all select f1+3 from foo ) ss
+where bar.f1 = ss.f1;
+select tableoid::regclass::text as relname, bar.* from bar order by 1,2;
+ relname | f1 | f2  
+---------+----+-----
+ bar     |  1 | 201
+ bar     |  2 | 202
+ bar     |  3 | 203
+ bar     |  4 | 104
+ bar2    |  1 | 201
+ bar2    |  2 | 202
+ bar2    |  3 | 203
+ bar2    |  4 | 104
 (8 rows)
 
 /* Test multiple inheritance of column defaults */
@@ -909,7 +926,6 @@ ALTER TABLE inhts RENAME d TO dd;
  dd     | integer |           | plain   |              | 
 Inherits: inht1,
           inhs1
-Has OIDs: no
 Distributed by: (aa)
 
 DROP TABLE inhts;
@@ -931,7 +947,6 @@ ALTER TABLE inht1 RENAME aa TO aaa;
  z      | integer |           | plain   |              | 
 Inherits: inht2,
           inht3
-Has OIDs: no
 Distributed by: (aaa)
 
 CREATE TABLE inhts (d int) INHERITS (inht2, inhs1);
@@ -950,7 +965,6 @@ ERROR:  cannot rename inherited column "b"
  d      | integer |           | plain   |              | 
 Inherits: inht2,
           inhs1
-Has OIDs: no
 Distributed by: (aaaa)
 
 WITH RECURSIVE r AS (
@@ -998,7 +1012,6 @@ CREATE TABLE test_constraints_inh () INHERITS (test_constraints);
 Indexes:
     "test_constraints_val1_val2_key" UNIQUE CONSTRAINT, btree (val1, val2)
 Child tables: test_constraints_inh
-Has OIDs: no
 Distributed by: (val1, val2)
 
 ALTER TABLE ONLY test_constraints DROP CONSTRAINT test_constraints_val1_val2_key;
@@ -1010,7 +1023,6 @@ ALTER TABLE ONLY test_constraints DROP CONSTRAINT test_constraints_val1_val2_key
  val1   | character varying |           | extended |              | 
  val2   | integer           |           | plain    |              | 
 Child tables: test_constraints_inh
-Has OIDs: no
 Distributed by: (val1, val2)
 
 \d+ test_constraints_inh
@@ -1021,7 +1033,6 @@ Distributed by: (val1, val2)
  val1   | character varying |           | extended |              | 
  val2   | integer           |           | plain    |              | 
 Inherits: test_constraints
-Has OIDs: no
 Distributed by: (val1, val2)
 
 DROP TABLE test_constraints_inh;
@@ -1039,7 +1050,6 @@ CREATE TABLE test_ex_constraints_inh () INHERITS (test_ex_constraints);
 Indexes:
     "test_ex_constraints_c_excl" EXCLUDE USING gist (c WITH &&)
 Child tables: test_ex_constraints_inh
-Has OIDs: no
 Distributed randomly
 
 ALTER TABLE test_ex_constraints DROP CONSTRAINT test_ex_constraints_c_excl;
@@ -1049,7 +1059,6 @@ ALTER TABLE test_ex_constraints DROP CONSTRAINT test_ex_constraints_c_excl;
 --------+--------+-----------+---------+--------------+-------------
  c      | circle |           | plain   |              | 
 Child tables: test_ex_constraints_inh
-Has OIDs: no
 Distributed randomly
 
 \d+ test_ex_constraints_inh
@@ -1058,7 +1067,6 @@ Distributed randomly
 --------+--------+-----------+---------+--------------+-------------
  c      | circle |           | plain   |              | 
 Inherits: test_ex_constraints
-Has OIDs: no
 Distributed randomly
 
 DROP TABLE test_ex_constraints_inh;
@@ -1076,7 +1084,6 @@ Indexes:
     "test_primary_constraints_pkey" PRIMARY KEY, btree (id)
 Referenced by:
     TABLE "test_foreign_constraints" CONSTRAINT "test_foreign_constraints_id1_fkey" FOREIGN KEY (id1) REFERENCES test_primary_constraints(id)
-Has OIDs: no
 Distributed by: (id)
 
 \d+ test_foreign_constraints
@@ -1087,7 +1094,6 @@ Distributed by: (id)
 Foreign-key constraints:
     "test_foreign_constraints_id1_fkey" FOREIGN KEY (id1) REFERENCES test_primary_constraints(id)
 Child tables: test_foreign_constraints_inh
-Has OIDs: no
 Distributed by: (id1)
 
 ALTER TABLE test_foreign_constraints DROP CONSTRAINT test_foreign_constraints_id1_fkey;
@@ -1097,7 +1103,6 @@ ALTER TABLE test_foreign_constraints DROP CONSTRAINT test_foreign_constraints_id
 --------+---------+-----------+---------+--------------+-------------
  id1    | integer |           | plain   |              | 
 Child tables: test_foreign_constraints_inh
-Has OIDs: no
 Distributed by: (id1)
 
 \d+ test_foreign_constraints_inh
@@ -1106,7 +1111,6 @@ Distributed by: (id1)
 --------+---------+-----------+---------+--------------+-------------
  id1    | integer |           | plain   |              | 
 Inherits: test_foreign_constraints
-Has OIDs: no
 Distributed by: (id1)
 
 DROP TABLE test_foreign_constraints_inh;
@@ -1255,6 +1259,34 @@ select * from matest0 order by 1-id;
   1 | Test 1
 (6 rows)
 
+explain (verbose, costs off) select min(1-id) from matest0;
+                     QUERY PLAN                     
+----------------------------------------------------
+ Aggregate
+   Output: min((min((1 - matest0.id))))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (min((1 - matest0.id)))
+         ->  Aggregate
+               Output: min((1 - matest0.id))
+               ->  Append
+                     ->  Seq Scan on public.matest0
+                           Output: matest0.id
+                     ->  Seq Scan on public.matest1
+                           Output: matest1.id
+                     ->  Seq Scan on public.matest2
+                           Output: matest2.id
+                     ->  Seq Scan on public.matest3
+                           Output: matest3.id
+ Optimizer: legacy query optimizer
+ Settings: enable_indexscan=off, optimizer=off
+(17 rows)
+
+select min(1-id) from matest0;
+ min 
+-----
+  -5
+(1 row)
+
 reset enable_indexscan;
 set enable_seqscan = off;  -- plan with fewest seqscans should be merge
 -- GPDB_92_MERGE_FIXME: the cost of bitmap scan is not correct?
@@ -1294,6 +1326,46 @@ select * from matest0 order by 1-id;
   2 | Test 2
   1 | Test 1
 (6 rows)
+
+explain (verbose, costs off) select min(1-id) from matest0;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Result
+   Output: $0
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Limit
+           Output: ((1 - matest0.id))
+           ->  Gather Motion 3:1  (slice1; segments: 3)
+                 Output: ((1 - matest0.id))
+                 Merge Key: ((1 - matest0.id))
+                 ->  Result
+                       Output: ((1 - matest0.id))
+                       ->  Merge Append
+                             Sort Key: ((1 - matest0.id))
+                             ->  Index Scan using matest0i on public.matest0
+                                   Output: matest0.id, (1 - matest0.id)
+                                   Index Cond: ((1 - matest0.id) IS NOT NULL)
+                             ->  Index Scan using matest1i on public.matest1
+                                   Output: matest1.id, (1 - matest1.id)
+                                   Index Cond: ((1 - matest1.id) IS NOT NULL)
+                             ->  Sort
+                                   Output: matest2.id, ((1 - matest2.id))
+                                   Sort Key: ((1 - matest2.id))
+                                   ->  Index Only Scan using matest2_pkey on public.matest2
+                                         Output: matest2.id, (1 - matest2.id)
+                                         Filter: ((1 - matest2.id) IS NOT NULL)
+                             ->  Index Scan using matest3i on public.matest3
+                                   Output: matest3.id, (1 - matest3.id)
+                                   Index Cond: ((1 - matest3.id) IS NOT NULL)
+ Optimizer: legacy query optimizer
+ Settings: enable_bitmapscan=off, enable_seqscan=off, optimizer=off
+(29 rows)
+
+select min(1-id) from matest0;
+ min 
+-----
+  -5
+(1 row)
 
 reset enable_seqscan;
 reset enable_bitmapscan;
@@ -1417,6 +1489,48 @@ ORDER BY x, y;
                ->  Index Only Scan using tenk1_unique2 on tenk1 b
  Optimizer: legacy query optimizer
 (8 rows)
+
+-- exercise rescan code path via a repeatedly-evaluated subquery
+explain (costs off)
+SELECT
+    ARRAY(SELECT f.i FROM (
+        (SELECT d + g.i FROM generate_series(4, 30, 3) d ORDER BY 1)
+        UNION ALL
+        (SELECT d + g.i FROM generate_series(0, 30, 5) d ORDER BY 1)
+    ) f(i)
+    ORDER BY f.i LIMIT 10)
+FROM generate_series(1, 3) g(i);
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Function Scan on generate_series g
+   SubPlan 1
+     ->  Limit
+           ->  Sort
+                 Sort Key: ((d.d + g.i))
+                 ->  Append
+                       ->  Sort
+                             Sort Key: ((d.d + g.i))
+                             ->  Function Scan on generate_series d
+                       ->  Sort
+                             Sort Key: ((d_1.d + g.i))
+                             ->  Function Scan on generate_series d_1
+ Optimizer: legacy query optimizer
+(13 rows)
+
+SELECT
+    ARRAY(SELECT f.i FROM (
+        (SELECT d + g.i FROM generate_series(4, 30, 3) d ORDER BY 1)
+        UNION ALL
+        (SELECT d + g.i FROM generate_series(0, 30, 5) d ORDER BY 1)
+    ) f(i)
+    ORDER BY f.i LIMIT 10)
+FROM generate_series(1, 3) g(i);
+            array             
+------------------------------
+ {1,5,6,8,11,11,14,16,17,20}
+ {2,6,7,9,12,12,15,17,18,21}
+ {3,7,8,10,13,13,16,18,19,22}
+(3 rows)
 
 reset enable_seqscan;
 reset enable_indexscan;

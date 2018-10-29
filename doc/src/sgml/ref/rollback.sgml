@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-ROLLBACK">
+ <indexterm zone="sql-rollback">
+  <primary>ROLLBACK</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>ROLLBACK</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -14,10 +18,6 @@ PostgreSQL documentation
   <refname>ROLLBACK</refname>
   <refpurpose>abort the current transaction</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-rollback">
-  <primary>ROLLBACK</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -59,8 +59,8 @@ ROLLBACK [ WORK | TRANSACTION ]
   </para>
 
   <para>
-   Issuing <command>ROLLBACK</> when not inside a transaction does
-   no harm, but it will provoke a warning message.
+   Issuing <command>ROLLBACK</> outside of a transaction
+   block emits a warning and otherwise has no effect.
   </para>
  </refsect1>
 

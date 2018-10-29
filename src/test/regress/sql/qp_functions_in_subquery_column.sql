@@ -1,4 +1,12 @@
-set search_path='qp_funcs_in_contexts';
+-- Create our own copies of these test tables in our own
+-- schema (see qp_functions_in_contexts_setup.sql)
+CREATE SCHEMA qp_funcs_in_subquery_column;
+set search_path='qp_funcs_in_subquery_column', 'qp_funcs_in_contexts';
+
+CREATE TABLE foo (a int, b int);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+CREATE TABLE bar (c int, d int);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
 
 -- @description function_in_subqry_column_0.sql
 SELECT * FROM foo, (SELECT func1_nosql_vol(a) from foo) r order by 1,2,3;
@@ -34,10 +42,10 @@ SELECT * FROM foo, (SELECT func1_read_int_sql_vol(a) from foo) r order by 1,2,3;
 SELECT * FROM foo, (SELECT func1_read_int_sql_stb(a) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_11.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(a) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(a) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_12.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(a) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(a) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_13.sql
 begin;
@@ -434,28 +442,28 @@ SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_mod_int_stb(a)) from foo
 rollback;
 
 -- @description function_in_subqry_column_withfunc2_110.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_vol(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_vol(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_111.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_stb(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_stb(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_112.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_imm(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_imm(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_113.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_114.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_stb(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_stb(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_115.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_116.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_vol(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_vol(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_117.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_stb(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_stb(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_118.sql
 begin;
@@ -468,22 +476,22 @@ SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_mod_int_stb(a)) from 
 rollback;
 
 -- @description function_in_subqry_column_withfunc2_120.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_vol(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_vol(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_121.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_stb(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_stb(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_122.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_imm(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_imm(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_123.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_124.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_125.sql
-SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_imm(a)) from foo) r order by 1,2,3; 
+SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_imm(a)) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_column_withfunc2_126.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_read_int_vol(a)) from foo) r order by 1,2,3;

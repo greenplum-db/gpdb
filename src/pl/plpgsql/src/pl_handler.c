@@ -3,7 +3,7 @@
  * pl_handler.c		- Handler for the PL/pgSQL
  *			  procedural language
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,6 +25,13 @@
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
+#include "cdb/cdbvars.h"
+
+
+static bool plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source);
+static void plpgsql_extra_warnings_assign_hook(const char *newvalue, void *extra);
+static void plpgsql_extra_errors_assign_hook(const char *newvalue, void *extra);
+
 PG_MODULE_MAGIC;
 
 /* Custom GUC variable */
@@ -37,8 +44,95 @@ static const struct config_enum_entry variable_conflict_options[] = {
 
 int			plpgsql_variable_conflict = PLPGSQL_RESOLVE_ERROR;
 
+bool		plpgsql_print_strict_params = false;
+
+char	   *plpgsql_extra_warnings_string = NULL;
+char	   *plpgsql_extra_errors_string = NULL;
+int			plpgsql_extra_warnings;
+int			plpgsql_extra_errors;
+
 /* Hook for plugins */
 PLpgSQL_plugin **plugin_ptr = NULL;
+
+
+static bool
+plpgsql_extra_checks_check_hook(char **newvalue, void **extra, GucSource source)
+{
+	char	   *rawstring;
+	List	   *elemlist;
+	ListCell   *l;
+	int			extrachecks = 0;
+	int		   *myextra;
+
+	if (pg_strcasecmp(*newvalue, "all") == 0)
+		extrachecks = PLPGSQL_XCHECK_ALL;
+	else if (pg_strcasecmp(*newvalue, "none") == 0)
+		extrachecks = PLPGSQL_XCHECK_NONE;
+	else
+	{
+		/* Need a modifiable copy of string */
+		rawstring = pstrdup(*newvalue);
+
+		/* Parse string into list of identifiers */
+		if (!SplitIdentifierString(rawstring, ',', &elemlist))
+		{
+			/* syntax error in list */
+			GUC_check_errdetail("List syntax is invalid.");
+			pfree(rawstring);
+			list_free(elemlist);
+			return false;
+		}
+
+		foreach(l, elemlist)
+		{
+			char	   *tok = (char *) lfirst(l);
+
+			if (pg_strcasecmp(tok, "shadowed_variables") == 0)
+				extrachecks |= PLPGSQL_XCHECK_SHADOWVAR;
+			else if (pg_strcasecmp(tok, "all") == 0 || pg_strcasecmp(tok, "none") == 0)
+			{
+				GUC_check_errdetail("Key word \"%s\" cannot be combined with other key words.", tok);
+				pfree(rawstring);
+				list_free(elemlist);
+				return false;
+			}
+			else
+			{
+				GUC_check_errdetail("Unrecognized key word: \"%s\".", tok);
+				pfree(rawstring);
+				list_free(elemlist);
+				return false;
+			}
+		}
+
+		pfree(rawstring);
+		list_free(elemlist);
+	}
+
+	myextra = (int *) malloc(sizeof(int));
+	*myextra = extrachecks;
+	*extra = (void *) myextra;
+
+	return true;
+}
+
+static void
+plpgsql_extra_warnings_assign_hook(const char *newvalue, void *extra)
+{
+	/*
+	 * Don't emit parsing warnings in segments. We will emit them in the
+	 * QD, that's enough. The user won't appreciate getting the same warning
+	 * many times.
+	 */
+	if (Gp_role != GP_ROLE_EXECUTE)
+		plpgsql_extra_warnings = *((int *) extra);
+}
+
+static void
+plpgsql_extra_errors_assign_hook(const char *newvalue, void *extra)
+{
+	plpgsql_extra_errors = *((int *) extra);
+}
 
 
 /*
@@ -65,6 +159,34 @@ _PG_init(void)
 							 variable_conflict_options,
 							 PGC_SUSET, 0,
 							 NULL, NULL, NULL);
+
+	DefineCustomBoolVariable("plpgsql.print_strict_params",
+							 gettext_noop("Print information about parameters in the DETAIL part of the error messages generated on INTO .. STRICT failures."),
+							 NULL,
+							 &plpgsql_print_strict_params,
+							 false,
+							 PGC_USERSET, 0,
+							 NULL, NULL, NULL);
+
+	DefineCustomStringVariable("plpgsql.extra_warnings",
+							   gettext_noop("List of programming constructs which should produce a warning."),
+							   NULL,
+							   &plpgsql_extra_warnings_string,
+							   "none",
+							   PGC_USERSET, GUC_LIST_INPUT,
+							   plpgsql_extra_checks_check_hook,
+							   plpgsql_extra_warnings_assign_hook,
+							   NULL);
+
+	DefineCustomStringVariable("plpgsql.extra_errors",
+							   gettext_noop("List of programming constructs which should produce an error."),
+							   NULL,
+							   &plpgsql_extra_errors_string,
+							   "none",
+							   PGC_USERSET, GUC_LIST_INPUT,
+							   plpgsql_extra_checks_check_hook,
+							   plpgsql_extra_errors_assign_hook,
+							   NULL);
 
 	EmitWarningsOnPlaceholders("plpgsql");
 
@@ -126,7 +248,7 @@ plpgsql_call_handler(PG_FUNCTION_ARGS)
 			retval = (Datum) 0;
 		}
 		else
-			retval = plpgsql_exec_function(func, fcinfo);
+			retval = plpgsql_exec_function(func, fcinfo, NULL);
 	}
 	PG_CATCH();
 	{
@@ -165,6 +287,7 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
 	PLpgSQL_function *func;
 	FunctionCallInfoData fake_fcinfo;
 	FmgrInfo	flinfo;
+	EState	   *simple_eval_estate;
 	Datum		retval;
 	int			rc;
 
@@ -193,7 +316,51 @@ plpgsql_inline_handler(PG_FUNCTION_ARGS)
 	flinfo.fn_oid = InvalidOid;
 	flinfo.fn_mcxt = CurrentMemoryContext;
 
-	retval = plpgsql_exec_function(func, &fake_fcinfo);
+	/* Create a private EState for simple-expression execution */
+	simple_eval_estate = CreateExecutorState();
+
+	/* And run the function */
+	PG_TRY();
+	{
+		retval = plpgsql_exec_function(func, &fake_fcinfo, simple_eval_estate);
+	}
+	PG_CATCH();
+	{
+		/*
+		 * We need to clean up what would otherwise be long-lived resources
+		 * accumulated by the failed DO block, principally cached plans for
+		 * statements (which can be flushed with plpgsql_free_function_memory)
+		 * and execution trees for simple expressions, which are in the
+		 * private EState.
+		 *
+		 * Before releasing the private EState, we must clean up any
+		 * simple_econtext_stack entries pointing into it, which we can do by
+		 * invoking the subxact callback.  (It will be called again later if
+		 * some outer control level does a subtransaction abort, but no harm
+		 * is done.)  We cheat a bit knowing that plpgsql_subxact_cb does not
+		 * pay attention to its parentSubid argument.
+		 */
+		plpgsql_subxact_cb(SUBXACT_EVENT_ABORT_SUB,
+						   GetCurrentSubTransactionId(),
+						   0, NULL);
+
+		/* Clean up the private EState */
+		FreeExecutorState(simple_eval_estate);
+
+		/* Function should now have no remaining use-counts ... */
+		func->use_count--;
+		Assert(func->use_count == 0);
+
+		/* ... so we can free subsidiary storage */
+		plpgsql_free_function_memory(func);
+
+		/* And propagate the error */
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
+
+	/* Clean up the private EState */
+	FreeExecutorState(simple_eval_estate);
 
 	/* Function should now have no remaining use-counts ... */
 	func->use_count--;

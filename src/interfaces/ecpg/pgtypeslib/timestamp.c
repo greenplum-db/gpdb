@@ -18,9 +18,6 @@
 #include "pgtypes_date.h"
 
 
-int PGTYPEStimestamp_defmt_scan(char **, const char *, timestamp *, int *, int *, int *,
-							int *, int *, int *, int *);
-
 #ifdef HAVE_INT64_TIMESTAMP
 static int64
 time2t(const int hour, const int min, const int sec, const fsec_t fsec)
@@ -254,6 +251,8 @@ recalc_t:
 		if (tzn != NULL)
 			*tzn = NULL;
 	}
+
+	tm->tm_yday = dDate - date2j(tm->tm_year, 1, 1) + 1;
 
 	return 0;
 }	/* timestamp2tm() */

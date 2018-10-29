@@ -6,7 +6,7 @@
  * See also lsyscache.h, which provides convenience routines for
  * common cache-lookup operations.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/syscache.h
@@ -130,6 +130,9 @@ extern uint32 GetSysCacheHashValue(int cacheId,
 struct catclist;
 extern struct catclist *SearchSysCacheList(int cacheId, int nkeys,
 				   Datum key1, Datum key2, Datum key3, Datum key4);
+
+extern bool RelationInvalidatesSnapshotsOnly(Oid);
+extern bool RelationHasSysCache(Oid);
 
 /*
  * The use of the macros below rather than direct calls to the corresponding

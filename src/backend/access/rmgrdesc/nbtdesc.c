@@ -3,7 +3,7 @@
  * nbtdesc.c
  *	  rmgr descriptor routines for access/nbtree/nbtxlog.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -109,30 +109,6 @@ out_delete(StringInfo buf, XLogRecord *record)
 	}
 }
 
-/*
- * Print additional information about a DELETE_PAGE record.
- */
-static void
-out_delete_page(StringInfo buf, uint8 info, XLogRecord *record)
-{
-	char					*rec = XLogRecGetData(record);
-	xl_btree_delete_page 	*xlrec = (xl_btree_delete_page *) rec;
-
-	/* Update metapage if needed */
-	if (info == XLOG_BTREE_DELETE_PAGE_META)
-	{
-		xl_btree_metadata md;
-
-		memcpy(&md, (char *) xlrec + SizeOfBtreeDeletePage,
-			   sizeof(xl_btree_metadata));
-		appendStringInfo(buf, "; update metadata page 0 (root page value %u, level %d, fastroot page value %u, fastlevel %d)",
-						 md.root, 
-						 md.level,
-						 md.fastroot, 
-						 md.fastlevel);
-	}
-}
-
 void
 btree_desc(StringInfo buf, XLogRecord *record)
 {
@@ -146,7 +122,7 @@ btree_desc(StringInfo buf, XLogRecord *record)
 			{
 				xl_btree_insert *xlrec = (xl_btree_insert *) rec;
 
-				appendStringInfo(buf, "insert: ");
+				appendStringInfoString(buf, "insert: ");
 				out_target(buf, &(xlrec->target));
 				out_insert(buf, /* isleaf */ true, /* ismeta */ false, record);
 				break;
@@ -155,7 +131,7 @@ btree_desc(StringInfo buf, XLogRecord *record)
 			{
 				xl_btree_insert *xlrec = (xl_btree_insert *) rec;
 
-				appendStringInfo(buf, "insert_upper: ");
+				appendStringInfoString(buf, "insert_upper: ");
 				out_target(buf, &(xlrec->target));
 				out_insert(buf, /* isleaf */ false, /* ismeta */ false, record);
 				break;
@@ -164,7 +140,7 @@ btree_desc(StringInfo buf, XLogRecord *record)
 			{
 				xl_btree_insert *xlrec = (xl_btree_insert *) rec;
 
-				appendStringInfo(buf, "insert_meta: ");
+				appendStringInfoString(buf, "insert_meta: ");
 				out_target(buf, &(xlrec->target));
 				out_insert(buf, /* isleaf */ false, /* ismeta */ true, record);
 				break;
@@ -238,17 +214,27 @@ btree_desc(StringInfo buf, XLogRecord *record)
 				out_delete(buf, record);
 				break;
 			}
-		case XLOG_BTREE_DELETE_PAGE:
-		case XLOG_BTREE_DELETE_PAGE_META:
-		case XLOG_BTREE_DELETE_PAGE_HALF:
+		case XLOG_BTREE_MARK_PAGE_HALFDEAD:
 			{
-				xl_btree_delete_page *xlrec = (xl_btree_delete_page *) rec;
+				xl_btree_mark_page_halfdead *xlrec = (xl_btree_mark_page_halfdead *) rec;
 
-				appendStringInfo(buf, "delete_page: ");
+				appendStringInfoString(buf, "mark_page_halfdead: ");
 				out_target(buf, &(xlrec->target));
-				appendStringInfo(buf, "; dead %u; left %u; right %u",
-							xlrec->deadblk, xlrec->leftblk, xlrec->rightblk);
-				out_delete_page(buf, info, record);
+				appendStringInfo(buf, "; topparent %u; leaf %u; left %u; right %u",
+								 xlrec->topparent, xlrec->leafblk, xlrec->leftblk, xlrec->rightblk);
+				break;
+			}
+		case XLOG_BTREE_UNLINK_PAGE_META:
+		case XLOG_BTREE_UNLINK_PAGE:
+			{
+				xl_btree_unlink_page *xlrec = (xl_btree_unlink_page *) rec;
+
+				appendStringInfo(buf, "unlink_page: rel %u/%u/%u; ",
+				xlrec->node.spcNode, xlrec->node.dbNode, xlrec->node.relNode);
+				appendStringInfo(buf, "dead %u; left %u; right %u; btpo_xact %u; ",
+								 xlrec->deadblk, xlrec->leftsib, xlrec->rightsib, xlrec->btpo_xact);
+				appendStringInfo(buf, "leaf %u; leafleft %u; leafright %u; topparent %u",
+								 xlrec->leafblk, xlrec->leafleftsib, xlrec->leafrightsib, xlrec->topparent);
 				break;
 			}
 		case XLOG_BTREE_NEWROOT:
@@ -271,7 +257,7 @@ btree_desc(StringInfo buf, XLogRecord *record)
 				break;
 			}
 		default:
-			appendStringInfo(buf, "UNKNOWN");
+			appendStringInfoString(buf, "UNKNOWN");
 			break;
 	}
 }

@@ -696,6 +696,7 @@ _outCreateStmt_common(StringInfo str, CreateStmt *node)
 	WRITE_INT_FIELD(parentOidCount);
 	WRITE_NODE_FIELD(ofTypename);
 	WRITE_NODE_FIELD(constraints);
+
 	WRITE_NODE_FIELD(options);
 	WRITE_ENUM_FIELD(oncommit, OnCommitAction);
 	WRITE_STRING_FIELD(tablespacename);
@@ -833,42 +834,6 @@ _outAlterDefaultPrivilegesStmt(StringInfo str, AlterDefaultPrivilegesStmt *node)
 }
 
 static void
-_outColumnDef(StringInfo str, ColumnDef *node)
-{
-	WRITE_NODE_TYPE("COLUMNDEF");
-
-	WRITE_STRING_FIELD(colname);
-	WRITE_NODE_FIELD(typeName);
-	WRITE_INT_FIELD(inhcount);
-	WRITE_BOOL_FIELD(is_local);
-	WRITE_BOOL_FIELD(is_not_null);
-	WRITE_BOOL_FIELD(is_from_type);
-	WRITE_INT_FIELD(attnum);
-	WRITE_CHAR_FIELD(storage);
-	WRITE_NODE_FIELD(raw_default);
-	WRITE_NODE_FIELD(cooked_default);
-	WRITE_NODE_FIELD(collClause);
-	WRITE_OID_FIELD(collOid);
-	WRITE_NODE_FIELD(constraints);
-	WRITE_NODE_FIELD(encoding);
-}
-
-static void
-_outTypeName(StringInfo str, TypeName *node)
-{
-	WRITE_NODE_TYPE("TYPENAME");
-
-	WRITE_NODE_FIELD(names);
-	WRITE_OID_FIELD(typeOid);
-	WRITE_BOOL_FIELD(setof);
-	WRITE_BOOL_FIELD(pct_type);
-	WRITE_NODE_FIELD(typmods);
-	WRITE_INT_FIELD(typemod);
-	WRITE_NODE_FIELD(arrayBounds);
-	WRITE_LOCATION_FIELD(location);
-}
-
-static void
 _outQuery(StringInfo str, Query *node)
 {
 	WRITE_NODE_TYPE("QUERY");
@@ -906,6 +871,7 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(setOperations);
 	WRITE_NODE_FIELD(constraintDeps);
 	WRITE_BOOL_FIELD(isCTAS);
+	WRITE_BOOL_FIELD(needReshuffle);
 
 	/* Don't serialize policy */
 }
@@ -1277,17 +1243,38 @@ _outGpPolicy(StringInfo str, GpPolicy *node)
 }
 
 static void
+_outAlterTableSpaceMoveStmt(StringInfo str, AlterTableSpaceMoveStmt *node)
+{
+	WRITE_NODE_TYPE("ALTERTABLESPACEMOVESTMT");
+
+	WRITE_STRING_FIELD(orig_tablespacename);
+	WRITE_ENUM_FIELD(objtype, ObjectType);
+	WRITE_BOOL_FIELD(move_all);
+	WRITE_NODE_FIELD(roles);
+	WRITE_STRING_FIELD(new_tablespacename);
+	WRITE_BOOL_FIELD(nowait);
+}
+
+static void
 _outAlterTableSpaceOptionsStmt(StringInfo str, AlterTableSpaceOptionsStmt *node)
 {
 	WRITE_NODE_TYPE("ALTERTABLESPACEOPTIONS");
 
-	char	   *tablespacename;
-	List	   *options;
-	bool		isReset;
-
 	WRITE_STRING_FIELD(tablespacename);
 	WRITE_NODE_FIELD(options);
 	WRITE_BOOL_FIELD(isReset);
+}
+
+static void
+_outReshuffleExprFast(StringInfo str, ReshuffleExpr *node)
+{
+	WRITE_NODE_TYPE("RESHUFFLEEXPR");
+
+	WRITE_INT_FIELD(newSegs);
+	WRITE_INT_FIELD(oldSegs);
+	WRITE_NODE_FIELD(hashKeys);
+	WRITE_NODE_FIELD(hashTypes);
+	WRITE_INT_FIELD(ptype);
 }
 
 /*
@@ -1472,6 +1459,9 @@ _outNode(StringInfo str, void *obj)
 			case T_SplitUpdate:
 				_outSplitUpdate(str, obj);
 				break;
+			case T_Reshuffle:
+				_outReshuffle(str, obj);
+				break;
 			case T_RowTrigger:
 				_outRowTrigger(str, obj);
 				break;
@@ -1609,6 +1599,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_RangeTblRef:
 				_outRangeTblRef(str, obj);
+				break;
+			case T_RangeTblFunction:
+				_outRangeTblFunction(str, obj);
 				break;
 			case T_JoinExpr:
 				_outJoinExpr(str, obj);
@@ -1858,6 +1851,9 @@ _outNode(StringInfo str, void *obj)
 			case T_TruncateStmt:
 				_outTruncateStmt(str, obj);
 				break;
+			case T_ReplicaIdentityStmt:
+				_outReplicaIdentityStmt(str, obj);
+				break;
 			case T_AlterTableStmt:
 				_outAlterTableStmt(str, obj);
 				break;
@@ -1976,6 +1972,9 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_Query:
 				_outQuery(str, obj);
+				break;
+			case T_WithCheckOption:
+				_outWithCheckOption(str, obj);
 				break;
 			case T_SortGroupClause:
 				_outSortGroupClause(str, obj);
@@ -2222,8 +2221,14 @@ _outNode(StringInfo str, void *obj)
 			case T_DistributedBy:
 				_outDistributedBy(str, obj);
 				break;
+			case T_AlterTableSpaceMoveStmt:
+				_outAlterTableSpaceMoveStmt(str, obj);
+				break;
 			case T_AlterTableSpaceOptionsStmt:
 				_outAlterTableSpaceOptionsStmt(str, obj);
+				break;
+			case T_ReshuffleExpr:
+                _outReshuffleExprFast(str, obj);
 				break;
 			default:
 				elog(ERROR, "could not serialize unrecognized node type: %d",

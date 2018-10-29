@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -38,7 +38,7 @@ bool maxSortGroupRef_walker(Node *node, maxSortGroupRef_context *cxt);
 /*
  * tlist_member
  *	  Finds the (first) member of the given tlist whose expression is
- *	  equal() to the given expression.	Result is NULL if no such member.
+ *	  equal() to the given expression.  Result is NULL if no such member.
  */
 TargetEntry *
 tlist_member(Node *node, List *targetlist)
@@ -109,6 +109,35 @@ tlist_member_ignore_relabel(Node *node, List *targetlist)
 			tlexpr = ((RelabelType *) tlexpr)->arg;
 
 		if (equal(node, tlexpr))
+			return tlentry;
+	}
+	return NULL;
+}
+
+/*
+ * tlist_member_match_var
+ *	  Same as above, except that we match the provided Var on the basis
+ *	  of varno/varattno/varlevelsup only, rather than using full equal().
+ *
+ * This is needed in some cases where we can't be sure of an exact typmod
+ * match.  It's probably a good idea to check the vartype anyway, but
+ * we leave it to the caller to apply any suitable sanity checks.
+ */
+TargetEntry *
+tlist_member_match_var(Var *var, List *targetlist)
+{
+	ListCell   *temp;
+
+	foreach(temp, targetlist)
+	{
+		TargetEntry *tlentry = (TargetEntry *) lfirst(temp);
+		Var		   *tlvar = (Var *) tlentry->expr;
+
+		if (!tlvar || !IsA(tlvar, Var))
+			continue;
+		if (var->varno == tlvar->varno &&
+			var->varattno == tlvar->varattno &&
+			var->varlevelsup == tlvar->varlevelsup)
 			return tlentry;
 	}
 	return NULL;

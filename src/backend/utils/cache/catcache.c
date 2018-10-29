@@ -3,7 +3,7 @@
  * catcache.c
  *	  System catalog cache for tuples matching a key.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -21,6 +21,7 @@
 #include "access/sysattr.h"
 #include "access/tuptoaster.h"
 #include "access/valid.h"
+#include "access/xact.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "miscadmin.h"
@@ -566,8 +567,9 @@ AtEOXact_CatCache(bool isCommit)
 			/* Check CatCLists */
 			dlist_foreach(iter, &ccp->cc_lists)
 			{
-				CatCList   *cl = dlist_container(CatCList, cache_elem, iter.cur);
+				CatCList   *cl;
 
+				cl = dlist_container(CatCList, cache_elem, iter.cur);
 				Assert(cl->cl_magic == CL_MAGIC);
 				Assert(cl->refcount == 0);
 				Assert(!cl->dead);
@@ -580,8 +582,9 @@ AtEOXact_CatCache(bool isCommit)
 
 				dlist_foreach(iter, bucket)
 				{
-					CatCTup    *ct = dlist_container(CatCTup, cache_elem, iter.cur);
+					CatCTup    *ct;
 
+					ct = dlist_container(CatCTup, cache_elem, iter.cur);
 					Assert(ct->ct_magic == CT_MAGIC);
 					Assert(ct->refcount == 0);
 					Assert(!ct->dead);
@@ -734,9 +737,8 @@ InitCatCache(int id,
 	int			i;
 
 	/*
-	 * nbuckets is the number of hash buckets to use in this catcache.
-	 * Currently we just use a hard-wired estimate of an appropriate size for
-	 * each cache; maybe later make them dynamically resizable?
+	 * nbuckets is the initial number of hash buckets to use in this catcache.
+	 * It will be enlarged later if it becomes too full.
 	 *
 	 * nbuckets must be a power of two.  We check this via Assert rather than
 	 * a full runtime check because the values will be coming from constant
@@ -775,7 +777,8 @@ InitCatCache(int id,
 	 *
 	 * Note: we rely on zeroing to initialize all the dlist headers correctly
 	 */
-	cp = (CatCache *) palloc0(sizeof(CatCache) + nbuckets * sizeof(dlist_head));
+	cp = (CatCache *) palloc0(sizeof(CatCache));
+	cp->cc_bucket = palloc0(nbuckets * sizeof(dlist_head));
 
 	/*
 	 * initialize the cache's relation information for the relation
@@ -814,10 +817,48 @@ InitCatCache(int id,
 }
 
 /*
+ * Enlarge a catcache, doubling the number of buckets.
+ */
+static void
+RehashCatCache(CatCache *cp)
+{
+	dlist_head *newbucket;
+	int			newnbuckets;
+	int			i;
+
+	elog(DEBUG1, "rehashing catalog cache id %d for %s; %d tups, %d buckets",
+		 cp->id, cp->cc_relname, cp->cc_ntup, cp->cc_nbuckets);
+
+	/* Allocate a new, larger, hash table. */
+	newnbuckets = cp->cc_nbuckets * 2;
+	newbucket = (dlist_head *) MemoryContextAllocZero(CacheMemoryContext, newnbuckets * sizeof(dlist_head));
+
+	/* Move all entries from old hash table to new. */
+	for (i = 0; i < cp->cc_nbuckets; i++)
+	{
+		dlist_mutable_iter iter;
+
+		dlist_foreach_modify(iter, &cp->cc_bucket[i])
+		{
+			CatCTup    *ct = dlist_container(CatCTup, cache_elem, iter.cur);
+			int			hashIndex = HASH_INDEX(ct->hash_value, newnbuckets);
+
+			dlist_delete(iter.cur);
+			dlist_push_head(&newbucket[hashIndex], &ct->cache_elem);
+		}
+	}
+
+	/* Switch to the new array. */
+	pfree(cp->cc_bucket);
+	cp->cc_nbuckets = newnbuckets;
+	cp->cc_bucket = newbucket;
+}
+
+/*
  *		CatalogCacheInitializeCache
  *
  * This function does final initialization of a catcache: obtain the tuple
- * descriptor and set up the hash and equality function links.	We assume
+ * descriptor and set up the hash and equality function links.  We assume
  * that the relcache entry can be opened at this point!
  */
 #ifdef CACHEDEBUG
@@ -1090,7 +1131,7 @@ CrossCheckTuple(int cacheId,
  *		if necessary (on the first access to a particular cache).
  *
  *		The result is NULL if not found, or a pointer to a HeapTuple in
- *		the cache.	The caller must not modify the tuple, and must call
+ *		the cache.  The caller must not modify the tuple, and must call
  *		ReleaseCatCache() when done with it.
  *
  * The search key values should be expressed as Datums of the key columns'
@@ -1115,6 +1156,9 @@ SearchCatCache(CatCache *cache,
 	Relation	relation;
 	SysScanDesc scandesc;
 	HeapTuple	ntp;
+
+	/* Make sure we're in a xact, even if this ends up being a cache hit */
+	Assert(IsTransactionState());
 
 	/*
 	 * one-time startup overhead for each cache
@@ -1220,8 +1264,8 @@ SearchCatCache(CatCache *cache,
 	 * the relation --- for example, due to shared-cache-inval messages being
 	 * processed during heap_open().  This is OK.  It's even possible for one
 	 * of those lookups to find and enter the very same tuple we are trying to
-	 * fetch here.	If that happens, we will enter a second copy of the tuple
-	 * into the cache.	The first copy will never be referenced again, and
+	 * fetch here.  If that happens, we will enter a second copy of the tuple
+	 * into the cache.  The first copy will never be referenced again, and
 	 * will eventually age out of the cache, so there's no functional problem.
 	 * This case is rare enough that it's not worth expending extra cycles to
 	 * detect.
@@ -1231,7 +1275,7 @@ SearchCatCache(CatCache *cache,
 	scandesc = systable_beginscan(relation,
 								  cache->cc_indexoid,
 								  IndexScanOK(cache, cur_skey),
-								  SnapshotNow,
+								  NULL,
 								  cache->cc_nkeys,
 								  cur_skey);
 
@@ -1271,7 +1315,7 @@ SearchCatCache(CatCache *cache,
 	 *
 	 * In bootstrap mode, we don't build negative entries, because the cache
 	 * invalidation mechanism isn't alive and can't clear them if the tuple
-	 * gets created later.	(Bootstrap doesn't do UPDATEs, so it doesn't need
+	 * gets created later.  (Bootstrap doesn't do UPDATEs, so it doesn't need
 	 * cache inval for that.)
 	 */
 	if (ct == NULL)
@@ -1521,7 +1565,7 @@ SearchCatCacheList(CatCache *cache,
 		scandesc = systable_beginscan(relation,
 									  cache->cc_indexoid,
 									  IndexScanOK(cache, cur_skey),
-									  SnapshotNow,
+									  NULL,
 									  nkeys,
 									  cur_skey);
 
@@ -1601,7 +1645,7 @@ SearchCatCacheList(CatCache *cache,
 		/*
 		 * We are now past the last thing that could trigger an elog before we
 		 * have finished building the CatCList and remembering it in the
-		 * resource owner.	So it's OK to fall out of the PG_TRY, and indeed
+		 * resource owner.  So it's OK to fall out of the PG_TRY, and indeed
 		 * we'd better do so before we start marking the members as belonging
 		 * to the list.
 		 */
@@ -1690,7 +1734,7 @@ ReleaseCatCacheList(CatCList *list)
 /*
  * CatalogCacheCreateEntry
  *		Create a new CatCTup entry, copying the given HeapTuple and other
- *		supplied data into it.	The new entry initially has refcount 0.
+ *		supplied data into it.  The new entry initially has refcount 0.
  */
 static CatCTup *
 CatalogCacheCreateEntry(CatCache *cache, HeapTuple ntp,
@@ -1739,6 +1783,13 @@ CatalogCacheCreateEntry(CatCache *cache, HeapTuple ntp,
 
 	cache->cc_ntup++;
 	CacheHdr->ch_ntup++;
+
+	/*
+	 * If the hash table has become too full, enlarge the buckets array. Quite
+	 * arbitrarily, we enlarge when fill factor > 2.
+	 */
+	if (cache->cc_ntup > cache->cc_nbuckets * 2)
+		RehashCatCache(cache);
 
 	return ct;
 }

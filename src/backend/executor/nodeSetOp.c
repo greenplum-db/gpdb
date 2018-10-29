@@ -5,7 +5,7 @@
  *
  * The input of a SetOp node consists of tuples from two relations,
  * which have been combined into one dataset, with a junk attribute added
- * that shows which relation each tuple came from.	In SETOP_SORTED mode,
+ * that shows which relation each tuple came from.  In SETOP_SORTED mode,
  * the input has furthermore been sorted according to all the grouping
  * columns (ie, all the non-junk attributes).  The SetOp node scans each
  * group of identical tuples to determine how many came from each input
@@ -18,7 +18,7 @@
  * relation is the left-hand one for EXCEPT, and tries to make the smaller
  * input relation come first for INTERSECT.  We build a hash table in memory
  * with one entry for each group of identical tuples, and count the number of
- * tuples in the group from each relation.	After seeing all the input, we
+ * tuples in the group from each relation.  After seeing all the input, we
  * scan the hashtable and generate the correct output using those counts.
  * We can avoid making hashtable entries for any tuples appearing only in the
  * second input relation, since they cannot result in any output.
@@ -32,7 +32,7 @@
  * input group.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -268,7 +268,7 @@ setop_retrieve_direct(SetOpState *setopstate)
 
 		/*
 		 * Store the copied first input tuple in the tuple table slot reserved
-		 * for it.	The tuple will be deleted when it is cleared from the
+		 * for it.  The tuple will be deleted when it is cleared from the
 		 * slot.
 		 */
 		ExecStoreHeapTuple(setopstate->grp_firstTuple,

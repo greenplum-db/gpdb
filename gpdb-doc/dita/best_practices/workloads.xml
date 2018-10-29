@@ -19,9 +19,6 @@
         <xref href="#topic_hhc_z5w_r4/section_r52_rbl_zt" format="dita"/>
       </li>
       <li>
-        <xref href="#topic_hhc_z5w_r4/section_upm_rbl_zt" format="dita"/>
-      </li>
-      <li>
         <xref href="#topic_hhc_z5w_r4/configuring_rq" format="dita"/>
       </li>
     </ul>
@@ -158,35 +155,6 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
             operations. </p>
         </li>
       </ul>
-    </section>
-    <section id="section_upm_rbl_zt">
-      <title>Example Memory Configuration Calculations</title>
-      <ul id="ul_q4x_g1g_zt">
-        <li>Total RAM = 256GB </li>
-        <li>SWAP = 64GB </li>
-        <li>8 primary segments and 8 mirror segments per host, in blocks of 4 hosts</li>
-        <li>Maximum number of primaries per host during failure is 11</li>
-      </ul>
-      <p>
-        <b>vm.overcommit_ratio calculation</b>
-        <codeblock>
-gp_vmem = ((SWAP + RAM) – (7.5GB + 0.05 * RAM)) / 1.7
-        = ((64 + 256) - (7.5 + 0.05 * 256)) / 1.7 
-        = 176
-
-vm.overcommit_ratio = (RAM - (0.026 * gp_vmem)) / RAM 
-                    = (256 - (0.026 * 176)) / 256 
-                    = .982</codeblock>
-        Set <codeph>vm.overcommit_ratio</codeph> to 98. </p>
-      <p>
-        <b>gp_vmem_protect_limit calculation</b>
-        <codeblock>
-gp_vmem_protect_limit = gp_vmem / maximum_acting_primary_segments
-                      = 176 / 11 
-                      = 16GB
-                      = 16384MB
-</codeblock>
-      </p>
     </section>
     <section id="configuring_rq">
       <title>Configuring Resource Queues</title>

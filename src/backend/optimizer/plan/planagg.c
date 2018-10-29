@@ -10,16 +10,16 @@
  *		 ORDER BY col ASC/DESC
  *		 LIMIT 1)
  * Given a suitable index on tab.col, this can be much faster than the
- * generic scan-all-the-rows aggregation plan.	We can handle multiple
+ * generic scan-all-the-rows aggregation plan.  We can handle multiple
  * MIN/MAX aggregates by generating multiple subqueries, and their
- * orderings can be different.	However, if the query contains any
+ * orderings can be different.  However, if the query contains any
  * non-optimizable aggregates, there's no point since we'll have to
  * scan all the rows anyway.
  *
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -41,6 +41,7 @@
 #include "optimizer/planmain.h"
 #include "optimizer/planner.h"
 #include "optimizer/subselect.h"
+#include "optimizer/tlist.h"
 #include "parser/parsetree.h"
 #include "parser/parse_clause.h"
 #include "utils/lsyscache.h"
@@ -138,7 +139,7 @@ preprocess_minmax_aggregates(PlannerInfo *root, List *tlist)
 
 	/*
 	 * Scan the tlist and HAVING qual to find all the aggregates and verify
-	 * all are MIN/MAX aggregates.	Stop as soon as we find one that isn't.
+	 * all are MIN/MAX aggregates.  Stop as soon as we find one that isn't.
 	 */
 	aggs_list = NIL;
 	if (find_minmax_aggs_walker((Node *) tlist, &aggs_list))
@@ -173,7 +174,7 @@ preprocess_minmax_aggregates(PlannerInfo *root, List *tlist)
 		 * We can use either an ordering that gives NULLS FIRST or one that
 		 * gives NULLS LAST; furthermore there's unlikely to be much
 		 * performance difference between them, so it doesn't seem worth
-		 * costing out both ways if we get a hit on the first one.	NULLS
+		 * costing out both ways if we get a hit on the first one.  NULLS
 		 * FIRST is more likely to be available if the operator is a
 		 * reverse-sort operator, so try that first if reverse.
 		 */
@@ -415,9 +416,8 @@ build_minmax_path(PlannerInfo *root, MinMaxAggInfo *mminfo,
 	TargetEntry *tle;
 	NullTest   *ntest;
 	SortGroupClause *sortcl;
-	Path	   *cheapest_path;
+	RelOptInfo *final_rel;
 	Path	   *sorted_path;
-	double		dNumGroups;
 	Cost		path_cost;
 	double		path_fraction;
 
@@ -486,25 +486,28 @@ build_minmax_path(PlannerInfo *root, MinMaxAggInfo *mminfo,
 	 * Generate the best paths for this query, telling query_planner that we
 	 * have LIMIT 1.
 	 */
-	query_planner(subroot, parse->targetList, 1.0, 1.0,
-				  minmax_qp_callback, NULL,
-				  &cheapest_path, &sorted_path, &dNumGroups);
+	subroot->tuple_fraction = 1.0;
+	subroot->limit_tuples = 1.0;
+
+	final_rel = query_planner(subroot, parse->targetList,
+							  minmax_qp_callback, NULL);
 
 	/*
-	 * Fail if no presorted path.  However, if query_planner determines that
-	 * the presorted path is also the cheapest, it will set sorted_path to
-	 * NULL ... don't be fooled.  (This is kind of a pain here, but it
-	 * simplifies life for grouping_planner, so leave it be.)
+	 * Get the best presorted path, that being the one that's cheapest for
+	 * fetching just one row.  If there's no such path, fail.
 	 */
+	if (final_rel->rows > 1.0)
+		path_fraction = 1.0 / final_rel->rows;
+	else
+		path_fraction = 1.0;
+
+	sorted_path =
+		get_cheapest_fractional_path_for_pathkeys(final_rel->pathlist,
+												  subroot->query_pathkeys,
+												  NULL,
+												  path_fraction);
 	if (!sorted_path)
-	{
-		if (cheapest_path &&
-			pathkeys_contained_in(subroot->sort_pathkeys,
-								  cheapest_path->pathkeys))
-			sorted_path = cheapest_path;
-		else
-			return false;
-	}
+		return false;
 
 	/*
 	 * Determine cost to get just the first row of the presorted path.
@@ -512,11 +515,6 @@ build_minmax_path(PlannerInfo *root, MinMaxAggInfo *mminfo,
 	 * Note: cost calculation here should match
 	 * compare_fractional_path_costs().
 	 */
-	if (sorted_path->parent->rows > 1.0)
-		path_fraction = 1.0 / sorted_path->parent->rows;
-	else
-		path_fraction = 1.0;
-
 	path_cost = sorted_path->startup_cost +
 		path_fraction * (sorted_path->total_cost - sorted_path->startup_cost);
 
@@ -562,7 +560,11 @@ make_agg_subplan(PlannerInfo *root, MinMaxAggInfo *mminfo)
 	 */
 	plan = create_plan(subroot, mminfo->path);
 
-	/* Replace the plan's tlist with a copy of the one we built above. */
+	/*
+	 * If the top-level plan node is one that cannot do expression evaluation
+	 * and its existing target list isn't already what we need, we must insert
+	 * a Result node to project the desired tlist.
+	 */
 	plan = plan_pushdown_tlist(root, plan, copyObject(subparse->targetList));
 
 	if (plan->flow->flotype == FLOW_SINGLETON)

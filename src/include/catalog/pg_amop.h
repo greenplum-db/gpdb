@@ -30,7 +30,7 @@
  * intentional denormalization of the catalogs to buy lookup speed.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_amop.h
@@ -400,11 +400,11 @@ DATA(insert (	1988   1700 1700 4 s 1757 403 0 ));
 DATA(insert (	1988   1700 1700 5 s 1756 403 0 ));
 
 /* btree complex */
-DATA(insert (	3221   7198 7198 1 s 6481 403 0 ));
-DATA(insert (	3221   7198 7198 2 s 6483 403 0 ));
-DATA(insert (	3221   7198 7198 3 s 6469 403 0 ));
-DATA(insert (	3221   7198 7198 4 s 6484 403 0 ));
-DATA(insert (	3221   7198 7198 5 s 6482 403 0 ));
+DATA(insert (	6221   7198 7198 1 s 6481 403 0 ));
+DATA(insert (	6221   7198 7198 2 s 6483 403 0 ));
+DATA(insert (	6221   7198 7198 3 s 6469 403 0 ));
+DATA(insert (	6221   7198 7198 4 s 6484 403 0 ));
+DATA(insert (	6221   7198 7198 5 s 6482 403 0 ));
 
 /*
  *	btree bool
@@ -507,6 +507,16 @@ DATA(insert (	2994  2249 2249 4 s 2993	403 0 ));
 DATA(insert (	2994  2249 2249 5 s 2991	403 0 ));
 
 /*
+ *	btree record_image_ops
+ */
+
+DATA(insert (	3194  2249 2249 1 s 3190	403 0 ));
+DATA(insert (	3194  2249 2249 2 s 3192	403 0 ));
+DATA(insert (	3194  2249 2249 3 s 3188	403 0 ));
+DATA(insert (	3194  2249 2249 4 s 3193	403 0 ));
+DATA(insert (	3194  2249 2249 5 s 3191	403 0 ));
+
+/*
  * btree uuid_ops
  */
 
@@ -515,6 +525,16 @@ DATA(insert (	2968  2950 2950 2 s 2976	403 0 ));
 DATA(insert (	2968  2950 2950 3 s 2972	403 0 ));
 DATA(insert (	2968  2950 2950 4 s 2977	403 0 ));
 DATA(insert (	2968  2950 2950 5 s 2975	403 0 ));
+
+/*
+ * btree pg_lsn_ops
+ */
+
+DATA(insert (	3253  3220 3220 1 s 3224	403 0 ));
+DATA(insert (	3253  3220 3220 2 s 3226	403 0 ));
+DATA(insert (	3253  3220 3220 3 s 3222	403 0 ));
+DATA(insert (	3253  3220 3220 4 s 3227	403 0 ));
+DATA(insert (	3253  3220 3220 5 s 3225	403 0 ));
 
 /*
  *	hash index _ops
@@ -585,6 +605,8 @@ DATA(insert (	2231   1042 1042 1 s 1054 405 0 ));
 DATA(insert (	2235   1033 1033 1 s  974 405 0 ));
 /* uuid_ops */
 DATA(insert (	2969   2950 2950 1 s 2972 405 0 ));
+/* pg_lsn_ops */
+DATA(insert (	3254   3220 3220 1 s 3222 405 0 ));
 /* numeric_ops */
 DATA(insert (	1998   1700 1700 1 s 1752 405 0 ));
 /* array_ops */
@@ -782,6 +804,33 @@ DATA(insert (	4017   25 25 14 s	667 4000 0 ));
 DATA(insert (	4017   25 25 15 s	666 4000 0 ));
 
 /*
+ * btree jsonb_ops
+ */
+DATA(insert (	4033   3802 3802 1 s	3242 403 0 ));
+DATA(insert (	4033   3802 3802 2 s	3244 403 0 ));
+DATA(insert (	4033   3802 3802 3 s	3240 403 0 ));
+DATA(insert (	4033   3802 3802 4 s	3245 403 0 ));
+DATA(insert (	4033   3802 3802 5 s	3243 403 0 ));
+
+/*
+ * hash jsonb_ops
+ */
+DATA(insert (	4034   3802 3802 1 s 3240 405 0 ));
+
+/*
+ * GIN jsonb_ops
+ */
+DATA(insert (	4036   3802 3802 7 s 3246 2742 0 ));
+DATA(insert (	4036   3802 25 9 s 3247 2742 0 ));
+DATA(insert (	4036   3802 1009 10 s 3248 2742 0 ));
+DATA(insert (	4036   3802 1009 11 s 3249 2742 0 ));
+
+/*
+ * GIN jsonb_path_ops
+ */
+DATA(insert (	4037   3802 3802 7 s 3246 2742 0 ));
+
+/*
  * SP-GiST range_ops
  */
 DATA(insert (	3474   3831 3831 1 s	3893 4000 0 ));
@@ -794,6 +843,21 @@ DATA(insert (	3474   3831 3831 7 s	3890 4000 0 ));
 DATA(insert (	3474   3831 3831 8 s	3892 4000 0 ));
 DATA(insert (	3474   3831 2283 16 s	3889 4000 0 ));
 DATA(insert (	3474   3831 3831 18 s	3882 4000 0 ));
+
+/*
+ * GiST inet_ops
+ */
+DATA(insert (	3550	869 869 3 s		3552 783 0 ));
+DATA(insert (	3550	869 869 18 s	1201 783 0 ));
+DATA(insert (	3550	869 869 19 s	1202 783 0 ));
+DATA(insert (	3550	869 869 20 s	1203 783 0 ));
+DATA(insert (	3550	869 869 21 s	1204 783 0 ));
+DATA(insert (	3550	869 869 22 s	1205 783 0 ));
+DATA(insert (	3550	869 869 23 s	1206 783 0 ));
+DATA(insert (	3550	869 869 24 s	931 783 0 ));
+DATA(insert (	3550	869 869 25 s	932 783 0 ));
+DATA(insert (	3550	869 869 26 s	933 783 0 ));
+DATA(insert (	3550	869 869 27 s	934 783 0 ));
 
 /*
  * the operators for the on-disk bitmap index.

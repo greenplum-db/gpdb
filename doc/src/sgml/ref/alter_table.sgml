@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-ALTERTABLE">
+ <indexterm zone="sql-altertable">
+  <primary>ALTER TABLE</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>ALTER TABLE</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -14,10 +18,6 @@ PostgreSQL documentation
   <refname>ALTER TABLE</refname>
   <refpurpose>change the definition of a table</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-altertable">
-  <primary>ALTER TABLE</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -57,6 +57,7 @@ where action is one of:
   ALTER [COLUMN] column_name RESET ( attribute_option [, ... ] )
   ADD table_constraint [ NOT VALID ]
   ADD table_constraint_using_index
+  ALTER CONSTRAINT constraint_name [ DEFERRABLE | NOT DEFERRABLE ] [ INITIALLY DEFERRED | INITIALLY IMMEDIATE ]
   VALIDATE CONSTRAINT constraint_name
   DROP CONSTRAINT [ IF EXISTS ] constraint_name [RESTRICT | CASCADE]
   DISABLE TRIGGER [trigger_name | ALL | USER]
@@ -73,6 +74,7 @@ where action is one of:
   NOT OF
   OWNER TO new_owner
   SET TABLESPACE new_tablespace
+  REPLICA IDENTITY {DEFAULT | USING INDEX index_name | FULL | NOTHING}
 
 where partition_action is one of:
   ALTER DEFAULT PARTITION
@@ -140,7 +142,10 @@ Where column_reference_storage_directive is:
 
   <para>
    <command>ALTER TABLE</command> changes the definition of an existing table.
-   There are several subforms:
+   There are several subforms described below. Note that the lock level required
+   may differ for each subform. An <literal>ACCESS EXCLUSIVE</literal> lock is held
+   unless explicitly noted. When multiple subcommands are listed, the lock
+   held will be the strictest one required from any subcommand.
 
   <variablelist>
    <varlistentry>
@@ -237,6 +242,9 @@ Where column_reference_storage_directive is:
       <productname>PostgreSQL</productname> query planner, refer to
       <xref linkend="planner-stats">.
      </para>
+     <para>
+      SET STATISTICS acquires a <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -269,16 +277,21 @@ Where column_reference_storage_directive is:
       of statistics by the <productname>PostgreSQL</productname> query
       planner, refer to <xref linkend="planner-stats">.
      </para>
+     <para>
+      Changing per-attribute options acquires a
+      <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
+     </para>
     </listitem>
    </varlistentry>
 
    <varlistentry>
-    <indexterm>
-     <primary>TOAST</primary>
-     <secondary>per-column storage settings</secondary>
-    </indexterm>
-
-    <term><literal>SET STORAGE</literal></term>
+    <term>
+     <literal>SET STORAGE</literal>
+     <indexterm>
+      <primary>TOAST</primary>
+      <secondary>per-column storage settings</secondary>
+     </indexterm>
+    </term>
     <listitem>
      <para>
       This form sets the storage mode for a column. This controls whether this
@@ -375,6 +388,16 @@ Where column_reference_storage_directive is:
    </varlistentry>
 
    <varlistentry>
+    <term><literal>ALTER CONSTRAINT</literal></term>
+    <listitem>
+     <para>
+      This form alters the attributes of a constraint that was previously
+      created. Currently only foreign key constraints may be altered.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
     <term><literal>VALIDATE CONSTRAINT</literal></term>
     <listitem>
      <para>
@@ -382,9 +405,19 @@ Where column_reference_storage_directive is:
       as <literal>NOT VALID</literal>, by scanning the table to ensure there
       are no rows for which the constraint is not satisfied.
       Nothing happens if the constraint is already marked valid.
-      The value of separating validation from initial creation of the
-      constraint is that validation requires a lesser lock on the table
-      than constraint creation does.
+     </para>
+     <para>
+      Validation can be a long process on larger tables. The value of separating
+      validation from initial creation is that you can defer validation to less
+      busy times, or can be used to give additional time to correct pre-existing
+      errors while preventing new errors. Note also that validation on its own
+      does not prevent normal write commands against the table while it runs.
+     </para>
+     <para>
+      Validation acquires only a <literal>SHARE UPDATE EXCLUSIVE</literal> lock
+      on the table being altered. If the constraint is a foreign key then
+      a <literal>ROW SHARE</literal> lock is also required on
+      the table referenced by the constraint.
      </para>
     </listitem>
    </varlistentry>
@@ -450,6 +483,9 @@ Where column_reference_storage_directive is:
       <xref linkend="SQL-CLUSTER">
       operations.  It does not actually re-cluster the table.
      </para>
+     <para>
+      Changing cluster options acquires a <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
+     </para>
     </listitem>
    </varlistentry>
 
@@ -461,6 +497,9 @@ Where column_reference_storage_directive is:
       <xref linkend="SQL-CLUSTER">
       index specification from the table.  This affects
       future cluster operations that don't specify an index.
+     </para>
+     <para>
+      Changing cluster options acquires a <literal>SHARE UPDATE EXCLUSIVE</literal> lock.
      </para>
     </listitem>
    </varlistentry>
@@ -602,8 +641,8 @@ Where column_reference_storage_directive is:
     <term><literal>OWNER</literal></term>
     <listitem>
      <para>
-      This form changes the owner of the table, sequence, or view to the
-      specified user.
+      This form changes the owner of the table, sequence, view, materialized view,
+      or foreign table to the specified user.
      </para>
     </listitem>
    </varlistentry>
@@ -622,13 +661,34 @@ Where column_reference_storage_directive is:
     </listitem>
    </varlistentry>
 
+   <varlistentry id="SQL-CREATETABLE-REPLICA-IDENTITY">
+    <term><literal>REPLICA IDENTITY</literal></term>
+    <listitem>
+     <para>
+      This form changes the information which is written to the write-ahead log
+      to identify rows which are updated or deleted.  This option has no effect
+      except when logical replication is in use.  <literal>DEFAULT</>
+      (the default for non-system tables) records the 
+      old values of the columns of the primary key, if any.  <literal>USING INDEX</>
+      records the old values of the columns covered by the named index, which
+      must be unique, not partial, not deferrable, and include only columns marked
+      <literal>NOT NULL</>.  <literal>FULL</> records the old values of all columns
+      in the row.  <literal>NOTHING</> records no information about the old row.
+      (This is the default for system tables.)
+      In all cases, no old values are logged unless at least one of the columns
+      that would be logged differs between the old and new versions of the row.
+     </para>
+    </listitem>
+   </varlistentry>
+
    <varlistentry>
     <term><literal>RENAME</literal></term>
     <listitem>
      <para>
       The <literal>RENAME</literal> forms change the name of a table
-      (or an index, sequence, or view), the name of an individual column in
-      a table, or the name of a constraint of the table. There is no effect on the stored data.
+      (or an index, sequence, view, materialized view, or foreign table), the name
+      of an individual column in a table, or the name of a constraint of the table.
+      There is no effect on the stored data.
      </para>
     </listitem>
    </varlistentry>
@@ -727,7 +787,7 @@ Where column_reference_storage_directive is:
      </varlistentry>
 
      <varlistentry>
-      <term><replaceable class="PARAMETER">type</replaceable></term>
+      <term><replaceable class="PARAMETER">data_type</replaceable></term>
       <listitem>
        <para>
         Data type of the new column, or new data type for an existing
@@ -749,7 +809,7 @@ Where column_reference_storage_directive is:
       <term><replaceable class="PARAMETER">constraint_name</replaceable></term>
       <listitem>
        <para>
-        Name of an existing constraint to drop.
+        Name of a new or existing constraint.
        </para>
       </listitem>
      </varlistentry>
@@ -812,7 +872,7 @@ Where column_reference_storage_directive is:
       <term><replaceable class="PARAMETER">index_name</replaceable></term>
       <listitem>
        <para>
-        The index name on which the table should be marked for clustering.
+        The name of an existing index.
        </para>
       </listitem>
      </varlistentry>
@@ -886,14 +946,18 @@ Where column_reference_storage_directive is:
     When a column is added with <literal>ADD COLUMN</literal>, all existing
     rows in the table are initialized with the column's default value
     (NULL if no <literal>DEFAULT</> clause is specified).
+    If there is no <literal>DEFAULT</> clause, this is merely a metadata
+    change and does not require any immediate update of the table's data;
+    the added NULL values are supplied on readout, instead.
    </para>
 
    <para>
-    Adding a column with a non-null default or changing the type of an
-    existing column will require the entire table and indexes to be rewritten.
-    As an exception, if the <literal>USING</> clause does not change the column
+    Adding a column with a <literal>DEFAULT</> clause or changing the type of
+    an existing column will require the entire table and its indexes to be
+    rewritten.  As an exception when changing the type of an existing column,
+    if the <literal>USING</> clause does not change the column
     contents and the old type is either binary coercible to the new type or
-    an unconstrained domain over the new type, a table rewrite is not needed,
+    an unconstrained domain over the new type, a table rewrite is not needed;
     but any indexes on the affected columns must still be rebuilt.  Adding or
     removing a system <literal>oid</> column also requires rewriting the entire
     table.  Table and/or index rebuilds may take a significant amount of time
@@ -1103,6 +1167,14 @@ ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;
    To add a foreign key constraint to a table:
 <programlisting>
 ALTER TABLE distributors ADD CONSTRAINT distfk FOREIGN KEY (address) REFERENCES addresses (address);
+</programlisting>
+  </para>
+
+  <para>
+   To add a foreign key constraint to a table with the least impact on other work:
+<programlisting>
+ALTER TABLE distributors ADD CONSTRAINT distfk FOREIGN KEY (address) REFERENCES addresses (address) NOT VALID;
+ALTER TABLE distributors VALIDATE CONSTRAINT distfk;
 </programlisting>
   </para>
 

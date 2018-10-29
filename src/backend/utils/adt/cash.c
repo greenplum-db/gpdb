@@ -377,86 +377,84 @@ cash_out(PG_FUNCTION_ARGS)
 	 *		from the value.
 	 *----------
 	 */
-	result = palloc(strlen(bufptr) + strlen(csymbol) + strlen(signsymbol) + 4);
-
 	switch (sign_posn)
 	{
 		case 0:
 			if (cs_precedes)
-				sprintf(result, "(%s%s%s)",
-						csymbol,
-						(sep_by_space == 1) ? " " : "",
-						bufptr);
+				result = psprintf("(%s%s%s)",
+								  csymbol,
+								  (sep_by_space == 1) ? " " : "",
+								  bufptr);
 			else
-				sprintf(result, "(%s%s%s)",
-						bufptr,
-						(sep_by_space == 1) ? " " : "",
-						csymbol);
+				result = psprintf("(%s%s%s)",
+								  bufptr,
+								  (sep_by_space == 1) ? " " : "",
+								  csymbol);
 			break;
 		case 1:
 		default:
 			if (cs_precedes)
-				sprintf(result, "%s%s%s%s%s",
-						signsymbol,
-						(sep_by_space == 2) ? " " : "",
-						csymbol,
-						(sep_by_space == 1) ? " " : "",
-						bufptr);
+				result = psprintf("%s%s%s%s%s",
+								  signsymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  csymbol,
+								  (sep_by_space == 1) ? " " : "",
+								  bufptr);
 			else
-				sprintf(result, "%s%s%s%s%s",
-						signsymbol,
-						(sep_by_space == 2) ? " " : "",
-						bufptr,
-						(sep_by_space == 1) ? " " : "",
-						csymbol);
+				result = psprintf("%s%s%s%s%s",
+								  signsymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  bufptr,
+								  (sep_by_space == 1) ? " " : "",
+								  csymbol);
 			break;
 		case 2:
 			if (cs_precedes)
-				sprintf(result, "%s%s%s%s%s",
-						csymbol,
-						(sep_by_space == 1) ? " " : "",
-						bufptr,
-						(sep_by_space == 2) ? " " : "",
-						signsymbol);
+				result = psprintf("%s%s%s%s%s",
+								  csymbol,
+								  (sep_by_space == 1) ? " " : "",
+								  bufptr,
+								  (sep_by_space == 2) ? " " : "",
+								  signsymbol);
 			else
-				sprintf(result, "%s%s%s%s%s",
-						bufptr,
-						(sep_by_space == 1) ? " " : "",
-						csymbol,
-						(sep_by_space == 2) ? " " : "",
-						signsymbol);
+				result = psprintf("%s%s%s%s%s",
+								  bufptr,
+								  (sep_by_space == 1) ? " " : "",
+								  csymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  signsymbol);
 			break;
 		case 3:
 			if (cs_precedes)
-				sprintf(result, "%s%s%s%s%s",
-						signsymbol,
-						(sep_by_space == 2) ? " " : "",
-						csymbol,
-						(sep_by_space == 1) ? " " : "",
-						bufptr);
+				result = psprintf("%s%s%s%s%s",
+								  signsymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  csymbol,
+								  (sep_by_space == 1) ? " " : "",
+								  bufptr);
 			else
-				sprintf(result, "%s%s%s%s%s",
-						bufptr,
-						(sep_by_space == 1) ? " " : "",
-						signsymbol,
-						(sep_by_space == 2) ? " " : "",
-						csymbol);
+				result = psprintf("%s%s%s%s%s",
+								  bufptr,
+								  (sep_by_space == 1) ? " " : "",
+								  signsymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  csymbol);
 			break;
 		case 4:
 			if (cs_precedes)
-				sprintf(result, "%s%s%s%s%s",
-						csymbol,
-						(sep_by_space == 2) ? " " : "",
-						signsymbol,
-						(sep_by_space == 1) ? " " : "",
-						bufptr);
+				result = psprintf("%s%s%s%s%s",
+								  csymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  signsymbol,
+								  (sep_by_space == 1) ? " " : "",
+								  bufptr);
 			else
-				sprintf(result, "%s%s%s%s%s",
-						bufptr,
-						(sep_by_space == 1) ? " " : "",
-						csymbol,
-						(sep_by_space == 2) ? " " : "",
-						signsymbol);
+				result = psprintf("%s%s%s%s%s",
+								  bufptr,
+								  (sep_by_space == 1) ? " " : "",
+								  csymbol,
+								  (sep_by_space == 2) ? " " : "",
+								  signsymbol);
 			break;
 	}
 

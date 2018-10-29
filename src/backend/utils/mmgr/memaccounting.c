@@ -108,8 +108,6 @@ MemoryAccountIdType mainNestedExecutorAccount= MEMORY_OWNER_TYPE_Undefined;
  ******************************************************
  * Internal methods declarations
  */
-static void
-CheckMemoryAccountingLeak(void);
 
 static void
 InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit,
@@ -249,7 +247,6 @@ MemoryAccounting_Reset()
 		Assert(MemoryAccountMemoryContext->firstchild == NULL);
 
 		AdvanceMemoryAccountingGeneration();
-		CheckMemoryAccountingLeak();
 
 		/* Outstanding balance will come from either the rollover or the shared chunk header account */
 		Assert((RolloverMemoryAccount->allocated - RolloverMemoryAccount->freed) +
@@ -838,17 +835,6 @@ CreateMemoryAccountImpl(long maxLimit, MemoryOwnerType ownerType, MemoryAccountI
 }
 
 /*
- * CheckMemoryAccountingLeak
- *		Checks for leaks (i.e., memory accounts with balance) after everything
- *		is reset.
- */
-static void
-CheckMemoryAccountingLeak()
-{
-	/* Just an API. Not yet implemented. */
-}
-
-/*
  * Returns a combined array index where the long and short living accounts are together.
  * The first MEMORY_OWNER_TYPE_END_LONG_LIVING number of indices are reserved for long
  * living accounts and short living accounts follow after that.
@@ -1215,6 +1201,8 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_RecursiveUnion";
 	case MEMORY_OWNER_TYPE_Exec_CteScan:
 		return "X_CteScan";
+	case MEMORY_OWNER_TYPE_Exec_Reshuffle:
+		return "X_Reshuffle";
 	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
 		return "X_WorkTableScan";
 	case MEMORY_OWNER_TYPE_Exec_ForeignScan:

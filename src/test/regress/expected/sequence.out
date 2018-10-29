@@ -153,6 +153,9 @@ SELECT nextval('sequence_test'::text);
       99
 (1 row)
 
+DISCARD SEQUENCES;
+SELECT currval('sequence_test'::regclass);
+ERROR:  currval() not supported
 DROP SEQUENCE sequence_test;
 -- renaming sequences
 CREATE SEQUENCE foo_seq;
@@ -313,14 +316,19 @@ SELECT nextval('seq');
        1
 (1 row)
 
---SELECT lastval();
+SELECT lastval();
+ERROR:  lastval() not supported
 SELECT setval('seq', 99);
  setval 
 --------
      99
 (1 row)
 
---SELECT lastval();
+SELECT lastval();
+ERROR:  lastval() not supported
+DISCARD SEQUENCES;
+SELECT lastval();
+ERROR:  lastval() not supported
 CREATE SEQUENCE seq2;
 SELECT nextval('seq2');
  nextval 

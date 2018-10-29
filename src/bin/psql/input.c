@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/input.c
  */
@@ -38,7 +38,7 @@ static int	history_lines_added;
  *	Preserve newlines in saved queries by mapping '\n' to NL_IN_HISTORY
  *
  *	It is assumed NL_IN_HISTORY will never be entered by the user
- *	nor appear inside a multi-byte string.	0x00 is not properly
+ *	nor appear inside a multi-byte string.  0x00 is not properly
  *	handled by the readline routines so it can not be used
  *	for this purpose.
  */
@@ -157,7 +157,7 @@ pg_send_history(PQExpBuffer history_buf)
  *
  * Caller *must* have set up sigint_interrupt_jmp before calling.
  *
- * Note: we re-use a static PQExpBuffer for each call.	This is to avoid
+ * Note: we re-use a static PQExpBuffer for each call.  This is to avoid
  * leaking memory if interrupted by SIGINT.
  */
 char *
@@ -298,11 +298,7 @@ initializeInput(int flags)
 		if (histfile == NULL)
 		{
 			if (get_home_path(home))
-			{
-				psql_history = pg_malloc(strlen(home) + 1 +
-										 strlen(PSQLHISTORY) + 1);
-				snprintf(psql_history, MAXPGPATH, "%s/%s", home, PSQLHISTORY);
-			}
+				psql_history = psprintf("%s/%s", home, PSQLHISTORY);
 		}
 		else
 		{
@@ -341,7 +337,7 @@ bool
 saveHistory(char *fname, int max_lines, bool appendFlag, bool encodeFlag)
 {
 #ifdef USE_READLINE
-	int			errnum;
+	int			errnum = 0;
 
 	/*
 	 * Suppressing the write attempt when HISTFILE is set to /dev/null may
@@ -393,10 +389,10 @@ saveHistory(char *fname, int max_lines, bool appendFlag, bool encodeFlag)
 			/* truncate what we have ... */
 			if (max_lines >= 0)
 				stifle_history(max_lines);
-
 			/* ... and overwrite file.  Tough luck for concurrent sessions. */
-			errnum = write_history(fname);
-			if (errnum == 0)
+			errno = 0;
+			(void) write_history(fname);
+			if (errno == 0)
 				return true;
 		}
 

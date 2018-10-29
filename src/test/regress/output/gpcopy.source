@@ -1312,6 +1312,13 @@ SELECT count(*) < 57190 FROM lineitem_aborted;
  t
 (1 row)
 
+SELECT gp_inject_fault('cdb_copy_start_after_dispatch', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- Test external partition
 CREATE TABLE sales (
     id integer,
@@ -1399,3 +1406,51 @@ select count(*) from t;
 (1 row)
 
 \set QUIET on
+--
+-- Test error handling during COPY TO
+--
+-- To trigger an error, we use an output function that throws an
+-- error on a particular value. The trigger value is 1234.
+--
+CREATE TYPE broken_int4;
+CREATE FUNCTION broken_int4in(cstring)
+   RETURNS broken_int4
+   AS 'int4in'
+   LANGUAGE internal IMMUTABLE STRICT;
+NOTICE:  return type broken_int4 is only a shell
+CREATE FUNCTION broken_int4out(broken_int4)
+   RETURNS cstring
+   AS '@abs_builddir@/regress@DLSUFFIX@', 'broken_int4out'
+   LANGUAGE C IMMUTABLE STRICT;
+NOTICE:  argument type broken_int4 is only a shell
+CREATE TYPE broken_int4 (
+   internallength = 4,
+   input = broken_int4in,
+   output = broken_int4out,
+   alignment = int4,
+   passedbyvalue
+);
+-- Create a table, using the funny datatype, and load it with integers
+-- 1-10000. The input function works normally, so this works, but if you
+-- try to select the row with value 1234 from it, the output function will
+-- throw an error.
+CREATE TABLE broken_type_test (b broken_int4);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+insert into broken_type_test select g::text::broken_int4 from generate_series(1, 10000) g;
+-- Should work, since we don't hit the trigger value 1234. (In principle,
+-- that's not guaranteed; there's no ORDER BY, so the system could return
+-- any 10 rows. In practice, this seems pretty safe.)
+copy (select * from broken_type_test limit 10) to '/tmp/g';
+-- Should fail, because we try to output everything, including 1234
+copy (select * from broken_type_test) to '/tmp/g';
+ERROR:  testing failure in output function
+DETAIL:  The trigger value was 1234
+copy broken_type_test to '/tmp/g';
+ERROR:  testing failure in output function
+DETAIL:  The trigger value was 1234
+-- Don't leave behind a table that you can't dump.
+drop table broken_type_test;
+drop type broken_int4 cascade; -- drops the I/O functions, too.
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to function broken_int4in(cstring)
+drop cascades to function broken_int4out(broken_int4)

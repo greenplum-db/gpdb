@@ -3,7 +3,7 @@
  * tsquery_util.c
  *	  Utilities for tsquery datatype
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -333,6 +333,11 @@ QTN2QT(QTNode *in)
 	QTN2QTState state;
 
 	cntsize(in, &sumlen, &nnode);
+
+	if (TSQUERY_TOO_BIG(nnode, sumlen))
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("tsquery is too large")));
 	len = COMPUTESIZE(nnode, sumlen);
 
 	out = (TSQuery) palloc0(len);

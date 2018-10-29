@@ -3,7 +3,7 @@
 /*
  * regular expressions
  *
- * Copyright (c) 1998, 1999 Henry Spencer.	All rights reserved.
+ * Copyright (c) 1998, 1999 Henry Spencer.  All rights reserved.
  *
  * Development of this software was funded, in part, by Cray Research Inc.,
  * UUNET Communications Services Inc., Sun Microsystems Inc., and Scriptics
@@ -154,6 +154,7 @@ typedef struct
 #define REG_BADOPT	18			/* invalid embedded option */
 #define REG_ETOOBIG 19			/* nfa has too many states */
 #define REG_ECOLORS 20			/* too many colors */
+#define REG_CANCEL	21			/* operation cancelled */
 /* two specials for debugging and testing */
 #define REG_ATOI	101			/* convert error-code name to number */
 #define REG_ITOA	102			/* convert error-code number to name */

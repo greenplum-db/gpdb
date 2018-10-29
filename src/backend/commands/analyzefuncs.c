@@ -7,6 +7,7 @@
 #include "storage/bufmgr.h"
 #include "utils/builtins.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "miscadmin.h"
 
 /**
@@ -39,7 +40,8 @@ double			gp_statistics_sampling_threshold = 10000;
  * 	reltuples - estimated number of tuples in relation.
  * 	relpages  - exact number of pages.
  */
-static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 *reltuples, float4 *relpages)
+static void
+gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 *reltuples, float4 *relpages)
 {
 	float4		nrowsseen = 0;	/* # rows seen (including dead rows) */
 	float4		nrowsdead = 0;	/* # rows dead */
@@ -49,7 +51,7 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 	BlockNumber nblockstotal = 0;	/* nblocks in relation */
 	BlockNumber nblockstarget = (BlockNumber) gp_statistics_blocks_target; 
 	BlockNumber nblocksseen = 0;
-	int			j = 0; /* counter */
+	int			j;		/* counter */
 	
 	/**
 	 * Ensure that the right kind of relation with the right kind of storage is passed to us.
@@ -69,7 +71,8 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 		return; 
 	}
 		
-	for (j=0 ; j<nblockstotal; j++)
+	Snapshot	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	for (j = 0; j < nblockstotal; j++)
 	{
 		/**
 		 * Threshold is dynamically adjusted based on how many blocks we need to examine and how many blocks
@@ -136,7 +139,7 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 					targtuple.t_data = (HeapTupleHeader) PageGetItem(targpage, itemid);
 					targtuple.t_len = ItemIdGetLength(itemid);
 
-					if(!HeapTupleSatisfiesVisibility(rel, &targtuple, SnapshotNow, targbuffer))
+					if(!HeapTupleSatisfiesVisibility(rel, &targtuple, snapshot, targbuffer))
 					{
 						nrowsdead += 1;
 						pageRowsDead++;
@@ -173,6 +176,8 @@ static void gp_statistics_estimate_reltuples_relpages_heap(Relation rel, float4 
 		elog(DEBUG1, "ANALYZE detected 50%% or more empty pages (%f empty out of %f pages), please run VACUUM FULL for accurate estimation.", totalEmptyPages, totalSamplePages);
 	}
 
+	UnregisterSnapshot(snapshot);
+
 	return;
 }
 
@@ -197,6 +202,7 @@ gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4 *reltuples,
 	double			totalBytes = 0;
 	int64 hidden_tupcount;
 	AppendOnlyVisimap visimap;
+	Snapshot	snapshot = RegisterSnapshot(GetLatestSnapshot());
 
 	/**
 	 * Ensure that the right kind of relation with the right type of storage is passed to us.
@@ -208,7 +214,7 @@ gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4 *reltuples,
 	*relpages = 0.0;
 	
     /* get table level statistics from the pg_aoseg table */
-	aocsInfo = GetAllAOCSFileSegInfo(rel, SnapshotNow, &nsegs);
+	aocsInfo = GetAllAOCSFileSegInfo(rel, snapshot, &nsegs);
 	if (aocsInfo)
 	{
 		int i = 0;
@@ -235,11 +241,13 @@ gp_statistics_estimate_reltuples_relpages_ao_cs(Relation rel, float4 *reltuples,
 		*relpages = RelationGuessNumberOfBlocks(totalBytes);
 	}
 
-	AppendOnlyVisimap_Init(&visimap, rel->rd_appendonly->visimaprelid, rel->rd_appendonly->visimapidxid, AccessShareLock, SnapshotNow);
+	AppendOnlyVisimap_Init(&visimap, rel->rd_appendonly->visimaprelid, rel->rd_appendonly->visimapidxid, AccessShareLock, snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
 
 	(*reltuples) -= hidden_tupcount;
+
+	UnregisterSnapshot(snapshot);
 	  
 	return;
 }
@@ -262,25 +270,30 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	FileSegTotals		*fstotal;
 	AppendOnlyVisimap visimap;
 	int64 hidden_tupcount = 0;
+	Snapshot	snapshot = RegisterSnapshot(GetLatestSnapshot());
+
 	/**
 	 * Ensure that the right kind of relation with the right type of storage is passed to us.
 	 */
 	Assert(rel->rd_rel->relkind == RELKIND_RELATION);
 	Assert(RelationIsAoRows(rel));
 	
-	fstotal = GetSegFilesTotals(rel, SnapshotNow);
+	fstotal = GetSegFilesTotals(rel, snapshot);
 	Assert(fstotal);
 	/**
 	 * The planner doesn't understand AO's blocks, so need this method to try to fudge up a number for
-	 * the planner. 
+	 * the planner.
 	 */
-	*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
+	if (fstotal->totalbytes > 0)
+	{
+		*relpages = RelationGuessNumberOfBlocks((double)fstotal->totalbytes);
+	}
 
 	AppendOnlyVisimap_Init(&visimap,
 						   rel->rd_appendonly->visimaprelid,
 						   rel->rd_appendonly->visimapidxid,
 						   AccessShareLock,
-						   SnapshotNow);
+						   snapshot);
 	hidden_tupcount = AppendOnlyVisimap_GetRelationHiddenTupleCount(&visimap);
 	AppendOnlyVisimap_Finish(&visimap, AccessShareLock);
 
@@ -290,7 +303,7 @@ static void gp_statistics_estimate_reltuples_relpages_ao_rows(Relation rel, floa
 	*reltuples = (double)(fstotal->totaltuples - hidden_tupcount);
 
 	pfree(fstotal);
-	
+	UnregisterSnapshot(snapshot);
 	return;
 }
 

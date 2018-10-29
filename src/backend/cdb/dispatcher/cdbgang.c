@@ -15,7 +15,6 @@
 #include "postgres.h"
 
 #include <unistd.h>				/* getpid() */
-#include <pthread.h>
 #include <limits.h>
 
 #include "libpq-fe.h"
@@ -42,7 +41,6 @@
 #include "cdb/cdbdisp.h"		/* me */
 #include "cdb/cdbdisp_query.h"
 #include "cdb/cdbgang.h"		/* me */
-#include "cdb/cdbgang_thread.h"
 #include "cdb/cdbgang_async.h"
 #include "cdb/cdbtm.h"			/* discardDtxTransaction() */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
@@ -72,12 +70,28 @@ int			host_segments = 0;
 
 Gang      *CurrentGangCreating = NULL;
 
-CreateGangFunc pCreateGangFunc = NULL;
+CreateGangFunc pCreateGangFunc = cdbgang_createGang_async;
 
 static bool NeedResetSession = false;
 static Oid	OldTempNamespace = InvalidOid;
 
 static void resetSessionForPrimaryGangLoss(void);
+
+/*
+ * cdbgang_createGang:
+ *
+ * Creates a new gang by logging on a session to each segDB involved.
+ *
+ * call this function in GangContext memory context.
+ * elog ERROR or return a non-NULL gang.
+ */
+Gang *
+cdbgang_createGang(List *segments, SegmentType segmentType)
+{
+	Assert(pCreateGangFunc);
+
+	return pCreateGangFunc(segments, segmentType);
+}
 
 /*
  * Creates a new gang by logging on a session to each segDB involved.
@@ -113,7 +127,7 @@ AllocateGang(CdbDispatcherState *ds, GangType type, List *segments)
 	else
 		segmentType = SEGMENTTYPE_ANY;
 
-	newGang = pCreateGangFunc(segments, segmentType);
+	newGang = cdbgang_createGang(segments, segmentType);
 	newGang->allocated = true;
 	newGang->type = type;
 
@@ -334,7 +348,7 @@ makeOptions(void)
 		struct config_generic *guc = gucs[i];
 
 		if ((guc->flags & GUC_GPDB_ADDOPT) &&
-			(guc->context == PGC_USERSET || procRoleIsSuperuser()))
+			(guc->context == PGC_USERSET || IsAuthenticatedUserSuperUser()))
 			addOneOption(&string, guc);
 	}
 
@@ -763,54 +777,6 @@ resetSessionForPrimaryGangLoss(void)
  * Helper functions
  */
 
-int			gp_pthread_create(pthread_t *thread, void *(*start_routine) (void *),
-							  void *arg, const char *caller)
-{
-	int			pthread_err = 0;
-	pthread_attr_t t_atts;
-
-	/*
-	 * Call some init function. Before any thread is created, we need to init
-	 * some static stuff. The main purpose is to guarantee the non-thread safe
-	 * stuff are called in main thread, before any child thread get running.
-	 * Note these staic data structure should be read only after init.	Thread
-	 * creation is a barrier, so there is no need to get lock before we use
-	 * these data structures.
-	 *
-	 * So far, we know we need to do this for getpwuid_r (See MPP-1971, glibc
-	 * getpwuid_r is not thread safe).
-	 */
-#ifndef WIN32
-	get_gp_passwdptr();
-#endif
-
-	/*
-	 * save ourselves some memory: the defaults for thread stack size are
-	 * large (1M+)
-	 */
-	pthread_err = pthread_attr_init(&t_atts);
-	if (pthread_err != 0)
-	{
-		elog(LOG, "%s: pthread_attr_init failed.  Error %d", caller, pthread_err);
-		return pthread_err;
-	}
-
-	pthread_err = pthread_attr_setstacksize(&t_atts,
-											Max(PTHREAD_STACK_MIN, (256 * 1024)));
-	if (pthread_err != 0)
-	{
-		elog(LOG, "%s: pthread_attr_setstacksize failed.  Error %d", caller, pthread_err);
-		pthread_attr_destroy(&t_atts);
-		return pthread_err;
-	}
-
-	pthread_err = pthread_create(thread, &t_atts, start_routine, arg);
-
-	pthread_attr_destroy(&t_atts);
-
-	return pthread_err;
-}
-
 const char *
 gangTypeToString(GangType type)
 {
@@ -857,20 +823,11 @@ GangOK(Gang *gp)
 
 		if (cdbconn_isBadConnection(segdbDesc))
 			return false;
-		if (!FtsIsSegmentUp(segdbDesc->segment_database_info))
+		if (FtsIsSegmentDown(segdbDesc->segment_database_info))
 			return false;
 	}
 
 	return true;
-}
-
-void
-cdbgang_setAsync(bool async)
-{
-	if (async)
-		pCreateGangFunc = pCreateGangFuncAsync;
-	else
-		pCreateGangFunc = pCreateGangFuncThreaded;
 }
 
 void

@@ -47,23 +47,16 @@ The "gp_ao_co_diagnostics" shared library contains nine functions.
      Non-visible rows can be interpreted as historic entries 
      in the table, and therefore aid in debugging.
 
-  gp_aovisimap_wrapper(oid)
+  gp_aovisimap_wrapper(regclass)
 
-     oid = The oid of an append-only table.
+     regclass = The oid or name of an append-only table.
 
      Returns the tuple id, the segment file, and the row number
      of each obsolete tuples according to the visibility map.
 
-  gp_aovisimap_name_wrapper(text)
+  gp_aovisimap_entry_wrapper(regclass)
 
-     text = The name of an append-only table.
-
-     Same as gp_aovisimap_wrapper except that it takes the
-     table name as the parameter intead of hthe oid.
-
-  gp_aovisimap_entry_wrapper(oid)
-
-     oid = The oid of an append-only table.
+     regclass = The oid or name of an append-only table.
 
      Returns information about each visibility map entry of 
      the table. The information contains the segment number,
@@ -71,27 +64,13 @@ The "gp_ao_co_diagnostics" shared library contains nine functions.
      tuple in the entry, and a text-representation of the
      visibility bitmap. 
 
-  gp_aovisimap_entry_name_wrapper(text)
+  gp_aovisimap_hidden_info_wrapper(regclass)
 
-     text = The name of an append-only table.
-
-     Same as gp_aovisimap_entry_wrapper except that it takes the
-     table name as the parameter intead of hthe oid.
-
-  gp_aovisimap_hidden_info_wrapper(oid)
-
-     oid = The oid of an append-only table.
+     regclass = The oid or name of an append-only table.
 
      Returns the number of hidden (obsolete) tuples and
      the number of total tuples per segment file of
      the table.
-
-  gp_aovisimap_hidden_info_name_wrapper(text)
-
-     text = The name of an append-only table.
-
-     Same as gp_aovisimap_hidden_info except that it takes the
-     table name as the parameter intead of hthe oid.
 
 
  To install and use:
@@ -173,28 +152,12 @@ The "gp_ao_co_diagnostics" shared library contains nine functions.
           , 'gp_aovisimap_wrapper' LANGUAGE C STRICT;
 
 
-       CREATE FUNCTION gp_aovisimap_name(text) 
-        RETURNS TABLE ( tid tid
-                      , segno integer
-                      , row_num bigint) 
-        AS '$libdir/gp_ao_co_diagnostics.so'
-          , 'gp_aovisimap_name_wrapper' LANGUAGE C STRICT;
-
-
        CREATE FUNCTION gp_aovisimap_hidden_info(oid)
         RETURNS TABLE (segno integer
                        , hidden_tupcount bigint
                        , total_tupcount bigint) 
         AS '$libdir/gp_ao_co_diagnostics.so'
          ,'gp_aovisimap_hidden_info_wrapper' LANGUAGE C STRICT;
-
-
-       CREATE FUNCTION gp_aovisimap_hidden_info_name(text)
-        RETURNS TABLE (segno integer
-                       , hidden_tupcount bigint
-                       , total_tupcount bigint) 
-        AS '$libdir/gp_ao_co_diagnostics.so'
-         ,'gp_aovisimap_hidden_info_name_wrapper' LANGUAGE C STRICT;
 
 
        CREATE FUNCTION gp_aovisimap_entry(oid) 
@@ -205,14 +168,6 @@ The "gp_ao_co_diagnostics" shared library contains nine functions.
         AS '$libdir/gp_ao_co_diagnostics.so'
          ,'gp_aovisimap_entry' LANGUAGE C STRICT;
  
-
-       CREATE FUNCTION gp_aovisimap_entry_name(text) 
-        RETURNS TABLE(segno integer
-                       , first_row_num bigint
-                       , hidden_tupcount int
-                       , bitmap text)
-        AS '$libdir/gp_ao_co_diagnostics.so'
-        ,'gp_aovisimap_entry_name' LANGUAGE C STRICT;
 
   3. Connect to the segment you wish to evaluate.
 

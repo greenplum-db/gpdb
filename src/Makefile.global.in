@@ -1,5 +1,6 @@
 # -*-makefile-*-
 # src/Makefile.global.in
+# @configure_input@
 
 #------------------------------------------------------------------------------
 # All PostgreSQL makefiles include this file and use the variables it sets,
@@ -18,11 +19,11 @@
 #
 # Meta configuration
 
-standard_targets = all install installdirs uninstall distprep clean distclean maintainer-clean coverage check installcheck maintainer-check init-po update-po
+standard_targets = all install installdirs uninstall distprep clean distclean maintainer-clean coverage check installcheck init-po update-po
 # these targets should recurse even into subdirectories not being built:
 standard_always_targets = distprep clean distclean maintainer-clean
 
-.PHONY: $(standard_targets) install-strip html man installcheck-parallel installcheck-good
+.PHONY: $(standard_targets) install-strip html man installcheck-parallel maintainer-check installcheck-good
 
 # make `all' the default target
 all:
@@ -169,11 +170,11 @@ with_perl	= @with_perl@
 with_python	= @with_python@
 with_tcl	= @with_tcl@
 with_openssl	= @with_openssl@
-with_ossp_uuid	= @with_ossp_uuid@
 with_selinux	= @with_selinux@
 with_libxml	= @with_libxml@
 with_libxslt	= @with_libxslt@
 with_system_tzdata = @with_system_tzdata@
+with_uuid	= @with_uuid@
 with_zlib	= @with_zlib@
 with_libbz2	= @with_libbz2@
 with_apr_config	= @with_apr_config@
@@ -271,7 +272,8 @@ DLLWRAP = @DLLWRAP@
 LIBS = @LIBS@
 LDAP_LIBS_FE = @LDAP_LIBS_FE@
 LDAP_LIBS_BE = @LDAP_LIBS_BE@
-OSSP_UUID_LIBS = @OSSP_UUID_LIBS@
+UUID_LIBS = @UUID_LIBS@
+UUID_EXTRA_OBJS = @UUID_EXTRA_OBJS@
 LD = @LD@
 with_gnu_ld = @with_gnu_ld@
 ld_R_works = @ld_R_works@
@@ -328,6 +330,7 @@ apu_link_ld_libs	= @apu_link_ld_libs@
 AWK	= @AWK@
 LN_S	= @LN_S@
 MSGFMT  = @MSGFMT@
+MSGFMT_FLAGS = @MSGFMT_FLAGS@
 MSGMERGE = @MSGMERGE@
 PYTHON	= @PYTHON@
 TAR	= @TAR@
@@ -487,19 +490,33 @@ libpq = -L$(libpq_builddir) -lpq
 # pgport before libpq.  This does cause duplicate -lpgport's to appear
 # on client link lines.
 ifdef PGXS
-libpq_pgport = -L$(libdir) -lpgport -lpgcommon $(libpq)
+libpq_pgport = -L$(libdir) -lpgcommon -lpgport $(libpq)
 else
-libpq_pgport = -L$(top_builddir)/src/port -lpgport \
-			   -L$(top_builddir)/src/common -lpgcommon $(libpq)
+libpq_pgport = -L$(top_builddir)/src/common -lpgcommon -L$(top_builddir)/src/port -lpgport $(libpq)
 endif
 
+# Cygwin seems to need ldap libraries to be mentioned here, too
+ifeq ($(PORTNAME),cygwin)
+libpq_pgport += $(LDAP_LIBS_FE)
+endif
 
+# If PGXS is not defined, build libpq and libpgport dependencies as required.
+# If the build is with PGXS, then these are supposed to be already built and
+# installed, and we just ensure that the expected files exist.
+ifndef PGXS
 submake-libpq:
 	$(MAKE) -C $(libpq_builddir) all
+else
+submake-libpq: $(libdir)/libpq.so ;
+endif
 
+ifndef PGXS
 submake-libpgport:
 	$(MAKE) -C $(top_builddir)/src/port all
 	$(MAKE) -C $(top_builddir)/src/common all
+else
+submake-libpgport: $(libdir)/libpgport.a $(libdir)/libpgcommon.a ;
+endif
 
 .PHONY: submake-libpq submake-libpgport
 
@@ -526,11 +543,13 @@ endif
 
 pg_regress_locale_flags = $(if $(ENCODING),--encoding=$(ENCODING)) $(NOLOCALE)
 
-pg_regress_check = $(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --temp-install=./tmp_check --top-builddir=$(top_builddir) $(pg_regress_locale_flags)
-pg_regress_installcheck = $(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --psqldir='$(PSQLDIR)' $(pg_regress_locale_flags)
+pg_regress_check = $(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --temp-install=./tmp_check --top-builddir=$(top_builddir) $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+pg_regress_installcheck = $(top_builddir)/src/test/regress/pg_regress --inputdir=$(srcdir) --psqldir='$(PSQLDIR)' $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
 
 pg_regress_clean_files = results/ regression.diffs regression.out tmp_check/ log/
 
+pg_isolation_regress_check = $(top_builddir)/src/test/isolation/pg_isolation_regress --inputdir=$(srcdir) --temp-install=./tmp_check --top-builddir=$(top_builddir) $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
+pg_isolation_regress_installcheck = $(top_builddir)/src/test/isolation/pg_isolation_regress --inputdir=$(srcdir) --top-builddir=$(top_builddir) $(pg_regress_locale_flags) $(EXTRA_REGRESS_OPTS)
 
 ##########################################################################
 #
@@ -581,7 +600,7 @@ LIBOBJS = @LIBOBJS@
 # files needed for the chosen CRC-32C implementation
 PG_CRC32C_OBJS = @PG_CRC32C_OBJS@
 
-LIBS := -lpgport -lpgcommon $(LIBS)
+LIBS := -lpgcommon -lpgport $(LIBS)
 
 # to make ws2_32.lib the last library, and always link with shfolder,
 # so SHGetFolderName isn't picked up from shell32.dll
@@ -828,7 +847,7 @@ gcda_files := $(wildcard *.gcda)
 
 lcov.info: $(gcda_files)
 	rm -f *.gcov
-	$(if $^,$(LCOV) -d . -c -o $@ $(LCOVFLAGS))
+	$(if $^,$(LCOV) -d . -c -o $@ $(LCOVFLAGS) --gcov-tool $(GCOV))
 
 %.c.gcov: %.gcda | lcov.info
 	$(GCOV) -b -f -p -o . $(GCOVFLAGS) $*.c >$*.c.gcov.out

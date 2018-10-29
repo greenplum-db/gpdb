@@ -1,16 +1,13 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/help.c
  */
 #include "postgres_fe.h"
 
 #ifndef WIN32
-#ifdef HAVE_PWD_H
-#include <pwd.h>				/* for getpwuid() */
-#endif
 #include <sys/types.h>			/* (ditto) */
 #include <unistd.h>				/* for geteuid() */
 #else
@@ -26,6 +23,7 @@
 #endif
 
 #include "common.h"
+#include "common/username.h"
 #include "help.h"
 #include "input.h"
 #include "settings.h"
@@ -52,31 +50,18 @@ usage(void)
 {
 	const char *env;
 	const char *user;
-
-#ifndef WIN32
-	struct passwd *pw = NULL;
-#endif
+	char	   *errstr;
 
 	/* Find default user, in case we need it. */
 	user = getenv("PGUSER");
 	if (!user)
 	{
-#if !defined(WIN32) && !defined(__OS2__)
-		pw = getpwuid(geteuid());
-		if (pw)
-			user = pw->pw_name;
-		else
+		user = get_user_name(&errstr);
+		if (!user)
 		{
-			psql_error("could not get current user name: %s\n", strerror(errno));
+			psql_error("%s\n", errstr);
 			exit(EXIT_FAILURE);
 		}
-#else							/* WIN32 */
-		char		buf[128];
-		DWORD		bufsize = sizeof(buf) - 1;
-
-		if (GetUserName(buf, &bufsize))
-			user = buf;
-#endif   /* WIN32 */
 	}
 
 	printf(_("psql is the PostgreSQL interactive terminal (Greenplum version).\n\n"));
@@ -114,19 +99,19 @@ usage(void)
 	printf(_("\nOutput format options:\n"));
 	printf(_("  -A, --no-align           unaligned table output mode\n"));
 	printf(_("  -F, --field-separator=STRING\n"
-	   "                           set field separator (default: \"%s\")\n"),
+			 "                           field separator for unaligned output (default: \"%s\")\n"),
 		   DEFAULT_FIELD_SEP);
 	printf(_("  -H, --html               HTML table output mode\n"));
 	printf(_("  -P, --pset=VAR[=ARG]     set printing option VAR to ARG (see \\pset command)\n"));
 	printf(_("  -R, --record-separator=STRING\n"
-	"                           set record separator (default: newline)\n"));
+			 "                           record separator for unaligned output (default: newline)\n"));
 	printf(_("  -t, --tuples-only        print rows only\n"));
 	printf(_("  -T, --table-attr=TEXT    set HTML table tag attributes (e.g., width, border)\n"));
 	printf(_("  -x, --expanded           turn on expanded table output\n"));
 	printf(_("  -z, --field-separator-zero\n"
-		   "                           set field separator to zero byte\n"));
+			 "                           set field separator for unaligned output to zero byte\n"));
 	printf(_("  -0, --record-separator-zero\n"
-		  "                           set record separator to zero byte\n"));
+			 "                           set record separator for unaligned output to zero byte\n"));
 
 	printf(_("\nConnection options:\n"));
 	/* Display default host */
@@ -250,7 +235,7 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\f [STRING]            show or set field separator for unaligned query output\n"));
 	fprintf(output, _("  \\H                     toggle HTML output mode (currently %s)\n"),
 			ON(pset.popt.topt.format == PRINT_HTML));
-	fprintf(output, _("  \\pset NAME [VALUE]     set table output option\n"
+	fprintf(output, _("  \\pset [NAME [VALUE]]     set table output option\n"
 					  "                         (NAME := {format|border|expanded|fieldsep|fieldsep_zero|footer|null|\n"
 					  "                         numericlocale|recordsep|recordsep_zero|tuples_only|title|tableattr|pager})\n"));
 	fprintf(output, _("  \\t [on|off]            show only rows (currently %s)\n"),
@@ -448,7 +433,7 @@ print_copyright(void)
 {
 	puts(
 		 "Greenplum Database version of PostgreSQL Database Management System\n"
-		 "Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group\n\n"
+		 "Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group\n\n"
 		 "Portions Copyright (c) 2014-Present Pivotal Software, Inc.\n\n"
 		 "Portions Copyright (c) 2011-2014 EMC\n\n"
 		 "This software is based on Postgres95, formerly known as Postgres, which\n"

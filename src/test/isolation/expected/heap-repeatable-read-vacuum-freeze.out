@@ -1,6 +1,6 @@
 Parsed test spec with 4 sessions
 
-starting permutation: s2begin s1delete s1setfreezeminage s1vacuumfreeze s2select s1select s2abort s3selectinvisible s3checkrelfrozenxidwithxmax s1vacuumfreeze s3selectinvisible s3checkrelfrozenxidwithxmax
+starting permutation: s2begin s1delete s1setfreezeminage s1vacuumfreeze s2select s1select s2abort s3select s1vacuumfreeze s3select
 step s2begin: SET Debug_print_full_dtm=on; BEGIN ISOLATION LEVEL REPEATABLE READ;
 		 SELECT 123 AS "establish snapshot";
 establish snapshot
@@ -10,19 +10,9 @@ step s1delete: DELETE FROM heaptest;
 step s1setfreezeminage: SET vacuum_freeze_min_age = 0;
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 
-xmin           xmax           i              j              
+xmin_kind      xmax_kind      i              j              
 
 FrozenXid      NormalXid      0              0              
 FrozenXid      NormalXid      1              1              
@@ -39,84 +29,26 @@ count
 
 0              
 step s2abort: ABORT;
-step s3selectinvisible: 
-    SET Debug_print_full_dtm=on; 
-    SET gp_select_invisible=TRUE;
+step s3select: 
+    SELECT * from show_heaptest_content ORDER BY i;
 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+xmin_kind      xmax_kind      i              j              
 
-xmin           xmax           i              j              
-
-FrozenXid      NormalXid      0              0              
-FrozenXid      NormalXid      1              1              
-FrozenXid      NormalXid      2              2              
-FrozenXid      NormalXid      3              3              
-FrozenXid      NormalXid      4              4              
-FrozenXid      NormalXid      5              5              
-FrozenXid      NormalXid      6              6              
-FrozenXid      NormalXid      7              7              
-FrozenXid      NormalXid      8              8              
-FrozenXid      NormalXid      9              9              
-step s3checkrelfrozenxidwithxmax: 
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmax))) AS xmax
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmax)) != 0
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmax < relfrozenxid )
-
-gp_segment_id  xmax           gp_segment_id  relfrozenxid   
-
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
+FrozenXid      NormalXid                                    
 step s1vacuumfreeze: VACUUM heaptest;
-step s3selectinvisible: 
-    SET Debug_print_full_dtm=on; 
-    SET gp_select_invisible=TRUE;
+step s3select: 
+    SELECT * from show_heaptest_content ORDER BY i;
 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
-
-xmin           xmax           i              j              
-
-step s3checkrelfrozenxidwithxmax: 
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmax))) AS xmax
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmax)) != 0
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmax < relfrozenxid )
-
-gp_segment_id  xmax           gp_segment_id  relfrozenxid   
+xmin_kind      xmax_kind      i              j              
 
 
 starting permutation: s4begin s4delete s4abort s1setfreezeminage s1vacuumfreeze s2select
@@ -126,19 +58,9 @@ step s4abort: ABORT;
 step s1setfreezeminage: SET vacuum_freeze_min_age = 0;
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 
-xmin           xmax           i              j              
+xmin_kind      xmax_kind      i              j              
 
 FrozenXid      InvalidXid     0              0              
 FrozenXid      InvalidXid     1              1              
@@ -151,7 +73,7 @@ FrozenXid      InvalidXid     7              7
 FrozenXid      InvalidXid     8              8              
 FrozenXid      InvalidXid     9              9              
 
-starting permutation: s2begin s1insert s1setfreezeminage s1vacuumfreeze s2select s1select s2abort s2select s3checkrelfrozenxidwithxmin s1vacuumfreeze s2select s3checkrelfrozenxidwithxmin
+starting permutation: s2begin s1insert s1setfreezeminage s1vacuumfreeze s2select s1select s2abort s2select s3select s1vacuumfreeze s2select s3select
 step s2begin: SET Debug_print_full_dtm=on; BEGIN ISOLATION LEVEL REPEATABLE READ;
 		 SELECT 123 AS "establish snapshot";
 establish snapshot
@@ -161,19 +83,9 @@ step s1insert: SET Debug_print_full_dtm=on; INSERT INTO heaptest SELECT i, i FRO
 step s1setfreezeminage: SET vacuum_freeze_min_age = 0;
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 
-xmin           xmax           i              j              
+xmin_kind      xmax_kind      i              j              
 
 FrozenXid      InvalidXid     0              0              
 FrozenXid      InvalidXid     1              1              
@@ -185,25 +97,25 @@ FrozenXid      InvalidXid     6              6
 FrozenXid      InvalidXid     7              7              
 FrozenXid      InvalidXid     8              8              
 FrozenXid      InvalidXid     9              9              
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
+NormalXid      InvalidXid                                   
 step s1select: SELECT COUNT(*) FROM heaptest;
 count          
 
 20             
 step s2abort: ABORT;
 step s2select: 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 
-xmin           xmax           i              j              
+xmin_kind      xmax_kind      i              j              
 
 FrozenXid      InvalidXid     0              0              
 FrozenXid      InvalidXid     1              1              
@@ -225,37 +137,36 @@ NormalXid      InvalidXid     16             16
 NormalXid      InvalidXid     17             17             
 NormalXid      InvalidXid     18             18             
 NormalXid      InvalidXid     19             19             
-step s3checkrelfrozenxidwithxmin: 
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmin))) AS xmin
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmin)) > 2
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmin < relfrozenxid )
+step s3select: 
+    SELECT * from show_heaptest_content ORDER BY i;
 
-gp_segment_id  xmin           gp_segment_id  relfrozenxid   
+xmin_kind      xmax_kind      i              j              
 
+FrozenXid      InvalidXid     0              0              
+FrozenXid      InvalidXid     1              1              
+FrozenXid      InvalidXid     2              2              
+FrozenXid      InvalidXid     3              3              
+FrozenXid      InvalidXid     4              4              
+FrozenXid      InvalidXid     5              5              
+FrozenXid      InvalidXid     6              6              
+FrozenXid      InvalidXid     7              7              
+FrozenXid      InvalidXid     8              8              
+FrozenXid      InvalidXid     9              9              
+NormalXid      InvalidXid     10             10             
+NormalXid      InvalidXid     11             11             
+NormalXid      InvalidXid     12             12             
+NormalXid      InvalidXid     13             13             
+NormalXid      InvalidXid     14             14             
+NormalXid      InvalidXid     15             15             
+NormalXid      InvalidXid     16             16             
+NormalXid      InvalidXid     17             17             
+NormalXid      InvalidXid     18             18             
+NormalXid      InvalidXid     19             19             
 step s1vacuumfreeze: VACUUM heaptest;
 step s2select: 
-    SELECT CASE 
-         WHEN xmin = 2 THEN 'FrozenXid' 
-         ELSE 'NormalXid' 
-       END AS xmin, 
-       CASE 
-         WHEN xmax = 0 THEN 'InvalidXid' 
-         ELSE 'NormalXid' 
-       END AS xmax, 
-       * 
-    FROM heaptest 
-    ORDER BY i;
+    SELECT * from show_heaptest_content ORDER BY i;
 
-xmin           xmax           i              j              
+xmin_kind      xmax_kind      i              j              
 
 FrozenXid      InvalidXid     0              0              
 FrozenXid      InvalidXid     1              1              
@@ -277,19 +188,28 @@ FrozenXid      InvalidXid     16             16
 FrozenXid      InvalidXid     17             17             
 FrozenXid      InvalidXid     18             18             
 FrozenXid      InvalidXid     19             19             
-step s3checkrelfrozenxidwithxmin: 
-    SELECT *
-    FROM   (SELECT gp_segment_id,
-	    Min(Int4in(Xidout(xmin))) AS xmin
-	    FROM   heaptest
-	    WHERE  Int4in(Xidout(xmin)) > 2
-	    GROUP  BY gp_segment_id) tb
-    JOIN (SELECT gp_segment_id,
-	  Int4in(Xidout(relfrozenxid)) AS relfrozenxid
-	  FROM   Gp_dist_random('pg_class')
-	  WHERE  relname = 'heaptest') pg
-    ON ( tb.gp_segment_id = pg.gp_segment_id )
-    WHERE  ( xmin < relfrozenxid )
+step s3select: 
+    SELECT * from show_heaptest_content ORDER BY i;
 
-gp_segment_id  xmin           gp_segment_id  relfrozenxid   
+xmin_kind      xmax_kind      i              j              
 
+FrozenXid      InvalidXid     0              0              
+FrozenXid      InvalidXid     1              1              
+FrozenXid      InvalidXid     2              2              
+FrozenXid      InvalidXid     3              3              
+FrozenXid      InvalidXid     4              4              
+FrozenXid      InvalidXid     5              5              
+FrozenXid      InvalidXid     6              6              
+FrozenXid      InvalidXid     7              7              
+FrozenXid      InvalidXid     8              8              
+FrozenXid      InvalidXid     9              9              
+FrozenXid      InvalidXid     10             10             
+FrozenXid      InvalidXid     11             11             
+FrozenXid      InvalidXid     12             12             
+FrozenXid      InvalidXid     13             13             
+FrozenXid      InvalidXid     14             14             
+FrozenXid      InvalidXid     15             15             
+FrozenXid      InvalidXid     16             16             
+FrozenXid      InvalidXid     17             17             
+FrozenXid      InvalidXid     18             18             
+FrozenXid      InvalidXid     19             19             

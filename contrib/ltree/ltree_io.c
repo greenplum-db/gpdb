@@ -8,19 +8,13 @@
 #include <ctype.h>
 
 #include "ltree.h"
+#include "utils/memutils.h"
 #include "crc32.h"
 
 PG_FUNCTION_INFO_V1(ltree_in);
-Datum		ltree_in(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(ltree_out);
-Datum		ltree_out(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(lquery_in);
-Datum		lquery_in(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(lquery_out);
-Datum		lquery_out(PG_FUNCTION_ARGS);
 
 
 #define UNCHAR ereport(ERROR, \
@@ -64,6 +58,11 @@ ltree_in(PG_FUNCTION_ARGS)
 		ptr += charlen;
 	}
 
+	if (num + 1 > MaxAllocSize / sizeof(nodeitem))
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+			 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
+					num + 1, (int) (MaxAllocSize / sizeof(nodeitem)))));
 	list = lptr = (nodeitem *) palloc(sizeof(nodeitem) * (num + 1));
 	ptr = buf;
 	while (*ptr)
@@ -228,6 +227,11 @@ lquery_in(PG_FUNCTION_ARGS)
 	}
 
 	num++;
+	if (num > MaxAllocSize / ITEMSIZE)
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+			 errmsg("number of levels (%d) exceeds the maximum allowed (%d)",
+					num, (int) (MaxAllocSize / ITEMSIZE))));
 	curqlevel = tmpql = (lquery_level *) palloc0(ITEMSIZE * num);
 	ptr = buf;
 	while (*ptr)

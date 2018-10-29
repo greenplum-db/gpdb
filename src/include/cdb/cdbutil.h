@@ -113,6 +113,7 @@ struct CdbComponentDatabases
 	int			my_segindex;	/* the content of this database */
 	bool		my_isprimary;	/* the isprimary flag of this database */
 	uint8		fts_version;	/* the version of fts */
+	int			expand_version;
 	int			numActiveQEs;
 	int			numIdleQEs;
 	int			qeCounter;
@@ -156,6 +157,26 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
 CdbComponentDatabases * cdbcomponent_getCdbComponents(bool DNSLookupAsError);
 void cdbcomponent_destroyCdbComponents(void);
 
+void cdbcomponent_updateCdbComponents(void);
+/*
+ * cdbcomponent_cleanupIdleQEs()
+ *
+ * This routine is used when a session has been idle for a while (waiting for the
+ * client to send us SQL to execute). The idea is to consume less resources while sitting idle.
+ *
+ * The expectation is that if the session is logged on, but nobody is sending us work to do,
+ * we want to free up whatever resources we can. Usually it means there is a human being at the
+ * other end of the connection, and that person has walked away from their terminal, or just hasn't
+ * decided what to do next. We could be idle for a very long time (many hours).
+ *
+ * Of course, freeing QEs means that the next time the user does send in an SQL statement,
+ * we need to allocate QEs (at least the writer QEs) to do anything. This entails extra work,
+ * so we don't want to do this if we don't think the session has gone idle.
+ *
+ * Only call these routines from an idle session.
+ *
+ * This routine is also called from the sigalarm signal handler (hopefully that is safe to do).
+ */
 void cdbcomponent_cleanupIdleQEs(bool includeWriter);
 
 CdbComponentDatabaseInfo * cdbcomponent_getComponentInfo(int contentId);
@@ -187,17 +208,14 @@ extern int16 master_standby_dbid(void);
 extern CdbComponentDatabaseInfo *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
 
+extern int numsegmentsFromQD;
 /*
  * Returns the number of segments
  */
-extern int	getgpsegmentCount(void);
+extern int getgpsegmentCount(void);
 
 #define ELOG_DISPATCHER_DEBUG(...) do { \
        if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \
-    } while(false);
-
-#define WRITE_LOG_DISPATCHER_DEBUG(...) do { \
-	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) write_log(__VA_ARGS__); \
     } while(false);
 
 #endif   /* CDBUTIL_H */

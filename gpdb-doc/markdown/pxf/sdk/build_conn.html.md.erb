@@ -145,7 +145,7 @@ Perform the following procedure to create a local copy of the *Demo* connector s
 5. The original PXF *Demo* connector resides in the `org.greenplum.pxf.api.examples` package. Your *Demo* connector resides in a package named `org.greenplum.pxf.example.demo`. Update the package name in your local copy of the *Demo* connector source code. You can edit the files, run a script, etc. For example:
 
     ``` shell
-    user@devsystem$ find . -name '*.java' -exec sed -i '' s/"org.apache.hawq.pxf.api.examples"/"org.apache.hawq.pxf.example.demo"/g {} +
+    user@devsystem$ find . -name '*.java' -exec sed -i '' s/"org.greenplum.pxf.api.examples"/"org.greenplum.pxf.example.demo"/g {} +
     ```
 
 6. Initialize a `gradle` Java library project for your *Demo* connector. For example:

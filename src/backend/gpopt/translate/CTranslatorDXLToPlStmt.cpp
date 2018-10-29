@@ -1214,10 +1214,9 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 	Plan *plan = &(func_scan->scan.plan);
 
 	RangeTblEntry *rte = TranslateDXLTvfToRangeTblEntry(tvf_dxlnode, output_context, &base_table_context);
-	GPOS_ASSERT(NULL != rte);
-
-	func_scan->funcexpr = rte->funcexpr;
-	func_scan->funccolnames = rte->eref->colnames;
+	GPOS_ASSERT(rte != NULL);
+	GPOS_ASSERT(list_length(rte->functions) == 1);
+	RangeTblFunction *rtfunc = (RangeTblFunction *) gpdb::CopyObject(linitial(rte->functions));
 
 	// we will add the new range table entry as the last element of the range table
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
@@ -1257,6 +1256,10 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 
 	ListCell *lc_target_entry = NULL;
 
+	rtfunc->funccolnames = NIL;
+	rtfunc->funccoltypes = NIL;
+	rtfunc->funccoltypmods = NIL;
+	rtfunc->funccolcollations = NIL;
 	ForEach (lc_target_entry, target_list)
 	{
 		TargetEntry *target_entry = (TargetEntry *) lfirst(lc_target_entry);
@@ -1266,11 +1269,13 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 		INT typ_mod = gpdb::ExprTypeMod((Node*) target_entry->expr);
 		Oid collation_type_oid = gpdb::TypeCollation(oid_type);
 
-		func_scan->funccoltypes = gpdb::LAppendOid(func_scan->funccoltypes, oid_type);
-		func_scan->funccoltypmods = gpdb::LAppendInt(func_scan->funccoltypmods, typ_mod);
+		rtfunc->funccolnames = gpdb::LAppend(rtfunc->funccolnames, gpdb::MakeStringValue(target_entry->resname));
+		rtfunc->funccoltypes = gpdb::LAppendOid(rtfunc->funccoltypes, oid_type);
+		rtfunc->funccoltypmods = gpdb::LAppendInt(rtfunc->funccoltypmods, typ_mod);
 		// GPDB_91_MERGE_FIXME: collation
-		func_scan->funccolcollations = gpdb::LAppendOid(func_scan->funccolcollations, collation_type_oid);
+		rtfunc->funccolcollations = gpdb::LAppendOid(rtfunc->funccolcollations, collation_type_oid);
 	}
+	func_scan->functions = ListMake1(rtfunc);
 
 	SetParamIds(plan);
 
@@ -1354,11 +1359,14 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
-	rte->funcexpr = (Node *)func_expr;
+	RangeTblFunction *rtfunc = MakeNode(RangeTblFunction);
+	rtfunc->funcexpr = (Node *) func_expr;
+	// GPDB_91_MERGE_FIXME: collation
+	// set rtfunc->funccoltypemods & rtfunc->funccolcollations?
+	rte->functions = ListMake1(rtfunc);
+
 	rte->inFromCl = true;
 	rte->eref = alias;
-	// GPDB_91_MERGE_FIXME: collation
-	// set rte->funccoltypemods & rte->funccolcollations?
 
 	return rte;
 }
@@ -5181,9 +5189,18 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy
 												gpdb::GetGPSegmentCount());
 
 	GPOS_ASSERT(IMDRelation::EreldistrHash == dxlop->Ereldistrpolicy() ||
-				IMDRelation::EreldistrRandom == dxlop->Ereldistrpolicy());
-	
-	distr_policy->ptype = POLICYTYPE_PARTITIONED;
+				IMDRelation::EreldistrRandom == dxlop->Ereldistrpolicy() ||
+				IMDRelation::EreldistrReplicated == dxlop->Ereldistrpolicy()) ;
+
+	if (IMDRelation::EreldistrReplicated == dxlop->Ereldistrpolicy())
+	{
+		distr_policy->ptype = POLICYTYPE_REPLICATED;
+	}
+	else
+	{
+		distr_policy->ptype = POLICYTYPE_PARTITIONED;
+	}
+
 	distr_policy->nattrs = 0;
 	if (IMDRelation::EreldistrHash == dxlop->Ereldistrpolicy())
 	{

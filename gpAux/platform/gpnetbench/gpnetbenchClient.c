@@ -10,11 +10,14 @@
 #include <sys/time.h>
 
 #define INIT_RETRIES 5
-void send_buffer(int fd, char* buffer, int bytes);
-void print_headers();
-double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
 
-void usage()
+static void send_buffer(int fd, char* buffer, int bytes);
+static void print_headers(void);
+static double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
+static void usage(void);
+
+static void
+usage(void)
 {
 	fprintf(stdout, "usage: gpnetbench -p PORT -H HOST [-l SECONDS] [-t EXPERIMENT] [-f UNITS] [-P HEADERS] [-b KB] [-h]\n");
 	fprintf(stdout, "where\n");
@@ -29,7 +32,8 @@ void usage()
 	fprintf(stdout, "       -h shows this help message\n");
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
 	int socketFd;
 	int retVal;
@@ -169,7 +173,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void send_buffer(int fd, char* buffer, int bytes)
+static void
+send_buffer(int fd, char* buffer, int bytes)
 {
 	ssize_t retval;
 
@@ -192,7 +197,8 @@ void send_buffer(int fd, char* buffer, int bytes)
 	}
 }
 
-double subtractTimeOfDay(struct timeval* begin, struct timeval* end)
+static double
+subtractTimeOfDay(struct timeval* begin, struct timeval* end)
 {
 	double seconds;
 
@@ -209,7 +215,8 @@ double subtractTimeOfDay(struct timeval* begin, struct timeval* end)
 	return seconds;
 }
 
-void print_headers()
+static void
+print_headers()
 {
 	printf("               Send\n");
 	printf("               Message  Elapsed\n");

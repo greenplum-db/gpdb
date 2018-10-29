@@ -29,6 +29,7 @@ SELECT '2006-08-13 12:34:56'::timestamptz;
 
 -- SET LOCAL has no effect outside of a transaction
 SET LOCAL vacuum_cost_delay TO 50;
+WARNING:  SET LOCAL can only be used in transaction blocks
 SHOW vacuum_cost_delay;
  vacuum_cost_delay 
 -------------------
@@ -36,6 +37,7 @@ SHOW vacuum_cost_delay;
 (1 row)
 
 SET LOCAL datestyle = 'SQL';
+WARNING:  SET LOCAL can only be used in transaction blocks
 SHOW datestyle;
  DateStyle 
 -----------
@@ -762,3 +764,19 @@ PL/pgSQL function myfunc(integer) line 3 at SQL statement
  2MB    | 3MB
 (1 row)
 
+-- Normally, CREATE FUNCTION should complain about invalid values in
+-- function SET options; but not if check_function_bodies is off,
+-- because that creates ordering hazards for pg_dump
+create function func_with_bad_set() returns int as $$ select 1 $$
+language sql
+set default_text_search_config = no_such_config;
+NOTICE:  text search configuration "no_such_config" does not exist
+ERROR:  invalid value for parameter "default_text_search_config": "no_such_config"
+set check_function_bodies = off;
+create function func_with_bad_set() returns int as $$ select 1 $$
+language sql
+set default_text_search_config = no_such_config;
+NOTICE:  text search configuration "no_such_config" does not exist
+select func_with_bad_set();
+ERROR:  invalid value for parameter "default_text_search_config": "no_such_config"
+reset check_function_bodies;

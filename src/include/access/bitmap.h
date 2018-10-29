@@ -559,15 +559,14 @@ typedef BMScanOpaqueData *BMScanOpaque;
  *
  * Some information in high 4 bits of log record xl_info field.
  */
-#define XLOG_BITMAP_INSERT_NEWLOV	0x10 /* add a new LOV page */
+/* 0x10 is unused */
 #define XLOG_BITMAP_INSERT_LOVITEM	0x20 /* add a new entry into a LOV page */
 #define XLOG_BITMAP_INSERT_META		0x30 /* update the metapage */
 #define XLOG_BITMAP_INSERT_BITMAP_LASTWORDS	0x40 /* update the last 2 words
 													in a bitmap */
 /* insert bitmap words into a bitmap page which is not the last one. */
 #define XLOG_BITMAP_INSERT_WORDS		0x50
-/* insert bitmap words to the last bitmap page and the lov buffer */
-#define XLOG_BITMAP_INSERT_LASTWORDS	0x60
+/* 0x60 is unused */
 #define XLOG_BITMAP_UPDATEWORD			0x70
 #define XLOG_BITMAP_UPDATEWORDS			0x80
 
@@ -801,7 +800,6 @@ extern void _bitmap_intersect(BMBatchWords **batches, uint32 numBatches,
 extern void _bitmap_union(BMBatchWords **batches, uint32 numBatches,
 					   BMBatchWords *result);
 extern void _bitmap_begin_iterate(BMBatchWords *words, BMIterateResult *result);
-extern void _bitmap_log_newpage(Relation rel, uint8 info, Buffer buf);
 extern void _bitmap_log_metapage(Relation rel, ForkNumber fork, Page page);
 extern void _bitmap_log_bitmap_lastwords(Relation rel, Buffer lovBuffer,
 									 OffsetNumber lovOffset, BMLOVItem lovItem);

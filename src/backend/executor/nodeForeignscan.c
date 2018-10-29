@@ -3,7 +3,7 @@
  * nodeForeignscan.c
  *	  Routines to support scans of foreign tables
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -147,7 +147,7 @@ ExecInitForeignScan(ForeignScan *node, EState *estate, int eflags)
 	scanstate->ss.ss_currentRelation = currentRelation;
 
 	/*
-	 * get the scan type from the relation descriptor.	(XXX at some point we
+	 * get the scan type from the relation descriptor.  (XXX at some point we
 	 * might want to let the FDW editorialize on the scan tupdesc.)
 	 */
 	ExecAssignScanType(&scanstate->ss, RelationGetDescr(currentRelation));

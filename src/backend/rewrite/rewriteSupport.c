@@ -3,7 +3,7 @@
  * rewriteSupport.c
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -123,7 +123,7 @@ get_rewrite_oid(Oid relid, const char *rulename, bool missing_ok)
  * Find rule oid, given only a rule name but no rel OID.
  *
  * If there's more than one, it's an error.  If there aren't any, that's an
- * error, too.	In general, this should be avoided - it is provided to support
+ * error, too.  In general, this should be avoided - it is provided to support
  * syntax that is compatible with pre-7.3 versions of PG, where rule names
  * were unique across the entire database.
  */
@@ -144,7 +144,7 @@ get_rewrite_oid_without_relid(const char *rulename,
 				CStringGetDatum(rulename));
 
 	RewriteRelation = heap_open(RewriteRelationId, AccessShareLock);
-	scanDesc = heap_beginscan(RewriteRelation, SnapshotNow, 1, &scanKeyData);
+	scanDesc = heap_beginscan_catalog(RewriteRelation, 1, &scanKeyData);
 
 	htup = heap_getnext(scanDesc, ForwardScanDirection);
 	if (!HeapTupleIsValid(htup))

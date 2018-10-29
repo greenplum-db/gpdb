@@ -33,6 +33,17 @@ function configure() {
   popd
 }
 
+function gen_gpexpand_input() {
+  HOSTNAME=`hostname`
+  PWD=`pwd`
+  cat > input <<-EOF
+$HOSTNAME:$HOSTNAME:25436:$PWD/datadirs/expand/primary:7:2:p
+$HOSTNAME:$HOSTNAME:25437:$PWD/datadirs/expand/mirror:8:2:m
+EOF
+
+  chmod a+r input
+}
+
 function make_cluster() {
   source /usr/local/greenplum-db-devel/greenplum_path.sh
   export BLDWRAP_POSTGRES_CONF_ADDONS=${BLDWRAP_POSTGRES_CONF_ADDONS}
@@ -40,8 +51,25 @@ function make_cluster() {
   # require max_connections of at least 129.
   export DEFAULT_QD_MAX_CONNECT=150
   export STATEMENT_MEM=250MB
+  export PGPORT=15432
   pushd gpdb_src/gpAux/gpdemo
-  su gpadmin -c "make create-demo-cluster"
+  export MASTER_DATA_DIRECTORY=`pwd`"/datadirs/qddir/demoDataDir-1"
+  # If $ONLINE_EXPAND is set, the job is to run ICW after expansion to see
+  # whether all the cases have been passed without restarting cluster.
+  # So it will create a cluster with two segments and execute gpexpand to
+  # expand the cluster to three segments
+  if [ ! -z "$ONLINE_EXPAND" ]
+  then
+    su gpadmin -c "make create-demo-cluster NUM_PRIMARY_MIRROR_PAIRS=2"
+    # Backup master pid, to check it after the whole test, be sure there is
+    # no test case restarting the cluster
+    su gpadmin -c "head -n 1 $MASTER_DATA_DIRECTORY/postmaster.pid > master.pid.bk"
+    gen_gpexpand_input
+    su gpadmin -c "createdb gpstatus"
+    su gpadmin -c "gpexpand -i input -D gpstatus"
+  else
+    su gpadmin -c "make create-demo-cluster"
+  fi
   popd
 }
 

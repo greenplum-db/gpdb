@@ -63,13 +63,13 @@ t
 
 -- Then vacuum should have completed compaction leaving segment file 1
 -- in default state on QD but in awaiting drop state on QEs
-select segno, state from gp_ao_or_aocs_seg_name('test_table_@orientation@');
+select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
 segno|state
 -----+-----
 1    |1    
 2    |1    
 (2 rows)
-0U: select segno, state from gp_ao_or_aocs_seg_name('test_table_@orientation@');
+0U: select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
 segno|state
 -----+-----
 1    |2    

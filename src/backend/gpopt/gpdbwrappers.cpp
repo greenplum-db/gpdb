@@ -765,7 +765,7 @@ gpdb::IsOrderedAgg
 }
 
 bool
-gpdb::AggHasCombineFunc
+gpdb::IsAggPartialCapable
 	(
 	Oid aggid
 	)
@@ -773,7 +773,7 @@ gpdb::AggHasCombineFunc
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_aggregate */
-		return has_agg_combinefunc(aggid);
+		return is_agg_partial_capable(aggid);
 	}
 	GP_WRAP_END;
 	return false;

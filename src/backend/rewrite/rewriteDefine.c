@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -40,6 +40,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
 
@@ -49,7 +50,7 @@
 
 
 static void checkRuleResultList(List *targetList, TupleDesc resultDesc,
-					bool isSelect);
+					bool isSelect, bool requireColumnNameMatch);
 static bool setRuleCheckAsUser_walker(Node *node, Oid *context);
 static void setRuleCheckAsUser_Query(Query *qry, Oid userid);
 
@@ -63,7 +64,6 @@ static Oid
 InsertRule(char *rulname,
 		   int evtype,
 		   Oid eventrel_oid,
-		   AttrNumber evslot_index,
 		   bool evinstead,
 		   Node *event_qual,
 		   List *action,
@@ -91,7 +91,6 @@ InsertRule(char *rulname,
 	namestrcpy(&rname, rulname);
 	values[Anum_pg_rewrite_rulename - 1] = NameGetDatum(&rname);
 	values[Anum_pg_rewrite_ev_class - 1] = ObjectIdGetDatum(eventrel_oid);
-	values[Anum_pg_rewrite_ev_attr - 1] = Int16GetDatum(evslot_index);
 	values[Anum_pg_rewrite_ev_type - 1] = CharGetDatum(evtype + '0');
 	values[Anum_pg_rewrite_ev_enabled - 1] = CharGetDatum(RULE_FIRES_ON_ORIGIN);
 	values[Anum_pg_rewrite_is_instead - 1] = BoolGetDatum(evinstead);
@@ -122,7 +121,6 @@ InsertRule(char *rulname,
 		 * When replacing, we don't need to replace every attribute
 		 */
 		MemSet(replaces, false, sizeof(replaces));
-		replaces[Anum_pg_rewrite_ev_attr - 1] = true;
 		replaces[Anum_pg_rewrite_ev_type - 1] = true;
 		replaces[Anum_pg_rewrite_is_instead - 1] = true;
 		replaces[Anum_pg_rewrite_ev_qual - 1] = true;
@@ -210,7 +208,7 @@ DefineRule(RuleStmt *stmt, const char *queryString)
 	transformRuleStmt(stmt, queryString, &actions, &whereClause);
 
 	/*
-	 * Find and lock the relation.	Lock level should match
+	 * Find and lock the relation.  Lock level should match
 	 * DefineQueryRewrite.
 	 */
 	relId = RangeVarGetRelid(stmt->relation, AccessExclusiveLock, false);
@@ -243,7 +241,6 @@ DefineQueryRewrite(char *rulename,
 				   List *action)
 {
 	Relation	event_relation;
-	int			event_attno;
 	ListCell   *l;
 	Query	   *query;
 	bool		RelisBecomingView = false;
@@ -263,6 +260,8 @@ DefineQueryRewrite(char *rulename,
 
 	/*
 	 * Verify relation is of a type that rules can sensibly be applied to.
+	 * Internal callers can target materialized views, but transformRuleStmt()
+	 * blocks them for users.  Don't mention them in the error message.
 	 */
 	if (event_relation->rd_rel->relkind != RELKIND_RELATION &&
 		event_relation->rd_rel->relkind != RELKIND_MATVIEW &&
@@ -362,7 +361,9 @@ DefineQueryRewrite(char *rulename,
 		 */
 		checkRuleResultList(query->targetList,
 							RelationGetDescr(event_relation),
-							true);
+							true,
+							event_relation->rd_rel->relkind !=
+							RELKIND_MATVIEW);
 
 		/*
 		 * ... there must not be another ON SELECT rule already ...
@@ -414,7 +415,7 @@ DefineQueryRewrite(char *rulename,
 		 *
 		 * If so, check that the relation is empty because the storage for the
 		 * relation is going to be deleted.  Also insist that the rel not have
-		 * any triggers, indexes, or child tables.	(Note: these tests are too
+		 * any triggers, indexes, or child tables.  (Note: these tests are too
 		 * strict, because they will reject relations that once had such but
 		 * don't anymore.  But we don't really care, because this whole
 		 * business of converting relations to views is just a kluge to allow
@@ -424,6 +425,7 @@ DefineQueryRewrite(char *rulename,
 			event_relation->rd_rel->relkind != RELKIND_MATVIEW)
 		{
 			HeapScanDesc scanDesc;
+			Snapshot	snapshot;
 
 			/* In GPDB, also forbid turning AO tables or external tables into views. */
 			if (!RelationIsHeap(event_relation))
@@ -431,14 +433,15 @@ DefineQueryRewrite(char *rulename,
 						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 						 errmsg("cannot convert non-heap table \"%s\" to a view",
 								RelationGetRelationName(event_relation))));
-
-			scanDesc = heap_beginscan(event_relation, SnapshotNow, 0, NULL);
+			snapshot = RegisterSnapshot(GetLatestSnapshot());
+			scanDesc = heap_beginscan(event_relation, snapshot, 0, NULL);
 			if (heap_getnext(scanDesc, ForwardScanDirection) != NULL)
 				ereport(ERROR,
 						(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 						 errmsg("could not convert table \"%s\" to a view because it is not empty",
 								RelationGetRelationName(event_relation))));
 			heap_endscan(scanDesc);
+			UnregisterSnapshot(snapshot);
 
 			if (event_relation->rd_rel->relhastriggers)
 				ereport(ERROR,
@@ -495,14 +498,13 @@ DefineQueryRewrite(char *rulename,
 						 errmsg("RETURNING lists are not supported in non-INSTEAD rules")));
 			checkRuleResultList(query->returningList,
 								RelationGetDescr(event_relation),
-								false);
+								false, false);
 		}
 	}
 
 	/*
 	 * This rule is allowed - prepare to install it.
 	 */
-	event_attno = -1;
 
 	/* discard rule if it's null action and not INSTEAD; it's a no-op */
 	if (action != NIL || is_instead)
@@ -510,7 +512,6 @@ DefineQueryRewrite(char *rulename,
 		ruleId = InsertRule(rulename,
 							event_type,
 							event_relid,
-							event_attno,
 							is_instead,
 							event_qual,
 							action,
@@ -588,8 +589,8 @@ DefineQueryRewrite(char *rulename,
 
 		/*
 		 * Fix pg_class entry to look like a normal view's, including setting
-		 * the correct relkind and removal of reltoastrelid/reltoastidxid of
-		 * the toast table we potentially removed above.
+		 * the correct relkind and removal of reltoastrelid of the toast table
+		 * we potentially removed above.
 		 */
 		classTup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(event_relid));
 		if (!HeapTupleIsValid(classTup))
@@ -601,7 +602,6 @@ DefineQueryRewrite(char *rulename,
 		classForm->reltuples = 0;
 		classForm->relallvisible = 0;
 		classForm->reltoastrelid = InvalidOid;
-		classForm->reltoastidxid = InvalidOid;
 		classForm->relhasindex = false;
 		classForm->relkind = RELKIND_VIEW;
 		classForm->relhasoids = false;
@@ -627,14 +627,19 @@ DefineQueryRewrite(char *rulename,
  *		Verify that targetList produces output compatible with a tupledesc
  *
  * The targetList might be either a SELECT targetlist, or a RETURNING list;
- * isSelect tells which.  (This is mostly used for choosing error messages,
- * but also we don't enforce column name matching for RETURNING.)
+ * isSelect tells which.  This is used for choosing error messages.
+ *
+ * A SELECT targetlist may optionally require that column names match.
  */
 static void
-checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect)
+checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect,
+					bool requireColumnNameMatch)
 {
 	ListCell   *tllist;
 	int			i;
+
+	/* Only a SELECT may require a column name match. */
+	Assert(isSelect || !requireColumnNameMatch);
 
 	i = 0;
 	foreach(tllist, targetList)
@@ -671,7 +676,7 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("cannot convert relation containing dropped columns to view")));
 
-		if (isSelect && strcmp(tle->resname, attname) != 0)
+		if (requireColumnNameMatch && strcmp(tle->resname, attname) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 errmsg("SELECT rule's target entry %d has different column name from \"%s\"", i, attname)));
@@ -719,7 +724,7 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect)
  * Note: for a view (ON SELECT rule), the checkAsUser field of the OLD
  * RTE entry will be overridden when the view rule is expanded, and the
  * checkAsUser field of the NEW entry is irrelevant because that entry's
- * requiredPerms bits will always be zero.	However, for other types of rules
+ * requiredPerms bits will always be zero.  However, for other types of rules
  * it's important to set these fields to match the rule owner.  So we just set
  * them always.
  */
@@ -865,7 +870,7 @@ RangeVarCallbackForRenameRule(const RangeVar *rv, Oid relid, Oid oldrelid,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a table or view", rv->relname)));
 
-	if (!allowSystemTableMods && IsSystemClass(form))
+	if (!allowSystemTableMods && IsSystemClass(relid, form))
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("permission denied: \"%s\" is a system catalog",

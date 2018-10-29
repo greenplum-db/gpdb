@@ -3,7 +3,7 @@
  * nodeRecursiveunion.c
  *	  routines to handle RecursiveUnion nodes.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -333,7 +333,7 @@ ExecReScanRecursiveUnion(RecursiveUnionState *node)
 
 	/*
 	 * if chgParam of subnode is not null then plan will be re-scanned by
-	 * first ExecProcNode.	Because of above, we only have to do this to the
+	 * first ExecProcNode.  Because of above, we only have to do this to the
 	 * non-recursive term.
 	 */
 	if (outerPlan->chgParam == NULL)

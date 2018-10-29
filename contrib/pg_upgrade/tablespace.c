@@ -3,7 +3,7 @@
  *
  *	tablespace functions
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/tablespace.c
  */
 
@@ -27,9 +27,8 @@ init_tablespaces(void)
 
 	if (os_info.num_old_tablespaces > 0 &&
 	strcmp(old_cluster.tablespace_suffix, new_cluster.tablespace_suffix) == 0)
-		pg_log(PG_FATAL,
-			   "Cannot upgrade to/from the same system catalog version when\n"
-			   "using tablespaces.\n");
+		pg_fatal("Cannot upgrade to/from the same system catalog version when\n"
+				 "using tablespaces.\n");
 }
 
 
@@ -82,10 +81,9 @@ get_tablespace_paths(void)
 		 * Effectively, this is checking only for tables/indexes in
 		 * non-existent tablespace directories.  Databases located in
 		 * non-existent tablespaces already throw a backend error.
-		 * Non-existent tablespace directories can occur when a data
-		 * directory that contains user tablespaces is moved as part
-		 * of pg_upgrade preparation and the symbolic links are not
-		 * updated.
+		 * Non-existent tablespace directories can occur when a data directory
+		 * that contains user tablespaces is moved as part of pg_upgrade
+		 * preparation and the symbolic links are not updated.
 		 */
 		if (stat(os_info.old_tablespaces[tblnum], &statBuf) != 0)
 		{
@@ -95,13 +93,13 @@ get_tablespace_paths(void)
 							  os_info.old_tablespaces[tblnum]);
 			else
 				report_status(PG_FATAL,
-							  "cannot stat() tablespace directory \"%s\": %s\n",
-							  os_info.old_tablespaces[tblnum], getErrorText(errno));
+						   "cannot stat() tablespace directory \"%s\": %s\n",
+					   os_info.old_tablespaces[tblnum], getErrorText(errno));
 		}
 		if (!S_ISDIR(statBuf.st_mode))
-				report_status(PG_FATAL,
-							  "tablespace path \"%s\" is not a directory\n",
-							  os_info.old_tablespaces[tblnum]);
+			report_status(PG_FATAL,
+						  "tablespace path \"%s\" is not a directory\n",
+						  os_info.old_tablespaces[tblnum]);
 	}
 
 	PQclear(res);
@@ -120,12 +118,10 @@ set_tablespace_directory_suffix(ClusterInfo *cluster)
 	else
 	{
 		/* This cluster has a version-specific subdirectory */
-		cluster->tablespace_suffix = pg_malloc(4 +
-										 strlen(cluster->major_version_str) +
-											   10 /* OIDCHARS */ + 1);
 
 		/* The leading slash is needed to start a new directory. */
-		sprintf(cluster->tablespace_suffix, "/PG_%s_%d", cluster->major_version_str,
-				cluster->controldata.cat_ver);
+		cluster->tablespace_suffix = psprintf("/PG_%s_%d",
+											  cluster->major_version_str,
+											  cluster->controldata.cat_ver);
 	}
 }

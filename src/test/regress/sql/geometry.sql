@@ -105,10 +105,6 @@ SELECT '' AS thirty, p.f1, l.s, p.f1 ## l.s AS closest
    FROM LSEG_GEOM_TBL l, POINT_GEOM_TBL p;
 
 --
--- Lines
---
-
---
 -- Boxes
 --
 

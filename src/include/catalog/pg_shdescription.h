@@ -7,12 +7,12 @@
  * NOTE: an object is identified by the OID of the row that primarily
  * defines the object, plus the OID of the table that that row appears in.
  * For example, a database is identified by the OID of its pg_database row
- * plus the pg_class OID of table pg_database.	This allows unique
+ * plus the pg_class OID of table pg_database.  This allows unique
  * identification of objects without assuming that OIDs are unique
  * across tables.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_shdescription.h
@@ -32,7 +32,7 @@
 #include "catalog/genbki.h"
 
 /* ----------------
- *		pg_shdescription definition.	cpp turns this into
+ *		pg_shdescription definition.    cpp turns this into
  *		typedef struct FormData_pg_shdescription
  * ----------------
  */

@@ -90,7 +90,7 @@ connection_target: opt_database_name opt_server opt_port
 				strncmp($3 + strlen("//"), "127.0.0.1", strlen("127.0.0.1")) != 0)
 				mmerror(PARSE_ERROR, ET_ERROR, "Unix-domain sockets only work on \"localhost\" but not on \"%s\"", $3 + strlen("//"));
 
-			$$ = make3_str(make3_str(mm_strdup("\""), $1, mm_strdup(":")), $3, make3_str(make3_str($4, mm_strdup("/"), $6),	$7, mm_strdup("\"")));
+			$$ = make3_str(make3_str(mm_strdup("\""), $1, mm_strdup(":")), $3, make3_str(make3_str($4, mm_strdup("/"), $6), $7, mm_strdup("\"")));
 		}
 		| char_variable
 		{
@@ -291,7 +291,7 @@ ECPGCursorStmt:  DECLARE cursor_name cursor_options CURSOR opt_hold FOR prepared
 		{
 			struct cursor *ptr, *this;
 			char *cursor_marker = $2[0] == ':' ? mm_strdup("$0") : mm_strdup($2);
-			int (* strcmp_fn)(const char *, const char *) = ($2[0] == ':' ? strcmp : pg_strcasecmp);
+			int (* strcmp_fn)(const char *, const char *) = (($2[0] == ':' || $2[0] == '"') ? strcmp : pg_strcasecmp);
 			struct variable *thisquery = (struct variable *)mm_alloc(sizeof(struct variable));
 			const char *con = connection ? connection : "NULL";
 			char *comment;
@@ -837,7 +837,12 @@ opt_signed: SQL_SIGNED
 variable_list: variable
 			{ $$ = $1; }
 		| variable_list ',' variable
-			{ $$ = cat_str(3, $1, mm_strdup(","), $3); }
+		{
+			if (actual_type[struct_level].type_enum == ECPGt_varchar)
+				$$ = cat_str(3, $1, mm_strdup(";"), $3);
+			else
+				$$ = cat_str(3, $1, mm_strdup(","), $3);
+		}
 		;
 
 variable: opt_pointer ECPGColLabel opt_array_bounds opt_bit_field opt_initializer
@@ -1428,13 +1433,13 @@ action : CONTINUE_P
 		| SQL_GOTO name
 		{
 			$<action>$.code = W_GOTO;
-			$<action>$.command = strdup($2);
+			$<action>$.command = mm_strdup($2);
 			$<action>$.str = cat2_str(mm_strdup("goto "), $2);
 		}
 		| SQL_GO TO name
 		{
 			$<action>$.code = W_GOTO;
-			$<action>$.command = strdup($3);
+			$<action>$.command = mm_strdup($3);
 			$<action>$.str = cat2_str(mm_strdup("goto "), $3);
 		}
 		| DO name '(' c_args ')'
@@ -1687,7 +1692,7 @@ cvariable:	CVARIABLE
 				{
 					case '[':
 							if (brace)
-								mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays for simple data types are not supported");
+								mmfatal(PARSE_ERROR, "multidimensional arrays for simple data types are not supported");
 							brace_open++;
 							break;
 					case ']':
@@ -1856,15 +1861,20 @@ DeallocateStmt: DEALLOCATE prepared_name                { $$ = $2; }
                 | DEALLOCATE PREPARE ALL                { $$ = mm_strdup("all"); }
                 ;
 
-Iresult:        Iconst			{ $$ = $1; }
-                | '(' Iresult ')'       { $$ = cat_str(3, mm_strdup("("), $2, mm_strdup(")")); }
-                | Iresult '+' Iresult   { $$ = cat_str(3, $1, mm_strdup("+"), $3); }
-                | Iresult '-' Iresult   { $$ = cat_str(3, $1, mm_strdup("-"), $3); }
-                | Iresult '*' Iresult   { $$ = cat_str(3, $1, mm_strdup("*"), $3); }
-                | Iresult '/' Iresult   { $$ = cat_str(3, $1, mm_strdup("/"), $3); }
-                | Iresult '%' Iresult   { $$ = cat_str(3, $1, mm_strdup("%"), $3); }
-                | ecpg_sconst		{ $$ = $1; }
-                | ColId                 { $$ = $1; }
+Iresult:        Iconst				{ $$ = $1; }
+                | '(' Iresult ')'		{ $$ = cat_str(3, mm_strdup("("), $2, mm_strdup(")")); }
+                | Iresult '+' Iresult		{ $$ = cat_str(3, $1, mm_strdup("+"), $3); }
+                | Iresult '-' Iresult		{ $$ = cat_str(3, $1, mm_strdup("-"), $3); }
+                | Iresult '*' Iresult		{ $$ = cat_str(3, $1, mm_strdup("*"), $3); }
+                | Iresult '/' Iresult		{ $$ = cat_str(3, $1, mm_strdup("/"), $3); }
+                | Iresult '%' Iresult		{ $$ = cat_str(3, $1, mm_strdup("%"), $3); }
+                | ecpg_sconst			{ $$ = $1; }
+                | ColId				{ $$ = $1; }
+		| ColId '(' var_type ')'        { if (pg_strcasecmp($1, "sizeof") != 0)
+							mmerror(PARSE_ERROR, ET_ERROR, "operator not allowed in variable definition");
+						  else
+							$$ = cat_str(4, $1, mm_strdup("("), $3.type_str, mm_strdup(")"));
+						}
                 ;
 
 execute_rest: /* EMPTY */	{ $$ = EMPTY; }

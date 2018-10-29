@@ -373,11 +373,12 @@ filter_fragments_for_segment(List *list)
 
 	int			index = 0;
 	int			frag_index = 1;
-	int32		shift = xid % GpIdentity.numsegments;
+	int			numsegments = getgpsegmentCount();
+	int32		shift = xid % numsegments;
 
 	for (current = list_head(list); current != NULL; index++)
 	{
-		if (GpIdentity.segindex == (index + shift) % GpIdentity.numsegments)
+		if (GpIdentity.segindex == (index + shift) % numsegments)
 		{
 			/*
 			 * current segment is the one that should process, keep the

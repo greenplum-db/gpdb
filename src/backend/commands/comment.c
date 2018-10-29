@@ -4,7 +4,7 @@
  *
  * PostgreSQL object comments utility code.
  *
- * Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/commands/comment.c
@@ -101,7 +101,7 @@ CommentObject(CommentStmt *stmt)
 				relation->rd_rel->relkind != RELKIND_FOREIGN_TABLE)
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("\"%s\" is not a table, view, composite type, or foreign table",
+						 errmsg("\"%s\" is not a table, view, materialized view, composite type, or foreign table",
 								RelationGetRelationName(relation))));
 			break;
 		default:
@@ -213,7 +213,7 @@ CreateComments(Oid oid, Oid classoid, int32 subid, char *comment)
 	description = heap_open(DescriptionRelationId, RowExclusiveLock);
 
 	sd = systable_beginscan(description, DescriptionObjIndexId, true,
-							SnapshotNow, 3, skey);
+							NULL, 3, skey);
 
 	while ((oldtuple = systable_getnext(sd)) != NULL)
 	{
@@ -307,7 +307,7 @@ CreateSharedComments(Oid oid, Oid classoid, char *comment)
 	shdescription = heap_open(SharedDescriptionRelationId, RowExclusiveLock);
 
 	sd = systable_beginscan(shdescription, SharedDescriptionObjIndexId, true,
-							SnapshotNow, 2, skey);
+							NULL, 2, skey);
 
 	while ((oldtuple = systable_getnext(sd)) != NULL)
 	{
@@ -389,7 +389,7 @@ DeleteComments(Oid oid, Oid classoid, int32 subid)
 	description = heap_open(DescriptionRelationId, RowExclusiveLock);
 
 	sd = systable_beginscan(description, DescriptionObjIndexId, true,
-							SnapshotNow, nkeys, skey);
+							NULL, nkeys, skey);
 
 	while ((oldtuple = systable_getnext(sd)) != NULL)
 		simple_heap_delete(description, &oldtuple->t_self);
@@ -425,7 +425,7 @@ DeleteSharedComments(Oid oid, Oid classoid)
 	shdescription = heap_open(SharedDescriptionRelationId, RowExclusiveLock);
 
 	sd = systable_beginscan(shdescription, SharedDescriptionObjIndexId, true,
-							SnapshotNow, 2, skey);
+							NULL, 2, skey);
 
 	while ((oldtuple = systable_getnext(sd)) != NULL)
 		simple_heap_delete(shdescription, &oldtuple->t_self);
@@ -468,7 +468,7 @@ GetComment(Oid oid, Oid classoid, int32 subid)
 	tupdesc = RelationGetDescr(description);
 
 	sd = systable_beginscan(description, DescriptionObjIndexId, true,
-							SnapshotNow, 3, skey);
+							NULL, 3, skey);
 
 	comment = NULL;
 	while ((tuple = systable_getnext(sd)) != NULL)

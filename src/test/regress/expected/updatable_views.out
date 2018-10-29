@@ -1,7 +1,8 @@
 --
 -- UPDATABLE VIEWS
 --
--- check that non-updatable views are rejected with useful error messages
+-- check that non-updatable views and columns are rejected with useful error
+-- messages
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
 CREATE VIEW ro_view1 AS SELECT DISTINCT a, b FROM base_tbl; -- DISTINCT not supported
@@ -17,18 +18,17 @@ CREATE VIEW ro_view10 AS SELECT 1 AS a; -- No base relations
 CREATE VIEW ro_view11 AS SELECT b1.a, b2.b FROM base_tbl b1, base_tbl b2; -- Multiple base relations
 CREATE VIEW ro_view12 AS SELECT * FROM generate_series(1, 10) AS g(a); -- SRF in rangetable
 CREATE VIEW ro_view13 AS SELECT a, b FROM (SELECT * FROM base_tbl) AS t; -- Subselect in rangetable
-CREATE VIEW ro_view14 AS SELECT ctid FROM base_tbl; -- System columns not supported
-CREATE VIEW ro_view15 AS SELECT a, upper(b) FROM base_tbl; -- Expression/function in targetlist
-CREATE VIEW ro_view16 AS SELECT a, b, a AS aa FROM base_tbl; -- Repeated column
+CREATE VIEW rw_view14 AS SELECT ctid, a, b FROM base_tbl; -- System columns may be part of an updatable view
+CREATE VIEW rw_view15 AS SELECT a, upper(b) FROM base_tbl; -- Expression/function may be part of an updatable view
+CREATE VIEW rw_view16 AS SELECT a, b, a AS aa FROM base_tbl; -- Repeated column may be part of an updatable view
 CREATE VIEW ro_view17 AS SELECT * FROM ro_view1; -- Base relation not updatable
-CREATE VIEW ro_view18 WITH (security_barrier = true)
-  AS SELECT * FROM base_tbl; -- Security barrier views not updatable
-CREATE VIEW ro_view19 AS SELECT * FROM (VALUES(1)) AS tmp(a); -- VALUES in rangetable
+CREATE VIEW ro_view18 AS SELECT * FROM (VALUES(1)) AS tmp(a); -- VALUES in rangetable
 CREATE SEQUENCE seq;
-CREATE VIEW ro_view20 AS SELECT * FROM seq; -- View based on a sequence
+CREATE VIEW ro_view19 AS SELECT * FROM seq; -- View based on a sequence
+CREATE VIEW ro_view20 AS SELECT a, b, generate_series(1, a) g FROM base_tbl; -- SRF in targetlist not supported
 SELECT table_name, is_insertable_into
   FROM information_schema.tables
- WHERE table_name LIKE 'ro_view%'
+ WHERE table_name LIKE E'r_\\_view%'
  ORDER BY table_name;
  table_name | is_insertable_into 
 ------------+--------------------
@@ -37,9 +37,6 @@ SELECT table_name, is_insertable_into
  ro_view11  | NO
  ro_view12  | NO
  ro_view13  | NO
- ro_view14  | NO
- ro_view15  | NO
- ro_view16  | NO
  ro_view17  | NO
  ro_view18  | NO
  ro_view19  | NO
@@ -52,11 +49,14 @@ SELECT table_name, is_insertable_into
  ro_view7   | NO
  ro_view8   | NO
  ro_view9   | NO
+ rw_view14  | YES
+ rw_view15  | YES
+ rw_view16  | YES
 (20 rows)
 
 SELECT table_name, is_updatable, is_insertable_into
   FROM information_schema.views
- WHERE table_name LIKE 'ro_view%'
+ WHERE table_name LIKE E'r_\\_view%'
  ORDER BY table_name;
  table_name | is_updatable | is_insertable_into 
 ------------+--------------+--------------------
@@ -65,9 +65,6 @@ SELECT table_name, is_updatable, is_insertable_into
  ro_view11  | NO           | NO
  ro_view12  | NO           | NO
  ro_view13  | NO           | NO
- ro_view14  | NO           | NO
- ro_view15  | NO           | NO
- ro_view16  | NO           | NO
  ro_view17  | NO           | NO
  ro_view18  | NO           | NO
  ro_view19  | NO           | NO
@@ -80,11 +77,14 @@ SELECT table_name, is_updatable, is_insertable_into
  ro_view7   | NO           | NO
  ro_view8   | NO           | NO
  ro_view9   | NO           | NO
+ rw_view14  | YES          | YES
+ rw_view15  | YES          | YES
+ rw_view16  | YES          | YES
 (20 rows)
 
 SELECT table_name, column_name, is_updatable
   FROM information_schema.columns
- WHERE table_name LIKE 'ro_view%'
+ WHERE table_name LIKE E'r_\\_view%'
  ORDER BY table_name, ordinal_position;
  table_name |  column_name  | is_updatable 
 ------------+---------------+--------------
@@ -96,29 +96,24 @@ SELECT table_name, column_name, is_updatable
  ro_view12  | a             | NO
  ro_view13  | a             | NO
  ro_view13  | b             | NO
- ro_view14  | ctid          | NO
- ro_view15  | a             | NO
- ro_view15  | upper         | NO
- ro_view16  | a             | NO
- ro_view16  | b             | NO
- ro_view16  | aa            | NO
  ro_view17  | a             | NO
  ro_view17  | b             | NO
  ro_view18  | a             | NO
- ro_view18  | b             | NO
- ro_view19  | a             | NO
+ ro_view19  | sequence_name | NO
+ ro_view19  | last_value    | NO
+ ro_view19  | start_value   | NO
+ ro_view19  | increment_by  | NO
+ ro_view19  | max_value     | NO
+ ro_view19  | min_value     | NO
+ ro_view19  | cache_value   | NO
+ ro_view19  | log_cnt       | NO
+ ro_view19  | is_cycled     | NO
+ ro_view19  | is_called     | NO
  ro_view2   | a             | NO
  ro_view2   | b             | NO
- ro_view20  | sequence_name | NO
- ro_view20  | last_value    | NO
- ro_view20  | start_value   | NO
- ro_view20  | increment_by  | NO
- ro_view20  | max_value     | NO
- ro_view20  | min_value     | NO
- ro_view20  | cache_value   | NO
- ro_view20  | log_cnt       | NO
- ro_view20  | is_cycled     | NO
- ro_view20  | is_called     | NO
+ ro_view20  | a             | NO
+ ro_view20  | b             | NO
+ ro_view20  | g             | NO
  ro_view3   | ?column?      | NO
  ro_view4   | count         | NO
  ro_view5   | a             | NO
@@ -131,88 +126,154 @@ SELECT table_name, column_name, is_updatable
  ro_view8   | b             | NO
  ro_view9   | a             | NO
  ro_view9   | b             | NO
-(43 rows)
+ rw_view14  | ctid          | NO
+ rw_view14  | a             | YES
+ rw_view14  | b             | YES
+ rw_view15  | a             | YES
+ rw_view15  | upper         | NO
+ rw_view16  | a             | YES
+ rw_view16  | b             | YES
+ rw_view16  | aa            | YES
+(46 rows)
 
+-- Read-only views
 DELETE FROM ro_view1;
 ERROR:  cannot delete from view "ro_view1"
 DETAIL:  Views containing GROUP BY are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DELETE FROM ro_view2;
 ERROR:  cannot delete from view "ro_view2"
 DETAIL:  Views containing GROUP BY are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DELETE FROM ro_view3;
 ERROR:  cannot delete from view "ro_view3"
 DETAIL:  Views containing HAVING are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DELETE FROM ro_view4;
 ERROR:  cannot delete from view "ro_view4"
-DETAIL:  Views that return columns that are not columns of their base relation are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+DETAIL:  Views that return aggregate functions are not automatically updatable
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DELETE FROM ro_view5;
 ERROR:  cannot delete from view "ro_view5"
-DETAIL:  Views that return columns that are not columns of their base relation are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+DETAIL:  Views that return window functions are not automatically updatable
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 DELETE FROM ro_view6;
 ERROR:  cannot delete from view "ro_view6"
 DETAIL:  Views containing UNION, INTERSECT, or EXCEPT are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
 UPDATE ro_view7 SET a=a+1;
 ERROR:  cannot update view "ro_view7"
 DETAIL:  Views containing WITH are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 UPDATE ro_view8 SET a=a+1;
 ERROR:  cannot update view "ro_view8"
 DETAIL:  Views containing LIMIT or OFFSET are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 UPDATE ro_view9 SET a=a+1;
 ERROR:  cannot update view "ro_view9"
 DETAIL:  Views containing LIMIT or OFFSET are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 UPDATE ro_view10 SET a=a+1;
 ERROR:  cannot update view "ro_view10"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 UPDATE ro_view11 SET a=a+1;
 ERROR:  cannot update view "ro_view11"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 UPDATE ro_view12 SET a=a+1;
 ERROR:  cannot update view "ro_view12"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 INSERT INTO ro_view13 VALUES (3, 'Row 3');
 ERROR:  cannot insert into view "ro_view13"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
-INSERT INTO ro_view14 VALUES (null);
-ERROR:  cannot insert into view "ro_view14"
-DETAIL:  Views that return system columns are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
-INSERT INTO ro_view15 VALUES (3, 'ROW 3');
-ERROR:  cannot insert into view "ro_view15"
-DETAIL:  Views that return columns that are not columns of their base relation are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
-INSERT INTO ro_view16 VALUES (3, 'Row 3', 3);
-ERROR:  cannot insert into view "ro_view16"
-DETAIL:  Views that return the same column more than once are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
+HINT:  To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
+-- Partially updatable view
+INSERT INTO rw_view14 VALUES (null, 3, 'Row 3'); -- should fail
+ERROR:  cannot insert into column "ctid" of view "rw_view14"
+DETAIL:  View columns that refer to system columns are not updatable.
+INSERT INTO rw_view14 (a, b) VALUES (3, 'Row 3'); -- should be OK
+UPDATE rw_view14 SET ctid=null WHERE a=3; -- should fail
+ERROR:  cannot update column "ctid" of view "rw_view14"
+DETAIL:  View columns that refer to system columns are not updatable.
+UPDATE rw_view14 SET b='ROW 3' WHERE a=3; -- should be OK
+SELECT * FROM base_tbl;
+ a  |   b    
+----+--------
+ -2 | Row -2
+ -1 | Row -1
+  0 | Row 0
+  1 | Row 1
+  2 | Row 2
+  3 | ROW 3
+(6 rows)
+
+DELETE FROM rw_view14 WHERE a=3; -- should be OK
+-- Partially updatable view
+INSERT INTO rw_view15 VALUES (3, 'ROW 3'); -- should fail
+ERROR:  cannot insert into column "upper" of view "rw_view15"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+INSERT INTO rw_view15 (a) VALUES (3); -- should be OK
+ALTER VIEW rw_view15 ALTER COLUMN upper SET DEFAULT 'NOT SET';
+INSERT INTO rw_view15 (a) VALUES (4); -- should fail
+ERROR:  cannot insert into column "upper" of view "rw_view15"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view15 SET upper='ROW 3' WHERE a=3; -- should fail
+ERROR:  cannot update column "upper" of view "rw_view15"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view15 SET upper=DEFAULT WHERE a=3; -- should fail
+ERROR:  cannot update column "upper" of view "rw_view15"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view15 SET a=4 WHERE a=3; -- should be OK
+SELECT * FROM base_tbl;
+ a  |      b      
+----+-------------
+ -2 | Row -2
+ -1 | Row -1
+  0 | Row 0
+  1 | Row 1
+  2 | Row 2
+  4 | Unspecified
+(6 rows)
+
+DELETE FROM rw_view15 WHERE a=4; -- should be OK
+-- Partially updatable view
+INSERT INTO rw_view16 VALUES (3, 'Row 3', 3); -- should fail
+ERROR:  multiple assignments to same column "a"
+INSERT INTO rw_view16 (a, b) VALUES (3, 'Row 3'); -- should be OK
+UPDATE rw_view16 SET a=3, aa=-3 WHERE a=3; -- should fail
+ERROR:  multiple assignments to same column "a"
+UPDATE rw_view16 SET aa=-3 WHERE a=3; -- should be OK
+SELECT * FROM base_tbl;
+ a  |   b    
+----+--------
+ -2 | Row -2
+ -1 | Row -1
+  0 | Row 0
+  1 | Row 1
+  2 | Row 2
+ -3 | Row 3
+(6 rows)
+
+DELETE FROM rw_view16 WHERE a=-3; -- should be OK
+-- Read-only views
 INSERT INTO ro_view17 VALUES (3, 'ROW 3');
 ERROR:  cannot insert into view "ro_view1"
 DETAIL:  Views containing GROUP BY are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
-INSERT INTO ro_view18 VALUES (3, 'ROW 3');
-ERROR:  cannot insert into view "ro_view18"
-DETAIL:  Security-barrier views are not automatically updatable.
-HINT:  To make the view insertable, provide an unconditional ON INSERT DO INSTEAD rule or an INSTEAD OF INSERT trigger.
-DELETE FROM ro_view19;
-ERROR:  cannot delete from view "ro_view19"
+HINT:  To enable inserting into the view, provide an INSTEAD OF INSERT trigger or an unconditional ON INSERT DO INSTEAD rule.
+DELETE FROM ro_view18;
+ERROR:  cannot delete from view "ro_view18"
 DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON DELETE DO INSTEAD rule or an INSTEAD OF DELETE trigger.
-UPDATE ro_view20 SET max_value=1000;
+HINT:  To enable deleting from the view, provide an INSTEAD OF DELETE trigger or an unconditional ON DELETE DO INSTEAD rule.
+UPDATE ro_view19 SET max_value=1000;
+ERROR:  cannot update view "ro_view19"
+DETAIL:  Views that do not select from a single table or view are not automatically updatable.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
+UPDATE ro_view20 SET b=upper(b);
 ERROR:  cannot update view "ro_view20"
-DETAIL:  Views that do not select from a single table or view are not automatically updatable.
-HINT:  To make the view updatable, provide an unconditional ON UPDATE DO INSTEAD rule or an INSTEAD OF UPDATE trigger.
+DETAIL:  Views that return set-returning functions are not automatically updatable.
+HINT:  To enable updating the view, provide an INSTEAD OF UPDATE trigger or an unconditional ON UPDATE DO INSTEAD rule.
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to 16 other objects
 DETAIL:  drop cascades to view ro_view1
@@ -226,14 +287,14 @@ drop cascades to view ro_view8
 drop cascades to view ro_view9
 drop cascades to view ro_view11
 drop cascades to view ro_view13
-drop cascades to view ro_view15
-drop cascades to view ro_view16
-drop cascades to view ro_view18
+drop cascades to view rw_view15
+drop cascades to view rw_view16
+drop cascades to view ro_view20
 drop cascades to view ro_view4
-drop cascades to view ro_view14
-DROP VIEW ro_view10, ro_view12, ro_view19;
+drop cascades to view rw_view14
+DROP VIEW ro_view10, ro_view12, ro_view18;
 DROP SEQUENCE seq CASCADE;
-NOTICE:  drop cascades to view ro_view20
+NOTICE:  drop cascades to view ro_view19
 -- simple updatable view
 CREATE TABLE base_tbl (a int PRIMARY KEY, b text DEFAULT 'Unspecified');
 INSERT INTO base_tbl SELECT i, 'Row ' || i FROM generate_series(-2, 2) g(i);
@@ -1061,3 +1122,1262 @@ SELECT * FROM rw_view1;
 
 DROP TABLE base_tbl CASCADE;
 NOTICE:  drop cascades to view rw_view1
+-- views with updatable and non-updatable columns
+CREATE TABLE base_tbl(a float);
+INSERT INTO base_tbl SELECT i/10.0 FROM generate_series(1,10) g(i);
+CREATE VIEW rw_view1 AS
+  SELECT ctid, sin(a) s, a, cos(a) c
+  FROM base_tbl
+  WHERE a != 0
+  ORDER BY abs(a);
+INSERT INTO rw_view1 VALUES (null, null, 1.1, null); -- should fail
+ERROR:  cannot insert into column "ctid" of view "rw_view1"
+DETAIL:  View columns that refer to system columns are not updatable.
+INSERT INTO rw_view1 (s, c, a) VALUES (null, null, 1.1); -- should fail
+ERROR:  cannot insert into column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+INSERT INTO rw_view1 (a) VALUES (1.1) RETURNING a, s, c; -- OK
+  a  |         s         |         c         
+-----+-------------------+-------------------
+ 1.1 | 0.891207360061435 | 0.453596121425577
+(1 row)
+
+UPDATE rw_view1 SET s = s WHERE a = 1.1; -- should fail
+ERROR:  cannot update column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view1 SET a = 1.05 WHERE a = 1.1 RETURNING s; -- OK
+         s         
+-------------------
+ 0.867423225594017
+(1 row)
+
+DELETE FROM rw_view1 WHERE a = 1.05; -- OK
+CREATE VIEW rw_view2 AS
+  SELECT s, c, s/c t, a base_a, ctid
+  FROM rw_view1;
+INSERT INTO rw_view2 VALUES (null, null, null, 1.1, null); -- should fail
+ERROR:  cannot insert into column "t" of view "rw_view2"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+INSERT INTO rw_view2(s, c, base_a) VALUES (null, null, 1.1); -- should fail
+ERROR:  cannot insert into column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+INSERT INTO rw_view2(base_a) VALUES (1.1) RETURNING t; -- OK
+        t         
+------------------
+ 1.96475965724865
+(1 row)
+
+UPDATE rw_view2 SET s = s WHERE base_a = 1.1; -- should fail
+ERROR:  cannot update column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view2 SET t = t WHERE base_a = 1.1; -- should fail
+ERROR:  cannot update column "t" of view "rw_view2"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view2 SET base_a = 1.05 WHERE base_a = 1.1; -- OK
+DELETE FROM rw_view2 WHERE base_a = 1.05 RETURNING base_a, s, c, t; -- OK
+ base_a |         s         |         c         |        t         
+--------+-------------------+-------------------+------------------
+   1.05 | 0.867423225594017 | 0.497571047891727 | 1.74331530998317
+(1 row)
+
+CREATE VIEW rw_view3 AS
+  SELECT s, c, s/c t, ctid
+  FROM rw_view1;
+INSERT INTO rw_view3 VALUES (null, null, null, null); -- should fail
+ERROR:  cannot insert into column "t" of view "rw_view3"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+INSERT INTO rw_view3(s) VALUES (null); -- should fail
+ERROR:  cannot insert into column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+UPDATE rw_view3 SET s = s; -- should fail
+ERROR:  cannot update column "s" of view "rw_view1"
+DETAIL:  View columns that are not columns of their base relation are not updatable.
+DELETE FROM rw_view3 WHERE s = sin(0.1); -- should be OK
+SELECT * FROM base_tbl ORDER BY a;
+  a  
+-----
+ 0.2
+ 0.3
+ 0.4
+ 0.5
+ 0.6
+ 0.7
+ 0.8
+ 0.9
+   1
+(9 rows)
+
+SELECT table_name, is_insertable_into
+  FROM information_schema.tables
+ WHERE table_name LIKE E'r_\\_view%'
+ ORDER BY table_name;
+ table_name | is_insertable_into 
+------------+--------------------
+ rw_view1   | YES
+ rw_view2   | YES
+ rw_view3   | NO
+(3 rows)
+
+SELECT table_name, is_updatable, is_insertable_into
+  FROM information_schema.views
+ WHERE table_name LIKE E'r_\\_view%'
+ ORDER BY table_name;
+ table_name | is_updatable | is_insertable_into 
+------------+--------------+--------------------
+ rw_view1   | YES          | YES
+ rw_view2   | YES          | YES
+ rw_view3   | NO           | NO
+(3 rows)
+
+SELECT table_name, column_name, is_updatable
+  FROM information_schema.columns
+ WHERE table_name LIKE E'r_\\_view%'
+ ORDER BY table_name, ordinal_position;
+ table_name | column_name | is_updatable 
+------------+-------------+--------------
+ rw_view1   | ctid        | NO
+ rw_view1   | s           | NO
+ rw_view1   | a           | YES
+ rw_view1   | c           | NO
+ rw_view2   | s           | NO
+ rw_view2   | c           | NO
+ rw_view2   | t           | NO
+ rw_view2   | base_a      | YES
+ rw_view2   | ctid        | NO
+ rw_view3   | s           | NO
+ rw_view3   | c           | NO
+ rw_view3   | t           | NO
+ rw_view3   | ctid        | NO
+(13 rows)
+
+SELECT events & 4 != 0 AS upd,
+       events & 8 != 0 AS ins,
+       events & 16 != 0 AS del
+  FROM pg_catalog.pg_relation_is_updatable('rw_view3'::regclass, false) t(events);
+ upd | ins | del 
+-----+-----+-----
+ f   | f   | t
+(1 row)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+drop cascades to view rw_view3
+-- inheritance tests
+CREATE TABLE base_tbl_parent (a int);
+CREATE TABLE base_tbl_child (CHECK (a > 0)) INHERITS (base_tbl_parent);
+INSERT INTO base_tbl_parent SELECT * FROM generate_series(-8, -1);
+INSERT INTO base_tbl_child SELECT * FROM generate_series(1, 8);
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl_parent;
+CREATE VIEW rw_view2 AS SELECT * FROM ONLY base_tbl_parent;
+SELECT * FROM rw_view1 ORDER BY a;
+ a  
+----
+ -8
+ -7
+ -6
+ -5
+ -4
+ -3
+ -2
+ -1
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+(16 rows)
+
+SELECT * FROM ONLY rw_view1 ORDER BY a;
+ a  
+----
+ -8
+ -7
+ -6
+ -5
+ -4
+ -3
+ -2
+ -1
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+(16 rows)
+
+SELECT * FROM rw_view2 ORDER BY a;
+ a  
+----
+ -8
+ -7
+ -6
+ -5
+ -4
+ -3
+ -2
+ -1
+(8 rows)
+
+INSERT INTO rw_view1 VALUES (-100), (100);
+INSERT INTO rw_view2 VALUES (-200), (200);
+UPDATE rw_view1 SET a = a*10 WHERE a IN (-1, 1); -- Should produce -10 and 10
+UPDATE ONLY rw_view1 SET a = a*10 WHERE a IN (-2, 2); -- Should produce -20 and 20
+UPDATE rw_view2 SET a = a*10 WHERE a IN (-3, 3); -- Should produce -30 only
+UPDATE ONLY rw_view2 SET a = a*10 WHERE a IN (-4, 4); -- Should produce -40 only
+DELETE FROM rw_view1 WHERE a IN (-5, 5); -- Should delete -5 and 5
+DELETE FROM ONLY rw_view1 WHERE a IN (-6, 6); -- Should delete -6 and 6
+DELETE FROM rw_view2 WHERE a IN (-7, 7); -- Should delete -7 only
+DELETE FROM ONLY rw_view2 WHERE a IN (-8, 8); -- Should delete -8 only
+SELECT * FROM ONLY base_tbl_parent ORDER BY a;
+  a   
+------
+ -200
+ -100
+  -40
+  -30
+  -20
+  -10
+  100
+  200
+(8 rows)
+
+SELECT * FROM base_tbl_child ORDER BY a;
+ a  
+----
+  3
+  4
+  7
+  8
+ 10
+ 20
+(6 rows)
+
+DROP TABLE base_tbl_parent, base_tbl_child CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+-- simple WITH CHECK OPTION
+CREATE TABLE base_tbl (a int, b int DEFAULT 10);
+INSERT INTO base_tbl VALUES (1,2), (2,3), (1,-1);
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a < b
+  WITH LOCAL CHECK OPTION;
+\d+ rw_view1
+                View "public.rw_view1"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+ b      | integer |           | plain   | 
+View definition:
+ SELECT base_tbl.a,
+    base_tbl.b
+   FROM base_tbl
+  WHERE base_tbl.a < base_tbl.b;
+Options: check_option=local
+
+SELECT * FROM information_schema.views WHERE table_name = 'rw_view1';
+ table_catalog | table_schema | table_name |          view_definition           | check_option | is_updatable | is_insertable_into | is_trigger_updatable | is_trigger_deletable | is_trigger_insertable_into 
+---------------+--------------+------------+------------------------------------+--------------+--------------+--------------------+----------------------+----------------------+----------------------------
+ regression    | public       | rw_view1   |  SELECT base_tbl.a,               +| LOCAL        | YES          | YES                | NO                   | NO                   | NO
+               |              |            |     base_tbl.b                    +|              |              |                    |                      |                      | 
+               |              |            |    FROM base_tbl                  +|              |              |                    |                      |                      | 
+               |              |            |   WHERE (base_tbl.a < base_tbl.b); |              |              |                    |                      |                      | 
+(1 row)
+
+INSERT INTO rw_view1 VALUES(3,4); -- ok
+INSERT INTO rw_view1 VALUES(4,3); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (4, 3).
+INSERT INTO rw_view1 VALUES(5,null); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (5, null).
+UPDATE rw_view1 SET b = 5 WHERE a = 3; -- ok
+UPDATE rw_view1 SET b = -5 WHERE a = 3; -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (3, -5).
+INSERT INTO rw_view1(a) VALUES (9); -- ok
+INSERT INTO rw_view1(a) VALUES (10); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (10, 10).
+SELECT * FROM base_tbl;
+ a | b  
+---+----
+ 1 |  2
+ 2 |  3
+ 1 | -1
+ 3 |  5
+ 9 | 10
+(5 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
+-- WITH LOCAL/CASCADED CHECK OPTION
+CREATE TABLE base_tbl (a int);
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a > 0;
+CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a < 10
+  WITH CHECK OPTION; -- implicitly cascaded
+\d+ rw_view2
+                View "public.rw_view2"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+View definition:
+ SELECT rw_view1.a
+   FROM rw_view1
+  WHERE rw_view1.a < 10;
+Options: check_option=cascaded
+
+SELECT * FROM information_schema.views WHERE table_name = 'rw_view2';
+ table_catalog | table_schema | table_name |      view_definition       | check_option | is_updatable | is_insertable_into | is_trigger_updatable | is_trigger_deletable | is_trigger_insertable_into 
+---------------+--------------+------------+----------------------------+--------------+--------------+--------------------+----------------------+----------------------+----------------------------
+ regression    | public       | rw_view2   |  SELECT rw_view1.a        +| CASCADED     | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM rw_view1          +|              |              |                    |                      |                      | 
+               |              |            |   WHERE (rw_view1.a < 10); |              |              |                    |                      |                      | 
+(1 row)
+
+INSERT INTO rw_view2 VALUES (-5); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (-5).
+INSERT INTO rw_view2 VALUES (5); -- ok
+INSERT INTO rw_view2 VALUES (15); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (15).
+SELECT * FROM base_tbl;
+ a 
+---
+ 5
+(1 row)
+
+UPDATE rw_view2 SET a = a - 10; -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (-5).
+UPDATE rw_view2 SET a = a + 10; -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (15).
+CREATE OR REPLACE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a < 10
+  WITH LOCAL CHECK OPTION;
+\d+ rw_view2
+                View "public.rw_view2"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+View definition:
+ SELECT rw_view1.a
+   FROM rw_view1
+  WHERE rw_view1.a < 10;
+Options: check_option=local
+
+SELECT * FROM information_schema.views WHERE table_name = 'rw_view2';
+ table_catalog | table_schema | table_name |      view_definition       | check_option | is_updatable | is_insertable_into | is_trigger_updatable | is_trigger_deletable | is_trigger_insertable_into 
+---------------+--------------+------------+----------------------------+--------------+--------------+--------------------+----------------------+----------------------+----------------------------
+ regression    | public       | rw_view2   |  SELECT rw_view1.a        +| LOCAL        | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM rw_view1          +|              |              |                    |                      |                      | 
+               |              |            |   WHERE (rw_view1.a < 10); |              |              |                    |                      |                      | 
+(1 row)
+
+INSERT INTO rw_view2 VALUES (-10); -- ok, but not in view
+INSERT INTO rw_view2 VALUES (20); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (20).
+SELECT * FROM base_tbl;
+  a  
+-----
+   5
+ -10
+(2 rows)
+
+ALTER VIEW rw_view1 SET (check_option=here); -- invalid
+ERROR:  invalid value for "check_option" option
+DETAIL:  Valid values are "local", and "cascaded".
+ALTER VIEW rw_view1 SET (check_option=local);
+INSERT INTO rw_view2 VALUES (-20); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (-20).
+INSERT INTO rw_view2 VALUES (30); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (30).
+ALTER VIEW rw_view2 RESET (check_option);
+\d+ rw_view2
+                View "public.rw_view2"
+ Column |  Type   | Modifiers | Storage | Description 
+--------+---------+-----------+---------+-------------
+ a      | integer |           | plain   | 
+View definition:
+ SELECT rw_view1.a
+   FROM rw_view1
+  WHERE rw_view1.a < 10;
+
+SELECT * FROM information_schema.views WHERE table_name = 'rw_view2';
+ table_catalog | table_schema | table_name |      view_definition       | check_option | is_updatable | is_insertable_into | is_trigger_updatable | is_trigger_deletable | is_trigger_insertable_into 
+---------------+--------------+------------+----------------------------+--------------+--------------+--------------------+----------------------+----------------------+----------------------------
+ regression    | public       | rw_view2   |  SELECT rw_view1.a        +| NONE         | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM rw_view1          +|              |              |                    |                      |                      | 
+               |              |            |   WHERE (rw_view1.a < 10); |              |              |                    |                      |                      | 
+(1 row)
+
+INSERT INTO rw_view2 VALUES (30); -- ok, but not in view
+SELECT * FROM base_tbl;
+  a  
+-----
+   5
+ -10
+  30
+(3 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+-- WITH CHECK OPTION with no local view qual
+CREATE TABLE base_tbl (a int);
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WITH CHECK OPTION;
+CREATE VIEW rw_view2 AS SELECT * FROM rw_view1 WHERE a > 0;
+CREATE VIEW rw_view3 AS SELECT * FROM rw_view2 WITH CHECK OPTION;
+SELECT * FROM information_schema.views WHERE table_name LIKE E'rw\\_view_' ORDER BY table_name;
+ table_catalog | table_schema | table_name |      view_definition      | check_option | is_updatable | is_insertable_into | is_trigger_updatable | is_trigger_deletable | is_trigger_insertable_into 
+---------------+--------------+------------+---------------------------+--------------+--------------+--------------------+----------------------+----------------------+----------------------------
+ regression    | public       | rw_view1   |  SELECT base_tbl.a       +| CASCADED     | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM base_tbl;         |              |              |                    |                      |                      | 
+ regression    | public       | rw_view2   |  SELECT rw_view1.a       +| NONE         | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM rw_view1         +|              |              |                    |                      |                      | 
+               |              |            |   WHERE (rw_view1.a > 0); |              |              |                    |                      |                      | 
+ regression    | public       | rw_view3   |  SELECT rw_view2.a       +| CASCADED     | YES          | YES                | NO                   | NO                   | NO
+               |              |            |    FROM rw_view2;         |              |              |                    |                      |                      | 
+(3 rows)
+
+INSERT INTO rw_view1 VALUES (-1); -- ok
+INSERT INTO rw_view1 VALUES (1); -- ok
+INSERT INTO rw_view2 VALUES (-2); -- ok, but not in view
+INSERT INTO rw_view2 VALUES (2); -- ok
+INSERT INTO rw_view3 VALUES (-3); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (-3).
+INSERT INTO rw_view3 VALUES (3); -- ok
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 3 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+drop cascades to view rw_view3
+-- WITH CHECK OPTION with subquery
+CREATE TABLE base_tbl (a int);
+CREATE TABLE ref_tbl (a int PRIMARY KEY);
+INSERT INTO ref_tbl SELECT * FROM generate_series(1,10);
+CREATE VIEW rw_view1 AS
+  SELECT * FROM base_tbl b
+  WHERE EXISTS(SELECT 1 FROM ref_tbl r WHERE r.a = b.a)
+  WITH CHECK OPTION;
+INSERT INTO rw_view1 VALUES (5); -- ok
+INSERT INTO rw_view1 VALUES (15); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (15).
+UPDATE rw_view1 SET a = a + 5; -- ok
+UPDATE rw_view1 SET a = a + 5; -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (15).
+EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
+                   QUERY PLAN                    
+-------------------------------------------------
+ Insert on base_tbl b
+   ->  Result
+         SubPlan 1  (slice0; segments: 1)
+           ->  Result
+                 Filter: (r.a = b.a)
+                 ->  Materialize
+                       ->  Seq Scan on ref_tbl r
+         SubPlan 2  (slice0; segments: 1)
+           ->  Materialize
+                 ->  Seq Scan on ref_tbl r_1
+ Optimizer: legacy query optimizer
+(11 rows)
+
+EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Update on base_tbl b
+   ->  Redistribute Motion 3:3  (slice1; segments: 3)
+         Hash Key: ((b.a + 5))
+         ->  Split
+               ->  Hash Join
+                     Hash Cond: (r.a = b.a)
+                     ->  Seq Scan on ref_tbl r
+                     ->  Hash
+                           ->  Seq Scan on base_tbl b
+         SubPlan 1  (slice1; segments: 3)
+           ->  Result
+                 Filter: (r_1.a = b.a)
+                 ->  Materialize
+                       ->  Seq Scan on ref_tbl r_1
+         SubPlan 2  (slice1; segments: 3)
+           ->  Materialize
+                 ->  Seq Scan on ref_tbl r_2
+ Optimizer: legacy query optimizer
+(18 rows)
+
+DROP TABLE base_tbl, ref_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
+-- WITH CHECK OPTION with BEFORE trigger on base table
+CREATE TABLE base_tbl (a int, b int);
+CREATE FUNCTION base_tbl_trig_fn()
+RETURNS trigger AS
+$$
+BEGIN
+  NEW.b := 10;
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+CREATE TRIGGER base_tbl_trig BEFORE INSERT OR UPDATE ON base_tbl
+  FOR EACH ROW EXECUTE PROCEDURE base_tbl_trig_fn();
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a < b WITH CHECK OPTION;
+INSERT INTO rw_view1 VALUES (5,0); -- ok
+INSERT INTO rw_view1 VALUES (15, 20); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (15, 10).
+UPDATE rw_view1 SET a = 20, b = 30; -- should fail
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
+DROP FUNCTION base_tbl_trig_fn();
+-- WITH LOCAL CHECK OPTION with INSTEAD OF trigger on base view
+CREATE TABLE base_tbl (a int, b int);
+CREATE VIEW rw_view1 AS SELECT a FROM base_tbl WHERE a < b;
+CREATE FUNCTION rw_view1_trig_fn()
+RETURNS trigger AS
+$$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO base_tbl VALUES (NEW.a, 10);
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    UPDATE base_tbl SET a=NEW.a WHERE a=OLD.a;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    DELETE FROM base_tbl WHERE a=OLD.a;
+    RETURN OLD;
+  END IF;
+END;
+$$
+LANGUAGE plpgsql;
+CREATE TRIGGER rw_view1_trig
+  INSTEAD OF INSERT OR UPDATE OR DELETE ON rw_view1
+  FOR EACH ROW EXECUTE PROCEDURE rw_view1_trig_fn();
+ERROR:  INSTEAD OF triggers are not supported in Greenplum
+CREATE VIEW rw_view2 AS
+  SELECT * FROM rw_view1 WHERE a > 0 WITH LOCAL CHECK OPTION;
+INSERT INTO rw_view2 VALUES (-5); -- should fail
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view2"
+DETAIL:  Failing row contains (-5, null).
+INSERT INTO rw_view2 VALUES (5); -- ok
+INSERT INTO rw_view2 VALUES (50); -- ok, but not in view
+UPDATE rw_view2 SET a = a - 10; -- should fail
+SELECT * FROM base_tbl;
+ a  | b 
+----+---
+  5 |  
+ 50 |  
+(2 rows)
+
+-- Check option won't cascade down to base view with INSTEAD OF triggers
+ALTER VIEW rw_view2 SET (check_option=cascaded);
+INSERT INTO rw_view2 VALUES (100); -- ok, but not in view (doesn't fail rw_view1's check)
+ERROR:  new row violates WITH CHECK OPTION for view "rw_view1"
+DETAIL:  Failing row contains (100, null).
+UPDATE rw_view2 SET a = 200 WHERE a = 5; -- ok, but not in view (doesn't fail rw_view1's check)
+SELECT * FROM base_tbl;
+ a  | b 
+----+---
+  5 |  
+ 50 |  
+(2 rows)
+
+-- Neither local nor cascaded check options work with INSTEAD rules
+DROP TRIGGER rw_view1_trig ON rw_view1;
+ERROR:  trigger "rw_view1_trig" for table "rw_view1" does not exist
+-- GPDB: The previous tests don't work the same as in upstream. Reset the
+-- contents of the table to be the same as in upstream after this test, so
+-- that the tests that follow return the same results.
+delete from base_tbl;
+insert into base_tbl values (50, 10), (100, 10), (200, 10);
+CREATE RULE rw_view1_ins_rule AS ON INSERT TO rw_view1
+  DO INSTEAD INSERT INTO base_tbl VALUES (NEW.a, 10);
+CREATE RULE rw_view1_upd_rule AS ON UPDATE TO rw_view1
+  DO INSTEAD UPDATE base_tbl SET a=NEW.a WHERE a=OLD.a;
+INSERT INTO rw_view2 VALUES (-10); -- ok, but not in view (doesn't fail rw_view2's check)
+INSERT INTO rw_view2 VALUES (5); -- ok
+INSERT INTO rw_view2 VALUES (20); -- ok, but not in view (doesn't fail rw_view1's check)
+UPDATE rw_view2 SET a = 30 WHERE a = 5; -- ok, but not in view (doesn't fail rw_view1's check)
+INSERT INTO rw_view2 VALUES (5); -- ok
+UPDATE rw_view2 SET a = -5 WHERE a = 5; -- ok, but not in view (doesn't fail rw_view2's check)
+SELECT * FROM base_tbl;
+  a  | b  
+-----+----
+  50 | 10
+ 100 | 10
+ 200 | 10
+ -10 | 10
+  20 | 10
+  30 | 10
+  -5 | 10
+(7 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+DROP FUNCTION rw_view1_trig_fn();
+CREATE TABLE base_tbl (a int);
+CREATE VIEW rw_view1 AS SELECT a,10 AS b FROM base_tbl;
+CREATE RULE rw_view1_ins_rule AS ON INSERT TO rw_view1
+  DO INSTEAD INSERT INTO base_tbl VALUES (NEW.a);
+CREATE VIEW rw_view2 AS
+  SELECT * FROM rw_view1 WHERE a > b WITH LOCAL CHECK OPTION;
+INSERT INTO rw_view2 VALUES (2,3); -- ok, but not in view (doesn't fail rw_view2's check)
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+-- security barrier view
+CREATE TABLE base_tbl (person text, visibility text);
+INSERT INTO base_tbl VALUES ('Tom', 'public'),
+                            ('Dick', 'private'),
+                            ('Harry', 'public');
+CREATE VIEW rw_view1 AS
+  SELECT person FROM base_tbl WHERE visibility = 'public';
+CREATE FUNCTION snoop(anyelement)
+RETURNS boolean AS
+$$
+BEGIN
+  RAISE NOTICE 'snooped value: %', $1;
+  RETURN true;
+END;
+$$
+LANGUAGE plpgsql COST 0.000001;
+CREATE OR REPLACE FUNCTION leakproof(anyelement)
+RETURNS boolean AS
+$$
+BEGIN
+  RETURN true;
+END;
+$$
+LANGUAGE plpgsql STRICT IMMUTABLE LEAKPROOF;
+SELECT * FROM rw_view1 WHERE snoop(person);
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Dick
+NOTICE:  snooped value: Harry
+ person 
+--------
+ Tom
+ Harry
+(2 rows)
+
+UPDATE rw_view1 SET person=person WHERE snoop(person);
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Dick
+NOTICE:  snooped value: Harry
+DELETE FROM rw_view1 WHERE NOT snoop(person);
+NOTICE:  snooped value: Dick
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Harry
+ALTER VIEW rw_view1 SET (security_barrier = true);
+SELECT table_name, is_insertable_into
+  FROM information_schema.tables
+ WHERE table_name = 'rw_view1';
+ table_name | is_insertable_into 
+------------+--------------------
+ rw_view1   | YES
+(1 row)
+
+SELECT table_name, is_updatable, is_insertable_into
+  FROM information_schema.views
+ WHERE table_name = 'rw_view1';
+ table_name | is_updatable | is_insertable_into 
+------------+--------------+--------------------
+ rw_view1   | YES          | YES
+(1 row)
+
+SELECT table_name, column_name, is_updatable
+  FROM information_schema.columns
+ WHERE table_name = 'rw_view1'
+ ORDER BY ordinal_position;
+ table_name | column_name | is_updatable 
+------------+-------------+--------------
+ rw_view1   | person      | YES
+(1 row)
+
+SELECT * FROM rw_view1 WHERE snoop(person);
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Harry
+ person 
+--------
+ Tom
+ Harry
+(2 rows)
+
+UPDATE rw_view1 SET person=person WHERE snoop(person);
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Harry
+DELETE FROM rw_view1 WHERE NOT snoop(person);
+NOTICE:  snooped value: Tom
+NOTICE:  snooped value: Harry
+EXPLAIN (costs off) SELECT * FROM rw_view1 WHERE snoop(person);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on rw_view1
+         Filter: snoop(rw_view1.person)
+         ->  Seq Scan on base_tbl
+               Filter: (visibility = 'public'::text)
+ Optimizer: legacy query optimizer
+(6 rows)
+
+EXPLAIN (costs off) UPDATE rw_view1 SET person=person WHERE snoop(person);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Update on base_tbl base_tbl_1
+   ->  Subquery Scan on base_tbl
+         Filter: snoop(base_tbl.person)
+         ->  Seq Scan on base_tbl base_tbl_2
+               Filter: (visibility = 'public'::text)
+(5 rows)
+
+EXPLAIN (costs off) DELETE FROM rw_view1 WHERE NOT snoop(person);
+                     QUERY PLAN                      
+-----------------------------------------------------
+ Delete on base_tbl base_tbl_1
+   ->  Subquery Scan on base_tbl
+         Filter: (NOT snoop(base_tbl.person))
+         ->  Seq Scan on base_tbl base_tbl_2
+               Filter: (visibility = 'public'::text)
+(5 rows)
+
+-- security barrier view on top of security barrier view
+CREATE VIEW rw_view2 WITH (security_barrier = true) AS
+  SELECT * FROM rw_view1 WHERE snoop(person);
+SELECT table_name, is_insertable_into
+  FROM information_schema.tables
+ WHERE table_name = 'rw_view2';
+ table_name | is_insertable_into 
+------------+--------------------
+ rw_view2   | YES
+(1 row)
+
+SELECT table_name, is_updatable, is_insertable_into
+  FROM information_schema.views
+ WHERE table_name = 'rw_view2';
+ table_name | is_updatable | is_insertable_into 
+------------+--------------+--------------------
+ rw_view2   | YES          | YES
+(1 row)
+
+SELECT table_name, column_name, is_updatable
+  FROM information_schema.columns
+ WHERE table_name = 'rw_view2'
+ ORDER BY ordinal_position;
+ table_name | column_name | is_updatable 
+------------+-------------+--------------
+ rw_view2   | person      | YES
+(1 row)
+
+SELECT * FROM rw_view2 WHERE snoop(person);
+NOTICE:  snooped value: Tom  (seg0 slice1 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Tom  (seg0 slice1 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 slice1 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 slice1 127.0.0.1:40000 pid=26896)
+ person 
+--------
+ Tom
+ Harry
+(2 rows)
+
+UPDATE rw_view2 SET person=person WHERE snoop(person);
+NOTICE:  snooped value: Tom  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Tom  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
+DELETE FROM rw_view2 WHERE NOT snoop(person);
+NOTICE:  snooped value: Tom  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Tom  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
+NOTICE:  snooped value: Harry  (seg0 127.0.0.1:40000 pid=26896)
+EXPLAIN (costs off) SELECT * FROM rw_view2 WHERE snoop(person);
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on rw_view2
+         Filter: snoop(rw_view2.person)
+         ->  Subquery Scan on rw_view1
+               Filter: snoop(rw_view1.person)
+               ->  Seq Scan on base_tbl
+                     Filter: (visibility = 'public'::text)
+ Optimizer: legacy query optimizer
+(8 rows)
+
+EXPLAIN (costs off) UPDATE rw_view2 SET person=person WHERE snoop(person);
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Update on base_tbl base_tbl_1
+   ->  Subquery Scan on base_tbl
+         Filter: snoop(base_tbl.person)
+         ->  Subquery Scan on base_tbl_2
+               Filter: snoop(base_tbl_2.person)
+               ->  Seq Scan on base_tbl base_tbl_3
+                     Filter: (visibility = 'public'::text)
+(7 rows)
+
+EXPLAIN (costs off) DELETE FROM rw_view2 WHERE NOT snoop(person);
+                        QUERY PLAN                         
+-----------------------------------------------------------
+ Delete on base_tbl base_tbl_1
+   ->  Subquery Scan on base_tbl
+         Filter: (NOT snoop(base_tbl.person))
+         ->  Subquery Scan on base_tbl_2
+               Filter: snoop(base_tbl_2.person)
+               ->  Seq Scan on base_tbl base_tbl_3
+                     Filter: (visibility = 'public'::text)
+(7 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to 2 other objects
+DETAIL:  drop cascades to view rw_view1
+drop cascades to view rw_view2
+-- security barrier view on top of table with rules
+CREATE TABLE base_tbl(id int PRIMARY KEY, data text, deleted boolean);
+INSERT INTO base_tbl VALUES (1, 'Row 1', false), (2, 'Row 2', true);
+CREATE RULE base_tbl_ins_rule AS ON INSERT TO base_tbl
+  WHERE EXISTS (SELECT 1 FROM base_tbl t WHERE t.id = new.id)
+  DO INSTEAD
+    UPDATE base_tbl SET data = new.data, deleted = false WHERE id = new.id;
+CREATE RULE base_tbl_del_rule AS ON DELETE TO base_tbl
+  DO INSTEAD
+    UPDATE base_tbl SET deleted = true WHERE id = old.id;
+CREATE VIEW rw_view1 WITH (security_barrier=true) AS
+  SELECT id, data FROM base_tbl WHERE NOT deleted;
+SELECT * FROM rw_view1;
+ id | data  
+----+-------
+  1 | Row 1
+(1 row)
+
+EXPLAIN (costs off) DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
+                           QUERY PLAN                           
+----------------------------------------------------------------
+ Update on base_tbl base_tbl_1
+   ->  Nested Loop
+         ->  Seq Scan on base_tbl base_tbl_1
+               Filter: (id = 1)
+         ->  Materialize
+               ->  Subquery Scan on base_tbl
+                     Filter: snoop(base_tbl.data)
+                     ->  Seq Scan on base_tbl base_tbl_2
+                           Filter: ((NOT deleted) AND (id = 1))
+ Optimizer: legacy query optimizer
+(10 rows)
+
+DELETE FROM rw_view1 WHERE id = 1 AND snoop(data);
+NOTICE:  snooped value: Row 1
+EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (2, 'New row 2');
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Insert on base_tbl
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Gather Motion 3:1  (slice1; segments: 3)
+           ->  Seq Scan on base_tbl t
+                 Filter: (id = 2)
+   ->  Result
+         One-Time Filter: ($0 IS NOT TRUE)
+ Optimizer: legacy query optimizer
+ 
+ Update on base_tbl
+   InitPlan 1 (returns $0)  (slice2)
+     ->  Limit
+           ->  Gather Motion 1:1  (slice1; segments: 1)
+                 ->  Limit
+                       ->  Seq Scan on base_tbl t
+                             Filter: (id = 2)
+   ->  Result
+         One-Time Filter: $0
+         ->  Seq Scan on base_tbl
+               Filter: (id = 2)
+ Optimizer: legacy query optimizer
+(21 rows)
+
+INSERT INTO rw_view1 VALUES (2, 'New row 2');
+SELECT * FROM base_tbl;
+ id |   data    | deleted 
+----+-----------+---------
+  1 | Row 1     | t
+  2 | New row 2 | f
+(2 rows)
+
+DROP TABLE base_tbl CASCADE;
+NOTICE:  drop cascades to view rw_view1
+-- security barrier view based on inheiritance set
+CREATE TABLE t1 (a int, b float, c text);
+CREATE INDEX t1_a_idx ON t1(a);
+INSERT INTO t1
+SELECT i,i,'t1' FROM generate_series(1,10) g(i);
+ANALYZE t1;
+CREATE TABLE t11 (d text) INHERITS (t1);
+CREATE INDEX t11_a_idx ON t11(a);
+INSERT INTO t11
+SELECT i,i,'t11','t11d' FROM generate_series(1,10) g(i);
+ANALYZE t11;
+CREATE TABLE t12 (e int[]) INHERITS (t1);
+CREATE INDEX t12_a_idx ON t12(a);
+INSERT INTO t12
+SELECT i,i,'t12','{1,2}'::int[] FROM generate_series(1,10) g(i);
+ANALYZE t12;
+CREATE TABLE t111 () INHERITS (t11, t12);
+NOTICE:  merging multiple inherited definitions of column "a"
+NOTICE:  merging multiple inherited definitions of column "b"
+NOTICE:  merging multiple inherited definitions of column "c"
+CREATE INDEX t111_a_idx ON t111(a);
+INSERT INTO t111
+SELECT i,i,'t111','t111d','{1,1,1}'::int[] FROM generate_series(1,10) g(i);
+ANALYZE t111;
+CREATE VIEW v1 WITH (security_barrier=true) AS
+SELECT *, (SELECT d FROM t11 WHERE t11.a = t1.a LIMIT 1) AS d
+FROM t1
+WHERE a > 5 AND EXISTS(SELECT 1 FROM t12 WHERE t12.a = t1.a);
+SELECT * FROM v1 WHERE a=3; -- should not see anything
+ a | b | c | d 
+---+---+---+---
+(0 rows)
+
+SELECT * FROM v1 WHERE a=8;
+ a | b |  c   |  d   
+---+---+------+------
+ 8 | 8 | t1   | t11d
+ 8 | 8 | t11  | t11d
+ 8 | 8 | t12  | t11d
+ 8 | 8 | t111 | t11d
+(4 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Update on public.t1 t1_4
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         Output: "outer".a, t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id, (DMLAction)
+         Hash Key: "outer".a
+         ->  Split
+               Output: "outer".a, t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1
+                     Output: 100, t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id
+                     Filter: snoop(t1.a)
+                     ->  Hash Semi Join
+                           Output: t1_5.ctid, t1_5.gp_segment_id, t1_5.a, t1_5.b, t1_5.c
+                           Hash Cond: (t1_5.a = t12.a)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Output: t1_5.ctid, t1_5.gp_segment_id, t1_5.a, t1_5.b, t1_5.c
+                                 Hash Key: t1_5.a
+                                 ->  Seq Scan on public.t1 t1_5
+                                       Output: t1_5.ctid, t1_5.gp_segment_id, t1_5.a, t1_5.b, t1_5.c
+                                       Filter: ((t1_5.a > 5) AND (t1_5.a = 3) AND leakproof(t1_5.a))
+                           ->  Hash
+                                 Output: t12.a
+                                 ->  Append
+                                       ->  Seq Scan on public.t12
+                                             Output: t12.a
+                                             Filter: (t12.a > 5)
+                                       ->  Seq Scan on public.t111
+                                             Output: t111.a
+                                             Filter: (t111.a > 5)
+   ->  Redistribute Motion 3:3  (slice4; segments: 3)
+         Output: "outer".a, t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id, (DMLAction)
+         Hash Key: "outer".a
+         ->  Split
+               Output: "outer".a, t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_1
+                     Output: 100, t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id
+                     Filter: snoop(t1_1.a)
+                     ->  Hash Semi Join
+                           Output: t11.ctid, t11.gp_segment_id, t11.a, t11.b, t11.c, t11.d
+                           Hash Cond: (t11.a = t12_1.a)
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Output: t11.ctid, t11.gp_segment_id, t11.a, t11.b, t11.c, t11.d
+                                 Hash Key: t11.a
+                                 ->  Seq Scan on public.t11
+                                       Output: t11.ctid, t11.gp_segment_id, t11.a, t11.b, t11.c, t11.d
+                                       Filter: ((t11.a > 5) AND (t11.a = 3) AND leakproof(t11.a))
+                           ->  Hash
+                                 Output: t12_1.a
+                                 ->  Append
+                                       ->  Seq Scan on public.t12 t12_1
+                                             Output: t12_1.a
+                                             Filter: (t12_1.a > 5)
+                                       ->  Seq Scan on public.t111 t111_1
+                                             Output: t111_1.a
+                                             Filter: (t111_1.a > 5)
+   ->  Redistribute Motion 3:3  (slice6; segments: 3)
+         Output: "outer".a, t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id, (DMLAction)
+         Hash Key: "outer".a
+         ->  Split
+               Output: "outer".a, t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_2
+                     Output: 100, t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id
+                     Filter: snoop(t1_2.a)
+                     ->  Hash Semi Join
+                           Output: t12_2.ctid, t12_2.gp_segment_id, t12_2.a, t12_2.b, t12_2.c, t12_2.e
+                           Hash Cond: (t12_2.a = t12_3.a)
+                           ->  Seq Scan on public.t12 t12_2
+                                 Output: t12_2.ctid, t12_2.gp_segment_id, t12_2.a, t12_2.b, t12_2.c, t12_2.e
+                                 Filter: ((t12_2.a > 5) AND (t12_2.a = 3) AND leakproof(t12_2.a))
+                           ->  Hash
+                                 Output: t12_3.a
+                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                       Output: t12_3.a
+                                       Hash Key: 3
+                                       ->  Append
+                                             ->  Seq Scan on public.t12 t12_3
+                                                   Output: t12_3.a
+                                                   Filter: (t12_3.a > 5)
+                                             ->  Seq Scan on public.t111 t111_2
+                                                   Output: t111_2.a
+                                                   Filter: (t111_2.a > 5)
+   ->  Redistribute Motion 3:3  (slice8; segments: 3)
+         Output: "outer".a, t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id, (DMLAction)
+         Hash Key: "outer".a
+         ->  Split
+               Output: "outer".a, t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_3
+                     Output: 100, t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id
+                     Filter: snoop(t1_3.a)
+                     ->  Hash Semi Join
+                           Output: t111_3.ctid, t111_3.gp_segment_id, t111_3.a, t111_3.b, t111_3.c, t111_3.d, t111_3.e
+                           Hash Cond: (t111_3.a = t12_4.a)
+                           ->  Seq Scan on public.t111 t111_3
+                                 Output: t111_3.ctid, t111_3.gp_segment_id, t111_3.a, t111_3.b, t111_3.c, t111_3.d, t111_3.e
+                                 Filter: ((t111_3.a > 5) AND (t111_3.a = 3) AND leakproof(t111_3.a))
+                           ->  Hash
+                                 Output: t12_4.a
+                                 ->  Redistribute Motion 3:3  (slice7; segments: 3)
+                                       Output: t12_4.a
+                                       Hash Key: 3
+                                       ->  Append
+                                             ->  Seq Scan on public.t12 t12_4
+                                                   Output: t12_4.a
+                                                   Filter: (t12_4.a > 5)
+                                             ->  Seq Scan on public.t111 t111_4
+                                                   Output: t111_4.a
+                                                   Filter: (t111_4.a > 5)
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(107 rows)
+
+UPDATE v1 SET a=100 WHERE snoop(a) AND leakproof(a) AND a = 3;
+SELECT * FROM v1 WHERE a=100; -- Nothing should have been changed to 100
+ a | b | c | d 
+---+---+---+---
+(0 rows)
+
+SELECT * FROM t1 WHERE a=100; -- Nothing should have been changed to 100
+ a | b | c 
+---+---+---
+(0 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF)
+UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Update on public.t1 t1_4
+   ->  Redistribute Motion 3:3  (slice2; segments: 3)
+         Output: ((t1.a + 1)), t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id, (DMLAction)
+         Hash Key: ((t1.a + 1))
+         ->  Split
+               Output: ((t1.a + 1)), t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1
+                     Output: (t1.a + 1), t1.b, t1.c, t1.a, t1.ctid, t1.gp_segment_id
+                     Filter: snoop(t1.a)
+                     ->  Hash Semi Join
+                           Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c
+                           Hash Cond: (t1_5.a = t12.a)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                                 Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c
+                                 Hash Key: t1_5.a
+                                 ->  Seq Scan on public.t1 t1_5
+                                       Output: t1_5.a, t1_5.ctid, t1_5.gp_segment_id, t1_5.b, t1_5.c
+                                       Filter: ((t1_5.a > 5) AND (t1_5.a = 8) AND leakproof(t1_5.a))
+                           ->  Hash
+                                 Output: t12.a
+                                 ->  Append
+                                       ->  Seq Scan on public.t12
+                                             Output: t12.a
+                                             Filter: (t12.a > 5)
+                                       ->  Seq Scan on public.t111
+                                             Output: t111.a
+                                             Filter: (t111.a > 5)
+   ->  Redistribute Motion 3:3  (slice4; segments: 3)
+         Output: ((t1_1.a + 1)), t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id, (DMLAction)
+         Hash Key: ((t1_1.a + 1))
+         ->  Split
+               Output: ((t1_1.a + 1)), t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_1
+                     Output: (t1_1.a + 1), t1_1.b, t1_1.c, t1_1.d, t1_1.a, t1_1.ctid, t1_1.gp_segment_id
+                     Filter: snoop(t1_1.a)
+                     ->  Hash Semi Join
+                           Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d
+                           Hash Cond: (t11.a = t12_1.a)
+                           ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                                 Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d
+                                 Hash Key: t11.a
+                                 ->  Seq Scan on public.t11
+                                       Output: t11.a, t11.ctid, t11.gp_segment_id, t11.b, t11.c, t11.d
+                                       Filter: ((t11.a > 5) AND (t11.a = 8) AND leakproof(t11.a))
+                           ->  Hash
+                                 Output: t12_1.a
+                                 ->  Append
+                                       ->  Seq Scan on public.t12 t12_1
+                                             Output: t12_1.a
+                                             Filter: (t12_1.a > 5)
+                                       ->  Seq Scan on public.t111 t111_1
+                                             Output: t111_1.a
+                                             Filter: (t111_1.a > 5)
+   ->  Redistribute Motion 3:3  (slice6; segments: 3)
+         Output: ((t1_2.a + 1)), t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id, (DMLAction)
+         Hash Key: ((t1_2.a + 1))
+         ->  Split
+               Output: ((t1_2.a + 1)), t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_2
+                     Output: (t1_2.a + 1), t1_2.b, t1_2.c, t1_2.e, t1_2.a, t1_2.ctid, t1_2.gp_segment_id
+                     Filter: snoop(t1_2.a)
+                     ->  Hash Semi Join
+                           Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e
+                           Hash Cond: (t12_2.a = t12_3.a)
+                           ->  Seq Scan on public.t12 t12_2
+                                 Output: t12_2.a, t12_2.ctid, t12_2.gp_segment_id, t12_2.b, t12_2.c, t12_2.e
+                                 Filter: ((t12_2.a > 5) AND (t12_2.a = 8) AND leakproof(t12_2.a))
+                           ->  Hash
+                                 Output: t12_3.a
+                                 ->  Redistribute Motion 3:3  (slice5; segments: 3)
+                                       Output: t12_3.a
+                                       Hash Key: 8
+                                       ->  Append
+                                             ->  Seq Scan on public.t12 t12_3
+                                                   Output: t12_3.a
+                                                   Filter: (t12_3.a > 5)
+                                             ->  Seq Scan on public.t111 t111_2
+                                                   Output: t111_2.a
+                                                   Filter: (t111_2.a > 5)
+   ->  Redistribute Motion 3:3  (slice8; segments: 3)
+         Output: ((t1_3.a + 1)), t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id, (DMLAction)
+         Hash Key: ((t1_3.a + 1))
+         ->  Split
+               Output: ((t1_3.a + 1)), t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id, DMLAction
+               ->  Subquery Scan on t1_3
+                     Output: (t1_3.a + 1), t1_3.b, t1_3.c, t1_3.d, t1_3.e, t1_3.a, t1_3.ctid, t1_3.gp_segment_id
+                     Filter: snoop(t1_3.a)
+                     ->  Hash Semi Join
+                           Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e
+                           Hash Cond: (t111_3.a = t12_4.a)
+                           ->  Seq Scan on public.t111 t111_3
+                                 Output: t111_3.a, t111_3.ctid, t111_3.gp_segment_id, t111_3.b, t111_3.c, t111_3.d, t111_3.e
+                                 Filter: ((t111_3.a > 5) AND (t111_3.a = 8) AND leakproof(t111_3.a))
+                           ->  Hash
+                                 Output: t12_4.a
+                                 ->  Redistribute Motion 3:3  (slice7; segments: 3)
+                                       Output: t12_4.a
+                                       Hash Key: 8
+                                       ->  Append
+                                             ->  Seq Scan on public.t12 t12_4
+                                                   Output: t12_4.a
+                                                   Filter: (t12_4.a > 5)
+                                             ->  Seq Scan on public.t111 t111_4
+                                                   Output: t111_4.a
+                                                   Filter: (t111_4.a > 5)
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(107 rows)
+
+UPDATE v1 SET a=a+1 WHERE snoop(a) AND leakproof(a) AND a = 8;
+NOTICE:  snooped value: 8  (seg0 slice4 127.0.0.1:40000 pid=26920)
+NOTICE:  snooped value: 8  (seg0 slice8 127.0.0.1:40000 pid=26956)
+NOTICE:  snooped value: 8  (seg0 slice6 127.0.0.1:40000 pid=26944)
+NOTICE:  snooped value: 8  (seg0 slice2 127.0.0.1:40000 pid=26932)
+SELECT * FROM v1 WHERE b=8;
+ a | b |  c   |  d   
+---+---+------+------
+ 9 | 8 | t1   | t11d
+ 9 | 8 | t11  | t11d
+ 9 | 8 | t12  | t11d
+ 9 | 8 | t111 | t11d
+(4 rows)
+
+-- Like snoop() function, but doesn't print the actual value, as long
+-- as it's >= 5. This is used in GPDB in lieu of the snoop() function,
+-- because the order the NOTICEs for different rows arrive from the
+-- segments is not deterministic in GPDB. By omitting the value, we
+-- make the output the same regardless of the row order, as long as
+-- all the values are > 5, as they should if the security barrier view
+-- works correctly.
+CREATE FUNCTION snoop_five(int4)
+RETURNS boolean AS
+$$
+BEGIN
+  IF $1 <= 5 THEN
+    RAISE NOTICE 'snooped value: %', $1;
+  ELSE
+    RAISE NOTICE 'snooped a value that''s above 5';
+  END IF;
+  RETURN true;
+END;
+$$
+LANGUAGE plpgsql COST 0.000001;
+DELETE FROM v1 WHERE snoop_five(a) AND leakproof(a); -- should not delete everything, just where a>5
+NOTICE:  snooped a value that's above 5  (seg0 slice4 127.0.0.1:40000 pid=17181)
+NOTICE:  snooped a value that's above 5  (seg0 slice2 127.0.0.1:40000 pid=17193)
+NOTICE:  snooped a value that's above 5  (seg1 slice2 127.0.0.1:40001 pid=17194)
+NOTICE:  snooped a value that's above 5  (seg1 slice6 127.0.0.1:40001 pid=17206)
+NOTICE:  snooped a value that's above 5  (seg1 slice6 127.0.0.1:40001 pid=17206)
+NOTICE:  snooped a value that's above 5  (seg1 slice6 127.0.0.1:40001 pid=17206)
+NOTICE:  snooped a value that's above 5  (seg1 slice6 127.0.0.1:40001 pid=17206)
+NOTICE:  snooped a value that's above 5  (seg0 slice6 127.0.0.1:40000 pid=17205)
+NOTICE:  snooped a value that's above 5  (seg1 slice4 127.0.0.1:40001 pid=17182)
+NOTICE:  snooped a value that's above 5  (seg1 slice8 127.0.0.1:40001 pid=17218)
+NOTICE:  snooped a value that's above 5  (seg1 slice4 127.0.0.1:40001 pid=17182)
+NOTICE:  snooped a value that's above 5  (seg1 slice8 127.0.0.1:40001 pid=17218)
+NOTICE:  snooped a value that's above 5  (seg1 slice2 127.0.0.1:40001 pid=17194)
+NOTICE:  snooped a value that's above 5  (seg1 slice8 127.0.0.1:40001 pid=17218)
+NOTICE:  snooped a value that's above 5  (seg1 slice4 127.0.0.1:40001 pid=17182)
+NOTICE:  snooped a value that's above 5  (seg1 slice8 127.0.0.1:40001 pid=17218)
+NOTICE:  snooped a value that's above 5  (seg1 slice2 127.0.0.1:40001 pid=17194)
+NOTICE:  snooped a value that's above 5  (seg1 slice4 127.0.0.1:40001 pid=17182)
+NOTICE:  snooped a value that's above 5  (seg1 slice2 127.0.0.1:40001 pid=17194)
+NOTICE:  snooped a value that's above 5  (seg0 slice8 127.0.0.1:40000 pid=17217)
+TABLE t1; -- verify all a<=5 are intact
+ a | b |  c   
+---+---+------
+ 1 | 1 | t1
+ 2 | 2 | t1
+ 3 | 3 | t1
+ 4 | 4 | t1
+ 5 | 5 | t1
+ 1 | 1 | t11
+ 2 | 2 | t11
+ 3 | 3 | t11
+ 4 | 4 | t11
+ 5 | 5 | t11
+ 1 | 1 | t12
+ 2 | 2 | t12
+ 3 | 3 | t12
+ 4 | 4 | t12
+ 5 | 5 | t12
+ 1 | 1 | t111
+ 2 | 2 | t111
+ 3 | 3 | t111
+ 4 | 4 | t111
+ 5 | 5 | t111
+(20 rows)
+
+DROP TABLE t1, t11, t12, t111 CASCADE;
+NOTICE:  drop cascades to view v1
+DROP FUNCTION snoop(anyelement);
+DROP FUNCTION leakproof(anyelement);

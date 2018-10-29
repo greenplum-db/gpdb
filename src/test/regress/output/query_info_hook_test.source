@@ -37,7 +37,6 @@ WARNING:  Query submit
 WARNING:  Query start
 WARNING:  Plan node initializing
 WARNING:  Plan node executing
-WARNING:  Plan node executing
 WARNING:  Query Canceling
 WARNING:  Query Canceled
 ERROR:  canceling statement due to user request

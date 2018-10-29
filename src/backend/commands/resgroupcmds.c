@@ -141,7 +141,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 
 	/* Check if MaxResourceGroups limit is reached */
 	sscan = systable_beginscan(pg_resgroup_rel, ResGroupRsgnameIndexId, false,
-							   SnapshotNow, 0, NULL);
+							   NULL, 0, NULL);
 	nResGroups = 0;
 	while (systable_getnext(sscan) != NULL)
 		nResGroups++;
@@ -162,7 +162,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 				CStringGetDatum(stmt->name));
 
 	sscan = systable_beginscan(pg_resgroup_rel, ResGroupRsgnameIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	if (HeapTupleIsValid(systable_getnext(sscan)))
 		ereport(ERROR,
@@ -289,7 +289,7 @@ DropResourceGroup(DropResourceGroupStmt *stmt)
 				CStringGetDatum(stmt->name));
 
 	sscan = systable_beginscan(pg_resgroup_rel, ResGroupRsgnameIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
@@ -558,7 +558,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	sscan = systable_beginscan(rel,
 							   ResGroupCapabilityResgroupidIndexId,
 							   true,
-							   SnapshotNow, 1, &key);
+							   NULL, 1, &key);
 
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
@@ -668,7 +668,7 @@ GetResGroupIdForRole(Oid roleid)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(roleid));
 
-	sscan = systable_beginscan(rel, AuthIdOidIndexId, true, SnapshotNow, 1, &key);
+	sscan = systable_beginscan(rel, AuthIdOidIndexId, true, NULL, 1, &key);
 
 	tuple = systable_getnext(sscan);
 	if (!HeapTupleIsValid(tuple))
@@ -1219,7 +1219,7 @@ updateResgroupCapabilityEntry(Relation rel,
 
 	sscan = systable_beginscan(rel,
 							   ResGroupCapabilityResgroupidResLimittypeIndexId, true,
-							   SnapshotNow, 2, scankey);
+							   NULL, 2, scankey);
 
 	MemSet(values, 0, sizeof(values));
 	MemSet(isnull, 0, sizeof(isnull));
@@ -1335,7 +1335,7 @@ validateCapabilities(Relation rel,
 	}
 
 	sscan = systable_beginscan(rel, ResGroupCapabilityResgroupidIndexId,
-							   true, SnapshotNow, 0, NULL);
+							   true, NULL, 0, NULL);
 
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
@@ -1487,7 +1487,7 @@ deleteResgroupCapabilities(Oid groupid)
 
 	sscan = systable_beginscan(resgroup_capability_rel,
 							   ResGroupCapabilityResgroupidIndexId,
-							   true, SnapshotNow, 1, &scankey);
+							   true, NULL, 1, &scankey);
 
 	while ((tuple = systable_getnext(sscan)) != NULL)
 		simple_heap_delete(resgroup_capability_rel, &tuple->t_self);
@@ -1514,7 +1514,7 @@ checkAuthIdForDrop(Oid groupId)
 				ObjectIdGetDatum(groupId));
 
 	authidScan = systable_beginscan(authIdRel, AuthIdRolResGroupIndexId, true,
-									SnapshotNow, 1, &authidScankey);
+									NULL, 1, &authidScankey);
 
 	if (HeapTupleIsValid(systable_getnext(authidScan)))
 		ereport(ERROR,

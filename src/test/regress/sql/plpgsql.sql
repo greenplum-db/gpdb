@@ -2220,7 +2220,7 @@ create function excpt_test2() returns void as $$
 begin
     begin
         begin
-    	    raise notice '% %', sqlstate, sqlerrm;
+            raise notice '% %', sqlstate, sqlerrm;
         end;
     end;
 end; $$ language plpgsql;
@@ -2230,7 +2230,7 @@ select excpt_test2();
 create function excpt_test3() returns void as $$
 begin
     begin
-    	raise exception 'user exception';
+        raise exception 'user exception';
     exception when others then
 	    raise notice 'caught exception % %', sqlstate, sqlerrm;
 	    begin
@@ -2607,6 +2607,197 @@ select footest();
 
 drop function footest();
 
+-- test printing parameters after failure due to STRICT
+
+set plpgsql.print_strict_params to true;
+
+create or replace function footest() returns void as $$
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- no rows
+  select * from foo where f1 = p1 and f1::text = p3 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows, no params
+  select * from foo where f1 > 3 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- no rows
+  execute 'select * from foo where f1 = $1 or f1::text = $2' using 0, 'foo' into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows
+  execute 'select * from foo where f1 > $1' using 1 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows, no parameters
+  execute 'select * from foo where f1 > 3' into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+create or replace function footest() returns void as $$
+-- override the global
+#print_strict_params off
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+reset plpgsql.print_strict_params;
+
+create or replace function footest() returns void as $$
+-- override the global
+#print_strict_params on
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+
+select footest();
+
+-- test warnings and errors
+set plpgsql.extra_warnings to 'all';
+set plpgsql.extra_warnings to 'none';
+set plpgsql.extra_errors to 'all';
+set plpgsql.extra_errors to 'none';
+
+-- test warnings when shadowing a variable
+
+set plpgsql.extra_warnings to 'shadowed_variables';
+
+-- simple shadowing of input and output parameters
+create or replace function shadowtest(in1 int)
+	returns table (out1 int) as $$
+declare
+in1 int;
+out1 int;
+begin
+end
+$$ language plpgsql;
+select shadowtest(1);
+
+set plpgsql.extra_warnings to 'shadowed_variables';
+select shadowtest(1);
+create or replace function shadowtest(in1 int)
+	returns table (out1 int) as $$
+declare
+in1 int;
+out1 int;
+begin
+end
+$$ language plpgsql;
+select shadowtest(1);
+drop function shadowtest(int);
+
+-- shadowing in a second DECLARE block
+create or replace function shadowtest()
+	returns void as $$
+declare
+f1 int;
+begin
+	declare
+	f1 int;
+	begin
+	end;
+end$$ language plpgsql;
+drop function shadowtest();
+
+-- several levels of shadowing
+create or replace function shadowtest(in1 int)
+	returns void as $$
+declare
+in1 int;
+begin
+	declare
+	in1 int;
+	begin
+	end;
+end$$ language plpgsql;
+drop function shadowtest(int);
+
+-- shadowing in cursor definitions
+create or replace function shadowtest()
+	returns void as $$
+declare
+f1 int;
+c1 cursor (f1 int) for select 1;
+begin
+end$$ language plpgsql;
+drop function shadowtest();
+
+-- test errors when shadowing a variable
+
+set plpgsql.extra_errors to 'shadowed_variables';
+
+create or replace function shadowtest(f1 int)
+	returns boolean as $$
+declare f1 int; begin return 1; end $$ language plpgsql;
+
+select shadowtest(1);
+
+reset plpgsql.extra_errors;
+reset plpgsql.extra_warnings;
+
+create or replace function shadowtest(f1 int)
+	returns boolean as $$
+declare f1 int; begin return 1; end $$ language plpgsql;
+
+select shadowtest(1);
+
 -- test scrollable cursor support
 
 create function sc_test() returns setof integer as $$
@@ -2961,22 +3152,22 @@ drop table tabwithcols;
 -- Tests for composite-type results
 --
 
-create type footype as (x int, y varchar);
+create type compostype as (x int, y varchar);
 
 -- test: use of variable of composite type in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 declare
-  v footype;
+  v compostype;
 begin
   v := (1, 'hello');
   return v;
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
 -- test: use of variable of record type in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 declare
   v record;
 begin
@@ -2985,39 +3176,39 @@ begin
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
 -- test: use of row expr in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return (1, 'hello'::varchar);
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
 -- this does not work currently (no implicit casting)
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return (1, 'hello');
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
 -- ... but this does
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
-  return (1, 'hello')::footype;
+  return (1, 'hello')::compostype;
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
-drop function foo();
+drop function compos();
 
 -- test: return a row expr as record.
-create or replace function foorec() returns record as $$
+create or replace function composrec() returns record as $$
 declare
   v record;
 begin
@@ -3026,46 +3217,46 @@ begin
 end;
 $$ language plpgsql;
 
-select foorec();
+select composrec();
 
 -- test: return row expr in return statement.
-create or replace function foorec() returns record as $$
+create or replace function composrec() returns record as $$
 begin
   return (1, 'hello');
 end;
 $$ language plpgsql;
 
-select foorec();
+select composrec();
 
-drop function foorec();
+drop function composrec();
 
 -- test: row expr in RETURN NEXT statement.
-create or replace function foo() returns setof footype as $$
+create or replace function compos() returns setof compostype as $$
 begin
   for i in 1..3
   loop
     return next (1, 'hello'::varchar);
   end loop;
-  return next null::footype;
-  return next (2, 'goodbye')::footype;
+  return next null::compostype;
+  return next (2, 'goodbye')::compostype;
 end;
 $$ language plpgsql;
 
-select * from foo();
+select * from compos();
 
-drop function foo();
+drop function compos();
 
 -- test: use invalid expr in return statement.
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return 1 + 1;
 end;
 $$ language plpgsql;
 
-select foo();
+select compos();
 
-drop function foo();
-drop type footype;
+drop function compos();
+drop type compostype;
 
 --
 -- Tests for 8.4's new RAISE features
@@ -3281,6 +3472,38 @@ $$ language plpgsql;
 select raise_test();
 
 drop function raise_test();
+
+-- test passing column_name, constraint_name, datatype_name, table_name
+-- and schema_name error fields
+
+create or replace function stacked_diagnostics_test() returns void as $$
+declare _column_name text;
+        _constraint_name text;
+        _datatype_name text;
+        _table_name text;
+        _schema_name text;
+begin
+  raise exception using
+    column = '>>some column name<<',
+    constraint = '>>some constraint name<<',
+    datatype = '>>some datatype name<<',
+    table = '>>some table name<<',
+    schema = '>>some schema name<<';
+exception when others then
+  get stacked diagnostics
+        _column_name = column_name,
+        _constraint_name = constraint_name,
+        _datatype_name = pg_datatype_name,
+        _table_name = table_name,
+        _schema_name = schema_name;
+  raise notice 'column %, constraint %, type %, table %, schema %',
+    _column_name, _constraint_name, _datatype_name, _table_name, _schema_name;
+end;
+$$ language plpgsql;
+
+select stacked_diagnostics_test();
+
+drop function stacked_diagnostics_test();
 
 -- test CASE statement
 
@@ -3888,3 +4111,105 @@ select testoa(1,2,1); -- fail at update
 
 drop function arrayassign1();
 drop function testoa(x1 int, x2 int, x3 int);
+
+-- access to call stack
+create function inner_func(int)
+returns int as $$
+declare _context text;
+begin
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  -- lets do it again, just for fun..
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  raise notice 'lets make sure we didnt break anything';
+  return 2 * $1;
+end;
+$$ language plpgsql;
+
+create or replace function outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into inner_func()';
+  myresult := inner_func($1);
+  raise notice 'inner_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+
+create or replace function outer_outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into outer_func()';
+  myresult := outer_func($1);
+  raise notice 'outer_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+
+select outer_outer_func(10);
+-- repeated call should to work
+select outer_outer_func(20);
+
+drop function outer_outer_func(int);
+drop function outer_func(int);
+drop function inner_func(int);
+
+-- access to call stack from exception
+create function inner_func(int)
+returns int as $$
+declare
+  _context text;
+  sx int := 5;
+begin
+  begin
+    perform sx / 0;
+  exception
+    when division_by_zero then
+      get diagnostics _context = pg_context;
+      raise notice '***%***', _context;
+  end;
+
+  -- lets do it again, just for fun..
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  raise notice 'lets make sure we didnt break anything';
+  return 2 * $1;
+end;
+$$ language plpgsql;
+
+create or replace function outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into inner_func()';
+  myresult := inner_func($1);
+  raise notice 'inner_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+
+create or replace function outer_outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into outer_func()';
+  myresult := outer_func($1);
+  raise notice 'outer_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+
+select outer_outer_func(10);
+-- repeated call should to work
+select outer_outer_func(20);
+
+drop function outer_outer_func(int);
+drop function outer_func(int);
+drop function inner_func(int);

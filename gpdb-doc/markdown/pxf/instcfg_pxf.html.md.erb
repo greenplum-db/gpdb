@@ -1,22 +1,16 @@
 ---
-title: Installing and Configuring PXF
+title: Configuring PXF
 ---
 
-The Greenplum Platform Extension Framework (PXF) provides connectors to Hadoop, Hive, HBase and external SQL data stores. To use these PXF connectors, you must install Hadoop, Hive, and HBase clients on each Greenplum Database segment host as described in this one-time installation and configuration procedure:
+The Greenplum Platform Extension Framework (PXF) provides connectors to Hadoop, Hive, HBase and external SQL data stores. You must configure PXF to support the connectors that you plan to use.
 
-- **[Installing and Configuring Hadoop Clients for PXF](client_instcfg.html)**
+To configure PXF, you must:
 
-PXF accesses Hadoop services on behalf of Greenplum Database end users. By default, PXF tries to access data source services (HDFS, Hive, HBase) using the identity of the Greenplum Database user account that logs into Greenplum Database. In order to support this functionality, you must configure proxy settings for Hadoop, as well as for Hive and HBase if you intend to use those PXF connectors. Follow procedures in:
+1. Install Java packages on each Greenplum Database segment host as described in **[Installing Java for PXF](install_java.html)**.
 
-- **[Configuring User Impersonation and Proxying](pxfuserimpers.html)**
+2. If you plan to use the Hadoop, Hive, or HBase PXF connectors, you must perform the configuration procedure described in **[Configuring PXF Hadoop Connectors](client_instcfg.html)**.
 
-to configure user impersonation and proxying for Hadoop services, or to turn off PXF user impersonation.
+3. **[Initialize PXF](cfginitstart_pxf.html#init_pxf)**.
 
-You must also configure and initialize PXF itself, and start the PXF service on each segment host:
-
-- **[Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html)**
-
-If your Hadoop cluster is secured with Kerberos, you must configure PXF and generate Kerberos principals and keytabs for each segment host:
-
-- **[Configuring PXF for Secure HDFS](pxf_kerbhdfs.html)**
+4. **[Start PXF](cfginitstart_pxf.html#start_pxf)**.
 

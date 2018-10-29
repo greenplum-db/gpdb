@@ -34,8 +34,8 @@ select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_
 
 -- Then vacuum should have completed compaction leaving segment file 1
 -- in default state on QD but in awaiting drop state on QEs
-select segno, state from gp_ao_or_aocs_seg_name('test_table_@orientation@');
-0U: select segno, state from gp_ao_or_aocs_seg_name('test_table_@orientation@');
+select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
+0U: select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
 
 -- And the entry in append only hash table for segno 1 is in awaiting drop state
 select segno, state from gp_toolkit.__gp_get_ao_entry_from_cache('test_table_@orientation@'::regclass::oid)

@@ -3,7 +3,7 @@
  * findtimezone.c
  *	  Functions for determining the default timezone to use.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/bin/initdb/findtimezone.c
@@ -52,7 +52,7 @@ pg_TZDIR(void)
  * This is simpler than the backend function of the same name because
  * we assume that the input string has the correct case already, so there
  * is no need for case-folding.  (This is obviously true if we got the file
- * name from the filesystem to start with.	The only other place it can come
+ * name from the filesystem to start with.  The only other place it can come
  * from is the environment variable TZ, and there seems no need to allow
  * case variation in that; other programs aren't likely to.)
  *
@@ -68,7 +68,7 @@ pg_open_tzfile(const char *name, char *canonname)
 	if (canonname)
 		strlcpy(canonname, name, TZ_STRLEN_MAX + 1);
 
-	strcpy(fullname, pg_TZDIR());
+	strlcpy(fullname, pg_TZDIR(), sizeof(fullname));
 	if (strlen(fullname) + 1 + strlen(name) >= MAXPGPATH)
 		return -1;				/* not gonna fit */
 	strcat(fullname, "/");
@@ -375,7 +375,7 @@ identify_system_timezone(void)
 	}
 
 	/* Search for the best-matching timezone file */
-	strcpy(tmptzdir, pg_TZDIR());
+	strlcpy(tmptzdir, pg_TZDIR(), sizeof(tmptzdir));
 	bestscore = -1;
 	resultbuf[0] = '\0';
 	scan_available_timezones(tmptzdir, tmptzdir + strlen(tmptzdir) + 1,
@@ -471,7 +471,7 @@ identify_system_timezone(void)
 		return resultbuf;
 
 	/*
-	 * Did not find the timezone.  Fallback to use a GMT zone.	Note that the
+	 * Did not find the timezone.  Fallback to use a GMT zone.  Note that the
 	 * Olson timezone database names the GMT-offset zones in POSIX style: plus
 	 * is west of Greenwich.  It's unfortunate that this is opposite of SQL
 	 * conventions.  Should we therefore change the names? Probably not...
@@ -490,7 +490,7 @@ identify_system_timezone(void)
  * Recursively scan the timezone database looking for the best match to
  * the system timezone behavior.
  *
- * tzdir points to a buffer of size MAXPGPATH.	On entry, it holds the
+ * tzdir points to a buffer of size MAXPGPATH.  On entry, it holds the
  * pathname of a directory containing TZ files.  We internally modify it
  * to hold pathnames of sub-directories and files, but must restore it
  * to its original contents before exit.

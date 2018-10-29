@@ -1762,9 +1762,9 @@ pg_resqueue_status(PG_FUNCTION_ARGS)
 static void
 BuildQueueStatusContext(QueueStatusContext *fctx)
 {
-	LWLockId	partitionLock;
 	int			num_calls = 0;
-	int			partition = 0;
+	int			numRecords;
+	int			i;
 	HASH_SEQ_STATUS status;
 	ResQueueData *queue = NULL;
 
@@ -1776,11 +1776,8 @@ BuildQueueStatusContext(QueueStatusContext *fctx)
 	 * the same lock order as the rest of the code - i.e. partition locks
 	 * *first* *then* the queue lock (otherwise we could deadlock ourselves).
 	 */
-	for (partition = 0; partition < NUM_LOCK_PARTITIONS; partition++)
-	{
-		partitionLock = FirstLockMgrLock + partition;
-		LWLockAcquire(partitionLock, LW_EXCLUSIVE);
-	}
+	for (i = 0; i < NUM_LOCK_PARTITIONS; i++)
+		LWLockAcquire(LockHashPartitionLockByIndex(i), LW_EXCLUSIVE);
 
 	/*
 	 * Lock resource queue structures.
@@ -1792,10 +1789,10 @@ BuildQueueStatusContext(QueueStatusContext *fctx)
 	num_calls = hash_get_num_entries(ResQueueHash);
 	Assert(num_calls == ResScheduler->num_queues);
 
-	int			i = 0;
-
+	numRecords = 0;
 	while ((queue = (ResQueueData *) hash_seq_search(&status)) != NULL)
 	{
+		QueueStatusRec *record = &fctx->record[numRecords];
 		int			j;
 		ResLimit	limits = NULL;
 		uint32		hashcode;
@@ -1805,44 +1802,29 @@ BuildQueueStatusContext(QueueStatusContext *fctx)
 		 */
 		limits = queue->limits;
 
-		fctx->record[i].queueid = queue->queueid;
+		record->queueid = queue->queueid;
 
 		for (j = 0; j < NUM_RES_LIMIT_TYPES; j++)
 		{
 			switch (limits[j].type)
 			{
 				case RES_COUNT_LIMIT:
-					{
-						fctx->record[i].queuecountthreshold =
-							limits[j].threshold_value;
-
-						fctx->record[i].queuecountvalue =
-							limits[j].current_value;
-					}
+					record->queuecountthreshold = limits[j].threshold_value;
+					record->queuecountvalue = limits[j].current_value;
 					break;
 
 				case RES_COST_LIMIT:
-					{
-						fctx->record[i].queuecostthreshold =
-							limits[j].threshold_value;
-
-						fctx->record[i].queuecostvalue =
-							limits[j].current_value;
-					}
+					record->queuecostthreshold = limits[j].threshold_value;
+					record->queuecostvalue = limits[j].current_value;
 					break;
 
 				case RES_MEMORY_LIMIT:
-					{
-						fctx->record[i].queuememthreshold =
-							limits[j].threshold_value;
-
-						fctx->record[i].queuememvalue =
-							limits[j].current_value;
-					}
+					record->queuememthreshold = limits[j].threshold_value;
+					record->queuememvalue =limits[j].current_value;
 					break;
 
 				default:
-					Assert(false && "Should never reach here!");
+					elog(ERROR, "unrecognized resource queue limit type: %d", limits[j].type);
 			}
 		}
 
@@ -1863,31 +1845,28 @@ BuildQueueStatusContext(QueueStatusContext *fctx)
 
 		if (!found || !lock)
 		{
-			fctx->record[i].queuewaiters = 0;
-			fctx->record[i].queueholders = 0;
+			record->queuewaiters = 0;
+			record->queueholders = 0;
 		}
 		else
 		{
-			fctx->record[i].queuewaiters = lock->nRequested - lock->nGranted;
-			fctx->record[i].queueholders = lock->nGranted;
+			record->queuewaiters = lock->nRequested - lock->nGranted;
+			record->queueholders = lock->nGranted;
 		}
 
-		i++;
-		Assert(i <= MaxResourceQueues);
+		numRecords++;
+		Assert(numRecords <= MaxResourceQueues);
 	}
 
 	/* Release the resource scheduler lock. */
 	LWLockRelease(ResQueueLock);
 
 	/* ...and the partition locks. */
-	for (partition = NUM_LOCK_PARTITIONS; --partition >= 0;)
-	{
-		partitionLock = FirstLockMgrLock + partition;
-		LWLockRelease(partitionLock);
-	}
+	for (i = NUM_LOCK_PARTITIONS; --i >= 0;)
+		LWLockRelease(LockHashPartitionLockByIndex(i));
 
 	/* Set the real no. of calls as we know it now! */
-	fctx->numRecords = i;
+	fctx->numRecords = numRecords;
 	return;
 }
 

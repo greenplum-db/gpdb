@@ -141,30 +141,9 @@ SOptContext::SOptContext()
 	m_should_generate_plan_stmt(false),
 	m_should_serialize_plan_dxl(false),
 	m_is_unexpected_failure(false),
+	m_should_error_out(false),
 	m_error_msg(NULL)
 {}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		SOptContext::HandleError
-//
-//	@doc:
-//		If there is an error, throw GPOS_EXCEPTION to abort plan generation.
-//		Calling elog::ERROR would result in longjump and hence a memory leak.
-//---------------------------------------------------------------------------
-void
-SOptContext::HandleError
-	(
-	BOOL *has_unexpected_failure
-	)
-{
-	*has_unexpected_failure = m_is_unexpected_failure;
-	if (NULL != m_error_msg)
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError);
-	}
-}
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -665,9 +644,6 @@ COptTasks::OptimizeTask
 	GPOS_ASSERT(NULL == opt_ctxt->m_plan_dxl);
 	GPOS_ASSERT(NULL == opt_ctxt->m_plan_stmt);
 
-	// initially assume no unexpected failure
-	opt_ctxt->m_is_unexpected_failure = false;
-
 	AUTO_MEM_POOL(amp);
 	IMemoryPool *mp = amp.Pmp();
 
@@ -820,19 +796,12 @@ COptTasks::OptimizeTask
 		CRefCount::SafeRelease(plan_dxl);
 		CMDCache::Shutdown();
 
-		if (GPOS_MATCH_EX(ex, gpdxl::ExmaGPDB, gpdxl::ExmiGPDBError))
-		{
-			elog(DEBUG1, "GPDB Exception. Please check log for more information.");
-		}
-		else if (ShouldErrorOut(ex))
-		{
-			IErrorContext *errctxt = CTask::Self()->GetErrCtxt();
-			opt_ctxt->m_error_msg = CreateMultiByteCharStringFromWCString(errctxt->GetErrorMsg());
-		}
-		else
-		{
-			opt_ctxt->m_is_unexpected_failure = IsUnexpectedFailure(ex);
-		}
+		IErrorContext *errctxt = CTask::Self()->GetErrCtxt();
+
+		opt_ctxt->m_should_error_out = ShouldErrorOut(ex);
+		opt_ctxt->m_is_unexpected_failure = IsUnexpectedFailure(ex);
+		opt_ctxt->m_error_msg = CreateMultiByteCharStringFromWCString(errctxt->GetErrorMsg());
+
 		GPOS_RETHROW(ex);
 	}
 	GPOS_CATCH_END;
@@ -965,8 +934,7 @@ PlannedStmt *
 COptTasks::GPOPTOptimizedPlan
 	(
 	Query *query,
-	SOptContext *gpopt_context,
-	BOOL *has_unexpected_failure // output : set to true if optimizer unexpectedly failed to produce plan
+	SOptContext *gpopt_context
 	)
 {
 	Assert(query);
@@ -974,17 +942,7 @@ COptTasks::GPOPTOptimizedPlan
 
 	gpopt_context->m_query = query;
 	gpopt_context->m_should_generate_plan_stmt= true;
-	GPOS_TRY
-	{
-		Execute(&OptimizeTask, gpopt_context);
-	}
-	GPOS_CATCH_EX(ex)
-	{
-		*has_unexpected_failure = gpopt_context->m_is_unexpected_failure;
-		GPOS_RETHROW(ex);
-	}
-	GPOS_CATCH_END;
-	gpopt_context->HandleError(has_unexpected_failure);
+	Execute(&OptimizeTask, gpopt_context);
 	return gpopt_context->m_plan_stmt;
 }
 

@@ -32,7 +32,7 @@ This section describes how to use PXF to write HDFS data, including how to creat
 Before writing HDFS data using PXF, ensure that:
 
 -  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
-- You have initialized and started PXF on your Greenplum Database segment hosts. See [Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- You have initialized and started PXF on your Greenplum Database segment hosts. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 - You have granted both *read and write* permissions to the HDFS directories that will be accessed as external tables in Greenplum Database. If user impersonation is enabled (the default), you must grant these permissions to each Greenplum Database user/role name that will use external tables that reference the HDFS files. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 
 

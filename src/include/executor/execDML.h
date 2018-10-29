@@ -39,7 +39,7 @@ ExecInsert(TupleTableSlot *slot,
 
 extern TupleTableSlot *
 ExecDelete(ItemPointer tupleid,
-		   HeapTupleHeader oldtuple,
+		   HeapTuple oldtuple,
 		   TupleTableSlot *planSlot,
 		   EPQState *epqstate,
 		   EState *estate,
@@ -49,7 +49,7 @@ ExecDelete(ItemPointer tupleid,
 
 extern TupleTableSlot *
 ExecUpdate(ItemPointer tupleid,
-		   HeapTupleHeader oldtuple,
+		   HeapTuple oldtuple,
 		   TupleTableSlot *slot,
 		   TupleTableSlot *planSlot,
 		   EPQState *epqstate,

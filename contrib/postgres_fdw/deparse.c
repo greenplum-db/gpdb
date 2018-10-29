@@ -23,7 +23,7 @@
  * the foreign table's columns are not marked with collations that match the
  * remote table's columns, which we can consider to be user error.
  *
- * Portions Copyright (c) 2012-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/postgres_fdw/deparse.c
@@ -110,6 +110,7 @@ static void deparseTargetList(StringInfo buf,
 				  List **retrieved_attrs);
 static void deparseReturningList(StringInfo buf, PlannerInfo *root,
 					 Index rtindex, Relation rel,
+					 bool trig_after_row,
 					 List *returningList,
 					 List **retrieved_attrs);
 static void deparseColumnRef(StringInfo buf, int varno, int varattno,
@@ -131,17 +132,22 @@ static void deparseRelabelType(RelabelType *node, deparse_expr_cxt *context);
 static void deparseBoolExpr(BoolExpr *node, deparse_expr_cxt *context);
 static void deparseNullTest(NullTest *node, deparse_expr_cxt *context);
 static void deparseArrayExpr(ArrayExpr *node, deparse_expr_cxt *context);
+static void printRemoteParam(int paramindex, Oid paramtype, int32 paramtypmod,
+				 deparse_expr_cxt *context);
+static void printRemotePlaceholder(Oid paramtype, int32 paramtypmod,
+					   deparse_expr_cxt *context);
 
 
 /*
- * Examine each restriction clause in baserel's baserestrictinfo list,
- * and classify them into two groups, which are returned as two lists:
+ * Examine each qual clause in input_conds, and classify them into two groups,
+ * which are returned as two lists:
  *	- remote_conds contains expressions that can be evaluated remotely
  *	- local_conds contains expressions that can't be evaluated remotely
  */
 void
 classifyConditions(PlannerInfo *root,
 				   RelOptInfo *baserel,
+				   List *input_conds,
 				   List **remote_conds,
 				   List **local_conds)
 {
@@ -150,7 +156,7 @@ classifyConditions(PlannerInfo *root,
 	*remote_conds = NIL;
 	*local_conds = NIL;
 
-	foreach(lc, baserel->baserestrictinfo)
+	foreach(lc, input_conds)
 	{
 		RestrictInfo *ri = (RestrictInfo *) lfirst(lc);
 
@@ -209,7 +215,7 @@ is_foreign_expr(PlannerInfo *root,
  * We must check that the expression contains only node types we can deparse,
  * that all types/functions/operators are safe to send (which we approximate
  * as being built-in), and that all collations used in the expression derive
- * from Vars of the foreign table.	Because of the latter, the logic is
+ * from Vars of the foreign table.  Because of the latter, the logic is
  * pretty close to assign_collations_walker() in parse_collate.c, though we
  * can assume here that the given expression is valid.
  */
@@ -239,7 +245,7 @@ foreign_expr_walker(Node *node,
 
 				/*
 				 * If the Var is from the foreign table, we consider its
-				 * collation (if any) safe to use.	If it is from another
+				 * collation (if any) safe to use.  If it is from another
 				 * table, we treat its collation the same way as we would a
 				 * Param's collation, ie it's not safe for it to have a
 				 * non-default collation.
@@ -365,7 +371,7 @@ foreign_expr_walker(Node *node,
 
 				/*
 				 * Detect whether node is introducing a collation not derived
-				 * from a foreign Var.	(If so, we just mark it unsafe for now
+				 * from a foreign Var.  (If so, we just mark it unsafe for now
 				 * rather than immediately returning false, since the parent
 				 * node might not care.)
 				 */
@@ -652,7 +658,7 @@ is_builtin(Oid oid)
 
 /*
  * Construct a simple SELECT statement that retrieves desired columns
- * of the specified foreign table, and append it to "buf".	The output
+ * of the specified foreign table, and append it to "buf".  The output
  * contains just "SELECT ... FROM tablename".
  *
  * We also create an integer List of the columns being retrieved, which is
@@ -740,7 +746,7 @@ deparseTargetList(StringInfo buf,
 	}
 
 	/*
-	 * Add ctid if needed.	We currently don't support retrieving any other
+	 * Add ctid if needed.  We currently don't support retrieving any other
 	 * system columns.
 	 */
 	if (bms_is_member(SelfItemPointerAttributeNumber - FirstLowInvalidHeapAttributeNumber,
@@ -841,7 +847,7 @@ deparseInsertSql(StringInfo buf, PlannerInfo *root,
 
 	if (targetAttrs)
 	{
-		appendStringInfoString(buf, "(");
+		appendStringInfoChar(buf, '(');
 
 		first = true;
 		foreach(lc, targetAttrs)
@@ -869,16 +875,14 @@ deparseInsertSql(StringInfo buf, PlannerInfo *root,
 			pindex++;
 		}
 
-		appendStringInfoString(buf, ")");
+		appendStringInfoChar(buf, ')');
 	}
 	else
 		appendStringInfoString(buf, " DEFAULT VALUES");
 
-	if (returningList)
-		deparseReturningList(buf, root, rtindex, rel, returningList,
-							 retrieved_attrs);
-	else
-		*retrieved_attrs = NIL;
+	deparseReturningList(buf, root, rtindex, rel,
+					   rel->trigdesc && rel->trigdesc->trig_insert_after_row,
+						 returningList, retrieved_attrs);
 }
 
 /*
@@ -918,11 +922,9 @@ deparseUpdateSql(StringInfo buf, PlannerInfo *root,
 	}
 	appendStringInfoString(buf, " WHERE ctid = $1");
 
-	if (returningList)
-		deparseReturningList(buf, root, rtindex, rel, returningList,
-							 retrieved_attrs);
-	else
-		*retrieved_attrs = NIL;
+	deparseReturningList(buf, root, rtindex, rel,
+					   rel->trigdesc && rel->trigdesc->trig_update_after_row,
+						 returningList, retrieved_attrs);
 }
 
 /*
@@ -942,34 +944,48 @@ deparseDeleteSql(StringInfo buf, PlannerInfo *root,
 	deparseRelation(buf, rel);
 	appendStringInfoString(buf, " WHERE ctid = $1");
 
-	if (returningList)
-		deparseReturningList(buf, root, rtindex, rel, returningList,
-							 retrieved_attrs);
-	else
-		*retrieved_attrs = NIL;
+	deparseReturningList(buf, root, rtindex, rel,
+					   rel->trigdesc && rel->trigdesc->trig_delete_after_row,
+						 returningList, retrieved_attrs);
 }
 
 /*
- * deparse RETURNING clause of INSERT/UPDATE/DELETE
+ * Add a RETURNING clause, if needed, to an INSERT/UPDATE/DELETE.
  */
 static void
 deparseReturningList(StringInfo buf, PlannerInfo *root,
 					 Index rtindex, Relation rel,
+					 bool trig_after_row,
 					 List *returningList,
 					 List **retrieved_attrs)
 {
-	Bitmapset  *attrs_used;
+	Bitmapset  *attrs_used = NULL;
 
-	/*
-	 * We need the attrs mentioned in the query's RETURNING list.
-	 */
-	attrs_used = NULL;
-	pull_varattnos((Node *) returningList, rtindex,
-				   &attrs_used);
+	if (trig_after_row)
+	{
+		/* whole-row reference acquires all non-system columns */
+		attrs_used =
+			bms_make_singleton(0 - FirstLowInvalidHeapAttributeNumber);
+	}
 
-	appendStringInfoString(buf, " RETURNING ");
-	deparseTargetList(buf, root, rtindex, rel, attrs_used,
-					  retrieved_attrs);
+	if (returningList != NIL)
+	{
+		/*
+		 * We need the attrs, non-system and system, mentioned in the local
+		 * query's RETURNING list.
+		 */
+		pull_varattnos((Node *) returningList, rtindex,
+					   &attrs_used);
+	}
+
+	if (attrs_used != NULL)
+	{
+		appendStringInfoString(buf, " RETURNING ");
+		deparseTargetList(buf, root, rtindex, rel, attrs_used,
+						  retrieved_attrs);
+	}
+	else
+		*retrieved_attrs = NIL;
 }
 
 /*
@@ -989,7 +1005,7 @@ deparseAnalyzeSizeSql(StringInfo buf, Relation rel)
 	initStringInfo(&relname);
 	deparseRelation(&relname, rel);
 
-	appendStringInfo(buf, "SELECT pg_catalog.pg_relation_size(");
+	appendStringInfoString(buf, "SELECT pg_catalog.pg_relation_size(");
 	deparseStringLiteral(buf, relname.data);
 	appendStringInfo(buf, "::pg_catalog.regclass) / %d", BLCKSZ);
 }
@@ -1271,16 +1287,11 @@ deparseVar(Var *node, deparse_expr_cxt *context)
 				*context->params_list = lappend(*context->params_list, node);
 			}
 
-			appendStringInfo(buf, "$%d", pindex);
-			appendStringInfo(buf, "::%s",
-							 format_type_with_typemod(node->vartype,
-													  node->vartypmod));
+			printRemoteParam(pindex, node->vartype, node->vartypmod, context);
 		}
 		else
 		{
-			appendStringInfo(buf, "(SELECT null::%s)",
-							 format_type_with_typemod(node->vartype,
-													  node->vartypmod));
+			printRemotePlaceholder(node->vartype, node->vartypmod, context);
 		}
 	}
 }
@@ -1302,7 +1313,7 @@ deparseConst(Const *node, deparse_expr_cxt *context)
 
 	if (node->constisnull)
 	{
-		appendStringInfo(buf, "NULL");
+		appendStringInfoString(buf, "NULL");
 		appendStringInfo(buf, "::%s",
 						 format_type_with_typemod(node->consttype,
 												  node->consttypmod));
@@ -1387,26 +1398,12 @@ deparseConst(Const *node, deparse_expr_cxt *context)
  *
  * If we're generating the query "for real", add the Param to
  * context->params_list if it's not already present, and then use its index
- * in that list as the remote parameter number.
- *
- * If we're just generating the query for EXPLAIN, replace the Param with
- * a dummy expression "(SELECT null::<type>)".	In all extant versions of
- * Postgres, the planner will see that as an unknown constant value, which is
- * what we want.  (If we sent a Param, recent versions might try to use the
- * value supplied for the Param as an estimated or even constant value, which
- * we don't want.)  This might need adjustment if we ever make the planner
- * flatten scalar subqueries.
- *
- * Note: we label the Param's type explicitly rather than relying on
- * transmitting a numeric type OID in PQexecParams().  This allows us to
- * avoid assuming that types have the same OIDs on the remote side as they
- * do locally --- they need only have the same names.
+ * in that list as the remote parameter number.  During EXPLAIN, there's
+ * no need to identify a parameter number.
  */
 static void
 deparseParam(Param *node, deparse_expr_cxt *context)
 {
-	StringInfo	buf = context->buf;
-
 	if (context->params_list)
 	{
 		int			pindex = 0;
@@ -1426,16 +1423,11 @@ deparseParam(Param *node, deparse_expr_cxt *context)
 			*context->params_list = lappend(*context->params_list, node);
 		}
 
-		appendStringInfo(buf, "$%d", pindex);
-		appendStringInfo(buf, "::%s",
-						 format_type_with_typemod(node->paramtype,
-												  node->paramtypmod));
+		printRemoteParam(pindex, node->paramtype, node->paramtypmod, context);
 	}
 	else
 	{
-		appendStringInfo(buf, "(SELECT null::%s)",
-						 format_type_with_typemod(node->paramtype,
-												  node->paramtypmod));
+		printRemotePlaceholder(node->paramtype, node->paramtypmod, context);
 	}
 }
 
@@ -1455,7 +1447,7 @@ deparseArrayRef(ArrayRef *node, deparse_expr_cxt *context)
 	/*
 	 * Deparse referenced array expression first.  If that expression includes
 	 * a cast, we have to parenthesize to prevent the array subscript from
-	 * being taken as typename decoration.	We can avoid that in the typical
+	 * being taken as typename decoration.  We can avoid that in the typical
 	 * case of subscripting a Var, but otherwise do it.
 	 */
 	if (IsA(node->refexpr, Var))
@@ -1536,15 +1528,7 @@ deparseFuncExpr(FuncExpr *node, deparse_expr_cxt *context)
 	procform = (Form_pg_proc) GETSTRUCT(proctup);
 
 	/* Check if need to print VARIADIC (cf. ruleutils.c) */
-	if (OidIsValid(procform->provariadic))
-	{
-		if (procform->provariadic != ANYOID)
-			use_variadic = true;
-		else
-			use_variadic = node->funcvariadic;
-	}
-	else
-		use_variadic = false;
+	use_variadic = node->funcvariadic;
 
 	/* Print schema name only if it's not pg_catalog */
 	if (procform->pronamespace != PG_CATALOG_NAMESPACE)
@@ -1575,7 +1559,7 @@ deparseFuncExpr(FuncExpr *node, deparse_expr_cxt *context)
 }
 
 /*
- * Deparse given operator expression.	To avoid problems around
+ * Deparse given operator expression.   To avoid problems around
  * priority of operations, we always parenthesize the arguments.
  */
 static void
@@ -1650,7 +1634,7 @@ deparseOperatorName(StringInfo buf, Form_pg_operator opform)
 	else
 	{
 		/* Just print operator name. */
-		appendStringInfo(buf, "%s", opname);
+		appendStringInfoString(buf, opname);
 	}
 }
 
@@ -1672,7 +1656,7 @@ deparseDistinctExpr(DistinctExpr *node, deparse_expr_cxt *context)
 }
 
 /*
- * Deparse given ScalarArrayOpExpr expression.	To avoid problems
+ * Deparse given ScalarArrayOpExpr expression.  To avoid problems
  * around priority of operations, we always parenthesize the arguments.
  */
 static void
@@ -1811,4 +1795,48 @@ deparseArrayExpr(ArrayExpr *node, deparse_expr_cxt *context)
 	if (node->elements == NIL)
 		appendStringInfo(buf, "::%s",
 						 format_type_with_typemod(node->array_typeid, -1));
+}
+
+/*
+ * Print the representation of a parameter to be sent to the remote side.
+ *
+ * Note: we always label the Param's type explicitly rather than relying on
+ * transmitting a numeric type OID in PQexecParams().  This allows us to
+ * avoid assuming that types have the same OIDs on the remote side as they
+ * do locally --- they need only have the same names.
+ */
+static void
+printRemoteParam(int paramindex, Oid paramtype, int32 paramtypmod,
+				 deparse_expr_cxt *context)
+{
+	StringInfo	buf = context->buf;
+	char	   *ptypename = format_type_with_typemod(paramtype, paramtypmod);
+
+	appendStringInfo(buf, "$%d::%s", paramindex, ptypename);
+}
+
+/*
+ * Print the representation of a placeholder for a parameter that will be
+ * sent to the remote side at execution time.
+ *
+ * This is used when we're just trying to EXPLAIN the remote query.
+ * We don't have the actual value of the runtime parameter yet, and we don't
+ * want the remote planner to generate a plan that depends on such a value
+ * anyway.  Thus, we can't do something simple like "$1::paramtype".
+ * Instead, we emit "((SELECT null::paramtype)::paramtype)".
+ * In all extant versions of Postgres, the planner will see that as an unknown
+ * constant value, which is what we want.  This might need adjustment if we
+ * ever make the planner flatten scalar subqueries.  Note: the reason for the
+ * apparently useless outer cast is to ensure that the representation as a
+ * whole will be parsed as an a_expr and not a select_with_parens; the latter
+ * would do the wrong thing in the context "x = ANY(...)".
+ */
+static void
+printRemotePlaceholder(Oid paramtype, int32 paramtypmod,
+					   deparse_expr_cxt *context)
+{
+	StringInfo	buf = context->buf;
+	char	   *ptypename = format_type_with_typemod(paramtype, paramtypmod);
+
+	appendStringInfo(buf, "((SELECT null::%s)::%s)", ptypename, ptypename);
 }

@@ -13,7 +13,7 @@
  * This code will also work on platforms where struct addrinfo is defined
  * in the system headers but no getaddrinfo() can be located.
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * src/include/getaddrinfo.h
  *
@@ -81,6 +81,9 @@
 #endif
 #ifndef NI_NUMERICSERV
 #define NI_NUMERICSERV	2
+#endif
+#ifndef NI_NAMEREQD
+#define NI_NAMEREQD		4
 #endif
 
 #ifndef NI_MAXHOST

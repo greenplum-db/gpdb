@@ -21,7 +21,7 @@
  * Postgres 9.2, this check is made automatically by the Makefile.)
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -172,6 +172,9 @@ extern void core_yyset_column(int column_no, yyscan_t yyscanner);
  *  <xus> quoted string with Unicode escapes
  *  <xusend> end of a quoted string with Unicode escapes, UESCAPE can follow
  *  <xeu> Unicode surrogate pair in extended quoted string
+ *
+ * Remember to add an <<EOF>> case whenever you add a new exclusive state!
+ * The default one is probably not the right thing.
  */
 
 %x xb
@@ -562,12 +565,13 @@ other			.
 <xus>{quotefail} {
 					/* throw back all but the quote */
 					yyless(1);
-					/* handle possible UESCAPE in xusend mode */
+					/* xusend state looks for possible UESCAPE */
 					BEGIN(xusend);
 				}
-<xusend>{whitespace}
+<xusend>{whitespace} { /* stay in xusend state over whitespace */ }
 <xusend>{other} |
-<xusend>{xustop1} {
+<xusend>{xustop1} |
+<xusend><<EOF>>	{
 					/* no UESCAPE after the quote, throw back everything */
 					yyless(0);
 					BEGIN(INITIAL);
@@ -742,14 +746,16 @@ other			.
 				}
 <xui>{dquote} {
 					yyless(1);
-					/* handle possible UESCAPE in xuiend mode */
+					/* xuiend state looks for possible UESCAPE */
 					BEGIN(xuiend);
 				}
-<xuiend>{whitespace} { }
+<xuiend>{whitespace} { /* stay in xuiend state over whitespace */ }
 <xuiend>{other} |
-<xuiend>{xustop1} {
+<xuiend>{xustop1} |
+<xuiend><<EOF>>	{
 					/* no UESCAPE after the quote, throw back everything */
-					char		   *ident;
+					char	   *ident;
+					int			identlen;
 
 					yyless(0);
 
@@ -757,14 +763,16 @@ other			.
 					if (yyextra->literallen == 0)
 						yyerror("zero-length delimited identifier");
 					ident = litbuf_udeescape('\\', yyscanner);
-					if (yyextra->literallen >= NAMEDATALEN)
-						truncate_identifier(ident, yyextra->literallen, true);
+					identlen = strlen(ident);
+					if (identlen >= NAMEDATALEN)
+						truncate_identifier(ident, identlen, true);
 					yylval->str = ident;
 					return IDENT;
 				}
 <xuiend>{xustop2}	{
 					/* found UESCAPE after the end quote */
-					char		   *ident;
+					char	   *ident;
+					int			identlen;
 
 					BEGIN(INITIAL);
 					if (yyextra->literallen == 0)
@@ -776,8 +784,9 @@ other			.
 						yyerror("invalid Unicode escape character");
 					}
 					ident = litbuf_udeescape(yytext[yyleng - 2], yyscanner);
-					if (yyextra->literallen >= NAMEDATALEN)
-						truncate_identifier(ident, yyextra->literallen, true);
+					identlen = strlen(ident);
+					if (identlen >= NAMEDATALEN)
+						truncate_identifier(ident, identlen, true);
 					yylval->str = ident;
 					return IDENT;
 				}

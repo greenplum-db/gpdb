@@ -26,6 +26,7 @@
 #include "fmgr.h"
 #include "funcapi.h"
 #include "utils/builtins.h"
+#include "utils/snapmgr.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbvars.h"
 #include "utils/lsyscache.h"
@@ -179,7 +180,7 @@ gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 				errmsg("input relation is not a heap table")));
 	}
 
-	HeapScanDesc scandesc = heap_beginscan(rel, SnapshotNow, 0, NULL);
+	HeapScanDesc scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
 	HeapTuple    tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	while (HeapTupleIsValid(tuple))

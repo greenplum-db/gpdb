@@ -1,16 +1,5 @@
 <!-- doc/src/sgml/ref/set_transaction.sgml -->
 <refentry id="SQL-SET-TRANSACTION">
- <refmeta>
-  <refentrytitle>SET TRANSACTION</refentrytitle>
-  <manvolnum>7</manvolnum>
-  <refmiscinfo>SQL - Language Statements</refmiscinfo>
- </refmeta>
-
- <refnamediv>
-  <refname>SET TRANSACTION</refname>
-  <refpurpose>set the characteristics of the current transaction</refpurpose>
- </refnamediv>
-
  <indexterm zone="sql-set-transaction">
   <primary>SET TRANSACTION</primary>
  </indexterm>
@@ -29,6 +18,17 @@
   <primary>deferrable transaction</primary>
   <secondary>setting</secondary>
  </indexterm>
+
+ <refmeta>
+  <refentrytitle>SET TRANSACTION</refentrytitle>
+  <manvolnum>7</manvolnum>
+  <refmiscinfo>SQL - Language Statements</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>SET TRANSACTION</refname>
+  <refpurpose>set the characteristics of the current transaction</refpurpose>
+ </refnamediv>
 
  <refsynopsisdiv>
 <synopsis>
@@ -184,9 +184,8 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <replaceable class="parameter">transa
 
   <para>
    If <command>SET TRANSACTION</command> is executed without a prior
-   <command>START TRANSACTION</command> or  <command>BEGIN</command>,
-   it will appear to have no effect, since the transaction will immediately
-   end.
+   <command>START TRANSACTION</command> or <command>BEGIN</command>,
+   it emits a warning and otherwise has no effect.
   </para>
 
   <para>

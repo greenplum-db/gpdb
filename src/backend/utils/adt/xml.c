@@ -4,7 +4,7 @@
  *	  XML data type support.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/backend/utils/adt/xml.c
@@ -347,10 +347,7 @@ xml_recv(PG_FUNCTION_ARGS)
 	xmlFreeDoc(doc);
 
 	/* Now that we know what we're dealing with, convert to server encoding */
-	newstr = (char *) pg_do_encoding_conversion((unsigned char *) str,
-												nbytes,
-												encoding,
-												GetDatabaseEncoding());
+	newstr = pg_any_to_server(str, nbytes, encoding);
 
 	if (newstr != str)
 	{
@@ -444,9 +441,9 @@ xmlcomment(PG_FUNCTION_ARGS)
 				 errmsg("invalid XML comment")));
 
 	initStringInfo(&buf);
-	appendStringInfo(&buf, "<!--");
+	appendStringInfoString(&buf, "<!--");
 	appendStringInfoText(&buf, arg);
-	appendStringInfo(&buf, "-->");
+	appendStringInfoString(&buf, "-->");
 
 	PG_RETURN_XML_P(stringinfo_to_xmltype(&buf));
 #else
@@ -931,7 +928,7 @@ pg_xml_init_library(void)
  * pg_xml_init --- set up for use of libxml and register an error handler
  *
  * This should be called by each function that is about to use libxml
- * facilities and requires error handling.	It initializes libxml with
+ * facilities and requires error handling.  It initializes libxml with
  * pg_xml_init_library() and establishes our libxml error handler.
  *
  * strictness determines which errors are reported and which are ignored.
@@ -980,7 +977,7 @@ pg_xml_init(PgXmlStrictness strictness)
 
 	/*
 	 * Verify that xmlSetStructuredErrorFunc set the context variable we
-	 * expected it to.	If not, the error context pointer we just saved is not
+	 * expected it to.  If not, the error context pointer we just saved is not
 	 * the correct thing to restore, and since that leaves us without a way to
 	 * restore the context in pg_xml_done, we must fail.
 	 *
@@ -1143,7 +1140,7 @@ parse_xml_decl(const xmlChar *str, size_t *lenp,
 	int			utf8len;
 
 	/*
-	 * Only initialize libxml.	We don't need error handling here, but we do
+	 * Only initialize libxml.  We don't need error handling here, but we do
 	 * need to make sure libxml is initialized before calling any of its
 	 * functions.  Note that this is safe (and a no-op) if caller has already
 	 * done pg_xml_init().
@@ -1510,7 +1507,7 @@ xml_pstrdup(const char *string)
 /*
  * xmlPgEntityLoader --- entity loader callback function
  *
- * Silently prevent any external entity URL from being loaded.	We don't want
+ * Silently prevent any external entity URL from being loaded.  We don't want
  * to throw an error, so instead make the entity appear to expand to an empty
  * string.
  *
@@ -1679,8 +1676,8 @@ xml_errorHandler(void *data, xmlErrorPtr error)
 	chopStringInfoNewlines(errorBuf);
 
 	/*
-	 * Legacy error handling mode.	err_occurred is never set, we just add the
-	 * message to err_buf.	This mode exists because the xml2 contrib module
+	 * Legacy error handling mode.  err_occurred is never set, we just add the
+	 * message to err_buf.  This mode exists because the xml2 contrib module
 	 * uses our error-handling infrastructure, but we don't want to change its
 	 * behaviour since it's deprecated anyway.  This is also why we don't
 	 * distinguish between notices, warnings and errors here --- the old-style
@@ -1804,10 +1801,8 @@ sqlchar_to_unicode(char *s)
 	char	   *utf8string;
 	pg_wchar	ret[2];			/* need space for trailing zero */
 
-	utf8string = (char *) pg_do_encoding_conversion((unsigned char *) s,
-													pg_mblen(s),
-													GetDatabaseEncoding(),
-													PG_UTF8);
+	/* note we're not assuming s is null-terminated */
+	utf8string = pg_server_to_any(s, pg_mblen(s), PG_UTF8);
 
 	pg_encoding_mb2wchar_with_len(PG_UTF8, utf8string, ret,
 								  pg_encoding_mblen(PG_UTF8, utf8string));
@@ -1863,19 +1858,19 @@ map_sql_identifier_to_xml_name(char *ident, bool fully_escaped,
 	for (p = ident; *p; p += pg_mblen(p))
 	{
 		if (*p == ':' && (p == ident || fully_escaped))
-			appendStringInfo(&buf, "_x003A_");
+			appendStringInfoString(&buf, "_x003A_");
 		else if (*p == '_' && *(p + 1) == 'x')
-			appendStringInfo(&buf, "_x005F_");
+			appendStringInfoString(&buf, "_x005F_");
 		else if (fully_escaped && p == ident &&
 				 pg_strncasecmp(p, "xml", 3) == 0)
 		{
 			if (*p == 'x')
-				appendStringInfo(&buf, "_x0078_");
+				appendStringInfoString(&buf, "_x0078_");
 			else
-				appendStringInfo(&buf, "_x0058_");
+				appendStringInfoString(&buf, "_x0058_");
 		}
 		else if (escape_period && *p == '.')
-			appendStringInfo(&buf, "_x002E_");
+			appendStringInfoString(&buf, "_x002E_");
 		else
 		{
 			pg_wchar	u = sqlchar_to_unicode(p);
@@ -1903,19 +1898,15 @@ map_sql_identifier_to_xml_name(char *ident, bool fully_escaped,
 static char *
 unicode_to_sqlchar(pg_wchar c)
 {
-	unsigned char utf8string[5];	/* need room for trailing zero */
+	char		utf8string[8];	/* need room for trailing zero */
 	char	   *result;
 
 	memset(utf8string, 0, sizeof(utf8string));
-	unicode_to_utf8(c, utf8string);
+	unicode_to_utf8(c, (unsigned char *) utf8string);
 
-	result = (char *) pg_do_encoding_conversion(utf8string,
-												pg_encoding_mblen(PG_UTF8,
-														(char *) utf8string),
-												PG_UTF8,
-												GetDatabaseEncoding());
-	/* if pg_do_encoding_conversion didn't strdup, we must */
-	if (result == (char *) utf8string)
+	result = pg_any_to_server(utf8string, strlen(utf8string), PG_UTF8);
+	/* if pg_any_to_server didn't strdup, we must */
+	if (result == utf8string)
 		result = pstrdup(result);
 	return result;
 }
@@ -2449,9 +2440,9 @@ xmldata_root_element_start(StringInfo result, const char *eltname,
 		if (strlen(targetns) > 0)
 			appendStringInfo(result, " xsi:schemaLocation=\"%s #\"", targetns);
 		else
-			appendStringInfo(result, " xsi:noNamespaceSchemaLocation=\"#\"");
+			appendStringInfoString(result, " xsi:noNamespaceSchemaLocation=\"#\"");
 	}
-	appendStringInfo(result, ">\n");
+	appendStringInfoString(result, ">\n");
 }
 
 
@@ -2956,8 +2947,8 @@ map_multipart_sql_identifier_to_xml_name(char *a, char *b, char *c, char *d)
 	initStringInfo(&result);
 
 	if (a)
-		appendStringInfo(&result, "%s",
-						 map_sql_identifier_to_xml_name(a, true, true));
+		appendStringInfoString(&result,
+							   map_sql_identifier_to_xml_name(a, true, true));
 	if (b)
 		appendStringInfo(&result, ".%s",
 						 map_sql_identifier_to_xml_name(b, true, true));
@@ -3223,71 +3214,71 @@ map_sql_type_to_xml_name(Oid typeoid, int typmod)
 	{
 		case BPCHAROID:
 			if (typmod == -1)
-				appendStringInfo(&result, "CHAR");
+				appendStringInfoString(&result, "CHAR");
 			else
 				appendStringInfo(&result, "CHAR_%d", typmod - VARHDRSZ);
 			break;
 		case VARCHAROID:
 			if (typmod == -1)
-				appendStringInfo(&result, "VARCHAR");
+				appendStringInfoString(&result, "VARCHAR");
 			else
 				appendStringInfo(&result, "VARCHAR_%d", typmod - VARHDRSZ);
 			break;
 		case NUMERICOID:
 			if (typmod == -1)
-				appendStringInfo(&result, "NUMERIC");
+				appendStringInfoString(&result, "NUMERIC");
 			else
 				appendStringInfo(&result, "NUMERIC_%d_%d",
 								 ((typmod - VARHDRSZ) >> 16) & 0xffff,
 								 (typmod - VARHDRSZ) & 0xffff);
 			break;
 		case INT4OID:
-			appendStringInfo(&result, "INTEGER");
+			appendStringInfoString(&result, "INTEGER");
 			break;
 		case INT2OID:
-			appendStringInfo(&result, "SMALLINT");
+			appendStringInfoString(&result, "SMALLINT");
 			break;
 		case INT8OID:
-			appendStringInfo(&result, "BIGINT");
+			appendStringInfoString(&result, "BIGINT");
 			break;
 		case FLOAT4OID:
-			appendStringInfo(&result, "REAL");
+			appendStringInfoString(&result, "REAL");
 			break;
 		case FLOAT8OID:
-			appendStringInfo(&result, "DOUBLE");
+			appendStringInfoString(&result, "DOUBLE");
 			break;
 		case BOOLOID:
-			appendStringInfo(&result, "BOOLEAN");
+			appendStringInfoString(&result, "BOOLEAN");
 			break;
 		case TIMEOID:
 			if (typmod == -1)
-				appendStringInfo(&result, "TIME");
+				appendStringInfoString(&result, "TIME");
 			else
 				appendStringInfo(&result, "TIME_%d", typmod);
 			break;
 		case TIMETZOID:
 			if (typmod == -1)
-				appendStringInfo(&result, "TIME_WTZ");
+				appendStringInfoString(&result, "TIME_WTZ");
 			else
 				appendStringInfo(&result, "TIME_WTZ_%d", typmod);
 			break;
 		case TIMESTAMPOID:
 			if (typmod == -1)
-				appendStringInfo(&result, "TIMESTAMP");
+				appendStringInfoString(&result, "TIMESTAMP");
 			else
 				appendStringInfo(&result, "TIMESTAMP_%d", typmod);
 			break;
 		case TIMESTAMPTZOID:
 			if (typmod == -1)
-				appendStringInfo(&result, "TIMESTAMP_WTZ");
+				appendStringInfoString(&result, "TIMESTAMP_WTZ");
 			else
 				appendStringInfo(&result, "TIMESTAMP_WTZ_%d", typmod);
 			break;
 		case DATEOID:
-			appendStringInfo(&result, "DATE");
+			appendStringInfoString(&result, "DATE");
 			break;
 		case XMLOID:
-			appendStringInfo(&result, "XML");
+			appendStringInfoString(&result, "XML");
 			break;
 		default:
 			{
@@ -3381,12 +3372,12 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
 
 	if (typeoid == XMLOID)
 	{
-		appendStringInfo(&result,
-						 "<xsd:complexType mixed=\"true\">\n"
-						 "  <xsd:sequence>\n"
-						 "    <xsd:any name=\"element\" minOccurs=\"0\" maxOccurs=\"unbounded\" processContents=\"skip\"/>\n"
-						 "  </xsd:sequence>\n"
-						 "</xsd:complexType>\n");
+		appendStringInfoString(&result,
+							   "<xsd:complexType mixed=\"true\">\n"
+							   "  <xsd:sequence>\n"
+							   "    <xsd:any name=\"element\" minOccurs=\"0\" maxOccurs=\"unbounded\" processContents=\"skip\"/>\n"
+							   "  </xsd:sequence>\n"
+							   "</xsd:complexType>\n");
 	}
 	else
 	{
@@ -3404,8 +3395,7 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
 					appendStringInfo(&result,
 									 "    <xsd:maxLength value=\"%d\"/>\n",
 									 typmod - VARHDRSZ);
-				appendStringInfo(&result,
-								 "  </xsd:restriction>\n");
+				appendStringInfoString(&result, "  </xsd:restriction>\n");
 				break;
 
 			case BYTEAOID:
@@ -3455,18 +3445,18 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
 				break;
 
 			case FLOAT4OID:
-				appendStringInfo(&result,
+				appendStringInfoString(&result,
 				"  <xsd:restriction base=\"xsd:float\"></xsd:restriction>\n");
 				break;
 
 			case FLOAT8OID:
-				appendStringInfo(&result,
-								 "  <xsd:restriction base=\"xsd:double\"></xsd:restriction>\n");
+				appendStringInfoString(&result,
+									   "  <xsd:restriction base=\"xsd:double\"></xsd:restriction>\n");
 				break;
 
 			case BOOLOID:
-				appendStringInfo(&result,
-								 "  <xsd:restriction base=\"xsd:boolean\"></xsd:restriction>\n");
+				appendStringInfoString(&result,
+									   "  <xsd:restriction base=\"xsd:boolean\"></xsd:restriction>\n");
 				break;
 
 			case TIMEOID:
@@ -3516,10 +3506,10 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
 				}
 
 			case DATEOID:
-				appendStringInfo(&result,
-								 "  <xsd:restriction base=\"xsd:date\">\n"
-								 "    <xsd:pattern value=\"\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2}\"/>\n"
-								 "  </xsd:restriction>\n");
+				appendStringInfoString(&result,
+									"  <xsd:restriction base=\"xsd:date\">\n"
+									   "    <xsd:pattern value=\"\\p{Nd}{4}-\\p{Nd}{2}-\\p{Nd}{2}\"/>\n"
+									   "  </xsd:restriction>\n");
 				break;
 
 			default:
@@ -3536,8 +3526,7 @@ map_sql_type_to_xmlschema_type(Oid typeoid, int typmod)
 				}
 				break;
 		}
-		appendStringInfo(&result,
-						 "</xsd:simpleType>\n");
+		appendStringInfoString(&result, "</xsd:simpleType>\n");
 	}
 
 	return result.data;

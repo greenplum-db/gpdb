@@ -14,6 +14,7 @@
 #define OID_DISPATCH_H
 
 #include "utils/relcache.h"
+#include "access/htup.h"
 
 /* Functions used in master */
 extern void AddDispatchOidFromTuple(Relation catalogrel, HeapTuple tuple);

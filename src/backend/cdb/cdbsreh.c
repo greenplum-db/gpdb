@@ -269,12 +269,12 @@ FormErrorTuple(CdbSreh *cdbsreh)
  * rows, and whether rows were ignored or logged into an error log file.
  */
 void
-ReportSrehResults(CdbSreh *cdbsreh, int total_rejected)
+ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected)
 {
 	if (total_rejected > 0)
 	{
 		ereport(NOTICE,
-				(errmsg("Found %d data formatting errors (%d or more "
+				(errmsg("Found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more "
 						"input rows). Rejected related input data.",
 						total_rejected, total_rejected)));
 	}
@@ -289,6 +289,15 @@ sendnumrows_internal(int numrejected, int64 numcompleted)
 		elog(FATAL, "SendNumRows: called outside of execute context.");
 
 	pq_beginmessage(&buf, 'j'); /* 'j' is the msg code for rejected records */
+	/*
+	 * GPDB_91_MERGE_FIXME: If there are more than INT_MAX rejected rows,
+	 * this will overflow. That is possible at least if you specify the
+	 * segment reject limit as a percentage.
+	 *
+	 * If you fix this, note that there are more fields and variables that
+	 * need to be changed from int to int64. But had to put this FIXME
+	 * somewhere..
+	 */
 	pq_sendint(&buf, numrejected, 4);
 	if (numcompleted > 0)		/* optional send completed num for COPY FROM
 								 * ON SEGMENT */

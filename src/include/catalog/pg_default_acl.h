@@ -4,7 +4,7 @@
  *	  definition of default ACLs for new objects.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_default_acl.h
@@ -21,7 +21,7 @@
 #include "catalog/genbki.h"
 
 /* ----------------
- *		pg_default_acl definition.	cpp turns this into
+ *		pg_default_acl definition.  cpp turns this into
  *		typedef struct FormData_pg_default_acl
  * ----------------
  */
@@ -67,7 +67,7 @@ typedef FormData_pg_default_acl *Form_pg_default_acl;
 
 /*
  * Types of objects for which the user is allowed to specify default
- * permissions through pg_default_acl.	These codes are used in the
+ * permissions through pg_default_acl.  These codes are used in the
  * defaclobjtype column.
  */
 #define DEFACLOBJ_RELATION		'r'		/* table, view */

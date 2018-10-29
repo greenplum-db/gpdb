@@ -291,54 +291,6 @@ static inline int64 compword_to_int8(const char *entry)
 	return num;
 }
 
-static inline void printout_double(double *vals, int num_values, int stop);
-static inline void printout_double(double *vals, int num_values, int stop)
-{
-	char *output_str = (char *)palloc(sizeof(char)*(num_values*(6+18+2))+1);
-	char *str = output_str;
-	int numout;
-	for (int i=0; i<num_values; i++) {
-		numout=snprintf(str,26,"%6.2f,%#llX,",vals[i],*((long long unsigned int *)(&(vals[i]))));
-		str+=numout-1;
-	}
-	*str = '\0';
-	elog(NOTICE,"doubles:%s",output_str);
-}
-static inline void printout_index(char *ix, int num_values, int stop);
-static inline void printout_index(char *ix, int num_values, int stop)
-{
-	char *output_str = (char *)palloc(sizeof(char)*((num_values*7)+1));
-	char *str = output_str;
-	int numout;
-	elog(NOTICE,"num_values=%d",num_values);
-	for (int i=0; i<num_values; i++,ix+=int8compstoragesize(ix)) {
-		numout=snprintf(str,7,"%lld,",(long long int)compword_to_int8(ix));
-		str+=numout;
-	}
-	*str = '\0';
-	elog(NOTICE,"index:%s",output_str);
-}
-static inline void printout_sdata(SparseData sdata, char *msg, int stop);
-static inline void printout_sdata(SparseData sdata, char *msg, int stop)
-{
-	elog(NOTICE,"%s ==> unvct,tvct,ilen,dlen,datatype=%d,%d,%d,%d,%d",
-			msg,
-			sdata->unique_value_count,sdata->total_value_count,
-			sdata->index->len,sdata->vals->len,
-			sdata->type_of_data);
-	{
-		char *ix=sdata->index->data;
-		double *ar=(double *)(sdata->vals->data);
-		printout_double(ar,sdata->unique_value_count,0);
-		printout_index(ix,sdata->unique_value_count,0);
-	}
-
-	if (stop)
-	  ereport(ERROR, 
-			  (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			   errmsg("LAL STOP")));
-}
-
 /*------------------------------------------------------------------------------
  * Multiplication, Addition, Division by scalars
  *------------------------------------------------------------------------------

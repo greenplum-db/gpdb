@@ -4,19 +4,6 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-SELECT">
- <refmeta>
-  <refentrytitle>SELECT</refentrytitle>
-  <manvolnum>7</manvolnum>
-  <refmiscinfo>SQL - Language Statements</refmiscinfo>
- </refmeta>
-
- <refnamediv>
-  <refname>SELECT</refname>
-  <refname>TABLE</refname>
-  <refname>WITH</refname>
-  <refpurpose>retrieve rows from a table or view</refpurpose>
- </refnamediv>
-
  <indexterm zone="sql-select">
   <primary>SELECT</primary>
  </indexterm>
@@ -30,11 +17,24 @@ PostgreSQL documentation
   <secondary>in SELECT</secondary>
  </indexterm>
 
+ <refmeta>
+  <refentrytitle>SELECT</refentrytitle>
+  <manvolnum>7</manvolnum>
+  <refmiscinfo>SQL - Language Statements</refmiscinfo>
+ </refmeta>
+
+ <refnamediv>
+  <refname>SELECT</refname>
+  <refname>TABLE</refname>
+  <refname>WITH</refname>
+  <refpurpose>retrieve rows from a table or view</refpurpose>
+ </refnamediv>
+
  <refsynopsisdiv>
 <synopsis>
 [ WITH [ RECURSIVE ] <replaceable class="parameter">with_query</replaceable> [, ...] ]
 SELECT [ ALL | DISTINCT [ ON ( <replaceable class="parameter">expression</replaceable> [, ...] ) ] ]
-    * | <replaceable class="parameter">expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...]
+    [ * | <replaceable class="parameter">expression</replaceable> [ [ AS ] <replaceable class="parameter">output_name</replaceable> ] [, ...] ]
     [ FROM <replaceable class="parameter">from_item</replaceable> [, ...] ]
     [ WHERE <replaceable class="parameter">condition</replaceable> ]
     [ GROUP BY <replaceable class="parameter">grouping_element</replaceable> [, ...] ]
@@ -76,8 +76,12 @@ where <replaceable class="parameter">window_specification</replaceable> can be:
     [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ] [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
     [ LATERAL ] ( <replaceable class="parameter">select</replaceable> ) [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ]
     <replaceable class="parameter">with_query_name</replaceable> [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
-    [ LATERAL ] <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] | <replaceable class="parameter">column_definition</replaceable> [, ...] ) ]
+    [ LATERAL ] <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] )
+                [ WITH ORDINALITY ] [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
+    [ LATERAL ] <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) [ AS ] <replaceable class="parameter">alias</replaceable> ( <replaceable class="parameter">column_definition</replaceable> [, ...] )
     [ LATERAL ] <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) AS ( <replaceable class="parameter">column_definition</replaceable> [, ...] )
+    [ LATERAL ] ROWS FROM( <replaceable class="parameter">function_name</replaceable> ( [ <replaceable class="parameter">argument</replaceable> [, ...] ] ) [ AS ( <replaceable class="parameter">column_definition</replaceable> [, ...] ) ] [, ...] )
+                [ WITH ORDINALITY ] [ [ AS ] <replaceable class="parameter">alias</replaceable> [ ( <replaceable class="parameter">column_alias</replaceable> [, ...] ) ] ]
     <replaceable class="parameter">from_item</replaceable> [ NATURAL ] <replaceable class="parameter">join_type</replaceable> <replaceable class="parameter">from_item</replaceable> [ ON <replaceable class="parameter">join_condition</replaceable> | USING ( <replaceable class="parameter">join_column</replaceable> [, ...] ) ]
 
 where <replaceable class="parameter">group_elem</replaceable> can be one of:
@@ -241,7 +245,7 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
     subqueries that can be referenced by name in the primary query.
     The subqueries effectively act as temporary tables or views
     for the duration of the primary query.
-    Each subquery can be a <command>SELECT</command>, <command>VALUES</command>,
+    Each subquery can be a <command>SELECT</command>, <command>TABLE</>, <command>VALUES</command>,
     <command>INSERT</command>, <command>UPDATE</command> or
     <command>DELETE</command> statement.
     When writing a data-modifying statement (<command>INSERT</command>,
@@ -398,19 +402,57 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
         Function calls can appear in the <literal>FROM</literal>
         clause.  (This is especially useful for functions that return
         result sets, but any function can be used.)  This acts as
-        though its output were created as a temporary table for the
-        duration of this single <command>SELECT</command> command. An
-        alias can also be used. If an alias is written, a column alias
-        list can also be written to provide substitute names for one
-        or more attributes of the function's composite return type. If
-        the function has been defined as returning the <type>record</>
-        data type, then an alias or the key word <literal>AS</> must
-        be present, followed by a column definition list in the form
-        <literal>( <replaceable
+        though the function's output were created as a temporary table for the
+        duration of this single <command>SELECT</command> command.
+        When the optional <command>WITH ORDINALITY</command> clause is
+        added to the function call, a new column is appended after
+        all the function's output columns with numbering for each row.
+       </para>
+
+       <para>
+        An alias can be provided in the same way as for a table.
+        If an alias is written, a column
+        alias list can also be written to provide substitute names for
+        one or more attributes of the function's composite return
+        type, including the column added by <literal>ORDINALITY</literal>
+        if present.
+       </para>
+
+       <para>
+        Multiple function calls can be combined into a
+        single <literal>FROM</>-clause item by surrounding them
+        with <literal>ROWS FROM( ... )</>.  The output of such an item is the
+        concatenation of the first row from each function, then the second
+        row from each function, etc.  If some of the functions produce fewer
+        rows than others, NULLs are substituted for the missing data, so
+        that the total number of rows returned is always the same as for the
+        function that produced the most rows.
+       </para>
+
+      <para>
+        If the function has been defined as returning the
+        <type>record</> data type, then an alias or the key word
+        <literal>AS</> must be present, followed by a column
+        definition list in the form <literal>( <replaceable
         class="parameter">column_name</replaceable> <replaceable
-        class="parameter">data_type</replaceable> <optional>, ... </>
-        )</literal>.  The column definition list must match the actual
-        number and types of columns returned by the function.
+        class="parameter">data_type</replaceable> <optional>, ...
+        </>)</literal>.  The column definition list must match the
+        actual number and types of columns returned by the function.
+       </para>
+
+       <para>
+        When using the <literal>ROWS FROM( ... )</> syntax, if one of the
+        functions requires a column definition list, it's preferred to put
+        the column definition list after the function call inside
+        <literal>ROWS FROM( ... )</>.  A column definition list can be placed
+        after the <literal>ROWS FROM( ... )</> construct only if there's just
+        a single function and no <literal>WITH ORDINALITY</> clause.
+       </para>
+
+       <para>
+        To use <literal>ORDINALITY</literal> together with a column definition
+        list, you must use the <literal>ROWS FROM( ... )</> syntax and put the
+        column definition list inside <literal>ROWS FROM( ... )</>.
        </para>
       </listitem>
      </varlistentry>
@@ -643,6 +685,12 @@ GROUP BY <replaceable class="parameter">expression</replaceable> [, ...]
     the grouped columns (or a subset thereof) are the primary key of
     the table containing the ungrouped column.
    </para>
+
+   <para>
+    Currently, <literal>FOR NO KEY UPDATE</>, <literal>FOR UPDATE</>,
+    <literal>FOR SHARE</> and <literal>FOR KEY SHARE</> cannot be
+    specified with <literal>GROUP BY</literal>.
+   </para>
   </refsect2>
 
   <refsect2 id="SQL-HAVING">
@@ -678,6 +726,12 @@ HAVING <replaceable class="parameter">condition</replaceable>
     <literal>HAVING</literal> clause can only reference table columns from
     within aggregate functions.  Such a query will emit a single row if the
     <literal>HAVING</literal> condition is true, zero rows if it is not true.
+   </para>
+
+   <para>
+    Currently, <literal>FOR NO KEY UPDATE</>, <literal>FOR UPDATE</>,
+    <literal>FOR SHARE</> and <literal>FOR KEY SHARE</> cannot be
+    specified with <literal>HAVING</literal>.
    </para>
   </refsect2>
 
@@ -814,6 +868,12 @@ UNBOUNDED FOLLOWING
    </para>
 
    <para>
+    Currently, <literal>FOR NO KEY UPDATE</>, <literal>FOR UPDATE</>,
+    <literal>FOR SHARE</> and <literal>FOR KEY SHARE</> cannot be
+    specified with <literal>WINDOW</literal>.
+   </para>
+
+   <para>
     Window functions are described in detail in
     <xref linkend="tutorial-window">,
     <xref linkend="syntax-window-functions">, and
@@ -908,6 +968,12 @@ SELECT DISTINCT ON (location) location, time, report
     <literal>ORDER BY</> expression(s).  The <literal>ORDER BY</> clause
     will normally contain additional expression(s) that determine the
     desired precedence of rows within each <literal>DISTINCT ON</> group.
+   </para>
+
+   <para>
+    Currently, <literal>FOR NO KEY UPDATE</>, <literal>FOR UPDATE</>,
+    <literal>FOR SHARE</> and <literal>FOR KEY SHARE</> cannot be
+    specified with <literal>DISTINCT</literal>.
    </para>
   </refsect2>
 
@@ -1454,12 +1520,18 @@ SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss ORDER BY column1;
 <programlisting>
 TABLE <replaceable class="parameter">name</replaceable>
 </programlisting>
-    is completely equivalent to
+    is equivalent to
 <programlisting>
 SELECT * FROM <replaceable class="parameter">name</replaceable>
 </programlisting>
     It can be used as a top-level command or as a space-saving syntax
-    variant in parts of complex queries.
+    variant in parts of complex queries. Only the <literal>WITH</>,
+    <literal>UNION</>, <literal>INTERSECT</>, <literal>EXCEPT</>,
+    <literal>ORDER BY</>, <literal>LIMIT</>, <literal>OFFSET</>,
+    <literal>FETCH</> and <literal>FOR</> locking clauses can be used
+    with <command>TABLE</>; the <literal>WHERE</> clause and any form of
+    aggregation cannot
+    be used.
    </para>
   </refsect2>
  </refsect1>
@@ -1607,6 +1679,23 @@ SELECT * FROM distributors_2(111) AS (f1 int, f2 text);
   </para>
 
   <para>
+   Here is an example of a function with an ordinality column added:
+
+<programlisting>
+SELECT * FROM unnest(ARRAY['a','b','c','d','e','f']) WITH ORDINALITY;
+ unnest | ordinality
+--------+----------
+ a      |        1
+ b      |        2
+ c      |        3
+ d      |        4
+ e      |        5
+ f      |        6
+(6 rows)
+</programlisting>
+  </para>
+
+  <para>
    This example shows how to use a simple <literal>WITH</> clause:
 
 <programlisting>
@@ -1712,10 +1801,24 @@ SELECT 2+2;
     following query is invalid:
 <programlisting>
 SELECT distributors.* WHERE distributors.name = 'Westward';
-</programlisting><productname>PostgreSQL</productname> releases prior to
+</programlisting>
+    <productname>PostgreSQL</productname> releases prior to
     8.1 would accept queries of this form, and add an implicit entry
     to the query's <literal>FROM</literal> clause for each table
     referenced by the query. This is no longer allowed.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title>Empty <literal>SELECT</literal> Lists</title>
+
+   <para>
+    The list of output expressions after <literal>SELECT</literal> can be
+    empty, producing a zero-column result table.
+    This is not valid syntax according to the SQL standard.
+    <productname>PostgreSQL</productname> allows it to be consistent with
+    allowing zero-column tables.
+    However, an empty list is not allowed when <literal>DISTINCT</> is used.
    </para>
   </refsect2>
 
@@ -1878,8 +1981,12 @@ SELECT distributors.* WHERE distributors.name = 'Westward';
    <title>Nonstandard Clauses</title>
 
    <para>
-    The clause <literal>DISTINCT ON</literal> is not defined in the
+    <literal>DISTINCT ON ( ... )</literal> is an extension of the
     SQL standard.
+   </para>
+
+   <para>
+    <literal>ROWS FROM( ... )</> is an extension of the SQL standard.
    </para>
   </refsect2>
  </refsect1>

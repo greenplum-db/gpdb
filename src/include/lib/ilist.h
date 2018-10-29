@@ -7,7 +7,7 @@
  * lists that an object could be in.  List links are embedded directly into
  * the objects, and thus no extra memory management overhead is required.
  * (Of course, if only a small proportion of existing objects are in a list,
- * the link fields in the remainder would be wasted space.	But usually,
+ * the link fields in the remainder would be wasted space.  But usually,
  * it saves space to not have separately-allocated list nodes.)
  *
  * None of the functions here allocate any memory; they just manipulate
@@ -77,7 +77,7 @@
  *
  * While a simple iteration is useful, we sometimes also want to manipulate
  * the list while iterating.  There is a different iterator element and looping
- * construct for that.	Suppose we want to delete tables that meet a certain
+ * construct for that.  Suppose we want to delete tables that meet a certain
  * criterion:
  *
  * dlist_mutable_iter miter;
@@ -96,7 +96,7 @@
  * }
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -211,9 +211,14 @@ typedef struct slist_head
  * Used as state in slist_foreach(). To get the current element of the
  * iteration use the 'cur' member.
  *
- * Do *not* manipulate the list while iterating!
+ * It's allowed to modify the list while iterating, with the exception of
+ * deleting the iterator's current node; deletion of that node requires
+ * care if the iteration is to be continued afterward.  (Doing so and also
+ * deleting or inserting adjacent list elements might misbehave; also, if
+ * the user frees the current node's storage, continuing the iteration is
+ * not safe.)
  *
- * NB: this wouldn't really need to be an extra struct, we could use a
+ * NB: this wouldn't really need to be an extra struct, we could use an
  * slist_node * directly. We prefer a separate type for consistency.
  */
 typedef struct slist_iter
@@ -224,15 +229,18 @@ typedef struct slist_iter
 /*
  * Singly linked list iterator allowing some modifications while iterating.
  *
- * Used as state in slist_foreach_modify().
+ * Used as state in slist_foreach_modify(). To get the current element of the
+ * iteration use the 'cur' member.
  *
- * Iterations using this are allowed to remove the current node and to add
- * more nodes ahead of the current node.
+ * The only list modification allowed while iterating is to remove the current
+ * node via slist_delete_current() (*not* slist_delete()).  Insertion or
+ * deletion of nodes adjacent to the current node would misbehave.
  */
 typedef struct slist_mutable_iter
 {
 	slist_node *cur;			/* current element */
 	slist_node *next;			/* next node we'll iterate to */
+	slist_node *prev;			/* prev node, for deletions */
 } slist_mutable_iter;
 
 
@@ -243,7 +251,7 @@ typedef struct slist_mutable_iter
 
 /* Prototypes for functions too big to be inline */
 
-/* Caution: this is O(n) */
+/* Caution: this is O(n); consider using slist_delete_current() instead */
 extern void slist_delete(slist_head *head, slist_node *node);
 
 #ifdef ILIST_DEBUG
@@ -263,7 +271,7 @@ extern void slist_check(slist_head *head);
 
 /*
  * We want the functions below to be inline; but if the compiler doesn't
- * support that, fall back on providing them as regular functions.	See
+ * support that, fall back on providing them as regular functions.  See
  * STATIC_IF_INLINE in c.h.
  */
 #ifndef PG_USE_INLINE
@@ -566,7 +574,7 @@ dlist_tail_node(dlist_head *head)
 
 /*
  * We want the functions below to be inline; but if the compiler doesn't
- * support that, fall back on providing them as regular functions.	See
+ * support that, fall back on providing them as regular functions.  See
  * STATIC_IF_INLINE in c.h.
  */
 #ifndef PG_USE_INLINE
@@ -578,6 +586,7 @@ extern slist_node *slist_pop_head_node(slist_head *head);
 extern bool slist_has_next(slist_head *head, slist_node *node);
 extern slist_node *slist_next_node(slist_head *head, slist_node *node);
 extern slist_node *slist_head_node(slist_head *head);
+extern void slist_delete_current(slist_mutable_iter *iter);
 
 /* slist macro support function */
 extern void *slist_head_element_off(slist_head *head, size_t off);
@@ -679,6 +688,29 @@ slist_head_node(slist_head *head)
 {
 	return (slist_node *) slist_head_element_off(head, 0);
 }
+
+/*
+ * Delete the list element the iterator currently points to.
+ *
+ * Caution: this modifies iter->cur, so don't use that again in the current
+ * loop iteration.
+ */
+STATIC_IF_INLINE void
+slist_delete_current(slist_mutable_iter *iter)
+{
+	/*
+	 * Update previous element's forward link.  If the iteration is at the
+	 * first list element, iter->prev will point to the list header's "head"
+	 * field, so we don't need a special case for that.
+	 */
+	iter->prev->next = iter->next;
+
+	/*
+	 * Reset cur to prev, so that prev will continue to point to the prior
+	 * valid list element after slist_foreach_modify() advances to the next.
+	 */
+	iter->cur = iter->prev;
+}
 #endif   /* PG_USE_INLINE || ILIST_INCLUDE_DEFINITIONS */
 
 /*
@@ -706,7 +738,12 @@ slist_head_node(slist_head *head)
  *
  * Access the current element with iter.cur.
  *
- * It is *not* allowed to manipulate the list during iteration.
+ * It's allowed to modify the list while iterating, with the exception of
+ * deleting the iterator's current node; deletion of that node requires
+ * care if the iteration is to be continued afterward.  (Doing so and also
+ * deleting or inserting adjacent list elements might misbehave; also, if
+ * the user frees the current node's storage, continuing the iteration is
+ * not safe.)
  */
 #define slist_foreach(iter, lhead)											\
 	for (AssertVariableIsOfTypeMacro(iter, slist_iter),						\
@@ -720,15 +757,18 @@ slist_head_node(slist_head *head)
  *
  * Access the current element with iter.cur.
  *
- * Iterations using this are allowed to remove the current node and to add
- * more nodes ahead of the current node.
+ * The only list modification allowed while iterating is to remove the current
+ * node via slist_delete_current() (*not* slist_delete()).  Insertion or
+ * deletion of nodes adjacent to the current node would misbehave.
  */
 #define slist_foreach_modify(iter, lhead)									\
 	for (AssertVariableIsOfTypeMacro(iter, slist_mutable_iter),				\
 		 AssertVariableIsOfTypeMacro(lhead, slist_head *),					\
-		 (iter).cur = (lhead)->head.next,									\
+		 (iter).prev = &(lhead)->head,										\
+		 (iter).cur = (iter).prev->next,									\
 		 (iter).next = (iter).cur ? (iter).cur->next : NULL;				\
 		 (iter).cur != NULL;												\
+		 (iter).prev = (iter).cur,											\
 		 (iter).cur = (iter).next,											\
 		 (iter).next = (iter).next ? (iter).next->next : NULL)
 

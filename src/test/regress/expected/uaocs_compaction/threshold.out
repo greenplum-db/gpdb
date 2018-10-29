@@ -13,7 +13,7 @@ SELECT COUNT(*) FROM uaocs_threshold;
     97
 (1 row)
 
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -22,7 +22,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 -- 97 visible tuples, no vacuum
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -30,7 +30,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 
 DELETE FROM uaocs_threshold WHERE a < 12;
 DELETE 8
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |      100 |     1
@@ -39,7 +39,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 -- 89 visible tuples, do vacuum
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      2 |       89 |     1
@@ -49,7 +49,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 -- no invisible tuples, no vacuum
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      2 |       89 |     1
@@ -58,7 +58,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 
 DELETE FROM uaocs_threshold WHERE a < 15;
 DELETE 3
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      2 |       89 |     1
@@ -68,7 +68,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 -- 3 invisible tuples, no vacuum
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      2 |       89 |     1
@@ -80,7 +80,7 @@ SET
 -- 3 invisible tuples, no vacuum
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |       86 |     1
@@ -91,7 +91,7 @@ INSERT INTO uaocs_threshold SELECT i as a, i as b, 'hello world' as c FROM gener
 INSERT 0 101
 DELETE FROM uaocs_threshold WHERE a > 100 and a < 175;
 DELETE 74
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      2 |        0 |     1
@@ -100,7 +100,7 @@ SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_
 
 VACUUM uaocs_threshold;
 VACUUM
-SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg_name('uaocs_threshold');
+SELECT DISTINCT segno, tupcount, state FROM gp_toolkit.__gp_aocsseg('uaocs_threshold');
  segno | tupcount | state 
 -------+----------+-------
      1 |        0 |     1

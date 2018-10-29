@@ -3,7 +3,7 @@
  * print.c
  *	  various print routines (used mostly for debugging)
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -572,6 +572,10 @@ plannode_type(Plan *p)
 			return "REPEAT";
 		case T_ForeignScan:
 			return "FOREIGNSCAN";
+		case T_SplitUpdate:
+			return "SPLITUPDATE";
+		case T_Reshuffle:
+			return "RESHUFFLE";
 		default:
 			return "UNKNOWN";
 	}

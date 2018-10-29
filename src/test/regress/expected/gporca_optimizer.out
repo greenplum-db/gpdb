@@ -40,6 +40,7 @@ set optimizer_trace_fallback = on;
 -- expected fall back to the planner
 select sum(distinct a), count(distinct b) from orca.r;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multiple Distinct Qualified Aggregates are disabled in the optimizer
  sum | count 
 -----+-------
  210 |     7
@@ -6602,6 +6603,7 @@ select * from orca.r where a in (select count(*)+1 as v from orca.foo full join 
 
 select * from orca.r where r.a in (select d+r.b+1 as v from orca.foo full join orca.bar on (foo.d = bar.a) group by d+r.b) order by r.a, r.b;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Query-to-DXL Translation: No variable entry found due to incorrect normalization of query
  a  | b 
 ----+---
   3 | 0
@@ -8024,8 +8026,10 @@ NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_3
 NOTICE:  CREATE TABLE will create partition "multilevel_p_1_prt_bb_2_2_prt_sp2_4" for table "multilevel_p_1_prt_bb_2"
 insert into orca.multilevel_p values (1,1), (100,200);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables with non-uniform partitioning structure
 select * from orca.multilevel_p;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Multi-level partitioned tables with non-uniform partitioning structure
   a  |  b  
 -----+-----
    1 |   1
@@ -8783,6 +8787,7 @@ CREATE FUNCTION sum_combinefunc(anyelement,anyelement) returns anyelement AS 'se
 CREATE AGGREGATE myagg1(anyelement) (SFUNC = sum_sfunc, COMBINEFUNC = sum_combinefunc, STYPE = anyelement, INITCOND = '0');
 SELECT myagg1(i) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
 CONTEXT:  SQL function "sum_sfunc" during startup
  myagg1 
 --------
@@ -8793,6 +8798,7 @@ CREATE FUNCTION sum_sfunc2(anyelement,anyelement,anyelement) returns anyelement 
 CREATE AGGREGATE myagg2(anyelement,anyelement) (SFUNC = sum_sfunc2, STYPE = anyelement, INITCOND = '0');
 SELECT myagg2(i,j) FROM orca.tab1;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
 CONTEXT:  SQL function "sum_sfunc2" during startup
  myagg2 
 --------
@@ -8815,8 +8821,10 @@ INSERT INTO array_table values(7,array[3],'a');
 INSERT INTO array_table values(8,array[3],'b');
 SELECT f3, myagg3(f1) from (select * from array_table order by f1 limit 10) as foo GROUP BY f3 ORDER BY f3;
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
 CONTEXT:  SQL function "gptfp" during startup
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
 CONTEXT:  SQL function "gpffp" during startup
  f3 | myagg3  
 ----+---------
@@ -9636,6 +9644,7 @@ set optimizer_enable_dynamictablescan = off;
 -- gather on 1 segment because of direct dispatch
 explain select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
                                                  QUERY PLAN                                                  
 -------------------------------------------------------------------------------------------------------------
  Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..13.52 rows=13 width=10)
@@ -9657,6 +9666,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 select * from orca.bm_dyn_test_onepart where i=2 and t='2';
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  No plan has been computed for required properties
  i | j | t 
 ---+---+---
  2 | 2 | 2
@@ -10123,18 +10133,19 @@ analyze idxscan_inner;
 set optimizer_enable_hashjoin = off;
 explain select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
 where ordernum between 10 and 20;
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..888833.77 rows=3 width=9)
-   ->  Nested Loop  (cost=0.00..888833.77 rows=1 width=9)
-         Join Filter: idxscan_outer.id = idxscan_inner.productid
-         ->  Index Scan using idxscan_inner_ordernum_key on idxscan_inner  (cost=0.00..6.00 rows=1 width=9)
-               Index Cond: ordernum >= 10 AND ordernum <= 20
-         ->  Materialize  (cost=0.00..431.00 rows=9 width=4)
-               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=9 width=4)
-                     ->  Table Scan on idxscan_outer  (cost=0.00..431.00 rows=3 width=4)
- Optimizer: PQO version 2.73.0
-(9 rows)
+                                                       QUERY PLAN                                                       
+------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..888833.21 rows=3 width=9)
+   ->  Nested Loop  (cost=0.00..888833.21 rows=1 width=9)
+         Join Filter: (idxscan_outer.id = idxscan_inner.productid)
+         ->  Table Scan on idxscan_outer  (cost=0.00..431.00 rows=3 width=4)
+         ->  Materialize  (cost=0.00..6.00 rows=1 width=9)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..6.00 rows=1 width=9)
+                     Hash Key: idxscan_inner.productid
+                     ->  Index Scan using idxscan_inner_ordernum_key on idxscan_inner  (cost=0.00..6.00 rows=1 width=9)
+                           Index Cond: ((ordernum >= 10) AND (ordernum <= 20))
+ Optimizer: PQO version 3.1.0
+(10 rows)
 
 select id, comment from idxscan_outer as o join idxscan_inner as i on o.id = i.productid
 where ordernum between 10 and 20;
@@ -10295,6 +10306,7 @@ CREATE TABLE btree_test as SELECT * FROM generate_series(1,100) as a distributed
 CREATE INDEX btree_test_index ON btree_test(a);
 EXPLAIN SELECT * FROM btree_test WHERE a in (1, 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan not supported
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.25 rows=2 width=4)
@@ -10306,6 +10318,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('2', 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan not supported
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.25 rows=2 width=4)
@@ -10317,6 +10330,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2');
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan not supported
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.25 rows=2 width=4)
@@ -10328,6 +10342,7 @@ INFO:  GPORCA failed to produce a plan, falling back to planner
 
 EXPLAIN SELECT * FROM btree_test WHERE a in ('1', '2', 47);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  DXL-to-PlStmt Translation: ScalarArrayOpExpr condition on index scan not supported
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.38 rows=3 width=4)
@@ -10411,8 +10426,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 explain select count(*) from foo group by cube(a,b);
-LOG:  2018-03-29 10:22:52:869837 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: Cube",
+LOG:  2018-03-29 10:22:52:869837 PDT,THD000,NOTICE,"Feature not supported: Cube",
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: Cube
 LOG:  Planner produced plan :0
                                                                    QUERY PLAN                                                                   
 ------------------------------------------------------------------------------------------------------------------------------------------------
@@ -10458,6 +10474,8 @@ CREATE FUNCTION func_enum_element(ANYENUM, ANYELEMENT) RETURNS TABLE(a ANYENUM, 
 AS $$ SELECT $1, ARRAY[$2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_enum_element('red'::rainbow, 'blue'::rainbow::anyelement);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_enum_element" during startup
   a  |   b    
 -----+--------
  red | {blue}
@@ -10469,6 +10487,8 @@ CREATE FUNCTION func_element_array(ANYELEMENT, ANYARRAY) RETURNS TABLE(a ANYELEM
 AS $$ SELECT $1, $2[1]$$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array('red'::rainbow, ARRAY['blue'::rainbow]);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_element_array" during startup
   a  |  b   
 -----+------
  red | blue
@@ -10480,6 +10500,8 @@ CREATE FUNCTION func_element_array(ANYARRAY, ANYENUM) RETURNS TABLE(a ANYELEMENT
 AS $$ SELECT $1[1], $2 $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_array(ARRAY['blue'::rainbow], 'blue'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_element_array" during startup
   a   |  b   
 ------+------
  blue | blue
@@ -10491,6 +10513,8 @@ CREATE FUNCTION func_array(ANYARRAY) RETURNS TABLE(a ANYELEMENT, b ANYENUM)
 AS $$ SELECT $1[1], $1[2] $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array(ARRAY['blue'::rainbow, 'yellow'::rainbow]);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_array" during startup
   a   |   b    
 ------+--------
  blue | yellow
@@ -10502,6 +10526,8 @@ CREATE FUNCTION func_element_variadic(ANYELEMENT, VARIADIC ANYARRAY) RETURNS TAB
 AS $$ SELECT array_prepend($1, $2); $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_element_variadic(1.1, 1.1, 2.2, 3.3);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_element_variadic" during startup
          a         
 -------------------
  {1.1,1.1,2.2,3.3}
@@ -10513,6 +10539,8 @@ CREATE FUNCTION func_nonarray(ANYNONARRAY) RETURNS TABLE(a ANYNONARRAY)
 AS $$ SELECT $1; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray(5);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_nonarray" during startup
  a 
 ---
  5
@@ -10524,6 +10552,8 @@ CREATE FUNCTION func_nonarray_enum(ANYNONARRAY, ANYENUM) RETURNS TABLE(a ANYARRA
 AS $$ SELECT ARRAY[$1, $2]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_nonarray_enum('blue'::rainbow, 'red'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_nonarray_enum" during startup
      a      
 ------------
  {blue,red}
@@ -10535,6 +10565,8 @@ CREATE FUNCTION func_array_nonarray_enum(ANYARRAY, ANYNONARRAY, ANYENUM) RETURNS
 AS $$ SELECT $1[1]; $$ LANGUAGE SQL STABLE;
 SELECT * FROM func_array_nonarray_enum(ARRAY['blue'::rainbow, 'red'::rainbow], 'red'::rainbow, 'yellow'::rainbow);
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  GPDB Expression type: Query Parameter not supported in DXL
+CONTEXT:  SQL function "func_array_nonarray_enum" during startup
   a   
 ------
  blue
@@ -10565,8 +10597,9 @@ set log_statement='none';
 set log_min_duration_statement=-1;
 set client_min_messages='log';
 create table foo_ctas(a) as (select generate_series(1,10)) distributed by (a);
-LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported by the Pivotal Query Optimizer: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
+LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA",
 INFO:  GPORCA failed to produce a plan, falling back to planner
+DETAIL:  Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
 LOG:  Planner produced plan :0
 LOG:  Computing Scalar Stats : column a
 reset client_min_messages;

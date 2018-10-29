@@ -9,7 +9,7 @@
  * bootstrap file from these header files.)
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/genbki.h
@@ -27,7 +27,7 @@
  *
  * Variable-length catalog fields (except possibly the first not nullable one)
  * should not be visible in C structures, so they are made invisible by #ifdefs
- * of an undefined symbol.	See also MARKNOTNULL in bootstrap.c for how this is
+ * of an undefined symbol.  See also MARKNOTNULL in bootstrap.c for how this is
  * handled.
  */
 #undef CATALOG_VARLEN

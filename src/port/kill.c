@@ -3,7 +3,7 @@
  * kill.c
  *	  kill()
  *
- * Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  *	This is a replacement version of kill for Win32 which sends
  *	signals that the backend can recognize.
@@ -37,6 +37,26 @@ pgkill(int pid, int sig)
 		/* No support for process groups */
 		errno = EINVAL;
 		return -1;
+	}
+
+	/* special case for SIGKILL: just ask the system to terminate the target */
+	if (sig == SIGKILL)
+	{
+		HANDLE		prochandle;
+
+		if ((prochandle = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD) pid)) == NULL)
+		{
+			errno = ESRCH;
+			return -1;
+		}
+		if (!TerminateProcess(prochandle, 255))
+		{
+			_dosmaperr(GetLastError());
+			CloseHandle(prochandle);
+			return -1;
+		}
+		CloseHandle(prochandle);
+		return 0;
 	}
 	snprintf(pipename, sizeof(pipename), "\\\\.\\pipe\\pgsignal_%u", pid);
 

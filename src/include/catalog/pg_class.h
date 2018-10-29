@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_class.h
@@ -49,7 +49,6 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83) BKI_SCHEMA_MACRO
 	int32		relallvisible;	/* # of all-visible blocks (not always
 								 * up-to-date) */
 	Oid			reltoastrelid;	/* OID of toast table; 0 if none */
-	Oid			reltoastidxid;	/* if toast table, OID of chunk_id index */
 	bool		relhasindex;	/* T if has (or has had) any indexes */
 	bool		relisshared;	/* T if shared across databases */
 	char		relpersistence; /* see RELPERSISTENCE_xxx constants below */
@@ -69,6 +68,7 @@ CATALOG(pg_class,1259) BKI_BOOTSTRAP BKI_ROWTYPE_OID(83) BKI_SCHEMA_MACRO
 	bool		relhastriggers; /* has (or has had) any TRIGGERs */
 	bool		relhassubclass; /* has (or has had) derived classes */
 	bool		relispopulated; /* matview currently holds query results */
+	char		relreplident;	/* see REPLICA_IDENTITY_xxx constants  */
 	TransactionId relfrozenxid; /* all Xids < this are frozen in this rel */
 	TransactionId relminmxid;	/* all multixacts in this rel are >= this.
 								 * this is really a MultiXactId */
@@ -87,7 +87,6 @@ FOREIGN_KEY(relowner REFERENCES pg_authid(oid));
 FOREIGN_KEY(relam REFERENCES pg_am(oid));
 FOREIGN_KEY(reltablespace REFERENCES pg_tablespace(oid));
 FOREIGN_KEY(reltoastrelid REFERENCES pg_class(oid));
-FOREIGN_KEY(reltoastidxid REFERENCES pg_class(oid));
 
 /* Size of fixed part of pg_class tuples, not counting var-length fields */
 #define CLASS_TUPLE_SIZE \
@@ -118,25 +117,25 @@ typedef FormData_pg_class *Form_pg_class;
 #define Anum_pg_class_reltuples			10
 #define Anum_pg_class_relallvisible		11
 #define Anum_pg_class_reltoastrelid		12
-#define Anum_pg_class_reltoastidxid		13
-#define Anum_pg_class_relhasindex		14
-#define Anum_pg_class_relisshared		15
-#define Anum_pg_class_relpersistence	16
-#define Anum_pg_class_relkind			17
-#define Anum_pg_class_relstorage		18 /* GPDB specific */
-#define Anum_pg_class_relnatts			19
-#define Anum_pg_class_relchecks			20
-#define Anum_pg_class_relhasoids		21
-#define Anum_pg_class_relhaspkey		22
-#define Anum_pg_class_relhasrules		23
-#define Anum_pg_class_relhastriggers	24
-#define Anum_pg_class_relhassubclass	25
-#define Anum_pg_class_relispopulated	26
+#define Anum_pg_class_relhasindex		13
+#define Anum_pg_class_relisshared		14
+#define Anum_pg_class_relpersistence	15
+#define Anum_pg_class_relkind			16
+#define Anum_pg_class_relstorage		17 /* GPDB specific */
+GPDB_COLUMN_DEFAULT(relstorage, h);
+#define Anum_pg_class_relnatts			18
+#define Anum_pg_class_relchecks			19
+#define Anum_pg_class_relhasoids		20
+#define Anum_pg_class_relhaspkey		21
+#define Anum_pg_class_relhasrules		22
+#define Anum_pg_class_relhastriggers	23
+#define Anum_pg_class_relhassubclass	24
+#define Anum_pg_class_relispopulated	25
+#define Anum_pg_class_relreplident		26
 #define Anum_pg_class_relfrozenxid		27
 #define Anum_pg_class_relminmxid		28
 #define Anum_pg_class_relacl			29
 #define Anum_pg_class_reloptions		30
-
 
 /* ----------------
  *		initial contents of pg_class
@@ -151,13 +150,13 @@ typedef FormData_pg_class *Form_pg_class;
  * Note: "3" in the relfrozenxid column stands for FirstNormalTransactionId;
  * similarly, "1" in relminmxid stands for FirstMultiXactId
  */
-DATA(insert OID = 1247 (  pg_type		PGNSP 71 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 30 0 t f f f f t 3 1 _null_ _null_ ));
+DATA(insert OID = 1247 (  pg_type		PGNSP 71 0 PGUID 0 0 0 0 0 0 0 f f p r 30 0 t f f f f t n 3 1 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 21 0 f f f f f t 3 1 _null_ _null_ ));
+DATA(insert OID = 1249 (  pg_attribute	PGNSP 75 0 PGUID 0 0 0 0 0 0 0 f f p r 21 0 f f f f f t n 3 1 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1255 (  pg_proc		PGNSP 81 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 29 0 t f f f f t 3 1 _null_ _null_ ));
+DATA(insert OID = 1255 (  pg_proc		PGNSP 81 0 PGUID 0 0 0 0 0 0 0 f f p r 29 0 t f f f f t n 3 1 _null_ _null_ ));
 DESCR("");
-DATA(insert OID = 1259 (  pg_class		PGNSP 83 0 PGUID 0 0 0 0 0 0 0 0 f f p r h 30 0 t f f f f t 3 1 _null_ _null_ ));
+DATA(insert OID = 1259 (  pg_class		PGNSP 83 0 PGUID 0 0 0 0 0 0 0 f f p r 30 0 t f f f f t n 3 1 _null_ _null_ ));
 DESCR("");
 
 
@@ -181,6 +180,19 @@ DESCR("");
 #define		  RELPERSISTENCE_PERMANENT	'p'		/* regular table */
 #define		  RELPERSISTENCE_UNLOGGED	'u'		/* unlogged permanent table */
 #define		  RELPERSISTENCE_TEMP		't'		/* temporary table */
+
+/* default selection for replica identity (primary key or nothing) */
+#define		  REPLICA_IDENTITY_DEFAULT	'd'
+/* no replica identity is logged for this relation */
+#define		  REPLICA_IDENTITY_NOTHING	'n'
+/* all columns are loged as replica identity */
+#define		  REPLICA_IDENTITY_FULL		'f'
+/*
+ * an explicitly chosen candidate key's columns are used as identity;
+ * will still be set if the index has been dropped, in that case it
+ * has the same meaning as 'd'
+ */
+#define		  REPLICA_IDENTITY_INDEX	'i'
 
 /*
  * relstorage describes how a relkind is physically stored in the database.
@@ -223,4 +235,5 @@ static inline bool relstorage_is_foreign(char c)
 {
 	return (c == RELSTORAGE_FOREIGN);
 }
+
 #endif   /* PG_CLASS_H */

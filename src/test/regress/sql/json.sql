@@ -100,6 +100,25 @@ FROM rows q;
 
 SELECT row_to_json(row((select array_agg(x) as d from generate_series(5,10) x)),false);
 
+-- to_json, timestamps
+
+select to_json(timestamp '2014-05-28 12:22:35.614298');
+
+BEGIN;
+SET LOCAL TIME ZONE 10.5;
+select to_json(timestamptz '2014-05-28 12:22:35.614298-04');
+SET LOCAL TIME ZONE -8;
+select to_json(timestamptz '2014-05-28 12:22:35.614298-04');
+COMMIT;
+
+-- unicode escape - backslash is not escaped
+
+select to_json(text '\uabcd');
+
+-- any other backslash is escaped
+
+select to_json(text '\abcd');
+
 --json_agg
 
 SELECT json_agg(q)
@@ -136,8 +155,8 @@ CREATE TEMP TABLE test_json (
 
 INSERT INTO test_json VALUES
 ('scalar','"a scalar"'),
-('array','["zero", "one","two",null,"four","five"]'),
-('object','{"field1":"val1","field2":"val2","field3":null}');
+('array','["zero", "one","two",null,"four","five", [1,2,3],{"f1":9}]'),
+('object','{"field1":"val1","field2":"val2","field3":null, "field4": 4, "field5": [1,2,3], "field6": {"f1":9}}');
 
 SELECT test_json -> 'x'
 FROM test_json
@@ -175,6 +194,13 @@ SELECT test_json->>2
 FROM test_json
 WHERE json_type = 'array';
 
+SELECT test_json ->> 6 FROM test_json WHERE json_type = 'array';
+SELECT test_json ->> 7 FROM test_json WHERE json_type = 'array';
+
+SELECT test_json ->> 'field4' FROM test_json WHERE json_type = 'object';
+SELECT test_json ->> 'field5' FROM test_json WHERE json_type = 'object';
+SELECT test_json ->> 'field6' FROM test_json WHERE json_type = 'object';
+
 SELECT json_object_keys(test_json)
 FROM test_json
 WHERE json_type = 'scalar';
@@ -186,6 +212,13 @@ WHERE json_type = 'array';
 SELECT json_object_keys(test_json)
 FROM test_json
 WHERE json_type = 'object';
+
+-- test extending object_keys resultset - initial resultset size is 256
+
+select count(*) from
+    (select json_object_keys(json_object(array_agg(g)))
+     from (select unnest(array['f'||n,n::text])as g
+           from generate_series(1,300) as n) x ) y;
 
 -- nulls
 
@@ -265,8 +298,10 @@ select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>>'{f2,1}';
 
 -- array_elements
 
-select json_array_elements('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false]');
-select * from json_array_elements('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false]') q;
+select json_array_elements('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false,"stringy"]');
+select * from json_array_elements('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false,"stringy"]') q;
+select json_array_elements_text('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false,"stringy"]');
+select * from json_array_elements_text('[1,true,[1,[2,3]],null,{"f1":1,"f2":[7,8,9]},false,"stringy"]') q;
 
 -- populate_record
 create type jpop as (a text, b int, c timestamp);
@@ -310,6 +345,108 @@ select json '{ "a":  "\ude04X" }' -> 'a'; -- orphan low surrogate
 select json '{ "a":  "the Copyright \u00a9 sign" }' ->> 'a' as correct_in_utf8;
 select json '{ "a":  "dollar \u0024 character" }' ->> 'a' as correct_everywhere;
 select json '{ "a":  "null \u0000 escape" }' ->> 'a' as not_unescaped;
+
+--json_typeof() function
+select value, json_typeof(value)
+  from (values (json '123.4'),
+               (json '-1'),
+               (json '"foo"'),
+               (json 'true'),
+               (json 'false'),
+               (json 'null'),
+               (json '[1, 2, 3]'),
+               (json '[]'),
+               (json '{"x":"foo", "y":123}'),
+               (json '{}'),
+               (NULL::json))
+      as data(value);
+
+-- json_build_array, json_build_object, json_object_agg
+
+SELECT json_build_array('a',1,'b',1.2,'c',true,'d',null,'e',json '{"x": 3, "y": [1,2,3]}');
+
+SELECT json_build_object('a',1,'b',1.2,'c',true,'d',null,'e',json '{"x": 3, "y": [1,2,3]}');
+
+SELECT json_build_object(
+       'a', json_build_object('b',false,'c',99),
+       'd', json_build_object('e',array[9,8,7]::int[],
+           'f', (select row_to_json(r) from ( select relkind, oid::regclass as name from pg_class where relname = 'pg_class') r)));
+
+
+-- empty objects/arrays
+SELECT json_build_array();
+
+SELECT json_build_object();
+
+-- make sure keys are quoted
+SELECT json_build_object(1,2);
+
+-- keys must be scalar and not null
+SELECT json_build_object(null,2);
+
+SELECT json_build_object(r,2) FROM (SELECT 1 AS a, 2 AS b) r;
+
+SELECT json_build_object(json '{"a":1,"b":2}', 3);
+
+SELECT json_build_object('{1,2,3}'::int[], 3);
+
+CREATE TEMP TABLE foo (serial_num int, name text, type text);
+INSERT INTO foo VALUES (847001,'t15','GE1043');
+INSERT INTO foo VALUES (847002,'t16','GE1043');
+INSERT INTO foo VALUES (847003,'sub-alpha','GESS90');
+
+SELECT json_build_object('turbines',json_object_agg(serial_num,json_build_object('name',name,'type',type) order by serial_num))
+FROM foo;
+
+-- json_object
+
+-- one dimension
+SELECT json_object('{a,1,b,2,3,NULL,"d e f","a b c"}');
+
+-- same but with two dimensions
+SELECT json_object('{{a,1},{b,2},{3,NULL},{"d e f","a b c"}}');
+
+-- odd number error
+SELECT json_object('{a,b,c}');
+
+-- one column error
+SELECT json_object('{{a},{b}}');
+
+-- too many columns error
+SELECT json_object('{{a,b,c},{b,c,d}}');
+
+-- too many dimensions error
+SELECT json_object('{{{a,b},{c,d}},{{b,c},{d,e}}}');
+
+--two argument form of json_object
+
+select json_object('{a,b,c,"d e f"}','{1,2,3,"a b c"}');
+
+-- too many dimensions
+SELECT json_object('{{a,1},{b,2},{3,NULL},{"d e f","a b c"}}', '{{a,1},{b,2},{3,NULL},{"d e f","a b c"}}');
+
+-- mismatched dimensions
+
+select json_object('{a,b,c,"d e f",g}','{1,2,3,"a b c"}');
+
+select json_object('{a,b,c,"d e f"}','{1,2,3,"a b c",g}');
+
+-- null key error
+
+select json_object('{a,b,NULL,"d e f"}','{1,2,3,"a b c"}');
+
+-- empty key error
+
+select json_object('{a,b,"","d e f"}','{1,2,3,"a b c"}');
+
+
+-- json_to_record and json_to_recordset
+
+select * from json_to_record('{"a":1,"b":"foo","c":"bar"}',true)
+    as x(a int, b text, d text);
+
+select * from json_to_recordset('[{"a":1,"b":"foo","d":false},{"a":2,"b":"bar","c":true}]',false)
+    as x(a int, b text, c boolean);
 
 -- checking proisstrict settings
 

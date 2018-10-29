@@ -4,7 +4,7 @@
  *
  *	  Routines for opclass (and opfamily) manipulation commands
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -107,11 +107,14 @@ OpFamilyCacheLookup(Oid amID, List *opfamilyname, bool missing_ok)
 		/* Look in specific schema only */
 		Oid			namespaceId;
 
-		namespaceId = LookupExplicitNamespace(schemaname, false);
-		htup = SearchSysCache3(OPFAMILYAMNAMENSP,
-							   ObjectIdGetDatum(amID),
-							   PointerGetDatum(opfname),
-							   ObjectIdGetDatum(namespaceId));
+		namespaceId = LookupExplicitNamespace(schemaname, missing_ok);
+		if (!OidIsValid(namespaceId))
+			htup = NULL;
+		else
+			htup = SearchSysCache3(OPFAMILYAMNAMENSP,
+								   ObjectIdGetDatum(amID),
+								   PointerGetDatum(opfname),
+								   ObjectIdGetDatum(namespaceId));
 	}
 	else
 	{
@@ -183,11 +186,14 @@ OpClassCacheLookup(Oid amID, List *opclassname, bool missing_ok)
 		/* Look in specific schema only */
 		Oid			namespaceId;
 
-		namespaceId = LookupExplicitNamespace(schemaname, false);
-		htup = SearchSysCache3(CLAAMNAMENSP,
-							   ObjectIdGetDatum(amID),
-							   PointerGetDatum(opcname),
-							   ObjectIdGetDatum(namespaceId));
+		namespaceId = LookupExplicitNamespace(schemaname, missing_ok);
+		if (!OidIsValid(namespaceId))
+			htup = NULL;
+		else
+			htup = SearchSysCache3(CLAAMNAMENSP,
+								   ObjectIdGetDatum(amID),
+								   PointerGetDatum(opcname),
+								   ObjectIdGetDatum(namespaceId));
 	}
 	else
 	{
@@ -389,7 +395,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 	 * A minimum expectation therefore is that the caller have execute
 	 * privilege with grant option.  Since we don't have a way to make the
 	 * opclass go away if the grant option is revoked, we choose instead to
-	 * require ownership of the functions.	It's also not entirely clear what
+	 * require ownership of the functions.  It's also not entirely clear what
 	 * permissions should be required on the datatype, but ownership seems
 	 * like a safe choice.
 	 *
@@ -618,7 +624,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 					ObjectIdGetDatum(amoid));
 
 		scan = systable_beginscan(rel, OpclassAmNameNspIndexId, true,
-								  SnapshotNow, 1, skey);
+								  NULL, 1, skey);
 
 		while (HeapTupleIsValid(tup = systable_getnext(scan)))
 		{
@@ -671,7 +677,7 @@ DefineOpClass(CreateOpClassStmt *stmt)
 					opclassoid, procedures, false);
 
 	/*
-	 * Create dependencies for the opclass proper.	Note: we do not create a
+	 * Create dependencies for the opclass proper.  Note: we do not create a
 	 * dependency link to the AM, because we don't currently support DROP
 	 * ACCESS METHOD.
 	 */
@@ -1118,7 +1124,7 @@ assignOperTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 	if (OidIsValid(member->sortfamily))
 	{
 		/*
-		 * Ordering op, check index supports that.	(We could perhaps also
+		 * Ordering op, check index supports that.  (We could perhaps also
 		 * check that the operator returns a type supported by the sortfamily,
 		 * but that seems more trouble than it's worth here.  If it does not,
 		 * the operator will never be matchable to any ORDER BY clause, but no
@@ -1247,7 +1253,7 @@ assignProcTypes(OpFamilyMember *member, Oid amoid, Oid typeoid)
 
 	/*
 	 * The default in CREATE OPERATOR CLASS is to use the class' opcintype as
-	 * lefttype and righttype.	In CREATE or ALTER OPERATOR FAMILY, opcintype
+	 * lefttype and righttype.  In CREATE or ALTER OPERATOR FAMILY, opcintype
 	 * isn't available, so make the user specify the types.
 	 */
 	if (!OidIsValid(member->lefttype))
@@ -1656,7 +1662,7 @@ RemoveAmOpEntryById(Oid entryOid)
 	rel = heap_open(AccessMethodOperatorRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(rel, AccessMethodOperatorOidIndexId, true,
-							  SnapshotNow, 1, skey);
+							  NULL, 1, skey);
 
 	/* we expect exactly one match */
 	tup = systable_getnext(scan);
@@ -1685,7 +1691,7 @@ RemoveAmProcEntryById(Oid entryOid)
 	rel = heap_open(AccessMethodProcedureRelationId, RowExclusiveLock);
 
 	scan = systable_beginscan(rel, AccessMethodProcedureOidIndexId, true,
-							  SnapshotNow, 1, skey);
+							  NULL, 1, skey);
 
 	/* we expect exactly one match */
 	tup = systable_getnext(scan);

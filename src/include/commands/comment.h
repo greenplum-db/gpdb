@@ -7,7 +7,7 @@
  *
  * Prototypes for functions in commands/comment.c
  *
- * Copyright (c) 1999-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1999-2014, PostgreSQL Global Development Group
  *
  *-------------------------------------------------------------------------
  */
@@ -24,7 +24,7 @@
  * related routines.  CommentObject() implements the SQL "COMMENT ON"
  * command.  DeleteComments() deletes all comments for an object.
  * CreateComments creates (or deletes, if comment is NULL) a comment
- * for a specific key.	There are versions of these two methods for
+ * for a specific key.  There are versions of these two methods for
  * both normal and shared objects.
  *------------------------------------------------------------------
  */

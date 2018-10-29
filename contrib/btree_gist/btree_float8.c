@@ -23,14 +23,6 @@ PG_FUNCTION_INFO_V1(gbt_float8_distance);
 PG_FUNCTION_INFO_V1(gbt_float8_penalty);
 PG_FUNCTION_INFO_V1(gbt_float8_same);
 
-Datum		gbt_float8_compress(PG_FUNCTION_ARGS);
-Datum		gbt_float8_union(PG_FUNCTION_ARGS);
-Datum		gbt_float8_picksplit(PG_FUNCTION_ARGS);
-Datum		gbt_float8_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_float8_distance(PG_FUNCTION_ARGS);
-Datum		gbt_float8_penalty(PG_FUNCTION_ARGS);
-Datum		gbt_float8_same(PG_FUNCTION_ARGS);
-
 
 static bool
 gbt_float8gt(const void *a, const void *b)
@@ -93,6 +85,7 @@ static const gbtree_ninfo tinfo =
 {
 	gbt_t_float8,
 	sizeof(float8),
+	16,							/* sizeof(gbtreekey16) */
 	gbt_float8gt,
 	gbt_float8ge,
 	gbt_float8eq,
@@ -104,7 +97,6 @@ static const gbtree_ninfo tinfo =
 
 
 PG_FUNCTION_INFO_V1(float8_dist);
-Datum		float8_dist(PG_FUNCTION_ARGS);
 Datum
 float8_dist(PG_FUNCTION_ARGS)
 {

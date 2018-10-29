@@ -7379,10 +7379,10 @@ from sale group by rollup(cn,dt);
  dt     | date   |           | plain   | 
  sum    | bigint |           | plain   | 
 View definition:
- SELECT "Window".dt, 
+ SELECT "Window".dt,
     sum("Window".cn) OVER (ORDER BY "Window".att_3 RANGE "Window".att_3 PRECEDING) AS sum
-   FROM ( SELECT sale.cn, 
-            sale.dt, 
+   FROM ( SELECT sale.cn,
+            sale.dt,
             grouping(sale.cn) AS att_3
            FROM sale
           GROUP BY ROLLUP (sale.cn, sale.dt)) "Window"(cn, dt, att_3);

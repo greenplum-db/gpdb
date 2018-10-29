@@ -130,7 +130,7 @@ RemoveExtProtocolById(Oid protOid)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(protOid));
 	scan = systable_beginscan(rel, ExtprotocolOidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -173,7 +173,7 @@ AlterExtProtocolOwner(const char *name, Oid newOwnerId)
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(name));
 	scan = systable_beginscan(rel, ExtprotocolPtcnameIndexId, true,
-							  SnapshotNow, 1, &scankey);
+							  NULL, 1, &scankey);
 	tup = systable_getnext(scan);
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
@@ -303,7 +303,7 @@ RenameExtProtocol(const char *oldname, const char *newname)
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(oldname));
 	scan = systable_beginscan(rel, ExtprotocolPtcnameIndexId, true,
-							  SnapshotNow, 1, &scankey);
+							  NULL, 1, &scankey);
 	tup = systable_getnext(scan);
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,

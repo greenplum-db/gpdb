@@ -260,7 +260,7 @@ INSERT 1
 -- Actual test begins
 1: INSERT INTO AO VALUES (1);
 INSERT 1
-2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 segno|tupcount
 -----+--------
 1    |127     
@@ -269,7 +269,7 @@ segno|tupcount
 -- Under jump jash, (3) and (1) are on the same seg(seg2).
 1: INSERT INTO AO VALUES (3);
 INSERT 1
-2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 segno|tupcount
 -----+--------
 1    |128     
@@ -286,7 +286,7 @@ INSERT 1
 COMMIT
 2: COMMIT;
 COMMIT
-2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 segno|tupcount
 -----+--------
 1    |129     
@@ -296,7 +296,7 @@ segno|tupcount
 INSERT 100000
 1: INSERT INTO AO VALUES (3);
 INSERT 1
-2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg_name('ao');
+2U: SELECT segno, case when tupcount = 0 then 'zero' when tupcount <= 5 then 'few' else 'many' end FROM gp_ao_or_aocs_seg('ao');
 segno|case
 -----+----
 1    |many

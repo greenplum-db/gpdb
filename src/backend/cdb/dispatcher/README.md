@@ -37,9 +37,6 @@ For a query/plan, QD would build one `GANGTYPE_PRIMARY_WRITER` Gang, and several
 	* `CdbDispatchSetCommand`: send SET commands to all existing Gangs except those allocated for extended queries, and block to get results or error
 	* `CdbDispDtxProtocolCommand`: send DTX commands to the writer Gang, and block to get results or error
 	
-### Dispatcher Mode:
-To improve parallelism, Dispatcher has two different implementations internally, one is using threads, the other leverages asynchronous network programming. When GUC `gp_connections_per_thread` is 0, async dispatcher is used, which is the default configuration
-
 ### Dispatcher routines:
 All dispatcher routines contains few standard steps:
 * CdbDispatchPlan/CdbDispatchUtilityStatement/CdbDispatchCommand/CdbDispatchSetCommand/CdbDispDtxProtocolCommand

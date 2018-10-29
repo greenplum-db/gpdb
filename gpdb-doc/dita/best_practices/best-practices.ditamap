@@ -8,8 +8,8 @@
         <topicref href="summary.xml"/>
         <topicref href="sysconfig.xml"/>
         <topicref href="schema.xml"/>
-        <topicref href="workloads.xml"/>
         <topicref href="resgroups.xml"/>
+        <topicref href="workloads.xml"/>
         <topicref href="maintenance.xml">
             <topicref href="analyze.xml"/>
             <topicref href="bloat.xml"/>

@@ -534,11 +534,11 @@ CREATE VIEW cte_view as
  e      | integer |           | plain   | 
 View definition:
  WITH cte(e) AS (
-                 SELECT bar.d
-                   FROM bar
-        INTERSECT 
-                 SELECT foo.a
-                   FROM foo
+         SELECT bar.d
+           FROM bar
+        INTERSECT
+         SELECT foo.a
+           FROM foo
  LIMIT 10
         )
  SELECT cte.e
@@ -575,21 +575,21 @@ SELECT cte2.e,cte.f FROM cte,cte2 where cte.e = cte2.e
  f      | integer |           | plain   | 
 View definition:
  WITH cte(e, f) AS (
-         SELECT foo.a, 
+         SELECT foo.a,
             bar.d
-           FROM bar, 
+           FROM bar,
             foo
           WHERE foo.a = bar.d
         ), cte2(e, f) AS (
-         SELECT cte_1.e, 
+         SELECT cte_1.e,
             bar.d
-           FROM bar, 
+           FROM bar,
             cte cte_1
           WHERE cte_1.e = bar.c
         )
- SELECT cte2.e, 
+ SELECT cte2.e,
     cte.f
-   FROM cte, 
+   FROM cte,
     cte2
   WHERE cte.e = cte2.e;
 

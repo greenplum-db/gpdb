@@ -92,10 +92,10 @@ the visibility map used for heaps in PostgreSQL 8.4 and above!
 
 The AO visibility map is used to implement `DELETEs` and `UPDATEs`. An
 `UPDATE` in PostgreSQL is like `DELETE+INSERT`. In heap tables, the ctid
-field is used to implement update-chain-following when updates are
-done in in `READ COMMITTED` mode, but AO tables don't store that
-information, so an update of a recently updated row in read committed
-mode behaves as if the row was deleted.
+field is used to implement update-chain-following when updates are done
+in `READ COMMITTED` mode, but AO tables don't store that information, so
+an update of a recently updated row in read committed mode behaves as if
+the row was deleted.
 
 The AO visiblity map works as an overlay, over the data. When a row
 is `DELETEd` from an AO table, the original tuple is not modified. Instead,

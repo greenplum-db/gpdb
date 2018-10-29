@@ -3,7 +3,7 @@
  * alter.c
  *	  Drivers for generic alter commands
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -300,7 +300,7 @@ AlterObjectRename_internal(Relation rel, Oid objectId, const char *new_name)
 }
 
 /*
- * Executes an ALTER OBJECT / RENAME TO statement.	Based on the object
+ * Executes an ALTER OBJECT / RENAME TO statement.  Based on the object
  * type, the function appropriate to that type is executed.
  */
 static Oid

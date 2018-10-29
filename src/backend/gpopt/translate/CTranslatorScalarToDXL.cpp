@@ -261,9 +261,18 @@ CTranslatorScalarToDXL::TranslateScalarToDXL
 
 	if (NULL == func_ptr)
 	{
-		CHAR *str = (CHAR*) gpdb::NodeToString(const_cast<Expr*>(expr));
-		CWStringDynamic *wcstr = CDXLUtils::CreateDynamicStringFromCharArray(m_mp, str);
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, wcstr->GetBuffer());
+		// This expression is not supported. Check for a few common cases, to
+		// give a better message.
+		if (tag == T_Param)
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, GPOS_WSZ_LIT("Query Parameter"));
+		}
+		else
+		{
+			CHAR *str = (CHAR*) gpdb::NodeToString(const_cast<Expr*>(expr));
+			CWStringDynamic *wcstr = CDXLUtils::CreateDynamicStringFromCharArray(m_mp, str);
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiPlStmt2DXLConversion, wcstr->GetBuffer());
+		}
 	}
 
 	CDXLNode *return_node = (this->*func_ptr)(expr, var_colid_mapping);

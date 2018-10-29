@@ -9,14 +9,8 @@
  */
 #include "postgres_fe.h"
 
-#include <unistd.h>
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-
-extern char *optarg;
-
 #include "libpq-fe.h"
+#include "pg_getopt.h"
 
 /* an extensible array to keep track of elements to show */
 typedef struct
@@ -413,7 +407,7 @@ sql_exec(PGconn *conn, const char *todo, bool quiet)
 }
 
 /*
- * Dump all databases.	There are no system objects to worry about.
+ * Dump all databases.  There are no system objects to worry about.
  */
 void
 sql_exec_dumpalldbs(PGconn *conn, struct options * opts)
@@ -508,22 +502,21 @@ sql_exec_searchtables(PGconn *conn, struct options * opts)
 	free(comma_filenodes);
 
 	/* now build the query */
-	todo = (char *) pg_malloc(650 + strlen(qualifiers));
-	snprintf(todo, 650 + strlen(qualifiers),
-			 "SELECT pg_catalog.pg_relation_filenode(c.oid) as \"Filenode\", relname as \"Table Name\" %s\n"
-			 "FROM pg_catalog.pg_class c \n"
-		 "	LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \n"
-			 "	LEFT JOIN pg_catalog.pg_database d ON d.datname = pg_catalog.current_database(),\n"
-			 "	pg_catalog.pg_tablespace t \n"
-			 "WHERE relkind IN ('r', 'm', 'i', 'S', 't') AND \n"
-			 "		t.oid = CASE\n"
-			 "			WHEN reltablespace <> 0 THEN reltablespace\n"
-			 "			ELSE dattablespace\n"
-			 "		END AND \n"
-			 "  (%s) \n"
-			 "ORDER BY relname\n",
-			 opts->extended ? addfields : "",
-			 qualifiers);
+	todo = psprintf(
+					"SELECT pg_catalog.pg_relation_filenode(c.oid) as \"Filenode\", relname as \"Table Name\" %s\n"
+					"FROM pg_catalog.pg_class c \n"
+		"	LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace \n"
+					"	LEFT JOIN pg_catalog.pg_database d ON d.datname = pg_catalog.current_database(),\n"
+					"	pg_catalog.pg_tablespace t \n"
+					"WHERE relkind IN ('r', 'm', 'i', 'S', 't') AND \n"
+					"		t.oid = CASE\n"
+			"			WHEN reltablespace <> 0 THEN reltablespace\n"
+					"			ELSE dattablespace\n"
+					"		END AND \n"
+					"  (%s) \n"
+					"ORDER BY relname\n",
+					opts->extended ? addfields : "",
+					qualifiers);
 
 	free(qualifiers);
 

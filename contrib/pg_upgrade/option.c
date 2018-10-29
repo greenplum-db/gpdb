@@ -3,20 +3,19 @@
  *
  *	options functions
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/option.c
  */
 
 #include "postgres_fe.h"
 
 #include "miscadmin.h"
+#include "getopt_long.h"
 
 #include "pg_upgrade.h"
 
-#include <getopt_long.h>
 #include <time.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 #ifdef WIN32
 #include <io.h>
 #endif
@@ -25,6 +24,7 @@
 static void usage(void);
 static void check_required_directory(char **dirpath, char **configpath,
 				   char *envVarName, char *cmdLineOption, char *description);
+#define FIX_DEFAULT_READ_ONLY "-c default_transaction_read_only=false"
 
 
 UserOpts	user_opts;
@@ -48,7 +48,7 @@ parseCommandLine(int argc, char *argv[])
 		{"old-port", required_argument, NULL, 'p'},
 		{"new-port", required_argument, NULL, 'P'},
 
-		{"user", required_argument, NULL, 'u'},
+		{"username", required_argument, NULL, 'U'},
 		{"check", no_argument, NULL, 'c'},
 		{"link", no_argument, NULL, 'k'},
 		{"retain", no_argument, NULL, 'r'},
@@ -92,8 +92,7 @@ parseCommandLine(int argc, char *argv[])
 
 	if (argc > 1)
 	{
-		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0 ||
-			strcmp(argv[1], "-?") == 0)
+		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
 		{
 			usage();
 			exit(0);
@@ -107,12 +106,12 @@ parseCommandLine(int argc, char *argv[])
 
 	/* Allow help and version to be run as root, so do the test here. */
 	if (os_user_effective_id == 0)
-		pg_log(PG_FATAL, "%s: cannot be run as root\n", os_info.progname);
+		pg_fatal("%s: cannot be run as root\n", os_info.progname);
 
 	if ((log_opts.internal = fopen_priv(INTERNAL_LOG_FILE, "a")) == NULL)
-		pg_log(PG_FATAL, "cannot write to log file %s\n", INTERNAL_LOG_FILE);
+		pg_fatal("cannot write to log file %s\n", INTERNAL_LOG_FILE);
 
-	while ((option = getopt_long(argc, argv, "d:D:b:B:cj:ko:O:p:P:ru:v",
+	while ((option = getopt_long(argc, argv, "d:D:b:B:cj:ko:O:p:P:rU:v",
 								 long_options, &optindex)) != -1)
 	{
 		switch (option)
@@ -163,7 +162,7 @@ parseCommandLine(int argc, char *argv[])
 			case 'p':
 				if ((old_cluster.port = atoi(optarg)) <= 0)
 				{
-					pg_log(PG_FATAL, "invalid old port number\n");
+					pg_fatal("invalid old port number\n");
 					exit(1);
 				}
 				break;
@@ -171,7 +170,7 @@ parseCommandLine(int argc, char *argv[])
 			case 'P':
 				if ((new_cluster.port = atoi(optarg)) <= 0)
 				{
-					pg_log(PG_FATAL, "invalid new port number\n");
+					pg_fatal("invalid new port number\n");
 					exit(1);
 				}
 				break;
@@ -180,9 +179,10 @@ parseCommandLine(int argc, char *argv[])
 				log_opts.retain = true;
 				break;
 
-			case 'u':
+			case 'U':
 				pg_free(os_info.user);
 				os_info.user = pg_strdup(optarg);
+				os_info.user_specified = true;
 
 				/*
 				 * Push the user name into the environment so pre-9.1
@@ -226,9 +226,8 @@ parseCommandLine(int argc, char *argv[])
 				break;
 
 			default:
-				pg_log(PG_FATAL,
-					   "Try \"%s --help\" for more information.\n",
-					   os_info.progname);
+				pg_fatal("Try \"%s --help\" for more information.\n",
+						 os_info.progname);
 				break;
 		}
 	}
@@ -237,7 +236,7 @@ parseCommandLine(int argc, char *argv[])
 	for (filename = output_files; *filename != NULL; filename++)
 	{
 		if ((fp = fopen_priv(*filename, "a")) == NULL)
-			pg_log(PG_FATAL, "cannot write to log file %s\n", *filename);
+			pg_fatal("cannot write to log file %s\n", *filename);
 
 		/* Start with newline because we might be appending to a file. */
 		fprintf(fp, "\n"
@@ -247,6 +246,18 @@ parseCommandLine(int argc, char *argv[])
 				ctime(&run_time));
 		fclose(fp);
 	}
+
+	/* Turn off read-only mode;  add prefix to PGOPTIONS? */
+	if (getenv("PGOPTIONS"))
+	{
+		char	   *pgoptions = psprintf("%s %s", FIX_DEFAULT_READ_ONLY,
+										 getenv("PGOPTIONS"));
+
+		pg_putenv("PGOPTIONS", pgoptions);
+		pfree(pgoptions);
+	}
+	else
+		pg_putenv("PGOPTIONS", FIX_DEFAULT_READ_ONLY);
 
 	/* Get values from env if not already set */
 	check_required_directory(&old_cluster.bindir, NULL, "PGBINOLD", "-b",
@@ -273,26 +284,26 @@ usage(void)
   pg_upgrade [OPTION]...\n\
 \n\
 Options:\n\
-  -b, --old-bindir=OLDBINDIR    old cluster executable directory\n\
-  -B, --new-bindir=NEWBINDIR    new cluster executable directory\n\
+  -b, --old-bindir=BINDIR      old cluster executable directory\n\
+  -B, --new-bindir=BINDIR       new cluster executable directory\n\
   -c, --check                   check clusters only, don't change any data\n\
-  -d, --old-datadir=OLDDATADIR  old cluster data directory\n\
-  -D, --new-datadir=NEWDATADIR  new cluster data directory\n\
+  -d, --old-datadir=DATADIR     old cluster data directory\n\
+  -D, --new-datadir=DATADIR     new cluster data directory\n\
   -j, --jobs                    number of simultaneous processes or threads to use\n\
   -k, --link                    link instead of copying files to new cluster\n\
   -o, --old-options=OPTIONS     old cluster options to pass to the server\n\
   -O, --new-options=OPTIONS     new cluster options to pass to the server\n\
-  -p, --old-port=OLDPORT        old cluster port number (default %d)\n\
-  -P, --new-port=NEWPORT        new cluster port number (default %d)\n\
+  -p, --old-port=PORT           old cluster port number (default %d)\n\
+  -P, --new-port=PORT           new cluster port number (default %d)\n\
   -r, --retain                  retain SQL and log files after success\n\
-  -u, --user=NAME               cluster superuser (default \"%s\")\n\
+  -U, --username=NAME           cluster superuser (default \"%s\")\n\
   -v, --verbose                 enable verbose internal logging\n\
   -V, --version                 display version information, then exit\n\
       --mode=TYPE               designate node type to upgrade, \"segment\" or \"dispatcher\" (default \"segment\")\n\
       --progress                enable progress reporting\n\
       --remove-checksum         remove data checksums when creating new cluster\n\
       --add-checksum            add data checksumming to the new cluster\n\
-  -?, -h, --help                show this help, then exit\n\
+  -?, --help                    show this help, then exit\n\
 \n\
 Before running pg_upgrade you must:\n\
   create a new database cluster (using the new version of initdb)\n\
@@ -300,10 +311,10 @@ Before running pg_upgrade you must:\n\
   shutdown the postmaster servicing the new cluster\n\
 \n\
 When you run pg_upgrade, you must provide the following information:\n\
-  the data directory for the old cluster  (-d OLDDATADIR)\n\
-  the data directory for the new cluster  (-D NEWDATADIR)\n\
-  the \"bin\" directory for the old version (-b OLDBINDIR)\n\
-  the \"bin\" directory for the new version (-B NEWBINDIR)\n\
+  the data directory for the old cluster  (-d DATADIR)\n\
+  the data directory for the new cluster  (-D DATADIR)\n\
+  the \"bin\" directory for the old version (-b BINDIR)\n\
+  the \"bin\" directory for the new version (-B BINDIR)\n\
 \n\
 For example:\n\
   pg_upgrade -d oldCluster/data -D newCluster/data -b oldCluster/bin -B newCluster/bin\n\
@@ -356,9 +367,9 @@ check_required_directory(char **dirpath, char **configpath,
 				*configpath = pg_strdup(envVar);
 		}
 		else
-			pg_log(PG_FATAL, "You must identify the directory where the %s.\n"
-				   "Please use the %s command-line option or the %s environment variable.\n",
-				   description, cmdLineOption, envVarName);
+			pg_fatal("You must identify the directory where the %s.\n"
+					 "Please use the %s command-line option or the %s environment variable.\n",
+					 description, cmdLineOption, envVarName);
 	}
 
 	/*
@@ -419,8 +430,8 @@ adjust_data_dir(ClusterInfo *cluster)
 
 	if ((output = popen(cmd, "r")) == NULL ||
 		fgets(cmd_output, sizeof(cmd_output), output) == NULL)
-		pg_log(PG_FATAL, "Could not get data directory using %s: %s\n",
-			   cmd, getErrorText(errno));
+		pg_fatal("Could not get data directory using %s: %s\n",
+				 cmd, getErrorText(errno));
 
 	pclose(output);
 
@@ -458,7 +469,7 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
 			/* Use the current directory for the socket */
 			cluster->sockdir = pg_malloc(MAXPGPATH);
 			if (!getcwd(cluster->sockdir, MAXPGPATH))
-				pg_log(PG_FATAL, "cannot find current directory\n");
+				pg_fatal("cannot find current directory\n");
 		}
 		else
 		{
@@ -476,23 +487,24 @@ get_sock_dir(ClusterInfo *cluster, bool live_check)
 			snprintf(filename, sizeof(filename), "%s/postmaster.pid",
 					 cluster->pgdata);
 			if ((fp = fopen(filename, "r")) == NULL)
-				pg_log(PG_FATAL, "Cannot open file %s: %m\n", filename);
+				pg_fatal("Cannot open file %s: %m\n", filename);
 
 			for (lineno = 1;
 			   lineno <= Max(LOCK_FILE_LINE_PORT, LOCK_FILE_LINE_SOCKET_DIR);
 				 lineno++)
 			{
 				if (fgets(line, sizeof(line), fp) == NULL)
-					pg_log(PG_FATAL, "Cannot read line %d from %s: %m\n", lineno, filename);
+					pg_fatal("Cannot read line %d from %s: %m\n", lineno, filename);
 
 				/* potentially overwrite user-supplied value */
 				if (lineno == LOCK_FILE_LINE_PORT)
 					sscanf(line, "%hu", &old_cluster.port);
 				if (lineno == LOCK_FILE_LINE_SOCKET_DIR)
 				{
-					cluster->sockdir = pg_malloc(MAXPGPATH);
+					cluster->sockdir = pg_strdup(line);
 					/* strip off newline */
-					sscanf(line, "%s\n", cluster->sockdir);
+					if (strchr(cluster->sockdir, '\n') != NULL)
+						*strchr(cluster->sockdir, '\n') = '\0';
 				}
 			}
 			fclose(fp);

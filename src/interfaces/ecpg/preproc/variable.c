@@ -86,7 +86,7 @@ find_struct_member(char *name, char *str, struct ECPGstruct_member * members, in
 					case '\0':	/* found the end, but this time it has to be
 								 * an array element */
 						if (members->type->type != ECPGt_array)
-							mmerror(PARSE_ERROR, ET_FATAL, "incorrectly formed variable \"%s\"", name);
+							mmfatal(PARSE_ERROR, "incorrectly formed variable \"%s\"", name);
 
 						switch (members->type->u.element->type)
 						{
@@ -113,7 +113,7 @@ find_struct_member(char *name, char *str, struct ECPGstruct_member * members, in
 							return (find_struct_member(name, end, members->type->u.members, brace_level));
 						break;
 					default:
-						mmerror(PARSE_ERROR, ET_FATAL, "incorrectly formed variable \"%s\"", name);
+						mmfatal(PARSE_ERROR, "incorrectly formed variable \"%s\"", name);
 						break;
 				}
 			}
@@ -136,10 +136,10 @@ find_struct(char *name, char *next, char *end)
 	if (c == '-')
 	{
 		if (p->type->type != ECPGt_array)
-			mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not a pointer", name);
+			mmfatal(PARSE_ERROR, "variable \"%s\" is not a pointer", name);
 
 		if (p->type->u.element->type != ECPGt_struct && p->type->u.element->type != ECPGt_union)
-			mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not a pointer to a structure or a union", name);
+			mmfatal(PARSE_ERROR, "variable \"%s\" is not a pointer to a structure or a union", name);
 
 		/* restore the name, we will need it later */
 		*next = c;
@@ -151,7 +151,7 @@ find_struct(char *name, char *next, char *end)
 		if (next == end)
 		{
 			if (p->type->type != ECPGt_struct && p->type->type != ECPGt_union)
-				mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is neither a structure nor a union", name);
+				mmfatal(PARSE_ERROR, "variable \"%s\" is neither a structure nor a union", name);
 
 			/* restore the name, we will need it later */
 			*next = c;
@@ -161,10 +161,10 @@ find_struct(char *name, char *next, char *end)
 		else
 		{
 			if (p->type->type != ECPGt_array)
-				mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not an array", name);
+				mmfatal(PARSE_ERROR, "variable \"%s\" is not an array", name);
 
 			if (p->type->u.element->type != ECPGt_struct && p->type->u.element->type != ECPGt_union)
-				mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not a pointer to a structure or a union", name);
+				mmfatal(PARSE_ERROR, "variable \"%s\" is not a pointer to a structure or a union", name);
 
 			/* restore the name, we will need it later */
 			*next = c;
@@ -230,7 +230,7 @@ find_variable(char *name)
 				*next = '\0';
 				p = find_simple(name);
 				if (p == NULL)
-					mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not declared", name);
+					mmfatal(PARSE_ERROR, "variable \"%s\" is not declared", name);
 
 				*next = c;
 				switch (p->type->u.element->type)
@@ -252,7 +252,7 @@ find_variable(char *name)
 		p = find_simple(name);
 
 	if (p == NULL)
-		mmerror(PARSE_ERROR, ET_FATAL, "variable \"%s\" is not declared", name);
+		mmfatal(PARSE_ERROR, "variable \"%s\" is not declared", name);
 
 	return (p);
 }
@@ -437,6 +437,8 @@ remove_variable_from_list(struct arguments ** list, struct variable * var)
 void
 dump_variables(struct arguments * list, int mode)
 {
+	char	   *str_zero = mm_strdup("0");
+
 	if (list == NULL)
 		return;
 
@@ -450,11 +452,13 @@ dump_variables(struct arguments * list, int mode)
 	/* Then the current element and its indicator */
 	ECPGdump_a_type(yyout, list->variable->name, list->variable->type, list->variable->brace_level,
 					list->indicator->name, list->indicator->type, list->indicator->brace_level,
-					NULL, NULL, mm_strdup("0"), NULL, NULL);
+					NULL, NULL, str_zero, NULL, NULL);
 
 	/* Then release the list element. */
 	if (mode != 0)
 		free(list);
+
+	free(str_zero);
 }
 
 void
@@ -497,7 +501,7 @@ get_typedef(char *name)
 
 	for (this = types; this && strcmp(this->name, name) != 0; this = this->next);
 	if (!this)
-		mmerror(PARSE_ERROR, ET_FATAL, "unrecognized data type name \"%s\"", name);
+		mmfatal(PARSE_ERROR, "unrecognized data type name \"%s\"", name);
 
 	return (this);
 }
@@ -508,7 +512,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 	if (atoi(type_index) >= 0)
 	{
 		if (atoi(*length) >= 0)
-			mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays are not supported");
+			mmfatal(PARSE_ERROR, "multidimensional arrays are not supported");
 
 		*length = type_index;
 	}
@@ -516,7 +520,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 	if (atoi(type_dimension) >= 0)
 	{
 		if (atoi(*dimension) >= 0 && atoi(*length) >= 0)
-			mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays are not supported");
+			mmfatal(PARSE_ERROR, "multidimensional arrays are not supported");
 
 		if (atoi(*dimension) >= 0)
 			*length = *dimension;
@@ -525,18 +529,18 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 	}
 
 	if (pointer_len > 2)
-		mmerror(PARSE_ERROR, ET_FATAL, ngettext("multilevel pointers (more than 2 levels) are not supported; found %d level",
-												"multilevel pointers (more than 2 levels) are not supported; found %d levels", pointer_len),
+		mmfatal(PARSE_ERROR, ngettext("multilevel pointers (more than 2 levels) are not supported; found %d level",
+									  "multilevel pointers (more than 2 levels) are not supported; found %d levels", pointer_len),
 				pointer_len);
 
 	if (pointer_len > 1 && type_enum != ECPGt_char && type_enum != ECPGt_unsigned_char && type_enum != ECPGt_string)
-		mmerror(PARSE_ERROR, ET_FATAL, "pointer to pointer is not supported for this data type");
+		mmfatal(PARSE_ERROR, "pointer to pointer is not supported for this data type");
 
 	if (pointer_len > 1 && (atoi(*length) >= 0 || atoi(*dimension) >= 0))
-		mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays are not supported");
+		mmfatal(PARSE_ERROR, "multidimensional arrays are not supported");
 
 	if (atoi(*length) >= 0 && atoi(*dimension) >= 0 && pointer_len)
-		mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays are not supported");
+		mmfatal(PARSE_ERROR, "multidimensional arrays are not supported");
 
 	switch (type_enum)
 	{
@@ -550,7 +554,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 			}
 
 			if (atoi(*length) >= 0)
-				mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays for structures are not supported");
+				mmfatal(PARSE_ERROR, "multidimensional arrays for structures are not supported");
 
 			break;
 		case ECPGt_varchar:
@@ -611,7 +615,7 @@ adjust_array(enum ECPGttype type_enum, char **dimension, char **length, char *ty
 			}
 
 			if (atoi(*length) >= 0)
-				mmerror(PARSE_ERROR, ET_FATAL, "multidimensional arrays for simple data types are not supported");
+				mmfatal(PARSE_ERROR, "multidimensional arrays for simple data types are not supported");
 
 			break;
 	}

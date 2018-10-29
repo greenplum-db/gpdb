@@ -52,9 +52,6 @@ log_optimizer(PlannedStmt *plan, bool fUnexpectedFailure)
 		return;
 	}
 
-	if (optimizer_trace_fallback)
-		elog(INFO, "GPORCA failed to produce a plan, falling back to planner");
-
 	/* optimizer failed to produce a plan, log failure */
 	if (OPTIMIZER_ALL_FAIL == optimizer_log_failure)
 	{

@@ -9,7 +9,7 @@
  * contains variables.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
@@ -485,7 +485,7 @@ contain_var_clause_walker(Node *node, void *context)
  *
  *	  Returns true if any such Var found.
  *
- * Will recurse into sublinks.	Also, may be invoked directly on a Query.
+ * Will recurse into sublinks.  Also, may be invoked directly on a Query.
  */
 bool
 contain_vars_of_level(Node *node, int levelsup)
@@ -545,10 +545,10 @@ contain_vars_of_level_walker(Node *node, int *sublevels_up)
  *	  Find the parse location of any Var of the specified query level.
  *
  * Returns -1 if no such Var is in the querytree, or if they all have
- * unknown parse location.	(The former case is probably caller error,
+ * unknown parse location.  (The former case is probably caller error,
  * but we don't bother to distinguish it from the latter case.)
  *
- * Will recurse into sublinks.	Also, may be invoked directly on a Query.
+ * Will recurse into sublinks.  Also, may be invoked directly on a Query.
  *
  * Note: it might seem appropriate to merge this functionality into
  * contain_vars_of_level, but that would complicate that function's API.
@@ -696,7 +696,7 @@ contain_vars_of_level_or_above(Node *node, int levelsup)
  *	  Upper-level vars (with varlevelsup > 0) should not be seen here,
  *	  likewise for upper-level Aggrefs and PlaceHolderVars.
  *
- *	  Returns list of nodes found.	Note the nodes themselves are not
+ *	  Returns list of nodes found.  Note the nodes themselves are not
  *	  copied, only referenced.
  *
  * Does not examine subqueries, therefore must only be used after reduction
@@ -773,7 +773,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
  * flatten_join_alias_vars
  *	  Replace Vars that reference JOIN outputs with references to the original
  *	  relation variables instead.  This allows quals involving such vars to be
- *	  pushed down.	Whole-row Vars that reference JOIN relations are expanded
+ *	  pushed down.  Whole-row Vars that reference JOIN relations are expanded
  *	  into RowExpr constructs that name the individual output Vars.  This
  *	  is necessary since we will not scan the JOIN as a base relation, which
  *	  is the only way that the executor can directly handle whole-row Vars.
@@ -785,7 +785,7 @@ pull_var_clause_walker(Node *node, pull_var_clause_context *context)
  * entries might now be arbitrary expressions, not just Vars.  This affects
  * this function in one important way: we might find ourselves inserting
  * SubLink expressions into subqueries, and we must make sure that their
- * Query.hasSubLinks fields get set to TRUE if so.	If there are any
+ * Query.hasSubLinks fields get set to TRUE if so.  If there are any
  * SubLinks in the join alias lists, the outer Query should already have
  * hasSubLinks = TRUE, so this is only relevant to un-flattened subqueries.
  *
@@ -844,7 +844,7 @@ flatten_join_alias_vars_mutator(Node *node,
 				newvar = (Node *) lfirst(lv);
 				attnum++;
 				/* Ignore dropped columns */
-				if (IsA(newvar, Const))
+				if (newvar == NULL)
 					continue;
 				newvar = copyObject(newvar);
 
@@ -877,6 +877,7 @@ flatten_join_alias_vars_mutator(Node *node,
 		/* Expand join alias reference */
 		Assert(var->varattno > 0);
 		newvar = (Node *) list_nth(rte->joinaliasvars, var->varattno - 1);
+		Assert(newvar != NULL);
 		newvar = copyObject(newvar);
 
 		/*

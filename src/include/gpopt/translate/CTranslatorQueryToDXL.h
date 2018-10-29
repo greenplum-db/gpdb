@@ -390,6 +390,9 @@ namespace gpdxl
 			// check for support command types, throws an exception when command type not yet supported
 			void CheckSupportedCmdType(Query *query);
 
+			// check for supported range table entries, throws an exception when something is not yet supported
+			void CheckRangeTable(Query *query);
+
 			// translate a select-project-join expression into DXL
 			CDXLNode *TranslateSelectProjectJoinToDXL(List *target_list, FromExpr *from_expr, IntToUlongMap *sort_group_attno_to_colid_mapping, IntToUlongMap *output_attno_to_colid_mapping, List *group_clause);
 

@@ -1512,7 +1512,7 @@ pg_utf8_islegal(const unsigned char *source, int length)
  *
  * Not knowing anything about the properties of the encoding in use, we just
  * keep incrementing the last byte until we get a validly-encoded result,
- * or we run out of values to try.	We don't bother to try incrementing
+ * or we run out of values to try.  We don't bother to try incrementing
  * higher-order bytes, so there's no growth in runtime for wider characters.
  * (If we did try to do that, we'd need to consider the likelihood that 255
  * is not a valid final byte in the encoding.)
@@ -1542,7 +1542,7 @@ pg_generic_charinc(unsigned char *charptr, int len)
  * For a one-byte character less than 0x7F, we just increment the byte.
  *
  * For a multibyte character, every byte but the first must fall between 0x80
- * and 0xBF; and the first byte must be between 0xC0 and 0xF4.	We increment
+ * and 0xBF; and the first byte must be between 0xC0 and 0xF4.  We increment
  * the last byte that's not already at its maximum value.  If we can't find a
  * byte that's less than the maximum allowable value, we simply fail.  We also
  * need some special-case logic to skip regions used for surrogate pair
@@ -1720,7 +1720,7 @@ pg_eucjp_increment(unsigned char *charptr, int length)
  * XXX must be sorted by the same order as enum pg_enc (in mb/pg_wchar.h)
  *-------------------------------------------------------------------
  */
-pg_wchar_tbl pg_wchar_table[] = {
+const pg_wchar_tbl pg_wchar_table[] = {
 	{pg_ascii2wchar_with_len, pg_wchar2single_with_len, pg_ascii_mblen, pg_ascii_dsplen, pg_ascii_verifier, 1}, /* PG_SQL_ASCII */
 	{pg_eucjp2wchar_with_len, pg_wchar2euc_with_len, pg_eucjp_mblen, pg_eucjp_dsplen, pg_eucjp_verifier, 3},	/* PG_EUC_JP */
 	{pg_euccn2wchar_with_len, pg_wchar2euc_with_len, pg_euccn_mblen, pg_euccn_dsplen, pg_euccn_verifier, 2},	/* PG_EUC_CN */
@@ -1778,10 +1778,7 @@ pg_mic_mblen(const unsigned char *mbstr)
 int
 pg_encoding_mblen(int encoding, const char *mbstr)
 {
-	Assert(PG_VALID_ENCODING(encoding));
-
-	return ((encoding >= 0 &&
-			 encoding < sizeof(pg_wchar_table) / sizeof(pg_wchar_tbl)) ?
+	return (PG_VALID_ENCODING(encoding) ?
 		((*pg_wchar_table[encoding].mblen) ((const unsigned char *) mbstr)) :
 	((*pg_wchar_table[PG_SQL_ASCII].mblen) ((const unsigned char *) mbstr)));
 }
@@ -1792,10 +1789,7 @@ pg_encoding_mblen(int encoding, const char *mbstr)
 int
 pg_encoding_dsplen(int encoding, const char *mbstr)
 {
-	Assert(PG_VALID_ENCODING(encoding));
-
-	return ((encoding >= 0 &&
-			 encoding < sizeof(pg_wchar_table) / sizeof(pg_wchar_tbl)) ?
+	return (PG_VALID_ENCODING(encoding) ?
 	   ((*pg_wchar_table[encoding].dsplen) ((const unsigned char *) mbstr)) :
 	((*pg_wchar_table[PG_SQL_ASCII].dsplen) ((const unsigned char *) mbstr)));
 }
@@ -1808,10 +1802,7 @@ pg_encoding_dsplen(int encoding, const char *mbstr)
 int
 pg_encoding_verifymb(int encoding, const char *mbstr, int len)
 {
-	Assert(PG_VALID_ENCODING(encoding));
-
-	return ((encoding >= 0 &&
-			 encoding < sizeof(pg_wchar_table) / sizeof(pg_wchar_tbl)) ?
+	return (PG_VALID_ENCODING(encoding) ?
 			((*pg_wchar_table[encoding].mbverify) ((const unsigned char *) mbstr, len)) :
 			((*pg_wchar_table[PG_SQL_ASCII].mbverify) ((const unsigned char *) mbstr, len)));
 }

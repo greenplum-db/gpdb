@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/settings.h
  */
@@ -70,6 +70,8 @@ typedef struct _psqlSettings
 	FILE	   *queryFout;		/* where to send the query results */
 	bool		queryFoutPipe;	/* queryFout is from a popen() */
 
+	FILE	   *copyStream;		/* Stream to read/write for \copy command */
+
 	printQueryOpt popt;
 
 	char	   *gfname;			/* one-shot file output argument for \g */
@@ -84,8 +86,6 @@ typedef struct _psqlSettings
 	int			sversion;		/* backend server version */
 	const char *progname;		/* in case you renamed psql */
 	char	   *inputfile;		/* file being currently processed, if any */
-	char	   *dirname;		/* current directory for \s display */
-
 	uint64		lineno;			/* also for error reporting */
 
 	bool		timing;			/* enable timing of all queries */
@@ -96,7 +96,7 @@ typedef struct _psqlSettings
 
 	/*
 	 * The remaining fields are set by assign hooks associated with entries in
-	 * "vars".	They should not be set directly except by those hook
+	 * "vars".  They should not be set directly except by those hook
 	 * functions.
 	 */
 	bool		autocommit;

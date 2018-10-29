@@ -3,6 +3,10 @@ doc/src/sgml/ref/create_function.sgml
 -->
 
 <refentry id="SQL-CREATEFUNCTION">
+ <indexterm zone="sql-createfunction">
+  <primary>CREATE FUNCTION</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>CREATE FUNCTION</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -13,10 +17,6 @@ doc/src/sgml/ref/create_function.sgml
   <refname>CREATE FUNCTION</refname>
   <refpurpose>define a new function</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-createfunction">
-  <primary>CREATE FUNCTION</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -135,8 +135,7 @@ CREATE [ OR REPLACE ] FUNCTION
 
      <listitem>
       <para>
-       The name of an argument. Some languages (currently only SQL and
-       PL/pgSQL)
+       The name of an argument. Some languages (including SQL and PL/pgSQL)
        let you use the name in the function body.  For other languages the
        name of an input argument is just extra documentation, so far as
        the function itself is concerned; but you can use input argument names
@@ -254,10 +253,10 @@ CREATE [ OR REPLACE ] FUNCTION
      <listitem>
       <para>
        The name of the language that the function is implemented in.
-       Can be <literal>SQL</literal>, <literal>C</literal>,
+       It can be <literal>sql</literal>, <literal>c</literal>,
        <literal>internal</literal>, or the name of a user-defined
-       procedural language.  For backward compatibility,
-       the name can be enclosed by single quotes.
+       procedural language, e.g. <literal>plpgsql</literal>.  Enclosing the
+       name in single quotes is deprecated and requires matching case.
       </para>
      </listitem>
     </varlistentry>
@@ -581,12 +580,13 @@ CREATE FUNCTION foo(int, int default 42) ...
 
    <para>
     The full <acronym>SQL</acronym> type syntax is allowed for
-    input arguments and return value. However, some details of the
-    type specification (e.g., the precision field for
-    type <type>numeric</type>) are the responsibility of the
-    underlying function implementation and are silently swallowed
-    (i.e., not recognized or
-    enforced) by the <command>CREATE FUNCTION</command> command.
+    declaring a function's arguments and return value.  However,
+    parenthesized type modifiers (e.g., the precision field for
+    type <type>numeric</type>) are discarded by <command>CREATE FUNCTION</>.
+    Thus for example
+    <literal>CREATE FUNCTION foo (varchar(10)) ...</>
+    is exactly the same as
+    <literal>CREATE FUNCTION foo (varchar) ...</>.
    </para>
 
    <para>

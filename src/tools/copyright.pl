@@ -2,7 +2,7 @@
 #################################################################
 # copyright.pl -- update copyright notices throughout the source tree, idempotently.
 #
-# Copyright (c) 2011-2013, PostgreSQL Global Development Group
+# Copyright (c) 2011-2014, PostgreSQL Global Development Group
 #
 # src/tools/copyright.pl
 #################################################################
@@ -65,4 +65,3 @@ print
 "Manually update doc/src/sgml/legal.sgml and src/interfaces/libpq/libpq.rc.in too.\n";
 print
 "Also update ./COPYRIGHT and doc/src/sgml/legal.sgml in all back branches.\n";
-

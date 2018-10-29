@@ -3,7 +3,7 @@
  * standbydesc.c
  *	  rmgr descriptor routines for storage/ipc/standby.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -33,7 +33,7 @@ standby_desc_running_xacts(StringInfo buf, xl_running_xacts *xlrec)
 	}
 
 	if (xlrec->subxid_overflow)
-		appendStringInfo(buf, "; subxid ovf");
+		appendStringInfoString(buf, "; subxid ovf");
 }
 
 void
@@ -47,7 +47,7 @@ standby_desc(StringInfo buf, XLogRecord *record)
 		xl_standby_locks *xlrec = (xl_standby_locks *) rec;
 		int			i;
 
-		appendStringInfo(buf, "AccessExclusive locks:");
+		appendStringInfoString(buf, "AccessExclusive locks:");
 
 		for (i = 0; i < xlrec->nlocks; i++)
 			appendStringInfo(buf, " xid %u db %u rel %u",
@@ -58,9 +58,9 @@ standby_desc(StringInfo buf, XLogRecord *record)
 	{
 		xl_running_xacts *xlrec = (xl_running_xacts *) rec;
 
-		appendStringInfo(buf, "running xacts:");
+		appendStringInfoString(buf, "running xacts:");
 		standby_desc_running_xacts(buf, xlrec);
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

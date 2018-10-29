@@ -18,6 +18,7 @@ all:
 	$(MAKE) -C contrib/extprotocol all	
 	$(MAKE) -C contrib/dblink all
 	$(MAKE) -C contrib/indexscan all
+	$(MAKE) -C contrib/pageinspect all  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support all
 	$(MAKE) -C contrib/pg_upgrade all
 	$(MAKE) -C contrib/pg_xlogdump all
@@ -50,6 +51,7 @@ install:
 	$(MAKE) -C contrib/extprotocol $@
 	$(MAKE) -C contrib/dblink $@
 	$(MAKE) -C contrib/indexscan $@ 
+	$(MAKE) -C contrib/pageinspect $@  # needed by src/test/isolation
 	$(MAKE) -C contrib/pg_upgrade_support $@
 	$(MAKE) -C contrib/pg_upgrade $@
 	$(MAKE) -C contrib/pg_xlogdump $@
@@ -120,9 +122,9 @@ create-tinc-test-cluster: destroy-demo-cluster
 	$(MAKE) -C gpAux/gpdemo DEFAULT_QD_MAX_CONNECT=150 NUM_PRIMARY_MIRROR_PAIRS=2
 	. gpAux/gpdemo/gpdemo-env.sh && createdb gptest
 
-check: all
+check check-tests: all
 
-check installcheck installcheck-parallel:
+check check-tests installcheck installcheck-parallel installcheck-tests:
 	$(MAKE) -C src/test/regress $@
 
 $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib gpcontrib,check)
@@ -136,14 +138,11 @@ $(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib gpcontrib
 # which probably indicates that we're relying on undefined behavior... we should
 # probably pull anything order-dependent out of recurse() and back into the
 # recipe body).
-$(call recurse,installcheck-world,src/test/regress,installcheck-good)
+# GPDB_94_MERGE_FIXME: We should stop listing each contrib module here separately.
 $(call recurse,installcheck-world, \
-			   src/test/fsync \
-			   src/test/walrep \
-			   src/test/heap_checksum \
-			   src/test/isolation \
-			   src/test/isolation2 \
+			   src/test/ \
 			   src/pl \
+			   src/interfaces/gppc \
 			   contrib/formatter_fixedwidth \
 			   contrib/extprotocol \
 			   contrib/dblink \
@@ -151,9 +150,7 @@ $(call recurse,installcheck-world, \
 			   contrib/hstore \
 			   contrib/pgcrypto \
 			   gpcontrib \
-			   src/bin/gpfdist \
-			   src/interfaces/gppc \
-			   src/test/kerberos \
+			   src/bin/ \
 			   gpMgmt/bin,installcheck)
 .PHONY: installcheck-gpcheckcat
 installcheck-world: installcheck-gpcheckcat
@@ -161,8 +158,6 @@ installcheck-gpcheckcat:
 	gpcheckcat -A
 $(call recurse,installcheck-world,gpcontrib/gp_replica_check,installcheck)
 $(call recurse,installcheck-world,contrib/pg_upgrade,check)
-
-$(call recurse,maintainer-check,doc src config contrib gpcontrib)
 
 # Run mock tests, that don't require a running server. Arguably these should
 # be part of [install]check-world, but we treat them more like part of
@@ -207,10 +202,8 @@ distdir:
 	  fi || exit; \
 	done
 	$(MAKE) -C $(distdir) distprep
-	#$(MAKE) -C $(distdir)/doc/src/sgml/ HISTORY INSTALL regress_README
-	#cp $(distdir)/doc/src/sgml/HISTORY $(distdir)/
+	#$(MAKE) -C $(distdir)/doc/src/sgml/ INSTALL
 	#cp $(distdir)/doc/src/sgml/INSTALL $(distdir)/
-	#cp $(distdir)/doc/src/sgml/regress_README $(distdir)/src/test/regress/README
 	$(MAKE) -C $(distdir) distclean
 	#rm -f $(distdir)/README.git
 

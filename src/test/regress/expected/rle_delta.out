@@ -46,7 +46,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -153,7 +152,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a6     | timestamp with time zone    |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (id)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -202,7 +200,6 @@ Alter table delta_alter Alter column a4 Type interval;
  a6     | timestamp with time zone    |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (id)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -244,7 +241,6 @@ Alter table delta_alter Alter column a5 Type timestamp with time zone;
  a6     | timestamp without time zone |                                                          | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |                                                          | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (id)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -310,7 +306,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 Checksum: f
 Indexes:
     "dl_ix_bt" bitmap (a1)
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -391,7 +386,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
 Checksum: f
 Indexes:
     "dl_ix_br" btree (a1)
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -469,7 +463,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -504,7 +497,6 @@ Create index dl_ins_bt_ix on  delta_ins_bitmap using bitmap(a3);
 Checksum: f
 Indexes:
     "dl_ins_bt_ix" bitmap (a3)
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -566,7 +558,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a6     | timestamp with time zone    |           | plain    |              | rle_type         | 1                 | 32768      | 
  a7     | text                        |           | extended |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -601,7 +592,6 @@ Create index dl_br_ix on  delta_ins_btree(a3);
 Checksum: f
 Indexes:
     "dl_br_ix" btree (a3)
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -675,7 +665,6 @@ Checksum: f
 Indexes:
     "dl_bt_ix" bitmap (a1)
     "dl_ix" btree (a3)
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, blocksize=8192, checksum=false
 
@@ -738,7 +727,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a8     | bigint                      |           | plain    |              | none             | 0                 | 32768      | 
  a9     | text                        |           | extended |              | rle_type         | 2                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -808,7 +796,6 @@ DISTRIBUTED BY (b);
  b      | integer        |           | plain    |              | rle_type         | 1                 | 32768      | 
  c      | character(100) |           | extended |              | rle_type         | 1                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (b)
 Options: appendonly=true, orientation=column, compresstype=rle_type, checksum=false
 
@@ -1103,7 +1090,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a8     | bigint                      |           | plain    |              | zlib             | 7                 | 32768      | 
  a9     | text                        |           | extended |              | rle_type         | 2                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, checksum=false
 
@@ -1201,7 +1187,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 1                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 1                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=1, checksum=false
 
@@ -1300,7 +1285,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: t
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=true
 
@@ -1366,7 +1350,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=false
 
@@ -1435,7 +1418,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 2                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 2                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=2, checksum=false
 
@@ -1558,7 +1540,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 3                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 3                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=3, checksum=false
 
@@ -1657,7 +1638,6 @@ select attrelid::regclass as relname, attnum, attoptions from pg_class c, pg_att
  a5     | timestamp without time zone |           | plain   |              | rle_type         | 4                 | 32768      | 
  a6     | timestamp with time zone    |           | plain   |              | rle_type         | 4                 | 32768      | 
 Checksum: f
-Has OIDs: no
 Distributed by: (a1)
 Options: appendonly=true, orientation=column, compresstype=rle_type, compresslevel=4, checksum=false
 

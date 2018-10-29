@@ -9469,26 +9469,28 @@ select c.cid cid,
 from cust c, sales s, datedim d
 where c.cid = s.cid and s.date_sk = d.date_sk and
       ((d.year = 2001 and lower(s.type) = 't1' and plusone(d.moy) = 5) or (d.moy = 4 and upper(s.type) = 'T2'));
-                                                                      QUERY PLAN
-------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=2704.25..885451.68 rows=110 width=72)
-   ->  Hash Join  (cost=2704.25..885451.68 rows=37 width=72)
-         Hash Cond: s.cid = c.cid
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=1852.75..884597.69 rows=6 width=8)
-               Hash Key: s.cid
-               ->  Hash Join  (cost=1852.75..884597.36 rows=6 width=8)
-                     Hash Cond: s.date_sk = d.date_sk
-                     Join Filter: (d.year = 2001 AND lower(s.type) = 't1'::text AND plusone(d.moy) = 5) OR (d.moy = 4 AND upper(s.type) = 'T2'::text)
-                     ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1357.00 rows=13967 width=40)
-                           Hash Key: s.date_sk
-                           ->  Seq Scan on sales s  (cost=0.00..519.00 rows=13967 width=40)
-                     ->  Hash  (cost=879.00..879.00 rows=25967 width=12)
-                           ->  Seq Scan on datedim d  (cost=0.00..879.00 rows=25967 width=12)
-         ->  Hash  (cost=434.00..434.00 rows=11134 width=68)
-               ->  Seq Scan on cust c  (cost=0.00..434.00 rows=11134 width=68)
- Settings:  optimizer=off; optimizer_cte_inlining_bound=1000; optimizer_segments=3
- Optimizer status: legacy query optimizer
-(17 rows)
+                                                                               QUERY PLAN                                                                               
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=2215.04..2775.38 rows=110 width=72)
+   ->  Hash Join  (cost=2215.04..2775.38 rows=37 width=72)
+         Hash Cond: (c.cid = s.cid)
+         ->  Seq Scan on cust c  (cost=0.00..434.00 rows=11134 width=68)
+         ->  Hash  (cost=2214.95..2214.95 rows=3 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=940.72..2214.95 rows=3 width=8)
+                     Hash Key: s.cid
+                     ->  Hash Join  (cost=940.72..2214.80 rows=3 width=8)
+                           Hash Cond: (d.date_sk = s.date_sk)
+                           Join Filter: (((d.year = 2001) AND (lower(s.type) = 't1'::text) AND (plusone(d.moy) = 5)) OR ((d.moy = 4) AND (upper(s.type) = 'T2'::text)))
+                           ->  Seq Scan on datedim d  (cost=0.00..1268.50 rows=52 width=12)
+                                 Filter: ((year = 2001) OR (moy = 4))
+                           ->  Hash  (cost=939.68..939.68 rows=28 width=40)
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..939.68 rows=28 width=40)
+                                       Hash Key: s.date_sk
+                                       ->  Seq Scan on sales s  (cost=0.00..938.00 rows=28 width=40)
+                                             Filter: ((lower(type) = 't1'::text) OR (upper(type) = 'T2'::text))
+ Planning time: 2.896 ms
+ Optimizer: legacy query optimizer
+(19 rows)
 
 reset optimizer_segments;
 -- Bitmap indexes

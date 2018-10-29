@@ -11,6 +11,7 @@
 *.dll
 *.a
 *.mo
+*.pot
 objfiles.txt
 .deps/
 *.log
@@ -19,6 +20,7 @@ objfiles.txt
 *.gcov
 *.gcov.out
 lcov.info
+coverage/
 *.vcproj
 *.vcxproj
 win32ver.rc

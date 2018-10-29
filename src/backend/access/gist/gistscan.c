@@ -4,7 +4,7 @@
  *	  routines to manage scans on GiST index relations
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -56,7 +56,7 @@ GISTSearchTreeItemCombiner(RBNode *existing, const RBNode *newrb, void *arg)
 	/*
 	 * If new item is heap tuple, it goes to front of chain; otherwise insert
 	 * it before the first index-page item, so that index pages are visited in
-	 * LIFO order, ensuring depth-first search of index pages.	See comments
+	 * LIFO order, ensuring depth-first search of index pages.  See comments
 	 * in gist_private.h.
 	 */
 	if (GISTSearchItemIsHeap(*newitem))

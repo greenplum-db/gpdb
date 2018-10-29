@@ -169,6 +169,7 @@
 				<topicref href="system_catalogs/gp_resgroup_config.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_status.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
+				<topicref href="system_catalogs/gp_stat_replication.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>
 				<topicref href="system_catalogs/gp_transaction_log.xml"/>
 				<topicref href="system_catalogs/gp_version_at_initdb.xml"/>
@@ -266,8 +267,7 @@
 			id="pl_perl"/>
 		<topicref href="extensions/madlib.xml" navtitle="Greenplum MADlib Extension for Analytics"
 			id="madlib"/>
-		<topicref href="extensions/gppc.xml" navtitle="Greenplum Partner Connector API"
-			id="gppc"/>
+		<topicref href="extensions/gppc.xml" navtitle="Greenplum Partner Connector API" id="gppc"/>
 		<topicref href="extensions/fuzzystrmatch.xml"
 			navtitle="Greenplum Fuzzy String Match Extension" id="fuzzystrmatch"/>
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"

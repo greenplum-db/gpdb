@@ -4,7 +4,7 @@
  *	  POSTGRES buffer manager definitions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/bufmgr.h
@@ -41,7 +41,9 @@ typedef enum
 	RBM_NORMAL,					/* Normal read */
 	RBM_ZERO,					/* Don't read from disk, caller will
 								 * initialize */
-	RBM_ZERO_ON_ERROR			/* Read, but return an all-zeros page on error */
+	RBM_ZERO_ON_ERROR,			/* Read, but return an all-zeros page on error */
+	RBM_NORMAL_NO_LOG			/* Don't log page as invalid during WAL
+								 * replay; otherwise same as RBM_NORMAL */
 } ReadBufferMode;
 
 /* in globals.c ... this duplicates miscadmin.h */
@@ -212,7 +214,7 @@ extern Size BufferShmemSize(void);
 extern void BufferGetTag(Buffer buffer, RelFileNode *rnode,
 			 ForkNumber *forknum, BlockNumber *blknum);
 
-extern void MarkBufferDirtyHint(Buffer buffer);
+extern void MarkBufferDirtyHint(Buffer buffer, bool buffer_std);
 
 extern void UnlockBuffers(void);
 extern void LockBuffer(Buffer buffer, int mode);

@@ -264,10 +264,11 @@ typedef struct ParallelizeCorrelatedPlanWalkerContext
 								 * gather or broadcast */
 	List	   *rtable;			/* rtable from the global context */
 	bool		subPlanDistributed; /* is original subplan distributed */
+	Flow	   *currentPlanFlow;
 } ParallelizeCorrelatedPlanWalkerContext;
 
 /**
- * Context information to map vars occuring in the Result node's targetlist
+ * Context information to map vars occurring in the Result node's targetlist
  * and quals to what is produced by the underlying SeqScan node.
  */
 typedef struct MapVarsMutatorContext
@@ -282,7 +283,7 @@ typedef struct MapVarsMutatorContext
  */
 static bool ContainsParamWalker(Node *expr, void *ctx);
 static void ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context);
-static Plan *ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed);
+static Plan *ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed, Flow *currentPlanFlow);
 static Node *MapVarsMutator(Node *expr, MapVarsMutatorContext *ctx);
 static Node *ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerContext *ctx);
 static Node *ParallelizeCorrelatedSubPlanUpdateFlowMutator(Node *node);
@@ -438,20 +439,26 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 
 	if (IsA(node, FunctionScan))
 	{
-		RangeTblEntry *rte = rt_fetch(((Scan *) node)->scanrelid,
-									  ctx->rtable);
+		RangeTblEntry *rte;
+		ListCell   *lc;
 
+		rte = rt_fetch(((Scan *) node)->scanrelid, ctx->rtable);
 		Assert(rte->rtekind == RTE_FUNCTION);
 
-		if (rte->funcexpr &&
-			ContainsParamWalker(rte->funcexpr, NULL /* ctx */ ) && ctx->subPlanDistributed)
+		foreach(lc, rte->functions)
 		{
-			ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-							errmsg("Cannot parallelize that query yet."),
-							errdetail("In a subquery FROM clause, a "
-									  "function invocation cannot contain "
-									  "a correlated reference.")
+			RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
+
+			if (rtfunc->funcexpr &&
+				ContainsParamWalker(rtfunc->funcexpr, NULL /* ctx */ ) && ctx->subPlanDistributed)
+			{
+				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								errmsg("Cannot parallelize that query yet."),
+								errdetail("In a subquery FROM clause, a "
+										  "function invocation cannot contain "
+										  "a correlated reference.")
 							));
+			}
 		}
 	}
 
@@ -572,8 +579,9 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 		 */
 		if (ctx->movement == MOVEMENT_BROADCAST)
 		{
+			Assert (NULL != ctx->currentPlanFlow);
 			broadcastPlan(scanPlan, false /* stable */ , false /* rescannable */,
-						  scanPlan->flow->numsegments /* numsegments */);
+						  ctx->currentPlanFlow->numsegments /* numsegments */);
 		}
 		else
 		{
@@ -664,7 +672,7 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
  * Parallelizes a correlated subplan. See ParallelizeCorrelatedSubPlanMutator for details.
  */
 Plan *
-ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed)
+ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Movement m, bool subPlanDistributed, Flow *currentPlanFlow)
 {
 	ParallelizeCorrelatedPlanWalkerContext ctx;
 
@@ -673,6 +681,7 @@ ParallelizeCorrelatedSubPlan(PlannerInfo *root, SubPlan *spExpr, Plan *plan, Mov
 	ctx.subPlanDistributed = subPlanDistributed;
 	ctx.sp = spExpr;
 	ctx.rtable = root->glob->finalrtable;
+	ctx.currentPlanFlow = currentPlanFlow;
 	return (Plan *) ParallelizeCorrelatedSubPlanMutator((Node *) plan, &ctx);
 
 }
@@ -738,6 +747,7 @@ ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
 
 		if (containingPlanDistributed)
 		{
+			Assert(NULL != context->currentPlanFlow);
 			broadcastPlan(newPlan, false /* stable */ , false /* rescannable */,
 						  context->currentPlanFlow->numsegments /* numsegments */);
 		}
@@ -773,7 +783,7 @@ ParallelizeSubplan(SubPlan *spExpr, PlanProfile *context)
 		 * Subplan corresponds to a correlated subquery and its parallelization
 		 * requires certain transformations.
 		 */
-		newPlan = ParallelizeCorrelatedSubPlan(context->root, spExpr, newPlan, reqMove, subPlanDistributed);
+		newPlan = ParallelizeCorrelatedSubPlan(context->root, spExpr, newPlan, reqMove, subPlanDistributed, context->currentPlanFlow);
 	}
 
 	Assert(newPlan);
@@ -859,8 +869,8 @@ prescan_walker(Node *node, PlanProfile *context)
 				}
 
 				/*
-				 * Init plan and main plan are dispatched seperately,
-				 * so we need to set DISPATCH_PARALLEL flag seperately
+				 * Init plan and main plan are dispatched separately,
+				 * so we need to set DISPATCH_PARALLEL flag separately
 				 * for them.
 				 *
 				 * save the parallel state of main plan. init plan

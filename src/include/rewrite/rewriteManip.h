@@ -4,7 +4,7 @@
  *		Querytree manipulation subroutines for query rewriter.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/rewrite/rewriteManip.h
@@ -51,8 +51,6 @@ extern void IncrementVarSublevelsUpInTransformGroupedWindows(Node *node,
 
 extern bool rangeTableEntry_used(Node *node, int rt_index,
 					 int sublevels_up);
-extern bool attribute_used(Node *node, int rt_index, int attno,
-			   int sublevels_up);
 
 extern Query *getInsertSelectQuery(Query *parsetree, Query ***subquery_ptr);
 

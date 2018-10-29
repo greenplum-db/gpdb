@@ -65,6 +65,9 @@ manage to be a conflict it would merely mean that one bit-update would
 be lost and need to be done again later.  These four bits are only hints
 (they cache the results of transaction status lookups in pg_clog), so no
 great harm is done if they get reset to zero by conflicting updates.
+Note, however, that a tuple is frozen by setting both HEAP_XMIN_INVALID
+and HEAP_XMIN_COMMITTED; this is a critical update and accordingly requires
+an exclusive buffer lock (and it must also be WAL-logged).
 
 5. To physically remove a tuple or compact free space on a page, one
 must hold a pin and an exclusive lock, *and* observe while holding the
@@ -173,8 +176,8 @@ small limit value) whenever the buffer is pinned.  (This requires only the
 buffer header spinlock, which would have to be taken anyway to increment the
 buffer reference count, so it's nearly free.)
 
-The "clock hand" is a buffer index, NextVictimBuffer, that moves circularly
-through all the available buffers.  NextVictimBuffer is protected by the
+The "clock hand" is a buffer index, nextVictimBuffer, that moves circularly
+through all the available buffers.  nextVictimBuffer is protected by the
 BufFreelistLock.
 
 The algorithm for a process that needs to obtain a victim buffer is:
@@ -186,8 +189,8 @@ is pinned or has a nonzero usage count, it cannot be used; ignore it and
 return to the start of step 2.  Otherwise, pin the buffer, release
 BufFreelistLock, and return the buffer.
 
-3. Otherwise, select the buffer pointed to by NextVictimBuffer, and
-circularly advance NextVictimBuffer for next time.
+3. Otherwise, select the buffer pointed to by nextVictimBuffer, and
+circularly advance nextVictimBuffer for next time.
 
 4. If the selected buffer is pinned or has a nonzero usage count, it cannot
 be used.  Decrement its usage count (if nonzero) and return to step 3 to
@@ -251,11 +254,11 @@ Background Writer's Processing
 The background writer is designed to write out pages that are likely to be
 recycled soon, thereby offloading the writing work from active backends.
 To do this, it scans forward circularly from the current position of
-NextVictimBuffer (which it does not change!), looking for buffers that are
+nextVictimBuffer (which it does not change!), looking for buffers that are
 dirty and not pinned nor marked with a positive usage count.  It pins,
 writes, and releases any such buffer.
 
-If we can assume that reading NextVictimBuffer is an atomic action, then
+If we can assume that reading nextVictimBuffer is an atomic action, then
 the writer doesn't even need to take the BufFreelistLock in order to look
 for buffers to write; it needs only to spinlock each buffer header for long
 enough to check the dirtybit.  Even without that assumption, the writer
@@ -265,7 +268,7 @@ the contention cost of the writer compared to PG 8.0.)
 
 During a checkpoint, the writer's strategy must be to write every dirty
 buffer (pinned or not!).  We may as well make it start this scan from
-NextVictimBuffer, however, so that the first-to-be-written pages are the
+nextVictimBuffer, however, so that the first-to-be-written pages are the
 ones that backends might otherwise have to write for themselves soon.
 
 The background writer takes shared content lock on a buffer while writing it

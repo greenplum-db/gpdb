@@ -24,8 +24,8 @@
 #define XLOG_BLCKSZ_K	(XLOG_BLCKSZ / 1024)
 
 #define LABEL_FORMAT		"        %-32s"
-#define NA_FORMAT			"%18s"
-#define OPS_FORMAT			"%9.3f ops/sec  %6.0f usecs/op"
+#define NA_FORMAT			"%20s"
+#define OPS_FORMAT			"%11.3f ops/sec  %6.0f usecs/op"
 #define USECS_SEC			1000000
 
 /* These are macros to avoid timing the function call overhead. */
@@ -146,8 +146,7 @@ handle_args(int argc, char *argv[])
 
 	if (argc > 1)
 	{
-		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0 ||
-			strcmp(argv[1], "-?") == 0)
+		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
 		{
 			printf("Usage: %s [-f FILENAME] [-s SECS-PER-TEST]\n", progname);
 			exit(0);
@@ -207,7 +206,7 @@ prepare_buf(void)
 	for (ops = 0; ops < XLOG_SEG_SIZE; ops++)
 		full_buf[ops] = random();
 
-	buf = (char *) TYPEALIGN(ALIGNOF_XLOG_BUFFER, full_buf);
+	buf = (char *) TYPEALIGN(XLOG_BLCKSZ, full_buf);
 }
 
 static void
@@ -370,6 +369,13 @@ test_sync(int writes_per_op)
 		{
 			for (writes = 0; writes < writes_per_op; writes++)
 				if (write(tmpfile, buf, XLOG_BLCKSZ) != XLOG_BLCKSZ)
+
+					/*
+					 * This can generate write failures if the filesystem has
+					 * a large block size, e.g. 4k, and there is no support
+					 * for O_DIRECT writes smaller than the file system block
+					 * size, e.g. XFS.
+					 */
 					die("write failed");
 			if (lseek(tmpfile, 0, SEEK_SET) == -1)
 				die("seek failed");

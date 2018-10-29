@@ -20,14 +20,15 @@ from gp_segment_configuration where content = 0 and role = 'p';
 
 select gp_inject_fault('fts_update_config', 'reset', 1);
 
+-- Postmaster should have restarted FTS by now. Trigger a scan and
+-- validate that configuration is sane.
+select gp_request_fts_probe_scan();
+
 -- Verify that FTS didn't leak any locks due to the error during
 -- config update.
 select locktype, mode, relation, pid, granted from pg_locks where
 relation = 'gp_segment_configuration'::regclass or
 relation = 'gp_configuration_history'::regclass;
-select gp_inject_fault('fts_update_config', 'reset', 1);
--- Postmaster should have restarted FTS by now.  Trigger a scan and
--- validate that configuration is sane.
-select gp_request_fts_probe_scan();
+
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';

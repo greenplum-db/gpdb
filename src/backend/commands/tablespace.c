@@ -40,13 +40,13 @@
  * To allow CREATE DATABASE to give a new database a default tablespace
  * that's different from the template database's default, we make the
  * provision that a zero in pg_class.reltablespace means the database's
- * default tablespace.	Without this, CREATE DATABASE would have to go in
+ * default tablespace.  Without this, CREATE DATABASE would have to go in
  * and munge the system catalogs of the new database.
  *
  *
  * Portions Copyright (c) 2005-2010 Greenplum Inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -71,21 +71,26 @@
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/indexing.h"
+#include "catalog/namespace.h"
 #include "catalog/objectaccess.h"
+#include "catalog/pg_namespace.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
 #include "commands/comment.h"
 #include "commands/seclabel.h"
+#include "commands/tablecmds.h"
 #include "commands/tablespace.h"
-#include "common/relpath.h"
+#include "commands/user.h"
 #include "miscadmin.h"
 #include "postmaster/bgwriter.h"
 #include "storage/fd.h"
+#include "storage/lmgr.h"
 #include "storage/standby.h"
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/tqual.h"
@@ -252,6 +257,8 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	Oid			tablespaceoid;
 	char	   *location = NULL;
 	Oid			ownerId;
+	Datum		newOptions;
+	List       *nonContentOptions = NIL;
 
 	/* Must be super user */
 	if (!superuser())
@@ -297,16 +304,10 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 								 errhint("Segment content IDs can be found in gp_segment_configuration table.")));
 				}
 				else if (contentId == GpIdentity.segindex)
-				{
 					location = pstrdup(strVal(defel->arg));
-					break;
-				}
 			}
 			else
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("invalid segment specification"),
-						 errhint("Segment-level locations can be specified using \"contentX <path>\" where X is the content ID.")));
+				nonContentOptions = lappend(nonContentOptions, defel);
 		}
 	}
 
@@ -334,11 +335,11 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 
 	/*
 	 * Check that location isn't too long. Remember that we're going to append
-	 * 'PG_XXX/<dboid>/<relid>.<nnn>'.	FYI, we never actually reference the
-	 * whole path, but mkdir() uses the first two parts.
+	 * 'PG_XXX/<dboid>/<relid>_<fork>.<nnn>'.  FYI, we never actually
+	 * reference the whole path here, but mkdir() uses the first two parts.
 	 */
 	if (strlen(location) + 1 + strlen(tablespace_version_directory()) + 1 +
-		OIDCHARS + 1 + OIDCHARS + 1 + OIDCHARS > MAXPGPATH)
+	  OIDCHARS + 1 + OIDCHARS + 1 + FORKNAMECHARS + 1 + OIDCHARS > MAXPGPATH)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 				 errmsg("tablespace location \"%s\" is too long",
@@ -380,7 +381,16 @@ CreateTableSpace(CreateTableSpaceStmt *stmt)
 	values[Anum_pg_tablespace_spcowner - 1] =
 		ObjectIdGetDatum(ownerId);
 	nulls[Anum_pg_tablespace_spcacl - 1] = true;
-	nulls[Anum_pg_tablespace_spcoptions - 1] = true;
+
+	/* Generate new proposed spcoptions (text array) */
+	newOptions = transformRelOptions((Datum) 0,
+									 nonContentOptions,
+									 NULL, NULL, false, false);
+	(void) tablespace_reloptions(newOptions, true);
+	if (newOptions != (Datum) 0)
+		values[Anum_pg_tablespace_spcoptions - 1] = newOptions;
+	else
+		nulls[Anum_pg_tablespace_spcoptions - 1] = true;
 
 	tuple = heap_form_tuple(rel->rd_att, values, nulls);
 
@@ -480,7 +490,7 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(tablespacename));
-	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	if (!HeapTupleIsValid(tuple))
@@ -640,16 +650,16 @@ DropTableSpace(DropTableSpaceStmt *stmt)
 static void
 create_tablespace_directories(const char *location, const Oid tablespaceoid)
 {
-	char	   *linkloc = palloc(OIDCHARS + OIDCHARS + 1);
-	char	   *location_with_version_dir = palloc(strlen(location) + 1 +
-										strlen(tablespace_version_directory()) + 1);
+	char	   *linkloc;
+	char	   *location_with_version_dir;
+	struct stat st;
 
-	sprintf(linkloc, "pg_tblspc/%u", tablespaceoid);
-	sprintf(location_with_version_dir, "%s/%s", location,
+	linkloc = psprintf("pg_tblspc/%u", tablespaceoid);
+	location_with_version_dir = psprintf("%s/%s", location,
 										tablespace_version_directory());
 
 	/*
-	 * Attempt to coerce target directory to safe permissions.	If this fails,
+	 * Attempt to coerce target directory to safe permissions.  If this fails,
 	 * it doesn't exist or has the wrong owner.
 	 */
 	if (chmod(location, S_IRWXU) != 0)
@@ -669,8 +679,6 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 
 	if (InRecovery)
 	{
-		struct stat st;
-
 		/*
 		 * Our theory for replaying a CREATE is to forcibly drop the target
 		 * subdirectory if present, and then recreate it. This may be more
@@ -704,14 +712,32 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
 						 location_with_version_dir)));
 	}
 
-	/* Remove old symlink in recovery, in case it points to the wrong place */
+	/*
+	 * In recovery, remove old symlink, in case it points to the wrong place.
+	 *
+	 * On Windows, junction points act like directories so we must be able to
+	 * apply rmdir; in general it seems best to make this code work like the
+	 * symlink removal code in destroy_tablespace_directories, except that
+	 * failure to remove is always an ERROR.
+	 */
 	if (InRecovery)
 	{
-		if (unlink(linkloc) < 0 && errno != ENOENT)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not remove symbolic link \"%s\": %m",
-							linkloc)));
+		if (lstat(linkloc, &st) == 0 && S_ISDIR(st.st_mode))
+		{
+			if (rmdir(linkloc) < 0)
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						 errmsg("could not remove directory \"%s\": %m",
+								linkloc)));
+		}
+		else
+		{
+			if (unlink(linkloc) < 0 && errno != ENOENT)
+				ereport(ERROR,
+						(errcode_for_file_access(),
+						 errmsg("could not remove symbolic link \"%s\": %m",
+								linkloc)));
+		}
 	}
 
 	/*
@@ -734,7 +760,7 @@ create_tablespace_directories(const char *location, const Oid tablespaceoid)
  * Attempt to remove filesystem infrastructure for the tablespace.
  *
  * 'redo' indicates we are redoing a drop from XLOG; in that case we should
- * not throw an ERROR for problems, just LOG them.	The worst consequence of
+ * not throw an ERROR for problems, just LOG them.  The worst consequence of
  * not removing files here would be failure to release some disk space, which
  * does not justify throwing an error that would require manual intervention
  * to get the database running again.
@@ -751,10 +777,8 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 	char	   *subfile;
 	struct stat st;
 
-	linkloc_with_version_dir = palloc(9 + 1 + OIDCHARS + 1 +
-									strlen(tablespace_version_directory()));
-	sprintf(linkloc_with_version_dir, "pg_tblspc/%u/%s", tablespaceoid,
-									tablespace_version_directory());
+	linkloc_with_version_dir = psprintf("pg_tblspc/%u/%s", tablespaceoid,
+										tablespace_version_directory());
 
 	/*
 	 * Check if the tablespace still contains any files.  We try to rmdir each
@@ -771,10 +795,10 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 	 *
 	 * If redo is true then ENOENT is a likely outcome here, and we allow it
 	 * to pass without comment.  In normal operation we still allow it, but
-	 * with a warning.	This is because even though ProcessUtility disallows
+	 * with a warning.  This is because even though ProcessUtility disallows
 	 * DROP TABLESPACE in a transaction block, it's possible that a previous
 	 * DROP failed and rolled back after removing the tablespace directories
-	 * and/or symlink.	We want to allow a new DROP attempt to succeed at
+	 * and/or symlink.  We want to allow a new DROP attempt to succeed at
 	 * removing the catalog entries (and symlink if still present), so we
 	 * should not give a hard error here.
 	 */
@@ -810,8 +834,7 @@ destroy_tablespace_directories(Oid tablespaceoid, bool redo)
 			strcmp(de->d_name, "..") == 0)
 			continue;
 
-		subfile = palloc(strlen(linkloc_with_version_dir) + 1 + strlen(de->d_name) + 1);
-		sprintf(subfile, "%s/%s", linkloc_with_version_dir, de->d_name);
+		subfile = psprintf("%s/%s", linkloc_with_version_dir, de->d_name);
 
 		/* This check is just to deliver a friendlier error message */
 		if (!redo && !directory_is_empty(subfile))
@@ -869,10 +892,14 @@ remove_symlink:
 	else
 	{
 		if (unlink(linkloc) < 0)
-			ereport(redo ? LOG : (errno == ENOENT ? WARNING : ERROR),
+		{
+			int			saved_errno = errno;
+
+			ereport(redo ? LOG : (saved_errno == ENOENT ? WARNING : ERROR),
 					(errcode_for_file_access(),
 					 errmsg("could not remove symbolic link \"%s\": %m",
 							linkloc)));
+		}
 	}
 
 	pfree(linkloc_with_version_dir);
@@ -931,7 +958,7 @@ RenameTableSpace(const char *oldname, const char *newname)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(oldname));
-	scan = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scan = heap_beginscan_catalog(rel, 1, entry);
 	tup = heap_getnext(scan, ForwardScanDirection);
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
@@ -965,7 +992,7 @@ RenameTableSpace(const char *oldname, const char *newname)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(newname));
-	scan = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scan = heap_beginscan_catalog(rel, 1, entry);
 	tup = heap_getnext(scan, ForwardScanDirection);
 	if (HeapTupleIsValid(tup))
 		ereport(ERROR,
@@ -1022,7 +1049,7 @@ AlterTableSpaceOptions(AlterTableSpaceOptionsStmt *stmt)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(stmt->tablespacename));
-	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tup = heap_getnext(scandesc, ForwardScanDirection);
 	if (!HeapTupleIsValid(tup))
 		ereport(ERROR,
@@ -1082,6 +1109,197 @@ AlterTableSpaceOptions(AlterTableSpaceOptionsStmt *stmt)
 }
 
 /*
+ * Alter table space move
+ *
+ * Allows a user to move all of their objects in a given tablespace in the
+ * current database to another tablespace. Only objects which the user is
+ * considered to be an owner of are moved and the user must have CREATE rights
+ * on the new tablespace. These checks should mean that ALTER TABLE will never
+ * fail due to permissions, but note that permissions will also be checked at
+ * that level. Objects can be ALL, TABLES, INDEXES, or MATERIALIZED VIEWS.
+ *
+ * All to-be-moved objects are locked first. If NOWAIT is specified and the
+ * lock can't be acquired then we ereport(ERROR).
+ */
+Oid
+AlterTableSpaceMove(AlterTableSpaceMoveStmt *stmt)
+{
+	List	   *relations = NIL;
+	ListCell   *l;
+	ScanKeyData key[1];
+	Relation	rel;
+	HeapScanDesc scan;
+	HeapTuple	tuple;
+	Oid			orig_tablespaceoid;
+	Oid			new_tablespaceoid;
+	List	   *role_oids = roleNamesToIds(stmt->roles);
+
+	/* Ensure we were not asked to move something we can't */
+	if (!stmt->move_all && stmt->objtype != OBJECT_TABLE &&
+		stmt->objtype != OBJECT_INDEX && stmt->objtype != OBJECT_MATVIEW)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("only tables, indexes, and materialized views exist in tablespaces")));
+
+	/* Get the orig and new tablespace OIDs */
+	orig_tablespaceoid = get_tablespace_oid(stmt->orig_tablespacename, false);
+	new_tablespaceoid = get_tablespace_oid(stmt->new_tablespacename, false);
+
+	/* Can't move shared relations in to or out of pg_global */
+	/* This is also checked by ATExecSetTableSpace, but nice to stop earlier */
+	if (orig_tablespaceoid == GLOBALTABLESPACE_OID ||
+		new_tablespaceoid == GLOBALTABLESPACE_OID)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("cannot move relations in to or out of pg_global tablespace")));
+
+	/*
+	 * Must have CREATE rights on the new tablespace, unless it is the
+	 * database default tablespace (which all users implicitly have CREATE
+	 * rights on).
+	 */
+	if (OidIsValid(new_tablespaceoid) && new_tablespaceoid != MyDatabaseTableSpace)
+	{
+		AclResult	aclresult;
+
+		aclresult = pg_tablespace_aclcheck(new_tablespaceoid, GetUserId(),
+										   ACL_CREATE);
+		if (aclresult != ACLCHECK_OK)
+			aclcheck_error(aclresult, ACL_KIND_TABLESPACE,
+						   get_tablespace_name(new_tablespaceoid));
+	}
+
+	/*
+	 * Now that the checks are done, check if we should set either to
+	 * InvalidOid because it is our database's default tablespace.
+	 */
+	if (orig_tablespaceoid == MyDatabaseTableSpace)
+		orig_tablespaceoid = InvalidOid;
+
+	if (new_tablespaceoid == MyDatabaseTableSpace)
+		new_tablespaceoid = InvalidOid;
+
+	/* no-op */
+	if (orig_tablespaceoid == new_tablespaceoid)
+		return new_tablespaceoid;
+
+	/*
+	 * Walk the list of objects in the tablespace and move them. This will
+	 * only find objects in our database, of course.
+	 */
+	ScanKeyInit(&key[0],
+				Anum_pg_class_reltablespace,
+				BTEqualStrategyNumber, F_OIDEQ,
+				ObjectIdGetDatum(orig_tablespaceoid));
+
+	rel = heap_open(RelationRelationId, AccessShareLock);
+	scan = heap_beginscan_catalog(rel, 1, key);
+	while ((tuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
+	{
+		Oid			relOid = HeapTupleGetOid(tuple);
+		Form_pg_class relForm;
+
+		relForm = (Form_pg_class) GETSTRUCT(tuple);
+
+		/*
+		 * Do not move objects in pg_catalog as part of this, if an admin
+		 * really wishes to do so, they can issue the individual ALTER
+		 * commands directly.
+		 *
+		 * Also, explicitly avoid any shared tables, temp tables, or TOAST
+		 * (TOAST will be moved with the main table).
+		 */
+		if (IsSystemNamespace(relForm->relnamespace) || relForm->relisshared ||
+			isAnyTempNamespace(relForm->relnamespace) ||
+			relForm->relnamespace == PG_TOAST_NAMESPACE)
+			continue;
+
+		/* Only consider objects which live in tablespaces */
+		if (relForm->relkind != RELKIND_RELATION &&
+			relForm->relkind != RELKIND_INDEX &&
+			relForm->relkind != RELKIND_MATVIEW)
+			continue;
+
+		/* Check if we were asked to only move a certain type of object */
+		if (!stmt->move_all &&
+			((stmt->objtype == OBJECT_TABLE &&
+			  relForm->relkind != RELKIND_RELATION) ||
+			 (stmt->objtype == OBJECT_INDEX &&
+			  relForm->relkind != RELKIND_INDEX) ||
+			 (stmt->objtype == OBJECT_MATVIEW &&
+			  relForm->relkind != RELKIND_MATVIEW)))
+			continue;
+
+		/* Check if we are only moving objects owned by certain roles */
+		if (role_oids != NIL && !list_member_oid(role_oids, relForm->relowner))
+			continue;
+
+		/*
+		 * Handle permissions-checking here since we are locking the tables
+		 * and also to avoid doing a bunch of work only to fail part-way. Note
+		 * that permissions will also be checked by AlterTableInternal().
+		 *
+		 * Caller must be considered an owner on the table to move it.
+		 */
+		if (!pg_class_ownercheck(relOid, GetUserId()))
+			aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
+						   NameStr(relForm->relname));
+
+		if (stmt->nowait &&
+			!ConditionalLockRelationOid(relOid, AccessExclusiveLock))
+			ereport(ERROR,
+					(errcode(ERRCODE_OBJECT_IN_USE),
+			   errmsg("aborting due to \"%s\".\"%s\" --- lock not available",
+					  get_namespace_name(relForm->relnamespace),
+					  NameStr(relForm->relname))));
+		else
+			LockRelationOid(relOid, AccessExclusiveLock);
+
+		/* Add to our list of objects to move */
+		relations = lappend_oid(relations, relOid);
+	}
+
+	heap_endscan(scan);
+	heap_close(rel, AccessShareLock);
+
+	if (relations == NIL)
+		ereport(NOTICE,
+				(errcode(ERRCODE_NO_DATA_FOUND),
+				 errmsg("no matching relations in tablespace \"%s\" found",
+					orig_tablespaceoid == InvalidOid ? "(database default)" :
+						get_tablespace_name(orig_tablespaceoid))));
+
+	/* Everything is locked, loop through and move all of the relations. */
+	foreach(l, relations)
+	{
+		List	   *cmds = NIL;
+		AlterTableCmd *cmd = makeNode(AlterTableCmd);
+
+		cmd->subtype = AT_SetTableSpace;
+		cmd->name = stmt->new_tablespacename;
+
+		cmds = lappend(cmds, cmd);
+
+		AlterTableInternal(lfirst_oid(l), cmds, false);
+	}
+
+	/*
+	 * If we are the QD, dispatch this command to all the QEs
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
+	{
+		CdbDispatchUtilityStatement((Node *) stmt,
+									DF_CANCEL_ON_ERROR|
+									DF_WITH_SNAPSHOT|
+									DF_NEED_TWO_PHASE,
+									NIL,
+									NULL);
+	}
+
+	return new_tablespaceoid;
+}
+
+/*
  * Routines for handling the GUC variable 'default_tablespace'.
  */
 
@@ -1108,7 +1326,7 @@ check_tablespace(const char *tablespacename)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(tablespacename));
-	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* If nothing matches then the tablespace doesn't exist */
@@ -1129,7 +1347,7 @@ check_default_tablespace(char **newval, void **extra, GucSource source)
 {
 	/*
 	 * If we aren't inside a transaction, we cannot do database access so
-	 * cannot verify the name.	Must accept the value on faith.
+	 * cannot verify the name.  Must accept the value on faith.
 	 */
 	if (IsTransactionState())
 	{
@@ -1142,12 +1360,8 @@ check_default_tablespace(char **newval, void **extra, GucSource source)
 			!check_tablespace(*newval))
 		{
 			/*
-			 * When source == PGC_S_TEST, we are checking the argument of an
-			 * ALTER DATABASE SET or ALTER USER SET command.  pg_dumpall dumps
-			 * all roles before tablespaces, so if we're restoring a
-			 * pg_dumpall script the tablespace might not yet exist, but will
-			 * be created later.  Because of that, issue a NOTICE if source ==
-			 * PGC_S_TEST, but accept the value anyway.
+			 * When source == PGC_S_TEST, don't throw a hard error for a
+			 * nonexistent tablespace, only a NOTICE.  See comments in guc.h.
 			 */
 			if (source == PGC_S_TEST)
 			{
@@ -1276,14 +1490,9 @@ check_temp_tablespaces(char **newval, void **extra, GucSource source)
 			}
 
 			/*
-			 * In an interactive SET command, we ereport for bad info.	When
-			 * source == PGC_S_TEST, we are checking the argument of an ALTER
-			 * DATABASE SET or ALTER USER SET command.	pg_dumpall dumps all
-			 * roles before tablespaces, so if we're restoring a pg_dumpall
-			 * script the tablespace might not yet exist, but will be created
-			 * later.  Because of that, issue a NOTICE if source ==
-			 * PGC_S_TEST, but accept the value anyway.  Otherwise, silently
-			 * ignore any bad list elements.
+			 * In an interactive SET command, we ereport for bad info.  When
+			 * source == PGC_S_TEST, don't throw a hard error for a
+			 * nonexistent tablespace, only a NOTICE.  See comments in guc.h.
 			 */
 			curoid = get_tablespace_oid(curname, source <= PGC_S_TEST);
 			if (curoid == InvalidOid)
@@ -1476,7 +1685,7 @@ get_tablespace_oid(const char *tablespacename, bool missing_ok)
 				Anum_pg_tablespace_spcname,
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(tablespacename));
-	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* If nothing matches then the tablespace doesn't exist */
@@ -1567,7 +1776,7 @@ get_tablespace_name(Oid spc_oid)
 				ObjectIdAttributeNumber,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(spc_oid));
-	scandesc = heap_beginscan(rel, SnapshotNow, 1, entry);
+	scandesc = heap_beginscan_catalog(rel, 1, entry);
 	tuple = heap_getnext(scandesc, ForwardScanDirection);
 
 	/* We assume that there can be at most one matching tuple */

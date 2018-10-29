@@ -5,7 +5,7 @@
  *	  zillions of large objects (internal, external, jaquith, inversion).
  *	  Now we only support inversion.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/large_object.h
@@ -66,11 +66,13 @@ typedef struct LargeObjectDesc
  * Also, it seems to be a smart move to make the page size be a power of 2,
  * since clients will often be written to send data in power-of-2 blocks.
  * This avoids unnecessary tuple updates caused by partial-page writes.
+ *
+ * NB: Changing LOBLKSIZE requires an initdb.
  */
 #define LOBLKSIZE		(BLCKSZ / 4)
 
 /*
- * Maximum length in bytes for a large object.	To make this larger, we'd
+ * Maximum length in bytes for a large object.  To make this larger, we'd
  * have to widen pg_largeobject.pageno as well as various internal variables.
  */
 #define MAX_LARGE_OBJECT_SIZE	((int64) INT_MAX * LOBLKSIZE)

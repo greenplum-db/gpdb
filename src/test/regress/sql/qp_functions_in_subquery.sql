@@ -1,4 +1,12 @@
-set search_path='qp_funcs_in_contexts';
+-- Create our own copies of these test tables in our own
+-- schema (see qp_functions_in_contexts_setup.sql)
+CREATE SCHEMA qp_funcs_in_subquery;
+set search_path='qp_funcs_in_subquery', 'qp_funcs_in_contexts';
+
+CREATE TABLE foo (a int, b int);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+CREATE TABLE bar (c int, d int);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
 
 -- @description function_in_subqry_0.sql
 SELECT * FROM foo, (SELECT func1_nosql_vol(5)) r order by 1,2,3;

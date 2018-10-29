@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -373,7 +373,7 @@ generate_implied_quals(PlannerInfo *root)
  *	  entry if there's not one already.
  *
  * Note that this function must not be used until after we have completed
- * merging EquivalenceClasses.	(We don't try to enforce that here; instead,
+ * merging EquivalenceClasses.  (We don't try to enforce that here; instead,
  * equivclass.c will complain if a merge occurs after root->canon_pathkeys
  * has become nonempty.)
  */
@@ -447,7 +447,7 @@ make_canonical_pathkey(PlannerInfo *root,
  *
  * Both the given pathkey and the list members must be canonical for this
  * to work properly, but that's okay since we no longer ever construct any
- * non-canonical pathkeys.	(Note: the notion of a pathkey *list* being
+ * non-canonical pathkeys.  (Note: the notion of a pathkey *list* being
  * canonical includes the additional requirement of no redundant entries,
  * which is exactly what we are checking for here.)
  *
@@ -481,12 +481,15 @@ pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys)
  *	  Given an expression and sort-order information, create a PathKey.
  *	  The result is always a "canonical" PathKey, but it might be redundant.
  *
+ * expr is the expression, and nullable_relids is the set of base relids
+ * that are potentially nullable below it.
+ *
  * If the PathKey is being generated from a SortGroupClause, sortref should be
  * the SortGroupClause's SortGroupRef; otherwise zero.
  *
  * If rel is not NULL, it identifies a specific relation we're considering
  * a path for, and indicates that child EC members for that relation can be
- * considered.	Otherwise child members are ignored.  (See the comments for
+ * considered.  Otherwise child members are ignored.  (See the comments for
  * get_eclass_for_sort_expr.)
  *
  * create_it is TRUE if we should create any missing EquivalenceClass
@@ -496,6 +499,7 @@ pathkey_is_redundant(PathKey *new_pathkey, List *pathkeys)
 static PathKey *
 make_pathkey_from_sortinfo(PlannerInfo *root,
 						   Expr *expr,
+						   Relids nullable_relids,
 						   Oid opfamily,
 						   Oid opcintype,
 						   Oid collation,
@@ -515,7 +519,7 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 	/*
 	 * EquivalenceClasses need to contain opfamily lists based on the family
 	 * membership of mergejoinable equality operators, which could belong to
-	 * more than one opfamily.	So we have to look up the opfamily's equality
+	 * more than one opfamily.  So we have to look up the opfamily's equality
 	 * operator and get its membership.
 	 */
 	equality_op = get_opfamily_member(opfamily,
@@ -531,8 +535,8 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 			 equality_op);
 
 	/* Now find or (optionally) create a matching EquivalenceClass */
-	eclass = get_eclass_for_sort_expr(root, expr, opfamilies,
-									  opcintype, collation,
+	eclass = get_eclass_for_sort_expr(root, expr, nullable_relids,
+									  opfamilies, opcintype, collation,
 									  sortref, rel, create_it);
 
 	/* Fail if no EC and !create_it */
@@ -554,6 +558,7 @@ make_pathkey_from_sortinfo(PlannerInfo *root,
 static PathKey *
 make_pathkey_from_sortop(PlannerInfo *root,
 						 Expr *expr,
+						 Relids nullable_relids,
 						 Oid ordering_op,
 						 bool nulls_first,
 						 Index sortref,
@@ -575,6 +580,7 @@ make_pathkey_from_sortop(PlannerInfo *root,
 
 	return make_pathkey_from_sortinfo(root,
 									  expr,
+									  nullable_relids,
 									  opfamily,
 									  opcintype,
 									  collation,
@@ -676,7 +682,7 @@ get_cheapest_path_for_pathkeys(List *paths, List *pathkeys,
 
 		/*
 		 * Since cost comparison is a lot cheaper than pathkey comparison, do
-		 * that first.	(XXX is that still true?)
+		 * that first.  (XXX is that still true?)
 		 */
 		if (matched_path != NULL &&
 			compare_path_costs(matched_path, path, cost_criterion) <= 0)
@@ -718,7 +724,7 @@ get_cheapest_fractional_path_for_pathkeys(List *paths,
 
 		/*
 		 * Since cost comparison is a lot cheaper than pathkey comparison, do
-		 * that first.	(XXX is that still true?)
+		 * that first.  (XXX is that still true?)
 		 */
 		if (matched_path != NULL &&
 			compare_fractional_path_costs(matched_path, path, fraction) <= 0)
@@ -788,9 +794,13 @@ build_index_pathkeys(PlannerInfo *root,
 			nulls_first = index->nulls_first[i];
 		}
 
-		/* OK, try to make a canonical pathkey for this sort key */
+		/*
+		 * OK, try to make a canonical pathkey for this sort key.  Note we're
+		 * underneath any outer joins, so nullable_relids should be NULL.
+		 */
 		cpathkey = make_pathkey_from_sortinfo(root,
 											  indexkey,
+											  NULL,
 											  index->sortopfamily[i],
 											  index->opcintype[i],
 											  index->indexcollations[i],
@@ -853,10 +863,62 @@ find_indexkey_var(PlannerInfo *root, RelOptInfo *rel, AttrNumber varattno)
 	return makeVar(relid, varattno, vartypeid, type_mod, varcollid, 0);
 }
 
+
+/*
+ * build_expression_pathkey
+ *	  Build a pathkeys list that describes an ordering by a single expression
+ *	  using the given sort operator.
+ *
+ * expr, nullable_relids, and rel are as for make_pathkey_from_sortinfo.
+ * We induce the other arguments assuming default sort order for the operator.
+ *
+ * Similarly to make_pathkey_from_sortinfo, the result is NIL if create_it
+ * is false and the expression isn't already in some EquivalenceClass.
+ */
+List *
+build_expression_pathkey(PlannerInfo *root,
+						 Expr *expr,
+						 Relids nullable_relids,
+						 Oid opno,
+						 Relids rel,
+						 bool create_it)
+{
+	List	   *pathkeys;
+	Oid			opfamily,
+				opcintype;
+	int16		strategy;
+	PathKey    *cpathkey;
+
+	/* Find the operator in pg_amop --- failure shouldn't happen */
+	if (!get_ordering_op_properties(opno,
+									&opfamily, &opcintype, &strategy))
+		elog(ERROR, "operator %u is not a valid ordering operator",
+			 opno);
+
+	cpathkey = make_pathkey_from_sortinfo(root,
+										  expr,
+										  nullable_relids,
+										  opfamily,
+										  opcintype,
+										  exprCollation((Node *) expr),
+									   (strategy == BTGreaterStrategyNumber),
+									   (strategy == BTGreaterStrategyNumber),
+										  0,
+										  rel,
+										  create_it);
+
+	if (cpathkey)
+		pathkeys = list_make1(cpathkey);
+	else
+		pathkeys = NIL;
+
+	return pathkeys;
+}
+
 /*
  * convert_subquery_pathkeys
  *	  Build a pathkeys list that describes the ordering of a subquery's
- *	  result, in the terms of the outer query.	This is essentially a
+ *	  result, in the terms of the outer query.  This is essentially a
  *	  task of conversion.
  *
  * 'rel': outer query's RelOptInfo for the subquery relation.
@@ -909,15 +971,18 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 
 				/*
 				 * Note: it might look funny to be setting sortref = 0 for a
-				 * reference to a volatile sub_eclass.	However, the
+				 * reference to a volatile sub_eclass.  However, the
 				 * expression is *not* volatile in the outer query: it's just
 				 * a Var referencing whatever the subquery emitted. (IOW, the
 				 * outer query isn't going to re-execute the volatile
-				 * expression itself.)	So this is okay.
+				 * expression itself.)	So this is okay.  Likewise, it's
+				 * correct to pass nullable_relids = NULL, because we're
+				 * underneath any outer joins appearing in the outer query.
 				 */
 				outer_ec =
 					get_eclass_for_sort_expr(root,
 											 outer_expr,
+											 NULL,
 											 sub_eclass->ec_opfamilies,
 											 sub_member->em_datatype,
 											 sub_eclass->ec_collation,
@@ -943,7 +1008,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 			/*
 			 * Otherwise, the sub_pathkey's EquivalenceClass could contain
 			 * multiple elements (representing knowledge that multiple items
-			 * are effectively equal).	Each element might match none, one, or
+			 * are effectively equal).  Each element might match none, one, or
 			 * more of the output columns that are visible to the outer query.
 			 * This means we may have multiple possible representations of the
 			 * sub_pathkey in the context of the outer query.  Ideally we
@@ -1026,6 +1091,7 @@ convert_subquery_pathkeys(PlannerInfo *root, RelOptInfo *rel,
 					 */
 					outer_ec = get_eclass_for_sort_expr(root,
 														outer_expr,
+														NULL,
 												   sub_eclass->ec_opfamilies,
 														sub_expr_type,
 														sub_expr_coll,
@@ -1197,6 +1263,7 @@ cdb_make_pathkey_for_expr(PlannerInfo *root,
 		lefttype = getBaseType(lefttype);
 
 	eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
+									  NULL, /* nullable_relids */ /* GPDB_94_MERGE_FIXME: is NULL ok here? */
 									  mergeopfamilies,
 									  lefttype,
 									  exprCollation(expr),
@@ -1294,6 +1361,7 @@ cdb_pull_up_pathkey(PlannerInfo *root,
 
 	outer_ec = get_eclass_for_sort_expr(root,
 										newexpr,
+										NULL, /* nullable_relids */ /* GPDB_94_MERGE_FIXME: is NULL ok here? */
 										pathkey->pk_eclass->ec_opfamilies,
 										exprType((Node *) newexpr),
 										exprCollation((Node *) newexpr),
@@ -1323,6 +1391,13 @@ cdb_pull_up_pathkey(PlannerInfo *root,
  * The resulting PathKeys are always in canonical form.  (Actually, there
  * is no longer any code anywhere that creates non-canonical PathKeys.)
  *
+ * We assume that root->nullable_baserels is the set of base relids that could
+ * have gone to NULL below the SortGroupClause expressions.  This is okay if
+ * the expressions came from the query's top level (ORDER BY, DISTINCT, etc)
+ * and if this function is only invoked after deconstruct_jointree.  In the
+ * future we might have to make callers pass in the appropriate
+ * nullable-relids set, but for now it seems unnecessary.
+ *
  * 'sortclauses' is a list of SortGroupClause nodes
  * 'tlist' is the targetlist to find the referenced tlist entries in
  */
@@ -1344,6 +1419,7 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
 		Assert(OidIsValid(sortcl->sortop));
 		pathkey = make_pathkey_from_sortop(root,
 										   sortkey,
+										   root->nullable_baserels,
 										   sortcl->sortop,
 										   sortcl->nulls_first,
 										   sortcl->tleSortGroupRef,
@@ -1393,6 +1469,7 @@ make_distribution_keys_for_groupclause(PlannerInfo *root, List *groupclause, Lis
 		Assert(OidIsValid(sortcl->sortop));
 		pathkey = make_pathkey_from_sortop(root,
 										   expr,
+										   root->nullable_baserels,
 										   sortcl->sortop,
 										   sortcl->nulls_first,
 										   sortcl->tleSortGroupRef,
@@ -1453,6 +1530,7 @@ make_pathkeys_for_groupclause_recurse(pathkeys_for_groupclause_context *cxt,
 				Assert(OidIsValid(sortcl->sortop));
 				pathkey = make_pathkey_from_sortop(cxt->root,
 												   sortkey,
+												   cxt->root->nullable_baserels,
 												   sortcl->sortop,
 												   sortcl->nulls_first,
 												   sortcl->tleSortGroupRef,
@@ -1540,7 +1618,7 @@ make_pathkeys_for_groupclause_noncanonical(PlannerInfo *root,
  * right sides.
  *
  * Note this is called before EC merging is complete, so the links won't
- * necessarily point to canonical ECs.	Before they are actually used for
+ * necessarily point to canonical ECs.  Before they are actually used for
  * anything, update_mergeclause_eclasses must be called to ensure that
  * they've been updated to point to canonical ECs.
  */
@@ -1564,6 +1642,7 @@ initialize_mergeclause_eclasses(PlannerInfo *root, RestrictInfo *restrictinfo)
 	restrictinfo->left_ec =
 		get_eclass_for_sort_expr(root,
 								 (Expr *) get_leftop(clause),
+								 restrictinfo->nullable_relids,
 								 restrictinfo->mergeopfamilies,
 								 lefttype,
 								 ((OpExpr *) clause)->inputcollid,
@@ -1573,6 +1652,7 @@ initialize_mergeclause_eclasses(PlannerInfo *root, RestrictInfo *restrictinfo)
 	restrictinfo->right_ec =
 		get_eclass_for_sort_expr(root,
 								 (Expr *) get_rightop(clause),
+								 restrictinfo->nullable_relids,
 								 restrictinfo->mergeopfamilies,
 								 righttype,
 								 ((OpExpr *) clause)->inputcollid,
@@ -1672,7 +1752,7 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 		 * It's possible that multiple matching clauses might have different
 		 * ECs on the other side, in which case the order we put them into our
 		 * result makes a difference in the pathkeys required for the other
-		 * input path.	However this routine hasn't got any info about which
+		 * input path.  However this routine hasn't got any info about which
 		 * order would be best, so we don't worry about that.
 		 *
 		 * It's also possible that the selected mergejoin clauses produce
@@ -1703,7 +1783,7 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
 
 		/*
 		 * If we didn't find a mergeclause, we're done --- any additional
-		 * sort-key positions in the pathkeys are useless.	(But we can still
+		 * sort-key positions in the pathkeys are useless.  (But we can still
 		 * mergejoin if we found at least one mergeclause.)
 		 */
 		if (matched_restrictinfos == NIL)
@@ -1735,7 +1815,7 @@ find_mergeclauses_for_pathkeys(PlannerInfo *root,
  * Returns a pathkeys list that can be applied to the outer relation.
  *
  * Since we assume here that a sort is required, there is no particular use
- * in matching any available ordering of the outerrel.	(joinpath.c has an
+ * in matching any available ordering of the outerrel.  (joinpath.c has an
  * entirely separate code path for considering sort-free mergejoins.)  Rather,
  * it's interesting to try to match the requested query_pathkeys so that a
  * second output sort may be avoided; and failing that, we try to list "more
@@ -2066,7 +2146,7 @@ pathkeys_useful_for_merging(PlannerInfo *root, RelOptInfo *rel, List *pathkeys)
 
 		/*
 		 * If we didn't find a mergeclause, we're done --- any additional
-		 * sort-key positions in the pathkeys are useless.	(But we can still
+		 * sort-key positions in the pathkeys are useless.  (But we can still
 		 * mergejoin if we found at least one mergeclause.)
 		 */
 		if (matched)
@@ -2096,7 +2176,7 @@ right_merge_direction(PlannerInfo *root, PathKey *pathkey)
 			pathkey->pk_opfamily == query_pathkey->pk_opfamily)
 		{
 			/*
-			 * Found a matching query sort column.	Prefer this pathkey's
+			 * Found a matching query sort column.  Prefer this pathkey's
 			 * direction iff it matches.  Note that we ignore pk_nulls_first,
 			 * which means that a sort might be needed anyway ... but we still
 			 * want to prefer only one of the two possible directions, and we
@@ -2172,13 +2252,13 @@ truncate_useless_pathkeys(PlannerInfo *root,
  *		useful according to truncate_useless_pathkeys().
  *
  * This is a cheap test that lets us skip building pathkeys at all in very
- * simple queries.	It's OK to err in the direction of returning "true" when
+ * simple queries.  It's OK to err in the direction of returning "true" when
  * there really aren't any usable pathkeys, but erring in the other direction
  * is bad --- so keep this in sync with the routines above!
  *
  * We could make the test more complex, for example checking to see if any of
  * the joinclauses are really mergejoinable, but that likely wouldn't win
- * often enough to repay the extra cycles.	Queries with neither a join nor
+ * often enough to repay the extra cycles.  Queries with neither a join nor
  * a sort are reasonably common, though, so this much work seems worthwhile.
  */
 bool

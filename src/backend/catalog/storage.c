@@ -3,7 +3,7 @@
  * storage.c
  *	  code to create and destroy physical storage for relations
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -317,9 +317,9 @@ smgrDoPendingDeletes(bool isCommit)
 	PendingRelDelete *next;
 	int			nrels = 0,
 				i = 0,
-				maxrels = 8;
-	SMgrRelation *srels = palloc(maxrels * sizeof(SMgrRelation));
-	char	   *relstorages = palloc(maxrels * sizeof(char));
+				maxrels = 0;
+	SMgrRelation *srels = NULL;
+	char	   *relstorages = NULL;
 
 	prev = NULL;
 	for (pending = pendingDeletes; pending != NULL; pending = next)
@@ -343,8 +343,14 @@ smgrDoPendingDeletes(bool isCommit)
 				SMgrRelation srel;
 				srel = smgropen(pending->relnode.node, pending->backend);
 
-				/* extend the array if needed (double the size) */
-				if (maxrels <= nrels)
+				/* allocate the initial array, or extend it, if needed */
+				if (maxrels == 0)
+				{
+					maxrels = 8;
+					srels = palloc(sizeof(SMgrRelation) * maxrels);
+					relstorages = palloc(maxrels * sizeof(char));
+				}
+				else if (maxrels <= nrels)
 				{
 					maxrels *= 2;
 					srels = repalloc(srels, sizeof(SMgrRelation) * maxrels);
@@ -366,10 +372,10 @@ smgrDoPendingDeletes(bool isCommit)
 
 		for (i = 0; i < nrels; i++)
 			smgrclose(srels[i]);
+
+		pfree(srels);
+		pfree(relstorages);
 	}
-
-	pfree(srels);
-
 }
 
 /*
@@ -379,7 +385,7 @@ smgrDoPendingDeletes(bool isCommit)
  * *ptr is set to point to a freshly-palloc'd array of RelFileNodes.
  * If there are no relations to be deleted, *ptr is set to NULL.
  *
- * Only non-temporary relations are included in the returned list.	This is OK
+ * Only non-temporary relations are included in the returned list.  This is OK
  * because the list is used only in contexts where temporary relations don't
  * matter: we're either writing to the two-phase state file (and transactions
  * that have touched temp tables can't be prepared) or we're writing to xlog

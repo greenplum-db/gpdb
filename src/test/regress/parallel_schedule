@@ -13,7 +13,7 @@ test: tablespace
 # ----------
 # The first group of parallel tests
 # ----------
-test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money rangetypes
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money rangetypes pg_lsn regproc
 
 # Depends on things setup during char, varchar and text
 test: strings
@@ -23,7 +23,7 @@ test: numerology
 # ----------
 # The second group of parallel tests
 # ----------
-test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet macaddr tstypes comments
+test: point lseg line box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet macaddr tstypes comments
 
 # ----------
 # Another group of parallel tests
@@ -108,7 +108,7 @@ test: namespace
 # ----------
 # Another group of parallel tests
 # ----------
-test: privileges security_label collate
+test: privileges security_label collate lock replica_identity
 
 # GPDB_93_MERGE_FIXME: Materialized views have not been "MPP-ified", and don't
 # currently work. Disable test, until it's fixed. (If they still don't work when
@@ -119,7 +119,7 @@ test: privileges security_label collate
 # ----------
 # Another group of parallel tests
 # ----------
-test: alter_generic misc psql
+test: alter_generic misc psql async
 
 # rules cannot run concurrently with any test that creates a view
 #
@@ -137,7 +137,7 @@ test: event_trigger
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json jsonb indirect_toast
 
 # Output of the 'combocid' test contains ctid and cmin values, which will
 # differ depending on how many segments are used. Hence disabled in GPDB.
@@ -166,3 +166,5 @@ test: returning
 # GUCs stats_block_level and stats_row_level, which have been removed from
 # GPDB.
 #test: stats
+
+test: reshuffle reshuffle_ao reshuffle_aoco

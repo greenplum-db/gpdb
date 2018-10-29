@@ -4,7 +4,7 @@
  *	  POSTGRES disk block definitions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/block.h
@@ -37,7 +37,7 @@ typedef uint32 BlockNumber;
 /*
  * BlockId:
  *
- * this is a storage type for BlockNumber.	in other words, this type
+ * this is a storage type for BlockNumber.  in other words, this type
  * is used for on-disk structures (e.g., in HeapTupleData) whereas
  * BlockNumber is the type on which calculations are performed (e.g.,
  * in access method code).

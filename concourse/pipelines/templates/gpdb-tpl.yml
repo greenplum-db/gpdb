@@ -48,9 +48,13 @@ groups:
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
 {% endif %}
+{% if "centos6" in os_types and "CLI" in test_sections %}
+  - pg_upgrade
+{% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icw_planner_centos7_online_expand
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -105,7 +109,6 @@ groups:
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_ud_start
-  - regression_tests_pxf
   - regression_tests_gphdfs_hadoop_centos
   - regression_tests_gphdfs_mapr_centos
 {% endif %}
@@ -187,9 +190,13 @@ groups:
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
 {% endif %}
+{% if "centos6" in os_types and "CLI" in test_sections %}
+  - pg_upgrade
+{% endif %}
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icw_planner_centos7_online_expand
   - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
@@ -281,6 +288,9 @@ groups:
   - compile_gpdb_centos6
   - gptransfer
   - compile_gpdb_centos6
+{% if "centos6" in os_types and "ICW" in test_sections %}
+  - pg_upgrade
+{% endif %}
 
 {% endif %}
 {% if "UD" in test_sections %}
@@ -289,7 +299,6 @@ groups:
 - name: UD
   jobs:
   - gate_ud_start
-  - regression_tests_pxf
   - regression_tests_gphdfs_hadoop_centos
   - regression_tests_gphdfs_mapr_centos
   - compile_gpdb_centos6
@@ -339,7 +348,6 @@ resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "Replication"      in test_sections or
       "ResourceGroups"     in test_sections or
-      "Interconnect"     in test_sections or
       "CLI"      in test_sections or
       "UD"      in test_sections %}
 - name: ccp_src
@@ -371,6 +379,17 @@ resources:
 
 {% endif %}
 {% endif %}
+{% if "centos6" in os_types and "ICW" in test_sections %}
+- name: icw_gporca_centos6_dump
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{test-data-bucket-name}}
+    secret_access_key: {{bucket-secret-access-key}}
+    region_name: {{aws-region}}
+    versioned_file: gpdb6/icw_gporca_centos6/dump.sql.xz
+
+{% endif %}
 {% if "CLI" in test_sections %}
 # a second cluster for gptransfer tests
 - name: terraform2
@@ -389,6 +408,14 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
 
+- name: snowflake-simple-database-dump # remove this resource in favor of icw_gporca_centos6_dump once gpexpand works with a dump of ICW
+  type: s3
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{test-data-bucket-name}}
+    secret_access_key: {{bucket-secret-access-key}}
+    region_name: {{aws-region}}
+    versioned_file: snowflake-simple-database/dump.sql.xz
 {% endif %}
 {% if "aix7" in os_types %}
 - name: aix_environments
@@ -434,21 +461,6 @@ resources:
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-git-remote}}
 
-{% if "UD" in test_sections %}
-- name: pxf_src
-  type: git
-  source:
-    branch: {{pxf-git-branch}}
-    private_key: {{pxf-git-key}}
-    uri: {{pxf-git-remote}}
-
-- name: centos6-gpdb-dev-pxf-hdp
-  type: docker-image
-  source:
-    repository: pivotaldata/gpdb-pxf-dev
-    tag: centos6-hdp-server
-
-{% endif %}
 {% if "ubuntu16" in os_types %}
 - name: debian_release
   type: git
@@ -540,17 +552,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: release_candidates/bin_gpdb_sles11/gpdb6/((rc-build-type))/bin_gpdb.tar.gz
-
-{% endif %}
-{% if "UD" in test_sections %}
-- name: pxf_tarball
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{pxf-aws-bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: pxf_artifacts/prod/gpdb_branch_master/stable/pxf.tar.gz
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
@@ -817,12 +818,6 @@ replication_ccp_gen_cluster_params_anchor: &replication_ccp_gen_cluster_params
   file: ccp_src/ci/tasks/gen_cluster.yml
   params:
     <<: *ccp_gen_cluster_default_params
-
-replication_ccp_run_tests_params_anchor: &replication_ccp_run_tests_params
-  file: gpdb_src/concourse/tasks/run_tinc.yml
-  image: centos-gpdb-dev-6
-  on_success:
-    <<: *ccp_destroy
 
 ## ======================================================================
 ##    _       _
@@ -1159,6 +1154,10 @@ jobs:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
+      DUMP_DB: "true"
+  - put: icw_gporca_centos6_dump
+    params:
+      file: sqldump/dump.sql.xz
 
 - name: icw_gporca_centos6_gpos_memory
   plan:
@@ -1234,6 +1233,27 @@ jobs:
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icw_planner_centos7_online_expand
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+      EXCLUDE_TESTS: instr_in_shmem_setup,instr_in_shmem_terminate,segspace_setup,segspace,segspace_cleanup,cursor,instr_in_shmem,instr_in_shmem_verify
+      ONLINE_EXPAND: true
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -1401,6 +1421,11 @@ jobs:
       - icw_extensions_gpcloud_centos6
 {% endif %}
 {% endif %}
+{% if "centos6" in os_types %}
+    - get: icw_gporca_centos6_dump
+      passed:
+      - icw_gporca_centos6
+{% endif %}
     - get: gpdb_src
       passed:
 {% if "centos6" in os_types %}
@@ -1527,45 +1552,18 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed: [compile_gpdb_centos6]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
+    - get: bin_gpdb
       passed: [compile_gpdb_centos6]
+      resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
-    - get: ccp_src
     - get: centos-gpdb-dev-6
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    <<: *replication_ccp_gen_cluster_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-dev-6
-    config:
-      platform: linux
-      inputs:
-       - name: ccp_src
-       - name: cluster_env_files
-      run:
-        path: bash
-        args:
-        - -c
-        - |
-          set -ex
-          ccp_src/scripts/setup_ssh_to_cluster.sh
-          ssh -t centos@mdw << 'SSH_CMD'
-            sudo yum --cacheonly list installed kernel-devel-$(uname -r)
-          SSH_CMD
-  - task: run_tests
-    <<: *replication_ccp_run_tests_params
     params:
-      TINC_TARGET: mpp_interconnect
-    # ccp_destroy should be part of *replication_ccp_run_tests_params
-  ensure:
-    <<: *set_failed
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+        BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
+      TEST_OS: centos
 {% endif %}
 
 {% endif %}
@@ -1917,13 +1915,16 @@ jobs:
       params:
         submodules:
         - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
+      passed: [gate_icw_end]
     - get: gpdb_binary
       resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
+      passed: [gate_icw_end]
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: icw_gporca_centos6_dump
+      passed: [gate_icw_end]
+    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1937,6 +1938,7 @@ jobs:
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     image: centos-gpdb-dev-6
+    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
@@ -1962,6 +1964,7 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-dev-6
+    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1977,6 +1980,7 @@ jobs:
   - task: pre_run_test_setup
     image: centos-gpdb-dev-6
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
+    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_tinc.yml
     image: centos-gpdb-dev-6
@@ -2091,7 +2095,52 @@ jobs:
   ensure:
     <<: *set_failed_two_clusters
 
+{% if "centos6" in os_types and "ICW" in test_sections %}
+- name: pg_upgrade
+  ensure:
+    <<: *set_failed
+  on_success:
+    <<: *ccp_destroy
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [icw_gporca_centos6]
+    - get: bin_gpdb_centos6
+      passed: [icw_gporca_centos6]
+      trigger: [[ test_trigger ]]
+    - get: icw_gporca_centos6_dump
+      passed: [icw_gporca_centos6]
+    - get: centos-gpdb-dev-6
+    - get: ccp_src
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        instance_type: n1-standard-2
+        number_of_nodes: 2
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+      PLATFORM: centos6
+    input_mapping:
+      gpdb_binary: bin_gpdb_centos6
+  - task: set_gpinitsystem_config
+    file: gpdb_src/concourse/tasks/set_gpinitsystem_config.yml
+    params:
+      GPINITSYSTEM_CONFIG: gpdb_src/concourse/scripts/configurations/pg_upgrade_gpinitsystem_config
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: test_upgrade
+    file: gpdb_src/concourse/tasks/test_upgrade.yml
+    input_mapping:
+      sqldump: icw_gporca_centos6_dump
+    params:
+      NUMBER_OF_NODES: 2
 {% endif %}
+
+{% endif %} # end CLI test_sections
 {% if "UD" in test_sections %}
 ## ======================================================================
 ##  _   _ ____
@@ -2111,28 +2160,6 @@ jobs:
     - get: bin_gpdb_centos6
       passed:
       - compile_gpdb_centos6
-
-- name: regression_tests_pxf
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-    - get: pxf_tarball
-      trigger: [[ test_trigger ]]
-    - get: pxf_src
-    - get: centos6-gpdb-dev-pxf-hdp
-  - task: test_pxf
-    file: pxf_src/concourse/tasks/test_pxf.yml
-    image: centos6-gpdb-dev-pxf-hdp
-    params:
-      GROUP: smoke
-      HADOOP_CLIENT: HDP
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
 
 - name: regression_tests_gphdfs_hadoop_centos
   plan:
@@ -2364,6 +2391,7 @@ jobs:
       - icw_gporca_centos6
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icw_planner_centos7_online_expand
       - icw_gporca_sles11
       - icw_gporca_sles12
       - icw_planner_sles12
@@ -2381,7 +2409,6 @@ jobs:
       - walrep_2
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
-      - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
@@ -2392,6 +2419,7 @@ jobs:
       - MADlib_Test_planner_centos6
       - MADlib_Test_orca_centos7
       - MADlib_Test_planner_centos7
+      - pg_upgrade
       - gpaddmirrors
       - gpexpand
       - gpcheck
@@ -2413,7 +2441,6 @@ jobs:
       - walrep_2
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
-      - regression_tests_pxf
 {% for test_name in CLI_1_suites +
                     CLI_2_suites +
                     CLI_gpexpand_suites %}
@@ -2433,6 +2460,7 @@ jobs:
       - compile_gpdb_centos7
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icw_planner_centos7_online_expand
       - resource_group_centos7
       - MADlib_Test_orca_centos7
       - MADlib_Test_planner_centos7
@@ -2474,8 +2502,8 @@ jobs:
 {% endif %}
 
 ## ======================================================================
-##    __      _                 _                 
-##   /__\_  _| |_ ___ _ __  ___(_) ___  _ __  ___ 
+##    __      _                 _
+##   /__\_  _| |_ ___ _ __  ___(_) ___  _ __  ___
 ##  /_\ \ \/ / __/ _ \ '_ \/ __| |/ _ \| '_ \/ __|
 ## //__  >  <| ||  __/ | | \__ \ | (_) | | | \__ \
 ## \__/ /_/\_\\__\___|_| |_|___/_|\___/|_| |_|___/

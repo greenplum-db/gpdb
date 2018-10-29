@@ -33,6 +33,7 @@ import sys
 import subprocess
 import threading
 import Queue
+import pipes  # for shell-quoting, pipes.quote()
 
 class ReplicaCheck(threading.Thread):
     def __init__(self, segrow, datname, relation_types):
@@ -58,7 +59,7 @@ Mirror Data Directory Location: %s' % (self.host, self.port, self.datname,
         cmd = '''PGOPTIONS='-c gp_session_role=utility' psql -h %s -p %s -c "select * from gp_replica_check('%s', '%s', '%s')" %s''' % (self.host, self.port,
                                                                                                                                         self.ploc, self.mloc,
                                                                                                                                         self.relation_types,
-                                                                                                                                        self.datname)
+                                                                                                                                        pipes.quote(self.datname))
 
         if self.primary_status.strip() == 'd':
             print "Primary segment for content %d is down" % self.content
@@ -76,10 +77,10 @@ def install_extension(databases):
 
     database_list = map(str.strip, databases.split(','))
     print "Creating gp_replica_check extension on databases if needed:"
-    datnames = subprocess.check_output('psql postgres -t -c "%s"' % get_datname_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
+    datnames = subprocess.check_output('psql postgres -t -A -c "%s"' % get_datname_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
     for datname in datnames:
-        if len(datname) > 1 and (datname.strip() in database_list or 'all' in database_list):
-            print subprocess.check_output('psql %s -t -c "%s"' % (datname.strip(), create_ext_sql), stderr=subprocess.STDOUT, shell=True)
+        if len(datname) >= 1 and (datname.strip() in database_list or 'all' in database_list):
+            print subprocess.check_output('psql %s -t -c "%s"' % (pipes.quote(datname), create_ext_sql), stderr=subprocess.STDOUT, shell=True)
 
 # Get the primary and mirror servers, for each content ID.
 def get_segments():
@@ -112,13 +113,12 @@ SELECT datname FROM pg_catalog.pg_database WHERE datname != 'template0'
 
     database_list = map(str.strip, databases.split(','))
 
-    dbrawlist = subprocess.check_output('psql postgres -t -c "%s"' % dblist_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
+    dbrawlist = subprocess.check_output('psql postgres -t -A -c "%s"' % dblist_sql, stderr=subprocess.STDOUT, shell=True).split('\n')
     dblist = []
     for dbrow in dbrawlist:
-        dbname = dbrow.strip()
-        if dbname != '':
-            if dbname in database_list or 'all' in database_list:
-                dblist.append(dbname)
+        dbname = dbrow
+        if len(dbname) >= 1 and (dbname in database_list or 'all' in database_list):
+            dblist.append(dbname)
 
     return dblist
 

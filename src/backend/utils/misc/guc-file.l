@@ -2,7 +2,7 @@
 /*
  * Scanner for the configuration file
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/backend/utils/misc/guc-file.l
  */
@@ -136,6 +136,7 @@ ProcessConfigFile(GucContext context)
 				   *head,
 				   *tail;
 	int			i;
+	char		*ErrorConfFile = ConfigFileName;
 
 	/*
 	 * Config files are processed on startup (by the postmaster only)
@@ -150,7 +151,7 @@ ProcessConfigFile(GucContext context)
 	 */
 	elevel = IsUnderPostmaster ? DEBUG2 : LOG;
 
-	/* Parse the file into a list of option names and values */
+	/* Parse the main config file into a list of option names and values */
 	head = tail = NULL;
 
 	if (!ParseConfigFile(ConfigFileName, NULL, true, 0, elevel, &head, &tail))
@@ -164,6 +165,22 @@ ProcessConfigFile(GucContext context)
 
 	if (!ParseConfigFile(gp_replication_config_filename, NULL, true, 0, elevel, &head, &tail))
 		goto cleanup_list;
+
+	/*
+	 * Parse the PG_AUTOCONF_FILENAME file, if present, after the main file
+	 * to replace any parameters set by ALTER SYSTEM command.  Because this
+	 * file is in the data directory, we can't read it until the DataDir has
+	 * been set.
+	 */
+	if (DataDir &&
+		!ParseConfigFile(PG_AUTOCONF_FILENAME, NULL, false, 0, elevel,
+						 &head, &tail))
+	{
+		/* Syntax error(s) detected in the file, so bail out */
+		error = true;
+		ErrorConfFile = PG_AUTOCONF_FILENAME;
+		goto cleanup_list;
+	}
 
 	/*
 	 * Mark all extant GUC variables as not present in the config file.
@@ -213,6 +230,7 @@ ProcessConfigFile(GucContext context)
 							item->name,
 							item->filename, item->sourceline)));
 			error = true;
+			ErrorConfFile = item->filename;
 		}
 	}
 
@@ -339,7 +357,10 @@ ProcessConfigFile(GucContext context)
 			}
 		}
 		else if (scres == 0)
+		{
 			error = true;
+			ErrorConfFile = item->filename;
+		}
 		/* else no error but variable's active value was not changed */
 
 		/*
@@ -360,8 +381,6 @@ ProcessConfigFile(GucContext context)
 	PgReloadTime = GetCurrentTimestamp();
 
  cleanup_list:
-	FreeConfigVariables(head);
-
 	if (error)
 	{
 		/* During postmaster startup, any error is fatal */
@@ -369,24 +388,31 @@ ProcessConfigFile(GucContext context)
 			ereport(ERROR,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
 					 errmsg("configuration file \"%s\" contains errors",
-							ConfigFileName)));
+							ErrorConfFile)));
 		else if (apply)
 			ereport(elevel,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
 					 errmsg("configuration file \"%s\" contains errors; unaffected changes were applied",
-							ConfigFileName)));
+							ErrorConfFile)));
 		else
 			ereport(elevel,
 					(errcode(ERRCODE_CONFIG_FILE_ERROR),
 					 errmsg("configuration file \"%s\" contains errors; no changes were applied",
-							ConfigFileName)));
+							ErrorConfFile)));
 	}
+
+	/*
+	 * Calling FreeConfigVariables() any earlier than this can cause problems,
+	 * because ErrorConfFile could be pointing to a string that will be freed
+	 * here.
+	 */
+	FreeConfigVariables(head);
 }
 
 /*
  * Given a configuration file or directory location that may be a relative
  * path, return an absolute one.  We consider the location to be relative to
- * the directory holding the calling file.
+ * the directory holding the calling file, or to DataDir if no calling file.
  */
 static char *
 AbsoluteConfigLocation(const char *location, const char *calling_file)
@@ -406,10 +432,8 @@ AbsoluteConfigLocation(const char *location, const char *calling_file)
 		}
 		else
 		{
-			/*
-			 * calling_file is NULL, we make an absolute path from $PGDATA
-			 */
-			join_path_components(abs_path, data_directory, location);
+			AssertState(DataDir);
+			join_path_components(abs_path, DataDir, location);
 			canonicalize_path(abs_path);
 		}
 		return pstrdup(abs_path);
@@ -430,6 +454,7 @@ ParseConfigFile(const char *config_file, const char *calling_file, bool strict,
 				ConfigVariable **head_p,
 				ConfigVariable **tail_p)
 {
+	char	   *abs_path;
 	bool		OK = true;
 	FILE	   *fp;
 
@@ -447,8 +472,8 @@ ParseConfigFile(const char *config_file, const char *calling_file, bool strict,
 		return false;
 	}
 
-	config_file = AbsoluteConfigLocation(config_file,calling_file);
-	fp = AllocateFile(config_file, "r");
+	abs_path = AbsoluteConfigLocation(config_file, calling_file);
+	fp = AllocateFile(abs_path, "r");
 	if (!fp)
 	{
 		if (strict)
@@ -456,19 +481,23 @@ ParseConfigFile(const char *config_file, const char *calling_file, bool strict,
 			ereport(elevel,
 					(errcode_for_file_access(),
 					 errmsg("could not open configuration file \"%s\": %m",
-							config_file)));
-			return false;
+							abs_path)));
+			OK = false;
+			goto cleanup;
 		}
 
 		ereport(LOG,
 				(errmsg("skipping missing configuration file \"%s\"",
-						config_file)));
-		return OK;
+						abs_path)));
+		goto cleanup;
 	}
 
-	OK = ParseConfigFp(fp, config_file, depth, elevel, head_p, tail_p);
+	OK = ParseConfigFp(fp, abs_path, depth, elevel, head_p, tail_p);
 
-	FreeFile(fp);
+cleanup:
+	if (fp)
+		FreeFile(fp);
+	pfree(abs_path);
 
 	return OK;
 }
@@ -617,9 +646,9 @@ ParseConfigFp(FILE *fp, const char *config_file, int depth, int elevel,
 								 depth + 1, elevel,
 								 head_p, tail_p))
 				OK = false;
-				yy_switch_to_buffer(lex_buffer);
-				pfree(opt_name);
-				pfree(opt_value);
+			yy_switch_to_buffer(lex_buffer);
+			pfree(opt_name);
+			pfree(opt_value);
 		}
 		else if (guc_name_compare(opt_name, "include") == 0)
 		{
@@ -735,7 +764,8 @@ ParseConfigDirectory(const char *includedir,
 				(errcode_for_file_access(),
 				 errmsg("could not open configuration directory \"%s\": %m",
 						directory)));
-		return false;
+		status = false;
+		goto cleanup;
 	}
 
 	/*
@@ -790,7 +820,8 @@ ParseConfigDirectory(const char *includedir,
 					(errcode_for_file_access(),
 					 errmsg("could not stat file \"%s\": %m",
 							filename)));
-			return false;
+			status = false;
+			goto cleanup;
 		}
 	}
 
@@ -811,7 +842,9 @@ ParseConfigDirectory(const char *includedir,
 	status = true;
 
 cleanup:
-	FreeDir(d);
+	if (d)
+		FreeDir(d);
+	pfree(directory);
 	return status;
 }
 

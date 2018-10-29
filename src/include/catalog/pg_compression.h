@@ -18,7 +18,7 @@
 #define PG_COMPRESSION
 
 #include "catalog/genbki.h"
-
+#include "fmgr.h"
 #include "utils/relcache.h"
 
 /* ----------------

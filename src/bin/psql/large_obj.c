@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/large_obj.c
  */
@@ -47,7 +47,7 @@ print_lo_result(const char *fmt,...)
 
 
 /*
- * Prepare to do a large-object operation.	We *must* be inside a transaction
+ * Prepare to do a large-object operation.  We *must* be inside a transaction
  * block for all these operations, so start one if needed.
  *
  * Returns TRUE if okay, FALSE if failed.  *own_transaction is set to indicate

@@ -3,7 +3,7 @@
  * compat.c
  *		Reimplementations of various backend functions.
  *
- * Portions Copyright (c) 2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2013-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		contrib/pg_xlogdump/compat.c
@@ -25,6 +25,7 @@
 
 #include "access/twophase.h"
 #include "access/xlog.h"
+#include "catalog/catalog.h"
 #include "catalog/pg_tablespace.h"
 #include "common/relpath.h"
 
@@ -46,7 +47,7 @@ timestamptz_to_time_t(TimestampTz t)
 
 /*
  * Stopgap implementation of timestamptz_to_str that doesn't depend on backend
- * infrastructure.	This will work for timestamps that are within the range
+ * infrastructure.  This will work for timestamps that are within the range
  * of the platform time_t type.  (pg_time_t is compatible except for possibly
  * being wider.)
  *

@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  * Written by Peter Eisentraut <peter_e@gmx.net>.
  *
  * src/include/utils/guc.h
@@ -52,7 +52,7 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
  * configuration file, or by client request in the connection startup
  * packet (e.g., from libpq's PGOPTIONS variable).  Furthermore, an
  * already-started backend will ignore changes to such an option in the
- * configuration file.	The idea is that these options are fixed for a
+ * configuration file.  The idea is that these options are fixed for a
  * given backend once it's started, but they can vary across backends.
  *
  * SUSET options can be set at postmaster startup, with the SIGHUP
@@ -84,11 +84,15 @@ typedef enum
  * dividing line between "interactive" and "non-interactive" sources for
  * error reporting purposes.
  *
- * PGC_S_TEST is used when testing values to be stored as per-database or
- * per-user defaults ("doit" will always be false, so this never gets stored
- * as the actual source of any value).	This is an interactive case, but
- * it needs its own source value because some assign hooks need to make
- * different validity checks in this case.
+ * PGC_S_TEST is used when testing values to be used later ("doit" will always
+ * be false, so this never gets stored as the actual source of any value).
+ * For example, ALTER DATABASE/ROLE tests proposed per-database or per-user
+ * defaults this way, and CREATE FUNCTION tests proposed function SET clauses
+ * this way.  This is an interactive case, but it needs its own source value
+ * because some assign hooks need to make different validity checks in this
+ * case.  In particular, references to nonexistent database objects generally
+ * shouldn't throw hard errors in this case, at most NOTICEs, since the
+ * objects might exist by the time the setting is used for real.
  *
  * NB: see GucSource_Names in guc.c if you change this.
  */
@@ -679,6 +683,7 @@ extern bool parse_real(const char *value, double *result);
 extern int set_config_option(const char *name, const char *value,
 				  GucContext context, GucSource source,
 				  GucAction action, bool changeVal, int elevel);
+extern void AlterSystemSetConfigFile(AlterSystemStmt *setstmt);
 extern char *GetConfigOptionByName(const char *name, const char **varname);
 extern void GetConfigOptionByNum(int varnum, const char **values, bool *noshow);
 extern int	GetNumConfigOptions(void);
@@ -688,7 +693,7 @@ extern void SetPGVariableOptDispatch(const char *name, List *args, bool is_local
 extern void GetPGVariable(const char *name, DestReceiver *dest);
 extern TupleDesc GetPGVariableResultDesc(const char *name);
 
-extern void ExecSetVariableStmt(VariableSetStmt *stmt);
+extern void ExecSetVariableStmt(VariableSetStmt *stmt, bool isTopLevel);
 extern char *ExtractSetVariableArgs(VariableSetStmt *stmt);
 
 extern void ProcessGUCArray(ArrayType *array,
@@ -764,7 +769,6 @@ extern const char *show_gp_session_role(void);
 extern bool check_gp_role(char **newval, void **extra, GucSource source);
 extern void assign_gp_role(const char *newval, void *extra);
 extern const char *show_gp_role(void);
-extern void assign_gp_connections_per_thread(int newval, void *extra);
 extern void assign_gp_write_shared_snapshot(bool newval, void *extra);
 extern bool gpvars_check_gp_resource_manager_policy(char **newval, void **extra, GucSource source);
 extern void gpvars_assign_gp_resource_manager_policy(const char *newval, void *extra);

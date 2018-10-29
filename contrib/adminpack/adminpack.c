@@ -3,7 +3,7 @@
  * adminpack.c
  *
  *
- * Copyright (c) 2002-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2014, PostgreSQL Global Development Group
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
@@ -39,11 +39,6 @@
 #endif
 
 PG_MODULE_MAGIC;
-
-Datum		pg_file_write(PG_FUNCTION_ARGS);
-Datum		pg_file_rename(PG_FUNCTION_ARGS);
-Datum		pg_file_unlink(PG_FUNCTION_ARGS);
-Datum		pg_logdir_ls(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(pg_file_write);
 PG_FUNCTION_INFO_V1(pg_file_rename);
@@ -376,8 +371,7 @@ pg_logdir_ls(PG_FUNCTION_ARGS)
 		/* Seems the timestamp is OK; prepare and return tuple */
 
 		values[0] = timestampbuf;
-		values[1] = palloc(strlen(fctx->location) + strlen(de->d_name) + 2);
-		sprintf(values[1], "%s/%s", fctx->location, de->d_name);
+		values[1] = psprintf("%s/%s", fctx->location, de->d_name);
 
 		tuple = BuildTupleFromCStrings(funcctx->attinmeta, values);
 

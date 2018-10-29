@@ -4,7 +4,7 @@
  *	  POSTGRES internal predicate locking definitions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/predicate_internals.h
@@ -128,7 +128,7 @@ typedef struct SERIALIZABLEXACT
  * The following types are used to provide an ad hoc list for holding
  * SERIALIZABLEXACT objects.  An HTAB is overkill, since there is no need to
  * access these by key -- there are direct pointers to these objects where
- * needed.	If a shared memory list is created, these types can probably be
+ * needed.  If a shared memory list is created, these types can probably be
  * eliminated in favor of using the general solution.
  */
 typedef struct PredXactListElementData
@@ -254,10 +254,10 @@ typedef struct SERIALIZABLEXID
  * be the target of predicate locks.
  *
  * Note that the hash function being used doesn't properly respect tag
- * length -- it will go to a four byte boundary past the end of the tag.
- * If you change this struct, make sure any slack space is initialized,
- * so that any random bytes in the middle or at the end are not included
- * in the hash.
+ * length -- if the length of the structure isn't a multiple of four bytes it
+ * will go to a four byte boundary past the end of the tag.  If you change
+ * this struct, make sure any slack space is initialized, so that any random
+ * bytes in the middle or at the end are not included in the hash.
  *
  * TODO SSI: If we always use the same fields for the same type of value, we
  * should rename these.  Holding off until it's clear there are no exceptions.
@@ -272,7 +272,6 @@ typedef struct PREDICATELOCKTARGETTAG
 	uint32		locktag_field2; /* a 32-bit ID field */
 	uint32		locktag_field3; /* a 32-bit ID field */
 	uint32		locktag_field4; /* a 32-bit ID field */
-	uint32		locktag_field5; /* a 32-bit ID field */
 } PREDICATELOCKTARGETTAG;
 
 /*
@@ -283,12 +282,6 @@ typedef struct PREDICATELOCKTARGETTAG
  * added when a predicate lock is requested on an object which doesn't
  * already have one.  An entry is removed when the last lock is removed from
  * its list.
- *
- * Because a particular target might become obsolete, due to update to a new
- * version, before the reading transaction is obsolete, we need some way to
- * prevent errors from reuse of a tuple ID.  Rather than attempting to clean
- * up the targets as the related tuples are pruned or vacuumed, we check the
- * xmin on access.	This should be far less costly.
  */
 typedef struct PREDICATELOCKTARGET
 {
@@ -318,9 +311,9 @@ typedef struct PREDICATELOCKTAG
  * The PREDICATELOCK struct represents an individual lock.
  *
  * An entry can be created here when the related database object is read, or
- * by promotion of multiple finer-grained targets.	All entries related to a
+ * by promotion of multiple finer-grained targets.  All entries related to a
  * serializable transaction are removed when that serializable transaction is
- * cleaned up.	Entries can also be removed when they are combined into a
+ * cleaned up.  Entries can also be removed when they are combined into a
  * single coarser-grained lock entry.
  */
 typedef struct PREDICATELOCK
@@ -391,29 +384,26 @@ typedef struct PredicateLockData
 
 /*
  * These macros define how we map logical IDs of lockable objects into the
- * physical fields of PREDICATELOCKTARGETTAG.	Use these to set up values,
+ * physical fields of PREDICATELOCKTARGETTAG.   Use these to set up values,
  * rather than accessing the fields directly.  Note multiple eval of target!
  */
 #define SET_PREDICATELOCKTARGETTAG_RELATION(locktag,dboid,reloid) \
 	((locktag).locktag_field1 = (dboid), \
 	 (locktag).locktag_field2 = (reloid), \
 	 (locktag).locktag_field3 = InvalidBlockNumber, \
-	 (locktag).locktag_field4 = InvalidOffsetNumber, \
-	 (locktag).locktag_field5 = InvalidTransactionId)
+	 (locktag).locktag_field4 = InvalidOffsetNumber)
 
 #define SET_PREDICATELOCKTARGETTAG_PAGE(locktag,dboid,reloid,blocknum) \
 	((locktag).locktag_field1 = (dboid), \
 	 (locktag).locktag_field2 = (reloid), \
 	 (locktag).locktag_field3 = (blocknum), \
-	 (locktag).locktag_field4 = InvalidOffsetNumber, \
-	 (locktag).locktag_field5 = InvalidTransactionId)
+	 (locktag).locktag_field4 = InvalidOffsetNumber)
 
-#define SET_PREDICATELOCKTARGETTAG_TUPLE(locktag,dboid,reloid,blocknum,offnum,xmin) \
+#define SET_PREDICATELOCKTARGETTAG_TUPLE(locktag,dboid,reloid,blocknum,offnum) \
 	((locktag).locktag_field1 = (dboid), \
 	 (locktag).locktag_field2 = (reloid), \
 	 (locktag).locktag_field3 = (blocknum), \
-	 (locktag).locktag_field4 = (offnum), \
-	 (locktag).locktag_field5 = (xmin))
+	 (locktag).locktag_field4 = (offnum))
 
 #define GET_PREDICATELOCKTARGETTAG_DB(locktag) \
 	((Oid) (locktag).locktag_field1)
@@ -423,8 +413,6 @@ typedef struct PredicateLockData
 	((BlockNumber) (locktag).locktag_field3)
 #define GET_PREDICATELOCKTARGETTAG_OFFSET(locktag) \
 	((OffsetNumber) (locktag).locktag_field4)
-#define GET_PREDICATELOCKTARGETTAG_XMIN(locktag) \
-	((TransactionId) (locktag).locktag_field5)
 #define GET_PREDICATELOCKTARGETTAG_TYPE(locktag)							 \
 	(((locktag).locktag_field4 != InvalidOffsetNumber) ? PREDLOCKTAG_TUPLE : \
 	 (((locktag).locktag_field3 != InvalidBlockNumber) ? PREDLOCKTAG_PAGE :   \
@@ -462,6 +450,7 @@ typedef struct TwoPhasePredicateXactRecord
 typedef struct TwoPhasePredicateLockRecord
 {
 	PREDICATELOCKTARGETTAG target;
+	uint32		filler;			/* to avoid length change in back-patched fix */
 } TwoPhasePredicateLockRecord;
 
 typedef struct TwoPhasePredicateRecord

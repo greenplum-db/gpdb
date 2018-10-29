@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/test/regress/pg_regress_main.c
@@ -27,9 +27,9 @@
  */
 static PID_TYPE
 psql_start_test(const char *testname,
-				_stringlist ** resultfiles,
-				_stringlist ** expectfiles,
-				_stringlist ** tags)
+				_stringlist **resultfiles,
+				_stringlist **expectfiles,
+				_stringlist **tags)
 {
 	PID_TYPE	pid;
 	char		infile[MAXPGPATH];
@@ -98,7 +98,7 @@ psql_start_test(const char *testname,
 						   "%s ", launcher);
 
 	snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset,
-			 "%s " SYSTEMQUOTE "\"%s%spsql\" -X -a -q -d \"%s\" < \"%s\" > \"%s\" 2>&1" SYSTEMQUOTE,
+			 "%s \"%s%spsql\" -X -a -q -d \"%s\" < \"%s\" > \"%s\" 2>&1",
 			 use_utility_mode ? "env PGOPTIONS='-c gp_session_role=utility'" : "",
 			 psqldir ? psqldir : "",
 			 psqldir ? "/" : "",
@@ -119,7 +119,7 @@ psql_start_test(const char *testname,
 }
 
 static void
-psql_init(void)
+psql_init(int argc, char **argv)
 {
 	/* set default regression database name */
 	add_stringlist_item(&dblist, "regression");

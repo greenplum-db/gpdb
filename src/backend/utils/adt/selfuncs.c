@@ -12,7 +12,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -74,7 +74,7 @@
  *		float8 oprjoin (internal, oid, internal, int2, internal);
  *
  * (Before Postgres 8.4, join estimators had only the first four of these
- * parameters.	That signature is still allowed, but deprecated.)  The
+ * parameters.  That signature is still allowed, but deprecated.)  The
  * relationship between jointype and sjinfo is explained in the comments for
  * clause_selectivity() --- the short version is that jointype is usually
  * best ignored in favor of examining sjinfo.
@@ -204,7 +204,7 @@ static List *add_predicate_to_quals(IndexOptInfo *index, List *indexQuals);
  *
  * Note: this routine is also used to estimate selectivity for some
  * operators that are not "=" but have comparable selectivity behavior,
- * such as "~=" (geometric approximate-match).	Even for "=", we must
+ * such as "~=" (geometric approximate-match).  Even for "=", we must
  * keep in mind that the left and right datatypes may differ.
  */
 Datum
@@ -268,7 +268,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 
 	/*
 	 * If we matched the var to a unique index or DISTINCT clause, assume
-	 * there is exactly one match regardless of anything else.	(This is
+	 * there is exactly one match regardless of anything else.  (This is
 	 * slightly bogus, since the index or clause's equality operator might be
 	 * different from ours, but it's much more likely to be right than
 	 * ignoring the information.)
@@ -288,7 +288,7 @@ var_eq_const(VariableStatData *vardata, Oid operator,
 		/*
 		 * Is the constant "=" to any of the column's most common values?
 		 * (Although the given operator may not really be "=", we will assume
-		 * that seeing whether it returns TRUE is an appropriate test.	If you
+		 * that seeing whether it returns TRUE is an appropriate test.  If you
 		 * don't like this, maybe you shouldn't be using eqsel for your
 		 * operator...)
 		 */
@@ -394,7 +394,7 @@ var_eq_non_const(VariableStatData *vardata, Oid operator,
 
 	/*
 	 * If we matched the var to a unique index or DISTINCT clause, assume
-	 * there is exactly one match regardless of anything else.	(This is
+	 * there is exactly one match regardless of anything else.  (This is
 	 * slightly bogus, since the index or clause's equality operator might be
 	 * different from ours, but it's much more likely to be right than
 	 * ignoring the information.)
@@ -417,7 +417,7 @@ var_eq_non_const(VariableStatData *vardata, Oid operator,
 		 * result averaged over all possible values whether common or
 		 * uncommon.  (Essentially, we are assuming that the not-yet-known
 		 * comparison value is equally likely to be any of the possible
-		 * values, regardless of their frequency in the table.	Is that a good
+		 * values, regardless of their frequency in the table.  Is that a good
 		 * idea?)
 		 */
 		selec = 1.0 - stats->stanullfrac;
@@ -636,7 +636,7 @@ mcv_selectivity(VariableStatData   *vardata,
  * essentially using the histogram just as a representative sample.  However,
  * small histograms are unlikely to be all that representative, so the caller
  * should be prepared to fall back on some other estimation approach when the
- * histogram is missing or very small.	It may also be prudent to combine this
+ * histogram is missing or very small.  It may also be prudent to combine this
  * approach with another one when the histogram is small.
  *
  * If the actual histogram size is not at least min_hist_size, we won't bother
@@ -654,7 +654,7 @@ mcv_selectivity(VariableStatData   *vardata,
  *
  * Note that the result disregards both the most-common-values (if any) and
  * null entries.  The caller is expected to combine this result with
- * statistics for those portions of the column population.	It may also be
+ * statistics for those portions of the column population.  It may also be
  * prudent to clamp the result range, ie, disbelieve exact 0 or 1 outputs.
  */
 double
@@ -760,7 +760,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 			 *
 			 * If the binary search accesses the first or last histogram
 			 * entry, we try to replace that endpoint with the true column min
-			 * or max as found by get_actual_variable_range().	This
+			 * or max as found by get_actual_variable_range().  This
 			 * ameliorates misestimates when the min or max is moving as a
 			 * result of changes since the last ANALYZE.  Note that this could
 			 * result in effectively including MCVs into the histogram that
@@ -864,7 +864,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 
 						/*
 						 * Watch out for the possibility that we got a NaN or
-						 * Infinity from the division.	This can happen
+						 * Infinity from the division.  This can happen
 						 * despite the previous checks, if for example "low"
 						 * is -Infinity.
 						 */
@@ -879,7 +879,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 					 * Ideally we'd produce an error here, on the grounds that
 					 * the given operator shouldn't have scalarXXsel
 					 * registered as its selectivity func unless we can deal
-					 * with its operand types.	But currently, all manner of
+					 * with its operand types.  But currently, all manner of
 					 * stuff is invoking scalarXXsel, so give a default
 					 * estimate until that can be fixed.
 					 */
@@ -905,7 +905,7 @@ ineq_histogram_selectivity(PlannerInfo *root,
 
 			/*
 			 * The histogram boundaries are only approximate to begin with,
-			 * and may well be out of date anyway.	Therefore, don't believe
+			 * and may well be out of date anyway.  Therefore, don't believe
 			 * extremely small or large selectivity estimates --- unless we
 			 * got actual current endpoint values from the table.
 			 */
@@ -1102,7 +1102,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 
 	/*
 	 * If this is for a NOT LIKE or similar operator, get the corresponding
-	 * positive-match operator and work with that.	Set result to the correct
+	 * positive-match operator and work with that.  Set result to the correct
 	 * default estimate, too.
 	 */
 	if (negate)
@@ -1188,7 +1188,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 
 	/*
 	 * Pull out any fixed prefix implied by the pattern, and estimate the
-	 * fractional selectivity of the remainder of the pattern.	Unlike many of
+	 * fractional selectivity of the remainder of the pattern.  Unlike many of
 	 * the other functions in this file, we use the pattern operator's actual
 	 * collation for this step.  This is not because we expect the collation
 	 * to make a big difference in the selectivity estimate (it seldom would),
@@ -1306,7 +1306,7 @@ patternsel(PG_FUNCTION_ARGS, Pattern_Type ptype, bool negate)
 		/*
 		 * If we have most-common-values info, add up the fractions of the MCV
 		 * entries that satisfy MCV OP PATTERN.  These fractions contribute
-		 * directly to the result selectivity.	Also add up the total fraction
+		 * directly to the result selectivity.  Also add up the total fraction
 		 * represented by MCV entries.
 		 */
 		mcv_selec = mcv_selectivity(&vardata, &opproc, constval, true,
@@ -1501,30 +1501,28 @@ booltestsel(PlannerInfo *root, BoolTestType booltesttype, Node *arg,
 			/*
 			 * No most-common-value info available. Still have null fraction
 			 * information, so use it for IS [NOT] UNKNOWN. Otherwise adjust
-			 * for null fraction and assume an even split for boolean tests.
+			 * for null fraction and assume a 50-50 split of TRUE and FALSE.
 			 */
 			switch (booltesttype)
 			{
 				case IS_UNKNOWN:
-
-					/*
-					 * Use freq_null directly.
-					 */
+					/* select only NULL values */
 					selec = freq_null;
 					break;
 				case IS_NOT_UNKNOWN:
-
-					/*
-					 * Select not unknown (not null) values. Calculate from
-					 * freq_null.
-					 */
+					/* select non-NULL values */
 					selec = 1.0 - freq_null;
 					break;
 				case IS_TRUE:
-				case IS_NOT_TRUE:
 				case IS_FALSE:
-				case IS_NOT_FALSE:
+					/* Assume we select half of the non-NULL values */
 					selec = (1.0 - freq_null) / 2.0;
+					break;
+				case IS_NOT_TRUE:
+				case IS_NOT_FALSE:
+					/* Assume we select NULLs plus half of the non-NULLs */
+					/* equiv. to freq_null + (1.0 - freq_null) / 2.0 */
+					selec = (freq_null + 1.0) / 2.0;
 					break;
 				default:
 					elog(ERROR, "unrecognized booltesttype: %d",
@@ -1727,6 +1725,10 @@ scalararraysel(PlannerInfo *root,
 	leftop = (Node *) linitial(clause->args);
 	rightop = (Node *) lsecond(clause->args);
 
+	/* aggressively reduce both sides to constants */
+	leftop = estimate_expression_value(root, leftop);
+	rightop = estimate_expression_value(root, rightop);
+
 	/* get nominal (after relabeling) element type of rightop */
 	nominal_element_type = get_base_element_type(exprType(rightop));
 	if (!OidIsValid(nominal_element_type))
@@ -1827,7 +1829,7 @@ scalararraysel(PlannerInfo *root,
 
 		/*
 		 * For generic operators, we assume the probability of success is
-		 * independent for each array element.	But for "= ANY" or "<> ALL",
+		 * independent for each array element.  But for "= ANY" or "<> ALL",
 		 * if the array elements are distinct (which'd typically be the case)
 		 * then the probabilities are disjoint, and we should just sum them.
 		 *
@@ -2233,9 +2235,9 @@ eqjoinsel_inner(Oid operator,
 	if (have_mcvs1 && have_mcvs2)
 	{
 		/*
-		 * We have most-common-value lists for both relations.	Run through
+		 * We have most-common-value lists for both relations.  Run through
 		 * the lists to see which MCVs actually join to each other with the
-		 * given operator.	This allows us to determine the exact join
+		 * given operator.  This allows us to determine the exact join
 		 * selectivity for the portion of the relations represented by the MCV
 		 * lists.  We still have to estimate for the remaining population, but
 		 * in a skewed distribution this gives us a big leg up in accuracy.
@@ -2267,7 +2269,7 @@ eqjoinsel_inner(Oid operator,
 
 		/*
 		 * Note we assume that each MCV will match at most one member of the
-		 * other MCV list.	If the operator isn't really equality, there could
+		 * other MCV list.  If the operator isn't really equality, there could
 		 * be multiple matches --- but we don't look for them, both for speed
 		 * and because the math wouldn't add up...
 		 */
@@ -2422,7 +2424,7 @@ eqjoinsel_semi(Oid operator,
 
 	/*
 	 * We clamp nd2 to be not more than what we estimate the inner relation's
-	 * size to be.	This is intuitively somewhat reasonable since obviously
+	 * size to be.  This is intuitively somewhat reasonable since obviously
 	 * there can't be more than that many distinct values coming from the
 	 * inner rel.  The reason for the asymmetry (ie, that we don't clamp nd1
 	 * likewise) is that this is the only pathway by which restriction clauses
@@ -2461,9 +2463,9 @@ eqjoinsel_semi(Oid operator,
 	if (have_mcvs1 && have_mcvs2 && OidIsValid(operator))
 	{
 		/*
-		 * We have most-common-value lists for both relations.	Run through
+		 * We have most-common-value lists for both relations.  Run through
 		 * the lists to see which MCVs actually join to each other with the
-		 * given operator.	This allows us to determine the exact join
+		 * given operator.  This allows us to determine the exact join
 		 * selectivity for the portion of the relations represented by the MCV
 		 * lists.  We still have to estimate for the remaining population, but
 		 * in a skewed distribution this gives us a big leg up in accuracy.
@@ -2494,7 +2496,7 @@ eqjoinsel_semi(Oid operator,
 
 		/*
 		 * Note we assume that each MCV will match at most one member of the
-		 * other MCV list.	If the operator isn't really equality, there could
+		 * other MCV list.  If the operator isn't really equality, there could
 		 * be multiple matches --- but we don't look for them, both for speed
 		 * and because the math wouldn't add up...
 		 */
@@ -2531,7 +2533,7 @@ eqjoinsel_semi(Oid operator,
 
 		/*
 		 * Now we need to estimate the fraction of relation 1 that has at
-		 * least one join partner.	We know for certain that the matched MCVs
+		 * least one join partner.  We know for certain that the matched MCVs
 		 * do, so that gives us a lower bound, but we're really in the dark
 		 * about everything else.  Our crude approach is: if nd1 <= nd2 then
 		 * assume all non-null rel1 rows have join partners, else assume for
@@ -3129,11 +3131,11 @@ add_unique_group_var(PlannerInfo *root, List *varinfos,
  * case (all possible cross-product terms actually appear as groups) since
  * very often the grouped-by Vars are highly correlated.  Our current approach
  * is as follows:
- *	1.	Expressions yielding boolean are assumed to contribute two groups,
+ *	1.  Expressions yielding boolean are assumed to contribute two groups,
  *		independently of their content, and are ignored in the subsequent
- *		steps.	This is mainly because tests like "col IS NULL" break the
+ *		steps.  This is mainly because tests like "col IS NULL" break the
  *		heuristic used in step 2 especially badly.
- *	2.	Reduce the given expressions to a list of unique Vars used.  For
+ *	2.  Reduce the given expressions to a list of unique Vars used.  For
  *		example, GROUP BY a, a + b is treated the same as GROUP BY a, b.
  *		It is clearly correct not to count the same Var more than once.
  *		It is also reasonable to treat f(x) the same as x: f() cannot
@@ -3143,14 +3145,14 @@ add_unique_group_var(PlannerInfo *root, List *varinfos,
  *		As a special case, if a GROUP BY expression can be matched to an
  *		expressional index for which we have statistics, then we treat the
  *		whole expression as though it were just a Var.
- *	3.	If the list contains Vars of different relations that are known equal
+ *	3.  If the list contains Vars of different relations that are known equal
  *		due to equivalence classes, then drop all but one of the Vars from each
  *		known-equal set, keeping the one with smallest estimated # of values
  *		(since the extra values of the others can't appear in joined rows).
  *		Note the reason we only consider Vars of different relations is that
  *		if we considered ones of the same rel, we'd be double-counting the
  *		restriction selectivity of the equality in the next step.
- *	4.	For Vars within a single source rel, we multiply together the numbers
+ *	4.  For Vars within a single source rel, we multiply together the numbers
  *		of values, clamp to the number of rows in the rel (divided by 10 if
  *		more than one Var), and then multiply by the selectivity of the
  *		restriction clauses for that rel.  When there's more than one Var,
@@ -3161,7 +3163,7 @@ add_unique_group_var(PlannerInfo *root, List *varinfos,
  *		by the restriction selectivity is effectively assuming that the
  *		restriction clauses are independent of the grouping, which is a crummy
  *		assumption, but it's hard to do better.
- *	5.	If there are Vars from multiple rels, we repeat step 4 for each such
+ *	5.  If there are Vars from multiple rels, we repeat step 4 for each such
  *		rel, and multiply the results together.
  * Note that rels not containing grouped Vars are ignored completely, as are
  * join clauses.  Such rels cannot increase the number of groups, and we
@@ -3192,7 +3194,7 @@ estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows)
 		return 1.0;
 
 	/*
-	 * Count groups derived from boolean grouping expressions.	For other
+	 * Count groups derived from boolean grouping expressions.  For other
 	 * expressions, find the unique Vars used, treating an expression as a Var
 	 * if we can find stats for it.  For each one, record the statistical
 	 * estimate of number of distinct values (total in its table, without
@@ -3281,7 +3283,7 @@ estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows)
 	 * Group Vars by relation and estimate total numdistinct.
 	 *
 	 * For each iteration of the outer loop, we process the frontmost Var in
-	 * varinfos, plus all other Vars in the same relation.	We remove these
+	 * varinfos, plus all other Vars in the same relation.  We remove these
 	 * Vars from the newvarinfos list for the next iteration. This is the
 	 * easiest way to group Vars of same rel together.
 	 */
@@ -3384,11 +3386,11 @@ estimate_num_groups(PlannerInfo *root, List *groupExprs, double input_rows)
  * distribution, so this will have to do for now.
  *
  * We are passed the number of buckets the executor will use for the given
- * input relation.	If the data were perfectly distributed, with the same
+ * input relation.  If the data were perfectly distributed, with the same
  * number of tuples going into each available bucket, then the bucketsize
  * fraction would be 1/nbuckets.  But this happy state of affairs will occur
  * only if (a) there are at least nbuckets distinct data values, and (b)
- * we have a not-too-skewed data distribution.	Otherwise the buckets will
+ * we have a not-too-skewed data distribution.  Otherwise the buckets will
  * be nonuniformly occupied.  If the other relation in the join has a key
  * distribution similar to this one's, then the most-loaded buckets are
  * exactly those that will be probed most often.  Therefore, the "average"
@@ -3563,7 +3565,7 @@ convert_to_scalar(Datum value, Oid valuetypid, double *scaledvalue,
 	 * operators to estimate selectivity for the other's.  This is outright
 	 * wrong in some cases --- in particular signed versus unsigned
 	 * interpretation could trip us up.  But it's useful enough in the
-	 * majority of cases that we do it anyway.	Should think about more
+	 * majority of cases that we do it anyway.  Should think about more
 	 * rigorous ways to do it.
 	 */
 	switch (valuetypid)
@@ -4146,7 +4148,7 @@ get_restriction_variable(PlannerInfo *root, List *args, int varRelid,
 	right = (Node *) lsecond(args);
 
 	/*
-	 * Examine both sides.	Note that when varRelid is nonzero, Vars of other
+	 * Examine both sides.  Note that when varRelid is nonzero, Vars of other
 	 * relations will be treated as pseudoconstants.
 	 */
 	examine_variable(root, left, varRelid, vardata);
@@ -4389,7 +4391,7 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 
 	/*
 	 * Okay, it's a more complicated expression.  Determine variable
-	 * membership.	Note that when varRelid isn't zero, only vars of that
+	 * membership.  Note that when varRelid isn't zero, only vars of that
 	 * relation are considered "real" vars.
 	 */
 	varnos = pull_varnos(basenode);
@@ -4438,13 +4440,13 @@ examine_variable(PlannerInfo *root, Node *node, int varRelid,
 	if (onerel)
 	{
 		/*
-		 * We have an expression in vars of a single relation.	Try to match
+		 * We have an expression in vars of a single relation.  Try to match
 		 * it to expressional index columns, in hopes of finding some
 		 * statistics.
 		 *
 		 * XXX it's conceivable that there are multiple matches with different
 		 * index opfamilies; if so, we need to pick one that matches the
-		 * operator we are estimating for.	FIXME later.
+		 * operator we are estimating for.  FIXME later.
 		 */
 		ListCell   *ilist;
 
@@ -4643,6 +4645,12 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 		TargetEntry *ste;
 
 		/*
+		 * Punt if it's a whole-row var rather than a plain column reference.
+		 */
+		if (var->varattno == InvalidAttrNumber)
+			return;
+
+		/*
 		 * Punt if subquery uses set operations or GROUP BY, as these will
 		 * mash underlying columns' stats beyond recognition.  (Set ops are
 		 * particularly nasty; if we forged ahead, we would return stats
@@ -4709,7 +4717,7 @@ examine_simple_variable(PlannerInfo *root, Var *var,
 		 *
 		 * This is probably a harsher restriction than necessary; it's
 		 * certainly OK for the selectivity estimator (which is a C function,
-		 * and therefore omnipotent anyway) to look at the statistics.	But
+		 * and therefore omnipotent anyway) to look at the statistics.  But
 		 * many selectivity estimators will happily *invoke the operator
 		 * function* to try to work out a good estimate - and that's not OK.
 		 * So for now, don't dig down for stats.
@@ -4771,7 +4779,7 @@ get_variable_numdistinct(VariableStatData *vardata, bool *isdefault)
 	}
 
 	/*
-	 * Determine the stadistinct value to use.	There are cases where we can
+	 * Determine the stadistinct value to use.  There are cases where we can
 	 * get an estimate even without a pg_statistic entry, or can get a better
 	 * value than is in pg_statistic.
 	 */
@@ -4899,7 +4907,7 @@ get_variable_range(PlannerInfo *root, VariableStatData *vardata, Oid sortop,
 
 	/*
 	 * XXX It's very tempting to try to use the actual column min and max, if
-	 * we can get them relatively-cheaply with an index probe.	However, since
+	 * we can get them relatively-cheaply with an index probe.  However, since
 	 * this function is called many times during join planning, that could
 	 * have unpleasant effects on planning speed.  Need more investigation
 	 * before enabling this.
@@ -5114,6 +5122,7 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			HeapTuple	tup;
 			Datum		values[INDEX_MAX_KEYS];
 			bool		isnull[INDEX_MAX_KEYS];
+			SnapshotData SnapshotDirty;
 
 			estate = CreateExecutorState();
 			econtext = GetPerTupleExprContext(estate);
@@ -5136,6 +5145,7 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			slot = MakeSingleTupleTableSlot(RelationGetDescr(heapRel));
 			econtext->ecxt_scantuple = slot;
 			get_typlenbyval(vardata->atttype, &typLen, &typByVal);
+			InitDirtySnapshot(SnapshotDirty);
 
 			/* set up an IS NOT NULL scan key so that we ignore nulls */
 			ScanKeyEntryInitialize(&scankeys[0],
@@ -5152,7 +5162,22 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			/* If min is requested ... */
 			if (min)
 			{
-				index_scan = index_beginscan(heapRel, indexRel, SnapshotNow,
+				/*
+				 * In principle, we should scan the index with our current
+				 * active snapshot, which is the best approximation we've got
+				 * to what the query will see when executed.  But that won't
+				 * be exact if a new snap is taken before running the query,
+				 * and it can be very expensive if a lot of uncommitted rows
+				 * exist at the end of the index (because we'll laboriously
+				 * fetch each one and reject it).  What seems like a good
+				 * compromise is to use SnapshotDirty.  That will accept
+				 * uncommitted rows, and thus avoid fetching multiple heap
+				 * tuples in this scenario.  On the other hand, it will reject
+				 * known-dead rows, and thus not give a bogus answer when the
+				 * extreme value has been deleted; that case motivates not
+				 * using SnapshotAny here.
+				 */
+				index_scan = index_beginscan(heapRel, indexRel, &SnapshotDirty,
 											 1, 0);
 				index_rescan(index_scan, scankeys, 1, NULL, 0);
 
@@ -5184,7 +5209,7 @@ get_actual_variable_range(PlannerInfo *root, VariableStatData *vardata,
 			/* If max is requested, and we didn't find the index is empty */
 			if (max && have_data)
 			{
-				index_scan = index_beginscan(heapRel, indexRel, SnapshotNow,
+				index_scan = index_beginscan(heapRel, indexRel, &SnapshotDirty,
 											 1, 0);
 				index_rescan(index_scan, scankeys, 1, NULL, 0);
 
@@ -5284,7 +5309,7 @@ find_join_input_rel(PlannerInfo *root, Relids relids)
  * Check whether char is a letter (and, hence, subject to case-folding)
  *
  * In multibyte character sets, we can't use isalpha, and it does not seem
- * worth trying to convert to wchar_t to use iswalpha.	Instead, just assume
+ * worth trying to convert to wchar_t to use iswalpha.  Instead, just assume
  * any multibyte char is potentially case-varying.
  */
 static int
@@ -5536,7 +5561,7 @@ pattern_fixed_prefix(Const *patt, Pattern_Type ptype, Oid collation,
  * together with info about MCVs and NULLs.
  *
  * We use the >= and < operators from the specified btree opfamily to do the
- * estimation.	The given variable and Const must be of the associated
+ * estimation.  The given variable and Const must be of the associated
  * datatype.
  *
  * XXX Note: we make use of the upper bound to estimate operator selectivity
@@ -5595,7 +5620,7 @@ prefix_selectivity(PlannerInfo *root, VariableStatData *vardata,
 
 		/*
 		 * Merge the two selectivities in the same way as for a range query
-		 * (see clauselist_selectivity()).	Note that we don't need to worry
+		 * (see clauselist_selectivity()).  Note that we don't need to worry
 		 * about double-exclusion of nulls, since ineq_histogram_selectivity
 		 * doesn't count those anyway.
 		 */
@@ -5845,7 +5870,7 @@ byte_increment(unsigned char *ptr, int len)
  * that is not a bulletproof guarantee that an extension of the string might
  * not sort after it; an example is that "foo " is less than "foo!", but it
  * is not clear that a "dictionary" sort ordering will consider "foo!" less
- * than "foo bar".	CAUTION: Therefore, this function should be used only for
+ * than "foo bar".  CAUTION: Therefore, this function should be used only for
  * estimation purposes when working in a non-C collation.
  *
  * To try to catch most cases where an extended string might otherwise sort
@@ -6102,7 +6127,7 @@ string_to_bytea_const(const char *str, size_t str_len)
  * genericcostestimate is a general-purpose estimator that can be used for
  * most index types.  In some cases we use genericcostestimate as the base
  * code and then incorporate additional index-type-specific knowledge in
- * the type-specific calling function.	To avoid code duplication, we make
+ * the type-specific calling function.  To avoid code duplication, we make
  * genericcostestimate return a number of intermediate values as well as
  * its preliminary estimates of the output cost values.  The GenericCosts
  * struct includes all these values.
@@ -6223,7 +6248,7 @@ genericcostestimate(PlannerInfo *root,
 	 *
 	 * In practice access to upper index levels is often nearly free because
 	 * those tend to stay in cache under load; moreover, the cost involved is
-	 * highly dependent on index type.	We therefore ignore such costs here
+	 * highly dependent on index type.  We therefore ignore such costs here
 	 * and leave it to the caller to add a suitable charge if needed.
 	 */
 	if (index->pages > 1 && index->tuples > 1)
@@ -6242,9 +6267,9 @@ genericcostestimate(PlannerInfo *root,
 	 * The above calculations are all per-index-scan.  However, if we are in a
 	 * nestloop inner scan, we can expect the scan to be repeated (with
 	 * different search keys) for each row of the outer relation.  Likewise,
-	 * ScalarArrayOpExpr quals result in multiple index scans.	This creates
+	 * ScalarArrayOpExpr quals result in multiple index scans.  This creates
 	 * the potential for cache effects to reduce the number of disk page
-	 * fetches needed.	We want to estimate the average per-scan I/O cost in
+	 * fetches needed.  We want to estimate the average per-scan I/O cost in
 	 * the presence of caching.
 	 *
 	 * We use the Mackert-Lohman formula (see costsize.c for details) to
@@ -6291,7 +6316,7 @@ genericcostestimate(PlannerInfo *root,
 	 * evaluated once at the start of the scan to reduce them to runtime keys
 	 * to pass to the index AM (see nodeIndexscan.c).  We model the per-tuple
 	 * CPU costs as cpu_index_tuple_cost plus one cpu_operator_cost per
-	 * indexqual operator.	Because we have numIndexTuples as a per-scan
+	 * indexqual operator.  Because we have numIndexTuples as a per-scan
 	 * number, we have to multiply by num_sa_scans to get the correct result
 	 * for ScalarArrayOpExpr cases.  Similarly add in costs for any index
 	 * ORDER BY expressions.
@@ -6338,16 +6363,16 @@ genericcostestimate(PlannerInfo *root,
  * ANDing the index predicate with the explicitly given indexquals produces
  * a more accurate idea of the index's selectivity.  However, we need to be
  * careful not to insert redundant clauses, because clauselist_selectivity()
- * is easily fooled into computing a too-low selectivity estimate.	Our
+ * is easily fooled into computing a too-low selectivity estimate.  Our
  * approach is to add only the predicate clause(s) that cannot be proven to
- * be implied by the given indexquals.	This successfully handles cases such
+ * be implied by the given indexquals.  This successfully handles cases such
  * as a qual "x = 42" used with a partial index "WHERE x >= 40 AND x < 50".
  * There are many other cases where we won't detect redundancy, leading to a
  * too-low selectivity estimate, which will bias the system in favor of using
- * partial indexes where possible.	That is not necessarily bad though.
+ * partial indexes where possible.  That is not necessarily bad though.
  *
  * Note that indexQuals contains RestrictInfo nodes while the indpred
- * does not, so the output list will be mixed.	This is OK for both
+ * does not, so the output list will be mixed.  This is OK for both
  * predicate_implied_by() and clauselist_selectivity(), but might be
  * problematic if the result were passed to other things.
  */
@@ -6415,7 +6440,7 @@ btcostestimate(PG_FUNCTION_ARGS)
 	 * the index scan).  Additional quals can suppress visits to the heap, so
 	 * it's OK to count them in indexSelectivity, but they should not count
 	 * for estimating numIndexTuples.  So we must examine the given indexquals
-	 * to find out which ones count as boundary quals.	We rely on the
+	 * to find out which ones count as boundary quals.  We rely on the
 	 * knowledge that they are given in index column order.
 	 *
 	 * For a RowCompareExpr, we consider only the first column, just as
@@ -6761,7 +6786,7 @@ hashcostestimate(PG_FUNCTION_ARGS)
 	 * because the hash AM makes sure that's always one page.
 	 *
 	 * Likewise, we could consider charging some CPU for each index tuple in
-	 * the bucket, if we knew how many there were.	But the per-tuple cost is
+	 * the bucket, if we knew how many there were.  But the per-tuple cost is
 	 * just a hash value comparison, not a general datatype-dependent
 	 * comparison, so any such charge ought to be quite a bit less than
 	 * cpu_operator_cost; which makes it probably not worth worrying about.
@@ -6819,7 +6844,7 @@ gistcostestimate(PG_FUNCTION_ARGS)
 	/*
 	 * Add a CPU-cost component to represent the costs of initial descent. We
 	 * just use log(N) here not log2(N) since the branching factor isn't
-	 * necessarily two anyway.	As for btree, charge once per SA scan.
+	 * necessarily two anyway.  As for btree, charge once per SA scan.
 	 */
 	if (index->tuples > 1)		/* avoid computing log(0) */
 	{
@@ -6881,7 +6906,7 @@ spgcostestimate(PG_FUNCTION_ARGS)
 	/*
 	 * Add a CPU-cost component to represent the costs of initial descent. We
 	 * just use log(N) here not log2(N) since the branching factor isn't
-	 * necessarily two anyway.	As for btree, charge once per SA scan.
+	 * necessarily two anyway.  As for btree, charge once per SA scan.
 	 */
 	if (index->tuples > 1)		/* avoid computing log(0) */
 	{
@@ -6958,7 +6983,7 @@ gincost_pattern(IndexOptInfo *index, int indexcol,
 
 	/*
 	 * Get the operator's strategy number and declared input data types within
-	 * the index opfamily.	(We don't need the latter, but we use
+	 * the index opfamily.  (We don't need the latter, but we use
 	 * get_op_opfamily_properties because it will throw error if it fails to
 	 * find a matching pg_amop entry.)
 	 */
@@ -7042,7 +7067,8 @@ gincost_pattern(IndexOptInfo *index, int indexcol,
  * appropriately.  If the query is unsatisfiable, return false.
  */
 static bool
-gincost_opexpr(IndexOptInfo *index, OpExpr *clause, GinQualCounts *counts)
+gincost_opexpr(PlannerInfo *root, IndexOptInfo *index, OpExpr *clause,
+			   GinQualCounts *counts)
 {
 	Node	   *leftop = get_leftop((Expr *) clause);
 	Node	   *rightop = get_rightop((Expr *) clause);
@@ -7065,6 +7091,9 @@ gincost_opexpr(IndexOptInfo *index, OpExpr *clause, GinQualCounts *counts)
 		elog(ERROR, "could not match index to operand");
 		operand = NULL;			/* keep compiler quiet */
 	}
+
+	/* aggressively reduce to a constant, and look through relabeling */
+	operand = estimate_expression_value(root, operand);
 
 	if (IsA(operand, RelabelType))
 		operand = (Node *) ((RelabelType *) operand)->arg;
@@ -7100,11 +7129,12 @@ gincost_opexpr(IndexOptInfo *index, OpExpr *clause, GinQualCounts *counts)
  * each of which involves one value from the RHS array, plus all the
  * non-array quals (if any).  To model this, we average the counts across
  * the RHS elements, and add the averages to the counts in *counts (which
- * correspond to per-indexscan costs).	We also multiply counts->arrayScans
+ * correspond to per-indexscan costs).  We also multiply counts->arrayScans
  * by N, causing gincostestimate to scale up its estimates accordingly.
  */
 static bool
-gincost_scalararrayopexpr(IndexOptInfo *index, ScalarArrayOpExpr *clause,
+gincost_scalararrayopexpr(PlannerInfo *root,
+						  IndexOptInfo *index, ScalarArrayOpExpr *clause,
 						  double numIndexEntries,
 						  GinQualCounts *counts)
 {
@@ -7128,6 +7158,9 @@ gincost_scalararrayopexpr(IndexOptInfo *index, ScalarArrayOpExpr *clause,
 	/* index column must be on the left */
 	if ((indexcol = find_index_column(leftop, index)) < 0)
 		elog(ERROR, "could not match index to operand");
+
+	/* aggressively reduce to a constant, and look through relabeling */
+	rightop = estimate_expression_value(root, rightop);
 
 	if (IsA(rightop, RelabelType))
 		rightop = (Node *) ((RelabelType *) rightop)->arg;
@@ -7266,7 +7299,7 @@ gincostestimate(PG_FUNCTION_ARGS)
 
 	/*
 	 * nPendingPages can be trusted, but the other fields are as of the last
-	 * VACUUM.	Scale them by the ratio numPages / nTotalPages to account for
+	 * VACUUM.  Scale them by the ratio numPages / nTotalPages to account for
 	 * growth since then.  If the fields are zero (implying no VACUUM at all,
 	 * and an index created pre-9.1), assume all pages are entry pages.
 	 */
@@ -7347,7 +7380,8 @@ gincostestimate(PG_FUNCTION_ARGS)
 		clause = rinfo->clause;
 		if (IsA(clause, OpExpr))
 		{
-			matchPossible = gincost_opexpr(index,
+			matchPossible = gincost_opexpr(root,
+										   index,
 										   (OpExpr *) clause,
 										   &counts);
 			if (!matchPossible)
@@ -7355,7 +7389,8 @@ gincostestimate(PG_FUNCTION_ARGS)
 		}
 		else if (IsA(clause, ScalarArrayOpExpr))
 		{
-			matchPossible = gincost_scalararrayopexpr(index,
+			matchPossible = gincost_scalararrayopexpr(root,
+													  index,
 												(ScalarArrayOpExpr *) clause,
 													  numEntries,
 													  &counts);
@@ -7410,7 +7445,7 @@ gincostestimate(PG_FUNCTION_ARGS)
 
 	/*
 	 * Add an estimate of entry pages read by partial match algorithm. It's a
-	 * scan over leaf pages in entry tree.	We haven't any useful stats here,
+	 * scan over leaf pages in entry tree.  We haven't any useful stats here,
 	 * so estimate it as proportion.
 	 */
 	entryPagesFetched += ceil(numEntryPages * counts.partialEntries / numEntries);
@@ -7448,31 +7483,30 @@ gincostestimate(PG_FUNCTION_ARGS)
 	*indexStartupCost = (entryPagesFetched + dataPagesFetched) * spc_random_page_cost;
 
 	/*
-	 * Now we compute the number of data pages fetched while the scan
-	 * proceeds.
+	 * Now compute the number of data pages fetched during the scan.
+	 *
+	 * We assume every entry to have the same number of items, and that there
+	 * is no overlap between them. (XXX: tsvector and array opclasses collect
+	 * statistics on the frequency of individual keys; it would be nice to use
+	 * those here.)
 	 */
-
-	/* data pages scanned for each exact (non-partial) matched entry */
 	dataPagesFetched = ceil(numDataPages * counts.exactEntries / numEntries);
 
 	/*
-	 * Estimate number of data pages read, using selectivity estimation and
-	 * capacity of data page.
+	 * If there is a lot of overlap among the entries, in particular if one of
+	 * the entries is very frequent, the above calculation can grossly
+	 * under-estimate.  As a simple cross-check, calculate a lower bound based
+	 * on the overall selectivity of the quals.  At a minimum, we must read
+	 * one item pointer for each matching entry.
+	 *
+	 * The width of each item pointer varies, based on the level of
+	 * compression.  We don't have statistics on that, but an average of
+	 * around 3 bytes per item is fairly typical.
 	 */
 	dataPagesFetchedBySel = ceil(*indexSelectivity *
-								 (numTuples / (BLCKSZ / SizeOfIptrData)));
-
+								 (numTuples / (BLCKSZ / 3)));
 	if (dataPagesFetchedBySel > dataPagesFetched)
-	{
-		/*
-		 * At least one of entries is very frequent and, unfortunately, we
-		 * couldn't get statistic about entries (only tsvector has such
-		 * statistics). So, we obviously have too small estimation of pages
-		 * fetched from data tree. Re-estimate it from known capacity of data
-		 * pages
-		 */
 		dataPagesFetched = dataPagesFetchedBySel;
-	}
 
 	/* Account for cache effects, the same as above */
 	if (outer_scans > 1 || counts.arrayScans > 1)

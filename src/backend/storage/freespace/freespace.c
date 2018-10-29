@@ -4,7 +4,7 @@
  *	  POSTGRES free space map for quickly finding free space in relations
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -41,14 +41,14 @@
  * MaxFSMRequestSize, exclusive.
  *
  * MaxFSMRequestSize depends on the architecture and BLCKSZ, but assuming
- * default 8k BLCKSZ, and that MaxFSMRequestSize is 24 bytes, the categories
- * look like this
+ * default 8k BLCKSZ, and that MaxFSMRequestSize is 8164 bytes, the
+ * categories look like this:
  *
  *
  * Range	 Category
  * 0	- 31   0
  * 32	- 63   1
- * ...	  ...  ...
+ * ...    ...  ...
  * 8096 - 8127 253
  * 8128 - 8163 254
  * 8164 - 8192 255
@@ -123,7 +123,7 @@ static uint8 fsm_vacuum_page(Relation rel, FSMAddress addr, bool *eof);
  * will turn out to have too little space available by the time the caller
  * gets a lock on it.  In that case, the caller should report the actual
  * amount of free space available on that page and then try again (see
- * RecordAndGetPageWithFreeSpace).	If InvalidBlockNumber is returned,
+ * RecordAndGetPageWithFreeSpace).  If InvalidBlockNumber is returned,
  * extend the relation.
  */
 BlockNumber
@@ -216,7 +216,7 @@ XLogRecordPageWithFreeSpace(RelFileNode rnode, BlockNumber heapBlk,
 		PageInit(page, BLCKSZ, 0);
 
 	if (fsm_set_avail(page, slot, new_cat))
-		MarkBufferDirtyHint(buf);
+		MarkBufferDirtyHint(buf, false);
 	UnlockReleaseBuffer(buf);
 }
 
@@ -286,7 +286,7 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
 			return;				/* nothing to do; the FSM was already smaller */
 		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 		fsm_truncate_avail(BufferGetPage(buf), first_removed_slot);
-		MarkBufferDirtyHint(buf);
+		MarkBufferDirtyHint(buf, false);
 		UnlockReleaseBuffer(buf);
 
 		new_nfsmblocks = fsm_logical_to_physical(first_removed_address) + 1;
@@ -379,8 +379,7 @@ fsm_space_needed_to_cat(Size needed)
 
 	/* Can't ask for more space than the highest category represents */
 	if (needed > MaxFSMRequestSize)
-		elog(ERROR, "invalid FSM request size %lu",
-			 (unsigned long) needed);
+		elog(ERROR, "invalid FSM request size %zu", needed);
 
 	if (needed == 0)
 		return 1;
@@ -638,7 +637,7 @@ fsm_set_and_search(Relation rel, FSMAddress addr, uint16 slot,
 	page = BufferGetPage(buf);
 
 	if (fsm_set_avail(page, slot, newValue))
-		MarkBufferDirtyHint(buf);
+		MarkBufferDirtyHint(buf, false);
 
 	if (minValue != 0)
 	{
@@ -789,7 +788,7 @@ fsm_vacuum_page(Relation rel, FSMAddress addr, bool *eof_p)
 			{
 				LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
 				fsm_set_avail(BufferGetPage(buf), slot, child_avail);
-				MarkBufferDirtyHint(buf);
+				MarkBufferDirtyHint(buf, false);
 				LockBuffer(buf, BUFFER_LOCK_UNLOCK);
 			}
 		}

@@ -1563,15 +1563,6 @@ create_lovitem(Relation rel, Buffer metabuf, uint64 tidnum,
 		newLovBuffer = _bitmap_getbuf(rel, P_NEW, BM_WRITE);
 		_bitmap_init_lovpage(rel, newLovBuffer);
 
-		/*
-		START_CRIT_SECTION();
-
-		if(use_wal)
-			_bitmap_log_newpage(rel, XLOG_BITMAP_INSERT_NEWLOV, 
-								newLovBuffer);
-		END_CRIT_SECTION();
-		*/
-
 		_bitmap_relbuf(currLovBuffer);
 
 		currLovBuffer = newLovBuffer;

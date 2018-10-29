@@ -57,7 +57,10 @@ BACKEND_COMMON_GETTEXT_TRIGGERS = \
     errmsg errmsg_plural:1,2 \
     errdetail errdetail_log errdetail_plural:1,2 \
     errhint \
-    errcontext
+    errcontext \
+    XactLockTableWait:4 \
+    MultiXactIdWait:6 \
+    ConditionalMultiXactIdWait:6
 BACKEND_COMMON_GETTEXT_FLAGS = \
     errmsg:1:c-format errmsg_plural:1:c-format errmsg_plural:2:c-format \
     errdetail:1:c-format errdetail_log:1:c-format errdetail_plural:1:c-format errdetail_plural:2:c-format \
@@ -68,7 +71,7 @@ BACKEND_COMMON_GETTEXT_FLAGS = \
 all-po: $(MO_FILES)
 
 %.mo: %.po
-	$(MSGFMT) -o $@ $<
+	$(MSGFMT) $(MSGFMT_FLAGS) -o $@ $<
 
 ifeq ($(word 1,$(GETTEXT_FILES)),+)
 po/$(CATALOG_NAME).pot: $(word 2, $(GETTEXT_FILES)) $(MAKEFILE_LIST)
@@ -113,12 +116,6 @@ clean-po:
 	rm -f po/$(CATALOG_NAME).pot
 
 
-maintainer-check-po: $(ALL_PO_FILES)
-	for file in $^; do \
-	  $(MSGFMT) -c -v -o /dev/null $$file || exit 1; \
-	done
-
-
 init-po: po/$(CATALOG_NAME).pot
 
 
@@ -155,7 +152,6 @@ install: install-po
 installdirs: installdirs-po
 uninstall: uninstall-po
 clean distclean maintainer-clean: clean-po
-maintainer-check: maintainer-check-po
 
 .PHONY: all-po install-po installdirs-po uninstall-po clean-po \
-        maintainer-check-po init-po update-po
+        init-po update-po
