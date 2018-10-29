@@ -216,14 +216,14 @@ AC_SUBST(enable_pxf)
 # gphdfs
 #
 PGAC_ARG_BOOL(enable, gphdfs, no,
-             [do not build gphdfs])
+             [build with gphdfs])
 AC_SUBST(enable_gphdfs)
 
 #
 # orafce
 #
 PGAC_ARG_BOOL(enable, orafce, no,
-             [do not build Oracle compatability functions])
+             [build with Oracle compatability functions])
 AC_SUBST(enable_orafce)
 
 #
