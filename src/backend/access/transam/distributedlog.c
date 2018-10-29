@@ -130,7 +130,7 @@ DistributedLog_InitOldestXmin(TransactionId oldestLocalXmin)
 		int			page = TransactionIdToPage(oldestXmin);
 		TransactionId xid;
 
-		if (SimpleLruPageExists(DistributedLogCtl, page))
+		if (SimpleLruDoesPhysicalPageExist(DistributedLogCtl, page))
 		{
 			/* Found the beginning of valid distributedlog */
 			break;
@@ -340,7 +340,7 @@ DistributedLog_SetCommittedWithinAPage(
 		elog((Debug_print_full_dtm ? LOG : DEBUG5),
 			 "DistributedLog_SetCommitted check if page %d is present",
 			 page);
-		if (!SimpleLruPageExists(DistributedLogCtl, page))
+		if (!SimpleLruDoesPhysicalPageExist(DistributedLogCtl, page))
 		{
 			DistributedLog_ZeroPage(page, /* writeXLog */ false);
 			elog((Debug_print_full_dtm ? LOG : DEBUG5),
@@ -548,7 +548,7 @@ DistributedLog_ScanForPrevCommitted(
 		/*
 		 * Peek to see if page exists.
 		 */
-		if (!SimpleLruPageExists(DistributedLogCtl, pageno))
+		if (!SimpleLruDoesPhysicalPageExist(DistributedLogCtl, pageno))
 		{
 			LWLockRelease(DistributedLogControlLock);
 

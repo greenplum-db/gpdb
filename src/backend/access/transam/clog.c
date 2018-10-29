@@ -453,7 +453,7 @@ CLOGScanForPrevStatus(
 		/*
 		 * Peek to see if page exists.
 		 */
-		if (!SimpleLruPageExists(ClogCtl, pageno))
+		if (!SimpleLruDoesPhysicalPageExist(ClogCtl, pageno))
 		{
 			LWLockRelease(CLogControlLock);
 
