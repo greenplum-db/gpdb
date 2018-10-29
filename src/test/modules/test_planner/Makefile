@@ -26,5 +26,7 @@ include $(top_builddir)/src/Makefile.global
 include $(top_srcdir)/contrib/contrib-global.mk
 endif
 
+installcheck: install
+
 test: clean all install
 	psql postgres -f sql/test_planner.sql 2>&1
