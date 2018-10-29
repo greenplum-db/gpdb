@@ -27,6 +27,7 @@
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "storage/backendid.h"
+#include "storage/bufmgr.h"
 #include "storage/sinvaladt.h"
 #include "tcop/tcopprot.h"
 #include "utils/gdd.h"

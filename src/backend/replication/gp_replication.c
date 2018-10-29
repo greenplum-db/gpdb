@@ -16,6 +16,7 @@
 #include "cdb/cdbvars.h"
 #include "replication/gp_replication.h"
 #include "replication/walreceiver.h"
+#include "replication/walsender.h"
 #include "replication/walsender_private.h"
 #include "utils/builtins.h"
 

@@ -49,6 +49,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/resource_manager.h"
+#include "utils/timestamp.h"
 
 /* table_functions test */
 extern Datum multiset_example(PG_FUNCTION_ARGS);

@@ -90,6 +90,7 @@
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
 #include "utils/tqual.h"
+#include "utils/timestamp.h"
 
 #include "cdb/cdbpartition.h"
 #include "cdb/cdbsreh.h"

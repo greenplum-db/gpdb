@@ -16,9 +16,14 @@
 
 #include "access/xlogdefs.h"
 #include "storage/block.h"
-#include "storage/bufmgr.h"
 #include "storage/item.h"
 #include "storage/off.h"
+#include "miscadmin.h"
+
+#ifndef FRONTEND
+/* Needed by PageGetLSN(), only for asserts in backend code */
+#include "storage/bufmgr.h"
+#endif
 
 /*
  * A postgres disk page is an abstraction layered on top of a postgres
@@ -364,7 +369,7 @@ typedef PageHeaderData *PageHeader;
 static inline XLogRecPtr
 PageGetLSN(Page page)
 {
-#ifdef USE_ASSERT_CHECKING
+#if defined (USE_ASSERT_CHECKING) && !defined(FRONTEND)
 	extern PGDLLIMPORT char *BufferBlocks; /* duplicates bufmgr.h */
 	char *pagePtr = page;
 
@@ -379,7 +384,6 @@ PageGetLSN(Page page)
 		Assert(LWLockHeldByMe(hdr->content_lock));
 	}
 #endif
-
 	return PageXLogRecPtrGet(((PageHeader) (page))->pd_lsn);
 }
 

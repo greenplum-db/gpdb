@@ -13,6 +13,8 @@
  */
 #include "postgres.h"
 
+#include <signal.h>
+
 #include "cdb/cdbgang.h"
 #include "commands/async.h"
 #include "storage/sinval.h"

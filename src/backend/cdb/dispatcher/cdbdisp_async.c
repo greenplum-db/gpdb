@@ -39,7 +39,7 @@
 #include "miscadmin.h"
 #include "commands/sequence.h"
 #include "access/xact.h"
-
+#include "utils/timestamp.h"
 #define DISPATCH_WAIT_TIMEOUT_MSEC 2000
 
 /*

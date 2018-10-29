@@ -15,6 +15,7 @@
 #include "libpq/pqformat.h"
 #include "utils/builtins.h"
 #include "utils/pg_lsn.h"
+#include "utils/timestamp.h"
 
 PG_MODULE_MAGIC;
 

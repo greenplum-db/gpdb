@@ -20,9 +20,7 @@
 #include "storage/buf.h"
 #include "utils/pg_crc.h"
 #include "utils/relcache.h"
-#include "utils/timestamp.h"
 #include "cdb/cdbpublic.h"
-#include "replication/walsender.h"
 #include "datatype/timestamp.h"
 
 /*

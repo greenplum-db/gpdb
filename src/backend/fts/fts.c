@@ -60,7 +60,7 @@
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"
-
+#include "storage/bufmgr.h"
 #include "executor/spi.h"
 
 #include "tcop/tcopprot.h" /* quickdie() */
@@ -241,7 +241,7 @@ ftsMain(int argc, char *argv[])
 	BaseInit();
 
 	/* See InitPostgres()... */
-	InitProcess();	
+	InitProcess();
 	InitBufferPoolBackend();
 	InitXLOGAccess();
 
