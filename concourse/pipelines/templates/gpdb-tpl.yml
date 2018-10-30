@@ -47,6 +47,7 @@ groups:
   - icw_gporca_centos6_gpos_memory
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
+  - gptimezonecheck
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - pg_upgrade
@@ -189,6 +190,7 @@ groups:
   - icw_planner_centos6
   - icw_planner_ictcp_centos6
   - compile_gpdb_centos6
+  - gptimezonecheck
 {% endif %}
 {% if "centos6" in os_types and "CLI" in test_sections %}
   - pg_upgrade
@@ -452,6 +454,11 @@ resources:
     branch: {{gpaddon-binary-swap-git-branch}}
     private_key: {{gpaddon-git-key}}
     uri: {{gpaddon-binary-swap-git-remote}}
+
+- name: tz_src
+  type: git
+  source:
+    uri: https://github.com/eggert/tz.git
 
 {% endif %}
 - name: gpaddon_src
@@ -1193,6 +1200,24 @@ jobs:
     image: centos-gpdb-dev-6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      TEST_OS: centos
+
+- name: gptimezonecheck
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos6]
+    - get: tz_src
+    - get: bin_gpdb
+      resource: bin_gpdb_centos6
+      passed: [compile_gpdb_centos6]
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-dev-6
+  - task: tzcheck
+    file: gpdb_src/concourse/tasks/tzcheck.yml
+    image: centos-gpdb-dev-6
+    params:
+      tz_tag: 2018e # IANA database version
       TEST_OS: centos
 
 {% endif %}
@@ -2397,6 +2422,7 @@ jobs:
       - icw_planner_sles12
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
+      - gptimezonecheck
       - gpdb_packaging_ubuntu16
       - icw_planner_ictcp_centos6
       - icw_extensions_gpcloud_centos6
