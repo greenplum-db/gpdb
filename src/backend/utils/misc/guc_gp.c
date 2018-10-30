@@ -5365,20 +5365,12 @@ assign_gp_default_storage_options(const char *newval, void *extra)
 void
 set_gp_replication_config(const char *name, const char *value)
 {
-	AlterSystemStmt *newnode;
-	A_Const *aconst;
-	List *args;
+	A_Const aconst = {.type = T_A_Const, .val = {.type = T_String, .val.str = pstrdup(value)}};
+	List *args = list_make1(&aconst);
+	VariableSetStmt setstmt = {.type = T_VariableSetStmt, .kind = VAR_SET_VALUE, .name = pstrdup(name), .args = args};
+	AlterSystemStmt alterSystemStmt = {.type = T_AlterSystemStmt, .setstmt = &setstmt};
 	
-	newnode = makeNode(AlterSystemStmt);
-	newnode->setstmt = makeNode(VariableSetStmt);
-	newnode->setstmt->name = pstrdup(name);
-	newnode->setstmt->kind = VAR_SET_VALUE;
-	aconst = makeNode(A_Const);
-	aconst->val = *makeString(pstrdup(value));
-	args = list_make1(aconst);
-	newnode->setstmt->args = args;
-	
-	AlterSystemSetConfigFile(newnode);
+	AlterSystemSetConfigFile(&alterSystemStmt);
 }
 
 /*
