@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ds20941">GRANT</title><body><p id="sql_command_desc">Defines access privileges.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
+<topic id="topic1"><title id="ds20941">GRANT</title><body>
+    <p id="sql_command_desc">Defines access privileges.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [,...] | ALL [PRIVILEGES] }
     ON [TABLE] <varname>tablename</varname> [, ...]
     TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
@@ -45,121 +49,284 @@ GRANT <varname>parent_role</varname> [, ...]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
     ON PROTOCOL <varname>protocolname</varname>
-    TO <varname>username</varname></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>GRANT</codeph> command has two basic variants: one that
-grants privileges on a database object (table, view, foreign table, sequence, database, foreign-data wrapper, foreign server,
-function, procedural language, schema, or tablespace), and one that grants
-membership in a role.</p><sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the <codeph>GRANT</codeph> command gives specific privileges
-on a database object to one or more roles. These privileges are added
-to those already granted, if any. </p><p>The key word <codeph>PUBLIC</codeph> indicates that the privileges
-are to be granted to all roles, including those that may be created later.
-<codeph>PUBLIC</codeph> may be thought of as an implicitly defined group-level
-role that always includes all roles. Any particular role will have the
-sum of privileges granted directly to it, privileges granted to any role
-it is presently a member of, and privileges granted to <codeph>PUBLIC</codeph>.
-</p><p>If <codeph>WITH GRANT OPTION</codeph> is specified, the recipient
-of the privilege may in turn grant it to others. Without a grant option,
-the recipient cannot do that. Grant options cannot be granted to <codeph>PUBLIC</codeph>.
-</p><p>There is no need to grant privileges to the owner of an object (usually
-the role that created it), as the owner has all privileges by default.
-The right to drop an object, or to alter its definition in any way is
-not described by a grantable privilege; it is inherent in the owner,
-and cannot be granted or revoked. The owner implicitly has all grant
-options for the object, too.</p><p>Depending on the type of object, the initial default privileges may
-include granting some privileges to <codeph>PUBLIC</codeph>. The default
-is no public access for tables, schemas, and tablespaces; <codeph>CONNECT</codeph>
-privilege and <codeph>TEMP</codeph> table creation privilege for databases;
-<codeph>EXECUTE</codeph> privilege for functions; and <codeph>USAGE</codeph>
-privilege for languages. The object owner may of course revoke these
-privileges.</p></sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
-in a role to one or more other roles. Membership in a role is significant
-because it conveys the privileges granted to a role to each of its members.
-</p><p>If <codeph>WITH ADMIN OPTION</codeph> is specified, the member may
-in turn grant membership in the role to others, and revoke membership
-in the role as well. Database superusers can grant or revoke membership
-in any role to anyone. Roles having <codeph>CREATEROLE</codeph> privilege
-can grant or revoke membership in any role that is not a superuser.</p><p>Unlike the case with privileges, membership in a role cannot be granted
-to <codeph>PUBLIC</codeph>.</p></sectiondiv><sectiondiv id="section6"><b>GRANT on Protocols</b><p>After creating a custom protocol, specify <codeph>CREATE TRUSTED PROTOCOL</codeph>
-to be able to allowing any user besides the owner to access it. If the
-protocol is not trusted, you cannot give any other user permission to
-use it to read or write data. After a <codeph>TRUSTED</codeph> protocol
-is created, you can specify which other users can access it with the
-<codeph>GRANT</codeph> command. </p><ul><li id="ds157703">To allow a user to create a readable external table with a trusted
-            protocol<codeblock>GRANT SELECT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157705">To allow a user to create a writable external table with a trusted
-            protocol<codeblock>GRANT INSERT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157707">To allow a user to create both readable and writable external table with a trusted
-            protocol<codeblock>GRANT ALL ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li></ul></sectiondiv></section><section id="section7"><title>Parameters</title><parml><plentry><pt>SELECT</pt><pd>Allows <codeph>SELECT</codeph> from any column of the specified table,
-view, or sequence. Also allows the use of <codeph>COPY TO</codeph>.</pd> 
-</plentry><plentry><pt>INSERT</pt><pd>Allows <codeph>INSERT</codeph> of a new row into the specified table.
-Also allows <codeph>COPY FROM</codeph>.</pd></plentry><plentry><pt>UPDATE</pt><pd>Allows <codeph>UPDATE</codeph> of any column of the specified table.
-<codeph>SELECT ... FOR UPDATE</codeph> and <codeph>SELECT ... FOR SHARE</codeph>
-also require this privilege (as well as the <codeph>SELECT</codeph> privilege).
-For sequences, this privilege allows the use of the <codeph>nextval()</codeph>
-and <codeph>setval()</codeph> functions.</pd></plentry><plentry><pt>DELETE</pt><pd>Allows <codeph>DELETE</codeph> of a row from the specified table.
-</pd></plentry><plentry><pt>REFERENCES</pt><pd>This keyword is accepted, although foreign key constraints are currently
-not supported in Greenplum Database. To create a foreign key constraint,
-it is necessary to have this privilege on both the referencing and referenced
-tables.</pd></plentry><plentry><pt>TRIGGER</pt><pd>Allows the creation of a trigger on the specified table.<note>Greenplum Database does not
-              support triggers.</note></pd></plentry>
+    TO <varname>username</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p>The <codeph>GRANT</codeph> command has two basic variants: one that
+        grants privileges on a database object (table, view, foreign table,
+        sequence, database, foreign-data wrapper, foreign server, function,
+        procedural language, schema, or tablespace), and one that grants
+        membership in a role.</p>
+      <sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant
+          of the <codeph>GRANT</codeph> command gives specific privileges on a
+          database object to one or more roles. These privileges are added to
+          those already granted, if any. </p><p>The key word
+            <codeph>PUBLIC</codeph> indicates that the privileges are to be
+          granted to all roles, including those that may be created later.
+            <codeph>PUBLIC</codeph> may be thought of as an implicitly defined
+          group-level role that always includes all roles. Any particular role
+          will have the sum of privileges granted directly to it, privileges
+          granted to any role it is presently a member of, and privileges
+          granted to <codeph>PUBLIC</codeph>. </p><p>If <codeph>WITH GRANT
+            OPTION</codeph> is specified, the recipient of the privilege may in
+          turn grant it to others. Without a grant option, the recipient cannot
+          do that. Grant options cannot be granted to <codeph>PUBLIC</codeph>.
+          </p><p>There is no need to grant privileges to the owner of an object
+          (usually the role that created it), as the owner has all privileges by
+          default. The right to drop an object, or to alter its definition in
+          any way is not described by a grantable privilege; it is inherent in
+          the owner, and cannot be granted or revoked. The owner implicitly has
+          all grant options for the object, too.</p><p>Depending on the type of
+          object, the initial default privileges may include granting some
+          privileges to <codeph>PUBLIC</codeph>. The default is no public access
+          for tables, schemas, and tablespaces; <codeph>CONNECT</codeph>
+          privilege and <codeph>TEMP</codeph> table creation privilege for
+          databases; <codeph>EXECUTE</codeph> privilege for functions; and
+            <codeph>USAGE</codeph> privilege for languages. The object owner may
+          of course revoke these privileges.</p></sectiondiv>
+      <sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the
+            <codeph>GRANT</codeph> command grants membership in a role to one or
+          more other roles. Membership in a role is significant because it
+          conveys the privileges granted to a role to each of its members.
+          </p><p>If <codeph>WITH ADMIN OPTION</codeph> is specified, the member
+          may in turn grant membership in the role to others, and revoke
+          membership in the role as well. Database superusers can grant or
+          revoke membership in any role to anyone. Roles having
+            <codeph>CREATEROLE</codeph> privilege can grant or revoke membership
+          in any role that is not a superuser.</p><p>Unlike the case with
+          privileges, membership in a role cannot be granted to
+            <codeph>PUBLIC</codeph>.</p></sectiondiv>
+      <sectiondiv id="section6"><b>GRANT on Protocols</b><p>After creating a
+          custom protocol, specify <codeph>CREATE TRUSTED PROTOCOL</codeph> to
+          be able to allow any user besides the owner to access it. If the
+          protocol is not trusted, you cannot give any other user permission to
+          use it to read or write data. After a <codeph>TRUSTED</codeph>
+          protocol is created, you can specify which other users can access it
+          with the <codeph>GRANT</codeph> command. </p><ul>
+          <li id="ds157703">To allow a user to create a readable external table
+            with a trusted
+            protocol<codeblock>GRANT SELECT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+          <li id="ds157705">To allow a user to create a writable external table
+            with a trusted
+            protocol<codeblock>GRANT INSERT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+          <li id="ds157707">To allow a user to create both readable and writable
+            external tables with a trusted
+            protocol<codeblock>GRANT ALL ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li>
+        </ul><p>You can also use this command to grant users permissions to
+          create and use <codeph>hdfs</codeph>, <codeph>s3</codeph>, and
+            <codeph>pxf</codeph> external tables. However, external tables of
+          type <codeph>http</codeph>, <codeph>https</codeph>,
+            <codeph>gpfdist</codeph>, and <codeph>gpfdists</codeph>, are
+          implemented internally in Greenplum Database instead of as custom
+          protocols. For these types, use the <codeph>CREATE ROLE</codeph> or
+            <codeph>ALTER ROLE</codeph> command to set the
+            <codeph>CREATEEXTTABLE</codeph> or <codeph>NOCREATEEXTTABLE</codeph>
+          attribute for each user. See <xref href="./CREATE_ROLE.xml#topic1"
+            type="topic" format="dita"/> for syntax and
+        examples.</p></sectiondiv>
+    </section>
+    <section id="section7">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt>SELECT</pt>
+          <pd>Allows <codeph>SELECT</codeph> from any column of the specified
+            table, view, or sequence. Also allows the use of <codeph>COPY
+              TO</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>INSERT</pt>
+          <pd>Allows <codeph>INSERT</codeph> of a new row into the specified
+            table. Also allows <codeph>COPY FROM</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>UPDATE</pt>
+          <pd>Allows <codeph>UPDATE</codeph> of any column of the specified
+            table. <codeph>SELECT ... FOR UPDATE</codeph> and <codeph>SELECT ...
+              FOR SHARE</codeph> also require this privilege (as well as the
+              <codeph>SELECT</codeph> privilege). For sequences, this privilege
+            allows the use of the <codeph>nextval()</codeph> and
+              <codeph>setval()</codeph> functions.</pd>
+        </plentry>
+        <plentry>
+          <pt>DELETE</pt>
+          <pd>Allows <codeph>DELETE</codeph> of a row from the specified table.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>REFERENCES</pt>
+          <pd>This keyword is accepted, although foreign key constraints are
+            currently not supported in Greenplum Database. To create a foreign
+            key constraint, it is necessary to have this privilege on both the
+            referencing and referenced tables.</pd>
+        </plentry>
+        <plentry>
+          <pt>TRIGGER</pt>
+          <pd>Allows the creation of a trigger on the specified
+              table.<note>Greenplum Database does not support
+            triggers.</note></pd>
+        </plentry>
         <plentry>
           <pt>TRUNCATE</pt>
           <pd>
-            <p>Allows <codeph>TRUNCATE</codeph> of all rows from the specified table. </p>
+            <p>Allows <codeph>TRUNCATE</codeph> of all rows from the specified
+              table. </p>
           </pd>
-        </plentry><plentry><pt>CREATE</pt><pd>For databases, allows new schemas to be created within the database.</pd><pd>For schemas, allows new objects to be created within the schema.
-To rename an existing object, you must own the object and have this privilege
-for the containing schema.</pd><pd>For tablespaces, allows tables and indexes to be created within the
-tablespace, and allows databases to be created that have the tablespace
-as their default tablespace. (Note that revoking this privilege will
-not alter the placement of existing objects.)</pd></plentry><plentry><pt>CONNECT</pt><pd>Allows the user to connect to the specified database. This privilege
-is checked at connection startup (in addition to checking any restrictions
-imposed by <codeph>pg_hba.conf</codeph>).</pd></plentry><plentry><pt>TEMPORARY</pt><pt>TEMP</pt><pd>Allows temporary tables to be created while using the database.</pd></plentry><plentry><pt>EXECUTE</pt><pd>Allows the use of the specified function and the use of any operators
-that are implemented on top of the function. This is the only type of
-privilege that is applicable to functions. (This syntax works for aggregate
-functions, as well.) </pd></plentry><plentry><pt>USAGE</pt><pd>For procedural languages, allows the use of the specified language
-for the creation of functions in that language. This is the only type
-of privilege that is applicable to procedural languages.</pd><pd>For schemas, allows access to objects contained in the specified
-schema (assuming that the objects' own privilege requirements are also
-met). Essentially this allows the grantee to look up objects within the
-schema.</pd><pd>For sequences, this privilege allows the use of the 
-<codeph>nextval()</codeph> function.</pd>
-        <pd>For foreign-data wrappers, this privilege enables the grantee to create new servers using that foreign-data wrapper.</pd>
-        <pd>For servers, this privilege enables the grantee to create, alter, and drop their own user's user mappings associated with that server. Also, it enables the grantee to query the options of the server and associated user mappings.</pd>
-     </plentry><plentry><pt>ALL PRIVILEGES</pt><pd>Grant all of the available privileges at once. The <codeph>PRIVILEGES</codeph>
-key word is optional in Greenplum Database, though it is required by
-strict SQL. </pd></plentry><plentry><pt>PUBLIC</pt><pd>A special group-level role that denotes that the privileges are to
-be granted to all roles, including those that may be created later. </pd></plentry><plentry><pt>WITH GRANT OPTION</pt><pd>The recipient of the privilege may in turn grant it to others.</pd></plentry><plentry><pt>WITH ADMIN OPTION</pt><pd>The member of a role may in turn grant membership in the role to
-others.</pd></plentry></parml></section><section id="section8"><title>Notes</title><p>Database superusers can access all objects regardless of object privilege
-settings. One exception to this rule is view objects. Access to tables
-referenced in the view is determined by permissions of the view owner
-not the current user (even if the current user is a superuser).</p><p>If a superuser chooses to issue a <codeph>GRANT</codeph> or <codeph>REVOKE</codeph>
-command, the command is performed as though it were issued by the owner
-of the affected object. In particular, privileges granted via such a
-command will appear to have been granted by the object owner. For role
-membership, the membership appears to have been granted by the containing
-role itself. </p><p><codeph>GRANT</codeph> and <codeph>REVOKE</codeph> can also be done
-by a role that is not the owner of the affected object, but is a member
-of the role that owns the object, or is a member of a role that holds
-privileges <codeph>WITH GRANT OPTION</codeph> on the object. In this
-case the privileges will be recorded as having been granted by the role
-that actually owns the object or holds the privileges <codeph>WITH GRANT
-OPTION</codeph>.</p><p>Granting permission on a table does not automatically extend permissions
-to any sequences used by the table, including sequences tied to <codeph>SERIAL</codeph>
-columns. Permissions on a sequence must be set separately. </p><p>Greenplum Database does not support granting or revoking privileges
-for individual columns of a table. One possible workaround is to create
-a view having just the desired columns and then grant privileges to that
-view.</p><p>Use psql's <codeph>\z</codeph> meta-command to obtain information
-about existing privileges for an object.</p></section><section id="section9"><title>Examples</title><p>Grant insert privilege to all roles on table <codeph>mytable</codeph>: </p><codeblock>GRANT INSERT ON mytable TO PUBLIC;</codeblock><p>Grant all available privileges to role <codeph>sally</codeph> on the view
-        <codeph>topten</codeph>. Note that while the above will indeed grant all privileges if
-        executed by a superuser or the owner of <codeph>topten</codeph>, when executed by someone
-        else it will only grant those permissions for which the granting role has grant options.</p><codeblock>GRANT ALL PRIVILEGES ON topten TO sally;</codeblock><p>Grant membership in role <codeph>admins</codeph> to user <codeph>joe</codeph>: </p><codeblock>GRANT admins TO joe;</codeblock></section><section id="section10"><title>Compatibility</title><p>The <codeph>PRIVILEGES</codeph> key word in is required in the SQL standard,
-but optional in Greenplum Database. The SQL standard does not support
-setting the privileges on more than one object per command. </p><p>Greenplum Database allows an object owner to revoke his own ordinary privileges: for example, a
-        table owner can make the table read-only to himself by revoking his own
-          <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>,  <codeph>DELETE</codeph>, and
-          <codeph>TRUNCATE</codeph> privileges. This is not possible according to the SQL standard.
-        Greenplum Database treats the owner's privileges as having been granted by the owner to
-        himself; therefore he can revoke them too. In the SQL standard, the owner's privileges are
-        granted by an assumed <i>system</i> entity. </p><p>The SQL standard allows setting privileges for individual columns
-within a table.</p><p>The SQL standard provides for a <codeph>USAGE</codeph> privilege on
-other kinds of objects: character sets, collations, translations, domains.
-</p><p>Privileges on databases, tablespaces, schemas, and languages are Greenplum
-Database extensions.</p></section><section id="section11"><title>See Also</title><p><codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+        </plentry>
+        <plentry>
+          <pt>CREATE</pt>
+          <pd>For databases, allows new schemas to be created within the
+            database.</pd>
+          <pd>For schemas, allows new objects to be created within the schema.
+            To rename an existing object, you must own the object and have this
+            privilege for the containing schema.</pd>
+          <pd>For tablespaces, allows tables and indexes to be created within
+            the tablespace, and allows databases to be created that have the
+            tablespace as their default tablespace. (Note that revoking this
+            privilege will not alter the placement of existing objects.)</pd>
+        </plentry>
+        <plentry>
+          <pt>CONNECT</pt>
+          <pd>Allows the user to connect to the specified database. This
+            privilege is checked at connection startup (in addition to checking
+            any restrictions imposed by <codeph>pg_hba.conf</codeph>).</pd>
+        </plentry>
+        <plentry>
+          <pt>TEMPORARY</pt>
+          <pt>TEMP</pt>
+          <pd>Allows temporary tables to be created while using the
+            database.</pd>
+        </plentry>
+        <plentry>
+          <pt>EXECUTE</pt>
+          <pd>Allows the use of the specified function and the use of any
+            operators that are implemented on top of the function. This is the
+            only type of privilege that is applicable to functions. (This syntax
+            works for aggregate functions, as well.) </pd>
+        </plentry>
+        <plentry>
+          <pt>USAGE</pt>
+          <pd>For procedural languages, allows the use of the specified language
+            for the creation of functions in that language. This is the only
+            type of privilege that is applicable to procedural languages.</pd>
+          <pd>For schemas, allows access to objects contained in the specified
+            schema (assuming that the objects' own privilege requirements are
+            also met). Essentially this allows the grantee to look up objects
+            within the schema.</pd>
+          <pd>For sequences, this privilege allows the use of the
+              <codeph>nextval()</codeph> function.</pd>
+          <pd>For foreign-data wrappers, this privilege enables the grantee to
+            create new servers using that foreign-data wrapper.</pd>
+          <pd>For servers, this privilege enables the grantee to create, alter,
+            and drop their own user's user mappings associated with that server.
+            Also, it enables the grantee to query the options of the server and
+            associated user mappings.</pd>
+        </plentry>
+        <plentry>
+          <pt>ALL PRIVILEGES</pt>
+          <pd>Grant all of the available privileges at once. The
+              <codeph>PRIVILEGES</codeph> key word is optional in Greenplum
+            Database, though it is required by strict SQL. </pd>
+        </plentry>
+        <plentry>
+          <pt>PUBLIC</pt>
+          <pd>A special group-level role that denotes that the privileges are to
+            be granted to all roles, including those that may be created later.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>WITH GRANT OPTION</pt>
+          <pd>The recipient of the privilege may in turn grant it to
+            others.</pd>
+        </plentry>
+        <plentry>
+          <pt>WITH ADMIN OPTION</pt>
+          <pd>The member of a role may in turn grant membership in the role to
+            others.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section8">
+      <title>Notes</title>
+      <p>Database superusers can access all objects regardless of object
+        privilege settings. One exception to this rule is view objects. Access
+        to tables referenced in the view is determined by permissions of the
+        view owner not the current user (even if the current user is a
+        superuser).</p>
+      <p>If a superuser chooses to issue a <codeph>GRANT</codeph> or
+          <codeph>REVOKE</codeph> command, the command is performed as though it
+        were issued by the owner of the affected object. In particular,
+        privileges granted via such a command will appear to have been granted
+        by the object owner. For role membership, the membership appears to have
+        been granted by the containing role itself. </p>
+      <p><codeph>GRANT</codeph> and <codeph>REVOKE</codeph> can also be done by
+        a role that is not the owner of the affected object, but is a member of
+        the role that owns the object, or is a member of a role that holds
+        privileges <codeph>WITH GRANT OPTION</codeph> on the object. In this
+        case the privileges will be recorded as having been granted by the role
+        that actually owns the object or holds the privileges <codeph>WITH GRANT
+          OPTION</codeph>.</p>
+      <p id="p_agk_gbb_qfb">Granting permission on a table does not
+        automatically extend permissions to any sequences used by the table,
+        including sequences tied to <codeph>SERIAL</codeph> columns. Permissions
+        on a sequence must be set separately. </p>
+      <p>Greenplum Database does not support granting or revoking privileges for
+        individual columns of a table. One possible workaround is to create a
+        view having just the desired columns and then grant privileges to that
+        view.</p>
+      <p>The <codeph>GRANT</codeph> command cannot be used to set privileges for
+        the protocols <codeph>file</codeph>, <codeph>gpfdist</codeph>, or
+          <codeph>gpfdists</codeph>. These protocols are implemented internally
+        in Greenplum Database. Instead, use the <xref
+          href="CREATE_ROLE.xml#topic1"/> or <xref href="ALTER_ROLE.xml#topic1"
+        /> command to set the <codeph>CREATEEXTTABLE</codeph> attribute for the
+        role. </p>
+      <p>Use psql's <codeph>\z</codeph> meta-command to obtain information about
+        existing privileges for an object.</p>
+    </section>
+    <section id="section9">
+      <title>Examples</title>
+      <p>Grant insert privilege to all roles on table <codeph>mytable</codeph>: </p>
+      <codeblock>GRANT INSERT ON mytable TO PUBLIC;</codeblock>
+      <p>Grant all available privileges to role <codeph>sally</codeph> on the
+        view <codeph>topten</codeph>. Note that while the above will indeed
+        grant all privileges if executed by a superuser or the owner of
+          <codeph>topten</codeph>, when executed by someone else it will only
+        grant those permissions for which the granting role has grant
+        options.</p>
+      <codeblock>GRANT ALL PRIVILEGES ON topten TO sally;</codeblock>
+      <p>Grant membership in role <codeph>admins</codeph> to user
+          <codeph>joe</codeph>: </p>
+      <codeblock>GRANT admins TO joe;</codeblock>
+    </section>
+    <section id="section10">
+      <title>Compatibility</title>
+      <p>The <codeph>PRIVILEGES</codeph> key word in is required in the SQL
+        standard, but optional in Greenplum Database. The SQL standard does not
+        support setting the privileges on more than one object per command. </p>
+      <p>Greenplum Database allows an object owner to revoke his own ordinary
+        privileges: for example, a table owner can make the table read-only to
+        himself by revoking his own <codeph>INSERT</codeph>,
+          <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
+          <codeph>TRUNCATE</codeph> privileges. This is not possible according
+        to the SQL standard. Greenplum Database treats the owner's privileges as
+        having been granted by the owner to himself; therefore he can revoke
+        them too. In the SQL standard, the owner's privileges are granted by an
+        assumed <i>system</i> entity. </p>
+      <p>The SQL standard allows setting privileges for individual columns
+        within a table.</p>
+      <p>The SQL standard provides for a <codeph>USAGE</codeph> privilege on
+        other kinds of objects: character sets, collations, translations,
+        domains. </p>
+      <p>Privileges on databases, tablespaces, schemas, and languages are
+        Greenplum Database extensions.</p>
+    </section>
+    <section id="section11">
+      <title>See Also</title>
+      <p><codeph><xref href="./REVOKE.xml#topic1" type="topic" format="dita"
+          /></codeph>, <xref href="./CREATE_ROLE.xml#topic1" type="topic"
+          format="dita"/>, <xref href="./ALTER_ROLE.xml#topic1" type="topic"
+          format="dita"/></p>
+    </section>
+  </body></topic>
