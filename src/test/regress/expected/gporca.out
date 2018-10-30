@@ -2385,6 +2385,62 @@ select count(*) from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y
      8
 (1 row)
 
+-- result node with one time filter and filter
+explain select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
+from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
+                                                     QUERY PLAN                                                      
+---------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=72.61..72.66 rows=20 width=12)
+   Merge Key: bar1.x1
+   ->  Sort  (cost=72.61..72.66 rows=7 width=12)
+         Sort Key: bar1.x1
+         ->  Hash Join  (cost=3.85..72.17 rows=7 width=12)
+               Hash Cond: bar2.x2 = bar1.x2
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..3.90 rows=10 width=4)
+                     Hash Key: bar2.x2
+                     ->  Seq Scan on bar2  (cost=0.00..3.30 rows=10 width=4)
+               ->  Hash  (cost=3.60..3.60 rows=7 width=8)
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..3.60 rows=7 width=8)
+                           Hash Key: bar1.x2
+                           ->  Seq Scan on bar1  (cost=0.00..3.20 rows=7 width=8)
+               SubPlan 1
+                 ->  Result  (cost=0.00..3.20 rows=1 width=0)
+                       One-Time Filter: $0 = $1
+                       ->  Result  (cost=3.20..3.21 rows=1 width=0)
+                             Filter: foo.x2 = $1 AND $0::double precision = random()
+                             ->  Materialize  (cost=3.20..3.21 rows=1 width=0)
+                                   ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.20 rows=1 width=0)
+                                         ->  Seq Scan on foo  (cost=0.00..3.20 rows=1 width=0)
+ Settings:  optimizer=off; optimizer_segments=3
+ Optimizer status: legacy query optimizer
+(23 rows)
+
+select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
+from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
+ col1 | x1 
+------+----
+    0 |  1
+    0 |  2
+    0 |  3
+    0 |  4
+    0 |  5
+    0 |  6
+    0 |  7
+    0 |  8
+    0 |  9
+    0 | 10
+    0 | 11
+    0 | 12
+    0 | 13
+    0 | 14
+    0 | 15
+    0 | 16
+    0 | 17
+    0 | 18
+    0 | 19
+    0 | 20
+(20 rows)
+
 drop table orca.r cascade;
 create table orca.r(a int, b int) distributed by (a);
 create unique index r_a on orca.r(a);
