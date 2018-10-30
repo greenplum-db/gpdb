@@ -259,8 +259,10 @@
 		</topicref>
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
 		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
-		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types" copy-to="datatypes.xml" chunk="to-content select-topic">
-			<topicref href="data_types.xml#topic_vmf_z4c_qfb" copy-to="datatypes-pseudo.xml" chunk="to-content select-branch"/>
+		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types"
+			copy-to="datatypes.xml" chunk="to-content select-topic">
+			<topicref href="datatype-pseudo.xml"/>
+			<topicref href="datatype-textsearch.xml"/>
 		</topicref>
 		<topicref href="character_sets.xml" navtitle="Character Set Support" id="character_sets"/>
 		<topicref href="config_params/guc_config.ditamap" navtitle="Server Configuration Parameters"
