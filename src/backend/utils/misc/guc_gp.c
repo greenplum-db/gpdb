@@ -5616,11 +5616,23 @@ validate_gp_replication_conf_option(struct config_generic *record,
 				}
 				break;
 			}
+		case PGC_ENUM:
+			{
+				struct config_enum *conf = (struct config_enum *) record;
+				int		newval;
+
+				if (!config_enum_lookup_by_name(conf, value, &newval))
+				{
+					ereport(elevel,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("invalid value for parameter \"%s\": \"%s\"",
+									record->name, value)));
+					return false;
+
+				}
+				break;
+			}
 		default:
-			/*
-			 * FIXME: Need to add validation for the PGC_ENUM once merged
-			 * commit 52a8d4f8f7e286482886861175312c1434b1d4fd from upstream 8.4
-			 */
 			/*
 			 * make sure all the types are checked, and we should never reach here
 			 */
