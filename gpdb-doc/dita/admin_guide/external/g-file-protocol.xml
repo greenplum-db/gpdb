@@ -6,9 +6,9 @@
     an operating system file. </shortdesc>
   <body>
     <p>The URI includes the host name, port, and path to the file. Each file must reside on a
-      segment host in a location accessible by the Greenplum superuser (<codeph>gpadmin</codeph>).
-      The host name used in the URI must match a segment host name registered in the
-        <codeph>gp_segment_configuration</codeph> system catalog table. </p>
+      segment host in a location accessible by the Greenplum Database superuser
+        (<codeph>gpadmin</codeph>). The host name used in the URI must match a segment host name
+      registered in the <codeph>gp_segment_configuration</codeph> system catalog table. </p>
     <p>The <codeph>LOCATION</codeph> clause can have multiple URIs, as shown in this example:
       <codeblock>CREATE EXTERNAL TABLE ext_expenses (
    name text, date date, amount float4, category text, desc1 text ) 

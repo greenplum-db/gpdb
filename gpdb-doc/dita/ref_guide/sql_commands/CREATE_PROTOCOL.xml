@@ -17,10 +17,10 @@
             <p><codeph>CREATE PROTOCOL</codeph> associates a data access protocol name with call
                 handlers that are responsible for reading from and writing data to an external data
                 source. </p>
-            <p>The <codeph>CREATE PROTOCOL</codeph> must specify either a read call handler or a
-                write call handler. The call handlers specified in the <codeph>CREATE
+            <p>The <codeph>CREATE PROTOCOL</codeph> command must specify either a read call handler
+                or a write call handler. The call handlers specified in the <codeph>CREATE
                     PROTOCOL</codeph> command must be defined in the database.</p>
-            <p>The protocol name can be specified in an <codeph>CREATE EXTERNAL TABLE</codeph>
+            <p>The protocol name can be specified in a <codeph>CREATE EXTERNAL TABLE</codeph>
                 command. </p>
             <p> For information about creating and enabling a custom data access protocol, see
                 "Example Custom Data Access Protocol" in the <cite>Greenplum Database Administrator
@@ -61,9 +61,14 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p>Greenplum Database installs the custom protocols <codeph>file</codeph>,
-                    <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>, and <codeph>gphdfs</codeph>
-                by default. Optionally, the <codeph>s3</codeph> protocol can be installed.</p>
+            <p>Greenplum Database handles external tables of type <codeph>file</codeph>,
+                    <codeph>gpfdist</codeph>, and <codeph>gpfdists</codeph> internally. The custom
+                protocol <codeph>gphdfs</codeph> is registered in Greenplum Database by default. See
+                    <xref href="../../admin_guide/external/g-s3-protocol.xml#amazon-emr/s3_prereq"/>
+                for information about enabling the <codeph>S3</codeph> protocol. See the <xref
+                    href="../../pxf/overview_pxf.html" type="topic" format="html">Greenplum Platform
+                    Extension Framework (PXF)</xref> documentation for information about configuring
+                the PXF extension and using the <codeph>pxf</codeph> protocol.</p>
             <p>Any shared library that implements a data access protocol must be located in the same
                 location on all Greenplum Database segment hosts. For example, the shared library
                 can be in a location specified by the operating system environment variable
