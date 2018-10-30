@@ -7040,6 +7040,12 @@ void CopyExtractRowMetaData(CopyState cstate)
 
 	/* look for the second delimiter, and extract line_buf_converted */
 	COPY_FIND_MD_DELIM;
+	if(cstate->md_error)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("COPY metadata not found. This probably means that there is a "
+						"mixture of newline types in the data. Use the NEWLINE keyword "
+						"in order to resolve this reliably.")));
 	Assert(*line_start == '0' || *line_start == '1'); 
 	cstate->line_buf_converted = atoi(line_start);
 	
