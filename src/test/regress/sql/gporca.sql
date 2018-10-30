@@ -127,6 +127,12 @@ select count(*)+1 from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1
 select count(*)+1 from orca.foo x where x.x1 > (select count(*) from orca.bar1 y where y.x1 = x.x2);
 select count(*) from orca.foo x where x.x1 > (select count(*)+1 from orca.bar1 y where y.x1 = x.x2);
 
+-- result node with one time filter and filter
+explain select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
+from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
+select case when bar1.x2 = bar2.x2 then coalesce((select 1 from orca.foo where bar1.x2 = bar2.x2 and bar1.x2 = random() and foo.x2 = bar2.x2),0) else 1 end as col1, bar1.x1
+from orca.bar1 inner join orca.bar2 on (bar1.x2 = bar2.x2) order by bar1.x1; 
+
 drop table orca.r cascade;
 create table orca.r(a int, b int) distributed by (a);
 create unique index r_a on orca.r(a);
@@ -1605,6 +1611,17 @@ SELECT a FROM ggg WHERE a IN (NULL, 'x');
 EXPLAIN SELECT a FROM ggg WHERE a NOT IN (NULL, '');
 
 EXPLAIN SELECT a FROM ggg WHERE a IN (NULL, 'x');
+
+
+-- result node with one time filter and filter
+CREATE TABLE onetimefilter1 (a int, b int);
+CREATE TABLE onetimefilter2 (a int, b int);
+INSERT INTO onetimefilter1 SELECT i, i FROM generate_series(1,10)i;
+INSERT INTO onetimefilter2 SELECT i, i FROM generate_series(1,10)i;
+ANALYZE onetimefilter1;
+ANALYZE onetimefilter2;
+EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
+WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
