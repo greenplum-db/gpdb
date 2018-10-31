@@ -1270,7 +1270,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 			case CREATE_EXTENSION_END:		/* Mark creating_extension flag = false */
 				creating_extension = false;
 				CurrentExtensionObject = InvalidOid;
-				return InvalidOid;		/* GPDB_93_MERGE_FIXME: can we get the real OID from somewhere? Do we need it? */
+				return get_extension_oid(stmt->extname, true);
 
 			default:
 				elog(ERROR, "unrecognized create_ext_state: %d",
