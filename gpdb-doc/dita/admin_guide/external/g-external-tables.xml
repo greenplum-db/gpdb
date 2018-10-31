@@ -37,9 +37,12 @@
          <ul id="ul_ifb_crh_qfb">
             <li>Custom protocols must be registered using the <codeph>CREATE PROTOCOL</codeph>
                command. The <codeph>gphdfs://</codeph> protocol is preregistered when you install
-               Greenplum Database. You can optionally register the <codeph>s3://</codeph> and
-                  <codeph>pxf://</codeph> protocols. Internal protocols are always present and
-               cannot be unregistered.</li>
+               Greenplum Database. Registering the PXF extension in a database creates the
+                  <codeph>pxf://</codeph> protocol. (See <xref
+                  href="pxf-overview.xml#topic_u14_wtd_dbb"/>.) You can optionally register the
+                  <codeph>s3://</codeph> protocol. (See <xref
+                  href="g-s3-protocol.xml#amazon-emr/s3_prereq"/>.) Internal protocols are always
+               present and cannot be unregistered.</li>
             <li>When a custom protocol is registered, shared libraries are installed on all
                Greenplum Database hosts and a row is added to the <codeph>pg_extprotocol</codeph>
                catalog table to specify the handler functions that implement the protocol. The
