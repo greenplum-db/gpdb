@@ -172,10 +172,10 @@
               <entry colname="col5">usual choice for integer</entry>
             </row>
             <row>
-              <entry colname="col1">interval [ (p) ]</entry>
+              <entry colname="col1">interval [ <varname>fields</varname> ] [ (p) ]</entry>
               <entry colname="col2"/>
-              <entry colname="col3">12 bytes</entry>
-              <entry colname="col4">-178000000 years - 178000000 years</entry>
+              <entry colname="col3">16 bytes</entry>
+              <entry colname="col4">-178000000 years to 178000000 years</entry>
               <entry colname="col5">time span</entry>
             </row>
             <row>

@@ -260,6 +260,7 @@
 		<topicref href="gp_toolkit.ditamap" format="ditamap"/>
 		<topicref href="gpperfmon/gpperfmon.ditamap" format="ditamap"/>
 		<topicref href="data_types.xml" navtitle="Greenplum Database Data Types" id="data_types">
+			<topicref href="datatype-datetime.xml"/>
 			<topicref href="datatype-pseudo.xml"/>
 			<topicref href="datatype-textsearch.xml"/>
 		</topicref>
