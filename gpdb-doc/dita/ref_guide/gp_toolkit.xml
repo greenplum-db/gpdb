@@ -1560,12 +1560,17 @@
       class="- topic/topic ">
       <title id="ie193152x" class="- topic/title ">gp_resgroup_config</title>
       <body class="- topic/body ">
-        <p>The <codeph>gp_resgroup_config</codeph> view allows administrators to
-         see the current CPU, memory, and concurrency limits for a resource group.
-         The view also displays proposed limit settings. A proposed limit will
-         differ from the current limit when the limit has been altered, but the
-         new value could not be immediately applied.</p>
+        <p>The <codeph>gp_resgroup_config</codeph> view allows administrators to see the current
+          CPU, memory, and concurrency limits for a resource group. The view also displays proposed
+          limit settings. A proposed limit will differ from the current limit when the limit has
+          been altered, but the new value could not be immediately applied.</p>
         <p>This view is accessible to all users.</p>
+        <note>Resource groups use the Linux control groups (cgroups) configured on the host systems.
+          The cgroups are used to manage host system resources. When resource groups use cgroups
+          that are as part of a nested set of cgroups, resource group limits are relative to the
+          parent cgroup allotment. For information about nested cgroups and Greenplum Database
+          resource group limits, see <xref
+            href="../admin_guide/workload_mgmt_resgroups.xml#topic8339intro"/>.</note>
         <table id="ie177971x" class="- topic/table ">
           <title class="- topic/title ">gp_resgroup_config</title>
           <tgroup cols="2" class="- topic/tgroup ">
