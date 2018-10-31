@@ -13,7 +13,5 @@
 
 extern void DefineExtProtocol(List *name, List *parameters, bool trusted);
 extern void RemoveExtProtocolById(Oid protOid);
-extern Oid AlterExtProtocolOwner(const char *name, Oid newOwnerId);
-
 
 #endif   /* EXTPROTOCOLCMDS_H */
