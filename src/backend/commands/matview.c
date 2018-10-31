@@ -245,7 +245,7 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	 * will be gone).
 	 */
 	OIDNewHeap = make_new_heap(matviewOid, tableSpace, concurrent,
-							   ExclusiveLock, true /* GPDB_93_MERGE_FIXME Is true? */);
+							   ExclusiveLock, false);
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap);
 
