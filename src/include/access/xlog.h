@@ -403,25 +403,12 @@ extern void do_pg_abort_backup(void);
 #define BACKUP_LABEL_FILE		"backup_label"
 #define BACKUP_LABEL_OLD		"backup_label.old"
 
-extern void xlog_print_redo_lsn_application(
-		RelFileNode		*rnode,
-		BlockNumber 	blkno,
-		void			*page,
-		XLogRecPtr		lsn,
-		const char		*funcName);
-
-extern void XLogReadRecoveryCommandFile(int emode);
-
+/* Greenplum additions */
+extern void readRecoveryCommandFile(void);
 extern List *XLogReadTimeLineHistory(TimeLineID targetTLI);
-
-extern TimeLineID GetRecoveryTargetTLI(void);
-
 extern bool IsStandbyMode(void);
 extern DBState GetCurrentDBState(void);
-extern bool IsRoleMirror(void);
-
-extern XLogRecPtr
-last_xlog_replay_location(void);
-
+extern XLogRecPtr last_xlog_replay_location(void);
 extern void wait_for_mirror(void);
+
 #endif   /* XLOG_H */

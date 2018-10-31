@@ -1423,7 +1423,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
      * Check for recovery control file, and if so set up state for offline
      * recovery
      */
-    XLogReadRecoveryCommandFile(DEBUG5);
+	readRecoveryCommandFile();
 
     /* Now we can determine the list of expected TLIs */
     expectedTLIs = readTimeLineHistory(ThisTimeLineID);

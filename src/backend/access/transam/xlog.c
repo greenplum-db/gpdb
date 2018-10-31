@@ -812,9 +812,7 @@ static XLogRecPtr XLogInsert_Internal(RmgrId rmid, uint8 info, XLogRecData *rdat
 static void CheckRecoveryConsistency(void);
 static XLogRecord *ReadCheckpointRecord(XLogReaderState *xlogreader,
 					 XLogRecPtr RecPtr, int whichChkpti, bool report);
-#if 0
 static bool rescanLatestTimeLine(void);
-#endif
 static void WriteControlFile(void);
 static void ReadControlFile(void);
 static char *str_time(pg_time_t tnow);
@@ -5164,7 +5162,7 @@ str_time(pg_time_t tnow)
  * The file is parsed using the main configuration parser.
  */
 void
-XLogReadRecoveryCommandFile(int emode)
+readRecoveryCommandFile(void)
 {
 	FILE	   *fd;
 	TimeLineID	rtli = 0;
@@ -5183,10 +5181,6 @@ XLogReadRecoveryCommandFile(int emode)
 				 errmsg("could not open recovery command file \"%s\": %m",
 						RECOVERY_COMMAND_FILE)));
 	}
-
-	ereport(emode,
-			(errmsg("Found recovery.conf file, checking appropriate parameters "
-					" for recovery in standby mode")));
 
 	/*
 	 * Since we're asking ParseConfigFp() to report errors as FATAL, there's
@@ -6303,7 +6297,7 @@ StartupXLOG(void)
 	 * Check for recovery control file, and if so set up state for offline
 	 * recovery
 	 */
-	XLogReadRecoveryCommandFile(LOG);
+	readRecoveryCommandFile();
 
 	if (StandbyModeRequested)
 	{

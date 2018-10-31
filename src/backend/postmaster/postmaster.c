@@ -2012,14 +2012,14 @@ initMasks(fd_set *rmask)
 }
 
 /*
- * XXX check to see if we're a mirror.  And if we are: (1) Assume that we
- * are running as super user. (2) No data pages need to be accessed by this
- * backend - no snapshot / transaction needed.
+ * Check to see if we're a mirror, and if we are: (1) Assume that we are
+ * running as superuser; (2) No data pages need to be accessed by this backend
+ * - no snapshot / transaction needed.
  *
  * The recovery.conf file is renamed to recovery.done at the end of xlog
  * replay.  Normal backends can be created thereafter.
  */
-bool
+static bool
 IsRoleMirror(void)
 {
 	struct stat stat_buf;
