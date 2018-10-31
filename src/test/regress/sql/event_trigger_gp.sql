@@ -15,6 +15,11 @@ CREATE OR REPLACE FUNCTION write_to_file() RETURNS integer as '$libdir/gpextprot
 CREATE OR REPLACE FUNCTION read_from_file() RETURNS integer as '$libdir/gpextprotocol.so', 'demoprot_import' LANGUAGE C STABLE NO SQL;
 
 CREATE PROTOCOL demoprot_event_trig_test (readfunc = 'read_from_file', writefunc = 'write_to_file');
+
+CREATE WRITABLE EXTERNAL TABLE demoprot_w(a int) location('demoprot_event_trig_test://demoprotfile.txt') format 'text';
+
+DROP EXTERNAL TABLE demoprot_w CASCADE;
+
 DROP PROTOCOL demoprot_event_trig_test;
 
 drop event trigger regress_event_trigger;

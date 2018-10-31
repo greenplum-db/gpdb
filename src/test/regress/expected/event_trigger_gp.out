@@ -16,6 +16,10 @@ CREATE OR REPLACE FUNCTION read_from_file() RETURNS integer as '$libdir/gpextpro
 NOTICE:  test_event_trigger: ddl_command_start CREATE FUNCTION
 CREATE PROTOCOL demoprot_event_trig_test (readfunc = 'read_from_file', writefunc = 'write_to_file');
 NOTICE:  test_event_trigger: ddl_command_start CREATE PROTOCOL
+CREATE WRITABLE EXTERNAL TABLE demoprot_w(a int) location('demoprot_event_trig_test://demoprotfile.txt') format 'text';
+NOTICE:  test_event_trigger: ddl_command_start CREATE EXTERNAL TABLE
+DROP EXTERNAL TABLE demoprot_w CASCADE;
+NOTICE:  test_event_trigger: ddl_command_start DROP EXTERNAL TABLE
 DROP PROTOCOL demoprot_event_trig_test;
 NOTICE:  test_event_trigger: ddl_command_start DROP PROTOCOL
 drop event trigger regress_event_trigger;

@@ -1009,9 +1009,11 @@ EventTriggerSupportsObjectClass(ObjectClass objclass)
 		case OCLASS_DEFACL:
 		case OCLASS_EXTENSION:
 			return true;
+
 		case OCLASS_EXTPROTOCOL:
+			return true;
 		case OCLASS_COMPRESSION:
-			return false;/*GPDB_93_MERGE_FIXME is these gp types support trigger? */
+			return false;
 
 		case MAX_OCLASS:
 
