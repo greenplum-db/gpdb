@@ -278,7 +278,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	{
 		case CMD_SELECT:
 			/* If the query comes from 'CREAT TABLE AS' or 'SELECT INTO' */
-			if (query->intoClauseType != INTOCLAUSE_NONE)
+			if (query->parentStmtType != PARENTSTMTTYPE_NONE)
 			{
 				List	   *hashExpr;
 				ListCell   *exp1;
@@ -443,7 +443,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 								strcat(columns, "???");
 
 						}
-						if (query->intoClauseType == INTOCLAUSE_CTAS)
+						if (query->parentStmtType == PARENTSTMTTYPE_CTAS)
 							ereport(NOTICE,
 									(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 									 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "

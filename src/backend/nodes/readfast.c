@@ -254,7 +254,7 @@ _readQuery(void)
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
 	READ_NODE_FIELD(constraintDeps);
-	READ_BOOL_FIELD(intoClauseType);
+	READ_BOOL_FIELD(parentStmtType);
 	READ_BOOL_FIELD(needReshuffle);
 
 	/* policy not serialized */

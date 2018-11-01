@@ -150,8 +150,8 @@ static const char BinarySignature[11] = "PGCOPY\n\377\r\n\0";
 
 /* non-export function prototypes */
 static CopyState BeginCopy(bool is_from, Relation rel, Node *raw_query,
-			const char *queryString, List *attnamelist, List *options,
-		   TupleDesc tupDesc);
+						   const char *queryString, List *attnamelist, List *options,
+						   TupleDesc tupDesc);
 static void EndCopy(CopyState cstate);
 static CopyState BeginCopyTo(Relation rel, Node *query, const char *queryString,
 							 const char *filename, bool is_program, List *attnamelist,
@@ -1129,6 +1129,11 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 
 			cstate->partitions = stmt->partitions;
 
+			/*
+			 * "copy t to file on segment"					CopyDispatchOnSegment
+			 * "copy (select * from t) to file on segment"	CopyToQueryOnSegment
+			 * "copy t/(select * from t) to file"			DoCopyTo
+			 */
 			if (Gp_role == GP_ROLE_DISPATCH && cstate->on_segment)
 			{
 				if (cstate->rel)
@@ -1814,11 +1819,9 @@ BeginCopy(bool is_from,
 		query = (Query *) linitial(rewritten);
 
 
-		if (cstate->on_segment)
+		if (cstate->on_segment && IsA(query, Query))
 		{
-			if (IsA(query, Query))
-				query->intoClauseType = INTOCLAUSE_COPY;
-
+			query->parentStmtType = PARENTSTMTTYPE_COPY;
 		}
 		/* Query mustn't use INTO, either */
 		if (query->utilityStmt != NULL &&
@@ -2172,7 +2175,6 @@ MakeCopyIntoClause(CopyStmt *stmt)
 	CopyIntoClause *copyIntoClause;
 	copyIntoClause = makeNode(CopyIntoClause);
 
-	copyIntoClause->type = T_CopyIntoClause;
 	copyIntoClause->is_program = stmt->is_program;
 	copyIntoClause->ao_segnos = stmt->ao_segnos;
 	copyIntoClause->filename = stmt->filename;

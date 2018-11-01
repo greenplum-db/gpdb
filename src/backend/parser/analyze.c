@@ -3291,8 +3291,8 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
 	result->commandType = CMD_UTILITY;
 	result->utilityStmt = (Node *) stmt;
 
-	/* GPDB: Set isCTAS to be true as we know this query is for CTAS */
-	((Query*)stmt->query)->intoClauseType = INTOCLAUSE_CTAS;
+	/* GPDB: Set parentStmtType to PARENTSTMTTYPE_CTAS as we know this query is for CTAS */
+	((Query*)stmt->query)->parentStmtType = PARENTSTMTTYPE_CTAS;
 
 	if (stmt->into->distributedBy && Gp_role == GP_ROLE_DISPATCH)
 		setQryDistributionPolicy(stmt->into, (Query *)stmt->query);

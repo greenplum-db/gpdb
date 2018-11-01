@@ -385,7 +385,7 @@ ChoosePortalStrategy(List *stmts)
 			{
 				if (query->commandType == CMD_SELECT &&
 					query->utilityStmt == NULL &&
-					query->intoClauseType == INTOCLAUSE_NONE)
+					query->parentStmtType == PARENTSTMTTYPE_NONE)
 				{
 					if (query->hasModifyingCTE)
 						return PORTAL_ONE_MOD_WITH;
@@ -523,7 +523,7 @@ FetchStatementTargetList(Node *stmt)
 		{
 			if (query->commandType == CMD_SELECT &&
 				query->utilityStmt == NULL &&
-				query->intoClauseType == INTOCLAUSE_NONE)
+				query->parentStmtType == PARENTSTMTTYPE_NONE)
 				return query->targetList;
 			if (query->returningList)
 				return query->returningList;

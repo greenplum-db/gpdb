@@ -3185,7 +3185,7 @@ _copyQuery(const Query *from)
 	COPY_NODE_FIELD(setOperations);
 	COPY_NODE_FIELD(constraintDeps);
 	COPY_NODE_FIELD(intoPolicy);
-	COPY_SCALAR_FIELD(intoClauseType);
+	COPY_SCALAR_FIELD(parentStmtType);
 	COPY_SCALAR_FIELD(needReshuffle);
 
 	return newnode;

@@ -930,7 +930,7 @@ _equalQuery(const Query *a, const Query *b)
 	if (!GpPolicyEqual(a->intoPolicy, b->intoPolicy))
 		return false;
 
-	COMPARE_SCALAR_FIELD(intoClauseType);
+	COMPARE_SCALAR_FIELD(parentStmtType);
 	COMPARE_SCALAR_FIELD(needReshuffle);
 
 	return true;
