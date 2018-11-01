@@ -406,10 +406,15 @@ expand_targetlist(PlannerInfo *root, List *tlist, int command_type,
 			}
 		}
 
-		if (key_col_updated)
+		if (key_col_updated || root->parse->needReshuffle)
 		{
 			/*
 			 * Yes, this is a split update.
+			 * Updating a hash column is a split update, of course.
+			 * We should note that current reshuffle implementation
+			 * is based on split-update, so if the query is a reshuffle
+			 * query, it is also a split-update even if we are reshuffling
+			 * a random distributed table.
 			 *
 			 * For each column that was changed, add the original column value
 			 * to the target list, if it's not there already.
