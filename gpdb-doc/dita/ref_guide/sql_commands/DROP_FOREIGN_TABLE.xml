@@ -24,7 +24,7 @@
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt><varname>_name</varname></pt>
+                    <pt><varname>name</varname></pt>
                     <pd>
                         <p>The name (optionally schema-qualified) of the foreign table to drop.</p>
                     </pd>
@@ -49,7 +49,7 @@
         </section>
         <section id="section7">
             <title>Compatibility</title>
-            <p><codeph>DROP SERVER</codeph> conforms to ISO/IEC 9075-9 (SQL/MED), except that the standard only allows one foreign table to be dropped per command. The <codeph>IF EXISTS</codeph> clause is a Greenplum Database extension.</p>
+            <p><codeph>DROP FOREIGN TABLE</codeph> conforms to ISO/IEC 9075-9 (SQL/MED), except that the standard only allows one foreign table to be dropped per command. The <codeph>IF EXISTS</codeph> clause is a Greenplum Database extension.</p>
         </section>
         <section id="section8">
             <title>See Also</title>

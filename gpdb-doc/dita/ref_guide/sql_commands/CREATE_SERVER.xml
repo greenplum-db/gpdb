@@ -13,7 +13,7 @@
         </section>
         <section id="section3">
             <title>Description</title>
-            <p><codeph>CREATE SERVER</codeph> defines a new foreign server. The who defines
+            <p><codeph>CREATE SERVER</codeph> defines a new foreign server. The user who defines
                the server becomes its owner.</p>
             <p>A foreign server typically encapsulates connection information that a foreign-data
               wrapper uses to access an external data source. Additional user-specific connection
@@ -33,13 +33,13 @@
                 <plentry>
                     <pt><varname>server_type</varname></pt>
                     <pd>
-                        <p>Optional server type.</p>
+                        <p>Optional server type, potentially useful to foreign-data wrappers.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt><varname>server_version</varname></pt>
                     <pd>
-                        <p>Optional server version.</p>
+                        <p>Optional server version, potentially useful to foreign-data wrappers.</p>
                     </pd>
                 </plentry>
                 <plentry>

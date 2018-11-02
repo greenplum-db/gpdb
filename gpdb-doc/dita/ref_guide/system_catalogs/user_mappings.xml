@@ -38,8 +38,8 @@
             </entry>
             <entry colname="col2">sql_identifier</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">Name of the database that contains the foreign server used by
-              this mapping (always the current database).</entry>
+            <entry colname="col4">Name of the database in which the foreign server used by
+              this mapping is defined (always the current database).</entry>
           </row>
           <row>
             <entry colname="col1">

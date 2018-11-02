@@ -39,7 +39,7 @@
           <row>
             <entry colname="col1"><codeph>srvname</codeph></entry>
             <entry colname="col2">text</entry>
-            <entry colname="col3"></entry>
+            <entry colname="col3">pg_foreign_server.srvname</entry>
             <entry colname="col4">Name of the foreign server.</entry>
           </row>
           <row>
@@ -58,12 +58,20 @@
             <entry colname="col1"><codeph>umoptions</codeph></entry>
             <entry colname="col2">text[]</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">User mapping-specific options, as "keyword=value" strings;
-               viewable only if the current user is the owner of the foreign server, else
-                null.</entry>
+            <entry colname="col4">User mapping-specific options, as "keyword=value" strings.</entry>
           </row>
         </tbody>
       </tgroup>
     </table>
+    <p>
+      To protect password information stored as a user mapping option, the
+      <codeph>umoptions</codeph> column reads as null unless one of the following
+      applies:</p> <ul>
+        <li>The current user is the user being mapped, and owns the server or holds
+          <codeph>USAGE</codeph> privilege on it.</li>
+        <li>The current user is the server owner and the mapping is for
+          <codeph>PUBLIC</codeph>.</li>
+        <li>The current user is a superuser.</li>
+      </ul>
   </body>
 </topic>
