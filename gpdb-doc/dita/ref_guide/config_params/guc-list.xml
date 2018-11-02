@@ -2603,9 +2603,15 @@
       <p>For <cmdname>CREATE TABLE</cmdname>, if the value of the parameter is <codeph>off</codeph>
         (the default), and the table creation command does not contain a <cmdname>DISTRIBUTED
           BY</cmdname> clause, Greenplum Database chooses the table distribution key based on the
-        command. If the <cmdname>LIKE</cmdname> or <cmdname>INHERITS</cmdname> clause is specified
-        in table creation command, the created table uses the same distribution key as the source or
-        parent table. </p>
+          command:<ul id="ul_rjb_gty_qfb">
+          <li>If a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph> clause is specified, then
+            Greenplum copies the distribution key from the source or parent table.</li>
+          <li>If a <codeph>PRIMARY KEY</codeph> or <codeph>UNIQUE</codeph> constraints are
+            specified, then Greenplum chooses the largest subset of all the key columns as the
+            distribution key.</li>
+          <li>If neither constraints nor a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph> clause
+            is specified, then Greenplum chooses the first column as the distribution key.</li>
+        </ul></p>
       <p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
         these rules to create a table when the <cmdname>DISTRIBUTED BY</cmdname> clause is not
           specified:<ul id="ul_tbr_5kq_kq">
