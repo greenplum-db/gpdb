@@ -627,6 +627,8 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 vpath_build
+PG_SYSROOT
+PG_VERSION_NUM
 PROVE
 SGMLSPL
 COLLATEINDEX
@@ -18724,6 +18726,27 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+
+# If we are inserting PG_SYSROOT into CPPFLAGS, do so symbolically not
+# literally, so that it's possible to override it at build time using
+# a command like "make ... PG_SYSROOT=path".  This has to be done after
+# we've finished all configure checks that depend on CPPFLAGS.
+if test x"$PG_SYSROOT" != x; then
+  CPPFLAGS=`echo "$CPPFLAGS" | sed -e "s| $PG_SYSROOT | \\\$(PG_SYSROOT) |"`
+fi
+
+
+
+# Begin output steps
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using compiler=$cc_string" >&5
+$as_echo "$as_me: using compiler=$cc_string" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using CFLAGS=$CFLAGS" >&5
+$as_echo "$as_me: using CFLAGS=$CFLAGS" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using CPPFLAGS=$CPPFLAGS" >&5
+$as_echo "$as_me: using CPPFLAGS=$CPPFLAGS" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: using LDFLAGS=$LDFLAGS" >&5
+$as_echo "$as_me: using LDFLAGS=$LDFLAGS" >&6;}
 
 # prepare build tree if outside source tree
 # Note 1: test -ef might not exist, but it's more reliable than `pwd`.
