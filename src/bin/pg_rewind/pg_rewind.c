@@ -38,6 +38,7 @@ static void updateControlFile(ControlFileData *ControlFile);
 static void syncTargetDirectory(const char *argv0);
 static void sanityChecks(void);
 static void findCommonAncestorTimeline(XLogRecPtr *recptr, TimeLineID *tli);
+static void ensureCleanShutdown(const char *argv0);
 
 static ControlFileData ControlFile_target;
 static ControlFileData ControlFile_source;
@@ -205,6 +206,21 @@ main(int argc, char **argv)
 	buffer = slurpFile(datadir_target, "global/pg_control", &size);
 	digestControlFile(&ControlFile_target, buffer, size);
 	pg_free(buffer);
+
+	/*
+	 * If the target instance was not cleanly shut down, run a single-user
+	 * postgres session really quickly and reload the control file to get the
+	 * new state.
+	 */
+	if (ControlFile_target.state != DB_SHUTDOWNED &&
+		ControlFile_target.state != DB_SHUTDOWNED_IN_RECOVERY)
+	{
+		ensureCleanShutdown(argv[0]);
+
+		buffer = slurpFile(datadir_target, "global/pg_control", &size);
+		digestControlFile(&ControlFile_target, buffer, size);
+		pg_free(buffer);
+	}
 
 	buffer = fetchFile("global/pg_control", &size);
 	digestControlFile(&ControlFile_source, buffer, size);
@@ -632,4 +648,48 @@ syncTargetDirectory(const char *argv0)
 
 	if (system(cmd) != 0)
 		pg_fatal("sync of target directory failed\n");
+}
+
+/*
+ * Ensure clean shutdown of target instance by launching single-user mode
+ * postgres to do crash recovery.
+ */
+static void
+ensureCleanShutdown(const char *argv0)
+{
+	int		ret;
+#define MAXCMDLEN (2 * MAXPGPATH)
+	char	exec_path[MAXPGPATH];
+	char	cmd[MAXCMDLEN];
+
+	/* locate postgres binary */
+	if ((ret = find_other_exec(argv0, "postgres",
+							   "postgres (Greenplum Database) " PG_VERSION "\n",
+							   exec_path)) < 0)
+	{
+		char        full_path[MAXPGPATH];
+
+		if (find_my_exec(argv0, full_path) < 0)
+			strlcpy(full_path, progname, sizeof(full_path));
+
+		if (ret == -1)
+			pg_fatal("The program \"postgres\" is needed by %s but was \n"
+					 "not found in the same directory as \"%s\".\n"
+					 "Check your installation.\n", progname, full_path);
+		else
+			pg_fatal("The program \"postgres\" was found by \"%s\"\n"
+					 "but was not the same version as %s.\n"
+					 "Check your installation.\n", full_path, progname);
+	}
+
+	/* only skip processing after ensuring presence of postgres */
+	if (dry_run)
+		return;
+
+	/* finally run postgres single-user mode */
+	snprintf(cmd, MAXCMDLEN, "\"%s\" --single -D \"%s\" template1 < %s",
+			 exec_path, datadir_target, DEVNULL);
+
+	if (system(cmd) != 0)
+		pg_fatal("postgres single-user mode of target instance failed for command: %s\n", cmd);
 }

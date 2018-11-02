@@ -6668,12 +6668,6 @@ StartupXLOG(void)
 	else if (ControlFile->state != DB_SHUTDOWNED)
 		InRecovery = true;
 
-	if (InRecovery && !IsUnderPostmaster)
-	{
-		ereport(FATAL,
-				(errmsg("Database must be shutdown cleanly when using single backend start")));
-	}
-
 	/* Recovery from xlog */
 	if (InRecovery)
 	{

@@ -93,7 +93,7 @@ echo "Standby promoted."
 after_promotion
 
 # Stop the master and be ready to perform the rewind
-pg_ctl -w -D $TEST_MASTER stop -m fast >>$log_path 2>&1
+pg_ctl -w -D $TEST_MASTER stop -m $MASTER_PG_CTL_STOP_MODE >>$log_path 2>&1
 
 # For a local test, source node need to be stopped as well.
 if [ $TEST_SUITE == "local" ]; then

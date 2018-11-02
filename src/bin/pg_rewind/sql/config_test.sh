@@ -75,6 +75,7 @@ STANDBY_PSQL="psql -a --no-psqlrc -p $PORT_STANDBY"
 PG_CTL_COMMON_OPTIONS="--gp_dbid=2 --gp_contentid=0"
 MASTER_PG_CTL_OPTIONS="-p ${PORT_MASTER} $PG_CTL_COMMON_OPTIONS"
 STANDBY_PG_CTL_OPTIONS="-p ${PORT_STANDBY} $PG_CTL_COMMON_OPTIONS"
+MASTER_PG_CTL_STOP_MODE="fast"
 
 function wait_until_standby_is_promoted {
    retry=50
