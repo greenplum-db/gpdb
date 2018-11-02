@@ -62,10 +62,16 @@
             <xref href="gpinitsystem.xml#topic1" type="topic" format="dita"/>
           </p>
           <p otherprops="pivotal">
+            <xref href="../../greenplum-kafka/gpkafka.xml" type="topic" format="dita" scope="peer">gpkafka</xref>
+          </p>
+          <p otherprops="pivotal">
             <xref href="../../greenplum-kafka/gpkafka-check.xml" type="topic" format="dita" scope="peer">gpkafka check</xref>
           </p>
           <p otherprops="pivotal">
             <xref href="../../greenplum-kafka/gpkafka-load.xml" type="topic" format="dita" scope="peer">gpkafka load</xref>
+          </p>
+          <p otherprops="pivotal">
+            <xref href="../../greenplum-kafka/gpkafka-yaml-v2.xml" type="topic" format="dita" scope="peer">gpkafka-v2.yaml</xref>
           </p>
           <p otherprops="pivotal">
             <xref href="../../greenplum-kafka/gpkafka-yaml.xml" type="topic" format="dita" scope="peer">gpkafka.yaml</xref>

@@ -19,8 +19,10 @@
             <topicref href="admin_utilities/gpfdist.xml"/>
             <topicref href="admin_utilities/gpinitstandby.xml"/>
             <topicref href="admin_utilities/gpinitsystem.xml"/>
+            <topicref href="../greenplum-kafka/gpkafka.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka"/>
             <topicref href="../greenplum-kafka/gpkafka-check.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka check"/>
             <topicref href="../greenplum-kafka/gpkafka-load.xml" otherprops="pivotal" scope="peer" navtitle= "gpkafka load"/>
+            <topicref href="../greenplum-kafka/gpkafka-yaml-v2.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka.yaml"/>
             <topicref href="../greenplum-kafka/gpkafka-yaml.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka.yaml"/>
             <topicref href="admin_utilities/gpload.xml"/>
             <topicref href="admin_utilities/gplogfilter.xml"/>
