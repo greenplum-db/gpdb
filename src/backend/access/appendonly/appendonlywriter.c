@@ -779,9 +779,6 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 
 			appendOnlyInsertXact = true;
 			segfilestat->xid = CurrentXid;
-			elogif(segfilestat->state != COMPACTED_AWAITING_DROP,
-				   ERROR, "expected segno (%d) from AO relid %d in state COMPACTED_AWAITING_DROP but found in state %d",
-				   i, relid, segfilestat->state);
 			segfilestat->state = DROP_USE;
 		}
 	}
