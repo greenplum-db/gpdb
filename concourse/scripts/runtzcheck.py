@@ -33,8 +33,10 @@ class TZFile(object):
 
         self_header = self._output.replace(self._prefix_path, "")
         other_header = other._output.replace(other._prefix_path, "")
+        if self_header != other_header:
+            print "WARNING: Mismatched header %s" % self._filename
 
-        return self_output != other_output or self_header != other_header
+        return self_output != other_output
 
 def check_timezone_good(tz_tuple):
     if tz_tuple[0] != tz_tuple[1]:
@@ -74,7 +76,7 @@ def main():
         has_mismatched_tzfiles = True
 
     p = Pool(16)
-    if False in p.map(check_timezone_good, parallel_list):
+    if not all(p.map(check_timezone_good, parallel_list)):
         has_mismatched_tzfiles = True
 
     if not has_mismatched_tzfiles:
