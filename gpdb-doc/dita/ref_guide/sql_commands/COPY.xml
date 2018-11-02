@@ -650,12 +650,12 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
           <codeph>/tmp/lineitem_program.csv</codeph> file with <codeph>cat</codeph> utility. The
         file is placed on the Greenplum Database
         master.<codeblock>COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem.csv' CSV; </codeblock></p>
-      <p>This example uses the <codeph>PROGRAM</codeph> and <codeph>ON SEGEMENT</codeph> clauses to
+      <p>This example uses the <codeph>PROGRAM</codeph> and <codeph>ON SEGMENT</codeph> clauses to
         copy data to files on the segment hosts. On the segment hosts, the <codeph>COPY</codeph>
         command replaces <codeph>&lt;SEGID></codeph> with the segment content ID to create a file
         for each segment instance on the segment
         host.<codeblock>COPY LINEITEM TO PROGRAM 'cat > /tmp/lineitem_program&lt;SEGID>.csv' ON SEGMENT CSV; </codeblock></p>
-      <p>This example uses the <codeph>PROGRAM</codeph> and <codeph>ON SEGEMENT</codeph> clauses to
+      <p>This example uses the <codeph>PROGRAM</codeph> and <codeph>ON SEGMENT</codeph> clauses to
         copy data from files on the segment hosts. The <codeph>COPY</codeph> command replaces
           <codeph>&lt;SEGID></codeph> with the segment content ID when copying data from the files.
         On the segment hosts, there must be a file for each segment instance where the file name

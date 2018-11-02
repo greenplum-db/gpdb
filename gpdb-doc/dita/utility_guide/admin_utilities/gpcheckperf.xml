@@ -123,7 +123,7 @@
                 <plentry>
                     <pt>-f <varname>hostfile_gpchecknet</varname></pt>
                     <pd>For the network performance test, all entries in the host file must be for
-                        host adresses within the same subnet. If your segment hosts have multiple
+                        host addresses within the same subnet. If your segment hosts have multiple
                         network interfaces configured on different subnets, run the network test
                         once for each subnet. For example (a host file containing segment host
                         address names for interconnect subnet 1):</pd>

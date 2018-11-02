@@ -129,7 +129,7 @@ pgbouncer [ -V | --version ] | [ -h | --help ]</codeblock>
           are comments and are ignored. The characters "<codeph>;</codeph>" and "<codeph>#</codeph>"
           are not recognized when they appear later in the line.</p>
         <section>
-          <title>Synopsys</title>
+          <title>Synopsis</title>
           <codeblock>[databases]
 db = ...
 
@@ -516,7 +516,7 @@ db = ...
               <plentry>
                 <pt>stats_users</pt>
                 <pd>Comma-separated list of database users that are allowed to connect and run
-                  read-only queries on console. Thats means all SHOW commands except SHOW
+                  read-only queries on console. That means all SHOW commands except SHOW
                     FDS.<p>Default: empty.</p></pd>
               </plentry>
             </parml>
@@ -621,7 +621,7 @@ db = ...
           </section>
           <section>
             <title>Dangerous Timeouts</title>
-            <p>Setting tje following timeouts can cause unexpected errors.</p>
+            <p>Setting the following timeouts can cause unexpected errors.</p>
             <parml>
               <plentry>
                 <pt>query_timeout</pt>
@@ -670,7 +670,7 @@ db = ...
                 <pt>listen_backlog</pt>
                 <pd>Backlog argument for the <codeph>listen(2)</codeph> system call. It how many new
                   unanswered connection attempts are kept in queue. When the queue is full, further
-                  new connection attemps are dropped.<p>Default: 128</p></pd>
+                  new connection attempts are dropped.<p>Default: 128</p></pd>
               </plentry>
               <plentry>
                 <pt>sbuf_loopcnt</pt>

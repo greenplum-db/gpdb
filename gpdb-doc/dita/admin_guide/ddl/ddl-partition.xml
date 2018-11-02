@@ -838,7 +838,7 @@ INTO (PARTITION jan17, default partition);
                 system.<p>This example uses the <codeph>gpfdist</codeph> protocol. This command
                 starts the <codeph>gpfdist</codeph> protocol.
               <codeblock> $ gpfdist</codeblock></p></li>
-            <li>Create a writable external table.<p>This <codeph>CREATE WRITABLE EXTENAL
+            <li>Create a writable external table.<p>This <codeph>CREATE WRITABLE EXTERNAL
                   TABLE</codeph> command creates a writable external table with the same columns as
                 the partitioned
               table.</p><codeblock>CREATE WRITABLE EXTERNAL TABLE my_sales_ext ( LIKE sales_1_prt_yr_1 )
@@ -846,7 +846,7 @@ INTO (PARTITION jan17, default partition);
   FORMAT 'csv' 
   DISTRIBUTED BY (id) ;</codeblock></li>
             <li>Create a readable external table that reads the data from that destination of the
-              writable external table created in the previous step.<p>This <codeph>CREATE EXTENAL
+              writable external table created in the previous step.<p>This <codeph>CREATE EXTERNAL
                   TABLE</codeph> create a readable external that uses the same external data as the
                 writable external
               data.</p><codeblock>CREATE EXTERNAL TABLE sales_2010_ext ( LIKE sales_1_prt_yr_1) 

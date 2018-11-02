@@ -311,7 +311,7 @@
       <p>Enabling and using resource management in Greenplum Database involves the following
         high-level tasks:</p>
       <ol id="ol_ec5_4dy_wq">
-        <li>Configure resource managment. See <xref href="#topic9" format="dita"/>.</li>
+        <li>Configure resource management. See <xref href="#topic9" format="dita"/>.</li>
         <li id="iz153167">Create the resource queues and set limits on them. See <xref
             href="#topic10" type="topic" format="dita"/> and <xref href="#topic19" format="dita"
           />.</li>

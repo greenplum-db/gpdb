@@ -429,7 +429,7 @@ date: 1865
                     key and accumulates values in a <codeph>state</codeph> variable. When the
                     transition function is called on the first value of a key, the
                       <codeph>state</codeph> is set to the value specified by <xref
-                      href="#topic3/INITIALIZE" format="dita">INITALIZE</xref> of a <xref
+                      href="#topic3/INITIALIZE" format="dita">INITIALIZE</xref> of a <xref
                       href="#topic3/REDUCE" format="dita">REDUCE</xref> job (or the default state
                     value for the data type). A transition takes two arguments as input; the current
                     state of the key reduction, and the next value, which then produces a new
@@ -671,7 +671,7 @@ date: 1865
 # It takes two database tables as input:
 #   - documents (doc_id integer, url text, data text)
 # - keywords (keyword_id integer, keyword text)#
-# The documents data is searched for occurences of keywords and returns results of
+# The documents data is searched for occurrences of keywords and returns results of
 # url, data and keyword (a keyword can be multiple words, such as "high performance # computing")
 %YAML 1.1
 ---
@@ -877,7 +877,7 @@ RETURNS:
  # ['1','5','7'] - 0 from each element = ['1','5','7']
  # ['2', '8'] - 1 from each element = ['1', '7']
         # 5) Resulting arrays after subtracting the offset in step 4 are
- #    intersected and their overlaping values kept: 
+ #    intersected and their overlapping values kept: 
         #    ['1','5','7'].intersect['1', '7'] = [1,7]
         # 6) Determines the length of the intersection, which is the number of 
  # times that an entire keyword (with all its pieces) matches in the 

@@ -8,7 +8,7 @@
     <title id="monitoring">Monitoring</title>
     <body>
       <p>Greenplum Database includes utilities that are useful for monitoring the system.</p>
-      <p>The <codeph>gp_toolkit</codeph> schema conatains several views that can be accessed using
+      <p>The <codeph>gp_toolkit</codeph> schema contains several views that can be accessed using
         SQL commands to query system catalogs, log files, and operating environment for system
         status information. </p>
       <p>The <codeph>gp_stats_missing</codeph> view shows tables that do not have statistics and

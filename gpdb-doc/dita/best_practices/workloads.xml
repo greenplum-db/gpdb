@@ -81,7 +81,7 @@ VM Protect failed to allocate 4096 bytes, 0 MB available</codeblock></p>
         <li>
           <b>vm.overcommit_memory</b>
           <p>This is a Linux kernel parameter, set in <codeph>/etc/sysctl.conf</codeph>. It should
-            aways be set to 2. It determines the method the OS uses for determining how much memory
+            always be set to 2. It determines the method the OS uses for determining how much memory
             can be allocated to processes and 2 is the only safe setting for Greenplum Database.
           </p>
         </li>

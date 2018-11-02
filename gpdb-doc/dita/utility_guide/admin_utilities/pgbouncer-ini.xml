@@ -5,7 +5,7 @@
   <body>
     <p>PgBouncer configuration file.</p>
     <section>
-      <title>Synopsys</title>
+      <title>Synopsis</title>
       <codeblock>[databases]
 db = ...
 
@@ -623,7 +623,7 @@ db = ...
             <pt>listen_backlog</pt>
             <pd>Backlog argument for the <codeph>listen(2)</codeph> system call. It determines how many new
               unanswered connection attempts are kept in queue. When the queue is full, further
-              new connection attemps are dropped.<p>Default: 128</p></pd>
+              new connection attempts are dropped.<p>Default: 128</p></pd>
           </plentry>
           <plentry>
             <pt>sbuf_loopcnt</pt>

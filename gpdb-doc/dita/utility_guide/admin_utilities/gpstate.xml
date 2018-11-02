@@ -239,12 +239,12 @@
             <row>
               <entry colname="col1">Estimated total data to synchronize</entry>
               <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
-                size of data left to syncronize</entry>
+                size of data left to synchronize</entry>
             </row>
             <row>
               <entry colname="col1">Data synchronized</entry>
               <entry colname="col2">when in <varname>Resynchronization</varname> mode, the estimated
-                size of data that has already been syncronized</entry>
+                size of data that has already been synchronized</entry>
             </row>
             <row>
               <entry colname="col1">Estimated resync progress with mirror</entry>
@@ -338,7 +338,7 @@
             </row>
             <row>
               <entry colname="col1">Sync state</entry>
-              <entry colname="col2">WAL sender syncronization state: <varname>sync</varname></entry>
+              <entry colname="col2">WAL sender synchronization state: <varname>sync</varname></entry>
             </row>
             <row>
               <entry colname="col1">Sent Location</entry>

@@ -8,7 +8,7 @@
       that you add to a table.  Declaring a column of type <codeph>SERIAL</codeph> implicitly
       creates a sequence counter for use in that table column.
     </p>
-    <p>Greenplum Database provides commands to create, alter, and drop a squence. Greenplum Database
+    <p>Greenplum Database provides commands to create, alter, and drop a sequence. Greenplum Database
        also provides built-in functions to return the next value in the
        sequence (<codeph>nextval()</codeph>) or to set the sequence to a specific start
        value (<codeph>setval()</codeph>).</p>

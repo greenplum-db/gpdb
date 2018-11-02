@@ -302,7 +302,7 @@
             <entry colname="col3">pg_collation.oid</entry>
             <entry colname="col4">Specifies the collation of the type. Zero if the type
               does not support collations. The value is <codeph>DEFAULT_COLLATION_OID</codeph>
-              for a base type that suppports collations. A domain over a collatable type
+              for a base type that supports collations. A domain over a collatable type
               can have some other collation OID if one was specified for the domain.</entry>
           </row>
           <row>

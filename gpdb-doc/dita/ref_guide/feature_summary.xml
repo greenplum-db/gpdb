@@ -40,7 +40,7 @@
               EXISTS</codeph> clauses that Greenplum's parallel optimizer cannot rewrite into
             joins.</li>
           <li id="ik264484">Backwards scrolling cursors, including the use of <codeph>FETCH
-              PRIOR</codeph>, <codeph>FETCH FIRST</codeph>, <codeph>FETCH ABOLUTE</codeph>, and
+              PRIOR</codeph>, <codeph>FETCH FIRST</codeph>, <codeph>FETCH ABSOLUTE</codeph>, and
               <codeph>FETCH RELATIVE</codeph>.</li>
           <li id="ik264507">In <codeph>CREATE TABLE</codeph> statements (on hash-distributed
             tables): a <codeph>UNIQUE</codeph> or <codeph>PRIMARY KEY</codeph> clause must include

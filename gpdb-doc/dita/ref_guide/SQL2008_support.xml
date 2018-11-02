@@ -1804,7 +1804,7 @@
             <entry colname="col1">F671</entry>
             <entry colname="col2">Subqueries in <codeph>CHECK</codeph></entry>
             <entry colname="col3">NO</entry>
-            <entry colname="col4">Intentionally ommitted</entry>
+            <entry colname="col4">Intentionally omitted</entry>
           </row>
           <row>
             <entry colname="col1">F672</entry>

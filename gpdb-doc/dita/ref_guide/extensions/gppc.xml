@@ -732,12 +732,12 @@ GppcSPIFinish();
           descriptor. A tuple descriptor defines the following for each
           attribute in the tuple:<ul>
            <li>attribute name</li>
-           <li>object identifer of the attribute data type</li>
+           <li>object identifier of the attribute data type</li>
            <li>byte length of the attribute data type</li>
            <li>object identifier of the attribute modifer</li>
         </ul></p>
         <p>The GPPC API defines an abstract type, <codeph>GppcTupleDesc</codeph>,
-          to represent a tuple/row desriptor. The API also provides functions
+          to represent a tuple/row descriptor. The API also provides functions
           that you can use to create, access, and set tuple descriptors:</p>
         <table id="in201681">
           <tgroup cols="2">
@@ -803,7 +803,7 @@ int32_t GppcTupleDescAttrTypmod(GppcTupleDesc tupdesc, int16_t attno);</codebloc
                <codeblock>GppcTupleDesc       tdesc;
 GppcTupleDesc       indesc = some_input_descriptor;
 
-// initalize the tuple descriptor with 2 attributes
+// initialize the tuple descriptor with 2 attributes
 tdesc = GppcCreateTemplateTupleDesc(2);
 
 // use third attribute from the input descriptor
@@ -1133,7 +1133,7 @@ LANGUAGE C STRICT;</codeblock></p>
         <li>If the shared library file name is specified without a directory
           prefix, Greenplum Database searches for the file in the directory
           identified by the <codeph>dynamic_library_path</codeph> server
-          configuration paramater value.</li>
+          configuration parameter value.</li>
         <li>The current working directory.</li></ol>
     </body>
   </topic>
@@ -1322,8 +1322,8 @@ return_tbl(GPPC_FUNCTION_ARGS)
     }
 
     // log the attribute names of the output tuple descriptor
-    GppcReport(level, "ouput tuple descriptor attr0 name: %s", GppcTupleDescAttrName(out_tupdesc, 0));
-    GppcReport(level, "ouput tuple descriptor attr1 name: %s", GppcTupleDescAttrName(out_tupdesc, 1));
+    GppcReport(level, "output tuple descriptor attr0 name: %s", GppcTupleDescAttrName(out_tupdesc, 0));
+    GppcReport(level, "output tuple descriptor attr1 name: %s", GppcTupleDescAttrName(out_tupdesc, 1));
 
     // retrieve the attribute values by name from the tuple
     bool text_isnull, int_isnull;

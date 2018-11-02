@@ -727,7 +727,7 @@ lo_import 152801</codeblock>
                 here, as that is already taken care of by <codeph>\pset border</codeph>. </li>
               <li id="kb151808"><b><codeph>tuples_only</codeph></b> | <b><codeph>t </codeph></b>
                   [<varname>novalue</varname> | <varname>on</varname> | <varname>off</varname>] –
-                The <codeph>\pset tuples_only</codeph> command by itselt toggles between tuples only
+                The <codeph>\pset tuples_only</codeph> command by itself toggles between tuples only
                 and full display. The values <varname>on</varname> and <varname>off</varname> set
                 the tuples display, regardless of the current setting. Full display may show extra
                 information such as column headers, titles, and various footers. In tuples only

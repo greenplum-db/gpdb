@@ -10,7 +10,7 @@
     </section>
     <section>
       <title>Description</title>
-        <p>The PgBouncer Adminstration Console is available via <codeph>psql</codeph>. Connect to the PgBouncer <codeph><varname>port</varname></codeph> and the virtual database named <codeph>pgbouncer</codeph> to log in to the console.</p>
+        <p>The PgBouncer Administration Console is available via <codeph>psql</codeph>. Connect to the PgBouncer <codeph><varname>port</varname></codeph> and the virtual database named <codeph>pgbouncer</codeph> to log in to the console.</p>
         <p>Users listed in the <codeph>pgbouncer.ini</codeph> configuration parameters <codeph>admin_users</codeph> and <codeph>stats_users</codeph> have privileges to log in to the PgBouncer Administration Console.</p>
         <p>You can control connections between PgBouncer and Greenplum Database from the console. You can also set PgBouncer configuration parameters. </p>
     </section>

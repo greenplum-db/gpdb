@@ -25,7 +25,7 @@ to use the default owner (the user executing the command). </pd></plentry><plent
               href="../character_sets.xml" type="topic" format="dita"/>.</pd></plentry><plentry><pt><varname>tablespace</varname></pt><pd>The name of the tablespace that will be associated with the new database,
 or <codeph>DEFAULT</codeph> to use the template database's tablespace.
 This tablespace will be the default tablespace used for objects created
-in this database.</pd></plentry><plentry><pt><varname>connlimit</varname></pt><pd>The maximum number of concurrent connections posible. The default
+in this database.</pd></plentry><plentry><pt><varname>connlimit</varname></pt><pd>The maximum number of concurrent connections possible. The default
 of -1 means there is no limitation.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>CREATE DATABASE</codeph> cannot be executed inside a transaction
 block.</p><p>When you copy a database by specifying its name as the template, no
 other sessions can be connected to the template database while it is

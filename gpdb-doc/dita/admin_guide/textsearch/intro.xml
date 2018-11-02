@@ -231,7 +231,7 @@ text @@ text</codeblock>
         for text search applications.</p>
       <ul id="ul_ywm_fg1_nfb">
         <li>The Apache Solr cluster can be scaled separately from the database. Solr nodes can be
-          deployed on the Greenplum Database hosts or on seperate hosts on the network. </li>
+          deployed on the Greenplum Database hosts or on separate hosts on the network. </li>
         <li>Indexing and search workloads can be moved out of Greenplum Database to Solr to maintain
           database query performance.</li>
         <li>GPText creates Solr indexes that are split into <i>shards</i>, one per Greenplum

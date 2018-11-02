@@ -30,7 +30,7 @@ public.cust_table: city, state</codeblock><p>For
         table data, and inserts data from the temporary table to the table in the specified sort
         order. Each table reload is performed in a single transaction.</p>
       <p>For a partitioned table, you can reload the data of a leaf child partition. However, data
-        is inserted from the root partition table, which acquires a <codeph>ROW EXLCUSIVE</codeph>
+        is inserted from the root partition table, which acquires a <codeph>ROW EXCLUSIVE</codeph>
         lock on the entire table.</p></section>
     <section id="section5"><title>Options</title><parml>
         <plentry>

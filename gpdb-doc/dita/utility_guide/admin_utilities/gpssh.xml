@@ -176,7 +176,7 @@ sync_retries = 5</codeblock>
                     <pd>Increasing this value can compensate for slow network performance or segment
                         host performance issues such as heavy CPU or I/O load. However, when a
                         connection cannot be established, an increased value also increases the
-                        delay when an error is retuned.</pd>
+                        delay when an error is returned.</pd>
                 </plentry>
             </parml>
         </section>

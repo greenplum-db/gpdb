@@ -844,7 +844,7 @@ server 10.6.220.20</codeblock></li>
               network interfaces that you specify in the <codeph>iptables</codeph> settings are the
               interfaces for the Greenplum Database hosts that you list in the
                 <varname>hostfile_gpinitsystem</varname> file. You specify the file when you run the
-                <codeph>gpinitsystem</codeph> command to intialize a Greenplum Database system. See
+                <codeph>gpinitsystem</codeph> command to initialize a Greenplum Database system. See
                 <xref href="./init_gpdb.xml#topic1" type="topic" format="dita"/> for information
               about the <varname>hostfile_gpinitsystem</varname> file and the
                 <codeph>gpinitsystem</codeph> command. </p></li>

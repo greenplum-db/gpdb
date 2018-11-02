@@ -585,8 +585,8 @@ done</codeblock></p>
                 <codeph>uint_8</codeph> is converted to Greenplum Database <codeph>int</codeph> (32
               bit).</li>
             <li>Greenplum Database supports any UDT data type or UDT array data type. Greenplum
-              Database attempts to convert the UDT to a sting. If the UDT cannot be converted to a
-              sting, Greenplum Database returns an error.</li>
+              Database attempts to convert the UDT to a string. If the UDT cannot be converted to a
+              string, Greenplum Database returns an error.</li>
             <li>The definition of the <codeph>Interval</codeph> data type in Parquet is
               significantly different than the <codeph>Interval</codeph> definition in Greenplum
               Database and cannot be converted. The Parquet <codeph>Interval</codeph> data is
