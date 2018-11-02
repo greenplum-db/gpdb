@@ -2610,7 +2610,9 @@
             specified, then Greenplum chooses the largest subset of all the key columns as the
             distribution key.</li>
           <li>If neither constraints nor a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph> clause
-            is specified, then Greenplum chooses the first column as the distribution key.</li>
+            is specified, then Greenplum chooses the first suitable column as the distribution key.
+            (Columns with geometric or user-defined data types are not eligible as Greenplum
+            distribution key columns.)</li>
         </ul></p>
       <p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
         these rules to create a table when the <cmdname>DISTRIBUTED BY</cmdname> clause is not
