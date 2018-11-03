@@ -2716,7 +2716,7 @@ order by 1,2;
                              ->  Result
                                    ->  Limit
                                          ->  Result
-                                               Filter: (NOT ("outer".y IS NULL))
+                                               One-Time Filter: (NOT ("outer".y IS NULL))
                                                ->  Materialize
                                                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
                                                            ->  Table Scan on int8_tbl int8_tbl_2
