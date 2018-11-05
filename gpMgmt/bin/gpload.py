@@ -1997,7 +1997,7 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists.
     #
-    def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors):
+    def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors, encodingCode):
         sqlFormat = """select attrelid::regclass
                  from (
                         select
@@ -2057,6 +2057,9 @@ class gpload:
         else:
             sql += "and pgext.rejectlimit IS NULL "
 
+        if encodingCode:
+            sql += "and pgext.encoding = %s " % encodingCode
+
         sql+= "group by attrelid "
 
         sql+= """having
@@ -2083,7 +2086,7 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists. The results of this SQl are table names without schema
     #
-    def get_fast_match_exttable_query(self, formatType, formatOpts, limitStr, schemaName, log_errors):
+    def get_fast_match_exttable_query(self, formatType, formatOpts, limitStr, schemaName, log_errors, encodingCode):
 
         sqlFormat = """select relname from pg_class
                     join
@@ -2129,6 +2132,9 @@ class gpload:
             sql += "and pgext.rejectlimit = %s " % limitStr
         else:
             sql += "and pgext.rejectlimit IS NULL "
+
+        if encodingCode:
+            sql += "and pgext.encoding = %s " % encodingCode
 
         sql+= "limit 1;"
 
@@ -2289,7 +2295,18 @@ class gpload:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
+        encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
+        if encodingStr == None:
+            result = self.db.query("SHOW SERVER_ENCODING".encode('utf-8')).getresult()
+            if len(result) > 0:
+                encodingStr = result[0][0]
+
+        if encodingStr:
+            sql = "SELECT pg_char_to_encoding('%s')" % encodingStr
+            result = self.db.query(sql.encode('utf-8')).getresult()
+            if len(result) > 0:
+                encodingCode = result[0][0]
 
         limitStr = self.getconfig('gpload:input:error_limit',int, None)
         if self.log_errors and not limitStr:
@@ -2342,10 +2359,10 @@ class gpload:
                 self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
                 if self.fast_match:
                     sql = self.get_fast_match_exttable_query(formatType, self.formatOpts,
-                        limitStr, self.extSchemaName, self.log_errors)
+                        limitStr, self.extSchemaName, self.log_errors, encodingCode)
                 else:
                     sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
-                        limitStr, from_cols, self.extSchemaName, self.log_errors)
+                        limitStr, from_cols, self.extSchemaName, self.log_errors, encodingCode)
 
                 resultList = self.db.query(sql.encode('utf-8')).getresult()
                 if len(resultList) > 0:

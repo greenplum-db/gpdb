@@ -1,0 +1,22 @@
+2018-11-05 22:52:11|INFO|gpload session started 2018-11-05 22:52:11
+2018-11-05 22:52:11|INFO|setting schema 'public' for table 'texttable'
+2018-11-05 22:52:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-11-05 22:52:11|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2018-11-05 22:52:11|INFO|did not find an external table to reuse. creating ext_gpload_reusable_601e34fe_e10a_11e8_b2e8_00505698a2d7
+2018-11-05 22:52:11|ERROR|could not run SQL "create external table ext_gpload_reusable_601e34fe_e10a_11e8_b2e8_00505698a2d7("s1" text,"s2" text,"s3" text,"dt" timestamp without time zone,"n1" smallint,"n2" integer,"n3" bigint,"n4" numeric,"n5" numeric,"n6" real,"n7" double precision)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null '\N' escape '\') encoding'xxxx' ": ERROR:  xxxx is not a valid encoding name
+
+2018-11-05 22:52:11|INFO|rows Inserted          = 0
+2018-11-05 22:52:11|INFO|rows Updated           = 0
+2018-11-05 22:52:11|INFO|data formatting errors = 0
+2018-11-05 22:52:11|INFO|gpload failed
+2018-11-05 22:52:11|INFO|gpload session started 2018-11-05 22:52:11
+2018-11-05 22:52:11|INFO|setting schema 'public' for table 'texttable'
+2018-11-05 22:52:11|INFO|started gpfdist -p 8081 -P 8082 -f "/home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt" -t 30
+2018-11-05 22:52:11|INFO|did not find a staging table to reuse. creating staging_gpload_reusable_afbaac0da7ced19791c9ab9c537f41d3
+2018-11-05 22:52:12|INFO|did not find an external table to reuse. creating ext_gpload_reusable_6067ad3c_e10a_11e8_b378_00505698a2d7
+2018-11-05 22:52:12|ERROR|could not run SQL "create external table ext_gpload_reusable_6067ad3c_e10a_11e8_b378_00505698a2d7("s1" text,"s2" text,"s3" text,"dt" timestamp without time zone,"n1" smallint,"n2" integer,"n3" bigint,"n4" numeric,"n5" numeric,"n6" real,"n7" double precision)location('gpfdist://127.0.0.1:8081//home/gpadmin/workspace/gpdb/gpMgmt/bin/gpload_test/gpload2/data_file.txt') format'text' (delimiter '|' null '\N' escape '\') encoding'xxxx' ": ERROR:  xxxx is not a valid encoding name
+
+2018-11-05 22:52:12|INFO|rows Inserted          = 0
+2018-11-05 22:52:12|INFO|rows Updated           = 0
+2018-11-05 22:52:12|INFO|data formatting errors = 0
+2018-11-05 22:52:12|INFO|gpload failed

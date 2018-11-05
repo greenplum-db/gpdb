@@ -95,7 +95,7 @@ d = mkpath('config')
 if not os.path.exists(d):
     os.mkdir(d)
 
-def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false'):
+def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',portNum='8081',database='reuse_gptest',host='localhost',formatOpts='text',file='data/external_file_01.txt',table='texttable',format='text',delimiter="'|'",escape='',quote='',truncate='False',log_errors=None, error_limit='0',error_table=None,externalSchema=None,staging_table=None,fast_match='false', encoding=None):
 
     f = open(mkpath('config/config_file'),'w')
     f.write("VERSION: 1.0.0.1")
@@ -138,6 +138,8 @@ def write_config_file(mode='insert', reuse_flag='',columns_flag='0',mapping='0',
         f.write("\n    - ERROR_LIMIT: " + error_limit)
     if delimiter:
         f.write("\n    - DELIMITER: "+delimiter)
+    if encoding:
+        f.write("\n    - ENCODING: "+encoding)
     if escape:
         f.write("\n    - ESCAPE: "+escape)
     if quote:
@@ -426,7 +428,7 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
 
     def test_00_gpload_formatOpts_setup(self):
         "0  gpload setup"
-        for num in range(1,34):
+        for num in range(1,38):
            f = open(mkpath('query%d.sql' % num),'w')
            f.write("\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n"+"\! gpload -f "+mkpath('config/config_file')+ " -d reuse_gptest\n")
            f.close()
@@ -697,6 +699,34 @@ class GPLoad_FormatOpts_TestCase(unittest.TestCase):
         copy_data('external_file_04.txt','data_file.txt')
         write_config_file(mode='merge',reuse_flag='true',fast_match='true',file='data_file.txt',externalSchema='test')
         self.doTest(33)
+    def test_34_gpload_reuse_table_merge_mode_with_fast_match_and_encoding(self):
+        "34  gpload merge mode with fast match and encoding GBK"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='true',file='data_file.txt',encoding='GBK')
+        self.doTest(34)
+
+    def test_35_gpload_reuse_table_merge_mode_with_fast_match_default_encoding(self):
+        "35  gpload does not reuse table when encoding is setted from GBK to empty"
+        write_config_file(mode='merge',reuse_flag='true',fast_match='true',file='data_file.txt')
+        self.doTest(35)
+
+    def test_36_gpload_reuse_table_merge_mode_default_encoding(self):
+        "36  gpload merge mode with encoding GBK"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file.txt',encoding='GBK')
+        self.doTest(36)
+
+    def test_37_gpload_reuse_table_merge_mode_invalid_encoding(self):
+        "37  gpload merge mode with invalid encoding"
+        file = mkpath('setup.sql')
+        runfile(file)
+        copy_data('external_file_04.txt','data_file.txt')
+        write_config_file(mode='merge',reuse_flag='true',fast_match='false',file='data_file.txt',encoding='xxxx')
+        self.doTest(37)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(GPLoad_FormatOpts_TestCase)
