@@ -61,7 +61,7 @@
           <pd>If a segment instance is not listed in the <codeph>WITH</codeph> clause, Greenplum
             Database uses the directory specified in the <codeph>LOCATION</codeph> clause.</pd>
           <pd>When registering a tablepace, the directories should be empty and must be owned by the
-            PostgreSQL system user.</pd>
+            Greenplum Database system user.</pd>
         </plentry>
       </parml>
     </section>
