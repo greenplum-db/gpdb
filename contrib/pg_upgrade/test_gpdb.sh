@@ -27,6 +27,10 @@ DUMP_OPTS=
 # running it in case it was just executed to save time.
 gpcheckcat=1
 
+# This is a regression test; we may want to disable it in the future but
+#  still keep it around.
+run_check_vacuum_worked=1
+
 # gpdemo can create a cluster without mirrors, and if such a cluster should be
 # upgraded then mirror upgrading must be turned off as it otherwise will report
 # a failure.
@@ -42,6 +46,11 @@ smoketest=0
 # after the test. If set to 1 the directory isn't removed when the testscript
 # exits
 retain_tempdir=0
+
+# For performance testing, we want to skip everything other than what we need
+# to upgrade to the new cluster.  This tests the nominal production use case.
+# TODO: what about the pg_upgrade precheck for upgrade?
+perf_test=0
 
 # Not all platforms have a realpath binary in PATH, most notably macOS doesn't,
 # so provide an alternative implementation. Returns an absolute path in the
@@ -107,6 +116,9 @@ check_vacuum_worked()
 	local datadir=$1
 	local contentid=$2
 
+	if (( !$run_check_vacuum_worked )) ; then
+        return 0;
+    fi
 
 	# GPDB_94_MERGE_FIXME: This test doesn't work in 9.4 anymore, because
 	# freezing no longer resets 'xmin', it just sets a new flag in the
@@ -195,6 +207,7 @@ usage()
 	echo " -K           Remove checksums during upgrade"
 	echo " -m           Upgrade mirrors"
 	echo " -r           Retain temporary installation after test, even on success"
+	echo " -p           pg_upgrade performance checking only"
 	exit 0
 }
 
@@ -244,11 +257,20 @@ diff_and_exit() {
 	exit 1
 }
 
+print_delta_seconds()
+{
+	startSeconds=$1
+	contextString=$2
+	endSeconds=`date +%s`
+	deltaSeconds=`expr $endSeconds - $startSeconds`
+	echo "$contextString: $deltaSeconds"
+}
+
 # Main
 temp_root=`pwd`/tmp_check
 base_dir=`pwd`
 
-while getopts ":o:b:sCkKmr" opt; do
+while getopts ":o:b:sCkKmrp" opt; do
 	case ${opt} in
 		o )
 			realpath OLD_DATADIR "${OPTARG}"
@@ -279,6 +301,11 @@ while getopts ":o:b:sCkKmr" opt; do
 		r )
 			retain_tempdir=1
 			PGUPGRADE_OPTS+=' --retain '
+			;;
+		p )
+			perf_test=1
+			gpcheckcat=0
+			run_check_vacuum_worked=0
 			;;
 		* )
 			usage
@@ -339,9 +366,11 @@ if (( $gpcheckcat )) ; then
 	fi
 fi
 
-echo -n 'Dumping database schema before upgrade... '
-${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump1.sql"
-echo done
+if (( !$perf_test )) ; then
+	echo -n 'Dumping database schema before upgrade... '
+	${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump1.sql"
+	echo done
+fi
 
 gpstop -a
 
@@ -364,8 +393,11 @@ MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
 PGPORT=""; unset PGPORT
 PGOPTIONS=""; unset PGOPTIONS
 
+epoch_for_perf_start=`date +%s`
+
 # Start by upgrading the master
 upgrade_qd "${temp_root}/upgrade/qd" "${OLD_DATADIR}/qddir/demoDataDir-1/" "${NEW_DATADIR}/qddir/demoDataDir-1/"
+print_delta_seconds $epoch_for_perf_start 'number_of_seconds_for_upgrade_qd'
 
 # If this is a minimal smoketest to ensure that we are handling all objects
 # properly, then check that the upgraded schema is identical and exit.
@@ -396,13 +428,23 @@ do
 	rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpssh.conf"
 	rm -rf "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpperfmon"
 	# Upgrade the segment data files without dump/restore of the schema
+
+	epoch_for_perf_QEstart=`date +%s`
 	upgrade_segment "${temp_root}/upgrade/dbfast$i" "${OLD_DATADIR}/dbfast$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
+	print_delta_seconds $epoch_for_perf_QEstart 'number_of_seconds_for_upgrade_qe'
 
 	if (( $mirrors )) ; then
+		epoch_for_perf_QEMstart=`date +%s`
 		upgrade_segment "${temp_root}/upgrade/dbfast_mirror$i" "${OLD_DATADIR}/dbfast_mirror$i/demoDataDir$j/" "${NEW_DATADIR}/dbfast_mirror$i/demoDataDir$j/"
+		print_delta_seconds $epoch_for_perf_QEMstart 'number_of_seconds_for_upgrade_qdm'
 	fi
 done
 
+print_delta_seconds $epoch_for_perf_start 'number_of_seconds_for_upgrade'
+
 . ${NEW_BINDIR}/../greenplum_path.sh
 
-diff_and_exit
+
+if (( !$perf_test )) ; then
+	diff_and_exit
+fi
