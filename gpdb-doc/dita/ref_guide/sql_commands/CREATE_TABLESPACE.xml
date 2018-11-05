@@ -54,7 +54,7 @@
         <plentry>
           <pt>content<varname>ID_i</varname>='<varname>/path/to/dir_i</varname>'</pt>
           <pd>The value <varname>ID_i</varname> is the content ID for the segment instance.
-              <varname>/path/to/dir_i</varname> is absolute path to the host system file location
+              <varname>/path/to/dir_i</varname> is tne absolute path to the host system file location
             that the segment instance uses as the root directory for the tablespace. You cannot
             specify the content ID of the master instance (<codeph>-1</codeph>). You can specify the
             same directory for multiple segments. </pd>
