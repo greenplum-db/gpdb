@@ -473,19 +473,20 @@
               <codeph>gp_create_table_random_default_distribution</codeph> controls the default
             table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
             specified when you create a table. Greenplum Database follows these rules to create a
-            table if a distribution policy is not specified.
-	    <p>If the value of the parameter is
+            table if a distribution policy is not specified. <p>If the value of the parameter is
                 <codeph>off</codeph> (the default), Greenplum Database chooses the table
-		distribution key based on the command. If the <cmdname>LIKE</cmdname> or
-                <cmdname>INHERITS</cmdname> clause is specified, the distribution key
-		is copied from the source or parent table. If the PRIMARY KEY or UNIQUE
-		constraints were specified, the largest subset of all the key columns is used
-		as the distribution key. Finally, if there are no constraints nor
-		<cmdname>LIKE</cmdname>/<cmdname>INHERITS</cmdname>, the first column is chosen.
-	    </p>
-	    <p>If
-              the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
-              these rules:<ul id="ul_tbr_5kq_kq">
+              distribution key based on the command:<ul id="ul_rjb_gty_qfb">
+                <li>If a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph> clause is specified,
+                  then Greenplum copies the distribution key from the source or parent table.</li>
+                <li>If a <codeph>PRIMARY KEY</codeph> or <codeph>UNIQUE</codeph> constraints are
+                  specified, then Greenplum chooses the largest subset of all the key columns as the
+                  distribution key.</li>
+                <li>If neither constraints nor a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph>
+                  clause is specified, then Greenplum chooses the first suitable column as the
+                  distribution key. (Columns with geometric or user-defined data types are not
+                  eligible as Greenplum distribution key columns.)</li>
+              </ul></p><p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum
+              Database follows these rules:<ul id="ul_tbr_5kq_kq">
                 <li>If <cmdname>PRIMARY KEY</cmdname> or <cmdname>UNIQUE</cmdname> columns are not
                   specified, the distribution of the table is random (<cmdname>DISTRIBUTED
                     RANDOMLY</cmdname>). Table distribution is random even if the table creation
