@@ -69,7 +69,7 @@
       <title>Notes</title>
       <p>Tablespaces are only supported on systems that support symbolic links. </p>
       <p><codeph>CREATE TABLESPACE</codeph> cannot be executed inside a transaction block.</p>
-      <p>When creating tablespaces, ensure that file system location have sufficient I/O speed and
+      <p>When creating tablespaces, ensure that file system locations have sufficient I/O speed and
         available disk space.</p>
       <p>
         <codeph>CREATE TABLESPACE</codeph> creates symbolic links from the
@@ -78,7 +78,7 @@
       <p>The system catalog table <codeph>pg_tablespace</codeph> stores tablespace information. This
         command displays the tablespace OID values, names, and
         owner.<codeblock>SELECT oid, spcname, spcowner FROM pg_tablespace ;</codeblock></p>
-      <p>The Greenplum Database build-in function
+      <p>The Greenplum Database built-in function
             <codeph>gp_tablespace_location(<varname>tablespace_oid</varname>)</codeph> displays the
         tablespace host system file locations for all segment instances. This command lists the
         segment database IDs and host system file locations for the tablespace with OID
@@ -94,7 +94,7 @@
         file system location for the tablespace is specified in the <codeph>LOCATION</codeph>
         clause. </p>
       <codeblock>CREATE TABLESPACE mytblspace LOCATION '/gpdbtspc/mytestspace' WITH (content0='/temp/mytest', content1='/temp/mytest');</codeblock>
-      <p>The example specifies the same location for the two segment instances. You can specify
+      <p>The example specifies the same location for the two segment instances. You can a specify
         different location for each segment.</p>
     </section>
     <section id="section7">
