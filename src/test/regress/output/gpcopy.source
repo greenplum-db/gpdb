@@ -512,6 +512,31 @@ HINT:  valid options are: 'LF', 'CRLF', 'CR'
 COPY copy_regression_newline to stdout with delimiter '|' newline 'blah';
 ERROR:  newline currently available for data loading only, not unloading
 DROP TABLE copy_regression_newline;
+-- test automatic detect newline
+-- the problem lies in the way we (and postgresql) handle newlines. We 
+-- automatically detect the newline type (LF, CR or CRLF) by looking at
+-- the first row of data, and assume that the rest of the data has the 
+-- same newline type. This happens on the master and then on each segment
+-- all over again. That can be confusing. For example, 
+-- the original data xxxxxx\nxxxx\rxxx\n
+-- QD detect the newline and add prefix <MD> 
+-- <MD>xxxxxx\n
+-- <MD>xxx\rxxx\n
+-- QE detect the newline type again and split line to 
+-- <MD>xxxxxx\n
+-- <MD>xxx\r
+-- xxx\n
+-- We lost the prefix <MD> and get a panic
+ CREATE TABLE copy_regression_detect(a text) distributed by(a);
+COPY copy_regression_detect FROM stdin;
+ERROR:  COPY metadata cur_lineno not found. This probably means that there is a mixture of newline types in the data. Use the NEWLINEkeyword in order to resolve this reliably.  (seg1 127.0.0.1:25433 pid=7977)
+CONTEXT:  COPY copy_regression_detect, line 2: "2
+"
+COPY copy_regression_detect FROM stdin;
+ERROR:  COPY metadata line_buf_converted not found. This probably means that there is a mixture of newline types in the data. Use the NEWLINE keyword in order to resolve this reliably.  (seg2 127.0.0.1:25434 pid=7978)
+CONTEXT:  COPY copy_regression_detect, line 2: "2^22
+"
+DROP TABLE copy_regression_detect;
 -- Test that FORCE QUOTE option works with the fastpath for integers and
 -- numerics
 COPY (

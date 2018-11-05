@@ -7026,9 +7026,9 @@ void CopyExtractRowMetaData(CopyState cstate)
 	if(cstate->md_error)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("COPY metadata not found. This probably means that there is a "
-						"mixture of newline types in the data. Use the NEWLINE keyword "
-						"in order to resolve this reliably.")));
+				 errmsg("COPY metadata cur_lineno not found. This probably means that "
+						"there is a mixture of newline types in the data. Use the NEWLINE"
+						"keyword in order to resolve this reliably.")));
 
 	cstate->cur_lineno = atoi(line_start);
 
@@ -7043,9 +7043,9 @@ void CopyExtractRowMetaData(CopyState cstate)
 	if(cstate->md_error)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-				 errmsg("COPY metadata not found. This probably means that there is a "
-						"mixture of newline types in the data. Use the NEWLINE keyword "
-						"in order to resolve this reliably.")));
+				 errmsg("COPY metadata line_buf_converted not found. This probably means "
+						"that there is a mixture of newline types in the data. Use the "
+						"NEWLINE keyword in order to resolve this reliably.")));
 	Assert(*line_start == '0' || *line_start == '1'); 
 	cstate->line_buf_converted = atoi(line_start);
 	
