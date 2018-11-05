@@ -4,7 +4,7 @@
 <topic id="topic1">
   <title id="bi20941">COMMENT</title>
   <body>
-    <p id="sql_command_desc">Defines or change the comment of an object.</p>
+    <p id="sql_command_desc">Defines or changes the comment of an object.</p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">COMMENT ON
