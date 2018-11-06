@@ -580,13 +580,25 @@ DROP TABLE copy_regression_newline;
 -- <MD>xxx\r
 -- xxx\n
 -- We lost the prefix <MD> and get a panic
- CREATE TABLE copy_regression_detect(a text) distributed by(a);
+CREATE TABLE copy_regression_detect(a text) distributed by(a);
+-- negative
 COPY copy_regression_detect FROM stdin;
 1
 12
 \.
 
 COPY copy_regression_detect FROM stdin;
+1
+12^22
+\.
+
+-- positive
+COPY copy_regression_detect FROM stdin WITH NEWLINE 'LF';
+1
+12
+\.
+
+COPY copy_regression_detect FROM stdin WITH NEWLINE 'LF';
 1
 12^22
 \.

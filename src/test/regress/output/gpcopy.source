@@ -527,7 +527,8 @@ DROP TABLE copy_regression_newline;
 -- <MD>xxx\r
 -- xxx\n
 -- We lost the prefix <MD> and get a panic
- CREATE TABLE copy_regression_detect(a text) distributed by(a);
+CREATE TABLE copy_regression_detect(a text) distributed by(a);
+-- negative
 COPY copy_regression_detect FROM stdin;
 ERROR:  COPY metadata cur_lineno not found. This probably means that there is a mixture of newline types in the data. Use the NEWLINEkeyword in order to resolve this reliably.  (seg1 127.0.0.1:25433 pid=7977)
 CONTEXT:  COPY copy_regression_detect, line 2: "2
@@ -536,6 +537,9 @@ COPY copy_regression_detect FROM stdin;
 ERROR:  COPY metadata line_buf_converted not found. This probably means that there is a mixture of newline types in the data. Use the NEWLINE keyword in order to resolve this reliably.  (seg2 127.0.0.1:25434 pid=7978)
 CONTEXT:  COPY copy_regression_detect, line 2: "2^22
 "
+-- positive
+COPY copy_regression_detect FROM stdin WITH NEWLINE 'LF';
+COPY copy_regression_detect FROM stdin WITH NEWLINE 'LF';
 DROP TABLE copy_regression_detect;
 -- Test that FORCE QUOTE option works with the fastpath for integers and
 -- numerics
