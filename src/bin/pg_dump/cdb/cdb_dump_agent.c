@@ -2351,8 +2351,11 @@ dumpTableComment(Archive *fout, TableInfo *tbinfo,
 		if (objsubid == 0)
 		{
 			resetPQExpBuffer(target);
-			appendPQExpBuffer(target, "%s %s", reltypename,
-							  fmtId(tbinfo->dobj.name));
+			if (strcmp(reltypename, "EXTERNAL TABLE") == 0)
+				reltypename = "TABLE";
+			appendPQExpBuffer(target, "%s %s.", reltypename,
+							  fmtId(tbinfo->dobj.namespace->dobj.name));
+			appendPQExpBuffer(target, "%s ", fmtId(tbinfo->dobj.name));
 
 			resetPQExpBuffer(query);
 			appendPQExpBuffer(query, "COMMENT ON %s IS ", target->data);
