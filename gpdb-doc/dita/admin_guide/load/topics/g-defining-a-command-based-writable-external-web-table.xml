@@ -6,9 +6,9 @@
    <body>
       <p>You can define writable external web tables to send output rows to an application or
          script. The application must accept an input stream, reside in the same location on all of
-         the Greenplum segment hosts, and be executable by the
-            <codeph>gpadmin</codeph> user. All segments in the Greenplum system run the application or script, whether or not a segment has output rows to
-         process.</p>
+         the Greenplum segment hosts, and be executable by the <codeph>gpadmin</codeph> user. All
+         segments in the Greenplum system run the application or script, whether or not a segment
+         has output rows to process.</p>
       <p>Use <codeph>CREATE WRITABLE EXTERNAL WEB TABLE</codeph> to define the external table and
          specify the application or script to run on the segment hosts. Commands execute from within
          the database and cannot access environment variables (such as <codeph>$PATH</codeph>). Set
@@ -17,17 +17,17 @@
       <p>
          <codeblock>=# CREATE WRITABLE EXTERNAL WEB TABLE output (output text) 
     EXECUTE 'export PATH=$PATH:/home/<codeph>gpadmin</codeph>
-            <codeph/>/programs;
+            /programs;
     myprogram.sh' 
     FORMAT 'TEXT'
     DISTRIBUTED RANDOMLY;
 </codeblock>
       </p>
-      <p>The following Greenplum Database variables are available for use in OS
-         commands executed by a web or writable external table. Set these variables as environment
-         variables in the shell that executes the command(s). They can be used to identify a set of
-         requests made by an external table statement across the Greenplum Database
-         array of hosts and segment instances.</p>
+      <p>The following Greenplum Database variables are available for use in OS commands executed by
+         a web or writable external table. Set these variables as environment variables in the shell
+         that executes the command(s). They can be used to identify a set of requests made by an
+         external table statement across the Greenplum Database array of hosts and segment
+         instances.</p>
       <table id="du224024">
          <title>External Table EXECUTE Variables</title>
          <tgroup cols="2">
@@ -56,13 +56,18 @@
                </row>
                <row>
                   <entry colname="col1">$GP_MASTER_HOST</entry>
-                  <entry colname="col2">The host name of the Greenplum
-                     master host from which the external table statement was dispatched.</entry>
+                  <entry colname="col2">The host name of the Greenplum master host from which the
+                     external table statement was dispatched.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_MASTER_PORT</entry>
-                  <entry colname="col2">The port number of the Greenplum master instance from which the external table statement was
-                     dispatched.</entry>
+                  <entry colname="col2">The port number of the Greenplum master instance from which
+                     the external table statement was dispatched.</entry>
+               </row>
+               <row>
+                  <entry colname="col1">$GP_QUERY_STRING</entry>
+                  <entry colname="col2">The SQL command (DML or SQL query) executed by Greenplum
+                     Database.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_SEG_DATADIR</entry>
@@ -82,7 +87,7 @@
                <row>
                   <entry colname="col1">$GP_SEGMENT_COUNT</entry>
                   <entry colname="col2">The total number of primary segment instances in the
-                        Greenplum Database system.</entry>
+                     Greenplum Database system.</entry>
                </row>
                <row>
                   <entry colname="col1">$GP_SEGMENT_ID</entry>
