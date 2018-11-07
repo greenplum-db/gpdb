@@ -2,7 +2,7 @@
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map xmlns:ditaarch="http://dita.oasis-open.org/architecture/2005/" id="map">
     <title>Greenplum Database Best Practices</title>
-    <topicref href="../../5120/homenav.html" scope="external" navtitle="Greenplum Database 5.12 Documentation"
+    <topicref href="../../5130/homenav.html" scope="external" navtitle="Greenplum Database 5.13 Documentation"
         format="html" otherprops="op-help"/>
     <topicref href="intro.xml">
         <topicref href="summary.xml"/>

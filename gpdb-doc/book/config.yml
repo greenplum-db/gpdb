@@ -6,48 +6,48 @@ sections:
 - repository:
     name: markdown
     at_path: common
-  directory: docs/5120/common
+  directory: docs/5130/common
   subnav_template: gpdb-landing-subnav
 
 - repository:
     name: markdown
     at_path: pxf
-  directory: docs/5120/pxf
+  directory: docs/5130/pxf
   subnav_template: pxf-subnav
 
 dita_sections:
 - repository:
     name: dita
     at_path: admin_guide
-  directory: docs/5120/admin_guide
+  directory: docs/5130/admin_guide
   ditamap_location: admin_guide.ditamap
   ditaval_location: ../gpdb-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: security-guide
-  directory: docs/5120/security-guide
+  directory: docs/5130/security-guide
   ditamap_location: security-guide.ditamap
   ditaval_location: ../gpdb-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: best_practices
-  directory: docs/5120/best_practices
+  directory: docs/5130/best_practices
   ditamap_location: best-practices.ditamap
   ditaval_location: ../gpdb-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: utility_guide
-  directory: docs/5120/utility_guide
+  directory: docs/5130/utility_guide
   ditamap_location: utility_guide.ditamap
   ditaval_location: ../gpdb-webhelp.ditaval
 
 - repository:
     name: dita
     at_path: ref_guide
-  directory: docs/5120/ref_guide
+  directory: docs/5130/ref_guide
   ditamap_location: ref_guide.ditamap
   ditaval_location: ../gpdb-webhelp.ditaval
 
