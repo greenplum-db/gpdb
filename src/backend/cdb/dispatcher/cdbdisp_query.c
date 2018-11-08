@@ -1046,9 +1046,6 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 	 * Since we intend to execute the plan, inventory the slice tree,
 	 * allocate gangs, and associate them with slices.
 	 *
-	 * For now, always use segment 'gp_singleton_segindex' for
-	 * singleton gangs.
-	 *
 	 * On return, gangs have been allocated and CDBProcess lists have
 	 * been filled in in the slice table.)
 	 * 

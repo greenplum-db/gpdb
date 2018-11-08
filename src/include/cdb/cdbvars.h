@@ -851,9 +851,6 @@ extern int  gp_debug_linger;
 #define UNSET_SLICE_ID -1
 extern int	currentSliceId;
 
-/* Segment id where singleton gangs are to be dispatched. */
-extern int  gp_singleton_segindex;
-
 extern int cdb_total_plans;
 /* Enable ading the cost for walking the chain in the hash join. */
 extern bool gp_cost_hashjoin_chainwalk;

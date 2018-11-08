@@ -52,7 +52,6 @@ typedef struct PlannerConfig
 
 	/* These ones are tricky */
 	//GpRoleValue	Gp_role; // TODO: this one is tricky
-	//int			gp_singleton_segindex; // TODO: change this.
 } PlannerConfig;
 
 extern PlannerConfig *DefaultPlannerConfig(void);
