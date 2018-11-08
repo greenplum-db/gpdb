@@ -50,6 +50,7 @@ static DumpableObject **oprinfoindex;
 static DumpableObject **collinfoindex;
 static DumpableObject **nspinfoindex;
 static DumpableObject **extinfoindex;
+static DumpableObject **binaryupgradeinfoindex;
 static int	numTables;
 static int	numTypes;
 static int	numFuncs;
@@ -80,7 +81,7 @@ static int	strInArray(const char *pattern, char **arr, int arr_size);
  *	  Collect information about all potentially dumpable objects
  */
 TableInfo *
-getSchemaData(Archive *fout, int *numTablesPtr)
+getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 {
 	TableInfo  *tblinfo;
 	TypeInfo   *typinfo;
@@ -109,6 +110,17 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 
 	/* GPDB specific variables */
 	int			numExtProtocols;
+
+	if (binary_upgrade)
+	{
+		BinaryUpgradeInfo *binfo;
+
+		if (g_verbose)
+			write_msg(NULL, "identifying required binary upgrade calls\n");
+
+		binfo = getBinaryUpgradeObjects();
+		binaryupgradeinfoindex = buildIndexArray(binfo, 1, sizeof(BinaryUpgradeInfo));
+	}
 
 	/*
 	 * We must read extensions and extension membership info first, because

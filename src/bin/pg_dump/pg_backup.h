@@ -181,6 +181,8 @@ extern void ArchiveEntry(Archive *AHX,
 			 const DumpId *deps, int nDeps,
 			 DataDumperPtr dumpFn, void *dumpArg);
 
+extern void AmendArchiveEntry(Archive *AHX, DumpId dumpId, const char *defn);
+
 /* Called to write *data* to the archive */
 extern void WriteData(Archive *AH, const void *data, size_t dLen);
 

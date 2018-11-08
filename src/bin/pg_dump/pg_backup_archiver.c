@@ -876,6 +876,37 @@ WriteData(Archive *AHX, const void *data, size_t dLen)
 }
 
 /*
+ * Amend an existing TOC entry by changing its definition. This can be used
+ * in situations where the TOC entry must be restored first, but dumped last.
+ * By first issuing the ArchiveEntry() to create a TOC with a placeholder
+ * defn, the defn can be updated with the actual contents later using this.
+ * The current usecase is binary upgrade Oid preassignment where we need to
+ * restore the preassignments before any object that allocate Oids has been
+ * created, but the definition of the preassignments can only be dumped last
+ * when we've seen all the relevant Oids.
+ */
+void
+AmendArchiveEntry(Archive *AHX, DumpId dumpId, const char *defn)
+{
+	ArchiveHandle *AH = (ArchiveHandle *) AHX;
+
+	TocEntry *toc = AH->toc;
+
+	while (toc)
+	{
+		if (toc->dumpId == dumpId)
+		{
+			if (toc->defn)
+				pg_free(toc->defn);
+			toc->defn = pg_strdup(defn);
+			return;
+		}
+		toc = toc->next;
+	}
+}
+
+
+/*
  * Create a new TOC entry. The TOC was designed as a TOC, but is now the
  * repository for all metadata. But the name has stuck.
  */

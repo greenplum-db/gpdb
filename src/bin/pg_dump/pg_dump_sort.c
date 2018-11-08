@@ -122,7 +122,8 @@ static const int newObjectTypePriority[] =
 	22,							/* DO_PRE_DATA_BOUNDARY */
 	25,							/* DO_POST_DATA_BOUNDARY */
 	32,							/* DO_EVENT_TRIGGER */
-	33							/* DO_REFRESH_MATVIEW */
+	33,							/* DO_REFRESH_MATVIEW */
+	1							/* DO_BINARY_UPGRADE */
 };
 
 static DumpId preDataBoundId;
@@ -1424,6 +1425,11 @@ describeDumpableObject(DumpableObject *obj, char *buf, int bufsize)
 		case DO_POST_DATA_BOUNDARY:
 			snprintf(buf, bufsize,
 					 "POST-DATA BOUNDARY  (ID %d)",
+					 obj->dumpId);
+			return;
+		case DO_BINARY_UPGRADE:
+			snprintf(buf, bufsize,
+					 "BINARY UPGRADE  (ID %d)",
 					 obj->dumpId);
 			return;
 	}

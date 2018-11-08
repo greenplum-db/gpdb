@@ -130,6 +130,8 @@ static SimpleStringList relid_string_list = {NULL, NULL};
 static SimpleStringList funcid_string_list = {NULL, NULL};
 static SimpleOidList function_include_oids = {NULL, NULL};
 
+static SimpleOidList preassigned_oids = {NULL, NULL};
+
 /* default, if no "inclusion" switches appear, is to dump everything */
 static bool include_everything = true;
 
@@ -159,6 +161,8 @@ static bool gp_partitioning_available = false;
 
 /* flag indicating whether or not this GP database supports column encoding */
 static bool gp_attribute_encoding_available = false;
+
+static DumpId binary_upgrade_dumpid;
 
 static void help(const char *progname);
 static void setup_connection(Archive *AH, const char *dumpencoding,
@@ -267,6 +271,8 @@ static char *getFormattedTypeName(Archive *fout, Oid oid, OidOptions opts);
 static void getBlobs(Archive *fout);
 static void dumpBlob(Archive *fout, BlobInfo *binfo);
 static int	dumpBlobs(Archive *fout, void *arg);
+static void dumpPreassignedOidArchiveEntry(Archive *fout, BinaryUpgradeInfo *binfo);
+static void dumpPreassignedOidDefinition(Archive *fout, BinaryUpgradeInfo *binfo);
 static void dumpDatabase(Archive *AH);
 static void dumpEncoding(Archive *AH);
 static void dumpStdStrings(Archive *AH);
@@ -990,7 +996,7 @@ main(int argc, char **argv)
 	 * Now scan the database and create DumpableObject structs for all the
 	 * objects we intend to dump.
 	 */
-	tblinfo = getSchemaData(fout, &numTables);
+	tblinfo = getSchemaData(fout, &numTables, binary_upgrade);
 
 	if (fout->remoteVersion < 80400)
 		guessConstraintInheritance(tblinfo, numTables);
@@ -1058,9 +1064,18 @@ main(int argc, char **argv)
 	if (include_everything && !dataOnly)
 		dumpDatabase(fout);
 
+	int binfo_index = -1;
 	/* Now the rearrangeable objects. */
 	for (i = 0; i < numObjs; i++)
+	{
 		dumpDumpableObject(fout, dobjs[i]);
+		if (dobjs[i]->objType == DO_BINARY_UPGRADE)
+			binfo_index = i;
+	}
+
+	/* Amend the Oid preassignment TOC with the actual Oids gathered */
+	if (binary_upgrade && binfo_index >= 0)
+		dumpPreassignedOidDefinition(fout, (BinaryUpgradeInfo *) dobjs[binfo_index]);
 
 	/*
 	 * Set up options info to ensure we dump what we want.
@@ -2558,6 +2573,65 @@ guessConstraintInheritance(TableInfo *tblinfo, int numTables)
 	}
 }
 
+static void
+dumpPreassignedOidArchiveEntry(Archive *fout, BinaryUpgradeInfo *binfo)
+{
+	PQExpBuffer	setoidquery;
+	CatalogId	maxoidid;
+
+	setoidquery = createPQExpBuffer();
+
+	appendPQExpBufferStr(setoidquery,
+						 "-- Placeholder for binary_upgrade.set_preassigned_oids()\n\n");
+
+	maxoidid.oid = 0;
+	maxoidid.tableoid = 0;
+
+	char *tag = pg_strdup("binary_upgrade");
+
+	ArchiveEntry(fout,
+				 maxoidid,		/* catalog ID */
+				 binfo->dobj.dumpId,		/* dump ID */
+				 tag,		/* Name */
+				 NULL,			/* Namespace */
+				 NULL,			/* Tablespace */
+				 "",			/* Owner */
+				 false,			/* with oids */
+				 tag,	/* Desc */
+				 SECTION_PRE_DATA,		/* Section */
+				 setoidquery->data, /* Create */
+				 "",	/* Del */
+				 NULL,			/* Copy */
+				 NULL,			/* Deps */
+				 0,				/* # Deps */
+				 NULL,			/* Dumper */
+				 NULL);			/* Dumper Arg */
+
+	destroyPQExpBuffer(setoidquery);
+	free(tag);
+}
+
+static void
+dumpPreassignedOidDefinition(Archive *fout, BinaryUpgradeInfo *binfo)
+{
+	PQExpBuffer	setoidquery;
+	SimpleOidListCell *cell;
+
+	setoidquery = createPQExpBuffer();
+
+	appendPQExpBufferStr(setoidquery,
+						 "SELECT binary_upgrade.set_preassigned_oids(ARRAY[");
+	for (cell = preassigned_oids.head; cell; cell = cell->next)
+	{
+		appendPQExpBuffer(setoidquery, "%u%s",
+						  cell->val, (cell->next ? "," : ""));
+	}
+	appendPQExpBufferStr(setoidquery, "]::pg_catalog.oid[]);\n\n");
+
+	AmendArchiveEntry(fout, binfo->dobj.dumpId, setoidquery->data);
+
+	destroyPQExpBuffer(setoidquery);
+}
 
 /*
  * dumpDatabase:
@@ -3127,6 +3201,7 @@ binary_upgrade_set_namespace_oid(Archive *fout, PQExpBuffer upgrade_buffer,
 	upgrade_res = ExecuteSqlQueryForSingleRow(fout, upgrade_query->data);
 	pg_nspname = PQgetvalue(upgrade_res, 0, PQfnumber(upgrade_res, "nspname"));
 
+	simple_oid_list_append(&preassigned_oids, pg_namespace_oid);
 	appendPQExpBuffer(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_namespace oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 	 "SELECT binary_upgrade.set_next_pg_namespace_oid('%u'::pg_catalog.oid, "
@@ -3148,6 +3223,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 	Oid			pg_type_array_nsoid;
 	char	   *pg_type_array_name;
 
+	simple_oid_list_append(&preassigned_oids, pg_type_oid);
 	appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type oid\n");
 	appendPQExpBuffer(upgrade_buffer,
 	 "SELECT binary_upgrade.set_next_pg_type_oid('%u'::pg_catalog.oid, "
@@ -3171,6 +3247,7 @@ binary_upgrade_set_type_oids_by_type_oid(Archive *fout,
 
 	if (OidIsValid(pg_type_array_oid))
 	{
+		simple_oid_list_append(&preassigned_oids, pg_type_array_oid);
 		appendPQExpBufferStr(upgrade_buffer,
 			   "\n-- For binary upgrade, must preserve pg_type array oid\n");
 		appendPQExpBuffer(upgrade_buffer,
@@ -3259,6 +3336,7 @@ binary_upgrade_set_type_oids_by_rel_oid_impl(Archive *fout,
 		 * owner's OID, but the new cluster will be using the correct name, and
 		 * it's the new cluster's name that we have to use in preassignment.
 		 */
+		simple_oid_list_append(&preassigned_oids, pg_type_toast_oid);
 		appendPQExpBufferStr(upgrade_buffer, "\n-- For binary upgrade, must preserve pg_type toast oid\n");
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.set_next_toast_pg_type_oid('%u'::pg_catalog.oid, "
@@ -3411,6 +3489,7 @@ binary_upgrade_set_pg_class_oids_impl(Archive *fout,
 
 	if (!is_index)
 	{
+		simple_oid_list_append(&preassigned_oids, pg_class_oid);
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.set_next_heap_pg_class_oid('%u'::pg_catalog.oid, "
 						  "'%u'::pg_catalog.oid, $$%s$$::text);\n",
@@ -3434,11 +3513,13 @@ binary_upgrade_set_pg_class_oids_impl(Archive *fout,
 			 * in preassignment.
 			 */
 
+			simple_oid_list_append(&preassigned_oids, pg_class_reltoastrelid);
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.set_next_toast_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$pg_toast_%u$$::text);\n",
 							  pg_class_reltoastrelid, pg_class_reltoastnamespace, pg_class_oid);
 
 			/* every toast table has an index */
+			simple_oid_list_append(&preassigned_oids, pg_index_indexrelid);
 			appendPQExpBuffer(upgrade_buffer,
 							  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid , '%u'::pg_catalog.oid, $$pg_toast_%u_index$$::text);\n",
 								  pg_index_indexrelid, pg_class_reltoastnamespace, pg_class_oid);
@@ -3481,6 +3562,7 @@ binary_upgrade_set_pg_class_oids_impl(Archive *fout,
 	}
 	else
 	{
+		simple_oid_list_append(&preassigned_oids, pg_class_oid);
 		appendPQExpBuffer(upgrade_buffer,
 						  "SELECT binary_upgrade.set_next_index_pg_class_oid('%u'::pg_catalog.oid, '%u'::pg_catalog.oid, $$%s$$::text);\n",
 						  pg_class_oid, pg_class_relnamespace, pg_class_relname);
@@ -3747,6 +3829,22 @@ getExtensions(Archive *fout, int *numExtensions)
 	*numExtensions = ntups;
 
 	return extinfo;
+}
+
+BinaryUpgradeInfo *
+getBinaryUpgradeObjects(void)
+{
+	BinaryUpgradeInfo	*binfo;
+
+	binfo = (BinaryUpgradeInfo *) pg_malloc0(sizeof(BinaryUpgradeInfo));
+
+	binfo->dobj.objType = DO_BINARY_UPGRADE;
+	AssignDumpId(&binfo->dobj);
+	binfo->dobj.name = pg_strdup("__binary_upgrade");
+
+	binary_upgrade_dumpid = binfo->dobj.dumpId;
+
+	return binfo;
 }
 
 /*
@@ -8197,6 +8295,10 @@ dumpDumpableObject(Archive *fout, DumpableObject *dobj)
 		case DO_POST_DATA_BOUNDARY:
 			/* never dumped, nothing to do */
 			break;
+
+		case DO_BINARY_UPGRADE:
+			dumpPreassignedOidArchiveEntry(fout, (BinaryUpgradeInfo *) dobj);
+			break;
 	}
 }
 
@@ -8244,7 +8346,7 @@ dumpNamespace(Archive *fout, NamespaceInfo *nspinfo)
 				 nspinfo->rolname,
 				 false, "SCHEMA", SECTION_PRE_DATA,
 				 q->data, delq->data, NULL,
-				 NULL, 0,
+				 &(binary_upgrade_dumpid), 1,
 				 NULL, NULL);
 
 	/* Dump Schema Comments and Security Labels */
@@ -16570,6 +16672,7 @@ addBoundaryDependencies(DumpableObject **dobjs, int numObjs,
 			case DO_BLOB:
 			case DO_EXTPROTOCOL:
 			case DO_TYPE_STORAGE_OPTIONS:
+			case DO_BINARY_UPGRADE:
 				/* Pre-data objects: must come before the pre-data boundary */
 				addObjectDependency(preDataBound, dobj->dumpId);
 				break;

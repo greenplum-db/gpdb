@@ -112,12 +112,14 @@ typedef enum
 	DO_DEFAULT_ACL,
 	DO_BLOB,
 	DO_BLOB_DATA,
-	DO_EXTPROTOCOL,
-	DO_TYPE_STORAGE_OPTIONS,
 	DO_PRE_DATA_BOUNDARY,
 	DO_POST_DATA_BOUNDARY,
 	DO_EVENT_TRIGGER,
-	DO_REFRESH_MATVIEW
+	DO_REFRESH_MATVIEW,
+
+	DO_EXTPROTOCOL,
+	DO_TYPE_STORAGE_OPTIONS,
+	DO_BINARY_UPGRADE
 } DumpableObjectType;
 
 typedef struct _dumpableObject
@@ -133,6 +135,11 @@ typedef struct _dumpableObject
 	int			nDeps;			/* number of valid dependencies */
 	int			allocDeps;		/* allocated size of dependencies[] */
 } DumpableObject;
+
+typedef struct _binaryupgradeinfo
+{
+	DumpableObject dobj;
+} BinaryUpgradeInfo;
 
 typedef struct _namespaceInfo
 {
@@ -561,7 +568,7 @@ extern const char *EXT_PARTITION_NAME_POSTFIX;
 struct Archive;
 typedef struct Archive Archive;
 
-extern TableInfo *getSchemaData(Archive *, int *numTablesPtr);
+extern TableInfo *getSchemaData(Archive *, int *numTablesPtr, int binary_upgrade);
 
 typedef enum _OidOptions
 {
@@ -649,6 +656,7 @@ extern EventTriggerInfo *getEventTriggers(Archive *fout, int *numEventTriggers);
 /* START MPP ADDITION */
 extern TypeStorageOptions *getTypeStorageOptions(Archive *fout, int *numTypes);
 extern ExtProtInfo *getExtProtocols(Archive *fout, int *numExtProtocols);
+extern BinaryUpgradeInfo *getBinaryUpgradeObjects(void);
 
 extern bool	testExtProtocolSupport(Archive *fout);
 /* END MPP ADDITION */
