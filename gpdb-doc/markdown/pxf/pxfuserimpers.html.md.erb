@@ -19,10 +19,10 @@ Perform the following procedure to turn PXF user impersonation on or off in your
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-2. Open the `$GPHOME/pxf/conf/pxf-env.sh` file in a text editor. For example:
+2. Recall the location of the PXF user configuration directory (`$PXF_CONF`). Open the `$PXF_CONF/conf/pxf-env.sh` configuration file in a text editor. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
     ```
 
 3. Locate the `PXF_USER_IMPERSONATION` setting in the `pxf-env.sh` file. Set the value to `true` to turn PXF user impersonation on, or `false` to turn it off. For example:
@@ -31,13 +31,13 @@ Perform the following procedure to turn PXF user impersonation on or off in your
     PXF_USER_IMPERSONATION="true"
     ```
 
-4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-env.sh =:/usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/etc/pxf/usercfg/conf/pxf-env.sh
     ```
 
-5. Restart PXF on each Greenplum Database segment host to apply the new setting. For example:
+5. If you have previously started PXF, restart it on each Greenplum Database segment host to apply the new setting. For example:
 
     ``` shell
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
@@ -67,7 +67,7 @@ When PXF user personation is enabled (the default), you must configure the Hadoo
     ```
 4. After changing `core-site.xml`, you must restart Hadoop for your changes to take effect.
 
-5. Copy the updated `core-site.xml` file to the Hadoop client installation on each Greenplum Database segment host.
+5. Copy the updated `core-site.xml` file to the Hadoop configuration directory `/etc/hadoop/conf` on each Greenplum Database segment host.
 
 ## <a id="hive"></a>Hive User Impersonation
 

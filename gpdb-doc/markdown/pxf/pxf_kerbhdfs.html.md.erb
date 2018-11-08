@@ -10,7 +10,7 @@ When Kerberos is enabled for your HDFS filesystem, PXF, as an HDFS client, requi
 
 Before you configure PXF for access to a secure HDFS filesystem, ensure that you have:
 
-- Configured, initialized, and started PXF as described in [Configuring PXF](instcfg_pxf.html), including enabling PXF and Hadoop user impersonation.
+- Initialized, configured, and started PXF as described in [Configuring PXF](instcfg_pxf.html), including enabling PXF and Hadoop user impersonation.
 
 - Enabled Kerberos for your Hadoop cluster per the instructions for your specific distribution and verified the configuration.
 
@@ -66,12 +66,12 @@ Perform the following steps to configure PXF for a secure HDFS. You will perform
     root@kdc-server$ kadmin.local -q "listprincs"
     ```
 
-6.  Copy the keytab file for each PXF service principal to its respective segment host. For example, the following commands copy each principal generated in step 4 to the `$GPHOME/pxf/conf` directory on the segment host:
+6.  Copy the keytab file for each PXF service principal to its respective segment host. For example, the following commands copy each principal generated in step 4 to the PXF default keytab directory on the segment host when `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    root@kdc-server$ scp /etc/security/keytabs/pxf-host1.service.keytab host1.example.com:/usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ scp /etc/security/keytabs/pxf-host2.service.keytab host2.example.com:/usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ scp /etc/security/keytabs/pxf-host3.service.keytab host3.example.com:/usr/local/greenplum-db/pxf/conf/pxf.service.keytab
+    root@kdc-server$ scp /etc/security/keytabs/pxf-host1.service.keytab host1.example.com:/etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ scp /etc/security/keytabs/pxf-host2.service.keytab host2.example.com:/etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ scp /etc/security/keytabs/pxf-host3.service.keytab host3.example.com:/etc/pxf/usercfg/keytabs/pxf.service.keytab
     ```
 
     Note the file system location of the keytab file on each PXF host; you will need this information for a later configuration step.
@@ -79,12 +79,12 @@ Perform the following steps to configure PXF for a secure HDFS. You will perform
 7. Change the ownership and permissions on the `pxf.service.keytab` files. The files must be owned and readable by only the `gpadmin` user. For example:
 
     ``` shell 
-    root@kdc-server$ ssh host1.example.com chown gpadmin:gpadmin /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ ssh host1.example.com chmod 400 /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ ssh host2.example.com chown gpadmin:gpadmin /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ ssh host2.example.com chmod 400 /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ ssh host3.example.com chown gpadmin:gpadmin /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
-    root@kdc-server$ ssh host3.example.com chmod 400 /usr/local/greenplum-db/pxf/conf/pxf.service.keytab
+    root@kdc-server$ ssh host1.example.com chown gpadmin:gpadmin /etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ ssh host1.example.com chmod 400 /etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ ssh host2.example.com chown gpadmin:gpadmin /etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ ssh host2.example.com chmod 400 /etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ ssh host3.example.com chown gpadmin:gpadmin /etc/pxf/usercfg/keytabs/pxf.service.keytab
+    root@kdc-server$ ssh host3.example.com chmod 400 /etc/pxf/usercfg/keytabs/pxf.service.keytab
     ```
 
 **Perform the following steps on each Greenplum Database segment host**:
@@ -103,22 +103,22 @@ Perform the following steps to configure PXF for a secure HDFS. You will perform
     root@seghost$ yum install krb5-libs krb5-workstation
     ```
 
-3. Copy the configuration files from your Hadoop cluster to the PXF Hadoop client installation on the Greenplum Database segment host. The configuration file directory is specific to your Hadoop distribution. For example:
+3. Copy the configuration files from your Hadoop cluster to the PXF Hadoop configuration directory on the Greenplum Database segment host. The configuration file directory is specific to your Hadoop distribution. For example:
 
     ``` shell
     gpadmin@seghost$ scp hadoop_host:/etc/hadoop/conf/* /etc/hadoop/conf/
     ```
 
-4. Open the `$GPHOME/pxf/conf/pxf-env.sh` configuration file in the editor of your choice. For example, to open the file with `vi`:
+4. Open the PXF `pxf-env.sh` user configuration file in the editor of your choice. For example, to open the file with `vi` when `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@seghost$ vi $GPHOME/pxf/conf/pxf-env.sh
+    gpadmin@seghost$ vi /etc/pxf/usercfg/conf/pxf-env.sh
     ```
     
 5. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required. Specify the location of the keytab file and the Kerberos principal, substituting your realm. *The default values for these settings are identified below*:
 
     ``` shell
-    export PXF_KEYTAB="${PXF_HOME}/conf/pxf.service.keytab"
+    export PXF_KEYTAB="${PXF_CONF}/keytabs/pxf.service.keytab"
     export PXF_PRINCIPAL="gpadmin/_HOST@EXAMPLE.COM"
     ```
     

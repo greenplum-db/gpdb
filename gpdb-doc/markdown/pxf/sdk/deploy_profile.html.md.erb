@@ -66,7 +66,7 @@ You can re-use a single plug-in class name in multiple profile definitions. For 
 
 ## <a id="reg_profile"></a>Registering a New Profile
 
-When you register a new profile with PXF, you add the profile definition to the `$GPHOME/pxf/conf/pxf-profiles.xml` file. Ensure that you add the profile definition between the \<profiles\> and \<\profiles\> (notice the **s**) keywords when you edit the `pxf-profiles.xml` file.
+When you register a new profile with PXF, you add the profile definition to the `$PXF_CONF/conf/pxf-profiles.xml` file. Ensure that you add the profile definition between the \<profiles\> and \<\profiles\> (notice the **s**) keywords when you edit the `pxf-profiles.xml` file.
 
 **Note**: In a typical Greenplum Database deployment, the `pxf-profiles.xml` file contains multiple third-party profile definitions.
 
@@ -75,10 +75,10 @@ When you register a new profile with PXF, you add the profile definition to the 
 
 When you deploy a new profile, you copy the updated `pxf-profiles.xml` file to each segment host, and then you must restart the PXF service on each host. Only the Greenplum Database administrative user can register profiles and restart the PXF service.
 
-For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster, these commands deploy the profile across the cluster:
+For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`, these commands deploy the profile across the cluster:
 
 ``` shell
-gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-profiles.xml =:/usr/local/greenplum-db/pxf/conf/pxf-profiles.xml
+gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
 gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
 ```
 
@@ -109,7 +109,7 @@ Perform the following procedure to define and register a read profile and a writ
 2. Open the `pxf-profiles.xml` file in the editor of your choosing. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-profiles.xml
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-profiles.xml
     ```
 
 3. Add a definition for a *Demo* connector read profile named `DemoReadLocalFS`. Copy/paste the following text to the `pxf-profiles.xml` file, making sure to paste inside the \<profiles\> and \</profiles\> keywords:
@@ -143,10 +143,10 @@ Perform the following procedure to define and register a read profile and a writ
 
 5. Save the file and exit the editor.
 
-6. Copy the `pxf-profiles.xml` file to all segment hosts in your Greenplum Database cluster. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+6. Copy the `pxf-profiles.xml` file to all segment hosts in your Greenplum Database cluster. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-profiles.xml =:/usr/local/greenplum-db/pxf/conf/pxf-profiles.xml
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
     ```
 
 7. Run the `pxf restart` command to restart PXF on each segment host. For example:

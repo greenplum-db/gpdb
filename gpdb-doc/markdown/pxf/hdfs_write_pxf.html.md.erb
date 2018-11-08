@@ -355,22 +355,15 @@ public class PxfExample_CustomWritable implements Writable {
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ````
 
-5. Copy the `pxfex-customwritable.jar` JAR file to the same location on each Greenplum Database segment host, and note the location. For example:
+5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory on each Greenplum Database segment host, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /home/gpadmin/pxfex-customwritable.jar =:/tmp/pxfex-customwritable.jar
+    gpadmin@gpmaster$ gpscp -v -f seghostfile /home/gpadmin/pxfex-customwritable.jar =:/etc/pxf/usercfg/lib/pxfex-customwritable.jar
     ```
 
-4. Edit the PXF Agent classpath and add the absolute path to the `pxfex-customwritable.jar` JAR file in `$GPHOME/pxf/conf/pxf-public.classpath`. For example:
-
-    ``` pre
-    /tmp/pxfex-customwritable.jar
-    ```
-
-5. Copy the updated `pxf-public.classpath` file to each segment host and then restart PXF on each host. For example:
+6. Restart PXF on each Greenplum Database segment host. For example:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-public.classpath =:/usr/local/greenplum-db/pxf/conf/pxf-public.classpath
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
     ```
 

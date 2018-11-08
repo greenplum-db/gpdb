@@ -21,17 +21,22 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-You must initialize and start PXF before you can use the framework. You must also explicitly enable PXF in each database in which you plan to use it.
+You must initialize and start PXF before you can use the framework.
 
 ## <a id="init_pxf"></a>Initializing PXF
 
-You must explicitly initialize the PXF service instance. This one-time initialization creates the PXF service web application. It also updates PXF configuration files to include information specific to your configuration and the connectors that you will use.
+You must explicitly initialize the PXF service instance. This one-time initialization creates the PXF service web application and generates PXF configuration files and templates.
+
+PXF supports both internal and user-customizable configuration properties. Initializing PXF generates PXF internal configuration files, setting default properties specific to your configuration. Initializing PXF also generates configuration file templates for user-customizable settings such as custom profiles and PXF runtime and logging settings.
+
+PXF internal configuration files are located in `$GPHOME/pxf/conf`. You identify the PXF user configuration directory at initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF prompts you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
+
+During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [About the PXF Installation and Configuration Directories](about_pxf_dir.html) for a list of these directories and their contents.
+
 
 ### <a id="init-pxf-prereq"></a>Prerequisites
 
-Before initializing PXF in your Greenplum Database cluster:
-
-- *If you plan to use the PXF Hadoop connectors*, configure them as described in [Configuring the PXF Hadoop Connectors ](client_instcfg.html).
+Before initializing PXF in your Greenplum Database cluster, be sure to identify the filesystem location for the PXF user configuration directory, `$PXF_CONF`.
  
 ### <a id="init-pxf-steps"></a>Procedure
 
@@ -52,24 +57,54 @@ Perform the following procedure to initialize PXF on each segment host in your G
     seghost3
     ```
 
-3. If not already present, install the `unzip` package on each Greenplum Database segment host. You must have operating system super user privileges to install packages:
+3. If not already present, install the `unzip` package on the master and each Greenplum Database segment host. You must have operating system super user privileges to install packages. For example:
 
     ``` shell
+    gpadmin@gpmaster$ sudo yum -y install unzip
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile "sudo yum -y install unzip"
     ```
 
-4. Run the `pxf init` command to initialize the PXF service on each segment host. For example:
+4. Run the `pxf init` command to initialize the PXF service on the master and each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization. (Note that the `gpadmin` user must have permission to either create, or write to, the specified directory.)
 
     ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf init"
+    gpadmin@gpmaster$ PXF_CONF=/etc/pxf/usercfg /usr/local/greenplum-db/pxf/bin/pxf init
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile 'PXF_CONF=/etc/pxf/usercfg /usr/local/greenplum-db/pxf/bin/pxf init'
     ```
-    
-    The `init` command creates and initializes the PXF web application. It also creates the `pxf-private.classpath` file, which specifies the required PXF JAR files.
+
+    The `init` command creates the PXF web application and initializes internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
+
+    **Note**: The PXF service will run only on the segment hosts. You `pxf init` on the master to set up the PXF user configuration directories there.
 
 
 ## <a id="start_pxf"></a>Starting PXF
 
 After initializing PXF, you must explicitly start PXF on each segment host in your Greenplum Database cluster. The PXF service, once started, runs as the `gpadmin` user on default port 5888. Only the `gpadmin` user can start and stop the PXF service.
+
+If you want to change the default PXF configuration, you must update the configuration before you start PXF.
+
+`$PXF_CONF/conf` includes these user-customizable configuration files:
+
+- `pxf-env.sh` - PXF runtime configuration parameters
+- `pxf-log4j.properties` - PXF logging configuration parameters
+- `pxf-profiles.xml` - Custom PXF profile definitions
+
+The `pxf-env.sh` file exposes the following PXF runtime configuration parameters:
+
+| Parameter  | Description | Default Value |
+|-----------|---------------| ------------|
+| JAVA_HOME    | The Java JRE home directory. | /usr/java/default |
+| PXF_LOG_DIR   | The PXF log directory. | $PXF_CONF/logs |
+| PXF_JVM_OPTS  | Default options for the PXF Java virtual machine. | -Xmx2g -Xms1g |
+| PXF_KEYTAB  | The absolute path to the PXF service Kerberos principal keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
+| PXF_PRINCIPAL  | The PXF service Kerberos principal. | gpadmin/\_HOST@EXAMPLE.COM |
+
+You must propogate any updates that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
+
+### <a id="start_pxf_prereq"></a>Prerequisites
+
+Before you start PXF in your Greenplum Database cluster, ensure that you have previously initialized PXF.
+ 
+### <a id="start_pxf_proc"></a>Procedure
 
 Perform the following procedure to start PXF on each segment host in your Greenplum Database cluster.  You will use the `gpssh` command and a `seghostfile` to run the command on multiple hosts.
 
