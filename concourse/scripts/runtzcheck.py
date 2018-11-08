@@ -18,6 +18,10 @@ class TZFile(object):
         self._prefix_path = prefix_path
         self._filename = filename
         self._output = output
+        if GPDB_ZONEDIR_PREFIX in self._prefix_path:
+            self._src = 'GPDB'
+        else:
+            self._src = 'IANA'
 
     def __eq__(self, other):
         return not self.__ne__(other)
@@ -34,13 +38,13 @@ class TZFile(object):
         self_header = self._output.replace(self._prefix_path, "")
         other_header = other._output.replace(other._prefix_path, "")
         if self_header != other_header:
-            print "WARNING: Mismatched header %s" % self._filename
+            print "WARNING header mismtach: \n{src1} header is {header1} \n{src2} header is {header2}".format(src1=self._src, header1=self_header.strip(), src2=other._src, header2=other_header.strip())
 
         return self_output != other_output
 
 def check_timezone_good(tz_tuple):
     if tz_tuple[0] != tz_tuple[1]:
-        print "Mismatching timezone %s" % tz_tuple[0].name
+        print "ERROR Mismatching timezone %s" % tz_tuple[0].name
         return False
     return True
 

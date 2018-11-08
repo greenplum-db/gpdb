@@ -459,6 +459,7 @@ resources:
   type: git
   source:
     uri: https://github.com/eggert/tz.git
+    tag_filter: '20[0-9][0-9][a-z]'
 
 {% endif %}
 - name: gpaddon_src
@@ -1217,7 +1218,6 @@ jobs:
     file: gpdb_src/concourse/tasks/tzcheck.yml
     image: centos-gpdb-dev-6
     params:
-      tz_tag: 2018e # IANA database version
       TEST_OS: centos
 
 {% endif %}
