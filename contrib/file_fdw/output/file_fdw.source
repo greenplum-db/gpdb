@@ -243,7 +243,7 @@ SET ROLE file_fdw_user;
 EXPLAIN (VERBOSE, COSTS FALSE) SELECT * FROM agg_text WHERE a > 0;
  Foreign Scan on public.agg_text
    Output: a, b
-   Filter: agg_text.a > 0
+   Filter: (agg_text.a > 0)
    Foreign File: @abs_srcdir@/data/agg.data
  Optimizer: legacy query optimizer
 

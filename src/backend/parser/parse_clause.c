@@ -364,14 +364,6 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
 				 errmsg("permission denied: \"%s\" is a system catalog",
 						 RelationGetRelationName(pstate->p_target_relation))));
 
-	/* special check for DML on foreign relations */
-	if(RelationIsForeign(pstate->p_target_relation))
-		ereport(ERROR,
-				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("foreign tables are read only. cannot change \"%s\"",
-						 RelationGetRelationName(pstate->p_target_relation))));
-
-
 	/* special check for DML on external relations */
 	if(RelationIsExternal(pstate->p_target_relation))
 	{
