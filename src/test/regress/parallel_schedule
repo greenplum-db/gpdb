@@ -166,6 +166,3 @@ test: returning
 # GUCs stats_block_level and stats_row_level, which have been removed from
 # GPDB.
 #test: stats
-
-test: reshuffle reshuffle_ao reshuffle_aoco
-

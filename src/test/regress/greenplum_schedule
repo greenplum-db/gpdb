@@ -14,6 +14,8 @@
 #   to the segments, and therefore has to run in smaller groups to avoid
 #   hitting max_connections limit on segments.
 #
+# test reshuffle
+test: reshuffle reshuffle_ao reshuffle_aoco
 
 # enable query metrics cluster GUC
 test: instr_in_shmem_setup

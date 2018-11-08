@@ -1,76 +1,48 @@
 set allow_system_table_mods=true;
 
 -- Hash distributed tables
-Create table t1_reshuffle(a int, b int, c int);
+Create table t1_reshuffle(a int, b int, c int) distributed by (a);
 update gp_distribution_policy  set numsegments=2 where localoid='t1_reshuffle'::regclass;
 insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
 Update t1_reshuffle set c = gp_segment_id;
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+begin;
 Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+abort;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+Alter table t1_reshuffle set with (reshuffle);
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
 select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
 drop table t1_reshuffle;
 
-Create table t1_reshuffle(a int, b int, c int);
-update gp_distribution_policy  set numsegments=1 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
-Update t1_reshuffle set c = gp_segment_id;
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
-drop table t1_reshuffle;
-
-Create table t1_reshuffle(a int, b int, c int) distributed by (a,b);
-update gp_distribution_policy  set numsegments=2 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
-Update t1_reshuffle set c = gp_segment_id;
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
-drop table t1_reshuffle;
-
-Create table t1_reshuffle(a int, b int, c int) distributed by (a,b);
-update gp_distribution_policy  set numsegments=1 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
-Update t1_reshuffle set c = gp_segment_id;
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
-select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
-drop table t1_reshuffle;
 
 Create table t1_reshuffle(a int, b int, c int) with OIDS distributed by (a,b);
 update gp_distribution_policy  set numsegments=1 where localoid='t1_reshuffle'::regclass;
 insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
 Update t1_reshuffle set c = gp_segment_id;
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+begin;
 Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+abort;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+Alter table t1_reshuffle set with (reshuffle);
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
 select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
 drop table t1_reshuffle;
-
 
 -- Test NULLs.
 Create table t1_reshuffle(a int, b int, c int) distributed by (a,b,c);
@@ -84,13 +56,19 @@ insert into t1_reshuffle values
   (null, 6,    null),
   (7,    null, null),
   (null, null, null);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+begin;
 Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle where gp_segment_id=0;
-Select count(*) from t1_reshuffle where gp_segment_id=1;
-Select count(*) from t1_reshuffle where gp_segment_id=2;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+abort;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+Alter table t1_reshuffle set with (reshuffle);
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
 select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
 drop table t1_reshuffle;
 
@@ -100,87 +78,72 @@ update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle_1
 update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle_1_prt_other'::regclass;
 update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle'::regclass;
 insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
-Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=1;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=2;
-drop table t1_reshuffle;
 
-Create table t1_reshuffle(a int, b int, c int) distributed by (a) partition by list(b) (partition t1_reshuffle_1 values(1), partition t1_reshuffle_2 values(2), default partition other);
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_t1_reshuffle_1'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_t1_reshuffle_2'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_other'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
-Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=2;
-drop table t1_reshuffle;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
 
-Create table t1_reshuffle(a int, b int, c int) distributed by (a,b) partition by list(b) (partition t1_reshuffle_1 values(1), partition t1_reshuffle_2 values(2), default partition other);
-update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle_1_prt_t1_reshuffle_1'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle_1_prt_t1_reshuffle_2'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle_1_prt_other'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
+begin;
 Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=1;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=2;
-drop table t1_reshuffle;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+abort;
 
-Create table t1_reshuffle(a int, b int, c int) distributed by (a,b) partition by list(b) (partition t1_reshuffle_1 values(1), partition t1_reshuffle_2 values(2), default partition other);
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_t1_reshuffle_1'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_t1_reshuffle_2'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle_1_prt_other'::regclass;
-update gp_distribution_policy set numsegments = 2 where localoid='t1_reshuffle'::regclass;
-insert into t1_reshuffle select i,i,0 from generate_series(1,100) I;
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
 Alter table t1_reshuffle set with (reshuffle);
-Select count(*) from t1_reshuffle;
-Select count(*) > 0 from t1_reshuffle where gp_segment_id=2;
+
+Select gp_segment_id, count(*) from t1_reshuffle group by gp_segment_id;
+
+select numsegments from gp_distribution_policy where localoid='t1_reshuffle'::regclass;
 drop table t1_reshuffle;
 
 -- Random distributed tables
 Create table r1_reshuffle(a int, b int, c int) distributed randomly;
-update gp_distribution_policy  set numsegments=1 where localoid='r1_reshuffle'::regclass;
-insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
-Update r1_reshuffle set c = gp_segment_id;
-Select count(*) from r1_reshuffle;
-Alter table r1_reshuffle set with (reshuffle);
-Select count(*) from r1_reshuffle;
-Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
-drop table r1_reshuffle;
-
-Create table r1_reshuffle(a int, b int, c int) with OIDS distributed randomly;
-update gp_distribution_policy  set numsegments=1 where localoid='r1_reshuffle'::regclass;
-insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
-Update r1_reshuffle set c = gp_segment_id;
-Select count(*) from r1_reshuffle;
-Alter table r1_reshuffle set with (reshuffle);
-Select count(*) from r1_reshuffle;
-Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
-drop table r1_reshuffle;
-
-Create table r1_reshuffle(a int, b int, c int) distributed randomly;
 update gp_distribution_policy  set numsegments=2 where localoid='r1_reshuffle'::regclass;
 insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
 Update r1_reshuffle set c = gp_segment_id;
+
 Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+begin;
 Alter table r1_reshuffle set with (reshuffle);
 Select count(*) from r1_reshuffle;
 Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+abort;
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+Alter table r1_reshuffle set with (reshuffle);
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+select numsegments from gp_distribution_policy where localoid='r1_reshuffle'::regclass;
 drop table r1_reshuffle;
 
-Create table r1_reshuffle(a int, b int, c int) distributed randomly partition by list(b) (partition r1_reshuffle_1 values(1), partition r1_reshuffle_2 values(2), default partition other);
-update gp_distribution_policy set numsegments = 1 where localoid='r1_reshuffle_1_prt_r1_reshuffle_1'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='r1_reshuffle_1_prt_r1_reshuffle_2'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='r1_reshuffle_1_prt_other'::regclass;
-update gp_distribution_policy set numsegments = 1 where localoid='r1_reshuffle'::regclass;
+Create table r1_reshuffle(a int, b int, c int) with OIDS distributed randomly;
+update gp_distribution_policy  set numsegments=2 where localoid='r1_reshuffle'::regclass;
 insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
+Update r1_reshuffle set c = gp_segment_id;
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+begin;
 Alter table r1_reshuffle set with (reshuffle);
 Select count(*) from r1_reshuffle;
-Select count(*) > 0 from r1_reshuffle where gp_segment_id=1;
 Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+abort;
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+Alter table r1_reshuffle set with (reshuffle);
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+select numsegments from gp_distribution_policy where localoid='r1_reshuffle'::regclass;
 drop table r1_reshuffle;
 
 Create table r1_reshuffle(a int, b int, c int) distributed randomly partition by list(b) (partition r1_reshuffle_1 values(1), partition r1_reshuffle_2 values(2), default partition other);
@@ -189,10 +152,25 @@ update gp_distribution_policy set numsegments = 2 where localoid='r1_reshuffle_1
 update gp_distribution_policy set numsegments = 2 where localoid='r1_reshuffle_1_prt_other'::regclass;
 update gp_distribution_policy set numsegments = 2 where localoid='r1_reshuffle'::regclass;
 insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+begin;
 Alter table r1_reshuffle set with (reshuffle);
 Select count(*) from r1_reshuffle;
-Select count(*) > 0 from r1_reshuffle where gp_segment_id=1;
 Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+abort;
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+Alter table r1_reshuffle set with (reshuffle);
+
+Select count(*) from r1_reshuffle;
+Select count(*) > 0 from r1_reshuffle where gp_segment_id=2;
+
+select numsegments from gp_distribution_policy where localoid='r1_reshuffle'::regclass;
 drop table r1_reshuffle;
 
 -- Replicated tables
@@ -202,9 +180,8 @@ drop table r1_reshuffle;
 -- The case can only work under the assumption: it's running on 3-segment cluster
 -- in a single machine.
 -- start_ignore
-drop language plpythonu;
--- end_ignore
 create language plpythonu;
+-- end_ignore
 create function update_on_segment(tabname text, segid int, numseg int) returns boolean as
 $$
 import pygresql.pg as pg
@@ -242,25 +219,27 @@ select update_on_segment('r1_reshuffle', 0, 1);
 select update_on_segment('r1_reshuffle', 1, 1);
 select update_on_segment('r1_reshuffle', 2, 1);
 insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
-Select count(*) from r1_reshuffle;
-Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
-Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
-Alter table r1_reshuffle set with (reshuffle);
-Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
-Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
-drop table r1_reshuffle;
 
-Create table r1_reshuffle(a int, b int, c int) distributed replicated;
-update gp_distribution_policy  set numsegments=2 where localoid='r1_reshuffle'::regclass;
-select update_on_segment('r1_reshuffle', 0, 2);
-select update_on_segment('r1_reshuffle', 1, 2);
-select update_on_segment('r1_reshuffle', 2, 2);
-insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
 Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
 Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+begin;
 Alter table r1_reshuffle set with (reshuffle);
 Select count(*) from r1_reshuffle;
+abort;
+
+Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
 Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+Alter table r1_reshuffle set with (reshuffle);
+
+Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
+Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+select numsegments from gp_distribution_policy where localoid='r1_reshuffle'::regclass;
 drop table r1_reshuffle;
 
 Create table r1_reshuffle(a int, b int, c int) with OIDS distributed replicated;
@@ -269,11 +248,27 @@ select update_on_segment('r1_reshuffle', 0, 2);
 select update_on_segment('r1_reshuffle', 1, 2);
 select update_on_segment('r1_reshuffle', 2, 2);
 insert into r1_reshuffle select i,i,0 from generate_series(1,100) I;
+
 Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
 Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+begin;
 Alter table r1_reshuffle set with (reshuffle);
 Select count(*) from r1_reshuffle;
+abort;
+
+Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
 Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+Alter table r1_reshuffle set with (reshuffle);
+
+Select count(*) from r1_reshuffle;
+Select select_on_segment('Select count(*) from r1_reshuffle;', 1);
+Select select_on_segment('Select count(*) from r1_reshuffle;', 2);
+
+select numsegments from gp_distribution_policy where localoid='r1_reshuffle'::regclass;
 drop table r1_reshuffle;
 
 -- table with update triggers on distributed key column
