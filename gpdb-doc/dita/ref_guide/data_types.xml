@@ -186,6 +186,13 @@
               <entry colname="col5">variable unlimited length</entry>
             </row>
             <row>
+              <entry colname="col1">jsonb</entry>
+              <entry colname="col2"/>
+              <entry colname="col3">???</entry>
+              <entry colname="col4">???</entry>
+              <entry colname="col5">???</entry>
+            </row>
+            <row>
               <entry colname="col1">lseg</entry>
               <entry colname="col2"/>
               <entry colname="col3">32 bytes</entry>

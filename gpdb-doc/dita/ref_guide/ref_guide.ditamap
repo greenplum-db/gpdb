@@ -33,8 +33,8 @@
 			<topicref href="sql_commands/ALTER_TABLESPACE.xml"/>
 			<topicref href="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/>
 			<topicref href="sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/>
-      <topicref href="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/>
-      <topicref href="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/>
+			<topicref href="sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/>
+			<topicref href="sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/>
 			<topicref href="sql_commands/ALTER_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/ALTER_TYPE.xml"/>
 			<topicref href="sql_commands/ALTER_USER.xml"/>
@@ -78,8 +78,8 @@
 			<topicref href="sql_commands/CREATE_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml"/>
 			<topicref href="sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml"/>
-      <topicref href="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/>
-      <topicref href="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml"/>
+			<topicref href="sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/>
+			<topicref href="sql_commands/CREATE_TEXT_SEARCH_TEMPLATE.xml"/>
 			<topicref href="sql_commands/CREATE_TYPE.xml"/>
 			<topicref href="sql_commands/CREATE_USER.xml"/>
 			<topicref href="sql_commands/CREATE_USER_MAPPING.xml"/>
@@ -118,8 +118,8 @@
 			<topicref href="sql_commands/DROP_TABLESPACE.xml"/>
 			<topicref href="sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml"/>
 			<topicref href="sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml"/>
-      <topicref href="sql_commands/DROP_TEXT_SEARCH_PARSER.xml"/>
-      <topicref href="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/>
+			<topicref href="sql_commands/DROP_TEXT_SEARCH_PARSER.xml"/>
+			<topicref href="sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/>
 			<topicref href="sql_commands/DROP_TRIGGER.xml" otherprops="op-hidden"/>
 			<topicref href="sql_commands/DROP_TYPE.xml"/>
 			<topicref href="sql_commands/DROP_USER.xml"/>
@@ -221,6 +221,7 @@
 				<topicref href="system_catalogs/pg_namespace.xml"/>
 				<topicref href="system_catalogs/pg_opclass.xml"/>
 				<topicref href="system_catalogs/pg_operator.xml"/>
+				<topicref href="system_catalogs/pg_opfamily.xml"/>
 				<topicref href="system_catalogs/pg_partition.xml"/>
 				<topicref href="system_catalogs/pg_partition_columns.xml"/>
 				<topicref href="system_catalogs/pg_partition_encoding.xml"/>
