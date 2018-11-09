@@ -1542,6 +1542,7 @@ fi
 # Check for zstd.h
 if test "$with_zstd" = yes; then
   AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
+  AC_CHECK_HEADER(zstd_errors.h, [], [AC_MSG_ERROR([header file <zstd_errors.h> is required for zstd support])])
 fi
 
 if test "$with_gssapi" = yes ; then
@@ -1648,7 +1649,7 @@ fi
 
 if test "$PORTNAME" = "win32" ; then
    AC_CHECK_HEADERS(crtdefs.h)
-fi 
+fi
 
 # OpenBSD requires libexecinfo from ports for backtrace() as it's a glibc addition
 if test "$PORTNAME" = "openbsd"; then

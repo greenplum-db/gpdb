@@ -16,6 +16,7 @@
 #include "utils/builtins.h"
 
 #include <zstd.h>
+#include <zstd_errors.h>
 
 Datum zstd_constructor(PG_FUNCTION_ARGS);
 Datum zstd_destructor(PG_FUNCTION_ARGS);
@@ -104,7 +105,16 @@ zstd_compress(PG_FUNCTION_ARGS)
 
 	if (ZSTD_isError(dst_length_used))
 	{
-		elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
+		if (ZSTD_getErrorCode(dst_length_used) == ZSTD_error_dstSize_tooSmall) {
+			/*
+			 * This error is returned when "compressed" output is bigger than
+			 * uncompressed input.
+			 * The caller can detect this by checking dst_used >= src_size
+			 */
+			dst_length_used = src_sz;
+		}
+		else
+			elog(ERROR, "%s", ZSTD_getErrorName(dst_length_used));
 	}
 
 	*dst_used = (int32) dst_length_used;

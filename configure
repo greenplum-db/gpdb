@@ -13158,13 +13158,21 @@ fi
 
 fi
 
-# Check for zstd.h
+# Check for zstd.h and zstd_errors.h
 if test "$with_zstd" = yes; then
   ac_fn_c_check_header_mongrel "$LINENO" "zstd.h" "ac_cv_header_zstd_h" "$ac_includes_default"
 if test "x$ac_cv_header_zstd_h" = xyes; then :
 
 else
   as_fn_error $? "header file <zstd.h> is required for zstd support" "$LINENO" 5
+fi
+
+
+  ac_fn_c_check_header_mongrel "$LINENO" "zstd_errors.h" "ac_cv_header_zstd_errors_h" "$ac_includes_default"
+if test "x$ac_cv_header_zstd_errors_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <zstd_errors.h> is required for zstd support" "$LINENO" 5
 fi
 
 
