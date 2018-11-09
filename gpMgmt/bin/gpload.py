@@ -2297,7 +2297,7 @@ class gpload:
 
         encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
-        if encodingStr == None:
+        if encodingStr is None:
             result = self.db.query("SHOW SERVER_ENCODING".encode('utf-8')).getresult()
             if len(result) > 0:
                 encodingStr = result[0][0]
