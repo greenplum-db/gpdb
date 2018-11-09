@@ -198,3 +198,23 @@ Perform the following procedure to decrease the maximum number of Tomcat threads
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
     ```
 
+## <a id="pxf-timezonecfg"></a>Addressing PXF JDBC Connector Time Zone Errors
+
+You use the PXF JDBC connector to access data stored in an external SQL database. Depending upon the JDBC driver, PXF may return an error if there is a mismatch between the default time zone set for the PXF server and the time zone set for the external SQL database.
+
+For example, if you use the PXF JDBC connector to access an Oracle database with a conflicting time zone, PXF logs an error similar to the following:
+
+``` pre
+SEVERE: Servlet.service() for servlet [PXF REST Service] in context with path [/pxf] threw exception
+java.io.IOException: ORA-00604: error occurred at recursive SQL level 1
+ORA-01882: timezone region not found
+```
+
+Should you encounter this error, you can set a default time zone for the PXF server in the `$GPHOME/pxf/conf/pxf-env.sh` configuration file, `PXF_JVM_OPTS` property setting. For example:
+
+``` pre
+export PXF_JVM_OPTS="<current_settings> -Duser.timezone=America/Chicago"
+```
+
+As described in previous sections, you must copy the updated configuration file to each Greenplum Database segment host and restart the PXF server on each host.
+
