@@ -1590,7 +1590,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	}
 
 	/*
-	 * Actual work_mem used.
+	 * Actual work_mem used and wanted
 	 */
 	if (es->analyze && es->verbose && ns->workmemused.vcnt > 0)
 	{
@@ -1612,13 +1612,37 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 								 ns->totalWorkfileCreated.vcnt);
 
 			appendStringInfo(es->str, "\n");
+
+			if (ns->workmemwanted.vcnt > 0)
+			{
+				appendStringInfoSpaces(es->str, es->indent * 2);
+				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
+				if (ns->ninst == 1)
+				{
+					appendStringInfo(es->str,
+								 "Work_mem wanted: %s to lessen workfile I/O.",
+								 maxbuf);
+				}
+				else
+				{
+					cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemwanted));
+					cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
+					appendStringInfo(es->str,
+									 "Work_mem wanted: %s avg, %s max%s"
+									 " to lessen workfile I/O affecting %d workers.",
+									 avgbuf, maxbuf, segbuf, ns->workmemwanted.vcnt);
+				}
+
+				appendStringInfo(es->str, "\n");
+			}
 		}
 		else
 		{
-			ExplainPropertyLong("work_mem", (long) kb(ns->workmemused.vsum), es);
-			ExplainPropertyInteger("work_mem Segments", ns->workmemused.vcnt, es);
-			ExplainPropertyLong("work_mem Max Memory", (long) kb(ns->workmemused.vmax), es);
-			ExplainPropertyLong("work_mem Max Memory Segment", ns->workmemused.imax, es);
+			ExplainOpenGroup("work_mem", "work_mem", true, es);
+			ExplainPropertyLong("Used", (long) kb(ns->workmemused.vsum), es);
+			ExplainPropertyInteger("Segments", ns->workmemused.vcnt, es);
+			ExplainPropertyLong("Max Memory", (long) kb(ns->workmemused.vmax), es);
+			ExplainPropertyLong("Max Memory Segment", ns->workmemused.imax, es);
 
 			/*
 			 * Total number of segments in which this node reuses cached or
@@ -1626,6 +1650,20 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			 */
 			if (nodeSupportWorkfileCaching(planstate))
 				ExplainPropertyInteger("Workfile Spilling", ns->totalWorkfileCreated.vcnt, es);
+
+			if (ns->workmemwanted.vcnt > 0)
+			{
+				ExplainPropertyLong("Max Memory Wanted", (long) kb(ns->workmemwanted.vmax), es);
+
+				if (ns->ninst > 1)
+				{
+					ExplainPropertyInteger("Max Memory Wanted Segment", ns->workmemwanted.imax, es);
+					ExplainPropertyLong("Avg Memory Wanted", (long) kb(cdbexplain_agg_avg(&ns->workmemwanted)), es);
+					ExplainPropertyInteger("Segments Affected", ns->ninst, es);
+				}
+			}
+
+			ExplainCloseGroup("work_mem", "work_mem", true, es);
 		}
 	}
 
@@ -1651,34 +1689,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 							 avgbuf,
 							 maxbuf,
 							 segbuf);
-		}
-	}
-
-	/*
-	 * What value of work_mem would suffice to eliminate workfile I/O?
-	 * [#159443489]
-	 */
-	if (es->analyze && es->verbose && ns->workmemwanted.vcnt > 0)
-	{
-		appendStringInfoSpaces(es->str, es->indent * 2);
-		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
-		if (ns->ninst == 1)
-		{
-			appendStringInfo(es->str,
-							 "Work_mem wanted: %s to lessen workfile I/O.\n",
-							 maxbuf);
-		}
-		else
-		{
-			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemwanted));
-			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
-			appendStringInfo(es->str,
-							 "Work_mem wanted: %s avg, %s max%s"
-							 " to lessen workfile I/O affecting %d workers.\n",
-							 avgbuf,
-							 maxbuf,
-							 segbuf,
-							 ns->workmemwanted.vcnt);
 		}
 	}
 
