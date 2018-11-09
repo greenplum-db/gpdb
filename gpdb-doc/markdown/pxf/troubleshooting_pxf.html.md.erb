@@ -210,11 +210,13 @@ java.io.IOException: ORA-00604: error occurred at recursive SQL level 1
 ORA-01882: timezone region not found
 ```
 
-Should you encounter this error, you can set a default time zone for the PXF server in the `$GPHOME/pxf/conf/pxf-env.sh` configuration file, `PXF_JVM_OPTS` property setting. For example:
+Should you encounter this error, you can set default time zone option(s) for the PXF server in the `$GPHOME/pxf/conf/pxf-env.sh` configuration file, `PXF_JVM_OPTS` property setting. For example, to set the time zone:
 
 ``` pre
 export PXF_JVM_OPTS="<current_settings> -Duser.timezone=America/Chicago"
 ```
+
+You can use the `PXF_JVM_OPTS` property to set other Java options as well.
 
 As described in previous sections, you must copy the updated configuration file to each Greenplum Database segment host and restart the PXF server on each host.
 
