@@ -229,6 +229,7 @@ run_upgrade() {
 
     ssh -ttn "$hostname" '
         source '"${NEW_GPHOME}"'/greenplum_path.sh
+        export TIMEFORMAT=$'\'''"$hostname"'::'"$datadir"'\telapsed\t%3lR\tuser\t%3lU\tsys\t%3lS'\''
         time pg_upgrade '"${upgrade_opts}"' '"$*"' \
             -b '"${OLD_GPHOME}"'/bin/ -B '"${NEW_GPHOME}"'/bin/ \
             -d '"$datadir"' \
