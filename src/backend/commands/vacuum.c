@@ -1494,6 +1494,12 @@ vac_update_relstats_from_list(List *updated_stats)
 {
 	ListCell *lc;
 
+	/*
+	 * This function is only called in the context of the QD, so let's be
+	 * explicit about that given the assumptions taken.
+	 */
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
 	foreach (lc, updated_stats)
 	{
 		VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
@@ -1508,17 +1514,13 @@ vac_update_relstats_from_list(List *updated_stats)
 			stats->relallvisible = stats->relallvisible / rel->rd_cdbpolicy->numsegments;
 		}
 
-		/*
-		 * Pass 'false' for isvacuum, so that the stats are
-		 * actually updated.
-		 */
 		vac_update_relstats(rel,
 							stats->rel_pages, stats->rel_tuples,
 							stats->relallvisible,
 							rel->rd_rel->relhasindex,
 							InvalidTransactionId,
 							InvalidMultiXactId,
-							false /* isvacuum */);
+							true /* isvacuum */);
 		relation_close(rel, AccessShareLock);
 	}
 }
