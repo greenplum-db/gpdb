@@ -2015,42 +2015,6 @@ WalSndKill(int code, Datum arg)
 
 	Assert(walsnd != NULL);
 
-	if (IS_QUERY_DISPATCHER())
-	{
-		/*
-		 * Acquire the SyncRepLock here to avoid any race conditions
-		 * that may occur when the WAL sender is waking up waiting backends in the
-		 * sync-rep queue just before its exit and a new backend comes in
-		 * to wait in the queue due to the fact that WAL sender is still alive.
-		 * Refer to the use of SyncRepLock in SyncRepWaitForLSN()
-		 */
-		LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
-		{
-			/* Release any waiting backends in the sync-rep queue */
-			SyncRepWakeQueue(true, SYNC_REP_WAIT_WRITE);
-			SyncRepWakeQueue(true, SYNC_REP_WAIT_FLUSH);
-
-			SpinLockAcquire(&MyWalSnd->mutex);
-
-			MyWalSnd->synchronous = false;
-
-			/* xlog can get freed without the WAL sender worry */
-			MyWalSnd->xlogCleanUpTo = InvalidXLogRecPtr;
-
-			/* Mark WalSnd struct no longer in use. */
-			MyWalSnd->replica_disconnected_at = (pg_time_t) time(NULL);
-			MyWalSnd->pid = 0;
-
-			SpinLockRelease(&MyWalSnd->mutex);
-
-			DisownLatch(&MyWalSnd->latch);
-		}
-		LWLockRelease(SyncRepLock);
-		/* WalSnd struct isn't mine anymore */
-		MyWalSnd = NULL;
-		return;
-	}
-
 	/*
 	 * Clear MyWalSnd first; then disown the latch.  This is so that signal
 	 * handlers won't try to touch the latch after it's no longer ours.
