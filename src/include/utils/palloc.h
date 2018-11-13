@@ -55,7 +55,13 @@
 #define CDB_PALLOC_CALLER_ID
 */
 
-// GPDB_93_MERGE_FIXME: This mechanism got broken.
+/*
+ * GPDB_93_MERGE_FIXME: This mechanism got broken. If this is resurrected and
+ * and made working the --enable-testutils invocations should be readded to
+ * gpAux/Makefile. For reference to where, the commit adding this comment has
+ * the removal so reverting this will get us back where we were before the
+ * merge.
+ */
 #ifdef USE_ASSERT_CHECKING
 //#define CDB_PALLOC_TAGS
 #endif
