@@ -7570,7 +7570,6 @@ open_program_pipes(char *command, bool forwrite)
 	if (program_pipes->pid == -1)
 	{
 		errno = save_errno;
-		pfree(program_pipes);
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 				 errmsg("can not start command: %s", command)));

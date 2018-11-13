@@ -296,8 +296,6 @@ url_execute_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate)
 	if (file->handle->pid == -1)
 	{
 		errno = save_errno;
-		pfree(file->common.url);
-		pfree(file);
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
 						errmsg("cannot start external table command: %m"),

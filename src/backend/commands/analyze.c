@@ -4031,15 +4031,9 @@ merge_leaf_stats(VacAttrStatsP stats,
 		}
 		else
 		{
-			// Else error out due to incompatible leaf HLL counter merge
-			pfree(hllcounters);
-			pfree(hllcounters_fullscan);
-			pfree(hllcounters_copy);
-			pfree(nDistincts);
-			pfree(nMultiples);
-			pfree(nUniques);
+			/* Else error out due to incompatible leaf HLL counter merge */
 			ereport(ERROR,
-					 (errmsg("ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge"),
+					(errmsg("ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge"),
 					 errhint("Re-run ANALYZE or ANALYZE FULLSCAN")));
 		}
 	}
