@@ -9,11 +9,11 @@ PXF is a Java service. It requires a Java 1.7 or 1.8 installation on each Greenp
 
 ## <a id="prereq"></a>Prerequisites
 
-Ensure that you have access to, or superuser permissions to install, Java version 1.7 or 1.8 on each Greenplum Database segment host.
+Ensure that you have access to, or superuser permissions to install, Java version 1.7 or 1.8 on each Greenplum Database host.
 
 ## <a id="proc"></a>Procedure
 
-Perform the following procedure to install Java on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
+Perform the following procedure to install Java on the master and on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
 
 1. Log in to your Greenplum Database master node and set up the environment:
 
@@ -30,17 +30,19 @@ Perform the following procedure to install Java on each segment host in your Gre
     seghost3
     ```
 
-3. Install Java on each Greenplum Database segment host and set up the Java environment on each host.
+3. Install Java on the master and on each Greenplum Database segment host, and then set up the Java environment on each host.
 
     1. Install the Java package. For example, to install Java version 1.8:
 
         ``` shell
+        gpadmin@gpmaster$ sudo yum -y install java-1.8.0-openjdk-1.8.0*
         gpadmin@gpmaster$ gpssh -e -v -f seghostfile sudo yum -y install java-1.8.0-openjdk-1.8.0*
         ```
 
     2. Identify the Java base install directory. Update the `gpadmin` user's `.bash_profile` file on each segment host to include this `$JAVA_HOME` setting if it is not already present. For example:
 
         ``` shell
+        gpadmin@gpmaster$ echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.x86_64/jre' >> /home/gpadmin/.bash_profile
         gpadmin@gpmaster$ gpssh -e -v -f seghostfile "echo 'export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.x86_64/jre' >> /home/gpadmin/.bash_profile"
         ```
 
