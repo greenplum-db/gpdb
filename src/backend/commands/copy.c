@@ -2210,55 +2210,53 @@ BeginCopyToOnSegment(QueryDesc *queryDesc)
 	/* We use fe_msgbuf as a per-row buffer regardless of copy_dest */
 	cstate->fe_msgbuf = makeStringInfo();
 
+	cstate->filename = pstrdup(copyIntoClause->filename);
+	cstate->is_program = copyIntoClause->is_program;
+
+	if (cstate->on_segment)
+		MangleCopyFileName(cstate);
+	filename = cstate->filename;
+
+	if (cstate->is_program)
 	{
-		cstate->filename = pstrdup(copyIntoClause->filename);
-		cstate->is_program = copyIntoClause->is_program;
+		cstate->program_pipes = open_program_pipes(cstate->filename, true);
+		cstate->copy_file = fdopen(cstate->program_pipes->pipes[0], PG_BINARY_W);
 
-		if (cstate->on_segment)
-			MangleCopyFileName(cstate);
-		filename = cstate->filename;
+		if (cstate->copy_file == NULL)
+			ereport(ERROR,
+					(errmsg("could not execute command \"%s\": %m",
+							cstate->filename)));
+	}
+	else
+	{
+		mode_t oumask; /* Pre-existing umask value */
+		struct stat st;
 
-		if (cstate->is_program)
-		{
-			cstate->program_pipes = open_program_pipes(cstate->filename, true);
-			cstate->copy_file = fdopen(cstate->program_pipes->pipes[0], PG_BINARY_W);
+		/*
+		 * Prevent write to relative path ... too easy to shoot oneself in
+		 * the foot by overwriting a database file ...
+		 */
+		if (!is_absolute_path(filename))
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_NAME),
+							errmsg("relative path not allowed for COPY to file")));
 
-			if (cstate->copy_file == NULL)
-				ereport(ERROR,
-						(errmsg("could not execute command \"%s\": %m",
-								cstate->filename)));
-		}
-		else
-		{
-			mode_t oumask; /* Pre-existing umask value */
-			struct stat st;
+		oumask = umask(S_IWGRP | S_IWOTH);
+		cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
+		umask(oumask);
+		if (cstate->copy_file == NULL)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+							errmsg("could not open file \"%s\" for writing: %m", filename)));
 
-			/*
-			 * Prevent write to relative path ... too easy to shoot oneself in
-			 * the foot by overwriting a database file ...
-			 */
-			if (!is_absolute_path(filename))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_NAME),
-								errmsg("relative path not allowed for COPY to file")));
+		// Increase buffer size to improve performance  (cmcdevitt)
+		setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
 
-			oumask = umask(S_IWGRP | S_IWOTH);
-			cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
-			umask(oumask);
-			if (cstate->copy_file == NULL)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-								errmsg("could not open file \"%s\" for writing: %m", filename)));
-
-			// Increase buffer size to improve performance  (cmcdevitt)
-			setvbuf(cstate->copy_file, NULL, _IOFBF, 393216); // 384 Kbytes
-
-			fstat(fileno(cstate->copy_file), &st);
-			if (S_ISDIR(st.st_mode))
-				ereport(ERROR,
-						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-								errmsg("\"%s\" is a directory", filename)));
-		}
+		fstat(fileno(cstate->copy_file), &st);
+		if (S_ISDIR(st.st_mode))
+			ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+							errmsg("\"%s\" is a directory", filename)));
 	}
 
 	attr = tupDesc->attrs;
