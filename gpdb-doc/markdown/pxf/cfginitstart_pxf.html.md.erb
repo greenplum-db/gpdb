@@ -31,7 +31,7 @@ PXF supports both internal and user-customizable configuration properties. Initi
 
 PXF internal configuration files are located in `$GPHOME/pxf/conf`. You identify the PXF user configuration directory at initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF prompts you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
 
-During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [About the PXF Installation and Configuration Directories](about_pxf_dir.html) for a list of these directories and their contents.
+During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [PXF User Configuration Directories](about_pxf_dir.html#usercfg) for a list of these directories and their contents.
 
 
 ### <a id="init-pxf-prereq"></a>Prerequisites
@@ -71,9 +71,9 @@ Perform the following procedure to initialize PXF on each segment host in your G
     gpadmin@gpmaster$ gpssh -e -v -f seghostfile 'PXF_CONF=/etc/pxf/usercfg /usr/local/greenplum-db/pxf/bin/pxf init'
     ```
 
-    The `init` command creates the PXF web application and initializes internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
+    The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
 
-    **Note**: The PXF service will run only on the segment hosts. You `pxf init` on the master to set up the PXF user configuration directories there.
+    **Note**: The PXF service runs only on the segment hosts. However, you must execute `pxf init` on the master to set up the PXF user configuration directories there.
 
 
 ## <a id="start_pxf"></a>Starting PXF
@@ -84,9 +84,9 @@ If you want to change the default PXF configuration, you must update the configu
 
 `$PXF_CONF/conf` includes these user-customizable configuration files:
 
-- `pxf-env.sh` - PXF runtime configuration parameters
-- `pxf-log4j.properties` - PXF logging configuration parameters
-- `pxf-profiles.xml` - Custom PXF profile definitions
+- `pxf-env.sh` - runtime configuration parameters
+- `pxf-log4j.properties` - logging configuration parameters
+- `pxf-profiles.xml` - custom profile definitions
 
 The `pxf-env.sh` file exposes the following PXF runtime configuration parameters:
 
@@ -98,7 +98,7 @@ The `pxf-env.sh` file exposes the following PXF runtime configuration parameters
 | PXF_KEYTAB  | The absolute path to the PXF service Kerberos principal keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
 | PXF_PRINCIPAL  | The PXF service Kerberos principal. | gpadmin/\_HOST@EXAMPLE.COM |
 
-You must propogate any updates that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
+You must propagate any updates that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
 
 ### <a id="start_pxf_prereq"></a>Prerequisites
 

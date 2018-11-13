@@ -4,6 +4,8 @@ title: About the PXF Installation and Configuration Directories
 
 PXF is installed on your master node when you install Greenplum Database. You install PXF on your Greenplum Database segment hosts when you invoke the `gpseginstall` command.
 
+## <a id="installed"></a>PXF Installation Directories
+
 The following PXF files and directories are installed in your Greenplum Database cluster when you install Greenplum. These files/directories are relative to the PXF installation directory `$GPHOME/pxf`:
 
 | Directory | Description                                                                                                                                                                                                                                |
@@ -15,6 +17,8 @@ The following PXF files and directories are installed in your Greenplum Database
 | templates/                | Configuration templates for PXF. |
 
 
+## <a id="runtime"></a>PXF Runtime Directories
+
 During initialization and startup, PXF creates the following internal directories in `$GPHOME/pxf`:
 
 
@@ -22,6 +26,8 @@ During initialization and startup, PXF creates the following internal directorie
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | pxf&#8209;service/         | After initializing PXF, the PXF service instance directory.                                                                                                                                                                                                              |
 | run/         | After starting PXF, the PXF run directory. Includes a PXF catalina process id file.                                                                                                                                                                                                              |
+
+## <a id="usercfg"></a>PXF User Configuration Directories
 
 Also during initialization, PXF populates a user configuration directory that you choose (`$PXF_CONF`) with the following subdirectories and template files:
 

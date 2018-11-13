@@ -22,7 +22,7 @@ The Greenplum Database administrator registers a third-party connector and its r
 
 ## <a id="deploy_to_cluster"></a>Deploying to the Greenplum Database Cluster
 
-When the Greenplum Database administrator deploys a new connector, he copies the connector JAR file and the (JAR) files of any dependencies to each Greenplum Database segment host, and then must restart the PXF agent on each host. Only the Greenplum Database administrative user can restart the PXF agent. 
+When a Greenplum Database administrator deploys a new connector, they copy the connector JAR file and the (JAR) files of any dependencies to each Greenplum Database segment host, and then must restart the PXF agent on each host. Only the Greenplum Database administrative user can restart the PXF agent. 
 
 For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`, these commands deploy the connector across the cluster:
 

@@ -8,9 +8,7 @@ PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache H
 
 ## <a id="client-pxf-prereq"></a>Prerequisites
 
-PXF bundles all of the JAR files on which it depends, including those for Hadoop services, and loads these JARs at runtime. Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to each Greenplum Database segment host. Before you configure PXF Hadoop, Hive, and HBase connectors, ensure that you:
-
-- Can copy configuration files from HDFS, Hive, and HBase hosts in your Hadoop cluster to the Greenplum Database master host.
+PXF bundles all of the JAR files on which it depends, including those for Hadoop services, and loads these JARs at runtime. Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to each Greenplum Database segment host. Before you configure PXF Hadoop, Hive, and HBase connectors, ensure that you can copy configuration files from HDFS, Hive, and HBase hosts in your Hadoop cluster to the Greenplum Database master host.
 
 In this procedure, you copy Hadoop configuration files to `/etc/<hadoop-service>/conf` directories on each Greenplum Database segment host. You must create these directories if they do not exist, and assign read and write access permissions to the `gpadmin` user. You need only create the directories for the Hadoop services that you plan to use. For example, to create the directories and assign permission:
 
