@@ -15,6 +15,7 @@
 #   hitting max_connections limit on segments.
 #
 # test reshuffle
+test: reshuffle_helper
 test: reshuffle reshuffle_ao reshuffle_aoco
 
 # enable query metrics cluster GUC

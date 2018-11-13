@@ -1978,57 +1978,62 @@ test_consume_xids(PG_FUNCTION_ARGS)
 
 /*
  * Function to execute a DML/DDL command on segment with specified content id.
- * Returns true on success or error on failure.
+ * To use:
+ *
+ * CREATE FUNCTION gp_execute_on_server(content int, query text) returns text
+ * language C as '$libdir/regress.so', 'gp_execute_on_server';
  */
 PG_FUNCTION_INFO_V1(gp_execute_on_server);
 Datum
 gp_execute_on_server(PG_FUNCTION_ARGS)
 {
-	int16	content = PG_GETARG_INT16(0);
-	char *query = PG_GETARG_CSTRING(1);
-	int ret;
-	int proc;
-	if (GpIdentity.segindex == content)
-	{
-		if ((ret = SPI_connect()) < 0)
-			/* internal error */
-			elog(ERROR, "SPI_connect returned %d", ret);
+	int32		content = PG_GETARG_INT32(0);
+	char	   *query = TextDatumGetCString(PG_GETARG_TEXT_PP(1));
+	CdbPgResults cdb_pgresults;
+	StringInfoData result_str;
 
-		/* Retrieve the desired rows */
-		ret = SPI_execute(query, false, 0);
-		proc = SPI_processed;
-		if (ret != SPI_OK_SELECT || proc <= 0)
+	if (!IS_QUERY_DISPATCHER())
+		elog(ERROR, "cannot use gp_execute_on_server() when not in QD mode");
+
+	CdbDispatchCommandToSegments(query,
+								 DF_CANCEL_ON_ERROR | DF_WITH_SNAPSHOT,
+								 list_make1_int(content),
+								 &cdb_pgresults);
+
+	/*
+	 * Collect the results.
+	 *
+	 * All the result fields are appended to a string, with minimal
+	 * formatting. That's not very pretty, but is good enough for
+	 * regression tests.
+	 */
+	initStringInfo(&result_str);
+	for (int resultno = 0; resultno < cdb_pgresults.numResults; resultno++)
+	{
+		struct pg_result *pgresult = cdb_pgresults.pg_results[resultno];
+
+		if (PQresultStatus(pgresult) != PGRES_TUPLES_OK &&
+			PQresultStatus(pgresult) != PGRES_COMMAND_OK)
 		{
-			SPI_finish();
-			elog(ERROR, "SPI failed on segment %d, return code %d",
-				 GpIdentity.segindex, ret);
+			cdbdisp_clearCdbPgResults(&cdb_pgresults);
+			elog(ERROR, "execution failed with status %d", PQresultStatus(pgresult));
 		}
-		SPI_finish();
-		PG_RETURN_BOOL(true);
-	}
-	else if (IS_QUERY_DISPATCHER())
-	{
-		proc = 0;
-		CdbPgResults cdb_pgresults;
-		int i;
-		CdbDispatchCommand(query, DF_CANCEL_ON_ERROR | DF_WITH_SNAPSHOT, &cdb_pgresults);
-		for (i = 0; i < cdb_pgresults.numResults; i++)
-		{
-			struct pg_result *pgresult = cdb_pgresults.pg_results[i];
 
-			if (PQresultStatus(pgresult) != PGRES_TUPLES_OK &&
-				PQresultStatus(pgresult) != PGRES_COMMAND_OK)
+		for (int rowno = 0; rowno < PQntuples(pgresult); rowno++)
+		{
+			if (rowno > 0)
+				appendStringInfoString(&result_str, "\n");
+			for (int colno = 0; colno < PQnfields(pgresult); colno++)
 			{
-				cdbdisp_clearCdbPgResults(&cdb_pgresults);
-				elog(ERROR, "execution failed with status %d", PQresultStatus(pgresult));
+				if (colno > 0)
+					appendStringInfoString(&result_str, " ");
+				appendStringInfoString(&result_str, PQgetvalue(pgresult, rowno, colno));
 			}
 		}
-
-		cdbdisp_clearCdbPgResults(&cdb_pgresults);
-		PG_RETURN_BOOL(true);
 	}
-	else
-		PG_RETURN_BOOL(true);
+
+	cdbdisp_clearCdbPgResults(&cdb_pgresults);
+	PG_RETURN_TEXT_P(CStringGetTextDatum(result_str.data));
 }
 
 /*

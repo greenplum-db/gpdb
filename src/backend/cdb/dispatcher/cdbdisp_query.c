@@ -108,7 +108,8 @@ static DispatchCommandQueryParms *cdbdisp_buildUtilityQueryParms(struct Node *st
 static DispatchCommandQueryParms *cdbdisp_buildCommandQueryParms(const char *strCommand, int flags);
 
 static void cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
-											int flags, CdbPgResults *cdb_pgresults);
+											int flags, List *segments,
+											CdbPgResults *cdb_pgresults);
 
 static void
 cdbdisp_dispatchX(QueryDesc *queryDesc,
@@ -311,12 +312,27 @@ CdbDispatchSetCommand(const char *strCommand, bool cancelOnError)
  *
  * -flags:
  *  Is the combination of DF_NEED_TWO_PHASE, DF_WITH_SNAPSHOT,DF_CANCEL_ON_ERROR
- *
  */
 void
 CdbDispatchCommand(const char *strCommand,
 				   int flags,
 				   CdbPgResults *cdb_pgresults)
+{
+	return CdbDispatchCommandToSegments(strCommand,
+										flags,
+										cdbcomponent_getCdbComponentsList(),
+										cdb_pgresults);
+}
+
+/*
+ * Like CdbDispatchCommand, but sends the command only to the
+ * specified segments.
+ */
+void
+CdbDispatchCommandToSegments(const char *strCommand,
+							 int flags,
+							 List *segments,
+							 CdbPgResults *cdb_pgresults)
 {
 	DispatchCommandQueryParms *pQueryParms;
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
@@ -332,7 +348,10 @@ CdbDispatchCommand(const char *strCommand,
 
 	pQueryParms = cdbdisp_buildCommandQueryParms(strCommand, flags);
 
-	return cdbdisp_dispatchCommandInternal(pQueryParms, flags, cdb_pgresults);
+	return cdbdisp_dispatchCommandInternal(pQueryParms,
+										   flags,
+										   segments,
+										   cdb_pgresults);
 }
 
 /*
@@ -369,12 +388,16 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 
 	pQueryParms = cdbdisp_buildUtilityQueryParms(stmt, flags, oid_assignments);
 
-	return cdbdisp_dispatchCommandInternal(pQueryParms, flags, cdb_pgresults);
+	return cdbdisp_dispatchCommandInternal(pQueryParms,
+										   flags,
+										   cdbcomponent_getCdbComponentsList(),
+										   cdb_pgresults);
 }
 
 static void
 cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
                                 int flags,
+								List *segments,
                                 CdbPgResults *cdb_pgresults)
 {
 	CdbDispatcherState *ds;
@@ -394,8 +417,7 @@ cdbdisp_dispatchCommandInternal(DispatchCommandQueryParms *pQueryParms,
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER,
-										cdbcomponent_getCdbComponentsList());
+	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, segments);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);

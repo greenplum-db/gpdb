@@ -1,0 +1,22 @@
+CREATE OR REPLACE FUNCTION gp_execute_on_server(content int, query text) returns text
+language C as '@abs_builddir@/regress@DLSUFFIX@', 'gp_execute_on_server';
+
+-- A helper function, to forcibly update gp_distribution_policy.numsegments
+-- for a table, in the QD as well as all QEs.
+create function update_numsegments_in_policy(relid regclass, numseg int) returns void as
+$$
+declare
+  update_sql text;
+begin
+  -- Update the entry in QD.
+  update_sql = 'update gp_distribution_policy set numsegments=' || numseg || ' where localoid=' || relid::oid;
+  execute update_sql;
+
+  -- And the same in each QE.
+  -- XXX: This works under the assumption that this is a 3-segment cluster
+  perform gp_execute_on_server(0, update_sql);
+  perform gp_execute_on_server(1, update_sql);
+  perform gp_execute_on_server(2, update_sql);
+end;
+$$
+LANGUAGE plpgsql;

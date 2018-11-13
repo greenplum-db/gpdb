@@ -175,54 +175,14 @@ drop table r1_reshuffle_ao;
 
 -- Replicated tables
 -- We have to make sure replicated table successfully reshuffled.
--- Currently we could only connect to the specific segments in utility mode
--- to see if the data is consistent there. We create some python function here.
--- The case can only work under the assumption: it's running on 3-segment cluster
--- in a single machine.
--- start_ignore
-create language plpythonu;
--- end_ignore
-create function update_on_segment_ao(tabname text, segid int, numseg int) returns boolean as
-$$
-import pygresql.pg as pg
-conn = pg.connect(dbname='regression')
-port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0]
-conn.close()
-
-conn = pg.connect(dbname='regression', opt='-c gp_session_role=utility', port=port)
-conn.query("set allow_system_table_mods = true")
-conn.query("update gp_distribution_policy set numsegments = %d where localoid = '%s'::regclass" % (numseg, tabname))
-conn.close()
-
-return True
-$$
-LANGUAGE plpythonu;
-
-create function select_on_segment_ao(sql text, segid int) returns int as
-$$
-import pygresql.pg as pg
-conn = pg.connect(dbname='regression')
-port = conn.query("select port from gp_segment_configuration where content = %d and role = 'p'" % segid).getresult()[0][0]
-conn.close()
-
-conn = pg.connect(dbname='regression', opt='-c gp_session_role=utility', port=port)
-r = conn.query(sql).getresult()
-conn.close()
-
-return r[0][0]
-$$
-LANGUAGE plpythonu;
 
 Create table r1_reshuffle_ao(a int, b int, c int) with (appendonly = true) distributed replicated;
-update gp_distribution_policy  set numsegments=1 where localoid='r1_reshuffle_ao'::regclass;
-select update_on_segment_ao('r1_reshuffle_ao', 0, 1);
-select update_on_segment_ao('r1_reshuffle_ao', 1, 1);
-select update_on_segment_ao('r1_reshuffle_ao', 2, 1);
+select update_numsegments_in_policy('r1_reshuffle_ao', 1);
 insert into r1_reshuffle_ao select i,i,0 from generate_series(1,100) I;
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 begin;
 Alter table r1_reshuffle_ao set with (reshuffle);
@@ -230,28 +190,25 @@ Select count(*) from r1_reshuffle_ao;
 abort;
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 Alter table r1_reshuffle_ao set with (reshuffle);
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 select numsegments from gp_distribution_policy where localoid='r1_reshuffle_ao'::regclass;
 drop table r1_reshuffle_ao;
 
 Create table r1_reshuffle_ao(a int, b int, c int) with (appendonly = true, OIDS = true) distributed replicated;
-update gp_distribution_policy  set numsegments=2 where localoid='r1_reshuffle_ao'::regclass;
-select update_on_segment_ao('r1_reshuffle_ao', 0, 2);
-select update_on_segment_ao('r1_reshuffle_ao', 1, 2);
-select update_on_segment_ao('r1_reshuffle_ao', 2, 2);
+select update_numsegments_in_policy('r1_reshuffle_ao', 2);
 insert into r1_reshuffle_ao select i,i,0 from generate_series(1,100) I;
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 begin;
 Alter table r1_reshuffle_ao set with (reshuffle);
@@ -259,14 +216,14 @@ Select count(*) from r1_reshuffle_ao;
 abort;
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 Alter table r1_reshuffle_ao set with (reshuffle);
 
 Select count(*) from r1_reshuffle_ao;
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 1);
-Select select_on_segment_ao('Select count(*) from r1_reshuffle_ao;', 2);
+Select gp_execute_on_server(1, 'Select count(*) from r1_reshuffle_ao;');
+Select gp_execute_on_server(2, 'Select count(*) from r1_reshuffle_ao;');
 
 select numsegments from gp_distribution_policy where localoid='r1_reshuffle_ao'::regclass;
 drop table r1_reshuffle_ao;
