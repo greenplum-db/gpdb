@@ -194,6 +194,8 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
       <title>Examples</title>
       <p>Change the password for a role: </p>
       <codeblock>ALTER ROLE daria WITH PASSWORD 'passwd123';</codeblock>
+      <p>Remove a role's password:</p>
+      <codeblock>ALTER ROLE daria WITH PASSWORD NULL;</codeblock>
       <p>Change a password expiration date:</p>
       <codeblock>ALTER ROLE scott VALID UNTIL 'May 4 12:00:00 2015 +1';</codeblock>
       <p>Make a password valid forever:</p>

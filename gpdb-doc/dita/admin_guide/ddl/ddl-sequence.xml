@@ -86,13 +86,13 @@
         <codeblock>SELECT setval('myserial', 201);
 </codeblock>
       </p>
-      <p><codeph>setval()</codeph> has two function signatures: <codeph>setval(sequence, start_val)</codeph>
-        and <codeph>setval(sequence, start_val, is_called)</codeph>. The default behaviour of
-        <codeph>setval( sequence, start_val)</codeph> sets the sequence <codeph>is_called</codeph>
-        attribute value to <codeph>true</codeph>.
-      </p>
-      <p>If you do not want the sequence counter advanced on the next <codeph>nextval()</codeph> call,
-        use the <codeph>setval( sequence, start_val, is_called)</codeph> function signature, passing a <codeph>false</codeph> argument:</p>
+      <p><codeph>setval()</codeph> has two function signatures: <codeph>setval(sequence,
+            start_val)</codeph> and <codeph>setval(sequence, start_val, is_called)</codeph>. The
+          default behaviour of <codeph>setval(sequence, start_val)</codeph> sets the sequence
+            <codeph>is_called</codeph> attribute value to <codeph>true</codeph>. </p>
+      <p>If you do not want the sequence counter advanced on the next <codeph>nextval()</codeph>
+          call, use the <codeph>setval(sequence, start_val, is_called)</codeph> function signature,
+          passing a <codeph>false</codeph> argument:</p>
       <p>
         <codeblock>SELECT setval('myserial', 201, false);
 </codeblock>
@@ -105,22 +105,31 @@
     <title>Altering a Sequence</title>
     <body>
       <p>The <codeph><xref href="../../ref_guide/sql_commands/ALTER_SEQUENCE.xml#topic1"/></codeph>
-        command changes the attributes of an existing sequence. You can alter the sequence
-        minimum, maximum, and increment values. You can also restart the sequence at a specific
-        value.</p>
+        command changes the attributes of an existing sequence. You can alter the sequence start,
+        minimum, maximum, and increment values. You can also restart the sequence at the start value
+        or at a specified value.</p>
       <p>Any parameters not set in the <codeph>ALTER SEQUENCE</codeph> command retain their prior
         settings.</p>
+      <p><codeph>ALTER SEQUENCE <varname>sequence</varname> START WITH
+            <varname>start_value</varname></codeph> sets the sequence's <codeph>start_value</codeph>
+        attribute to the new starting value. It has no effect on the <codeph>last_value</codeph>
+        attribute or the value returned by the <codeph>nextval(sequence)</codeph> function.</p>
+      <p><codeph>ALTER SEQUENCE <varname>sequence</varname> RESTART</codeph> resets the sequence's
+          <codeph>last_value</codeph> attribute to the current value of the
+          <codeph>start_value</codeph> attribute and the <codeph>is_called</codeph> attribute to
+          <codeph>false</codeph>. The next call to the <codeph>nextval(sequence)</codeph>  function
+        returns <varname>start_value</varname>.</p>
+      <p><codeph>ALTER SEQUENCE <varname>sequence</varname> RESTART WITH
+            <varname>restart_value</varname></codeph> sets the sequence's
+          <varname>last_value</varname> attribute to the new value and the
+          <codeph>is_called</codeph> attribute to <codeph>false</codeph>. The next call to the
+          <codeph>nextval(sequence)</codeph>  returns <varname>restart_value</varname>. This is the
+        equivalent of calling <codeph>setval(sequence, restart_value, false)</codeph>.</p>
       <p>The following command restarts the sequence named <codeph>myserial</codeph> at value
-        <codeph>105</codeph>:</p>
+          <codeph>105</codeph>:</p>
       <p>
         <codeblock>ALTER SEQUENCE myserial RESTART WITH 105;
 </codeblock>
-      </p>
-      <p>When you alter a sequence start value with the <codeph>ALTER SEQUENCE</codeph> command, Greenplum Database sets the sequence's
-        <codeph>is_called</codeph> attribute to <codeph>false</codeph>. The first
-        <codeph>nextval()</codeph> invoked after restarting a sequence does not advance the
-        sequence counter, but returns the sequence restart value and sets
-         <codeph>is_called</codeph> to <codeph>true</codeph>.
       </p>
     </body>
   </topic>

@@ -9,13 +9,12 @@
             ><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE [OR REPLACE] FUNCTION <varname>name</varname>    
     ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [ { DEFAULT | = } <varname>defexpr</varname> ] [, ...] ] )
       [ RETURNS { [ SETOF ] rettype 
-        | TABLE ([{ argname argtype | LIKE other table }
-          [, ...]])
+        | TABLE ([{ <varname>column_name</varname> <varname>column_type</varname> [, ...] ] | LIKE <varname>other_table</varname> } )
         } ]
     { LANGUAGE <varname>langname</varname>
     | IMMUTABLE | STABLE | VOLATILE
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
-    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINE
+    | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
     | COST <varname>execution_cost</varname>
     | SET <varname>configuration_parameter</varname> { TO <varname>value</varname> | = <varname>value</varname> | FROM CURRENT }
@@ -25,10 +24,9 @@
            } [, ...] ) ]</codeblock></section>
         <section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines a new function. <codeph>CREATE OR REPLACE
                     FUNCTION</codeph> will either create a new function, or replace an existing
-                definition.</p><p>The name of the new function
-                must not match any existing function with the same argument types in the same
-                schema. However, functions of different argument types may share a name
-                (overloading). </p><p>To update the definition of an existing function, use
+                definition.</p><p>The name of the new function must not match any existing function with the same input argument
+                types in the same schema. However, functions of different argument types may share a
+                name (overloading). </p><p>To update the definition of an existing function, use
                     <codeph>CREATE OR REPLACE FUNCTION</codeph>. It is not possible to change the
                 name or argument types of a function this way (this would actually create a new,
                 distinct function). Also, <codeph>CREATE OR REPLACE FUNCTION</codeph> will not let
@@ -91,10 +89,11 @@ SELECT foo();</codeblock><p>In
                 <plentry>
                     <pt><varname>argmode</varname></pt>
                     <pd>The mode of an argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
-                            <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. Only
-                            <codeph>OUT</codeph> arguments can follow an argument declared as
-                            <codeph>VARIADIC</codeph>. If omitted, the default is
-                            <codeph>IN</codeph>. </pd>
+                            <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the
+                        default is <codeph>IN</codeph>. Only <codeph>OUT</codeph> arguments can
+                        follow an argument declared as <codeph>VARIADIC</codeph>. Also,
+                            <codeph>OUT</codeph> and <codeph>INOUT</codeph> arguments cannot be used
+                        together with the <codeph>RETURNS TABLE</codeph> notation. </pd>
                 </plentry>
                 <plentry>
                     <pt><varname>argname</varname></pt>
@@ -146,6 +145,18 @@ SELECT foo();</codeblock><p>In
                     <pd>The type of a column is referenced by writing
                                 <codeph><varname>tablename</varname>.<varname>columnname</varname>%TYPE</codeph>.
                     </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>column_name</varname></pt>
+                    <pd>The name of an output column in the <codeph>RETURNS TABLE</codeph> syntax.
+                        This is effectively another way of declaring a named <codeph>OUT</codeph>
+                        parameter, except that <codeph>RETURNS TABLE</codeph> also implies
+                            <codeph>RETURNS SETOF</codeph>.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>column_type</varname></pt>
+                    <pd>The data type of an output column in the <codeph>RETURNS TABLE</codeph>
+                        syntax.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>langname</varname></pt>
@@ -297,11 +308,10 @@ SELECT foo();</codeblock><p>In
                 details of the type specification (such as the precision field for type
                     <varname>numeric</varname>) are the responsibility of the underlying function
                 implementation and are not recognized or enforced by the <codeph>CREATE
-                    FUNCTION</codeph> command. </p><p>Greenplum Database allows function
-                overloading. The same name can be used for several different functions so long as
-                they have distinct argument types. However, the C names of all functions must be
-                different, so you must give overloaded C functions different C names (for example,
-                use the argument types as part of the C names). </p><p>Two functions are considered
+                    FUNCTION</codeph> command. </p><p>Greenplum Database allows function overloading. The same name can be used for several different
+                functions so long as they have distinct input argument types. However, the C names
+                of all functions must be different, so you must give overloaded C functions
+                different C names (for example, use the argument types as part of the C names). </p><p>Two functions are considered
                 the same if they have the same names and input argument types, ignoring any
                     <codeph>OUT</codeph> parameters. Thus for example these declarations
                 conflict:</p><codeblock>CREATE FUNCTION foo(int) ...
@@ -426,7 +436,14 @@ CREATE FUNCTION dup(int) RETURNS dup_result
     AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
     LANGUAGE SQL;
 
-SELECT * FROM dup(42);</codeblock><p>This
+SELECT * FROM dup(42);</codeblock><p>Another
+                way to return multiple columns is to use a <codeph>TABLE</codeph>
+                function:</p><codeblock>CREATE FUNCTION dup(int) RETURNS TABLE(f1 int, f2 text)
+    AS $$ SELECT $1, CAST($1 AS text) || ' is text' $$
+    LANGUAGE SQL;
+
+SELECT * FROM dup(4);
+</codeblock><p>This
                 function is defined with the <codeph>EXECUTE ON ALL SEGMENTS</codeph> to run on all
                 primary segment instances. The <codeph>SELECT</codeph> command executes the function
                 that returns the time it was run on each segment
@@ -450,7 +467,7 @@ END;
 $$ LANGUAGE plpgsql;</codeblock>If
             you execute <codeph>SELECT get_part_name(100);</codeph> at the master the function
             executes on the master. (The master instance directs the query to a single primary
-            segment.) If orders is a distributed table and you execute the following query,  the
+            segment.) If orders is a distributed table and you execute the following query, the
                 <codeph>get_part_name()</codeph> function executes on the primary
             segments.<codeblock><codeph>SELECT order_id, get_part_name(orders.part_no) FROM orders;</codeph></codeblock></section>
         <section id="section9"><title>Compatibility</title><p><codeph>CREATE FUNCTION</codeph> is

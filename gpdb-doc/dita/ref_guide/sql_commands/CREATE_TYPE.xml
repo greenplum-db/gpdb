@@ -43,7 +43,8 @@ PostgreSQL documentation. Enum types take a list of one or more quoted labels, e
 <codeph>NAMEDATALEN</codeph> bytes long (64 in a standard build).</p>
 </sectiondiv>
 <sectiondiv id="section5"><b>Base Types</b><p>The third form of <codeph>CREATE TYPE</codeph>
-                    creates a new base type (scalar type). The parameters may appear in any order,
+                    creates a new base type (scalar type). You must be a superuser to create a new base type.
+                    The parameters may appear in any order,
                     not only that shown in the syntax, and most are optional. You must register two
                     or more functions (using <codeph>CREATE FUNCTION</codeph>) before defining the
                     type. The support functions <varname>input_function</varname> and <varname>output_function</varname> are
