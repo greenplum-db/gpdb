@@ -18,6 +18,10 @@
 #include <zstd.h>
 #include <zstd_errors.h>
 
+#ifndef PG_MODULE_MAGIC
+PG_MODULE_MAGIC;
+#endif
+
 Datum zstd_constructor(PG_FUNCTION_ARGS);
 Datum zstd_destructor(PG_FUNCTION_ARGS);
 Datum zstd_compress(PG_FUNCTION_ARGS);
@@ -30,7 +34,6 @@ PG_FUNCTION_INFO_V1(zstd_compress);
 PG_FUNCTION_INFO_V1(zstd_decompress);
 PG_FUNCTION_INFO_V1(zstd_validator);
 
-PG_MODULE_MAGIC;
 
 /* Internal state for zstd */
 typedef struct zstd_state

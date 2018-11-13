@@ -20,10 +20,12 @@ endif
 # Install into cdb_init.d, so that the catalog changes performed by initdb,
 # and the compressor is available in all databases.
 .PHONY: install-data
+
 install-data:
 	$(INSTALL_DATA) zstd_compression.sql '$(DESTDIR)$(datadir)/cdb_init.d/zstd_compression.sql'
 
 install: install-data
+
 
 .PHONY: uninstall-data
 
@@ -31,4 +33,13 @@ uninstall-data:
 	rm -f '$(DESTDIR)$(datadir)/cdb_init.d/zstd_compression.sql'
 
 uninstall: uninstall-data
+
+
+.PHONY: unittest-check unittest-clean
+
+unittest-check:
+	$(MAKE) -C test check
+
+unittest-clean:
+	$(MAKE) -C test clean
 
