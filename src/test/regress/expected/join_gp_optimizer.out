@@ -563,3 +563,60 @@ explain select * from t5370 a , t5370_2 b where a.name=b.name;
 
 drop table t5370;
 drop table t5370_2;
+-- github issue 6215 cases
+-- When executing the following plan
+-- ```
+--  Gather Motion 1:1  (slice1; segments: 1)
+--    ->  Merge Full Join
+--         ->  Seq Scan on int4_tbl a
+--         ->  Seq Scan on int4_tbl b
+--```
+-- Greenplum will raise an Assert Fail.
+-- We force adding a material node for
+-- merge full join on true.
+drop table if exists t6215;
+create table t6215(f1 int4) distributed replicated;
+insert into t6215(f1) values (1), (2), (3);
+set enable_material = off;
+-- The plan still have Material operator
+explain (costs off) select * from t6215 a full join t6215 b on true;
+                                 QUERY PLAN                                 
+----------------------------------------------------------------------------
+ Gather Motion 1:1  (slice1; segments: 1)
+   ->  Result
+         ->  Sequence
+               ->  Shared Scan (share slice:id 1:0)
+                     ->  Materialize
+                           ->  Table Scan on t6215 t6215_1
+               ->  Sequence
+                     ->  Shared Scan (share slice:id 1:1)
+                           ->  Materialize
+                                 ->  Table Scan on t6215
+                     ->  Append
+                           ->  Nested Loop Left Join
+                                 Join Filter: true
+                                 ->  Shared Scan (share slice:id 1:0)
+                                 ->  Shared Scan (share slice:id 1:1)
+                           ->  Result
+                                 ->  Nested Loop Anti Join
+                                       Join Filter: true
+                                       ->  Shared Scan (share slice:id 1:1)
+                                       ->  Shared Scan (share slice:id 1:0)
+ Optimizer: PQO version 3.9.0
+(21 rows)
+
+select * from t6215 a full join t6215 b on true;
+ f1 | f1 
+----+----
+  1 |  1
+  1 |  2
+  1 |  3
+  2 |  1
+  2 |  2
+  2 |  3
+  3 |  1
+  3 |  2
+  3 |  3
+(9 rows)
+
+drop table t6215;

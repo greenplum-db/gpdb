@@ -493,7 +493,6 @@ ExecSupportsMarkRestore(NodeTag plantype)
 {
 	switch (plantype)
 	{
-		case T_SeqScan:
 		case T_IndexScan:
 		case T_IndexOnlyScan:
 		case T_TidScan:

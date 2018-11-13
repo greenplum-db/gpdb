@@ -311,3 +311,25 @@ explain select * from t5370 a , t5370_2 b where a.name=b.name;
 
 drop table t5370;
 drop table t5370_2;
+
+-- github issue 6215 cases
+-- When executing the following plan
+-- ```
+--  Gather Motion 1:1  (slice1; segments: 1)
+--    ->  Merge Full Join
+--         ->  Seq Scan on int4_tbl a
+--         ->  Seq Scan on int4_tbl b
+--```
+-- Greenplum will raise an Assert Fail.
+-- We force adding a material node for
+-- merge full join on true.
+drop table if exists t6215;
+create table t6215(f1 int4) distributed replicated;
+insert into t6215(f1) values (1), (2), (3);
+
+set enable_material = off;
+-- The plan still have Material operator
+explain (costs off) select * from t6215 a full join t6215 b on true;
+select * from t6215 a full join t6215 b on true;
+
+drop table t6215;
