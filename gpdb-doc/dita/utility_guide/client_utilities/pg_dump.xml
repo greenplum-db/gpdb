@@ -275,6 +275,13 @@
               triggers.</note></pd>
           </plentry>
           <plentry>
+            <pt>--lock-wait-timeout=<varname>timeout</varname></pt>
+            <pd>Do not wait forever to acquire shared table locks at the beginning of the dump.
+              Instead, fail if unable to lock a table within the specified
+                <varname>timeout</varname>. Specify <varname>timeout</varname> as a number of
+              milliseconds.</pd>
+          </plentry>
+          <plentry>
             <pt>--no-tablespaces</pt>
             <pd>Do not output commands to select tablespaces. With this option, all objects will be
               created in whichever tablespace is the default during restore.</pd>

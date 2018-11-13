@@ -756,7 +756,8 @@ ALTER TABLE <varname>name</varname>
                                         <codeph>OWNER</codeph>, and <codeph>TABLESPACE</codeph>
                                 actions never recurse to descendant tables; that is, they always act
                                 as though <codeph>ONLY</codeph> were specified. Adding a constraint
-                                can recurse only for <codeph>CHECK</codeph> constraints.</p>
+                                can recurse only for <codeph>CHECK</codeph> constraints, and is
+                                required to do so for such constraints.</p>
                         <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
                                 data is changed on a partitioned table that contains a leaf child
                                 partition that has been exchanged to use an external table.
@@ -788,9 +789,14 @@ ALTER TABLE <varname>name</varname>
                         <codeblock>ALTER TABLE distributors RENAME TO suppliers;</codeblock>
                         <p>Add a not-null constraint to a column:</p>
                         <codeblock>ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;</codeblock>
-                        <p>Add a check constraint to a table:</p>
+                        <p>Add a check constraint to a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
+                        <p>Remove a check constraint from  a table and all of its children:</p>
+                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
+                        <p>Remove a check constraint from a table only:</p>
+                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk</codeblock>
+                        <p>(The check constraint remains in place for any child tables.)</p>
                         <p>Move a table to a different schema:</p>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
                         <p>Change the distribution policy of a table to replicated:</p>

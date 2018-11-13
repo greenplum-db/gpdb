@@ -4,9 +4,12 @@
 <topic id="topic1"><title id="ax20941">ALTER SEQUENCE</title><body><p id="sql_command_desc">Changes the definition of a sequence generator.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER SEQUENCE <varname>name</varname> [INCREMENT [ BY ] <varname>increment</varname>] 
      [MINVALUE <varname>minvalue</varname> | NO MINVALUE] 
      [MAXVALUE <varname>maxvalue</varname> | NO MAXVALUE] 
-     [RESTART [ WITH ] <varname>start</varname>] 
+     [START [ WITH ] <varname>start</varname> ]
+     [RESTART [ [ WITH ] <varname>restart</varname>] ]
      [CACHE <varname>cache</varname>] [[ NO ] CYCLE] 
      [OWNED BY {<varname>table.column</varname> | NONE}]
+
+ALTER SEQUENCE <varname>name</varname> OWNER TO <varname>new_owner</varname>
 
 ALTER SEQUENCE <varname>name</varname> RENAME TO <varname>new_name
 </varname>
@@ -15,7 +18,12 @@ sequence generator. Any parameters not specifically set in the <codeph>ALTER
 SEQUENCE</codeph> command retain their prior settings.</p><p>You must own the sequence to use <codeph>ALTER SEQUENCE</codeph>.
 To change a sequence's schema, you must also have <codeph>CREATE</codeph>
 privilege on the new schema. Note that superusers have all these privileges
-automatically.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a sequence to be altered.
+automatically.</p>
+      <p>To alter the owner, you must be a direct or indirect member of the new owning role, and
+        that role must have <codeph>CREATE</codeph> privilege on the sequence's schema. (These
+        restrictions enforce that altering the owner does not do anything you could not do by
+        dropping and recreating the sequence. However, a superuser can alter ownership of any
+        sequence anyway.)</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a sequence to be altered.
 </pd></plentry><plentry><pt><varname>increment</varname></pt><pd>The clause <codeph>INCREMENT BY <varname>increment</varname></codeph> is optional. A positive value will
             make an ascending sequence, a negative one a descending sequence. If unspecified, the
             old increment value will be maintained. </pd></plentry><plentry><pt><varname>minvalue</varname></pt><pt>NO MINVALUE</pt><pd>The optional clause <codeph>MINVALUE <varname>minvalue</varname></codeph> determines the minimum value a
@@ -24,8 +32,26 @@ automatically.</p></section><section id="section4"><title>Parameters</title><par
             neither option is specified, the current minimum value will be maintained. </pd></plentry><plentry><pt><varname>maxvalue</varname></pt><pt>NO MAXVALUE</pt><pd>The optional clause <codeph>MAXVALUE <varname>maxvalue</varname></codeph> determines the maximum value for
             the sequence. If <codeph>NO MAXVALUE</codeph> is specified, the defaults are 263-1 and
             -1 for ascending and descending sequences, respectively, will be used. If neither option
-            is specified, the current maximum value will be maintained.</pd></plentry><plentry><pt><varname>start</varname></pt><pd>The optional clause <codeph>RESTART WITH</codeph> <varname>start</varname> changes the
-current value of the sequence. Altering the sequence in this manner is equivalent to calling the <codeph>setval(sequence, start_val, is_called)</codeph> function with <codeph>is_called = false</codeph>. The first <codeph>nextval()</codeph> call after you alter the sequence start value does not increment the sequence and returns <varname>start</varname>.</pd></plentry><plentry><pt><varname>cache</varname></pt><pd>The clause <codeph>CACHE <varname>cache</varname></codeph> enables sequence numbers to be preallocated and
+            is specified, the current maximum value will be maintained.</pd></plentry>
+        <plentry>
+          <pt>start</pt>
+          <pd>The optional clause START WITH <varname>start</varname> changes the recorded start
+            value of the sequence. This has no effect on the <i>current</i> sequence value;  it
+            simply sets the value that future <codeph>ALTER SEQUENCE RESTART</codeph> commands will
+            use.</pd>
+        </plentry><plentry><pt><varname>restart</varname></pt><pd>The optional clause <codeph>RESTART [ WITH <varname>restart</varname> ]</codeph> changes the
+            current value of the sequence. This is equivalent to calling the
+                <codeph>setval(<varname>sequence</varname>, <varname>start_val</varname>,
+                <varname>is_called</varname>)</codeph> function with
+                <codeph><varname>is_called</varname> = false</codeph>. The specified value will be
+            returned by the next call of the <codeph>nextval(<varname>sequence</varname>)</codeph>
+            function. Writing <codeph>RESTART</codeph> with no <varname>restart</varname> value is
+            equivalent to supplying the start value that was recorded by <codeph>CREATE
+              SEQUENCE</codeph> or last set by <codeph>ALTER SEQUENCE START WITH</codeph>.</pd></plentry>
+        <plentry>
+          <pt><varname>new_owner</varname></pt>
+          <pd>The user name of the new owner of the sequence.</pd>
+        </plentry><plentry><pt><varname>cache</varname></pt><pd>The clause <codeph>CACHE <varname>cache</varname></codeph> enables sequence numbers to be preallocated and
             stored in memory for faster access. The minimum value is 1 (only one value can be
             generated at a time, i.e., no cache). If unspecified, the old cache value will be
             maintained.</pd></plentry><plentry><pt>CYCLE</pt><pd>The optional <codeph>CYCLE</codeph> key word may be used to enable
@@ -49,15 +75,17 @@ removes any existing table column association.</pd></plentry>
         </plentry><plentry><pt><varname>new_schema</varname></pt><pd>The new schema for the sequence.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>To avoid blocking of concurrent transactions that obtain numbers from the same sequence,
           <codeph>ALTER SEQUENCE</codeph>'s effects on the sequence generation parameters are never
         rolled back; those changes take effect immediately and are not reversible. However, the
-          <codeph>OWNED BY</codeph>, <codeph>RENAME TO</codeph>, and <codeph>SET SCHEMA</codeph>
-        clauses are ordinary catalog updates and can be rolled back.</p><p><codeph>ALTER SEQUENCE</codeph> will not immediately affect <codeph>nextval()</codeph>
+          <codeph>OWNED BY</codeph>, <codeph>OWNER TO</codeph>, <codeph>RENAME TO</codeph>, and
+          <codeph>SET SCHEMA</codeph> clauses are ordinary catalog updates and can be rolled
+        back.</p><p><codeph>ALTER SEQUENCE</codeph> will not immediately affect <codeph>nextval()</codeph>
 results in sessions, other than the current one, that have preallocated
 (cached) sequence values. They will use up all cached values prior to
 noticing the changed sequence generation parameters. The current session
-will be affected immediately.</p><p>Some variants of <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"
-          /></codeph> can be used with sequences as well. For example, to rename a sequence use
-          <codeph>ALTER TABLE RENAME</codeph>.</p></section><section id="section6"><title>Examples</title><p>Restart a sequence called <codeph>serial</codeph> at <codeph>105</codeph>:</p><codeblock>ALTER SEQUENCE serial RESTART WITH 105;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER SEQUENCE</codeph> conforms to the SQL standard, except for the <codeph>OWNED
-          BY</codeph>, <codeph>RENAME TO</codeph>, and <codeph>SET SCHEMA</codeph> clauses, which
-        are Greenplum Database extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
+will be affected immediately.</p><p>For historical reasons, <codeph>ALTER TABLE</codeph> can be used with sequences too; but the only
+        variants of <codeph>ALTER TABLE</codeph> that are allowed with sequences are equivalent to
+        the forms shown above.</p></section><section id="section6"><title>Examples</title><p>Restart a sequence called <codeph>serial</codeph> at <codeph>105</codeph>:</p><codeblock>ALTER SEQUENCE serial RESTART WITH 105;</codeblock></section><section id="section7"><title>Compatibility</title><p><codeph>ALTER SEQUENCE</codeph> conforms to the SQL standard, except for the <codeph>START
+          WITH</codeph>, <codeph>OWNED BY</codeph>, <codeph>OWNER TO</codeph>, <codeph>RENAME
+          TO</codeph>, and <codeph>SET SCHEMA</codeph> clauses, which are Greenplum Database
+        extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_SEQUENCE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./ALTER_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

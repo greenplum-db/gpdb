@@ -259,13 +259,17 @@
             conflict, then the duplicate columns are merged to form a single column in the new
             table. If the column name list of the new table contains a column name that is also
             inherited, the data type must likewise match the inherited column(s), and the column
-            definitions are merged into one. However, inherited and new column declarations of the
-            same name need not specify identical constraints: all constraints provided from any
-            declaration are merged together and all are applied to the new table. If the new table
-            explicitly specifies a default value for the column, this default overrides any defaults
-            from inherited declarations of the column. Otherwise, any parents that specify default
-            values for the column must all specify the same default, or an error will be reported.
-          </pd>
+            definitions are merged into one. If the new table explicitly specifies a default value
+            for the column, this default overrides any defaults from inherited declarations of the
+            column. Otherwise, any parents that specify default values for the column must all
+            specify the same default, or an error will be reported. </pd>
+          <pd><codeph>CHECK</codeph> constraints are merged in essentially the same way as columns:
+            if multiple parent tables or the new table defintion contain identically-named
+              <codeph>constraints</codeph>, these constraints must all have the same check
+            expression, or an error will be reported. Constraints having the same name and
+            expression will be merged into one copy. Notice that an unnamed <codeph>CHECK</codeph>
+            constraint in the new table will never be merged, since a unique name will always be
+            chosen for it.</pd>
         </plentry>
         <plentry>
           <pt>LIKE <varname>other_table</varname> [{INCLUDING | EXCLUDING} {DEFAULTS |
