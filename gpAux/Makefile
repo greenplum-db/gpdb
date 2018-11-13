@@ -224,7 +224,7 @@ BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
 ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 win32 win64)" ""
-CONFIGFLAGS+= --with-openssl --with-pam --with-krb5 --with-ldap $(BLD_CURL_CONFIG) $(APR_CONFIG)
+CONFIGFLAGS+= --with-openssl --with-pam --with-ldap $(BLD_CURL_CONFIG) $(APR_CONFIG)
 endif
 
 # ...but do include some of the authlibs on AIX
@@ -276,7 +276,6 @@ $(GPPGDIR)/GNUmakefile : $(GPPGDIR)/configure  env.sh
                      CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL) \
                      ./configure $(CONFIGFLAGS)               \
                          --prefix=$(INSTLOC)                  \
-                         --with-docdir=$(INSTLOC)/doc         \
                          --mandir=$(INSTLOC)/man
 
 Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
@@ -286,7 +285,6 @@ Debug/GNUmakefile : $(GPPGDIR)/configure  env.sh
                 CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)     \
                 ./configure $(CONFIGFLAGS)                   \
                     --prefix=$(INSTLOC)                      \
-                    --with-docdir=$(INSTLOC)/doc             \
                     --mandir=$(INSTLOC)/man
 
 Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
@@ -296,7 +294,6 @@ Release/GNUmakefile : $(GPPGDIR)/configure  env.sh
                   CFLAGS=$(INSTCFLAGS) $(BLD_CONFIG_SHELL)  \
                   ./configure $(CONFIGFLAGS)                \
                       --prefix=$(INSTLOC)                   \
-                      --with-docdir=$(INSTLOC)/doc          \
                       --mandir=$(INSTLOC)/man
 
 #---------------------------------------------------------------------
