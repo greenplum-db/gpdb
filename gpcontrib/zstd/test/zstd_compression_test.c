@@ -36,20 +36,20 @@
 void
 test_uncompressed_sz_equals_compressed_sz(void **state)
 {
-    int32 uncompressed_size = 42;
-    int32 compressed_size = 0;
+	int32		uncompressed_size = 42;
+	int32		compressed_size = 0;
 
-    DirectFunctionCall6(
-        zstd_compress,
-        PointerGetDatum(NULL),
-        Int32GetDatum(uncompressed_size),
-        PointerGetDatum(NULL),
-        Int32GetDatum(uncompressed_size),
-        PointerGetDatum(&compressed_size),
-        PointerGetDatum(NULL)
-    );
+	DirectFunctionCall6(
+						zstd_compress,
+						PointerGetDatum(NULL),
+						Int32GetDatum(uncompressed_size),
+						PointerGetDatum(NULL),
+						Int32GetDatum(uncompressed_size),
+						PointerGetDatum(&compressed_size),
+						PointerGetDatum(NULL)
+		);
 
-    assert_int_equal(compressed_size, uncompressed_size);
+	assert_int_equal(compressed_size, uncompressed_size);
 }
 
 int
@@ -57,7 +57,7 @@ main(int argc, char *argv[])
 {
 	cmockery_parse_arguments(argc, argv);
 
-	const UnitTest tests[] = {
+	const		UnitTest tests[] = {
 		unit_test(test_uncompressed_sz_equals_compressed_sz),
 	};
 

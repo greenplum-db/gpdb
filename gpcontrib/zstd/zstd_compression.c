@@ -22,11 +22,11 @@
 PG_MODULE_MAGIC;
 #endif
 
-Datum zstd_constructor(PG_FUNCTION_ARGS);
-Datum zstd_destructor(PG_FUNCTION_ARGS);
-Datum zstd_compress(PG_FUNCTION_ARGS);
-Datum zstd_decompress(PG_FUNCTION_ARGS);
-Datum zstd_validator(PG_FUNCTION_ARGS);
+Datum		zstd_constructor(PG_FUNCTION_ARGS);
+Datum		zstd_destructor(PG_FUNCTION_ARGS);
+Datum		zstd_compress(PG_FUNCTION_ARGS);
+Datum		zstd_decompress(PG_FUNCTION_ARGS);
+Datum		zstd_validator(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(zstd_constructor);
 PG_FUNCTION_INFO_V1(zstd_destructor);
@@ -42,7 +42,7 @@ typedef struct zstd_state
 	bool		compress;		/* Compress if true, decompress otherwise */
 	ZSTD_CCtx  *zstd_compress_context;	/* ZSTD compression context */
 	ZSTD_DCtx  *zstd_decompress_context;	/* ZSTD decompression context */
-} zstd_state;
+}			zstd_state;
 
 Datum
 zstd_constructor(PG_FUNCTION_ARGS)
@@ -108,11 +108,12 @@ zstd_compress(PG_FUNCTION_ARGS)
 
 	if (ZSTD_isError(dst_length_used))
 	{
-		if (ZSTD_getErrorCode(dst_length_used) == ZSTD_error_dstSize_tooSmall) {
+		if (ZSTD_getErrorCode(dst_length_used) == ZSTD_error_dstSize_tooSmall)
+		{
 			/*
 			 * This error is returned when "compressed" output is bigger than
-			 * uncompressed input.
-			 * The caller can detect this by checking dst_used >= src_size
+			 * uncompressed input. The caller can detect this by checking
+			 * dst_used >= src_size
 			 */
 			dst_length_used = src_sz;
 		}
@@ -163,4 +164,3 @@ zstd_validator(PG_FUNCTION_ARGS)
 {
 	PG_RETURN_VOID();
 }
-
