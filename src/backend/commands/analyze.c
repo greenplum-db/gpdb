@@ -3808,7 +3808,10 @@ merge_leaf_stats(VacAttrStatsP stats,
 		get_parts(stats->attr->attrelid, 0 /*level*/, 0 /*parent*/,
 				  false /* inctemplate */, true /*includesubparts*/);
 	Assert(pn);
-	elog(LOG, "Merging leaf partition stats to calculate root partition stats : column %s", get_attname(stats->attr->attrelid, stats->attr->attnum));
+	ereport(DEBUG2,
+			(errmsg("Merging leaf partition stats to calculate root partition stats : column %s",
+					get_attname(stats->attr->attrelid, stats->attr->attnum))));
+
 	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
 	StdAnalyzeData *mystats = (StdAnalyzeData *) stats->extra_data;
 	int numPartitions = list_length(oid_list);

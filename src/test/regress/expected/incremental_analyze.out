@@ -1709,8 +1709,6 @@ ALTER TABLE foo ADD COLUMN c int;
 INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
 ANALYZE rootpartition foo;
 LOG:  column c of partition foo_1_prt_1 is not analyzed, so ANALYZE will collect sample for stats calculation
-LOG:  Merging leaf partition stats to calculate root partition stats : column a
-LOG:  Merging leaf partition stats to calculate root partition stats : column b
 LOG:  Computing Scalar Stats : column c
 -- Testing auto merging root statistics for all columns
 -- where column attnums are differents due to dropped columns
@@ -1751,9 +1749,6 @@ ANALYZE foo_1_prt_def_part;
 LOG:  Computing Scalar Stats : column a
 LOG:  Computing Scalar Stats : column c
 LOG:  Computing Scalar Stats : column d
-LOG:  Merging leaf partition stats to calculate root partition stats : column a
-LOG:  Merging leaf partition stats to calculate root partition stats : column c
-LOG:  Merging leaf partition stats to calculate root partition stats : column d
 reset client_min_messages;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
      tablename      | attname | null_frac | n_distinct | most_common_vals |           most_common_freqs           |                          histogram_bounds                           
@@ -1806,7 +1801,6 @@ LOG:  Auto merging of leaf partition stats to calculate root partition stats is 
 LOG:  Computing Scalar Stats : column a
 ANALYZE foo_1_prt_def_part(a);
 LOG:  Computing Scalar Stats : column a
-LOG:  Merging leaf partition stats to calculate root partition stats : column a
 reset client_min_messages;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
      tablename      | attname | null_frac | n_distinct | most_common_vals |           most_common_freqs           | histogram_bounds 
@@ -1849,7 +1843,6 @@ LOG:  Auto merging of leaf partition stats to calculate root partition stats is 
 LOG:  Computing Scalar Stats : column d
 ANALYZE foo_1_prt_def_part(d);
 LOG:  Computing Scalar Stats : column d
-LOG:  Merging leaf partition stats to calculate root partition stats : column d
 reset client_min_messages;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
      tablename      | attname | null_frac | n_distinct | most_common_vals | most_common_freqs | histogram_bounds 
@@ -1897,9 +1890,6 @@ ANALYZE foo_1_prt_2;
 set client_min_messages to 'log';
 -- ANALYZE ROOT PARTITION will piggyback on the stats collected from the leaf and merge them
 ANALYZE ROOTPARTITION foo;
-LOG:  Merging leaf partition stats to calculate root partition stats : column a
-LOG:  Merging leaf partition stats to calculate root partition stats : column b
-LOG:  Merging leaf partition stats to calculate root partition stats : column c
 reset client_min_messages;
 reset optimizer_analyze_root_partition;
 SELECT tablename, attname, null_frac, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename like 'foo%' ORDER BY attname,tablename;
