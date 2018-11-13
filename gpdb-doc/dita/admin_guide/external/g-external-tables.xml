@@ -43,11 +43,12 @@
                   <codeph>s3://</codeph> protocol. (See <xref
                   href="g-s3-protocol.xml#amazon-emr/s3_prereq"/>.) Internal protocols are always
                present and cannot be unregistered.</li>
-            <li>When a custom protocol is registered, shared libraries are installed on all
-               Greenplum Database hosts and a row is added to the <codeph>pg_extprotocol</codeph>
-               catalog table to specify the handler functions that implement the protocol. The
-               internal protocols have no additional libraries to install and they are not
-               represented in the <codeph>pg_extprotocol</codeph> table.</li>
+            <li>When a custom protocol is registered, a row is added to the
+                  <codeph>pg_extprotocol</codeph> catalog table to specify the handler functions
+               that implement the protocol. The protocol's shared libraries must have been installed
+               on all Greenplum Database hosts. The internal protocols are not represented in the
+                  <codeph>pg_extprotocol</codeph> table and have no additional libraries to
+               install.</li>
             <li>To grant users permissions on custom protocols, you use <codeph>GRANT [SELECT |
                   INSERT | ALL] ON PROTOCOL</codeph>. To allow (or deny) users permissions on the
                internal protocols, you use <codeph>CREATE ROLE</codeph> or <codeph>ALTER
