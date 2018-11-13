@@ -1494,6 +1494,12 @@ vac_update_relstats_from_list(List *updated_stats)
 {
 	ListCell *lc;
 
+	/*
+	 * This function is only called in the context of the QD, so let's be
+	 * explicit about that given the assumptions taken.
+	 */
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
 	foreach (lc, updated_stats)
 	{
 		VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
@@ -1506,6 +1512,18 @@ vac_update_relstats_from_list(List *updated_stats)
 			stats->rel_pages = stats->rel_pages / rel->rd_cdbpolicy->numsegments;
 			stats->rel_tuples = stats->rel_tuples / rel->rd_cdbpolicy->numsegments;
 			stats->relallvisible = stats->relallvisible / rel->rd_cdbpolicy->numsegments;
+		}
+		/*
+		 * If the relation is a partition root, we wont have any statistics
+		 * to update with as we've looked at the root in isolation. Avoid
+		 * resetting the statistics to zero. This means that the root won't
+		 * have the correct aggregate statistics until it has been ANALYZEd.
+		 */
+		else if (rel_is_partitioned(stats->relid))
+		{
+			stats->rel_pages = rel->rd_rel->relpages;
+			stats->rel_tuples = rel->rd_rel->reltuples;
+			stats->relallvisible = rel->rd_rel->relallvisible;
 		}
 
 		/*
