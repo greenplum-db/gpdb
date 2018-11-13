@@ -191,3 +191,13 @@ ALTER TABLE s_priv_test.t_priv_table OWNER TO r_priv_test;
 VACUUM ANALYZE s_priv_test.t_priv_table;
 DROP SCHEMA s_priv_test CASCADE;
 DROP ROLE r_priv_test;
+
+-- Ensure that VACUUM doesn't reset the statistics on the parent table
+CREATE TABLE pt (a int, b int) DISTRIBUTED BY (a) PARTITION BY range (b) (END(5), START(5));
+INSERT INTO pt SELECT 0, 6 FROM generate_series(1, 12);
+ANALYZE pt;
+SELECT reltuples FROM pg_catalog.pg_class WHERE relname = 'pt';
+VACUUM pt;
+SELECT reltuples FROM pg_catalog.pg_class WHERE relname = 'pt';
+VACUUM ANALYZE pt;
+SELECT reltuples FROM pg_catalog.pg_class WHERE relname = 'pt';

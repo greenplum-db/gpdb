@@ -1739,14 +1739,29 @@ vac_update_relstats_from_list(Relation rel,
 		ListCell *lc;
 		num_pages = 0;
 		num_tuples = 0.0;
-		foreach (lc, updated_stats)
+
+		/*
+		 * If the relation is a partition root, we wont have any statistics
+		 * to update with as we've looked at the root in isolation. Avoid
+		 * resetting the statistics to zero. This means that the root won't
+		 * have the correct aggregate statistics until it has been ANALYZEd.
+		 */
+		if (rel_is_partitioned(RelationGetRelid(rel)))
 		{
-			VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
-			if (stats->relid == RelationGetRelid(rel))
+			num_pages = rel->rd_rel->relpages;
+			num_tuples = rel->rd_rel->reltuples;
+		}
+		else
+		{
+			foreach (lc, updated_stats)
 			{
-				num_pages += stats->rel_pages;
-				num_tuples += stats->rel_tuples;
-				break;
+				VPgClassStats *stats = (VPgClassStats *) lfirst(lc);
+				if (stats->relid == RelationGetRelid(rel))
+				{
+					num_pages += stats->rel_pages;
+					num_tuples += stats->rel_tuples;
+					break;
+				}
 			}
 		}
 	}
