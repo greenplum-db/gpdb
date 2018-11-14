@@ -493,7 +493,7 @@ assign_gp_role(const char *newval, void *extra)
 	bool		do_disconnect = false;
 	bool		do_connect = false;
 
-	if (Gp_role != newrole && IsUnderPostmaster)
+	if (Gp_role != newrole && IsUnderPostmaster && !IsInitProcessingMode())
 	{
 		if (Gp_role != GP_ROLE_UTILITY)
 			do_disconnect = true;
