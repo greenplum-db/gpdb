@@ -98,7 +98,14 @@
           <pt>-F (full recovery)</pt>
           <pd>Optional. Perform a full copy of the active segment instance in order to recover the
             failed segment. The default is to only copy over the incremental changes that occurred
-            while the segment was down.</pd>
+            while the segment was down. To recover segment instance that is down, an incremental
+            recovery should be attempted before performing a full recovery.<ph otherprops="pivotal">
+              If incremental recovery was not successful and the down segment instance data is not
+              corrupted, contact Pivotal Support.</ph>
+            <note type="warning">A full recovery deletes the data directory of the down segment
+              instance before copying the data from the active (current primary) segment instance.
+              Before performing a full recovery, ensure that the segment failure did not cause data
+              corruption and that any host segment disk issues have been fixed.</note></pd>
         </plentry>
         <plentry>
           <pt>-i <varname>recover_config_file</varname></pt>
