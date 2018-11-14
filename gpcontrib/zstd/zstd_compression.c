@@ -87,6 +87,12 @@ zstd_destructor(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();
 }
 
+/*
+ * zstd compression implementation
+ *
+ * Note that when compression fails due to algorithm inefficiency,
+ * dst_used is set so src_sz, but the output buffer contents are left unchanged
+ */
 Datum
 zstd_compress(PG_FUNCTION_ARGS)
 {

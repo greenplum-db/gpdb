@@ -27,6 +27,7 @@
 /* Include unit under test */
 #include "../zstd_compression.c"
 
+/* Include mock functions for zstd.h */
 #include "mock/zstd_mock.c"
 
 
