@@ -106,6 +106,37 @@ CREATE FUNCTION
   2 | Fish
 (2 rows)</codeblock></li>
       </ol>
+      <section>
+        <title>Using dblink as a Non-Superuser</title>
+        <p>If non-superusers need to create non-password-authenticated connections to other
+          Greenplum Database databases from within a database session, use the
+            <codeph>dblink_connect_u()</codeph> function. Only superusers can use
+            <codeph>dblink_connect()</codeph> to create non-password-authenticated connections. To
+          create a <codeph>dblink</codeph> connection to the remote database and execute and SQL
+          command on the remote database, the user must be defined as a user in the remote database
+          and must have the appropriate access privilege to the tables in the database. </p>
+        <p>Refer to <xref href="https://www.postgresql.org/docs/8.4/static/dblink.html"
+            format="html" scope="external">dblink</xref> in the PostgreSQL documentation for more
+          information about individual <codeph>dblink</codeph> functions. </p>
+        <ol id="ol_dpt_ll3_5fb">
+          <li>As a superuser in the database that the non-superuser connects to, grant the
+              <codeph>EXECUTE</codeph> privilege on the <codeph>dblink_connect_u()</codeph>
+            functions. This example grants the privilege to the non-superuser
+              <codeph>test_user</codeph> on the functions with the signatures for creating an
+            implicit or a named
+            connection.<codeblock># <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text) TO test_user;</b>
+# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;</b></codeblock></li>
+          <li>Now <codeph>test_user</codeph> can create a connection to a another database. For
+            example, <codeph>test_user</codeph> can execute this command to create a connection
+            named <codeph>testconn</codeph> to a remote database.
+            <codeblock>=> <b>SELECT dblink_connect_u('testconn', 'host=myremote port=5432 dbname=postgres user=test_user password=secret');</b></codeblock></li>
+          <li><codeph>test_user</codeph> can use <codeph>dblink()</codeph> to execute an SQL command
+            on the remote database. For example, <codeph>test_user</codeph> can run this command
+            that uses the connection named <codeph>testconn</codeph> to execute a
+              <codeph>SELECT</codeph> command on the remote
+            database.<codeblock>=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
+        </ol>
+      </section>
     </body>
   </topic>
 </topic>
