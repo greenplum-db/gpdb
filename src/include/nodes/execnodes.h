@@ -2674,8 +2674,8 @@ typedef struct PartitionSelectorState
 	PartitionAccessMethods *accessMethods;              /* Access method for partition */
 	struct PartitionRule **levelPartRules; 				/* accepted partitions for all levels */
 	List *levelEqExprStates;                            /* ExprState for equality expressions for all levels */
-	List *levelExprStates;                              /* ExprState for general expressions for all levels */
-	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
+	List *levelExprStateLists;                          /* ExprState list for general expressions for all levels */
+	List *residualPredicateExprStateList;               /* ExprState list for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
 
 	TupleDesc	partTabDesc;
