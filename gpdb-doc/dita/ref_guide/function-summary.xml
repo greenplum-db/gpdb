@@ -503,7 +503,7 @@ SELECT foo();
                 <entry>
                   <codeph>int</codeph>
                 </entry>
-                <entry>Get JSON array element (indexed from zero).</entry>
+                <entry>Get the JSON array element (indexed from zero).</entry>
                 <entry>
                   <codeph>'[{"a":"foo"},{"b":"bar"},{"c":"baz"}]'::json->2</codeph>
                 </entry>
@@ -518,7 +518,7 @@ SELECT foo();
                 <entry>
                   <codeph>text</codeph>
                 </entry>
-                <entry>Get JSON object field by key.</entry>
+                <entry>Get the JSON object field by key.</entry>
                 <entry>
                   <codeph>'{"a": {"b":"foo"}}'::json->'a'</codeph>
                 </entry>
@@ -533,7 +533,7 @@ SELECT foo();
                 <entry>
                   <codeph>int</codeph>
                 </entry>
-                <entry>Get JSON array element as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON array element as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'[1,2,3]'::json->>2</codeph>
                 </entry>
@@ -548,7 +548,7 @@ SELECT foo();
                 <entry>
                   <codeph>text</codeph>
                 </entry>
-                <entry>Get JSON object field as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON object field as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'{"a":1,"b":2}'::json->>'b'</codeph>
                 </entry>
@@ -563,7 +563,7 @@ SELECT foo();
                 <entry>
                   <codeph>text[]</codeph>
                 </entry>
-                <entry>Get JSON object at specified path.</entry>
+                <entry>Get the JSON object at specified path.</entry>
                 <entry><codeph>'{"a": {"b":{"c": "foo"}}}'::json#>'{a,b}</codeph>'</entry>
                 <entry>
                   <codeph>{"c": "foo"}</codeph>
@@ -576,7 +576,7 @@ SELECT foo();
                 <entry>
                   <codeph>text[]</codeph>
                 </entry>
-                <entry>Get JSON object at specified path as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON object at specified path as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'{"a":[1,2,3],"b":[4,5,6]}'::json#>>'{a,2}'</codeph>
                 </entry>
@@ -595,27 +595,17 @@ SELECT foo();
           operators return <codeph>NULL</codeph>, rather than failing, if the JSON input does not
           have the right structure to match the request; for example if no such element
           exists.</note>
-        <p>Operators that require <codeph>jsonb</codeph> data type as the left operand are described
-          in the following table <xref
-            href="http://www.postgresql.org/docs/9.4/static/functions-json.html#FUNCTIONS-JSONB-OP-TABLE"
-            format="html" scope="external">Table 9-41</xref><xref
-            href="#topic_o5y_14w_2z/table_dcb_y3w_mq" format="dita"/>. Many of these operators can
-          be indexed by <codeph>jsonb</codeph> operator classes. For a full description of
+        <p>Operators that require the <codeph>jsonb</codeph> data type as the left operand are
+          described in the following table. Many of these operators can be indexed by
+            <codeph>jsonb</codeph> operator classes. For a full description of
             <codeph>jsonb</codeph> containment and existence semantics, see <xref
-            href="https://www.postgresql.org/docs/9.4/static/datatype-json.html#JSON-CONTAINMENT"
-            format="html" scope="external">8.14.3</xref>
-          <xref href="../admin_guide/query/topics/json-data.xml#topic_isx_2tw_mq" format="dita"/><ph
+            href="../admin_guide/query/topics/json-data.xml#topic_isx_2tw_mq" format="dita"/><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>.
-          For a information about how these operators can be used to effectively index
-            <codeph>jsonb</codeph> data, see. <xref
-            href="https://www.postgresql.org/docs/9.4/static/datatype-json.html#JSON-INDEXING"
-            format="html" scope="external">8.14.4</xref>
-          <xref href="../admin_guide/query/topics/json-data.xml#topic_aqt_1tw_mq" format="dita"/><ph
+          For information about how these operators can be used to effectively index
+            <codeph>jsonb</codeph> data, see <xref
+            href="../admin_guide/query/topics/json-data.xml#topic_aqt_1tw_mq" format="dita"/><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
-        <p><xref
-            href="http://www.postgresql.org/docs/9.4/static/functions-json.html#FUNCTIONS-JSONB-OP-TABLE"
-            format="html" scope="external">Table 9-41</xref> jsonb Operators</p>
         <table id="table_dcb_y3w_mq">
           <title><codeph>jsonb</codeph> Operators</title>
           <tgroup cols="4">
@@ -695,20 +685,12 @@ SELECT foo();
             </tbody>
           </tgroup>
         </table>
-        <p>The standard comparison operators in the following table <xref
-            href="http://www.postgresql.org/docs/9.4/static/functions-comparison.html#FUNCTIONS-COMPARISON-TABLE"
-            format="html" scope="external">Table 9-1</xref>
-          <xref href="#topic_o5y_14w_2z/table_j4w_z5n_vq" format="dita"/> are available only for the
+        <p>The standard comparison operators in the following table are available only for the
             <codeph>jsonb</codeph> data type, not for the <codeph>json</codeph> data type. They
           follow the ordering rules for B-tree operations described in <xref
-            href="http://www.postgresql.org/docs/9.4/static/datatype-json.html#JSON-INDEXING"
-            format="html" scope="external">Section 8.14.4</xref><xref
             href="../admin_guide/query/topics/json-data.xml#topic_aqt_1tw_mq" format="dita"/><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
-        <p><xref
-            href="http://www.postgresql.org/docs/9.4/static/functions-comparison.html#FUNCTIONS-COMPARISON-TABLE"
-            format="html" scope="external">Table 9-1</xref> jsonb Comparison Operators</p>
         <table id="table_j4w_z5n_vq">
           <title><codeph>jsonb</codeph> Comparison Operators</title>
           <tgroup cols="2">
@@ -767,17 +749,9 @@ SELECT foo();
       <title>JSON Creation Functions</title>
       <body>
         <p>This table describes the functions that create <codeph>json</codeph> data type values. </p>
-        <p>This table <xref
-            href="http://www.postgresql.org/docs/9.4/static/functions-json.html#FUNCTIONS-JSON-CREATION-TABLE"
-            format="html" scope="external">Table 9-42</xref>
-          <xref href="#topic_u4s_wnw_2z/table_sqb_y3w_mb" format="dita"/> describes the functions
-          that create <codeph>json</codeph> data type values. (Currently, there are no equivalent
-          functions for <codeph>jsonb</codeph>, but you can cast the result of one of these
-          functions to <codeph>jsonb</codeph>.)</p>
-        <draft-comment author="msk"><b>Q:</b> For <codeph>json_build_array</codeph> and
-            <codeph>json_build_object</codeph> is function input type <cmdname>VARIADIC</cmdname>
-          supported? or does input have to be a one-dimensional array?<p>NEW - TESTED
-          OK</p></draft-comment>
+        <p>This table describes the functions that create <codeph>json</codeph> data type values.
+          (Currently, there are no equivalent functions for <codeph>jsonb</codeph>, but you can cast
+          the result of one of these functions to <codeph>jsonb</codeph>.)</p>
         <table id="table_sqb_y3w_mb">
           <title>JSON Creation Functions </title>
           <tgroup cols="4">
@@ -800,7 +774,7 @@ SELECT foo();
                 </entry>
                 <entry>Returns the value as a JSON object. Arrays and composites are processed
                   recursively and are converted to arrays and objects. If the input contains a cast
-                  from the type to <cmdname>json</cmdname>, the cast function is used to perform the
+                  from the type to <codeph>json</codeph>, the cast function is used to perform the
                   conversion; otherwise, a JSON scalar value is produced. For any scalar type other
                   than a number, a Boolean, or a null value, the text representation will be used,
                   properly quoted and escaped so that it is a valid JSON string.</entry>
@@ -817,7 +791,7 @@ SELECT foo();
                 </entry>
                 <entry>Returns the array as a JSON array. A multidimensional array becomes a JSON
                   array of arrays. <p>Line feeds will be added between dimension-1 elements if
-                      <cmdname>pretty_bool</cmdname> is true.</p></entry>
+                      <codeph>pretty_bool</codeph> is true.</p></entry>
                 <entry>
                   <codeph>array_to_json('{{1,5},{99,100}}'::int[])</codeph>
                 </entry>
@@ -830,7 +804,7 @@ SELECT foo();
                   <codeph>row_to_json(record [, pretty_bool])</codeph>
                 </entry>
                 <entry>Returns the row as a JSON object. <p>Line feeds will be added between level-1
-                    elements if <cmdname>pretty_bool</cmdname> is true.</p></entry>
+                    elements if <codeph>pretty_bool</codeph> is true.</p></entry>
                 <entry>
                   <codeph>row_to_json(row(1,'foo'))</codeph>
                 </entry>
@@ -841,7 +815,7 @@ SELECT foo();
               <row>
                 <entry><codeph>json_build_array(VARIADIC "any"</codeph>)</entry>
                 <entry>Builds a possibly-heterogeneously-typed JSON array out of a
-                    <cmdname>VARIADIC</cmdname> argument list.</entry>
+                    <codeph>VARIADIC</codeph> argument list.</entry>
                 <entry>
                   <codeph>json_build_array(1,2,'3',4,5)</codeph>
                 </entry>
@@ -853,7 +827,7 @@ SELECT foo();
                 <entry>
                   <codeph>json_build_object(VARIADIC "any")</codeph>
                 </entry>
-                <entry>Builds a JSON object out of a <cmdname>VARIADIC</cmdname> argument list. The
+                <entry>Builds a JSON object out of a <codeph>VARIADIC</codeph> argument list. The
                   argument list is taken in order and converted to a set of key/value pairs.</entry>
                 <entry>
                   <codeph>json_build_object('foo',1,'bar',2)</codeph>
@@ -904,7 +878,6 @@ SELECT foo();
           as <codeph>to_json</codeph> except for offering a pretty-printing option. The behavior
           described for <codeph>to_json</codeph> likewise applies to each individual value converted
           by the other JSON creation functions.</note>
-        <draft-comment author="msk"><b>Q:</b> ADD TO HSTORE?</draft-comment>
         <note>The <xref href="../utility_guide/hstore.xml">hstore</xref> extension has a cast from
             <codeph>hstore</codeph> to <codeph>json</codeph>, so that <codeph>hstore</codeph> values
           converted via the JSON creation functions will be represented as JSON objects, not as
@@ -964,13 +937,12 @@ SELECT foo();
     <topic id="topic_z5d_snw_2z">
       <title>JSON Processing Functions</title>
       <body>
-        <draft-comment author="msk">NEW - json and jsonb - TESTED OK</draft-comment>
-        <p>This tables shows the functions that are available for processing <codeph>json</codeph>
+        <p>This table shows the functions that are available for processing <codeph>json</codeph>
           and <codeph>jsonb</codeph> values.</p>
         <p>Many of these processing functions and operators convert Unicode escapes in JSON strings
           to the appropriate single character. This is a not an issue if the input data type is
-            <cmdname>jsonb</cmdname>, because the conversion was already done. However, for
-            <cmdname>json</cmdname> data type input, this might result in an error being thrown. See
+            <codeph>jsonb</codeph>, because the conversion was already done. However, for
+            <codeph>json</codeph> data type input, this might result in an error being thrown. See
             <xref href="../admin_guide/query/topics/json-data.xml#topic_upc_tcs_fz"/><ph
             otherprops="op-print"> in the <cite>Greenplum Database Administrator
           Guide</cite></ph>.</p>
@@ -1057,8 +1029,8 @@ SELECT foo();
                   <p><codeph>jsonb</codeph>
                   </p>
                 </entry>
-                <entry>Returns JSON value pointed to by <codeph>path_elems</codeph> (equivalent to
-                    <codeph>#></codeph> operator).</entry>
+                <entry>Returns the JSON value pointed to by <codeph>path_elems</codeph> (equivalent
+                  to <codeph>#></codeph> operator).</entry>
                 <entry><codeph>json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</codeph>
                 </entry>
                 <entry>
@@ -1073,7 +1045,7 @@ SELECT foo();
                   </p></entry>
                 <entry><codeph>text</codeph>
                 </entry>
-                <entry>Returns JSON value pointed to by <codeph>path_elems</codeph> as text.
+                <entry>Returns the JSON value pointed to by <codeph>path_elems</codeph> as text.
                   Equivalent to <codeph>#>></codeph> operator.</entry>
                 <entry><codeph>json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
                     'f6')</codeph>
@@ -1200,7 +1172,7 @@ SELECT foo();
                 <entry>Builds an arbitrary record from a JSON object. See <xref
                     href="#topic_z5d_snw_2z/json_proc_1" format="dita">Note 1</xref>. <p>As with all
                     functions returning record, the caller must explicitly define the structure of
-                    the record with an <cmdname>AS</cmdname> clause.</p></entry>
+                    the record with an <codeph>AS</codeph> clause.</p></entry>
                 <entry><codeph>select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
                     int, b text, d text)</codeph>
                 </entry>
@@ -1220,7 +1192,7 @@ SELECT foo();
                 <entry>Builds an arbitrary set of records from a JSON array of objects See <xref
                     href="#topic_z5d_snw_2z/json_proc_1" format="dita">Note 1</xref>. <p>As with all
                     functions returning record, the caller must explicitly define the structure of
-                    the record with an <cmdname>AS</cmdname> clause.</p></entry>
+                    the record with an <codeph>AS</codeph> clause.</p></entry>
                 <entry><codeph>select * from
                     json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
                     text);</codeph>

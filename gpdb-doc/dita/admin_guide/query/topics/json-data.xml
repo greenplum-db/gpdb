@@ -44,14 +44,13 @@
               <li>The order of object keys is not preserved.</li>
               <li>Duplicate object keys are not kept. If the input includes duplicate keys, only the
                 last value is kept.</li>
-            </ul></li>
-          <li>The <codeph>jsonb</codeph> data type supports indexing. See <xref
-              href="#topic_aqt_1tw_mq" format="dita"/>.</li>
+            </ul><p>The <codeph>jsonb</codeph> data type supports indexing. See <xref
+                href="#topic_aqt_1tw_mq" format="dita"/>.</p></li>
         </ul></p>
       <p>In general, JSON data should be stored as the <codeph>jsonb</codeph> data type unless there
         are specialized needs, such as legacy assumptions about ordering of object keys.</p>
       <section>
-        <title>Notes about Greenplum Database JSON data</title>
+        <title>About Unicode Characters in JSON Data</title>
         <p>The <xref href="http://rfc7159.net/rfc7159" format="html" scope="external">RFC
             7159</xref> document permits JSON strings to contain Unicode escape sequences denoted by
               <codeph>\u<varname>XXXX</varname></codeph>. However, Greenplum Database allows only
@@ -79,6 +78,9 @@
           characters. The functions throw an error for characters that cannot be represented in the
           database encoding. You should avoid mixing Unicode escapes in JSON with a non-UTF8
           database encoding, if possible.</note>
+      </section>
+      <section>
+        <title>Mapping JSON Data Types to Greenplum Data Types</title>
         <p>When converting JSON text input into <codeph>jsonb</codeph> data, the primitive data
           types described by RFC 7159 are effectively mapped onto native Greenplum Database data
           types, as shown in the following table.</p>
@@ -191,7 +193,7 @@ SELECT '{"bar": "baz", "balance": 7.77, "active":false}'::jsonb;
 -----------------------+-------------------------
  {"reading": 1.230e-5} | {"reading": 0.00001230}
 (1 row)</codeblock>
-      <p>However, the <codeph>jsonb</codeph> data type preserve trailing fractional zeroes, as seen
+      <p>However, the <codeph>jsonb</codeph> data type preserves trailing fractional zeroes, as seen
         in previous example, even though those are semantically insignificant for purposes such as
         equality checks.</p>
     </body>
@@ -358,7 +360,7 @@ SELECT jdoc->'guid', jdoc->'name' FROM api WHERE jdoc -> 'tags' ? 'qui';</codebl
           for particular items within the <codeph>tags</codeph> key is common, defining an index
           like this might be worthwhile:</p>
         <codeblock>CREATE INDEX idxgintags ON api USING gin ((jdoc -> 'tags'));</codeblock>
-        <p>Now, the <cmdname>WHERE</cmdname> clause <codeph>jdoc -> 'tags' ? 'qui'</codeph> is be
+        <p>Now, the <codeph>WHERE</codeph> clause <codeph>jdoc -> 'tags' ? 'qui'</codeph> is
           recognized as an application of the indexable operator <codeph>?</codeph> to the indexed
           expression <codeph>jdoc -> 'tags'</codeph>. For information about expression indexes, see
             <xref href="../../ddl/ddl-index.xml#topic_tfz_3vz_4fb"/>.</p>
@@ -478,7 +480,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>int</codeph>
                 </entry>
-                <entry>Get JSON array element (indexed from zero).</entry>
+                <entry>Get the JSON array element (indexed from zero).</entry>
                 <entry>
                   <codeph>'[{"a":"foo"},{"b":"bar"},{"c":"baz"}]'::json->2</codeph>
                 </entry>
@@ -493,7 +495,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>text</codeph>
                 </entry>
-                <entry>Get JSON object field by key.</entry>
+                <entry>Get the JSON object field by key.</entry>
                 <entry>
                   <codeph>'{"a": {"b":"foo"}}'::json->'a'</codeph>
                 </entry>
@@ -508,7 +510,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>int</codeph>
                 </entry>
-                <entry>Get JSON array element as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON array element as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'[1,2,3]'::json->>2</codeph>
                 </entry>
@@ -523,7 +525,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>text</codeph>
                 </entry>
-                <entry>Get JSON object field as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON object field as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'{"a":1,"b":2}'::json->>'b'</codeph>
                 </entry>
@@ -538,7 +540,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>text[]</codeph>
                 </entry>
-                <entry>Get JSON object at specified path.</entry>
+                <entry>Get the JSON object at specified path.</entry>
                 <entry><codeph>'{"a": {"b":{"c": "foo"}}}'::json#>'{a,b}</codeph>'</entry>
                 <entry>
                   <codeph>{"c": "foo"}</codeph>
@@ -551,7 +553,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>text[]</codeph>
                 </entry>
-                <entry>Get JSON object at specified path as <codeph>text</codeph>.</entry>
+                <entry>Get the JSON object at specified path as <codeph>text</codeph>.</entry>
                 <entry>
                   <codeph>'{"a":[1,2,3],"b":[4,5,6]}'::json#>>'{a,2}'</codeph>
                 </entry>
@@ -570,12 +572,13 @@ Array with n elements > array with n - 1 elements</pre>
           operators return <codeph>NULL</codeph>, rather than failing, if the JSON input does not
           have the right structure to match the request; for example if no such element
           exists.</note>
-        <p>Operators that require <codeph>jsonb</codeph> data type as the left operand are described
-          in the following table. Many of these operators can be indexed by <codeph>jsonb</codeph>
-          operator classes. For a full description of <codeph>jsonb</codeph> containment and
-          existence semantics, see <xref href="#topic_isx_2tw_mq" format="dita"/>. For a information
-          about how these operators can be used to effectively index <codeph>jsonb</codeph> data,
-          see <xref href="#topic_aqt_1tw_mq" format="dita"/>.</p>
+        <p>Operators that require the <codeph>jsonb</codeph> data type as the left operand are
+          described in the following table. Many of these operators can be indexed by
+            <codeph>jsonb</codeph> operator classes. For a full description of
+            <codeph>jsonb</codeph> containment and existence semantics, see <xref
+            href="#topic_isx_2tw_mq" format="dita"/>. For information about how these operators can
+          be used to effectively index <codeph>jsonb</codeph> data, see <xref
+            href="#topic_aqt_1tw_mq" format="dita"/>.</p>
         <table id="table_dcb_y3w_mq">
           <title><codeph>jsonb</codeph> Operators</title>
           <tgroup cols="4">
@@ -716,10 +719,9 @@ Array with n elements > array with n - 1 elements</pre>
     <topic id="topic_u4s_wnw_2z">
       <title>JSON Creation Functions</title>
       <body>
-        <p>This table describes the functions that create <codeph>json</codeph> data type values. </p>
-        <p>The following table describes the functions that create <codeph>json</codeph> data type
-          values. (Currently, there are no equivalent functions for <codeph>jsonb</codeph>, but you
-          can cast the result of one of these functions to <codeph>jsonb</codeph>.)</p>
+        <p>This table describes the functions that create <codeph>json</codeph> data type values.
+          (Currently, there are no equivalent functions for <codeph>jsonb</codeph>, but you can cast
+          the result of one of these functions to <codeph>jsonb</codeph>.)</p>
         <table id="table_sqb_y3w_mb">
           <title>JSON Creation Functions </title>
           <tgroup cols="4">
@@ -742,7 +744,7 @@ Array with n elements > array with n - 1 elements</pre>
                 </entry>
                 <entry>Returns the value as a JSON object. Arrays and composites are processed
                   recursively and are converted to arrays and objects. If the input contains a cast
-                  from the type to <cmdname>json</cmdname>, the cast function is used to perform the
+                  from the type to <codeph>json</codeph>, the cast function is used to perform the
                   conversion; otherwise, a JSON scalar value is produced. For any scalar type other
                   than a number, a Boolean, or a null value, the text representation will be used,
                   properly quoted and escaped so that it is a valid JSON string.</entry>
@@ -759,7 +761,7 @@ Array with n elements > array with n - 1 elements</pre>
                 </entry>
                 <entry>Returns the array as a JSON array. A multidimensional array becomes a JSON
                   array of arrays. <p>Line feeds will be added between dimension-1 elements if
-                      <cmdname>pretty_bool</cmdname> is true.</p></entry>
+                      <codeph>pretty_bool</codeph> is true.</p></entry>
                 <entry>
                   <codeph>array_to_json('{{1,5},{99,100}}'::int[])</codeph>
                 </entry>
@@ -772,7 +774,7 @@ Array with n elements > array with n - 1 elements</pre>
                   <codeph>row_to_json(record [, pretty_bool])</codeph>
                 </entry>
                 <entry>Returns the row as a JSON object. <p>Line feeds will be added between level-1
-                    elements if <cmdname>pretty_bool</cmdname> is true.</p></entry>
+                    elements if <codeph>pretty_bool</codeph> is true.</p></entry>
                 <entry>
                   <codeph>row_to_json(row(1,'foo'))</codeph>
                 </entry>
@@ -783,7 +785,7 @@ Array with n elements > array with n - 1 elements</pre>
               <row>
                 <entry><codeph>json_build_array(VARIADIC "any"</codeph>)</entry>
                 <entry>Builds a possibly-heterogeneously-typed JSON array out of a
-                    <cmdname>VARIADIC</cmdname> argument list.</entry>
+                    <codeph>VARIADIC</codeph> argument list.</entry>
                 <entry>
                   <codeph>json_build_array(1,2,'3',4,5)</codeph>
                 </entry>
@@ -795,7 +797,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>
                   <codeph>json_build_object(VARIADIC "any")</codeph>
                 </entry>
-                <entry>Builds a JSON object out of a <cmdname>VARIADIC</cmdname> argument list. The
+                <entry>Builds a JSON object out of a <codeph>VARIADIC</codeph> argument list. The
                   argument list is taken in order and converted to a set of key/value pairs.</entry>
                 <entry>
                   <codeph>json_build_object('foo',1,'bar',2)</codeph>
@@ -847,7 +849,7 @@ Array with n elements > array with n - 1 elements</pre>
           described for <codeph>to_json</codeph> likewise applies to each individual value converted
           by the other JSON creation functions.</note>
         <note>The <xref href="../../../utility_guide/hstore.xml#topic_vcn_jkq_1bb">hstore
-            module</xref> contains functions that a cast from <codeph>hstore</codeph> to
+            module</xref> contains functions that cast from <codeph>hstore</codeph> to
             <codeph>json</codeph>, so that <codeph>hstore</codeph> values converted via the JSON
           creation functions will be represented as JSON objects, not as primitive string
           values.</note>
@@ -906,12 +908,12 @@ Array with n elements > array with n - 1 elements</pre>
     <topic id="topic_z5d_snw_2z">
       <title>JSON Processing Functions</title>
       <body>
-        <p>This tables shows the functions that are available for processing <codeph>json</codeph>
+        <p>This table shows the functions that are available for processing <codeph>json</codeph>
           and <codeph>jsonb</codeph> values.</p>
         <p>Many of these processing functions and operators convert Unicode escapes in JSON strings
           to the appropriate single character. This is a not an issue if the input data type is
-            <cmdname>jsonb</cmdname>, because the conversion was already done. However, for
-            <cmdname>json</cmdname> data type input, this might result in an error being thrown. See
+            <codeph>jsonb</codeph>, because the conversion was already done. However, for
+            <codeph>json</codeph> data type input, this might result in an error being thrown. See
             <xref href="#topic_upc_tcs_fz" format="dita"/>.</p>
         <table id="table_wfc_y3w_mb">
           <title>JSON Processing Functions</title>
@@ -996,8 +998,8 @@ Array with n elements > array with n - 1 elements</pre>
                   <p><codeph>jsonb</codeph>
                   </p>
                 </entry>
-                <entry>Returns JSON value pointed to by <codeph>path_elems</codeph> (equivalent to
-                    <codeph>#></codeph> operator).</entry>
+                <entry>Returns the JSON value pointed to by <codeph>path_elems</codeph> (equivalent
+                  to <codeph>#></codeph> operator).</entry>
                 <entry><codeph>json_extract_path('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4')</codeph>
                 </entry>
                 <entry>
@@ -1012,7 +1014,7 @@ Array with n elements > array with n - 1 elements</pre>
                   </p></entry>
                 <entry><codeph>text</codeph>
                 </entry>
-                <entry>Returns JSON value pointed to by <codeph>path_elems</codeph> as text.
+                <entry>Returns the JSON value pointed to by <codeph>path_elems</codeph> as text.
                   Equivalent to <codeph>#>></codeph> operator.</entry>
                 <entry><codeph>json_extract_path_text('{"f2":{"f3":1},"f4":{"f5":99,"f6":"foo"}}','f4',
                     'f6')</codeph>
@@ -1140,7 +1142,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>Builds an arbitrary record from a JSON object. See <xref
                     href="#topic_z5d_snw_2z/json_proc_1" format="dita">Note 1</xref>. <p>As with all
                     functions returning record, the caller must explicitly define the structure of
-                    the record with an <cmdname>AS</cmdname> clause.</p></entry>
+                    the record with an <codeph>AS</codeph> clause.</p></entry>
                 <entry><codeph>select * from json_to_record('{"a":1,"b":[1,2,3],"c":"bar"}') as x(a
                     int, b text, d text)</codeph>
                 </entry>
@@ -1160,7 +1162,7 @@ Array with n elements > array with n - 1 elements</pre>
                 <entry>Builds an arbitrary set of records from a JSON array of objects See <xref
                     href="#topic_z5d_snw_2z/json_proc_1" format="dita">Note 1</xref>. <p>As with all
                     functions returning record, the caller must explicitly define the structure of
-                    the record with an <cmdname>AS</cmdname> clause.</p></entry>
+                    the record with an <codeph>AS</codeph> clause.</p></entry>
                 <entry><codeph>select * from
                     json_to_recordset('[{"a":1,"b":"foo"},{"a":"2","c":"bar"}]') as x(a int, b
                     text);</codeph>
