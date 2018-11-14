@@ -16,11 +16,11 @@ insert into test select i, i % 100 from generate_series(1,1000) as i;
 create language plpythonu;
 -- end_ignore
 
-create or replace function sum_alien_consumption(query text) returns int as
+create or replace function sum_owner_consumption(query text, owner text) returns int as
 $$
 import re
 rv = plpy.execute('EXPLAIN ANALYZE '+ query)
-search_text = 'X_Alien'
+search_text = owner
 total_consumption = 0
 count = 0
 comp_regex = re.compile("[^0-9]+(\d+)\/(\d+).+")
@@ -36,10 +36,10 @@ return total_consumption
 $$
 language plpythonu;
 
-select sum_alien_consumption('SELECT t1.i, t2.j FROM test as t1 join test as t2 on t1.i = t2.j') = 0;
+select sum_owner_consumption('SELECT t1.i, t2.j FROM test as t1 join test as t2 on t1.i = t2.j', 'X_Alien') = 0;
 
 set execute_pruned_plan=off;
-select sum_alien_consumption('SELECT t1.i, t2.j FROM test as t1 join test as t2 on t1.i = t2.j') > 0;
+select sum_owner_consumption('SELECT t1.i, t2.j FROM test as t1 join test as t2 on t1.i = t2.j', 'X_Alien') > 0;
 
 create or replace function has_account_type(query text, search_text text) returns int as
 $$
@@ -165,3 +165,30 @@ select has_account_type('select oneoff_plan_func(i) from all_tuples_on_seg0', 'P
 -- We expect only three Executor accounts, one per segment, because
 -- simple expressions in pl/pgsql should not need a full executor.
 select has_account_type('select oneoff_plan_func(i) from all_tuples_on_seg0', 'Executor');
+
+-- The memory consumption for X_PartitionSelector should not go above 1 MB
+-- total on all 3 segments -- It was around 7 MB before the bug in eval_part_qual was
+-- fixed. Although, It was max around .07MB after the fix, but have kept a small buffer.
+set explain_memory_verbosity=detail;
+-- start_ignore
+drop table if exists bar_part;
+drop table if exists foo;
+-- end_ignore
+create table bar_part (a int, b int) distributed by (b) partition by range(b) (start(1) end (2) every(1));
+create table foo (a int, b int) distributed by (b);
+insert into bar_part select 1, 1 from generate_series(1,100000)i;
+insert into foo select 1, 1 from generate_series(1,80000)i;
+analyze foo;
+analyze bar_part;
+select sum_owner_consumption('select * from bar_part where exists (select 1 from foo where foo.b = bar_part.b and bar_part.b > 0);', 'X_PartitionSelector') between 1 and 1000000;
+-- We expect, one slice in the plan for the top Gather Motion. Corresponding to
+-- each segment, there will be 1 instance of the slice, thus total 3 Executor
+-- accounts for 3 segments
+select has_account_type('select simple_sql_function(i) from all_tuples_on_seg0', 'Executor');
+-- Inserting even more data does not cause the memory usage to go high as it
+-- should be independent of the tuples. However, before the fix, it increased with
+-- more rows. Check the memory for X_PartitionSelector owner does not go above 1 MB.
+insert into foo select 1, 1 from generate_series(1,80000)i;
+select sum_owner_consumption('select * from bar_part where exists (select 1 from foo where foo.b = bar_part.b and bar_part.b > 0);', 'X_PartitionSelector') between 1 and 1000000;
+insert into foo select 1, 1 from generate_series(1,80000)i;
+select sum_owner_consumption('select * from bar_part where exists (select 1 from foo where foo.b = bar_part.b and bar_part.b > 0);', 'X_PartitionSelector') between 1 and 1000000;
