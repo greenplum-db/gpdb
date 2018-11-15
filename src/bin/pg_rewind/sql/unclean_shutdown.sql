@@ -6,7 +6,7 @@
 # extension, but we use a custom launcher script that runs the scripts using
 # a shell instead.
 
-TESTNAME=basictest
+TESTNAME=unclean_shutdown
 
 . sql/config_test.sh
 
@@ -42,7 +42,7 @@ function after_promotion
 # clean shutdown on the target instance.
 function after_rewind
 {
-PGOPTIONS=${PGOPTIONS_UTILITY} $STANDBY_PSQL -c "SELECT state FROM pg_stat_replication"
+:
 }
 
 # Run the test

@@ -41,8 +41,6 @@ PGOPTIONS=${PGOPTIONS_UTILITY} $STANDBY_PSQL -c "SELECT state FROM pg_stat_repli
 function after_rewind
 {
 grep "no rewind required" $log_path
-wait_until_standby_streaming_state
-PGOPTIONS=${PGOPTIONS_UTILITY} $STANDBY_PSQL -c "SELECT state FROM pg_stat_replication;"
 }
 
 # Run the test

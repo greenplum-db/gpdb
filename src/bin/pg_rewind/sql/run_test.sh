@@ -159,6 +159,15 @@ pg_ctl -w -D $TEST_MASTER start -o "$MASTER_PG_CTL_OPTIONS" >>$log_path 2>&1
 
 #### Now run the test-specific parts to check the result
 echo "Old master restarted after rewind."
+# Make sure master is able to connect to standby and reach streaming state.
+wait_until_standby_streaming_state
+PGOPTIONS=${PGOPTIONS_UTILITY} $STANDBY_PSQL -c "SELECT state FROM pg_stat_replication;"
+
+# Now promote master and run validation queries
+pg_ctl -w -D $TEST_MASTER promote >>$log_path 2>&1
+wait_until_master_is_promoted >>$log_path 2>&1
+echo "Master promoted."
+
 after_rewind
 
 # Stop remaining servers

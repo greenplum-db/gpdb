@@ -4,6 +4,13 @@ Standby initialized and running.
 Standby promoted.
 Running pg_rewind...
 Old master restarted after rewind.
+SELECT state FROM pg_stat_replication;
+   state   
+-----------
+ streaming
+(1 row)
+
+Master promoted.
 tst_both_dir
 tst_both_dir/both_file1
 tst_both_dir/both_file2
