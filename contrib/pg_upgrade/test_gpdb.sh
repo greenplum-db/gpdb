@@ -198,7 +198,7 @@ upgrade_segment()
 usage()
 {
 	appname=`basename $0`
-	echo "usage: $appname -o <dir> -b <dir>"
+	echo "usage: $appname -o <dir> -b <dir> [options]"
 	echo " -o <dir>     Directory containing old datadir"
 	echo " -b <dir>     Directory containing binaries"
 	echo " -s           Run smoketest only"
