@@ -578,6 +578,7 @@ extractPageInfo(XLogRecord *record)
 
 						/* FPW does not exists. */
 						pageinfo_add(MAIN_FORKNUM, xlrec->node, xlrec->rootblk);
+						pageinfo_add(MAIN_FORKNUM, xlrec->node, BTREE_METAPAGE);
 						break;
 					}
 
