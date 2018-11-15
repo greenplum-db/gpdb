@@ -32,8 +32,8 @@
         Database SQL. </p>
       <p>The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on
         Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at <xref
-          href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
-          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
+          href="https://www.postgresql.org/docs/9.4/static/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql.html</xref></p>
       <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
@@ -75,6 +75,10 @@ END [ label ];</codeblock>
           block that appears within another block must have a semicolon after <codeph>END</codeph>,
           as shown in the previous block. The <codeph>END</codeph> that concludes a function body
           does not require a semicolon.</p>
+        <p>A <varname>label</varname> is required only if you want to identify
+          the block for use in an <codeph>EXIT</codeph> statement, or to qualify
+          the names of variables declared in the block. If you provide a label
+          after <codeph>END</codeph>, it must match the label at the block's beginning.</p>
         <note type="important">Do not confuse the use of the <codeph>BEGIN</codeph> and
             <codeph>END</codeph> keywords for grouping statements in PL/pgSQL with the database
           commands for transaction control. The PL/pgSQL <codeph>BEGIN</codeph> and
@@ -83,32 +87,33 @@ END [ label ];</codeblock>
           query — they cannot start or commit that transaction, since there would be no context for
           them to execute in. However, a PL/pgSQL block that contains an <codeph>EXCEPTION</codeph>
           clause effectively forms a subtransaction that can be rolled back without affecting the
-          outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the post the
-          Postgres documentation on error trapping at <xref
-            href="https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
+          outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the
+          PostgreSQL documentation on trapping errors at <xref
+            href="https://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
             scope="external" format="html"
-            >https://www.postgresql.org/docs/8.3/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
-        <p>All key words and identifiers can be written in mixed upper and lower case. Identifiers
-          are implicitly converted to lowercase unless enclosed in double-quotes ( " ).</p>
-        <p>You can add comments in PL/pgSQL in the following ways:</p>
+            >https://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
+        <p>Keywords are case-insensitive. Identifiers
+          are implicitly converted to lowercase unless double-quoted, just as they
+          are in ordinary SQL commands.</p>
+        <p>Comments work the same way in PL/pgSQL code as in ordinary SQL:</p>
         <ul>
           <li id="pt219192">A double dash (--) starts a comment that extends to the end of the line. </li>
-          <li id="pt219185">A /* starts a block comment that extends to the next occurrence of */.
-              <p>Block comments cannot be nested, but double dash comments can be enclosed into a
-              block comment and a double dash can hide the block comment delimiters /* and
-            */.</p></li>
+          <li id="pt219185">A /* starts a block comment that extends to the matching occurrence of */.
+              <p>Block comments nest.</p></li>
         </ul>
         <p>Any statement in the statement section of a block can be a subblock. Subblocks can be
           used for logical grouping or to localize variables to a small group of statements.</p>
-        <p>The variables declared in the declarations section preceding a block are initialized to
-          their default values every time the block is entered, not only once per function call. For
-          example declares the variable <codeph>quantity</codeph> several times:</p>
+        <p>Variables declared in a subblock mask any similarly-named variables of
+          outer blocks for the duration of the subblock. You can access the outer
+           variables if you qualify their names with their block's label. For
+           example this function declares a variable named <codeph>quantity</codeph>
+           several times:</p>
         <codeblock>CREATE FUNCTION testfunc() RETURNS integer AS $$
+&lt;&lt; outerblock >>
 DECLARE
    quantity integer := 30;
 BEGIN
-   RAISE NOTICE 'Quantity here is %', quantity;  
-   -- Quantity here is 30
+   RAISE NOTICE 'Quantity here is %', quantity;  -- Prints 30
    quantity := 50;
    --
    -- Create a subblock
@@ -116,11 +121,10 @@ BEGIN
    DECLARE
       quantity integer := 80;
    BEGIN
-      RAISE NOTICE 'Quantity here is %', quantity;  
-      -- Quantity here is 80
+      RAISE NOTICE 'Quantity here is %', quantity;  -- Prints 80
+      RAISE NOTICE 'Outer quantity here is %', outerblock.quantity;  -- Prints 50
    END;
-   RAISE NOTICE 'Quantity here is %', quantity; 
-   -- Quantity here is 50
+   RAISE NOTICE 'Quantity here is %', quantity;  -- Prints 50
    RETURN quantity;
 END;
 $$ LANGUAGE plpgsql;</codeblock>
@@ -131,9 +135,9 @@ $$ LANGUAGE plpgsql;</codeblock>
           <p>You can execute SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>,
               <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
             the PL/pgSQL statements, see <xref
-              href="https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html"
+              href="https://www.postgresql.org/docs/9.4/static/plpgsql-statements.html"
               scope="external" format="html"
-              >https://www.postgresql.org/docs/8.3/static/plpgsql-statements.html</xref>. </p>
+              >https://www.postgresql.org/docs/9.4/static/plpgsql-statements.html</xref>. </p>
           <note type="note">The PL/pgSQL statement <codeph>SELECT INTO</codeph> is not supported in
             the <codeph>EXECUTE</codeph> statement. </note>
         </body>
@@ -186,13 +190,13 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic8" xml:lang="en">
       <title>Example: Using the Data Type of a Table Column</title>
       <body>
-        <p>When declaring a variable, you can use <codeph>%TYPE</codeph> to specify the data type of
-          a variable or table column. This is the syntax for declaring a variable with the data type
+        <p>When declaring a variable, you can use the <codeph>%TYPE</codeph> construct to specify the data type of
+          a variable or table column. This is the syntax for declaring a variable whose type is the data type
           of a table column:</p>
         <codeblock>name table.column_name%TYPE;</codeblock>
-        <p>You can use this to declare variables that will hold database values. For example, if you
+        <p>You can use the <codeph>%TYPE</codeph> construct to declare variables that will hold database values. For example, suppose you
           have a column named <codeph>user_id</codeph> in your <codeph>users</codeph> table. To
-          declare the variable <codeph>my_userid</codeph> with the same data type as the
+          declare a variable named <codeph>my_userid</codeph> with the same data type as the
             <codeph>users.user_id</codeph> column:</p>
         <codeblock>my_userid users.user_id%TYPE;</codeblock>
         <p><codeph>%TYPE</codeph> is particularly valuable in polymorphic functions, since the data
@@ -204,10 +208,10 @@ $$ LANGUAGE plpgsql;</codeblock>
     <topic id="topic9" xml:lang="en">
       <title>Example: Composite Type Based on a Table Row</title>
       <body>
-        <p>The following syntax declares a composite variable based on table row:</p>
+        <p>A variable of a composite type is called a row variable. The following syntax declares a composite variable based on table row:</p>
         <codeblock>name table_name%ROWTYPE;</codeblock>
         <p>Such a row variable can hold a whole row of a <codeph>SELECT</codeph> or
-            <codeph>FOR</codeph> query result, so long as that query column set matches the declared
+            <codeph>FOR</codeph> query result, so long as that query's column set matches the declared
           type of the variable. The individual fields of the row value are accessed using the usual
           dot notation, for example <codeph>rowvar.column</codeph>.</p>
         <p>Parameters to a function can be composite types (complete table rows). In that case, the
@@ -229,7 +233,7 @@ $$ LANGUAGE plpgsql;</codeblock>
  ('test2', 52.5, 2),
  ('test3', 32.22, 6),
  ('test4', 12.1, 4) ;</codeblock></p>
-        <p>This function uses a variable and <codeph>ROWTYPE</codeph> composite variable based on
+        <p>This function uses a column <codeph>%TYPE</codeph> variable and <codeph>%ROWTYPE</codeph> composite variable based on
             <codeph>table1</codeph>. </p>
         <codeblock>CREATE OR REPLACE FUNCTION t1_calc( name text) RETURNS integer 
 AS $$ 
@@ -384,7 +388,7 @@ $$ LANGUAGE plpgsql;</codeblock>
   <topic id="topic_isw_3sx_cz">
       <title>Example: Anonymous Block</title>
       <body>
-        <p>This example executes the function in the previous example as an anonymous block with the
+        <p>This example executes the statements in the <codeph>t1_calc()</codeph> function from a previous example as an anonymous block using the
             <codeph>DO</codeph> command. In the example, the anonymous block retrieves the input
           value from a temporary
           table.<codeblock>CREATE TEMP TABLE list AS VALUES ('test1') DISTRIBUTED RANDOMLY;
@@ -404,9 +408,9 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
   <topic id="topic10" xml:lang="en">
     <title id="pt214450">References</title>
     <body>
-      <p>The Postgres documentation about PL/pgSQL is at <xref
-          href="https://www.postgresql.org/docs/8.3/static/plpgsql.html" scope="external"
-          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql.html</xref></p>
+      <p>The PostgreSQL documentation about PL/pgSQL is at <xref
+          href="https://www.postgresql.org/docs/9.4/static/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql.html</xref></p>
       <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
         command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
@@ -414,8 +418,8 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
           Guide</cite>. For information about using Greenplum Database functions see "Querying Data"
         in the <cite>Greenplum Database Administrator Guide</cite></p>
       <p>For information about porting Oracle functions, see <xref
-          href="https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html" scope="external"
-          format="html">https://www.postgresql.org/docs/8.3/static/plpgsql-porting.html</xref>. For
+          href="https://www.postgresql.org/docs/9.4/static/plpgsql-porting.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql-porting.html</xref>. For
         information about installing and using the Oracle compatibility functions with Greenplum
         Database, see "Oracle Compatibility Functions" in the <cite>Greenplum Database Utility
           Guide</cite>.</p>
