@@ -2408,8 +2408,13 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	 * still hold the session lock on the master table.  We do this in
 	 * cleanup phase when it's AO table or in prepare phase if it's an
 	 * empty AO table.
+	 *
+	 * A VacuumStmt object for secondary toast relation is constructed and
+	 * dispatched separately by the QD, when vacuuming the master relation.  A
+	 * backend executing dispatched VacuumStmt (GP_ROLE_EXECUTE), therefore,
+	 * should not execute this block of code.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH && (is_heap ||
+	if (Gp_role != GP_ROLE_EXECUTE && (is_heap ||
 		(!is_heap && (vacstmt->appendonly_phase == AOVAC_CLEANUP ||
 					  vacstmt->appendonly_relation_empty))))
 	{
@@ -2438,8 +2443,13 @@ vacuum_rel(Relation onerel, Oid relid, VacuumStmt *vacstmt, LOCKMODE lmode,
 	 *
 	 * We alter the vacuum statement here since the AO auxiliary tables
 	 * vacuuming will be dispatched to the primaries.
+	 *
+	 * Similar to toast, a VacuumStmt object for each AO auxiliary relation is
+	 * constructed and dispatched separately by the QD, when vacuuming the
+	 * base AO relation.  A backend executing dispatched VacuumStmt
+	 * (GP_ROLE_EXECUTE), therefore, should not execute this block of code.
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH &&
+	if (Gp_role != GP_ROLE_EXECUTE &&
 		(vacstmt->appendonly_phase == AOVAC_CLEANUP ||
 		 (vacstmt->appendonly_relation_empty &&
 		  vacstmt->appendonly_phase == AOVAC_PREPARE)))
