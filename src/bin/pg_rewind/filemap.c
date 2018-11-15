@@ -424,6 +424,81 @@ process_block_change(ForkNumber forknum, RelFileNode rnode, BlockNumber blkno)
 	}
 }
 
+void
+process_aofile_change(RelFileNode rnode, int segno, int64 offset)
+{
+	char	   *path;
+	file_entry_t key;
+	file_entry_t *key_ptr;
+	file_entry_t *entry;
+	filemap_t  *map = filemap;
+	file_entry_t **e;
+
+	Assert(map->array);
+
+	path = datasegpath(rnode, MAIN_FORKNUM, segno);
+
+	key.path = (char *) path;
+	key_ptr = &key;
+
+	e = bsearch(&key_ptr, map->array, map->narray, sizeof(file_entry_t *),
+				path_cmp);
+	if (e)
+		entry = *e;
+	else
+		entry = NULL;
+	pfree(path);
+
+	if (entry)
+	{
+		switch(entry->action)
+		{
+			case FILE_ACTION_COPY_TAIL:
+				/*
+				 * if the insertion happened in the area which copy_tail will
+				 * copy, no change in action needed. But if insert was
+				 * performed at offset lower than copy_tail's current starting
+				 * point, reset the starting point to lower value from xlog
+				 * record.
+				 */
+				if (offset < entry->oldsize)
+					entry->oldsize = offset;
+				break;
+			case FILE_ACTION_NONE:
+			case FILE_ACTION_TRUNCATE:
+				/*
+				 * if the insertion happened after the point we plan to
+				 * truncate, don't bother copying.
+				 */
+				if (offset < entry->newsize)
+				{
+					/*
+					 * convert action to copy_tail, to copy over the data
+					 * modified on target from source. Since the existing
+					 * action is FILE_ACTION_NONE or FILE_ACTION_TRUNCATE,
+					 * oldsize must be either equal or greater than newsize,
+					 * so we can safely assign offset to oldsize.
+					 */
+					Assert(offset <= entry->oldsize);
+					entry->oldsize = offset;
+					entry->action = FILE_ACTION_COPY_TAIL;
+				}
+				break;
+			case FILE_ACTION_COPY:
+			case FILE_ACTION_REMOVE:
+				break;
+			case FILE_ACTION_CREATE:
+				pg_fatal("unexpected AO file modification for directory or symbolic link \"%s\"\n", entry->path);
+		}
+	}
+	else
+	{
+		/* Similar to process_block_change(), the absence of the file entry is not an error */
+	}
+
+	pg_log(PG_DEBUG, "Entry for path %s has action %d\n", entry->path, entry->action);
+}
+
 /*
  * Convert the linked list of entries in map->first/last to the array,
  * map->array.

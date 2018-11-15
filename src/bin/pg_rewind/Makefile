@@ -26,7 +26,7 @@ OBJS	= pg_rewind.o parsexlog.o xlogreader.o datapagemap.o timeline.o \
 
 EXTRA_CLEAN = xlogreader.c compact.c
 
-REGRESS = basictest extrafiles databases pg_xlog_symlink unclean_shutdown simple_no_rewind_required
+REGRESS = basictest extrafiles databases pg_xlog_symlink unclean_shutdown simple_no_rewind_required ao_rewind
 REGRESS_OPTS=--use-existing --launcher=./launcher
 
 all: pg_rewind

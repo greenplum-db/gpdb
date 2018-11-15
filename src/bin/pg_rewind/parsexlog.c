@@ -41,6 +41,7 @@
 #include "commands/dbcommands.h"
 #include "commands/tablespace.h"
 #include "commands/sequence.h"
+#include "cdb/cdbappendonlyxlog.h"
 
 static void extractPageInfo(XLogRecord *record);
 
@@ -962,6 +963,28 @@ extractPageInfo(XLogRecord *record)
 			}
 			break;
 
+		case RM_APPEND_ONLY_ID:
+			switch (info)
+			{
+				case XLOG_APPENDONLY_INSERT:
+				{
+					xl_ao_insert *insert_record = (xl_ao_insert *) XLogRecGetData(record);
+					process_aofile_change(insert_record->target.node,
+										  insert_record->target.segment_filenum,
+										  insert_record->target.offset);
+					break;
+				}
+				case XLOG_APPENDONLY_TRUNCATE:
+				{
+					/*
+					 * We can safely ignore these. If a file is truncated
+					 * locally, we'll notice that when we compare the sizes,
+					 * and will copy the missing tail from remote system.
+					 */
+					break;
+				}
+			}
+			break;
 		default:
 			/*
 			 * It's important that we error out, not ignore, records that we
