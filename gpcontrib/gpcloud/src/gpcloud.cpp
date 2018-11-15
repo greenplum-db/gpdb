@@ -1,6 +1,9 @@
 extern "C" {
 #include "postgres.h"
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-register"
+
 #include "access/extprotocol.h"
 #include "access/xact.h"
 #include "catalog/pg_exttable.h"
@@ -12,6 +15,8 @@ extern "C" {
 #include "utils/builtins.h"
 #include "utils/memutils.h"
 #include "utils/resowner.h"
+
+#pragma clang diagnostic pop
 
 /* Do the module magic dance */
 PG_MODULE_MAGIC;
