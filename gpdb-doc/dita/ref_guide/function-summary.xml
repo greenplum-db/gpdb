@@ -748,7 +748,6 @@ SELECT foo();
     <topic id="topic_u4s_wnw_2z">
       <title>JSON Creation Functions</title>
       <body>
-        <p>This table describes the functions that create <codeph>json</codeph> data type values. </p>
         <p>This table describes the functions that create <codeph>json</codeph> data type values.
           (Currently, there are no equivalent functions for <codeph>jsonb</codeph>, but you can cast
           the result of one of these functions to <codeph>jsonb</codeph>.)</p>
