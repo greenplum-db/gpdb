@@ -1341,11 +1341,11 @@ NOTICE:  f_leak => passwd123  (seg0 slice1 10.64.4.155:25432 pid=8483)
 -- cost of the function, do we want to do that?
 -- end_ignore
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_normal WHERE f_leak(passwd);
-                           QUERY PLAN                            
------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Table Scan on customer
-         Filter: name = 'regress_alice'::text AND f_leak(passwd)
+         Filter: ((name = 'regress_alice'::text) AND f_leak(passwd))
  Optimizer: PQO version 2.59.1
 (4 rows)
 
@@ -1357,13 +1357,13 @@ NOTICE:  f_leak => passwd123
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_property_secure WHERE f_leak(passwd);
-                     QUERY PLAN                     
-----------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on my_property_secure
          Filter: f_leak(my_property_secure.passwd)
          ->  Seq Scan on customer
-               Filter: name = 'regress_alice'::text
+               Filter: (name = 'regress_alice'::text)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1382,16 +1382,16 @@ NOTICE:  f_leak => 9801-2345-6789-0123  (seg0 slice1 127.0.0.1:25432 pid=12344)
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_normal WHERE f_leak(cnum);
-                                     QUERY PLAN                                      
--------------------------------------------------------------------------------------
+                                        QUERY PLAN                                         
+-------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Nested Loop
          Join Filter: true
          ->  Table Scan on credit_card
                Filter: f_leak(cnum)
          ->  Index Scan using customer_dist_key_cid_key on customer
-               Index Cond: dist_key = credit_card.dist_key AND cid = credit_card.cid
-               Filter: name = 'regress_alice'::text
+               Index Cond: ((dist_key = credit_card.dist_key) AND (cid = credit_card.cid))
+               Filter: (name = 'regress_alice'::text)
  Optimizer: PQO version 2.67.0
 (9 rows)
 
@@ -1403,17 +1403,17 @@ NOTICE:  f_leak => 1111-2222-3333-4444
 (1 row)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_secure WHERE f_leak(cnum);
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Subquery Scan on my_credit_card_secure
          Filter: f_leak(my_credit_card_secure.cnum)
          ->  Hash Join
-               Hash Cond: r.cid = l.cid AND r.dist_key = l.dist_key
+               Hash Cond: ((r.cid = l.cid) AND (r.dist_key = l.dist_key))
                ->  Seq Scan on credit_card r
                ->  Hash
                      ->  Seq Scan on customer l
-                           Filter: name = 'regress_alice'::text
+                           Filter: (name = 'regress_alice'::text)
  Optimizer: legacy query optimizer
 (10 rows)
 
@@ -1434,23 +1434,23 @@ NOTICE:  f_leak => 1111-2222-3333-4444
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_normal
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
-                                          QUERY PLAN                                          
-----------------------------------------------------------------------------------------------
+                                             QUERY PLAN                                             
+----------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: r.cid = l.cid
+         Hash Cond: (r.cid = l.cid)
          ->  Seq Scan on credit_usage r
-               Filter: ymd >= '10-01-2011'::date AND ymd < '11-01-2011'::date
+               Filter: ((ymd >= '10-01-2011'::date) AND (ymd < '11-01-2011'::date))
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Subquery Scan on l
                            Filter: f_leak(l.cnum)
                            ->  Hash Join
-                                 Hash Cond: r_1.cid = l_1.cid AND r_1.dist_key = l_1.dist_key
+                                 Hash Cond: ((r_1.cid = l_1.cid) AND (r_1.dist_key = l_1.dist_key))
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l_1
-                                             Filter: name = 'regress_alice'::text
+                                             Filter: (name = 'regress_alice'::text)
  Optimizer: legacy query optimizer
 (16 rows)
 
@@ -1468,23 +1468,23 @@ NOTICE:  f_leak => 1111-2222-3333-4444  (seg0 slice1 127.0.0.1:25434 pid=892)
 
 EXPLAIN (COSTS OFF) SELECT * FROM my_credit_card_usage_secure
        WHERE f_leak(cnum) AND ymd >= '2011-10-01' AND ymd < '2011-11-01';
-                                        QUERY PLAN                                        
-------------------------------------------------------------------------------------------
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Subquery Scan on my_credit_card_usage_secure
          Filter: f_leak(my_credit_card_usage_secure.cnum)
          ->  Hash Join
-               Hash Cond: r.cid = l.cid
+               Hash Cond: (r.cid = l.cid)
                ->  Seq Scan on credit_usage r
-                     Filter: ymd >= '10-01-2011'::date AND ymd < '11-01-2011'::date
+                     Filter: ((ymd >= '10-01-2011'::date) AND (ymd < '11-01-2011'::date))
                ->  Hash
                      ->  Broadcast Motion 3:3  (slice1; segments: 3)
                            ->  Hash Join
-                                 Hash Cond: r_1.cid = l.cid AND r_1.dist_key = l.dist_key
+                                 Hash Cond: ((r_1.cid = l.cid) AND (r_1.dist_key = l.dist_key))
                                  ->  Seq Scan on credit_card r_1
                                  ->  Hash
                                        ->  Seq Scan on customer l
-                                             Filter: name = 'regress_alice'::text
+                                             Filter: (name = 'regress_alice'::text)
  Optimizer: legacy query optimizer
 (16 rows)
 
