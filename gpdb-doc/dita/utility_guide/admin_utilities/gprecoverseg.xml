@@ -88,7 +88,7 @@
         <plentry>
           <pt>-B <varname>parallel_processes</varname></pt>
           <pd>The number of segments to recover in parallel. If not specified, the utility will
-            start up to four parallel processes depending on how many segment instances it needs to
+            start up to 16 parallel processes depending on how many segment instances it needs to
             recover.</pd>
         </plentry>
         <plentry>
