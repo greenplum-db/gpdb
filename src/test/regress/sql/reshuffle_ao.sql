@@ -335,3 +335,47 @@ Alter table part_ao_t1_reshuffle set with (reshuffle);
 Select gp_segment_id, count(*) from part_ao_t1_reshuffle group by gp_segment_id;
 
 drop table part_ao_t1_reshuffle;
+
+-- test reshuffle from full random to full hash distributed
+create table ao_t1_reshuffle_full_random (c1 int, c2 int) with (appendonly=true) distributed randomly;
+insert into ao_t1_reshuffle_full_random select * from generate_series(1, 10);
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 'ao_t1_reshuffle_full_random'::regclass;
+
+begin;
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+select gp_segment_id, count(*) from ao_t1_reshuffle_full_random group by gp_segment_id;
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 'ao_t1_reshuffle_full_random'::regclass;
+abort;
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 'ao_t1_reshuffle_full_random'::regclass;
+
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+
+select gp_segment_id, count(*) from ao_t1_reshuffle_full_random group by gp_segment_id;
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 'ao_t1_reshuffle_full_random'::regclass;
+
+-- test fail cases
+begin;
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed by (c2);
+abort;
+
+begin;
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed randomly;
+abort;
+
+begin;
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed replicated;
+abort;
+
+DROP TABLE ao_t1_reshuffle_full_random;
+
+create table ao_t1_reshuffle_full_random (c1 int, c2 int) with (appendonly=true) distributed randomly;
+update gp_distribution_policy set numsegments = 1 where localoid = 'ao_t1_reshuffle_full_random'::regclass;
+insert into ao_t1_reshuffle_full_random select * from generate_series(1, 20);
+
+begin;
+alter table ao_t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+abort;
+
+DROP TABLE ao_t1_reshuffle_full_random;

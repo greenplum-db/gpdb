@@ -957,3 +957,72 @@ DETAIL:  drop cascades to table inherit_t1_reshuffle_p2
 drop cascades to table inherit_t1_reshuffle_p4
 drop cascades to table inherit_t1_reshuffle_p3
 drop cascades to table inherit_t1_reshuffle_p5
+-- test reshuffle from full random to full hash distributed
+create table t1_reshuffle_full_random (c1 int, c2 int) distributed randomly;
+insert into t1_reshuffle_full_random select * from generate_series(1, 10);
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+ attrnums | policytype | numsegments 
+----------+------------+-------------
+          | p          |           3
+(1 row)
+
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+select gp_segment_id, count(*) from t1_reshuffle_full_random group by gp_segment_id;
+ gp_segment_id | count 
+---------------+-------
+             1 |     5
+             0 |     3
+             2 |     2
+(3 rows)
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+ attrnums | policytype | numsegments 
+----------+------------+-------------
+ {1}      | p          |           3
+(1 row)
+
+abort;
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+ attrnums | policytype | numsegments 
+----------+------------+-------------
+          | p          |           3
+(1 row)
+
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+select gp_segment_id, count(*) from t1_reshuffle_full_random group by gp_segment_id;
+ gp_segment_id | count 
+---------------+-------
+             0 |     3
+             2 |     2
+             1 |     5
+(3 rows)
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+ attrnums | policytype | numsegments 
+----------+------------+-------------
+ {1}      | p          |           3
+(1 row)
+
+-- test fail cases
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c2);
+ERROR:  reshuffle with distributed by only supported from random full to hash full
+abort;
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed randomly;
+ERROR:  reshuffle with distributed by only supported from random full to hash full
+abort;
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed replicated;
+ERROR:  reshuffle with distributed by only supported from random full to hash full
+abort;
+DROP TABLE t1_reshuffle_full_random;
+create table t1_reshuffle_full_random (c1 int, c2 int) distributed randomly;
+update gp_distribution_policy set numsegments = 1 where localoid = 't1_reshuffle_full_random'::regclass;
+insert into t1_reshuffle_full_random select * from generate_series(1, 20);
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+ERROR:  reshuffle with distributed by only supported from random full to hash full
+abort;
+DROP TABLE t1_reshuffle_full_random;

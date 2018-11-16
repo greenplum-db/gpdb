@@ -415,3 +415,47 @@ alter table inherit_t1_reshuffle_p1 set with(reshuffle);
 select count(*) > 0 from inherit_t1_reshuffle_p1 where gp_segment_id = 2;
 
 DROP TABLE inherit_t1_reshuffle_p1 CASCADE;
+
+-- test reshuffle from full random to full hash distributed
+create table t1_reshuffle_full_random (c1 int, c2 int) distributed randomly;
+insert into t1_reshuffle_full_random select * from generate_series(1, 10);
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+select gp_segment_id, count(*) from t1_reshuffle_full_random group by gp_segment_id;
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+abort;
+
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+
+select gp_segment_id, count(*) from t1_reshuffle_full_random group by gp_segment_id;
+select attrnums, policytype, numsegments from gp_distribution_policy where localoid = 't1_reshuffle_full_random'::regclass;
+
+-- test fail cases
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c2);
+abort;
+
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed randomly;
+abort;
+
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed replicated;
+abort;
+
+DROP TABLE t1_reshuffle_full_random;
+
+create table t1_reshuffle_full_random (c1 int, c2 int) distributed randomly;
+update gp_distribution_policy set numsegments = 1 where localoid = 't1_reshuffle_full_random'::regclass;
+insert into t1_reshuffle_full_random select * from generate_series(1, 20);
+
+begin;
+alter table t1_reshuffle_full_random set with(reshuffle) distributed by (c1);
+abort;
+
+DROP TABLE t1_reshuffle_full_random;

@@ -497,6 +497,8 @@ static void CheckDropRelStorage(RangeVar *rel, ObjectType removeType);
 static void inherit_parent(Relation parent_rel, Relation child_rel,
 						   bool is_partition, List *inhAttrNameList);
 
+static void ReshuffleRelationData(Relation rel);
+
 /* ----------------------------------------------------------------
  *		DefineRelation
  *				Creates a new relation.
@@ -14445,16 +14447,6 @@ ReshuffleRelationData(Relation rel)
 	prelname = pstrdup(RelationGetRelationName(rel));
 	namespace_name = get_namespace_name(rel->rd_rel->relnamespace);
 
-	if (policy->numsegments >= getgpsegmentCount())
-	{
-		ereport(NOTICE,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("Do not need to reshuffle %s.%s",
-							   namespace_name,prelname)));
-
-		return;
-	}
-
 	relation = makeRangeVar(namespace_name, prelname, -1);
 	stmt->relation = relation;
 
@@ -14648,13 +14640,49 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				if (pg_strcasecmp(reshuffle_str, def->defname) == 0)
 				{
 					MemoryContext oldcontext;
-					GpPolicy *newPolicy;
-					PartStatus targetRelPartStatus;
+					GpPolicy     *newPolicy;
+					PartStatus    targetRelPartStatus;
+					bool          needReshuffle = true;
 
-					if (NULL != lsecond(lprime))
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-										errmsg("Can not set Distribute By")));
+					if (ldistro)
+					{
+						if (!GpPolicyIsRandomPartitioned(rel->rd_cdbpolicy) ||
+							rel->rd_cdbpolicy->numsegments != getgpsegmentCount() ||
+							list_length(ldistro->keys) == 0)
+						{
+							/*
+							 * Reshuffle with distributed by only support
+							 * reshuffle from a random fully distribtued
+							 * table to a hash fully distributed table.
+							 */
+							ereport(ERROR,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									 errmsg("reshuffle with distributed by "
+											"only supported from random full "
+											"to hash full")));
+						}
+
+						policy = getPolicyForDistributedBy(ldistro, rel->rd_att);
+						GpPolicyReplace(RelationGetRelid(rel), policy);
+						CommandCounterIncrement();
+					}
+					else
+					{
+						/*
+						 * With no distributed by clause, we do not change
+						 * they policy type. We are only increasing numsegments
+						 * of the table and doing data movement.
+						 */
+						if (rel->rd_cdbpolicy->numsegments >= getgpsegmentCount())
+						{
+							ereport(NOTICE,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+									 errmsg("Do not need to reshuffle %s.%s",
+											get_namespace_name(rel->rd_rel->relnamespace),
+											pstrdup(RelationGetRelationName(rel)))));
+							needReshuffle = false;
+						}
+					}
 
 					/*
 					 * We generate a UpdateStmt when the relation is non-partition
@@ -14662,37 +14690,37 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 					 */
 					targetRelPartStatus = rel_part_status(RelationGetRelid(rel));
 
-					if(PART_STATUS_LEAF == targetRelPartStatus ||
-					   PART_STATUS_NONE == targetRelPartStatus)
-					{
+					if(needReshuffle &&
+					   (PART_STATUS_LEAF == targetRelPartStatus ||
+						PART_STATUS_NONE == targetRelPartStatus))
 						ReshuffleRelationData(rel);
+
+					if (!ldistro)
+					{
+						/* Generate a new policy and adjust the numsegments */
+						policy = rel->rd_cdbpolicy;
+						oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+						newPolicy = GpPolicyCopy(policy);
+						MemoryContextSwitchTo(oldcontext);
+						newPolicy->numsegments = getgpsegmentCount();
+
+						/* Update the numsegments in gp_distribution_policy */
+						GpPolicyReplace(RelationGetRelid(rel), newPolicy);
+						oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+						rel->rd_cdbpolicy = GpPolicyCopy(newPolicy);
+						MemoryContextSwitchTo(oldcontext);
 					}
 
-					/* Generate a new policy and adjust the numsegments */
-					policy = rel->rd_cdbpolicy;
-					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-					newPolicy = GpPolicyCopy(policy);
-					MemoryContextSwitchTo(oldcontext);
-
-					newPolicy->numsegments = getgpsegmentCount();
-
-					/* Update the numsegments in gp_distribution_policy */
-					GpPolicyReplace(RelationGetRelid(rel), newPolicy);
-					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-					rel->rd_cdbpolicy = GpPolicyCopy(newPolicy);
-					MemoryContextSwitchTo(oldcontext);
 					heap_close(rel, NoLock);
 
 					/*
 					 * Save the policy in the CMD, it would be dispatched in
 					 * next step.
-					 */
-					lsecond(lprime) = makeNode(SetDistributionCmd);
-					/*
 					 * Notice: reshuffle can not specify (Distribute By), so
 					 * we don't need to pass a policy info to segments like
 					 * lprime = lappend(lprime, newPolicy);
 					 */
+					lsecond(lprime) = makeNode(SetDistributionCmd);
 					goto l_distro_fini;
 				}
 				else if (pg_strcasecmp(reorg_str, def->defname) != 0)

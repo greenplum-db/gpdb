@@ -266,8 +266,6 @@ ExecReshuffle(ReshuffleState *node)
 									  nulls,
 									  reshuffle->policyAttrs,
 									  node->oldcdbhash));
-
-				Assert(oldSegID == newSegID);
 			}
 		}
 
