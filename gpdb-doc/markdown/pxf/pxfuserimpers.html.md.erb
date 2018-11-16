@@ -67,7 +67,7 @@ When PXF user personation is enabled (the default), you must configure the Hadoo
     ```
 4. After changing `core-site.xml`, you must restart Hadoop for your changes to take effect.
 
-5. Copy the updated `core-site.xml` file to the Hadoop configuration directory `/etc/hadoop/conf` on each Greenplum Database segment host.
+5. Copy the updated `core-site.xml` file to the PXF Hadoop configuration directory `$PXF_CONF/servers/default` on the master and each Greenplum Database segment host.
 
 ## <a id="hive"></a>Hive User Impersonation
 

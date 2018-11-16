@@ -37,6 +37,7 @@ Also during initialization, PXF populates a user configuration directory that yo
 | keytabs/  | The default location for the PXF service Kerberos principal keytab file.  |
 | lib/     | The default PXF user runtime library directory. |
 | logs/     | The PXF runtime log file directory. Includes `pxf-service.log` and the Tomcat-related log `catalina.out`. The `logs/` directory and log files are readable only by the `gpadmin` user. |
-| servers/  | The server configuration directory; each subdirectory identifies the name of a server. PXF supports a Hadoop server configuration named `default`. The `default/` directory includes template Hadoop configuration files. |
+| servers/  | The server configuration directory; each subdirectory identifies the name of a server. PXF supports a default Hadoop server configuration named `default`. |
+| templates/  | The Hadoop configuration template file directory. |
 
 Refer to [Initializing PXF](cfginitstart_pxf.html#init_pxf) and [Starting PXF](cfginitstart_pxf.html#start_pxf) for detailed information about the PXF initialization and startup commands and procedures.

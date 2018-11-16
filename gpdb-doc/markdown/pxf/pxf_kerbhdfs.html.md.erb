@@ -103,12 +103,6 @@ Perform the following steps to configure PXF for a secure HDFS. You will perform
     root@seghost$ yum install krb5-libs krb5-workstation
     ```
 
-3. Copy the configuration files from your Hadoop cluster to the PXF Hadoop configuration directory on the Greenplum Database segment host. The configuration file directory is specific to your Hadoop distribution. For example:
-
-    ``` shell
-    gpadmin@seghost$ scp hadoop_host:/etc/hadoop/conf/* /etc/hadoop/conf/
-    ```
-
 4. Open the PXF `pxf-env.sh` user configuration file in the editor of your choice. For example, to open the file with `vi` when `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell

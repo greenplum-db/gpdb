@@ -57,13 +57,6 @@ Perform the following procedure to initialize PXF on each segment host in your G
     seghost3
     ```
 
-3. If not already present, install the `unzip` package on the master and each Greenplum Database segment host. You must have operating system super user privileges to install packages. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ sudo yum -y install unzip
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "sudo yum -y install unzip"
-    ```
-
 4. Run the `pxf init` command to initialize the PXF service on the master and each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization. (Note that the `gpadmin` user must have permission to either create, or write to, the specified directory.)
 
     ``` shell
@@ -73,7 +66,7 @@ Perform the following procedure to initialize PXF on each segment host in your G
 
     The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
 
-    **Note**: The PXF service runs only on the segment hosts. However, you must execute `pxf init` on the master to set up the PXF user configuration directories there.
+    **Note**: The PXF service runs only on the segment hosts. However, you execute `pxf init` on the Greenplum Database master to set up the PXF user configuration directories there.
 
 
 ## <a id="start_pxf"></a>Starting PXF

@@ -153,7 +153,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
 5. Restart PXF on each Greenplum Database segment host. For example:
 
     ``` shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
+    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
     ```
 
 ### <a id="pxf-threadcfg"></a>Another Option for Resource-Constrained PXF Segment Hosts
