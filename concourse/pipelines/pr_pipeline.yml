@@ -3,16 +3,16 @@
 ## ======================================================================
 
 resource_types:
-  - name: pull_request
+  - name: pull-request
     type: docker-image
     source:
-      repository: jtarchie/pr
+      repository: teliaoss/github-pr-resource
 
 resources:
   - name: gpdb_pr
-    type: pull_request
+    type: pull-request
     source:
-      repo: greenplum-db/gpdb
+      repository: greenplum-db/gpdb
       access_token: {{gpdb-git-access-token}}
       ignore_paths:
       - gpdb-doc/*
