@@ -72,7 +72,7 @@ realpath()
 
 restore_cluster()
 {
-	status=$?
+	local status=$?
 
 	pushd $base_dir
 	# Reset the pg_control files from the old cluster which were renamed
@@ -197,7 +197,7 @@ upgrade_segment()
 
 usage()
 {
-	appname=`basename $0`
+	local appname=`basename $0`
 	echo "usage: $appname -o <dir> -b <dir> [options]"
 	echo " -o <dir>     Directory containing old datadir"
 	echo " -b <dir>     Directory containing binaries"
@@ -214,8 +214,8 @@ usage()
 # Diffs the dump1.sql and dump2.sql files in the $temp_root, and exits
 # accordingly (exit code 1 if they differ, 0 otherwise).
 diff_and_exit() {
-	args=
-	pgopts=
+	local args=
+	local pgopts=
 
 	if (( $smoketest )) ; then
 		# After a smoke test, we only have the master available to query.
@@ -259,12 +259,12 @@ diff_and_exit() {
 
 print_delta_seconds()
 {
-	startSeconds=$1
-	contextString=$2
-	endSeconds=`date +%s`
-	deltaSeconds=`expr $endSeconds - $startSeconds`
+	local start_seconds=$1
+	local context_string=$2
+	local end_seconds=`date +%s`
+	local delta_seconds=`expr $end_seconds - $start_seconds`
 
-	echo "$contextString: $deltaSeconds"
+	echo "$context_string: $delta_seconds"
 }
 
 main() {
