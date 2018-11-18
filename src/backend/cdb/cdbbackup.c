@@ -1165,7 +1165,6 @@ gp_read_backup_file__(PG_FUNCTION_ARGS)
 
 	if (info.st_size != fread(pszFullStatus, 1, info.st_size, f))
 	{
-		fclose(f);
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
 				 errmsg("Error reading Backup File %s Type %d", pszFileName, fileType)));
