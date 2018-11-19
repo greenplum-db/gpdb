@@ -10,12 +10,6 @@ TESTNAME=databases
 
 . sql/config_test.sh
 
-# Nothing to do here
-function before_master
-{
-:
-}
-
 # Create a database in master.
 function before_standby
 {

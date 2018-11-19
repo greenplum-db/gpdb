@@ -12,12 +12,6 @@ TESTNAME=extrafiles
 
 . sql/config_test.sh
 
-# Nothing to do here
-function before_master
-{
-  :
-}
-
 # Create a subdir that will be present in both
 function before_standby
 {
@@ -41,11 +35,6 @@ function standby_following_master
   echo "in master2" > $TEST_MASTER/tst_master_dir/master_file2
   mkdir $TEST_MASTER/tst_master_dir/master_subdir/
   echo "in master3" > $TEST_MASTER/tst_master_dir/master_subdir/master_file3
-}
-
-function after_promotion
-{
-  :
 }
 
 # See what files and directories are present after rewind.

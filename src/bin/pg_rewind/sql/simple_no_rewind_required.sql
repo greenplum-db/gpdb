@@ -11,24 +11,6 @@ STOP_MASTER_BEFORE_PROMOTE=true
 
 . sql/config_test.sh
 
-# Nothing to do here
-function before_master
-{
-:
-}
-
-# Nothing to do here
-function before_standby
-{
-:
-}
-
-# Nothing to do here
-function standby_following_master
-{
-:
-}
-
 # Run checkpoint to update Control File with new timeline ID
 function after_promotion
 {
