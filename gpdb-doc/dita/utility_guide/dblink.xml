@@ -4,16 +4,17 @@
   <title>dblink Functions</title>
   <shortdesc>The <codeph>dblink</codeph> module supports connections to other Greenplum Database
     databases from within a database session. These databases can reside in the same Greenplum
-    Database system, or be in a remote system. </shortdesc>
+    Database system, or in a remote system. </shortdesc>
   <body>
     <p>Greenplum Database supports <codeph>dblink</codeph> connections between databases in
       Greenplum Database installations with the same major version number. <codeph>dblink</codeph>
       may also connect to other Greenplum Database installations that use compatible
         <codeph>libpq</codeph> libraries.</p>
-    <p>You create a <codeph>dblink</codeph> connection to a database and execute and SQL command on
-      database as a Greenplum Database user. The user must have the appropriate access privileges to
-      the tables in the database. If the database is in a remote system, the user must be defined as
-      a Greenplum Database user in the remote system with the appropriate access privileges. </p>
+    <p>You create a <codeph>dblink</codeph> connection to a database and execute an SQL command in
+      the database as a Greenplum Database user. The user must have the appropriate access
+      privileges to the database tables referenced in the SQL command. If the database is in a
+      remote system, the user must be defined as a Greenplum Database user in the remote system with
+      the appropriate access privileges. </p>
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
       other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
       tables or for administrative tools such as <codeph>gpcopy</codeph> or
@@ -125,7 +126,7 @@ CREATE EXENSION</codeblock></li>
           but this should be done with care.</p>
         <note type="warning">If a Greenplum Database system has configured users with an
           authentication method that does not involve a password, then impersonation and subsequent
-          escalation of privileges can occur when a non-superuser can execute
+          escalation of privileges can occur when a non-superuser executes
             <codeph>dblink_connect_u()</codeph>. The <codeph>dblink</codeph> connection will appear
           to have originated from the user specified by the function. For example, a non-superuser
           can execute <codeph>dblink_connect_u()</codeph> and specify a user that is configured with
@@ -148,8 +149,8 @@ testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;
               uses the value of the <codeph>PGUSER</codeph> environment variable when Greenplum
               Database was started. </note></li>
           <li><codeph>test_user</codeph> can use the <codeph>dblink()</codeph> function to execute a
-            query using a <codeph>dblink</codeph> connection. For example, this command that uses
-            the <codeph>dblink</codeph> connection named <codeph>testconn</codeph> created in the
+            query using a <codeph>dblink</codeph> connection. For example, this command uses the
+              <codeph>dblink</codeph> connection named <codeph>testconn</codeph> created in the
             previous
             step.<codeblock>testdb=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
         </ol>
