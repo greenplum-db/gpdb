@@ -793,10 +793,11 @@ ALTER TABLE <varname>name</varname>
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
                         <p>Remove a check constraint from  a table and all of its children:</p>
-                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
+                        <codeblock>ALTER TABLE distributors DROP CONSTRAINT zipchk;</codeblock>
                         <p>Remove a check constraint from a table only:</p>
-                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk</codeblock>
-                        <p>(The check constraint remains in place for any child tables.)</p>
+                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
+                        <p>(The check constraint remains in place for any child tables that inherit
+                                        <codeph>distributors</codeph>.)</p>
                         <p>Move a table to a different schema:</p>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
                         <p>Change the distribution policy of a table to replicated:</p>
