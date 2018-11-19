@@ -17,7 +17,7 @@ The PXF agent determines certain runtime dependencies from configuration files f
 
 The `$GPHOME/pxf/conf/pxf-private.classpath` configuration file identifies the runtime dependencies for the PXF agent itself. This file also identifies the runtime dependencies for the PXF built-in HDFS, Hive, and HBase connectors.
 
-The Greenplum Database administrator registers a third-party connector and its runtime dependencies by copying the files to the `$PXF_CONF/lib` directory, and restarting the PXF agent on each segment host.
+The Greenplum Database administrator registers a third-party connector and its runtime dependencies by copying the files to the `$PXF_CONF/lib` directory, and then restarting the PXF agent on each segment host.
 
 
 ## <a id="deploy_to_cluster"></a>Deploying to the Greenplum Database Cluster

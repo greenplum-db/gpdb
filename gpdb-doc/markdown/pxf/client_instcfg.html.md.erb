@@ -4,13 +4,13 @@ title: Configuring PXF Hadoop Connectors (Optional)
 
 PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache Hadoop distributions. This topic describes how configure the PXF Hadoop, Hive, and HBase connectors.
 
-*If you do not plan to use the Hadoop-related PXF connectors, you need not perform this procedure.*
+*If you do not want to use the Hadoop-related PXF connectors, then you do not need to perform this procedure.*
 
 ## <a id="client-pxf-prereq"></a>Prerequisites
 
 PXF bundles all of the JAR files on which it depends, including those for Hadoop services, and loads these JARs at runtime. Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to each Greenplum Database segment host. Before you configure PXF Hadoop, Hive, and HBase connectors, ensure that you can copy configuration files from HDFS, Hive, and HBase hosts in your Hadoop cluster to the Greenplum Database master host.
 
-In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/server/default` directory on each Greenplum Database segment host. PXF creates this directory when you run `pxf init`.
+In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on each Greenplum Database segment host. PXF creates this directory when you run `pxf init`.
 
 ## <a id="client-pxf-config-steps"></a>Procedure
 
@@ -31,7 +31,7 @@ You will use the `gpssh` and `gpscp` utilities where possible to run a command o
     1. Copy the `core-site.xml`, `hdfs-site.xml`, `mapred-site.xml`, and `yarn-site.xml` Hadoop configuration files from your Hadoop cluster NameNode host to the current host using your tool of choice. For example, this command uses `scp` to copy the files:
 
         ``` shell
-        gpadmin@gpmaster$ cd $PXF_CONF/server/default
+        gpadmin@gpmaster$ cd $PXF_CONF/servers/default
         gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/core-site.xml .
         gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/hdfs-site.xml .
         gpadmin@gpmaster$ scp hdfsuser@namenode:/etc/hadoop/conf/mapred-site.xml .
