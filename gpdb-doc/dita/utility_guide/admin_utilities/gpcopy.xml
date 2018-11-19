@@ -13,7 +13,8 @@
             <title>Synopsis</title>
             <codeblock><b>gpcopy</b>
    { <b>--full </b>|
-     <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] |
+     { <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] 
+        [<b>--dest-dbname</b> <varname>dest-db1</varname>[, <varname>dest-db2</varname> ... ]] } |
      <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] }
@@ -138,8 +139,9 @@
                 <plentry>
                     <pt>--dbname <varname>database</varname></pt>
                     <pd>A source database to copy. To copy multiple databases to the destination
-                        system specify a comma separated list of databases. All the user defined
-                        tables and table data are copied to the destination system. </pd>
+                        system specify a comma separated list of databases and enclose the list in
+                        quotes. All the user defined tables and table data are copied to the
+                        destination system. </pd>
                     <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
                         error and quits. If a destination database does not exist a database is
                         created. </pd>
@@ -155,6 +157,22 @@
                     <pd>If specified, debug messages are displayed at the command prompt.</pd>
                     <pd>This option cannot be specified with the <codeph>--quiet</codeph>
                         option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-dbname <varname>database</varname></pt>
+                    <pd>To copy a database to a different destination database, specify the name of
+                        the destination database. If you specify multiple databases, enclose the
+                        list of databases in quotes. The number of database names must match the
+                        number of names specified in the <codeph>--dbname</codeph> option. The
+                        utility copies the source databases to the destination databases in the
+                        listed order. In this example, <codeph>db1</codeph> is copied to
+                            <codeph>destdb1</codeph>, and <codeph>db1</codeph> is copied to
+                            <codeph>destdb2</codeph>.
+                        <codeblock>gpcopy --dest-host mdw-2 --dbname="db1,db2" --dest-dbname="destdb1,destdb2" --drop</codeblock></pd>
+                    <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
+                        error and quits. If a destination database does not exist a database is
+                        created. </pd>
+                    <pd>Valid only with the <codeph>--dbname</codeph> option.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dest-host <varname>dest_host</varname></pt>
