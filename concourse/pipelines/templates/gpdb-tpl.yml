@@ -66,7 +66,8 @@ groups:
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - icw_extensions_gpcloud
-  - test_gpdb_debian_package
+  - test_gpdb_ent_debian_package
+  - test_gpdb_open_source_debian_package
   - gate_icw_end
   - QP_memory-accounting
   - QP_optimizer-functional
@@ -192,7 +193,8 @@ groups:
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - icw_extensions_gpcloud
-  - test_gpdb_debian_package
+  - test_gpdb_ent_debian_package
+  - test_gpdb_open_source_debian_package
   - QP_memory-accounting
   - QP_optimizer-functional
   - gate_icw_end
@@ -1451,6 +1453,9 @@ jobs:
     - get: deb_package_open_source_ubuntu16
       passed:
       - compile_gpdb_open_source_ubuntu16
+    - get: deb_package_ubuntu16
+      passed:
+      - compile_gpdb_ubuntu16
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1486,6 +1491,10 @@ jobs:
       - get: deb_package_open_source_ubuntu16
         passed:
         - gate_compile_end
+      - get: deb_package_ubuntu16
+        passed:
+        - gate_compile_end
+
 
 - name: icw_planner_centos6
   plan:
@@ -1674,7 +1683,7 @@ jobs:
     params:
       TEST_SUITE: "icw"
 
-- name: test_gpdb_debian_package
+- name: test_gpdb_open_source_debian_package
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1685,11 +1694,34 @@ jobs:
       passed:
       - gate_icw_start
       trigger: [[ test_trigger ]]
-  - task: test_gpdb_deb_package
+  - task: test_gpdb_open_source_deb_package
+    input_mapping:
+      deb_package: deb_package_open_source_ubuntu16
     file: gpdb_src/concourse/tasks/deb_test_package.yml
     image: ubuntu-gpdb-debian-dev-16
     params:
-      DEBIAN_PACKAGE: {{deb_package_open_source_ubuntu16_versioned_file}}
+      DEBIAN_PACKAGE: deb_package/greenplum-db.deb
+      IS_OPEN_SOURCE_DEB: true
+
+- name: test_gpdb_ent_debian_package
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed:
+      - gate_icw_start
+    - get: ubuntu-gpdb-debian-dev-16
+    - get: deb_package_ubuntu16
+      passed:
+      - gate_icw_start
+      trigger: [[ test_trigger ]]
+  - task: test_gpdb_ent_deb_package
+    input_mapping:
+      deb_package: deb_package_ubuntu16
+    file: gpdb_src/concourse/tasks/deb_test_package.yml
+    image: ubuntu-gpdb-debian-dev-16
+    params:
+      DEBIAN_PACKAGE: deb_package/greenplum*.deb
+      IS_OPEN_SOURCE_DEB: false
 
 - name: icw_extensions_gpcloud
   plan:
@@ -3630,7 +3662,8 @@ jobs:
       - icw_gporca_sles11
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
-      - test_gpdb_debian_package
+      - test_gpdb_ent_debian_package
+      - test_gpdb_open_source_debian_package
       - icw_extensions_gpcloud
       - client_loader_remote_test_aix
       - mpp_resource_group_centos6

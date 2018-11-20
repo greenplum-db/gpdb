@@ -2,9 +2,10 @@ platform: linux
 image_resource:
   type: docker-image
 inputs:
-  - name: deb_package_open_source_ubuntu16
+  - name: deb_package
   - name: gpdb_src
 run:
   path: gpdb_src/concourse/scripts/deb_test_package.bash
 params:
   DEBIAN_PACKAGE:
+  IS_OPEN_SOURCE_DEB: false

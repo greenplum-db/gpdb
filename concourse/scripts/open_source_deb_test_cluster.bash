@@ -3,6 +3,10 @@ set -euxo pipefail
 
 source /opt/gpdb/greenplum_path.sh
 
+psql -t -U gpadmin template1 -c 'select version()' | grep '\-oss'
+# gpssh replaces "-" with " " in version string
+gpssh --version | grep ' oss'
+
 createdb testdb
 
 psql -U gpadmin testdb -c "CREATE TABLE test_table (test_col1 int, text_col2 text);"
