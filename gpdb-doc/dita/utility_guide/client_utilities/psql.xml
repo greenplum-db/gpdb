@@ -248,14 +248,14 @@
         <p>The permissions on <codeph>.pgpass</codeph> must disallow any access to world or group
           (for example: <codeph>chmod 0600 ~/.pgpass</codeph>). If the permissions are less strict
           than this, the file will be ignored. (The file permissions are not currently checked on
-          Microsoft Windows clients, however.)</p> An alternative way to specify connection
-        parameters is in a <codeph>conninfo</codeph> string or a URI, which is used instead of a
-        database name. This mechanism gives you very wide control over the connection. For
-        example:</sectiondiv>
-      <codeblock>$ psql "service=myservice sslmode=require"
-$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock>
-      <p>If the connection could not be made for any reason (insufficient privileges, server is not
-        running, etc.), <codeph>psql</codeph> will return an error and terminate.</p>
+          Microsoft Windows clients, however.)</p>
+        <p>An alternative way to specify connection parameters is in a <codeph>conninfo</codeph>
+          string or a URI, which is used instead of a database name. This mechanism gives you very
+          wide control over the connection. For
+          example:</p><codeblock>$ psql "service=myservice sslmode=require"
+$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>If
+          the connection could not be made for any reason (insufficient privileges, server is not
+          running, etc.), <codeph>psql</codeph> will return an error and terminate.</p></sectiondiv>
       <sectiondiv id="section9">
         <b>Entering SQL Commands</b>
         <p>In normal operation, <codeph>psql</codeph> provides a prompt with the name of the
