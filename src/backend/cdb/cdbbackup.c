@@ -1248,7 +1248,6 @@ gp_write_backup_file__(PG_FUNCTION_ARGS)
 	nBytes = strlen(pszBackup);
 	if (nBytes != fwrite(pszBackup, 1, nBytes, f))
 	{
-		fclose(f);
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
 				 errmsg("Error writing Backup File %s", pszFileName)));
