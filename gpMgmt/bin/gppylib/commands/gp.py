@@ -976,7 +976,7 @@ class GpCatVersionDirectory(Command):
 
 #-----------------------------------------------
 class GpAddConfigScript(Command):
-    def __init__(self, name, directorystring, entry, value=None, removeonly=False, ctxt=LOCAL, remoteHost=None):
+    def __init__(self, name, directorystring, entry, value=None, removeonly=False, ctxt=LOCAL, remoteHost=None, autoconf=False):
         cmdStr="echo '%s' | $GPHOME/sbin/gpaddconfig.py --entry %s" % (directorystring, entry)
         if value:
             # value will be encoded and unencoded in the script to protect against shell interpretation
@@ -984,6 +984,8 @@ class GpAddConfigScript(Command):
             cmdStr = cmdStr + " --value '" + value + "'"
         if removeonly:
             cmdStr = cmdStr + " --removeonly "
+        if autoconf:
+            cmdStr = cmdStr + " --autoconf "
 
         Command.__init__(self,name,cmdStr,ctxt,remoteHost)
 

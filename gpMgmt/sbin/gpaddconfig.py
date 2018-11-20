@@ -33,6 +33,7 @@ def parseargs():
     parser.add_option('--entry', type='string')
     parser.add_option('--value', type='string')
     parser.add_option('--removeonly', action='store_true')
+    parser.add_option('--autoconf', action='store_true')
     parser.set_defaults(removeonly=False)
 
     # Parse the command line arguments
@@ -61,7 +62,10 @@ while line:
 
     directory = line.rstrip()
 
-    filename = directory + "/postgresql.conf"
+    if options.autoconf:
+        filename = directory + "/postgresql.auto.conf"
+    else:
+        filename = directory + "/postgresql.conf"
     if not os.path.exists(filename):
         raise Exception("path does not exist" + filename)
 
