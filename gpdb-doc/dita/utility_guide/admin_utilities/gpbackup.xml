@@ -73,6 +73,12 @@
         configuration file. See <xref
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p>
+      <note>This utility uses secure shell (SSH) connections between systems to perform its tasks.
+        In large Greenplum Database deployments, cloud deployments, or deployments with a large
+        number of segments per host, this utility may exceed the host's maximum threshold for
+        unauthenticated connections. Consider updating the SSH <codeph>MaxStartups</codeph>
+        configuration parameter to increase this threshold. For more information about SSH
+        configuration options, refer to the SSH documentation for your Linux distribution.</note>
     </section>
     <section>
       <title>Options</title>
@@ -254,7 +260,7 @@
             backs up tables in a separate transaction. For example, if you specify <codeph>--jobs
               2</codeph>, the utility creates two processes, each process starts a single
             transaction, and the utility backs up the tables in parallel using the two processes.
-              <note type="important">If you specify a value higher than 1, the database must be in a
+            <note type="important">If you specify a value higher than 1, the database must be in a
               quiescent state while the utility acquires a lock on the tables that are being backed
               up. If database operations are being performed on tables that are being backed up
               during the table locking process, consistency between tables that are backed up in
@@ -303,9 +309,9 @@
           <pt><b>--single-data-file</b></pt>
           <pd>Optional. Create a single data file on each segment host for all tables backed up on
             that segment. By default, each <codeph>gpbackup</codeph> creates one compressed CSV file
-            for each table that is backed up on the segment.<note>If you use the
-                <codeph>--single-data-file</codeph> option to combine table backups into a single
-              file per segment, you cannot set the <codeph>gprestore</codeph> option
+            for each table that is backed up on the segment.
+            <note>If you use the <codeph>--single-data-file</codeph> option to combine table backups
+              into a single file per segment, you cannot set the <codeph>gprestore</codeph> option
                 <codeph>--jobs</codeph> to a value higher than 1 to perform a parallel restore
               operation.</note></pd>
         </plentry>
