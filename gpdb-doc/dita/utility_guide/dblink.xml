@@ -67,7 +67,7 @@ INSERT 0 2
 postgres=# <b>\q
 </b>$</codeblock></li>
         <li>Log into a different database as a superuser. In this example, the superuser
-            <codeph>gpadmin</codeph> logs into the database<codeph>testdb</codeph>. If the
+            <codeph>gpadmin</codeph> logs into the database <codeph>testdb</codeph>. If the
             <codeph>dblink</codeph> functions are not already available, register the
             <codeph>dblink</codeph> extension in the
           database:<codeblock>$ <b>psql -d testdb</b>
@@ -87,7 +87,8 @@ CREATE EXENSION</codeblock></li>
 (1 row)</codeblock>
           <note>If a <codeph>user</codeph> is not specified, <codeph>dblink_connect()</codeph> uses
             the value of the <codeph>PGUSER</codeph> environment variable when Greenplum Database
-            was started. </note></li>
+            was started. If <codeph>PGUSER</codeph> is not set, the default is the system user that
+            started Greenplum Database.</note></li>
         <li>Use the <codeph>dblink()</codeph> function to query a database using a configured
           connection. Keep in mind that this function returns a record type, so you must assign the
           columns returned in the <codeph>dblink()</codeph> query. For example, the following
@@ -141,18 +142,19 @@ CREATE EXENSION</codeblock></li>
             with the signatures for creating an implicit or a named <codeph>dblink</codeph>
             connection.<codeblock>testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text) TO test_user;</b>
 testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;</b></codeblock></li>
-          <li>Now <codeph>test_user</codeph> can create a connection to a another local database
+          <li>Now <codeph>test_user</codeph> can create a connection to another local database
             without a password. For example, <codeph>test_user</codeph> can log into the
               <codeph>testdb</codeph> database and execute this command to create a connection named
               <codeph>testconn</codeph> to the local <codeph>postgres</codeph> database.<codeblock>testdb=> <b>SELECT dblink_connect_u('testconn', 'dbname=postgres user=test_user');</b></codeblock>
             <note>If a <codeph>user</codeph> is not specified, <codeph>dblink_connect_u()</codeph>
               uses the value of the <codeph>PGUSER</codeph> environment variable when Greenplum
-              Database was started. </note></li>
+              Database was started. If <codeph>PGUSER</codeph> is not set, the default is the system
+              user that started Greenplum Database.</note></li>
           <li><codeph>test_user</codeph> can use the <codeph>dblink()</codeph> function to execute a
             query using a <codeph>dblink</codeph> connection. For example, this command uses the
               <codeph>dblink</codeph> connection named <codeph>testconn</codeph> created in the
-            previous
-            step.<codeblock>testdb=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
+            previous step. <codeph>test_user</codeph> must have appropriate access to the
+            table.<codeblock>testdb=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
         </ol>
       </section>
     </body>
