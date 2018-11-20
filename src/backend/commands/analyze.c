@@ -3862,10 +3862,16 @@ compute_scalar_stats(VacAttrStatsP stats,
 	}
 	else
 	{
-		/* ORCA complains if a column has no statistics whatsoever,
-		 * so store something */
+		/*
+		 * ORCA complains if a column has no statistics whatsoever, so store
+		 * either the best we can figure out given what we have, or zero in
+		 * case we don't have enough.
+		 */
 		stats->stats_valid = true;
-		stats->stanullfrac = (double) null_cnt / (double) samplerows;
+		if (samplerows)
+			stats->stanullfrac = (double) null_cnt / (double) samplerows;
+		else
+			stats->stanullfrac = 0.0;
 		if (is_varwidth)
 			stats->stawidth = 0;	/* "unknown" */
 		else
