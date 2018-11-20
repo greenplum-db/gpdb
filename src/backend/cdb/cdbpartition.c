@@ -2850,12 +2850,9 @@ rel_partitioning_is_uniform(Oid rootOid)
 				if (fFirstNode)
 				{
 					/* add current constraint to hash table */
-					void	   *con_entry = hash_search(conHash, &curr_con, HASH_ENTER, &found);
+					void	   *con_entry;
 
-					if (con_entry == NULL)
-					{
-						ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-					}
+					con_entry = hash_search(conHash, &curr_con, HASH_ENTER, &found);
 					((ConNodeEntry *) con_entry)->entry = curr_con;
 				}
 

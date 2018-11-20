@@ -2783,7 +2783,7 @@ groupHashNew(Oid groupId)
 	Assert(i < pResGroupControl->nGroups);
 
 	entry = (ResGroupHashEntry *)
-		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_ENTER_NULL, &found);
+		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_ENTER, &found);
 	/* caller should test that the group does not exist already */
 	Assert(!found);
 	entry->index = i;

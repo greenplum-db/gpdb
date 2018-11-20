@@ -368,10 +368,6 @@ addMCVToHashTable(HTAB *datumHash, MCVFreqPair *mcvFreqPair)
 		MCVFreqPair *key = MCVFreqPairCopy(mcvFreqPair);
 
 		mcvfreq = hash_search(datumHash, &key, HASH_ENTER, &found);
-		if (mcvfreq == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
 		mcvfreq->entry = key;
 	}
 	else
