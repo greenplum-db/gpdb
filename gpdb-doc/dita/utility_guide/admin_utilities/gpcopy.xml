@@ -48,19 +48,19 @@
             <ul>
                 <li id="pk138459">Copy a Greenplum Database system with the <codeph>--full</codeph>
                     option. This option copies all database objects including, tables, table data,
-                    indexes, views, users, roles, functions, and resource queues for all user
-                    defined databases to a different destination system. </li>
-                <li id="pk138461">Copy a set of user defined database tables to a destination
+                    indexes, views, users, roles, functions, and resource queues for all
+                    user-defined databases to a different destination system. </li>
+                <li id="pk138461">Copy a set of user-defined database tables to a destination
                     system. <ul id="ul_ly3_v5c_vdb">
-                        <li>The <codeph>--dbname</codeph> option copies all user defined tables,
+                        <li>The <codeph>--dbname</codeph> option copies all user-defined tables,
                             table data, and re-creates the table indexes from specified
                             databases.</li>
                         <li>The <codeph>--include-table</codeph> or
                                 <codeph>--include-table-file</codeph> option copies a specified set
-                            of user defined tables, table data, and re-creates the table indexes. </li>
+                            of user-defined tables, table data, and re-creates the table indexes. </li>
                         <li>The <codeph>--exclude-table</codeph> and
                                 <codeph>--exclude-table-file</codeph> options exclude a specified
-                            set of user defined tables and table data to be copied. </li>
+                            set of user-defined tables and table data to be copied. </li>
                     </ul></li>
                 <li>Copy only the database schemas with the <codeph>--metadata-only</codeph>
                     option.</li>
@@ -139,8 +139,8 @@
                 <plentry>
                     <pt>--dbname <varname>database</varname></pt>
                     <pd>A source database to copy. To copy multiple databases to the destination
-                        system specify a comma separated list of databases and enclose the list in
-                        quotes. All the user defined tables and table data are copied to the
+                        system specify a comma-separated list of databases with no spaces between
+                        the names. All the user-defined tables and table data are copied to the
                         destination system. </pd>
                     <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
                         error and quits. If a destination database does not exist a database is
@@ -161,14 +161,15 @@
                 <plentry>
                     <pt>--dest-dbname <varname>database</varname></pt>
                     <pd>To copy a database to a different destination database, specify the name of
-                        the destination database. If you specify multiple databases, enclose the
-                        list of databases in quotes. The number of database names must match the
-                        number of names specified in the <codeph>--dbname</codeph> option. The
-                        utility copies the source databases to the destination databases in the
+                        the destination database. For multiple databases, specify a comma-separated
+                        list of databases with between the names. The number of database names must
+                        match the number of names specified in the <codeph>--dbname</codeph> option.
+                        The utility copies the source databases to the destination databases in the
                         listed order. In this example, <codeph>db1</codeph> is copied to
-                            <codeph>destdb1</codeph>, and <codeph>db1</codeph> is copied to
-                            <codeph>destdb2</codeph>.
-                        <codeblock>gpcopy --dest-host mdw-2 --dbname="db1,db2" --dest-dbname="destdb1,destdb2" --drop</codeblock></pd>
+                            <codeph>destdb1</codeph>, <codeph>db2</codeph> is copied to
+                            <codeph>destdb2</codeph>, and <codeph>db3</codeph> is copied to
+                            <codeph>db3</codeph>.
+                        <codeblock>gpcopy --dest-host mdw-2 --dbname=db1,db2,db3 --dest-dbname=destdb1,destdb2,db3 --drop</codeblock></pd>
                     <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
                         error and quits. If a destination database does not exist a database is
                         created. </pd>
@@ -203,7 +204,7 @@
                     <pd>A table from the source database system to exclude from transfer. The fully
                         qualified table name must be specified
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>). </pd>
-                    <pd>To exclude multiple tables, specify a comma separated list of table
+                    <pd>To exclude multiple tables, specify a comma-separated list of table
                         names.</pd>
                     <pd>A set of tables can be specified using the Go language regular expression
                         syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
@@ -248,7 +249,7 @@
                         name must be specified
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         You cannot specify views or system catalog tables. To copy multiple tables,
-                        specify a comma separated list of table names.</pd>
+                        specify a comma-separated list of table names.</pd>
                     <pd>A set of tables can be specified using the Go language regular expression
                         syntax. You can use regular expressions in table names and schema names.
                         Regular expressions are not supported for database names. </pd>
@@ -294,8 +295,8 @@
                     <pd>This option performs a migration of a Greenplum Database source system to a
                         destination system. </pd>
                     <pd>A migration copies all database objects including, tables, indexes, views,
-                        roles, functions, user defined types (UDT), resource queues, and resource
-                        groups for all user defined databases. The default databases,
+                        roles, functions, user-defined types (UDT), resource queues, and resource
+                        groups for all user-defined databases. The default databases,
                             <codeph>postgres</codeph>, <codeph>template0</codeph>, and
                             <codeph>template1</codeph>, are not copied.</pd>
                     <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
@@ -353,8 +354,9 @@
                         transferred.</pd>
                     <pd>If specified with the <codeph>--full</codeph> option,
                             <codeph>gpcopy</codeph> replicates the complete database schema,
-                        including all tables, indexes, views, user defined types (UDT), and user
-                        defined functions (UDF) for the source databases. No data is transferred. </pd>
+                        including all tables, indexes, views, user-defined types (UDT), and
+                        user-defined functions (UDF) for the source databases. No data is
+                        transferred. </pd>
                     <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
                         with the <codeph>--include-table</codeph> or
                             <codeph>--include-table-file</codeph> options, <codeph>gpcopy</codeph>
@@ -585,7 +587,7 @@
    --truncate --analyze --validate count</codeblock>
             <p dir="ltr">This command specifies the <codeph>--full</codeph> and
                     <codeph>--metadata-only</codeph> options to copy the complete database schema,
-                including all tables, indexes, views, user defined types (UDT), and user defined
+                including all tables, indexes, views, user-defined types (UDT), and user-defined
                 functions (UDF) from all the source databases. No data is copied, The
                     <codeph>--drop</codeph> option specifies that the table is dropped in the
                 destination database before it is created again if the table exists in both the
