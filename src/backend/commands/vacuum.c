@@ -1119,7 +1119,9 @@ get_rel_oids(Oid relid, VacuumStmt *vacstmt, int stmttype)
 				}
 				if (optimizer_analyze_root_partition || (vacstmt->options & VACOPT_ROOTONLY))
 				{
-					if (leaf_parts_analyzed(root_rel_oid, relationOid, va_root_attnums))
+					int		elevel = ((vacstmt->options & VACOPT_VERBOSE) ? LOG : DEBUG2);
+
+					if (leaf_parts_analyzed(root_rel_oid, relationOid, va_root_attnums, elevel))
 						oid_list = lappend_oid(oid_list, root_rel_oid);
 				}
 			}

@@ -184,7 +184,7 @@ static void compute_index_stats(Relation onerel, double totalrows,
 					HeapTuple *rows, int numrows,
 					MemoryContext col_context);
 static VacAttrStats *examine_attribute(Relation onerel, int attnum,
-				  Node *index_expr);
+				  Node *index_expr, int elevel);
 static int acquire_sample_rows_dispatcher(Relation onerel, bool inh, int elevel,
 										  HeapTuple *rows, int targrows,
 										  double *totalrows, double *totaldeadrows);
@@ -547,7 +547,7 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 								col, RelationGetRelationName(onerel))));
 			unique_cols = bms_add_member(unique_cols, i);
 
-			vacattrstats[tcnt] = examine_attribute(onerel, i, NULL);
+			vacattrstats[tcnt] = examine_attribute(onerel, i, NULL, elevel);
 			if (vacattrstats[tcnt] != NULL)
 				tcnt++;
 		}
@@ -561,7 +561,7 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 		tcnt = 0;
 		for (i = 1; i <= attr_cnt; i++)
 		{
-			vacattrstats[tcnt] = examine_attribute(onerel, i, NULL);
+			vacattrstats[tcnt] = examine_attribute(onerel, i, NULL, elevel);
 			if (vacattrstats[tcnt] != NULL)
 				tcnt++;
 		}
@@ -615,7 +615,7 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 						indexkey = (Node *) lfirst(indexpr_item);
 						indexpr_item = lnext(indexpr_item);
 						thisdata->vacattrstats[tcnt] =
-							examine_attribute(Irel[ind], i + 1, indexkey);
+							examine_attribute(Irel[ind], i + 1, indexkey, elevel);
 						if (thisdata->vacattrstats[tcnt] != NULL)
 							tcnt++;
 					}
@@ -659,7 +659,7 @@ do_analyze_rel(Relation onerel, VacuumStmt *vacstmt,
 		{
 			acquire_hll_by_query(onerel, attr_cnt, vacattrstats, elevel);
 
-			elog (LOG,"HLL FULL SCAN ");
+			ereport(elevel, (errmsg("HLL FULL SCAN")));
 		}
 	}
 
@@ -1191,7 +1191,7 @@ compute_index_stats(Relation onerel, double totalrows,
  * and index_expr is the expression tree representing the column's data.
  */
 static VacAttrStats *
-examine_attribute(Relation onerel, int attnum, Node *index_expr)
+examine_attribute(Relation onerel, int attnum, Node *index_expr, int elevel)
 {
 	Form_pg_attribute attr = onerel->rd_att->attrs[attnum - 1];
 	HeapTuple	typtuple;
@@ -1212,6 +1212,7 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
 	 * fixed fields of the pg_attribute tuple.
 	 */
 	stats = (VacAttrStats *) palloc0(sizeof(VacAttrStats));
+	stats->elevel = elevel;
 	stats->attr = (Form_pg_attribute) palloc(ATTRIBUTE_FIXED_PART_SIZE);
 	memcpy(stats->attr, attr, ATTRIBUTE_FIXED_PART_SIZE);
 
@@ -2860,7 +2861,7 @@ std_typanalyze(VacAttrStats *stats)
 	 */
 	List *va_cols = list_make1_int(stats->attr->attnum);
 	if (rel_part_status(attr->attrelid) == PART_STATUS_ROOT &&
-		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols) &&
+		leaf_parts_analyzed(stats->attr->attrelid, InvalidOid, va_cols, stats->elevel) &&
 		op_hashjoinable(eqopr, stats->attrtypid))
 	{
 		stats->merge_stats = true;
@@ -2965,7 +2966,9 @@ compute_minimal_stats(VacAttrStatsP stats,
 
 	stats->stahll = (bytea *)hyperloglog_init_def();
 
-	elog(LOG, "Computing Minimal Stats : column %s", get_attname(stats->attr->attrelid, stats->attr->attnum));
+	ereport(DEBUG2,
+			(errmsg("Computing Minimal Stats for column %s",
+					get_attname(stats->attr->attrelid, stats->attr->attnum))));
 
 	for (i = 0; i < samplerows; i++)
 	{
@@ -3277,7 +3280,9 @@ compute_very_minimal_stats(VacAttrStatsP stats,
 	bool		is_varwidth = (!stats->attr->attbyval &&
 							   stats->attr->attlen < 0);
 
-	elog(LOG, "Computing Very Minimal Stats : column %s", get_attname(stats->attr->attrelid, stats->attr->attnum));
+	ereport(DEBUG2,
+			(errmsg("Computing Very Minimal Stats for column %s",
+					get_attname(stats->attr->attrelid, stats->attr->attnum))));
 
 	for (i = 0; i < samplerows; i++)
 	{
@@ -3393,10 +3398,12 @@ compute_scalar_stats(VacAttrStatsP stats,
 
 	PrepareSortSupportFromOrderingOp(mystats->ltopr, &ssup);
 
-	// Initialize HLL counter to be stored in stats
+	/* Initialize HLL counter to be stored in stats */
 	stats->stahll = (bytea *)hyperloglog_init_def();
 
-	elog(LOG, "Computing Scalar Stats : column %s", get_attname(stats->attr->attrelid, stats->attr->attnum));
+	ereport(DEBUG2,
+			(errmsg("Computing Scalar Stats for column %s",
+					get_attname(stats->attr->attrelid, stats->attr->attnum))));
 
 	/* Initial scan to find sortable values */
 	for (i = 0; i < samplerows; i++)
@@ -3938,7 +3945,10 @@ merge_leaf_stats(VacAttrStatsP stats,
 		get_parts(stats->attr->attrelid, 0 /*level*/, 0 /*parent*/,
 				  false /* inctemplate */, true /*includesubparts*/);
 	Assert(pn);
-	elog(LOG, "Merging leaf partition stats to calculate root partition stats : column %s", get_attname(stats->attr->attrelid, stats->attr->attnum));
+	ereport(DEBUG2,
+			(errmsg("Merging leaf partition stats to calculate root partition stats : column %s",
+					get_attname(stats->attr->attrelid, stats->attr->attnum))));
+
 	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
 	StdAnalyzeData *mystats = (StdAnalyzeData *) stats->extra_data;
 	int numPartitions = list_length(oid_list);

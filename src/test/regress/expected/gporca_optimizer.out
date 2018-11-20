@@ -10657,7 +10657,6 @@ LOG:  2017-05-31 14:43:22:338568 PDT,THD000,NOTICE,"Feature not supported: CTAS.
 INFO:  GPORCA failed to produce a plan, falling back to planner
 DETAIL:  Feature not supported: CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA
 LOG:  Planner produced plan :0
-LOG:  Computing Scalar Stats : column a
 reset client_min_messages;
 reset log_min_duration_statement;
 reset log_statement;

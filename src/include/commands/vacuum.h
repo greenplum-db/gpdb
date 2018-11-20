@@ -84,6 +84,7 @@ typedef struct VacAttrStats
 	Form_pg_type attrtype;		/* copy of pg_type row for attrtypid */
 	char		relstorage;		/* pg_class.relstorage for table */
 	MemoryContext anl_context;	/* where to save long-lived data */
+	int16		elevel;			/* set to LOG for ANALYZE VERBOSE */
 
 	/*
 	 * These fields must be filled in by the typanalyze routine, unless it

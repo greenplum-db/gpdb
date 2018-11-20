@@ -1066,7 +1066,7 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
  *  split partitions.
  */
 bool
-leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
+leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols, int elevel)
 {
 	PartitionNode *pn = get_parts(attrelid,
 								  0 /* level */ ,
@@ -1113,9 +1113,13 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 			if (!HeapTupleIsValid(heaptupleStats) || relpages == 0)
 			{
 				if (relid_exclude == InvalidOid)
-					elog(LOG, "column %s of partition %s is not analyzed, so ANALYZE will collect sample for stats calculation", attname, get_rel_name(partRelid));
+					ereport(elevel,
+							(errmsg("column %s of partition %s is not analyzed, so ANALYZE will collect sample for stats calculation",
+									attname, get_rel_name(partRelid))));
 				else
-					elog(LOG, "Auto merging of leaf partition stats to calculate root partition stats is not possible because column %s of partition %s is not analyzed", attname, get_rel_name(partRelid));
+					ereport(elevel,
+							(errmsg("auto merging of leaf partition stats to calculate root partition stats is not possible because column %s of partition %s is not analyzed",
+									attname, get_rel_name(partRelid))));
 				return false;
 			}
 			heap_freetuple(heaptupleStats);

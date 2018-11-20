@@ -677,7 +677,11 @@ SET client_min_messages = 'log';
 -- the leaf partitions does not have any stats for it, yet
 ALTER TABLE foo ADD COLUMN c int;
 INSERT INTO foo SELECT i, i%9, i%100 FROM generate_series(1,500)i;
-ANALYZE rootpartition foo;
+-- start_matchsubs
+-- m/gp_acquire_sample_rows([^,]+, [^,]+, .+)/
+-- s/gp_acquire_sample_rows([^,]+, [^,]+, .+)/gp_acquire_sample_rows()/
+-- end_matchsubs
+ANALYZE VERBOSE rootpartition foo;
 -- Testing auto merging root statistics for all columns
 -- where column attnums are differents due to dropped columns
 -- and split partitions.
