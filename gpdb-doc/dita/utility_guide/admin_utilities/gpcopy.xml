@@ -162,13 +162,13 @@
                     <pt>--dest-dbname <varname>database</varname></pt>
                     <pd>To copy a database to a different destination database, specify the name of
                         the destination database. For multiple databases, specify a comma-separated
-                        list of databases with between the names. The number of database names must
-                        match the number of names specified in the <codeph>--dbname</codeph> option.
-                        The utility copies the source databases to the destination databases in the
-                        listed order. In this example, <codeph>db1</codeph> is copied to
-                            <codeph>destdb1</codeph>, <codeph>db2</codeph> is copied to
-                            <codeph>destdb2</codeph>, and <codeph>db3</codeph> is copied to
-                            <codeph>db3</codeph>.
+                        list of databases with no spaces between the names. The number of database
+                        names must match the number of names specified in the
+                            <codeph>--dbname</codeph> option. The utility copies the source
+                        databases to the destination databases in the listed order. In this example,
+                            <codeph>db1</codeph> is copied to <codeph>destdb1</codeph>,
+                            <codeph>db2</codeph> is copied to <codeph>destdb2</codeph>, and
+                            <codeph>db3</codeph> is copied to <codeph>db3</codeph>.
                         <codeblock>gpcopy --dest-host mdw-2 --dbname=db1,db2,db3 --dest-dbname=destdb1,destdb2,db3 --drop</codeblock></pd>
                     <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
                         error and quits. If a destination database does not exist a database is
