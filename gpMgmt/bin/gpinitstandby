@@ -338,6 +338,19 @@ def check_and_start_standby():
                            standby.port,
                            standby.dbid,
                            array.getNumSegmentContents())
+    # set synchronous_standby_names to '*'
+    cmd = gp.GpAddConfigScript('master',
+                               array.master.datadir,
+                               'synchronous_standby_names',
+                               value="'*'",
+                               removeonly=False,
+                               ctxt=gp.REMOTE,
+                               remoteHost=array.master.hostname,
+                               autoconf=True)
+    cmd.run(validateAfter=True)
+    # make it effective
+    pg.ReloadDbConf.local('pg_ctl reload', array.master)
+
     logger.info("Successfully started standby master")
 
 #-------------------------------------------------------------------------
