@@ -256,20 +256,11 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 (2 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-     coalesce      |        mode         | locktype |    node    
--------------------+---------------------+----------+------------
- partlockt_1_prt_8 | ShareLock           | relation | n segments
- partlockt_1_prt_4 | ShareLock           | relation | n segments
- partlockt_1_prt_5 | ShareLock           | relation | n segments
- partlockt_1_prt_3 | ShareLock           | relation | n segments
- partlockt_1_prt_1 | ShareLock           | relation | n segments
- partlockt_1_prt_2 | ShareLock           | relation | n segments
- partlockt_1_prt_9 | ShareLock           | relation | n segments
- partlockt_idx     | AccessExclusiveLock | relation | n segments
- partlockt_1_prt_7 | ShareLock           | relation | n segments
- partlockt         | ShareLock           | relation | n segments
- partlockt_1_prt_6 | ShareLock           | relation | n segments
-(11 rows)
+   coalesce    |        mode         | locktype |    node    
+---------------+---------------------+----------+------------
+ partlockt     | ShareLock           | relation | n segments
+ partlockt_idx | AccessExclusiveLock | relation | n segments
+(2 rows)
 
 commit;
 -- Force use of the index in the select and delete below. We're not interested

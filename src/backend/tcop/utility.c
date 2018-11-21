@@ -1517,8 +1517,9 @@ ProcessUtilitySlow(Node *parsetree,
 					 */
 					if (stmt->relationOid)
 						relid = stmt->relationOid;
-					relid =
-						RangeVarGetRelidExtended(stmt->relation, lockmode,
+					else
+						relid =
+							RangeVarGetRelidExtended(stmt->relation, lockmode,
 												 false, false,
 												 RangeVarCallbackOwnsRelation,
 												 NULL);
