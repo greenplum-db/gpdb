@@ -14540,15 +14540,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	Oid			tmprelid;
 	Oid			tarrelid = RelationGetRelid(rel);
 	char		tarrelstorage = rel->rd_rel->relstorage;
-	List	   *oid_map = NIL;
 	bool        rand_pol = false;
 	bool        rep_pol = false;
 	bool        force_reorg = false;
 	Datum		newOptions = PointerGetDatum(NULL);
 	bool		change_policy = false;
-	int         nattr; /* number of attributes */
 	int			numsegments;
-	bool				useExistingColumnAttributes = true;
 	SetDistributionCmd *qe_data = NULL; 
 	bool 				save_optimizer_replicated_table_insert;
 	Oid					relationOid = InvalidOid;
@@ -14605,7 +14602,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	{
 		if (lwith)
 		{
-			bool		 seen_reorg = false;
 			char		*reorg_str = "reorganize";
 			char		*reshuffle_str = "reshuffle";
 			List		*nlist = NIL;
@@ -14671,7 +14667,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			}
 			else if (pg_strcasecmp(reorg_str, def->defname) == 0)
 			{
-				seen_reorg = true;
 				if (!def->arg)
 					force_reorg = true;
 				else if (IsA(def->arg, String) && pg_strcasecmp("TRUE", strVal(def->arg)) == 0)
@@ -14990,7 +14985,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		queryDesc = build_ctas_with_dist(rel, ldistro,
 						untransformRelOptions(newOptions),
 						&tmprv,
-						useExistingColumnAttributes);
+						true);
 
 		/*
 		 * bypass gpmon info collecting in following ExecutorStart
@@ -15089,7 +15084,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 		backend_id = qe_data->backendId;
 		tmprv = make_temp_table_name(rel, backend_id);
-		oid_map = qe_data->indexOidMap;
 
 		newOptions = new_rel_opts(rel);
 	}
@@ -15121,7 +15115,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	 * the cache, we keep the lock though. ATRewriteCatalogs() knows
 	 * that we've closed the relation here.
 	 */
-	nattr = RelationGetNumberOfAttributes(rel);
 	heap_close(rel, NoLock);
 	rel = NULL;
 	tmprelid = RangeVarGetRelid(tmprv, NoLock, false);
@@ -15198,8 +15191,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	{
 		if (change_policy)
 			GpPolicyReplace(tarrelid, policy);
-
-		qe_data->indexOidMap = oid_map;
 
 		linitial(lprime) = lwith;
 		lsecond(lprime) = qe_data;

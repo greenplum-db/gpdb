@@ -2779,13 +2779,12 @@ _outAlterTableCmd(StringInfo str, const AlterTableCmd *node)
 }
 
 static void
-_outSetDistributionCmd(StringInfo str, const SetDistributionCmd*node)
+_outSetDistributionCmd(StringInfo str, const SetDistributionCmd *node)
 {
 	WRITE_NODE_TYPE("SETDISTRIBUTIONCMD");
 
 	WRITE_INT_FIELD(backendId);
 	WRITE_NODE_FIELD(relids);
-	WRITE_NODE_FIELD(indexOidMap);
 	WRITE_NODE_FIELD(hiddenTypes);
 }
 

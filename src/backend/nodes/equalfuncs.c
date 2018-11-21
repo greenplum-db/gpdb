@@ -1048,7 +1048,6 @@ _equalSetDistributionCmd(const SetDistributionCmd *a, const SetDistributionCmd *
 {
 	COMPARE_SCALAR_FIELD(backendId);
 	COMPARE_NODE_FIELD(relids);
-	COMPARE_NODE_FIELD(indexOidMap);
 	COMPARE_NODE_FIELD(hiddenTypes);
 
 	return true;

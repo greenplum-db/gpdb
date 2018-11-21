@@ -1033,7 +1033,6 @@ _readSetDistributionCmd(void)
 
 	READ_INT_FIELD(backendId);
 	READ_NODE_FIELD(relids);
-	READ_NODE_FIELD(indexOidMap);
 	READ_NODE_FIELD(hiddenTypes);
 
 	READ_DONE();
