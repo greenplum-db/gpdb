@@ -6,6 +6,12 @@
 -- m/ERROR:  multiple updates to a row by the same query is not allowed/
 -- s/ERROR:  multiple updates to a row by the same query is not allowed/ERROR:  cross-partition or multi-update to a row/
 
+-- m/ERROR:  relation not found .*/
+-- s/ERROR:  relation not found .*/ERROR:  cross-partition or multi-update to a row/
+
+-- m/DETAIL:  This can be validly caused by a concurrent delete operation on this object/
+-- s/.//gs
+
 -- end_matchsubs
 
 -- First create a bunch of test tables
