@@ -1524,6 +1524,23 @@ ProcessUtilitySlow(Node *parsetree,
 												 RangeVarCallbackOwnsRelation,
 												 NULL);
 
+					/*
+					 * For unnamed indexes, choose an index name that will be
+					 * used later when creating IndexStmts for the leaf
+					 * partitions in a partitioned table.
+					 */
+					if (stmt->idxname == NULL && rel_is_partitioned(relid))
+					{
+						Relation rel = heap_open(relid, NoLock);
+						stmt->idxname = ChooseIndexName(RelationGetRelationName(rel),
+														RelationGetNamespace(rel),
+														ChooseIndexColumnNames(stmt->indexParams),
+														stmt->excludeOpNames,
+														stmt->primary,
+														stmt->isconstraint);
+						heap_close(rel, NoLock);
+					}
+
 					/* Run parse analysis ... */
 					stmts = transformIndexStmt(relid, stmt, queryString);
 
