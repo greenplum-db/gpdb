@@ -14081,54 +14081,28 @@ build_ctas_with_dist(Relation rel, DistributedBy *dist_clause,
 }
 
 static Datum
-new_rel_opts(Relation rel, List *lwith)
+new_rel_opts(Relation rel)
 {
 	Datum newOptions = PointerGetDatum(NULL);
-	bool make_heap = false;
-	if (lwith && list_length(lwith))
-	{
-		ListCell *lc;
 
-		/*
-		 * See if user has specified appendonly = false. If so, we
-		 * have no use for the existing reloptions
-		 */
-		foreach(lc, lwith)
-		{
-			DefElem *e = lfirst(lc);
-			if (pg_strcasecmp(e->defname, "appendonly") == 0 &&
-				pg_strcasecmp(defGetString(e), "false") == 0)
-			{
-				make_heap = true;
-				break;
-			}
-		}
-	}
+	/* Get the old reloptions */
+	bool isnull;
+	Oid relid = RelationGetRelid(rel);
+	HeapTuple optsTuple;
 
-	if (!make_heap)
-	{
-		/* Get the old reloptions */
-		bool isnull;
-		Oid relid = RelationGetRelid(rel);
-		HeapTuple optsTuple;
+	optsTuple = SearchSysCache1(RELOID,
+								ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(optsTuple))
+		elog(ERROR, "cache lookup failed for relation %u", relid);
 
-		optsTuple = SearchSysCache1(RELOID,
-									ObjectIdGetDatum(relid));
-		if (!HeapTupleIsValid(optsTuple))
-				elog(ERROR, "cache lookup failed for relation %u", relid);
+	newOptions = SysCacheGetAttr(RELOID, optsTuple,
+								 Anum_pg_class_reloptions, &isnull);
 
-		newOptions = SysCacheGetAttr(RELOID, optsTuple,
-									 Anum_pg_class_reloptions, &isnull);
+	/* take a copy since we're using it after ReleaseSysCache() */
+	if (!isnull)
+		newOptions = datumCopy(newOptions, false, -1);
 
-		/* take a copy since we're using it after ReleaseSysCache() */
-		if (!isnull)
-			newOptions = datumCopy(newOptions, false, -1);
-
-		ReleaseSysCache(optsTuple);
-	}
-
-	/* Generate new proposed reloptions (text array) */
-	newOptions = transformRelOptions(newOptions, lwith, NULL, NULL, false, false);
+	ReleaseSysCache(optsTuple);
 
 	return newOptions;
 }
@@ -14572,9 +14546,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	bool        force_reorg = false;
 	Datum		newOptions = PointerGetDatum(NULL);
 	bool		change_policy = false;
-	bool		is_ao = false;
-	bool        is_aocs = false;
-	char        relstorage = RELSTORAGE_HEAP;
 	int         nattr; /* number of attributes */
 	int			numsegments;
 	bool				useExistingColumnAttributes = true;
@@ -14635,174 +14606,102 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (lwith)
 		{
 			bool		 seen_reorg = false;
-			ListCell	*lc;
 			char		*reorg_str = "reorganize";
 			char		*reshuffle_str = "reshuffle";
 			List		*nlist = NIL;
 
-			/* remove the "REORGANIZE=true/false" from the WITH clause */
-			foreach(lc, lwith)
-			{
-				DefElem	*def = lfirst(lc);
-
-				if (pg_strcasecmp(reshuffle_str, def->defname) == 0)
-				{
-					MemoryContext oldcontext;
-					GpPolicy *newPolicy;
-					PartStatus targetRelPartStatus;
-
-					if (NULL != lsecond(lprime))
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-										errmsg("Can not set Distribute By")));
-
-					/*
-					 * We generate a UpdateStmt when the relation is non-partition
-					 * table or root-partition table.
-					 */
-					targetRelPartStatus = rel_part_status(RelationGetRelid(rel));
-
-					if(PART_STATUS_LEAF == targetRelPartStatus ||
-					   PART_STATUS_NONE == targetRelPartStatus)
-					{
-						ReshuffleRelationData(rel);
-					}
-
-					/* Generate a new policy and adjust the numsegments */
-					policy = rel->rd_cdbpolicy;
-					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-					newPolicy = GpPolicyCopy(policy);
-					MemoryContextSwitchTo(oldcontext);
-
-					newPolicy->numsegments = getgpsegmentCount();
-
-					/* Update the numsegments in gp_distribution_policy */
-					GpPolicyReplace(RelationGetRelid(rel), newPolicy);
-					oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
-					rel->rd_cdbpolicy = GpPolicyCopy(newPolicy);
-					MemoryContextSwitchTo(oldcontext);
-					heap_close(rel, NoLock);
-
-					/*
-					 * Save the policy in the CMD, it would be dispatched in
-					 * next step.
-					 */
-					lsecond(lprime) = makeNode(SetDistributionCmd);
-					/*
-					 * Notice: reshuffle can not specify (Distribute By), so
-					 * we don't need to pass a policy info to segments like
-					 * lprime = lappend(lprime, newPolicy);
-					 */
-					goto l_distro_fini;
-				}
-				else if (pg_strcasecmp(reorg_str, def->defname) != 0)
-				{
-					/* MPP-7770: disable changing storage options for now */
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("option \"%s\" not supported",
-									def->defname)));
-
-					if (pg_strcasecmp(def->defname, "appendonly") == 0)
-					{
-						if (IsA(def->arg, String) && pg_strcasecmp(strVal(def->arg), "true") == 0)
-						{
-							is_ao = true;
-							relstorage = RELSTORAGE_AOROWS;
-						}
-						else
-							is_ao = false;
-					}
-					else if (pg_strcasecmp(def->defname, "orientation") == 0)
-					{
-						if (IsA(def->arg, String) && pg_strcasecmp(strVal(def->arg), "column") == 0)
-						{
-							is_aocs = true;
-							relstorage = RELSTORAGE_AOCOLS;
-						}
-						else
-						{
-							if (!IsA(def->arg, String) || pg_strcasecmp(strVal(def->arg), "row") != 0)
-								ereport(ERROR,
-										(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-										 errmsg("invalid orientation option"),
-										 errhint("Valid orientation options are \"column\" or \"row\".")));
-						}
-					}
-					else
-					{
-						useExistingColumnAttributes=false;
-					}
-
-					nlist = lappend(nlist, def);
-				}
-				else
-				{
-					/* have we been here before ? */
-					if (seen_reorg)
-						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-								 errmsg("\"%s\" specified more than once",
-								 		reorg_str)));
-
-					seen_reorg = true;
-					if (!def->arg)
-						force_reorg = true;
-					else
-					{
-						if (IsA(def->arg, String) && pg_strcasecmp("TRUE", strVal(def->arg)) == 0)
-							force_reorg = true;
-						else if (IsA(def->arg, String) && pg_strcasecmp("FALSE", strVal(def->arg)) == 0)
-							force_reorg = false;
-						else
-							ereport(ERROR,
-									(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-									 errmsg("Invalid REORGANIZE option"),
-									 errhint("Valid REORGANIZE options are \"true\" or \"false\".")));
-					}
-				}
-			}
-
-			if (is_aocs && !is_ao)
+			if (list_length(lwith) > 1)
 			{
 				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("specified orientation requires appendonly")));
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("with options at most one, reorg|reshuffle")));
+			}
+
+			DefElem	*def = linitial(lwith);
+			if (pg_strcasecmp(reshuffle_str, def->defname) == 0)
+			{
+				MemoryContext oldcontext;
+				GpPolicy *newPolicy;
+				PartStatus targetRelPartStatus;
+
+				if (NULL != lsecond(lprime))
+					ereport(ERROR,
+							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+							 errmsg("Can not set Distribute By")));
+
+				/*
+				 * We generate a UpdateStmt when the relation is non-partition
+				 * table or root-partition table.
+				 */
+				targetRelPartStatus = rel_part_status(RelationGetRelid(rel));
+
+				if(PART_STATUS_LEAF == targetRelPartStatus ||
+				   PART_STATUS_NONE == targetRelPartStatus)
+				{
+					ReshuffleRelationData(rel);
+				}
+
+				/* Generate a new policy and adjust the numsegments */
+				policy = rel->rd_cdbpolicy;
+				oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+				newPolicy = GpPolicyCopy(policy);
+				MemoryContextSwitchTo(oldcontext);
+
+				newPolicy->numsegments = getgpsegmentCount();
+
+				/* Update the numsegments in gp_distribution_policy */
+				GpPolicyReplace(RelationGetRelid(rel), newPolicy);
+				oldcontext = MemoryContextSwitchTo(GetMemoryChunkContext(rel));
+				rel->rd_cdbpolicy = GpPolicyCopy(newPolicy);
+				MemoryContextSwitchTo(oldcontext);
+				heap_close(rel, NoLock);
+
+				/*
+				 * Save the policy in the CMD, it would be dispatched in
+				 * next step.
+				 */
+				lsecond(lprime) = makeNode(SetDistributionCmd);
+				/*
+				 * Notice: reshuffle can not specify (Distribute By), so
+				 * we don't need to pass a policy info to segments like
+				 * lprime = lappend(lprime, newPolicy);
+				 */
+				goto l_distro_fini;
+
+			}
+			else if (pg_strcasecmp(reorg_str, def->defname) == 0)
+			{
+				seen_reorg = true;
+				if (!def->arg)
+					force_reorg = true;
+				else if (IsA(def->arg, String) && pg_strcasecmp("TRUE", strVal(def->arg)) == 0)
+					force_reorg = true;
+				else if (IsA(def->arg, String) && pg_strcasecmp("FALSE", strVal(def->arg)) == 0)
+					force_reorg = false;
+				else
+				{
+					ereport(ERROR,
+							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+							 errmsg("Invalid REORGANIZE option"),
+							 errhint("Valid REORGANIZE options are \"true\" or \"false\".")));
+				}
+			}
+			else
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("with options only support reorg|reshuffle")));
 			}
 
 			lwith = nlist;
-
-			/*
-			 * If there are other storage options, but REORGANIZE is not
-			 * specified, then the storage must be re-org'd.  But if REORGANIZE
-			 * was specified use that setting.
-			 *
-			 * If the user specified we not force a reorg but there are other
-			 * WITH clause items, then we cannot honour what the user has
-			 * requested.
-			 */
-			if (!seen_reorg && list_length(lwith))
-				force_reorg = true;
-			else if (seen_reorg && force_reorg == false && list_length(lwith))
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("%s must be set to true when changing storage type",
-						 		reorg_str)));
-
-			newOptions = new_rel_opts(rel, lwith);
-
-			/* ensure that the options parse */
-			if (newOptions)
-				(void) heap_reloptions(rel->rd_rel->relkind, newOptions, true);
 		}
-		else
-		{
-			newOptions = new_rel_opts(rel, NIL);
-		}
+
+		newOptions = new_rel_opts(rel);
 
 		if (ldistro)
 			change_policy = true;
 
+		/* abstract a macro or a function */
 		if (ldistro && ldistro->ptype == POLICYTYPE_PARTITIONED && ldistro->keys == NIL)
 		{
 			rand_pol = true;
@@ -15164,27 +15063,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 	{
 		int			backend_id;
 		bool		reorg = false;
-		ListCell   *lc;
-		DefElem    *def;
 
 		Assert(list_length(lprime) >= 2);
 
 		lwith = linitial(lprime);
 		qe_data = lsecond(lprime);
 		policy = lthird(lprime);
-
-		/* Remove "reorganize" since we don't want it in reloptions of pg_class */	
-		foreach(lc, lwith)
-		{
-			def = lfirst(lc);
-			if (pg_strcasecmp(def->defname, "reorganize") == 0)
-			{
-				if (pg_strcasecmp(strVal(def->arg), "true") == 0)
-					reorg = true;
-				lwith = list_delete(lwith, def);
-				break;
-			}
-		}
 
 		if (policy)
 			GpPolicyReplace(RelationGetRelid(rel), policy);
@@ -15207,28 +15091,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		tmprv = make_temp_table_name(rel, backend_id);
 		oid_map = qe_data->indexOidMap;
 
-		if (list_length(lprime) == 4)
-		{
-			Value *v = lfourth(lprime);
-			if (intVal(v) == 1)
-			{
-				is_ao = true;
-				relstorage = RELSTORAGE_AOROWS;
-			}
-			else if (intVal(v) == 2)
-			{
-				is_ao = true;
-				is_aocs = true;
-				relstorage = RELSTORAGE_AOCOLS;
-			}
-			else
-			{
-				is_ao = false;
-				relstorage = RELSTORAGE_HEAP;
-			}
-		}
-
-		newOptions = new_rel_opts(rel, lwith);
+		newOptions = new_rel_opts(rel);
 	}
 
 	/*
@@ -15341,7 +15204,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		linitial(lprime) = lwith;
 		lsecond(lprime) = qe_data;
 		lprime = lappend(lprime, policy);
-		lprime = lappend(lprime, makeInteger(is_ao ? (is_aocs ? 2 : 1) : 0));
 	}
 
 	/* Step (h) Drop the table */
