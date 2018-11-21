@@ -14610,7 +14610,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("with options at most one, reorg|reshuffle")));
+						 errmsg("not supported for more than one option in WITH clause")));
 			}
 
 			DefElem	*def = linitial(lwith);
@@ -14685,7 +14685,8 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("with options only support reorg|reshuffle")));
+						 errmsg("option \"%s\" not supported",
+								def->defname)));
 			}
 
 			lwith = nlist;
@@ -14696,7 +14697,6 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (ldistro)
 			change_policy = true;
 
-		/* abstract a macro or a function */
 		if (ldistro && ldistro->ptype == POLICYTYPE_PARTITIONED && ldistro->keys == NIL)
 		{
 			rand_pol = true;
