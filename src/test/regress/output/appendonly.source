@@ -746,8 +746,6 @@ select indexname from pg_indexes where tablename = 'ao' order by indexname;
 (4 rows)
 
 alter table ao alter j type bigint;
-ERROR:  cannot alter indexed column
-HINT:  DROP the index first, and recreate it after the ALTER
 alter table ao rename j to j_renamed;
 alter table ao drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'ao' order by attname, tablename;

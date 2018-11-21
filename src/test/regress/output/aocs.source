@@ -660,8 +660,6 @@ select indexname from pg_indexes where tablename = 'co' order by indexname;
 (4 rows)
 
 alter table co alter j type bigint;
-ERROR:  cannot alter indexed column
-HINT:  DROP the index first, and recreate it after the ALTER
 alter table co rename j to j_renamed;
 alter table co drop column j_renamed;
 select tablename, attname, avg_width, n_distinct from pg_stats where tablename = 'co' order by attname, tablename;
