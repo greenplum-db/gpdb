@@ -563,6 +563,75 @@ exchange partition for (integer '2') with table exchange_external_table without 
 
 select * from exchange_sub_partition;
 
+--
+-- ************************************************************
+-- * Scenario 11
+-- *  - Test unnamed index creation on all partitions for a
+-- *      single level partitioned table.
+-- *  - no default parts, no dropped columns
+-- ************************************************************
+--
+create table unnamed_index_part_table
+(
+  part_key int,
+  index_key int
+)
+partition by range(part_key)
+(
+  partition part1 end (3),
+  partition part2 start (3)
+);
+
+-- physical unnamed index on all parts
+-- output shows indexes created on all parts
+create index on unnamed_index_part_table(index_key);
+
+SELECT n.nspname as "Schema", c.relname as "Name", c.relkind, c2.relname as "Table"
+FROM pg_catalog.pg_class c
+     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+     LEFT JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid
+     LEFT JOIN pg_catalog.pg_class c2 ON i.indrelid = c2.oid
+WHERE c.relkind IN ('i','') AND c2.relname like 'unnamed_index_part_table%';
+
+--
+-- ************************************************************
+-- * Scenario 12
+-- * 	- unnamed indexes on multi-level partitions
+-- ************************************************************
+--
+create table unnamed_index_multi_part_table
+(
+  date date,
+  region text,
+  region1 text,
+  amount decimal(10,2)
+)
+partition by range(date)
+subpartition by list(region)
+(
+ partition part1 start(date '2008-01-01') end(date '2009-01-01')
+	(
+	subpartition usa	values ('usa'),
+	subpartition asia	values ('asia'),
+	default subpartition def
+	),
+ partition part2 start(date '2009-01-01') end(date '2010-01-01')
+	(
+	subpartition usa	values ('usa'),
+	subpartition asia	values ('asia')
+	)
+);
+
+-- create unnamed indexe (will be created on all parts/subparts)
+create index on unnamed_index_multi_part_table(date, amount);
+
+SELECT n.nspname as "Schema", c.relname as "Name", c.relkind, c2.relname as "Table"
+FROM pg_catalog.pg_class c
+     LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+     LEFT JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid
+     LEFT JOIN pg_catalog.pg_class c2 ON i.indrelid = c2.oid
+WHERE c.relkind IN ('i','') AND c2.relname like 'unnamed_index_multi_part_table%';
+
 -- cleanup
 drop function gp_build_logical_index(oid);
 drop function gp_get_physical_index_relid(oid, oid, int[], text, text, bool);
