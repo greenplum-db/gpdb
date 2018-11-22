@@ -14610,7 +14610,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						 errmsg("not supported for more than one option in WITH clause")));
+						 errmsg("cannot specify more than one option in WITH clause")));
 			}
 
 			DefElem	*def = linitial(lwith);
@@ -14620,10 +14620,10 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 				GpPolicy *newPolicy;
 				PartStatus targetRelPartStatus;
 
-				if (NULL != lsecond(lprime))
+				if (ldistro)
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("Can not set Distribute By")));
+							 errmsg("cannot use RESHUFFLE=true with SET DISTRIBUTED BY")));
 
 				/*
 				 * We generate a UpdateStmt when the relation is non-partition
