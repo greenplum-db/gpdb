@@ -2589,11 +2589,9 @@ def missingEntryQuery(max_content, catname, pkey, castedPkey):
           WHERE master.segid is null
              OR segids is null
              OR NOT segids @> (select array_agg(content::int4) from gp_segment_configuration WHERE content >= 0)
-          """.format(oidcasted_pk=','.join(castedPkey),
-                     primary_key=','.join(pkey),
+          """.format(primary_key=','.join(pkey),
                      catalog=catname,
-                     catalog_exclude=catalog_exclude,
-                     max_content=max_content)
+                     catalog_exclude=catalog_exclude)
 
     return qry
 
