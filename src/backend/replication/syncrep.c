@@ -101,6 +101,8 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	char	   *new_status = NULL;
 	const char *old_status;
 	int			mode = SyncRepWaitMode;
+	bool		syncStandbyPresent = false;
+	int			i = 0;
 
 	/*
 	 * SIGUSR1 is used to wake us up, cannot wait from inside SIGUSR1 handler
