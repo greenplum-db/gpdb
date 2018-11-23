@@ -8218,7 +8218,7 @@ get_coercion_expr(Node *arg, deparse_context *context,
 		((Const *) arg)->consttypmod == -1)
 	{
 		/* Show the constant without normal ::typename decoration */
-		get_const_expr((Const *) arg, context, false);
+		get_const_expr((Const *) arg, context, -1);
 	}
 	else
 	{
