@@ -2,7 +2,7 @@
 -- Test the resource group name convention.
 --
 -- Resource group names follow the general object name convention:
--- https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
+-- https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
 --
 -- Besides that there are 3 reserved names:
 -- * default_group, admin_group: names of the 2 default resource groups;

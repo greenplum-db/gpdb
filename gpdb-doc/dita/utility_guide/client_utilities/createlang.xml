@@ -30,7 +30,7 @@
       <p>The <codeph>PL/pgSQL</codeph> language is registered in all databases by default.</p>
       <p>Greenplum Database also has language handlers for <codeph>PL/Java</codeph> and
           <codeph>PL/R</codeph>, but those languages are not pre-installed with Greenplum Database.
-        See the <xref href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
+        See the <xref href="https://www.postgresql.org/docs/8.3/xplang.html" scope="external"
           format="html">Procedural Languages</xref> section in the PostgreSQL documentation for more
         information.</p>
     </section>

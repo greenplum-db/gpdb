@@ -27,7 +27,7 @@
         an argument to a user-defined function. See <xref href="#topic_ig2_1pc_qfb" format="dita"/>
         for more about the <i>anytable</i> pseudo-type.</p>
       <p>For more information about pseudo-types, see the Postgres documentation about <xref
-          href="https://www.postgresql.org/docs/8.3/static/datatype-pseudo.html" format="html"
+          href="https://www.postgresql.org/docs/8.3/datatype-pseudo.html" format="html"
           scope="external">Pseudo-Types</xref>.</p>
     </body>
     <topic id="topic_dbn_bpc_qfb">
@@ -75,7 +75,7 @@
           argument matching and determining the actual result type, such a function behaves the same
           as if you had declared the appropriate number of <i>anynonarray</i> parameters.</p>
         <p>For more information about polymorphic types, see the Postgres documentation about <xref
-            href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html#AEN41553" format="html"
+            href="https://www.postgresql.org/docs/8.3/xfunc-c.html#AEN41553" format="html"
             scope="external">Polymorphic Arguments and Return Types</xref>.</p>
       </body>
     </topic>

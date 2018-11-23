@@ -51,7 +51,7 @@
       <li>GIN indexes take about three times longer to build than GiST</li>
       <li>GIN indexes are moderately slower to update than GiST indexes, but about 10 times slower
         if fast-update support was disabled (see <xref
-          href="https://www.postgresql.org/docs/9.4/static/gin-implementation.html#GIN-FAST-UPDATE"
+          href="https://www.postgresql.org/docs/9.4/gin-implementation.html#GIN-FAST-UPDATE"
           format="html" scope="external">GIN Fast Update Technique</xref> in the PostgreSQL
         documentation for details)</li>
       <li>GIN indexes are two-to-three times larger than GiST indexes</li>

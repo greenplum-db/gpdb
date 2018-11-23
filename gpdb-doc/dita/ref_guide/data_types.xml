@@ -65,7 +65,7 @@
               <entry colname="col2"/>
               <entry colname="col3"><i>n</i> bits</entry>
               <entry colname="col4"><xref
-                  href="https://www.postgresql.org/docs/8.3/static/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
+                  href="https://www.postgresql.org/docs/8.3/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
                   scope="external" format="html">bit string constant</xref></entry>
               <entry colname="col5">fixed-length bit string</entry>
             </row>
@@ -75,7 +75,7 @@
               <entry colname="col2">varbit</entry>
               <entry colname="col3">actual number of bits</entry>
               <entry colname="col4"><xref
-                  href="https://www.postgresql.org/docs/8.3/static/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
+                  href="https://www.postgresql.org/docs/8.3/sql-syntax.html#SQL-SYNTAX-BIT-STRINGS"
                   scope="external" format="html">bit string constant</xref></entry>
               <entry colname="col5">variable-length bit string</entry>
             </row>
@@ -100,7 +100,7 @@
               <entry colname="col2"/>
               <entry colname="col3">1 byte + <i>binary string</i></entry>
               <entry colname="col4">sequence of <xref
-                  href="https://www.postgresql.org/docs/8.3/static/datatype-binary.html#DATATYPE-BINARY-SQLESC"
+                  href="https://www.postgresql.org/docs/8.3/datatype-binary.html#DATATYPE-BINARY-SQLESC"
                   scope="external" format="html"><ph>octets</ph></xref></entry>
               <entry colname="col5">variable-length binary string</entry>
             </row>

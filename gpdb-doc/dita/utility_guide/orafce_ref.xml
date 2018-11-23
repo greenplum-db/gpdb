@@ -490,7 +490,7 @@ FROM suppliers;</codeblock></li>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
         <p>PostgreSQL <codeph><xref
-              href="https://www.postgresql.org/docs/8.3/static/functions-binarystring.html"
+              href="https://www.postgresql.org/docs/8.3/functions-binarystring.html"
               scope="external" format="html" class="- topic/xref ">decode</xref></codeph> (not
           compatible with Oracle)</p>
       </section>
@@ -1125,7 +1125,7 @@ from clients;</codeblock>
           beginning with the second character.</p>
         <title class="- topic/title ">Compatibility</title>
         <p>PostgreSQL <codeph><xref
-              href="https://www.postgresql.org/docs/8.3/static/functions-string.html"
+              href="https://www.postgresql.org/docs/8.3/functions-string.html"
               scope="external" format="html" class="- topic/xref ">substr</xref></codeph> (not
           compatible with Oracle)</p>
       </section>
@@ -1295,7 +1295,7 @@ FROM ClientDB;</codeblock>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
         <p>PostgreSQL <codeph><xref
-              href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
+              href="https://www.postgresql.org/docs/8.3/functions-math.html" scope="external"
               format="html" class="- topic/xref ">round</xref></codeph> (not compatible with
           Oracle)</p>
       </section>
@@ -1487,7 +1487,7 @@ FROM ClientDB;</codeblock>
         <p>This command is compatible with Oracle syntax and is provided for convenience. </p>
         <title class="- topic/title ">See Also</title>
         <p>PostgreSQL <codeph><xref
-              href="https://www.postgresql.org/docs/8.3/static/functions-math.html" scope="external"
+              href="https://www.postgresql.org/docs/8.3/functions-math.html" scope="external"
               format="html" class="- topic/xref ">trunc</xref></codeph> (not compatible with
           Oracle)</p>
       </section>

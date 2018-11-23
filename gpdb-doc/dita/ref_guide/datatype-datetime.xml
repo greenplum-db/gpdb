@@ -9,11 +9,11 @@
    <p>Greenplum supports the full set of SQL date and time types, shown in <xref
       href="#topic_abq_gfk_qfb/datatype-datetime-table" format="dita"/>. The operations available on
      these data types are described in <xref
-      href="https://www.postgresql.org/docs/9.4/static/functions-datetime.html" format="html"
+      href="https://www.postgresql.org/docs/9.4/functions-datetime.html" format="html"
       scope="external">Date/Time Functions and Operators</xref> in the PostgreSQL documentation.
      Dates are counted according to the Gregorian calendar, even in years before that calendar was
      introduced (see <xref
-      href="https://www.postgresql.org/docs/9.4/static/datetime-units-history.html" format="html"
+      href="https://www.postgresql.org/docs/9.4/datetime-units-history.html" format="html"
       scope="external">History of Units</xref> in the PostgreSQL documentation for more
      information).</p>
 
@@ -160,7 +160,7 @@ MINUTE TO SECOND
      day-month-year interpretation, or <codeph>YMD</codeph> to select year-month-day interpretation.</p>
 
     <p>Greenplum is more flexible in handling date/time input than the SQL standard requires. See
-      <xref href="https://www.postgresql.org/docs/9.4/static/datetime-appendix.html" format="html"
+      <xref href="https://www.postgresql.org/docs/9.4/datetime-appendix.html" format="html"
       scope="external">Appendix B. Date/Time Support</xref> in the PostgreSQL documentation for the
      exact parsing rules of date/time input and for the recognized text fields including months,
      days of the week, and time zones.</p>
@@ -444,7 +444,7 @@ January 8 04:05:06 1999 PST
      from UTC to the current <varname>timezone</varname> zone, and displayed as local time in that
      zone. To see the time in another time zone, either change <varname>timezone</varname> or use
      the <codeph>AT TIME ZONE</codeph> construct (see <xref
-      href="https://www.postgresql.org/docs/9.4/static/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT"
+      href="https://www.postgresql.org/docs/9.4/functions-datetime.html#FUNCTIONS-DATETIME-ZONECONVERT"
       format="html" scope="external">AT TIME ZONE</xref> in the PostgreSQL documentation).</p>
 
      <p>Conversions between <codeph>timestamp without time zone</codeph> and
@@ -525,7 +525,7 @@ January 8 04:05:06 1999 PST
       <codeph>CURRENT_TIMESTAMP</codeph>, <codeph>LOCALTIME</codeph>,
       <codeph>LOCALTIMESTAMP</codeph>. The latter four accept an optional subsecond precision
      specification. (See <xref
-      href="https://www.postgresql.org/docs/9.4/static/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT"
+      href="https://www.postgresql.org/docs/9.4/functions-datetime.html#FUNCTIONS-DATETIME-CURRENT"
       format="html" scope="external">Current Date/Time</xref> in the PostgreSQL documentation.) Note
      that these are SQL functions and are <i>not</i> recognized in data input strings.</p>
 
@@ -627,7 +627,7 @@ January 8 04:05:06 1999 PST
      client.</p>
 
     <p>The formatting function <codeph>to_char</codeph> (see <xref
-      href="https://www.postgresql.org/docs/9.4/static/functions-formatting.html" format="html"
+      href="https://www.postgresql.org/docs/9.4/functions-formatting.html" format="html"
       scope="external">Data Type Formatting Functions</xref>) is also available as a more flexible
      way to format date/time output.</p>
    </section>

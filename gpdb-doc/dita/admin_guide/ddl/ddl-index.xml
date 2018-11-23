@@ -94,7 +94,7 @@ VACUUM ANALYZE old_table;
         are not supported. Each index type uses a different algorithm that is best suited to
         different types of queries. B-tree indexes fit the most common situations and are the
         default index type. See <xref
-          href="https://www.postgresql.org/docs/8.3/static/indexes-types.html" scope="external"
+          href="https://www.postgresql.org/docs/8.3/indexes-types.html" scope="external"
           format="html"><ph>Index Types</ph></xref> in the PostgreSQL documentation for a
         description of these types.</p>
       <note type="note">Greenplum Database allows unique indexes only if the columns of the index

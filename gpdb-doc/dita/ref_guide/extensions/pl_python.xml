@@ -176,7 +176,7 @@ SELECT * FROM composite_type_as_list();
  {{"(first,1)","(second,1)"},{"(first,2)","(second,2)"},{"(first,3)","(second,3)"}}
 (1 row) </codeblock>
         <p>Refer to the PostgreSQL <xref
-            href="https://www.postgresql.org/docs/devel/static/plpython-data.html#plpython-arrays"
+            href="https://www.postgresql.org/docs/devel/plpython-data.html#plpython-arrays"
             scope="external" format="html">Arrays, Lists</xref> documentation for additional
           information on PL/Python handling of arrays and composite types.</p>
       </body>
@@ -191,7 +191,7 @@ SELECT * FROM composite_type_as_list();
           run the query from multiple Python functions.</p>
         <p>PL/Python also supports the <codeph>plpy.subtransaction()</codeph> function to help
           manage <codeph>plpy.execute</codeph> calls in an explicit subtransaction. See <xref
-            href="https://www.postgresql.org/docs/9.1/static/plpython-subtransaction.html"
+            href="https://www.postgresql.org/docs/9.1/plpython-subtransaction.html"
             format="html" scope="external">Explicit Subtransactions</xref> in the PostgreSQL
           documentation for additional information about <codeph>plpy.subtransaction()</codeph>.</p>
       </body>
@@ -237,8 +237,8 @@ SELECT * FROM composite_type_as_list();
           <p>When you prepare an execution plan using the PL/Python module the plan is automatically
             saved. See the Postgres Server Programming Interface (SPI) documentation for information
             about the execution plans <xref
-              href="https://www.postgresql.org/docs/8.3/static/spi.html" scope="external"
-              format="html">https://www.postgresql.org/docs/8.3/static/spi.html</xref>.</p>
+              href="https://www.postgresql.org/docs/8.3/spi.html" scope="external"
+              format="html">https://www.postgresql.org/docs/8.3/spi.html</xref>.</p>
           <p>To make effective use of saved plans across function calls you use one of the Python
             persistent storage dictionaries SD or GD. </p>
           <p>The global dictionary SD is available to store data between function calls. This
@@ -558,8 +558,8 @@ $$ language plpythonu;</codeblock>
         <p>For information about the Python language, see <xref href="https://www.python.org/"
             scope="external" format="html">https://www.python.org/</xref>.</p>
         <p>For information about PL/Python see the PostgreSQL documentation at <xref
-            href="https://www.postgresql.org/docs/8.3/static/plpython.html" scope="external"
-            format="html">https://www.postgresql.org/docs/8.3/static/plpython.html</xref>. </p>
+            href="https://www.postgresql.org/docs/8.3/plpython.html" scope="external"
+            format="html">https://www.postgresql.org/docs/8.3/plpython.html</xref>. </p>
         <p>For information about Python Package Index (PyPI), see <xref
             href="https://pypi.python.org/pypi" format="html" scope="external"
             >https://pypi.python.org/pypi</xref>.</p>

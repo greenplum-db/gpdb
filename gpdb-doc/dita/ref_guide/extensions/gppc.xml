@@ -61,7 +61,7 @@
     <title id="py21716799">Using the GPPC API</title>
     <body>
       <p>The GPPC API shares some concepts with C language functions as defined
-        by PostgreSQL. Refer to <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html" format="html" scope="external">C-Language Functions</xref>
+        by PostgreSQL. Refer to <xref href="https://www.postgresql.org/docs/8.3/xfunc-c.html" format="html" scope="external">C-Language Functions</xref>
         in the PostgreSQL documentation for detailed information about developing
         C language functions.</p>
       <p>The GPPC API is a wrapper that makes a C/C++ function SQL-invokable
@@ -611,7 +611,7 @@ GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));</cod
         <p>The Greenplum Database Server Programming Interface (SPI) provides
           writers of C/C++ functions the ability to run SQL commands within a
           GPPC function. For additional information on SPI functions, refer to
-           <xref href="https://www.postgresql.org/docs/8.3/static/spi.html"
+           <xref href="https://www.postgresql.org/docs/8.3/spi.html"
              scope="external"
              format="html">Server Programming Interface</xref>
             in the PostgreSQL documentation.</p>
@@ -1060,7 +1060,7 @@ ntuple = GppcAnyTableGetNextTuple(intbl);</codeblock></p>
         <p>To use the PGXS infrastructure to generate a shared library for
           functions that you create with the GPPC API, create a simple
           <codeph>Makefile</codeph> that sets PGXS-specific variables.</p>
-        <note>Refer to <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html#XFUNC-C-PGXS" format="html" scope="external">Extension Building Infrastructure</xref>
+        <note>Refer to <xref href="https://www.postgresql.org/docs/8.3/xfunc-c.html#XFUNC-C-PGXS" format="html" scope="external">Extension Building Infrastructure</xref>
           in the PostgreSQL documentation for information about the
           <codeph>Makefile</codeph> variables supported by PGXS.</note>
         <p>For example, the following <codeph>Makefile</codeph> generates

@@ -322,7 +322,7 @@ doing the actual work as a series of small, self-contained commits. This makes
 the reviewer's job much easier and increases the timeliness of feedback.
 
 When it comes to C and C++ parts of Greenplum, we try to follow
-[PostgreSQL Coding Conventions](https://www.postgresql.org/docs/devel/static/source.html).
+[PostgreSQL Coding Conventions](https://www.postgresql.org/docs/devel/source.html).
 In addition to that we require that:
    * All Python code passes [Pylint](https://www.pylint.org/)
    * All Go code is formatted according to [gofmt](https://golang.org/cmd/gofmt/)

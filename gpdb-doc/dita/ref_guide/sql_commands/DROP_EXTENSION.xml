@@ -43,7 +43,7 @@
           <pd>
             <p>Automatically drop objects that depend on the extension, and in turn all objects that
               depend on those objects. See the PostgreSQL information about <xref
-                href="https://www.postgresql.org/docs/9.6/static/ddl-depend.html" format="html"
+                href="https://www.postgresql.org/docs/9.6/ddl-depend.html" format="html"
                 scope="external">Dependency Tracking</xref>.</p>
           </pd>
         </plentry>

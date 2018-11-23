@@ -452,7 +452,7 @@ SELECT xmlelement(name test, xmlattributes(func(a, b))) FROM test;</codeblock></
           <codeph>&amp;</codeph> will be converted to entities. Binary data (data type
           <codeph>bytea</codeph>) will be represented in base64 or hex encoding, depending on the
         setting of the configuration parameter <xref
-          href="https://www.postgresql.org/docs/9.1/static/runtime-config-client.html#GUC-XMLBINARY"
+          href="https://www.postgresql.org/docs/9.1/runtime-config-client.html#GUC-XMLBINARY"
           format="html" scope="external">xmlbinary</xref>. The particular behavior for individual
         data types is expected to evolve in order to align the SQL and Greenplum Database data types
         with the XML schema specification, at which point a more precise description will

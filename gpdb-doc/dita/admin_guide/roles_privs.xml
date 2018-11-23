@@ -446,7 +446,7 @@
         want the ability to query other
         databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></p>
       <p>See <xref
-          href="https://www.postgresql.org/docs/8.3/static/pgcrypto.html"
+          href="https://www.postgresql.org/docs/8.3/pgcrypto.html"
           format="html" scope="external">pgcrypto</xref> in the PostgreSQL documentation for more
         information about individual functions.</p>
     </body>

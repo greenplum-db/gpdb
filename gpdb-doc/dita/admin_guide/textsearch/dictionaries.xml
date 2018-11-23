@@ -94,7 +94,7 @@
         partially normalize words to simplify the task of later dictionaries.
         For example, a filtering dictionary could be used to remove accents from
         accented letters, as is done by the <xref
-          href="https://www.postgresql.org/docs/9.4/static/unaccent.html"
+          href="https://www.postgresql.org/docs/9.4/unaccent.html"
           format="html" scope="external">unaccent</xref> module.</p>
     </section>
     <section id="stop-words">

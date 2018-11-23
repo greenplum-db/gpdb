@@ -605,7 +605,7 @@ sdw3-2</codeblock><p>Check
         <p>See <xref href="../utility_guide/dblink.html" format="dita" scope="peer" type="topic"
             >dblink Functions</xref> for basic information about using <codeph>dblink</codeph> to
           query other databases. See <xref
-            href="https://www.postgresql.org/docs/8.3/static/dblink.html" format="html"
+            href="https://www.postgresql.org/docs/8.3/dblink.html" format="html"
             scope="external">dblink</xref> in the PostgreSQL documentation for more information
           about individual functions.</p>
       </body>
@@ -627,7 +627,7 @@ sdw3-2</codeblock><p>Check
               <codeph>$GPHOME/share/postgresql/contrib/pgcrypto.sql</codeph> in each database where
             you want the ability to query other
             databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/pgcrypto.sql</codeblock></p><p>See
-              <xref href="https://www.postgresql.org/docs/8.3/static/pgcrypto.html" format="html"
+              <xref href="https://www.postgresql.org/docs/8.3/pgcrypto.html" format="html"
               scope="external">pgcrypto</xref> in the PostgreSQL documentation for more information
             about individual functions.</p></note>
       </body>

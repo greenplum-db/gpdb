@@ -63,16 +63,16 @@
       Database, see the following sections of the PostgreSQL documentation:</p>
     <ul id="ul_c5v_3bd_xp">
       <li>
-        <xref href="https://www.postgresql.org/docs/8.3/static/views-overview.html" scope="external"
+        <xref href="https://www.postgresql.org/docs/8.3/views-overview.html" scope="external"
           format="html">System Views</xref>
       </li>
       <li>
         <xref
-          href="https://www.postgresql.org/docs/8.3/static/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE"
+          href="https://www.postgresql.org/docs/8.3/monitoring-stats.html#MONITORING-STATS-VIEWS-TABLE"
           scope="external" format="html">Statistics Collector Views</xref>
       </li>
       <li>
-        <xref href="https://www.postgresql.org/docs/8.3/static/information-schema.html"
+        <xref href="https://www.postgresql.org/docs/8.3/information-schema.html"
           scope="external" format="html">The Information Schema</xref>
       </li>
     </ul>

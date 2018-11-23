@@ -32,8 +32,8 @@
         Database SQL. </p>
       <p>The PL/pgSQL language is a subset of Oracle PL/SQL. Greenplum Database PL/pgSQL is based on
         Postgres PL/pgSQL. The Postgres PL/pgSQL documentation is at <xref
-          href="https://www.postgresql.org/docs/9.4/static/plpgsql.html" scope="external"
-          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql.html</xref></p>
+          href="https://www.postgresql.org/docs/9.4/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/plpgsql.html</xref></p>
       <p>When using PL/pgSQL functions, function attributes affect how Greenplum Database creates
         query plans. You can specify the attribute <codeph>IMMUTABLE</codeph>,
           <codeph>STABLE</codeph>, or <codeph>VOLATILE</codeph> as part of the
@@ -89,9 +89,9 @@ END [ label ];</codeblock>
           clause effectively forms a subtransaction that can be rolled back without affecting the
           outer transaction. For more about the <codeph>EXCEPTION</codeph> clause, see the
           PostgreSQL documentation on trapping errors at <xref
-            href="https://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
+            href="https://www.postgresql.org/docs/9.4/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING"
             scope="external" format="html"
-            >https://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
+            >https://www.postgresql.org/docs/9.4/plpgsql-control-structures.html#PLPGSQL-ERROR-TRAPPING</xref>. </note>
         <p>Keywords are case-insensitive. Identifiers
           are implicitly converted to lowercase unless double-quoted, just as they
           are in ordinary SQL commands.</p>
@@ -135,9 +135,9 @@ $$ LANGUAGE plpgsql;</codeblock>
           <p>You can execute SQL commands with PL/pgSQL statements such as <codeph>EXECUTE</codeph>,
               <codeph>PERFORM</codeph>, and <codeph>SELECT ... INTO</codeph>. For information about
             the PL/pgSQL statements, see <xref
-              href="https://www.postgresql.org/docs/9.4/static/plpgsql-statements.html"
+              href="https://www.postgresql.org/docs/9.4/plpgsql-statements.html"
               scope="external" format="html"
-              >https://www.postgresql.org/docs/9.4/static/plpgsql-statements.html</xref>. </p>
+              >https://www.postgresql.org/docs/9.4/plpgsql-statements.html</xref>. </p>
           <note type="note">The PL/pgSQL statement <codeph>SELECT INTO</codeph> is not supported in
             the <codeph>EXECUTE</codeph> statement. </note>
         </body>
@@ -153,7 +153,7 @@ $$ LANGUAGE plpgsql;</codeblock>
         <p>Greenplum Database will automatically re-plan a saved query plan if there is any schema change to any relation used in the query, or if any user-defined function used in the query is redefined. This makes the re-use of a prepared plan transparent in most cases.</p>
         <p>The SQL commands that you use in a PL/pgSQL function must refer to the same tables and columns on every execution. You cannot use a parameter as the name of a table or a column in an SQL command.</p>
         <p>PL/pgSQL caches a separate query plan for each combination of actual argument types in which you invoke a polymorphic function to ensure that data type differences do not cause unexpected failures.</p>
-        <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.0/static/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" scope="external" format="html">Plan Caching</xref> documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.</p>
+        <p>Refer to the PostgreSQL <xref href="https://www.postgresql.org/docs/9.0/plpgsql-implementation.html#PLPGSQL-PLAN-CACHING" scope="external" format="html">Plan Caching</xref> documentation for a detailed discussion of plan caching considerations in the PL/pgSQL language.</p>
     </body>
   </topic>
   <topic id="topic6" xml:lang="en">
@@ -409,8 +409,8 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
     <title id="pt214450">References</title>
     <body>
       <p>The PostgreSQL documentation about PL/pgSQL is at <xref
-          href="https://www.postgresql.org/docs/9.4/static/plpgsql.html" scope="external"
-          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql.html</xref></p>
+          href="https://www.postgresql.org/docs/9.4/plpgsql.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/plpgsql.html</xref></p>
       <p>Also, see the <codeph><xref href="../sql_commands/CREATE_FUNCTION.xml#topic1"/></codeph>
         command in the <cite>Greenplum Database Reference Guide</cite>.</p>
       <p>For a summary of built-in Greenplum Database functions, see <xref
@@ -418,8 +418,8 @@ END $$ LANGUAGE plpgsql ;</codeblock></p>
           Guide</cite>. For information about using Greenplum Database functions see "Querying Data"
         in the <cite>Greenplum Database Administrator Guide</cite></p>
       <p>For information about porting Oracle functions, see <xref
-          href="https://www.postgresql.org/docs/9.4/static/plpgsql-porting.html" scope="external"
-          format="html">https://www.postgresql.org/docs/9.4/static/plpgsql-porting.html</xref>. For
+          href="https://www.postgresql.org/docs/9.4/plpgsql-porting.html" scope="external"
+          format="html">https://www.postgresql.org/docs/9.4/plpgsql-porting.html</xref>. For
         information about installing and using the Oracle compatibility functions with Greenplum
         Database, see "Oracle Compatibility Functions" in the <cite>Greenplum Database Utility
           Guide</cite>.</p>

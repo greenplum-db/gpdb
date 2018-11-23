@@ -99,7 +99,7 @@ wraparound data loss in database "database_name"
           <p>For information about the configuration parameters, see the <i>Greenplum Database
               Reference Guide</i>. </p>
           <p>For information about transaction ID wraparound see the <xref
-              href="https://www.postgresql.org/docs/8.3/static/index.html" scope="external"
+              href="https://www.postgresql.org/docs/8.3/index.html" scope="external"
               format="html"><ph>PostgreSQL documentation</ph></xref>.</p>
         </section>
       </body>

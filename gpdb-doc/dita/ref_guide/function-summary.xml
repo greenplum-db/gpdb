@@ -112,7 +112,7 @@ SELECT foo();
         PostgreSQL. All functions and operators are supported in Greenplum Database as in PostgreSQL
         with the exception of <codeph>STABLE</codeph> and <codeph>VOLATILE</codeph> functions, which
         are subject to the restrictions noted in <xref href="#topic27" format="dita"/>. See the
-          <xref format="html" href="https://www.postgresql.org/docs/9.4/static/functions.html"
+          <xref format="html" href="https://www.postgresql.org/docs/9.4/functions.html"
           scope="external">Functions and Operators</xref> section of the PostgreSQL documentation
         for more information about these built-in functions and operators.</p>
       <table id="in204913">
@@ -134,7 +134,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-logical.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-logical.html"
                   scope="external">Logical Operators</xref>
               </entry>
               <entry colname="col2"/>
@@ -144,7 +144,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-comparison.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-comparison.html"
                   scope="external">Comparison Operators</xref>
               </entry>
               <entry colname="col2"/>
@@ -154,7 +154,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-math.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-math.html"
                   scope="external">
                   <ph>Mathematical Functions and Operators</ph>
                 </xref>
@@ -166,7 +166,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-string.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-string.html"
                   scope="external">
                   <ph>String Functions and Operators</ph>
                 </xref>
@@ -180,7 +180,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-binarystring.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-binarystring.html"
                   scope="external">
                   <ph>Binary String Functions and Operators</ph>
                 </xref>
@@ -192,7 +192,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-bitstring.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-bitstring.html"
                   scope="external">
                   <ph>Bit String Functions and Operators</ph>
                 </xref>
@@ -204,7 +204,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-matching.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-matching.html"
                   scope="external">
                   <ph>Pattern Matching</ph>
                 </xref>
@@ -216,7 +216,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-formatting.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-formatting.html"
                   scope="external">
                   <ph>Data Type Formatting Functions</ph>
                 </xref>
@@ -228,7 +228,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-datetime.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-datetime.html"
                   scope="external">
                   <ph>Date/Time Functions and Operators</ph>
                 </xref>
@@ -241,7 +241,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-enum.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-enum.html"
                   scope="external"> Enum Support Functions </xref>
               </entry>
               <entry colname="col2"/>
@@ -251,7 +251,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-geometry.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-geometry.html"
                   scope="external">
                   <ph>Geometric Functions and Operators</ph>
                 </xref>
@@ -263,7 +263,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-net.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-net.html"
                   scope="external">
                   <ph>Network Address Functions and Operators</ph>
                 </xref>
@@ -275,7 +275,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-sequence.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-sequence.html"
                   scope="external">
                   <ph>Sequence Manipulation Functions</ph>
                 </xref>
@@ -287,7 +287,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-conditional.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-conditional.html"
                   scope="external">
                   <ph>Conditional Expressions</ph>
                 </xref>
@@ -299,7 +299,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-array.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-array.html"
                   scope="external">
                   <ph>Array Functions and Operators</ph>
                 </xref>
@@ -313,7 +313,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-aggregate.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-aggregate.html"
                   scope="external">
                   <ph>Aggregate Functions</ph>
                 </xref>
@@ -325,7 +325,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-subquery.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-subquery.html"
                   scope="external">
                   <ph>Subquery Expressions</ph>
                 </xref>
@@ -337,7 +337,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-comparisons.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-comparisons.html"
                   scope="external">
                   <ph>Row and Array Comparisons</ph>
                 </xref>
@@ -349,7 +349,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-srf.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-srf.html"
                   scope="external">
                   <ph>Set Returning Functions</ph>
                 </xref>
@@ -361,7 +361,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-info.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-info.html"
                   scope="external">
                   <ph>System Information Functions</ph>
                 </xref>
@@ -385,7 +385,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/functions-admin.html"
+                  href="https://www.postgresql.org/docs/9.4/functions-admin.html"
                   scope="external">
                   <ph>System Administration Functions</ph>
                 </xref>
@@ -400,7 +400,7 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.1/static/functions-xml.html"
+                  href="https://www.postgresql.org/docs/9.1/functions-xml.html"
                   scope="external">XML Functions</xref> and function-like expressions </entry>
               <entry colname="col2"/>
               <entry colname="col3">
@@ -1151,7 +1151,7 @@ SELECT sum(myvalue) FROM mymatrix;
               </entry>
               <entry colname="col4">Transforms a one dimensional array into rows. Returns a set of
                   <codeph>anyelement</codeph>, a polymorphic <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/static/datatype-pseudo.html"
+                  href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html"
                   scope="external"><ph>pseudotype in PostgreSQL</ph></xref>.</entry>
             </row>
           </tbody>

@@ -36,7 +36,7 @@
                 function. Use <codeph>CREATE OR REPLACE FUNCTION</codeph> to change a function
                 definition without breaking objects that refer to the function.</p><p>For more
                 information about creating functions, see the <xref
-                    href="https://www.postgresql.org/docs/8.3/static/xfunc.html" scope="external"
+                    href="https://www.postgresql.org/docs/8.3/xfunc.html" scope="external"
                     format="html">User Defined Functions</xref> section of the PostgreSQL
                 documentation.</p><sectiondiv id="section4"><b>Limited Use of VOLATILE and STABLE Functions</b><p>To prevent data from
                     becoming out-of-sync across the segments in Greenplum Database, any function
@@ -250,7 +250,7 @@ SELECT foo();</codeblock><p>In
                     <pt>COST <varname>execution_cost</varname></pt>
                     <pd>A positive number identifying the estimated execution cost for the function,
                         in <xref
-                            href="https://www.postgresql.org/docs/8.3/static/runtime-config-query.html#GUC-CPU-OPERATOR-COST"
+                            href="https://www.postgresql.org/docs/8.3/runtime-config-query.html#GUC-CPU-OPERATOR-COST"
                             scope="external" format="html">cpu_operator_cost</xref> units. If the
                         function returns a set, <varname>execution_cost</varname> identifies the
                         cost per returned row. If the cost is not specified, C-language and internal

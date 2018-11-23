@@ -85,7 +85,7 @@ and <varname>aggregate_signature</varname> is:
           </pd>
         </plentry>
       </parml>
-      <p>See <xref href="https://www.postgresql.org/docs/9.6/static/extend-extensions.html"
+      <p>See <xref href="https://www.postgresql.org/docs/9.6/extend-extensions.html"
           format="html" scope="external">Packaging Related Objects into an Extension</xref> for more
         information about these operations. </p>
       <p>You must own the extension to use <codeph>ALTER EXTENSION</codeph>. The

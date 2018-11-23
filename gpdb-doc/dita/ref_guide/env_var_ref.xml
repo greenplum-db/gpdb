@@ -145,7 +145,7 @@ export MASTER_DATA_DIRECTORY</codeblock>
             <body class="- topic/body ">
                 <p>The name of the password file to use for lookups. If not set, it defaults to
                         <codeph class="+ topic/ph pr-d/codeph ">~/.pgpass</codeph>. See the topic
-                    about <xref href="https://www.postgresql.org/docs/8.3/static/libpq-pgpass.html"
+                    about <xref href="https://www.postgresql.org/docs/8.3/libpq-pgpass.html"
                         scope="external" format="html" class="- topic/xref ">The Password File</xref> in the PostgreSQL documentation for more
                     information.</p>
             </body>

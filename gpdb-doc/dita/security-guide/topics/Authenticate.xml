@@ -26,7 +26,7 @@
       <p>Client access and authentication is controlled by a configuration file named
           <codeph>pg_hba.conf</codeph> (the standard PostgreSQL host-based authentication file). For
         detailed information about this file, see <xref
-          href="https://www.postgresql.org/docs/9.1/static/auth-pg-hba-conf.html" format="html"
+          href="https://www.postgresql.org/docs/9.1/auth-pg-hba-conf.html" format="html"
           scope="external">The pg_hba.conf File</xref> in the PostgreSQL documentation. </p>
       <p>In Greenplum Database, the <codeph>pg_hba.conf</codeph> file of the master instance
         controls client access and authentication to your Greenplum system. The segments also have

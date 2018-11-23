@@ -37,7 +37,7 @@ CREATE [TRUSTED] [PROCEDURAL] LANGUAGE <varname>name</varname>
                 Greenplum Database distribution: PL/pgSQL, PL/Perl, and PL/Python. Language handlers
                 have also been added for PL/Java and PL/R, but those languages are not pre-installed
                 with Greenplum Database. See the topic on <xref
-                    href="https://www.postgresql.org/docs/8.3/static/xplang.html" scope="external"
+                    href="https://www.postgresql.org/docs/8.3/xplang.html" scope="external"
                     format="html">Procedural Languages</xref> in the PostgreSQL documentation for
                 more information on developing functions using these procedural languages.</p>
             <p>The PL/Perl, PL/Java, and PL/R libraries require the correct versions of Perl, Java,

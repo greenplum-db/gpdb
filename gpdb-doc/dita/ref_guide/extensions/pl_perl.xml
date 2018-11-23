@@ -29,7 +29,7 @@
                 functions. PL/Perl provides both trusted and untrusted variants of the language. </p>
             <p> PL/Perl is embedded in your Greenplum Database distribution. Greenplum Database
                 PL/Perl requires Perl to be installed on the system of each database host. </p>
-            <p> Refer to the <xref href="https://www.postgresql.org/docs/9.1/static/plperl.html"
+            <p> Refer to the <xref href="https://www.postgresql.org/docs/9.1/plperl.html"
                     scope="external" format="html"> PostgreSQL PL/Perl documentation </xref> for
                 additional information. </p>
         </body>
@@ -77,7 +77,7 @@
                 user-defined functions. </p>
             <p> PL/Perl has limitations with respect to communication between interpreters and the
                 number of interpreters running in a single process. Refer to the PostgreSQL <xref
-                    href="https://www.postgresql.org/docs/9.1/static/plperl-trusted.html"
+                    href="https://www.postgresql.org/docs/9.1/plperl-trusted.html"
                     scope="external" format="html">Trusted and Untrusted PL/Perl</xref>
                 documentation for additional information. </p>
         </body>
@@ -202,7 +202,7 @@ SELECT perl_max( 1, null );
                 statements accept any string that is an acceptable input format for the function's
                 declared return type. </p>
             <p> Refer to the PostgreSQL <xref
-                    href="https://www.postgresql.org/docs/9.1/static/plperl-funcs.html"
+                    href="https://www.postgresql.org/docs/9.1/plperl-funcs.html"
                     scope="external" format="html">PL/Perl Functions and Arguments</xref>
                 documentation for additional information, including composite type and result set
                 manipulation. </p>
@@ -262,7 +262,7 @@ SELECT return_match( 'iff' );
 (1 row)
 </codeblock>
                 <p> Refer to the PostgreSQL PL/Perl <xref
-                        href="https://www.postgresql.org/docs/9.1/static/plperl-builtins.html"
+                        href="https://www.postgresql.org/docs/9.1/plperl-builtins.html"
                         scope="external" format="html">Built-in Functions</xref> documentation for a
                     detailed discussion of available functions. </p>
             </body>

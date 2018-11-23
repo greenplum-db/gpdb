@@ -690,7 +690,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           rolled back.</li>
         <li><codeph>plpy.subtransaction()</codeph> - Manages <codeph>plpy.execute</codeph> calls in
           an explicit subtransaction. See <xref
-            href="https://www.postgresql.org/docs/9.1/static/plpython-subtransaction.html"
+            href="https://www.postgresql.org/docs/9.1/plpython-subtransaction.html"
             format="html" scope="external">Explicit Subtransactions</xref> in the PostgreSQL
           documentation for additional information about
           <codeph>plpy.subtransaction()</codeph>.</li>
@@ -730,8 +730,8 @@ $$ LANGUAGE plcontainer;</codeblock></p>
         related containers would be shut down and the data from GD and SD lost.</p>
       <p>For information about PL/Python, see <xref href="pl_python.xml#topic1"/>. </p>
       <p>For information about the <codeph>plpy</codeph> methods, see <xref
-          href="https://www.postgresql.org/docs/8.4/static/plpython-database.html" format="html"
-          scope="external">https://www.postgresql.org/docs/8.4/static/plpython-database.htm</xref>.
+          href="https://www.postgresql.org/docs/8.4/plpython-database.html" format="html"
+          scope="external">https://www.postgresql.org/docs/8.4/plpython-database.htm</xref>.
       </p>
     </body>
   </topic>
