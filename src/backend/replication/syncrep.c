@@ -125,6 +125,43 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	LWLockAcquire(SyncRepLock, LW_EXCLUSIVE);
 	Assert(MyProc->syncRepState == SYNC_REP_NOT_WAITING);
 
+	if (IS_QUERY_DISPATCHER())
+	{
+		/*
+		 * There could be a better way to figure out if there is any active
+		 * standby.  But currently, let's move ahead by looking at the per WAL
+		 * sender structure to see if anyone is really active, streaming (or
+		 * still catching up within limits) and wants to be synchronous.
+		 */
+		for (i = 0; i < max_wal_senders; i++)
+		{
+			/* use volatile pointer to prevent code rearrangement */
+			volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
+
+			SpinLockAcquire(&walsnd->mutex);
+			syncStandbyPresent = (walsnd->pid != 0)
+				&& (walsnd->synchronous)
+				&& ((walsnd->state == WALSNDSTATE_STREAMING)
+					|| (walsnd->state == WALSNDSTATE_CATCHUP &&
+						walsnd->caughtup_within_range));
+			SpinLockRelease(&walsnd->mutex);
+
+			if (syncStandbyPresent)
+				break;
+		}
+
+		/* See if we found any active standby connected. If NO, no need to wait.*/
+		if (!syncStandbyPresent)
+		{
+			elogif(debug_walrepl_syncrep, LOG,
+					"syncrep wait -- Not waiting for syncrep because no active and synchronous "
+					"standby (walsender) was found.");
+
+			LWLockRelease(SyncRepLock);
+			return;
+		}
+	}
+
 	/*
 	 * We don't wait for sync rep if WalSndCtl->sync_standbys_defined is not
 	 * set.  See SyncRepUpdateSyncStandbysDefined.
@@ -133,7 +170,7 @@ SyncRepWaitForLSN(XLogRecPtr XactCommitLSN)
 	 * condition but we'll be fetching that cache line anyway so it's likely
 	 * to be a low cost check.
 	 */
-	if (!WalSndCtl->sync_standbys_defined ||
+	if (((!IS_QUERY_DISPATCHER()) && !WalSndCtl->sync_standbys_defined) ||
 		XactCommitLSN <= WalSndCtl->lsn[mode])
 	{
 		elogif(debug_walrepl_syncrep, LOG,
