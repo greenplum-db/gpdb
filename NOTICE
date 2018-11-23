@@ -2321,6 +2321,14 @@ documentation will at all times remain with copyright holders.
  */
 
 =================================================================
+  For: world database (world.sql)
+  Statistics Finland
+=================================================================
+
+The sample data used in the world database is Copyright Statistics
+Finland, http://www.stat.fi/worldinfigures.
+
+=================================================================
 ------------------ PXF ------------------------------------------
 =================================================================
 
