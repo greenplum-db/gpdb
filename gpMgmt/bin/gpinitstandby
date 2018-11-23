@@ -277,20 +277,6 @@ def delete_standby(options):
     # Disable Ctrl-C
     signal.signal(signal.SIGINT,signal.SIG_IGN)
     
-    # If the standby is down, and the synchronous_standby_names is *, the cluster will not start
-    # set synchronous_standby_names to ''
-    cmd = gp.GpAddConfigScript('master',
-                               array.master.datadir,
-                               'synchronous_standby_names',
-                               value="''",
-                               removeonly=False,
-                               ctxt=gp.REMOTE,
-                               remoteHost=array.master.hostname,
-                               autoconf=True)
-    cmd.run(validateAfter=True)
-    # make it effective
-    pg.ReloadDbConf.local('pg_ctl reload', array.master)
-
     try:
         remove_standby_from_catalog(options, array)
     except Exception, ex:
