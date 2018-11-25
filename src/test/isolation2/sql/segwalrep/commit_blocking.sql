@@ -116,3 +116,9 @@ alter system set synchronous_standby_names to '*';
 -- everything should be back to normal
 4: insert into standbywalrep_commit_blocking select i from generate_series(1,10)i;
 4: select * from standbywalrep_commit_blocking order by a;
+
+-- set synchronous_standby_names to default value ''
+alter system set synchronous_standby_names to '';
+
+-- reload to make synchronous_standby_names effective
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL, NULL);

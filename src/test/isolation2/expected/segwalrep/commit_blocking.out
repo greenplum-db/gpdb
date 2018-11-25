@@ -240,3 +240,15 @@ a
 9 
 10
 (12 rows)
+
+-- set synchronous_standby_names to default value ''
+alter system set synchronous_standby_names to '';
+ALTER
+
+-- reload to make synchronous_standby_names effective
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=-1), 'reload', NULL, NULL, NULL);
+pg_ctl          
+----------------
+server signaled
+
+(1 row)
