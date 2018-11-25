@@ -5212,6 +5212,7 @@ ExecEvalReshuffleExpr(ReshuffleExprState *astate,
 	bool		result;
 
 	Assert(!IS_QUERY_DISPATCHER());
+	Assert(sr->ptype != POLICYTYPE_REPLICATED);
 
 	if(sr->ptype == POLICYTYPE_PARTITIONED)
 	{
@@ -5251,26 +5252,6 @@ ExecEvalReshuffleExpr(ReshuffleExprState *astate,
 
 			result = (cdbhashrandomseg(newSegs) >= sr->oldSegs);
 		}
-	}
-	else if(sr->ptype == POLICYTYPE_REPLICATED)
-	{
-		/*
-		 * For replicated tables:
-		 * if we have 3 old segments: 0 1 2
-		 * and we add 4 new segments: 3 4 5 6
-		 * The seg#0 is responsible for reshuffling data into seg#3 and seg#6
-		 * The seg#1 is responsible for reshuffling data into seg#4
-		 * The seg#2 is responsible for reshuffling data into seg#5
-		 *
-		 * 1. New segments need not reshuffle data
-		 * 2. if we have 3 old segments and only add 1 new segments,
-		 * 	  then the seg#1 and seg#2 need not reshuffle data
-		 */
-		if (GpIdentity.segindex >= sr->oldSegs ||
-			GpIdentity.segindex + sr->oldSegs >= sr->newSegs)
-			result = false;
-		else
-			result = true;
 	}
 	else
 		result = false;

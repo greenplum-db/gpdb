@@ -97,7 +97,8 @@
  * 		For replicated table, the table data is same in the all old
  * 		segments, so there do not need to delete any tuples, it only
  * 		need copy the tuple which is in the old segments to the new
- * 		segments, so the ReshuffleExpr do not filte any tuples, In
+ * 		segments, the ReshuffleExpr do not filte any tuples, and
+ * 		we make it NULL pointer in the Parse Tree as an optimization,
  * 		the Reshuffle node, we neglect the tuple which is generated
  * 		for deleting, only return the inserting tuple to motion. Let
  * 		me illustrate this with an example:

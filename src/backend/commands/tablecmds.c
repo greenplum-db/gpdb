@@ -14453,7 +14453,7 @@ ReshuffleRelationData(Relation rel)
 	char				*namespace_name;
 	RangeVar			*relation;
 	UpdateStmt			*stmt = makeNode(UpdateStmt);
-	ReshuffleExpr		*reshuffleExpr = makeNode(ReshuffleExpr);
+	ReshuffleExpr		*reshuffleExpr = NULL;
 	GpPolicy 			*policy = rel->rd_cdbpolicy;
 	int					i;
 	Query 				*q;
@@ -14485,9 +14485,13 @@ ReshuffleRelationData(Relation rel)
 	stmt->relation = relation;
 
 	/* make an reshuffle expression to filter some tuples */
-	reshuffleExpr->newSegs = getgpsegmentCount();
-	reshuffleExpr->oldSegs = policy->numsegments;
-	reshuffleExpr->ptype = policy->ptype;
+	if (!GpPolicyIsReplicated(policy))
+	{
+		reshuffleExpr = makeNode(ReshuffleExpr);
+		reshuffleExpr->newSegs = getgpsegmentCount();
+		reshuffleExpr->oldSegs = policy->numsegments;
+		reshuffleExpr->ptype = policy->ptype;
+	}
 	stmt->whereClause = (Node*)reshuffleExpr;
 
 	/* make an target list for the UpdateStmt */
