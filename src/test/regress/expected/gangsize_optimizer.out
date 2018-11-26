@@ -219,3 +219,22 @@ INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 1
 end;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+-- add test for table expand
+begin;
+alter table random_2_0 expand table;
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
+abort;
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
+begin;
+alter table replicate_2_1 expand table;
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
+abort;
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2
+begin;
+alter table hash_2_3_4 expand table;
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
+abort;
+INFO:  Distributed transaction command 'Distributed Abort (No Prepared)' to ALL contents: 0 1 2

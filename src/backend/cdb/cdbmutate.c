@@ -1538,10 +1538,10 @@ make_reshuffle(PlannerInfo *root,
 			   RangeTblEntry *rte,
 			   Index resultRelationsIdx)
 {
+	int 		 i;
 	Reshuffle 	*reshufflePlan = makeNode(Reshuffle);
 	Relation 	rel = relation_open(rte->relid, NoLock);
 	GpPolicy 	*policy = rel->rd_cdbpolicy;
-	int 		i;
 
 	reshufflePlan->plan.targetlist = list_copy(subplan->targetlist);
 	reshufflePlan->plan.lefttree = subplan;
@@ -1563,8 +1563,7 @@ make_reshuffle(PlannerInfo *root,
 
 	reshufflePlan->ptype = policy->ptype;
 
-	/* FIXME: pass old or new cluster size to numsegments? */
-	mark_plan_strewn((Plan *) reshufflePlan, GP_POLICY_ALL_NUMSEGMENTS);
+	mark_plan_strewn((Plan *) reshufflePlan, subplan->flow->numsegments);
 
 	heap_close(rel, NoLock);
 
