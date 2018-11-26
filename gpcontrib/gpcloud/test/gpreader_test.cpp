@@ -313,5 +313,5 @@ TEST(Common, ThreadFunctions) {
     thread_cleanup();
     EXPECT_EQ((void*)NULL, mutex_buf);
 
-    EXPECT_NE((uint64_t)0, id_function());
+    EXPECT_NE((uint64_t)0, gpcloud_id_function());
 }
