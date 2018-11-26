@@ -22,6 +22,7 @@
    [<b>--exclude-table-file</b> <varname>table-file1</varname>]
       [ <b>--exclude-table-file</b> <varname>table-file2</varname>] ... ]]
    [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b> | <b>--append</b> ]
+   [<b>--parallelize-leaf-partitions</b>] 
    [<b>--dry-run</b>]
    [<b>--analyze</b>]
    [<b>--validate</b> <varname>type</varname>]
@@ -339,6 +340,15 @@
                         tables are copied using the segment instances.</pd>
                     <pd>For smaller tables, copying tables using the Greenplum Database master is
                         more efficient than using segment instances.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--parallelize-leaf-partitions</pt>
+                    <pd>If specified, the utility copies the leaf partition tables of a partitioned
+                        table in parallel. The default is to copy the partitioned table as a single
+                        table based on root partition table. </pd>
+                    <pd>If the <codeph>--validate</codeph> option is also specified, the utility
+                        validates each leaf partition table during the copy process and then
+                        validates the entire partitioned table.</pd>
                 </plentry>
                 <plentry>
                     <pt>--quiet</pt>
