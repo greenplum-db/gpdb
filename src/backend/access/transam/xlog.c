@@ -832,46 +832,6 @@ static void XLogProcessCheckpointRecord(XLogRecord *rec);
 
 static void GetXLogCleanUpTo(XLogRecPtr recptr, XLogSegNo *_logSegNo);
 
-#ifdef WAL_DEBUG
-static char *XLogContiguousCopy(
-	XLogRecord 		*record,
-
-	XLogRecData 	*rdata)
-{
-	XLogRecData *rdt;
-	int32 len;
-	char *buffer;
-
-	rdt = rdata;
-	len = SizeOfXLogRecord;
-	while (rdt != NULL)
-	{
-		if (rdt->data != NULL)
-		{
-			len += rdt->len;
-		}
-		rdt = rdt->next;
-	}
-
-	buffer = (char*)palloc(len);
-
-	memcpy(buffer, record, SizeOfXLogRecord);
-	rdt = rdata;
-	len = SizeOfXLogRecord;
-	while (rdt != NULL)
-	{
-		if (rdt->data != NULL)
-		{
-			memcpy(&buffer[len], rdt->data, rdt->len);
-			len += rdt->len;
-		}
-		rdt = rdt->next;
-	}
-
-	return buffer;
-}
-#endif
-
 static void CopyXLogRecordToWAL(int write_len, bool isLogSwitch,
 					XLogRecData *rdata,
 					XLogRecPtr StartPos, XLogRecPtr EndPos);
@@ -1346,7 +1306,8 @@ begin:;
 		StringInfoData buf;
 
 		initStringInfo(&buf);
-		appendStringInfo(&buf, "INSERT @ %X/%X: ",
+		appendStringInfo(&buf, "INSERT @ %X/%X, LSN %X/%X: ",
+						 (uint32) (StartPos >> 32), (uint32) StartPos,
 						 (uint32) (EndPos >> 32), (uint32) EndPos);
 		xlog_outrec(&buf, rechdr);
 		if (rdata->data != NULL)
@@ -1362,11 +1323,12 @@ begin:;
 			rdt_lastnormal->next = NULL;
 
 			initStringInfo(&recordbuf);
+			appendBinaryStringInfo(&recordbuf, rechdr, SizeOfXLogRecord);
 			for (; rdata != NULL; rdata = rdata->next)
 				appendBinaryStringInfo(&recordbuf, rdata->data, rdata->len);
 
 			appendStringInfoString(&buf, " - ");
-			RmgrTable[rechdr->xl_rmid].rm_desc(&buf, rechdr->xl_info, recordbuf.data);
+			RmgrTable[rechdr->xl_rmid].rm_desc(&buf, (XLogRecord *)recordbuf.data);
 			pfree(recordbuf.data);
 		}
 		elog(LOG, "%s", buf.data);
