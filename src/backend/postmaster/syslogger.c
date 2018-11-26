@@ -180,7 +180,7 @@ static void flush_pipe_input(char *logbuffer, int *bytes_in_logbuffer);
 
 static unsigned int __stdcall pipeThread(void *arg);
 #endif
-static void logfile_rotate(bool time_based_rotation, bool size_based_rotation, const char *suffix,
+static bool logfile_rotate(bool time_based_rotation, bool size_based_rotation, const char *suffix,
 						   const char *log_directory, const char *log_filename,
                            FILE **fh, char **last_log_file_name);
 static char *logfile_getname(pg_time_t timestamp, const char *suffix, const char *log_directory, const char *log_file_pattern);
@@ -347,6 +347,8 @@ SysLoggerMain(int argc, char *argv[])
         struct timeval timeout;
 #endif
 
+		bool		all_rotations_occurred = false;
+
         if (got_SIGHUP)
         {
             got_SIGHUP = false;
@@ -437,7 +439,10 @@ SysLoggerMain(int argc, char *argv[])
 			}
         }
 
-        if (rotation_requested)
+		all_rotations_occurred = rotation_requested ||
+								 (alert_log_level_opened && alert_rotation_requested);
+
+		if (rotation_requested)
 		{
 			/*
 			 * Force rotation when both values are zero. It means the request
@@ -447,20 +452,35 @@ SysLoggerMain(int argc, char *argv[])
 				size_rotation_for = LOG_DESTINATION_STDERR | LOG_DESTINATION_CSVLOG;
 
 			rotation_requested = false;
-            logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_STDERR) != 0,
-						   NULL, Log_directory, Log_filename,
-						   &syslogFile, &last_file_name);
-            logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_CSVLOG) != 0,
-						   ".csv", Log_directory, Log_filename,
-						   &csvlogFile, &last_csv_file_name);
+
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_STDERR) != 0,
+							   NULL, Log_directory, Log_filename,
+							   &syslogFile, &last_file_name);
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, (size_rotation_for & LOG_DESTINATION_CSVLOG) != 0,
+							   ".csv", Log_directory, Log_filename,
+							   &csvlogFile, &last_csv_file_name);
 		}
 
         if (alert_log_level_opened && alert_rotation_requested)
 		{
 			alert_rotation_requested = false;
-            logfile_rotate(time_based_rotation, size_rotation_for_alert,
-						   NULL, gp_perf_mon_directory, alert_file_pattern,
-                           &alertLogFile, &alert_last_file_name);
+			all_rotations_occurred &=
+				logfile_rotate(time_based_rotation, size_rotation_for_alert,
+							   NULL, gp_perf_mon_directory, alert_file_pattern,
+							   &alertLogFile, &alert_last_file_name);
+		}
+
+		/*
+		 * GPDB: only update our rotation timestamp if every log file above was
+		 * able to rotate. In upstream, this would have been done as part of
+		 * logfile_rotate() itself -- Postgres calls that function once, whereas
+		 * we call it (up to) three times.
+		 */
+		if (all_rotations_occurred)
+		{
+			set_next_rotation_time();
 		}
 #ifndef WIN32
 
@@ -1973,7 +1993,6 @@ pipeThread(void *arg)
 /*
  * perform logfile rotation.
  *
- *
  * In GPDB, this has been modified significantly from the upstream version:
  *
  * - In PostgreSQL, one call to logfile_rotate performs rotation for both the
@@ -1981,11 +2000,12 @@ pipeThread(void *arg)
  *   and also for the GPDB specific 'alert' log
  * - In PostgreSQL, this resets 'rotation_requested' flag. In GPDB, the caller
  *   has to do it.
- *
- *
- *
+ * - In PostgreSQL, this calls set_next_rotation_time(). In GPDB, the caller
+ *   has to do it once all calls to this function return true (i.e. after all
+ *   rotations have been successfully completed for the current timestamp), to
+ *   avoid having the filename timestamp advance multiple times per rotation.
  */
-static void
+static bool
 logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 			   const char *suffix,
                const char *log_directory, 
@@ -2046,7 +2066,7 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 			}
 			if (filename)
 				pfree(filename);
-			return;
+			return false;
 		}
 
 		setvbuf(fh, NULL, LBF_MODE, 0);
@@ -2078,7 +2098,7 @@ logfile_rotate(bool time_based_rotation, bool size_based_rotation,
 	if (filename)
 		pfree(filename);
 
-    set_next_rotation_time();
+	return true;
 }
 
 
