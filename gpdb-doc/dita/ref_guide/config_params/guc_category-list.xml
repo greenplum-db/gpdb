@@ -1550,10 +1550,6 @@
               <p>
                 <xref href="guc-list.xml#gp_dbid" type="section">gp_dbid</xref>
               </p>
-              <p>
-                <xref href="guc-list.xml#gp_num_contents_in_cluster" type="section"
-                  >gp_num_contents_in_cluster</xref>
-              </p>
             </stentry>
             <stentry>
               <p>

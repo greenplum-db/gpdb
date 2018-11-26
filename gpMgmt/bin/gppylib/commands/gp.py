@@ -129,23 +129,23 @@ class PgCtlBackendOptions(CmdArgs):
     --------
 
     >>> str(PgCtlBackendOptions(5432, 1, 2))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
+    '-p 5432 --gp_dbid=1 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -i --gp_contentid=-1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_master(False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=-1 -E'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -i --gp_contentid=-1 -E'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_segment(1))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -i --gp_contentid=1'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -i --gp_contentid=1'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('upgrade'))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -U'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -U'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_special('maintenance'))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -m'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -m'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(True))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -c gp_role=utility'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -c gp_role=utility'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_utility(False))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true'
+    '-p 5432 --gp_dbid=1 --silent-mode=true'
     >>> str(PgCtlBackendOptions(5432, 1, 2).set_restricted(True,1))
-    '-p 5432 --gp_dbid=1 --gp_num_contents_in_cluster=2 --silent-mode=true -c superuser_reserved_connections=1'
+    '-p 5432 --gp_dbid=1 --silent-mode=true -c superuser_reserved_connections=1'
     >>>
 
     """
@@ -159,7 +159,6 @@ class PgCtlBackendOptions(CmdArgs):
         CmdArgs.__init__(self, [
             "-p", str(port),
             "--gp_dbid="+ str(dbid),
-            "--gp_num_contents_in_cluster="+ str(numcids),
         ])
 
     #
@@ -221,7 +220,7 @@ class PgCtlStartArgs(CmdArgs):
     >>> str(a).split(' ') #doctest: +NORMALIZE_WHITESPACE
     ['env', GPERA=123', '$GPHOME/bin/pg_ctl', '-D', '/data1/master/gpseg-1', '-l',
      '/data1/master/gpseg-1/pg_log/startup.log', '-w', '-t', '600',
-     '-o', '"', '-p', '5432', '--gp_dbid=1', '--gp_num_contents_in_cluster=2', '--silent-mode=true', '"', 'start']
+     '-o', '"', '-p', '5432', '--gp_dbid=1', '--silent-mode=true', '"', 'start']
     """
 
     def __init__(self, datadir, backend, era, wrapper, args, wait, timeout=None):

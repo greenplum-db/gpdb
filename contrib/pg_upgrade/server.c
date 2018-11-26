@@ -245,7 +245,7 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 	 * win on ext4.
 	 */
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=%d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d --gp_dbid=1 --gp_contentid=%d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
 			 (user_opts.segment_mode == DISPATCHER ? -1 : 0),
 			 (cluster->controldata.cat_ver >=

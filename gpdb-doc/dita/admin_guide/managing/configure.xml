@@ -1280,9 +1280,6 @@
             <li id="kh177743">
               <codeph>gp_dbid</codeph>
             </li>
-            <li id="kh178565">
-              <codeph>gp_num_contents_in_cluster</codeph>
-            </li>
             <li id="kh164511">
               <codeph>gp_role</codeph>
             </li>

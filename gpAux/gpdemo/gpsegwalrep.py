@@ -150,8 +150,8 @@ class StartInstances():
         if contentid != GpSegmentConfiguration.MASTER_CONTENT_ID:
             dbid = 0
 
-        opts = ("-p %d --gp_dbid=%d --silent-mode=true -i --gp_contentid=%d --gp_num_contents_in_cluster=%d" %
-                (segment_port, dbid, contentid, self.clusterconfig.get_num_contents()))
+        opts = ("-p %d --gp_dbid=%d --silent-mode=true -i --gp_contentid=%d" %
+                (segment_port, dbid, contentid))
 
         # Arguments for the master.
         #

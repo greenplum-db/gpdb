@@ -354,9 +354,6 @@
             <li>
               <xref href="#gp_motion_cost_per_row"/>
             </li>
-            <li>
-              <xref href="#gp_num_contents_in_cluster"/>
-            </li>
             <li><xref href="#gp_recursive_cte_prototype"/></li>
             <li>
               <xref href="#gp_reject_percent_threshold"/>
@@ -4496,33 +4493,6 @@
               <entry colname="col1">floating point</entry>
               <entry colname="col2">0</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_num_contents_in_cluster">
-    <title>gp_num_contents_in_cluster</title>
-    <body>
-      <p>The number of primary segments in the Greenplum Database system.</p>
-      <table id="gp_num_contents_in_cluster_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">-</entry>
-              <entry colname="col2">-</entry>
-              <entry colname="col3">read only</entry>
             </row>
           </tbody>
         </tgroup>

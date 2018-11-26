@@ -130,7 +130,7 @@ check_vacuum_worked()
 
 	# Start the instance using the same pg_ctl invocation used by pg_upgrade.
 	"${NEW_BINDIR}/pg_ctl" -w -l /dev/null -D "${datadir}" \
-		-o "-p 18432 --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
+		-o "-p 18432 --gp_dbid=1 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
 		start
 
 	# Query for the xmin ages.

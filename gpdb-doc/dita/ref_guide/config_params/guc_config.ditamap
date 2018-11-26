@@ -142,7 +142,6 @@
             <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
-            <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>

@@ -11,7 +11,7 @@ returns text as $$
     if command in ('stop', 'restart'):
         cmd = cmd + '-w -m immediate %s' % command
     elif command == 'start':
-        opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, dbid, contentid)
+        opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
         cmd = cmd + '-o "%s" start' % opts
     else:
         return 'Invalid command input'
