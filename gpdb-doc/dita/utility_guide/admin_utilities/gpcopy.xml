@@ -345,7 +345,7 @@
                     <pt>--parallelize-leaf-partitions</pt>
                     <pd>If specified, the utility copies the leaf partition tables of a partitioned
                         table in parallel. The default is to copy the partitioned table as a single
-                        table based on root partition table. </pd>
+                        table based on the root partition table. </pd>
                     <pd>If the <codeph>--validate</codeph> option is also specified, the utility
                         validates each leaf partition table during the copy process and then
                         validates the entire partitioned table.</pd>
@@ -508,7 +508,7 @@
                 <p>If you specify copying leaf partitions of a partitioned table with an option such
                     as <codeph>--include-table</codeph> or <codeph>--exclude-table</codeph>,
                         <codeph>gpcopy</codeph> creates the partitioned table if it does not exist.
-                    Only the data for the specified leaf partitioned are added to the partitioned
+                    Only the data for the specified leaf partitions are added to the partitioned
                     table. Specifying individual leaf partitions is useful when the entire
                     partitioned tabled does not need to be copied.</p>
                 <p><codeph>gpcopy</codeph> does not support table data distribution checking when
