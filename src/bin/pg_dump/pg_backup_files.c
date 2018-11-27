@@ -461,7 +461,7 @@ _CloseArchive(ArchiveHandle *AH)
 		AH->CustomOutPtr = _WriteBuf;
 
 		ropt = NewRestoreOptions();
-		ropt->dropSchema = 1;
+		ropt->dropSchema = 0;
 		ropt->compression = 0;
 		ropt->superuser = NULL;
 		ropt->suppressDumpWarnings = true;
