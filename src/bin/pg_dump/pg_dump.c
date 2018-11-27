@@ -3508,11 +3508,13 @@ dumpBlobs(Archive *fout, void *arg)
 	 * the already-in-memory dumpable objects instead...
 	 */
 	if (fout->remoteVersion >= 90000)
-		blobQry = "DECLARE bloboid CURSOR FOR SELECT oid FROM pg_largeobject_metadata";
-	else if (fout->remoteVersion >= 70100)
-		blobQry = "DECLARE bloboid CURSOR FOR SELECT DISTINCT loid FROM pg_largeobject";
+		blobQry =
+			"DECLARE bloboid CURSOR FOR "
+			"SELECT oid FROM pg_largeobject_metadata ORDER BY 1";
 	else
-		error_unsupported_server_version(fout);
+		blobQry =
+			"DECLARE bloboid CURSOR FOR "
+			"SELECT DISTINCT loid FROM pg_largeobject ORDER BY 1";
 
 	ExecuteSqlStatement(fout, blobQry);
 
