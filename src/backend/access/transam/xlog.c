@@ -3045,6 +3045,8 @@ XLogBackgroundFlush(void)
 	 */
 	AdvanceXLInsertBuffer(InvalidXLogRecPtr, true);
 
+	SIMPLE_FAULT_INJECTOR(InXLogBackgroundFlush);
+
 	return wrote_something;
 }
 

@@ -255,6 +255,8 @@ FI_IDENT(CreateGangInProgress, "create_gang_in_progress")
 FI_IDENT(DecreaseToastMaxChunkSize, "decrease_toast_max_chunk_size")
 /* inject fault to let cleanupGang return false */
 FI_IDENT(CleanupQE, "cleanup_qe")
+/* inject fault in XLogBackgroundFlush() after completing the flush */
+FI_IDENT(InXLogBackgroundFlush, "in_xlog_background_flush")
 #endif
 
 /*
