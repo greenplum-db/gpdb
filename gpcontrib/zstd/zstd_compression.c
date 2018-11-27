@@ -18,7 +18,7 @@
 #include <zstd.h>
 #include <zstd_errors.h>
 
-#ifndef PG_MODULE_MAGIC
+#ifndef UNIT_TESTING
 PG_MODULE_MAGIC;
 #endif
 
