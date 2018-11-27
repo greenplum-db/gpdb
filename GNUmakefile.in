@@ -123,7 +123,7 @@ check check-tests: all
 check check-tests installcheck installcheck-parallel installcheck-tests:
 	$(MAKE) -C src/test/regress $@
 
-$(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib gpcontrib,check)
+$(call recurse,check-world,src/test src/pl src/interfaces/ecpg contrib src/bin gpcontrib,check)
 
 # This is a top-level target that runs "all" regression test suites against
 # a running server. This is what the CI pipeline runs.

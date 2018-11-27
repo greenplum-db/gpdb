@@ -11,8 +11,9 @@ standard_initdb "$tempdir/data";
 command_exit_is([ 'pg_ctl', 'status', '-D', "$tempdir/data" ],
 	3, 'pg_ctl status with server not running');
 
-system_or_bail 'pg_ctl', '-l', "$tempdir/logfile", '-D',
-  "$tempdir/data", '-w', 'start';
+system_or_bail 'pg_ctl', '-s', '-l', "$tempdir/logfile", '-D',
+  "$tempdir/data", '-w', 'start', '-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1';
+
 command_exit_is([ 'pg_ctl', 'status', '-D', "$tempdir/data" ],
 	0, 'pg_ctl status with server running');
 

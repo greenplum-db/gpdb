@@ -10,7 +10,7 @@ program_options_handling_ok('reindexdb');
 my $tempdir = tempdir;
 start_test_server $tempdir;
 
-$ENV{PGOPTIONS} = '--client-min-messages=WARNING';
+$ENV{PGOPTIONS} = '-c gp_session_role=utility --client-min-messages=WARNING';
 
 issues_sql_like(
 	[ 'reindexdb', 'postgres' ],
