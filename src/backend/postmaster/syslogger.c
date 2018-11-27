@@ -497,8 +497,7 @@ SysLoggerMain(int argc, char *argv[])
 		if (Log_RotationAge > 0 && !rotation_disabled)
 		{
 			/* Do a logfile rotation if it's time */
-			pg_time_t	now = (pg_time_t) time(NULL);
-
+			now = (pg_time_t) time(NULL);
 			if (now >= next_rotation_time)
 			{
 				rotation_requested = time_based_rotation = true;
