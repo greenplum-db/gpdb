@@ -60,7 +60,6 @@
 #include "access/aosegfiles.h"
 #include "access/aocssegfiles.h"
 #include "cdb/cdbappendonlyam.h"
-#include "cdb/cdbvars.h"
 #include "utils/timestamp.h"
 
 
@@ -532,15 +531,6 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 	}
 	else
 	{
-		/*
-		 * QE reader should not bring in a shared buffer from disk if its
-		 * writer has already aborted the transaction.  Check for interrupts
-		 * allows the reader to determine if the writer has sent a cancel
-		 * signal.
-		 */
-		if (!Gp_is_writer)
-			CHECK_FOR_INTERRUPTS();
-
 		/*
 		 * Read in the page, unless the caller intends to overwrite it and
 		 * just wants us to allocate a buffer.
