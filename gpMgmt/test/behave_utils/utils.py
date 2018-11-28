@@ -224,7 +224,7 @@ def create_database_if_not_exists(context, dbname, host=None, port=0, user=None)
 
 def create_database(context, dbname=None, host=None, port=0, user=None):
     LOOPS = 10
-    if host == None or port == 0 or user == None:
+    if host is None or port == 0 or user is None:
         createdb_cmd = 'createdb %s' % dbname
     else:
         createdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "create database %s"' % (host,
@@ -519,7 +519,7 @@ def create_int_table(context, table_name, table_type='heap', dbname='testdb'):
 
 def drop_database(context, dbname, host=None, port=0, user=None):
     LOOPS = 10
-    if host == None or port == 0 or user == None:
+    if host is None or port == 0 or user is None:
         dropdb_cmd = 'dropdb %s' % dbname
     else:
         dropdb_cmd = 'psql -h %s -p %d -U %s -d template1 -c "drop database %s"' % (host,

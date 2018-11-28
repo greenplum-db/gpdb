@@ -1295,19 +1295,19 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                         = parse_gpexpand_segment_line(inputFilename, line, l)
 
                     # Check that input values look reasonable.
-                    if hostname == None or len(hostname) == 0:
+                    if hostname is None or len(hostname) == 0:
                         raise ExpansionError("Invalid host name on line " + str(line))
-                    if address == None or len(address) == 0:
+                    if address is None or len(address) == 0:
                         raise ExpansionError("Invaid address on line " + str(line))
-                    if port == None or str(port).isdigit() == False or int(port) < 0:
+                    if port is None or str(port).isdigit() == False or int(port) < 0:
                         raise ExpansionError("Invalid port number on line " + str(line))
-                    if datadir == None or len(datadir) == 0:
+                    if datadir is None or len(datadir) == 0:
                         raise ExpansionError("Invalid data directory on line " + str(line))
-                    if dbid == None or str(dbid).isdigit() == False or int(dbid) < 0:
+                    if dbid is None or str(dbid).isdigit() == False or int(dbid) < 0:
                         raise ExpansionError("Invalid dbid on line " + str(line))
-                    if contentId == None or str(contentId).isdigit() == False or int(contentId) < 0:
+                    if contentId is None or str(contentId).isdigit() == False or int(contentId) < 0:
                         raise ExpansionError("Invalid contentId on line " + str(line))
-                    if role == None or len(role) > 1 or (role != 'p' and role != 'm'):
+                    if role is None or len(role) > 1 or (role != 'p' and role != 'm'):
                         raise ExpansionError("Invalid role on line " + str(line))
 
                     retValue.append(NewSegmentInput(hostname=hostname
@@ -2775,7 +2775,7 @@ def main(options, args, parser):
             logger.info('Expansion has already completed.')
             logger.info('If you want to expand again, run gpexpand -c to remove')
             logger.info('the gpexpand schema and begin a new expansion')
-        elif gpexpand_db_status == None and gpexpand_file_status == None and options.filename:
+        elif gpexpand_db_status is None and gpexpand_file_status is None and options.filename:
             if not _gp_expand.validate_unalterable_tables():
                 raise ValidationError()
             if _gp_expand.check_unique_indexes():
@@ -2804,7 +2804,7 @@ def main(options, args, parser):
             logger.info('To begin table expansion onto the new segments')
             logger.info('rerun gpexpand')
             logger.info('************************************************')
-        elif options.filename is None and gpexpand_file_status == None:
+        elif options.filename is None and gpexpand_file_status is None:
             interview_setup(gparray, options)
         else:
             logger.error('The last gpexpand setup did not complete successfully.')

@@ -97,13 +97,13 @@ def parseargs():
         parser.print_help()
         parser.exit()
 
-    if options.input_filename == None:
+    if options.input_filename is None:
         logger.error('Missing argument. -i or --input is a required argument.')
         parser.print_help()
         parser.exit()
 
     try:
-        if options.master_data_directory == None:
+        if options.master_data_directory is None:
             options.master_data_directory = get_masterdatadir()
         options.gphome = get_gphome()
     except GpError, msg:
@@ -233,8 +233,8 @@ class Configuration:
                 oldPort = rowMap['oldPort']
                 oldDataDirectory = rowMap['oldDataDirectory']
                 oldGpdb = lookupGpdb(oldAddress, oldPort, oldDataDirectory)
-                if oldGpdb == None or oldGpdb.getSegmentRole() != ROLE_MIRROR:
-                    if oldGpdb == None:
+                if oldGpdb is None or oldGpdb.getSegmentRole() != ROLE_MIRROR:
+                    if oldGpdb is None:
                         raise Exception(
                             "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
                             % (oldAddress, str(oldPort), oldDataDirectory))
@@ -339,7 +339,7 @@ try:
     """ Do some sanity checks on the input. """
     for mirror in newConfig.oldMirrorList:
         seg = lookupGpdb(mirror.address, mirror.port, mirror.dataDirectory)
-        if seg == None:
+        if seg is None:
             raise Exception(
                 "Old mirror segment does not exist with given information: address = %s, port = %s, segment data directory = %s"
                 % (mirror.address, str(mirror.port), mirror.dataDirectory))

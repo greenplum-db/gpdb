@@ -424,7 +424,7 @@ class GPCatalogTable():
         By default excludes the "known differences" columns, to include them
         pass [] as the excluding list.
         '''
-        if excluding == None:
+        if excluding is None:
             excluding = self._excluding
         else:
             excluding = set(excluding)

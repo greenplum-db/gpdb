@@ -209,7 +209,7 @@ class GpHostCache:
             # If the db didn't have hostname already set, (it was loaded from
             # an old catalog?) set it based on the hostname from the interface
             # lookup.
-            if db.getSegmentHostName() == None:
+            if db.getSegmentHostName() is None:
                 db.setSegmentHostName(hostname)
 
             if hostname not in self.gphost_map:

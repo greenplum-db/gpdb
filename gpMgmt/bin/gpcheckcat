@@ -128,10 +128,10 @@ class Global():
         self.reset_stmt_queues()
 
         self.home = os.environ.get('HOME')
-        if self.home == None:
+        if self.home is None:
             usage('Error: $HOME must be set')
         self.user = os.environ.get('USER') or os.environ.get('LOGNAME')
-        if self.user == None:
+        if self.user is None:
             usage('Error: either $USER or $LOGNAME must be set')
 
         self.catalog = None
@@ -414,7 +414,7 @@ def connect2run(qry, col=None):
 
     err = []
     for [cfg, curs] in batch:
-        if col == None:
+        if col is None:
             col = curs.listfields()
         for row in curs.dictresult():
             err.append([cfg, col, row])
@@ -2340,14 +2340,14 @@ def checkTableACL(cat):
     isShared = cat.isShared()
     acl = cat.getTableAcl()
 
-    if GV.aclStatus == None:
+    if GV.aclStatus is None:
         GV.aclStatus = True
 
     # Skip:
     #   - master only tables
     #   - tables without a primary key
     #   - tables without acls
-    if master or pkey == [] or acl == None:
+    if master or pkey == [] or acl is None:
         return
 
     # skip shared/non-shared tables
@@ -2413,7 +2413,7 @@ def checkForeignKey(cat_tables=None):
     logger.info('-----------------------------------')
     logger.info('Performing foreign key tests')
 
-    if GV.foreignKeyStatus == None:
+    if GV.foreignKeyStatus is None:
         GV.foreignKeyStatus = True
 
     # looks up information in the catalog:
@@ -2446,7 +2446,7 @@ def checkMissingEntry():
     logger.info('-----------------------------------')
     logger.info('Performing cross consistency tests: check for missing or extraneous issues')
 
-    if GV.missingEntryStatus == None:
+    if GV.missingEntryStatus is None:
         GV.missingEntryStatus = True
 
     catalog_issues = _checkAllTablesForMissingEntries()
@@ -2618,7 +2618,7 @@ def checkInconsistentEntry():
     logger.info('-----------------------------------')
     logger.info('Performing cross consistency test: check for inconsistent entries')
 
-    if GV.inconsistentEntryStatus == None:
+    if GV.inconsistentEntryStatus is None:
         GV.inconsistentEntryStatus = True
 
     # looks up information in the catalog:

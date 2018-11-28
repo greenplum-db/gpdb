@@ -125,13 +125,13 @@ class Host:
         return self.m_popen_cmd;
 
     def isPclosed(self):
-        return self.m_popen == None;
+        return self.m_popen is None;
 
     def getAddrs(self):
         '''
         Gets the INET and INET6 addresses for this host.
         '''
-        if (self.m_inetAddrs == None) and (self.m_inet6Addrs == None):
+        if (self.m_inetAddrs is None) and (self.m_inet6Addrs is None):
             self.m_inetAddrs = []
             self.m_inet6Addrs = []
             try:

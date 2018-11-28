@@ -503,7 +503,7 @@ def ForceFTSProbeScan(cluster_configuration, expected_status = None, expected_mo
     while(True):
         runcommands(commands, "Force FTS probe scan", "FTS probe refreshed catalog")
 
-        if (expected_status == None or expected_mode == None):
+        if (expected_status is None or expected_mode is None):
             return
 
         cluster_configuration.refresh()

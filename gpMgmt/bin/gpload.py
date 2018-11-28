@@ -562,7 +562,7 @@ def sqlIdentifierCompare(x, y):
     and non-delimited identifiers. Return True if they are equivalent or False
     if they are not equivalent.
     """
-    if x == None or y == None:
+    if x is None or y is None:
        return False
 
     if isDelimited(x):
@@ -706,7 +706,7 @@ def notice_processor(self):
     r = re.compile("^NOTICE:  Found (\d+) data formatting errors.*")
     messageNumber = 0
     m = None
-    while messageNumber < len(theNotices) and m == None:
+    while messageNumber < len(theNotices) and m is None:
        aNotice = theNotices[messageNumber]
        m = r.match(aNotice)
        messageNumber = messageNumber + 1
@@ -937,7 +937,7 @@ def test_key(gp, key, crumb):
     it has the parent we expect
     """
     val = valid_tokens.get(key)
-    if val == None:
+    if val is None:
         gp.log(gp.ERROR, 'unrecognized key: "%s"' % key)
 
     p = val['parent']
@@ -1842,7 +1842,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
-                if d[key] == None:
+                if d[key] is None:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
                     for name, typ, mapto, hasseq in self.into_columns:
@@ -1865,7 +1865,7 @@ class gpload:
 
         # make sure that all columns have a type
         for name, typ, map, hasseq in self.from_columns:
-            if typ == None:
+            if typ is None:
                 self.log(self.ERROR, 'column "%s" has no type ' % name +
                        'and does not appear in target table "%s"' % self.schemaTable)
         self.log(self.DEBUG, 'from columns are:')
@@ -1881,7 +1881,7 @@ class gpload:
 
         # find the shema name for this table (according to search_path)
         # if it was not explicitly specified in the configuration file.
-        if self.schema == None:
+        if self.schema is None:
             queryString = """SELECT n.nspname
                              FROM pg_catalog.pg_class c
                              LEFT JOIN pg_catalog.pg_namespace n
@@ -1982,7 +1982,7 @@ class gpload:
                            found = True
                            break
                     if i:
-                        if i[2] == None: i[2] = i[0]
+                        if i[2] is None: i[2] = i[0]
                     else:
                         self.log(self.ERROR, 'no mapping for input column ' +
                                  '"%s" to output table' % x[0])
@@ -2187,7 +2187,7 @@ class gpload:
         return None
 
     def get_ext_schematable(self, schemaName, tableName):
-        if schemaName == None:
+        if schemaName is None:
             return tableName
         else:
             schemaTable = "%s.%s" % (schemaName, tableName)
