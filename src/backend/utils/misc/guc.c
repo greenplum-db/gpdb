@@ -1349,8 +1349,8 @@ static struct config_bool ConfigureNamesBool[] =
 		NULL, NULL, NULL
 	},
 	{
-		{"logging_collector", PGC_POSTMASTER, DEFUNCT_OPTIONS,
-			gettext_noop("Defunct: Start a subprocess to capture stderr output and/or csvlogs into log files."),
+		{"logging_collector", PGC_POSTMASTER, LOGGING_WHERE,
+			gettext_noop("Start a subprocess to capture stderr output and/or csvlogs into log files."),
 			NULL
 		},
 		&Logging_collector,
