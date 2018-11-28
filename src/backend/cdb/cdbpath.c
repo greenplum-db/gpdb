@@ -404,6 +404,29 @@ makeDistributionKeyForEC(EquivalenceClass *eclass)
 	return dk;
 }
 
+/*
+ * cdbpath_eclass_constant_isGreenplumDbHashable
+ *
+ * Iterates through a list of equivalence class members and determines if
+ * expression in pseudoconstant are GreenplumDbHashable.
+ */
+static bool
+cdbpath_eclass_constant_isGreenplumDbHashable(EquivalenceClass *ec)
+{
+	ListCell   *j;
+
+	foreach(j, ec->ec_members)
+	{
+			EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
+
+			/* Fail on non-hashable expression types */
+			if (em->em_is_const && !isGreenplumDbHashable(exprType((Node *) em->em_expr)))
+				return false;
+	}
+
+	return true;
+}
+
 static bool
 cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 									ListCell *distkeycell)
@@ -434,7 +457,7 @@ cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 	{
 		EquivalenceClass *ec = (EquivalenceClass *) lfirst(cell);
 
-		if (CdbEquivClassIsConstant(ec))
+		if (CdbEquivClassIsConstant(ec) && cdbpath_eclass_constant_isGreenplumDbHashable(ec))
 		{
 			codistkey = distkey;
 			break;
