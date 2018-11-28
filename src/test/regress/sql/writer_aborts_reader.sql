@@ -95,33 +95,3 @@ gp_segment_configuration where role = 'p' and content = 0;
 
 select gp_inject_fault('cancelled_reader_during_abort', 'reset', dbid) from
 gp_segment_configuration where role = 'p' and content = 0;
-
--- fifth test: a multi-slice query is aborted in a subtransaction
-select gp_inject_fault('cancelled_reader_during_abort', 'skip', dbid) from
-gp_segment_configuration where role = 'p' and content = 0;
-
-begin;
--- Make a write in this transaction so that a TransactionId will be
--- assigned to the top transaction.
-insert into writer_aborts_before_reader_a values (4, 4);
-savepoint sp1;
--- Make a write so that a TransactionId will be assigned to this
--- subtranaction.
-insert into writer_aborts_before_reader_a values (4, 4);
--- The QE writer should hit an error and walk through proc array to
--- signal all readers before marking the transaction aborted.
-update writer_aborts_before_reader_a set j = -1 from writer_aborts_before_reader_b;
-rollback to sp1;
--- The top transaction should remain in-progress, even after the
--- readers were signaled to cancel.  Verify that by executing a query.
-select count(*) from writer_aborts_before_reader_a, writer_aborts_before_reader_b
-where writer_aborts_before_reader_a.i = writer_aborts_before_reader_b.j;
-commit;
-
--- The fault should be hit during subtransaction abort because the
--- writer should wait for readers before marking the subtransaction as
--- aborted.
-select gp_inject_fault('cancelled_reader_during_abort', 'status', dbid) from
-gp_segment_configuration where role = 'p' and content = 0;
-select gp_inject_fault('cancelled_reader_during_abort', 'reset', dbid) from
-gp_segment_configuration where role = 'p' and content = 0;

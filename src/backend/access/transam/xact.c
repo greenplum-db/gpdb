@@ -5492,7 +5492,6 @@ AbortSubTransaction(void)
 		AtEOSubXact_LargeObject(false, s->subTransactionId,
 								s->parent->subTransactionId);
 		AtSubAbort_Notify();
-		AtAbort_Readers();
 
 		/* Advertise the fact that we aborted in pg_clog. */
 		(void) RecordTransactionAbort(true);
