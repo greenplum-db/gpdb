@@ -111,6 +111,7 @@ Feature: Validate command line arguments
 
     @nbupartI
     @ddpartI
+    @skip_for_gpdb_43
     Scenario: 5a Full Backup and Restore with constraints
         Given the backup test is initialized with database "bkdb5a"
         And there is a "heap" table "public.heap_table" in "bkdb5a" with data

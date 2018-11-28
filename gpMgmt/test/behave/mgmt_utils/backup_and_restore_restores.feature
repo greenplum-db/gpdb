@@ -66,6 +66,7 @@ Feature: Validate command line arguments
 
     @nbupartI
     @ddpartI
+    @skip_for_gpdb_43
     Scenario: 5a Full Backup and Restore with constraints
         Given the old timestamps are read from json
         When the user runs gpdbrestore -e with the stored timestamp
