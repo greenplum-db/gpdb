@@ -136,7 +136,7 @@ test: catalog
 test: bfv_catalog bfv_index bfv_olap bfv_aggregate bfv_partition bfv_partition_plans DML_over_joins gporca bfv_statistic
 # NOTE: gporca_faults uses gp_fault_injector - so do not add to a parallel group
 test: gporca_faults
-
+ 
 test: aggregate_with_groupingsets 
 
 test: nested_case_null sort bb_mpph
@@ -241,11 +241,5 @@ test: autovacuum-template0
 
 # Online expand introduce the partial tables, check them if they can run correctly
 test: gangsize
-
-# This test uses fault injectors in abort transaction workflow.  It
-# may be run in parallel with other tests as long as they don't abort
-# a transaction where mult-slice query was executed and the writer was
-# assigned a transaction ID.
-test: writer_aborts_reader
 
 # end of tests

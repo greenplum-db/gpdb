@@ -36,7 +36,6 @@ typedef struct SharedSnapshotSlot
 	ComboCidKeyData combocids[MaxComboCids];
 	SnapshotData	snapshot;
 	LWLockId        slotLock;
-	bool            writerSentCancel;
 } SharedSnapshotSlot;
 
 extern volatile SharedSnapshotSlot *SharedLocalSnapshotSlot;
@@ -54,7 +53,6 @@ extern void dumpSharedLocalSnapshot_forCursor(void);
 extern void readSharedLocalSnapshot_forCursor(Snapshot snapshot);
 
 extern void AtEOXact_SharedSnapshot(void);
-extern void AtAbort_Readers(void);
 
 #define NUM_SHARED_SNAPSHOT_SLOTS (2 * max_prepared_xacts)
 

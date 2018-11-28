@@ -1548,7 +1548,6 @@ updateSharedLocalSnapshot(DtxContextInfo *dtxContextInfo, Snapshot snapshot, cha
 	SharedLocalSnapshotSlot->QDxid = dtxContextInfo->distributedXid;
 		
 	SharedLocalSnapshotSlot->ready = true;
-	SharedLocalSnapshotSlot->writerSentCancel = false;
 
 	SharedLocalSnapshotSlot->segmateSync = dtxContextInfo->segmateSync;
 
@@ -4862,40 +4861,6 @@ ListAllGxid(void)
 	LWLockRelease(ProcArrayLock);
 
 	return gxids;
-}
-
-void
-CancelMyReaders(void)
-{
-	int numProcs;
-	int i;
-	int pid_index = 0;
-	ProcArrayStruct *arrayP = procArray;
-
-	pid_t *reader_pids = (pid_t *) palloc(arrayP->maxProcs * sizeof(pid_t));
-
-	Assert(Gp_is_writer);
-
-	LWLockAcquire(ProcArrayLock, LW_SHARED);
-	numProcs = arrayP->numProcs;
-	for (i = 0; i < numProcs; i++)
-	{
-		volatile PGPROC *proc = &allProcs[arrayP->pgprocnos[i]];
-		if (proc->mppSessionId == MyProc->mppSessionId &&
-			proc->pid != MyProcPid)
-		{
-			Assert(!proc->mppIsWriter);
-			Assert(proc->databaseId == MyDatabaseId);
-			reader_pids[pid_index++] = proc->pid;
-		}
-	}
-	LWLockRelease(ProcArrayLock);
-
-	while (--pid_index >= 0)
-	{
-		kill(reader_pids[pid_index], SIGINT); /* ignore error */
-		SIMPLE_FAULT_INJECTOR(CancelledReaderDuringAbort);
-	}
 }
 
 /*

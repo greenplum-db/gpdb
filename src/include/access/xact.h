@@ -292,9 +292,6 @@ extern void UnregisterSubXactCallback(SubXactCallback callback, void *arg);
 extern void RecordDistributedForgetCommitted(struct TMGXACT_LOG *gxact_log);
 
 extern int	xactGetCommittedChildren(TransactionId **ptr);
-extern void SetCurrentTransactionUsesReaders(void);
-extern bool GetCurrentTransactionUsesReaders(void);
-extern void ResetCurrentTransactionUsesReaders(void);
 
 extern void xact_redo(XLogRecPtr beginLoc, XLogRecPtr lsn, XLogRecord *record);
 extern void xact_desc(StringInfo buf, XLogRecord *record);

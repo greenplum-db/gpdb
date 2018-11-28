@@ -96,7 +96,6 @@ extern void GetSlotTableDebugInfo(void **snapshotArray, int *maxSlots);
 extern void getDtxCheckPointInfo(char **result, int *result_size);
 
 extern List *ListAllGxid(void);
-extern void CancelMyReaders(void);
 extern int GetPidByGxid(DistributedTransactionId gxid);
 
 extern void ProcArraySetReplicationSlotXmin(TransactionId xmin,

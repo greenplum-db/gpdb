@@ -942,26 +942,3 @@ LogDistributedSnapshotInfo(Snapshot snapshot, const char *prefix)
 	elog(LOG, "%s", buf.data);
 	pfree(buf.data);
 }
-
-/*
- * QE writer must let other QE readers participating in the same transaction
- * know that the transaction must be canceled.  This reduces the window
- * between a transaction being marked as aborted by the QE writer and QE
- * readers cancel executing part of the transaction / plan.
- */
-void
-AtAbort_Readers(void)
-{
-	/*
-	 * Walk the procArray only if the current transaction made any writes and
-	 * there are readers
-	 */
-	if (Gp_is_writer && TransactionIdIsValid(GetCurrentTransactionIdIfAny()) &&
-		GetCurrentTransactionUsesReaders())
-	{
-		Assert(SharedLocalSnapshotSlot != NULL);
-		SharedLocalSnapshotSlot->writerSentCancel = true;
-		CancelMyReaders();
-	}
-	/* TODO: how to ensure that the readers have acted upon the signal? */
-}
