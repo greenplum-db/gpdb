@@ -31,7 +31,10 @@
             <parml>
                 <plentry>
                     <pt>TRUSTED</pt>
-                    <pd>A noise word. </pd>
+                    <pd>If not specified, only superusers and the protocol owner can create external
+                        tables using the protocol. If specified, superusers and the protocol owner
+                        can <codeph>GRANT</codeph> permissions on the protocol to other database
+                        roles.</pd>
                 </plentry>
                 <plentry>
                     <pt>
@@ -87,7 +90,8 @@
             <title>See Also</title>
             <p><codeph><xref href="ALTER_PROTOCOL.xml#topic1"/></codeph>, <codeph><xref
                         href="CREATE_EXTERNAL_TABLE.xml#topic1"/></codeph>, <codeph><xref
-                        href="DROP_PROTOCOL.xml#topic1"/></codeph></p>
+                        href="DROP_PROTOCOL.xml#topic1"/></codeph>, <xref href="GRANT.xml#topic1"
+                /></p>
         </section>
     </body>
 </topic>
