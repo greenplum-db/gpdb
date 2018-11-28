@@ -508,7 +508,7 @@ class GpStop:
                     logger.error('Failed to stop standby. Attempting forceful termination of standby process')
                     (succeeded, mypid, file_datadir) = pg.ReadPostmasterTempFile.remote("Read standby tmp file",
                                                                                         self.dburl.pgport,
-                                                                                        remoteHost=standby.hostname).getResults()
+                                                                                        standby.hostname).getResults()
                     unix.kill_9_segment_processes(self.master_datadir, self.dburl.pgport, mypid)
                     if not pg.DbStatus.remote('checking status of standby master instance', standby, standby.hostname):
                         logger.info("Successfully shutdown master standby process on %s" % standby.hostname)
