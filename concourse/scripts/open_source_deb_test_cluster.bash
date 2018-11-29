@@ -3,6 +3,7 @@ set -euxo pipefail
 
 source /opt/gpdb/greenplum_path.sh
 
+export PGPORT=15432
 psql -t -U gpadmin template1 -c 'select version()' | grep '\-oss'
 # gpssh replaces "-" with " " in version string
 gpssh --version | grep ' oss'

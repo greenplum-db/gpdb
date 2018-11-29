@@ -2,6 +2,8 @@
 set -euxo pipefail
 
 source /opt/gpdb/greenplum_path.sh
+
+export PGPORT=15432
 psql -t -U gpadmin -v ON_ERROR_STOP=ON template1 << EOF
    -- check libxml
    SELECT '<?xml version="1.0" ?><response><status>foobar</status></response>'::xml;
