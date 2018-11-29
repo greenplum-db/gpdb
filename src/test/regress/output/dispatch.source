@@ -507,6 +507,27 @@ NOTICE:  Success:
  t
 (1 row)
 
+-- Case 1.6
+-- For a query need two phase commit, if error happens before commands are actually
+-- dispatched, the query can be cancelled correctly.
+-- 
+select gp_inject_fault('before_one_slice_dispatched', 'error', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
+update dispatch_test_t1 set c2 = 3 from dispatch_test_t2, dispatch_test_t3
+where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
+ERROR:  fault triggered, fault name:'before_one_slice_dispatched' fault type:'error'
+select gp_inject_fault('before_one_slice_dispatched', 'reset', 1);
+NOTICE:  Success:
+ gp_inject_fault 
+-----------------
+ t
+(1 row)
+
 -- test logging of gang management
 SET gp_log_gang = 'debug';
 -- test INFO raised from segments with various kinds of fields
@@ -664,14 +685,14 @@ create temp table disp_temp_test1 (c1 int, c2 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into disp_temp_test1 values (1, 2);
-select gp_inject_fault('cleanup_gang', 'skip', 1);
+-- Let cleanupSegdb() return false and writer gang be destroyed
+select gp_inject_fault('cleanup_qe', 'skip', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
  t
 (1 row)
 
--- Let cleanupGang return false and writer gang be destroyed
 select * from disp_temp_test1 where c1 / 0 = 9;
 ERROR:  division by zero  (seg2 slice1 127.0.0.1:25434 pid=27218)
 rollback to savepoint s1;
@@ -689,7 +710,7 @@ ERROR:  relation "disp_temp_test1" does not exist
 LINE 1: select * from disp_temp_test1;
                       ^
 -- reset fault
-select gp_inject_fault('cleanup_gang', 'reset', 1);
+select gp_inject_fault('cleanup_qe', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

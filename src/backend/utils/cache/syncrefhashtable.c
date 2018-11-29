@@ -51,7 +51,6 @@ SyncHTCreate(SyncHTCtl *syncHTCtl)
 	Assert(NULL != syncHTCtl);
 	Assert(NULL != syncHTCtl->isEmptyEntry);
 	Assert(NULL != syncHTCtl->initEntry);
-	Assert(NullLock != syncHTCtl->baseLWLockId);
 	Assert(0 != syncHTCtl->numPartitions);
 
 	SyncHT *syncHT = (SyncHT *) palloc(sizeof(SyncHT));

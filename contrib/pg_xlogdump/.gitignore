@@ -17,3 +17,6 @@
 /xactdesc.c
 /xlogdesc.c
 /xlogreader.c
+/appendonlydesc.c
+/bitmapdesc.c
+/distributedlogdesc.c

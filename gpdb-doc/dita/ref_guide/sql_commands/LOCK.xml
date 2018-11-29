@@ -161,7 +161,7 @@
             <p><codeph>LOCK TABLE</codeph> only deals with table-level locks, and so the mode names
                 involving <codeph>ROW</codeph> are all misnomers. These mode names should generally
                 be read as indicating the intention of the user to acquire row-level locks within
-                the locked table. Also, <codeph>ROW EXCLUSIVE</codeph> mode is a sharable table
+                the locked table. Also, <codeph>ROW EXCLUSIVE</codeph> mode is a shareable table
                 lock. Keep in mind that all the lock modes have identical semantics so far as
                     <codeph>LOCK TABLE</codeph> is concerned, differing only in the rules about
                 which modes conflict with which. For information on how to acquire an actual

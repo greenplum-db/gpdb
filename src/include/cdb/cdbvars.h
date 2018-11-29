@@ -292,31 +292,6 @@ extern int gp_fts_transition_retries;
 extern int gp_fts_transition_timeout;
 
 /*
- * Parameter gp_connections_per_thread
- *
- * The run-time parameter (GUC variables) gp_connections_per_thread
- * controls how many libpq connections to qExecs are processed in each
- * thread.
- *
- * Any number >= 1 is valid.
- *
- * 1 means each connection has its own thread.
- *
- * This can be set in the config file, or at runtime by a superuser using
- * SQL: set gp_connections_per_thread = x;
- *
- * The default is 256.	So, if there are fewer than 256 segdbs, all would be handled
- * by the same thread.
- *
- * Currently, this is used in two situation:
- *		1) In cdblink_setup, when the libpq connections are obtained by the dispatcher
- *				to the qExecs.
- *		2) In CdbDispatchCommand, when commands are sent from the dispatcher to the qExecs.
- *
- */
-extern int	gp_connections_per_thread; /* GUC var - server operating mode.  */
-
-/*
  * If number of subtransactions within a transaction exceed this limit,
  * then a warning is given to the user.
  */
@@ -444,8 +419,6 @@ extern bool gp_interconnect_log_stats;
 extern bool gp_interconnect_cache_future_packets;
 
 #define UNDEF_SEGMENT -2
-
-extern int	getgpsegmentCount(void);
 
 /*
  * Parameter interconnect_setup_timeout
@@ -878,9 +851,6 @@ extern int  gp_debug_linger;
 #define UNSET_SLICE_ID -1
 extern int	currentSliceId;
 
-/* Segment id where singleton gangs are to be dispatched. */
-extern int  gp_singleton_segindex;
-
 extern int cdb_total_plans;
 /* Enable ading the cost for walking the chain in the hash join. */
 extern bool gp_cost_hashjoin_chainwalk;
@@ -890,7 +860,6 @@ extern int cdb_max_slices;
 
 typedef struct GpId
 {
-	int32		numsegments;	/* count of distinct segindexes */
 	int32		dbid;			/* the dbid of this database */
 	int32		segindex;		/* content indicator: -1 for entry database,
 								 * 0, ..., n-1 for segment database *
@@ -914,7 +883,6 @@ extern uint32 Gp_listener_port;
  */
 extern void write_log(const char *fmt,...) __attribute__((format(printf, 1, 2)));
 
-extern void verifyGpIdentityIsSet(void);
 
 extern void increment_command_count(void);
 

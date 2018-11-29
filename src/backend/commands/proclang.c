@@ -3,7 +3,7 @@
  * proclang.c
  *	  PostgreSQL PROCEDURAL LANGUAGE support code.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -276,7 +276,7 @@ CreateProceduralLanguage_internal(CreatePLangStmt *stmt)
 		if (funcrettype != LANGUAGE_HANDLEROID)
 		{
 			/*
-			 * We allow OPAQUE just so we can load old dump files.	When we
+			 * We allow OPAQUE just so we can load old dump files.  When we
 			 * see a handler function declared OPAQUE, change it to
 			 * LANGUAGE_HANDLER.  (This is probably obsolete and removable?)
 			 */
@@ -492,7 +492,7 @@ find_language_template(const char *languageName)
 				BTEqualStrategyNumber, F_NAMEEQ,
 				CStringGetDatum(languageName));
 	scan = systable_beginscan(rel, PLTemplateNameIndexId, true,
-							  SnapshotNow, 1, &key);
+							  NULL, 1, &key);
 
 	tup = systable_getnext(scan);
 	if (HeapTupleIsValid(tup))

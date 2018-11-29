@@ -19,7 +19,7 @@
  * representation all the way through to execution.
  *
  * There is currently no special support for joins involving CTID; in
- * particular nothing corresponding to best_inner_indexscan().	Since it's
+ * particular nothing corresponding to best_inner_indexscan().  Since it's
  * not very useful to store TIDs of one table in another table, there
  * doesn't seem to be enough use-case to justify adding a lot of code
  * for that.
@@ -27,7 +27,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -59,7 +59,7 @@ static List *TidQualFromRestrictinfo(List *restrictinfo, int varno);
  * or
  *		pseudoconstant = CTID
  *
- * We check that the CTID Var belongs to relation "varno".	That is probably
+ * We check that the CTID Var belongs to relation "varno".  That is probably
  * redundant considering this is only applied to restriction clauses, but
  * let's be safe.
  */
@@ -259,8 +259,7 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 	/*
 	 * We don't support pushing join clauses into the quals of a tidscan, but
 	 * it could still have required parameterization due to LATERAL refs in
-	 * its tlist.  (That can only happen if the tidscan is on a relation
-	 * pulled up out of a UNION ALL appendrel.)
+	 * its tlist.
 	 */
 	required_outer = rel->lateral_relids;
 

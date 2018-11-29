@@ -404,7 +404,7 @@ class SQLIsolationTestCase:
         executing transactions. This is mainly used to test isolation behavior.
 
         [<#>[flag]:] <sql> | ! <shell scripts or command>
-        #: either an integer indicating an unique session, or a content-id if
+        #: either an integer indicating a unique session, or a content-id if
            followed by U (for utility-mode connections). In 'U' mode, the
            content-id can alternatively be an asterisk '*' to perform a
            utility-mode query on the master and all primaries.

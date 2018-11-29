@@ -511,9 +511,9 @@ SELECT sum(salary),
 FROM empsalary GROUP BY depname;
   sum  | row_number |  sum  
 -------+------------+-------
- 14600 |          3 | 14600
-  7400 |          2 | 22000
  25100 |          1 | 47100
+  7400 |          2 | 22000
+ 14600 |          3 | 14600
 (3 rows)
 
 -- identical windows with different names
@@ -632,12 +632,12 @@ select first_value(max(x)) over (), y
    ->  Gather Motion 3:1  (slice2; segments: 3)
          ->  Result
                ->  HashAggregate
-                     Group Key: (ten + four)
+                     Group Key: ((ten + four))
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
-                           Hash Key: (ten + four)
+                           Hash Key: ((ten + four))
                            ->  Result
                                  ->  HashAggregate
-                                       Group Key: ten + four
+                                       Group Key: (ten + four)
                                        ->  Result
                                              ->  Table Scan on tenk1
  Optimizer: PQO version 2.74.0
@@ -1059,8 +1059,107 @@ SELECT ntile(0) OVER (ORDER BY ten), ten, four FROM tenk1;
 ERROR:  argument of ntile must be greater than zero
 SELECT nth_value(four, 0) OVER (ORDER BY ten), ten, four FROM tenk1;
 ERROR:  argument of nth_value must be greater than zero
+-- filter
+SELECT sum(salary), row_number() OVER (ORDER BY depname), sum(
+    sum(salary) FILTER (WHERE enroll_date > '2007-01-01')
+) FILTER (WHERE depname <> 'sales') OVER (ORDER BY depname DESC) AS "filtered_sum",
+    depname
+FROM empsalary GROUP BY depname;
+  sum  | row_number | filtered_sum |  depname  
+-------+------------+--------------+-----------
+ 14600 |          3 |              | sales
+  7400 |          2 |         3500 | personnel
+ 25100 |          1 |        22600 | develop
+(3 rows)
+
+-- Test Sort node collapsing
+EXPLAIN (COSTS OFF)
+SELECT * FROM
+  (SELECT depname,
+          sum(salary) OVER (PARTITION BY depname order by empno) depsalary,
+          min(salary) OVER (PARTITION BY depname, empno order by enroll_date) depminsalary
+   FROM empsalary) emp
+WHERE depname = 'sales';
+                                  QUERY PLAN
+-----------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: depname, empno
+               Order By: enroll_date
+               ->  Sort
+                     Sort Key: depname, empno, enroll_date
+                     ->  WindowAgg
+                           Partition By: depname
+                           Order By: empno
+                           ->  Sort
+                                 Sort Key: depname, empno
+                                 ->  Table Scan on empsalary
+                                       Filter: ((depname)::text = 'sales'::text)
+(15 rows)
+
+-- Test Sort node reordering
+EXPLAIN (COSTS OFF)
+SELECT
+  lead(1) OVER (PARTITION BY depname ORDER BY salary, enroll_date),
+  lag(1) OVER (PARTITION BY depname ORDER BY salary,enroll_date,empno)
+FROM empsalary;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Result
+         ->  WindowAgg
+               Partition By: depname
+               Order By: salary, enroll_date, empno
+               ->  Sort
+                     Sort Key: depname, salary, enroll_date, empno
+                     ->  WindowAgg
+                           Partition By: depname
+                           Order By: salary, enroll_date
+                           ->  Sort
+                                 Sort Key: depname, salary, enroll_date
+                                 ->  Table Scan on empsalary
+(14 rows)
+
 -- cleanup
 DROP TABLE empsalary;
+-- test user-defined window function with named args and default args
+CREATE FUNCTION nth_value_def(val anyelement, n integer = 1) RETURNS anyelement
+  LANGUAGE internal WINDOW IMMUTABLE STRICT AS 'window_nth_value';
+-- GPDB: LIMIT 100 added, to force the result of the subquery to be ordered
+-- across all segments.
+SELECT nth_value_def(n := 2, val := ten) OVER (PARTITION BY four), ten, four
+  FROM (SELECT * FROM tenk1 WHERE unique2 < 10 ORDER BY four, ten LIMIT 100) s;
+ nth_value_def | ten | four 
+---------------+-----+------
+             0 |   0 |    0
+             0 |   0 |    0
+             0 |   4 |    0
+             1 |   1 |    1
+             1 |   1 |    1
+             1 |   7 |    1
+             1 |   9 |    1
+               |   0 |    2
+             3 |   1 |    3
+             3 |   3 |    3
+(10 rows)
+
+SELECT nth_value_def(ten) OVER (PARTITION BY four), ten, four
+  FROM (SELECT * FROM tenk1 WHERE unique2 < 10 ORDER BY four, ten LIMIT 100) s;
+ nth_value_def | ten | four 
+---------------+-----+------
+             0 |   0 |    0
+             0 |   0 |    0
+             0 |   4 |    0
+             1 |   1 |    1
+             1 |   1 |    1
+             1 |   7 |    1
+             1 |   9 |    1
+             0 |   0 |    2
+             1 |   1 |    3
+             1 |   3 |    3
+(10 rows)
+
 --
 -- Test the basic moving-aggregate machinery
 --

@@ -21,7 +21,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -31,6 +31,8 @@
  */
 
 #include "c.h"
+
+#include "pg_getopt.h"
 
 #if defined(LIBC_SCCS) && !defined(lint)
 static char sccsid[] = "@(#)getopt.c	8.3 (Berkeley) 4/27/95";
@@ -49,19 +51,12 @@ int			opterr = 1,			/* if error message should be printed */
 			optind = 1,			/* index into parent argv vector */
 			optopt;				/* character checked for validity */
 char	   *optarg;				/* argument associated with option */
-#else
 
-extern int	opterr;
-extern int	optind;
-extern int	optopt;
-extern char *optarg;
 #endif
 
 #define BADCH	(int)'?'
 #define BADARG	(int)':'
 #define EMSG	""
-
-int			getopt(int nargc, char *const * nargv, const char *ostr);
 
 /*
  * getopt

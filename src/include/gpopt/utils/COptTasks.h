@@ -88,6 +88,10 @@ struct SOptContext
 	// did the optimizer fail unexpectedly?
 	BOOL m_is_unexpected_failure;
 
+	// should the error be propagated to user, instead of falling back to the
+	// Postres planner?
+	BOOL m_should_error_out;
+
 	// buffer for optimizer error messages
 	CHAR *m_error_msg;
 
@@ -177,8 +181,7 @@ class COptTasks
 		PlannedStmt *GPOPTOptimizedPlan
 			(
 			Query *query,
-			SOptContext* gpopt_context,
-			BOOL *had_unexpected_failure // output : set to true if optimizer unexpectedly failed to produce plan
+			SOptContext* gpopt_context
 			);
 		
 		// enable/disable a given xforms

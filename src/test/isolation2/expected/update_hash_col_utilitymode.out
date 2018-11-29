@@ -1,0 +1,8 @@
+create table t_update_hash_col_utilitymode(c int) distributed by (c);
+CREATE
+
+1U: update t_update_hash_col_utilitymode set c = c + 1;
+ERROR:  Cannot update distribution key columns in utility mode
+
+drop table t_update_hash_col_utilitymode;
+DROP

@@ -194,6 +194,14 @@ create table foo (a int, b int) distributed by (c,C);
 ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: create table foo (a int, b int) distributed by (c,C);
                                                           ^
+create table foo (a int, b int, c int) distributed by (b, c, c);
+ERROR:  duplicate column in DISTRIBUTED BY clause
+LINE 1: ...te table foo (a int, b int, c int) distributed by (b, c, c);
+                                                                    ^
+create table foo (a int, b int, c int) distributed by (c, c, b);
+ERROR:  duplicate column in DISTRIBUTED BY clause
+LINE 1: ...te table foo (a int, b int, c int) distributed by (c, c, b);
+                                                                 ^
 create table foo ("I" int, i int) distributed by ("I",I);
 select attrnums from gp_distribution_policy where localoid='foo'::regclass;
  attrnums 

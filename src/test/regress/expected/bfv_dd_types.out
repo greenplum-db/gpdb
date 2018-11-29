@@ -9,129 +9,129 @@ set test_print_direct_dispatch_info=on;
 set gp_autostats_mode = 'None';
 -- test direct dispatch for different data types
 CREATE TABLE direct_test_type_int2 (id int2) DISTRIBUTED BY (id);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE TABLE direct_test_type_int4 (id int4) DISTRIBUTED BY (id);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 CREATE TABLE direct_test_type_int8 (id int8) DISTRIBUTED BY (id);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_real (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (real1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_smallint (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (smallint1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_boolean2 (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (boolean1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_double (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (double1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_date (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (date1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_abstime (x abstime) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bit (x bit) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bpchar (x bpchar) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bytea (x bytea) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_cidr (x cidr) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_inet (x inet) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_macaddr (x macaddr) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_tinterval (x tinterval) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_varbit (x varbit) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 INSERT INTO direct_test_type_int2 VALUES (1);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 INSERT INTO direct_test_type_int4 VALUES (1);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 INSERT INTO direct_test_type_int8 VALUES (1);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_real values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_smallint values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_boolean2 values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_double values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_date values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_abstime values('2008-08-08');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_bit values('1');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_bpchar values('abs');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_bytea values('greenplum');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_cidr values('68.44.55.111');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_inet values('68.44.55.111');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_tinterval values('["2008-08-08" "2010-10-10"]');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_varbit values('0101010');
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 -- @author antovl
@@ -143,63 +143,63 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE c
 -- @tags bfv
 -- @gucs optimizer_enable_constant_expression_evaluation=on;
 select * from direct_test_type_real where real1 = 8::real;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  real1 | smallint1 | boolean1 | int1 | double1 |   date1    | numeric1 
 -------+-----------+----------+------+---------+------------+----------
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
 select * from direct_test_type_smallint where smallint1 = 8::smallint;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  real1 | smallint1 | boolean1 | int1 | double1 |   date1    | numeric1 
 -------+-----------+----------+------+---------+------------+----------
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
 select * from direct_test_type_double where double1 = 8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  real1 | smallint1 | boolean1 | int1 | double1 |   date1    | numeric1 
 -------+-----------+----------+------+---------+------------+----------
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
 select * from direct_test_type_date where date1 = '2008-08-08';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  real1 | smallint1 | boolean1 | int1 | double1 |   date1    | numeric1 
 -------+-----------+----------+------+---------+------------+----------
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
 select * from direct_test_type_numeric where numeric1 = 8.8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  real1 | smallint1 | boolean1 | int1 | double1 |   date1    | numeric1 
 -------+-----------+----------+------+---------+------------+----------
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
 select 1 from direct_test_type_abstime where x = '2008-08-08';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  ?column? 
 ----------
         1
 (1 row)
 
 select * from direct_test_type_bit where x = '1';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  x 
 ---
  1
 (1 row)
 
 select * from direct_test_type_bpchar where x = 'abs';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
   x  
 -----
  abs
 (1 row)
 
 select * from direct_test_type_bytea where x = 'greenplum';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
           x           
 ----------------------
  \x677265656e706c756d
@@ -207,161 +207,161 @@ INFO:  Dispatch command to SINGLE content
 
 -- TODO: this currently not directly dispatched (AGL-1246)
 select * from direct_test_type_cidr where x = '68.44.55.111';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
         x        
 -----------------
  68.44.55.111/32
 (1 row)
 
 select * from direct_test_type_inet where x = '68.44.55.111';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
       x       
 --------------
  68.44.55.111
 (1 row)
 
 select * from direct_test_type_macaddr where x = '12:34:56:78:90:ab';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
          x         
 -------------------
  12:34:56:78:90:ab
 (1 row)
 
 select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  ?column? 
 ----------
         1
 (1 row)
 
 select * from direct_test_type_varbit where x = '0101010';
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
     x    
 ---------
  0101010
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int2;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int4;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE id = 1::int8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE 1::int2 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE 1::int4 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int2 WHERE 1::int8 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int2;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int4;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE id = 1::int8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE 1::int2 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE 1::int4 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int4 WHERE 1::int8 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int2;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int4;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE id = 1::int8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE 1::int2 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE 1::int4 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
 (1 row)
 
 SELECT * FROM direct_test_type_int8 WHERE 1::int8 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
   1
@@ -369,105 +369,105 @@ INFO:  Dispatch command to SINGLE content
 
 -- overflow test
 SELECT * FROM direct_test_type_int2 WHERE id = 32768::int4;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE id = -32769::int4;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE 32768::int4 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE -32769::int4 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE id = 2147483648::int8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE id = -2147483649::int8;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE 2147483648::int8 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 SELECT * FROM direct_test_type_int2 WHERE -2147483649::int8 = id;
-INFO:  Dispatch command to SINGLE content
+INFO:  (slice 1) Dispatch command to SINGLE content
  id 
 ----
 (0 rows)
 
 drop table direct_test_type_real;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_smallint;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_double;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_date;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_numeric;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int2;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int4;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_int8;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_abstime;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bpchar;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bytea;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_cidr;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_inet;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_macaddr;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_tinterval;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_varbit;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_boolean2;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 reset test_print_direct_dispatch_info;

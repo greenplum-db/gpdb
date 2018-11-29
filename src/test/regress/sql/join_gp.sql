@@ -289,13 +289,47 @@ insert into test_int2 values(3, 10), (4, 20);
 select t1.id, t1.data, t2.id, t2.data from test_int1 t1, test_int2 t2 where t1.data = t2.data;
 
 -- Test to ensure that for full outer join on varchar columns, planner is successful in finding a sort operator in the catalog
--- start_ignore
-create table input_table(a varchar(30), b varchar(30));
+create table input_table(a varchar(30), b varchar(30)) distributed by (a);
 set enable_hashjoin = off;
--- end_ignore
 explain (costs off) select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
-select X.a from input_table X full join (select a from input_table) Y ON X.a = Y.a;
 
 -- Cleanup
+reset enable_hashjoin;
 set client_min_messages='warning'; -- silence drop-cascade NOTICEs
 drop schema pred cascade;
+reset search_path;
+
+-- github issue 5370 cases
+drop table if exists t5370;
+drop table if exists t5370_2;
+create table t5370(id int,name text) distributed by(id);
+insert into t5370 select i,i from  generate_series(1,1000) i;
+create table t5370_2 as select * from t5370 distributed by (id);
+analyze t5370_2;
+analyze t5370;
+explain select * from t5370 a , t5370_2 b where a.name=b.name;
+
+drop table t5370;
+drop table t5370_2;
+
+-- github issue 6215 cases
+-- When executing the following plan
+-- ```
+--  Gather Motion 1:1  (slice1; segments: 1)
+--    ->  Merge Full Join
+--         ->  Seq Scan on int4_tbl a
+--         ->  Seq Scan on int4_tbl b
+--```
+-- Greenplum will raise an Assert Fail.
+-- We force adding a material node for
+-- merge full join on true.
+drop table if exists t6215;
+create table t6215(f1 int4) distributed replicated;
+insert into t6215(f1) values (1), (2), (3);
+
+set enable_material = off;
+-- The plan still have Material operator
+explain (costs off) select * from t6215 a full join t6215 b on true;
+select * from t6215 a full join t6215 b on true;
+
+drop table t6215;

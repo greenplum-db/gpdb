@@ -8,7 +8,7 @@
  * outside the core parser should be in parser.h.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/gramparse.h
@@ -29,7 +29,7 @@
 #include "parser/gram.h"
 
 /*
- * The YY_EXTRA data that a flex scanner allows us to pass around.	Private
+ * The YY_EXTRA data that a flex scanner allows us to pass around.  Private
  * state needed for raw parsing/lexing goes here.
  */
 typedef struct base_yy_extra_type

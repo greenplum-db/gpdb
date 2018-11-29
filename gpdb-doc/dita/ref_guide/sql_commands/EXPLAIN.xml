@@ -82,6 +82,8 @@ workfile
         approach:<codeblock>BEGIN;
 EXPLAIN ANALYZE ...;
 ROLLBACK;</codeblock></note>
+      <p><codeph>EXPLAIN VERBOSE</codeph> includes the output column list for each node in the plan
+        tree.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>

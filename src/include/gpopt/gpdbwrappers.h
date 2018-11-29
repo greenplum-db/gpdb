@@ -172,18 +172,14 @@ namespace gpdb {
 	// is aggregate ordered
 	bool IsOrderedAgg(Oid aggid);
 	
-	// does aggregate have a combine function
-	bool AggHasCombineFunc(Oid aggid);
+	// does aggregate have a combine function (and serial/deserial functions, if needed)
+	bool IsAggPartialCapable(Oid aggid);
 
 	// intermediate result type of given aggregate
 	Oid GetAggregate(const char* agg, Oid type_oid);
 
 	// array type oid
 	Oid GetArrayType(Oid typid);
-
-	// deconstruct array
-	void DeconstructArray(struct ArrayType *array, Oid elmtype, int elmlen, bool elmbyval,
-			char elmalign, Datum **elemsp, bool **nullsp, int *nelemsp);
 
 	// attribute stats slot
 	bool GetAttrStatsSlot(AttStatsSlot *sslot, HeapTuple statstuple, int reqkind,
@@ -462,9 +458,6 @@ namespace gpdb {
 	// does an operator exist with the given oid
 	bool OperatorExists(Oid oid);
 
-	// fetch detoasted copies of toastable datatypes
-	struct varlena *DetoastDatum(struct varlena * datum);
-
 	// expression tree walker
 	bool WalkExpressionTree(Node *node, bool(*walker)(), void *context);
 
@@ -514,8 +507,8 @@ namespace gpdb {
 	bool RelationExists(Oid oid);
 
 	// estimate the relation size using the real number of blocks and tuple density
-	void EstimateRelationSize(Relation rel,	int32 *attr_widths,	BlockNumber *pages,	double *tuples, double *allvisfrac);
 	void CdbEstimateRelationSize (RelOptInfo *relOptInfo, Relation rel, int32 *attr_widths, BlockNumber *pages, double *tuples, double *allvisfrac);
+	double CdbEstimatePartitionedNumTuples (Relation rel, bool *stats_missing);
 
 	// close the given relation
 	void CloseRelation(Relation rel);
@@ -591,10 +584,7 @@ namespace gpdb {
 
 	// replace any polymorphic type with correct data type deduced from input arguments
 	bool ResolvePolymorphicArgType(int numargs, Oid *argtypes, char *argmodes, FuncExpr *call_expr);
-	
-	// hash a const value with GPDB's hash function
-	int32 CdbHashConst(Const *constant, int num_segments);
-	
+
 	// hash a list of const values with GPDB's hash function
 	int32 CdbHashConstList(List *constants, int num_segments);
 	
@@ -647,7 +637,8 @@ namespace gpdb {
 	// returns true if a query cancel is requested in GPDB
 	bool IsAbortRequested(void);
 
-	GpPolicy *MakeGpPolicy(MemoryContext mcxt, GpPolicyType ptype, int nattrs);
+	GpPolicy *MakeGpPolicy(GpPolicyType ptype, int nattrs,
+						   int numsegments);
 
 } //namespace gpdb
 

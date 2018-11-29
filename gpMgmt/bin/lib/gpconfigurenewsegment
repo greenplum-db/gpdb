@@ -72,8 +72,7 @@ class ConfExpSegCmd(Command):
         """
 
         if not os.path.exists(os.path.dirname(path)):
-            logger.info("gpconfigurenewsegment:validatePath path %s does not exist" % path)
-            raise ValidationException("Parent directory for system data directory '%s' does not exist" % path)
+            self.makeOrUpdatePathAsNeeded(path)
 
         if not os.path.exists(path):
             return
@@ -99,7 +98,7 @@ class ConfExpSegCmd(Command):
         if os.path.exists(path):
             os.chmod(path, 0700)
         else:
-            os.mkdir(path, 0700)
+            os.makedirs(path, 0700)
 
     def run(self):
         try:
@@ -161,6 +160,13 @@ class ConfExpSegCmd(Command):
 
                     logger.info("create gp_dbid file for segment")
                     writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
+
+                    # Create pg_log for new segment in case it dosen't exist.
+                    try:
+                        self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_log"))
+                    except Exception, e:
+                        self.set_results(CommandResult(1,'',e,True,False))
+                        raise
 
                     logger.info("Updating %s/postgresql.conf" % self.datadir)
                     modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,

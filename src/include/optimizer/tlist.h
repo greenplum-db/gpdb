@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/tlist.h
@@ -22,6 +22,7 @@
 // return the first target entries that match the node expression
 extern TargetEntry *tlist_member(Node *node, List *targetlist);
 extern TargetEntry *tlist_member_ignore_relabel(Node *node, List *targetlist);
+extern TargetEntry *tlist_member_match_var(Var *var, List *targetlist);
 
 // return a list a target entries that match the node expression
 extern List *tlist_members(Node *node, List *targetlist);

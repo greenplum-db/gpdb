@@ -5,7 +5,7 @@ CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@)
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1,10) AS i;
 
 DELETE FROM ao WHERE a < 5;
-SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
+SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg('ao');
 VACUUM ao;
-SELECT state, modcount FROM gp_ao_or_aocs_seg_name('ao');
-SELECT sum(tupcount) FROM gp_ao_or_aocs_seg_name('ao');
+SELECT state, modcount FROM gp_ao_or_aocs_seg('ao');
+SELECT sum(tupcount) FROM gp_ao_or_aocs_seg('ao');

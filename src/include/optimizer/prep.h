@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/prep.h
@@ -38,6 +38,11 @@ extern List *init_list_cteplaninfo(int numCtes);
  */
 extern Node *negate_clause(Node *node);
 extern Expr *canonicalize_qual(Expr *qual);
+
+/*
+ * prototypes for prepsecurity.c
+ */
+extern void expand_security_quals(PlannerInfo *root, List *tlist);
 
 /*
  * prototypes for preptlist.c

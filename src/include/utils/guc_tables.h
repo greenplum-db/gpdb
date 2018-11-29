@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  *	  src/include/utils/guc_tables.h
  *
@@ -100,6 +100,7 @@ enum config_group
 
 	CLIENT_CONN_STATEMENT,
 	CLIENT_CONN_LOCALE,
+	CLIENT_CONN_PRELOAD,
 	CLIENT_CONN_OTHER,
 	LOCK_MANAGEMENT,
 	COMPAT_OPTIONS,

@@ -4,7 +4,7 @@
  *	  routines to manage scans of inverted index relations
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -163,6 +163,8 @@ ginFillScanKey(GinScanOpaque so, OffsetNumber attnum,
 	key->curItemMatches = false;
 	key->recheckCurItem = false;
 	key->isFinished = false;
+
+	ginInitConsistentFunction(ginstate, key);
 
 	for (i = 0; i < nQueryValues; i++)
 	{
@@ -387,7 +389,7 @@ ginNewScanKey(IndexScanDesc scan)
 	/*
 	 * If the index is version 0, it may be missing null and placeholder
 	 * entries, which would render searches for nulls and full-index scans
-	 * unreliable.	Throw an error if so.
+	 * unreliable.  Throw an error if so.
 	 */
 	if (hasNullQuery && !so->isVoidRes)
 	{

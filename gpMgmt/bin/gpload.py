@@ -562,7 +562,7 @@ def sqlIdentifierCompare(x, y):
     and non-delimited identifiers. Return True if they are equivalent or False
     if they are not equivalent.
     """
-    if x == None or y == None:
+    if x is None or y is None:
        return False
 
     if isDelimited(x):
@@ -706,7 +706,7 @@ def notice_processor(self):
     r = re.compile("^NOTICE:  Found (\d+) data formatting errors.*")
     messageNumber = 0
     m = None
-    while messageNumber < len(theNotices) and m == None:
+    while messageNumber < len(theNotices) and m is None:
        aNotice = theNotices[messageNumber]
        m = r.match(aNotice)
        messageNumber = messageNumber + 1
@@ -937,7 +937,7 @@ def test_key(gp, key, crumb):
     it has the parent we expect
     """
     val = valid_tokens.get(key)
-    if val == None:
+    if val is None:
         gp.log(gp.ERROR, 'unrecognized key: "%s"' % key)
 
     p = val['parent']
@@ -1842,7 +1842,7 @@ class gpload:
                 """ remove leading or trailing spaces """
                 d = { tempkey.strip() : value }
                 key = d.keys()[0]
-                if d[key] == None:
+                if d[key] is None:
                     self.log(self.DEBUG,
                              'getting source column data type from target')
                     for name, typ, mapto, hasseq in self.into_columns:
@@ -1865,7 +1865,7 @@ class gpload:
 
         # make sure that all columns have a type
         for name, typ, map, hasseq in self.from_columns:
-            if typ == None:
+            if typ is None:
                 self.log(self.ERROR, 'column "%s" has no type ' % name +
                        'and does not appear in target table "%s"' % self.schemaTable)
         self.log(self.DEBUG, 'from columns are:')
@@ -1881,7 +1881,7 @@ class gpload:
 
         # find the shema name for this table (according to search_path)
         # if it was not explicitly specified in the configuration file.
-        if self.schema == None:
+        if self.schema is None:
             queryString = """SELECT n.nspname
                              FROM pg_catalog.pg_class c
                              LEFT JOIN pg_catalog.pg_namespace n
@@ -1982,7 +1982,7 @@ class gpload:
                            found = True
                            break
                     if i:
-                        if i[2] == None: i[2] = i[0]
+                        if i[2] is None: i[2] = i[0]
                     else:
                         self.log(self.ERROR, 'no mapping for input column ' +
                                  '"%s" to output table' % x[0])
@@ -1997,7 +1997,7 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists.
     #
-    def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors):
+    def get_reuse_exttable_query(self, formatType, formatOpts, limitStr, from_cols, schemaName, log_errors, encodingCode):
         sqlFormat = """select attrelid::regclass
                  from (
                         select
@@ -2057,6 +2057,9 @@ class gpload:
         else:
             sql += "and pgext.rejectlimit IS NULL "
 
+        if encodingCode:
+            sql += "and pgext.encoding = %s " % encodingCode
+
         sql+= "group by attrelid "
 
         sql+= """having
@@ -2083,7 +2086,7 @@ class gpload:
     # This function will return the SQL to run in order to find out whether
     # such a table exists. The results of this SQl are table names without schema
     #
-    def get_fast_match_exttable_query(self, formatType, formatOpts, limitStr, schemaName, log_errors):
+    def get_fast_match_exttable_query(self, formatType, formatOpts, limitStr, schemaName, log_errors, encodingCode):
 
         sqlFormat = """select relname from pg_class
                     join
@@ -2129,6 +2132,9 @@ class gpload:
             sql += "and pgext.rejectlimit = %s " % limitStr
         else:
             sql += "and pgext.rejectlimit IS NULL "
+
+        if encodingCode:
+            sql += "and pgext.encoding = %s " % encodingCode
 
         sql+= "limit 1;"
 
@@ -2181,7 +2187,7 @@ class gpload:
         return None
 
     def get_ext_schematable(self, schemaName, tableName):
-        if schemaName == None:
+        if schemaName is None:
             return tableName
         else:
             schemaTable = "%s.%s" % (schemaName, tableName)
@@ -2289,7 +2295,18 @@ class gpload:
                     self.control_file_error("gpload:input:force_not_null must be a YAML sequence of strings")
             self.formatOpts += "force not null %s " % ','.join(force_not_null_columns)
 
+        encodingCode = None
         encodingStr = self.getconfig('gpload:input:encoding', unicode, None)
+        if encodingStr is None:
+            result = self.db.query("SHOW SERVER_ENCODING".encode('utf-8')).getresult()
+            if len(result) > 0:
+                encodingStr = result[0][0]
+
+        if encodingStr:
+            sql = "SELECT pg_char_to_encoding('%s')" % encodingStr
+            result = self.db.query(sql.encode('utf-8')).getresult()
+            if len(result) > 0:
+                encodingCode = result[0][0]
 
         limitStr = self.getconfig('gpload:input:error_limit',int, None)
         if self.log_errors and not limitStr:
@@ -2342,10 +2359,10 @@ class gpload:
                 self.formatOpts = self.formatOpts.replace("E'\\''","'\''")
                 if self.fast_match:
                     sql = self.get_fast_match_exttable_query(formatType, self.formatOpts,
-                        limitStr, self.extSchemaName, self.log_errors)
+                        limitStr, self.extSchemaName, self.log_errors, encodingCode)
                 else:
                     sql = self.get_reuse_exttable_query(formatType, self.formatOpts,
-                        limitStr, from_cols, self.extSchemaName, self.log_errors)
+                        limitStr, from_cols, self.extSchemaName, self.log_errors, encodingCode)
 
                 resultList = self.db.query(sql.encode('utf-8')).getresult()
                 if len(resultList) > 0:

@@ -22,9 +22,9 @@
  *		typedef struct FormData_pg_type_encoding
  * ----------------
  */
-#define TypeEncodingRelationId	3220
+#define TypeEncodingRelationId	6220
 
-CATALOG(pg_type_encoding,3220) BKI_WITHOUT_OIDS
+CATALOG(pg_type_encoding,6220) BKI_WITHOUT_OIDS
 {
 	Oid		typid;			
 	text	typoptions[1];	

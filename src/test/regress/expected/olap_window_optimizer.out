@@ -1597,7 +1597,7 @@ from sale_ord;
  Result  (cost=0.00..8.07 rows=6 width=24)
    ->  Window  (cost=0.00..8.07 rows=6 width=24)
          Order By: ord, cn
-         ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..6.50 rows=6 width=12)
+         ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..6.50 rows=6 width=12)
                Merge Key: ord, cn
                ->  Sort  (cost=0.00..5.43 rows=6 width=12)
                      Sort Key: ord, cn

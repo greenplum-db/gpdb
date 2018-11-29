@@ -3,7 +3,7 @@
  * parse_type.h
  *		handle type operations for parser
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/parser/parse_type.h
@@ -20,7 +20,9 @@
 typedef HeapTuple Type;
 
 extern Type LookupTypeName(ParseState *pstate, const TypeName *typeName,
-			   int32 *typmod_p);
+			   int32 *typmod_p, bool missing_ok);
+extern Oid LookupTypeNameOid(ParseState *pstate, const TypeName *typeName,
+				  bool missing_ok);
 extern Type typenameType(ParseState *pstate, const TypeName *typeName,
 			 int32 *typmod_p);
 extern Oid	typenameTypeId(ParseState *pstate, const TypeName *typeName);
@@ -45,7 +47,7 @@ extern Datum stringTypeDatum(Type tp, char *string, int32 atttypmod);
 
 extern Oid	typeidTypeRelid(Oid type_id);
 
-extern void parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p);
+extern void parseTypeString(const char *str, Oid *typeid_p, int32 *typmod_p, bool missing_ok);
 
 #define ISCOMPLEX(typeid) (typeidTypeRelid(typeid) != InvalidOid)
 

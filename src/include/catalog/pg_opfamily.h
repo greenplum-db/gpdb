@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_opfamily.h
@@ -83,6 +83,7 @@ DATA(insert OID = 1971 (	405		float_ops		PGNSP PGUID ));
 DATA(insert OID = 1974 (	403		network_ops		PGNSP PGUID ));
 #define NETWORK_BTREE_FAM_OID 1974
 DATA(insert OID = 1975 (	405		network_ops		PGNSP PGUID ));
+DATA(insert OID = 3550 (	783		network_ops		PGNSP PGUID ));
 DATA(insert OID = 1976 (	403		integer_ops		PGNSP PGUID ));
 #define INTEGER_BTREE_FAM_OID 1976
 DATA(insert OID = 1977 (	405		integer_ops		PGNSP PGUID ));
@@ -101,6 +102,7 @@ DATA(insert OID = 1990 (	405		oid_ops			PGNSP PGUID ));
 DATA(insert OID = 1991 (	403		oidvector_ops	PGNSP PGUID ));
 DATA(insert OID = 1992 (	405		oidvector_ops	PGNSP PGUID ));
 DATA(insert OID = 2994 (	403		record_ops		PGNSP PGUID ));
+DATA(insert OID = 3194 (	403		record_image_ops	PGNSP PGUID ));
 DATA(insert OID = 1994 (	403		text_ops		PGNSP PGUID ));
 #define TEXT_BTREE_FAM_OID 1994
 DATA(insert OID = 1995 (	405		text_ops		PGNSP PGUID ));
@@ -137,6 +139,8 @@ DATA(insert OID = 1029 (	783		point_ops		PGNSP PGUID ));
 DATA(insert OID = 2745 (	2742	array_ops		PGNSP PGUID ));
 DATA(insert OID = 2968 (	403		uuid_ops		PGNSP PGUID ));
 DATA(insert OID = 2969 (	405		uuid_ops		PGNSP PGUID ));
+DATA(insert OID = 3253 (	403		pg_lsn_ops		PGNSP PGUID ));
+DATA(insert OID = 3254 (	405		pg_lsn_ops		PGNSP PGUID ));
 DATA(insert OID = 3522 (	403		enum_ops		PGNSP PGUID ));
 DATA(insert OID = 3523 (	405		enum_ops		PGNSP PGUID ));
 DATA(insert OID = 3626 (	403		tsvector_ops	PGNSP PGUID ));
@@ -152,11 +156,15 @@ DATA(insert OID = 4015 (	4000	quad_point_ops	PGNSP PGUID ));
 DATA(insert OID = 4016 (	4000	kd_point_ops	PGNSP PGUID ));
 DATA(insert OID = 4017 (	4000	text_ops		PGNSP PGUID ));
 #define TEXT_SPGIST_FAM_OID 4017
+DATA(insert OID = 4033 (	403		jsonb_ops		PGNSP PGUID ));
+DATA(insert OID = 4034 (	405		jsonb_ops		PGNSP PGUID ));
+DATA(insert OID = 4035 (	783		jsonb_ops		PGNSP PGUID ));
+DATA(insert OID = 4036 (	2742	jsonb_ops		PGNSP PGUID ));
+DATA(insert OID = 4037 (	2742	jsonb_path_ops	PGNSP PGUID ));
 
 /* Complex Number type */
-DATA(insert OID = 3221 (	403		complex_ops		PGNSP PGUID ));
-
-DATA(insert OID = 7080 (	403		xlogloc_ops		PGNSP PGUID ));
+DATA(insert OID = 6221 (	403		complex_ops		PGNSP PGUID ));
+DATA(insert OID = 6224 (	405		complex_ops		PGNSP PGUID ));
 
 /*
  * on-disk bitmap index opfamilies.
@@ -192,5 +200,12 @@ DATA(insert OID = 7044 (	7013	bpchar_pattern_ops	PGNSP PGUID ));
 DATA(insert OID = 7046 (	7013	money_ops		PGNSP PGUID ));
 DATA(insert OID = 7047 (	7013	reltime_ops		PGNSP PGUID ));
 DATA(insert OID = 7048 (	7013	tinterval_ops	PGNSP PGUID ));
+
+/*
+ * hash support for a few built-in datatypes that are missing it in upstream.
+ */
+DATA(insert OID = 7077 (	405		tid_ops		PGNSP PGUID ));
+DATA(insert OID = 7078 (	405		bit_ops		PGNSP PGUID ));
+DATA(insert OID = 7079 (	405		varbit_ops	PGNSP PGUID ));
 
 #endif   /* PG_OPFAMILY_H */

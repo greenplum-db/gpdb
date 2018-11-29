@@ -112,6 +112,9 @@ InsertAppendOnlyEntry(Oid relid,
  *
  * The OIDs will be retrieved only when the corresponding output variable is
  * not NULL.
+ *
+ * 'appendOnlyMetaDataSnapshot' can be passed as NULL, which means use the
+ * latest snapshot, like in systable_beginscan.
  */
 void
 GetAppendOnlyEntryAuxOids(Oid relid,
@@ -262,7 +265,7 @@ UpdateAppendOnlyEntryAuxOids(Oid relid,
 				ObjectIdGetDatum(relid));
 
 	scan = systable_beginscan(pg_appendonly, AppendOnlyRelidIndexId, true,
-							  SnapshotNow, 1, key);
+							  NULL, 1, key);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
@@ -345,7 +348,7 @@ RemoveAppendonlyEntry(Oid relid)
 				ObjectIdGetDatum(relid));
 
 	scan = systable_beginscan(pg_appendonly_rel, AppendOnlyRelidIndexId, true,
-							  SnapshotNow, 1, key);
+							  NULL, 1, key);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,
@@ -429,7 +432,7 @@ GetAppendEntryForMove(
 				ObjectIdGetDatum(relId));
 
 	scan = systable_beginscan(pg_appendonly_rel, AppendOnlyRelidIndexId, true,
-							  SnapshotNow, 1, key);
+							  NULL, 1, key);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,

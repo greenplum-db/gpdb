@@ -10,11 +10,11 @@
  *
  * To simplify life for the SysV implementation, the ID is assumed to
  * consist of two unsigned long values (these are key and ID in SysV
- * terms).	Other platforms may ignore the second value if they need
+ * terms).  Other platforms may ignore the second value if they need
  * only one ID number.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/pg_shmem.h
@@ -24,6 +24,8 @@
 #ifndef PG_SHMEM_H
 #define PG_SHMEM_H
 
+#include "storage/dsm_impl.h"
+
 typedef struct PGShmemHeader	/* standard header for all Postgres shmem */
 {
 	int32		magic;			/* magic # to identify Postgres segments */
@@ -31,6 +33,7 @@ typedef struct PGShmemHeader	/* standard header for all Postgres shmem */
 	pid_t		creatorPID;		/* PID of creating process */
 	Size		totalsize;		/* total size of segment */
 	Size		freeoffset;		/* offset to first free space */
+	dsm_handle	dsm_control;	/* ID of dynamic shared memory control seg */
 	void	   *index;			/* pointer to ShmemIndex table */
 #ifndef WIN32					/* Windows doesn't have useful inode#s */
 	dev_t		device;			/* device data directory is on */
@@ -38,8 +41,17 @@ typedef struct PGShmemHeader	/* standard header for all Postgres shmem */
 #endif
 } PGShmemHeader;
 
+/* GUC variable */
+extern int	huge_pages;
 
-#ifdef EXEC_BACKEND
+/* Possible values for huge_pages */
+typedef enum
+{
+	HUGE_PAGES_OFF,
+	HUGE_PAGES_ON,
+	HUGE_PAGES_TRY
+}	HugePagesType;
+
 #ifndef WIN32
 extern unsigned long UsedShmemSegID;
 #else
@@ -47,11 +59,12 @@ extern HANDLE UsedShmemSegID;
 #endif
 extern void *UsedShmemSegAddr;
 
+#ifdef EXEC_BACKEND
 extern void PGSharedMemoryReAttach(void);
 #endif
 
 extern PGShmemHeader *PGSharedMemoryCreate(Size size, bool makePrivate,
-					 int port);
+					 int port, PGShmemHeader **shim);
 extern bool PGSharedMemoryIsInUse(unsigned long id1, unsigned long id2);
 extern void PGSharedMemoryDetach(void);
 

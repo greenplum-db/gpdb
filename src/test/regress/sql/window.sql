@@ -276,8 +276,44 @@ SELECT ntile(0) OVER (ORDER BY ten), ten, four FROM tenk1;
 
 SELECT nth_value(four, 0) OVER (ORDER BY ten), ten, four FROM tenk1;
 
+-- filter
+
+SELECT sum(salary), row_number() OVER (ORDER BY depname), sum(
+    sum(salary) FILTER (WHERE enroll_date > '2007-01-01')
+) FILTER (WHERE depname <> 'sales') OVER (ORDER BY depname DESC) AS "filtered_sum",
+    depname
+FROM empsalary GROUP BY depname;
+
+-- Test Sort node collapsing
+EXPLAIN (COSTS OFF)
+SELECT * FROM
+  (SELECT depname,
+          sum(salary) OVER (PARTITION BY depname order by empno) depsalary,
+          min(salary) OVER (PARTITION BY depname, empno order by enroll_date) depminsalary
+   FROM empsalary) emp
+WHERE depname = 'sales';
+
+-- Test Sort node reordering
+EXPLAIN (COSTS OFF)
+SELECT
+  lead(1) OVER (PARTITION BY depname ORDER BY salary, enroll_date),
+  lag(1) OVER (PARTITION BY depname ORDER BY salary,enroll_date,empno)
+FROM empsalary;
+
 -- cleanup
 DROP TABLE empsalary;
+
+-- test user-defined window function with named args and default args
+CREATE FUNCTION nth_value_def(val anyelement, n integer = 1) RETURNS anyelement
+  LANGUAGE internal WINDOW IMMUTABLE STRICT AS 'window_nth_value';
+
+-- GPDB: LIMIT 100 added, to force the result of the subquery to be ordered
+-- across all segments.
+SELECT nth_value_def(n := 2, val := ten) OVER (PARTITION BY four), ten, four
+  FROM (SELECT * FROM tenk1 WHERE unique2 < 10 ORDER BY four, ten LIMIT 100) s;
+
+SELECT nth_value_def(ten) OVER (PARTITION BY four), ten, four
+  FROM (SELECT * FROM tenk1 WHERE unique2 < 10 ORDER BY four, ten LIMIT 100) s;
 
 --
 -- Test the basic moving-aggregate machinery

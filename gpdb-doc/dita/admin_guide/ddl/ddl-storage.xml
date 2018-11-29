@@ -665,9 +665,10 @@
     <topic id="topic56" xml:lang="en">
       <title>Altering Table Distribution</title>
       <body>
-        <p><codeph>ALTER TABLE</codeph> provides options to change a table's distribution policy .
-          When the table distribution options change, the table data is redistributed on disk, which
-          can be resource intensive. You can also redistribute table data using the existing
+        <p><codeph>ALTER TABLE</codeph> provides options to change a table's
+          distribution policy. When the table distribution options change, the
+          table data may be redistributed on disk, which can be resource
+          intensive. You can also redistribute table data using the existing
           distribution policy.</p>
       </body>
     </topic>
@@ -690,6 +691,9 @@
           <codeblock>ALTER TABLE sales SET DISTRIBUTED RANDOMLY;
 </codeblock>
         </p>
+        <p>Changing the distribution policy of a table to <codeph>DISTRIBUTED
+            REPLICATED</codeph> or from <codeph>DISTRIBUTED REPLICATED</codeph>
+          automatically redistributes the table data.</p>
       </body>
     </topic>
     <topic id="topic58" xml:lang="en">
@@ -704,6 +708,10 @@
           <codeblock>ALTER TABLE sales SET WITH (REORGANIZE=TRUE);
 </codeblock>
         </p>
+        <p>Changing the distribution policy of a table to <codeph>DISTRIBUTED
+            REPLICATED</codeph> or from <codeph>DISTRIBUTED REPLICATED</codeph>
+          always redistributes the table data, even when you use
+            <codeph>REORGANIZE=FALSE</codeph>.</p>
       </body>
     </topic>
     <topic id="topic59" xml:lang="en">

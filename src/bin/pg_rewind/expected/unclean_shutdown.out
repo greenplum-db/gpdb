@@ -1,0 +1,13 @@
+Master initialized.
+Master running.
+Standby initialized and running.
+Standby promoted.
+Running pg_rewind...
+Old master restarted after rewind.
+SELECT state FROM pg_stat_replication;
+   state   
+-----------
+ streaming
+(1 row)
+
+Master promoted.

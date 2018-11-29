@@ -144,9 +144,6 @@ bool		gp_appendonly_verify_write_block = false;
 bool		gp_appendonly_compaction = true;
 int			gp_appendonly_compaction_threshold = 0;
 bool		gp_heap_require_relhasoids_match = true;
-bool		Debug_appendonly_rezero_quicklz_compress_scratch = false;
-bool		Debug_appendonly_rezero_quicklz_decompress_scratch = false;
-bool		Debug_appendonly_guard_end_quicklz_scratch = false;
 bool		gp_local_distributed_cache_stats = false;
 bool		debug_xlog_record_read = false;
 bool		Debug_cancel_print = false;
@@ -206,7 +203,7 @@ int			Debug_dtm_action_target = DEBUG_DTM_ACTION_TARGET_DEFAULT;
 
 int			Debug_dtm_action_protocol = DEBUG_DTM_ACTION_PROTOCOL_DEFAULT;
 
-#define DEBUG_DTM_ACTION_SEGMENT_DEFAULT 1
+#define DEBUG_DTM_ACTION_SEGMENT_DEFAULT -2
 #define DEBUG_DTM_ACTION_NESTINGLEVEL_DEFAULT 0
 
 int			Debug_dtm_action_segment = DEBUG_DTM_ACTION_SEGMENT_DEFAULT;
@@ -218,8 +215,6 @@ bool		gp_encoding_check_locale_compatibility;
 int			gp_connection_send_timeout;
 
 int			WalSendClientTimeout = 30000;		/* 30 seconds. */
-
-char	   *gp_replication_config_filename = NULL;
 
 char	   *data_directory;
 
@@ -388,6 +383,7 @@ bool		optimizer_enable_direct_dispatch;
 bool		optimizer_enable_hashjoin_redistribute_broadcast_children;
 bool		optimizer_enable_broadcast_nestloop_outer_child;
 bool		optimizer_enable_streaming_material;
+bool		optimizer_enable_gather_on_segment_for_dml;
 bool		optimizer_enable_assert_maxonerow;
 bool		optimizer_enable_constant_expression_evaluation;
 bool		optimizer_enable_bitmapscan;
@@ -530,6 +526,7 @@ static const struct config_enum_entry explain_memory_verbosity_options[] = {
 	{"suppress", EXPLAIN_MEMORY_VERBOSITY_SUPPRESS},
 	{"summary", EXPLAIN_MEMORY_VERBOSITY_SUMMARY},
 	{"detail", EXPLAIN_MEMORY_VERBOSITY_DETAIL},
+	{"debug", EXPLAIN_MEMORY_VERBOSITY_DEBUG},
 	{NULL, 0}
 };
 
@@ -1116,39 +1113,6 @@ struct config_bool ConfigureNamesBool_gp[] =
 		},
 		&gp_heap_require_relhasoids_match,
 		true,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_appendonly_rezero_quicklz_compress_scratch", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Zero the QuickLZ scratch buffer before each append-only block that is being compressed."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&Debug_appendonly_rezero_quicklz_compress_scratch,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_appendonly_guard_end_quicklz_scratch", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Put a guard area of all zeroes after the QuickLZ scratch buffers and verify it is still zero before and after compress and decompress operations."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&Debug_appendonly_guard_end_quicklz_scratch,
-		false,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"debug_appendonly_rezero_quicklz_decompress_scratch", PGC_USERSET, DEVELOPER_OPTIONS,
-			gettext_noop("Zero the QuickLZ scratch buffer before each append-only block that is being decompressed."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_NO_SHOW_ALL
-		},
-		&Debug_appendonly_rezero_quicklz_decompress_scratch,
-		false,
 		NULL, NULL, NULL
 	},
 
@@ -2679,6 +2643,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		NULL, NULL, NULL
 	},
 	{
+		{"optimizer_enable_gather_on_segment_for_dml", PGC_USERSET, DEVELOPER_OPTIONS,
+			gettext_noop("Enable DML optimization by enforcing a non-master gather in the optimizer."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&optimizer_enable_gather_on_segment_for_dml,
+		true,
+		NULL, NULL, NULL
+	},
+	{
 		{"optimizer_enforce_subplans", PGC_USERSET, DEVELOPER_OPTIONS,
 			gettext_noop("Enforce correlated execution in the optimizer"),
 			NULL,
@@ -3091,7 +3065,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&Debug_dtm_action_segment,
-		DEBUG_DTM_ACTION_SEGMENT_DEFAULT, 0, 1000,
+		DEBUG_DTM_ACTION_SEGMENT_DEFAULT, -2, 1000,
 		NULL, NULL, NULL
 	},
 
@@ -3308,17 +3282,6 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
 		},
 		&GpIdentity.segindex,
-		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_num_contents_in_cluster", PGC_POSTMASTER, PRESET_OPTIONS,
-			gettext_noop("Sets the number of segments in the cluster."),
-			NULL,
-			GUC_NOT_IN_SAMPLE | GUC_DISALLOW_IN_FILE
-		},
-		&GpIdentity.numsegments,
 		UNINITIALIZED_GP_IDENTITY_VALUE, INT_MIN, INT_MAX,
 		NULL, NULL, NULL
 	},
@@ -3587,17 +3550,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"gp_connections_per_thread", PGC_BACKEND, GP_ARRAY_TUNING,
-			gettext_noop("Sets the number of client connections handled in each thread."),
-			NULL,
-			GUC_GPDB_ADDOPT
-		},
-		&gp_connections_per_thread,
-		0, 0, INT_MAX,
-		NULL, assign_gp_connections_per_thread, NULL
-	},
-
-	{
 		{"gp_subtrans_warn_limit", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the warning limit on number of subtransactions in a transaction."),
 			NULL,
@@ -3615,7 +3567,7 @@ struct config_int ConfigureNamesInt_gp[] =
 			GUC_NOT_IN_SAMPLE
 		},
 		&gp_cached_gang_threshold,
-		5, 0, INT_MAX,
+		5, 1, INT_MAX,
 		NULL, NULL, NULL
 	},
 
@@ -4962,7 +4914,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 	{
 		{"explain_memory_verbosity", PGC_USERSET, RESOURCES_MEM,
 			gettext_noop("Experimental feature: show memory account usage in EXPLAIN ANALYZE."),
-			gettext_noop("Valid values are SUPPRESS, SUMMARY, and DETAIL."),
+			gettext_noop("Valid values are SUPPRESS, SUMMARY, DETAIL, and DEBUG."),
 			GUC_GPDB_ADDOPT
 		},
 		&explain_memory_verbosity,
@@ -5339,7 +5291,7 @@ check_gp_default_storage_options(char **newval, void **extra, GucSource source)
 		}
 
 		/*
-		 * All validations succeeded, it is safe to udpate global
+		 * All validations succeeded, it is safe to update global
 		 * appendonly storage options.
 		 */
 		*extra = malloc(sizeof(StdRdOptions));
@@ -5384,279 +5336,6 @@ assign_gp_default_storage_options(const char *newval, void *extra)
 	setDefaultAOStorageOpts(newopts);
 }
 
-
-bool
-select_gp_replication_config_files(const char *configdir, const char *progname)
-{
-	char *fname;
-
-	if (gp_replication_config_filename)
-		fname = make_absolute_path(gp_replication_config_filename);
-	else if (configdir)
-	{
-		fname = malloc(strlen(configdir)
-					   + strlen(GP_REPLICATION_CONFIG_FILENAME) + 2);
-		if (!fname)
-		{
-			ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-						    errmsg("out of memory")));
-		}
-
-		sprintf(fname, "%s/%s", configdir, GP_REPLICATION_CONFIG_FILENAME);
-	}
-	else
-	{
-		write_stderr("%s does not know where to find the \"gp_replication\" configuration file.\n"
-					 "This can be specified by the -D invocation option, or by the "
-					 "PGDATA environment variable.\n",
-					 progname);
-		return false;
-	}
-
-	gp_replication_config_filename = fname;
-	return true;
-}
-
-/*
- * Write updated configuration parameter values into a temporary file.
- * This function traverses the list of parameters and quotes the string
- * values before writing them.
- */
-static void
-write_gp_replication_conf_file(int fd, const char *filename, ConfigVariable *head)
-{
-	StringInfoData buf;
-	ConfigVariable *item;
-
-	initStringInfo(&buf);
-
-	/* Emit file header containing warning comment */
-	appendStringInfoString(&buf, "# Do not edit this file manually!\n");
-	appendStringInfoString(&buf, "# It will be overwritten by gp_set_synchronous_standby_name().\n");
-
-	errno = 0;
-	if (write(fd, buf.data, buf.len) != buf.len)
-	{
-		/* if write didn't set errno, assume problem is no disk space */
-		if (errno == 0)
-			errno = ENOSPC;
-		ereport(ERROR,
-		        (errcode_for_file_access(),
-				        errmsg("could not write to file \"%s\": %m", filename)));
-	}
-
-	/* Emit each parameter, properly quoting the value */
-	for (item = head; item != NULL; item = item->next)
-	{
-		char	   *escaped;
-
-		resetStringInfo(&buf);
-
-		appendStringInfoString(&buf, item->name);
-		appendStringInfoString(&buf, " = '");
-
-		escaped = escape_single_quotes_ascii(item->value);
-		if (!escaped)
-			ereport(ERROR,
-			        (errcode(ERRCODE_OUT_OF_MEMORY),
-					        errmsg("out of memory")));
-		appendStringInfoString(&buf, escaped);
-		free(escaped);
-
-		appendStringInfoString(&buf, "'\n");
-
-		errno = 0;
-		if (write(fd, buf.data, buf.len) != buf.len)
-		{
-			/* if write didn't set errno, assume problem is no disk space */
-			if (errno == 0)
-				errno = ENOSPC;
-			ereport(ERROR,
-			        (errcode_for_file_access(),
-					        errmsg("could not write to file \"%s\": %m", filename)));
-		}
-	}
-
-	/* fsync before considering the write to be successful */
-	if (pg_fsync(fd) != 0)
-		ereport(ERROR,
-		        (errcode_for_file_access(),
-				        errmsg("could not fsync file \"%s\": %m", filename)));
-
-	pfree(buf.data);
-}
-
-/*
- * Update the given list of configuration parameters, adding, replacing
- * or deleting the entry for item "name" (delete if "value" == NULL).
- */
-static void
-replace_gp_replication_config_value(ConfigVariable **head_p, ConfigVariable **tail_p,
-                                    const char *name, const char *value)
-{
-	ConfigVariable *item, *prev = NULL;
-
-	/* Search the list for an existing match (we assume there's only one) */
-	for (item = *head_p; item != NULL; item = item->next)
-	{
-		if (strcmp(item->name, name) == 0)
-		{
-			/* found a match, replace it */
-			pfree(item->value);
-			if (value != NULL)
-			{
-				/* update the parameter value */
-				item->value = pstrdup(value);
-			}
-			else
-			{
-				/* delete the configuration parameter from list */
-				if (*head_p == item)
-					*head_p = item->next;
-				else
-					prev->next = item->next;
-				if (*tail_p == item)
-					*tail_p = prev;
-
-				pfree(item->name);
-				pfree(item);
-			}
-			return;
-		}
-		prev = item;
-	}
-
-	/* Not there; no work if we're trying to delete it */
-	if (value == NULL)
-		return;
-
-	/* OK, append a new entry */
-	item = palloc(sizeof *item);
-	item->name = pstrdup(name);
-	item->value = pstrdup(value);
-	item->next = NULL;
-
-	if (*head_p == NULL)
-		*head_p = item;
-	else
-		(*tail_p)->next = item;
-	*tail_p = item;
-}
-
-/*
- * Validates configuration parameter and value
- */
-static bool
-validate_gp_replication_conf_option(struct config_generic *record,
-                     const char *value, int elevel)
-{
-	/*
-	 * Validate the value for the passed record, to ensure it is in expected
-	 * range.
-	 */
-	switch (record->vartype)
-	{
-		case PGC_BOOL:
-			{
-				bool		newval;
-
-				if (!parse_bool(value, &newval))
-				{
-					ereport(elevel,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							        errmsg("parameter \"%s\" requires a Boolean value",
-							               record->name)));
-					return false;
-				}
-				break;
-			}
-		case PGC_INT:
-			{
-				struct config_int *conf = (struct config_int *) record;
-				int			newval;
-				const char *hintmsg;
-
-				if (!parse_int(value, &newval, conf->gen.flags, &hintmsg))
-				{
-					ereport(elevel,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							        errmsg("invalid value for parameter \"%s\": \"%s\"",
-							               record->name, value),
-							        hintmsg ? errhint("%s", hintmsg) : 0));
-					return false;
-				}
-				if (newval < conf->min || newval > conf->max)
-				{
-					ereport(elevel,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							        errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
-							               newval, record->name, conf->min, conf->max)));
-					return false;
-				}
-				break;
-			}
-		case PGC_REAL:
-			{
-				struct config_real *conf = (struct config_real *) record;
-				double		newval;
-
-				if (!parse_real(value, &newval))
-				{
-					ereport(elevel,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							        errmsg("parameter \"%s\" requires a numeric value",
-							               record->name)));
-					return false;
-				}
-				if (newval < conf->min || newval > conf->max)
-				{
-					ereport(elevel,
-					        (errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							        errmsg("%g is outside the valid range for parameter \"%s\" (%g .. %g)",
-							               newval, record->name, conf->min, conf->max)));
-					return false;
-				}
-				break;
-			}
-		case PGC_STRING:
-			{
-				struct config_string *conf = (struct config_string *) record;
-
-				/*
-				 * The only sort of "parsing" check we need to ensure value is NOT truncated if GUC_IS_NAME.
-				 */
-				if (conf->gen.flags & GUC_IS_NAME)
-				{
-					char *tempPtr;
-					bool is_truncated;
-
-					tempPtr = strdup(value);
-					if (tempPtr == NULL)
-						return false;
-
-					truncate_identifier(tempPtr, strlen(tempPtr), true);
-					is_truncated = (strlen(value) != strlen(tempPtr));
-
-					free(tempPtr);
-
-					if (is_truncated)
-						return false;
-				}
-				break;
-			}
-		default:
-			/*
-			 * FIXME: Need to add validation for the PGC_ENUM once merged
-			 * commit 52a8d4f8f7e286482886861175312c1434b1d4fd from upstream 8.4
-			 */
-			/*
-			 * make sure all the types are checked, and we should never reach here
-			 */
-			Assert(false);
-	}
-	return true;
-}
-
 /*
  * Set GUC value in GP_REPLICATION_CONFIG_FILENAME.
  *
@@ -5668,142 +5347,12 @@ validate_gp_replication_conf_option(struct config_generic *record,
 void
 set_gp_replication_config(const char *name, const char *value)
 {
-	ConfigVariable *head = NULL;
-	ConfigVariable *tail = NULL;
-	volatile int Tmpfd;
-	char GpReplicationConfigTempFilename[MAXPGPATH];
-	char GpReplicationConfigFilename[MAXPGPATH];
-
-	if (!superuser())
-		ereport(ERROR,
-		        (errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				        (errmsg("must be superuser to update %s", gp_replication_config_filename))));
-
-	/*
-	 * GP_REPLICATION_CONFIG_FILENAME and its corresponding temporary file are always in
-	 * the data directory, so we can reference them by simple relative paths.
-	 */
-	snprintf(GpReplicationConfigFilename, sizeof(GpReplicationConfigFilename), "%s",
-	         gp_replication_config_filename);
-	snprintf(GpReplicationConfigTempFilename, sizeof(GpReplicationConfigTempFilename), "%s.%s",
-	         gp_replication_config_filename, "tmp");
-
-	/*
-	 * Only one backend is allowed to operate on GP_REPLICATION_CONFIG_FILENAME at a
-	 * time.  Use GpReplicationConfigFileLock to ensure that.  We must hold the lock while
-	 * reading the old file contents.
-	 */
-	LWLockAcquire(GpReplicationConfigFileLock, LW_EXCLUSIVE);
-
-	struct stat st;
-
-	if (stat(GpReplicationConfigFilename, &st) == 0)
-	{
-		/* open old file PG_AUTOCONF_FILENAME */
-		FILE	   *infile;
-
-		infile = AllocateFile(GpReplicationConfigFilename, "r");
-		if (infile == NULL)
-			ereport(ERROR,
-			        (errcode_for_file_access(),
-					        errmsg("could not open file \"%s\": %m",
-					               GpReplicationConfigFilename)));
-
-		/* parse it */
-		if (!ParseConfigFile(GpReplicationConfigFilename, 0, true, PGC_SUSET, LOG, &head, &tail))
-			ereport(ERROR,
-			        (errcode(ERRCODE_CONFIG_FILE_ERROR),
-					        errmsg("could not parse contents of file \"%s\"",
-					               GpReplicationConfigFilename)));
-
-		FreeFile(infile);
-	}
-
-	/*
-	 * If a value is specified, verify that it's sane.
-	 */
-	if (value)
-	{
-		struct config_generic *record;
-
-		record = find_option(name, false, LOG);
-		if (record == NULL)
-			ereport(ERROR,
-			        (errcode(ERRCODE_UNDEFINED_OBJECT),
-					        errmsg("unrecognized configuration parameter \"%s\"", name)));
-
-		/*
-		 * Don't allow the parameters which can't be set in configuration
-		 * files to be set in GP_REPLICATION_CONFIG_FILENAME file.
-		 */
-		if ((record->context == PGC_INTERNAL) ||
-		    (record->flags & GUC_DISALLOW_IN_FILE))
-			ereport(ERROR,
-			        (errcode(ERRCODE_CANT_CHANGE_RUNTIME_PARAM),
-					        errmsg("parameter \"%s\" cannot be changed",
-					               name)));
-
-		if (!validate_gp_replication_conf_option(record, value, ERROR))
-			ereport(ERROR,
-			        (errmsg("invalid value for parameter \"%s\": \"%s\"", name, value)));
-	}
-
-	replace_gp_replication_config_value(&head, &tail, name, value);
-
-	/*
-	 * To ensure crash safety, first write the new file data to a temp file,
-	 * then atomically rename it into place.
-	 *
-	 * If there is a temp file left over due to a previous crash, it's okay to
-	 * truncate and reuse it.
-	 */
-	Tmpfd = BasicOpenFile(GpReplicationConfigTempFilename,
-	                      O_CREAT | O_RDWR | O_TRUNC,
-	                      S_IRUSR | S_IWUSR);
-	if (Tmpfd < 0)
-		ereport(ERROR,
-		        (errcode_for_file_access(),
-				        errmsg("could not open file \"%s\": %m",
-				               GpReplicationConfigTempFilename)));
-
-	/*
-	 * Use a TRY block to clean up the file if we fail.  Since we need a TRY
-	 * block anyway, OK to use BasicOpenFile rather than OpenTransientFile.
-	 */
-	PG_TRY();
-	{
-		/* Write and sync the new contents to the temporary file */
-		write_gp_replication_conf_file(Tmpfd, GpReplicationConfigTempFilename, head);
-
-		/* Close before renaming; may be required on some platforms */
-		close(Tmpfd);
-		Tmpfd = -1;
-
-		/*
-		 * As the rename is atomic operation, if any problem occurs after this
-		 * at worst it can lose the parameters set by last ALTER SYSTEM
-		 * command.
-		 */
-		if (rename(GpReplicationConfigTempFilename, GpReplicationConfigFilename) < 0)
-			ereport(ERROR,
-			        (errcode_for_file_access(),
-					        errmsg("could not rename file \"%s\" to \"%s\": %m",
-					               GpReplicationConfigTempFilename, GpReplicationConfigFilename)));
-	}
-	PG_CATCH();
-	{
-		/* Close file first, else unlink might fail on some platforms */
-		if (Tmpfd >= 0)
-			close(Tmpfd);
-
-		/* Unlink, but ignore any error */
-		(void) unlink(GpReplicationConfigTempFilename);
-
-		PG_RE_THROW();
-	}
-	PG_END_TRY();
-
-	LWLockRelease(GpReplicationConfigFileLock);
+	A_Const aconst = {.type = T_A_Const, .val = {.type = T_String, .val.str = pstrdup(value)}};
+	List *args = list_make1(&aconst);
+	VariableSetStmt setstmt = {.type = T_VariableSetStmt, .kind = VAR_SET_VALUE, .name = pstrdup(name), .args = args};
+	AlterSystemStmt alterSystemStmt = {.type = T_AlterSystemStmt, .setstmt = &setstmt};
+	
+	AlterSystemSetConfigFile(&alterSystemStmt);
 }
 
 /*

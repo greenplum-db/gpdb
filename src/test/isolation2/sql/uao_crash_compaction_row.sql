@@ -61,31 +61,31 @@
 
 -- perform post crash validation checks
 -- for crash_before_cleanup_phase
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_cleanup_phase');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_cleanup_phase');
 1:INSERT INTO crash_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=25;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_cleanup_phase');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_cleanup_phase');
 1:VACUUM crash_before_cleanup_phase;
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_cleanup_phase');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_cleanup_phase');
 1:INSERT INTO crash_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 1:UPDATE crash_before_cleanup_phase SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_cleanup_phase ORDER BY a,b;
 -- for crash_before_segmentfile_drop
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_segmentfile_drop');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_segmentfile_drop');
 1:INSERT INTO crash_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 1:UPDATE crash_before_segmentfile_drop SET b = b+10 WHERE a=25;
 1:SELECT * FROM crash_before_segmentfile_drop ORDER BY a,b;
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_segmentfile_drop');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_segmentfile_drop');
 1:VACUUM crash_before_segmentfile_drop;
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_before_segmentfile_drop');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_segmentfile_drop');
 1:INSERT INTO crash_before_segmentfile_drop VALUES(21, 1, 'c'), (26, 1, 'c');
 1:UPDATE crash_before_segmentfile_drop SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_before_segmentfile_drop ORDER BY a,b;
 -- crash_vacuum_in_appendonly_insert
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_vacuum_in_appendonly_insert');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert');
 1:VACUUM crash_vacuum_in_appendonly_insert;
-1:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_vacuum_in_appendonly_insert');
+1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_vacuum_in_appendonly_insert');
 1:INSERT INTO crash_vacuum_in_appendonly_insert VALUES(21, 1, 'c'), (26, 1, 'c');
 1:UPDATE crash_vacuum_in_appendonly_insert SET b = b+10 WHERE a=26;
 1:SELECT * FROM crash_vacuum_in_appendonly_insert ORDER BY a,b;
@@ -126,24 +126,24 @@ SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 
 -- perform post crash validation checks
 -- for crash_master_before_cleanup_phase
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_cleanup_phase');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=25;
 4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_cleanup_phase');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
 4:VACUUM crash_master_before_cleanup_phase;
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_cleanup_phase');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 4:UPDATE crash_master_before_cleanup_phase SET b = b+10 WHERE a=26;
 4:SELECT * FROM crash_master_before_cleanup_phase ORDER BY a,b;
 -- for crash_master_before_segmentfile_drop
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_segmentfile_drop');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_segmentfile_drop');
 4:INSERT INTO crash_master_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 4:UPDATE crash_master_before_segmentfile_drop SET b = b+10 WHERE a=25;
 4:SELECT * FROM crash_master_before_segmentfile_drop ORDER BY a,b;
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_segmentfile_drop');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_segmentfile_drop');
 4:VACUUM crash_master_before_segmentfile_drop;
-4:SELECT * FROM gp_toolkit.__gp_aoseg_name('crash_master_before_segmentfile_drop');
+4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_segmentfile_drop');
 4:INSERT INTO crash_master_before_segmentfile_drop VALUES(21, 1, 'c'), (26, 1, 'c');
 4:UPDATE crash_master_before_segmentfile_drop SET b = b+10 WHERE a=26;
 4:SELECT * FROM crash_master_before_segmentfile_drop ORDER BY a,b;

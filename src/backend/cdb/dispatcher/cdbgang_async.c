@@ -30,14 +30,12 @@
 #include "libpq-int.h"
 #include "cdb/cdbfts.h"
 #include "cdb/cdbgang.h"
+#include "cdb/cdbgang_async.h"
 #include "cdb/cdbvars.h"
 #include "miscadmin.h"
 #include "utils/resowner.h"
 
 static int	getPollTimeout(const struct timeval *startTS);
-static Gang *createGang_async(GangType type, int gang_id, int size, int content);
-
-CreateGangFunc pCreateGangFuncAsync = createGang_async;
 
 /*
  * Creates a new gang by logging on a session to each segDB involved.
@@ -45,19 +43,20 @@ CreateGangFunc pCreateGangFuncAsync = createGang_async;
  * call this function in GangContext memory context.
  * elog ERROR or return a non-NULL gang.
  */
-static Gang *
-createGang_async(GangType type, int gang_id, int size, int content)
+Gang *
+cdbgang_createGang_async(List *segments, SegmentType segmentType)
 {
-	Gang	   *newGangDefinition;
-	SegmentDatabaseDescriptor *segdbDesc = NULL;
-	int			i = 0;
-	int			create_gang_retry_counter = 0;
-	int			in_recovery_mode_count = 0;
-	int			successful_connections = 0;
-	bool		retry = false;
-	int			poll_timeout = 0;
-	struct timeval startTS;
-	PostgresPollingStatusType *pollingStatus = NULL;
+	PostgresPollingStatusType	*pollingStatus = NULL;
+	SegmentDatabaseDescriptor	*segdbDesc = NULL;
+	struct timeval	startTS;
+	Gang	*newGangDefinition;
+	int		create_gang_retry_counter = 0;
+	int		in_recovery_mode_count = 0;
+	int		successful_connections = 0;
+	int		poll_timeout = 0;
+	int		i = 0;
+	int		size = 0;
+	bool	retry = false;
 
 	/*
 	 * true means connection status is confirmed, either established or in
@@ -65,34 +64,24 @@ createGang_async(GangType type, int gang_id, int size, int content)
 	 */
 	bool	   *connStatusDone = NULL;
 
-	ELOG_DISPATCHER_DEBUG("createGang type = %d, gang_id = %d, size = %d, content = %d",
-						  type, gang_id, size, content);
+	size = list_length(segments);
 
-	/* check arguments */
-	Assert(size == 1 || size == getgpsegmentCount());
-	Assert(CurrentResourceOwner != NULL);
-	Assert(CurrentMemoryContext == GangContext);
-	/* Writer gang is created before reader gangs. */
-	if (type == GANGTYPE_PRIMARY_WRITER)
-		Insist(!GangsExist());
+	ELOG_DISPATCHER_DEBUG("createGang size = %d, segment type = %d", size, segmentType);
 
 	Assert(CurrentGangCreating == NULL);
 
-create_gang_retry:
 	/* If we're in a retry, we may need to reset our initial state, a bit */
 	newGangDefinition = NULL;
+	/* allocate and initialize a gang structure */
+	newGangDefinition = buildGangDefinition(segments, segmentType);
+	CurrentGangCreating = newGangDefinition;
+
+create_gang_retry:
+	Assert(newGangDefinition != NULL);
+	Assert(newGangDefinition->size == size);
 	successful_connections = 0;
 	in_recovery_mode_count = 0;
 	retry = false;
-
-	/* allocate and initialize a gang structure */
-	newGangDefinition = buildGangDefinition(type, gang_id, size, content);
-	CurrentGangCreating = newGangDefinition;
-
-	Assert(newGangDefinition != NULL);
-	Assert(newGangDefinition->size == size);
-	Assert(newGangDefinition->perGangContext != NULL);
-	MemoryContextSwitchTo(newGangDefinition->perGangContext);
 
 	/*
 	 * allocate memory within perGangContext and will be freed automatically
@@ -116,7 +105,15 @@ create_gang_retry:
 			 * valid segdb we error out.  Also, if this segdb is invalid, we
 			 * must fail the connection.
 			 */
-			segdbDesc = &newGangDefinition->db_descriptors[i];
+			segdbDesc = newGangDefinition->db_descriptors[i];
+
+			/* if it's a cached QE, skip */
+			if (segdbDesc->conn != NULL && !cdbconn_isBadConnection(segdbDesc))
+			{
+				connStatusDone[i] = true;
+				successful_connections++;
+				continue;
+			}
 
 			/*
 			 * Build the connection string.  Writer-ness needs to be processed
@@ -124,8 +121,8 @@ create_gang_retry:
 			 * options are recognized.
 			 */
 			ret = build_gpqeid_param(gpqeid, sizeof(gpqeid),
-									 type == GANGTYPE_PRIMARY_WRITER,
-									 gang_id,
+									 segdbDesc->isWriter,
+									 segdbDesc->identifier,
 									 segdbDesc->segment_database_info->hostSegs);
 
 			if (!ret)
@@ -170,7 +167,7 @@ create_gang_retry:
 
 			for (i = 0; i < size; i++)
 			{
-				segdbDesc = &newGangDefinition->db_descriptors[i];
+				segdbDesc = newGangDefinition->db_descriptors[i];
 
 				/*
 				 * Skip established connections and in-recovery-mode
@@ -189,6 +186,7 @@ create_gang_retry:
 											errdetail("Internal error: No motion listener port (%s)", segdbDesc->whoami)));
 						successful_connections++;
 						connStatusDone[i] = true;
+
 						continue;
 
 					case PGRES_POLLING_READING:
@@ -258,7 +256,7 @@ create_gang_retry:
 
 				for (i = 0; i < size; i++)
 				{
-					segdbDesc = &newGangDefinition->db_descriptors[i];
+					segdbDesc = newGangDefinition->db_descriptors[i];
 					if (connStatusDone[i])
 						continue;
 
@@ -278,56 +276,32 @@ create_gang_retry:
 		ELOG_DISPATCHER_DEBUG("createGang: %d processes requested; %d successful connections %d in recovery",
 							  size, successful_connections, in_recovery_mode_count);
 
-		MemoryContextSwitchTo(GangContext);
-
 		/* some segments are in recovery mode */
 		if (successful_connections != size)
 		{
 			Assert(successful_connections + in_recovery_mode_count == size);
 
 			if (gp_gang_creation_retry_count <= 0 ||
-				create_gang_retry_counter++ >= gp_gang_creation_retry_count ||
-				type != GANGTYPE_PRIMARY_WRITER)
+				create_gang_retry_counter++ >= gp_gang_creation_retry_count)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("failed to acquire resources on one or more segments"),
 								errdetail("Segments are in recovery mode.")));
 
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 
-			DisconnectAndDestroyGang(newGangDefinition);
-			newGangDefinition = NULL;
-			CurrentGangCreating = NULL;
 			retry = true;
 		}
 	}
 	PG_CATCH();
 	{
-		MemoryContextSwitchTo(GangContext);
-
 		FtsNotifyProber();
 		/* FTS shows some segment DBs are down */
 		if (FtsTestSegmentDBIsDown(newGangDefinition->db_descriptors, size))
 		{
-
-			DisconnectAndDestroyGang(newGangDefinition);
-			newGangDefinition = NULL;
-			CurrentGangCreating = NULL;
-			DisconnectAndDestroyAllGangs(true);
-			CheckForResetSession();
 			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 							errmsg("failed to acquire resources on one or more segments"),
 							errdetail("FTS detected one or more segments are down")));
 
-		}
-
-		DisconnectAndDestroyGang(newGangDefinition);
-		newGangDefinition = NULL;
-		CurrentGangCreating = NULL;
-
-		if (type == GANGTYPE_PRIMARY_WRITER)
-		{
-			DisconnectAndDestroyAllGangs(true);
-			CheckForResetSession();
 		}
 
 		PG_RE_THROW();
@@ -344,8 +318,6 @@ create_gang_retry:
 
 		goto create_gang_retry;
 	}
-
-	setLargestGangsize(size);
 
 	CurrentGangCreating = NULL;
 

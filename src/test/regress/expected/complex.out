@@ -1344,6 +1344,21 @@ SELECT COUNT(c) = 4 AS tr, COUNT(DISTINCT gp_segment_id) = 1 AS tr
  t  | t
 (1 row)
 
+-- Use a complex in GROUP BY, to test the hash function used in hash agg.
+set enable_groupagg = off;
+SELECT c, count(*) FROM complex_ttbl GROUP BY c;
+    c     | count 
+----------+-------
+ 0 + 0i   |     4
+ 11 + 12i |     1
+ 14 + 15i |     1
+ 17 + 18i |     1
+ 2 + 3i   |     1
+ 5 + 6i   |     1
+ 8 + 9i   |     1
+(7 rows)
+
+reset enable_groupagg;
 DROP TABLE complex_ttbl;
 DROP SEQUENCE complex_seq;
 -- dot product
@@ -1365,3 +1380,14 @@ DETAIL:  The number of elements of the left argument is 2, the number of element
 SELECT dotproduct(ARRAY[COMPLEX(1,3),COMPLEX(5,7)], ARRAY[ARRAY[COMPLEX(2,4)],ARRAY[COMPLEX(6,8)]]);
 ERROR:  cannot dot product two multi-dimentsion arrays
 DETAIL:  The dimension of the left argument is 1, the dimension of the right argument is 2.
+-- GIN index on complex array
+CREATE TABLE complex_array_tab (complex_arr complex[]);
+CREATE INDEX ON complex_array_tab USING gin (complex_arr);
+INSERT INTO complex_array_tab VALUES (ARRAY[COMPLEX(1,3), COMPLEX(5,7)]);
+INSERT INTO complex_array_tab VALUES (ARRAY[COMPLEX(2,4), COMPLEX(6,8)]);
+SELECT * FROM complex_array_tab WHERE complex_arr @> ARRAY[COMPLEX(2,4)];
+     complex_arr     
+---------------------
+ {"2 + 4i","6 + 8i"}
+(1 row)
+

@@ -1,0 +1,27 @@
+-- Test concurrent update a table with a varying length type
+CREATE TABLE t_concurrent_update(a int, b int, c char(84));
+CREATE
+INSERT INTO t_concurrent_update VALUES(1,1,'test');
+INSERT 1
+
+1: BEGIN;
+BEGIN
+1: SET optimizer=off;
+SET
+1: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;
+UPDATE 1
+2: SET optimizer=off;
+SET
+2&: UPDATE t_concurrent_update SET b=b+10 WHERE a=1;  <waiting ...>
+1: END;
+END
+2<:  <... completed>
+UPDATE 1
+1: SELECT * FROM t_concurrent_update;
+a|b |c                                                                                   
+-+--+------------------------------------------------------------------------------------
+1|21|test                                                                                
+(1 row)
+
+DROP TABLE t_concurrent_update;
+DROP

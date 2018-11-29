@@ -5,20 +5,16 @@
 ```
 # Centos 6 (include dependencies for building GPDB)
 docker build -t local/gpdb-dev:centos6 centos6
-# Add gpadmin user to Centos 6 (gpdb cannot run as root)
-docker build --build-arg REPO_OWNER=local -t local/gpdb-dev:centos6-gpadmin centos6-gpadmin
 
 # Centos 7 (include dependencies for building GPDB)
 docker build -t local/gpdb-dev:centos7 centos7
-# Add gpadmin user to Centos 7 (gpdb cannot run as root)
-docker build --build-arg REPO_OWNER=local -t local/gpdb-dev:centos7-gpadmin centos7-gpadmin
 ```
 
 OR
 ## Download from docker hub
 ```
-docker pull pivotaldata/gpdb-dev:centos6-admin
-docker pull pivotaldata/gpdb-dev:centos7-admin
+docker pull pivotaldata/gpdb-dev:centos6
+docker pull pivotaldata/gpdb-dev:centos7
 ```
 
 # Build GPDB code with Docker
@@ -28,9 +24,9 @@ docker pull pivotaldata/gpdb-dev:centos7-admin
 git clone https://github.com/greenplum-db/gpdb.git
 cd gpdb
 ```
-### Use docker image based on gpdb/src/tools/docker/centos7-gpadmin
+### Use docker image based on gpdb/src/tools/docker/centos7
 ```
-docker run -w /home/build/gpdb -v ${PWD}:/home/build/gpdb:cached -it pivotaldata/gpdb-dev:centos7-gpadmin /bin/bash
+docker run -w /home/build/gpdb -v ${PWD}:/home/build/gpdb:cached -it pivotaldata/gpdb-dev:centos7 /bin/bash
 ```
 
 ### Inside docker

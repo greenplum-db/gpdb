@@ -5,7 +5,7 @@
  *	  strategy.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/buf_internals.h
@@ -111,16 +111,19 @@ typedef struct buftag
 #define BufTableHashPartition(hashcode) \
 	((hashcode) % NUM_BUFFER_PARTITIONS)
 #define BufMappingPartitionLock(hashcode) \
-	((LWLockId) (FirstBufMappingLock + BufTableHashPartition(hashcode)))
+	(&MainLWLockArray[BUFFER_MAPPING_LWLOCK_OFFSET + \
+		BufTableHashPartition(hashcode)].lock)
+#define BufMappingPartitionLockByIndex(i) \
+	(&MainLWLockArray[BUFFER_MAPPING_LWLOCK_OFFSET + (i)].lock)
 
 /*
  *	BufferDesc -- shared descriptor/state data for a single shared buffer.
  *
  * Note: buf_hdr_lock must be held to examine or change the tag, flags,
  * usage_count, refcount, or wait_backend_pid fields.  buf_id field never
- * changes after initialization, so does not need locking.	freeNext is
+ * changes after initialization, so does not need locking.  freeNext is
  * protected by the BufFreelistLock not buf_hdr_lock.  The LWLocks can take
- * care of themselves.	The buf_hdr_lock is *not* used to control access to
+ * care of themselves.  The buf_hdr_lock is *not* used to control access to
  * the data in the buffer!
  *
  * An exception is that if we have the buffer pinned, its tag can't change
@@ -131,7 +134,7 @@ typedef struct buftag
  *
  * We can't physically remove items from a disk page if another backend has
  * the buffer pinned.  Hence, a backend may need to wait for all other pins
- * to go away.	This is signaled by storing its own PID into
+ * to go away.  This is signaled by storing its own PID into
  * wait_backend_pid and setting flag bit BM_PIN_COUNT_WAITER.  At present,
  * there can be only one such waiter per buffer.
  *
@@ -151,8 +154,8 @@ typedef struct sbufdesc
 	int			buf_id;			/* buffer's index number (from 0) */
 	int			freeNext;		/* link in freelist chain */
 
-	LWLockId	io_in_progress_lock;	/* to wait for I/O to complete */
-	LWLockId	content_lock;	/* to lock access to buffer contents */
+	LWLock	   *io_in_progress_lock;	/* to wait for I/O to complete */
+	LWLock	   *content_lock;	/* to lock access to buffer contents */
 } BufferDesc;
 
 #define BufferDescriptorGetBuffer(bdesc) ((bdesc)->buf_id + 1)

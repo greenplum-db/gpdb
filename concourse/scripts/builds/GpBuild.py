@@ -10,6 +10,7 @@ class GpBuild(GpdbBuildBase):
         self.mode = 'on' if mode == 'orca' else 'off'
         self.configure_options =  [
                                     "--enable-mapreduce",
+                                    "--enable-orafce",
                                     "--with-gssapi",
                                     "--with-perl",
                                     "--with-libxml",

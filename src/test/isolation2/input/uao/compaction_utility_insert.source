@@ -5,14 +5,14 @@ CREATE TABLE foo (a INT, b INT, c CHAR(128)) WITH (appendonly=true, orientation=
 CREATE INDEX foo_index ON foo(b);
 
 INSERT INTO foo VALUES (1, 1, 'c');
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg_name('foo');
+SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
 0U: INSERT INTO foo VALUES (2, 2, 'c');
 0U: INSERT INTO foo VALUES (3, 3, 'c');
-0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg_name('foo') where segno = 0;
+0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where segno = 0;
 -- We know that the master does update its tupcount yet
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg_name('foo');
+SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');
 DELETE FROM foo WHERE a = 2;
 UPDATE foo SET b = -1 WHERE a = 3;
 VACUUM foo;
-0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg_name('foo') where segno = 0;
-SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg_name('foo');
+0U: SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo') where segno = 0;
+SELECT segno, tupcount, state FROM gp_ao_or_aocs_seg('foo');

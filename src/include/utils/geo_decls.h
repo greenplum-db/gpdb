@@ -3,7 +3,7 @@
  * geo_decls.h - Declarations for various 2D constructs.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/geo_decls.h
@@ -88,19 +88,12 @@ typedef struct
 
 /*---------------------------------------------------------------------
  * LINE - Specified by its general equation (Ax+By+C=0).
- *		If there is a y-intercept, it is C, which
- *		 incidentally gives a freebie point on the line
- *		 (if B=0, then C is the x-intercept).
- *		Slope m is precalculated to save time; if
- *		 the line is not vertical, m == A.
  *-------------------------------------------------------------------*/
 typedef struct
 {
 	double		A,
 				B,
 				C;
-
-	double		m;
 } LINE;
 
 

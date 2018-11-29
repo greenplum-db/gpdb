@@ -1578,12 +1578,12 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 explain select string_agg(a, '') from mpp14125 group by b;
                                               QUERY PLAN                                              
 ------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=8.32..9.20 rows=5 width=36)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=8.32..9.20 rows=5 width=36)
    ->  GroupAggregate  (cost=8.32..9.20 rows=5 width=36)
          Group By: b
          ->  Sort  (cost=8.32..8.57 rows=50 width=55)
                Sort Key: b
-               ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..5.00 rows=50 width=55)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..5.00 rows=50 width=55)
                      Hash Key: b
                      ->  Seq Scan on mpp14125  (cost=0.00..3.00 rows=50 width=55)
 (8 rows)

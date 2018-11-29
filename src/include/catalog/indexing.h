@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/indexing.h
@@ -115,6 +115,8 @@ DECLARE_UNIQUE_INDEX(pg_class_oid_index, 2662, on pg_class using btree(oid oid_o
 #define ClassOidIndexId  2662
 DECLARE_UNIQUE_INDEX(pg_class_relname_nsp_index, 2663, on pg_class using btree(relname name_ops, relnamespace oid_ops));
 #define ClassNameNspIndexId  2663
+DECLARE_INDEX(pg_class_tblspc_relfilenode_index, 3455, on pg_class using btree(reltablespace oid_ops, relfilenode oid_ops));
+#define ClassTblspcRelfilenodeIndexId  3455
 
 DECLARE_UNIQUE_INDEX(pg_collation_name_enc_nsp_index, 3164, on pg_collation using btree(collname name_ops, collencoding int4_ops, collnamespace oid_ops));
 #define CollationNameEncNspIndexId 3164
@@ -401,13 +403,13 @@ DECLARE_UNIQUE_INDEX(pg_extprotocol_oid_index, 7156, on pg_extprotocol using btr
 DECLARE_UNIQUE_INDEX(pg_extprotocol_ptcname_index, 7177, on pg_extprotocol using btree(ptcname name_ops));
 #define ExtprotocolPtcnameIndexId	7177
 
-DECLARE_INDEX(pg_attribute_encoding_attrelid_index, 3236, on pg_attribute_encoding using btree(attrelid oid_ops));
-#define AttributeEncodingAttrelidIndexId	3236
-DECLARE_UNIQUE_INDEX(pg_attribute_encoding_attrelid_attnum_index, 3237, on pg_attribute_encoding using btree(attrelid oid_ops, attnum int2_ops));
-#define AttributeEncodingAttrelidAttnumIndexId	3237
+DECLARE_INDEX(pg_attribute_encoding_attrelid_index, 6236, on pg_attribute_encoding using btree(attrelid oid_ops));
+#define AttributeEncodingAttrelidIndexId	6236
+DECLARE_UNIQUE_INDEX(pg_attribute_encoding_attrelid_attnum_index, 6237, on pg_attribute_encoding using btree(attrelid oid_ops, attnum int2_ops));
+#define AttributeEncodingAttrelidAttnumIndexId	6237
 
-DECLARE_UNIQUE_INDEX(pg_type_encoding_typid_index, 3207, on pg_type_encoding using btree(typid oid_ops));
-#define TypeEncodingTypidIndexId	3207
+DECLARE_UNIQUE_INDEX(pg_type_encoding_typid_index, 6207, on pg_type_encoding using btree(typid oid_ops));
+#define TypeEncodingTypidIndexId	6207
 
 DECLARE_UNIQUE_INDEX(pg_partition_encoding_parencoid_parencattnum_index, 9908, on pg_partition_encoding using btree(parencoid oid_ops, parencattnum int2_ops));
 #define PartitionEncodingParencoidAttnumIndexId	9908

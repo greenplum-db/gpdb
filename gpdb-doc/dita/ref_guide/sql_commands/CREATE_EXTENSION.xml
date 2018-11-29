@@ -130,7 +130,7 @@
                 control file and at least one least one SQL script file. The support files must be
                 installed in the same location on all Greenplum Database hosts. For information
                 about creating new extensions, see PostgreSQL information about <xref
-                    href="https://www.postgresql.org/docs/9.6/static/extend-extensions.html"
+                    href="https://www.postgresql.org/docs/9.6/extend-extensions.html"
                     format="html" scope="external">Packaging Related Objects into an
                     Extension</xref>.</p>
         </section>

@@ -387,6 +387,6 @@ ALTER RESOURCE GROUP admin_group SET CONCURRENCY 130;
 126: COMMIT;
 127: COMMIT;
 SELECT * FROM ao;
-SELECT * FROM gp_ao_or_aocs_seg_name('ao') ORDER BY segno;
+SELECT * FROM gp_ao_or_aocs_seg('ao') ORDER BY segno;
 
 ALTER RESOURCE GROUP admin_group SET CONCURRENCY 20;

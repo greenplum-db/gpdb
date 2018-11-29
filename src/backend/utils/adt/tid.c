@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,6 +22,7 @@
 #include <math.h>
 #include <limits.h>
 
+#include "access/hash.h"
 #include "access/heapam.h"
 #include "access/sysattr.h"
 #include "catalog/namespace.h"
@@ -32,6 +33,7 @@
 #include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "utils/tqual.h"
 
 #define PG_GETARG_ITEMPOINTER(n) DatumGetItemPointer(PG_GETARG_DATUM(n))
@@ -158,26 +160,6 @@ tidsend(PG_FUNCTION_ARGS)
 	PG_RETURN_BYTEA_P(pq_endtypsend(&buf));
 }
 
-
-/* ----------------------------------------------------------------
- *	Conversion operators.
- * ----------------------------------------------------------------
- */
-
-Datum
-tidtoi8(PG_FUNCTION_ARGS)       /*CDB*/
-{
-    ItemPointer itemPtr = PG_GETARG_ITEMPOINTER(0);
-    BlockNumber blockNumber;
-    OffsetNumber offsetNumber;
-
-    blockNumber = BlockIdGetBlockNumber(&(itemPtr->ip_blkid));
-    offsetNumber = itemPtr->ip_posid;
-
-	PG_RETURN_INT64(((int64)blockNumber << 16) + offsetNumber);
-}
-
-
 /*****************************************************************************
  *	 PUBLIC ROUTINES														 *
  *****************************************************************************/
@@ -263,6 +245,14 @@ tidsmaller(PG_FUNCTION_ARGS)
 	PG_RETURN_ITEMPOINTER(ItemPointerCompare(arg1, arg2) <= 0 ? arg1 : arg2);
 }
 
+
+Datum
+hashtid(PG_FUNCTION_ARGS)
+{
+	ItemPointer arg1 = PG_GETARG_ITEMPOINTER(0);
+
+	return hash_any((unsigned char *) arg1, sizeof(ItemPointerData));
+}
 
 /*
  *	Functions to get latest tid of a specified tuple.
@@ -360,6 +350,7 @@ currtid_byreloid(PG_FUNCTION_ARGS)
 	ItemPointer result;
 	Relation	rel;
 	AclResult	aclresult;
+	Snapshot	snapshot;
 
 	/*
 	 * Immediately inform client that the function is not supported
@@ -387,7 +378,10 @@ currtid_byreloid(PG_FUNCTION_ARGS)
 		return currtid_for_view(rel, tid);
 
 	ItemPointerCopy(tid, result);
-	heap_get_latest_tid(rel, SnapshotNow, result);
+
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	heap_get_latest_tid(rel, snapshot, result);
+	UnregisterSnapshot(snapshot);
 
 	heap_close(rel, AccessShareLock);
 
@@ -412,6 +406,7 @@ currtid_byrelname(PG_FUNCTION_ARGS)
 	RangeVar   *relrv;
 	Relation	rel;
 	AclResult	aclresult;
+	Snapshot	snapshot;
 
 	/*
 	 * Immediately inform client that the function is not supported
@@ -435,7 +430,9 @@ currtid_byrelname(PG_FUNCTION_ARGS)
 	result = (ItemPointer) palloc(sizeof(ItemPointerData));
 	ItemPointerCopy(tid, result);
 
-	heap_get_latest_tid(rel, SnapshotNow, result);
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	heap_get_latest_tid(rel, snapshot, result);
+	UnregisterSnapshot(snapshot);
 
 	heap_close(rel, AccessShareLock);
 

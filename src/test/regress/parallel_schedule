@@ -13,7 +13,7 @@ test: tablespace
 # ----------
 # The first group of parallel tests
 # ----------
-test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money rangetypes
+test: boolean char name varchar text int2 int4 int8 oid float4 float8 bit numeric txid uuid enum money rangetypes pg_lsn regproc
 
 # Depends on things setup during char, varchar and text
 test: strings
@@ -23,7 +23,7 @@ test: numerology
 # ----------
 # The second group of parallel tests
 # ----------
-test: point lseg box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet macaddr tstypes comments
+test: point lseg line box path polygon circle date time timetz timestamp timestamptz interval abstime reltime tinterval inet macaddr tstypes comments
 
 # ----------
 # Another group of parallel tests
@@ -90,7 +90,7 @@ ignore: random
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update delete lock
+test: select_into select_distinct select_distinct_on select_implicit select_having subselect union case join aggregates random portals arrays btree_index hash_index update delete
 
 # In PostgreSQL, namespace test is run as part of the fourth group, but there
 # are some GPDB additions in it that will show diff if concurrent tests use
@@ -108,7 +108,7 @@ test: namespace
 # ----------
 # Another group of parallel tests
 # ----------
-test: privileges security_label collate
+test: privileges security_label collate lock replica_identity
 
 # GPDB_93_MERGE_FIXME: Materialized views have not been "MPP-ified", and don't
 # currently work. Disable test, until it's fixed. (If they still don't work when
@@ -119,7 +119,7 @@ test: privileges security_label collate
 # ----------
 # Another group of parallel tests
 # ----------
-test: alter_generic misc psql
+test: alter_generic misc psql async
 
 # rules cannot run concurrently with any test that creates a view
 #
@@ -132,16 +132,12 @@ test: alter_generic misc psql
 # enable it
 #test: rules
 # event triggers cannot run concurrently with any test that runs DDL
-# GPDB_93_MERGE_FIXME: The DROP EVENT TRIGGER currently fails in the event_trigger
-# test, leaving behind an event trigger that prints extra NOTICEs for all DDL
-# commands in the subsequent tests, causing them to fail. Disable, so that
-# the subsequent tests have a chance of succeeding, until we fix event triggers.
-#test: event_trigger
+test: event_trigger
 
 # ----------
 # Another group of parallel tests
 # ----------
-test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json
+test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts foreign_data window xmlmap functional_deps advisory_lock json jsonb indirect_toast
 
 # Output of the 'combocid' test contains ctid and cmin values, which will
 # differ depending on how many segments are used. Hence disabled in GPDB.
@@ -156,7 +152,7 @@ test: select_views portals_p2 cluster dependency guc bitmapops tsearch tsdicts f
 # NB: temp.sql does a reconnect which transiently uses 2 connections,
 # so keep this parallel group to at most 19 tests
 # ----------
-test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table alter_extension sequence polymorphism rowtypes with xml
+test: plancache limit plpgsql copy2 temp domain rangefuncs prepare without_oid conversion truncate alter_table alter_extension sequence polymorphism rowtypes with xml gp_foreign_data
 
 # large objects are not supported by GPDB
 # test: largeobject

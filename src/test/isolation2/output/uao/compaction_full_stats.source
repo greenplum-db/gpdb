@@ -41,7 +41,7 @@ relname  |reltuples
 ---------+---------
 foo_index|85       
 (1 row)
-SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg_name('foo');
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo');
 segno|tupcount|state
 -----+--------+-----
 1    |0       |1    

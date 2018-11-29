@@ -34,6 +34,7 @@
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/guc.h"
 #include "miscadmin.h"
 
@@ -180,6 +181,7 @@ AOCSTruncateToEOF(Relation aorel)
 				segno;
 	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
+	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(RelationIsAoCols(aorel));
 
@@ -189,7 +191,7 @@ AOCSTruncateToEOF(Relation aorel)
 		   "Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
+	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 
 	for (i = 0; i < total_segfiles; i++)
 	{
@@ -215,7 +217,7 @@ AOCSTruncateToEOF(Relation aorel)
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 
 		/*
 		 * This should not occur since this segfile info was found by the
@@ -239,6 +241,7 @@ AOCSTruncateToEOF(Relation aorel)
 		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 static void
@@ -283,7 +286,8 @@ AOCSMoveTuple(TupleTableSlot *slot,
 static bool
 AOCSSegmentFileFullCompaction(Relation aorel,
 							  AOCSInsertDesc insertDesc,
-							  AOCSFileSegInfo *fsinfo)
+							  AOCSFileSegInfo *fsinfo,
+							  Snapshot snapshot)
 {
 	const char *relname;
 	AppendOnlyVisimap visiMap;
@@ -316,7 +320,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 						   aorel->rd_appendonly->visimaprelid,
 						   aorel->rd_appendonly->visimapidxid,
 						   ShareLock,
-						   SnapshotNow);
+						   snapshot);
 
 	elogif(Debug_appendonly_print_compaction,
 		   LOG, "Compact AO segfile %d, relation %sd",
@@ -328,7 +332,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 		proj[i] = true;
 	}
 	scanDesc = aocs_beginrangescan(aorel,
-								   SnapshotNow, SnapshotNow,
+								   snapshot, snapshot,
 								   &compact_segno, 1, NULL, proj);
 
 	tupDesc = RelationGetDescr(aorel);
@@ -398,7 +402,7 @@ AOCSSegmentFileFullCompaction(Relation aorel,
 	if (OidIsValid(aorel->rd_appendonly->blkdirrelid))
 	{
 		AppendOnlyBlockDirectory_DeleteSegmentFile(aorel,
-												   SnapshotNow,
+												   snapshot,
 												   compact_segno,
 												   0);
 	}
@@ -441,6 +445,7 @@ AOCSDrop(Relation aorel,
 				segno;
 	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
+	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
 	Assert(RelationIsAoCols(aorel));
@@ -452,7 +457,7 @@ AOCSDrop(Relation aorel,
 
 	/* Get information about all the file segments we need to scan */
 	segfile_array = GetAllAOCSFileSegInfo(aorel,
-										  SnapshotNow, &total_segfiles);
+										  appendOnlyMetaDataSnapshot, &total_segfiles);
 
 	for (i = 0; i < total_segfiles; i++)
 	{
@@ -482,7 +487,7 @@ AOCSDrop(Relation aorel,
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 
 		if (fsinfo->state == AOSEG_STATE_AWAITING_DROP)
 		{
@@ -498,6 +503,7 @@ AOCSDrop(Relation aorel,
 		FreeAllAOCSSegFileInfo(segfile_array, total_segfiles);
 		pfree(segfile_array);
 	}
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 
@@ -527,6 +533,7 @@ AOCSCompact(Relation aorel,
 				segno;
 	LockAcquireResult acquireResult;
 	AOCSFileSegInfo *fsinfo;
+	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	Assert(RelationIsAoCols(aorel));
 	Assert(Gp_role == GP_ROLE_EXECUTE || Gp_role == GP_ROLE_UTILITY);
@@ -538,7 +545,7 @@ AOCSCompact(Relation aorel,
 		   "Compact AO relation %s", relname);
 
 	/* Get information about all the file segments we need to scan */
-	segfile_array = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
+	segfile_array = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 
 	if (insert_segno >= 0)
 	{
@@ -578,7 +585,7 @@ AOCSCompact(Relation aorel,
 		}
 
 		/* Re-fetch under the write lock to get latest committed eof. */
-		fsinfo = GetAOCSFileSegInfo(aorel, SnapshotNow, segno);
+		fsinfo = GetAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, segno);
 
 		/*
 		 * This should not occur since this segfile info was found by the
@@ -594,9 +601,11 @@ AOCSCompact(Relation aorel,
 				 segno);
 
 		if (AppendOnlyCompaction_ShouldCompact(aorel,
-											   fsinfo->segno, fsinfo->total_tupcount, isFull))
+											   fsinfo->segno, fsinfo->total_tupcount, isFull,
+											   appendOnlyMetaDataSnapshot))
 		{
-			AOCSSegmentFileFullCompaction(aorel, insertDesc, fsinfo);
+			AOCSSegmentFileFullCompaction(aorel, insertDesc, fsinfo,
+										  appendOnlyMetaDataSnapshot);
 		}
 
 		pfree(fsinfo);
@@ -611,4 +620,5 @@ AOCSCompact(Relation aorel,
 		pfree(segfile_array);
 	}
 
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }

@@ -31,7 +31,8 @@ extern bool AppendOnlyCompaction_ShouldCompact(
 								   Relation aoRelation,
 								   int segno,
 								   int64 segmentTotalTupcount,
-								   bool isFull);
+								   bool isFull,
+								   Snapshot appendOnlyMetaDataSnapshot);
 extern void AppendOnlyThrowAwayTuple(Relation rel, MemTuple tuple,
 						 TupleTableSlot *slot, MemTupleBinding *mt_bind);
 extern void AppendOnlyTruncateToEOF(Relation aorel);

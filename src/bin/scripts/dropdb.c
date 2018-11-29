@@ -2,7 +2,7 @@
  *
  * dropdb
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/dropdb.c
@@ -121,7 +121,7 @@ main(int argc, char *argv[])
 
 	initPQExpBuffer(&sql);
 
-	appendPQExpBuffer(&sql, "DROP DATABASE %s%s;\n",
+	appendPQExpBuffer(&sql, "DROP DATABASE %s%s;",
 					  (if_exists ? "IF EXISTS " : ""), fmtId(dbname));
 
 	/* Avoid trying to drop postgres db while we are connected to it. */
@@ -132,7 +132,7 @@ main(int argc, char *argv[])
 							host, port, username, prompt_password, progname);
 
 	if (echo)
-		printf("%s", sql.data);
+		printf("%s\n", sql.data);
 	result = PQexec(conn, sql.data);
 	if (PQresultStatus(result) != PGRES_COMMAND_OK)
 	{

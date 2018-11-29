@@ -78,7 +78,7 @@ bool
 cdbpullup_exprHasSubplanRef(Expr *expr);
 
 
-extern Expr *cdbpullup_findPathKeyExprInTargetList(PathKey *item, List *targetlist);
+extern Expr *cdbpullup_findEclassInTargetList(EquivalenceClass *eclass, List *targetlist);
 
 extern List *cdbpullup_truncatePathKeysForTargetList(List *pathkeys, List *targetlist);
 

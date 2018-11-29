@@ -24,6 +24,7 @@
 #include "cdb/cdbhash.h"
 #include "executor/executor.h"
 #include "executor/execdebug.h"
+#include "executor/execUtils.h"
 #include "executor/nodeMotion.h"
 #include "optimizer/clauses.h"
 #include "parser/parse_oper.h"
@@ -117,7 +118,7 @@ static void execMotionSortedReceiverFirstTime(MotionState * node);
 
 static int
 CdbMergeComparator(void *lhs, void *rhs, void *context);
-static uint32 evalHashKey(ExprContext *econtext, List *hashkeys, List *hashtypes, CdbHash * h);
+static uint32 evalHashKey(ExprContext *econtext, List *hashkeys, List *hashtypes, CdbHash *h);
 
 static void doSendEndOfStream(Motion * motion, MotionState * node);
 static void doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot);
@@ -160,7 +161,7 @@ formatTuple(StringInfo buf, HeapTuple tup, TupleDesc tupdesc, Oid *outputFunArra
 bool isMotionGather(const Motion *m)
 {
 	return (m->motionType == MOTIONTYPE_FIXED
-			&& m->numOutputSegs == 1);
+			&& !m->isBroadcast);
 }
 
 /* ----------------------------------------------------------------
@@ -262,6 +263,14 @@ execMotionSender(MotionState * node)
 	PlanState  *outerNode;
 	Motion	   *motion = (Motion *) node->ps.plan;
 	bool		done = false;
+	int			numsegments = 0;
+
+	/* need refactor */
+	if (node->isExplictGatherMotion)
+	{
+		numsegments = motion->plan.flow->numsegments;
+	}
+
 
 
 #ifdef MEASURE_MOTION_TIME
@@ -273,7 +282,7 @@ execMotionSender(MotionState * node)
 
 	AssertState(motion->motionType == MOTIONTYPE_HASH || 
 			(motion->motionType == MOTIONTYPE_EXPLICIT && motion->segidColIdx > 0) || 
-			(motion->motionType == MOTIONTYPE_FIXED && motion->numOutputSegs <= 1));
+			(motion->motionType == MOTIONTYPE_FIXED));
 	Assert(node->ps.state->interconnect_context);
 
 	while (!done)
@@ -307,7 +316,7 @@ execMotionSender(MotionState * node)
 			done = true;
 		}
 		else if (node->isExplictGatherMotion &&
-				 GpIdentity.segindex != gp_singleton_segindex)
+				 GpIdentity.segindex != (gp_session_id % numsegments))
 		{
 			/*
 			 * For explicit gather motion, receiver
@@ -365,7 +374,7 @@ execMotionUnsortedReceiver(MotionState * node)
 
 	AssertState(motion->motionType == MOTIONTYPE_HASH ||
 			(motion->motionType == MOTIONTYPE_EXPLICIT && motion->segidColIdx > 0) || 
-			(motion->motionType == MOTIONTYPE_FIXED && motion->numOutputSegs <= 1));
+			(motion->motionType == MOTIONTYPE_FIXED));
 
 	Assert(node->ps.state->motionlayer_context);
 	Assert(node->ps.state->interconnect_context);
@@ -591,7 +600,6 @@ execMotionSortedReceiver_mk(MotionState * node)
     MotionMKHeapContext *ctxt = (MotionMKHeapContext *) node->tupleheap;
 
     Assert(motion->motionType == MOTIONTYPE_FIXED &&
-            motion->numOutputSegs <= 1 &&
             motion->sendSorted &&
             ctxt
           );
@@ -635,7 +643,6 @@ execMotionSortedReceiver(MotionState * node)
 	CdbTupleHeapInfo *tupHeapInfo;
 
 	AssertState(motion->motionType == MOTIONTYPE_FIXED &&
-			motion->numOutputSegs <= 1 &&
 			motion->sendSorted &&
 			hp != NULL);
 
@@ -892,7 +899,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 		/* Look up the receiving (parent) gang's slice table entry. */
 		recvSlice = (Slice *)list_nth(sliceTable->slices, sendSlice->parentIndex);
 
-		if (node->motionType == MOTIONTYPE_FIXED && node->numOutputSegs == 1)
+		if (node->motionType == MOTIONTYPE_FIXED && !node->isBroadcast)
 		{
 			/* Sending to a single receiving process on the entry db? */
 			/* Is receiving slice a root slice that runs here in the qDisp? */
@@ -907,11 +914,6 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 				/* sanity checks */
 				if (recvSlice->gangSize != 1)
 					elog(ERROR, "unexpected gang size: %d", recvSlice->gangSize);
-				Assert(node->outputSegIdx[0] >= 0
-					   ? (recvSlice->gangType == GANGTYPE_SINGLETON_READER ||
-						  recvSlice->gangType == GANGTYPE_ENTRYDB_READER ||
-						  (recvSlice->gangType == GANGTYPE_PRIMARY_READER && 1 == getgpsegmentCount()))
-					   : recvSlice->gangType == GANGTYPE_ENTRYDB_READER);
 			}
 		}
 
@@ -945,7 +947,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	 */
 	if (motionstate->mstype == MOTIONSTATE_SEND &&
 		node->motionType == MOTIONTYPE_FIXED &&
-		node->numOutputSegs == 1 &&
+		!node->isBroadcast &&
 		outerPlan(node) &&
 		outerPlan(node)->flow &&
 		outerPlan(node)->flow->locustype == CdbLocusType_Replicated)
@@ -967,7 +969,7 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	motionstate->numTuplesToParent = 0;
 
 	motionstate->stopRequested = false;
-	motionstate->numInputSegs = sendSlice->numGangMembersToBeActive;
+	motionstate->numInputSegs = sendSlice->gangSize;
 
 	/*
 	 * Miscellaneous initialization
@@ -1002,8 +1004,10 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 	if (motionstate->mstype == MOTIONSTATE_SEND && node->motionType == MOTIONTYPE_HASH) 
 	{
 		int			nkeys;
-
-		Assert(node->numOutputSegs > 0);
+		Oid		   *typeoids;
+		int			i;
+		int			numsegments;
+		ListCell   *ht;
 
 		nkeys = list_length(node->hashDataTypes);
 		
@@ -1011,10 +1015,37 @@ ExecInitMotion(Motion * node, EState *estate, int eflags)
 			motionstate->hashExpr = (List *) ExecInitExpr((Expr *) node->hashExpr,
 							(PlanState *) motionstate);
 
+		typeoids = palloc(nkeys * sizeof(Oid));
+		i = 0;
+		foreach(ht, node->hashDataTypes)
+		{
+			typeoids[i++] = lfirst_oid(ht);
+		}
+
 		/*
 		 * Create hash API reference
 		 */
-		motionstate->cdbhash = makeCdbHash(node->numOutputSegs);
+		if (estate->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		{
+			Assert(node->plan.flow);
+			Assert(node->plan.flow->numsegments > 0);
+
+			/*
+			 * For planner generated plan the size of receiver slice can be
+			 * determined from flow.
+			 */
+			numsegments = node->plan.flow->numsegments;
+		}
+		else
+		{
+			/*
+			 * For ORCA generated plan we could distribute to ALL as partially
+			 * distributed tables are not supported by ORCA yet.
+			 */
+			numsegments = getgpsegmentCount();
+		}
+
+		motionstate->cdbhash = makeCdbHash(numsegments, nkeys, typeoids);
     }
 
 	/* Merge Receive: Set up the key comparator and priority queue. */
@@ -1321,7 +1352,6 @@ uint32
 evalHashKey(ExprContext *econtext, List *hashkeys, List *hashtypes, CdbHash * h)
 {
 	ListCell   *hk;
-	ListCell   *ht;
 	MemoryContext oldContext;
 
 	ResetExprContext(econtext);
@@ -1338,25 +1368,26 @@ evalHashKey(ExprContext *econtext, List *hashkeys, List *hashtypes, CdbHash * h)
 	 * to assign a hash value for us.
 	 */
 	if (list_length(hashkeys) > 0)
-	{	
-		forboth(hk, hashkeys, ht, hashtypes)
+	{
+		int			i;
+
+		i = 0;
+		foreach(hk, hashkeys)
 		{
 			ExprState  *keyexpr = (ExprState *) lfirst(hk);
 			Datum		keyval;
 			bool		isNull;
-			
+
 			/*
 			 * Get the attribute value of the tuple
 			 */
 			keyval = ExecEvalExpr(keyexpr, econtext, &isNull, NULL);
-			
+
 			/*
 			 * Compute the hash function
 			 */
-			if (!isNull)			/* treat nulls as having hash key 0 */
-				cdbhash(h, keyval, lfirst_oid(ht));
-			else
-				cdbhashnull(h);
+			cdbhash(h, i + 1, keyval, isNull);
+			i++;
 		}
 	}
 	else
@@ -1422,13 +1453,12 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 
 	if (motion->motionType == MOTIONTYPE_FIXED)
 	{
-		if (motion->numOutputSegs == 0) /* Broadcast */
+		if (motion->isBroadcast) /* Broadcast */
 		{
 			targetRoute = BROADCAST_SEGIDX;
 		}
 		else /* Fixed Motion. */
 		{
-			Assert(motion->numOutputSegs == 1);
 			/*
 			 * Actually, since we can only send to a single output segment
 			 * here, we are guaranteed that we only have a single
@@ -1443,21 +1473,27 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 	{
 		uint32		hval = 0;
 
-		Assert(motion->numOutputSegs > 0);
-		Assert(motion->outputSegIdx != NULL);
-
 		econtext->ecxt_outertuple = outerTupleSlot;
 
-		Assert(node->cdbhash->numsegs == motion->numOutputSegs);
-		
 		hval = evalHashKey(econtext, node->hashExpr,
 				motion->hashDataTypes, node->cdbhash);
 
-		Assert(hval < getgpsegmentCount() && "redistribute destination outside segment array");
+#ifdef USE_ASSERT_CHECKING
+		if (node->ps.state->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		{
+			Assert(hval < node->ps.plan->flow->numsegments &&
+				   "redistribute destination outside segment array");
+		}
+		else
+		{
+			Assert(hval < getgpsegmentCount() &&
+				   "redistribute destination outside segment array");
+		}
+#endif /* USE_ASSERT_CHECKING */
 		
 		/* hashSegIdx takes our uint32 and maps it to an int, and here
 		 * we assign it to an int16. See below. */
-		targetRoute = motion->outputSegIdx[hval];
+		targetRoute = hval;
 
 		/* see MPP-2099, let's not run into this one again! NOTE: the
 		 * definition of BROADCAST_SEGIDX is key here, it *cannot* be

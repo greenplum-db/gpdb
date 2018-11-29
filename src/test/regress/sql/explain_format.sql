@@ -2,15 +2,15 @@
 -- m/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/
 -- s/\(actual time=\d+\.\d+..\d+\.\d+ rows=\d+ loops=\d+\)/(actual time=##.###..##.### rows=# loops=#)/
 -- m/\(slice\d+\)    Executor memory: (\d+)\w bytes\./
--- s/\(slice\d+\)    Executor memory: (\d+)\w bytes\./\(slice\)    Executor memory: (#####)K bytes./
+-- s/Executor memory: (\d+)\w bytes\./Executor memory: (#####)K bytes./
 -- m/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./
--- s/\(slice\d+\)    Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./\(slice\)    Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
--- m/\(slice\d+\)    /
--- s/\(slice\d+\)    /\(slice\)    /
+-- s/Executor memory: (\d+)\w bytes avg x \d+ workers, \d+\w bytes max \(seg\d+\)\./Executor memory: ####K bytes avg x #### workers, ####K bytes max (seg#)./
 -- m/Work_mem: \d+\w bytes max\./
 -- s/Work_mem: \d+\w bytes max\. */Work_mem: ###K bytes max./
--- m/Total runtime: \d+\.\d+ ms/
--- s/Total runtime: \d+\.\d+ ms/Total runtime: ##.### ms/
+-- m/Execution time: \d+\.\d+ ms/
+-- s/Execution time: \d+\.\d+ ms/Execution time: ##.### ms/
+-- m/Planning time: \d+\.\d+ ms/
+-- s/Planning time: \d+\.\d+ ms/Planning time: ##.### ms/
 -- m/cost=\d+\.\d+\.\.\d+\.\d+ rows=\d+ width=\d+/
 -- s/\(cost=\d+\.\d+\.\.\d+\.\d+ rows=\d+ width=\d+\)/(cost=##.###..##.### rows=### width=###)/
 -- m/Peak memory: \d+\w? bytes\./
@@ -66,14 +66,12 @@ EXPLAIN (ANALYZE) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.appl
 -- s/ Plan Width: \d+/ Plan Width: ##/
 -- m/ Time: \d+\.\d+/
 -- s/ Time: \d+\.\d+/ Time: ##.###/
--- m/Total Runtime: \d+\.\d+/
--- s/Total Runtime: \d+\.\d+/Total Runtime: ##.###/
+-- m/Execution Time: \d+\.\d+/
+-- s/Execution Time: \d+\.\d+/Execution Time: ##.###/
 -- m/Segments: \d+/
 -- s/Segments: \d+/Segments: #/
 -- m/PQO version \d+\.\d+\.\d+",?/
 -- s/PQO version \d+\.\d+\.\d+",?/PQO version ##.##.##"/
--- m/Slice: [0-3]/
--- s/Slice: [0-3]/Slice: # /
 -- m/ Memory: \d+/
 -- s/ Memory: \d+/ Memory: ###/
 -- m/Maximum Memory Used: \d+/
@@ -99,108 +97,22 @@ EXPLAIN (FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.
 EXPLAIN (ANALYZE, FORMAT YAML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
 -- explain_processing_on
 
--- JSON Required replaces for costs and time changes
--- start_matchsubs
--- m/ Loops": \d+,?/
--- s/ Loops": \d+,?/ Loops": #,/
--- m/ Cost": \d+\.\d+,/
--- s/ Cost": \d+\.\d+,/ Cost": ###.##,/
--- m/ Rows": \d+,/
--- s/ Rows": \d+,/ Rows": #####,/
--- m/"Plan Width": \d+,?/
--- s/"Plan Width": \d+,?/"Plan Width": ##,/
--- m/ Time": \d+\.\d+,/
--- s/ Time": \d+\.\d+,/ Time": ##.###,/
--- m/Total Runtime": \d+\.\d+,?/
--- s/Total Runtime": \d+\.\d+,?/Total Runtime": ##.###,/
--- m/"Memory used": \d+,?/
--- s/"Memory used": \d+,?/"Memory used": ####,/
--- m/"Segments": \d+,/
--- s/"Segments": \d+,/"Segments": #,/
--- m/"Slice": [0-3],/
--- s/"Slice": [0-3],/"Slice": #,/
--- m/Executor Memory": \d+,?/
--- s/Executor Memory": \d+,?/Executor Memory": ###/
--- m/"Maximum Memory Used": \d+,?/
--- s/"Maximum Memory Used": \d+,?/"Maximum Memory Used": ###,/
--- m/"Work Maximum Memory": \d+,?/
--- s/"Work Maximum Memory": \d+,?/"Work Maximum Memory": ###/
--- m/"Workers": \d+,/
--- s/"Workers": \d+,/"Workers": ##,/
--- m/Peak Memory": \d+,/
--- s/Peak Memory": \d+,/Peak Memory": ###,/
--- m/Virtual Memory": \d+/
--- s/Virtual Memory": \d+/Virtual Memory": ###/
--- m/"Average": \d+,/
--- s/"Average": \d+,/"Average": ##, /
--- m/"Total memory used across slices": \d+,/
--- s/"Total memory used across slices": \d+,\s*/"Total memory used across slices": ###,/
--- m/"ORCA Memory Used \w+": \d+,?/
--- s/"ORCA Memory Used (\w+)": \d+,?/"ORCA Memory Used $1": ##/
--- end_matchsubs
--- explain_processing_off
--- Check Explain JSON output
-EXPLAIN (FORMAT JSON) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
--- explain_processing_on
+--
+-- Test a simple case with JSON and XML output, too.
+--
+-- This should be enough for those format. The only difference between JSON,
+-- XML, and YAML is in the formatting, after all.
 
---- Check Explain Analyze JSON output that include the slices information
--- explain_processing_off
-EXPLAIN (ANALYZE, FORMAT JSON) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
--- explain_processing_on
-
--- XML Required replaces for costs and time changes
+-- Check JSON format
+--
 -- start_matchsubs
--- m/Cost>\d+\.\d+<\/[^>]+\-Cost>\s+/
--- s/Cost>\d+\.\d+<\/([^>]+)\-Cost>\s+/Cost>###.##<\/$1-Cost>/
--- m/Plan-Rows>\d+<\/Plan-Rows>\s+/
--- s/Plan-Rows>\d+<\/Plan-Rows>\s+/Plan-Rows>###<\/Plan-Rows>/
--- m/Plan-Width>\d+<\/Plan-Width>\s+/
--- s/Plan-Width>\d+<\/Plan-Width>\s+/Plan-Width>###<\/Plan-Width>/
--- m/Segments>\d+<\/Segments>\s+/
--- s/Segments>\d+<\/Segments>\s+/Segments>##<\/Segments>/
--- m/Actual-Rows>\d+<\/Actual-Rows>\s+/
--- s/Actual-Rows>\d+<\/Actual-Rows>\s+/Actual-Rows>###<\/Actual-Rows>/
--- m/Actual-Loops>\d+<\/Actual-Loops>\s+/
--- s/Actual-Loops>\d+<\/Actual-Loops>\s+/Actual-Loops>###<\/Actual-Loops>/
--- m/-Time>\d+\.\d+<\/[^>]+\-Time>\s*/
--- s/-Time>\d+\.\d+<\/([^>]+)\-Time>\s*/-Time>##.###<\/$1-Time>/
--- m/Total-Runtime>\d+\.\d+<\/Total-Runtime>\s+/
--- s/Total-Runtime>\d+\.\d+<\/Total-Runtime>\s+/Total-Runtime>##.###<\/Total-Runtime>/
--- m/Memory-used>\d+<\/Memory-used>\s+/
--- s/Memory-used>\d+<\/Memory-used>\s+/Memory-used>###<\/Memory-used>/
 -- m/PQO version \d+\.\d+\.\d+/
 -- s/PQO version \d+\.\d+\.\d+/PQO version ##.##.##/
--- m/<Slice>[0-3]<\/Slice>/
--- s/<Slice>[0-3]<\/Slice>\s+/<Slice>#<\/Slice> /
--- m/Executor-Memory>\d+<\//
--- s/Executor-Memory>\d+<\/([^>]+)>\s+/Executor-Memory>###<\/$1> /
--- m/<Maximum-Memory-Used>\d+<\/Maximum-Memory-Used>\s+/
--- s/<Maximum-Memory-Used>\d+<\/Maximum-Memory-Used>\s+/<Maximum-Memory-Used>###<\/Maximum-Memory-Used> /
--- m/<Work-Maximum-Memory>\d+<\/Work-Maximum-Memory>\s+/
--- s/<Work-Maximum-Memory>\d+<\/Work-Maximum-Memory>\s+/<Work-Maximum-Memory>###<\/Work-Maximum-Memory> /
--- m/<Workers>\d+<\/Workers>\s+/
--- s/<Workers>\d+<\/Workers>\s+/<Workers>###<\/Workers> /
--- m/Peak-Memory>\d+<\//
--- s/Peak-Memory>\d+<\/([^>]+)>\s+/Peak-Memory>###<\/$1>/
--- m/Virtual-Memory>\d+/
--- s/Virtual-Memory>\d+<\/([^>]+)>\s+/Virtual-Memory>###<\/$1>/
--- m/<Average>\d+<\/Average>/
--- s/<Average>\d+<\/Average>\s+/<Average>##<\/Average>/
--- m/<Total-memory-used-across-slices>\d+/
--- s/(<Total-memory-used-across-slices>)\d+(<\/[^>]+>)\s*/$1###$2/
--- m/<ORCA-Memory-Used-\w+>\d+/
--- s/<ORCA-Memory-Used-(\w+)>\d+(<\/[^>]+>)\s+/<ORCA-Memory-Used-$1>##$2/
--- m/>\s+\+/
--- s/>\s+\+/>+/
 -- end_matchsubs
 -- explain_processing_off
--- Check Explain XML output
-EXPLAIN (FORMAT XML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
--- explain_processing_on
+EXPLAIN (FORMAT JSON, COSTS OFF) SELECT * FROM generate_series(1, 10);
 
--- explain_processing_off
--- Check Explain Analyze XML output
-EXPLAIN (ANALYZE, FORMAT XML) SELECT * from boxes LEFT JOIN apples ON apples.id = boxes.apple_id LEFT JOIN box_locations ON box_locations.id = boxes.location_id;
+EXPLAIN (FORMAT XML, COSTS OFF) SELECT * FROM generate_series(1, 10);
 -- explain_processing_on
 
 -- Cleanup

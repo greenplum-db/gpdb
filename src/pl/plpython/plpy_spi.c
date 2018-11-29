@@ -120,7 +120,7 @@ PLy_spi_prepare(PyObject *self, PyObject *args)
 			 *information for input conversion.
 			 ********************************************************/
 
-			parseTypeString(sptr, &typeId, &typmod);
+			parseTypeString(sptr, &typeId, &typmod, false);
 
 			typeTup = SearchSysCache1(TYPEOID,
 									  ObjectIdGetDatum(typeId));
@@ -446,16 +446,6 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 		{
 			MemoryContext oldcontext2;
 
-			/*
-			 * Save tuple descriptor for later use by result set metadata
-			 * functions.  Save it in TopMemoryContext so that it survives
-			 * outside of an SPI context.  We trust that PLy_result_dealloc()
-			 * will clean it up when the time is right.
-			 */
-			oldcontext2 = MemoryContextSwitchTo(TopMemoryContext);
-			result->tupdesc = CreateTupleDescCopy(tuptable->tupdesc);
-			MemoryContextSwitchTo(oldcontext2);
-
 			if (rows)
 			{
 				Py_DECREF(result->rows);
@@ -464,23 +454,32 @@ PLy_spi_execute_fetch_result(SPITupleTable *tuptable, int64 rows, int status)
 				PLy_input_tuple_funcs(&args, tuptable->tupdesc);
 				for (i = 0; i < rows; i++)
 				{
-					PyObject   *row = PLyDict_FromTuple(&args, tuptable->vals[i],
+					PyObject   *row = PLyDict_FromTuple(&args,
+														tuptable->vals[i],
 														tuptable->tupdesc);
 
 					PyList_SetItem(result->rows, (Py_ssize_t)i, row);
 				}
 			}
+
+			/*
+			 * Save tuple descriptor for later use by result set metadata
+			 * functions.  Save it in TopMemoryContext so that it survives
+			 * outside of an SPI context.  We trust that PLy_result_dealloc()
+			 * will clean it up when the time is right.  (Do this as late as
+			 * possible, to minimize the number of ways the tupdesc could get
+			 * leaked due to errors.)
+			 */
+			oldcontext2 = MemoryContextSwitchTo(TopMemoryContext);
+			result->tupdesc = CreateTupleDescCopy(tuptable->tupdesc);
+			MemoryContextSwitchTo(oldcontext2);
 		}
 		PG_CATCH();
 		{
 			MemoryContextSwitchTo(oldcontext);
-			if (!PyErr_Occurred())
-				PLy_exception_set(PLy_exc_error,
-					   "unrecognized error in PLy_spi_execute_fetch_result");
 			PLy_typeinfo_dealloc(&args);
-			SPI_freetuptable(tuptable);
 			Py_DECREF(result);
-			return NULL;
+			PG_RE_THROW();
 		}
 		PG_END_TRY();
 

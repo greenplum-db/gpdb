@@ -51,6 +51,7 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/relcache.h"
+#include "utils/snapmgr.h"
 #include "utils/syscache.h"
 
 
@@ -783,7 +784,9 @@ OpenAOCSDatumStreams(AOCSInsertDesc desc)
 	desc->fsInfo = seginfo;
 
 	/* Never insert into a segment that is awaiting a drop */
-	Assert(desc->fsInfo->state != AOSEG_STATE_AWAITING_DROP);
+	elogif(desc->fsInfo->state == AOSEG_STATE_AWAITING_DROP, ERROR,
+		   "cannot insert into segno (%d) for AO relid %d that is in state AOSEG_STATE_AWAITING_DROP",
+		   desc->cur_segno, RelationGetRelid(desc->aoi_rel));
 
 	desc->rowCount = seginfo->total_tupcount;
 
@@ -833,7 +836,7 @@ aocs_insert_init(Relation rel, int segno, bool update_mode)
 
 	desc = (AOCSInsertDesc) palloc0(sizeof(AOCSInsertDescData));
 	desc->aoi_rel = rel;
-	desc->appendOnlyMetaDataSnapshot = SnapshotNow;
+	desc->appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	/*
 	 * Writers uses this since they have exclusive access to the lock acquired
@@ -1014,6 +1017,8 @@ aocs_insert_finish(AOCSInsertDesc idesc)
 	AppendOnlyBlockDirectory_End_forInsert(&(idesc->blockDirectory));
 
 	UpdateAOCSFileSegInfo(idesc);
+
+	UnregisterSnapshot(idesc->appendOnlyMetaDataSnapshot);
 
 	pfree(idesc->fsInfo);
 
@@ -1638,11 +1643,6 @@ typedef struct AOCSDeleteDescData
 	Relation	aod_rel;
 
 	/*
-	 * Snapshot to use for meta data operations
-	 */
-	Snapshot	appendOnlyMetaDataSnapshot;
-
-	/*
 	 * visibility map
 	 */
 	AppendOnlyVisimap visibilityMap;
@@ -1671,13 +1671,12 @@ aocs_delete_init(Relation rel)
 	AOCSDeleteDesc aoDeleteDesc = palloc0(sizeof(AOCSDeleteDescData));
 
 	aoDeleteDesc->aod_rel = rel;
-	aoDeleteDesc->appendOnlyMetaDataSnapshot = SnapshotNow;
 
 	AppendOnlyVisimap_Init(&aoDeleteDesc->visibilityMap,
 						   rel->rd_appendonly->visimaprelid,
 						   rel->rd_appendonly->visimapidxid,
 						   RowExclusiveLock,
-						   aoDeleteDesc->appendOnlyMetaDataSnapshot);
+						   GetCatalogSnapshot(InvalidOid));
 
 	AppendOnlyVisimapDelete_Init(&aoDeleteDesc->visiMapDelete,
 								 &aoDeleteDesc->visibilityMap);
@@ -1852,6 +1851,7 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 	int32		fileSegNo;
 	char		fn[MAXPGPATH];
 	int			i;
+	Snapshot	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	/* Column numbers of newly added columns start from here. */
 	AttrNumber	colno = desc->rel->rd_att->natts - desc->num_newcols;
@@ -1862,7 +1862,7 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 		AppendOnlyBlockDirectory_End_addCol(&desc->blockDirectory);
 	}
 	AppendOnlyBlockDirectory_Init_addCol(&desc->blockDirectory,
-										 SnapshotNow,
+										 appendOnlyMetaDataSnapshot,
 										 (FileSegInfo *) seginfo,
 										 desc->rel,
 										 seginfo->segno,
@@ -1885,6 +1885,7 @@ aocs_addcol_newsegfile(AOCSAddColumnDesc desc,
 		desc->dsw[i]->blockFirstRowNum = 1;
 	}
 	desc->cur_segno = seginfo->segno;
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 void

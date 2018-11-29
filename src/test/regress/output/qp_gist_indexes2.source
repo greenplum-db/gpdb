@@ -78,11 +78,11 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                         QUERY PLAN                          
--------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using propertyboxindex on gisttable1
-         Index Cond: property ~= '(7052,250),(6050,20)'::box
+         Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (4 rows)
 
@@ -123,11 +123,11 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                         QUERY PLAN                          
--------------------------------------------------------------
+                          QUERY PLAN                           
+---------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using propertyboxindex on gisttable1
-         Index Cond: property ~= '(7052,250),(6050,20)'::box
+         Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (4 rows)
 
@@ -426,7 +426,7 @@ SELECT owner, property FROM GistTable1
    ->  Sort  (cost=700.38..700.38 rows=1 width=51)
          Sort Key: id
          ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..700.37 rows=1 width=51)
-               Index Cond: property IS NULL
+               Index Cond: (property IS NULL)
  Settings:  enable_seqscan=off; optimizer=off
  Optimizer status: legacy query optimizer
 (8 rows)
@@ -465,7 +465,7 @@ SELECT id, property FROM GistTable1
    ->  Sort  (cost=701.28..701.28 rows=1 width=36)
          Sort Key: id
          ->  Index Scan using propertyisnullindex on gisttable1  (cost=0.00..701.27 rows=1 width=36)
-               Index Cond: property IS NULL
+               Index Cond: (property IS NULL)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -557,11 +557,11 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                         QUERY PLAN                         
-------------------------------------------------------------
+                          QUERY PLAN                          
+--------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using gistindex13 on gisttable13
-         Index Cond: property ~= '(999,999),(998,998)'::box
+         Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (4 rows)
 
@@ -576,11 +576,11 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                         QUERY PLAN                         
-------------------------------------------------------------
+                          QUERY PLAN                          
+--------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using gistindex13 on gisttable13
-         Index Cond: property ~= '(999,999),(998,998)'::box
+         Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (4 rows)
 
@@ -605,11 +605,11 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                         QUERY PLAN                         
-------------------------------------------------------------
+                          QUERY PLAN                          
+--------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Index Scan using gistindex13 on gisttable13
-         Index Cond: property ~= '(999,999),(998,998)'::box
+         Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (4 rows)
 
@@ -647,7 +647,7 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Index Scan using propertyboxindex on gisttable1
-               Index Cond: property ~= '(3,4),(1,2)'::box
+               Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -672,7 +672,7 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Index Scan using propertyboxindex on gisttable1
-               Index Cond: property ~= '(3,4),(1,2)'::box
+               Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -692,14 +692,14 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                      QUERY PLAN                      
-------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Seq Scan on gisttable1
-               Filter: property ~= '(3,4),(1,2)'::box
+               Filter: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -781,13 +781,13 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                              QUERY PLAN                             
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         Recheck Cond: (property ~= '(7052,250),(6050,20)'::box)
          ->  Bitmap Index Scan on propertyboxindex
-               Index Cond: property ~= '(7052,250),(6050,20)'::box
+               Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1077,9 +1077,9 @@ SELECT owner, property FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property IS NULL
+               Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
-                     Index Cond: property IS NULL
+                     Index Cond: (property IS NULL)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1170,13 +1170,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1191,13 +1191,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1222,13 +1222,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1259,16 +1259,16 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1286,16 +1286,16 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1315,14 +1315,14 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                      QUERY PLAN                      
-------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Append-only Scan on gisttable1
-               Filter: property ~= '(3,4),(1,2)'::box
+               Filter: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -1404,13 +1404,13 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         Recheck Cond: (property ~= '(7052,250),(6050,20)'::box)
          ->  Bitmap Index Scan on propertyboxindex
-               Index Cond: property ~= '(7052,250),(6050,20)'::box
+               Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1700,9 +1700,9 @@ SELECT owner, property FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property IS NULL
+               Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
-                     Index Cond: property IS NULL
+                     Index Cond: (property IS NULL)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1793,13 +1793,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1814,13 +1814,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1845,13 +1845,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Row-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -1882,16 +1882,16 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1909,16 +1909,16 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                           QUERY PLAN                           
-----------------------------------------------------------------
+                            QUERY PLAN                            
+------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Row-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -1938,14 +1938,14 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                      QUERY PLAN                      
-------------------------------------------------------
+                        QUERY PLAN                      
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Append-only Scan on gisttable1
-               Filter: property ~= '(3,4),(1,2)'::box
+               Filter: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -2027,13 +2027,13 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         Recheck Cond: (property ~= '(7052,250),(6050,20)'::box)
          ->  Bitmap Index Scan on propertyboxindex
-               Index Cond: property ~= '(7052,250),(6050,20)'::box
+               Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -2323,9 +2323,9 @@ SELECT owner, property FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property IS NULL
+               Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
-                     Index Cond: property IS NULL
+                     Index Cond: (property IS NULL)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -2416,13 +2416,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -2437,13 +2437,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -2468,13 +2468,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -2512,9 +2512,9 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -2539,9 +2539,9 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -2561,14 +2561,14 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                      QUERY PLAN                      
-------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Append-only Columnar Scan on gisttable1
-               Filter: property ~= '(3,4),(1,2)'::box
+               Filter: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 
@@ -2650,13 +2650,13 @@ SELECT owner, property FROM GistTable1
 EXPLAIN (COSTS OFF)
 SELECT owner, property FROM GistTable1
  WHERE property ~= '( (6050, 20), (7052, 250) )';
-                            QUERY PLAN                             
--------------------------------------------------------------------
+                             QUERY PLAN                              
+---------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-         Recheck Cond: property ~= '(7052,250),(6050,20)'::box
+         Recheck Cond: (property ~= '(7052,250),(6050,20)'::box)
          ->  Bitmap Index Scan on propertyboxindex
-               Index Cond: property ~= '(7052,250),(6050,20)'::box
+               Index Cond: (property ~= '(7052,250),(6050,20)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -2946,9 +2946,9 @@ SELECT owner, property FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property IS NULL
+               Recheck Cond: (property IS NULL)
                ->  Bitmap Index Scan on propertyisnullindex
-                     Index Cond: property IS NULL
+                     Index Cond: (property IS NULL)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -3039,13 +3039,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -3060,13 +3060,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -3091,13 +3091,13 @@ SELECT id, property AS "ProperTee" FROM GistTable13
 
 EXPLAIN (COSTS OFF) SELECT id, property AS "ProperTee" FROM GistTable13 
  WHERE property ~= '( (999,999), (998,998) )';
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                             QUERY PLAN                             
+--------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Bitmap Append-Only Column-Oriented Scan on gisttable13
-         Recheck Cond: property ~= '(999,999),(998,998)'::box
+         Recheck Cond: (property ~= '(999,999),(998,998)'::box)
          ->  Bitmap Index Scan on gistindex13
-               Index Cond: property ~= '(999,999),(998,998)'::box
+               Index Cond: (property ~= '(999,999),(998,998)'::box)
  Optimizer: legacy query optimizer
 (6 rows)
 
@@ -3135,9 +3135,9 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -3162,9 +3162,9 @@ EXPLAIN (COSTS OFF) SELECT id FROM GistTable1
    ->  Sort
          Sort Key: id
          ->  Bitmap Append-Only Column-Oriented Scan on gisttable1
-               Recheck Cond: property ~= '(3,4),(1,2)'::box
+               Recheck Cond: (property ~= '(3,4),(1,2)'::box)
                ->  Bitmap Index Scan on propertyboxindex
-                     Index Cond: property ~= '(3,4),(1,2)'::box
+                     Index Cond: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (9 rows)
 
@@ -3184,14 +3184,14 @@ SELECT id FROM GistTable1
 EXPLAIN (COSTS OFF) SELECT id FROM GistTable1 
  WHERE property ~= '( (1,2), (3,4) )'
  ORDER BY id;
-                      QUERY PLAN                      
-------------------------------------------------------
+                       QUERY PLAN                       
+--------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: id
    ->  Sort
          Sort Key: id
          ->  Append-only Columnar Scan on gisttable1
-               Filter: property ~= '(3,4),(1,2)'::box
+               Filter: (property ~= '(3,4),(1,2)'::box)
  Optimizer: legacy query optimizer
 (7 rows)
 

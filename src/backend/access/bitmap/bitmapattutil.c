@@ -136,8 +136,10 @@ _bitmap_create_lov_heapandindex(Relation rel,
 
 		if (RelationNeedsWAL(lovIndex))
 		{
-			log_newpage_rel(lovIndex, BufferGetBlockNumber(btree_metabuf), MAIN_FORKNUM,
-						btree_metapage);
+			START_CRIT_SECTION();
+			MarkBufferDirty(btree_metabuf);
+			log_newpage_buffer(btree_metabuf, true);
+			END_CRIT_SECTION();
 		}
 
 		/* This cache value is not valid anymore. */
@@ -181,7 +183,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 								 false, 0,
 								 ONCOMMIT_NOOP, NULL /* GP Policy */,
 								 (Datum)0, false, true,
-								 false, /* is_internal */
+								 true, /* is_internal */
 								 /* valid_opts */ true,
 								 /* is_part_child */ false,
 								 /* is_part_parent */ false);
@@ -250,7 +252,7 @@ _bitmap_create_lov_heapandindex(Relation rel,
 						 /* allow_system_table_mods */ true,
 						 /* skip_build */ false,
 						 /* concurrent */ false,
-						 /* is_internal */ false,	/* GPDB_93_MERGE_FIXME: What's the appropriate is_internal flag? */
+						 /* is_internal */ true,
 						 NULL);
 	*lovIndexOid = idxid;
 

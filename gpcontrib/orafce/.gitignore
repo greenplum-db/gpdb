@@ -1,0 +1,17 @@
+sqlparse.c
+sqlparse.h
+sqlscan.c
+*.o
+*.a
+*.so
+*.so.*
+*.sdf
+*.opensdf
+*.suo
+*.*.user
+/.deps/
+/orafce.sql
+/orafce.sql.in
+/results
+[Oo]bj/
+[Bb]in/

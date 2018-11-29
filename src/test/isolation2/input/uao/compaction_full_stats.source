@@ -16,4 +16,4 @@ DELETE FROM foo WHERE a < 16;
 VACUUM FULL foo;
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo';
 SELECT relname, reltuples FROM pg_class WHERE relname = 'foo_index';
-SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg_name('foo');
+SELECT segno, tupcount,state FROM gp_ao_or_aocs_seg('foo');

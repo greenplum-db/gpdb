@@ -3,7 +3,7 @@
  * execQual.c
  *	  Routines to evaluate qualification and targetlist expressions
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -26,7 +26,7 @@
  *		ExecProject() is used to make tuple projections.  Rather then
  *		trying to speed it up, the execution plan should be pre-processed
  *		to facilitate attribute sharing between nodes wherever possible,
- *		instead of doing needless copying.	-cim 5/31/91
+ *		instead of doing needless copying.  -cim 5/31/91
  *
  *		During expression evaluation, we check_stack_depth only in
  *		ExecMakeFunctionResult (and substitute routines) rather than at every
@@ -43,7 +43,10 @@
 #include "catalog/objectaccess.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbhash.h"
+#include "cdb/cdbvars.h"
 #include "cdb/partitionselection.h"
+#include "cdb/cdbutil.h"
 #include "commands/typecmds.h"
 #include "executor/execdebug.h"
 #include "executor/nodeAgg.h"
@@ -239,7 +242,7 @@ static bool ExecIsExprUnsafeToConst(Node *node);
  *
  * Note: for notational simplicity we declare these functions as taking the
  * specific type of ExprState that they work on.  This requires casting when
- * assigning the function pointer in ExecInitExpr.	Be careful that the
+ * assigning the function pointer in ExecInitExpr.  Be careful that the
  * function signature is declared correctly, because the cast suppresses
  * automatic checking!
  *
@@ -274,7 +277,7 @@ static bool ExecIsExprUnsafeToConst(Node *node);
  * The caller should already have switched into the temporary memory
  * context econtext->ecxt_per_tuple_memory.  The convenience entry point
  * ExecEvalExprSwitchContext() is provided for callers who don't prefer to
- * do the switch in an outer loop.	We do not do the switch in these routines
+ * do the switch in an outer loop.  We do not do the switch in these routines
  * because it'd be a waste of cycles during nested expression evaluation.
  * ----------------------------------------------------------------
  */
@@ -404,7 +407,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 		 * We might have a nested-assignment situation, in which the
 		 * refassgnexpr is itself a FieldStore or ArrayRef that needs to
 		 * obtain and modify the previous value of the array element or slice
-		 * being replaced.	If so, we have to extract that value from the
+		 * being replaced.  If so, we have to extract that value from the
 		 * array and pass it down via the econtext's caseValue.  It's safe to
 		 * reuse the CASE mechanism because there cannot be a CASE between
 		 * here and where the value would be needed, and an array assignment
@@ -477,7 +480,7 @@ ExecEvalArrayRef(ArrayRefExprState *astate,
 		/*
 		 * For assignment to varlena arrays, we handle a NULL original array
 		 * by substituting an empty (zero-dimensional) array; insertion of the
-		 * new element will result in a singleton array value.	It does not
+		 * new element will result in a singleton array value.  It does not
 		 * matter whether the new element is NULL.
 		 */
 		if (*isNull)
@@ -747,7 +750,8 @@ ExecEvalScalarVar(ExprState *exprstate, ExprContext *econtext,
 		{
 			if (variable->vartype != attr->atttypid)
 				ereport(ERROR,
-						(errmsg("attribute %d has wrong type", attnum),
+						(errcode(ERRCODE_DATATYPE_MISMATCH),
+						 errmsg("attribute %d has wrong type", attnum),
 						 errdetail("Table has type %s, but query expects %s.",
 								   format_type_be(attr->atttypid),
 								   format_type_be(variable->vartype))));
@@ -938,11 +942,11 @@ ExecEvalWholeRowVar(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 		 * We really only care about numbers of attributes and data types.
 		 * Also, we can ignore type mismatch on columns that are dropped in
 		 * the destination type, so long as (1) the physical storage matches
-		 * or (2) the actual column value is NULL.	Case (1) is helpful in
+		 * or (2) the actual column value is NULL.  Case (1) is helpful in
 		 * some cases involving out-of-date cached plans, while case (2) is
 		 * expected behavior in situations such as an INSERT into a table with
 		 * dropped columns (the planner typically generates an INT4 NULL
-		 * regardless of the dropped column type).	If we find a dropped
+		 * regardless of the dropped column type).  If we find a dropped
 		 * column and cannot verify that case (1) holds, we have to use
 		 * ExecEvalWholeRowSlow to check (2) for each row.
 		 */
@@ -1005,7 +1009,6 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 {
 	Var		   *variable = (Var *) wrvstate->xprstate.expr;
 	TupleTableSlot *slot;
-	HeapTuple	tuple;
 	TupleDesc	slot_tupdesc;
 	HeapTupleHeader dtuple;
 
@@ -1053,25 +1056,16 @@ ExecEvalWholeRowFast(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 	/*
 	 * Copy the slot tuple and make sure any toasted fields get detoasted.
 	 */
-	tuple = ExecFetchSlotHeapTuple(slot);
-	dtuple = (HeapTupleHeader) palloc(tuple->t_len);
-	memcpy((char *) dtuple, (char *) tuple->t_data, tuple->t_len);
-
-	HeapTupleHeaderSetDatumLength(dtuple, tuple->t_len);
+	dtuple = DatumGetHeapTupleHeader(ExecFetchSlotTupleDatum(slot));
 
 	/*
-	 * If the Var identifies a named composite type, label the tuple with that
-	 * type; otherwise use what is in the tupleDesc.
+	 * If the Var identifies a named composite type, label the datum with that
+	 * type; otherwise we'll use the slot's info.
 	 */
 	if (variable->vartype != RECORDOID)
 	{
 		HeapTupleHeaderSetTypeId(dtuple, variable->vartype);
 		HeapTupleHeaderSetTypMod(dtuple, variable->vartypmod);
-	}
-	else
-	{
-		HeapTupleHeaderSetTypeId(dtuple, slot_tupdesc->tdtypeid);
-		HeapTupleHeaderSetTypMod(dtuple, slot_tupdesc->tdtypmod);
 	}
 
 	return PointerGetDatum(dtuple);
@@ -1155,13 +1149,13 @@ ExecEvalWholeRowSlow(WholeRowVarExprState *wrvstate, ExprContext *econtext,
 	}
 
 	/*
-	 * We have to make a copy of the tuple so we can safely insert the Datum
-	 * overhead fields, which are not set in on-disk tuples.
+	 * Copy the slot tuple and make sure any toasted fields get detoasted.
 	 */
-	dtuple = (HeapTupleHeader) palloc(tuple->t_len);
-	memcpy((char *) dtuple, (char *) tuple->t_data, tuple->t_len);
+	dtuple = DatumGetHeapTupleHeader(ExecFetchSlotTupleDatum(slot));
 
-	HeapTupleHeaderSetDatumLength(dtuple, tuple->t_len);
+	/*
+	 * Reset datum's type ID fields to match the Var.
+	 */
 	HeapTupleHeaderSetTypeId(dtuple, variable->vartype);
 	HeapTupleHeaderSetTypMod(dtuple, variable->vartypmod);
 
@@ -1638,7 +1632,7 @@ ExecEvalFuncArgs(FunctionCallInfo fcinfo,
  *		ExecPrepareTuplestoreResult
  *
  * Subroutine for ExecMakeFunctionResult: prepare to extract rows from a
- * tuplestore function result.	We must set up a funcResultSlot (unless
+ * tuplestore function result.  We must set up a funcResultSlot (unless
  * already done in a previous call cycle) and verify that the function
  * returned the expected tuple descriptor.
  */
@@ -1683,7 +1677,7 @@ ExecPrepareTuplestoreResult(FuncExprState *fcache,
 	}
 
 	/*
-	 * If function provided a tupdesc, cross-check it.	We only really need to
+	 * If function provided a tupdesc, cross-check it.  We only really need to
 	 * do this for functions returning RECORD, but might as well do it always.
 	 */
 	if (resultDesc)
@@ -1767,9 +1761,7 @@ tupledesc_match(TupleDesc dst_tupdesc, TupleDesc src_tupdesc)
  * init_fcache is presumed already run on the FuncExprState.
  *
  * This function handles the most general case, wherein the function or
- * one of its arguments might (or might not) return a set.	If we find
- * no sets involved, we will change the FuncExprState's function pointer
- * to use a simpler method on subsequent calls.
+ * one of its arguments can return a set.
  */
 static Datum
 ExecMakeFunctionResult(FuncExprState *fcache,
@@ -1868,7 +1860,7 @@ restart:
 	if (fcache->func.fn_retset || hasSetArg)
 	{
 		/*
-		 * We need to return a set result.	Complain if caller not ready to
+		 * We need to return a set result.  Complain if caller not ready to
 		 * accept one.
 		 */
 		if (isDone == NULL)
@@ -2039,13 +2031,12 @@ restart:
 		/*
 		 * Non-set case: much easier.
 		 *
-		 * We change the ExprState function pointer to use the simpler
-		 * ExecMakeFunctionResultNoSets on subsequent calls.  This amounts to
-		 * assuming that no argument can return a set if it didn't do so the
-		 * first time.
+		 * In common cases, this code path is unreachable because we'd have
+		 * selected ExecMakeFunctionResultNoSets instead.  However, it's
+		 * possible to get here if an argument sometimes produces set results
+		 * and sometimes scalar results.  For example, a CASE expression might
+		 * call a set-returning function in only some of its arms.
 		 */
-		fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResultNoSets;
-
 		if (isDone)
 			*isDone = ExprSingleResult;
 
@@ -2198,7 +2189,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 	/*
 	 * Normally the passed expression tree will be a FuncExprState, since the
 	 * grammar only allows a function call at the top level of a table
-	 * function reference.	However, if the function doesn't return set then
+	 * function reference.  However, if the function doesn't return set then
 	 * the planner might have replaced the function call via constant-folding
 	 * or inlining.  So if we see any other kind of expression node, execute
 	 * it via the general ExecEvalExpr() code; the only difference is that we
@@ -2237,7 +2228,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 		 *
 		 * Note: ideally, we'd do this in the per-tuple context, but then the
 		 * argument values would disappear when we reset the context in the
-		 * inner loop.	So do it in caller context.  Perhaps we should make a
+		 * inner loop.  So do it in caller context.  Perhaps we should make a
 		 * separate context just to hold the evaluated arguments?
 		 */
 		argDone = ExecEvalFuncArgs(&fcinfo, fcache->args, econtext);
@@ -2327,7 +2318,7 @@ ExecMakeTableFunctionResult(ExprState *funcexpr,
 			 * Can't do anything very useful with NULL rowtype values. For a
 			 * function returning set, we consider this a protocol violation
 			 * (but another alternative would be to just ignore the result and
-			 * "continue" to get another row).	For a function not returning
+			 * "continue" to get another row).  For a function not returning
 			 * set, we fall out of the loop; we'll cons up an all-nulls result
 			 * row below.
 			 */
@@ -2487,7 +2478,7 @@ no_function_result:
 	}
 
 	/*
-	 * If function provided a tupdesc, cross-check it.	We only really need to
+	 * If function provided a tupdesc, cross-check it.  We only really need to
 	 * do this for functions returning RECORD, but might as well do it always.
 	 */
 	if (rsinfo.setDesc)
@@ -2536,10 +2527,22 @@ ExecEvalFunc(FuncExprState *fcache,
 	init_fcache(func->funcid, func->inputcollid, fcache,
 				econtext->ecxt_per_query_memory, true);
 
-	/* Go directly to ExecMakeFunctionResult on subsequent uses */
-	fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
-
-	return ExecMakeFunctionResult(fcache, econtext, isNull, isDone);
+	/*
+	 * We need to invoke ExecMakeFunctionResult if either the function itself
+	 * or any of its input expressions can return a set.  Otherwise, invoke
+	 * ExecMakeFunctionResultNoSets.  In either case, change the evalfunc
+	 * pointer to go directly there on subsequent uses.
+	 */
+	if (fcache->func.fn_retset || expression_returns_set((Node *) func->args))
+	{
+		fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
+		return ExecMakeFunctionResult(fcache, econtext, isNull, isDone);
+	}
+	else
+	{
+		fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResultNoSets;
+		return ExecMakeFunctionResultNoSets(fcache, econtext, isNull, isDone);
+	}
 }
 
 /* ----------------------------------------------------------------
@@ -2559,10 +2562,22 @@ ExecEvalOper(FuncExprState *fcache,
 	init_fcache(op->opfuncid, op->inputcollid, fcache,
 				econtext->ecxt_per_query_memory, true);
 
-	/* Go directly to ExecMakeFunctionResult on subsequent uses */
-	fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
-
-	return ExecMakeFunctionResult(fcache, econtext, isNull, isDone);
+	/*
+	 * We need to invoke ExecMakeFunctionResult if either the function itself
+	 * or any of its input expressions can return a set.  Otherwise, invoke
+	 * ExecMakeFunctionResultNoSets.  In either case, change the evalfunc
+	 * pointer to go directly there on subsequent uses.
+	 */
+	if (fcache->func.fn_retset || expression_returns_set((Node *) op->args))
+	{
+		fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResult;
+		return ExecMakeFunctionResult(fcache, econtext, isNull, isDone);
+	}
+	else
+	{
+		fcache->xprstate.evalfunc = (ExprStateEvalFunc) ExecMakeFunctionResultNoSets;
+		return ExecMakeFunctionResultNoSets(fcache, econtext, isNull, isDone);
+	}
 }
 
 /* ----------------------------------------------------------------
@@ -2982,7 +2997,7 @@ static void FastPathScalarArrayOp(ScalarArrayOpExpr *opexpr, ScalarArrayOpExprSt
  *
  * Evaluate "scalar op ANY/ALL (array)".  The operator always yields boolean,
  * and we combine the results across all array elements using OR and AND
- * (for ANY and ALL respectively).	Of course we short-circuit as soon as
+ * (for ANY and ALL respectively).  Of course we short-circuit as soon as
  * the result is known.
  */
 static Datum
@@ -3169,7 +3184,7 @@ ExecEvalScalarArrayOp(ScalarArrayOpExprState *sstate,
  *		qualification to conjunctive normal form.  If we ever get
  *		an AND to evaluate, we can be sure that it's not a top-level
  *		clause in the qualification, but appears lower (as a function
- *		argument, for example), or in the target list.	Not that you
+ *		argument, for example), or in the target list.  Not that you
  *		need to know this, mind you...
  * ----------------------------------------------------------------
  */
@@ -3300,7 +3315,7 @@ ExecEvalAnd(BoolExprState *andExpr, ExprContext *econtext,
 /* ----------------------------------------------------------------
  *		ExecEvalConvertRowtype
  *
- *		Evaluate a rowtype coercion operation.	This may require
+ *		Evaluate a rowtype coercion operation.  This may require
  *		rearranging field positions.
  * ----------------------------------------------------------------
  */
@@ -3439,7 +3454,7 @@ ExecEvalCase(CaseExprState *caseExpr, ExprContext *econtext,
 
 		/*
 		 * if we have a true test, then we return the result, since the case
-		 * statement is satisfied.	A NULL result from the test is not
+		 * statement is satisfied.  A NULL result from the test is not
 		 * considered true.
 		 */
 		if (DatumGetBool(clause_value) && !*isNull)
@@ -3653,7 +3668,7 @@ ExecEvalArray(ArrayExprState *astate, ExprContext *econtext,
 		 * If all items were null or empty arrays, return an empty array;
 		 * otherwise, if some were and some weren't, raise error.  (Note: we
 		 * must special-case this somehow to avoid trying to generate a 1-D
-		 * array formed from empty arrays.	It's not ideal...)
+		 * array formed from empty arrays.  It's not ideal...)
 		 */
 		if (haveempty)
 		{
@@ -4562,7 +4577,8 @@ ExecEvalFieldSelect(FieldSelectState *fstate,
 	/* As in ExecEvalScalarVar, we should but can't check typmod */
 	if (fselect->resulttype != attr->atttypid)
 		ereport(ERROR,
-				(errmsg("attribute %d has wrong type", fieldnum),
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("attribute %d has wrong type", fieldnum),
 				 errdetail("Table has type %s, but query expects %s.",
 						   format_type_be(attr->atttypid),
 						   format_type_be(fselect->resulttype))));
@@ -5178,6 +5194,73 @@ ExecEvalCurrentOfExpr(ExprState *exprstate, ExprContext *econtext,
 
 	return BoolGetDatum(result);
 }
+ 
+/* ----------------------------------------------------------------
+ *		ExecEvalReshuffleExpr
+ *
+ *		Evaluate an Reshuffle expression node.
+ * ----------------------------------------------------------------
+ */
+static Datum
+ExecEvalReshuffleExpr(ReshuffleExprState *astate,
+					  ExprContext *econtext,
+					  bool *isNull,
+					  ExprDoneCond *isDone)
+{
+	ReshuffleExpr *sr = (ReshuffleExpr *) astate->xprstate.expr;
+	uint32		newSeg;
+	bool		result;
+
+	Assert(!IS_QUERY_DISPATCHER());
+	Assert(sr->ptype != POLICYTYPE_REPLICATED);
+
+	if(sr->ptype == POLICYTYPE_PARTITIONED)
+	{
+		if (NULL != sr->hashKeys)
+		{
+			/* For hash distributed tables */
+			ListCell   *k;
+			int			i;
+
+			cdbhashinit(astate->cdbhash);
+			i = 0;
+			foreach(k, astate->hashKeys)
+			{
+				ExprState *vstate = (ExprState *) lfirst(k);
+				Datum		val;
+				bool		valnull;
+
+				val = ExecEvalExpr(vstate, econtext, &valnull, isDone);
+
+				cdbhash(astate->cdbhash, i + 1, val, valnull);
+				i++;
+			}
+
+			newSeg = cdbhashreduce(astate->cdbhash);
+			result = (GpIdentity.segindex != newSeg);
+		}
+		else
+		{
+			/*
+			 * For random distributed tables
+			 *
+			 * We generate a random value between[0, newSegs). When this
+			 * value is greater than oldSegs, it indicates that the tuple
+			 * needs to be reshuffled.
+			 */
+			int			newSegs = getgpsegmentCount();
+
+			result = (cdbhashrandomseg(newSegs) >= sr->oldSegs);
+		}
+	}
+	else
+		result = false;
+
+	*isNull = false;
+	return BoolGetDatum(result);
+
+}
+
 
 /*
  * ExecEvalExprSwitchContext
@@ -5204,7 +5287,7 @@ ExecEvalExprSwitchContext(ExprState *expression,
  * ExecInitExpr: prepare an expression tree for execution
  *
  * This function builds and returns an ExprState tree paralleling the given
- * Expr node tree.	The ExprState tree can then be handed to ExecEvalExpr
+ * Expr node tree.  The ExprState tree can then be handed to ExecEvalExpr
  * for execution.  Because the Expr tree itself is read-only as far as
  * ExecInitExpr and ExecEvalExpr are concerned, several different executions
  * of the same plan tree can occur concurrently.
@@ -5215,9 +5298,9 @@ ExecEvalExprSwitchContext(ExprState *expression,
  *
  * Any Aggref, WindowFunc, or SubPlan nodes found in the tree are added to the
  * lists of such nodes held by the parent PlanState. Otherwise, we do very
- * little initialization here other than building the state-node tree.	Any
+ * little initialization here other than building the state-node tree.  Any
  * nontrivial work associated with initializing runtime info for a node should
- * happen during the first actual evaluation of that node.	(This policy lets
+ * happen during the first actual evaluation of that node.  (This policy lets
  * us avoid work if the node is never actually evaluated.)
  *
  * Note: there is no ExecEndExpr function; we assume that any resource
@@ -6038,6 +6121,31 @@ ExecInitExpr(Expr *node, PlanState *parent)
 			}
 			break;
 
+        case T_ReshuffleExpr:
+			{
+				ReshuffleExpr *sr = (ReshuffleExpr *) node;
+				ReshuffleExprState *exprstate = makeNode(ReshuffleExprState);
+				Oid		   *typeoids;
+				int			i;
+				ListCell   *lc;
+
+				exprstate->hashKeys = (List *) ExecInitExpr((Expr *) sr->hashKeys, parent);
+				exprstate->xprstate.evalfunc = (ExprStateEvalFunc) ExecEvalReshuffleExpr;
+
+				typeoids = (Oid *) palloc(list_length(sr->hashKeys) * sizeof(Oid));
+
+				i = 0;
+				foreach(lc, sr->hashTypes)
+				{
+					typeoids[i++] = lfirst_oid(lc);
+				}
+
+				exprstate->cdbhash = makeCdbHash(sr->newSegs, list_length(sr->hashTypes), typeoids);
+
+				state = (ExprState *) exprstate;
+			}
+		    break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d",
 				 (int) nodeTag(node));
@@ -6133,7 +6241,7 @@ ExecQual(List *qual, ExprContext *econtext, bool resultForNull)
 	oldContext = MemoryContextSwitchTo(econtext->ecxt_per_tuple_memory);
 
 	/*
-	 * Evaluate the qual conditions one at a time.	If we find a FALSE result,
+	 * Evaluate the qual conditions one at a time.  If we find a FALSE result,
 	 * we can stop evaluating and return FALSE --- the AND result must be
 	 * FALSE.  Also, if we find a NULL result when resultForNull is FALSE, we
 	 * can stop and return FALSE --- the AND result must be FALSE or NULL in
@@ -6292,7 +6400,7 @@ ExecTargetList(List *targetlist,
 		else
 		{
 			/*
-			 * We have some done and some undone sets.	Restart the done ones
+			 * We have some done and some undone sets.  Restart the done ones
 			 * so that we can deliver a tuple (if possible).
 			 */
 			foreach(tl, targetlist)

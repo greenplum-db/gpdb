@@ -13,25 +13,22 @@ You must also identify any dependencies that your connector has on third-party c
 
 ## <a id="deploy_depends"></a>Registering Connector Run-Time Dependencies
 
-The PXF agent determines certain runtime dependencies from configuration files found in the `$GPHOME/pxf/conf` directory. Only the Greenplum Database administrative user can register PXF dependencies.
+The PXF agent determines certain runtime dependencies from configuration files found in the `$GPHOME/pxf/conf` and `$PXF_CONF/conf` directories. Only the Greenplum Database administrative user can register PXF dependencies.
 
-The `pxf-private.classpath` configuration file identifies the runtime dependencies for the PXF agent itself. This file also identifies the runtime dependencies for the PXF built-in HDFS, Hive, and HBase connectors.
+The `$GPHOME/pxf/conf/pxf-private.classpath` configuration file identifies the runtime dependencies for the PXF agent itself. This file also identifies the runtime dependencies for the PXF built-in HDFS, Hive, and HBase connectors.
 
-The Greenplum Database administrator registers a third-party connector and its runtime dependencies in the `pxf-public.classpath` configuration file. Entries in the `pxf-public.classpath` file identify the absolute path of a JAR file or a configuration directory, and are listed one per line.
-
-**Note**: The `pxf-public.classpath` file on a Greenplum Database segment host is shared by all third-party connectors running in the cluster.
+The Greenplum Database administrator registers a third-party connector and its runtime dependencies by copying the files to the `$PXF_CONF/lib` directory.
 
 
 ## <a id="deploy_to_cluster"></a>Deploying to the Greenplum Database Cluster
 
-When the Greenplum Database administrator deploys a new connector, they copy the connector JAR file and the (JAR) files of any dependencies to each Greenplum Database segment host. The administrator must also propagate any updates to the `pxf-public.classpath` configuration file to each segment host, and then must restart the PXF agent on each host. Only the Greenplum Database administrative user can restart the PXF agent. 
+When a Greenplum Database administrator deploys a new connector, they copy the connector JAR file and the (JAR) files of any dependencies to each Greenplum Database segment host, and then must restart the PXF agent on each host. Only the Greenplum Database administrative user can restart the PXF agent. 
 
-For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster, these commands deploy the connector across the cluster:
+For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`, these commands deploy the connector across the cluster:
 
 ``` shell
-gpadmin@gpmaster$ gpscp my-connector.jar -v -f seghostfile =:/my/jar/install/dir
-gpadmin@gpmaster$ gpscp connector-dependency.jar -v -seghostfile /dependency/install/dir
-gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-public.classpath =:/usr/local/greenplum-db/pxf/conf/pxf-public.classpath
+gpadmin@gpmaster$ gpscp my-connector.jar -v -f seghostfile =:/etc/pxf/usercfg/lib
+gpadmin@gpmaster$ gpscp connector-dependency.jar -v -seghostfile /etc/pxf/usercfg/lib
 gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
 ```
 
@@ -86,7 +83,7 @@ Notice that the *Demo* connector read and write operations share the same *Resol
 
 #### <a id="demo_depends"></a>Run-Time Dependencies
 
-The *Demo* connector has a run-time dependency on the Apache Commons Logging JAR, `commons-logging.jar`. This JAR file is installed with a Hadoop distribution and should already be specified in the `pxf-private.classpath` file.
+The *Demo* connector has a run-time dependency on the Apache Commons Logging JAR, `commons-logging.jar`. This JAR file is installed with PXF and should already be specified in the `pxf-private.classpath` file.
 
 ### <a id="deploy_prereqs"></a>Prerequisites
 
@@ -94,7 +91,7 @@ Before attempting this exercise, ensure that you have:
 
 - Built the *Demo* connector as described in [Example: Building the Demo Connector JAR File](build_conn.html#demo_buildjar).
 - Administrative access to a running Greenplum Database cluster.
-- Installed the Hadoop clients and initialized and started the PXF agent on each Greenplum Database segment host as described in [Installing and Configuring PXF](https://gpdb.docs.pivotal.io/latest/pxf/instcfg_pxf.html).
+- Initialized, configured, and started the PXF agent on each Greenplum Database segment host as described in [Configuring PXF](https://gpdb.docs.pivotal.io/latest/pxf/instcfg_pxf.html).
 - Enabled the PXF extension in the database, and optionally granted specific Greenplum Database roles access to the `pxf` protocol; [Enabling/Disabling PXF](https://gpdb.docs.pivotal.io/latest/pxf/using_pxf.html#enable-pxf-ext) and [Granting Access to PXF](https://gpdb.docs.pivotal.io/latest/pxf/using_pxf.html#access_pxf) describe these procedures.
 
 ### <a id="procedure"></a>Procedure
@@ -114,29 +111,10 @@ Perform the following procedure to deploy the *Demo* connector and to verify tha
     gpadmin@gpmaster$ scp user@devsystem:/PXFDEV_BASE/demo_example/build/libs/my-demo-connector.jar /tmp/
     ```
 
-3. Open the `pxf-public.classpath` file in the editor of your choosing. For example:
+8. Copy the *Demo* connector JAR file to the PXF user runtime library directory on all Greenplum Database segment hosts. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-public.classpath
-    ```
-
-4. Add an entry for the *Demo* connector JAR file to the `pxf-public.classpath` file. This entry should specify the absolute path of the *Demo* connector JAR file on the system. For example, if `my-demo-connector.jar` resides in the `/tmp` directory, add the following:
-
-    ``` pre
-    /tmp/my-demo-connector.jar
-    ```
-
-5. Save the file and exit the editor.
-
-7. Copy the `pxf-public.classpath` file to all segment hosts in your Greenplum Database cluster. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
-
-    ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-public.classpath =:/usr/local/greenplum-db/pxf/conf/pxf-public.classpath
-    ```
-8. Copy the *Demo* connector JAR file to all Greenplum Database segment hosts. Copy the JAR file to the location you specified in the `pxf-public.classpath` file. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /tmp/my-demo-connector.jar =:/tmp/my-demo-connector.jar
+    gpadmin@gpmaster$ gpscp -v -f seghostfile /tmp/my-demo-connector.jar =:/etc/pxf/usercfg/lib/my-demo-connector.jar
     ```
 
 9. Restart PXF on each segment host. For example:

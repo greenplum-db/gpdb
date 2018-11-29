@@ -3,7 +3,7 @@
  * varsup.c
  *	  postgres OID & XID variables support routines
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/access/transam/varsup.c
@@ -45,7 +45,7 @@ int xid_warn_limit;
  *
  * Note: when this is called, we are actually already inside a valid
  * transaction, since XIDs are now not allocated until the transaction
- * does something.	So it is safe to do a database lookup if we want to
+ * does something.  So it is safe to do a database lookup if we want to
  * issue a warning about XID wrap.
  */
 TransactionId
@@ -78,7 +78,7 @@ GetNewTransactionId(bool isSubXact)
 	 * If we're past xidVacLimit, start trying to force autovacuum cycles.
 	 * If we're past xidWarnLimit, start issuing warnings.
 	 * If we're past xidStopLimit, refuse to execute transactions, unless
-	 * we are running in a standalone backend (which gives an escape hatch
+	 * we are running in single-user mode (which gives an escape hatch
 	 * to the DBA who somehow got past the earlier defenses).
 	 *
 	 * Note that this coding also appears in GetNewMultiXactId.
@@ -183,7 +183,7 @@ GetNewTransactionId(bool isSubXact)
 	/*
 	 * Now advance the nextXid counter.  This must not happen until after we
 	 * have successfully completed ExtendCLOG() --- if that routine fails, we
-	 * want the next incoming transaction to try it again.	We cannot assign
+	 * want the next incoming transaction to try it again.  We cannot assign
 	 * more XIDs until there is CLOG space for them.
 	 */
 	TransactionIdAdvance(ShmemVariableCache->nextXid);
@@ -218,13 +218,13 @@ GetNewTransactionId(bool isSubXact)
 
 	/*
 	 * We must store the new XID into the shared ProcArray before releasing
-	 * XidGenLock.	This ensures that every active XID older than
+	 * XidGenLock.  This ensures that every active XID older than
 	 * latestCompletedXid is present in the ProcArray, which is essential for
 	 * correct OldestXmin tracking; see src/backend/access/transam/README.
 	 *
 	 * XXX by storing xid into MyPgXact without acquiring ProcArrayLock, we
 	 * are relying on fetch/store of an xid to be atomic, else other backends
-	 * might see a partially-set xid here.	But holding both locks at once
+	 * might see a partially-set xid here.  But holding both locks at once
 	 * would be a nasty concurrency hit.  So for now, assume atomicity.
 	 *
 	 * Note that readers of PGXACT xid fields should be careful to fetch the
@@ -360,14 +360,16 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
 		xidStopLimit -= FirstNormalTransactionId;
 
 	/*
-	 * We'll start complaining loudly when we get within xid_warn_limit
-	 * transactions of the stop point.	This is kind of arbitrary, but if
-	 * you let your gas gauge get down to 1% of full, would you be looking for
-	 * the next gas station?  We need to be fairly liberal about this number
-	 * because there are lots of scenarios where most transactions are done by
-	 * automatic clients that won't pay attention to warnings. (No, we're not
-	 * gonna make this configurable.  If you know enough to configure it, you
-	 * know enough to not get in this kind of trouble in the first place.)
+	 * We'll start complaining loudly when we get within xid_warn_limit of
+	 * the stop point.  This is kind of arbitrary, but if you let your gas
+	 * gauge get down to 1% of full, would you be looking for the next gas
+	 * station?  We need to be fairly liberal about this number because there
+	 * are lots of scenarios where most transactions are done by automatic
+	 * clients that won't pay attention to warnings. (No, we're not gonna make
+	 * this configurable.  If you know enough to configure it, you know enough
+	 * to not get in this kind of trouble in the first place.)
+	 *
+	 * GPDB_94_MERGE_FIXME: well, we've made it configurable anyway. Not sure why.
 	 */
 	xidWarnLimit = xidStopLimit  - (TransactionId)xid_warn_limit;
 	if (xidWarnLimit < FirstNormalTransactionId)
@@ -385,7 +387,8 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
 	 * value.  It doesn't look practical to update shared state from a GUC
 	 * assign hook (too many processes would try to execute the hook,
 	 * resulting in race conditions as well as crashes of those not connected
-	 * to shared memory).  Perhaps this can be improved someday.
+	 * to shared memory).  Perhaps this can be improved someday.  See also
+	 * SetMultiXactIdLimit.
 	 */
 	xidVacLimit = oldest_datfrozenxid + autovacuum_freeze_max_age;
 	if (xidVacLimit < FirstNormalTransactionId)
@@ -461,7 +464,7 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
  * We primarily check whether oldestXidDB is valid.  The cases we have in
  * mind are that that database was dropped, or the field was reset to zero
  * by pg_resetxlog.  In either case we should force recalculation of the
- * wrap limit.	Also do it if oldestXid is old enough to be forcing
+ * wrap limit.  Also do it if oldestXid is old enough to be forcing
  * autovacuums or other actions; this ensures we update our state as soon
  * as possible once extra overhead is being incurred.
  */
@@ -584,20 +587,43 @@ GetNewObjectId(void)
 }
 
 /*
- * AdvanceObjectId -- advance object id counter for QE nodes
+ * AdvanceObjectId -- advance object id counter for QD and QE nodes
  *
- * The QD provides the preassigned OID to the QE nodes which will be
- * used as the relation's OID. QE nodes do not use this OID as the
- * relfilenode value anymore so the OID counter is not
- * incremented. This function forcefully increments the QE node's OID
- * counter to be about the same as the OID provided by the QD node.
+ * When advancing the Oid counter of a QD, it should only be for the purpose
+ * of syncing Oid counters logically compared with the numeric maximum Oid
+ * counter value among the primary segments.
+ *
+ * When advancing the Oid counter of a QE, the QD provides the preassigned OID
+ * to the QE nodes which will be used as the relation's OID. QE nodes do not
+ * use this OID as the relfilenode value anymore so the OID counter is not
+ * incremented. This function forcefully increments the QE node's OID counter
+ * to be about the same as the OID provided by the QD node.
  */
 void
 AdvanceObjectId(Oid newOid)
 {
 	LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
 
-	while(GetNewObjectIdUnderLock() <= newOid);
+	if (OidFollowsNextOid(newOid))
+	{
+		int32 nextOidDifference = (int32)(newOid - ShmemVariableCache->nextOid);
+
+		/*
+		 * We directly set the nextOid counter to the given OID instead of
+		 * doing incremental calls to GetNewObjectIdUnderLock(). Update the
+		 * oidCount to VAR_OID_PREFETCH and create an xlog if we have
+		 * exhausted the current oidCount. We should always be moving forward
+		 * and never backwards.
+		 */
+		ShmemVariableCache->nextOid = newOid;
+		if (nextOidDifference >= ShmemVariableCache->oidCount)
+		{
+			XLogPutNextOid(ShmemVariableCache->nextOid + VAR_OID_PREFETCH);
+			ShmemVariableCache->oidCount = VAR_OID_PREFETCH;
+		}
+		else
+			ShmemVariableCache->oidCount -= nextOidDifference;
+	}
 
 	LWLockRelease(OidGenLock);
 }
@@ -654,4 +680,16 @@ GetNewSegRelfilenode(void)
 	LWLockRelease(RelfilenodeGenLock);
 
 	return result;
+}
+
+/*
+ * Is the given Oid logically > ShmemVariableCache->nextOid?
+ */
+bool
+OidFollowsNextOid(Oid id)
+{
+	int32		diff;
+
+	diff = (int32) (id - ShmemVariableCache->nextOid);
+	return (diff > 0);
 }

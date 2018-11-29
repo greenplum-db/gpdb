@@ -17,6 +17,7 @@
 #include "miscadmin.h"
 
 #include "cdb/cdbpartition.h"
+#include "cdb/cdbhash.h"
 #include "commands/tablecmds.h"
 #include "executor/execDML.h"
 #include "executor/instrument.h"
@@ -25,8 +26,9 @@
 #include "utils/memutils.h"
 
 /* Splits an update tuple into a DELETE/INSERT tuples. */
-void
-SplitTupleTableSlot(List *targetList, SplitUpdate *plannode, SplitUpdateState *node, Datum *values, bool *nulls);
+static void SplitTupleTableSlot(TupleTableSlot *slot,
+								List *targetList, SplitUpdate *plannode, SplitUpdateState *node,
+								Datum *values, bool *nulls);
 
 /* Memory used by node */
 #define SPLITUPDATE_MEM 1
@@ -41,13 +43,16 @@ ExecSplitUpdateExplainEnd(PlanState *planstate, struct StringInfoData *buf)
 	planstate->instrument->execmemused += SPLITUPDATE_MEM;
 }
 
+
 /* Split TupleTableSlot into a DELETE and INSERT TupleTableSlot */
-void
-SplitTupleTableSlot(List *targetList, SplitUpdate *plannode, SplitUpdateState *node, Datum *values, bool *nulls)
+static void
+SplitTupleTableSlot(TupleTableSlot *slot,
+					List *targetList, SplitUpdate *plannode, SplitUpdateState *node,
+					Datum *values, bool *nulls)
 {
-	ListCell *element = NULL;
-	ListCell *deleteAtt = plannode->deleteColIdx->head;
-	ListCell *insertAtt = plannode->insertColIdx->head;
+	ListCell *element;
+	ListCell *deleteAtt = list_head(plannode->deleteColIdx);
+	ListCell *insertAtt = list_head(plannode->insertColIdx);
 
 	Datum *delete_values = slot_get_values(node->deleteTuple);
 	bool *delete_nulls = slot_get_isnull(node->deleteTuple);
@@ -69,26 +74,40 @@ SplitTupleTableSlot(List *targetList, SplitUpdate *plannode, SplitUpdateState *n
 			insert_values[resno] = Int32GetDatum((int)DML_INSERT);
 			insert_nulls[resno] = false;
 		}
-		else if (((int)tle->resno) < plannode->ctidColIdx)
+		else if (((int)tle->resno) <= list_length(plannode->insertColIdx))
 		{
 			/* Old and new values */
-			delete_values[resno] = values[deleteAtt->data.int_value-1];
-			delete_nulls[resno] = nulls[deleteAtt->data.int_value-1];
+			int			deleteAttNo = lfirst_int(deleteAtt);
+			int			insertAttNo = lfirst_int(insertAtt);
 
-			insert_values[resno] = values[insertAtt->data.int_value-1];
-			insert_nulls[resno] = nulls[insertAtt->data.int_value-1];
+			if (deleteAttNo == -1)
+			{
+				delete_values[resno] = (Datum) 0;
+				delete_nulls[resno] = true;
+			}
+			else
+			{
+				delete_values[resno] = values[deleteAttNo - 1];
+				delete_nulls[resno] = nulls[deleteAttNo - 1];
+			}
 
-			deleteAtt = deleteAtt->next;
-			insertAtt = insertAtt->next;
+			insert_values[resno] = values[insertAttNo - 1];
+			insert_nulls[resno] = nulls[insertAttNo - 1];
+
+			deleteAtt = lnext(deleteAtt);
+			insertAtt = lnext(insertAtt);
 		}
 		else
 		{
+			Assert(IsA(tle->expr, Var));
 			/* `Resjunk' values */
 			delete_values[resno] = values[((Var *)tle->expr)->varattno-1];
 			delete_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
 
 			insert_values[resno] = values[((Var *)tle->expr)->varattno-1];
 			insert_nulls[resno] = nulls[((Var *)tle->expr)->varattno-1];
+
+			Assert(exprType((Node *) tle->expr) == slot->tts_tupleDescriptor->attrs[((Var *)tle->expr)->varattno-1]->atttypid);
 		}
 	}
 }
@@ -132,7 +151,7 @@ ExecSplitUpdate(SplitUpdateState *node)
 		ExecStoreAllNullTuple(node->deleteTuple);
 		ExecStoreAllNullTuple(node->insertTuple);
 
-		SplitTupleTableSlot(plannode->plan.targetlist, plannode, node, values, nulls);
+		SplitTupleTableSlot(slot, plannode->plan.targetlist, plannode, node, values, nulls);
 
 		result = node->deleteTuple;
 		node->processInsert = false;

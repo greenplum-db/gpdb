@@ -27,6 +27,7 @@
 #include "storage/procarray.h"
 #include "storage/procsignal.h"
 #include "storage/backendid.h"
+#include "storage/bufmgr.h"
 #include "storage/sinvaladt.h"
 #include "tcop/tcopprot.h"
 #include "utils/gdd.h"
@@ -37,10 +38,12 @@
 #include "utils/syscache.h"
 #include "utils/ps_status.h"
 #include "utils/faultinjector.h"
+#include "cdb/cdbvars.h"
 
 #include "libpq/pqsignal.h"
 #include "libpq/libpq-be.h"
 #include "executor/spi.h"
+#include "utils/sharedsnapshot.h"
 
 #include "gdddetector.h"
 
@@ -66,7 +69,6 @@ static int  doDeadLockCheck(void);
 static void buildWaitGraph(GddCtx *ctx);
 static void breakDeadLock(GddCtx *ctx);
 static void dumpCancelResult(StringInfo str, List *xids);
-static void findSuperuser(char *superuser, bool try_bootstrap);
 
 static MemoryContext	gddContext;
 static MemoryContext    oldContext;
@@ -75,6 +77,8 @@ static volatile sig_atomic_t got_SIGHUP = false;
 static volatile bool shutdown_requested = false;
 
 int gp_global_deadlock_detector_period;
+
+bool am_global_deadlock_detector = false;
 
 /*
  * Main entry point for global deadlock detector process.
@@ -159,11 +163,11 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 {
 	sigjmp_buf	local_sigjmp_buf;
 	Port		portbuf;
-	char		superuser[NAMEDATALEN];
 	char	   *fullpath;
 	char	   *knownDatabase = "postgres";
 
 	IsUnderPostmaster = true;
+	am_global_deadlock_detector = true;
 
 	/* Stay away from PMChildSlot */
 	MyPMChildSlot = -1;
@@ -227,6 +231,13 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 #endif
 	InitBufferPoolBackend();
 	InitXLOGAccess();
+
+	/*
+	 * This is tricky, adding SharedLocalSnapshotSlot to make GDD to be a dispatcher,
+	 * see isDtxQueryDispatcher(), so GDD can get newest segment configuration.
+	 * see setCurrentGxact()
+	 */ 
+	addSharedSnapshot("GDD Dispatcher", gp_session_id);
 
 	SetProcessingMode(NormalProcessing);
 
@@ -334,11 +345,12 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 
 	RelationCacheInitializePhase3();
 
-	memset(&portbuf, 0, sizeof(portbuf));
-	findSuperuser(superuser, true);
+	InitializeSessionUserIdStandalone();
 
+	memset(&portbuf, 0, sizeof(portbuf));
 	MyProcPort = &portbuf;
-	MyProcPort->user_name = superuser;
+	MyProcPort->user_name = MemoryContextStrdup(TopMemoryContext,
+												GetUserNameFromId(GetAuthenticatedUserId()));
 	MyProcPort->database_name = knownDatabase;
 
 	/* close the transaction we started above */
@@ -394,79 +406,6 @@ GlobalDeadLockDetectorLoop(void)
 	}
 
 	return;
-}
-
-/*
- * Find a super user.
- *
- * superuser is used to store the username, its size should be >= NAMEDATALEN.
- *
- * This functions is derived from getSuperuser() @cdbtm.c
- */
-static void
-findSuperuser(char *superuser, bool try_bootstrap)
-{
-	Relation auth_rel;
-	HeapTuple	auth_tup;
-	ScanKeyData	scankey[3];
-	SysScanDesc	sscan;
-	int			nkeys;
-	bool	isNull;
-
-	*superuser = '\0';
-
-	auth_rel = heap_open(AuthIdRelationId, AccessShareLock);
-
-	ScanKeyInit(&scankey[0],
-				Anum_pg_authid_rolsuper,
-				BTEqualStrategyNumber, F_BOOLEQ,
-				BoolGetDatum(true));
-	ScanKeyInit(&scankey[1],
-				Anum_pg_authid_rolcanlogin,
-				BTEqualStrategyNumber, F_BOOLEQ,
-				BoolGetDatum(true));
-	ScanKeyInit(&scankey[2],
-				ObjectIdAttributeNumber,
-				BTEqualStrategyNumber, F_OIDEQ,
-				ObjectIdGetDatum(BOOTSTRAP_SUPERUSERID));
-
-	nkeys = try_bootstrap ? 3 : 2;
-
-	/* FIXME: perform indexed scan here? */
-	sscan = systable_beginscan(auth_rel, InvalidOid, false,
-							   SnapshotNow, nkeys, scankey);
-
-	while (HeapTupleIsValid(auth_tup = systable_getnext(sscan)))
-	{
-		Datum	attrName;
-		Oid		userOid;
-		Datum	validuntil;
-
-		validuntil = heap_getattr(auth_tup, Anum_pg_authid_rolvaliduntil,
-								  RelationGetDescr(auth_rel), &isNull);
-		/* we actually want it to be NULL, that means always valid */
-		if (!isNull)
-			continue;
-
-		attrName = heap_getattr(auth_tup, Anum_pg_authid_rolname,
-								RelationGetDescr(auth_rel), &isNull);
-		Assert(!isNull);
-		strncpy(superuser, DatumGetCString(attrName), NAMEDATALEN);
-		superuser[NAMEDATALEN - 1] = '\0';
-
-		userOid = HeapTupleGetOid(auth_tup);
-		SetSessionUserId(userOid, true);
-
-		break;
-	}
-
-	systable_endscan(sscan);
-	heap_close(auth_rel, AccessShareLock);
-
-	if (!*superuser)
-		ereport(FATAL,
-				(errcode(ERRCODE_INVALID_NAME),
-				 errmsg("no super user is found")));
 }
 
 static int

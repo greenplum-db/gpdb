@@ -5,7 +5,7 @@
  *	  commands.  At one time acted as an interface between the Lisp and C
  *	  systems.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -87,49 +87,6 @@ static void ProcessUtilitySlow(Node *parsetree,
 				   DestReceiver *dest,
 				   char *completionTag);
 static void ExecDropStmt(DropStmt *stmt, bool isTopLevel);
-
-
-/*
- * Verify user has ownership of specified relation, else ereport.
- *
- * If noCatalogs is true then we also deny access to system catalogs,
- * except when allowSystemTableMods is true.
- */
-void
-CheckRelationOwnership(RangeVar *rel, bool noCatalogs)
-{
-	Oid			relOid;
-	HeapTuple	tuple;
-
-	/*
-	 * XXX: This is unsafe in the presence of concurrent DDL, since it is
-	 * called before acquiring any lock on the target relation.  However,
-	 * locking the target relation (especially using something like
-	 * AccessExclusiveLock) before verifying that the user has permissions is
-	 * not appealing either.
-	 */
-	relOid = RangeVarGetRelid(rel, NoLock, false);
-
-	tuple = SearchSysCache1(RELOID, ObjectIdGetDatum(relOid));
-	if (!HeapTupleIsValid(tuple))		/* should not happen */
-		elog(ERROR, "cache lookup failed for relation %u", relOid);
-
-	if (!pg_class_ownercheck(relOid, GetUserId()))
-		aclcheck_error(ACLCHECK_NOT_OWNER, ACL_KIND_CLASS,
-					   rel->relname);
-
-	if (noCatalogs)
-	{
-		if (!allowSystemTableMods &&
-			IsSystemClass((Form_pg_class) GETSTRUCT(tuple)))
-			ereport(ERROR,
-					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("permission denied: \"%s\" is a system catalog",
-							rel->relname)));
-	}
-
-	ReleaseSysCache(tuple);
-}
 
 
 /*
@@ -300,6 +257,7 @@ check_xact_readonly(Node *parsetree)
 		case T_AlterUserMappingStmt:
 		case T_DropUserMappingStmt:
 		case T_AlterTableSpaceOptionsStmt:
+		case T_AlterTableSpaceMoveStmt:
 		case T_CreateForeignTableStmt:
 		case T_SecLabelStmt:
 			PreventCommandIfReadOnly(CreateCommandTag(parsetree));
@@ -337,7 +295,7 @@ PreventCommandIfReadOnly(const char *cmdname)
  * PreventCommandDuringRecovery: throw error if RecoveryInProgress
  *
  * The majority of operations that are unsafe in a Hot Standby slave
- * will be rejected by XactReadOnly tests.	However there are a few
+ * will be rejected by XactReadOnly tests.  However there are a few
  * commands that are allowed in "read-only" xacts but cannot be allowed
  * in Hot Standby mode.  Those commands should call this function.
  */
@@ -634,46 +592,6 @@ standard_ProcessUtility(Node *parsetree,
 			ExecuteDoStmt((DoStmt *) parsetree);
 			break;
 
-		case T_CreateExternalStmt:
-			{
-				List *stmts;
-				ListCell   *l;
-
-				/* Run parse analysis ... */
-				/*
-				 * GPDB: Only do parse analysis in the Query Dispatcher. The Executor
-				 * nodes receive an already-transformed statement from the QD. We only
-				 * want to process the main CreateExternalStmt here, other such
-				 * statements that would be created from the main
-				 * CreateExternalStmt by parse analysis. The QD will dispatch
-				 * those other statements separately.
-				 */
-				if (Gp_role == GP_ROLE_EXECUTE)
-					stmts = list_make1(parsetree);
-				else
-					stmts = transformCreateExternalStmt((CreateExternalStmt *) parsetree, queryString);
-
-				/* ... and do it */
-				foreach(l, stmts)
-				{
-					Node	   *stmt = (Node *) lfirst(l);
-
-					if (IsA(stmt, CreateExternalStmt))
-						DefineExternalRelation((CreateExternalStmt *) stmt);
-					else
-					{
-						/* Recurse for anything else */
-						ProcessUtility(stmt,
-									   queryString,
-									   PROCESS_UTILITY_SUBCOMMAND,
-									   params,
-									   None_Receiver,
-									   NULL);
-					}
-				}
-			}
-			break;
-
 		case T_CreateTableSpaceStmt:
 			/* no event triggers for global objects */
 			if (Gp_role != GP_ROLE_EXECUTE)
@@ -705,12 +623,16 @@ standard_ProcessUtility(Node *parsetree,
 			AlterTableSpaceOptions((AlterTableSpaceOptionsStmt *) parsetree);
 			break;
 
+		case T_AlterTableSpaceMoveStmt:
+			/* no event triggers for global objects */
+			AlterTableSpaceMove((AlterTableSpaceMoveStmt *) parsetree);
+			break;
+
 		case T_TruncateStmt:
 			ExecuteTruncate((TruncateStmt *) parsetree);
 			break;
 
 		case T_CommentStmt:
-			/* NOTE: Not currently dispatched to QEs */
 			CommentObject((CommentStmt *) parsetree);
 			break;
 
@@ -887,8 +809,13 @@ standard_ProcessUtility(Node *parsetree,
 			ExplainQuery((ExplainStmt *) parsetree, queryString, params, dest);
 			break;
 
+		case T_AlterSystemStmt:
+			PreventTransactionChain(isTopLevel, "ALTER SYSTEM");
+			AlterSystemSetConfigFile((AlterSystemStmt *) parsetree);
+			break;
+
 		case T_VariableSetStmt:
-			ExecSetVariableStmt((VariableSetStmt *) parsetree);
+			ExecSetVariableStmt((VariableSetStmt *) parsetree, isTopLevel);
 			break;
 
 		case T_VariableShowStmt:
@@ -1003,6 +930,7 @@ standard_ProcessUtility(Node *parsetree,
 			break;
 
 		case T_ConstraintsSetStmt:
+			WarnNoTransactionChain(isTopLevel, "SET CONSTRAINTS");
 			AfterTriggerSetState((ConstraintsSetStmt *) parsetree);
 			break;
 
@@ -1242,7 +1170,7 @@ ProcessUtilitySlow(Node *parsetree,
 													relStorage, false, true, NULL);
 
 							/*
-							 * Let AlterTableCreateToastTable decide if this
+							 * Let NewRelationCreateToastTable decide if this
 							 * one needs a secondary relation too.
 							 */
 							CommandCounterIncrement();
@@ -1265,9 +1193,8 @@ ProcessUtilitySlow(Node *parsetree,
 													   toast_options,
 													   true);
 
-								AlterTableCreateToastTable(relOid,
+								NewRelationCreateToastTable(relOid,
 														   toast_options,
-														   true,
 														   cstmt->is_part_child,
 														   cstmt->is_part_parent);
 
@@ -1281,17 +1208,17 @@ ProcessUtilitySlow(Node *parsetree,
 								 * relation's is_part_parent flag.
 								 */
 								AlterTableCreateAoSegTable(relOid,
-														   cstmt->is_part_child,
-														   cstmt->is_part_parent);
+															cstmt->is_part_child,
+															cstmt->is_part_parent);
 
 								if (cstmt->buildAoBlkdir)
 									AlterTableCreateAoBlkdirTable(relOid,
-																  cstmt->is_part_child,
-																  cstmt->is_part_parent);
+																   cstmt->is_part_child,
+																   cstmt->is_part_parent);
 
 								AlterTableCreateAoVisimapTable(relOid,
-															   cstmt->is_part_child,
-															   cstmt->is_part_parent);
+																cstmt->is_part_child,
+																cstmt->is_part_parent);
 							}
 							if (Gp_role == GP_ROLE_DISPATCH)
 								CdbDispatchUtilityStatement((Node *) stmt,
@@ -1349,7 +1276,7 @@ ProcessUtilitySlow(Node *parsetree,
 					LOCKMODE	lockmode;
 
 					/*
-					 * Figure out lock mode, and acquire lock.	This also does
+					 * Figure out lock mode, and acquire lock.  This also does
 					 * basic permissions checks, so that we won't wait for a
 					 * lock on (for example) a relation on which we have no
 					 * permissions.
@@ -1367,7 +1294,8 @@ ProcessUtilitySlow(Node *parsetree,
 						if (Gp_role == GP_ROLE_EXECUTE)
 							stmts = list_make1(parsetree);
 						else
-							stmts = transformAlterTableStmt(atstmt, queryString);
+							stmts = transformAlterTableStmt(relid, atstmt,
+															queryString);
 
 						/* ... and do it */
 						foreach(l, stmts)
@@ -1474,7 +1402,6 @@ ProcessUtilitySlow(Node *parsetree,
 						case OBJECT_AGGREGATE:
 							DefineAggregate(stmt->defnames, stmt->args,
 											stmt->oldstyle, stmt->definition,
-											false, /* FIXME: GPDB-specific ordered flag */
 											queryString);
 							break;
 						case OBJECT_OPERATOR:
@@ -1520,9 +1447,51 @@ ProcessUtilitySlow(Node *parsetree,
 				}
 				break;
 
+			case T_CreateExternalStmt:
+				{
+					List *stmts;
+					ListCell   *l;
+
+					/* Run parse analysis ... */
+					/*
+					 * GPDB: Only do parse analysis in the Query Dispatcher. The Executor
+					 * nodes receive an already-transformed statement from the QD. We only
+					 * want to process the main CreateExternalStmt here, other such
+					 * statements that would be created from the main
+					 * CreateExternalStmt by parse analysis. The QD will dispatch
+					 * those other statements separately.
+					 */
+					if (Gp_role == GP_ROLE_EXECUTE)
+						stmts = list_make1(parsetree);
+					else
+						stmts = transformCreateExternalStmt((CreateExternalStmt *) parsetree, queryString);
+
+					/* ... and do it */
+					foreach(l, stmts)
+					{
+						Node	   *stmt = (Node *) lfirst(l);
+
+						if (IsA(stmt, CreateExternalStmt))
+							DefineExternalRelation((CreateExternalStmt *) stmt);
+						else
+						{
+							/* Recurse for anything else */
+							ProcessUtility(stmt,
+										   queryString,
+										   PROCESS_UTILITY_SUBCOMMAND,
+										   params,
+										   None_Receiver,
+										   NULL);
+						}
+					}
+				}
+				break;
+
 			case T_IndexStmt:	/* CREATE INDEX */
 				{
 					IndexStmt  *stmt = (IndexStmt *) parsetree;
+					Oid			relid;
+					LOCKMODE	lockmode;
 					ListCell   *lc;
 					List	   *stmts;
 
@@ -1530,10 +1499,50 @@ ProcessUtilitySlow(Node *parsetree,
 						PreventTransactionChain(isTopLevel,
 												"CREATE INDEX CONCURRENTLY");
 
-					CheckRelationOwnership(stmt->relation, true);
+					/*
+					 * Look up the relation OID just once, right here at the
+					 * beginning, so that we don't end up repeating the name
+					 * lookup later and latching onto a different relation
+					 * partway through.  To avoid lock upgrade hazards, it's
+					 * important that we take the strongest lock that will
+					 * eventually be needed here, so the lockmode calculation
+					 * needs to match what DefineIndex() does.
+					 */
+					lockmode = stmt->concurrent ? ShareUpdateExclusiveLock
+						: ShareLock;
+
+					/*
+					 * The QD might have looked up the OID of the base table
+					 * already, and stashed it in stmt->relid
+					 */
+					if (stmt->relationOid)
+						relid = stmt->relationOid;
+					else
+						relid =
+							RangeVarGetRelidExtended(stmt->relation, lockmode,
+												 false, false,
+												 RangeVarCallbackOwnsRelation,
+												 NULL);
+
+					/*
+					 * For unnamed indexes, choose an index name that will be
+					 * used later when creating IndexStmts for the leaf
+					 * partitions in a partitioned table.
+					 */
+					if (stmt->idxname == NULL && rel_is_partitioned(relid))
+					{
+						Relation rel = heap_open(relid, NoLock);
+						stmt->idxname = ChooseIndexName(RelationGetRelationName(rel),
+														RelationGetNamespace(rel),
+														ChooseIndexColumnNames(stmt->indexParams),
+														stmt->excludeOpNames,
+														stmt->primary,
+														stmt->isconstraint);
+						heap_close(rel, NoLock);
+					}
 
 					/* Run parse analysis ... */
-					stmts = transformIndexStmt(stmt, queryString);
+					stmts = transformIndexStmt(relid, stmt, queryString);
 
 					/*
 					 * In GPDB, a single IndexStmt can be expanded to several
@@ -1543,10 +1552,14 @@ ProcessUtilitySlow(Node *parsetree,
 					{
 						IndexStmt  *stmt = (IndexStmt *) lfirst(lc);
 
-						CheckRelationOwnership(stmt->relation, true);
-
 						/* ... and do it */
-						DefineIndex(stmt,
+						/*
+						 * transformIndexStmt() should've stored the heap
+						 * relation's OID in stmt-->relid
+						 */
+						Assert(OidIsValid(stmt->relationOid));
+						DefineIndex(stmt->relationOid,	/* OID of heap relation */
+								stmt,
 								InvalidOid,		/* no predefined OID */
 								false,	/* is_alter_table */
 								true,	/* check_rights */
@@ -1664,7 +1677,8 @@ ProcessUtilitySlow(Node *parsetree,
 					Oid			trigOid;
 
 					trigOid = CreateTrigger((CreateTrigStmt *) parsetree, queryString,
-											InvalidOid, InvalidOid, false);
+											InvalidOid, InvalidOid, InvalidOid,
+											InvalidOid, false);
 					if (Gp_role == GP_ROLE_DISPATCH)
 					{
 						((CreateTrigStmt *) parsetree)->trigOid = trigOid;
@@ -1801,8 +1815,12 @@ ExecDropStmt(DropStmt *stmt, bool isTopLevel)
 			break;
 	}
 
-	/* dispatch the original, unmodified statement */
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Dispatch the original, unmodified statement.
+	 *
+	 * Event triggers are not stored in QE nodes, so skip those.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && stmt->removeType != OBJECT_EVENT_TRIGGER)
 	{
 		int			flags;
 
@@ -2282,6 +2300,10 @@ CreateCommandTag(Node *parsetree)
 			tag = "ALTER TABLESPACE";
 			break;
 
+		case T_AlterTableSpaceMoveStmt:
+			tag = "ALTER TABLESPACE";
+			break;
+
 		case T_CreateExtensionStmt:
 			tag = "CREATE EXTENSION";
 			break;
@@ -2634,6 +2656,10 @@ CreateCommandTag(Node *parsetree)
 			tag = "REFRESH MATERIALIZED VIEW";
 			break;
 
+		case T_AlterSystemStmt:
+			tag = "ALTER SYSTEM";
+			break;
+
 		case T_VariableSetStmt:
 			switch (((VariableSetStmt *) parsetree)->kind)
 			{
@@ -2667,6 +2693,9 @@ CreateCommandTag(Node *parsetree)
 					break;
 				case DISCARD_TEMP:
 					tag = "DISCARD TEMP";
+					break;
+				case DISCARD_SEQUENCES:
+					tag = "DISCARD SEQUENCES";
 					break;
 				default:
 					tag = "???";
@@ -3012,6 +3041,10 @@ GetCommandLogLevel(Node *parsetree)
 			lev = LOGSTMT_DDL;
 			break;
 
+		case T_AlterTableSpaceMoveStmt:
+			lev = LOGSTMT_DDL;
+			break;
+
 		case T_CreateExtensionStmt:
 		case T_AlterExtensionStmt:
 		case T_AlterExtensionContentsStmt:
@@ -3231,6 +3264,10 @@ GetCommandLogLevel(Node *parsetree)
 
 		case T_RefreshMatViewStmt:
 			lev = LOGSTMT_DDL;
+			break;
+
+		case T_AlterSystemStmt:
+			lev = LOGSTMT_ALL;
 			break;
 
 		case T_VariableSetStmt:

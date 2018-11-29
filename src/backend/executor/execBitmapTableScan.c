@@ -47,7 +47,7 @@ getBitmapTableScanMethod(TableType tableType)
 	{
 		{
 			&BitmapHeapScanNext, &BitmapHeapScanRecheck, &BitmapHeapScanBegin, &BitmapHeapScanEnd,
-			&BitmapHeapScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
+			&BitmapHeapScanReScan
 		},
 		/*
 		 * AO and AOCS tables don't need a recheck-method, because they never
@@ -57,12 +57,12 @@ getBitmapTableScanMethod(TableType tableType)
 		 */
 		{
 			&BitmapAOScanNext, NULL, &BitmapAOScanBegin, &BitmapAOScanEnd,
-			&BitmapAOScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
+			&BitmapAOScanReScan
 		},
 		{
 			/* The same set of methods serve both AO and AOCO scans */
 			&BitmapAOScanNext, NULL, &BitmapAOScanBegin, &BitmapAOScanEnd,
-			&BitmapAOScanReScan, &MarkRestrNotAllowed, &MarkRestrNotAllowed
+			&BitmapAOScanReScan
 		}
 	};
 

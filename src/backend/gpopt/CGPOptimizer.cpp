@@ -44,9 +44,12 @@ CGPOptimizer::GPOPTOptimizedPlan
 {
 	SOptContext gpopt_context;
 	PlannedStmt* plStmt = NULL;
+
+	*had_unexpected_failure = false;
+
 	GPOS_TRY
 	{
-		plStmt = COptTasks::GPOPTOptimizedPlan(query, &gpopt_context, had_unexpected_failure);
+		plStmt = COptTasks::GPOPTOptimizedPlan(query, &gpopt_context);
 		// clean up context
 		gpopt_context.Free(gpopt_context.epinQuery, gpopt_context.epinPlStmt);
 	}
@@ -70,7 +73,7 @@ CGPOptimizer::GPOPTOptimizedPlan
 		}
 
 		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL, gpdxl::ExmiOptimizerError) ||
-			NULL != serialized_error_msg)
+			 gpopt_context.m_should_error_out)
 		{
 			Assert(NULL != serialized_error_msg);
 			errstart(ERROR, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
@@ -93,6 +96,24 @@ CGPOptimizer::GPOPTOptimizedPlan
 			errfinish(errcode(ERRCODE_INTERNAL_ERROR),
 					errmsg("Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."));
 		}
+
+		// Failed to produce a plan, but it wasn't an error that should
+		// be propagated to the user. Log the failure if needed, and
+		// return without a plan. The caller should fall back to the
+		// Postgres planner.
+
+		if (optimizer_trace_fallback)
+		{
+			errstart(INFO, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
+			errfinish(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				  errmsg("GPORCA failed to produce a plan, falling back to planner"),
+				  serialized_error_msg ? errdetail("%s", serialized_error_msg) : 0);
+		}
+
+		*had_unexpected_failure = gpopt_context.m_is_unexpected_failure;
+
+		if (serialized_error_msg)
+			pfree(serialized_error_msg);
 	}
 	GPOS_CATCH_END;
 	return plStmt;

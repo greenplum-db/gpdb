@@ -10,7 +10,7 @@
  *
  * Portions Copyright (c) 2006-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Copyright (c) 2002-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2002-2014, PostgreSQL Global Development Group
  *
  * src/include/catalog/pg_cast.h
  *
@@ -366,6 +366,10 @@ DATA(insert ( 1560 1560 1685 i f ));
 DATA(insert ( 1562 1562 1687 i f ));
 DATA(insert ( 1700 1700 1703 i f ));
 
+/* json to/from jsonb */
+DATA(insert ( 114 3802 0 e i ));
+DATA(insert ( 3802 114 0 e i ));
+
 /* complex type */
 DATA(insert (701  7198 3584 i f));
 DATA(insert (700  7198 3585 i f));
@@ -375,10 +379,5 @@ DATA(insert (21   7198 3588 i f));
 DATA(insert (600  7198 0 e b));
 DATA(insert (7198  600 0 e b));
 DATA(insert (1700 7198 7597 i f));
-
-/*
- * CDB: Allow explicit cast from tid to int8
- */
-DATA(insert (   27   20 6021 e f ));
 
 #endif   /* PG_CAST_H */

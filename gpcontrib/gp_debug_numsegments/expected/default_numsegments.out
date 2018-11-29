@@ -1,0 +1,188 @@
+drop extension if exists gp_debug_numsegments;
+NOTICE:  extension "gp_debug_numsegments" does not exist, skipping
+create extension gp_debug_numsegments;
+--
+-- GOOD: valid text values: random, full, minimal
+--
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+create table t_default_first (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments('random');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ RANDOM
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ RANDOM
+(1 row)
+
+create table t_default_random (c1 int, c2 int) distributed by (c1);
+select localoid::regclass, attrnums, policytype
+  from gp_distribution_policy
+ where localoid='t_default_random'::regclass
+   and numsegments between 1 and 3;
+     localoid     | attrnums | policytype 
+------------------+----------+------------
+ t_default_random | {1}      | p
+(1 row)
+
+drop table t_default_random;
+select gp_debug_set_create_table_default_numsegments('full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+create table t_default_full (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments('minimal');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ MINIMAL
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ MINIMAL
+(1 row)
+
+create table t_default_minimal (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments('FULL');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+create table "t_default_FULL" (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments('Full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+create table "t_default_Full" (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments('fulL');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+create table "t_default_fulL" (c1 int, c2 int) distributed by (c1);
+--
+-- GOOD: valid integer values between [1, gp_num_contents_in_cluster]
+--
+select gp_debug_set_create_table_default_numsegments(1);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 1
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ 1
+(1 row)
+
+create table t_default_1 (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+create table t_default_2 (c1 int, c2 int) distributed by (c1);
+select gp_debug_set_create_table_default_numsegments(3);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 3
+(1 row)
+
+select gp_debug_get_create_table_default_numsegments();
+ gp_debug_get_create_table_default_numsegments 
+-----------------------------------------------
+ 3
+(1 row)
+
+create table t_default_3 (c1 int, c2 int) distributed by (c1);
+select c.relname, d.attrnums, d.policytype, d.numsegments
+  from gp_distribution_policy d
+  join pg_class c
+    on d.localoid=c.oid
+   and c.relname like 't_default_%';
+      relname      | attrnums | policytype | numsegments 
+-------------------+----------+------------+-------------
+ t_default_first   | {1}      | p          |           3
+ t_default_full    | {1}      | p          |           3
+ t_default_minimal | {1}      | p          |           1
+ t_default_FULL    | {1}      | p          |           3
+ t_default_Full    | {1}      | p          |           3
+ t_default_fulL    | {1}      | p          |           3
+ t_default_1       | {1}      | p          |           1
+ t_default_2       | {1}      | p          |           2
+ t_default_3       | {1}      | p          |           3
+(9 rows)
+
+--
+-- BAD: syntax error
+--
+select gp_debug_set_create_table_default_numsegments('reset');
+ERROR:  invalid text value for default numsegments: 'reset'
+HINT:  Valid values: 'full', 'minimal', 'random'
+select gp_debug_set_create_table_default_numsegments('unknown');
+ERROR:  invalid text value for default numsegments: 'unknown'
+HINT:  Valid values: 'full', 'minimal', 'random'
+select gp_debug_set_create_table_default_numsegments('  full');
+ERROR:  invalid text value for default numsegments: '  full'
+HINT:  Valid values: 'full', 'minimal', 'random'
+select gp_debug_set_create_table_default_numsegments('full  ');
+ERROR:  invalid text value for default numsegments: 'full  '
+HINT:  Valid values: 'full', 'minimal', 'random'
+select gp_debug_set_create_table_default_numsegments('1');
+ERROR:  invalid text value for default numsegments: '1'
+HINT:  Valid values: 'full', 'minimal', 'random'
+select gp_debug_set_create_table_default_numsegments('');
+ERROR:  invalid text value for default numsegments: ''
+HINT:  Valid values: 'full', 'minimal', 'random'
+--
+-- BAD: out of range
+--
+select gp_debug_set_create_table_default_numsegments(0);
+ERROR:  invalid integer value for default numsegments: 0
+HINT:  Valid range: [1, gp_num_contents_in_cluster]
+select gp_debug_set_create_table_default_numsegments(-1);
+ERROR:  invalid integer value for default numsegments: -1
+HINT:  Valid range: [1, gp_num_contents_in_cluster]
+select gp_debug_set_create_table_default_numsegments(4);
+ERROR:  invalid integer value for default numsegments: 4
+HINT:  Valid range: [1, gp_num_contents_in_cluster]
+select gp_debug_set_create_table_default_numsegments(999);
+ERROR:  invalid integer value for default numsegments: 999
+HINT:  Valid range: [1, gp_num_contents_in_cluster]
+--
+-- BAD: cannot execute on segments
+--
+select gp_debug_set_create_table_default_numsegments(1)
+  from gp_dist_random('gp_id');
+ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM
+select gp_debug_get_create_table_default_numsegments()
+  from gp_dist_random('gp_id');
+ERROR:  function with EXECUTE ON restrictions cannot be used in the SELECT list of a query with FROM

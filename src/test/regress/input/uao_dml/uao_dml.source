@@ -620,7 +620,7 @@ ANALYZE bar;
 
 
 -- MPP-23546.  The following update statements ensure that
--- appendonly_udpate() sees tuples out of order with respect to their
+-- appendonly_update() sees tuples out of order with respect to their
 -- row numbers / tuple ids and also that the tuples seen by update
 -- span more than one visimap entry.
 

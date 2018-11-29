@@ -211,10 +211,14 @@ CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (poli);
 CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (bullseye);
 
 
--- Test whether geometric types can be part of a primary key.
+-- Test whether geometric types can be part of a distribution key.
 CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED BY (property);
 CREATE TABLE GistTable2 (id INTEGER, poli POLYGON) DISTRIBUTED BY (poli);
 CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE) DISTRIBUTED BY (bullseye);
+
+-- Same with ALTER TABLE.
+CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED RANDOMLY;
+ALTER TABLE GistTable2 SET DISTRIBUTED BY (property);
 
 -- ----------------------------------------------------------------------
 -- Test: test09NegativeTests.sql

@@ -2,7 +2,7 @@
  * pg_db_role_setting.c
  *		Routines to support manipulation of the pg_db_role_setting relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -51,7 +51,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(roleid));
 	scan = systable_beginscan(rel, DbRoleSettingDatidRolidIndexId, true,
-							  SnapshotNow, 2, scankey);
+							  NULL, 2, scankey);
 	tuple = systable_getnext(scan);
 
 	/*
@@ -290,7 +290,7 @@ AlterSetting(Oid databaseid, Oid roleid, VariableSetStmt *setstmt)
 
 /*
  * Drop some settings from the catalog.  These can be for a particular
- * database, or for a particular role.	(It is of course possible to do both
+ * database, or for a particular role.  (It is of course possible to do both
  * too, but it doesn't make sense for current uses.)
  */
 void
@@ -323,7 +323,7 @@ DropSetting(Oid databaseid, Oid roleid)
 		numkeys++;
 	}
 
-	scan = heap_beginscan(relsetting, SnapshotNow, numkeys, keys);
+	scan = heap_beginscan_catalog(relsetting, numkeys, keys);
 	while (HeapTupleIsValid(tup = heap_getnext(scan, ForwardScanDirection)))
 	{
 		simple_heap_delete(relsetting, &tup->t_self);
@@ -344,7 +344,8 @@ DropSetting(Oid databaseid, Oid roleid)
  * databaseid/roleid.
  */
 void
-ApplySetting(Oid databaseid, Oid roleid, Relation relsetting, GucSource source)
+ApplySetting(Snapshot snapshot, Oid databaseid, Oid roleid,
+			 Relation relsetting, GucSource source)
 {
 	SysScanDesc scan;
 	ScanKeyData keys[2];
@@ -362,7 +363,7 @@ ApplySetting(Oid databaseid, Oid roleid, Relation relsetting, GucSource source)
 				ObjectIdGetDatum(roleid));
 
 	scan = systable_beginscan(relsetting, DbRoleSettingDatidRolidIndexId, true,
-							  SnapshotNow, 2, keys);
+							  snapshot, 2, keys);
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		bool		isnull;

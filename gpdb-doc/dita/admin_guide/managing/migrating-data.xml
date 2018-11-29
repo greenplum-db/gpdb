@@ -5,9 +5,10 @@
   <body>
     <p>Greenplum Database provides utilities that you can use to migrate data between Greenplum
       Database systems.</p>
-    <p otherprops="pivotal">The <codeph>gpcopy</codeph> utility can require less disk space to
-      migrate between Greenplum Database systems that co-exist on the same hosts. </p>
-    <p>The <codeph>gpransfer</codeph> utility can migrate data between system with a different
-      number of segment instances.</p>
+    <p otherprops="pivotal">The <codeph>gpcopy</codeph> utility can migrate data between Greenplum
+      Database systems running software version 5.9.0 or later. The utility can require less disk
+      space to migrate between Greenplum Database systems that co-exist on the same hosts. </p>
+    <p>The <codeph>gpransfer</codeph> utility can migrate data between Greenplum Database
+      installations running any 5.x version software.</p>
   </body>
 </topic>

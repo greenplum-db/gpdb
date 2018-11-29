@@ -206,22 +206,6 @@ cdbdisp_seterrcode(int errcode, /* ERRCODE_xxx or 0 */
  * palloc/pfree or elog/ereport because they are not thread safe.
  */
 void
-cdbdisp_appendMessage(CdbDispatchResult *dispatchResult,
-                      int errcode,
-                      const char *fmt,
-                      ...)
-/* This extension allows gcc to check the format string */
-__attribute__((format(printf, 3, 4)));
-
-/*
- * Format a message, printf-style, and append to the error_message buffer.
- * Also write it to stderr if logging is enabled for messages of the
- * given severity level 'elevel' (for example, DEBUG1; or 0 to suppress).
- * 'errcode' is the ERRCODE_xxx value for setting the client's SQLSTATE.
- * NB: This can be called from a dispatcher thread, so it must not use
- * palloc/pfree or elog/ereport because they are not thread safe.
- */
-void
 cdbdisp_appendMessageNonThread(CdbDispatchResult *dispatchResult,
 							   int errcode,
 							   const char *fmt,

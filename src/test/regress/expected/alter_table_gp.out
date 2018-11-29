@@ -62,7 +62,7 @@ ALTER TABLE altable DROP COLUMN b;
 ALTER TABLE altable ADD CONSTRAINT c_check CHECK (c > 0);
 INSERT INTO altable(a, c) VALUES(0, -10);
 ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:25432 pid=21869)
-DETAIL:  Failing row contains (0, null, -10).
+DETAIL:  Failing row contains (0, -10).
 SELECT * FROM altable ORDER BY 1;
  a | c 
 ---+---
@@ -103,7 +103,7 @@ SELECT * FROM altable ORDER BY 1;
 
 UPDATE altable SET c = -10;
 ERROR:  new row for relation "altable" violates check constraint "c_check"  (seg0 127.0.0.1:25432 pid=21869)
-DETAIL:  Failing row contains (0, null, -10).
+DETAIL:  Failing row contains (0, -10).
 SELECT * FROM altable ORDER BY 1;
  a | c  
 ---+----

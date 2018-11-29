@@ -9,12 +9,10 @@
 
 #include "crc32.h"
 #include "ltree.h"
+#include "miscadmin.h"
 
 PG_FUNCTION_INFO_V1(ltxtq_in);
-Datum		ltxtq_in(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(ltxtq_out);
-Datum		ltxtq_out(PG_FUNCTION_ARGS);
 
 
 /* parser's states */
@@ -212,6 +210,9 @@ makepol(QPRS_STATE *state)
 	int32		lenstack = 0;
 	uint16		flag = 0;
 
+	/* since this function recurses, it could be driven to stack overflow */
+	check_stack_depth();
+
 	while ((type = gettoken_query(state, &val, &lenval, &strval, &flag)) != END)
 	{
 		switch (type)
@@ -276,6 +277,9 @@ makepol(QPRS_STATE *state)
 static void
 findoprnd(ITEM *ptr, int32 *pos)
 {
+	/* since this function recurses, it could be driven to stack overflow. */
+	check_stack_depth();
+
 	if (ptr[*pos].type == VAL || ptr[*pos].type == VALTRUE)
 	{
 		ptr[*pos].left = 0;
@@ -340,8 +344,12 @@ queryin(char *buf)
 				 errmsg("syntax error"),
 				 errdetail("Empty query.")));
 
-	/* make finish struct */
+	if (LTXTQUERY_TOO_BIG(state.num, state.sumlen))
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("ltxtquery is too large")));
 	commonlen = COMPUTESIZE(state.num, state.sumlen);
+
 	query = (ltxtquery *) palloc(commonlen);
 	SET_VARSIZE(query, commonlen);
 	query->size = state.num;

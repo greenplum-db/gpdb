@@ -19,8 +19,6 @@
 extern TableScanState *ExecInitTableScan(TableScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecTableScan(TableScanState *node);
 extern void ExecEndTableScan(TableScanState *node);
-extern void ExecTableMarkPos(TableScanState *node);
-extern void ExecTableRestrPos(TableScanState *node);
 extern void ExecReScanTable(TableScanState *node);
 extern void ExecEagerFreeTableScan(TableScanState *node);
 

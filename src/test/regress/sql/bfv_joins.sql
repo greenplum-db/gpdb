@@ -199,6 +199,42 @@ ON member_group.group_id = member_subgroup.group_id
 LEFT OUTER JOIN region
 ON (member_group.group_id IN (12,13,14,15) AND member_subgroup.subgroup_name = region.county_name);
 
+-- Test colocated equijoins on coerced distribution keys
+CREATE TABLE coercejoin (a varchar(10), b varchar(10)) DISTRIBUTED BY (a);
+-- Positive test, the join should be colocated as the implicit cast from the
+-- parse rewrite is a relabeling (varchar::text).
+EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a=b.a;
+-- Negative test, the join should not be colocated since the cast is a coercion
+-- which cannot guarantee that the coerced value would hash to the same segment
+-- as the uncoerced tuple.
+EXPLAIN (costs off) SELECT * FROM coercejoin a, coercejoin b WHERE a.a::numeric=b.a::numeric;
+
+--
+-- Test NLJ with join conds on distr keys using equality, IS DISTINCT FROM & IS NOT DISTINCT FROM exprs
+--
+create table nlj1 (a int, b int);
+create table nlj2 (a int, b int);
+
+insert into nlj1 values (1, 1), (NULL, NULL);
+insert into nlj2 values (1, 5), (NULL, 6);
+
+set optimizer_enable_hashjoin=off;
+set enable_hashjoin=off; set enable_mergejoin=off; set enable_nestloop=on;
+
+explain select * from nlj1, nlj2 where nlj1.a = nlj2.a;
+select * from nlj1, nlj2 where nlj1.a = nlj2.a;
+
+explain select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
+select * from nlj1, nlj2 where nlj1.a is not distinct from nlj2.a;
+
+explain select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+select * from nlj1, (select NULL a, b from nlj2) other where nlj1.a is not distinct from other.a;
+
+explain select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
+select * from nlj1, nlj2 where nlj1.a is distinct from nlj2.a;
+
+reset optimizer_enable_hashjoin;
+reset enable_hashjoin; reset enable_mergejoin; reset enable_nestloop;
 
 -- Clean up. None of the objects we create are very interesting to keep around.
 reset search_path;

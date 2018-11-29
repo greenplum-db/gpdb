@@ -45,24 +45,18 @@
  * nodes when the DDL command is dispatched, and for the QE nodes to use the
  * same, pre-assigned, OIDs for the objects.
  *
- * This same mechanism can be used to preserve OIDs during pg_upgrade. In
- * PostgreSQL, pg_upgrade only needs to preserve the OIDs of a few objects,
- * like types, but in GPDB we need to preserve most OIDs, because they need
- * to be kept in sync between the nodes. (Strictly speaking, we only need to
- * ensure that all the nodes use the same OIDs in the upgraded clusters, but
- * they wouldn't need to be the same as before upgrade. However, the most
- * straightforward way to achieve that is to use the same OIDs as before
- * upgrade.)
+ * This same mechanism is used to preserve OIDs when upgrading a GPDB cluster
+ * using pg_upgrade. pg_upgrade in PostgreSQL is using a set of global vars to
+ * communicate the next OID for an object during upgrade, a strategy GPDB
+ * doesn't employ due to the need for multiple OIDs for auxiliary objects.
+ * pg_upgrade records the OIDs from the old cluster and inserts them into the
+ * same 'preassigned_oids' list to restore them, that we use to assign specific
+ * OIDs in a QE node at dispatch. Additionally, to ensure that object creation
+ * that isn't bound by preassigned OIDs isn't consuming an OID that will later
+ * in the restore process be preassigned, a separate list of all such OIDs is
+ * maintained and queried before assigning a new non-preassigned OID.
  *
- * pg_upgrade has its own mechanism to record the OIDs from the old cluster
- * but when restoring the schema in the new cluster, it uses the same
- * 'preassigned_oids' list to restore them, that we use to assign specific
- * OIDs in a QE node at dispatch.
- *
- * (XXX: All the pg_upgrade code described above is to-be-done, as of
- * this writing),
- *
- * Portions Copyright 2016 Pivotal Software, Inc.
+ * Portions Copyright 2016-Present Pivotal Software, Inc.
  * Portions Copyright (c) 1996-2008, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
@@ -88,6 +82,7 @@
 #include "catalog/pg_enum.h"
 #include "catalog/pg_extension.h"
 #include "catalog/pg_extprotocol.h"
+#include "catalog/pg_event_trigger.h"
 #include "catalog/pg_foreign_data_wrapper.h"
 #include "catalog/pg_foreign_server.h"
 #include "catalog/pg_language.h"
@@ -147,6 +142,12 @@ static List *preassigned_oids = NIL;
  */
 static List *dispatch_oids = NIL;
 
+/*
+ * These will be used by the schema restoration process during binary upgrade,
+ * so any new object must not use any Oid on this list or else there will be
+ * collisions.
+ */
+static List *binary_upgrade_preassigned_oids = NIL;
 
 /*
  * Create an OidAssignment struct, for a catalog table tuple.
@@ -448,6 +449,11 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 			*exempt = true;
 			 break;
 
+		/* Event triggers are only stored and fired in the QD. */
+		case EventTriggerRelationId:
+			*exempt = true;
+			break;
+
 		/*
 		 * Large objects don't work very consistently in GPDB. They are not
 		 * distributed in the segments, but rather stored in the master node.
@@ -459,12 +465,12 @@ CreateKeyFromCatalogTuple(Relation catalogrel, HeapTuple tuple,
 			break;
 
 		 /*
-		  * These objects need to have their OIDs synchronized, but there is bespoken
-		  * code to deal with it.
+		  * These objects need to have their OIDs synchronized, but there is
+		  * bespoken code to deal with it.
 		  */
 		case TriggerRelationId:
 			*exempt = true;
-			 break;
+			break;
 
 		default:
 			*recognized = false;
@@ -626,10 +632,11 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
 	{
 		/*
-		 * When binary-upgrading the QD node, we must preserve the OIDs of
-		 * types, relations and enums from the old cluster, so we should have
-		 * pre-assigned OIDs for them.  For now we don't enforce the OIDs for
-		 * these objects here, consider that a future TODO.
+		 * During normal operation, all OIDs are preassigned unless the object
+		 * type is exempt (in which case we should never reach here). During
+		 * upgrades we do however allow objects to be created with new OIDs
+		 * since objects may be created in new cluster which didn't exist in
+		 * the old cluster.
 		 */
 		if (!IsBinaryUpgrade)
 			elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
@@ -727,6 +734,36 @@ GetPreassignedOidForType(Oid namespaceOid, const char *typname,
  * Functions for use in binary-upgrade mode
  * ----------------------------------------------------------------
  */
+
+/*
+ * Remember an Oid which will be used in schema restoration during binary
+ * upgrade, such that we can prohibit any new object to consume Oids which
+ * will lead to collision.
+ */
+void
+MarkOidPreassignedFromBinaryUpgrade(Oid oid)
+{
+	MemoryContext		oldcontext;
+
+	if (!IsBinaryUpgrade)
+		elog(ERROR, "MarkOidPreassignedFromBinaryUpgrade called, but not in binary upgrade mode");
+
+	if (oid == InvalidOid)
+		return;
+
+	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
+
+	/*
+	 * A list is hardly the best data structure for this as the number of OIDs
+	 * kept here can be quite high for a large schema. Implementing a better
+	 * store which enables quick lookups is a TODO for now.
+	 */
+	binary_upgrade_preassigned_oids =
+		lappend_oid(binary_upgrade_preassigned_oids, oid);
+
+	MemoryContextSwitchTo(oldcontext);
+}
+
 
 /*
  * Remember an OID which is set from loading a database dump performed
@@ -930,5 +967,5 @@ IsOidAcceptable(Oid oid)
 			return false;
 	}
 
-	return true;
+	return !(list_member_oid(binary_upgrade_preassigned_oids, oid));
 }

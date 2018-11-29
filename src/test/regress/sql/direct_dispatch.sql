@@ -202,6 +202,9 @@ SELECT * from direct_dispatch_foo WHERE id * id = 1;
 SELECT * from direct_dispatch_foo WHERE id * id = 1 OR id = 1;
 SELECT * from direct_dispatch_foo where id * id = 1 AND id = 1;
 
+-- main plan is direct dispatch and also has init plans
+update direct_dispatch_bar set id2 = 1 where id1 = 1 and exists (select * from direct_dispatch_foo where id = 2);
+
 -- init plan to see how transaction escalation happens
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);

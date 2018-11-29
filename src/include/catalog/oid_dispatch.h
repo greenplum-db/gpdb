@@ -14,6 +14,7 @@
 #define OID_DISPATCH_H
 
 #include "utils/relcache.h"
+#include "access/htup.h"
 
 /* Functions used in master */
 extern void AddDispatchOidFromTuple(Relation catalogrel, HeapTuple tuple);
@@ -31,6 +32,7 @@ extern Oid GetPreassignedOidForDatabase(const char *datname);
 
 /* Functions used in binary upgrade */
 extern bool IsOidAcceptable(Oid oid);
+extern void MarkOidPreassignedFromBinaryUpgrade(Oid oid);
 
 extern void AtEOXact_DispatchOids(bool isCommit);
 

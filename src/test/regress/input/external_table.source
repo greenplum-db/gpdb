@@ -88,10 +88,13 @@ DROP EXTERNAL TABLE IF EXISTS exttab_txs_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_udfs_1;
 DROP EXTERNAL TABLE IF EXISTS exttab_udfs_2;
 DROP EXTERNAL TABLE IF EXISTS exttab_views_3;
+DROP EXTERNAL WEB TABLE IF EXISTS table_env;
+DROP EXTERNAL WEB TABLE IF EXISTS table_qry;
 
 DROP VIEW IF EXISTS exttab_views_3;
 
 DROP PROTOCOL IF EXISTS demoprot_untrusted;
+DROP PROTOCOL IF EXISTS demoprot_untrusted2;
 
 drop external web table if exists check_ps;
 CREATE EXTERNAL WEB TABLE check_ps (x text)
@@ -110,6 +113,19 @@ drop external table check_ps;
 drop external table check_env;
 
 -- end_ignore
+-- table to get shell command "env" output which list all environment variable
+CREATE EXTERNAL WEB TABLE table_env (val TEXT)
+  EXECUTE E'env' ON SEGMENT 0
+  FORMAT 'TEXT' (ESCAPE 'OFF');
+SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%' ORDER BY val ASC;
+SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%\%' ESCAPE '&' ORDER BY val ASC;
+
+-- echo will behave differently on different platforms, force to use bash with -E option
+CREATE EXTERNAL WEB TABLE table_qry (val TEXT)
+  EXECUTE E'/usr/bin/env bash -c ''echo -E "$GP_QUERY_STRING"''' ON SEGMENT 0
+  FORMAT 'TEXT' (ESCAPE 'OFF');
+SELECT * FROM table_qry WHERE val LIKE '%\\%' ORDER BY val ASC;
+SELECT * FROM table_qry WHERE val LIKE '%\%' ESCAPE '&' ORDER BY val ASC;
 -- --------------------------------------
 -- some negative tests
 -- --------------------------------------
@@ -192,6 +208,9 @@ CREATE TRUSTED PROTOCOL demoprot (readfunc = 'read_from_file', writefunc = 'writ
 CREATE PROTOCOL demoprot_untrusted (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
 ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2;
 ALTER PROTOCOL demoprot_untrusted2 RENAME TO demoprot_untrusted;
+CREATE PROTOCOL demoprot_untrusted2 (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
+ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2; -- should failed
+ALTER PROTOCOL demoprot_untrustedx RENAME TO demoprot_untrusted2; --should failed
 
 CREATE ROLE extprotu NOSUPERUSER;
 SET SESSION AUTHORIZATION extprotu;

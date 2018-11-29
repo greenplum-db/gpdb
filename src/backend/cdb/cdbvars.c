@@ -36,6 +36,7 @@
 #include "storage/proc.h"
 #include "storage/procarray.h"
 #include "cdb/memquota.h"
+#include "postmaster/fts.h"
 
 /*
  * ----------------
@@ -82,9 +83,6 @@ bool		verify_gpfdists_cert; /* verifies gpfdist's certificate */
 int			gp_external_max_segs;	/* max segdbs per gpfdist/gpfdists URI */
 
 int			gp_safefswritesize; /* set for safe AO writes in non-mature fs */
-
-int			gp_connections_per_thread;	/* How many libpq connections are
-										 * handled in each thread */
 
 int			gp_cached_gang_threshold;	/* How many gangs to keep around from
 										 * stmt to stmt. */
@@ -327,9 +325,6 @@ int			currentSliceId = UNSET_SLICE_ID;	/* used by elog to show the
 												 * current slice the process
 												 * is executing. */
 
-/* Segment id where singleton gangs are to be dispatched. */
-int			gp_singleton_segindex;
-
 bool		gp_cost_hashjoin_chainwalk = false;
 
 /* ----------------
@@ -338,18 +333,7 @@ bool		gp_cost_hashjoin_chainwalk = false;
  * Any code needing the "numsegments"
  * can simply #include cdbvars.h, and use GpIdentity.numsegments
  */
-GpId		GpIdentity = {UNINITIALIZED_GP_IDENTITY_VALUE, UNINITIALIZED_GP_IDENTITY_VALUE, UNINITIALIZED_GP_IDENTITY_VALUE};
-
-void
-verifyGpIdentityIsSet(void)
-{
-	if (GpIdentity.numsegments == UNINITIALIZED_GP_IDENTITY_VALUE ||
-		GpIdentity.dbid == UNINITIALIZED_GP_IDENTITY_VALUE ||
-		GpIdentity.segindex == UNINITIALIZED_GP_IDENTITY_VALUE)
-	{
-		elog(ERROR, "GpIdentity is not set");
-	}
-}
+GpId		GpIdentity = {UNINITIALIZED_GP_IDENTITY_VALUE, UNINITIALIZED_GP_IDENTITY_VALUE};
 
 /*
  * Keep track of a few dispatch-related  statistics:
@@ -509,7 +493,7 @@ assign_gp_role(const char *newval, void *extra)
 	bool		do_disconnect = false;
 	bool		do_connect = false;
 
-	if (Gp_role != newrole && IsUnderPostmaster)
+	if (Gp_role != newrole && IsUnderPostmaster && !IsInitProcessingMode())
 	{
 		if (Gp_role != GP_ROLE_UTILITY)
 			do_disconnect = true;
@@ -551,26 +535,6 @@ assign_gp_role(const char *newval, void *extra)
 	}
 }
 
-
-/*
- * Assign hook routine for "gp_connections_per_thread" option.  This variable has context
- * PGC_SUSET so that is can only be set by a superuser via the SET command.
- * (It can also be set in config file, but not inside of PGOPTIONS.)
- *
- * See src/backend/util/misc/guc.c for option definition.
- */
-void
-assign_gp_connections_per_thread(int newval, void *extra)
-{
-#if FALSE
-	elog(DEBUG1, "assign_gp_connections_per_thread: gp_connections_per_thread=%s, newval=%d",
-		 show_gp_connections_per_thread(), newval);
-#endif
-
-	cdbdisp_setAsync(newval == 0);
-	cdbgang_setAsync(newval == 0);
-	gp_connections_per_thread = newval;
-}
 
 /*
  * Show hook routine for "gp_session_role" option.

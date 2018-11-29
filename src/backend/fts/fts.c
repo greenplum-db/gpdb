@@ -60,7 +60,7 @@
 #include "catalog/gp_segment_config.h"
 
 #include "storage/backendid.h"
-
+#include "storage/bufmgr.h"
 #include "executor/spi.h"
 
 #include "tcop/tcopprot.h" /* quickdie() */
@@ -241,7 +241,7 @@ ftsMain(int argc, char *argv[])
 	BaseInit();
 
 	/* See InitPostgres()... */
-	InitProcess();	
+	InitProcess();
 	InitBufferPoolBackend();
 	InitXLOGAccess();
 
@@ -359,18 +359,15 @@ static
 CdbComponentDatabases *readCdbComponentInfoAndUpdateStatus(MemoryContext probeContext)
 {
 	int i;
-	MemoryContext save = MemoryContextSwitchTo(probeContext);
-	/* cdbs is free'd by FtsLoop(). */
-	CdbComponentDatabases *cdbs = getCdbComponentInfo(false);
-	MemoryContextSwitchTo(save);
+	CdbComponentDatabases *cdbs = cdbcomponent_getCdbComponents(false);
 
 	for (i=0; i < cdbs->total_segment_dbs; i++)
 	{
 		CdbComponentDatabaseInfo *segInfo = &cdbs->segment_db_info[i];
 		uint8	segStatus = 0;
 
-		if (SEGMENT_IS_ALIVE(segInfo))
-			FTS_STATUS_SET_UP(segStatus);
+		if (!SEGMENT_IS_ALIVE(segInfo))
+			FTS_STATUS_SET_DOWN(segStatus);
 
 		ftsProbeInfo->fts_status[segInfo->dbid] = segStatus;
 	}
@@ -451,7 +448,7 @@ probeWalRepUpdateConfig(int16 dbid, int16 segindex, char role,
 					BTEqualStrategyNumber, F_INT2EQ,
 					Int16GetDatum(dbid));
 		sscan = systable_beginscan(configrel, GpSegmentConfigDbidIndexId,
-								   true, SnapshotNow, 1, &scankey);
+								   true, NULL, 1, &scankey);
 
 		configtuple = systable_getnext(sscan);
 
@@ -515,12 +512,6 @@ void FtsLoop()
 
 		probe_start_time = time(NULL);
 
-		if (cdbs != NULL)
-		{
-			freeCdbComponentDatabases(cdbs);
-			cdbs = NULL;
-		}
-
 		/* Need a transaction to access the catalogs */
 		StartTransactionCommand();
 
@@ -546,6 +537,7 @@ void FtsLoop()
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
 				   "skipping FTS probes due to %s",
 				   !has_mirrors ? "no mirrors" : "fts_probe fault");
+
 		}
 		else
 		{
@@ -566,12 +558,15 @@ void FtsLoop()
 
 			/* free any pallocs we made inside probeSegments() */
 			MemoryContextReset(probeContext);
-			cdbs = NULL;
 
 			/* Bump the version if configuration was updated. */
 			if (updated_probe_state)
 				ftsProbeInfo->fts_statusVersion++;
 		}
+
+		/* free current components info and free ip addr caches */	
+		cdbcomponent_destroyCdbComponents();
+
 		/* Notify any waiting backends about probe cycle completion. */
 		ftsProbeInfo->probeTick++;
 

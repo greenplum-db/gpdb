@@ -42,9 +42,9 @@
         files.</p>
       <p>If the backup you specify is an incremental backup, you need a complete set of backup files
         (a full backup and any required incremental backups). <codeph>gprestore</codeph> ensures
-        that the complete backup set is available before attempting to restore a backup. <note
-          type="important">For incremental backup sets, the backups must be on a single device. For
-          example, a backup set must all be on a Data Domain system. </note></p>
+        that the complete backup set is available before attempting to restore a backup.
+        <note type="important">For incremental backup sets, the backups must be on a single device.
+          For example, a backup set must all be on a Data Domain system. </note></p>
       <p>For information about incremental backups, see <xref
           href="../../admin_guide/managing/backup-gpbackup-incremental.xml"/>.</p>
       <p>When restoring from a backup set, <codeph>gprestore</codeph> restores to a database with
@@ -78,6 +78,12 @@
           href="../../admin_guide/managing/backup-gpbackup.xml#topic_qwd_d5d_tbb" format="dita"
         />.</p>
     </section>
+    <note>This utility uses secure shell (SSH) connections between systems to perform its tasks. In
+      large Greenplum Database deployments, cloud deployments, or deployments with a large number of
+      segments per host, this utility may exceed the host's maximum threshold for unauthenticated
+      connections. Consider updating the SSH <codeph>MaxStartups</codeph> configuration parameter to
+      increase this threshold. For more information about SSH configuration options, refer to the
+      SSH documentation for your Linux distribution.</note>
     <section>
       <title>Options</title>
       <parml>
@@ -226,10 +232,10 @@
             <varname>int</varname></pt>
           <pd>Optional. Specifies the number of parallel connections to use when restoring table
             data and metadata. By default, <codeph>gprestore</codeph> uses 1 connection. Increasing
-            this number can improve the speed of restoring data.<note>If you used the
-                <codeph>gpbackup --single-data-file</codeph> option to combine table backups into a
-              single file per segment, you cannot set <codeph>--jobs</codeph> to a value higher than
-              1 to perform a parallel restore operation.</note></pd>
+            this number can improve the speed of restoring data.
+            <note>If you used the <codeph>gpbackup --single-data-file</codeph> option to combine
+              table backups into a single file per segment, you cannot set <codeph>--jobs</codeph>
+              to a value higher than 1 to perform a parallel restore operation.</note></pd>
         </plentry>
         <plentry id="metadata_only">
           <pt><b>--metadata-only</b></pt>

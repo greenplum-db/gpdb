@@ -55,6 +55,22 @@
               <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names
             in a file specified with <codeph>--exclude-table-file</codeph>,
               <codeph>gpbackup</codeph> ignores the partition names.</li>
+          <li>Backing up a database with <codeph>gpbackup</codeph> while simultaneously running DDL
+            commands might cause <codeph>gpbackup</codeph> to fail, in order to ensure consistency
+            within the backup set. For example, if a table is dropped after the start of the backup
+            operation, <codeph>gpbackup</codeph> exits and displays the error message <codeph>ERROR:
+              relation &lt;<varname>schema.table</varname>> does not
+                exist</codeph>.<p><codeph>gpbackup</codeph> might fail when a table is dropped
+              during a backup operation due to table locking issues. <codeph>gpbackup</codeph>
+              generates a list of tables to back up and acquires an <codeph>ACCESS SHARED</codeph>
+              lock on the tables. If an <codeph>EXCLUSIVE LOCK</codeph> is held on a table,
+                <codeph>gpbackup</codeph> acquires the <codeph>ACCESS SHARED</codeph> lock after the
+              existing lock is released. If the table no longer exists when
+                <codeph>gpbackup</codeph> attempts to acquire a lock on the table,
+                <codeph>gpbackup</codeph> exits with the error message. </p><p>For tables that might
+              be dropped during a backup, you can exclude the tables from a backup with a
+                <codeph>gpbackup</codeph> table filtering option such as
+                <codeph>--exclude-table</codeph> or <codeph>--exclude-schema</codeph>.</p></li>
         </ul></p>
     </body>
   </topic>
@@ -405,10 +421,10 @@ public.sales_1_prt_dec17 </codeblock></p><p>Then
         generates one data file for each leaf
           partition:<codeblock>$ <b>gpbackup --dbname demo --include-table public.sales --leaf-partition-data</b></codeblock><p>When
           leaf partitions are backed up, the leaf partition data is backed up along with the
-          metadata for the entire partitioned table.</p><note>You cannot use the
-            <codeph>--exclude-table-file</codeph> option with
-          <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names in a
-          file specified with <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph>
+          metadata for the entire partitioned table.</p>
+        <note>You cannot use the <codeph>--exclude-table-file</codeph> option with
+            <codeph>--leaf-partition-data</codeph>. Although you can specify leaf partition names in
+          a file specified with <codeph>--exclude-table-file</codeph>, <codeph>gpbackup</codeph>
           ignores the partition names.</note></section>
       <section>
         <title>Filtering with gprestore</title>

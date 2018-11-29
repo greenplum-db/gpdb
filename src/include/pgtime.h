@@ -3,7 +3,7 @@
  * pgtime.h
  *	  PostgreSQL internal timezone library
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/include/pgtime.h
@@ -78,6 +78,7 @@ extern pg_tz *log_timezone;
 
 extern void pg_timezone_initialize(void);
 extern pg_tz *pg_tzset(const char *tzname);
+extern pg_tz *pg_tzset_offset(long gmtoffset);
 
 extern pg_tzenum *pg_tzenumerate_start(void);
 extern pg_tz *pg_tzenumerate_next(pg_tzenum *dir);

@@ -20,14 +20,14 @@ count
 -----
 81   
 (1 row)
-SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 segno|tupcount
 -----+--------
 1    |100     
 (1 row)
 VACUUM ao;
 VACUUM
-SELECT segno, tupcount FROM gp_ao_or_aocs_seg_name('ao');
+SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');
 segno|tupcount
 -----+--------
 1    |0       

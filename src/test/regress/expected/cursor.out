@@ -90,14 +90,13 @@ NOTICE:  Success:
 DECLARE cursor_c2 CURSOR FOR SELECT * FROM cursor_writer_reader WHERE b=666 ORDER BY 1;
 SAVEPOINT x;
 UPDATE cursor_writer_reader SET b=333 WHERE b=666;
--- start_ignore
-select gp_inject_fault('qe_got_snapshot_and_interconnect', 'status', 2);
-NOTICE:  Success: fault name:'qe_got_snapshot_and_interconnect' fault type:'suspend' ddl statement:'' database name:'' table name:'' occurrence:'1' sleep time:'0' fault injection state:'triggered'  num times hit:'1'
- gp_inject_fault 
------------------
+select gp_wait_until_triggered_fault('qe_got_snapshot_and_interconnect', 1, 2);
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=31091)
+ gp_wait_until_triggered_fault 
+-------------------------------
  t
 (1 row)
--- end_ignore
+
 select gp_inject_fault('qe_got_snapshot_and_interconnect', 'resume', 2);
 NOTICE:  Success:
  gp_inject_fault 

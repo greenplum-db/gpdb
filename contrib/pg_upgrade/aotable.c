@@ -95,7 +95,14 @@ restore_aosegment_table(PGconn *conn, RelInfo *rel)
 
 	PQclear(res);
 
-	/* Restore the entry in the AO segment table */
+	/*
+	 * Restore the entry in the AO segment table.
+	 *
+	 * There may already be junk data in the table, since we copy the master
+	 * data directory over to the segment before upgrade. Get rid of it first.
+	 */
+	executeQueryOrDie(conn, "TRUNCATE pg_aoseg.%s", segrelname);
+
 	for (i = 0; i < rel->naosegments; i++)
 	{
 		resetPQExpBuffer(query);
@@ -161,6 +168,8 @@ restore_aosegment_table(PGconn *conn, RelInfo *rel)
 	}
 
 	/* Restore the entries in the AO visimap table. */
+	executeQueryOrDie(conn, "TRUNCATE pg_aoseg.%s", vmaprelname);
+
 	for (i = 0; i < rel->naovisimaps; i++)
 	{
 		AOVisiMapInfo  *seg = &rel->aovisimaps[i];
@@ -188,6 +197,9 @@ restore_aosegment_table(PGconn *conn, RelInfo *rel)
 	}
 
 	/* Restore the entries in the AO blkdir table. */
+	if (blkdirrelname)
+		executeQueryOrDie(conn, "TRUNCATE pg_aoseg.%s", blkdirrelname);
+
 	for (i = 0; i < rel->naoblkdirs && blkdirrelname; i++)
 	{
 		AOBlkDir   *seg = &rel->aoblkdirs[i];

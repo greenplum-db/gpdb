@@ -148,7 +148,7 @@ CTranslatorUtils::GetTableDescr
 	IMDRelation::Ereldistrpolicy distribution_policy = rel->GetRelDistribution();
 
 	if (NULL != is_distributed_table &&
-		(IMDRelation::EreldistrHash == distribution_policy || IMDRelation::EreldistrRandom == distribution_policy))
+		(IMDRelation::EreldistrHash == distribution_policy || IMDRelation::EreldistrRandom == distribution_policy || IMDRelation::EreldistrReplicated == distribution_policy))
 	{
 		*is_distributed_table = true;
 	}
@@ -270,13 +270,23 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 	const RangeTblEntry *rte
 	)
 {
-	GPOS_ASSERT(NULL != rte->funcexpr);
-	FuncExpr *funcexpr = (FuncExpr *)rte->funcexpr;
+	/*
+	 * GPDB_94_MERGE_FIXME: RangeTblEntry for functions can now contain multiple function calls.
+	 * ORCA isn't prepared for that yet. See upstream commit 784e762e88.
+	 */
+	if (list_length(rte->functions) != 1)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multi-argument UNNEST() or TABLE()"));
+	}
+	/*
+	 * GPDB_94_MERGE_FIXME: Does WITH ORDINALITY work? It was new in 9.4. Add a check here,
+	 * if it doesn't, or remove this comment if it does.
+	 */
 
-	// get function id
-	CMDIdGPDB *mdid_func = GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcid);
-	CMDIdGPDB *mdid_return_type =  GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcresulttype);
-	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
+	RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
+	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
+	GPOS_ASSERT(funcexpr);
+	GPOS_ASSERT(IsA(funcexpr, FuncExpr));
 
 	// In the planner, scalar functions that are volatile (SIRV) or read or modify SQL
 	// data get patched into an InitPlan. This is not supported in the optimizer
@@ -285,6 +295,11 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("SIRV functions"));
 	}
 
+	// get function id
+	CMDIdGPDB *mdid_func = GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcid);
+	CMDIdGPDB *mdid_return_type =  GPOS_NEW(mp) CMDIdGPDB(funcexpr->funcresulttype);
+	const IMDType *type = md_accessor->RetrieveType(mdid_return_type);
+
 	// get function from MDcache
 	const IMDFunction *func = md_accessor->RetrieveFunc(mdid_func);
 
@@ -292,10 +307,10 @@ CTranslatorUtils::ConvertToCDXLLogicalTVF
 
 	CDXLColDescrArray *column_descrs = NULL;
 
-	if (NULL != rte->funccoltypes)
+	if (NULL != rtfunc->funccoltypes)
 	{
 		// function returns record - use col names and types from query
-		column_descrs = GetColumnDescriptorsFromRecord(mp, id_generator, rte->eref->colnames, rte->funccoltypes, rte->funccoltypmods);
+		column_descrs = GetColumnDescriptorsFromRecord(mp, id_generator, rte->eref->colnames, rtfunc->funccoltypes, rtfunc->funccoltypmods);
 	}
 	else if (type->IsComposite() && IMDId::IsValid(type->GetBaseRelMdid()))
 	{
@@ -2400,33 +2415,6 @@ CTranslatorUtils::CheckRTEPermissions
 	)
 {
 	gpdb::CheckRTPermissions(range_table_list);
-}
-
-//---------------------------------------------------------------------------
-//	@function:
-//		CTranslatorUtils::CheckAggregateWindowFn
-//
-//	@doc:
-//		Check if the window function is an aggregate and has 
-//      a combine function
-//
-//---------------------------------------------------------------------------
-void
-CTranslatorUtils::CheckAggregateWindowFn
-	(
-	Node *node
-	)
-{
-	GPOS_ASSERT(NULL != node);
-	GPOS_ASSERT(IsA(node, WindowFunc));
-
-	WindowFunc *winfunc = (WindowFunc *) node;
-
-	if (gpdb::AggregateExists(winfunc->winfnoid) && !gpdb::AggHasCombineFunc(winfunc->winfnoid))
-	{
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
-				GPOS_WSZ_LIT("Aggregate window function without combine function"));
-	}
 }
 
 

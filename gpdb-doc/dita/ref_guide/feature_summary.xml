@@ -40,7 +40,7 @@
               EXISTS</codeph> clauses that Greenplum's parallel optimizer cannot rewrite into
             joins.</li>
           <li id="ik264484">Backwards scrolling cursors, including the use of <codeph>FETCH
-              PRIOR</codeph>, <codeph>FETCH FIRST</codeph>, <codeph>FETCH ABOLUTE</codeph>, and
+              PRIOR</codeph>, <codeph>FETCH FIRST</codeph>, <codeph>FETCH ABSOLUTE</codeph>, and
               <codeph>FETCH RELATIVE</codeph>.</li>
           <li id="ik264507">In <codeph>CREATE TABLE</codeph> statements (on hash-distributed
             tables): a <codeph>UNIQUE</codeph> or <codeph>PRIMARY KEY</codeph> clause must include
@@ -203,9 +203,9 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
         Database system, some SQL commands have been added or modified, and there are a few
         PostgreSQL features that are not supported. Greenplum has also added features not found in
         PostgreSQL, such as physical data distribution, parallel query optimization, external
-        tables, resource queues, and enhanced table partitioning. For full
-        SQL syntax and references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic"
-          format="dita"/>.</p>
+        tables, resource queues, and enhanced table partitioning. For full SQL syntax and
+        references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic" format="dita"
+        />.</p>
       <table id="ik213423">
         <title>SQL Support in Greenplum Database</title>
         <tgroup cols="3">
@@ -245,12 +245,6 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3">Changes the definition of a Greenplum Database extension - based
                 on PostgreSQL 9.6. </entry>
-            </row>
-            <row>
-              <entry colname="col1"><codeph>ALTER FILESPACE</codeph></entry>
-              <entry colname="col2">YES</entry>
-              <entry colname="col3">Greenplum Database parallel tablespace feature - not in
-                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER FUNCTION</codeph></entry>
@@ -338,7 +332,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>ALTER TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>SET DEFAULT ENCODING</codeph></p></entry>
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>SET DEFAULT
+                    ENCODING</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>ALTER USER</codeph></entry>
@@ -436,7 +431,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE EXTENSION</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3">Loads a new extension into Greenplum Database -  based on
+              <entry colname="col3">Loads a new extension into Greenplum Database - based on
                 PostgreSQL 9.6.</entry>
             </row>
             <row>
@@ -525,8 +520,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3"><b>Limitations:</b><p>The <codeph>lastval()</codeph> and
                     <codeph>currval()</codeph> functions are not supported.</p><p>The
-                    <codeph>setval()</codeph> function is only allowed in queries that do not operate
-                  on distributed data.</p></entry>
+                    <codeph>setval()</codeph> function is only allowed in queries that do not
+                  operate on distributed data.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE TABLE</codeph></entry>
@@ -554,9 +549,10 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE TABLESPACE</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
-              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>FILESPACE
-                    </codeph><i>filespace_name</i></p></entry>
+              <entry colname="col2"><b otherprops="red">YES</b></entry>
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p>Specify host file system
+                  locations for specific segment instances.</p><p><codeph>WITH
+                      (content<varname>ID_1</varname>='<varname>/path/to/dir1</varname>...)</codeph></p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE TRIGGER</codeph></entry>
@@ -566,8 +562,10 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>CREATE TYPE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>COMPRESSTYPE | COMPRESSLEVEL | BLOCKSIZE</codeph></p><p><b>Limitations:</b></p><p>The functions used to implement a new base
-                  type must be <codeph>IMMUTABLE</codeph> functions.</p></entry>
+              <entry colname="col3"><b>Greenplum Database Clauses:</b><p><codeph>COMPRESSTYPE |
+                    COMPRESSLEVEL | BLOCKSIZE</codeph></p><p><b>Limitations:</b></p><p>The functions
+                  used to implement a new base type must be <codeph>IMMUTABLE</codeph>
+                  functions.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE USER</codeph></entry>
@@ -645,12 +643,6 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col2">YES</entry>
               <entry colname="col3">Greenplum Database parallel ETL feature - not in PostgreSQL
                 8.3.</entry>
-            </row>
-            <row>
-              <entry colname="col1"><codeph>DROP FILESPACE</codeph></entry>
-              <entry colname="col2">YES</entry>
-              <entry colname="col3">Greenplum Database parallel tablespace feature - not in
-                PostgreSQL 8.3.</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>DROP FUNCTION</codeph></entry>
@@ -731,7 +723,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             </row>
             <row>
               <entry colname="col1"><codeph>DROP TABLESPACE</codeph></entry>
-              <entry colname="col2"><b otherprops="red">NO</b></entry>
+              <entry colname="col2">YES</entry>
               <entry colname="col3"/>
             </row>
             <row>
@@ -938,8 +930,8 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>UPDATE</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"><b>Limitations:</b><p><codeph>SET</codeph>
-                  not allowed for Greenplum distribution key columns.</p></entry>
+              <entry colname="col3"><b>Limitations:</b><p><codeph>SET</codeph> not allowed for
+                  Greenplum distribution key columns.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>VACUUM</codeph></entry>

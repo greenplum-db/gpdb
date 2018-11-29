@@ -29,7 +29,7 @@ DELETE FROM mark_all_aoseg_await_drop;
 DELETE 30
 
 -- We should see all 3 aosegs in state 1
-0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg_name('mark_all_aoseg_await_drop');
+0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg('mark_all_aoseg_await_drop');
 segno|state
 -----+-----
 1    |1    
@@ -58,7 +58,7 @@ END
 -- it and did not commit before the vacuum got to it. The vacuum
 -- correctly skipped segno 1 and continued to cycle through the aoseg
 -- entries.
-0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg_name('mark_all_aoseg_await_drop');
+0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg('mark_all_aoseg_await_drop');
 segno|state
 -----+-----
 1    |1    

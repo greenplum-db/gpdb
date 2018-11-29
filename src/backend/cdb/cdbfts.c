@@ -117,23 +117,13 @@ FtsNotifyProber(void)
  * dispatcher: ONLY CALL THREADSAFE FUNCTIONS -- elog() is NOT threadsafe.
  */
 bool
-FtsIsSegmentUp(CdbComponentDatabaseInfo *dBInfo)
+FtsIsSegmentDown(CdbComponentDatabaseInfo *dBInfo)
 {
 	/* master is always reported as alive */
 	if (dBInfo->segindex == MASTER_SEGMENT_ID)
-		return true;
+		return false;
 
-	/*
-	 * If fullscan is not requested, caller is just trying to optimize on the
-	 * cached version of the segment status.  If the cached version is not
-	 * initialized yet, just return positively back.  This is mainly to avoid
-	 * queries incorrectly failing just after QD restarts if FTS process is yet
-	 * to start and complete initializing the cached status.  We shouldn't be
-	 * checking against uninitialzed variable.
-	 */
-	return ftsProbeInfo->fts_statusVersion ?
-		FTS_STATUS_IS_UP(ftsProbeInfo->fts_status[dBInfo->dbid]) :
-		true;
+	return FTS_STATUS_IS_DOWN(ftsProbeInfo->fts_status[dBInfo->dbid]);
 }
 
 /*
@@ -142,17 +132,17 @@ FtsIsSegmentUp(CdbComponentDatabaseInfo *dBInfo)
  * returns true if any segment DB is down.
  */
 bool
-FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor *segdbDesc, int size)
+FtsTestSegmentDBIsDown(SegmentDatabaseDescriptor **segdbDesc, int size)
 {
 	int			i = 0;
 
 	for (i = 0; i < size; i++)
 	{
-		CdbComponentDatabaseInfo *segInfo = segdbDesc[i].segment_database_info;
+		CdbComponentDatabaseInfo *segInfo = segdbDesc[i]->segment_database_info;
 
 		elog(DEBUG2, "FtsTestSegmentDBIsDown: looking for real fault on segment dbid %d", (int) segInfo->dbid);
 
-		if (!FtsIsSegmentUp(segInfo))
+		if (FtsIsSegmentDown(segInfo))
 		{
 			ereport(LOG, (errmsg_internal("FTS: found fault with segment dbid %d. "
 										  "Reconfiguration is in progress", (int) segInfo->dbid)));

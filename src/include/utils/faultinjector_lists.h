@@ -148,6 +148,8 @@ FI_IDENT(AppendOnlyInsert, "appendonly_insert")
 FI_IDENT(AppendOnlyDelete, "appendonly_delete")
 /* inject fault before an append-only update */
 FI_IDENT(AppendOnlyUpdate, "appendonly_update")
+/* inject fault before creating an appendonly hash entry*/
+FI_IDENT(BeforeCreatingAnAOHashEntry, "before_creating_an_ao_hash_entry")
 /* inject fault in append-only compression function */
 FI_IDENT(AppendOnlySkipCompression, "appendonly_skip_compression")
 /* inject fault while reindex db is in progress */
@@ -192,6 +194,8 @@ FI_IDENT(SendQEDetailsInitBackend, "send_qe_details_init_backend")
 FI_IDENT(ProcessStartupPacketFault, "process_startup_packet")
 /* inject fault in cdbdisp_dispatchX*/
 FI_IDENT(AfterOneSliceDispatched, "after_one_slice_dispatched")
+/* inject fault in cdbdisp_dispatchX*/
+FI_IDENT(BeforeOneSliceDispatched, "before_one_slice_dispatched")
 /* inject fault in interconnect to skip sending the stop ack */
 FI_IDENT(InterconnectStopAckIsLost, "interconnect_stop_ack_is_lost")
 /* inject fault in interconnect to make palloc0 fail in setup */
@@ -243,8 +247,6 @@ FI_IDENT(CreateResourceGroupFail, "create_resource_group_fail")
 FI_IDENT(AutoVacWorkerBeforeDoAutovacuum, "auto_vac_worker_before_do_autovacuum")
 /* inject fault when search DNS cache */
 FI_IDENT(GetDnsCachedAddress, "get_dns_cached_address")
-/* inject fault before notify fts probe */
-FI_IDENT(BeforeFtsNotify, "before_fts_notify")
 /* inject fault before aquiring lock during AlterTableCreateAoBlkdirTable */
 FI_IDENT(BeforeAcquireLockDuringCreateAoBlkdirTable, "before_acquire_lock_during_create_ao_blkdir_table")
 /* inject fault during gang creation, before check for interrupts */
@@ -252,7 +254,7 @@ FI_IDENT(CreateGangInProgress, "create_gang_in_progress")
 /* inject fault when creating new TOAST tables, to modify the chunk size */
 FI_IDENT(DecreaseToastMaxChunkSize, "decrease_toast_max_chunk_size")
 /* inject fault to let cleanupGang return false */
-FI_IDENT(CleanupGang, "cleanup_gang")
+FI_IDENT(CleanupQE, "cleanup_qe")
 #endif
 
 /*
@@ -262,22 +264,18 @@ FI_IDENT(CleanupGang, "cleanup_gang")
 #ifdef FI_TYPE
 FI_TYPE(FaultInjectorTypeNotSpecified = 0, "")
 FI_TYPE(FaultInjectorTypeSleep, "sleep")
-FI_TYPE(FaultInjectorTypeFault, "fault")
 FI_TYPE(FaultInjectorTypeFatal, "fatal")
 FI_TYPE(FaultInjectorTypePanic, "panic")
 FI_TYPE(FaultInjectorTypeError, "error")
 FI_TYPE(FaultInjectorTypeInfiniteLoop, "infinite_loop")
-FI_TYPE(FaultInjectorTypeDataCorruption, "data_corruption")
 FI_TYPE(FaultInjectorTypeSuspend, "suspend")
 FI_TYPE(FaultInjectorTypeResume, "resume")
 FI_TYPE(FaultInjectorTypeSkip, "skip")
-FI_TYPE(FaultInjectorTypeMemoryFull, "memory_full")
 FI_TYPE(FaultInjectorTypeReset, "reset")
 FI_TYPE(FaultInjectorTypeStatus, "status")
 FI_TYPE(FaultInjectorTypeSegv, "segv")
 FI_TYPE(FaultInjectorTypeInterrupt, "interrupt")
 FI_TYPE(FaultInjectorTypeFinishPending, "finish_pending")
-FI_TYPE(FaultInjectorTypeCheckpointAndPanic, "checkpoint_and_panic")
 FI_TYPE(FaultInjectorTypeWaitUntilTriggered, "wait_until_triggered")
 #endif
 

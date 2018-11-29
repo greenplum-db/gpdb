@@ -83,10 +83,10 @@ drop table ao_ts_table;
 drop table aoco_ts_table;
 drop tablespace testspace;
 -- Greenplum tablespaces have the option to define tablespace location for specific segments
-CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content9999 '@testtablespace@_otherloc'); -- should fail
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content9999='@testtablespace@_otherloc'); -- should fail
 ERROR:  segment content ID 9999 does not exist
 HINT:  Segment content IDs can be found in gp_segment_configuration table.
-CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' OPTIONS (content1 '@testtablespace@_otherloc');
+CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content1='@testtablespace@_otherloc');
 SELECT gp_segment_id,
        CASE tblspc_loc
             WHEN '@testtablespace@' THEN 'testtablespace'
@@ -101,6 +101,43 @@ FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='testsp
              0 | testtablespace
             -1 | testtablespace
 (4 rows)
+
+-- Test alter tablespace: PG does not seem to test these.
+-- test SET & OWNER
+ALTER TABLESPACE testspace_otherloc SET (random_page_cost=20.0);
+SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
+       spcoptions        
+-------------------------
+ {random_page_cost=20.0}
+(1 row)
+
+CREATE ROLE t_owner;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
+ALTER TABLESPACE testspace_otherloc OWNER TO t_owner;
+SELECT rolname from pg_roles WHERE oid in (SELECT spcowner FROM pg_tablespace WHERE spcname = 'testspace_otherloc');
+ rolname 
+---------
+ t_owner
+(1 row)
+
+ALTER TABLESPACE testspace_otherloc OWNER TO @gpcurusername@;
+DROP ROLE t_owner;
+-- test RENAME
+ALTER TABLESPACE testspace_otherloc RENAME TO testspace_otherloc2;
+SELECT spcname, spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc2';
+       spcname       |       spcoptions        
+---------------------+-------------------------
+ testspace_otherloc2 | {random_page_cost=20.0}
+(1 row)
+
+ALTER TABLESPACE testspace_otherloc2 RENAME TO testspace_otherloc;
+-- test RESET
+ALTER TABLESPACE testspace_otherloc RESET (random_page_cost);
+SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspace_otherloc';
+ spcoptions 
+------------
+ 
+(1 row)
 
 CREATE TABLE tblspc_otherloc_heap(a int, b text) distributed by (a);
 INSERT INTO tblspc_otherloc_heap select i, 'foo' || i from generate_series(1,10000)i;

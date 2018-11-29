@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="bi20941">COMMENT</title><body><p id="sql_command_desc">Defines or change the comment of an object.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">COMMENT ON
+<topic id="topic1">
+  <title id="bi20941">COMMENT</title>
+  <body>
+    <p id="sql_command_desc">Defines or changes the comment of an object.</p>
+    <section id="section2">
+      <title>Synopsis</title>
+      <codeblock id="sql_command_synopsis">COMMENT ON
 { TABLE <varname>object_name</varname> |
   COLUMN <varname>table_name.column_name</varname> |
   AGGREGATE <varname>agg_name</varname> (<varname>agg_type</varname> [, ...]) |
@@ -12,7 +18,6 @@
   DOMAIN <varname>object_name</varname> |
   FOREIGN DATA WRAPPER <varname>object_name</varname> |
   FOREIGN TABLE <varname>object_name</varname> |
-  FILESPACE <varname>object_name</varname> |
   FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
   INDEX <varname>object_name</varname> |
   LARGE OBJECT <varname>large_object_oid</varname> |
@@ -30,33 +35,106 @@
   TRIGGER <varname>trigger_name</varname> ON <varname>table_name</varname> |
   TYPE <varname>object_name</varname> |
   VIEW <varname>object_name</varname> } 
-IS '<varname>text</varname>'</codeblock></section><section id="section3"><title>Description</title><p><codeph>COMMENT</codeph> stores a comment about a database object. To
-modify a comment, issue a new <codeph>COMMENT</codeph> command for the
-same object. Only one comment string is stored for each object. To remove
-a comment, write <codeph>NULL</codeph> in place of the text string. Comments
-are automatically dropped when the object is dropped.</p><p>Comments can be easily retrieved with the psql meta-commands <codeph>\dd</codeph>,
-<codeph>\d+</codeph>, and <codeph>\l+</codeph>. Other user interfaces
-to retrieve comments can be built atop the same built-in functions that
-psql uses, namely <codeph>obj_description</codeph>, <codeph>col_description</codeph>,
-and <codeph>shobj_description</codeph>.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>object_name</varname></pt><pt><varname>table_name.column_name</varname></pt><pt><varname>agg_name</varname></pt><pt><varname>constraint_name</varname></pt><pt><varname>func_name</varname></pt><pt><varname>op</varname></pt><pt><varname>rule_name</varname></pt><pt><varname>trigger_name</varname></pt><pd>The name of the object to be commented. Names of tables, aggregates,
-domains, foreign tables, functions, indexes, operators, operator classes, sequences,
-types, and views may be schema-qualified. <note>Greenplum Database does not support triggers.</note></pd></plentry><plentry><pt><varname>agg_type</varname></pt><pd>An input data type on which the aggregate function operates. To reference
-a zero-argument aggregate function, write <codeph>*</codeph> in place
-of the list of input data types. </pd></plentry><plentry><pt><varname>sourcetype</varname></pt><pd>The name of the source data type of the cast. </pd></plentry><plentry><pt><varname>targettype</varname></pt><pd>The name of the target data type of the cast. </pd></plentry><plentry><pt><varname>argmode</varname></pt><pd>The mode of a function argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
-<codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the default is <codeph>IN</codeph>.
-Note that <codeph>COMMENT ON FUNCTION</codeph> does not actually pay
-any attention to <codeph>OUT</codeph> arguments, since only the input
-arguments are needed to determine the function's identity. So it is
-sufficient to list the <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> 
-arguments. </pd></plentry><plentry><pt><varname>argname</varname></pt><pd>The name of a function argument. Note that <codeph>COMMENT ON FUNCTION</codeph>
-does not actually pay any attention to argument names, since only the
-argument data types are needed to determine the function's identity.
-</pd></plentry><plentry><pt><varname>argtype</varname></pt><pd>The data type(s) of the function's arguments (optionally schema-qualified),
-if any. </pd></plentry><plentry><pt><varname>large_object_oid</varname></pt><pd>The OID of the large object. </pd></plentry><plentry><pt>PROCEDURAL</pt><pd>This is a noise word. </pd></plentry><plentry><pt><varname>text</varname></pt><pd>The new comment, written as a string literal; or <codeph>NULL</codeph>
-to drop the comment.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>There is presently no security mechanism for comments: any user connected
-to a database can see all the comments for objects in that database (although
-only superusers can change comments for objects that they do not own).
-For shared objects such as databases, roles, and tablespaces comments
-are stored globally and any user connected to any database can see all
-the comments for shared objects. Therefore, do not put security-critical
-information in comments.</p></section><section id="section6"><title>Examples</title><p>Attach a comment to the table <codeph>mytable</codeph>: </p><codeblock>COMMENT ON TABLE mytable IS 'This is my table.';</codeblock><p>Remove it again: </p><codeblock>COMMENT ON TABLE mytable IS NULL;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>COMMENT</codeph> statement in the SQL standard.</p></section></body></topic>
+IS '<varname>text</varname>'</codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
+      <p><codeph>COMMENT</codeph> stores a comment about a database object. To modify a comment,
+        issue a new <codeph>COMMENT</codeph> command for the same object. Only one comment string is
+        stored for each object. To remove a comment, write <codeph>NULL</codeph> in place of the
+        text string. Comments are automatically dropped when the object is dropped.</p>
+      <p>Comments can be easily retrieved with the psql meta-commands <codeph>\dd</codeph>,
+          <codeph>\d+</codeph>, and <codeph>\l+</codeph>. Other user interfaces to retrieve comments
+        can be built atop the same built-in functions that psql uses, namely
+          <codeph>obj_description</codeph>, <codeph>col_description</codeph>, and
+          <codeph>shobj_description</codeph>.</p>
+    </section>
+    <section id="section4">
+      <title>Parameters</title>
+      <parml>
+        <plentry>
+          <pt><varname>object_name</varname></pt>
+          <pt><varname>table_name.column_name</varname></pt>
+          <pt><varname>agg_name</varname></pt>
+          <pt><varname>constraint_name</varname></pt>
+          <pt><varname>func_name</varname></pt>
+          <pt><varname>op</varname></pt>
+          <pt><varname>rule_name</varname></pt>
+          <pt><varname>trigger_name</varname></pt>
+          <pd>The name of the object to be commented. Names of tables, aggregates, domains, foreign
+            tables, functions, indexes, operators, operator classes, sequences, types, and views may
+            be schema-qualified.
+            <note>Greenplum Database does not support triggers.</note></pd>
+        </plentry>
+        <plentry>
+          <pt><varname>agg_type</varname></pt>
+          <pd>An input data type on which the aggregate function operates. To reference a
+            zero-argument aggregate function, write <codeph>*</codeph> in place of the list of input
+            data types. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>sourcetype</varname></pt>
+          <pd>The name of the source data type of the cast. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>targettype</varname></pt>
+          <pd>The name of the target data type of the cast. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argmode</varname></pt>
+          <pd>The mode of a function argument: either <codeph>IN</codeph>, <codeph>OUT</codeph>,
+              <codeph>INOUT</codeph>, or <codeph>VARIADIC</codeph>. If omitted, the default is
+              <codeph>IN</codeph>. Note that <codeph>COMMENT ON FUNCTION</codeph> does not actually
+            pay any attention to <codeph>OUT</codeph> arguments, since only the input arguments are
+            needed to determine the function's identity. So it is sufficient to list the
+              <codeph>IN</codeph>, <codeph>INOUT</codeph>, and <codeph>VARIADIC</codeph> arguments.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argname</varname></pt>
+          <pd>The name of a function argument. Note that <codeph>COMMENT ON FUNCTION</codeph> does
+            not actually pay any attention to argument names, since only the argument data types are
+            needed to determine the function's identity. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>argtype</varname></pt>
+          <pd>The data type(s) of the function's arguments (optionally schema-qualified), if any.
+          </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>large_object_oid</varname></pt>
+          <pd>The OID of the large object. </pd>
+        </plentry>
+        <plentry>
+          <pt>PROCEDURAL</pt>
+          <pd>This is a noise word. </pd>
+        </plentry>
+        <plentry>
+          <pt><varname>text</varname></pt>
+          <pd>The new comment, written as a string literal; or <codeph>NULL</codeph> to drop the
+            comment.</pd>
+        </plentry>
+      </parml>
+    </section>
+    <section id="section5">
+      <title>Notes</title>
+      <p>There is presently no security mechanism for comments: any user connected to a database can
+        see all the comments for objects in that database (although only superusers can change
+        comments for objects that they do not own). For shared objects such as databases, roles, and
+        tablespaces comments are stored globally and any user connected to any database can see all
+        the comments for shared objects. Therefore, do not put security-critical information in
+        comments.</p>
+    </section>
+    <section id="section6">
+      <title>Examples</title>
+      <p>Attach a comment to the table <codeph>mytable</codeph>: </p>
+      <codeblock>COMMENT ON TABLE mytable IS 'This is my table.';</codeblock>
+      <p>Remove it again: </p>
+      <codeblock>COMMENT ON TABLE mytable IS NULL;</codeblock>
+    </section>
+    <section id="section7">
+      <title>Compatibility</title>
+      <p>There is no <codeph>COMMENT</codeph> statement in the SQL standard.</p>
+    </section>
+  </body>
+</topic>

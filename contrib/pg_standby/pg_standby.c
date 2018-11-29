@@ -28,20 +28,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
-
-#ifdef WIN32
-int			getopt(int argc, char *const argv[], const char *optstring);
-#else
 #include <sys/time.h>
-#include <unistd.h>
 
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-#endif   /* ! WIN32 */
-
-extern char *optarg;
-extern int	optind;
+#include "pg_getopt.h"
 
 const char *progname;
 
@@ -256,7 +245,7 @@ CustomizableCleanupPriorWALFiles(void)
 		 */
 		if ((xldir = opendir(archiveLocation)) != NULL)
 		{
-			while ((xlde = readdir(xldir)) != NULL)
+			while (errno = 0, (xlde = readdir(xldir)) != NULL)
 			{
 				/*
 				 * We ignore the timeline part of the XLOG segment identifiers
@@ -294,6 +283,10 @@ CustomizableCleanupPriorWALFiles(void)
 					}
 				}
 			}
+
+			if (errno)
+				fprintf(stderr, "%s: could not read archive location \"%s\": %s\n",
+						progname, archiveLocation, strerror(errno));
 			if (debug)
 				fprintf(stderr, "\n");
 		}
@@ -301,7 +294,10 @@ CustomizableCleanupPriorWALFiles(void)
 			fprintf(stderr, "%s: could not open archive location \"%s\": %s\n",
 					progname, archiveLocation, strerror(errno));
 
-		closedir(xldir);
+		if (closedir(xldir))
+			fprintf(stderr, "%s: could not close archive location \"%s\": %s\n",
+					progname, archiveLocation, strerror(errno));
+
 		fflush(stderr);
 	}
 }
@@ -345,7 +341,7 @@ SetWALFileNameForCleanup(void)
 	if (keepfiles > 0)
 	{
 		sscanf(nextWALFileName, "%08X%08X%08X", &tli, &log, &seg);
-		if (tli > 0 && log >= 0 && seg > 0)
+		if (tli > 0 && seg > 0)
 		{
 			log_diff = keepfiles / MaxSegmentsPerLogFile;
 			seg_diff = keepfiles % MaxSegmentsPerLogFile;

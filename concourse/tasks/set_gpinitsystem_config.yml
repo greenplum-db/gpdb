@@ -1,0 +1,23 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: centos
+    tag: "7"
+
+inputs:
+- name: gpdb_src
+- name: ccp_src
+  path: ccp_src_unmodified
+
+outputs:
+- name: ccp_src
+  path: ccp_src_modified
+
+params:
+  GPINITSYSTEM_CONFIG:
+
+run:
+  path: gpdb_src/concourse/scripts/set_gpinitsystem_config.sh

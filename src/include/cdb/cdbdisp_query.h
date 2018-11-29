@@ -84,6 +84,12 @@ CdbDispatchCommand(const char* strCommand,
                     int flags,
                     struct CdbPgResults* cdb_pgresults);
 
+void
+CdbDispatchCommandToSegments(const char* strCommand,
+							 int flags,
+							 List *segments,
+							 struct CdbPgResults* cdb_pgresults);
+
 /*
  * CdbDispatchUtilityStatement
  *

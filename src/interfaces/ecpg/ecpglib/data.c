@@ -455,6 +455,14 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 					{
 						char	   *str = (char *) (var + offset * act_tuple);
 
+						/*
+						 * If varcharsize is unknown and the offset is that of
+						 * char *, then this variable represents the array of
+						 * character pointers. So, use extra indirection.
+						 */
+						if (varcharsize == 0 && offset == sizeof(char *))
+							str = *(char **) str;
+
 						if (varcharsize == 0 || varcharsize > size)
 						{
 							strncpy(str, pval, size + 1);
@@ -526,15 +534,15 @@ ecpg_get_data(const PGresult *results, int act_tuple, int act_field, int lineno,
 								{
 									case ECPGt_short:
 									case ECPGt_unsigned_short:
-										*((short *) (ind + offset * act_tuple)) = variable->len;
+										*((short *) (ind + ind_offset * act_tuple)) = variable->len;
 										break;
 									case ECPGt_int:
 									case ECPGt_unsigned_int:
-										*((int *) (ind + offset * act_tuple)) = variable->len;
+										*((int *) (ind + ind_offset * act_tuple)) = variable->len;
 										break;
 									case ECPGt_long:
 									case ECPGt_unsigned_long:
-										*((long *) (ind + offset * act_tuple)) = variable->len;
+										*((long *) (ind + ind_offset * act_tuple)) = variable->len;
 										break;
 #ifdef HAVE_LONG_LONG_INT
 									case ECPGt_long_long:

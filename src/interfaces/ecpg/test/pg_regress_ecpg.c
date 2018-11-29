@@ -8,7 +8,7 @@
  *
  * This code is released under the terms of the PostgreSQL License.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/interfaces/ecpg/test/pg_regress_ecpg.c
@@ -78,9 +78,9 @@ ecpg_filter(const char *sourcefile, const char *outfile)
 
 static PID_TYPE
 ecpg_start_test(const char *testname,
-				_stringlist ** resultfiles,
-				_stringlist ** expectfiles,
-				_stringlist ** tags)
+				_stringlist **resultfiles,
+				_stringlist **expectfiles,
+				_stringlist **tags)
 {
 	PID_TYPE	pid;
 	char		inprg[MAXPGPATH];
@@ -137,7 +137,7 @@ ecpg_start_test(const char *testname,
 	snprintf(inprg, sizeof(inprg), "%s/%s", inputdir, testname);
 
 	snprintf(cmd, sizeof(cmd),
-			 SYSTEMQUOTE "\"%s\" >\"%s\" 2>\"%s\"" SYSTEMQUOTE,
+			 "\"%s\" >\"%s\" 2>\"%s\"",
 			 inprg,
 			 outfile_stdout,
 			 outfile_stderr);
@@ -159,7 +159,7 @@ ecpg_start_test(const char *testname,
 }
 
 static void
-ecpg_init(void)
+ecpg_init(int argc, char *argv[])
 {
 	/* nothing to do here at the moment */
 }

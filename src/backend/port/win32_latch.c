@@ -9,7 +9,7 @@
  * The Windows implementation uses Windows events that are inherited by
  * all postmaster child processes.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -246,7 +246,7 @@ WaitLatchOrSocket(volatile Latch *latch, int wakeEvents, pgsocket sock,
 				 rc == WAIT_OBJECT_0 + pmdeath_eventno)
 		{
 			/*
-			 * Postmaster apparently died.	Since the consequences of falsely
+			 * Postmaster apparently died.  Since the consequences of falsely
 			 * returning WL_POSTMASTER_DEATH could be pretty unpleasant, we
 			 * take the trouble to positively verify this with
 			 * PostmasterIsAlive(), even though there is no known reason to

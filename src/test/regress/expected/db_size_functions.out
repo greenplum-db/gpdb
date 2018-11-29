@@ -16,7 +16,7 @@ select pg_database_size('template0'::name) between 40000000 and 200000000;
  t
 (1 row)
 
-select pg_database_size(12510::oid) = pg_database_size('template0'::name);
+select pg_database_size(1::oid) = pg_database_size('template1'::name);
  ?column? 
 ----------
  t
@@ -149,6 +149,12 @@ select pg_relation_size('heapsizetest') between 3000000 and 5000000; -- 3637248
  t
 (1 row)
 
+select pg_relation_size('heapsizetest', 'fsm') between 250000 and 350000; -- 294912
+ ?column? 
+----------
+ t
+(1 row)
+
 select pg_table_size('heapsizetest') between 3000000 and 5000000; -- 4030464
  ?column? 
 ----------
@@ -216,10 +222,16 @@ CREATE TABLE aosizetest (a int) WITH (appendonly=true, orientation=row);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into aosizetest select generate_series(1, 100000);
-select pg_relation_size('aosizetest') between 750000 and 1500000; --1001648
+select pg_relation_size('aosizetest') between 750000 and 1500000; -- 1001648
  ?column? 
 ----------
  t
+(1 row)
+
+select pg_relation_size('aosizetest', 'fsm'); -- 0
+ pg_relation_size 
+------------------
+                0
 (1 row)
 
 select pg_table_size('aosizetest') between 1000000 and 1500000; -- 1263792
@@ -254,6 +266,12 @@ select pg_relation_size('aocssizetest') between 1000000 and 2000000; -- 1491240
  ?column? 
 ----------
  t
+(1 row)
+
+select pg_relation_size('aocssizetest', 'fsm'); -- 0
+ pg_relation_size 
+------------------
+                0
 (1 row)
 
 select pg_table_size('aocssizetest') between 1500000 and 3000000; -- 1884456

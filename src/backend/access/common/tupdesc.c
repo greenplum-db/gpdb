@@ -3,7 +3,7 @@
  * tupdesc.c
  *	  POSTGRES tuple descriptor support code
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -204,6 +204,7 @@ CreateTupleDescCopyConstr(TupleDesc tupdesc)
 				if (constr->check[i].ccbin)
 					cpy->check[i].ccbin = pstrdup(constr->check[i].ccbin);
 				cpy->check[i].ccvalid = constr->check[i].ccvalid;
+				cpy->check[i].ccnoinherit = constr->check[i].ccnoinherit;
 			}
 		}
 
@@ -465,7 +466,9 @@ equalTupleDescs(TupleDesc tupdesc1, TupleDesc tupdesc2, bool strict)
 			for (j = 0; j < n; check2++, j++)
 			{
 				if (strcmp(check1->ccname, check2->ccname) == 0 &&
-					strcmp(check1->ccbin, check2->ccbin) == 0)
+					strcmp(check1->ccbin, check2->ccbin) == 0 &&
+					check1->ccvalid == check2->ccvalid &&
+					check1->ccnoinherit == check2->ccnoinherit)
 					break;
 			}
 			if (j >= n)

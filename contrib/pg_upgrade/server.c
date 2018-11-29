@@ -3,15 +3,16 @@
  *
  *	database server functions
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/server.c
  */
 
 #include "postgres_fe.h"
 
 /*
- * GPDB_93_MERGE_FIXME: include introduced in 3db38b0ceffd95be81573c884f4b,
- * remove the local define and include at that point instead
+ * GPDB_94_MERGE_FIXME: include introduced in 928bca1a30d7e05cc3857a99e27a
+ * which shipped as 9.4.17.  Remove the local define and use the definition
+ * in the included header once we've merged with the 9.4 minor releases.
  */
 #define ALWAYS_SECURE_SEARCH_PATH_SQL \
     "SELECT pg_catalog.set_config('search_path', '', false)"
@@ -175,12 +176,12 @@ get_major_server_version(ClusterInfo *cluster)
 	snprintf(ver_filename, sizeof(ver_filename), "%s/PG_VERSION",
 			 cluster->pgdata);
 	if ((version_fd = fopen(ver_filename, "r")) == NULL)
-		pg_log(PG_FATAL, "could not open version file: %s\n", ver_filename);
+		pg_fatal("could not open version file: %s\n", ver_filename);
 
 	if (fscanf(version_fd, "%63s", cluster->major_version_str) == 0 ||
 		sscanf(cluster->major_version_str, "%d.%d", &integer_version,
 			   &fractional_version) != 2)
-		pg_log(PG_FATAL, "could not get version from %s\n", cluster->pgdata);
+		pg_fatal("could not get version from %s\n", cluster->pgdata);
 
 	fclose(version_fd);
 
@@ -244,7 +245,7 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 	 * win on ext4.
 	 */
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d --gp_dbid=1 --gp_num_contents_in_cluster=0 --gp_contentid=%d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d --gp_dbid=1 --gp_contentid=%d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
 			 (user_opts.segment_mode == DISPATCHER ? -1 : 0),
 			 (cluster->controldata.cat_ver >=
@@ -271,28 +272,26 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 		return false;
 
 	/*
-	 * We set this here to make sure atexit() shuts down the server,
-	 * but only if we started the server successfully.  We do it
-	 * before checking for connectivity in case the server started but
-	 * there is a connectivity failure.  If pg_ctl did not return success,
-	 * we will exit below.
+	 * We set this here to make sure atexit() shuts down the server, but only
+	 * if we started the server successfully.  We do it before checking for
+	 * connectivity in case the server started but there is a connectivity
+	 * failure.  If pg_ctl did not return success, we will exit below.
 	 *
 	 * Pre-9.1 servers do not have PQping(), so we could be leaving the server
-	 * running if authentication was misconfigured, so someday we might went to
-	 * be more aggressive about doing server shutdowns even if pg_ctl fails,
-	 * but now (2013-08-14) it seems prudent to be cautious.  We don't want to
-	 * shutdown a server that might have been accidentally started during the
-	 * upgrade.
+	 * running if authentication was misconfigured, so someday we might went
+	 * to be more aggressive about doing server shutdowns even if pg_ctl
+	 * fails, but now (2013-08-14) it seems prudent to be cautious.  We don't
+	 * want to shutdown a server that might have been accidentally started
+	 * during the upgrade.
 	 */
 	if (pg_ctl_return)
 		os_info.running_cluster = cluster;
 
 	/*
-	 * pg_ctl -w might have failed because the server couldn't be started,
-	 * or there might have been a connection problem in _checking_ if the
-	 * server has started.  Therefore, even if pg_ctl failed, we continue
-	 * and test for connectivity in case we get a connection reason for the
-	 * failure.
+	 * pg_ctl -w might have failed because the server couldn't be started, or
+	 * there might have been a connection problem in _checking_ if the server
+	 * has started.  Therefore, even if pg_ctl failed, we continue and test
+	 * for connectivity in case we get a connection reason for the failure.
 	 */
 	if ((conn = get_db_conn(cluster, "template1")) == NULL ||
 		PQstatus(conn) != CONNECTION_OK)
@@ -301,19 +300,20 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 			   PQerrorMessage(conn));
 		if (conn)
 			PQfinish(conn);
-		pg_log(PG_FATAL, "could not connect to %s postmaster started with the command:\n"
-			   "%s\n",
-			   CLUSTER_NAME(cluster), cmd);
+		pg_fatal("could not connect to %s postmaster started with the command:\n"
+				 "%s\n",
+				 CLUSTER_NAME(cluster), cmd);
 	}
 	PQfinish(conn);
 
 	/*
 	 * If pg_ctl failed, and the connection didn't fail, and throw_error is
-	 * enabled, fail now.  This could happen if the server was already running.
+	 * enabled, fail now.  This could happen if the server was already
+	 * running.
 	 */
 	if (!pg_ctl_return)
-		pg_log(PG_FATAL, "pg_ctl failed to start the %s server, or connection failed\n",
-			   CLUSTER_NAME(cluster));
+		pg_fatal("pg_ctl failed to start the %s server, or connection failed\n",
+				 CLUSTER_NAME(cluster));
 
 	return true;
 }
@@ -356,6 +356,9 @@ check_pghost_envvar(void)
 
 	start = PQconndefaults();
 
+	if (!start)
+		pg_fatal("out of memory\n");
+
 	for (option = start; option->keyword != NULL; option++)
 	{
 		if (option->envvar && (strcmp(option->envvar, "PGHOST") == 0 ||
@@ -367,9 +370,8 @@ check_pghost_envvar(void)
 			/* check for 'local' host values */
 				(strcmp(value, "localhost") != 0 && strcmp(value, "127.0.0.1") != 0 &&
 				 strcmp(value, "::1") != 0 && value[0] != '/'))
-				pg_log(PG_FATAL,
-					   "libpq environment variable %s has a non-local server value: %s\n",
-					   option->envvar, value);
+				pg_fatal("libpq environment variable %s has a non-local server value: %s\n",
+						 option->envvar, value);
 		}
 	}
 

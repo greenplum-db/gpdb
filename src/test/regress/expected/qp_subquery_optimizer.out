@@ -956,6 +956,24 @@ select Tbl04.* from Tbl04 where (Tbl04.a,Tbl04.b) not in (select Tbl06.a,Tbl06.b
  5 | 6
 (1 row)
 
+explain (costs off)
+select Tbl04.* from Tbl04 where not ((Tbl04.a,Tbl04.b) in (select Tbl06.a,Tbl06.b from Tbl06) or (Tbl04.a,Tbl04.b) in (select i3.a, i3.b from i3));
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Hash Left Anti Semi (Not-In) Join
+         Hash Cond: ((tbl04.a = i3.a) AND (tbl04.b = i3.b))
+         ->  Nested Loop Left Anti Semi (Not-In) Join
+               Join Filter: ((tbl04.a = tbl06.a) AND (tbl04.b = tbl06.b))
+               ->  Seq Scan on tbl04
+               ->  Materialize
+                     ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                           ->  Seq Scan on tbl06
+         ->  Hash
+               ->  Seq Scan on i3
+ Optimizer: legacy query optimizer
+(12 rows)
+
 select Tbl04.* from Tbl04 where not ((Tbl04.a,Tbl04.b) in (select Tbl06.a,Tbl06.b from Tbl06) or (Tbl04.a,Tbl04.b) in (select i3.a, i3.b from i3)); -- expected: (5,6)
  a | b 
 ---+---

@@ -118,7 +118,7 @@ host    gpperfmon   gpmon    ::1/128             md5</codeblock></p>
         </plentry>
       </parml>
     </section>
-    <p>See the <xref href="http://gptext.docs.pivotal.io" format="html" scope="external">Greenplum
+    <p>See the <xref href="http://gpcc.docs.pivotal.io" format="html" scope="external">Greenplum
         Command Center documentation</xref> for instructions to enable Kerberos authentication with
       Greenplum Command Center</p>
   </body>

@@ -1214,10 +1214,9 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 	Plan *plan = &(func_scan->scan.plan);
 
 	RangeTblEntry *rte = TranslateDXLTvfToRangeTblEntry(tvf_dxlnode, output_context, &base_table_context);
-	GPOS_ASSERT(NULL != rte);
-
-	func_scan->funcexpr = rte->funcexpr;
-	func_scan->funccolnames = rte->eref->colnames;
+	GPOS_ASSERT(rte != NULL);
+	GPOS_ASSERT(list_length(rte->functions) == 1);
+	RangeTblFunction *rtfunc = (RangeTblFunction *) gpdb::CopyObject(linitial(rte->functions));
 
 	// we will add the new range table entry as the last element of the range table
 	Index index = gpdb::ListLength(m_dxl_to_plstmt_context->GetRTableEntriesList()) + 1;
@@ -1257,6 +1256,10 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 
 	ListCell *lc_target_entry = NULL;
 
+	rtfunc->funccolnames = NIL;
+	rtfunc->funccoltypes = NIL;
+	rtfunc->funccoltypmods = NIL;
+	rtfunc->funccolcollations = NIL;
 	ForEach (lc_target_entry, target_list)
 	{
 		TargetEntry *target_entry = (TargetEntry *) lfirst(lc_target_entry);
@@ -1266,11 +1269,13 @@ CTranslatorDXLToPlStmt::TranslateDXLTvf
 		INT typ_mod = gpdb::ExprTypeMod((Node*) target_entry->expr);
 		Oid collation_type_oid = gpdb::TypeCollation(oid_type);
 
-		func_scan->funccoltypes = gpdb::LAppendOid(func_scan->funccoltypes, oid_type);
-		func_scan->funccoltypmods = gpdb::LAppendInt(func_scan->funccoltypmods, typ_mod);
+		rtfunc->funccolnames = gpdb::LAppend(rtfunc->funccolnames, gpdb::MakeStringValue(target_entry->resname));
+		rtfunc->funccoltypes = gpdb::LAppendOid(rtfunc->funccoltypes, oid_type);
+		rtfunc->funccoltypmods = gpdb::LAppendInt(rtfunc->funccoltypmods, typ_mod);
 		// GPDB_91_MERGE_FIXME: collation
-		func_scan->funccolcollations = gpdb::LAppendOid(func_scan->funccolcollations, collation_type_oid);
+		rtfunc->funccolcollations = gpdb::LAppendOid(rtfunc->funccolcollations, collation_type_oid);
 	}
+	func_scan->functions = ListMake1(rtfunc);
 
 	SetParamIds(plan);
 
@@ -1354,11 +1359,14 @@ CTranslatorDXLToPlStmt::TranslateDXLTvfToRangeTblEntry
 	func_expr->inputcollid = gpdb::ExprCollation((Node *) func_expr->args);
 	func_expr->funccollid = gpdb::TypeCollation(func_expr->funcresulttype);
 
-	rte->funcexpr = (Node *)func_expr;
+	RangeTblFunction *rtfunc = MakeNode(RangeTblFunction);
+	rtfunc->funcexpr = (Node *) func_expr;
+	// GPDB_91_MERGE_FIXME: collation
+	// set rtfunc->funccoltypemods & rtfunc->funccolcollations?
+	rte->functions = ListMake1(rtfunc);
+
 	rte->inFromCl = true;
 	rte->eref = alias;
-	// GPDB_91_MERGE_FIXME: collation
-	// set rte->funccoltypemods & rte->funccolcollations?
 
 	return rte;
 }
@@ -1958,48 +1966,34 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 		case EdxlopPhysicalMotionGather:
 		{
 			motion->motionType = MOTIONTYPE_FIXED;
-			// get segment id
-			INT segid = CDXLPhysicalGatherMotion::Cast(motion_dxlop)->IOutputSegIdx();
-			motion->numOutputSegs = 1;
-			motion->outputSegIdx = (INT *) gpdb::GPDBAlloc(sizeof(INT));
-			*(motion->outputSegIdx) = segid;
+			motion->isBroadcast = false;
+			flow->numsegments = 1;
+
 			break;
 		}
 		case EdxlopPhysicalMotionRedistribute:
 		case EdxlopPhysicalMotionRandom:
 		{
 			motion->motionType = MOTIONTYPE_HASH;
-			// translate output segment ids
-			const IntPtrArray *output_segids_array = CDXLPhysicalMotion::Cast(motion_dxlop)->GetOutputSegIdsArray();
-
-			GPOS_ASSERT(NULL != output_segids_array && 0 < output_segids_array->Size());
-			ULONG segid_count = output_segids_array->Size();
-			motion->outputSegIdx = (INT *) gpdb::GPDBAlloc (segid_count * sizeof(INT));
-			motion->numOutputSegs = segid_count;
-
-			for(ULONG ul = 0; ul < segid_count; ul++)
-			{
-				INT segid = *((*output_segids_array)[ul]);
-				motion->outputSegIdx[ul] = segid;
-			}
+			motion->isBroadcast = false;
 
 			break;
 		}
 		case EdxlopPhysicalMotionBroadcast:
 		{
 			motion->motionType = MOTIONTYPE_FIXED;
-			motion->numOutputSegs = 0;
-			motion->outputSegIdx = NULL;
+			motion->isBroadcast = true;
+
 			break;
 		}
 		case EdxlopPhysicalMotionRoutedDistribute:
 		{
-			motion->motionType = MOTIONTYPE_EXPLICIT;
-			motion->numOutputSegs = 0;
-			motion->outputSegIdx = NULL;
 			ULONG segid_col = CDXLPhysicalRoutedDistributeMotion::Cast(motion_dxlop)->SegmentIdCol();
 			const TargetEntry *te_sort_col = child_context.GetTargetEntry(segid_col);
+
+			motion->motionType = MOTIONTYPE_EXPLICIT;
 			motion->segidColIdx = te_sort_col->resno;
+			motion->isBroadcast = false;
 
 			break;
 			
@@ -5160,12 +5154,24 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy
 		num_of_distr_cols_alloc = num_of_distr_cols;
 	}
 	
-	GpPolicy *distr_policy = gpdb::MakeGpPolicy(NULL, POLICYTYPE_PARTITIONED, num_of_distr_cols_alloc);
+	// always set numsegments to ALL for CTAS
+	GpPolicy *distr_policy = gpdb::MakeGpPolicy(POLICYTYPE_PARTITIONED,
+												num_of_distr_cols_alloc,
+												gpdb::GetGPSegmentCount());
 
 	GPOS_ASSERT(IMDRelation::EreldistrHash == dxlop->Ereldistrpolicy() ||
-				IMDRelation::EreldistrRandom == dxlop->Ereldistrpolicy());
-	
-	distr_policy->ptype = POLICYTYPE_PARTITIONED;
+				IMDRelation::EreldistrRandom == dxlop->Ereldistrpolicy() ||
+				IMDRelation::EreldistrReplicated == dxlop->Ereldistrpolicy()) ;
+
+	if (IMDRelation::EreldistrReplicated == dxlop->Ereldistrpolicy())
+	{
+		distr_policy->ptype = POLICYTYPE_REPLICATED;
+	}
+	else
+	{
+		distr_policy->ptype = POLICYTYPE_PARTITIONED;
+	}
+
 	distr_policy->nattrs = 0;
 	if (IMDRelation::EreldistrHash == dxlop->Ereldistrpolicy())
 	{

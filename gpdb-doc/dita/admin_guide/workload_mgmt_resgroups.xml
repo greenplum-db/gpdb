@@ -18,7 +18,6 @@
       PL/Container external component, the memory limit that you define for the group specifies the
       maximum memory usage for all running instances of each PL/Container runtime to which you
       assign the group.</p>
-
     <p>This topic includes the following subtopics:</p>
     <ul id="ul_wjf_1wy_sp">
       <li id="im168064">
@@ -57,8 +56,7 @@
           <li id="im16806h">
             <xref href="#topic22" type="topic" format="dita"/>
           </li>
-        </ul>
-      </li>
+        </ul></li>
       <li>
         <xref href="#topic777999" type="topic" format="dita"/>
       </li>
@@ -91,9 +89,22 @@
       <p>You can also use resource groups to manage the CPU and memory resources of external
         components such as PL/Container. Resource groups for external components use Linux cgroups
         to manage both the total CPU and total memory resources for the component.</p>
+      <note>Containerized deployments of Greenplum Database, such as Greenplum for Kubernetes, might
+        create a hierarchical set of nested cgroups to manage host system resources. The nesting of
+        cgroups affects the Greenplum Database resource group limits for CPU percentage, CPU cores,
+        and memory (except for Greenplum Database external components). The Greenplum Database
+        resource group system resource limit is based on the quota for the parent group.<p>For
+          example, Greenplum Database is running in a cgroup demo, and the Greenplum Database cgroup
+          is nested in the cgroup demo. If the cgroup demo is configured with a CPU limit of 60% of
+          system CPU resources and the Greenplum Database resource group CPU limit is set 90%, the
+          Greenplum Database limit of host system CPU resources is 54% (0.6 x 0.9).</p><p>Nested
+          cgroups do not affect memory limits for Greenplum Database external components such as
+          PL/Container. Memory limits for external components can only be managed if the cgroup that
+          is used to manage Greenplum Database resources is not nested, the cgroup is configured as
+          a top-level cgroup.</p><p>For information about configuring cgroups for use by resource
+          groups, see <xref href="#topic71717999" format="dita"/>.</p></note>
     </body>
   </topic>
-
   <topic id="topic8339introattrlim" xml:lang="en">
     <title>Resource Group Attributes and Limits</title>
     <body>
@@ -104,7 +115,6 @@
         <li>Provide a set of limits that determine the amount of CPU and memory resources available
           to the group.</li>
       </ul>
-
       <p>Resource group attributes and limits:</p>
       <table id="resgroup_limit_descriptions">
         <tgroup cols="3">
@@ -160,7 +170,6 @@
           <codeph>SHOW</codeph> commands.</note>
     </body>
   </topic>
-
   <topic id="topic8339777" xml:lang="en">
     <title>Memory Auditor</title>
     <body>
@@ -221,14 +230,13 @@
       </table>
     </body>
   </topic>
-
   <topic id="topic8339717179" xml:lang="en">
     <title>Transaction Concurrency Limit</title>
     <body>
       <p>The <codeph>CONCURRENCY</codeph> limit controls the maximum number of concurrent
-        transactions permitted for a resource group for roles. <note>The
-            <codeph>CONCURRENCY</codeph> limit is not applicable to resource groups for external
-          components and must be set to zero (0) for such groups.</note></p>
+        transactions permitted for a resource group for roles.
+        <note>The <codeph>CONCURRENCY</codeph> limit is not applicable to resource groups for
+          external components and must be set to zero (0) for such groups.</note></p>
       <p>Each resource group for roles is logically divided into a fixed number of slots equal to
         the <codeph>CONCURRENCY</codeph> limit. Greenplum Database allocates these slots an equal,
         fixed percentage of memory resources.</p>
@@ -244,7 +252,6 @@
         concurrency limit.</p>
     </body>
   </topic>
-
   <topic id="topic833971717" xml:lang="en">
     <title>CPU Limits</title>
     <body>
@@ -271,7 +278,6 @@
       <note type="warning">Avoid setting <codeph>gp_resource_group_cpu_limit</codeph> to a value
         higher than .9. Doing so may result in high workload queries taking near all CPU resources,
         potentially starving Greenplum Database auxiliary processes.</note>
-
     </body>
     <topic id="cpuset" xml:lang="en">
       <title>Assigning CPU Resources by Core</title>
@@ -359,7 +365,6 @@
       <p>When resource groups are enabled, memory usage is managed at the Greenplum Database node,
         segment, and resource group levels. You can also manage memory at the transaction level with
         a resource group for roles.</p>
-
       <p>The <codeph><xref
             href="../ref_guide/config_params/guc-list.xml#gp_resource_group_memory_limit"
             type="topic"/></codeph> server configuration parameter identifies the maximum percentage
@@ -371,8 +376,10 @@
         Greenplum Database multiplied by the <codeph>gp_resource_group_memory_limit</codeph> server
         configuration parameter and divided by the number of active primary segments on the
         host:</p>
-      <p><codeblock>
-rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock></p>
+      <p>
+        <codeblock>
+rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_memory_limit) / num_active_primary_segments</codeblock>
+      </p>
       <p>Each resource group reserves a percentage of the segment memory for resource management.
         You identify this percentage via the <codeph>MEMORY_LIMIT</codeph> value that you specify
         when you create the resource group. The minimum <codeph>MEMORY_LIMIT</codeph> percentage you
@@ -389,10 +396,8 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           that may be shared among the currently running transactions. This memory is allotted on a
           first-come, first-served basis. A running transaction may use none, some, or all of the
             <codeph>MEMORY_SHARED_QUOTA</codeph>.</p>
-
         <p>The minimum <codeph>MEMORY_SHARED_QUOTA</codeph> that you can specify is 0, the maximum
           is 100. The default <codeph>MEMORY_SHARED_QUOTA</codeph> is 20.</p>
-
         <p>As mentioned previously, <codeph>CONCURRENCY</codeph> identifies the maximum number of
           concurrently running transactions permitted in a resource group for roles. The fixed
           memory reserved by a resource group is divided into <codeph>CONCURRENCY</codeph> number of
@@ -409,7 +414,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
           sum of the transaction's fixed memory and the full resource group shared memory
           allotment.</p>
       </body>
-
       <topic id="topic833glob" xml:lang="en">
         <title>Global Shared Memory</title>
         <body>
@@ -438,7 +442,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             memory-consuming or unpredicted queries.</p>
         </body>
       </topic>
-
       <topic id="topic833sp" xml:lang="en">
         <title>Query Operator Memory</title>
         <body>
@@ -470,7 +473,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
             roles. You can selectively set this limit on a per-query basis at the session level with
             the <codeph><xref href="../ref_guide/config_params/guc-list.xml#memory_spill_ratio"
                 type="topic"/></codeph> server configuration parameter.</p>
-
           <section id="topic833low" xml:lang="en">
             <title>memory_spill_ratio and Low Memory Queries </title>
             <p>A low <codeph>memory_spill_ratio</codeph> setting (for example, in the 0-2% range)
@@ -482,7 +484,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         </body>
       </topic>
     </topic>
-
     <topic id="topic833cons" xml:lang="en">
       <title>Other Memory Considerations</title>
       <body>
@@ -495,7 +496,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
       </body>
     </topic>
   </topic>
-
   <topic id="topic999" otherprops="pivotal" xml:lang="en">
     <title>Using Greenplum Command Center to Manage Resource Groups</title>
     <body>
@@ -514,7 +514,6 @@ rg_perseg_mem = ((RAM * (vm.overcommit_ratio / 100) + SWAP) * gp_resource_group_
         managing resource groups and workload management rules. </p>
     </body>
   </topic>
-
   <topic id="topic71717999" xml:lang="en">
     <title>Using Resource Groups</title>
     <body>
@@ -645,7 +644,6 @@ ls -l &lt;cgroup_mount_point&gt;/memory/gpdb</codeblock>
       </section>
     </body>
   </topic>
-
   <topic id="topic8" xml:lang="en">
     <title id="iz153124">Enabling Resource Groups</title>
     <body>
@@ -736,7 +734,6 @@ gpstart
         Database deployment.</p>
     </body>
   </topic>
-
   <topic id="topic10" xml:lang="en">
     <title id="iz139857">Creating Resource Groups</title>
     <body>
@@ -792,7 +789,6 @@ gpstart
       </p>
     </body>
   </topic>
-
   <topic id="topic17" xml:lang="en">
     <title id="iz172210">Assigning a Resource Group to a Role</title>
     <body>
@@ -828,8 +824,6 @@ gpstart
       </p>
     </body>
   </topic>
-
-
   <topic id="topic22" xml:lang="en">
     <title id="iz152239">Monitoring Resource Group Status</title>
     <body>
@@ -852,9 +846,7 @@ gpstart
           <xref href="#topic27" type="topic" format="dita"/>
         </li>
       </ul>
-
     </body>
-
     <topic id="topic221" xml:lang="en">
       <title id="iz152239">Viewing Resource Group Limits</title>
       <body>
@@ -870,7 +862,6 @@ gpstart
         </p>
       </body>
     </topic>
-
     <topic id="topic23" xml:lang="en">
       <title id="iz152239">Viewing Resource Group Query Status and CPU/Memory Usage</title>
       <body>
@@ -886,7 +877,6 @@ gpstart
         </p>
       </body>
     </topic>
-
     <topic id="topic25" xml:lang="en">
       <title id="iz152239">Viewing the Resource Group Assigned to a Role</title>
       <body>
@@ -902,7 +892,6 @@ gpstart
         </p>
       </body>
     </topic>
-
     <topic id="topic252525" xml:lang="en">
       <title id="iz15223925">Viewing a Resource Group's Running and Pending Queries</title>
       <body>
@@ -927,7 +916,6 @@ gpstart
           running instances. </p>
       </body>
     </topic>
-
     <topic id="topic27" xml:lang="en">
       <title id="iz153732">Cancelling a Running or Queued Transaction in a Resource Group</title>
       <body>
@@ -949,7 +937,6 @@ gpstart
         AND pg_stat_activity.usename=pg_roles.rolname;
 </codeblock>
         </p>
-
         <p>Sample partial query output:</p>
         <codeblock> rolname | rsgname  | procpid | waiting |     current_query     | datname 
 ---------+----------+---------+---------+-----------------------+---------
@@ -970,7 +957,6 @@ gpstart
         </note>
       </body>
     </topic>
-
   </topic>
   <topic id="topic777999" xml:lang="en">
     <title>Resource Group Frequently Asked Questions</title>

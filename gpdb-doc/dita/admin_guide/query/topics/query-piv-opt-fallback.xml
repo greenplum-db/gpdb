@@ -84,7 +84,7 @@
         optimizer.<codeblock>explain select * from pg_class;</codeblock></p>
       <p>A message is added to the log file. The message contains this <codeph>NOTICE</codeph>
         information that indicates the reason GPORCA did not execute the
-        query:<codeblock>NOTICE,""Feature not supported by the Pivotal Query Optimizer: Queries on master-only tables"</codeblock></p>
+        query:<codeblock>NOTICE,""Feature not supported: Queries on master-only tables"</codeblock></p>
     </body>
   </topic>
 </topic>

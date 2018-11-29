@@ -3,8 +3,8 @@
  * Small tests for gp_libpqwalreceiver
  *
  *-----------------------------------------------------------------------*/
-
 #include "postgres.h"
+
 #include "fmgr.h"
 #include "miscadmin.h"
 #include "access/xlog_internal.h"
@@ -13,6 +13,9 @@
 #include "cdb/cdbappendonlyxlog.h"
 #include "funcapi.h"
 #include "libpq/pqformat.h"
+#include "utils/builtins.h"
+#include "utils/pg_lsn.h"
+#include "utils/timestamp.h"
 
 PG_MODULE_MAGIC;
 
@@ -43,6 +46,8 @@ static void test_PrintLog(char *type, XLogRecPtr walPtr,
 static uint32 check_ao_record_present(unsigned char type, char *buf, Size len,
 									  uint32 xrecoff, CheckAoRecordResult *aorecordresults);
 
+void _PG_init(void);
+
 Datum test_connect(PG_FUNCTION_ARGS);
 Datum test_disconnect(PG_FUNCTION_ARGS);
 Datum test_receive(PG_FUNCTION_ARGS);
@@ -57,20 +62,17 @@ PG_FUNCTION_INFO_V1(test_send);
 PG_FUNCTION_INFO_V1(test_receive_and_verify);
 PG_FUNCTION_INFO_V1(test_xlog_ao);
 
-static void
-string_to_xlogrecptr(text *location, XLogRecPtr *rec)
+/*
+ * Module load callback.
+ *
+ * Initializes the libpqwalreceiver callbacks, by calling libpqwalreceiver's
+ * initialization routine. In a real walreceiver, this is done during
+ * the walreceiver process startup.
+ */
+void
+_PG_init(void)
 {
-	uint32 hi, lo;
-	char *locationstr = DatumGetCString(
-		DirectFunctionCall1(textout,
-							PointerGetDatum(location)));
-
-	if (sscanf(locationstr, "%X/%X", &hi, &lo) != 2)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("could not parse transaction log location \"%s\"",
-						locationstr)));
-	*rec = ((uint64) hi) << 32 | lo;
+	libpqwalreceiver_PG_init();
 }
 
 Datum
@@ -114,20 +116,15 @@ test_send(PG_FUNCTION_ARGS)
 Datum
 test_receive_and_verify(PG_FUNCTION_ARGS)
 {
-	text	   *start_location = PG_GETARG_TEXT_P(0);
-	text       *end_location = PG_GETARG_TEXT_P(1);
-	XLogRecPtr startpoint;
-	XLogRecPtr endpoint;
+	XLogRecPtr startpoint = PG_GETARG_LSN(0);
+	XLogRecPtr endpoint = PG_GETARG_LSN(1);
 	char   *buf;
 	int     len;
 	TimeLineID  startpointTLI;
 
-	string_to_xlogrecptr(start_location, &startpoint);
-	string_to_xlogrecptr(end_location, &endpoint);
-
 	/* For now hard-coding it to 1 */
 	startpointTLI = 1;
-	walrcv_startstreaming(startpointTLI, startpoint);
+	walrcv_startstreaming(startpointTLI, startpoint, NULL);
 
 	for (int i=0; i < NUM_RETRIES; i++)
 	{
@@ -242,7 +239,6 @@ test_XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len,
 static void
 test_XLogWalRcvWrite(char *buf, Size nbytes, XLogRecPtr recptr)
 {
-	static XLogSegNo recvSegNo = 0;
 	int			startoff;
 	int			byteswritten;
 
@@ -342,21 +338,18 @@ test_xlog_ao(PG_FUNCTION_ARGS)
 		funcctx->user_fctx = (void *) aorecordresults;
 
 		char         *conninfo = TextDatumGetCString(PG_GETARG_DATUM(0));
-		text         *start_location = PG_GETARG_TEXT_P(1);
-
-		XLogRecPtr    startpoint;
+		XLogRecPtr    startpoint = PG_GETARG_LSN(1);
 		TimeLineID  startpointTLI;
 		char         *buf;
 		int           len;
 		uint32        xrecoff;
 
-		string_to_xlogrecptr(start_location, &startpoint);
 		xrecoff = (uint32)startpoint;
 
 		walrcv_connect(conninfo);
 		/* For now hard-coding it to 1 */
 		startpointTLI = 1;
-		walrcv_startstreaming(startpointTLI, startpoint);
+		walrcv_startstreaming(startpointTLI, startpoint, NULL);
 
 		for (int i = 0; i < NUM_RETRIES; i++)
 		{

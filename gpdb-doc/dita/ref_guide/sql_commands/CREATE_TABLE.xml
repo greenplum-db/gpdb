@@ -23,7 +23,8 @@
    [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] )
    [ ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP} ]
    [ TABLESPACE <varname>tablespace</varname> ]
-   [ DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+   [ DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY 
+       | DISTRIBUTED REPLICATED ]
    [ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
        [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ] 
           [ SUBPARTITION TEMPLATE ( <varname>template_spec </varname>) ]
@@ -152,15 +153,24 @@
         constraint can also be written as a table constraint; a column constraint is only a
         notational convenience for use when the constraint only affects one column. </p>
       <p>When creating a table, there is an additional clause to declare the Greenplum Database
-        distribution policy. If a <codeph>DISTRIBUTED BY</codeph> or <codeph>DISTRIBUTED
-          RANDOMLY</codeph> clause is not supplied, then Greenplum assigns a hash distribution
-        policy to the table using either the <codeph>PRIMARY KEY</codeph> (if the table has one) or
-        the first column of the table as the distribution key. Columns of geometric or user-defined
-        data types are not eligible as Greenplum distribution key columns. If a table does not have
-        a column of an eligible data type, the rows are distributed based on a round-robin or random
-        distribution. To ensure an even distribution of data in your Greenplum Database system, you
-        want to choose a distribution key that is unique for each record, or if that is not
-        possible, then choose <codeph>DISTRIBUTED RANDOMLY</codeph>.</p>
+        distribution policy. If a <codeph>DISTRIBUTED BY</codeph>, <codeph>DISTRIBUTED
+          RANDOMLY</codeph>, or <codeph>DISTRIBUTED REPLICATED</codeph> clause is not supplied, then
+        Greenplum Database assigns a hash distribution policy to the table using either the
+          <codeph>PRIMARY KEY</codeph> (if the table has one) or the first column of the table as
+        the distribution key. Columns of geometric or user-defined data types are not eligible as
+        Greenplum distribution key columns. If a table does not have a column of an eligible data
+        type, the rows are distributed based on a round-robin or random distribution. To ensure an
+        even distribution of data in your Greenplum Database system, you want to choose a
+        distribution key that is unique for each record, or if that is not possible, then choose
+          <codeph>DISTRIBUTED RANDOMLY</codeph>. </p>
+      <p>If the <codeph>DISTRIBUTED REPLICATED</codeph> clause is supplied, Greenplum Database
+        distributes all rows of the table to all segments in the Greenplum Database system. This
+        option can be used in cases where user-defined functions must execute on the segments, and
+        the functions require access to all rows of the table. Replicated functions can also be used
+        to improve query performance by preventing broadcast motions for the table. The
+          <codeph>DISTRIBUTED REPLICATED</codeph> clause cannot be used with the <codeph>PARTITION
+          BY</codeph> clause or the <codeph>INHERITS</codeph> clause. A replicated table also cannot
+        be inherited by another table.</p>
       <p>The <codeph>PARTITION BY</codeph> clause allows you to divide the table into multiple
         sub-tables (or parts) that, taken together, make up the parent table and share its schema.
         Though the sub-tables exist as independent tables, the Greenplum Database restricts their
@@ -249,13 +259,17 @@
             conflict, then the duplicate columns are merged to form a single column in the new
             table. If the column name list of the new table contains a column name that is also
             inherited, the data type must likewise match the inherited column(s), and the column
-            definitions are merged into one. However, inherited and new column declarations of the
-            same name need not specify identical constraints: all constraints provided from any
-            declaration are merged together and all are applied to the new table. If the new table
-            explicitly specifies a default value for the column, this default overrides any defaults
-            from inherited declarations of the column. Otherwise, any parents that specify default
-            values for the column must all specify the same default, or an error will be reported.
-          </pd>
+            definitions are merged into one. If the new table explicitly specifies a default value
+            for the column, this default overrides any defaults from inherited declarations of the
+            column. Otherwise, any parents that specify default values for the column must all
+            specify the same default, or an error will be reported. </pd>
+          <pd><codeph>CHECK</codeph> constraints are merged in essentially the same way as columns:
+            if multiple parent tables or the new table defintion contain identically-named
+              <codeph>constraints</codeph>, these constraints must all have the same check
+            expression, or an error will be reported. Constraints having the same name and
+            expression will be merged into one copy. Notice that an unnamed <codeph>CHECK</codeph>
+            constraint in the new table will never be merged, since a unique name will always be
+            chosen for it.</pd>
         </plentry>
         <plentry>
           <pt>LIKE <varname>other_table</varname> [{INCLUDING | EXCLUDING} {DEFAULTS |
@@ -321,8 +335,8 @@
             identifying a set of columns as primary key also provides metadata about the design of
             the schema, as a primary key implies that other tables may rely on this set of columns
             as a unique identifier for rows. For a table to have a primary key, it must be hash
-            distributed (not randomly distributed), and the primary key The column(s) that are
-            unique must contain all the columns of the Greenplum distribution key. In addition, the
+            distributed (not randomly distributed), and the primary key, the column(s) that are
+            unique, must contain all the columns of the Greenplum distribution key. In addition, the
               <codeph>&lt;key&gt;</codeph> must contain all the columns in the partition key if the
             table is partitioned. Note that a <codeph>&lt;key&gt;</codeph> constraint in a
             partitioned table is not the same as a simple <codeph>UNIQUE INDEX</codeph>.</pd>
@@ -452,6 +466,7 @@
         <plentry>
           <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
           <pt>DISTRIBUTED RANDOMLY</pt>
+          <pt>DISTRIBUTED REPLICATED</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the table.
               <codeph>DISTRIBUTED BY</codeph> uses hash distribution with one or more columns
             declared as the distribution key. For the most even data distribution, the distribution
@@ -462,13 +477,20 @@
               <codeph>gp_create_table_random_default_distribution</codeph> controls the default
             table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
             specified when you create a table. Greenplum Database follows these rules to create a
-            table if a distribution policy is not specified.<p>If the value of the parameter is
+            table if a distribution policy is not specified. <p>If the value of the parameter is
                 <codeph>off</codeph> (the default), Greenplum Database chooses the table
-              distribution key based on the command. If the <cmdname>LIKE</cmdname> or
-                <cmdname>INHERITS</cmdname> clause is specified in table creation command, the
-              created table uses the same distribution key as the source or parent table. </p><p>If
-              the value of the parameter is set to <codeph>on</codeph>, Greenplum Database follows
-              these rules:<ul id="ul_tbr_5kq_kq">
+              distribution key based on the command:<ul id="ul_rjb_gty_qfb">
+                <li>If a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph> clause is specified,
+                  then Greenplum copies the distribution key from the source or parent table.</li>
+                <li>If a <codeph>PRIMARY KEY</codeph> or <codeph>UNIQUE</codeph> constraints are
+                  specified, then Greenplum chooses the largest subset of all the key columns as the
+                  distribution key.</li>
+                <li>If neither constraints nor a <codeph>LIKE</codeph> or <codeph>INHERITS</codeph>
+                  clause is specified, then Greenplum chooses the first suitable column as the
+                  distribution key. (Columns with geometric or user-defined data types are not
+                  eligible as Greenplum distribution key columns.)</li>
+              </ul></p><p>If the value of the parameter is set to <codeph>on</codeph>, Greenplum
+              Database follows these rules:<ul id="ul_tbr_5kq_kq">
                 <li>If <cmdname>PRIMARY KEY</cmdname> or <cmdname>UNIQUE</cmdname> columns are not
                   specified, the distribution of the table is random (<cmdname>DISTRIBUTED
                     RANDOMLY</cmdname>). Table distribution is random even if the table creation
@@ -479,7 +501,14 @@
                     <cmdname>DISTRIBUTED BY</cmdname> clause is not specified as part of the table
                   creation command, the command fails.</li>
               </ul></p></pd>
-          <pd>For information about the parameter, see "Server Configuration Parameters."</pd>
+          <pd>For more information about setting the default table distribution policy, see <xref
+              href="../config_params/guc-list.xml#gp_create_table_random_default_distribution"
+              type="section" format="dita"
+                ><codeph>gp_create_table_random_default_distribution</codeph></xref>. </pd>
+          <pd>The <codeph>DISTRIBUTED REPLICATED</codeph> clause replicates the entire table to all
+            Greenplum Database segment instances. It can be used when it is necessary to execute
+            user-defined functions on segments when the functions require access to all rows in the
+            table, or to improve query performance by preventing broadcast motions. </pd>
         </plentry>
         <plentry id="part_by">
           <pt>PARTITION BY</pt>
@@ -573,8 +602,8 @@
       <title>Notes</title>
       <ul id="ul_stf_sl1_tt">
         <li>In Greenplum Database (a Postgres-based system) the data types <codeph>VARCHAR</codeph>
-          or <codeph>TEXT</codeph> handles padding added to the textual data (space characters added
-          after the last non-space character) as significant characters, the data type
+          or <codeph>TEXT</codeph> handle padding added to the textual data (space characters added
+          after the last non-space character) as significant characters; the data type
             <codeph>CHAR</codeph> does not.<p>In Greenplum Database, values of type
                 <codeph>CHAR(<varname>n</varname>)</codeph> are padded with trailing spaces to the
             specified width <varname>n</varname>. The values are stored and displayed with the
@@ -598,10 +627,12 @@
           as (or a superset of) the table's distribution key columns. Also, the distribution key
           must be a left-subset of the constraint columns with the columns in the correct order. For
           example, if the primary key is (a,b,c), the distribution key can be only one of the
-          following: (a), (a,b), or (a,b,c).<p>A primary key constraint is simply a combination of a
-            unique constraint and a not-null constraint.</p><p>Greenplum Database automatically
-            creates a <codeph>UNIQUE</codeph> index for each <codeph>UNIQUE</codeph> or
-              <codeph>PRIMARY KEY</codeph> constraint to enforce uniqueness. Thus, it is not
+          following: (a), (a,b), or (a,b,c).<p>Replicated tables (<codeph>DISTRIBUTED
+              REPLICATED</codeph>) can have both <codeph>PRIMARY KEY</codeph> and
+              <codeph>UNIQUE</codeph>column constraints.</p><p>A primary key constraint is simply a
+            combination of a unique constraint and a not-null constraint.</p><p>Greenplum Database
+            automatically creates a <codeph>UNIQUE</codeph> index for each <codeph>UNIQUE</codeph>
+            or <codeph>PRIMARY KEY</codeph> constraint to enforce uniqueness. Thus, it is not
             necessary to create an index explicitly for primary key columns. <codeph>UNIQUE</codeph>
             and <codeph>PRIMARY KEY</codeph> constraints are not allowed on append-optimized tables
             because the <codeph>UNIQUE</codeph> indexes that are created by the constraints are not
@@ -611,8 +642,8 @@
             implementation.</p></li>
         <li>For append-optimized tables, <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not
           allowed in a serializable transaction and will cause the transaction to abort.
-            <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR</codeph><codeph>UPDATE</codeph>, and
-          triggers are not supported with append-optimized tables.</li>
+            <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are not
+          supported with append-optimized tables.</li>
         <li>To insert data into a partitioned table, you specify the root partitioned table, the
           table created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf
           child table of the partitioned table in an <codeph>INSERT</codeph> command. An error is

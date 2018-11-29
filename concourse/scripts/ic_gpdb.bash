@@ -82,9 +82,29 @@ function _main() {
     time make_cluster
     time gen_env
     time run_test
+    # If $ONLINE_EXPAND is set, the job is to run ICW after expansion to see
+    # whether all the cases have been passed without restarting cluster.
+    # Here is to check whether the cluster has been restarted by master pid.
+    # We wanna to be sure all the test cases have been passed after expansion
+    # without restarting the cluster. So any restarting is not expected.
+    if [ ! -z "$ONLINE_EXPAND" ]
+    then
+      OLD_MASTER_PID=`cat gpdb_src/gpAux/gpdemo/master.pid.bk`
+      NEW_MASTER_PID=`head -n 1 gpdb_src/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/postmaster.pid`
+      if [ "$OLD_MASTER_PID" != "$NEW_MASTER_PID" ]
+      then
+          echo "Master pid has changed, so the cluster has been restarted."
+          exit 1
+      fi
+    fi
 
     if [ "${TEST_BINARY_SWAP}" == "true" ]; then
         time ./gpdb_src/concourse/scripts/test_binary_swap_gpdb.bash
+    fi
+
+    if [ "${DUMP_DB}" == "true" ]; then
+        chmod 777 sqldump
+        su gpadmin -c ./gpdb_src/concourse/scripts/dumpdb.bash
     fi
 }
 

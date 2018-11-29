@@ -156,7 +156,7 @@ explain (costs off) select count(distinct d), count(distinct dt) from dqa_t1 gro
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
-         Hash Cond: NOT share0_ref2.c IS DISTINCT FROM share0_ref1.c
+         Hash Cond: (NOT (share0_ref2.c IS DISTINCT FROM share0_ref1.c))
          ->  HashAggregate
                Group Key: share0_ref2.c
                ->  HashAggregate
@@ -214,7 +214,7 @@ explain (costs off) select count(distinct d), count(distinct dt) from dqa_t1 gro
 --------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: NOT share0_ref2.d IS DISTINCT FROM share0_ref1.d
+         Hash Cond: (NOT (share0_ref2.d IS DISTINCT FROM share0_ref1.d))
          ->  HashAggregate
                Group Key: share0_ref2.d
                ->  HashAggregate
@@ -242,14 +242,14 @@ select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d;
 (1 row)
 
 explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d;
-                     QUERY PLAN                     
-----------------------------------------------------
+                      QUERY PLAN                      
+------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  HashAggregate
                Group Key: dqa_t1.d
                ->  Hash Join
-                     Hash Cond: dqa_t1.d = dqa_t2.d
+                     Hash Cond: (dqa_t1.d = dqa_t2.d)
                      ->  Seq Scan on dqa_t1
                      ->  Hash
                            ->  Seq Scan on dqa_t2
@@ -330,7 +330,7 @@ explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dq
                      ->  HashAggregate
                            Group Key: dqa_t2.dt, dqa_t1.d
                            ->  Hash Join
-                                 Hash Cond: dqa_t1.d = dqa_t2.d
+                                 Hash Cond: (dqa_t1.d = dqa_t2.d)
                                  ->  Seq Scan on dqa_t1
                                  ->  Hash
                                        ->  Seq Scan on dqa_t2
@@ -511,7 +511,7 @@ explain (costs off) select count(distinct c), count(distinct dt), i from dqa_t1 
 --------------------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Join
-         Hash Cond: NOT share0_ref2.i IS DISTINCT FROM share0_ref1.i
+         Hash Cond: (NOT (share0_ref2.i IS DISTINCT FROM share0_ref1.i))
          ->  HashAggregate
                Group Key: share0_ref2.i
                ->  HashAggregate
@@ -569,7 +569,7 @@ explain (costs off) select count(distinct i), count(distinct c), d from dqa_t1 g
 -------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: NOT share0_ref2.d IS DISTINCT FROM share0_ref1.d
+         Hash Cond: (NOT (share0_ref2.d IS DISTINCT FROM share0_ref1.d))
          ->  HashAggregate
                Group Key: share0_ref2.d
                ->  HashAggregate
@@ -608,7 +608,7 @@ explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where d
                      ->  HashAggregate
                            Group Key: dqa_t1.dt
                            ->  Hash Join
-                                 Hash Cond: dqa_t2.c = dqa_t1.c
+                                 Hash Cond: (dqa_t2.c = dqa_t1.c)
                                  ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                        ->  Seq Scan on dqa_t2
                                  ->  Hash
@@ -690,7 +690,7 @@ explain (costs off) select count(distinct dqa_t1.dt) from dqa_t1, dqa_t2 where d
                      ->  HashAggregate
                            Group Key: dqa_t2.dt, dqa_t1.dt
                            ->  Hash Join
-                                 Hash Cond: dqa_t1.c = dqa_t2.c
+                                 Hash Cond: (dqa_t1.c = dqa_t2.c)
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                        Hash Key: dqa_t1.c
                                        ->  Seq Scan on dqa_t1

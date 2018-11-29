@@ -50,7 +50,8 @@
         Database superuser. Other parameters require a restart of the system for the changes to take
         effect. A parameter that is classified as <i>session</i> can be set at the system level (in
         the <codeph>postgresql.conf</codeph> file), at the database-level (using <codeph>ALTER
-          DATABASE</codeph>), at the role-level (using <codeph>ALTER ROLE</codeph>), or at the
+          DATABASE</codeph>), at the role-level (using <codeph>ALTER ROLE</codeph>), at the
+           database- and role-level (<codeph>ALTER ROLE...IN DATABASE...SET</codeph>, or at the
         session-level (using <codeph>SET</codeph>). System parameters can only be set in the
           <codeph>postgresql.conf</codeph> file.</p>
       <p>In Greenplum Database, the master and each segment instance has its own
@@ -90,9 +91,10 @@
                 database session, and can have a hierarchy of settings: at the system level
                   (<codeph>postgresql.conf</codeph>), at the database level (<codeph>ALTER
                   DATABASE...SET</codeph>), at the role level (<codeph>ALTER ROLE...SET</codeph>),
+                at the database and role level (<codeph>ALTER ROLE...IN DATABASE...SET</codeph>),
                 or at the session level (<codeph>SET</codeph>). If the parameter is set at multiple
                 levels, then the most granular setting takes precedence (for example, session
-                overrides role, role overrides database, and database overrides system).<p>A
+                overrides database and role, database and role overrides role, role overrides database, and database overrides system).<p>A
                     <i>system</i> parameter can only be changed via the <codeph>postgresql.conf
                   </codeph>file(s).</p></entry>
             </row>

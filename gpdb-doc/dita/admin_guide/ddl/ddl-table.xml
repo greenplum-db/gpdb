@@ -18,7 +18,7 @@
         <li id="im142082">Any table or column constraints to limit the data that a column or table
           can contain. See <xref href="#topic28" type="topic" format="dita"/>.</li>
         <li id="im163705">The distribution policy of the table, which determines how Greenplum
-          Database divides data is across the segments. See <xref href="#topic34" type="topic"
+          Database divides data across the segments. See <xref href="#topic34" type="topic"
             format="dita"/>.</li>
         <li id="im163709">The way the table is stored on disk. <ph>See <xref
               href="ddl-storage.xml"/>.</ph>
@@ -37,7 +37,7 @@
         <p>For table columns that contain textual data, specify the data type
             <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph>. Specifying the data type
             <codeph>CHAR</codeph> is not recommended. In Greenplum Database, the data types
-            <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handles padding added to the data
+            <codeph>VARCHAR</codeph> or <codeph>TEXT</codeph> handle padding added to the data
           (space characters added after the last non-space character) as significant characters, the
           data type <codeph>CHAR</codeph> does not. For information on the character data types, see
           the <codeph>CREATE TABLE</codeph> command in the <cite>Greenplum Database Reference
@@ -99,7 +99,7 @@
             constraint is always written as a column constraint. For example:</p>
           <p>
             <codeblock>=&gt; CREATE TABLE products 
-       ( product_no integer <b>NOT NUL</b>L,
+       ( product_no integer <b>NOT NULL</b>,
          name text <b>NOT NULL</b>,
          price numeric );
 </codeblock>
@@ -110,9 +110,10 @@
         <title>Unique Constraints</title>
         <body>
           <p>Unique constraints ensure that the data contained in a column or a group of columns is
-            unique with respect to all the rows in the table. The table must be hash-distributed
-            (not <codeph>DISTRIBUTED RANDOMLY</codeph>), and the constraint columns must be the same
-            as (or a superset of) the table's distribution key columns. For example:</p>
+            unique with respect to all the rows in the table. The table must be hash-distributed or
+            replicated (not <codeph>DISTRIBUTED RANDOMLY</codeph>). If the table is
+            hash-distributed, the constraint columns must be the same as (or a superset of) the
+            table's distribution key columns. For example:</p>
           <p>
             <codeblock>=&gt; CREATE TABLE products 
        ( <codeph>product_no</codeph> integer <codeph>UNIQUE</codeph>, 
@@ -158,9 +159,9 @@
       <title id="im140308">Choosing the Table Distribution Policy</title>
       <body>
         <p>All Greenplum Database tables are distributed. When you create or alter a table, you
-          optionally specify <codeph>DISTRIBUTED BY</codeph> (hash distribution) or
-            <codeph>DISTRIBUTED RANDOMLY</codeph> (round-robin distribution) to determine the table
-          row distribution.</p>
+          optionally specify <codeph>DISTRIBUTED BY</codeph> (hash distribution),
+            <codeph>DISTRIBUTED RANDOMLY</codeph> (round-robin distribution), or <codeph>DISTRIBUTED
+            REPLICATED</codeph> (fully distributed) to determine the table row distribution.</p>
         <note>The Greenplum Database server configuration parameter
             <codeph>gp_create_table_random_default_distribution</codeph> controls the table
           distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not specified when
@@ -188,20 +189,33 @@
             distribution key). If a predicate in a query references a single customer ID, the query
             processing work is concentrated on just one segment. </li>
         </ul>
+        <p>The replicated table distribution policy (<codeph>DISTRIBUTED REPLICATED</codeph>) should
+          be used only for small tables. Replicating data to every segment is costly in both storage
+          and maintenance, and prohibitive for large fact tables. The primary use cases for
+          replicated tables are to: </p>
+        <ul id="ul_s1w_gjn_3fb">
+          <li id="li_h5h_3jn_3fb">remove restrictions on operations that user-defined functions can
+            perform on segments, and</li>
+          <li>improve query performance by making it unnecessary to broadcast frequently used tables
+            to all segments.</li>
+        </ul>
       </body>
       <topic id="topic35" xml:lang="en">
         <title>Declaring Distribution Keys</title>
         <body>
-          <p><codeph>CREATE TABLE</codeph>'s optional clauses <codeph>DISTRIBUTED BY</codeph> and
-              <codeph>DISTRIBUTED RANDOMLY</codeph> specify the distribution policy for a table. The
-            default is a hash distribution policy that uses either the <codeph>PRIMARY KEY</codeph>
-            (if the table has one) or the first column of the table as the distribution key. Columns
-            with geometric or user-defined data types are not eligible as Greenplum distribution key
-            columns. If a table does not have an eligible column, Greenplum distributes the rows
-            randomly or in round-robin fashion.</p>
-          <p>To ensure even distribution of data, choose a distribution key that is unique for each
-            record. If that is not possible, choose <codeph>DISTRIBUTED RANDOMLY</codeph>. For
-            example:</p>
+          <p><codeph>CREATE TABLE</codeph>'s optional clauses <codeph>DISTRIBUTED BY</codeph>,
+              <codeph>DISTRIBUTED RANDOMLY</codeph>, and <codeph>DISTRIBUTED REPLICATED</codeph>
+            specify the distribution policy for a table. The default is a hash distribution policy
+            that uses either the <codeph>PRIMARY KEY</codeph> (if the table has one) or the first
+            column of the table as the distribution key. Columns with geometric or user-defined data
+            types are not eligible as Greenplum Database distribution key columns. If a table does
+            not have an eligible column, Greenplum Database distributes the rows randomly or in
+            round-robin fashion. </p>
+          <p>Replicated tables have no distribution key because every row is distributed to every
+            Greenplum Database segment instance.</p>
+          <p>To ensure even distribution of hash-distributed data, choose a distribution key that is
+            unique for each record. If that is not possible, choose <codeph>DISTRIBUTED
+              RANDOMLY</codeph>. For example:</p>
           <p>
             <codeblock>=&gt; CREATE TABLE products
 <codeph>                        (name varchar(40),

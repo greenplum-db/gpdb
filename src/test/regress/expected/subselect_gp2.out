@@ -38,19 +38,19 @@ and usename='xxx' and datname='xxx';
                      QUERY PLAN                      
 -----------------------------------------------------
  Hash Join
-   Hash Cond: s.usesysid = u.oid
+   Hash Cond: (s.usesysid = u.oid)
    InitPlan 1 (returns $0)
      ->  Result
    ->  Hash Join
-         Hash Cond: s.datid = d.oid
+         Hash Cond: (s.datid = d.oid)
          ->  Function Scan on pg_stat_get_activity s
-               Filter: query = $0
+               Filter: (query = $0)
          ->  Hash
                ->  Seq Scan on pg_database d
-                     Filter: datname = 'xxx'::name
+                     Filter: (datname = 'xxx'::name)
    ->  Hash
          ->  Seq Scan on pg_authid u
-               Filter: rolname = 'xxx'::name
+               Filter: (rolname = 'xxx'::name)
  Optimizer: legacy query optimizer
 (15 rows)
 

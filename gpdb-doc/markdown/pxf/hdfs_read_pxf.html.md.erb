@@ -30,7 +30,7 @@ This section describes how to use PXF to access HDFS data, including how to crea
 Before working with HDFS data using PXF, ensure that:
 
 - You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions. If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
-- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring, Initializing, and Managing PXF](cfginitstart_pxf.html) for PXF initialization, configuration, and startup information.
+- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 - If user impersonation is enabled (the default), you have granted read permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database to each Greenplum Database user/role name that will access the HDFS files and directories. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 
 
@@ -108,12 +108,12 @@ The specific keywords and values used by the `pxf` protocol in the [CREATE EXTER
 
 | Keyword  | Value |
 |-------|-------------------------------------|
-| \<path-to-hdfs-file\>    | The absolute path to the directory or file in the HDFS data store. |
+| \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `HdfsTextSimple`, `HdfsTextMulti`, `Avro`, or `Json`. |
-| \<custom-option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
+| \<custom&#8209;option\>  | \<custom-option\> is profile-specific. Profile-specific options are discussed in the relevant sections later in this topic.|
 | FORMAT | Use `FORMAT` `'TEXT'` with the `HdfsTextSimple` profile when \<path-to-hdfs-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  with the `HdfsTextSimple` or `HdfsTextMulti` profile when \<path-to-hdfs-file\> references a comma-separated value data.  |
 | FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `Avro`, `Json`, and `Parquet` profiles. The `Avro`, `Json`, and `Parquet` `'CUSTOM'` `FORMAT`s also require the built-in `(formatter='pxfwritable_import')` \<formatting-property\> |
- \<formatting-properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
+ \<formatting&#8209;properties\>    | \<formatting-properties\> are profile-specific. Profile-specific formatting options are identified in the relevant sections later in this topic. |
 
 **Note**: When creating PXF external tables, you cannot use the `HEADER` option in your `FORMAT` specification.
 
@@ -123,7 +123,7 @@ Use the `HdfsTextSimple` profile when you read a plain text delimited or .csv da
 
 \<formatting-properties\> supported by the `HdfsTextSimple` profile include:
 
-| Keyword  | Syntax, Example(s) | Description |
+| Keyword  | &nbsp;&nbsp;Syntax,&nbsp;&nbsp;Example(s)&nbsp;&nbsp; | Description |
 |-------|--------------|-----------------------|
 | delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
@@ -207,7 +207,7 @@ Use the `HdfsTextMulti` profile to read plain text data with delimited single- o
 
 \<formatting-properties\> supported by the `HdfsTextMulti` profile include:
 
-| Keyword  | Syntax, Example(s) | Value |
+| Keyword  | &nbsp;&nbsp;Syntax,&nbsp;&nbsp;Example(s)&nbsp;&nbsp; | Value |
 |-------|--------------|-----------------------|
 | delimiter    | `(delimiter=E'\t')`<br>`(delimiter ':')` | The delimiter character in the data. For `FORMAT` `'CSV'`, the default value is a comma `,`. Preface the value with an `E` when the value is an escape sequence. |
 
@@ -639,7 +639,7 @@ Once the data is loaded to HDFS, you can use Greenplum Database and PXF to query
 
 PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object:
 
-| Keyword  | Syntax, Example(s) | Description |
+| Keyword  | &nbsp;&nbsp;Syntax,&nbsp;&nbsp;Example(s)&nbsp;&nbsp; | Description |
 |-------|--------------|-----------------------|
 | IDENTIFIER  | `&IDENTIFIER=<value>`<br>`&IDENTIFIER=created_at`| You must include the `IDENTIFIER` keyword and \<value\> in the `LOCATION` string only when you are accessing JSON data comprised of multi-line records. Use the \<value\> to identify the member name of the first field in the JSON record object. | 
 

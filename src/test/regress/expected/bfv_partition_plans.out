@@ -1312,14 +1312,20 @@ NOTICE:  CREATE TABLE will create partition "r_co_1_prt_6" for table "r_co"
 NOTICE:  CREATE TABLE will create partition "r_co_1_prt_7" for table "r_co"
 NOTICE:  CREATE TABLE will create partition "r_co_1_prt_8" for table "r_co"
 NOTICE:  CREATE TABLE will create partition "r_co_1_prt_9" for table "r_co"
-insert into r_part values (1,1), (2,2), (3,3);
-select * from r_part order by a,b;
- a | b 
----+---
- 1 | 1
- 2 | 2
- 3 | 3
-(3 rows)
+insert into r_part values (1,1), (2,2), (3,3), (4,4), (5,5), (6,6), (7,7), (8,8);
+-- following tests rely on the data distribution, verify them
+select gp_segment_id, * from r_part order by a,b;
+ gp_segment_id | a | b 
+---------------+---+---
+             2 | 1 | 1
+             1 | 2 | 2
+             2 | 3 | 3
+             0 | 4 | 4
+             1 | 5 | 5
+             1 | 6 | 6
+             0 | 7 | 7
+             0 | 8 | 8
+(8 rows)
 
 analyze r_part;
 explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate partitions in the r1 copy of r_part
@@ -1345,15 +1351,16 @@ explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate par
  Optimizer: legacy query optimizer
 (18 rows)
 
-explain select * from r_part where a in (1,2); -- should eliminate partitions
+-- the numbers in the filter should be both on segment 0
+explain select * from r_part where a in (7,8); -- should eliminate partitions
                                  QUERY PLAN                                 
 ----------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.02 rows=2 width=8)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..2.02 rows=2 width=8)
    ->  Append  (cost=0.00..2.02 rows=1 width=8)
-         ->  Seq Scan on r_part_1_prt_1  (cost=0.00..1.01 rows=1 width=8)
-               Filter: a = ANY ('{1,2}'::integer[])
-         ->  Seq Scan on r_part_1_prt_2  (cost=0.00..1.01 rows=1 width=8)
-               Filter: a = ANY ('{1,2}'::integer[])
+         ->  Seq Scan on r_part_1_prt_7  (cost=0.00..1.01 rows=1 width=8)
+               Filter: a = ANY ('{7,8}'::integer[])
+         ->  Seq Scan on r_part_1_prt_8  (cost=0.00..1.01 rows=1 width=8)
+               Filter: a = ANY ('{7,8}'::integer[])
  Optimizer: legacy query optimizer
 (7 rows)
 

@@ -268,6 +268,9 @@ SELECT '' AS to_timestamp_20, to_timestamp('5527', 'IIWID');
 
 SELECT '' AS to_timestamp_21, to_timestamp('2005364', 'IYYYIDDD');
 
+-- timestamp numeric fields constructor
+SELECT make_timestamp(2014,12,28,6,30,45.887);
+
 SET DateStyle TO DEFAULT;
 
 -- Make sure timeofdate() and current_time() are doing roughly the same thing

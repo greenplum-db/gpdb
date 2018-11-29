@@ -18,7 +18,7 @@
 #define PG_COMPRESSION
 
 #include "catalog/genbki.h"
-
+#include "fmgr.h"
 #include "utils/relcache.h"
 
 /* ----------------
@@ -71,13 +71,9 @@ typedef FormData_pg_compression *Form_pg_compression;
 /* Initial contents */
 DATA(insert OID = 7060 ( zlib gp_zlib_constructor gp_zlib_destructor gp_zlib_compress gp_zlib_decompress gp_zlib_validator PGUID ));
 
-DATA(insert OID = 7061 ( quicklz gp_quicklz_constructor gp_quicklz_destructor gp_quicklz_compress gp_quicklz_decompress gp_quicklz_validator PGUID ));
-
 DATA(insert OID = 7062 ( rle_type gp_rle_type_constructor gp_rle_type_destructor gp_rle_type_compress gp_rle_type_decompress gp_rle_type_validator PGUID ));
 
 DATA(insert OID = 7063 ( none gp_dummy_compression_constructor gp_dummy_compression_destructor gp_dummy_compression_compress gp_dummy_compression_decompress gp_dummy_compression_validator PGUID ));
-
-DATA(insert OID = 7070 ( zstd gp_zstd_constructor gp_zstd_destructor gp_zstd_compress gp_zstd_decompress gp_zstd_validator PGUID ));
 
 #define NUM_COMPRESS_FUNCS 5
 
@@ -92,8 +88,7 @@ typedef struct CompressionState
 	/*
 	 * Allows a constructor to tell the calling level the maximum storage
 	 * required for input of the given size. Different algorithms need
-	 * different maximum buffers. For example, quicklz's compression
-	 * algorithm needs at most input size + 400 bytes.
+	 * different maximum buffers.
 	 */
 	size_t (*desired_sz)(size_t input);
 

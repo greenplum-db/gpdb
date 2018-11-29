@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/mbprint.c
  *
@@ -20,7 +20,7 @@
  * To avoid version-skew problems, this file must not use declarations
  * from pg_wchar.h: the encoding IDs we are dealing with are determined
  * by the libpq.so we are linked with, and that might not match the
- * numbers we see at compile time.	(If this file were inside libpq,
+ * numbers we see at compile time.  (If this file were inside libpq,
  * the problem would go away...)
  *
  * Hence, we have our own definition of pg_wchar, and we get the values

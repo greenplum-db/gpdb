@@ -36,9 +36,7 @@ EXPLAIN ANALYZE SELECT * FROM explaintest;
                                                                QUERY PLAN                                                               
 ----------------------------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4)
-   Rows out:  10 rows at destination with 0.332 ms to first row, 0.345 ms to end, start offset by 0.283 ms.
    ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4)
-         Rows out:  Avg 3.3 rows x 3 workers.  Max 5 rows (seg1) with 0.015 ms to first row, 0.018 ms to end, start offset by 0.543 ms.
  Slice statistics:
    (slice0)    Executor memory: 318K bytes.
    (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
@@ -87,11 +85,11 @@ CREATE TABLE mpp22263 (
 create index mpp22263_idx1 on mpp22263 using btree(unique1);
 explain select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
-                                                QUERY PLAN                                                 
------------------------------------------------------------------------------------------------------------
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.06..278.70 rows=14 width=280)
    ->  Hash Join  (cost=0.06..278.70 rows=5 width=280)
-         Hash Cond: mpp22263.unique1 = "*VALUES*".column1 AND mpp22263.stringu1::text = "*VALUES*".column2
+         Hash Cond: ((mpp22263.unique1 = "*VALUES*".column1) AND ((mpp22263.stringu1)::text = "*VALUES*".column2))
          ->  Seq Scan on mpp22263  (cost=0.00..219.00 rows=3967 width=244)
          ->  Hash  (cost=0.03..0.03 rows=1 width=36)
                ->  Values Scan on "*VALUES*"  (cost=0.00..0.03 rows=1 width=36)
@@ -121,18 +119,18 @@ SELECT trim(et) et from
 get_explain_output($$ 
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
-                          et                          
-------------------------------------------------------
- Hash Cond: "*VALUES*".column1 = "*VALUES*_1".column1
+                           et                           
+--------------------------------------------------------
+ Hash Cond: ("*VALUES*".column1 = "*VALUES*_1".column1)
 (1 row)
 
 SELECT trim(et) et from
 get_explain_output($$
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
-                          et                          
-------------------------------------------------------
- Hash Cond: "*VALUES*".column1 = "*VALUES*_1".column1
+                           et                           
+--------------------------------------------------------
+ Hash Cond: ("*VALUES*".column1 = "*VALUES*_1".column1)
 (1 row)
 
 --
@@ -248,3 +246,50 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
  </explain>
 (1 row)
 
+-- github issues 5795. explain fails previously.
+explain SELECT * from information_schema.key_column_usage;
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=102.67..1432.09 rows=13 width=389)
+   Hash Cond: ((ss.roid = a.attrelid) AND ((ss.x).x = a.attnum))
+   Join Filter: (pg_has_role(ss.relowner, 'USAGE'::text) OR has_column_privilege(ss.roid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'::text))
+   ->  Subquery Scan on ss  (cost=3.34..106.09 rows=5825 width=333)
+         ->  Result  (cost=3.34..47.85 rows=5825 width=341)
+               ->  Hash Join  (cost=3.34..47.85 rows=5825 width=341)
+                     Hash Cond: (c.connamespace = nc.oid)
+                     ->  Hash Join  (cost=2.19..16.06 rows=6 width=281)
+                           Hash Cond: (r.relnamespace = nr.oid)
+                           ->  Hash Join  (cost=1.04..14.84 rows=7 width=221)
+                                 Hash Cond: (r.oid = c.conrelid)
+                                 ->  Seq Scan on pg_class r  (cost=0.00..13.41 rows=85 width=76)
+                                       Filter: (relkind = 'r'::"char")
+                                 ->  Hash  (cost=1.03..1.03 rows=1 width=149)
+                                       ->  Seq Scan on pg_constraint c  (cost=0.00..1.03 rows=1 width=149)
+                                             Filter: (contype = ANY ('{p,u,f}'::"char"[]))
+                           ->  Hash  (cost=1.09..1.09 rows=2 width=68)
+                                 ->  Seq Scan on pg_namespace nr  (cost=0.00..1.09 rows=5 width=68)
+                                       Filter: (NOT pg_is_other_temp_schema(oid))
+                     ->  Hash  (cost=1.07..1.07 rows=3 width=68)
+                           ->  Seq Scan on pg_namespace nc  (cost=0.00..1.07 rows=7 width=68)
+   ->  Hash  (cost=49.33..49.33 rows=1111 width=70)
+         ->  Seq Scan on pg_attribute a  (cost=0.00..49.33 rows=3333 width=70)
+               Filter: (NOT attisdropped)
+ Optimizer: legacy query optimizer
+(25 rows)
+
+-- github issue 5794.
+set gp_enable_explain_allstat=on;
+explain analyze SELECT * FROM explaintest;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.10 rows=10 width=4) (actual time=0.266..0.384 rows=5 loops=2)
+   ->  Seq Scan on explaintest  (cost=0.00..3.10 rows=4 width=4) (actual time=0.011..0.013 rows=2 loops=2)
+         allstat: seg_firststart_total_ntuples/seg0_0.745 ms_0.028 ms_3/seg1_0.640 ms_0.025 ms_5/seg2_0.997 ms_0.019 ms_2//end
+   (slice0)    Executor memory: 322K bytes.
+   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 2.600 ms
+(8 rows)
+
+set gp_enable_explain_allstat=DEFAULT;

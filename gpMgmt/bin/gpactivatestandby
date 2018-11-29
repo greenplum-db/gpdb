@@ -324,7 +324,10 @@ def promote_standby(master_data_dir):
         try:
             dburl = dbconn.DbURL()
             with dbconn.connect(dburl, utility=True, logConn=False) as conn:
-                pass
+                # When the new master is available for connections, we should
+                # run a CHECKPOINT to force the new TimeLineID to be written to
+                # the pg_control file.
+                dbconn.execSQL(conn, 'CHECKPOINT')
             logger.info('Standby master is promoted')
             return True
         except pygresql.InternalError, e:

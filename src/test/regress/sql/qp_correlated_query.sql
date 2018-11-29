@@ -113,6 +113,12 @@ explain (costs off)
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
 select * from A where exists (select * from B where A.i in (select C.i from C where C.i = B.i));
 
+
+-- Test for ALL_SUBLINK pull-up based on both left-hand and right-hand input
+explain (costs off)
+select * from A,B where exists (select * from C where B.i not in (select C.i from C where C.i != 10));
+select * from A,B where exists (select * from C where B.i not in (select C.i from C where C.i != 10));
+
 -- -- -- --
 -- Basic queries with NOT IN clause
 -- -- -- --

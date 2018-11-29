@@ -15,6 +15,7 @@
 #include "postgres.h"
 
 #include "access/htup_details.h"
+#include "access/skey.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
@@ -1356,7 +1357,7 @@ has_correlation_in_funcexpr_rte(List *rtable)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc_rte);
 
-		if (NULL != rte->funcexpr && contain_vars_of_level_or_above(rte->funcexpr, 1))
+		if (rte->functions  && contain_vars_of_level_or_above((Node *) rte->functions, 1))
 		{
 			return true;
 		}

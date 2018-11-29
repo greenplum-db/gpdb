@@ -5,7 +5,7 @@
  *
  *
  * Portions Copyright (c) 2017, Pivotal Software Inc
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,9 +25,8 @@
 #include "parser/parse_expr.h"
 
 /* Local functions */
-static Relids find_placeholders_recurse(PlannerInfo *root, Node *jtnode);
-static void mark_placeholders_in_expr(PlannerInfo *root, Node *expr,
-						  Relids relids);
+static void find_placeholders_recurse(PlannerInfo *root, Node *jtnode);
+static void find_placeholders_in_expr(PlannerInfo *root, Node *expr);
 
 
 /*
@@ -63,7 +62,7 @@ make_placeholder_expr(PlannerInfo *root, Expr *expr, Relids phrels)
  * We build PlaceHolderInfos only for PHVs that are still present in the
  * simplified query passed to query_planner().
  *
- * Note: this should only be called after query_planner() has started.	Also,
+ * Note: this should only be called after query_planner() has started.  Also,
  * create_new_ph must not be TRUE after deconstruct_jointree begins, because
  * make_outerjoininfo assumes that we already know about all placeholders.
  */
@@ -72,6 +71,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 					  bool create_new_ph)
 {
 	PlaceHolderInfo *phinfo;
+	Relids		rels_used;
 	ListCell   *lc;
 
 	/* if this ever isn't true, we'd need to be able to look in parent lists */
@@ -92,15 +92,38 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 	phinfo = makeNode(PlaceHolderInfo);
 	phinfo->phid = phv->phid;
 	phinfo->ph_var = copyObject(phv);
-	phinfo->ph_eval_at = pull_varnos((Node *) phv);
+
+	/*
+	 * Any referenced rels that are outside the PHV's syntactic scope are
+	 * LATERAL references, which should be included in ph_lateral but not in
+	 * ph_eval_at.  If no referenced rels are within the syntactic scope,
+	 * force evaluation at the syntactic location.
+	 */
+	rels_used = pull_varnos((Node *) phv->phexpr);
+	phinfo->ph_lateral = bms_difference(rels_used, phv->phrels);
+	if (bms_is_empty(phinfo->ph_lateral))
+		phinfo->ph_lateral = NULL;		/* make it exactly NULL if empty */
+	phinfo->ph_eval_at = bms_int_members(rels_used, phv->phrels);
+	/* If no contained vars, force evaluation at syntactic location */
+	if (bms_is_empty(phinfo->ph_eval_at))
+	{
+		phinfo->ph_eval_at = bms_copy(phv->phrels);
+		Assert(!bms_is_empty(phinfo->ph_eval_at));
+	}
 	/* ph_eval_at may change later, see update_placeholder_eval_levels */
 	phinfo->ph_needed = NULL;	/* initially it's unused */
-	phinfo->ph_may_need = NULL;
 	/* for the moment, estimate width using just the datatype info */
 	phinfo->ph_width = get_typavgwidth(exprType((Node *) phv->phexpr),
 									   exprTypmod((Node *) phv->phexpr));
 
 	root->placeholder_list = lappend(root->placeholder_list, phinfo);
+
+	/*
+	 * The PHV's contained expression may contain other, lower-level PHVs.  We
+	 * now know we need to get those into the PlaceHolderInfo list, too, so we
+	 * may as well do that immediately.
+	 */
+	find_placeholders_in_expr(root, (Node *) phinfo->ph_var->phexpr);
 
 	return phinfo;
 }
@@ -111,6 +134,12 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
  *
  * We don't need to look at the targetlist because build_base_rel_tlists()
  * will already have made entries for any PHVs in the tlist.
+ *
+ * This is called before we begin deconstruct_jointree.  Once we begin
+ * deconstruct_jointree, all active placeholders must be present in
+ * root->placeholder_list, because make_outerjoininfo and
+ * update_placeholder_eval_levels require this info to be available
+ * while we crawl up the join tree.
  */
 void
 find_placeholders_in_jointree(PlannerInfo *root)
@@ -121,7 +150,7 @@ find_placeholders_in_jointree(PlannerInfo *root)
 		/* Start recursion at top of jointree */
 		Assert(root->parse->jointree != NULL &&
 			   IsA(root->parse->jointree, FromExpr));
-		(void) find_placeholders_recurse(root, (Node *) root->parse->jointree);
+		find_placeholders_recurse(root, (Node *) root->parse->jointree);
 	}
 }
 
@@ -130,23 +159,15 @@ find_placeholders_in_jointree(PlannerInfo *root)
  *	  One recursion level of find_placeholders_in_jointree.
  *
  * jtnode is the current jointree node to examine.
- *
- * The result is the set of base Relids contained in or below jtnode.
- * This is just an internal convenience, it's not used at the top level.
  */
-static Relids
+static void
 find_placeholders_recurse(PlannerInfo *root, Node *jtnode)
 {
-	Relids		jtrelids;
-
 	if (jtnode == NULL)
-		return NULL;
+		return;
 	if (IsA(jtnode, RangeTblRef))
 	{
-		int			varno = ((RangeTblRef *) jtnode)->rtindex;
-
-		/* No quals to deal with, just return correct result */
-		jtrelids = bms_make_singleton(varno);
+		/* No quals to deal with here */
 	}
 	else if (IsA(jtnode, FromExpr))
 	{
@@ -154,57 +175,43 @@ find_placeholders_recurse(PlannerInfo *root, Node *jtnode)
 		ListCell   *l;
 
 		/*
-		 * First, recurse to handle child joins, and form their relid set.
+		 * First, recurse to handle child joins.
 		 */
-		jtrelids = NULL;
 		foreach(l, f->fromlist)
 		{
-			Relids		sub_relids;
-
-			sub_relids = find_placeholders_recurse(root, lfirst(l));
-			jtrelids = bms_join(jtrelids, sub_relids);
+			find_placeholders_recurse(root, lfirst(l));
 		}
 
 		/*
 		 * Now process the top-level quals.
 		 */
-		mark_placeholders_in_expr(root, f->quals, jtrelids);
+		find_placeholders_in_expr(root, f->quals);
 	}
 	else if (IsA(jtnode, JoinExpr))
 	{
 		JoinExpr   *j = (JoinExpr *) jtnode;
-		Relids		leftids,
-					rightids;
 
 		/*
-		 * First, recurse to handle child joins, and form their relid set.
+		 * First, recurse to handle child joins.
 		 */
-		leftids = find_placeholders_recurse(root, j->larg);
-		rightids = find_placeholders_recurse(root, j->rarg);
-		jtrelids = bms_join(leftids, rightids);
+		find_placeholders_recurse(root, j->larg);
+		find_placeholders_recurse(root, j->rarg);
 
 		/* Process the qual clauses */
-		mark_placeholders_in_expr(root, j->quals, jtrelids);
+		find_placeholders_in_expr(root, j->quals);
 	}
 	else
-	{
 		elog(ERROR, "unrecognized node type: %d",
 			 (int) nodeTag(jtnode));
-		jtrelids = NULL;		/* keep compiler quiet */
-	}
-	return jtrelids;
 }
 
 /*
- * mark_placeholders_in_expr
- *		Find all PlaceHolderVars in the given expression, and mark them
- *		as possibly needed at the specified join level.
- *
- * relids is the syntactic join level to mark as the "maybe needed" level
- * for each PlaceHolderVar found in the expression.
+ * find_placeholders_in_expr
+ *		Find all PlaceHolderVars in the given expression, and create
+ *		PlaceHolderInfo entries for them.
  */
 static void
-mark_placeholders_in_expr(PlannerInfo *root, Node *expr, Relids relids)
+find_placeholders_in_expr(PlannerInfo *root, Node *expr)
 {
 	List	   *vars;
 	ListCell   *vl;
@@ -219,61 +226,15 @@ mark_placeholders_in_expr(PlannerInfo *root, Node *expr, Relids relids)
 	foreach(vl, vars)
 	{
 		PlaceHolderVar *phv = (PlaceHolderVar *) lfirst(vl);
-		PlaceHolderInfo *phinfo;
 
 		/* Ignore any plain Vars */
 		if (!IsA(phv, PlaceHolderVar))
 			continue;
 
 		/* Create a PlaceHolderInfo entry if there's not one already */
-		phinfo = find_placeholder_info(root, phv, true);
-
-		/* Mark it, and recursively process any contained placeholders */
-		mark_placeholder_maybe_needed(root, phinfo, relids);
+		(void) find_placeholder_info(root, phv, true);
 	}
 	list_free(vars);
-}
-
-/*
- * mark_placeholder_maybe_needed
- *		Mark a placeholder as possibly needed at the specified join level.
- *
- * relids is the syntactic join level to mark as the "maybe needed" level
- * for the placeholder.
- *
- * This is called during an initial scan of the query's targetlist and quals
- * before we begin deconstruct_jointree.  Once we begin deconstruct_jointree,
- * all active placeholders must be present in root->placeholder_list with
- * their correct ph_may_need values, because make_outerjoininfo and
- * update_placeholder_eval_levels require this info to be available while
- * we crawl up the join tree.
- */
-void
-mark_placeholder_maybe_needed(PlannerInfo *root, PlaceHolderInfo *phinfo,
-							  Relids relids)
-{
-	Relids		est_eval_level;
-
-	/* Mark the PHV as possibly needed at the given syntactic level */
-	phinfo->ph_may_need = bms_add_members(phinfo->ph_may_need, relids);
-
-	/*
-	 * This is a bit tricky: the PHV's contained expression may contain other,
-	 * lower-level PHVs.  We need to get those into the PlaceHolderInfo list,
-	 * but they aren't going to be needed where the outer PHV is referenced.
-	 * Rather, they'll be needed where the outer PHV is evaluated.  We can
-	 * estimate that conservatively as the syntactic location of the PHV's
-	 * expression, but not less than the level of any Vars it contains.
-	 * (Normally the Vars would come from below the syntactic location anyway,
-	 * but this might not be true if the PHV contains any LATERAL references.)
-	 */
-	est_eval_level = bms_union(phinfo->ph_var->phrels, phinfo->ph_eval_at);
-
-	/* Now recurse to take care of any such PHVs */
-	mark_placeholders_in_expr(root, (Node *) phinfo->ph_var->phexpr,
-							  est_eval_level);
-
-	bms_free(est_eval_level);
 }
 
 /*
@@ -283,7 +244,7 @@ mark_placeholder_maybe_needed(PlannerInfo *root, PlaceHolderInfo *phinfo,
  * The initial eval_at level set by find_placeholder_info was the set of
  * rels used in the placeholder's expression (or the whole subselect below
  * the placeholder's syntactic location, if the expr is variable-free).
- * If the subselect contains any outer joins that can null any of those rels,
+ * If the query contains any outer joins that can null any of those rels,
  * we must delay evaluation to above those joins.
  *
  * We repeat this operation each time we add another outer join to
@@ -363,6 +324,9 @@ update_placeholder_eval_levels(PlannerInfo *root, SpecialJoinInfo *new_sjinfo)
 			}
 		} while (found_some);
 
+		/* Can't move the PHV's eval_at level to above its syntactic level */
+		Assert(bms_is_subset(eval_at, syn_level));
+
 		phinfo->ph_eval_at = eval_at;
 	}
 }
@@ -373,11 +337,14 @@ update_placeholder_eval_levels(PlannerInfo *root, SpecialJoinInfo *new_sjinfo)
  *
  * This is called after we've finished determining the eval_at levels for
  * all placeholders.  We need to make sure that all vars and placeholders
- * needed to evaluate each placeholder will be available at the join level
- * where the evaluation will be done.  Note that this loop can have
- * side-effects on the ph_needed sets of other PlaceHolderInfos; that's okay
- * because we don't examine ph_needed here, so there are no ordering issues
- * to worry about.
+ * needed to evaluate each placeholder will be available at the scan or join
+ * level where the evaluation will be done.  (It might seem that scan-level
+ * evaluations aren't interesting, but that's not so: a LATERAL reference
+ * within a placeholder's expression needs to cause the referenced var or
+ * placeholder to be marked as needed in the scan where it's evaluated.)
+ * Note that this loop can have side-effects on the ph_needed sets of other
+ * PlaceHolderInfos; that's okay because we don't examine ph_needed here, so
+ * there are no ordering issues to worry about.
  */
 void
 fix_placeholder_input_needed_levels(PlannerInfo *root)
@@ -387,27 +354,23 @@ fix_placeholder_input_needed_levels(PlannerInfo *root)
 	foreach(lc, root->placeholder_list)
 	{
 		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);
-		Relids		eval_at = phinfo->ph_eval_at;
+		List	   *vars = pull_var_clause((Node *) phinfo->ph_var->phexpr,
+										   PVC_RECURSE_AGGREGATES,
+										   PVC_INCLUDE_PLACEHOLDERS);
 
-		/* No work unless it'll be evaluated above baserel level */
-		if (bms_membership(eval_at) == BMS_MULTIPLE)
-		{
-			List	   *vars = pull_var_clause((Node *) phinfo->ph_var->phexpr,
-											   PVC_RECURSE_AGGREGATES,
-											   PVC_INCLUDE_PLACEHOLDERS);
-
-			add_vars_to_targetlist(root, vars, eval_at, false);
-			list_free(vars);
-		}
+		add_vars_to_targetlist(root, vars, phinfo->ph_eval_at, false);
+		list_free(vars);
 	}
 }
 
 /*
  * add_placeholders_to_base_rels
- *		Add any required PlaceHolderVars to base rels' targetlists.
+ *		Add any required PlaceHolderVars to base rels' targetlists, and
+ *		update lateral_vars lists for lateral references contained in them.
  *
  * If any placeholder can be computed at a base rel and is needed above it,
- * add it to that rel's targetlist.  This might look like it could be merged
+ * add it to that rel's targetlist, and add any lateral references it requires
+ * to the rel's lateral_vars list.  This might look like it could be merged
  * with fix_placeholder_input_needed_levels, but it must be separate because
  * join removal happens in between, and can change the ph_eval_at sets.  There
  * is essentially the same logic in add_placeholders_to_joinrel, but we can't
@@ -423,14 +386,52 @@ add_placeholders_to_base_rels(PlannerInfo *root)
 		PlaceHolderInfo *phinfo = (PlaceHolderInfo *) lfirst(lc);
 		Relids		eval_at = phinfo->ph_eval_at;
 
-		if (bms_membership(eval_at) == BMS_SINGLETON &&
-			bms_nonempty_difference(phinfo->ph_needed, eval_at))
+		if (bms_membership(eval_at) == BMS_SINGLETON)
 		{
 			int			varno = bms_singleton_member(eval_at);
 			RelOptInfo *rel = find_base_rel(root, varno);
 
-			rel->reltargetlist = lappend(rel->reltargetlist,
-										 copyObject(phinfo->ph_var));
+			/* add it to reltargetlist if needed above the rel scan level */
+			if (bms_nonempty_difference(phinfo->ph_needed, eval_at))
+				rel->reltargetlist = lappend(rel->reltargetlist,
+											 copyObject(phinfo->ph_var));
+			/* if there are lateral refs in it, add them to lateral_vars */
+			if (phinfo->ph_lateral != NULL)
+			{
+				List	   *vars = pull_var_clause((Node *) phinfo->ph_var->phexpr,
+												   PVC_RECURSE_AGGREGATES,
+												   PVC_INCLUDE_PLACEHOLDERS);
+				ListCell   *lc2;
+
+				foreach(lc2, vars)
+				{
+					Node	   *node = (Node *) lfirst(lc2);
+
+					if (IsA(node, Var))
+					{
+						Var		   *var = (Var *) node;
+
+						if (var->varno != varno)
+							rel->lateral_vars = lappend(rel->lateral_vars,
+														var);
+					}
+					else if (IsA(node, PlaceHolderVar))
+					{
+						PlaceHolderVar *other_phv = (PlaceHolderVar *) node;
+						PlaceHolderInfo *other_phi;
+
+						other_phi = find_placeholder_info(root, other_phv,
+														  false);
+						if (!bms_is_subset(other_phi->ph_eval_at, eval_at))
+							rel->lateral_vars = lappend(rel->lateral_vars,
+														other_phv);
+					}
+					else
+						Assert(false);
+				}
+
+				list_free(vars);
+			}
 		}
 	}
 }

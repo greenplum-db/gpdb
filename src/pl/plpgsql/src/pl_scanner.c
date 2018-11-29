@@ -4,7 +4,7 @@
  *	  lexical scanning for PL/pgSQL
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -44,7 +44,7 @@ IdentifierLookup plpgsql_IdentifierLookup = IDENTIFIER_LOOKUP_NORMAL;
  *
  * For the most part, the reserved keywords are those that start a PL/pgSQL
  * statement (and so would conflict with an assignment to a variable of the
- * same name).	We also don't sweat it much about reserving keywords that
+ * same name).  We also don't sweat it much about reserving keywords that
  * are reserved in the core grammar.  Try to avoid reserving other words.
  */
 
@@ -109,9 +109,14 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("alias", K_ALIAS, UNRESERVED_KEYWORD)
 	PG_KEYWORD("array", K_ARRAY, UNRESERVED_KEYWORD)
 	PG_KEYWORD("backward", K_BACKWARD, UNRESERVED_KEYWORD)
+	PG_KEYWORD("column", K_COLUMN, UNRESERVED_KEYWORD)
+	PG_KEYWORD("column_name", K_COLUMN_NAME, UNRESERVED_KEYWORD)
 	PG_KEYWORD("constant", K_CONSTANT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("constraint", K_CONSTRAINT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("constraint_name", K_CONSTRAINT_NAME, UNRESERVED_KEYWORD)
 	PG_KEYWORD("current", K_CURRENT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("cursor", K_CURSOR, UNRESERVED_KEYWORD)
+	PG_KEYWORD("datatype", K_DATATYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("debug", K_DEBUG, UNRESERVED_KEYWORD)
 	PG_KEYWORD("detail", K_DETAIL, UNRESERVED_KEYWORD)
 	PG_KEYWORD("dump", K_DUMP, UNRESERVED_KEYWORD)
@@ -130,9 +135,12 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("no", K_NO, UNRESERVED_KEYWORD)
 	PG_KEYWORD("notice", K_NOTICE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("option", K_OPTION, UNRESERVED_KEYWORD)
+	PG_KEYWORD("pg_context", K_PG_CONTEXT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("pg_datatype_name", K_PG_DATATYPE_NAME, UNRESERVED_KEYWORD)
 	PG_KEYWORD("pg_exception_context", K_PG_EXCEPTION_CONTEXT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("pg_exception_detail", K_PG_EXCEPTION_DETAIL, UNRESERVED_KEYWORD)
 	PG_KEYWORD("pg_exception_hint", K_PG_EXCEPTION_HINT, UNRESERVED_KEYWORD)
+	PG_KEYWORD("print_strict_params", K_PRINT_STRICT_PARAMS, UNRESERVED_KEYWORD)
 	PG_KEYWORD("prior", K_PRIOR, UNRESERVED_KEYWORD)
 	PG_KEYWORD("query", K_QUERY, UNRESERVED_KEYWORD)
 	PG_KEYWORD("relative", K_RELATIVE, UNRESERVED_KEYWORD)
@@ -141,10 +149,14 @@ static const ScanKeyword unreserved_keywords[] = {
 	PG_KEYWORD("reverse", K_REVERSE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("row_count", K_ROW_COUNT, UNRESERVED_KEYWORD)
 	PG_KEYWORD("rowtype", K_ROWTYPE, UNRESERVED_KEYWORD)
+	PG_KEYWORD("schema", K_SCHEMA, UNRESERVED_KEYWORD)
+	PG_KEYWORD("schema_name", K_SCHEMA_NAME, UNRESERVED_KEYWORD)
 	PG_KEYWORD("scroll", K_SCROLL, UNRESERVED_KEYWORD)
 	PG_KEYWORD("slice", K_SLICE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("sqlstate", K_SQLSTATE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("stacked", K_STACKED, UNRESERVED_KEYWORD)
+	PG_KEYWORD("table", K_TABLE, UNRESERVED_KEYWORD)
+	PG_KEYWORD("table_name", K_TABLE_NAME, UNRESERVED_KEYWORD)
 	PG_KEYWORD("type", K_TYPE, UNRESERVED_KEYWORD)
 	PG_KEYWORD("use_column", K_USE_COLUMN, UNRESERVED_KEYWORD)
 	PG_KEYWORD("use_variable", K_USE_VARIABLE, UNRESERVED_KEYWORD)
@@ -165,7 +177,7 @@ typedef struct
 
 /*
  * Scanner working state.  At some point we might wish to fold all this
- * into a YY_EXTRA struct.	For the moment, there is no need for plpgsql's
+ * into a YY_EXTRA struct.  For the moment, there is no need for plpgsql's
  * lexer to be re-entrant, and the notational burden of passing a yyscanner
  * pointer around is great enough to not want to do it without need.
  */
@@ -333,7 +345,7 @@ plpgsql_yylex(void)
 
 /*
  * Internal yylex function.  This wraps the core lexer and adds one feature:
- * a token pushback stack.	We also make a couple of trivial single-token
+ * a token pushback stack.  We also make a couple of trivial single-token
  * translations from what the core lexer does to what we want, in particular
  * interfacing from the core_YYSTYPE to YYSTYPE union.
  */
@@ -547,7 +559,7 @@ plpgsql_yyerror(const char *message)
 		/*
 		 * If we have done any lookahead then flex will have restored the
 		 * character after the end-of-token.  Zap it again so that we report
-		 * only the single token here.	This modifies scanbuf but we no longer
+		 * only the single token here.  This modifies scanbuf but we no longer
 		 * care about that.
 		 */
 		yytext[plpgsql_yyleng] = '\0';

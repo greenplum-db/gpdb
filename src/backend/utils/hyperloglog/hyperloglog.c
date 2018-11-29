@@ -584,7 +584,7 @@ hll_compress_dense(HLLCounter hloglog)
     }
 
     /* lz_compress the normalized array and copy that data into hloglog->data
-     * if any compression was acheived */
+     * if any compression was achieved */
     pglz_compress(data,m,dest,PGLZ_strategy_always);
     if (VARSIZE_ANY(dest) >= (m * hloglog->binbits /8) ){
 	/* free allocated memory and return unaltered array */
@@ -643,7 +643,7 @@ hll_compress_dense_unpacked(HLLCounter hloglog)
 
 
 	/* lz_compress the normalized array and copy that data into hloglog->data
-	* if any compression was acheived */
+	* if any compression was achieved */
 	pglz_compress(hloglog->data, m, dest, PGLZ_strategy_always);
 	if (VARSIZE_ANY(dest) >= (m * hloglog->binbits / 8)){
 		/* free allocated memory and return unaltered array */

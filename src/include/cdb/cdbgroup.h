@@ -30,7 +30,10 @@ extern Plan *cdb_grouping_planner(PlannerInfo* root,
 					 AggClauseCosts *agg_costs,
 					 GroupContext *group_context);
 
-extern bool cdbpathlocus_collocates(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match);
+extern bool cdbpathlocus_collocates_pathkeys(PlannerInfo *root, CdbPathLocus locus, List *pathkeys, bool exact_match);
+extern bool cdbpathlocus_collocates_expressions(PlannerInfo *root, CdbPathLocus locus, List *exprs,
+											   bool exact_match);
+
 extern CdbPathLocus cdbpathlocus_from_flow(Flow *flow);
 extern void generate_three_tlists(List *tlist,
 								  bool twostage,

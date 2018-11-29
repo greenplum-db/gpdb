@@ -19,5 +19,5 @@ set +e
 quicklz_error=$(psql testdb -c "INSERT INTO foo VALUES (1, 'abc');" 2>&1)
 set -e
 
-echo $quicklz_error | grep "quicklz compression not supported"
+echo $quicklz_error | grep "unknown compress type \"quicklz\""
 exit $?

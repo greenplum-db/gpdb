@@ -254,7 +254,8 @@ _readQuery(void)
 	READ_NODE_FIELD(rowMarks);
 	READ_NODE_FIELD(setOperations);
 	READ_NODE_FIELD(constraintDeps);
-	READ_BOOL_FIELD(isCTAS);
+	READ_BOOL_FIELD(parentStmtType);
+	READ_BOOL_FIELD(needReshuffle);
 
 	/* policy not serialized */
 
@@ -590,7 +591,6 @@ _readSetDistributionCmd(void)
 
 	READ_INT_FIELD(backendId);
 	READ_NODE_FIELD(relids);
-	READ_NODE_FIELD(indexOidMap);
 	READ_NODE_FIELD(hiddenTypes);
 
 	READ_DONE();
@@ -701,6 +701,7 @@ _readUpdateStmt(void)
 	READ_NODE_FIELD(fromClause);
 	READ_NODE_FIELD(returningList);
 	READ_NODE_FIELD(withClause);
+	READ_BOOL_FIELD(needReshuffle);
 	READ_DONE();
 }
 
@@ -1221,6 +1222,21 @@ _readPartitionValuesSpec(void)
 	READ_DONE();
 }
 
+static ExpandStmtSpec *
+_readExpandStmtSpec(void)
+{
+	READ_LOCALS(ExpandStmtSpec);
+
+	READ_ENUM_FIELD(method, ExpandMethod);
+	READ_BITMAPSET_FIELD(ps_none);
+	READ_BITMAPSET_FIELD(ps_root);
+	READ_BITMAPSET_FIELD(ps_interior);
+	READ_BITMAPSET_FIELD(ps_leaf);
+	READ_OID_FIELD(backendId);
+
+	READ_DONE();
+}
+
 static Partition *
 _readPartition(void)
 {
@@ -1419,6 +1435,7 @@ _readPlannedStmt(void)
 
 	READ_UINT64_FIELD(query_mem);
 	READ_NODE_FIELD(intoClause);
+	READ_NODE_FIELD(copyIntoClause);
 	READ_DONE();
 }
 
@@ -1858,11 +1875,23 @@ _readFunctionScan(void)
 
 	readScanInfo((Scan *)local_node);
 
-	READ_NODE_FIELD(funcexpr);
-	READ_NODE_FIELD(funccolnames);
-	READ_NODE_FIELD(funccoltypes);
-	READ_NODE_FIELD(funccoltypmods);
-	READ_NODE_FIELD(funccolcollations);
+	READ_NODE_FIELD(functions);
+	READ_BOOL_FIELD(funcordinality);
+
+	READ_DONE();
+}
+
+/*
+ * _readTableFunctionScan
+ */
+static TableFunctionScan *
+_readTableFunctionScan(void)
+{
+	READ_LOCALS(TableFunctionScan);
+
+	readScanInfo((Scan *)local_node);
+
+	READ_NODE_FIELD(function);
 
 	READ_DONE();
 }
@@ -2002,25 +2031,6 @@ _readWindowAgg(void)
 	READ_INT_FIELD(frameOptions);
 	READ_NODE_FIELD(startOffset);
 	READ_NODE_FIELD(endOffset);
-
-	READ_DONE();
-}
-
-/*
- * _readTableFunctionScan
- */
-static TableFunctionScan *
-_readTableFunctionScan(void)
-{
-	READ_LOCALS(TableFunctionScan);
-
-	readScanInfo((Scan *)local_node);
-	READ_NODE_FIELD(funcexpr);
-	READ_NODE_FIELD(funccolnames);
-	READ_NODE_FIELD(funccoltypes);
-	READ_NODE_FIELD(funccoltypmods);
-	READ_NODE_FIELD(funccolcollations);
-	READ_BYTEA_FIELD(funcuserdata);
 
 	READ_DONE();
 }
@@ -2214,6 +2224,7 @@ _readFlow(void)
 	READ_ENUM_FIELD(req_move, Movement);
 	READ_ENUM_FIELD(locustype, CdbLocusType);
 	READ_INT_FIELD(segindex);
+	READ_INT_FIELD(numsegments);
 
 	READ_NODE_FIELD(hashExpr);
 	READ_NODE_FIELD(flow_before_req_move);
@@ -2239,8 +2250,7 @@ _readMotion(void)
 	READ_NODE_FIELD(hashExpr);
 	READ_NODE_FIELD(hashDataTypes);
 
-	READ_INT_FIELD(numOutputSegs);
-	READ_INT_ARRAY(outputSegIdx, local_node->numOutputSegs, int);
+	READ_INT_FIELD(isBroadcast);
 
 	READ_INT_FIELD(numSortCols);
 	READ_INT_ARRAY(sortColIdx, local_node->numSortCols, AttrNumber);
@@ -2287,6 +2297,23 @@ _readSplitUpdate(void)
 	READ_NODE_FIELD(insertColIdx);
 	READ_NODE_FIELD(deleteColIdx);
 
+	readPlanInfo((Plan *)local_node);
+
+	READ_DONE();
+}
+
+/*
+ * _readReshuffle
+ */
+static Reshuffle *
+_readReshuffle(void)
+{
+	READ_LOCALS(Reshuffle);
+
+	READ_INT_FIELD(tupleSegIdx);
+	READ_NODE_FIELD(policyAttrs);
+	READ_INT_FIELD(oldSegs);
+	READ_INT_FIELD(ptype);
 	readPlanInfo((Plan *)local_node);
 
 	READ_DONE();
@@ -2365,11 +2392,11 @@ _readSlice(void)
 	READ_ENUM_FIELD(gangType, GangType);
 	Assert(local_node->gangType <= GANGTYPE_PRIMARY_WRITER);
 	READ_INT_FIELD(gangSize);
-	READ_INT_FIELD(numGangMembersToBeActive);
 	READ_BOOL_FIELD(directDispatch.isDirectDispatch);
 	READ_NODE_FIELD(directDispatch.contentIds); /* List of int index */
 	READ_DUMMY_FIELD(primaryGang, NULL);
 	READ_NODE_FIELD(primaryProcesses); /* List of (CDBProcess *) */
+	READ_BITMAPSET_FIELD(processesMap);
 
 	READ_DONE();
 }
@@ -2485,6 +2512,33 @@ _readCreateTableSpaceStmt(void)
 	READ_STRING_FIELD(owner);
 	READ_STRING_FIELD(location);
 	READ_NODE_FIELD(options);
+
+	READ_DONE();
+}
+
+static AlterTableSpaceMoveStmt *
+_readAlterTableSpaceMoveStmt(void)
+{
+	READ_LOCALS(AlterTableSpaceMoveStmt);
+
+	READ_STRING_FIELD(orig_tablespacename);
+	READ_ENUM_FIELD(objtype, ObjectType);
+	READ_BOOL_FIELD(move_all);
+	READ_NODE_FIELD(roles);
+	READ_STRING_FIELD(new_tablespacename);
+	READ_BOOL_FIELD(nowait);
+
+	READ_DONE();
+}
+
+static AlterTableSpaceOptionsStmt *
+_readAlterTableSpaceOptionsStmt(void)
+{
+	READ_LOCALS(AlterTableSpaceOptionsStmt);
+
+	READ_STRING_FIELD(tablespacename);
+	READ_NODE_FIELD(options);
+	READ_BOOL_FIELD(isReset);
 
 	READ_DONE();
 }
@@ -2697,8 +2751,8 @@ _readPlaceHolderInfo(void)
 	READ_INT_FIELD(phid);
 	READ_NODE_FIELD(ph_var);
 	READ_BITMAPSET_FIELD(ph_eval_at);
+	READ_BITMAPSET_FIELD(ph_lateral);
 	READ_BITMAPSET_FIELD(ph_needed);
-	READ_BITMAPSET_FIELD(ph_may_need);
 	READ_INT_FIELD(ph_width);
 
 	READ_DONE();
@@ -2751,6 +2805,7 @@ _readDistributedBy(void)
 	READ_LOCALS(DistributedBy);
 
 	READ_ENUM_FIELD(ptype, GpPolicyType);
+	READ_INT_FIELD(numsegments);
 	READ_NODE_FIELD(keys);
 
 	READ_DONE();
@@ -2853,6 +2908,7 @@ _readModifyTable(void)
 	READ_NODE_FIELD(resultRelations);
 	READ_INT_FIELD(resultRelIndex);
 	READ_NODE_FIELD(plans);
+	READ_NODE_FIELD(withCheckOptionLists);
 	READ_NODE_FIELD(returningLists);
 	READ_NODE_FIELD(fdwPrivLists);
 	READ_NODE_FIELD(rowMarks);
@@ -2874,6 +2930,19 @@ _readLockRows(void)
 	READ_NODE_FIELD(rowMarks);
 	READ_INT_FIELD(epqParam);
 
+	READ_DONE();
+}
+
+static ReshuffleExpr *
+_readReshuffleExprfFast(void)
+{
+	READ_LOCALS(ReshuffleExpr);
+
+	READ_INT_FIELD(newSegs);
+	READ_INT_FIELD(oldSegs);
+	READ_NODE_FIELD(hashKeys);
+	READ_NODE_FIELD(hashTypes);
+	READ_INT_FIELD(ptype);
 	READ_DONE();
 }
 
@@ -2940,6 +3009,8 @@ _readGpPolicy(void)
 	READ_LOCALS(GpPolicy);
 
 	READ_ENUM_FIELD(ptype, GpPolicyType);
+
+	READ_INT_FIELD(numsegments);
 
 	READ_INT_FIELD(nattrs);
 	READ_INT_ARRAY(attrs, local_node->nattrs, AttrNumber);
@@ -3162,6 +3233,9 @@ readNodeBinary(void)
 			case T_SplitUpdate:
 				return_value = _readSplitUpdate();
 				break;
+			case T_Reshuffle:
+				return_value = _readReshuffle();
+				break;
 			case T_RowTrigger:
 				return_value = _readRowTrigger();
 				break;
@@ -3179,6 +3253,9 @@ readNodeBinary(void)
 				break;
 			case T_IntoClause:
 				return_value = _readIntoClause();
+				break;
+			case T_CopyIntoClause:
+				return_value = _readCopyIntoClause();
 				break;
 			case T_Var:
 				return_value = _readVar();
@@ -3303,6 +3380,9 @@ readNodeBinary(void)
 			case T_RangeTblRef:
 				return_value = _readRangeTblRef();
 				break;
+			case T_RangeTblFunction:
+				return_value = _readRangeTblFunction();
+				break;
 			case T_JoinExpr:
 				return_value = _readJoinExpr();
 				break;
@@ -3357,6 +3437,9 @@ readNodeBinary(void)
 				break;
 			case T_PartitionValuesSpec:
 				return_value = _readPartitionValuesSpec();
+				break;
+			case T_ExpandStmtSpec:
+				return_value = _readExpandStmtSpec();
 				break;
 			case T_Partition:
 				return_value = _readPartition();
@@ -3437,8 +3520,6 @@ readNodeBinary(void)
 			case T_CreateConversionStmt:
 				return_value = _readCreateConversionStmt();
 				break;
-
-
 			case T_ViewStmt:
 				return_value = _readViewStmt();
 				break;
@@ -3460,6 +3541,9 @@ readNodeBinary(void)
 				return_value = _readTruncateStmt();
 				break;
 
+			case T_ReplicaIdentityStmt:
+				return_value = _readReplicaIdentityStmt();
+				break;
 			case T_AlterTableStmt:
 				return_value = _readAlterTableStmt();
 				break;
@@ -3574,6 +3658,9 @@ readNodeBinary(void)
 				break;
 			case T_Query:
 				return_value = _readQuery();
+				break;
+			case T_WithCheckOption:
+				return_value = _readWithCheckOption();
 				break;
 			case T_SortGroupClause:
 				return_value = _readSortGroupClause();
@@ -3693,7 +3780,9 @@ readNodeBinary(void)
 			case T_CreateTableSpaceStmt:
 				return_value = _readCreateTableSpaceStmt();
 				break;
-
+			case T_AlterTableSpaceOptionsStmt:
+				return_value = _readAlterTableSpaceOptionsStmt();
+				break;
 			case T_DropTableSpaceStmt:
 				return_value = _readDropTableSpaceStmt();
 				break;
@@ -3799,8 +3888,12 @@ readNodeBinary(void)
 			case T_DistributedBy:
 				return_value = _readDistributedBy();
 				break;
-
-
+			case T_AlterTableSpaceMoveStmt:
+				return_value = _readAlterTableSpaceMoveStmt();
+				break;
+			case T_ReshuffleExpr:
+				return_value = _readReshuffleExprfFast();
+				break;
 			default:
 				return_value = NULL; /* keep the compiler silent */
 				elog(ERROR, "could not deserialize unrecognized node type: %d",

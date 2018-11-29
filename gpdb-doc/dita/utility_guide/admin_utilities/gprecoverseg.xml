@@ -30,13 +30,15 @@
       <p>During an incremental recovery (the <codeph>-F</codeph> option is not specified), if
           <codeph>gprecoverseg</codeph> detects a segment instance with mirroring disabled in a
         system with mirrors enabled, the utility reports that mirroring is disabled for the segment,
-        does not attempt to recover that segment instance, and continues the recovery process.</p>
+        does not attempt to recover that segment instance, and continues the recovery process. </p>
       <p>A segment instance can fail for several reasons, such as a host failure, network failure,
         or disk failure. When a segment instance fails, its status is marked as <i>down</i> in the
         Greenplum Database system catalog, and its mirror is activated in <i>change tracking</i>
         mode. In order to bring the failed segment instance back into operation again, you must
         first correct the problem that made it fail in the first place, and then recover the segment
         instance in Greenplum Database using <codeph>gprecoverseg</codeph>.</p>
+      <note otherprops="pivotal"> If incremental recovery was not successful and the down segment
+        instance data is not corrupted, contact Pivotal Support. </note>
       <p>Segment recovery using <codeph>gprecoverseg</codeph> requires that you have an active
         mirror to recover from. For systems that do not have mirroring enabled, or in the event of a
         double fault (a primary and mirror pair both down at the same time) — you must take manual
@@ -60,9 +62,9 @@
 </codeblock>
       <p>See the <codeph>-i</codeph> option below for details and examples of a recovery
         configuration file.</p>
-      <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine your
-        current segment configuration so that you can plan your mirror recovery configuration. For
-        example, run the following query:</p>
+      <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you determine
+        your current segment configuration so that you can plan your mirror recovery configuration.
+        For example, run the following query:</p>
       <codeblock>=# SELECT dbid, content, address, port, datadir 
    FROM gp_segment_configuration
    ORDER BY dbid;</codeblock>
@@ -86,7 +88,7 @@
         <plentry>
           <pt>-B <varname>parallel_processes</varname></pt>
           <pd>The number of segments to recover in parallel. If not specified, the utility will
-            start up to four parallel processes depending on how many segment instances it needs to
+            start up to 16 parallel processes depending on how many segment instances it needs to
             recover.</pd>
         </plentry>
         <plentry>
@@ -98,7 +100,11 @@
           <pt>-F (full recovery)</pt>
           <pd>Optional. Perform a full copy of the active segment instance in order to recover the
             failed segment. The default is to only copy over the incremental changes that occurred
-            while the segment was down.</pd>
+            while the segment was down.
+            <note type="warning">A full recovery deletes the data directory of the down segment
+              instance before copying the data from the active (current primary) segment instance.
+              Before performing a full recovery, ensure that the segment failure did not cause data
+              corruption and that any host segment disk issues have been fixed.</note></pd>
         </plentry>
         <plentry>
           <pt>-i <varname>recover_config_file</varname></pt>
@@ -108,9 +114,8 @@
                 spaces.<codeblock>&lt;failed_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;<b>SPACE</b> 
 &lt;recovery_host_address&gt;:&lt;port&gt;:&lt;data_directory&gt;
 </codeblock><p><b>Comments</b></p><p>Lines
-              beginning with <codeph>#</codeph> are treated as comments and
-              ignored.</p>
-	      <p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
+              beginning with <codeph>#</codeph> are treated as comments and ignored.</p>
+            <p><b>Segments to Recover</b></p><p>Each line after the first specifies a segment to
               recover. This line can have one of two formats. In the event of in-place recovery,
               enter one group of colon delimited fields in the line. For example:</p><p>
               <codeblock>failedAddress:failedPort:failedDataDirectory</codeblock>
@@ -119,15 +124,13 @@
               spaces.</p><p>
               <codeblock>failedAddress:failedPort:failedDataDirectory<b>SPACE</b>newAddress:
 newPort:newDataDirectory</codeblock>
-            </p><p><b>Examples</b></p><p><b>In-place
-                recovery of a single
-                mirror</b></p>
-		<codeblock>sdw1-1:50001:/data1/mirror/gpseg16</codeblock>
-		<p><b>Recovery of a single mirror to a new host</b></p>
-		<codeblock>sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:50001:/data1/recover1/gpseg16</codeblock>
-		<p><b>Obtaining a Sample File</b></p>
-		<p>You can use the <codeph>-o</codeph> option to output a
-              sample recovery configuration file to use as a starting point.</p></pd>
+            </p><p><b>Examples</b></p><p><b>In-place recovery of a single mirror</b></p>
+            <codeblock>sdw1-1:50001:/data1/mirror/gpseg16</codeblock>
+            <p><b>Recovery of a single mirror to a new host</b></p>
+            <codeblock>sdw1-1:50001:/data1/mirror/gpseg16<b>SPACE</b>sdw4-1:50001:/data1/recover1/gpseg16</codeblock>
+            <p><b>Obtaining a Sample File</b></p>
+            <p>You can use the <codeph>-o</codeph> option to output a sample recovery configuration
+              file to use as a starting point.</p></pd>
         </plentry>
         <plentry>
           <pt>-l <varname>logfile_directory</varname></pt>

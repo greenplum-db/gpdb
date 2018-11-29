@@ -22,6 +22,7 @@
 #include "storage/fd.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 
 /*
  * Key structure for the visimap deletion hash table.
@@ -364,12 +365,10 @@ AppendOnlyVisimapScan_GetNextInvisible(
  * Finishes a visimap scan.
  */
 void
-AppendOnlyVisimapScan_Finish(
-							 AppendOnlyVisimapScan *visiMapScan,
+AppendOnlyVisimapScan_Finish(AppendOnlyVisimapScan *visiMapScan,
 							 LOCKMODE lockmode)
 {
-	AppendOnlyVisimapStore_EndScan(
-								   &visiMapScan->visimap.visimapStore,
+	AppendOnlyVisimapStore_EndScan(&visiMapScan->visimap.visimapStore,
 								   visiMapScan->indexScan);
 	AppendOnlyVisimap_Finish(&visiMapScan->visimap, lockmode);
 }

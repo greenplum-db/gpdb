@@ -168,7 +168,7 @@ gp_fault_inject_impl(int32 reason, int64 arg)
 			break;
 
 		case GP_FAULT_USER_SEGV_LWLOCK:
-			LWLockAcquire(WALInsertLock, LW_EXCLUSIVE);
+			LWLockAcquire(WALWriteLock, LW_EXCLUSIVE);
 			*(volatile int *) 0 = 1234;
 			break;
  	

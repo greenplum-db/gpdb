@@ -204,6 +204,10 @@ autostats_get_cmdtype(QueryDesc *queryDesc, AutoStatsCmdType * pcmdType, Oid *pr
 				relationOid = GetIntoRelOid(queryDesc);
 				cmdType = AUTOSTATS_CMDTYPE_CTAS;
 			}
+			else if (stmt->copyIntoClause != NULL)
+			{
+				cmdType = AUTOSTATS_CMDTYPE_COPY;
+			}
 			break;
 
 		case CMD_INSERT:

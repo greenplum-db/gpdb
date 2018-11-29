@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -138,7 +138,7 @@ CreateExecutorState(void)
 	 * Initialize all fields of the Executor State structure
 	 */
 	estate->es_direction = ForwardScanDirection;
-	estate->es_snapshot = SnapshotNow;
+	estate->es_snapshot = InvalidSnapshot;		/* caller must initialize this */
 	estate->es_crosscheck_snapshot = InvalidSnapshot;	/* no crosscheck */
 	estate->es_range_table = NIL;
 	estate->es_plannedstmt = NULL;
@@ -208,28 +208,6 @@ CreateExecutorState(void)
 	return estate;
 }
 
-/*
- * freeDynamicTableScanInfo
- *   Free the space for DynamicTableScanInfo.
- */
-static void
-freeDynamicTableScanInfo(DynamicTableScanInfo *scanInfo)
-{
-	Assert(scanInfo != NULL);
-	
-	if (scanInfo->partsMetadata != NIL)
-	{
-		list_free_deep(scanInfo->partsMetadata);
-	}
-	
-	if (scanInfo->numSelectorsPerScanId != NIL)
-	{
-		list_free(scanInfo->numSelectorsPerScanId);
-	}
-
-	pfree(scanInfo);
-}
-
 /* ----------------
  *		FreeExecutorState
  *
@@ -270,15 +248,7 @@ FreeExecutorState(EState *estate)
 	}
 
 	estate->dispatcherState = NULL;
-
-	/*
-	 * Free dynamicTableScanInfo.
-	 */
-	if (estate->dynamicTableScanInfo != NULL)
-	{
-		freeDynamicTableScanInfo(estate->dynamicTableScanInfo);
-		estate->dynamicTableScanInfo = NULL;
-	}
+	estate->dynamicTableScanInfo = NULL;
 
 	/*
 	 * Free the per-query memory context, thereby releasing all working
@@ -428,7 +398,7 @@ CreateStandaloneExprContext(void)
  * any previously computed pass-by-reference expression result will go away!
  *
  * If isCommit is false, we are being called in error cleanup, and should
- * not call callbacks but only release memory.	(It might be better to call
+ * not call callbacks but only release memory.  (It might be better to call
  * the callbacks and pass the isCommit flag to them, but that would require
  * more invasive code changes than currently seems justified.)
  *
@@ -457,7 +427,7 @@ FreeExprContext(ExprContext *econtext, bool isCommit)
  * ReScanExprContext
  *
  *		Reset an expression context in preparation for a rescan of its
- *		plan node.	This requires calling any registered shutdown callbacks,
+ *		plan node.  This requires calling any registered shutdown callbacks,
  *		since any partially complete set-returning-functions must be canceled.
  *
  * Note we make no assumption about the caller's memory context.
@@ -498,7 +468,7 @@ MakePerTupleExprContext(EState *estate)
 /* ----------------
  *		ExecAssignExprContext
  *
- *		This initializes the ps_ExprContext field.	It is only necessary
+ *		This initializes the ps_ExprContext field.  It is only necessary
  *		to do this for nodes which use ExecQual or ExecProject
  *		because those routines require an econtext. Other nodes that
  *		don't have to evaluate expressions don't need to do this.
@@ -544,7 +514,7 @@ ExecAssignResultTypeFromTL(PlanState *planstate)
 
 	/*
 	 * ExecTypeFromTL needs the parse-time representation of the tlist, not a
-	 * list of ExprStates.	This is good because some plan nodes don't bother
+	 * list of ExprStates.  This is good because some plan nodes don't bother
 	 * to set up planstate->targetlist ...
 	 */
 	tupDesc = ExecTypeFromTL(planstate->plan->targetlist, hasoid);
@@ -572,7 +542,7 @@ ExecGetResultType(PlanState *planstate)
  * the given tlist should be a list of ExprState nodes, not Expr nodes.
  *
  * inputDesc can be NULL, but if it is not, we check to see whether simple
- * Vars in the tlist match the descriptor.	It is important to provide
+ * Vars in the tlist match the descriptor.  It is important to provide
  * inputDesc for relation-scan plan nodes, as a cross check that the relation
  * hasn't been changed since the plan was made.  At higher levels of a plan,
  * there is no need to recheck.
@@ -735,9 +705,9 @@ get_last_attnums(Node *node, ProjectionInfo *projInfo)
 	}
 
 	/*
-	 * Don't examine the arguments of Aggrefs or WindowFuncs, because those do
-	 * not represent expressions to be evaluated within the overall
-	 * targetlist's econtext.
+	 * Don't examine the arguments or filters of Aggrefs or WindowFuncs,
+	 * because those do not represent expressions to be evaluated within the
+	 * overall targetlist's econtext.
 	 */
 	if (IsA(node, Aggref))
 		return false;
@@ -795,7 +765,7 @@ ExecAssignProjectionInfo(PlanState *planstate,
  *
  * However ... there is no particular need to do it during ExecEndNode,
  * because FreeExecutorState will free any remaining ExprContexts within
- * the EState.	Letting FreeExecutorState do it allows the ExprContexts to
+ * the EState.  Letting FreeExecutorState do it allows the ExprContexts to
  * be freed in reverse order of creation, rather than order of creation as
  * will happen if we delete them here, which saves O(N^2) work in the list
  * cleanup inside FreeExprContext.
@@ -815,7 +785,7 @@ ExecFreeExprContext(PlanState *planstate)
  *		the following scan type support functions are for
  *		those nodes which are stubborn and return tuples in
  *		their Scan tuple slot instead of their Result tuple
- *		slot..	luck fur us, these nodes do not do projections
+ *		slot..  luck fur us, these nodes do not do projections
  *		so we don't have to worry about getting the ProjectionInfo
  *		right for them...  -cim 6/3/91
  * ----------------------------------------------------------------
@@ -1232,7 +1202,7 @@ ExecInsertIndexTuples(TupleTableSlot *slot,
 		/*
 		 * If the index has an associated exclusion constraint, check that.
 		 * This is simpler than the process for uniqueness checks since we
-		 * always insert first and then check.	If the constraint is deferred,
+		 * always insert first and then check.  If the constraint is deferred,
 		 * we check now anyway, but don't throw error on violation; instead
 		 * we'll queue a recheck event.
 		 *
@@ -1416,7 +1386,7 @@ retry:
 
 		/*
 		 * If an in-progress transaction is affecting the visibility of this
-		 * tuple, we need to wait for it to complete and then recheck.	For
+		 * tuple, we need to wait for it to complete and then recheck.  For
 		 * simplicity we do rechecking by just restarting the whole scan ---
 		 * this case probably doesn't happen often enough to be worth trying
 		 * harder, and anyway we don't want to hold any index internal locks
@@ -1428,7 +1398,8 @@ retry:
 		if (TransactionIdIsValid(xwait))
 		{
 			index_endscan(index_scan);
-			XactLockTableWait(xwait);
+			XactLockTableWait(xwait, heap, &tup->t_data->t_ctid,
+							  XLTW_RecheckExclusionConstr);
 			goto retry;
 		}
 
@@ -1477,7 +1448,7 @@ retry:
 
 /*
  * Check existing tuple's index values to see if it really matches the
- * exclusion condition against the new_values.	Returns true if conflict.
+ * exclusion condition against the new_values.  Returns true if conflict.
  */
 static bool
 index_recheck_constraint(Relation index, Oid *constr_procs,
@@ -1747,7 +1718,7 @@ InitSliceTable(EState *estate, int nMotions, int nSubplans)
         slice->rootIndex = (i > 0 && i <= nMotions) ? -1 : i;
 		slice->gangType = GANGTYPE_UNALLOCATED;
 		slice->gangSize = 0;
-		slice->numGangMembersToBeActive = 0;
+		slice->segments = NIL;
 		slice->directDispatch.isDirectDispatch = false;
 		slice->directDispatch.contentIds = NIL;
 		slice->primaryGang = NULL;
@@ -1822,7 +1793,7 @@ sliceCalculateNumSendingProcesses(Slice *slice)
 			if (slice->directDispatch.isDirectDispatch)
 				return list_length(slice->directDispatch.contentIds);
 			else
-				return getgpsegmentCount();
+				return slice->gangSize;
 
 		default:
 			Insist(false);
@@ -1830,29 +1801,8 @@ sliceCalculateNumSendingProcesses(Slice *slice)
 	}
 }
 
-/*
- * Context for AssignGangs() and helper functions.
- */
-typedef struct SliceReq
-{
-	int			numNgangs;
-	int			num1gangs_primary_reader;
-    int         num1gangs_entrydb_reader;
-	int			nxtNgang;
-	int			nxt1gang_primary_reader;
-	int			nxt1gang_entrydb_reader;
-	Gang	  **vecNgangs;
-	Gang	  **vec1gangs_primary_reader;
-	Gang	  **vec1gangs_entrydb_reader;
-	bool		writer;
-
-}	SliceReq;
-
 /* Forward declarations */
-static void InitSliceReq(SliceReq * req);
-static void InventorySliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req);
-static void AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceReq * req);
-static void FinalizeSliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req);
+static void InventorySliceTree(CdbDispatcherState *ds, List * slices, int sliceIndex);
 
 /*
  * Function AssignGangs runs on the QD and finishes construction of the
@@ -1875,104 +1825,24 @@ static void FinalizeSliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req)
 void
 AssignGangs(CdbDispatcherState *ds, QueryDesc *queryDesc)
 {
-	EState	   *estate = queryDesc->estate;
-	SliceTable *sliceTable = estate->es_sliceTable;
-	ListCell   *cell;
-	Slice	   *slice;
-	int			i,
-				nslices;
-	Slice	  **sliceMap;
-	SliceReq	inv;
+	SliceTable	*sliceTable;
+	ListCell  	*cell;
+	Slice		*slice;
+	EState		*estate;
 	int			rootIdx;
 
-	/* Make a map so we can access slices quickly by index. */
-	nslices = list_length(sliceTable->slices);
-	sliceMap = (Slice **) palloc(nslices * sizeof(Slice *));
-	i = 0;
+	estate = queryDesc->estate;
+	sliceTable = estate->es_sliceTable;
+	rootIdx = RootSliceIndex(queryDesc->estate);
+
+	/* cleanup processMap because initPlan and main Plan share the same slice table */
 	foreach(cell, sliceTable->slices)
 	{
 		slice = (Slice *) lfirst(cell);
-		Assert(i == slice->sliceIndex);
-		sliceMap[i] = slice;
-		i++;
+		slice->processesMap = NULL;
 	}
 
-	rootIdx = RootSliceIndex(queryDesc->estate);
-
-	/* Initialize gang requirement inventory */
-	InitSliceReq(&inv);
-
-	/* Capture main slice tree requirement. */
-	InventorySliceTree(sliceMap, rootIdx, &inv);
-	FinalizeSliceTree(sliceMap, rootIdx, &inv);
-
-	/*
-	 * Get the gangs we'll use.
-	 *
-	 * As a general rule the first gang is a writer and the rest are readers.
-	 * If this happens to be an extended query protocol then all gangs are readers.
-	 */
-	if (inv.numNgangs > 0)
-	{
-		inv.vecNgangs = (Gang **) palloc(sizeof(Gang *) * inv.numNgangs);
-		for (i = 0; i < inv.numNgangs; i++)
-		{
-			if (i == 0 && !queryDesc->extended_query)
-			{
-				inv.vecNgangs[i] = AllocateWriterGang(ds);
-				Assert(inv.vecNgangs[i] != NULL);
-			}
-			else
-			{
-				inv.vecNgangs[i] = AllocateReaderGang(ds, GANGTYPE_PRIMARY_READER, queryDesc->portal_name);
-			}
-		}
-	}
-	if (inv.num1gangs_primary_reader > 0)
-	{
-		inv.vec1gangs_primary_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_primary_reader);
-		for (i = 0; i < inv.num1gangs_primary_reader; i++)
-		{
-			inv.vec1gangs_primary_reader[i] = AllocateReaderGang(ds, GANGTYPE_SINGLETON_READER, queryDesc->portal_name);
-		}
-	}
-	if (inv.num1gangs_entrydb_reader > 0)
-	{
-		inv.vec1gangs_entrydb_reader = (Gang **) palloc(sizeof(Gang *) * inv.num1gangs_entrydb_reader);
-		for (i = 0; i < inv.num1gangs_entrydb_reader; i++)
-		{
-			inv.vec1gangs_entrydb_reader[i] = AllocateReaderGang(ds, GANGTYPE_ENTRYDB_READER, queryDesc->portal_name);
-		}
-	}
-
-	/* Use the gangs to construct the CdbProcess lists in slices. */
-	inv.nxtNgang = 0;
-    inv.nxt1gang_primary_reader = 0;
-    inv.nxt1gang_entrydb_reader = 0;
-
-	AssociateSlicesToProcesses(sliceMap, rootIdx, &inv); /* Main tree. */
-
-	/* Clean up */
-	pfree(sliceMap);
-	if (inv.vecNgangs != NULL)
-		pfree(inv.vecNgangs);
-	if (inv.vec1gangs_primary_reader != NULL)
-		pfree(inv.vec1gangs_primary_reader);
-	if (inv.vec1gangs_entrydb_reader != NULL)
-		pfree(inv.vec1gangs_entrydb_reader);
-
-}
-
-void
-InitSliceReq(SliceReq * req)
-{
-	req->numNgangs = 0;
-    req->num1gangs_primary_reader = 0;
-    req->num1gangs_entrydb_reader = 0;
-	req->writer = FALSE;
-	req->vecNgangs = NULL;
-	req->vec1gangs_primary_reader = NULL;
-	req->vec1gangs_entrydb_reader = NULL;
+	InventorySliceTree(ds, sliceTable->slices, rootIdx);
 }
 
 /*
@@ -1981,179 +1851,28 @@ InitSliceReq(SliceReq * req)
  * generally useful.
  */
 void
-InventorySliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req)
-{
-	ListCell   *cell;
-	int			childIndex;
-	Slice	   *slice = sliceMap[sliceIndex];
-
-	switch (slice->gangType)
-	{
-		case GANGTYPE_UNALLOCATED:
-			/* Roots that run on the  QD don't need a gang. */
-			break;
-
-		case GANGTYPE_ENTRYDB_READER:
-            Assert(slice->gangSize == 1);
-			req->num1gangs_entrydb_reader++;
-			break;
-
-		case GANGTYPE_SINGLETON_READER:
-			req->num1gangs_primary_reader++;
-			break;
-
-		case GANGTYPE_PRIMARY_WRITER:
-			req->writer = TRUE;
-			/* fall through */
-
-		case GANGTYPE_PRIMARY_READER:
-			Assert(slice->gangSize == getgpsegmentCount());
-			req->numNgangs++;
-			break;
-	}
-
-	foreach(cell, slice->children)
-	{
-		childIndex = lfirst_int(cell);
-		InventorySliceTree(sliceMap, childIndex, req);
-	}
-}
-
-/*
- * Helper function to adjust slice tree for replicated table.
- *
- * Main slice or init plans that working on replicated table may
- * generate all gangs with 1-size, but in GPDB, main slice and
- * init plans all need a N-size gang to act as primary writer,
- * so this function will try to promote a 1-size gang to N-size
- * gang and set it as direct dispatch.
- */
-static void
-FinalizeSliceTree(Slice ** sliceMap, int sliceIndex, SliceReq * req)
+InventorySliceTree(CdbDispatcherState *ds, List *slices, int sliceIndex)
 {
 	ListCell *cell;
 	int childIndex;
-	Slice *slice = sliceMap[sliceIndex];
+	Slice *slice = list_nth(slices, sliceIndex);
 
-	if (req->numNgangs > 0)
-		return;
-
-	switch (slice->gangType)
+	if (slice->gangType == GANGTYPE_UNALLOCATED)
 	{
-		case GANGTYPE_UNALLOCATED:
-		case GANGTYPE_ENTRYDB_READER:
-		case GANGTYPE_PRIMARY_WRITER:
-		case GANGTYPE_PRIMARY_READER:
-			break;
-
-		case GANGTYPE_SINGLETON_READER:
-			Assert(req->num1gangs_primary_reader > 0);
-			req->num1gangs_primary_reader--;
-			req->numNgangs++;
-			slice->gangType = GANGTYPE_PRIMARY_READER;
-			slice->gangSize = getgpsegmentCount();
-			slice->numGangMembersToBeActive = 1;
-			Assert(!slice->directDispatch.isDirectDispatch);
-			slice->directDispatch.isDirectDispatch = true;
-			/*
-			 * Important: Do not make a random contentIds here,
-			 * always use first QE as worker, otherwise interconnect
-			 * will mess it up.
-			 */
-			slice->directDispatch.contentIds = list_make1_int(gp_singleton_segindex);
-			break;
+		slice->primaryGang = NULL;
+		slice->primaryProcesses = getCdbProcessesForQD(true);
+	}
+	else
+	{
+		Assert(slice->segments != NIL);
+		slice->primaryGang = AllocateGang(ds, slice->gangType, slice->segments);
+		setupCdbProcessList(slice);
 	}
 
 	foreach(cell, slice->children)
 	{
 		childIndex = lfirst_int(cell);
-		FinalizeSliceTree(sliceMap, childIndex, req);
-	}
-}
-
-
-#ifdef USE_ASSERT_CHECKING
-static int
-countNonNullValues(List *list)
-{
-	int res = 0;
-	ListCell *lc;
-
-	foreach(lc,list)
-		if ( lfirst(lc) != NULL)
-			res++;
-	return res;
-}
-#endif
-
-/*
- * Helper for AssignGangs uses the gangs in the inventory to fill in the
- * CdbProcess lists in the slice tree.	Recursive.	Closely coupled with
- * AssignGangs.  Not generally useful.
- */
-void
-AssociateSlicesToProcesses(Slice ** sliceMap, int sliceIndex, SliceReq * req)
-{
-	ListCell   *cell;
-	int			childIndex;
-	Slice	   *slice = sliceMap[sliceIndex];
-
-	switch (slice->gangType)
-	{
-		case GANGTYPE_UNALLOCATED:
-			/* Roots that run on the  QD don't need a gang. */
-
-			slice->primaryGang = NULL;
-			slice->primaryProcesses = getCdbProcessesForQD(true);
-			break;
-
-		case GANGTYPE_ENTRYDB_READER:
-			Assert(slice->gangSize == 1);
-			slice->primaryGang = req->vec1gangs_entrydb_reader[req->nxt1gang_entrydb_reader++];
-			Assert(slice->primaryGang != NULL);
-			slice->primaryProcesses = getCdbProcessList(slice->primaryGang,
-                                                        slice->sliceIndex,
-														NULL);
-			Assert(sliceCalculateNumSendingProcesses(slice) == countNonNullValues(slice->primaryProcesses));
-			break;
-
-		case GANGTYPE_PRIMARY_WRITER:
-			Assert(slice->gangSize == getgpsegmentCount());
-			Assert(req->numNgangs > 0 && req->writer);
-			Assert(req->vecNgangs[0] != NULL);
-
-			slice->primaryGang = req->vecNgangs[req->nxtNgang++];
-			Assert(slice->primaryGang != NULL);
-			slice->primaryProcesses = getCdbProcessList(slice->primaryGang,
-														slice->sliceIndex,
-														&slice->directDispatch);
-			break;
-
-		case GANGTYPE_SINGLETON_READER:
-			Assert(slice->gangSize == 1);
-			slice->primaryGang = req->vec1gangs_primary_reader[req->nxt1gang_primary_reader++];
-			Assert(slice->primaryGang != NULL);
-			slice->primaryProcesses = getCdbProcessList(slice->primaryGang,
-                                                        slice->sliceIndex,
-                                                        &slice->directDispatch);
-			Assert(sliceCalculateNumSendingProcesses(slice) == countNonNullValues(slice->primaryProcesses));
-			break;
-
-		case GANGTYPE_PRIMARY_READER:
-			Assert(slice->gangSize == getgpsegmentCount());
-			slice->primaryGang = req->vecNgangs[req->nxtNgang++];
-			Assert(slice->primaryGang != NULL);
-			slice->primaryProcesses = getCdbProcessList(slice->primaryGang,
-                                                        slice->sliceIndex,
-                                                        &slice->directDispatch);
-			Assert(sliceCalculateNumSendingProcesses(slice) == countNonNullValues(slice->primaryProcesses));
-			break;
-	}
-
-	foreach(cell, slice->children)
-	{
-		childIndex = lfirst_int(cell);
-		AssociateSlicesToProcesses(sliceMap, childIndex, req);
+		InventorySliceTree(ds, slices, childIndex);
 	}
 }
 

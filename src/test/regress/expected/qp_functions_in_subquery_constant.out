@@ -1,4 +1,11 @@
-set search_path='qp_funcs_in_contexts';
+-- Create our own copies of these test tables in our own
+-- schema (see qp_functions_in_contexts_setup.sql)
+CREATE SCHEMA qp_funcs_in_subquery_constant;
+set search_path='qp_funcs_in_subquery_constant', 'qp_funcs_in_contexts';
+CREATE TABLE foo (a int, b int);
+INSERT INTO foo select i, i+1 from generate_series(1,10) i;
+CREATE TABLE bar (c int, d int);
+INSERT INTO bar select i, i+1 from generate_series(1,10) i;
 -- @description function_in_subqry_constant_0.sql
 SELECT * FROM foo, (SELECT func1_nosql_vol(5) from foo) r order by 1,2,3;
  a  | b  | func1_nosql_vol 
@@ -2455,7 +2462,7 @@ SELECT * FROM foo, (SELECT func1_sql_setint_imm(5) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_constant_9.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(5) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_10.sql
@@ -2566,12 +2573,12 @@ SELECT * FROM foo, (SELECT func1_read_int_sql_stb(5) from foo) r order by 1,2,3;
 
 -- @description function_in_subqry_constant_11.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(5) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_12.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(5) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_13.sql
@@ -3240,7 +3247,7 @@ SELECT * FROM foo, (SELECT func1_nosql_vol(func2_sql_int_imm(5)) from foo) r ord
 
 -- @description function_in_subqry_constant_withfunc2_6.sql
 SELECT * FROM foo, (SELECT func1_nosql_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_7.sql
@@ -4001,7 +4008,7 @@ SELECT * FROM foo, (SELECT func1_nosql_stb(func2_sql_int_imm(5)) from foo) r ord
 
 -- @description function_in_subqry_constant_withfunc2_16.sql
 SELECT * FROM foo, (SELECT func1_nosql_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_17.sql
@@ -4762,7 +4769,7 @@ SELECT * FROM foo, (SELECT func1_nosql_imm(func2_sql_int_imm(5)) from foo) r ord
 
 -- @description function_in_subqry_constant_withfunc2_26.sql
 SELECT * FROM foo, (SELECT func1_nosql_imm(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_27.sql
@@ -5523,7 +5530,7 @@ SELECT * FROM foo, (SELECT func1_sql_int_vol(func2_sql_int_imm(5)) from foo) r o
 
 -- @description function_in_subqry_constant_withfunc2_36.sql
 SELECT * FROM foo, (SELECT func1_sql_int_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_37.sql
@@ -6284,7 +6291,7 @@ SELECT * FROM foo, (SELECT func1_sql_int_stb(func2_sql_int_imm(5)) from foo) r o
 
 -- @description function_in_subqry_constant_withfunc2_46.sql
 SELECT * FROM foo, (SELECT func1_sql_int_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_47.sql
@@ -7045,7 +7052,7 @@ SELECT * FROM foo, (SELECT func1_sql_int_imm(func2_sql_int_imm(5)) from foo) r o
 
 -- @description function_in_subqry_constant_withfunc2_56.sql
 SELECT * FROM foo, (SELECT func1_sql_int_imm(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_57.sql
@@ -10806,7 +10813,7 @@ SELECT * FROM foo, (SELECT func1_sql_setint_vol(func2_sql_int_imm(5)) from foo) 
 
 -- @description function_in_subqry_constant_withfunc2_66.sql
 SELECT * FROM foo, (SELECT func1_sql_setint_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_67.sql
@@ -15067,7 +15074,7 @@ SELECT * FROM foo, (SELECT func1_sql_setint_stb(func2_sql_int_imm(5)) from foo) 
 
 -- @description function_in_subqry_constant_withfunc2_76.sql
 SELECT * FROM foo, (SELECT func1_sql_setint_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_77.sql
@@ -19328,7 +19335,7 @@ SELECT * FROM foo, (SELECT func1_sql_setint_imm(func2_sql_int_imm(5)) from foo) 
 
 -- @description function_in_subqry_constant_withfunc2_86.sql
 SELECT * FROM foo, (SELECT func1_sql_setint_imm(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_87.sql
@@ -19953,42 +19960,42 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_constant_withfunc2_90.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_nosql_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_91.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_nosql_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_92.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_nosql_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_93.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_sql_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_94.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_sql_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_95.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_sql_int_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_96.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_97.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_vol(func2_read_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_98.sql
@@ -20007,7 +20014,7 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_constant_withfunc2_100.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_nosql_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_stb(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_101.sql
@@ -20224,7 +20231,7 @@ SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_nosql_imm(5)) from foo) 
 
 -- @description function_in_subqry_constant_withfunc2_103.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_sql_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func1_read_int_sql_stb(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_104.sql
@@ -20441,7 +20448,7 @@ SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_sql_int_imm(5)) from foo
 
 -- @description function_in_subqry_constant_withfunc2_106.sql
 SELECT * FROM foo, (SELECT func1_read_int_sql_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_107.sql
@@ -20566,42 +20573,42 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_constant_withfunc2_110.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_111.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_112.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_nosql_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_113.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_114.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_115.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_sql_int_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_116.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_117.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_vol(func2_read_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_vol(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_118.sql
@@ -20620,42 +20627,42 @@ PL/pgSQL function func2_mod_int_stb(integer) line 3 at SQL statement
 rollback;
 -- @description function_in_subqry_constant_withfunc2_120.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_121.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_122.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_nosql_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_123.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_124.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_125.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_sql_int_imm(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_126.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 -- @description function_in_subqry_constant_withfunc2_127.sql
 SELECT * FROM foo, (SELECT func1_read_setint_sql_stb(func2_read_int_stb(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c <> $1"
 PL/pgSQL function func1_read_setint_sql_stb(integer) line 5 at FOR over SELECT rows
 -- @description function_in_subqry_constant_withfunc2_128.sql
@@ -20717,7 +20724,7 @@ rollback;
 -- @description function_in_subqry_constant_withfunc2_136.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_int_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 rollback;
@@ -20787,7 +20794,7 @@ rollback;
 -- @description function_in_subqry_constant_withfunc2_146.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_int_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 rollback;
@@ -20857,7 +20864,7 @@ rollback;
 -- @description function_in_subqry_constant_withfunc2_156.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_vol(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 rollback;
@@ -20927,7 +20934,7 @@ rollback;
 -- @description function_in_subqry_constant_withfunc2_166.sql
 begin;
 SELECT * FROM foo, (SELECT func1_mod_setint_stb(func2_read_int_vol(5)) from foo) r order by 1,2,3;
-ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_contexts.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
+ERROR:  function cannot execute on a QE slice because it accesses relation "qp_funcs_in_subquery_constant.bar"  (seg0 slice1 172.17.0.6:25432 pid=118086)
 CONTEXT:  SQL statement "SELECT d FROM bar WHERE c = $1 LIMIT 1"
 PL/pgSQL function func2_read_int_vol(integer) line 5 at SQL statement
 rollback;

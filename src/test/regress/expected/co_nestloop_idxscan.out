@@ -13,7 +13,7 @@ create index foo_id_idx on co_nestloop_idxscan.foo(id);
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
                                     QUERY PLAN                                     
 -----------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=1.02..32.07 rows=2 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=1.02..32.07 rows=2 width=8)
    ->  Hash Join  (cost=1.02..32.07 rows=2 width=8)
          Hash Cond: f.id = b.id
          ->  Append-only Columnar Scan on foo f  (cost=0.00..31.01 rows=1 width=8)
@@ -34,7 +34,7 @@ set enable_nestloop=on;
 explain select f.id from co_nestloop_idxscan.foo f, co_nestloop_idxscan.bar b where f.id = b.id;
                                     QUERY PLAN                                     
 -----------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..32.03 rows=2 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..32.03 rows=2 width=8)
    ->  Nested Loop  (cost=0.00..32.03 rows=2 width=8)
          Join Filter: f.id = b.id
          ->  Append-only Columnar Scan on foo f  (cost=0.00..31.01 rows=1 width=8)

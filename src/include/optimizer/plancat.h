@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/plancat.h
@@ -39,6 +39,7 @@ extern void cdb_estimate_rel_size(RelOptInfo   *relOptInfo,
 							  BlockNumber  *pages,
 							  double       *tuples,
 							  double       *allvisfrac);
+extern double cdb_estimate_partitioned_numtuples(Relation rel, bool *stats_missing);
 
 extern int32 get_relation_data_width(Oid relid, int32 *attr_widths);
 

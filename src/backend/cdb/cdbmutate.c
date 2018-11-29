@@ -28,6 +28,7 @@
 #include "optimizer/var.h"
 #include "parser/parse_relation.h"
 #include "utils/fmgroids.h"
+#include "utils/guc.h"
 #include "utils/lsyscache.h"
 #include "utils/datum.h"
 #include "utils/syscache.h"
@@ -40,7 +41,6 @@
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
-#include "catalog/catalog.h"
 #include "catalog/gp_policy.h"
 #include "catalog/pg_type.h"
 
@@ -56,9 +56,8 @@
 #include "cdb/cdbpullup.h"
 #include "cdb/cdbsetop.h"
 #include "cdb/cdbvars.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbtargeteddispatch.h"
-
-#include "nodes/print.h"
 
 #include "executor/executor.h"
 
@@ -96,19 +95,17 @@ static Node *pre_dispatch_function_evaluation_mutator(Node *node,
  */
 static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode);
 
-static int *makeDefaultSegIdxArray(int numSegs);
-
 static void add_slice_to_motion(Motion *motion,
 					MotionType motionType, List *hashExpr,
-					int numOutputSegs, int *outputSegIdx);
+					bool isBroadcast,
+					int numsegments);
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
-
-static AttrNumber find_segid_column(List *tlist, Index relid);
 
 static bool replace_shareinput_targetlists_walker(Node *node, PlannerInfo *root, bool fPop);
 
 static bool fixup_subplan_walker(Node *node, SubPlanWalkerContext *context);
+static AttrNumber find_segid_column(List *tlist, Index relid);
 
 /*
  * Is target list of a Result node all-constant?
@@ -144,12 +141,16 @@ static void
 directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 {
 	int			i;
-	CdbHash    *h = NULL;
+	CdbHash    *h;
 	ListCell   *cell = NULL;
 	bool		directDispatch;
+	Oid		   *typeoids;
+	Datum	   *values;
+	bool	   *nulls;
 
-	h = makeCdbHash(GpIdentity.numsegments);
-	cdbhashinit(h);
+	typeoids = (Oid *) palloc(targetPolicy->nattrs * sizeof(Oid));
+	values = (Datum *) palloc(targetPolicy->nattrs * sizeof(Datum));
+	nulls = (bool *) palloc(targetPolicy->nattrs * sizeof(bool));
 
 	/*
 	 * the nested loops here seem scary -- especially since we've already
@@ -161,7 +162,7 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 	for (i = 0; i < targetPolicy->nattrs; i++)
 	{
 		Const	   *c;
-		TargetEntry *tle = NULL;
+		TargetEntry *tle;
 
 		foreach(cell, plan->targetlist)
 		{
@@ -180,16 +181,10 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 			}
 
 			c = (Const *) tle->expr;
-			if (c->constisnull)
-			{
-				cdbhashnull(h);
-			}
-			else
-			{
-				Assert(isGreenplumDbHashable(c->consttype));
-				cdbhash(h, c->constvalue, typeIsArrayType(c->consttype) ? ANYARRAYOID : c->consttype);
-			}
 
+			typeoids[i] = c->consttype;
+			values[i] = c->constvalue;
+			nulls[i] = c->constisnull;
 			break;
 		}
 
@@ -197,17 +192,148 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 			break;
 	}
 
-	/* We now have the hash-partition that this row belong to */
 	plan->directDispatch.isDirectDispatch = directDispatch;
 	if (directDispatch)
 	{
-		uint32		hashcode = cdbhashreduce(h);
+		uint32		hashcode;
 
+		h = makeCdbHash(targetPolicy->numsegments, targetPolicy->nattrs, typeoids);
+
+		cdbhashinit(h);
+		for (i = 0; i < targetPolicy->nattrs; i++)
+		{
+			cdbhash(h, i + 1, values[i], nulls[i]);
+		}
+
+		/* We now have the hash-partition that this row belong to */
+		hashcode = cdbhashreduce(h);
 		plan->directDispatch.contentIds = list_make1_int(hashcode);
 
 		elog(DEBUG1, "sending single row constant insert to content %d", hashcode);
 	}
+	pfree(typeoids);
+	pfree(values);
+	pfree(nulls);
 }
+
+/*
+ * Create a GpPolicy that matches the Flow of the given plan.
+ *
+ * This is used with CREATE TABLE AS, to derive the distribution
+ * key for the table from the query plan.
+ */
+static GpPolicy *
+get_partitioned_policy_from_flow(Plan *plan)
+{
+	/* Find out what the flow is partitioned on */
+	List	   *policykeys;
+	ListCell   *exp1;
+
+	/*
+	 * Is it a Hashed distribution?
+	 *
+	 * NOTE: HashedOJ is not OK, because we cannot let the NULLs be stored
+	 * multiple segments.
+	 */
+	if (plan->flow->locustype != CdbLocusType_Hashed)
+	{
+		return NULL;
+	}
+
+	/*
+	 * Sometimes the planner produces a Flow with CdbLocusType_Hashed,
+	 * but hashExpr are not set because we have lost track of the
+	 * expressions it's hashed on.
+	 */
+	if (!plan->flow->hashExpr)
+		return NULL;
+
+	policykeys = NIL;
+	foreach(exp1, plan->flow->hashExpr)
+	{
+		Expr	   *var1 = (Expr *) lfirst(exp1);
+		AttrNumber	n;
+		bool		found_expr = false;
+
+		/* See if this Expr is a column of the result table */
+
+		for (n = 1; n <= list_length(plan->targetlist); n++)
+		{
+			TargetEntry *target = get_tle_by_resno(plan->targetlist, n);
+			Var		   *new_var;
+
+			if (target->resjunk)
+				continue;
+
+			/*
+			 * Right side variable may be encapsulated by a relabel node.
+			 * Motion, however, does not care about relabel nodes.
+			 */
+			if (IsA(var1, RelabelType))
+				var1 = ((RelabelType *) var1)->arg;
+
+			/*
+			 * If subplan expr is a Var, copy to preserve its EXPLAIN info.
+			 */
+			if (IsA(target->expr, Var))
+			{
+				new_var = copyObject(target->expr);
+				new_var->varno = OUTER_VAR;
+				new_var->varattno = n;
+			}
+
+			/*
+			 * Make a Var that references the target list entry at this
+			 * offset, using OUTER_VAR as the varno
+			 */
+			else
+				new_var = makeVar(OUTER_VAR,
+								  n,
+								  exprType((Node *) target->expr),
+								  exprTypmod((Node *) target->expr),
+								  exprCollation((Node *) target->expr),
+								  0);
+
+			if (equal(var1, new_var))
+			{
+				/*
+				 * If it is, use it to partition the result table, to avoid
+				 * unnecessary redistribution of data
+				 */
+				Assert(list_length(policykeys) < MaxPolicyAttributeNumber);
+
+				if (list_member_int(policykeys, n))
+					ereport(ERROR,
+							(errcode(ERRCODE_DUPLICATE_COLUMN),
+							 errmsg("duplicate DISTRIBUTED BY column '%s'",
+									target->resname ? target->resname : "???")));
+
+				policykeys = lappend_int(policykeys, n);
+				found_expr = true;
+				break;
+			}
+		}
+
+		if (!found_expr)
+		{
+			/*
+			 * This distribution key is not present in the target list. Give
+			 * up.
+			 */
+			return NULL;
+		}
+	}
+
+	/*
+	 * We use the default number of segments, even if the flow was partially
+	 * distributed. That defeats the performance benefit of using the same
+	 * distribution key columns, because we'll need a Restribute Motion
+	 * anyway. But presumably if the user had expanded the cluster, they want
+	 * to use all the segments for new tables.
+	 */
+	return createHashPartitionedPolicy(policykeys, GP_POLICY_DEFAULT_NUMSEGMENTS);
+}
+
 
 /* -------------------------------------------------------------------------
  * Function apply_motion() and apply_motion_mutator() add motion nodes to a
@@ -234,6 +360,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	ApplyMotionState state;
 	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
+	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
 
 	/* Initialize mutator context. */
 
@@ -260,19 +387,16 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 		Assert(rte->rtekind == RTE_RELATION);
 
-		targetPolicy = GpPolicyFetch(CurrentMemoryContext, rte->relid);
+		targetPolicy = GpPolicyFetch(rte->relid);
 		targetPolicyType = targetPolicy->ptype;
 	}
 
 	switch (query->commandType)
 	{
 		case CMD_SELECT:
-			/* If the query comes from 'CREAT TABLE AS' or 'SELECT INTO' */
-			if (query->isCTAS)
+			/* If the query comes from 'CREATE TABLE AS' or 'SELECT INTO' */
+			if (query->parentStmtType != PARENTSTMTTYPE_NONE)
 			{
-				List	   *hashExpr;
-				ListCell   *exp1;
-
 				if (query->intoPolicy != NULL)
 				{
 					targetPolicy = query->intoPolicy;
@@ -283,7 +407,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				}
 				else if (gp_create_table_random_default_distribution)
 				{
-					targetPolicy = createRandomPartitionedPolicy(NULL);
+					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS);
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 							 errmsg("Using default RANDOM distribution since no distribution was specified."),
@@ -291,100 +415,17 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				}
 				else
 				{
-					/* Find out what the flow is partitioned on */
-					List	*policykeys = NIL;
-					hashExpr = plan->flow->hashExpr;
+					/* First try to deduce the distribution from the query */
+					targetPolicy = get_partitioned_policy_from_flow(plan);
 
-					if (hashExpr)
-						foreach(exp1, hashExpr)
+					/*
+					 * If that fails, hash on the first hashable column we can
+					 * find.
+					 */
+					if (!targetPolicy)
 					{
-						AttrNumber	n;
-						bool		found_expr = false;
-
-
-						/* See if this Expr is a column of the result table */
-
-						for (n = 1; n <= list_length(plan->targetlist); n++)
-						{
-							Var		   *new_var = NULL;
-
-							TargetEntry *target = get_tle_by_resno(plan->targetlist, n);
-
-							if (!target->resjunk)
-							{
-								Expr	   *var1 = (Expr *) lfirst(exp1);
-
-								/*
-								 * right side variable may be encapsulated by
-								 * a relabel node. motion, however, does not
-								 * care about relabel nodes.
-								 */
-								if (IsA(var1, RelabelType))
-									var1 = ((RelabelType *) var1)->arg;
-
-								/*
-								 * If subplan expr is a Var, copy to preserve
-								 * its EXPLAIN info.
-								 */
-								if (IsA(target->expr, Var))
-								{
-									new_var = copyObject(target->expr);
-									new_var->varno = OUTER_VAR;
-									new_var->varattno = n;
-								}
-
-								/*
-								 * Make a Var that references the target list
-								 * entry at this offset, using OUTER_VAR as the
-								 * varno
-								 */
-								else
-									new_var = makeVar(OUTER_VAR,
-													  n,
-													  exprType((Node *) target->expr),
-													  exprTypmod((Node *) target->expr),
-													  exprCollation((Node *) target->expr),
-													  0);
-
-								if (equal(var1, new_var))
-								{
-									/*
-									 * If it is, use it to partition the
-									 * result table, to avoid unnecessary
-									 * redistibution of data
-									 */
-									Assert(list_length(policykeys) < MaxPolicyAttributeNumber);
-
-									if (list_member_int(policykeys, n))
-									{
-										TargetEntry *target = get_tle_by_resno(plan->targetlist, n);
-
-										ereport(ERROR,
-												(errcode(ERRCODE_DUPLICATE_COLUMN),
-												 errmsg("duplicate DISTRIBUTED BY column '%s'",
-														target->resname ? target->resname : "???")));
-									}
-
-									policykeys = lappend_int(policykeys, n);
-									found_expr = true;
-									break;
-
-								}
-
-							}
-						}
-
-						if (!found_expr)
-							break;
-					}
-
-					/* do we know how to partition? */
-					if (policykeys == NIL)
-					{
-						/*
-						 * hash on the first hashable column we can find.
-						 */
 						int			i;
+						List	   *policykeys = NIL;
 
 						for (i = 0; i < list_length(plan->targetlist); i++)
 						{
@@ -402,35 +443,34 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 								}
 							}
 						}
+						targetPolicy = createHashPartitionedPolicy(policykeys,
+																   GP_POLICY_DEFAULT_NUMSEGMENTS);
 					}
 
-					targetPolicy = createHashPartitionedPolicy(NULL, policykeys);
-
-					if (query->intoPolicy == NULL)
+					/* If we deduced the policy from the query, give a NOTICE */
+					if (query->parentStmtType == PARENTSTMTTYPE_CTAS)
 					{
-						char	   *columns;
+						StringInfoData columnsbuf;
 						int			i;
 
-						columns = palloc((NAMEDATALEN + 3) * targetPolicy->nattrs + 1);
-						columns[0] = '\0';
+						initStringInfo(&columnsbuf);
 						for (i = 0; i < targetPolicy->nattrs; i++)
 						{
 							TargetEntry *target = get_tle_by_resno(plan->targetlist, targetPolicy->attrs[i]);
 
 							if (i > 0)
-								strcat(columns, ", ");
+								appendStringInfoString(&columnsbuf, ", ");
 							if (target->resname)
-								strcat(columns, target->resname);
+								appendStringInfoString(&columnsbuf, target->resname);
 							else
-								strcat(columns, "???");
+								appendStringInfoString(&columnsbuf, "???");
 
 						}
-
 						ereport(NOTICE,
 								(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 								 errmsg("Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) "
 										"named '%s' as the Greenplum Database data distribution key for this "
-										"table. ", columns),
+										"table. ", columnsbuf.data),
 								 errhint("The 'DISTRIBUTED BY' clause determines the distribution of data."
 										 " Make sure column(s) chosen are the optimal data distribution key to minimize skew.")));
 					}
@@ -440,47 +480,59 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 
 				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
 
+				/*
+				 * To copy data from old table to new table we must set
+				 * motion's dest numsegments the same as new table.
+				 */
+				numsegments = query->intoPolicy->numsegments;
+
 				if (GpPolicyIsReplicated(query->intoPolicy))
 				{
 					/*
-					 * CdbLocusType_SegmentGeneral is only used by replicated table right now,
-					 * so if both input and target are replicated table, no need to add a motion
+					 * CdbLocusType_SegmentGeneral is only used by replicated
+					 * table right now, so if both input and target are
+					 * replicated table, no need to add a motion
 					 */
 					if (plan->flow->flotype == FLOW_SINGLETON &&
-							plan->flow->locustype == CdbLocusType_SegmentGeneral)
+						plan->flow->locustype == CdbLocusType_SegmentGeneral)
 					{
 						/* do nothing */
 					}
 
-					/* plan's data are available on all segment, no motion needed */
+					/*
+					 * plan's data are available on all segment, no motion
+					 * needed
+					 */
 					if (plan->flow->flotype == FLOW_SINGLETON &&
-							plan->flow->locustype == CdbLocusType_General)
+						plan->flow->locustype == CdbLocusType_General)
 					{
 						/* do nothing */
 					}
 
-					if (!broadcastPlan(plan, false, false))
+					if (!broadcastPlan(plan, false, false, numsegments))
 						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-									errmsg("Cannot parallelize that SELECT INTO yet")));
+										errmsg("Cannot parallelize that SELECT INTO yet")));
 
 				}
 				else
 				{
 					/*
 					 * Make sure the top level flow is partitioned on the
-					 * partitioning key of the target relation.	Since this is a
-					 * SELECT INTO (basically same as an INSERT) command, the
-					 * target list will correspond to the attributes of the target
-					 * relation in order.
+					 * partitioning key of the target relation.	Since this is
+					 * a SELECT INTO (basically same as an INSERT) command,
+					 * the target list will correspond to the attributes of
+					 * the target relation in order.
 					 */
+					List	   *hashExpr;
+
 					hashExpr = getExprListFromTargetList(plan->targetlist,
-							targetPolicy->nattrs,
-							targetPolicy->attrs,
-							true);
-					if (!repartitionPlan(plan, false, false, hashExpr))
+														 targetPolicy->nattrs,
+														 targetPolicy->attrs,
+														 true);
+
+					if (!repartitionPlan(plan, false, false, hashExpr, numsegments))
 						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-									errmsg("Cannot parallelize that SELECT INTO yet")
-							       ));
+										errmsg("Cannot parallelize that SELECT INTO yet")));
 				}
 
 				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
@@ -489,8 +541,8 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 			{
 				if (plan->flow->flotype == FLOW_PARTITIONED ||
 					(plan->flow->flotype == FLOW_SINGLETON &&
-					plan->flow->locustype == CdbLocusType_SegmentGeneral))
-				bringResultToDispatcher = true;
+					 plan->flow->locustype == CdbLocusType_SegmentGeneral))
+					bringResultToDispatcher = true;
 
 				needToAssignDirectDispatchContentIds = root->config->gp_enable_direct_dispatch;
 			}
@@ -620,10 +672,14 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 		if (IsA(node, SubPlan) &&((SubPlan *) node)->is_initplan)
 		{
 			bool		saveContainMotionNodes = context->containMotionNodes;
+			int			saveSliceDepth = context->sliceDepth;
 
+			/* reset sliceDepth for each init plan */
+			context->sliceDepth = 0;
 			node = plan_tree_mutator(node, apply_motion_mutator, context);
 
 			context->containMotionNodes = saveContainMotionNodes;
+			context->sliceDepth = saveSliceDepth;
 
 			return node;
 		}
@@ -693,14 +749,10 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 
 		/* If top slice marked as singleton, make it a dispatcher singleton. */
 		if (motion->motionType == MOTIONTYPE_FIXED
-			&& motion->numOutputSegs == 1
-			&& motion->outputSegIdx[0] >= 0
+			&& !motion->isBroadcast
 			&& context->sliceDepth == 0)
 		{
-			Assert(flow->flotype == FLOW_SINGLETON &&
-				   flow->segindex == motion->outputSegIdx[0]);
 			flow->segindex = -1;
-			motion->outputSegIdx[0] = -1;
 		}
 
 		/*
@@ -742,22 +794,20 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 			if (flow->segindex >= 0 &&
 				context->sliceDepth == 0)
 				flow->segindex = -1;
-			else if (flow->segindex >= 0)
-				flow->segindex = gp_singleton_segindex;
 
-			newnode = (Node *) make_union_motion(plan,
-												 flow->segindex,
-												 true /* useExecutorVarFormat */ );
+			newnode = (Node *) make_union_motion(plan, true, flow->numsegments);
 			break;
 
 		case MOVEMENT_BROADCAST:
-			newnode = (Node *) make_broadcast_motion(plan, true /* useExecutorVarFormat */ );
+			newnode = (Node *) make_broadcast_motion(plan, true /* useExecutorVarFormat */,
+													 flow->numsegments);
 			break;
 
 		case MOVEMENT_REPARTITION:
 			newnode = (Node *) make_hashed_motion(plan,
 												  flow->hashExpr,
-												  true	/* useExecutorVarFormat */
+												  true	/* useExecutorVarFormat */,
+												  flow->numsegments
 				);
 			break;
 
@@ -767,7 +817,7 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 			 * add an ExplicitRedistribute motion node only if child plan
 			 * nodes have a motion node
 			 */
-			if (context->containMotionNodes)
+			if (context->containMotionNodes || IsA(plan, Reshuffle))
 			{
 				/*
 				 * motion node in child nodes: add a ExplicitRedistribute
@@ -876,23 +926,21 @@ assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode)
 static void
 add_slice_to_motion(Motion *motion,
 					MotionType motionType, List *hashExpr,
-					int numOutputSegs, int *outputSegIdx)
+					bool isBroadcast,
+					int numsegments)
 {
-	/* sanity checks */
-	/* check numOutputSegs and outputSegIdx are in sync.  */
-	AssertEquivalent(numOutputSegs == 0, outputSegIdx == NULL);
+	Assert(numsegments > 0);
+	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
+	{
+		Assert(!"what's the proper value of numsegments?");
+	}
 
-	/* numOutputSegs are either 0, for hash or broadcast, or 1, for focus */
-	Assert(numOutputSegs == 0 || numOutputSegs == 1);
-	AssertImply(motionType == MOTIONTYPE_HASH, numOutputSegs == 0);
-	AssertImply(numOutputSegs == 1, (outputSegIdx[0] == -1 || outputSegIdx[0] == gp_singleton_segindex));
-
+	AssertImply(isBroadcast, motionType == MOTIONTYPE_FIXED);
 
 	motion->motionType = motionType;
 	motion->hashExpr = hashExpr;
 	motion->hashDataTypes = NULL;
-	motion->numOutputSegs = numOutputSegs;
-	motion->outputSegIdx = outputSegIdx;
+	motion->isBroadcast = isBroadcast;
 
 	Assert(motion->plan.lefttree);
 
@@ -935,39 +983,32 @@ add_slice_to_motion(Motion *motion,
 	switch (motion->motionType)
 	{
 		case MOTIONTYPE_HASH:
-			motion->plan.flow = makeFlow(FLOW_PARTITIONED);
+			motion->plan.flow = makeFlow(FLOW_PARTITIONED, numsegments);
 			motion->plan.flow->locustype = CdbLocusType_Hashed;
 			motion->plan.flow->hashExpr = copyObject(motion->hashExpr);
-			motion->numOutputSegs = getgpsegmentCount();
-			motion->outputSegIdx = makeDefaultSegIdxArray(getgpsegmentCount());
 
 			break;
 		case MOTIONTYPE_FIXED:
-			if (motion->numOutputSegs == 0)
+			if (motion->isBroadcast)
 			{
 				/* broadcast */
-				motion->plan.flow = makeFlow(FLOW_REPLICATED);
+				motion->plan.flow = makeFlow(FLOW_REPLICATED, numsegments);
 				motion->plan.flow->locustype = CdbLocusType_Replicated;
 
 			}
-			else if (motion->numOutputSegs == 1)
+			else
 			{
 				/* Focus motion */
-				motion->plan.flow = makeFlow(FLOW_SINGLETON);
-				motion->plan.flow->segindex = motion->outputSegIdx[0];
+				motion->plan.flow = makeFlow(FLOW_SINGLETON, numsegments);
 				motion->plan.flow->locustype = (motion->plan.flow->segindex < 0) ?
 					CdbLocusType_Entry :
 					CdbLocusType_SingleQE;
 
 			}
-			else
-			{
-				Assert(!"Invalid numoutputSegs for motion type fixed");
-				motion->plan.flow = NULL;
-			}
+
 			break;
 		case MOTIONTYPE_EXPLICIT:
-			motion->plan.flow = makeFlow(FLOW_PARTITIONED);
+			motion->plan.flow = makeFlow(FLOW_PARTITIONED, numsegments);
 
 			/*
 			 * TODO: antova - Nov 18, 2010; add a special locus type for
@@ -985,43 +1026,37 @@ add_slice_to_motion(Motion *motion,
 }
 
 Motion *
-make_union_motion(Plan *lefttree, int destSegIndex, bool useExecutorVarFormat)
+make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
 {
 	Motion	   *motion;
-	int		   *outSegIdx = (int *) palloc(sizeof(int));
-
-	outSegIdx[0] = destSegIndex;
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, false, numsegments);
 	return motion;
 }
 
 Motion *
-make_sorted_union_motion(PlannerInfo *root,
-						 Plan *lefttree,
-						 int numSortCols, AttrNumber *sortColIdx,
-						 Oid *sortOperators, Oid *collations, bool *nullsFirst,
-						 int destSegIndex,
-						 bool useExecutorVarFormat)
+make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
+						 AttrNumber *sortColIdx, Oid *sortOperators,
+						 Oid *collations, bool *nullsFirst,
+						 bool useExecutorVarFormat, int numsegments)
 {
 	Motion	   *motion;
-	int		   *outSegIdx = (int *) palloc(sizeof(int));
-
-	outSegIdx[0] = destSegIndex;
 
 	motion = make_motion(root, lefttree,
 						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 1, outSegIdx);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, false, numsegments);
 	return motion;
 }
 
 Motion *
 make_hashed_motion(Plan *lefttree,
-				   List *hashExpr, bool useExecutorVarFormat)
+				   List *hashExpr,
+				   bool useExecutorVarFormat,
+				   int numsegments)
 {
 	Motion	   *motion;
 	ListCell   *lc;
@@ -1040,12 +1075,13 @@ make_hashed_motion(Plan *lefttree,
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, false, numsegments);
 	return motion;
 }
 
 Motion *
-make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat)
+make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
+					  int numsegments)
 {
 	Motion	   *motion;
 
@@ -1053,7 +1089,7 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat)
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
 
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, 0, NULL);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, true, numsegments);
 	return motion;
 }
 
@@ -1061,6 +1097,7 @@ Motion *
 make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVarFormat)
 {
 	Motion	   *motion;
+	int			numsegments;
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
@@ -1070,30 +1107,14 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 
 	motion->segidColIdx = segidColIdx;
 
-	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, 0, NULL);
-	return motion;
-}
-
-/* --------------------------------------------------------------------
- * makeDefaultSegIdxArray -- creates an int array with numSegs elements,
- * with values between 0 and numSegs-1
- * --------------------------------------------------------------------
- */
-static int *
-makeDefaultSegIdxArray(int numSegs)
-{
-	int		   *segIdx = palloc(numSegs * sizeof(int));
-
 	/*
-	 * The following assumes that the default is to have segindexes numbered
-	 * sequentially starting at 0.
+	 * For explicit motion data come back to the source segments,
+	 * so numsegments is also the same with source.
 	 */
-	int			i;
+	numsegments = lefttree->flow->numsegments;
 
-	for (i = 0; i < numSegs; i++)
-		segIdx[i] = i;
-
-	return segIdx;
+	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, false, numsegments);
+	return motion;
 }
 
 /* --------------------------------------------------------------------
@@ -1146,56 +1167,6 @@ getExprListFromTargetList(List *tlist,
 	return elist;
 }
 
-
-/*
- * isAnyColChangedByUpdate
- */
-bool
-isAnyColChangedByUpdate(PlannerInfo *root,
-						Index targetvarno,
-						RangeTblEntry *rte,
-						List *targetlist,
-						int nattrs,
-						AttrNumber *attrs)
-{
-	RelOptInfo *rel = root->simple_rel_array[targetvarno];
-	/*
-	 * Want to test whether an update statement possibly changes the value of
-	 * any of the partitioning columns.
-	 */
-
-	/*
-	 * If the relation has been deemed to be excluded by constraints, then
-	 * this relation will never yield any tuples to update.
-	 */
-	if(relation_excluded_by_constraints(root, rel, rte))
-		return false;
-
-	/*
-	 * For each partitioning column, the TargetListEntry for that varattno
-	 * should be just a Var node with the same varattno.
-	 */
-	int			i;
-
-	for (i = 0; i < nattrs; i++)
-	{
-		TargetEntry *tle = get_tle_by_resno(targetlist, attrs[i]);
-		Var		   *var;
-
-		Insist(tle);
-
-		if (!IsA(tle->expr, Var))
-			return true;
-
-		var = (Var *) tle->expr;
-		if (var->varnoold != targetvarno ||
-			var->varoattno != attrs[i])
-			return true;
-	}
-
-	return false;
-}								/* isAnyColChangedByUpdate */
-
 /*
  * Request an ExplicitRedistribute motion node for a plan node
  */
@@ -1216,160 +1187,11 @@ request_explicit_motion(Plan *plan, Index resultRelationsIdx, List *rtable)
 	plan->flow->req_move = MOVEMENT_EXPLICIT;
 
 	/* find segid column in target list */
-	AttrNumber	segidColIdx = find_segid_column(plan->targetlist, resultRelationsIdx);
-
-	Assert(-1 != segidColIdx);
+	AttrNumber	segidColIdx = ExecFindJunkAttributeInTlist(plan->targetlist, "gp_segment_id");
+	if (segidColIdx == InvalidAttrNumber)
+		elog(ERROR, "could not find gp_segment_id column in target list");
 
 	plan->flow->segidColIdx = segidColIdx;
-}
-
-typedef struct
-{
-	plan_tree_base_prefix	base;	/* Required prefix for
-									 * plan_tree_walker/mutator */
-
-	List					*absent_vars;
-	Index					result_relation_idx;
-	bool					found;
-} add_absent_targetlist_context;
-
-
-/*
- * Workhorse for add_absent_targetlist.
- */
-static void
-add_absent_targetlist_mutator(Plan *plan,
-							  add_absent_targetlist_context *pcontext)
-{
-	Node	*node;
-	int		targetResno;
-
-	node = (Node *) plan;
-
-	Assert(is_plan_node(node));
-
-	if (node->type >= T_SeqScan && node->type <=T_WorkTableScan)
-	{
-		Scan		*scan;
-		ListCell	*lcv;
-
-		scan = (Scan *) node;
-		if (scan->scanrelid != pcontext->result_relation_idx)
-			return;
-
-		targetResno = list_length(plan->targetlist) + 1;
-		foreach(lcv, pcontext->absent_vars)
-		{
-			TargetEntry	*newTle;
-			ListCell	*lct;
-
-			Assert(IsA(lfirst(lcv), Var));
-
-			/* Check if given var exists or not in targetlist */
-			foreach(lct, plan->targetlist)
-			{
-				TargetEntry	*tle;
-
-				Assert(IsA(lfirst(lct), TargetEntry));
-
-				tle = (TargetEntry *) lfirst(lct);
-				if (IsA(tle->expr, Var) &&
-					(((Var *) (tle->expr))->varattno == ((Var *) lfirst(lcv))->varattno))
-					break;
-			}
-
-			/* Skip the given var already exist in targetlist */
-			if (!lct)
-			{
-				newTle = makeTargetEntry((Expr *) lfirst(lcv), targetResno,
-										 "" /* resname */, false /* resjunk */);
-				plan->targetlist = lappend(plan->targetlist, newTle);
-				++targetResno;
-			}
-		}
-		pcontext->found = true;
-
-		return;
-	}
-
-	/* The scan node we want to add vars only exist atmost one child of the plan */
-	if (plan->lefttree)
-	{
-		add_absent_targetlist_mutator(plan->lefttree, pcontext);
-
-		if (!pcontext->found && plan->righttree)
-			add_absent_targetlist_mutator(plan->righttree, pcontext);
-
-		if (pcontext->found)
-		{
-			ListCell	*lcv;
-			int			targetResno;
-
-			targetResno = list_length(plan->targetlist) + 1;
-
-			foreach(lcv, pcontext->absent_vars)
-			{
-				Var			*var;
-				ListCell	*lct;
-				TargetEntry *tle;
-
-				Assert(IsA(lfirst(lcv), Var));
-
-				var = (Var *) lfirst(lcv);
-
-				/* Check given var exists or not in current targetlist */
-				foreach(lct, plan->targetlist)
-				{
-					tle = (TargetEntry *) lfirst(lct);
-
-					if (IsA(tle->expr, Var) &&
-						((Var *) tle->expr)->varno == pcontext->result_relation_idx &&
-						((Var *) tle->expr)->varattno == var->varattno)
-						break;
-				}
-
-				/* Skip if given var already exist in targetlist */
-				if (!lct)
-				{
-
-					tle = makeTargetEntry(lfirst(lcv), targetResno++, "" /* resname */, false /* junk */);
-					plan->targetlist = lappend(plan->targetlist, tle);
-				}
-			}
-
-			return;
-		}
-	}
-
-	return;
-}
-
-
-/*
- * Some old attribute vars of relation maybe absent, so we need to add it back recursively.
- *
- * plan subroot of current plan tree we want to add vars.
- * resultRelationsIdx the varno of scan node we search for adding vars. 
- * varsAbsent the vars we want to add.
- *
- * We always check existence of var in varsAbsent. We append var to targetlist if var
- * in varsAbsent doesn't exist.
- *
- * Please refer to make_splitupdate for more information.
- */
-static void
-add_absent_targetlist(struct PlannerInfo *root, Plan *plan,
-					  List *varsAbsent, Index resultRelationsIdx)
-{
-	add_absent_targetlist_context context;
-
-	planner_init_plan_tree_base(&context.base, root);
-
-	context.absent_vars = varsAbsent;
-	context.result_relation_idx = resultRelationsIdx;
-	context.found = false;
-
-	return add_absent_targetlist_mutator(plan, &context);
 }
 
 static void
@@ -1401,12 +1223,10 @@ failIfUpdateTriggers(Relation relation)
 				 errmsg("UPDATE on distributed key column not allowed on relation with update triggers")));
 }
 
-static void
-find_junk_tle(List *targetList, const char *junkAttrName, TargetEntry **targetEntry)
+static TargetEntry *
+find_junk_tle(List *targetList, const char *junkAttrName)
 {
 	ListCell	*lct;
-
-	*targetEntry = NULL;
 
 	foreach(lct, targetList)
 	{
@@ -1416,30 +1236,47 @@ find_junk_tle(List *targetList, const char *junkAttrName, TargetEntry **targetEn
 			continue;
 
 		if (strcmp(tle->resname, junkAttrName) == 0)
-			*targetEntry = tle;
+			return tle;
 	}
+	elog(ERROR, "could not find junk tle \"%s\"", junkAttrName);
 }
 
-static void
-find_ctid_attribute_check(List *targetList, AttrNumber *ctidAttr, Index resultRelationsIdx)
+static AttrNumber
+find_ctid_attribute_check(List *targetList)
 {
 	TargetEntry	*ctid;
 	Var			*var;
 
-	find_junk_tle(targetList, "ctid", &ctid);
-
-	Assert(NULL != ctid);
+	ctid = find_junk_tle(targetList, "ctid");
+	if (!ctid)
+		elog(ERROR, "could not find \"ctid\" column in input to UPDATE");
 	Assert(IsA(ctid->expr, Var));
 
 	var = (Var *) (ctid->expr);
 
 	/* Ctid should follow after normal attributes */
-	Assert((var->varno == resultRelationsIdx &&
-			var->varattno == SelfItemPointerAttributeNumber) ||
-		   (var->varnoold == resultRelationsIdx &&
-			var->varoattno == SelfItemPointerAttributeNumber));
+	Assert(var->vartype == TIDOID);
 
-	*ctidAttr = ctid->resno;
+	return ctid->resno;
+}
+
+static AttrNumber
+find_oid_attribute_check(List *targetList)
+{
+	TargetEntry	*tle;
+	Var			*var;
+
+	tle = find_junk_tle(targetList, "oid");
+	if (!tle)
+		elog(ERROR, "could not find \"oid\" column in input to UPDATE");
+	Assert(IsA(tle->expr, Var));
+
+	var = (Var *) (tle->expr);
+
+	/* OID should follow after normal attributes */
+	Assert(var->vartype == OIDOID);
+
+	return tle->resno;
 }
 
 /*
@@ -1464,9 +1301,7 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 
 		var = copyObject(((TargetEntry *) lfirst(lct))->expr);
 		var->varno = OUTER_VAR;
-		var->varnoold = OUTER_VAR;
 		var->varattno = ((TargetEntry *) lfirst(lct))->resno;
-		var->varoattno = ((TargetEntry *) lfirst(lct))->resno;
 
 		newTargetEntry = makeTargetEntry((Expr *) var, startAttrIdx + 1, ((TargetEntry *) lfirst(lct))->resname,
 										 true);
@@ -1476,65 +1311,34 @@ copy_junk_attributes(List *src, List **dest, AttrNumber startAttrIdx)
 }
 
 /*
- * The delete index should be corrected after all absent vars have been pushed to targetlist of subplan, because
- * not all absent vars will be added to targetlist, some of them maybe already exist.
- */
-static void
-correct_delete_idxes(List *deleteColIdx, List *targetList, List *varsAbsent, int absentAttrStart)
-{
-	ListCell	*currAbsentTle = NULL;
-	ListCell	*lct;
-
-	Assert(list_length(targetList) >= absentAttrStart);
-
-	if (list_length(targetList) > absentAttrStart)
-		currAbsentTle = list_nth_cell(targetList, absentAttrStart);
-
-	foreach(lct, varsAbsent)
-	{
-		TargetEntry	*appendTarget;
-		int			attrno;
-
-		Assert(currAbsentTle);
-
-		attrno = (int) ((Var *) lfirst(lct))->varattno;
-		appendTarget = lfirst(currAbsentTle);
-		currAbsentTle = lnext(currAbsentTle);
-
-		Assert(IsA(appendTarget->expr, Var));
-		list_nth_cell(deleteColIdx, attrno - 1)->data.int_value = appendTarget->resno;
-	}
-}
-
-/*
- * Check whether attributes exist in the targetlist of top plan.
- * If not exist, we need to add it to varsAbsent for pushing down later.
+ * Find attributes in the targetlist of top plan.
  *
  * We generates informations as following:
  *
- * varsAbsent absent OLD tuple attribute vars we need to push down
  * splitUpdateTargetList which should be a simple var list used by SplitUpdate
  * insertColIdx which point to resno of corresponding attributes in targetlist
  * deleteColIdx which contains placeholder, and value will be corrected later
  */
 static void
-process_targetlist_for_splitupdate(TupleDesc resultDesc, Index resultRelationsIdx, List *targetlist, List **varsAbsent,
+process_targetlist_for_splitupdate(Relation resultRel, List *targetlist,
 								   List **splitUpdateTargetList, List **insertColIdx, List **deleteColIdx)
 {
-	int attrIdx;
+	TupleDesc	resultDesc = RelationGetDescr(resultRel);
+	GpPolicy   *cdbpolicy = resultRel->rd_cdbpolicy;
+	int			attrIdx;
+	Var		   *splitVar;
+	TargetEntry	*splitTargetEntry;
+	ListCell   *lc;
 
+	lc = list_head(targetlist);
 	for (attrIdx = 1; attrIdx <= resultDesc->natts; ++attrIdx)
 	{
 		TargetEntry			*tle;
-		Var					*splitVar;
-		TargetEntry			*splitTargetEntry;
 		Form_pg_attribute	attr;
+		int			oldAttrIdx = -1;
 
-		*insertColIdx = lappend_int(*insertColIdx, attrIdx);
-		*deleteColIdx = lappend_int(*deleteColIdx, attrIdx);
-
-		tle = (TargetEntry *) list_nth(targetlist, attrIdx - 1);
-
+		tle = (TargetEntry *) lfirst(lc);
+		lc = lnext(lc);
 		Assert(tle);
 
 		attr = resultDesc->attrs[attrIdx - 1];
@@ -1544,70 +1348,59 @@ process_targetlist_for_splitupdate(TupleDesc resultDesc, Index resultRelationsId
 
 			splitTargetEntry = makeTargetEntry((Expr *) copyObject(tle->expr), tle->resno, tle->resname, tle->resjunk);
 			*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
-			continue;
 		}
 		else
 		{
-			splitVar = makeVar(OUTER_VAR, attrIdx, exprType((Node *) tle->expr),
-							   exprTypmod((Node *) tle->expr), exprCollation((Node *) tle->expr), 0 /* varlevelsup */);
+			int			i;
+
+			Assert(exprType((Node *) tle->expr) == attr->atttypid);
+
+			splitVar = (Var *) makeVar(OUTER_VAR,
+									   attrIdx,
+									   attr->atttypid,
+									   attr->atttypmod,
+									   attr->attcollation,
+									   0);
+			splitVar->varnoold = attrIdx;
+
 			splitTargetEntry = makeTargetEntry((Expr *) splitVar, tle->resno, tle->resname, tle->resjunk);
 			*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
+
+			/*
+			 * Is this a distribution key column? If so, we will need its old value.
+			 * expand_targetlist() put the old values for distribution key columns in
+			 * the target list after the new column values.
+			 */
+			for (i = 0; i < cdbpolicy->nattrs; i++)
+			{
+				AttrNumber	keyattno = cdbpolicy->attrs[i];
+
+				if (keyattno == attrIdx)
+				{
+					TargetEntry *oldtle;
+
+					oldAttrIdx = resultDesc->natts + i + 1;
+
+					/* sanity checks. */
+					if (oldAttrIdx > list_length(targetlist))
+						elog(ERROR, "old value for attribute \"%s\" missing from split update input target list",
+							 NameStr(attr->attname));
+					oldtle = list_nth(targetlist, oldAttrIdx - 1);
+					if (exprType((Node *) oldtle->expr) != attr->atttypid)
+						elog(ERROR, "datatype mismatch for old value for attribute \"%s\" in split update input target list",
+							 NameStr(attr->attname));
+
+					break;
+				}
+			}
+			/*
+			 * If oldAttrIdx is still -1, this is not a distribution key column.
+			 */
 		}
-		/*
-		 *  if the TargetEntry is a Var and it is from the RESULT relation,
-		 *  it indicates that this column is not the column that we want to UPDATE.
-		 *  otherwise, we need add it to the lower plan node as an old values,
-		 *  so we record it as absent Vars, and we will add it to lower plan node in
-		 *  ensuing steps.
-		 */
-		if (IsA(tle->expr, Var) &&
-			((Var *) tle->expr)->varnoold == resultRelationsIdx &&
-			((Var *) tle->expr)->varoattno == attrIdx)
-			continue;
 
-		*varsAbsent = lappend(*varsAbsent,
-							 makeVar(resultRelationsIdx, attrIdx, exprType((Node *) tle->expr),
-									 exprTypmod((Node *) tle->expr), exprCollation((Node *) tle->expr), 0 /* varlevelsup */));
+		*insertColIdx = lappend_int(*insertColIdx, attrIdx);
+		*deleteColIdx = lappend_int(*deleteColIdx, oldAttrIdx);
 	}
-}
-
-/*
- * Add target entry for oid at the end of targetlist, as well as splitUpdateTargetList.
- */
-static void
-add_oid_target_entry(PlannerInfo *root, Plan *subplan, Index resultRelationsIdx, List **splitUpdateTargetList, int *oidColIdx)
-{
-	Var			*oidVar;
-	Var			*splitVar;
-	TargetEntry	*splitTargetEntry;
-	int			oidIdx = 0;
-	ListCell	*lct;
-
-	oidVar = makeVar(resultRelationsIdx, ObjectIdAttributeNumber, OIDOID,
-					 -1 /* type mod */, InvalidOid, 0 /* varlevelsup */);
-
-	add_absent_targetlist(root, subplan, list_make1(oidVar), resultRelationsIdx);
-
-	foreach(lct, subplan->targetlist)
-	{
-		TargetEntry	*tle = (TargetEntry *) lfirst(lct);
-		if (IsA(tle->expr, Var) &&
-			((Var *) (tle->expr))->varno == resultRelationsIdx &&
-			((Var *) (tle->expr))->varattno == ObjectIdAttributeNumber)
-		{
-			break;
-		}
-		++oidIdx;
-	}
-
-	Assert(oidIdx < list_length(subplan->targetlist));
-
-	*oidColIdx = list_length(*splitUpdateTargetList) + 1;
-	splitVar = makeVar(OUTER_VAR, oidIdx + 1, OIDOID, -1 /* type mod */, InvalidOid, 0 /* varlevelsup */);
-	splitVar->varnoold = resultRelationsIdx;
-	splitVar->varoattno = ObjectIdAttributeNumber;
-	splitTargetEntry = makeTargetEntry((Expr *) splitVar, *oidColIdx, "oid", true);
-	*splitUpdateTargetList = lappend(*splitUpdateTargetList, splitTargetEntry);
 }
 
 /*
@@ -1618,20 +1411,28 @@ add_oid_target_entry(PlannerInfo *root, Plan *subplan, Index resultRelationsIdx,
  *
  * First, in order to split each update operation into two operations: delete + insert,
  * we add several columns into targetlist:
+ *
  * ctid: the tuple id used for deletion
  * action: which is generated by SplitUpdate node, and can be value of delete or insert
  * oid: if result relation has oids, we need to add oid to targetlist
  *
- * Second, if the result relation has update triggers, we should reject and error out, because currently
- * we don't support running triggers on that.
+ * Second, current GPDB executor don't support statement-level update triggers and will
+ * skip row-level update triggers because a split-update is actually consist of a delete
+ * and insert. So, if the result relation has update triggers, we should reject and error
+ * out because it's not functional.  There is an exception for 'ALTER TABLE SET WITH
+ * (RESHUFFLE)', RESHUFFLE also use split update node internal to rebalance/expand table,
+ * from the view of user, ALTER TABLE should not hit any kind of triggers, so we don't
+ * need to error out in this case.
  *
- * Third, to support deletion, and hash delete operation to correct segment, we need to get attributes of OLD
- * tuple. As a result, we need add those columns back if not exist in the targetlist of subplan recursively.
+ * Third, to support deletion, and hash delete operation to correct segment,
+ * we need to get attributes of OLD tuple. The old attributes must therefore
+ * be present in the subplan's target list. That is handled earlier in the
+ * planner, in expand_targetlist().
  *
  * For example, a typical plan would be as following for statement:
  * update foo set id = l.v + 1 from dep l where foo.v = l.id:
  *
- * |-- join ( targetlist: [ l.v + 1, foo.v, foo.ctid, foo.gp_segment_id ] )
+ * |-- join ( targetlist: [ l.v + 1, foo.v, foo.id, foo.ctid, foo.gp_segment_id ] )
  *       |
  *       |-- motion ( targetlist: [l.id, l.v] )
  *       |    |
@@ -1639,73 +1440,56 @@ add_oid_target_entry(PlannerInfo *root, Plan *subplan, Index resultRelationsIdx,
  *       |
  *       |-- hash (targetlist [ v, foo.ctid, foo.gp_segment_id ] )
  *            |
- *            |-- seqscan on foo (targetlist: [ v, foo.ctid, foo.gp_segment_id ] )
+ *            |-- seqscan on foo (targetlist: [ v, foo.id, foo.ctid, foo.gp_segment_id ] )
  *
- * From the plan above, the target foo.id is assigned as l.v + 1, but old value of id is not available.
- * So we need to add foo.id to seqscan on foo and its parent to make it available.
+ * From the plan above, the target foo.id is assigned as l.v + 1, and expand_targetlist()
+ * ensured that the old value of id, is also available, even though it would not otherwise
+ * be needed.
+ *
+ * 'result_relation' is the RTI of the UPDATE target relation.
  */
-SplitUpdate*
-make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte, Index resultRelationsIdx)
+SplitUpdate *
+make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntry *rte, bool checkTrigger)
 {
 	AttrNumber		ctidColIdx = 0;
 	List			*deleteColIdx = NIL;
 	List			*insertColIdx = NIL;
-	List			*varsAbsent = NIL;
 	int				actionColIdx;
-	int				oidColIdx = 0;
-	int				absentAttrStart;
+	AttrNumber		oidColIdx = 0;
 	List			*splitUpdateTargetList = NIL;
 	TargetEntry		*newTargetEntry;
 	SplitUpdate		*splitupdate;
 	DMLActionExpr	*actionExpr;
 	Relation		resultRelation;
 	TupleDesc		resultDesc;
-	bool			hasOids = false;
 
 	Assert(IsA(mt, ModifyTable));
 
 	/* Suppose we already hold locks before caller */
 	resultRelation = relation_open(rte->relid, NoLock);
 
-	failIfUpdateTriggers(resultRelation);
+	if (checkTrigger)
+		failIfUpdateTriggers(resultRelation);
 
 	resultDesc = RelationGetDescr(resultRelation);
 
 	/*
-	 * 1.insertColIdx/deleteColIdx: In split update mode, we have to form two tuples,
-	 *   one is for deleting and the other is for inserting, so we need record the correct
-	 *   attno which get from the target list of lower plan node. (NOTE:the deleteColIdx
-	 *   is not correct after process_targetlist_for_splitupdate function, we will
-	 *   correct it in correct_delete_idxes function.)
-	 * 2.we need to get the old value which would be used to compute the segment ID,
-	 *   but the lower plan node have no TargetEntry for old values, so we need to
-	 *   add the TargetEntry of old values to the lower plan node, we use the varsAbsent
-	 *   to record the TargetEntry for old values.
+	 * insertColIdx/deleteColIdx: In split update mode, we have to form two tuples,
+	 * one is for deleting and the other is for inserting. Find the old and new
+	 * values in the subplan's target list, and store their column indexes in
+	 * insertColIdx and deleteColIdx.
 	 */
-	process_targetlist_for_splitupdate(resultDesc, resultRelationsIdx, subplan->targetlist, &varsAbsent,
+	process_targetlist_for_splitupdate(resultRelation,
+									   subplan->targetlist,
 									   &splitUpdateTargetList, &insertColIdx, &deleteColIdx);
+	ctidColIdx = find_ctid_attribute_check(subplan->targetlist);
 
 	if (resultRelation->rd_rel->relhasoids)
-		hasOids = true;
+		oidColIdx = find_oid_attribute_check(subplan->targetlist);
 
-	find_ctid_attribute_check(subplan->targetlist, &ctidColIdx, resultRelationsIdx);
 	copy_junk_attributes(subplan->targetlist, &splitUpdateTargetList, resultDesc->natts);
 
 	relation_close(resultRelation, NoLock);
-
-	/* add the TargetEntry of old values to the lower plan node */
-	absentAttrStart = list_length(subplan->targetlist);
-
-	add_absent_targetlist(root, subplan, varsAbsent, resultRelationsIdx);
-
-	/*
-	 * The deleteColIdx which is returned by process_targetlist_for_splitupdate
-	 * function is not correct, now we correct it to the index of old values.
-	 */
-	correct_delete_idxes(deleteColIdx, subplan->targetlist, varsAbsent, absentAttrStart);
-
-	if (hasOids)
-		add_oid_target_entry(root, subplan, resultRelationsIdx, &splitUpdateTargetList, &oidColIdx);
 
 	/* finally, we should add action column at the end of targetlist */
 	actionExpr = makeNode(DMLActionExpr);
@@ -1739,7 +1523,7 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	splitupdate->plan.plan_width = subplan->plan_width;
 
 	/* We need a motion node above the SplitUpdate, so mark it as strewn */
-	mark_plan_strewn((Plan *) splitupdate);
+	mark_plan_strewn((Plan *) splitupdate, subplan->flow->numsegments);
 
 	mt->action_col_idxes = lappend_int(mt->action_col_idxes, actionColIdx);
 	mt->ctid_col_idxes = lappend_int(mt->ctid_col_idxes, ctidColIdx);
@@ -1747,6 +1531,45 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 
 	return splitupdate;
 }
+
+Reshuffle *
+make_reshuffle(PlannerInfo *root,
+			   Plan *subplan,
+			   RangeTblEntry *rte,
+			   Index resultRelationsIdx)
+{
+	int 		 i;
+	Reshuffle 	*reshufflePlan = makeNode(Reshuffle);
+	Relation 	rel = relation_open(rte->relid, NoLock);
+	GpPolicy 	*policy = rel->rd_cdbpolicy;
+
+	reshufflePlan->plan.targetlist = list_copy(subplan->targetlist);
+	reshufflePlan->plan.lefttree = subplan;
+
+	reshufflePlan->plan.startup_cost = subplan->startup_cost;
+	reshufflePlan->plan.total_cost = subplan->total_cost;
+	reshufflePlan->plan.plan_rows = subplan->plan_rows;
+	reshufflePlan->plan.plan_width = subplan->plan_width;
+	reshufflePlan->oldSegs = policy->numsegments;
+	reshufflePlan->tupleSegIdx =
+		find_segid_column(reshufflePlan->plan.targetlist,
+						  resultRelationsIdx);
+
+	for(i = 0; i < policy->nattrs; i++)
+	{
+		reshufflePlan->policyAttrs = lappend_int(reshufflePlan->policyAttrs,
+												 policy->attrs[i]);
+	}
+
+	reshufflePlan->ptype = policy->ptype;
+
+	mark_plan_strewn((Plan *) reshufflePlan, subplan->flow->numsegments);
+
+	heap_close(rel, NoLock);
+
+	return reshufflePlan;
+}
+
 
 /*
  * Find the index of the segid column of the requested relation (relid) in the
@@ -1783,7 +1606,6 @@ find_segid_column(List *tlist, Index relid)
 	/* no segid column found */
 	return -1;
 }
-
 
 /* ----------------------------------------------------------------------- *
  * cdbmutate_warn_ctid_without_segid() warns the user if the plan refers to a
@@ -2903,69 +2725,45 @@ assign_plannode_id(PlannedStmt *stmt)
 }
 
 /*
- * Hash a const value with GPDB's hash function
- */
-int32
-cdbhash_const(Const *pconst, int iSegments)
-{
-	CdbHash    *pcdbhash = makeCdbHash(iSegments);
-
-	cdbhashinit(pcdbhash);
-
-	if (pconst->constisnull)
-	{
-		cdbhashnull(pcdbhash);
-	}
-	else
-	{
-		Assert(isGreenplumDbHashable(pconst->consttype));
-		Oid			oidType = pconst->consttype;
-
-		if (typeIsArrayType(oidType))
-		{
-			oidType = ANYARRAYOID;
-		}
-		cdbhash(pcdbhash, pconst->constvalue, oidType);
-	}
-	return cdbhashreduce(pcdbhash);
-}
-
-/*
  * Hash a list of const values with GPDB's hash function
  */
 int32
 cdbhash_const_list(List *plConsts, int iSegments)
 {
+	ListCell   *lc;
+	CdbHash    *pcdbhash;
+	Oid		   *typeoids;
+	int			i;
+
 	Assert(0 < list_length(plConsts));
 
-	CdbHash    *pcdbhash = makeCdbHash(iSegments);
+	typeoids = palloc(list_length(plConsts) * sizeof(Oid));
 
-	cdbhashinit(pcdbhash);
-
-	ListCell   *lc = NULL;
-
+	i = 0;
 	foreach(lc, plConsts)
 	{
 		Const	   *pconst = (Const *) lfirst(lc);
 
 		Assert(IsA(pconst, Const));
 
-		if (pconst->constisnull)
-		{
-			cdbhashnull(pcdbhash);
-		}
-		else
-		{
-			Assert(isGreenplumDbHashable(pconst->consttype));
-			Oid			oidType = pconst->consttype;
-
-			if (typeIsArrayType(oidType))
-			{
-				oidType = ANYARRAYOID;
-			}
-			cdbhash(pcdbhash, pconst->constvalue, oidType);
-		}
+		typeoids[i] = pconst->consttype;
+		i++;
 	}
+
+	pcdbhash = makeCdbHash(iSegments, list_length(plConsts), typeoids);
+
+	cdbhashinit(pcdbhash);
+
+	i = 0;
+	foreach(lc, plConsts)
+	{
+		Const	   *pconst = (Const *) lfirst(lc);
+
+		cdbhash(pcdbhash, i + 1, pconst->constvalue, pconst->constisnull);
+		i++;
+	}
+
+	pfree(typeoids);
 
 	return cdbhashreduce(pcdbhash);
 }
@@ -3024,6 +2822,7 @@ rte_param_walker(List *rtable, ParamWalkerContext *context)
 {
 	ListCell   *lc;
 	int			rteid = 0;
+	ListCell   *func_lc;
 
 	foreach(lc, rtable)
 	{
@@ -3050,11 +2849,19 @@ rte_param_walker(List *rtable, ParamWalkerContext *context)
 				param_walker((Node *) rte->joinaliasvars, context);
 				break;
 			case RTE_FUNCTION:
-				param_walker(rte->funcexpr, context);
+				foreach(func_lc, rte->functions)
+				{
+					RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(func_lc);
+					param_walker(rtfunc->funcexpr, context);
+				}
 				break;
 			case RTE_TABLEFUNCTION:
 				param_walker((Node *) rte->subquery, context);
-				param_walker(rte->funcexpr, context);
+				foreach(func_lc, rte->functions)
+				{
+					RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(func_lc);
+					param_walker(rtfunc->funcexpr, context);
+				}
 				break;
 			case RTE_VALUES:
 				param_walker((Node *) rte->values_lists, context);
@@ -3319,7 +3126,7 @@ remove_subquery_in_RTEs(Node *node)
 			 * be shared by other objects in the tree.
 			 */
 			pfree(rte->subquery);
-			rte->subquery = makeNode(Query);
+			rte->subquery = NULL;
 		}
 
 		return;

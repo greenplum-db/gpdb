@@ -139,15 +139,11 @@ _bitmap_init_lovpage(Relation rel __attribute__((unused)), Buffer buf)
  * _bitmap_init_bitmappage() -- initialize a new page to store the bitmap.
  */
 void
-_bitmap_init_bitmappage(Relation rel __attribute__((unused)), Buffer buf)
+_bitmap_init_bitmappage(Page page)
 {
-	Page			page;
 	BMBitmapOpaque	opaque;
 
-	page = (Page) BufferGetPage(buf);
-
-	if(PageIsNew(page))
-		PageInit(page, BufferGetPageSize(buf), sizeof(BMBitmapOpaqueData));
+	PageInit(page, BLCKSZ, sizeof(BMBitmapOpaqueData));
 
 	/* even though page may not be new, reset all values */
 	opaque = (BMBitmapOpaque) PageGetSpecialPointer(page);

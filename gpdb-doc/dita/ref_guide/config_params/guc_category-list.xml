@@ -328,7 +328,7 @@
             </p>
             <p><xref href="guc-list.xml#optimizer_control" type="section">optimizer_control</xref>
             </p>
-            <p><xref href="guc-list.xml#optimizer_enable_associativit" type="section"
+            <p><xref href="guc-list.xml#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref></p>
             <p><xref href="guc-list.xml#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref></p>
@@ -1269,6 +1269,10 @@
                 >gp_external_enable_exec</xref>
             </p>
             <p>
+              <xref href="guc-list.xml#gp_external_enable_filter_pushdown" type="section"
+                >gp_external_enable_filter_pushdown</xref>
+            </p>
+            <p>
               <xref href="guc-list.xml#gp_external_max_segs" type="section"
                 >gp_external_max_segs</xref>
             </p>
@@ -1464,10 +1468,6 @@
                   >gp_cached_segworkers_threshold</xref>
               </p>
               <p>
-                <xref href="guc-list.xml#gp_connections_per_thread" type="section"
-                  >gp_connections_per_thread</xref>
-              </p>
-              <p>
                 <xref href="guc-list.xml#gp_enable_direct_dispatch" type="section"
                   >gp_enable_direct_dispatch</xref>
               </p>
@@ -1549,10 +1549,6 @@
               </p>
               <p>
                 <xref href="guc-list.xml#gp_dbid" type="section">gp_dbid</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_num_contents_in_cluster" type="section"
-                  >gp_num_contents_in_cluster</xref>
               </p>
             </stentry>
             <stentry>

@@ -82,6 +82,15 @@ function build_gpdb() {
   popd
 }
 
+function build_quicklz() {
+  pushd gpaddon_src/quicklz
+    # Need to have pg_config available to compile and install quicklz.
+    source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh
+    export PATH=${GREENPLUM_INSTALL_DIR}/bin:$PATH
+    make install
+  popd
+}
+
 function build_gppkg() {
   pushd ${GPDB_SRC_PATH}/gpAux
     make gppkg BLD_TARGETS="gppkg" INSTLOC="${GREENPLUM_INSTALL_DIR}" GPPKGINSTLOC="${GPDB_ARTIFACTS_DIR}" RELENGTOOLS=/opt/releng/tools
@@ -171,7 +180,12 @@ function _main() {
   # addon directory assumes that it is located in a particular location under
   # the source tree and hence needs to be copied over.
   rsync -au gpaddon_src/ ${GPDB_SRC_PATH}/gpAux/${ADDON_DIR}
+
   build_gpdb "${BLD_TARGET_OPTION[@]}"
+  if [ "${TARGET_OS}" != "win32" ] ; then
+      # Do not build quicklz support for windows
+      build_quicklz
+  fi
   build_gppkg
   if [ "${TARGET_OS}" != "win32" ] ; then
       # Don't unit test when cross compiling. Tests don't build because they

@@ -9,20 +9,20 @@ INSERT 10
 
 DELETE FROM ao WHERE a < 5;
 DELETE 4
-SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg_name('ao');
+SELECT state, tupcount, modcount FROM gp_ao_or_aocs_seg('ao');
 state|tupcount|modcount
 -----+--------+--------
 1    |10      |2       
 (1 row)
 VACUUM ao;
 VACUUM
-SELECT state, modcount FROM gp_ao_or_aocs_seg_name('ao');
+SELECT state, modcount FROM gp_ao_or_aocs_seg('ao');
 state|modcount
 -----+--------
 1    |0       
 1    |2       
 (2 rows)
-SELECT sum(tupcount) FROM gp_ao_or_aocs_seg_name('ao');
+SELECT sum(tupcount) FROM gp_ao_or_aocs_seg('ao');
 sum
 ---
 6  

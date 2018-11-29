@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/pathnode.h
@@ -99,7 +99,7 @@ extern Path *create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel,
 						 List *pathkeys, Relids required_outer);
 extern Path *create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						 RangeTblEntry *rte,
-						 Relids required_outer);
+						 List *pathkeys, Relids required_outer);
 extern Path *create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel,
 						 RangeTblEntry *rte,
 						 Relids required_outer);
@@ -181,6 +181,7 @@ extern RelOptInfo *build_join_rel(PlannerInfo *root,
 			   RelOptInfo *inner_rel,
 			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr);
+extern RelOptInfo *build_empty_join_rel(PlannerInfo *root);
 extern void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
 
 extern Var *cdb_define_pseudo_column(PlannerInfo   *root,

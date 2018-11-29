@@ -4,7 +4,7 @@
  *	  Standard POSTGRES buffer page definitions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/bufpage.h
@@ -16,9 +16,14 @@
 
 #include "access/xlogdefs.h"
 #include "storage/block.h"
-#include "storage/bufmgr.h"
 #include "storage/item.h"
 #include "storage/off.h"
+#include "miscadmin.h"
+
+#ifndef FRONTEND
+/* Needed by PageGetLSN(), only for asserts in backend code */
+#include "storage/bufmgr.h"
+#endif
 
 /*
  * A postgres disk page is an abstraction layered on top of a postgres
@@ -28,7 +33,7 @@
  * disk page is always a slotted page of the form:
  *
  * +----------------+---------------------------------+
- * | PageHeaderData | linp1 linp2 linp3 ...			  |
+ * | PageHeaderData | linp1 linp2 linp3 ...           |
  * +-----------+----+---------------------------------+
  * | ... linpN |									  |
  * +-----------+--------------------------------------+
@@ -36,7 +41,7 @@
  * |												  |
  * |			 v pd_upper							  |
  * +-------------+------------------------------------+
- * |			 | tupleN ...						  |
+ * |			 | tupleN ...                         |
  * +-------------+------------------+-----------------+
  * |	   ... tuple3 tuple2 tuple1 | "special space" |
  * +--------------------------------+-----------------+
@@ -67,7 +72,7 @@
  *
  * AM-specific per-page data (if any) is kept in the area marked "special
  * space"; each AM has an "opaque" structure defined somewhere that is
- * stored as the page trailer.	an access method should always
+ * stored as the page trailer.  an access method should always
  * initialize its pages with PageInit and then set its own opaque
  * fields.
  */
@@ -129,7 +134,7 @@ typedef struct
  * there are no flag bits relating to checksums.
  *
  * pd_prune_xid is a hint field that helps determine whether pruning will be
- * useful.	It is currently unused in index pages.
+ * useful.  It is currently unused in index pages.
  *
  * The page version number and page size are packed together into a single
  * uint16 field.  This is for historical reasons: before PostgreSQL 7.3,
@@ -364,7 +369,7 @@ typedef PageHeaderData *PageHeader;
 static inline XLogRecPtr
 PageGetLSN(Page page)
 {
-#ifdef USE_ASSERT_CHECKING
+#if defined (USE_ASSERT_CHECKING) && !defined(FRONTEND)
 	extern PGDLLIMPORT char *BufferBlocks; /* duplicates bufmgr.h */
 	char *pagePtr = page;
 
@@ -379,7 +384,6 @@ PageGetLSN(Page page)
 		Assert(LWLockHeldByMe(hdr->content_lock));
 	}
 #endif
-
 	return PageXLogRecPtrGet(((PageHeader) (page))->pd_lsn);
 }
 

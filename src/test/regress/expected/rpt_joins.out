@@ -1947,16 +1947,13 @@ on (x1 = xx1) where (xx2 is not null);
 -- to outside an IN
 --
 create table foo (unique1 int, unique2 int) distributed replicated;
-insert into foo vaules (1, 2), (2, 42);
-ERROR:  syntax error at or near "vaules"
-LINE 1: insert into foo vaules (1, 2), (2, 42);
-                        ^
+insert into foo values (1, 2), (2, 42);
 select count(*) from foo a where unique1 in
   (select unique1 from foo b join foo c using (unique1)
    where b.unique2 = 42);
  count 
 -------
-     0
+     1
 (1 row)
 
 drop table if exists foo;

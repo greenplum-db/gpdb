@@ -15,8 +15,8 @@ SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode=
 
 -- Check pg_stat_replication view (this assumes standby master has not been created)
 SELECT * FROM pg_stat_replication;
- pid | usesysid | usename | application_name | client_addr | client_hostname | client_port | backend_start | state | sent_location | write_location | flush_location | replay_location | sync_priority | sync_state 
------+----------+---------+------------------+-------------+-----------------+-------------+---------------+-------+---------------+----------------+----------------+-----------------+---------------+------------
+ pid | usesysid | usename | application_name | client_addr | client_hostname | client_port | backend_start | backend_xmin | state | sent_location | write_location | flush_location | replay_location | sync_priority | sync_state 
+-----+----------+---------+------------------+-------------+-----------------+-------------+---------------+--------------+-------+---------------+----------------+----------------+-----------------+---------------+------------
 (0 rows)
 
 -- Check pg_stat_replication view of master and primary segments

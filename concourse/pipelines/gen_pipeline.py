@@ -56,7 +56,12 @@ JOBS_THAT_ARE_GATES = ['gate_icw_start',
                        'gate_advanced_analytics_start',
                        'gate_release_candidate_start']
 
-JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = ['compile_gpdb_binary_swap_centos6', 'icw_gporca_centos6_gpos_memory'] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
+JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = [
+    'compile_gpdb_binary_swap_centos6',
+    'icw_gporca_centos6_gpos_memory',
+    'walrep_2',
+    'gpexpand_1'
+] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
 
 def suggested_git_remote():
     default_remote = "<https://github.com/<github-user>/gpdb>"
@@ -178,9 +183,8 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p %s \\\n' % os.path.basename(ARGS.output_filepath).rsplit('.', 1)[0]
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
+        msg += '    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \\\n'
         msg += '    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \\\n'
-        msg += '    -v bucket-name=gpdb5-concourse-builds-dev \\\n'
         msg += '    -v gpdb-git-remote=%s \\\n' % suggested_git_remote()
         msg += '    -v gpdb-git-branch=%s \n' % suggested_git_branch()
 
@@ -222,7 +226,7 @@ if __name__ == "__main__":
     PARSER.add_argument('-a', '--test_sections',
                         action='store',
                         dest='test_sections',
-                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA'],
+                        choices=['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions'],
                         default=['ICW'],
                         nargs='+',
                         help='Select tests sections to run')
@@ -242,7 +246,7 @@ if __name__ == "__main__":
 
     if ARGS.pipeline_type == 'prod':
         ARGS.os_types = ['centos6', 'centos7', 'sles', 'aix7', 'win', 'ubuntu16']
-        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA']
+        ARGS.test_sections = ['ICW', 'Replication', 'ResourceGroups', 'Interconnect', 'CLI', 'UD', 'AA', 'Extensions']
 
     # if generating a dev pipeline but didn't specify an output, don't overwrite the master pipeline
     if ARGS.pipeline_type != 'prod' and os.path.basename(ARGS.output_filepath) == default_output_filename:

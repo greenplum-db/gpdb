@@ -17,19 +17,15 @@
 #ifndef CDBUTIL_H
 #define CDBUTIL_H
 
-/*
- * Copied from geqo_random.h (deprecated)
- */
-
-#include <math.h>
 #include "catalog/gp_segment_config.h"
+#include "nodes/pg_list.h"
 
-/* cdb_rand returns a random float value between 0 and 1 inclusive */
-#define cdb_rand() ((double) random() / (double) MAX_RANDOM_VALUE)
+struct SegmentDatabaseDescriptor;
 
-/* cdb_randint returns integer value between lower and upper inclusive */
-#define cdb_randint(upper,lower) \
-	( (int) floor( cdb_rand()*(((upper)-(lower))+0.999999) ) + (lower) )
+extern MemoryContext CdbComponentsContext;
+
+typedef struct CdbComponentDatabaseInfo CdbComponentDatabaseInfo;
+typedef struct CdbComponentDatabases CdbComponentDatabases;
 
 /* --------------------------------------------------------------------------------------------------
  * Structure for MPP 2.0 database information
@@ -43,7 +39,7 @@
  *
  */
 #define COMPONENT_DBS_MAX_ADDRS (8)
-typedef struct CdbComponentDatabaseInfo
+struct CdbComponentDatabaseInfo
 {
 	int16		dbid;			/* the dbid of this database */
 	int16		segindex;		/* content indicator: -1 for entry database,
@@ -64,7 +60,12 @@ typedef struct CdbComponentDatabaseInfo
 
 	char	   *hostaddrs[COMPONENT_DBS_MAX_ADDRS];	/* cached lookup of names */	
 	int16		hostSegs;		/* number of primary segments on the same hosts */
-} CdbComponentDatabaseInfo;
+	List		*freelist;		/* list of idle segment dbs */
+	int			numIdleQEs;
+	int			numActiveQEs;
+
+	CdbComponentDatabases	*cdbs; /* point to owners */
+};
 
 #define SEGMENT_IS_ACTIVE_MIRROR(p) \
 	((p)->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR ? true : false)
@@ -85,7 +86,7 @@ typedef struct CdbComponentDatabaseInfo
  * The storage for instances of this structure returned by getCdbSegmentInstances() is palloc'd.
  * freeCdbSegmentDatabases() can be used to release the structure.
  */
-typedef struct CdbComponentDatabases
+struct CdbComponentDatabases
 {
 	CdbComponentDatabaseInfo *segment_db_info;	/* array of
 												 * SegmentDatabaseInfo's for
@@ -100,7 +101,19 @@ typedef struct CdbComponentDatabases
 	int			my_segindex;	/* the content of this database */
 	bool		my_isprimary;	/* the isprimary flag of this database */
 	uint8		fts_version;	/* the version of fts */
-} CdbComponentDatabases;
+	int			expand_version;
+	int			numActiveQEs;
+	int			numIdleQEs;
+	int			qeCounter;
+};
+
+//
+typedef enum SegmentType
+{
+	SEGMENTTYPE_EXPLICT_WRITER = 1,
+	SEGMENTTYPE_EXPLICT_READER,
+	SEGMENTTYPE_ANY
+}SegmentType;
 
 /*
  * performs all necessary setup required for initializing Greenplum Database components.
@@ -120,7 +133,7 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
 
 
 /*
- * getCdbComponentDatabases() returns a pointer to a CdbComponentDatabases
+ * cdbcomponent_getCdbComponents() returns a pointer to a CdbComponentDatabases
  * structure. Both the segment_db_info array and the entry_db_info_array are ordered by segindex,
  * isprimary desc.
  *
@@ -128,29 +141,42 @@ extern void cdb_cleanup(int code, Datum arg  __attribute__((unused)) );
  * are contained in palloc'd storage allocated from the current storage context.
  * The same is true for pointer-based values in CdbComponentDatabaseInfo.  The caller is responsible
  * for setting the current storage context and releasing the storage occupied the returned values.
- *
- * The function freeCdbComponentDatabases() is used to release the structure
- * returned by getCdbComponentDatabases().
- *
  */
-extern CdbComponentDatabases *getCdbComponentDatabases(void);
+CdbComponentDatabases * cdbcomponent_getCdbComponents(bool DNSLookupAsError);
+void cdbcomponent_destroyCdbComponents(void);
 
+void cdbcomponent_updateCdbComponents(void);
 /*
- * freeCdbComponentDatabases() releases the palloc'd storage returned by
- * getCdbComponentDatabases().
- */
-extern void freeCdbComponentDatabases(CdbComponentDatabases *pDBs);
-
-// UNDONE: This was a private procedure... are there any issues in making it public???
-/*
- * getCdbComponentInfo
+ * cdbcomponent_cleanupIdleQEs()
  *
+ * This routine is used when a session has been idle for a while (waiting for the
+ * client to send us SQL to execute). The idea is to consume less resources while sitting idle.
  *
- * Storage for the SegmentInstances block and all subsidiary
- * structures are allocated from the caller's context.
+ * The expectation is that if the session is logged on, but nobody is sending us work to do,
+ * we want to free up whatever resources we can. Usually it means there is a human being at the
+ * other end of the connection, and that person has walked away from their terminal, or just hasn't
+ * decided what to do next. We could be idle for a very long time (many hours).
+ *
+ * Of course, freeing QEs means that the next time the user does send in an SQL statement,
+ * we need to allocate QEs (at least the writer QEs) to do anything. This entails extra work,
+ * so we don't want to do this if we don't think the session has gone idle.
+ *
+ * Only call these routines from an idle session.
+ *
+ * This routine is also called from the sigalarm signal handler (hopefully that is safe to do).
  */
-extern CdbComponentDatabases *getCdbComponentInfo(bool DnsLookupFailureIsError);
+void cdbcomponent_cleanupIdleQEs(bool includeWriter);
 
+CdbComponentDatabaseInfo * cdbcomponent_getComponentInfo(int contentId);
+
+struct SegmentDatabaseDescriptor * cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType);
+
+void cdbcomponent_recycleIdleQE(struct SegmentDatabaseDescriptor *segdbDesc, bool forceDestroy);
+
+bool cdbcomponent_qesExist(void);
+bool cdbcomponent_activeQEsExist(void);
+
+List *cdbcomponent_getCdbComponentsList(void);
 /*
  * Given total number of primary segment databases and a number of segments
  * to "skip" - this routine creates a boolean map (array) the size of total
@@ -170,21 +196,14 @@ extern int16 master_standby_dbid(void);
 extern CdbComponentDatabaseInfo *dbid_get_dbinfo(int16 dbid);
 extern int16 contentid_get_dbid(int16 contentid, char role, bool getPreferredRoleNotCurrentRole);
 
+extern int numsegmentsFromQD;
 /*
  * Returns the number of segments
- *
- * N.B.  Gp_role must be either dispatch or execute, since
- * when utiliy	no mpp catalog tables are read.  An Assert is
- * thrown if Gp_role = utility.
  */
-extern int	getgpsegmentCount(void);
+extern int getgpsegmentCount(void);
 
 #define ELOG_DISPATCHER_DEBUG(...) do { \
        if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) elog(LOG, __VA_ARGS__); \
-    } while(false);
-
-#define WRITE_LOG_DISPATCHER_DEBUG(...) do { \
-	if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG) write_log(__VA_ARGS__); \
     } while(false);
 
 #endif   /* CDBUTIL_H */

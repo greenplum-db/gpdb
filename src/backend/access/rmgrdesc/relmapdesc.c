@@ -3,7 +3,7 @@
  * relmapdesc.c
  *	  rmgr descriptor routines for utils/cache/relmapper.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -30,5 +30,5 @@ relmap_desc(StringInfo buf, XLogRecord *record)
 						 xlrec->dbid, xlrec->tsid, xlrec->nbytes);
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

@@ -25,8 +25,8 @@ ALTER TABLE persons INHERIT stuff;
 CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL); -- error
 
 -- This test comes from postgres, and we expect it to fail on Greenplum
--- because Greenplum does not support both primary keys and unique constraints
--- at the same time.
+-- because Greenplum does not support having two primary key / unique
+-- constraints with no columns in common.
 CREATE TABLE persons2 OF person_type (
     id WITH OPTIONS PRIMARY KEY,
     UNIQUE (name)

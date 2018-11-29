@@ -42,9 +42,6 @@ PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(pgstattuple);
 PG_FUNCTION_INFO_V1(pgstattuplebyid);
 
-extern Datum pgstattuple(PG_FUNCTION_ARGS);
-extern Datum pgstattuplebyid(PG_FUNCTION_ARGS);
-
 /*
  * struct pgstattuple_type
  *
@@ -278,9 +275,11 @@ pgstat_heap(Relation rel, FunctionCallInfo fcinfo)
 	Buffer		buffer;
 	pgstattuple_type stat = {0};
 	BufferAccessStrategy bstrategy;
+	SnapshotData SnapshotDirty;
 
 	/* Disable syncscan because we assume we scan from block zero upwards */
 	scan = heap_beginscan_strat(rel, SnapshotAny, 0, NULL, true, false);
+	InitDirtySnapshot(SnapshotDirty);
 
 	nblocks = scan->rs_nblocks; /* # blocks to be scanned */
 
@@ -296,7 +295,7 @@ pgstat_heap(Relation rel, FunctionCallInfo fcinfo)
 		/* must hold a buffer lock to call HeapTupleSatisfiesVisibility */
 		LockBuffer(scan->rs_cbuf, BUFFER_LOCK_SHARE);
 
-		if (HeapTupleSatisfiesVisibility(rel, tuple, SnapshotNow, scan->rs_cbuf))
+		if (HeapTupleSatisfiesVisibility(rel, tuple, &SnapshotDirty, scan->rs_cbuf))
 		{
 			stat.tuple_len += tuple->t_len;
 			stat.tuple_count++;
@@ -311,7 +310,7 @@ pgstat_heap(Relation rel, FunctionCallInfo fcinfo)
 
 		/*
 		 * To avoid physically reading the table twice, try to do the
-		 * free-space scan in parallel with the heap scan.	However,
+		 * free-space scan in parallel with the heap scan.  However,
 		 * heap_getnext may find no tuples on a given page, so we cannot
 		 * simply examine the pages returned by the heap scan.
 		 */

@@ -36,7 +36,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -55,12 +55,13 @@
 #include "utils/lsyscache.h"
 
 #include "cdb/cdbhash.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
 #include "executor/spi.h"
 
 static TupleTableSlot *NextInputSlot(ResultState *node);
-static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlot);
+static bool TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot);
 
 /**
  * Returns the next valid input tuple from the left subtree
@@ -143,18 +144,7 @@ ExecResult(ResultState *node)
 
 		node->rs_checkqual = false;
 		if (!qualResult)
-		{
-			/*
-			 * CDB: We'll read no more from outer subtree. To keep our
-			 * sibling QEs from being starved, tell source QEs not to clog
-			 * up the pipeline with our never-to-be-consumed data.
-			 */
-			PlanState *outerPlan = outerPlanState(node);	
-			if (outerPlan)
-				ExecSquelchNode(outerPlan);	
-
 			return NULL;
-		}
 	}
 
 	TupleTableSlot *outputSlot = NULL;
@@ -236,8 +226,7 @@ ExecResult(ResultState *node)
 
 		if (!TupIsNull(candidateOutputSlot))
 		{
-			Result *result = (Result *)node->ps.plan;
-			if (TupleMatchesHashFilter(result, candidateOutputSlot))
+			if (TupleMatchesHashFilter(node, candidateOutputSlot))
 			{
 				outputSlot = candidateOutputSlot;
 			}
@@ -262,9 +251,11 @@ ExecResult(ResultState *node)
 /**
  * Returns true if tuple matches hash filter.
  */
-static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlot)
+static bool
+TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot)
 {
-	bool res = true;
+	Result	   *resultNode = (Result *)node->ps.plan;
+	bool		res = true;
 
 	Assert(resultNode);
 	Assert(!TupIsNull(resultSlot));
@@ -272,42 +263,66 @@ static bool TupleMatchesHashFilter(Result *resultNode, TupleTableSlot *resultSlo
 	if (resultNode->hashFilter)
 	{
 		Assert(resultNode->hashFilter);
-		ListCell	*cell = NULL;
+		ListCell	*cell;
+		CdbHash		*hash;
+		int			numSegments;
+		int			i;
+		Oid		   *typeoids;
 
-		CdbHash *hash = makeCdbHash(GpIdentity.numsegments);
-		cdbhashinit(hash);
+		if (node->ps.state->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		{
+			Assert(resultNode->plan.flow);
+			Assert(resultNode->plan.flow->numsegments > 0);
+
+			/*
+			 * For planner generated plan the size of receiver slice can be
+			 * determined from flow.
+			 */
+			numSegments = resultNode->plan.flow->numsegments;
+		}
+		else
+		{
+			/*
+			 * For ORCA generated plan we could distribute to ALL as partially
+			 * distributed tables are not supported by ORCA yet.
+			 */
+			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
+		}
+
+		typeoids = (Oid *) palloc(list_length(resultNode->hashList) * sizeof(Oid));
+
+		/*
+		 * Note that the table may be randomly distributed. hashList will be
+		 * empty in that case.
+		 */
+		i = 0;
 		foreach(cell, resultNode->hashList)
 		{
-			/**
-			 * Note that a table may be randomly distributed. The hashList will be empty.
-			 */
-			Datum		hAttr;
-			bool		isnull;
-			Oid			att_type;
-
-			int attnum = lfirst_int(cell);
+			int			attnum = lfirst_int(cell);
 
 			Assert(attnum > 0);
-			hAttr = slot_getattr(resultSlot, attnum, &isnull);
-			if (!isnull)
-			{
-				att_type = resultSlot->tts_tupleDescriptor->attrs[attnum - 1]->atttypid;
-
-				if (get_typtype(att_type) == 'd')
-					att_type = getBaseType(att_type);
-
-				/* CdbHash treats all array-types as ANYARRAYOID, it doesn't know how to hash
-				 * the individual types (why is this ?) */
-				if (typeIsArrayType(att_type))
-					att_type = ANYARRAYOID;
-
-				cdbhash(hash, hAttr, att_type);
-			}
-			else
-				cdbhashnull(hash);
+			typeoids[i++] = resultSlot->tts_tupleDescriptor->attrs[attnum - 1]->atttypid;
 		}
+
+		hash = makeCdbHash(numSegments, list_length(resultNode->hashList), typeoids);
+
+		cdbhashinit(hash);
+		i = 0;
+		foreach(cell, resultNode->hashList)
+		{
+			int			attnum = lfirst_int(cell);
+			Datum		hAttr;
+			bool		isnull;
+
+			hAttr = slot_getattr(resultSlot, attnum, &isnull);
+
+			cdbhash(hash, i + 1, hAttr, isnull);
+			i++;
+		}
+
 		int targetSeg = cdbhashreduce(hash);
 
+		pfree(typeoids);
 		pfree(hash);
 
 		res = (targetSeg == GpIdentity.segindex);

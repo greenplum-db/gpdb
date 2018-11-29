@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/execdesc.h
@@ -87,12 +87,6 @@ typedef struct Slice
 	int			gangSize;
 
 	/*
-	 * How many of the gang members will actually be used? This takes into
-	 * account directDispatch information.
-	 */
-	int			numGangMembersToBeActive;
-
-	/*
 	 * directDispatch->isDirectDispatch should ONLY be set for a slice
 	 * when it requires an n-gang.
 	 */
@@ -107,7 +101,11 @@ typedef struct Slice
 	 * The number of processes must agree with the the plan slice to be
 	 * implemented.
 	 */
-	List	   *primaryProcesses;
+	List		*primaryProcesses;
+	/* A bitmap to identify which QE should execute this slice */
+	Bitmapset	*processesMap;
+	/* A list of segment ids who will execute this slice */
+	List		*segments;
 } Slice;
 
 /*
@@ -264,6 +262,9 @@ typedef struct QueryDesc
 
 	/* This is always set NULL by the core system, but plugins can change it */
 	struct Instrumentation *totaltime;	/* total time spent in ExecutorRun */
+
+	/* The overall memory consumption account (i.e., outside of an operator) */
+	MemoryAccountIdType memoryAccountId;
 } QueryDesc;
 
 /* in pquery.c */

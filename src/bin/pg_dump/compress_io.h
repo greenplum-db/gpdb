@@ -3,7 +3,7 @@
  * compress_io.h
  *	 Interface to compress_io.c routines
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -29,7 +29,7 @@ typedef enum
 } CompressionAlgorithm;
 
 /* Prototype for callback function to WriteDataToArchive() */
-typedef size_t (*WriteFunc) (ArchiveHandle *AH, const char *buf, size_t len);
+typedef void (*WriteFunc) (ArchiveHandle *AH, const char *buf, size_t len);
 
 /*
  * Prototype for callback function to ReadDataFromArchive()
@@ -50,7 +50,7 @@ typedef struct CompressorState CompressorState;
 extern CompressorState *AllocateCompressor(int compression, WriteFunc writeF);
 extern void ReadDataFromArchive(ArchiveHandle *AH, int compression,
 					ReadFunc readF);
-extern size_t WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs,
+extern void WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs,
 				   const void *data, size_t dLen);
 extern void EndCompressor(ArchiveHandle *AH, CompressorState *cs);
 

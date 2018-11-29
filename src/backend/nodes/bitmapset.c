@@ -11,7 +11,7 @@
  * bms_is_empty() in preference to testing for NULL.)
  *
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/nodes/bitmapset.c
@@ -38,7 +38,7 @@
  * where x's are unspecified bits.  The two's complement negative is formed
  * by inverting all the bits and adding one.  Inversion gives
  *				yyyyyy01111
- * where each y is the inverse of the corresponding x.	Incrementing gives
+ * where each y is the inverse of the corresponding x.  Incrementing gives
  *				yyyyyy10000
  * and then ANDing with the original value gives
  *				00000010000
@@ -692,21 +692,20 @@ bms_add_member(Bitmapset *a, int x)
 		return bms_make_singleton(x);
 	wordnum = WORDNUM(x);
 	bitnum = BITNUM(x);
+
+	/* enlarge the set if necessary */
 	if (wordnum >= a->nwords)
 	{
-		/* Slow path: make a larger set and union the input set into it */
-		Bitmapset  *result;
-		int			nwords;
+		int			oldnwords = a->nwords;
 		int			i;
 
-		result = bms_make_singleton(x);
-		nwords = a->nwords;
-		for (i = 0; i < nwords; i++)
-			result->words[i] |= a->words[i];
-		pfree(a);
-		return result;
+		a = (Bitmapset *) repalloc(a, BITMAPSET_SIZE(wordnum + 1));
+		a->nwords = wordnum + 1;
+		/* zero out the enlarged portion */
+		for (i = oldnwords; i < a->nwords; i++)
+			a->words[i] = 0;
 	}
-	/* Fast path: x fits in existing set */
+
 	a->words[wordnum] |= ((bitmapword) 1 << bitnum);
 	return a;
 }
@@ -939,7 +938,7 @@ bms_first_from(const Bitmapset *a, int x)
 /*----------
  * bms_first_member - find and remove first member of a set
  *
- * Returns -1 if set is empty.	NB: set is destructively modified!
+ * Returns -1 if set is empty.  NB: set is destructively modified!
  *
  * This is intended as support for iterating through the members of a set.
  * The typical pattern is

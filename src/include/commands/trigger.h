@@ -3,7 +3,7 @@
  * trigger.h
  *	  Declarations for trigger handling.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/trigger.h
@@ -112,7 +112,7 @@ extern PGDLLIMPORT int SessionReplicationRole;
 #define TRIGGER_DISABLED					'D'
 
 extern Oid CreateTrigger(CreateTrigStmt *stmt, const char *queryString,
-			  Oid constraintOid, Oid indexOid,
+			  Oid relOid, Oid refRelOid, Oid constraintOid, Oid indexOid,
 			  bool isInternal);
 
 extern void RemoveTriggerById(Oid trigOid);
@@ -158,10 +158,12 @@ extern void ExecASDeleteTriggers(EState *estate,
 extern bool ExecBRDeleteTriggers(EState *estate,
 					 EPQState *epqstate,
 					 ResultRelInfo *relinfo,
-					 ItemPointer tupleid);
+					 ItemPointer tupleid,
+					 HeapTuple fdw_trigtuple);
 extern void ExecARDeleteTriggers(EState *estate,
 					 ResultRelInfo *relinfo,
-					 ItemPointer tupleid);
+					 ItemPointer tupleid,
+					 HeapTuple fdw_trigtuple);
 extern bool ExecIRDeleteTriggers(EState *estate,
 					 ResultRelInfo *relinfo,
 					 HeapTuple trigtuple);
@@ -173,10 +175,12 @@ extern TupleTableSlot *ExecBRUpdateTriggers(EState *estate,
 					 EPQState *epqstate,
 					 ResultRelInfo *relinfo,
 					 ItemPointer tupleid,
+					 HeapTuple fdw_trigtuple,
 					 TupleTableSlot *slot);
 extern void ExecARUpdateTriggers(EState *estate,
 					 ResultRelInfo *relinfo,
 					 ItemPointer tupleid,
+					 HeapTuple fdw_trigtuple,
 					 HeapTuple newtuple,
 					 List *recheckIndexes);
 extern TupleTableSlot *ExecIRUpdateTriggers(EState *estate,

@@ -308,12 +308,13 @@ alter table owner_test set with (reorganize = true) distributed by (i);
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from pg_class a, pg_class b, pg_class c,
+       z.rolname as toastidxowner
+from pg_class a
+     inner join pg_class b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join pg_class c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid = b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner;
@@ -322,14 +323,13 @@ where a.reltoastrelid = b.oid
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a,
-	 gp_dist_random('pg_class') b,
-	 gp_dist_random('pg_class') c,
+       z.rolname as toastidxowner
+from gp_dist_random('pg_class') a
+     inner join gp_dist_random('pg_class') b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join gp_dist_random('pg_class') c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid=b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner
@@ -345,14 +345,13 @@ alter table owner_test set with (reorganize = true) distributed by (i);
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a,
-	 gp_dist_random('pg_class') b,
-	 gp_dist_random('pg_class') c,
+       z.rolname as toastidxowner
+from gp_dist_random('pg_class') a
+     inner join gp_dist_random('pg_class') b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join gp_dist_random('pg_class') c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid=b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner

@@ -3,7 +3,7 @@
  * pg_proc.c
  *	  routines to support manipulation of the pg_proc relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -242,7 +242,7 @@ ProcedureCreate(const char *procedureName,
 
 	/*
 	 * Do not allow polymorphic return type unless at least one input argument
-	 * is polymorphic.	ANYRANGE return type is even stricter: must have an
+	 * is polymorphic.  ANYRANGE return type is even stricter: must have an
 	 * ANYRANGE input (since we can't deduce the specific range type from
 	 * ANYELEMENT).  Also, do not allow return type INTERNAL unless at least
 	 * one input argument is INTERNAL.
@@ -325,12 +325,6 @@ ProcedureCreate(const char *procedureName,
 			}
 		}
 	}
-
-	/* Guard against a case the planner doesn't handle yet */
-	if (isWindowFunc && parameterDefaults != NIL)
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("window functions cannot have default arguments")));
 
 	/*
 	 * All seems OK; prepare the data to be inserted into pg_proc.
@@ -581,7 +575,7 @@ ProcedureCreate(const char *procedureName,
 						ObjectIdGetDatum(oldOid));
 
 			scan = systable_beginscan(depRel, DependReferenceIndexId, true,
-									  SnapshotNow, 2, key);
+									  NULL, 2, key);
 
 			while (HeapTupleIsValid(depTup = systable_getnext(scan)))
 			{
@@ -750,24 +744,34 @@ ProcedureCreate(const char *procedureName,
 	/* Verify function body */
 	if (OidIsValid(languageValidator))
 	{
-		ArrayType  *set_items;
-		int			save_nestlevel;
+		ArrayType  *set_items = NULL;
+		int			save_nestlevel = 0;
 
 		/* Advance command counter so new tuple can be seen by validator */
 		CommandCounterIncrement();
 
-		/* Set per-function configuration parameters */
-		set_items = (ArrayType *) DatumGetPointer(proconfig);
-		if (set_items)			/* Need a new GUC nesting level */
+		/*
+		 * Set per-function configuration parameters so that the validation is
+		 * done with the environment the function expects.  However, if
+		 * check_function_bodies is off, we don't do this, because that would
+		 * create dump ordering hazards that pg_dump doesn't know how to deal
+		 * with.  (For example, a SET clause might refer to a not-yet-created
+		 * text search configuration.)	This means that the validator
+		 * shouldn't complain about anything that might depend on a GUC
+		 * parameter when check_function_bodies is off.
+		 */
+		if (check_function_bodies)
 		{
-			save_nestlevel = NewGUCNestLevel();
-			ProcessGUCArray(set_items,
-							(superuser() ? PGC_SUSET : PGC_USERSET),
-							PGC_S_SESSION,
-							GUC_ACTION_SAVE);
+			set_items = (ArrayType *) DatumGetPointer(proconfig);
+			if (set_items)		/* Need a new GUC nesting level */
+			{
+				save_nestlevel = NewGUCNestLevel();
+				ProcessGUCArray(set_items,
+								(superuser() ? PGC_SUSET : PGC_USERSET),
+								PGC_S_SESSION,
+								GUC_ACTION_SAVE);
+			}
 		}
-		else
-			save_nestlevel = 0; /* keep compiler quiet */
 
 		OidFunctionCall1(languageValidator, ObjectIdGetDatum(retval));
 
@@ -1020,7 +1024,7 @@ sql_function_parse_error_callback(void *arg)
 
 /*
  * Adjust a syntax error occurring inside the function body of a CREATE
- * FUNCTION or DO command.	This can be used by any function validator or
+ * FUNCTION or DO command.  This can be used by any function validator or
  * anonymous-block handler, not only for SQL-language functions.
  * It is assumed that the syntax error position is initially relative to the
  * function body string (as passed in).  If possible, we adjust the position
@@ -1153,7 +1157,7 @@ match_prosrc_to_literal(const char *prosrc, const char *literal,
 
 	/*
 	 * This implementation handles backslashes and doubled quotes in the
-	 * string literal.	It does not handle the SQL syntax for literals
+	 * string literal.  It does not handle the SQL syntax for literals
 	 * continued across line boundaries.
 	 *
 	 * We do the comparison a character at a time, not a byte at a time, so

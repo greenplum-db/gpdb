@@ -2,7 +2,7 @@
 #
 # Makefile for src/interfaces/ecpg/preproc
 #
-# Copyright (c) 1998-2013, PostgreSQL Global Development Group
+# Copyright (c) 1998-2014, PostgreSQL Global Development Group
 #
 # src/interfaces/ecpg/preproc/Makefile
 #
@@ -16,7 +16,7 @@ top_builddir = ../../../..
 include $(top_builddir)/src/Makefile.global
 
 MAJOR_VERSION= 4
-MINOR_VERSION= 9
+MINOR_VERSION= 10
 PATCHLEVEL=0
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
@@ -38,7 +38,7 @@ OBJS=	preproc.o pgc.o type.o ecpg.o output.o parser.o \
 	keywords.o c_keywords.o ecpg_keywords.o kwlookup.o ../ecpglib/typename.o descriptor.o variable.o \
 	$(WIN32RES)
 
-# Suppress parallel build to avoid a bug in gmake 3.82
+# Suppress parallel build to avoid a bug in GNU make 3.82
 # (see comments in ../Makefile)
 ifeq ($(MAKE_VERSION),3.82)
 .NOTPARALLEL:

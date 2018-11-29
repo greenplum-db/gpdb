@@ -97,11 +97,17 @@
 /* Define to 1 if you have the <apr_getopt.h> header file. */
 #undef HAVE_APR_GETOPT_H
 
+/* Define to 1 if you have the `ASN1_STRING_get0_data' function. */
+#undef HAVE_ASN1_STRING_GET0_DATA
+
 /* Define to 1 if you want to use atomics. */
 #undef HAVE_ATOMICS
 
 /* Define to 1 if you have the <atomic.h> header file. */
 #undef HAVE_ATOMIC_H
+
+/* Define to 1 if you have the `BIO_meth_new' function. */
+#undef HAVE_BIO_METH_NEW
 
 /* Define to 1 if you have the `cbrt' function. */
 #undef HAVE_CBRT
@@ -114,6 +120,9 @@
 
 /* Define to 1 if you have the `crypt' function. */
 #undef HAVE_CRYPT
+
+/* Define to 1 if you have the `CRYPTO_lock' function. */
+#undef HAVE_CRYPTO_LOCK
 
 /* Define to 1 if you have the <crypt.h> header file. */
 #undef HAVE_CRYPT_H
@@ -317,21 +326,6 @@
 /* Define to 1 if you have isinf(). */
 #undef HAVE_ISINF
 
-/* Define to 1 if `e_data' is a member of `krb5_error'. */
-#undef HAVE_KRB5_ERROR_E_DATA
-
-/* Define to 1 if `text.data' is a member of `krb5_error'. */
-#undef HAVE_KRB5_ERROR_TEXT_DATA
-
-/* Define to 1 if you have krb5_free_unparsed_name. */
-#undef HAVE_KRB5_FREE_UNPARSED_NAME
-
-/* Define to 1 if `client' is a member of `krb5_ticket'. */
-#undef HAVE_KRB5_TICKET_CLIENT
-
-/* Define to 1 if `enc_part2' is a member of `krb5_ticket'. */
-#undef HAVE_KRB5_TICKET_ENC_PART2
-
 /* Define to 1 if you have the <langinfo.h> header file. */
 #undef HAVE_LANGINFO_H
 
@@ -456,6 +450,9 @@
 /* Define to 1 if you have the <numa.h> header file. */
 #undef HAVE_NUMA_H
 
+/* Define to 1 if you have the `OPENSSL_init_ssl' function. */
+#undef HAVE_OPENSSL_INIT_SSL
+
 /* Define to 1 if you have the <ossp/uuid.h> header file. */
 #undef HAVE_OSSP_UUID_H
 
@@ -492,6 +489,9 @@
 /* Define to 1 if you have the `random' function. */
 #undef HAVE_RANDOM
 
+/* Define to 1 if you have the `RAND_OpenSSL' function. */
+#undef HAVE_RAND_OPENSSL
+
 /* Define to 1 if you have the <readline.h> header file. */
 #undef HAVE_READLINE_H
 
@@ -526,6 +526,9 @@
 /* Define to 1 if you have the `setsid' function. */
 #undef HAVE_SETSID
 
+/* Define to 1 if you have the `shm_open' function. */
+#undef HAVE_SHM_OPEN
+
 /* Define to 1 if you have the `sigprocmask' function. */
 #undef HAVE_SIGPROCMASK
 
@@ -544,6 +547,9 @@
 /* Define to 1 if you have the `srandom' function. */
 #undef HAVE_SRANDOM
 
+/* Define to 1 if you have the `SSL_get_current_compression' function. */
+#undef HAVE_SSL_GET_CURRENT_COMPRESSION
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -555,9 +561,6 @@
 
 /* Define to 1 if you have the `strerror_r' function. */
 #undef HAVE_STRERROR_R
-
-/* Define to 1 if cpp supports the ANSI # stringizing operator. */
-#undef HAVE_STRINGIZE
 
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
@@ -722,8 +725,20 @@
 /* Define to 1 if you have the <utime.h> header file. */
 #undef HAVE_UTIME_H
 
+/* Define to 1 if you have BSD UUID support. */
+#undef HAVE_UUID_BSD
+
+/* Define to 1 if you have E2FS UUID support. */
+#undef HAVE_UUID_E2FS
+
 /* Define to 1 if you have the <uuid.h> header file. */
 #undef HAVE_UUID_H
+
+/* Define to 1 if you have OSSP UUID support. */
+#undef HAVE_UUID_OSSP
+
+/* Define to 1 if you have the <uuid/uuid.h> header file. */
+#undef HAVE_UUID_UUID_H
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
@@ -773,9 +788,6 @@
 /* Define to the appropriate snprintf format for 64-bit ints. */
 #undef INT64_FORMAT
 
-/* Define to build with Kerberos 5 support. (--with-krb5) */
-#undef KRB5
-
 /* Define to 1 if `locale_t' requires <xlocale.h>. */
 #undef LOCALE_T_IN_XLOCALE
 
@@ -809,8 +821,8 @@
 /* Define to the name of a signed 64-bit integer type. */
 #undef PG_INT64_TYPE
 
-/* Define to the name of the default PostgreSQL service principal in Kerberos.
-   (--with-krb-srvnam=NAME) */
+/* Define to the name of the default PostgreSQL service principal in Kerberos
+   (GSSAPI). (--with-krb-srvnam=NAME) */
 #undef PG_KRB_SRVNAM
 
 /* PostgreSQL major version as a string */
@@ -1000,9 +1012,6 @@
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
 
-/* Define to empty if `const' does not conform to ANSI C. */
-#undef const
-
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
 #ifndef __cplusplus
@@ -1019,7 +1028,3 @@
 /* Define to the type of an unsigned integer type wide enough to hold a
    pointer, if such a type exists, and if the system does not define it. */
 #undef uintptr_t
-
-/* Define to empty if the keyword `volatile' does not work. Warning: valid
-   code using `volatile' can become incorrect without. Disable with care. */
-#undef volatile

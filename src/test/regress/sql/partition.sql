@@ -3759,7 +3759,39 @@ select * from pt_td_leak where col3 = 1;
 drop table pt_td_leak;
 drop table pt_td_leak_exchange;
 
+
+--
+-- Test COPY, when distribution keys have different attribute numbers,
+-- because of dropped columns
+--
+CREATE TABLE pt_dropped_col_distkey (i int, to_be_dropped text, t text)
+DISTRIBUTED BY (t) PARTITION BY RANGE (i) (START (1) END(10) EVERY (5));
+INSERT INTO pt_dropped_col_distkey SELECT g, 'dropped' || g, 'before drop ' || g FROM generate_series(1, 7) g;
+
+ALTER TABLE pt_dropped_col_distkey DROP COLUMN to_be_dropped;
+
+-- This new partition won't have the dropped column. Because the distribution
+-- key was after the dropped column, the attribute number of the distribution
+-- key column will be different in this partition and the parent.
+ALTER TABLE pt_dropped_col_distkey ADD PARTITION pt_dropped_col_distkey_new_part START (10) END (100);
+
+INSERT INTO pt_dropped_col_distkey SELECT g, 'after drop ' || g FROM generate_series(8, 15) g;
+SELECT * FROM pt_dropped_col_distkey ORDER BY i;
+COPY pt_dropped_col_distkey TO '/tmp/pt_dropped_col_distkey.out';
+
+DELETE FROM pt_dropped_col_distkey;
+
+COPY pt_dropped_col_distkey FROM '/tmp/pt_dropped_col_distkey.out';
+
+SELECT * FROM pt_dropped_col_distkey ORDER BY i;
+
+-- don't drop the table, so that we have a partitioned table like this still
+-- in the database, when we test pg_upgrade later.
+
+
+--
 -- Test split default partition while per tuple memory context is reset
+--
 drop table if exists test_split_part cascade;
 
 CREATE TABLE test_split_part ( log_id int NOT NULL, f_array int[] NOT NULL)

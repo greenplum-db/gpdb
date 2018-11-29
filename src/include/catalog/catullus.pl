@@ -1091,6 +1091,15 @@ sub doprocs()
 		make_rettype($fndef);
 		make_allargs($fndef);
 
+		if (defined($fndef->{tuple}->{proargmodes}))
+		{
+			my $ocount = $fndef->{tuple}->{proargmodes} =~ tr/o/o/;
+			if ($ocount == 1 and $fndef->{tuple}->{prorettype} == get_typeoid("record"))
+			{
+				die ("OUT count must not be 1 because the result type is record")
+			}
+		}
+
 		# Fill in defaults for procost and prorows. (We have to do this
 		# after make_rettype, as we don't know if it's a set-returning function
 		# before that.

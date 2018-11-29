@@ -396,3 +396,56 @@ INSERT INTO foo_stats values (repeat('b', 100000), 'bbbbb2', 'cccc2', 3);
 ANALYZE foo_stats;
 SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='foo_stats' ORDER BY attname;
 DROP TABLE IF EXISTS foo_stats;
+
+
+--
+-- Test statistics collection with a "partially distributed" table. That is, with a table
+-- that has a smaller 'numsegments' in the distribution policy than the segment count
+-- of the cluster.
+--
+set allow_system_table_mods=true;
+
+create table twoseg_table(a int, b int, c int) distributed by (a);
+update gp_distribution_policy set numsegments=2 where localoid='twoseg_table'::regclass;
+insert into twoseg_table select i, i % 10, 0 from generate_series(1, 50) I;
+analyze twoseg_table;
+
+select relname, reltuples, relpages from pg_class where relname ='twoseg_table' order by relname;
+select attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='twoseg_table' ORDER BY attname;
+
+drop table twoseg_table;
+
+--
+-- Test statistics collection on a replicated table.
+--
+create table rep_table(a int, b int, c int) distributed replicated;
+insert into rep_table select i, i % 10, 0 from generate_series(1, 50) I;
+analyze rep_table;
+
+select relname, reltuples, relpages from pg_class where relname ='rep_table' order by relname;
+select attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='rep_table' ORDER BY attname;
+
+drop table rep_table;
+
+
+--
+-- Test relpages collection for AO tables.
+--
+
+-- use a lower target, so that the whole table doesn't fit in the sample.
+set default_statistics_target=10;
+
+create table ao_analyze_test (i int4) with (appendonly=true);
+insert into ao_analyze_test select g from generate_series(1, 100000) g;
+create index ao_analyze_test_idx on ao_analyze_test (i);
+analyze ao_analyze_test;
+select relname, reltuples from pg_class where relname like 'ao_analyze_test%' order by relname;
+
+-- and same for AOCS
+create table aocs_analyze_test (i int4) with (appendonly=true, orientation=column);
+insert into aocs_analyze_test select g from generate_series(1, 100000) g;
+create index aocs_analyze_test_idx on aocs_analyze_test (i);
+analyze aocs_analyze_test;
+select relname, reltuples from pg_class where relname like 'aocs_analyze_test%' order by relname;
+
+reset default_statistics_target;

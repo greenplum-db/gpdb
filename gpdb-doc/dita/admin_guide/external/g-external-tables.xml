@@ -7,11 +7,11 @@
       table. They are often used to move data into and out of a Greenplum database.</shortdesc>
    <body>
       <p>To create an external table definition, you specify the format of your input files and the
-         location of your external data sources. For information input file formats, see <xref
+         location of your external data sources. For information about input file formats, see <xref
             href="../load/topics/g-formatting-data-files.xml#topic95"/>.</p>
       <p>Use one of the following protocols to access external table data sources. You cannot mix
          protocols in <codeph>CREATE EXTERNAL TABLE</codeph> statements:<ul id="ul_zj5_prj_kr">
-            <li><codeph>file://</codeph> accesses external data files on segment host that the
+            <li><codeph>file://</codeph> accesses external data files on segment hosts that the
                Greenplum Database superuser (<codeph>gpadmin</codeph>) can access. See <xref
                   href="g-file-protocol.xml#topic_qbh_pwh_kr"/>.</li>
             <li><codeph>gpfdist://</codeph> points to a directory on the file host and serves
@@ -28,6 +28,34 @@
 
             <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and HBase and Hive tables using the Greenplum Platform Extension Framework (PXF). See <xref href="g-pxf-protocol.xml"></xref>.</li>
          </ul></p>
+      <note>
+         <p>The <codeph>gphdfs://</codeph>, <codeph>s3://</codeph>, and <codeph>pxf://</codeph>
+            protocols are custom data access protocols, where the <codeph>file://</codeph>,
+               <codeph>gpfdist://</codeph>, and <codeph>gpfdists://</codeph> protocols are
+            implemented internally in Greenplum Database. The custom and internal protocols differ
+            in these ways:</p>
+         <ul id="ul_ifb_crh_qfb">
+            <li>Custom protocols must be registered using the <codeph>CREATE PROTOCOL</codeph>
+               command. The <codeph>gphdfs://</codeph> protocol is preregistered when you install
+               Greenplum Database. Registering the PXF extension in a database creates the
+                  <codeph>pxf://</codeph> protocol. (See <xref
+                  href="pxf-overview.xml#topic_u14_wtd_dbb"/>.) You can optionally register the
+                  <codeph>s3://</codeph> protocol. (See <xref
+                  href="g-s3-protocol.xml#amazon-emr/s3_prereq"/>.) Internal protocols are always
+               present and cannot be unregistered.</li>
+            <li>When a custom protocol is registered, a row is added to the
+                  <codeph>pg_extprotocol</codeph> catalog table to specify the handler functions
+               that implement the protocol. The protocol's shared libraries must have been installed
+               on all Greenplum Database hosts. The internal protocols are not represented in the
+                  <codeph>pg_extprotocol</codeph> table and have no additional libraries to
+               install.</li>
+            <li>To grant users permissions on custom protocols, you use <codeph>GRANT [SELECT |
+                  INSERT | ALL] ON PROTOCOL</codeph>. To allow (or deny) users permissions on the
+               internal protocols, you use <codeph>CREATE ROLE</codeph> or <codeph>ALTER
+                  ROLE</codeph> to add the <codeph>CREATEEXTTABLE</codeph> (or
+                  <codeph>NOCREATEEXTTABLE</codeph>) attribute to each user's role.</li>
+         </ul>
+      </note>
       <p>External tables access external files from within the database as if they are regular
          database tables. External tables defined with the
             <codeph>gpfdist</codeph>/<codeph>gpfdists</codeph>, <codeph>gphdfs</codeph>, and

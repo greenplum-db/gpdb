@@ -10,16 +10,16 @@ create or replace function test_receive() RETURNS bool AS
 create or replace function test_send() RETURNS bool AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 
-create or replace function test_receive_and_verify(text, text) RETURNS bool AS
+create or replace function test_receive_and_verify(pg_lsn, pg_lsn) RETURNS bool AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 
-create or replace function test_xlog_ao(IN text, IN text, OUT xrecoff INT, OUT record_type TEXT, 
+create or replace function test_xlog_ao(IN text, IN pg_lsn, OUT xrecoff INT, OUT record_type TEXT, 
                                         OUT recordlen INT, OUT spcNode OID, OUT dbNode OID, 
                                         OUT relNode OID, OUT segment_filenum INT, OUT file_offset BIGINT)
  RETURNS SETOF record AS
  '@abs_builddir@/gplibpq@DLSUFFIX@' LANGUAGE C VOLATILE STRICT NO SQL;
 
-CREATE OR REPLACE FUNCTION test_xlog_ao_wrapper(IN startpoints TEXT[])
+CREATE OR REPLACE FUNCTION test_xlog_ao_wrapper(IN startpoints pg_lsn[])
 RETURNS TABLE (gp_segment_id INT, oid OID, relname name, 
 	       xrecoff TEXT, record_type TEXT, recordlen INT,
 	       spcNode OID, dbNode OID, relNode OID, segment_filenum INT,
@@ -28,7 +28,7 @@ EXECUTE ON ALL SEGMENTS AS
 $func$
 DECLARE
 port TEXT;
-startpoint TEXT;
+startpoint pg_lsn;
 myseg INT;
 BEGIN
 	myseg := gp_execution_segment();

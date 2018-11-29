@@ -1,0 +1,42 @@
+Orafce News - History of user-visible changes
+Copyright (C) 2008-2016  Orafce Global Development Group
+
+Version 3.5.0
+* fix of important issue - missing IMMUTABLE flag for functions ltrim, btrim, rtrim, lpad, rpad
+
+Version 3.4.0 - 2017-03-14
+* new aggregate function wm_concat
+* PostgreSQL 9.6, 10 are supported well
+
+Version 3.2.0 - 2016-01-xx
+* remove support for 8.3, 8.4, 9.0, 9.1 (only 9.2 and higher are supported)
+* new functions: sysdate, sessiontimezone, dbtimezone
+
+Version 3.1 - 2015-07-11
+* remove support for 8.2
+* add support for 9.5
+* change the releasion number system
+* new functions: to_single_byte, to_multi_byte, nanvl, length,
+  ltrim, btrim, rtrim, lpad, rpad
+
+Version 3.0.10 - 1. Jan 2015
+* fix compilation issue in new code for Pg <= 9.1
+
+Version 3.0.9 - 27. Dec 2014
+* new Varchar2 and Nvarchar2 types
+* enhanced oracle.substr function
+* fix PGXN related issues in process
+
+Version 3.0.7 - 27. Jul 2014
+* PostgreSQL 9.4 compilation
+* new datatype and related functions: oracle.date
+
+Version 3.0.6 - 8. Sep 2013
+
+* PostgreSQL 9.3 compilation
+* some cleaning, fixes, much more regress tests
+
+Version 3.0.5 - X Dec 2012
+
+* PostgreSQL 9.1/9.2 compilation
+* ... TODO ...

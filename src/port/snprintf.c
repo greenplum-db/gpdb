@@ -18,7 +18,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.	IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -68,7 +68,7 @@
  * platforms.  This implementation is compatible with the Single Unix Spec:
  *
  * 1. -1 is returned only if processing is abandoned due to an invalid
- * parameter, such as incorrect format string.	(Although not required by
+ * parameter, such as incorrect format string.  (Although not required by
  * the spec, this happens only when no characters have yet been transmitted
  * to the destination.)
  *
@@ -89,7 +89,7 @@
  * Original:
  * Patrick Powell Tue Apr 11 09:48:21 PDT 1995
  * A bombproof version of doprnt (dopr) included.
- * Sigh.  This sort of thing is always nasty do deal with.	Note that
+ * Sigh.  This sort of thing is always nasty do deal with.  Note that
  * the version here does not include floating point. (now it does ... tgl)
  **************************************************************/
 
@@ -388,6 +388,19 @@ nextch1:
 				else
 					longflag = 1;
 				goto nextch1;
+			case 'z':
+#if SIZEOF_SIZE_T == 8
+#ifdef HAVE_LONG_INT_64
+				longflag = 1;
+#elif defined(HAVE_LONG_LONG_INT_64)
+				longlongflag = 1;
+#else
+#error "Don't know how to print 64bit integers"
+#endif
+#else
+				/* assume size_t is same size as int */
+#endif
+				goto nextch1;
 			case 'h':
 			case '\'':
 				/* ignore these */
@@ -620,6 +633,19 @@ nextch2:
 					longlongflag = 1;
 				else
 					longflag = 1;
+				goto nextch2;
+			case 'z':
+#if SIZEOF_SIZE_T == 8
+#ifdef HAVE_LONG_INT_64
+				longflag = 1;
+#elif defined(HAVE_LONG_LONG_INT_64)
+				longlongflag = 1;
+#else
+#error "Don't know how to print 64bit integers"
+#endif
+#else
+				/* assume size_t is same size as int */
+#endif
 				goto nextch2;
 			case 'h':
 			case '\'':

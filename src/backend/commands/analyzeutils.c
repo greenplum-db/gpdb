@@ -9,56 +9,23 @@
  *-------------------------------------------------------------------------
  */
 #include "postgres.h"
+
 #include "access/heapam.h"
-#include "access/hash.h"
+#include "catalog/pg_collation.h"
 #include "catalog/pg_statistic.h"
-#include "utils/array.h"
-#include "utils/lsyscache.h"
-#include "utils/datum.h"
-#include "utils/dynahash.h"
-#include "utils/hsearch.h"
 #include "cdb/cdbhash.h"
 #include "cdb/cdbheap.h"
 #include "cdb/cdbpartition.h"
-#include "parser/parse_oper.h"
-#include "access/heapam.h"
-#include "access/transam.h"
-#include "access/tuptoaster.h"
-#include "access/xact.h"
-#include "catalog/heap.h"
-#include "catalog/index.h"
-#include "catalog/indexing.h"
-#include "catalog/namespace.h"
-#include "catalog/pg_namespace.h"
-#include "cdb/cdbpartition.h"
-#include "cdb/cdbtm.h"
-#include "cdb/cdbvars.h"
-#include "commands/dbcommands.h"
+#include "commands/analyzeutils.h"
 #include "commands/vacuum.h"
-#include "executor/executor.h"
-#include "executor/spi.h"
 #include "miscadmin.h"
-#include "nodes/nodeFuncs.h"
 #include "parser/parse_oper.h"
-#include "parser/parse_relation.h"
-#include "pgstat.h"
-#include "postmaster/autovacuum.h"
-#include "storage/bufmgr.h"
-#include "storage/proc.h"
-#include "storage/procarray.h"
-#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/datum.h"
-#include "utils/elog.h"
-#include "utils/guc.h"
 #include "utils/lsyscache.h"
-#include "utils/memutils.h"
-#include "utils/pg_rusage.h"
 #include "utils/syscache.h"
-#include "utils/tuplesort.h"
-#include "utils/tqual.h"
+#include "utils/hsearch.h"
 
-#include "commands/analyzeutils.h"
 
 typedef struct MCVFreqEntry
 {
@@ -67,49 +34,42 @@ typedef struct MCVFreqEntry
 
 typedef struct PartDatum
 {
-	int partId; /* id of the partition histogram where the datum is from */
-	Datum datum;
+	int			partId;			/* id of the partition histogram where the
+								 * datum is from */
+	Datum		datum;
 } PartDatum;
 
-static Datum* buildMCVArrayForStatsEntry(MCVFreqPair** mcvpairArray, int *nEntries, float4 ndistinct, float4 samplerows);
-static float4* buildFreqArrayForStatsEntry(MCVFreqPair** mcvpairArray, int nEntries, float4 reltuples);
-static int datumHashTableMatch(const void*keyPtr1, const void *keyPtr2, Size keysize);
+static Datum *buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray, int *nEntries, float4 ndistinct, float4 samplerows);
+static float4 *buildFreqArrayForStatsEntry(MCVFreqPair **mcvpairArray, int nEntries, float4 reltuples);
+static int	datumHashTableMatch(const void *keyPtr1, const void *keyPtr2, Size keysize);
 static uint32 datumHashTableHash(const void *keyPtr, Size keysize);
-static void calculateHashWithHashAny(void *clientData, void *buf, size_t len);
-static HTAB* createDatumHashTable(unsigned int nEntries);
-static MCVFreqPair* MCVFreqPairCopy(MCVFreqPair* mcvFreqPair);
+static HTAB *createDatumHashTable(unsigned int nEntries);
+static MCVFreqPair *MCVFreqPairCopy(MCVFreqPair *mcvFreqPair);
 static bool containsDatum(HTAB *datumHash, MCVFreqPair *mcvFreqPair);
-static void addLeafPartitionMCVsToHashTable
-	(
-	HTAB *datumHash,
-	HeapTuple heaptupleStats,
-	float4 partReltuples,
-	TypInfo *typInfo
-	);
-static void addMCVToHashTable(HTAB* datumHash, MCVFreqPair *mcvFreqPair);
-static int mcvpair_cmp(const void *a, const void *b);
+static void addLeafPartitionMCVsToHashTable(HTAB *datumHash, HeapTuple heaptupleStats,
+			 float4 partReltuples, TypInfo *typInfo
+);
+static void addMCVToHashTable(HTAB *datumHash, MCVFreqPair *mcvFreqPair);
+static int	mcvpair_cmp(const void *a, const void *b);
 
 static void initTypInfo(TypInfo *typInfo, Oid typOid);
-static int getNextPartDatum(CdbHeap *hp);
-static int DatumHeapComparator(void *lhs, void *rhs, void *context);
-static void advanceCursor(int pid, int *cursors, AttStatsSlot **histSlots);
-static Datum getMinBound(AttStatsSlot **histSlots, int *cursors, int nParts, Oid ltFuncOid);
-static Datum getMaxBound(AttStatsSlot **histSlots, int nParts, Oid ltFuncOid);
+static int	getNextPartDatum(CdbHeap * hp);
+static int	DatumHeapComparator(void *lhs, void *rhs, void *context);
+static void advanceCursor(int pid, int *cursors, AttStatsSlot * *histSlots);
+static Datum getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid);
+static Datum getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid);
 static void
-getHistogramHeapTuple(AttStatsSlot **histSlots, HeapTuple *heaptupleStats, int *numNotNullParts, int nParts);
-static void initDatumHeap(CdbHeap *hp, AttStatsSlot **histSlots, int *cursors, int nParts);
+			getHistogramHeapTuple(AttStatsSlot * *histSlots, HeapTuple *heaptupleStats, int *numNotNullParts, int nParts);
+static void initDatumHeap(CdbHeap * hp, AttStatsSlot * *histSlots, int *cursors, int nParts);
 
-float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, int nParts,
-					  MCVFreqPair **mcvPairRemaining, int rem_mcv,
-					  float4 *eachBucket);
-
-#define DEFAULT_COLLATION_OID	100
+static float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, int nParts,
+			   MCVFreqPair **mcvPairRemaining, int rem_mcv,
+			   float4 *eachBucket);
 
 float4
 get_rel_reltuples(Oid relid)
 {
-	float4 relTuples = 0.0;
-
+	float4		relTuples = 0.0;
 	HeapTuple	tp;
 
 	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
@@ -128,7 +88,6 @@ int32
 get_rel_relpages(Oid relid)
 {
 	int32		relPages = 0.0;
-
 	HeapTuple	tp;
 
 	tp = SearchSysCache1(RELOID, ObjectIdGetDatum(relid));
@@ -155,23 +114,21 @@ get_rel_relpages(Oid relid)
  *  - partReltuples: the number of tuples in this partition
  */
 static void
-addLeafPartitionMCVsToHashTable
-	(
-	HTAB *datumHash,
-	HeapTuple heaptupleStats,
-	float4 partReltuples,
-	TypInfo *typInfo
-	)
+addLeafPartitionMCVsToHashTable (HTAB *datumHash, HeapTuple heaptupleStats,
+								 float4 partReltuples, TypInfo * typInfo)
 {
 	AttStatsSlot mcvSlot;
-	get_attstatsslot(&mcvSlot, heaptupleStats, STATISTIC_KIND_MCV, InvalidOid, ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
+
+	get_attstatsslot(&mcvSlot, heaptupleStats, STATISTIC_KIND_MCV,
+					 InvalidOid, ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS);
 
 	Assert(mcvSlot.nvalues == mcvSlot.nnumbers);
 	for (int i = 0; i < mcvSlot.nvalues; i++)
 	{
-		Datum mcv = mcvSlot.values[i];
-		float4 count = partReltuples * mcvSlot.numbers[i];
+		Datum		mcv = mcvSlot.values[i];
+		float4		count = partReltuples * mcvSlot.numbers[i];
 		MCVFreqPair *mcvFreqPair = (MCVFreqPair *) palloc(sizeof(MCVFreqPair));
+
 		mcvFreqPair->mcv = mcv;
 		mcvFreqPair->count = count;
 		mcvFreqPair->typinfo = typInfo;
@@ -194,46 +151,43 @@ addLeafPartitionMCVsToHashTable
  * 	- result: two dimensional arrays of MCVs and Freqs
  */
 MCVFreqPair **
-aggregate_leaf_partition_MCVs
-	(
-	Oid relationOid,
-	AttrNumber attnum,
-	HeapTuple *heaptupleStats,
-	float4 *relTuples,
-	unsigned int nEntries,
-	double ndistinct,
-	int *num_mcv,
-	int *rem_mcv,
-	void **result
-	)
+aggregate_leaf_partition_MCVs(Oid relationOid,
+							  AttrNumber attnum,
+							  HeapTuple *heaptupleStats,
+							  float4 *relTuples,
+							  unsigned int nEntries,
+							  double ndistinct,
+							  int *num_mcv,
+							  int *rem_mcv,
+							  void **result)
 {
-	List *lRelOids = rel_get_leaf_children_relids(
-		relationOid); /* list of OIDs of leaf partitions */
-	Oid typoid = get_atttype(relationOid, attnum);
-	TypInfo *typInfo = (TypInfo *) palloc(sizeof(TypInfo));
+	List	   *lRelOids = rel_get_leaf_children_relids(relationOid);	/* list of OIDs of leaf
+																		 * partitions */
+	Oid			typoid = get_atttype(relationOid, attnum);
+	TypInfo    *typInfo = (TypInfo *) palloc(sizeof(TypInfo));
+
 	initTypInfo(typInfo, typoid);
 
-	// Hash table for storing combined MCVs
-	HTAB *datumHash = createDatumHashTable(nEntries);
-	float4 sumReltuples = 0;
+	/* Hash table for storing combined MCVs */
+	HTAB	   *datumHash = createDatumHashTable(nEntries);
+	float4		sumReltuples = 0;
 
-	int numPartitions = list_length(lRelOids);
+	int			numPartitions = list_length(lRelOids);
+
 	for (int i = 0; i < numPartitions; i++)
 	{
 		if (!HeapTupleIsValid(heaptupleStats[i]))
-		{
 			continue;
-		}
 
 		addLeafPartitionMCVsToHashTable(datumHash, heaptupleStats[i], relTuples[i],
-							  typInfo);
+										typInfo);
 		sumReltuples += relTuples[i];
 	}
 
 	*rem_mcv = hash_get_num_entries(datumHash);
 	if (0 == *rem_mcv)
 	{
-		/* in the unlikely event of an emtpy hash table, return early */
+		/* in the unlikely event of an empty hash table, return early */
 		*result = NULL;
 		result++;
 		*result = NULL;
@@ -241,7 +195,7 @@ aggregate_leaf_partition_MCVs
 		return NULL;
 	}
 
-	int i = 0;
+	int			i = 0;
 	HASH_SEQ_STATUS hash_seq;
 	MCVFreqEntry *mcvfreq;
 
@@ -266,7 +220,7 @@ aggregate_leaf_partition_MCVs
 		return mcvpairArray;
 	}
 
-	result++; /* now switch to frequency array (result[1]) */
+	result++;					/* now switch to frequency array (result[1]) */
 	*result = (void *) buildFreqArrayForStatsEntry(mcvpairArray, *num_mcv,
 												   sumReltuples);
 
@@ -285,21 +239,18 @@ aggregate_leaf_partition_MCVs
  * 	- typoid: type oid of the MCV datum
  */
 static Datum *
-buildMCVArrayForStatsEntry
-	(
-	MCVFreqPair** mcvpairArray,
-	int *nEntries,
-	float4 ndistinct,
-	float4 samplerows
-	)
+buildMCVArrayForStatsEntry(MCVFreqPair **mcvpairArray,
+						   int *nEntries,
+						   float4 ndistinct,
+						   float4 samplerows)
 {
 	Assert(mcvpairArray);
 	Assert(*nEntries > 0);
 
-	Datum *out = palloc(sizeof(Datum)*(*nEntries));
-	double mincount = -1.0;
+	Datum	   *out = palloc(sizeof(Datum) * (*nEntries));
+	double		mincount = -1.0;
 
-	if (*nEntries == (int)ndistinct &&
+	if (*nEntries == (int) ndistinct &&
 		ndistinct > 0 &&
 		*nEntries <= default_statistics_target)
 	{
@@ -308,7 +259,7 @@ buildMCVArrayForStatsEntry
 	else
 	{
 		double		avgcount,
-				maxmincount;
+					maxmincount;
 
 		/* estimate # of occurrences in sample of a typical value */
 		avgcount = (double) samplerows / ndistinct;
@@ -330,13 +281,15 @@ buildMCVArrayForStatsEntry
 			{
 				pfree(out);
 				return NULL;
-			} else
+			}
+			else
 			{
 				*nEntries = i;
 				break;
 			}
 		}
-		Datum mcv = (mcvpairArray[i])->mcv;
+		Datum		mcv = (mcvpairArray[i])->mcv;
+
 		out[i] = mcv;
 	}
 
@@ -351,21 +304,20 @@ buildMCVArrayForStatsEntry
  * 	- reltuples: number of tuples of the root or interior partition (all leaf partitions combined)
  */
 static float4 *
-buildFreqArrayForStatsEntry
-	(
-	MCVFreqPair** mcvpairArray,
-	int nEntries,
-	float4 reltuples
-	)
+buildFreqArrayForStatsEntry(MCVFreqPair **mcvpairArray,
+							int nEntries,
+							float4 reltuples)
 {
 	Assert(mcvpairArray);
 	Assert(nEntries > 0);
-	Assert(reltuples > 0); /* otherwise ANALYZE will not collect stats */
+	Assert(reltuples > 0);		/* otherwise ANALYZE will not collect stats */
 
-	float4 *out = (float *)palloc(sizeof(float4)*nEntries);
+	float4	   *out = (float *) palloc(sizeof(float4) * nEntries);
+
 	for (int i = 0; i < nEntries; i++)
 	{
-		float4 freq = mcvpairArray[i]->count / reltuples;
+		float4		freq = mcvpairArray[i]->count / reltuples;
+
 		out[i] = freq;
 	}
 
@@ -381,8 +333,9 @@ mcvpair_cmp(const void *a, const void *b)
 	Assert(a);
 	Assert(b);
 
-	MCVFreqPair *mcvFreqPair1 = *(MCVFreqPair **)a;
-	MCVFreqPair *mcvFreqPair2 = *(MCVFreqPair **)b;
+	MCVFreqPair *mcvFreqPair1 = *(MCVFreqPair **) a;
+	MCVFreqPair *mcvFreqPair2 = *(MCVFreqPair **) b;
+
 	if (mcvFreqPair1->count > mcvFreqPair2->count)
 		return -1;
 	if (mcvFreqPair1->count < mcvFreqPair2->count)
@@ -401,26 +354,22 @@ mcvpair_cmp(const void *a, const void *b)
  * 	typlen - pg_type.typlen of the datum type
  */
 static void
-addMCVToHashTable(HTAB* datumHash, MCVFreqPair *mcvFreqPair)
+addMCVToHashTable(HTAB *datumHash, MCVFreqPair *mcvFreqPair)
 {
 	Assert(datumHash);
 	Assert(mcvFreqPair);
 
 	MCVFreqEntry *mcvfreq;
-	bool found = false; /* required by hash_search */
+	bool		found = false;	/* required by hash_search */
 
 	if (!containsDatum(datumHash, mcvFreqPair))
 	{
 		/* create a deep copy of MCVFreqPair and put it in the hash table */
 		MCVFreqPair *key = MCVFreqPairCopy(mcvFreqPair);
+
 		mcvfreq = hash_search(datumHash, &key, HASH_ENTER, &found);
-		if (mcvfreq == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
 		mcvfreq->entry = key;
 	}
-
 	else
 	{
 		mcvfreq = hash_search(datumHash, &mcvFreqPair, HASH_FIND, &found);
@@ -441,12 +390,15 @@ addMCVToHashTable(HTAB* datumHash, MCVFreqPair *mcvFreqPair)
  * 	result - a deep copy of input MCVFreqPair
  */
 static MCVFreqPair *
-MCVFreqPairCopy(MCVFreqPair* mcvFreqPair)
+MCVFreqPairCopy(MCVFreqPair *mcvFreqPair)
 {
-	MCVFreqPair *result = (MCVFreqPair*) palloc(sizeof(MCVFreqPair));
+	MCVFreqPair *result = (MCVFreqPair *) palloc(sizeof(MCVFreqPair));
+
 	result->count = mcvFreqPair->count;
 	result->typinfo = mcvFreqPair->typinfo;
-	result->mcv = datumCopy(mcvFreqPair->mcv, mcvFreqPair->typinfo->typbyval, mcvFreqPair->typinfo->typlen);
+	result->mcv = datumCopy(mcvFreqPair->mcv,
+							mcvFreqPair->typinfo->typbyval,
+							mcvFreqPair->typinfo->typlen);
 
 	return result;
 }
@@ -462,7 +414,8 @@ MCVFreqPairCopy(MCVFreqPair* mcvFreqPair)
 static bool
 containsDatum(HTAB *datumHash, MCVFreqPair *mcvFreqPair)
 {
-	bool found = false;
+	bool		found = false;
+
 	if (datumHash != NULL)
 		hash_search(datumHash, &mcvFreqPair, HASH_FIND, &found);
 
@@ -478,33 +431,20 @@ containsDatum(HTAB *datumHash, MCVFreqPair *mcvFreqPair)
  * Output:
  * 	a pointer to the created hash table
  */
-static HTAB*
+static HTAB *
 createDatumHashTable(unsigned int nEntries)
 {
-	HASHCTL	hash_ctl;
+	HASHCTL		hash_ctl;
+
 	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
 
-	hash_ctl.keysize = sizeof(MCVFreqPair*);
+	hash_ctl.keysize = sizeof(MCVFreqPair *);
 	hash_ctl.entrysize = sizeof(MCVFreqEntry);
 	hash_ctl.hash = datumHashTableHash;
 	hash_ctl.match = datumHashTableMatch;
 
-	return hash_create("DatumHashTable", nEntries, &hash_ctl, HASH_ELEM | HASH_FUNCTION | HASH_COMPARE);
-}
-
-/**
- * A generic hash function
- * Input:
- * 	buf - pointer to hash key
- * 	len - number of bytes to be hashed
- * Output:
- * 	clientData - hash value as an unsigned integer
- */
-static void
-calculateHashWithHashAny(void *clientData, void *buf, size_t len)
-{
-	uint32 *result = (uint32*) clientData;
-	*result = hash_any((unsigned char *)buf, len );
+	return hash_create("DatumHashTable", nEntries, &hash_ctl,
+					   HASH_ELEM | HASH_FUNCTION | HASH_COMPARE);
 }
 
 /**
@@ -518,10 +458,11 @@ calculateHashWithHashAny(void *clientData, void *buf, size_t len)
 static uint32
 datumHashTableHash(const void *keyPtr, Size keysize)
 {
-	uint32 result = 0;
+	uint32		result;
 	MCVFreqPair *mcvFreqPair = *((MCVFreqPair **)keyPtr);
+	FmgrInfo   *hashfunc = &mcvFreqPair->typinfo->hashfunc;
 
-	hashDatum(mcvFreqPair->mcv, mcvFreqPair->typinfo->typOid, calculateHashWithHashAny, &result);
+	result = DatumGetUInt32(FunctionCall1(hashfunc, mcvFreqPair->mcv));
 
 	return result;
 }
@@ -540,17 +481,13 @@ datumHashTableMatch(const void *keyPtr1, const void *keyPtr2, Size keysize)
 	Assert(keyPtr1);
 	Assert(keyPtr2);
 
-	MCVFreqPair *left = *((MCVFreqPair **)keyPtr1);
-	MCVFreqPair *right = *((MCVFreqPair **)keyPtr2);
+	MCVFreqPair *left = *((MCVFreqPair **) keyPtr1);
+	MCVFreqPair *right = *((MCVFreqPair **) keyPtr2);
 
 	Assert(left->typinfo->typOid == right->typinfo->typOid);
 
 	return datumCompare(left->mcv, right->mcv, left->typinfo->eqFuncOp) ? 0 : 1;
 }
-
-
-
-
 
 /*
  * Initialize type information
@@ -562,11 +499,20 @@ datumHashTableMatch(const void *keyPtr1, const void *keyPtr2, Size keysize)
 static void
 initTypInfo(TypInfo *typInfo, Oid typOid)
 {
+	Oid			ltOpr;
+	Oid			eqOpr;
+	Oid			hashFunc;
+
 	typInfo->typOid = typOid;
 	get_typlenbyval(typOid, &typInfo->typlen, &typInfo->typbyval);
-	get_sort_group_operators(typOid, false, true, false, &typInfo->ltFuncOp, &typInfo->eqFuncOp, NULL, NULL);
-	typInfo->eqFuncOp = get_opcode(typInfo->eqFuncOp);
-	typInfo->ltFuncOp = get_opcode(typInfo->ltFuncOp);
+
+	get_sort_group_operators(typOid, false, true, false, &ltOpr, &eqOpr, NULL, NULL);
+	typInfo->ltFuncOp = get_opcode(ltOpr);
+	typInfo->eqFuncOp = get_opcode(eqOpr);
+
+	if (!get_op_hash_functions(eqOpr, &hashFunc, NULL))
+		elog(ERROR, "could not find hash function for hash operator %u", eqOpr);
+	fmgr_info(hashFunc, &typInfo->hashfunc);
 }
 
 /*
@@ -577,17 +523,16 @@ initTypInfo(TypInfo *typInfo, Oid typOid)
  *  part id of the datum having minimum value in the heap. Return -1 if heap is empty.
  */
 static int
-getNextPartDatum(CdbHeap *hp)
+getNextPartDatum(CdbHeap * hp)
 {
 	if (CdbHeap_Count(hp) > 0)
 	{
-		PartDatum* minElement = CdbHeap_Min(PartDatum, hp);
+		PartDatum  *minElement = CdbHeap_Min(PartDatum, hp);
+
 		return minElement->partId;
 	}
 	return -1;
 }
-
-
 
 /*
  * Comparator function of heap element PartDatum
@@ -602,9 +547,9 @@ getNextPartDatum(CdbHeap *hp)
 static int
 DatumHeapComparator(void *lhs, void *rhs, void *context)
 {
-	Datum d1 = ((PartDatum *)lhs)->datum;
-	Datum d2 = ((PartDatum *)rhs)->datum;
-	TypInfo *typInfo = (TypInfo *) context;
+	Datum		d1 = ((PartDatum *) lhs)->datum;
+	Datum		d2 = ((PartDatum *) rhs)->datum;
+	TypInfo    *typInfo = (TypInfo *) context;
 
 	if (datumCompare(d1, d2, typInfo->ltFuncOp))
 	{
@@ -626,7 +571,7 @@ DatumHeapComparator(void *lhs, void *rhs, void *context)
  * 	nBounds - array of the number of bounds
  * */
 static void
-advanceCursor(int pid, int *cursors, AttStatsSlot **histSlots)
+advanceCursor(int pid, int *cursors, AttStatsSlot * *histSlots)
 {
 	cursors[pid]++;
 	if (cursors[pid] >= histSlots[pid]->nvalues)
@@ -640,14 +585,15 @@ advanceCursor(int pid, int *cursors, AttStatsSlot **histSlots)
  * the first bound of each partition since the bounds in a histogram are ordered.
  */
 static Datum
-getMinBound(AttStatsSlot **histSlots, int *cursors, int nParts, Oid ltFuncOid)
+getMinBound(AttStatsSlot * *histSlots, int *cursors, int nParts, Oid ltFuncOid)
 {
 	Assert(histSlots);
 	Assert(histSlots[0]);
 	Assert(cursors);
 	Assert(nParts > 0);
 
-	Datum minDatum = histSlots[0]->values[0];
+	Datum		minDatum = histSlots[0]->values[0];
+
 	for (int pid = 0; pid < nParts; pid++)
 	{
 		if (datumCompare(histSlots[pid]->values[0], minDatum, ltFuncOid))
@@ -665,18 +611,19 @@ getMinBound(AttStatsSlot **histSlots, int *cursors, int nParts, Oid ltFuncOid)
  * the last bound of each partition since the bounds in a histogram are ordered.
  */
 static Datum
-getMaxBound(AttStatsSlot **histSlots, int nParts, Oid ltFuncOid)
+getMaxBound(AttStatsSlot * *histSlots, int nParts, Oid ltFuncOid)
 {
 	Assert(histSlots);
 	Assert(histSlots[0]);
 	Assert(nParts > 0);
 
-	Datum maxDatum = histSlots[0]->values[histSlots[0]->nvalues-1];
+	Datum		maxDatum = histSlots[0]->values[histSlots[0]->nvalues - 1];
+
 	for (int pid = 0; pid < nParts; pid++)
 	{
-		if (datumCompare(maxDatum, histSlots[pid]->values[histSlots[pid]->nvalues-1], ltFuncOid))
+		if (datumCompare(maxDatum, histSlots[pid]->values[histSlots[pid]->nvalues - 1], ltFuncOid))
 		{
-			maxDatum = histSlots[pid]->values[histSlots[pid]->nvalues-1];
+			maxDatum = histSlots[pid]->values[histSlots[pid]->nvalues - 1];
 		}
 	}
 
@@ -692,27 +639,22 @@ getMaxBound(AttStatsSlot **histSlots, int nParts, Oid ltFuncOid)
  *  an array containing the aggregated histogram bounds
  */
 static Datum *
-buildHistogramEntryForStats
-	(
-	List *ldatum,
-	TypInfo* typInfo,
-	int *num_hist
-	)
+buildHistogramEntryForStats(List *ldatum, TypInfo *typInfo, int *num_hist)
 {
-
 	Assert(ldatum);
 	Assert(typInfo);
 
-	Datum *histArray = (Datum *)palloc(sizeof(Datum)*list_length(ldatum));
-	
-	ListCell *lc = NULL;
-	Datum *prevDatum = (Datum *) linitial(ldatum);
-	int idx = 0;
+	Datum	   *histArray = (Datum *) palloc(sizeof(Datum) * list_length(ldatum));
+
+	ListCell   *lc;
+	Datum	   *prevDatum = (Datum *) linitial(ldatum);
+	int			idx = 0;
+
 	*num_hist = 0;
 
-	foreach_with_count (lc, ldatum, idx)
+	foreach_with_count(lc, ldatum, idx)
 	{
-		Datum *pdatum = (Datum *) lfirst(lc);
+		Datum	   *pdatum = (Datum *) lfirst(lc);
 
 		/* remove duplicate datum in the list, starting from the second datum */
 		if (datumCompare(*pdatum, *prevDatum, typInfo->eqFuncOp) && idx > 0)
@@ -721,7 +663,7 @@ buildHistogramEntryForStats
 		}
 
 		histArray[*num_hist] = *pdatum;
-		*num_hist = *num_hist+1;
+		*num_hist = *num_hist + 1;
 		*prevDatum = *pdatum;
 	}
 
@@ -742,10 +684,10 @@ buildHistogramEntryForStats
  * 	sumReltuples - sum of number of tuples in all partitions
  */
 static void
-getHistogramHeapTuple(AttStatsSlot **histSlots, HeapTuple *heaptupleStats,
+getHistogramHeapTuple(AttStatsSlot * *histSlots, HeapTuple *heaptupleStats,
 					  int *numNotNullParts, int nParts)
 {
-	int pid = 0;
+	int			pid = 0;
 
 	for (int i = 0; i < nParts; i++)
 	{
@@ -753,7 +695,7 @@ getHistogramHeapTuple(AttStatsSlot **histSlots, HeapTuple *heaptupleStats,
 		{
 			continue;
 		}
-		histSlots[pid] = (AttStatsSlot *)palloc(sizeof(AttStatsSlot));
+		histSlots[pid] = (AttStatsSlot *) palloc(sizeof(AttStatsSlot));
 		get_attstatsslot(histSlots[pid], heaptupleStats[i], STATISTIC_KIND_HISTOGRAM, InvalidOid, ATTSTATSSLOT_VALUES);
 
 		if (histSlots[pid]->nvalues > 0)
@@ -777,16 +719,16 @@ getHistogramHeapTuple(AttStatsSlot **histSlots, HeapTuple *heaptupleStats,
  * 	sumReltuples - sum of number of tuples in all partitions
  */
 static void
-getHistogramMCVTuple(AttStatsSlot **histSlots, MCVFreqPair **mcvRemaining,
-					  int start_idx, int rem_mcv)
+getHistogramMCVTuple(AttStatsSlot * *histSlots, MCVFreqPair **mcvRemaining,
+					 int start_idx, int rem_mcv)
 {
 	for (int i = 0; i < rem_mcv; i++)
 	{
-		histSlots[start_idx+i] = (AttStatsSlot *)palloc(sizeof(AttStatsSlot));
-		histSlots[start_idx+i]->nvalues = 2;
-		histSlots[start_idx+i]->values = (Datum *)palloc(sizeof(Datum) * 2);
-		histSlots[start_idx+i]->values[0] = mcvRemaining[i]->mcv;
-		histSlots[start_idx+i]->values[1] = mcvRemaining[i]->mcv;
+		histSlots[start_idx + i] = (AttStatsSlot *) palloc(sizeof(AttStatsSlot));
+		histSlots[start_idx + i]->nvalues = 2;
+		histSlots[start_idx + i]->values = (Datum *) palloc(sizeof(Datum) * 2);
+		histSlots[start_idx + i]->values[0] = mcvRemaining[i]->mcv;
+		histSlots[start_idx + i]->values[1] = mcvRemaining[i]->mcv;
 	}
 }
 
@@ -799,13 +741,15 @@ getHistogramMCVTuple(AttStatsSlot **histSlots, MCVFreqPair **mcvRemaining,
  * 	nParts - number of partitions
  */
 static void
-initDatumHeap(CdbHeap *hp, AttStatsSlot **histSlots, int *cursors, int nParts)
+initDatumHeap(CdbHeap * hp, AttStatsSlot * *histSlots, int *cursors, int nParts)
 {
 	for (int pid = 0; pid < nParts; pid++)
 	{
-		if (cursors[pid] > 0) /* do nothing if part histogram only has one element */
+		/* do nothing if part histogram only has one element */
+		if (cursors[pid] > 0)
 		{
-			PartDatum pd;
+			PartDatum	pd;
+
 			pd.partId = pid;
 			pd.datum = histSlots[pid]->values[cursors[pid]];
 			CdbHeap_Insert(hp, &pd);
@@ -823,6 +767,7 @@ bool
 datumCompare(Datum d1, Datum d2, Oid opFuncOid)
 {
 	FmgrInfo	ltproc;
+
 	fmgr_info(opFuncOid, &ltproc);
 	return DatumGetBool(FunctionCall2Coll(&ltproc, DEFAULT_COLLATION_OID, d1, d2));
 }
@@ -891,35 +836,38 @@ datumCompare(Datum d1, Datum d2, Oid opFuncOid)
  *
  */
 int
-aggregate_leaf_partition_histograms
-	(
-	Oid relationOid,
-	AttrNumber attnum,
-	HeapTuple *heaptupleStats,
-	float4 *relTuples,
-	unsigned int nEntries,
-	MCVFreqPair **mcvpairArray,
-	int rem_mcv,
-	void **result
-	)
+aggregate_leaf_partition_histograms(Oid relationOid,
+									AttrNumber attnum,
+									HeapTuple *heaptupleStats,
+									float4 *relTuples,
+									unsigned int nEntries,
+									MCVFreqPair **mcvpairArray,
+									int rem_mcv,
+									void **result)
 {
 	AssertImply(rem_mcv != 0, mcvpairArray != NULL);
 
-	List *lRelOids = rel_get_leaf_children_relids(relationOid);
-	int nParts = list_length(lRelOids);
+	List	   *lRelOids = rel_get_leaf_children_relids(relationOid);
+	int			nParts = list_length(lRelOids);
+
 	Assert(nParts > 0);
 
 	/* get type information */
-	TypInfo typInfo;
-	Oid typOid = get_atttype(relationOid, attnum);
+	TypInfo		typInfo;
+	Oid			typOid = get_atttype(relationOid, attnum);
+
 	initTypInfo(&typInfo, typOid);
 
-	AttStatsSlot **histSlots = (AttStatsSlot **) palloc0((nParts + rem_mcv) * sizeof(AttStatsSlot *));
-	float4 sumReltuples = 0;
+	AttStatsSlot **histSlots = (AttStatsSlot * *) palloc0((nParts + rem_mcv) * sizeof(AttStatsSlot *));
+	float4		sumReltuples = 0;
 
-	int numNotNullParts = 0;
+	int			numNotNullParts = 0;
+
 	/* populate histData, nBounds, partsReltuples and sumReltuples */
-	float4 *eachBucket = palloc0( (nParts + rem_mcv) * sizeof(float4)); /* the number of data points in each bucket for each histogram */
+	float4	   *eachBucket = palloc0((nParts + rem_mcv) * sizeof(float4));	/* the number of data
+																			 * points in each bucket
+																			 * for each histogram */
+
 	getHistogramHeapTuple(histSlots, heaptupleStats, &numNotNullParts, nParts);
 	if (0 == numNotNullParts + rem_mcv)
 	{
@@ -931,16 +879,25 @@ aggregate_leaf_partition_histograms
 	sumReltuples = getBucketSizes(heaptupleStats, relTuples, nParts, mcvpairArray, rem_mcv, eachBucket);
 
 	/* reset nParts to the number of non-null parts */
-	nParts = numNotNullParts+rem_mcv;
+	nParts = numNotNullParts + rem_mcv;
 
 	/* now define the state variables needed for the aggregation loop */
-	float4 bucketSize = sumReltuples / nEntries; /* target bucket size in the aggregated histogram */
-	float4 nTuplesToFill = bucketSize; /* remaining number of tuples to fill in the current bucket
-									 of the aggregated histogram, reset to bucketSize when a new
-									 bucket is added */
-	int *cursors = palloc0(nParts * sizeof(int)); /* the index of current bucket for each histogram, set to -1
-								  after the histogram has been traversed */
-	float4 *remainingSize = palloc0(nParts * sizeof(float4)); /* remaining number of tuples in the current bucket of a part */
+	float4		bucketSize = sumReltuples / nEntries;	/* target bucket size in
+														 * the aggregated
+														 * histogram */
+	float4		nTuplesToFill = bucketSize; /* remaining number of tuples to
+											 * fill in the current bucket of
+											 * the aggregated histogram, reset
+											 * to bucketSize when a new bucket
+											 * is added */
+	int		   *cursors = palloc0(nParts * sizeof(int));	/* the index of current
+															 * bucket for each
+															 * histogram, set to -1
+															 * after the histogram
+															 * has been traversed */
+	float4	   *remainingSize = palloc0(nParts * sizeof(float4));	/* remaining number of
+																	 * tuples in the current
+																	 * bucket of a part */
 
 	/* initialize eachBucket[] and remainingSize[] */
 	for (int i = 0; i < nParts; i++)
@@ -951,24 +908,35 @@ aggregate_leaf_partition_histograms
 		}
 	}
 
-	int pid = 0; /* part id */
-	/* we maintain a priority queue (min heap) of PartDatum */
-	CdbHeap *dhp = CdbHeap_Create(DatumHeapComparator,
-								&typInfo,
-								nParts /* nSlotMax */,
-								sizeof(PartDatum),
-								NULL /* slotArray */);
+	int			pid = 0;		/* part id */
 
-	List *ldatum = NIL; /* list of pointers to the selected bounds */
-	/* the first bound in the aggregated histogram will be the minimum of the first bounds of all parts */
-	Datum minBound = getMinBound(histSlots, cursors, nParts, typInfo.ltFuncOp);
+	/* we maintain a priority queue (min heap) of PartDatum */
+	CdbHeap    *dhp = CdbHeap_Create(DatumHeapComparator,
+									 &typInfo,
+									 nParts /* nSlotMax */ ,
+									 sizeof(PartDatum),
+									 NULL /* slotArray */ );
+
+	List	   *ldatum = NIL;	/* list of pointers to the selected bounds */
+
+	/*
+	 * the first bound in the aggregated histogram will be the minimum of the
+	 * first bounds of all parts
+	 */
+	Datum		minBound = getMinBound(histSlots, cursors, nParts, typInfo.ltFuncOp);
+
 	ldatum = lappend(ldatum, &minBound);
 
-	/* continue filling the aggregated histogram, starting from the second bound */
+	/*
+	 * continue filling the aggregated histogram, starting from the second
+	 * bound
+	 */
 	initDatumHeap(dhp, histSlots, cursors, nParts);
 
-	/* loop continues when DatumHeap is not empty yet and the number of histogram boundaries
-	 * has not reached nEntries */
+	/*
+	 * loop continues when DatumHeap is not empty yet and the number of
+	 * histogram boundaries has not reached nEntries
+	 */
 	while (((pid = getNextPartDatum(dhp)) >= 0) && list_length(ldatum) < nEntries)
 	{
 		if (remainingSize[pid] < nTuplesToFill)
@@ -979,7 +947,8 @@ aggregate_leaf_partition_histograms
 			CdbHeap_DeleteMin(dhp);
 			if (cursors[pid] > 0)
 			{
-				PartDatum pd;
+				PartDatum	pd;
+
 				pd.partId = pid;
 				pd.datum = histSlots[pid]->values[cursors[pid]];
 				CdbHeap_Insert(dhp, &pd);
@@ -993,13 +962,17 @@ aggregate_leaf_partition_histograms
 		}
 	}
 
-	/* adding the max boundary across all histograms to the aggregated histogram */
-	Datum maxBound = getMaxBound(histSlots, nParts, typInfo.ltFuncOp);
+	/*
+	 * adding the max boundary across all histograms to the aggregated
+	 * histogram
+	 */
+	Datum		maxBound = getMaxBound(histSlots, nParts, typInfo.ltFuncOp);
+
 	ldatum = lappend(ldatum, &maxBound);
 
 	/* now ldatum contains the resulting boundaries */
-	int num_hist;
-	Datum *out = buildHistogramEntryForStats(ldatum, &typInfo, &num_hist);
+	int			num_hist;
+	Datum	   *out = buildHistogramEntryForStats(ldatum, &typInfo, &num_hist);
 
 	/* clean up */
 	CdbHeap_Destroy(dhp);
@@ -1009,22 +982,26 @@ aggregate_leaf_partition_histograms
 	return num_hist;
 }
 
-float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, int nParts,
-					  MCVFreqPair **mcvPairRemaining, int rem_mcv,
-					  float4 *eachBucket)
+static float4
+getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, int nParts,
+			   MCVFreqPair **mcvPairRemaining, int rem_mcv,
+			   float4 *eachBucket)
 {
-	float4 *total = palloc(nParts * sizeof(float4));
-	float4 sumTotal = 0;
-	int pid = 0;
+	float4	   *total = palloc(nParts * sizeof(float4));
+	float4		sumTotal = 0;
+	int			pid = 0;
+
 	Assert(total != NULL);
 	for (int i = 0; i < nParts; ++i)
 	{
 		AttStatsSlot mcvSlot;
+
 		total[i] = relTuples[i];
 		if (heaptupleStats[i] == NULL)
 			continue;
 
 		Form_pg_statistic stat = (Form_pg_statistic) GETSTRUCT(heaptupleStats[i]);
+
 		if (get_attstatsslot(&mcvSlot, heaptupleStats[i], STATISTIC_KIND_MCV,
 							 InvalidOid,
 							 ATTSTATSSLOT_VALUES | ATTSTATSSLOT_NUMBERS))
@@ -1037,12 +1014,12 @@ float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, 
 			}
 		}
 		total[i] -= relTuples[i] * stat->stanullfrac;
-		if (total[i] < 0.0) /* will this happen? */
+		if (total[i] < 0.0)		/* will this happen? */
 		{
 			total[i] = 0.0;
 		}
 
-		// We assume eachBucket[i] is initialized to 0.0
+		/* We assume eachBucket[i] is initialized to 0.0 */
 		if (get_attstatsslot(&mcvSlot, heaptupleStats[i],
 							 STATISTIC_KIND_HISTOGRAM, InvalidOid,
 							 ATTSTATSSLOT_VALUES))
@@ -1053,10 +1030,10 @@ float4 getBucketSizes(const HeapTuple *heaptupleStats, const float4 *relTuples, 
 
 		sumTotal += total[i];
 	}
-	
-	for (int i = pid; i < pid+rem_mcv; ++i)
+
+	for (int i = pid; i < pid + rem_mcv; ++i)
 	{
-		eachBucket[i] = mcvPairRemaining[i-pid]->count;
+		eachBucket[i] = mcvPairRemaining[i - pid]->count;
 		sumTotal += eachBucket[i];
 	}
 	pfree(total);
@@ -1070,7 +1047,8 @@ bool
 needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
 {
 	Assert(vacattrstats != NULL);
-	int i;
+	int			i;
+
 	for (i = 0; i < attr_cnt; i++)
 	{
 		Assert(vacattrstats[i] != NULL);
@@ -1103,7 +1081,7 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
  *  relid_exclude - it is the relid that is excluded to check for the stats.
  *  It is used when we are asked to auto merge statistics when analyzing a
  *  single leaf partition. As we are going to produce stats for that
- *  specific leaf partition, we should not check its stats availibility.
+ *  specific leaf partition, we should not check its stats availability.
  *  va_cols - column attnum list to be analyzed from root table's perspective.
  *  These attnum's needs to be translated for each leaf table as the attnums
  *  for different columns might be different due to the dropped columns and
@@ -1112,24 +1090,30 @@ needs_sample(VacAttrStats **vacattrstats, int attr_cnt)
 bool
 leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 {
-	PartitionNode *pn = get_parts(attrelid, 0 /*level*/ ,
-								  0 /*parent*/, false /* inctemplate */, true /*includesubparts*/);
+	PartitionNode *pn = get_parts(attrelid,
+								  0 /* level */ ,
+								  0 /* parent */ ,
+								  false /* inctemplate */ ,
+								  true /* includesubparts */ );
+
 	Assert(pn);
 
-	List *oid_list = all_leaf_partition_relids(pn); /* all leaves */
-	bool all_parts_empty = true;
-	ListCell *lc, *lc_col;
+	List	   *oid_list = all_leaf_partition_relids(pn);	/* all leaves */
+	bool		all_parts_empty = true;
+	ListCell   *lc,
+			   *lc_col;
 
 	foreach(lc, oid_list)
 	{
-		Oid partRelid = lfirst_oid(lc);
+		Oid			partRelid = lfirst_oid(lc);
+
 		if (partRelid == relid_exclude)
 			continue;
 
-		float4 relTuples = get_rel_reltuples(partRelid);
-		int32 relpages = get_rel_relpages(partRelid);
+		float4		relTuples = get_rel_reltuples(partRelid);
+		int32		relpages = get_rel_relpages(partRelid);
 
-		// Partition is analyzed and we detect it is empty
+		/* Partition is analyzed and we detect it is empty */
 		if (relTuples == 0.0 && relpages == 1)
 			continue;
 
@@ -1137,17 +1121,20 @@ leaf_parts_analyzed(Oid attrelid, Oid relid_exclude, List *va_cols)
 
 		foreach(lc_col, va_cols)
 		{
-			// Check stats availibility for each column that asked to be analyzed.
-			AttrNumber attnum = lfirst_int(lc_col);
+			/*
+			 * Check stats availability for each column that asked to be
+			 * analyzed.
+			 */
+			AttrNumber	attnum = lfirst_int(lc_col);
 			const char *attname = get_relid_attribute_name(attrelid, attnum);
-			AttrNumber child_attno = get_attnum(partRelid, attname);
+			AttrNumber	child_attno = get_attnum(partRelid, attname);
 
-			HeapTuple heaptupleStats = get_att_stats(partRelid, child_attno);
+			HeapTuple	heaptupleStats = get_att_stats(partRelid, child_attno);
 
-			// if there is no colstats
+			/* if there is no colstats */
 			if (!HeapTupleIsValid(heaptupleStats) || relpages == 0)
 			{
-				if(relid_exclude == InvalidOid)
+				if (relid_exclude == InvalidOid)
 					elog(LOG, "column %s of partition %s is not analyzed, so ANALYZE will collect sample for stats calculation", attname, get_rel_name(partRelid));
 				else
 					elog(LOG, "Auto merging of leaf partition stats to calculate root partition stats is not possible because column %s of partition %s is not analyzed", attname, get_rel_name(partRelid));

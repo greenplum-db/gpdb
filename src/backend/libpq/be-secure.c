@@ -6,7 +6,7 @@
  *	  message integrity and endpoint authentication.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,32 +18,22 @@
  *	  backend can restart automatically, it is important that
  *	  we select an algorithm that continues to provide confidentiality
  *	  even if the attacker has the server's private key.  Ephemeral
- *	  DH (EDH) keys provide this, and in fact provide Perfect Forward
- *	  Secrecy (PFS) except for situations where the session can
- *	  be hijacked during a periodic handshake/renegotiation.
- *	  Even that backdoor can be closed if client certificates
- *	  are used (since the imposter will be unable to successfully
- *	  complete renegotiation).
+ *	  DH (EDH) keys provide this and more (Perfect Forward Secrecy
+ *	  aka PFS).
  *
  *	  N.B., the static private key should still be protected to
  *	  the largest extent possible, to minimize the risk of
  *	  impersonations.
  *
  *	  Another benefit of EDH is that it allows the backend and
- *	  clients to use DSA keys.	DSA keys can only provide digital
+ *	  clients to use DSA keys.  DSA keys can only provide digital
  *	  signatures, not encryption, and are often acceptable in
  *	  jurisdictions where RSA keys are unacceptable.
  *
  *	  The downside to EDH is that it makes it impossible to
  *	  use ssldump(1) if there's a problem establishing an SSL
- *	  session.	In this case you'll need to temporarily disable
+ *	  session.  In this case you'll need to temporarily disable
  *	  EDH by commenting out the callback.
- *
- *	  ...
- *
- *	  Because the risk of cryptanalysis increases as large
- *	  amounts of data are sent with the same session key, the
- *	  session keys are periodically renegotiated.
  *
  *-------------------------------------------------------------------------
  */
@@ -68,8 +58,11 @@
 #ifdef USE_SSL
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
-#if SSLEAY_VERSION_NUMBER >= 0x0907000L
+#if OPENSSL_VERSION_NUMBER >= 0x0907000L
 #include <openssl/conf.h>
+#endif
+#if (OPENSSL_VERSION_NUMBER >= 0x0090800fL) && !defined(OPENSSL_NO_ECDH)
+#include <openssl/ec.h>
 #endif
 #endif   /* USE_SSL */
 
@@ -83,6 +76,7 @@
 
 static DH  *load_dh_file(int keylength);
 static DH  *load_dh_buffer(const char *, size_t);
+static DH  *generate_dh_parameters(int prime_len, int generator);
 static DH  *tmp_dh_cb(SSL *s, int is_export, int keylength);
 static int	verify_cb(int, X509_STORE_CTX *);
 static void info_cb(const SSL *ssl, int type, int args);
@@ -97,13 +91,6 @@ char	   *ssl_key_file;
 char	   *ssl_ca_file;
 char	   *ssl_crl_file;
 
-/*
- *	How much data can be sent across a secure connection
- *	(total in both directions) before we require renegotiation.
- *	Set to 0 to disable renegotiation completely.
- */
-int			ssl_renegotiation_limit;
-
 #ifdef USE_SSL
 static SSL_CTX *SSL_context = NULL;
 static bool ssl_loaded_verify_locations = false;
@@ -111,6 +98,12 @@ static bool ssl_loaded_verify_locations = false;
 
 /* GUC variable controlling SSL cipher list */
 char	   *SSLCipherSuites = NULL;
+
+/* GUC variable for default ECHD curve. */
+char	   *SSLECDHCurve;
+
+/* GUC variable: if false, prefer client ciphers */
+bool		SSLPreferServerCiphers;
 
 /* ------------------------------------------------------------ */
 /*						 Hardcoded values						*/
@@ -295,6 +288,7 @@ rloop:
 						(errcode(ERRCODE_PROTOCOL_VIOLATION),
 						 errmsg("unrecognized SSL error code: %d",
 								err)));
+				errno = ECONNRESET;
 				n = -1;
 				break;
 		}
@@ -345,35 +339,6 @@ secure_write(Port *port, void *ptr, size_t len)
 	{
 		int			err;
 
-		if (ssl_renegotiation_limit && port->count > ssl_renegotiation_limit * 1024L)
-		{
-			SSL_set_session_id_context(port->ssl, (void *) &SSL_context,
-									   sizeof(SSL_context));
-			if (SSL_renegotiate(port->ssl) <= 0)
-			{
-				report_commerror("SSL renegotiation failure");
-			}
-
-			if (SSL_do_handshake(port->ssl) <= 0)
-			{
-				report_commerror("SSL renegotiation failure");
-			}
-
-			if (port->ssl->state != SSL_ST_OK)
-			{
-				report_commerror("SSL failed to send renegotiation request");
-			}
-
-			port->ssl->state |= SSL_ST_ACCEPT;
-			SSL_do_handshake(port->ssl);
-			if (port->ssl->state != SSL_ST_OK)
-			{
-				report_commerror("SSL renegotiation failure");
-			}
-
-			port->count = 0;
-		}
-
 wloop:
 		errno = 0;
 		n = SSL_write(port->ssl, ptr, len);
@@ -416,6 +381,7 @@ wloop:
 				snprintf((char *)&err_msg, ERR_MSG_LEN, "unrecognized SSL error code: %d", err);
 				report_commerror(err_msg);
 
+				errno = ECONNRESET;
 				n = -1;
 				break;
 		}
@@ -444,11 +410,13 @@ wloop:
  * non-reentrant libc facilities. We also need to call send() and recv()
  * directly so it gets passed through the socket/signals layer on Win32.
  *
- * They are closely modelled on the original socket implementations in OpenSSL.
+ * These functions are closely modelled on the standard socket BIO in OpenSSL;
+ * see sock_read() and sock_write() in OpenSSL's crypto/bio/bss_sock.c.
+ * XXX OpenSSL 1.0.1e considers many more errcodes than just EINTR as reasons
+ * to retry; do we need to adopt their logic for that?
  */
 
-static bool my_bio_initialized = false;
-static BIO_METHOD my_bio_methods;
+static BIO_METHOD *my_bio_methods = NULL;
 
 static int
 my_sock_read(BIO *h, char *buf, int size)
@@ -459,7 +427,7 @@ my_sock_read(BIO *h, char *buf, int size)
 
 	if (buf != NULL)
 	{
-		res = recv(h->num, buf, size, 0);
+		res = recv(BIO_get_fd(h, NULL), buf, size, 0);
 		BIO_clear_retry_flags(h);
 		if (res <= 0)
 		{
@@ -483,7 +451,8 @@ my_sock_write(BIO *h, const char *buf, int size)
 
 	prepare_for_client_write();
 
-	res = send(h->num, buf, size, 0);
+	res = send(BIO_get_fd(h, NULL), buf, size, 0);
+	BIO_clear_retry_flags(h);
 	if (res <= 0)
 	{
 		if (errno == EINTR)
@@ -500,14 +469,41 @@ my_sock_write(BIO *h, const char *buf, int size)
 static BIO_METHOD *
 my_BIO_s_socket(void)
 {
-	if (!my_bio_initialized)
+	if (!my_bio_methods)
 	{
-		memcpy(&my_bio_methods, BIO_s_socket(), sizeof(BIO_METHOD));
-		my_bio_methods.bread = my_sock_read;
-		my_bio_methods.bwrite = my_sock_write;
-		my_bio_initialized = true;
+		BIO_METHOD *biom = (BIO_METHOD *) BIO_s_socket();
+#ifdef HAVE_BIO_METH_NEW
+		int			my_bio_index;
+
+		my_bio_index = BIO_get_new_index();
+		if (my_bio_index == -1)
+			return NULL;
+		my_bio_methods = BIO_meth_new(my_bio_index, "PostgreSQL backend socket");
+		if (!my_bio_methods)
+			return NULL;
+		if (!BIO_meth_set_write(my_bio_methods, my_sock_write) ||
+			!BIO_meth_set_read(my_bio_methods, my_sock_read) ||
+			!BIO_meth_set_gets(my_bio_methods, BIO_meth_get_gets(biom)) ||
+			!BIO_meth_set_puts(my_bio_methods, BIO_meth_get_puts(biom)) ||
+			!BIO_meth_set_ctrl(my_bio_methods, BIO_meth_get_ctrl(biom)) ||
+			!BIO_meth_set_create(my_bio_methods, BIO_meth_get_create(biom)) ||
+			!BIO_meth_set_destroy(my_bio_methods, BIO_meth_get_destroy(biom)) ||
+			!BIO_meth_set_callback_ctrl(my_bio_methods, BIO_meth_get_callback_ctrl(biom)))
+		{
+			BIO_meth_free(my_bio_methods);
+			my_bio_methods = NULL;
+			return NULL;
+		}
+#else
+		my_bio_methods = malloc(sizeof(BIO_METHOD));
+		if (!my_bio_methods)
+			return NULL;
+		memcpy(my_bio_methods, biom, sizeof(BIO_METHOD));
+		my_bio_methods->bread = my_sock_read;
+		my_bio_methods->bwrite = my_sock_write;
+#endif
 	}
-	return &my_bio_methods;
+	return my_bio_methods;
 }
 
 /* This should exactly match openssl's SSL_set_fd except for using my BIO */
@@ -515,9 +511,16 @@ static int
 my_SSL_set_fd(SSL *s, int fd)
 {
 	int			ret = 0;
-	BIO		   *bio = NULL;
+	BIO		   *bio;
+	BIO_METHOD *bio_method;
 
-	bio = BIO_new(my_BIO_s_socket());
+	bio_method = my_BIO_s_socket();
+	if (bio_method == NULL)
+	{
+		SSLerr(SSL_F_SSL_SET_FD, ERR_R_BUF_LIB);
+		goto err;
+	}
+	bio = BIO_new(bio_method);
 
 	if (bio == NULL)
 	{
@@ -616,6 +619,31 @@ load_dh_buffer(const char *buffer, size_t len)
 }
 
 /*
+ *	Generate DH parameters.
+ *
+ *	Last resort if we can't load precomputed nor hardcoded
+ *	parameters.
+ */
+static DH  *
+generate_dh_parameters(int prime_len, int generator)
+{
+#if (OPENSSL_VERSION_NUMBER >= 0x0090800fL)
+	DH		   *dh;
+
+	if ((dh = DH_new()) == NULL)
+		return NULL;
+
+	if (DH_generate_parameters_ex(dh, prime_len, generator, NULL))
+		return dh;
+
+	DH_free(dh);
+	return NULL;
+#else
+	return DH_generate_parameters(prime_len, generator, NULL, NULL);
+#endif
+}
+
+/*
  *	Generate an ephemeral DH key.  Because this can take a long
  *	time to compute, we can use precomputed parameters of the
  *	common key sizes.
@@ -684,7 +712,7 @@ tmp_dh_cb(SSL *s, int is_export, int keylength)
 		ereport(DEBUG2,
 				(errmsg_internal("DH: generating parameters (%d bits)",
 								 keylength)));
-		r = DH_generate_parameters(keylength, DH_GENERATOR_2, NULL, NULL);
+		r = generate_dh_parameters(keylength, DH_GENERATOR_2);
 	}
 
 	return r;
@@ -751,6 +779,31 @@ info_cb(const SSL *ssl, int type, int args)
 	}
 }
 
+#if (OPENSSL_VERSION_NUMBER >= 0x0090800fL) && !defined(OPENSSL_NO_ECDH)
+static void
+initialize_ecdh(void)
+{
+	EC_KEY	   *ecdh;
+	int			nid;
+
+	nid = OBJ_sn2nid(SSLECDHCurve);
+	if (!nid)
+		ereport(FATAL,
+				(errmsg("ECDH: unrecognized curve name: %s", SSLECDHCurve)));
+
+	ecdh = EC_KEY_new_by_curve_name(nid);
+	if (!ecdh)
+		ereport(FATAL,
+				(errmsg("ECDH: could not create key")));
+
+	SSL_CTX_set_options(SSL_context, SSL_OP_SINGLE_ECDH_USE);
+	SSL_CTX_set_tmp_ecdh(SSL_context, ecdh);
+	EC_KEY_free(ecdh);
+}
+#else
+#define initialize_ecdh()
+#endif
+
 /*
  *	Initialize global SSL context.
  */
@@ -763,17 +816,21 @@ initialize_SSL(void)
 
 	if (!SSL_context)
 	{
+#ifdef HAVE_OPENSSL_INIT_SSL
+		OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL);
+#else
 #if SSLEAY_VERSION_NUMBER >= 0x0907000L
 		OPENSSL_config(NULL);
 #endif
 		SSL_library_init();
 		SSL_load_error_strings();
+#endif
 
 		/*
 		 * We use SSLv23_method() because it can negotiate use of the highest
 		 * mutually supported protocol version, while alternatives like
 		 * TLSv1_2_method() permit only one specific version.  Note that we
-		 * don't actually allow SSL v2, only v3 and TLS protocols (see below).
+		 * don't actually allow SSL v2 or v3, only TLS protocols (see below).
 		 */
 		SSL_context = SSL_CTX_new(SSLv23_method());
 		if (!SSL_context)
@@ -833,13 +890,22 @@ initialize_SSL(void)
 							SSLerrmessage())));
 	}
 
-	/* set up ephemeral DH keys, and disallow SSL v2 while at it */
+	/* set up ephemeral DH keys, and disallow SSL v2/v3 while at it */
 	SSL_CTX_set_tmp_dh_callback(SSL_context, tmp_dh_cb);
-	SSL_CTX_set_options(SSL_context, SSL_OP_SINGLE_DH_USE | SSL_OP_NO_SSLv2);
+	SSL_CTX_set_options(SSL_context,
+						SSL_OP_SINGLE_DH_USE |
+						SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+
+	/* set up ephemeral ECDH keys */
+	initialize_ecdh();
 
 	/* set up the allowed cipher list */
 	if (SSL_CTX_set_cipher_list(SSL_context, SSLCipherSuites) != 1)
 		elog(FATAL, "could not set the cipher list (no valid ciphers available)");
+
+	/* Let server choose order */
+	if (SSLPreferServerCiphers)
+		SSL_CTX_set_options(SSL_context, SSL_OP_CIPHER_SERVER_PREFERENCE);
 
 	/*
 	 * Load CA store, so we can verify client certificates if needed.

@@ -452,19 +452,60 @@ drop table mpp5746, mpp5746_2;
 --
 create table distby_with_constraint (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED RANDOMLY;
 ERROR:  PRIMARY KEY and DISTRIBUTED RANDOMLY are incompatible
-create table distby_with_constraint (col1 int4 UNIQUE, col2 int4) DISTRIBUTED RANDOMLY;
+create table distby_with_constraint (col1 int4 UNIQUE,      col2 int4) DISTRIBUTED RANDOMLY;
 ERROR:  UNIQUE and DISTRIBUTED RANDOMLY are incompatible
 create table distby_with_constraint (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED BY (col2);
-ERROR:  PRIMARY KEY and DISTRIBUTED BY definitions incompatible
-HINT:  When there is both a PRIMARY KEY, and a DISTRIBUTED BY clause, the DISTRIBUTED BY clause must be equal to or a left-subset of the PRIMARY KEY
-create table distby_with_constraint (col1 int4 UNIQUE, col2 int4) DISTRIBUTED BY (col2);
-ERROR:  UNIQUE constraint and DISTRIBUTED BY definitions incompatible
-HINT:  When there is both a UNIQUE constraint, and a DISTRIBUTED BY clause, the DISTRIBUTED BY clause must be equal to or a left-subset of the UNIQUE columns
+ERROR:  PRIMARY KEY and DISTRIBUTED BY definitions are incompatible
+HINT:  When there is both a PRIMARY KEY and a DISTRIBUTED BY clause, the DISTRIBUTED BY clause must be a subset of the PRIMARY KEY.
+create table distby_with_constraint (col1 int4 UNIQUE,      col2 int4) DISTRIBUTED BY (col2);
+ERROR:  UNIQUE constraint and DISTRIBUTED BY definitions are incompatible
+HINT:  When there is both a UNIQUE constraint and a DISTRIBUTED BY clause, the DISTRIBUTED BY clause must be a subset of the UNIQUE constraint.
+create table distby_with_constraint (col1 int4, col2 int4, col3 int4, UNIQUE      (col1, col2)) distributed by (col3);
+ERROR:  UNIQUE constraint and DISTRIBUTED BY definitions are incompatible
+HINT:  When there is both a UNIQUE constraint and a DISTRIBUTED BY clause, the DISTRIBUTED BY clause must be a subset of the UNIQUE constraint.
+create table distby_with_constraint (col1 int4, col2 int4, col3 int4, UNIQUE      (col1), UNIQUE (col2));
+ERROR:  UNIQUE or PRIMARY KEY definitions are incompatible with each other
+HINT:  When there are multiple PRIMARY KEY / UNIQUE constraints, they must have at least one column in common.
+create table distby_with_constraint (col1 int4, col2 int4, col3 int4, UNIQUE      (col1), PRIMARY KEY (col2));
+ERROR:  UNIQUE or PRIMARY KEY definitions are incompatible with each other
+HINT:  When there are multiple PRIMARY KEY / UNIQUE constraints, they must have at least one column in common.
 -- these are allowed
-create table distby_with_constraint1 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED BY (col1);
-create table distby_with_constraint2 (col1 int4 UNIQUE, col2 int4) DISTRIBUTED BY (col1);
-create table distby_with_constraint3 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED REPLICATED;
-create table distby_with_constraint4 (col1 int4 UNIQUE, col2 int4) DISTRIBUTED REPLICATED;
+create table distby_with_constraint01 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED BY (col1);
+create table distby_with_constraint02 (col1 int4 UNIQUE,      col2 int4) DISTRIBUTED BY (col1);
+create table distby_with_constraint03 (col1 int4 PRIMARY KEY, col2 int4) DISTRIBUTED REPLICATED;
+create table distby_with_constraint04 (col1 int4 UNIQUE,      col2 int4) DISTRIBUTED REPLICATED;
+-- More complicated cases. Allowed.
+create table distby_with_constraint11 (col1 int4, col2 int4, UNIQUE      (col1, col2)) distributed by (col1);
+create table distby_with_constraint12 (col1 int4, col2 int4, PRIMARY KEY (col1, col2)) distributed by (col1);
+create table distby_with_constraint13 (col1 int4, col2 int4, UNIQUE      (col1, col2)) distributed by (col2);
+create table distby_with_constraint14 (col1 int4, col2 int4, PRIMARY KEY (col1, col2)) distributed by (col2);
+create table distby_with_constraint15 (col1 int4, col2 int4, UNIQUE      (col1, col2)) distributed by (col2, col1);
+create table distby_with_constraint16 (col1 int4, col2 int4, PRIMARY KEY (col1, col2)) distributed by (col2, col1);
+create table distby_with_constraint17 (col1 int4, col2 int4, UNIQUE      (col1, col2)) distributed by (col1, col2);
+create table distby_with_constraint18 (col1 int4, col2 int4, PRIMARY KEY (col1, col2)) distributed by (col1, col2);
+-- Test deriving the distribution key from constraint columns.
+create table distby_with_constraint21 (col1 int4, col2 int4, col3 int4, UNIQUE      (col1, col2), UNIQUE (col3, col1));
+create table distby_with_constraint22 (col1 int4, col2 int4, col3 int4, UNIQUE      (col1, col2), PRIMARY KEY (col3, col1));
+-- Check what distribution key was chosen for all the cases above.
+select c.relname, policytype, attrnums from pg_class c, gp_distribution_policy p where c.oid = p.localoid and relname LIKE 'distby_with_%' order by relname;
+         relname          | policytype | attrnums 
+--------------------------+------------+----------
+ distby_with_constraint01 | p          | {1}
+ distby_with_constraint02 | p          | {1}
+ distby_with_constraint03 | r          | 
+ distby_with_constraint04 | r          | 
+ distby_with_constraint11 | p          | {1}
+ distby_with_constraint12 | p          | {1}
+ distby_with_constraint13 | p          | {2}
+ distby_with_constraint14 | p          | {2}
+ distby_with_constraint15 | p          | {2,1}
+ distby_with_constraint16 | p          | {2,1}
+ distby_with_constraint17 | p          | {1,2}
+ distby_with_constraint18 | p          | {1,2}
+ distby_with_constraint21 | p          | {1}
+ distby_with_constraint22 | p          | {1}
+(14 rows)
+
 --
 -- Test that DISTRIBUTED BY is interpreted correctly with inheritance.
 --
@@ -511,4 +552,156 @@ select * from inhdisttest_b;
   1 | lastname b |       42
   1 | lastname c |      422
 (2 rows)
+
+--
+-- Test that NULLs are distributed correctly, by a CTAS involving an outer join
+--
+create temporary table even (i int4, j int4) distributed by (i);
+insert into even select g*2, g*2 from generate_series(1, 10) g;
+create temporary table odd (i int4, j int4) distributed by (i);
+insert into odd select g*2+1, g*2+1 from generate_series(1, 10) g;
+create temporary table ctas_x as
+  select even.j, even.i as a, odd.i as b from even full outer join odd on (even.i = odd.i)
+distributed by (a);
+-- Check that all the rows with NULL distribution key are stored on the same segment.
+select count(distinct gp_segment_id) from ctas_x where a is null;
+ count 
+-------
+     1
+(1 row)
+
+select a from ctas_x group by a;
+ a  
+----
+ 18
+  4
+  8
+ 20
+ 10
+  6
+ 12
+  2
+ 16
+   
+ 14
+(11 rows)
+
+-- The same, but let the planner deduce the distribution key by itself. The
+-- codepaths to deduce it, and to check if the explicitly given distribution
+-- needs a Redistribute, are different. It should not choose 'a', even though
+-- the result is distributed on 'a', because there are NULLs on all segments.
+create temporary table ctas_y as
+  select even.j, even.i as a, odd.i as b
+  from even full outer join odd on (even.i = odd.i);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'j' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+select a from ctas_y group by a;
+ a  
+----
+ 14
+ 18
+  4
+  8
+ 20
+ 10
+  6
+ 12
+  2
+ 16
+   
+(11 rows)
+
+-- Same for INSERT.
+create temporary table insert_z (j int4, a int4, b int4) distributed by (a);
+insert into insert_z
+  select even.j, even.i as a, odd.i as b
+  from even full outer join odd on (even.i = odd.i);
+select count(distinct gp_segment_id) from insert_z where a is null;
+ count 
+-------
+     1
+(1 row)
+
+select a from insert_z group by a;
+ a  
+----
+ 18
+  4
+  8
+ 20
+ 10
+  6
+ 12
+  2
+ 16
+   
+ 14
+(11 rows)
+
+-- This doesn't need a Redistribute Motion.
+explain (costs off) select even.i from even left outer join odd on (even.i = odd.i) group by (even.i);
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  HashAggregate
+         Group Key: even.i
+         ->  Hash Left Join
+               Hash Cond: (even.i = odd.i)
+               ->  Seq Scan on even
+               ->  Hash
+                     ->  Seq Scan on odd
+ Optimizer: legacy query optimizer
+(9 rows)
+
+-- But this does.
+explain (costs off) select even.i from even right outer join odd on (even.i = odd.i) group by (even.i);
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  HashAggregate
+         Group Key: even.i
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: even.i
+               ->  HashAggregate
+                     Group Key: even.i
+                     ->  Hash Left Join
+                           Hash Cond: (odd.i = even.i)
+                           ->  Seq Scan on odd
+                           ->  Hash
+                                 ->  Seq Scan on even
+ Optimizer: legacy query optimizer
+(13 rows)
+
+-- Check that we can track the distribution through multiple FULL OUTER JOINs.
+-- This query should not need Redistribute Motion.
+create temporary table a as select generate_series(1, 5) as i distributed by (i);
+create temporary table b as select generate_series(2, 6) as i distributed by (i);
+create temporary table c as select generate_series(3, 7) as i distributed by (i);
+explain (costs off) select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
+                QUERY PLAN                
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Hash Full Join
+         Hash Cond: (b.i = c.i)
+         ->  Hash Full Join
+               Hash Cond: (a.i = b.i)
+               ->  Seq Scan on a
+               ->  Hash
+                     ->  Seq Scan on b
+         ->  Hash
+               ->  Seq Scan on c
+ Optimizer: legacy query optimizer
+(11 rows)
+
+select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
+ i | i | i 
+---+---+---
+ 4 | 4 | 4
+   |   | 7
+ 2 | 2 |  
+ 5 | 5 | 5
+   | 6 | 6
+ 1 |   |  
+ 3 | 3 | 3
+(7 rows)
 

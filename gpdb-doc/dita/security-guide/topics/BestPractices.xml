@@ -77,7 +77,7 @@
     <section id="password-strength-recommendations">
       <title>Operating System Users and File System</title>
       <p> To protect the network from intrusion, system administrators should verify the passwords
-        used within an organization are sufficently strong. The following recommendations can
+        used within an organization are sufficiently strong. The following recommendations can
         strengthen a password: </p>
       <ul>
         <li> Minimum password length recommendation: At least 9 characters. MD5 passwords should be

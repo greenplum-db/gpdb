@@ -1489,7 +1489,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 = 35 ORDER BY col2,col3 LIMIT 5;
                                                        QUERY PLAN                                                       
 ------------------------------------------------------------------------------------------------------------------------
  Limit  (cost=0.00..431.00 rows=1 width=14)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=14)
          Merge Key: col2, col3
          ->  Sort  (cost=0.00..431.00 rows=1 width=14)
                Sort Key: col2, col3
@@ -1524,7 +1524,7 @@ EXPLAIN SELECT * FROM pt_lt_tab_df WHERE col2 > 15 ORDER BY col2,col3 LIMIT 5;
                                                           QUERY PLAN                                                          
 ------------------------------------------------------------------------------------------------------------------------------
  Limit  (cost=0.00..431.01 rows=3 width=14)
-   ->  Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.01 rows=5 width=14)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.01 rows=5 width=14)
          Merge Key: col2, col3
          ->  Limit  (cost=0.00..431.01 rows=3 width=14)
                ->  Sort  (cost=0.00..431.01 rows=23 width=14)
@@ -1784,7 +1784,7 @@ NOTICE:  CREATE TABLE will create partition "ds_4_1_prt_p200803" for table "ds_4
 explain select * from ds_4 where month_id = '200800';
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
                Filter: month_id::text = '200800'::text
@@ -1800,7 +1800,7 @@ explain select * from ds_4 where month_id = '200800';
 explain select * from ds_4 where month_id::int = 200800;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1815,7 +1815,7 @@ explain select * from ds_4 where month_id::int = 200800;
 explain select * from ds_4 where month_id::int - 801 < 200000;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1827,7 +1827,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000;
 explain select * from ds_4 where month_id::int - 801 < 200000 OR count_vas > 10;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1842,7 +1842,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000 OR count_vas > 10;
 explain select * from ds_4 where month_id::int - 801 < 200000 AND count_vas > 10;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1857,7 +1857,7 @@ explain select * from ds_4 where month_id::int - 801 < 200000 AND count_vas > 10
 explain select * from ds_4 where case when month_id = '200800' then 100 else 2 end = 100;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1872,7 +1872,7 @@ explain select * from ds_4 where case when month_id = '200800' then 100 else 2 e
 explain select * from ds_4 where case when month_id = '200800' then NULL else 2 end IS NULL;
                                               QUERY PLAN                                               
 -------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1887,7 +1887,7 @@ explain select * from ds_4 where case when month_id = '200800' then NULL else 2 
 explain select * from ds_4 where case when month_id::int = 200800 then count_vas else 2 end IS NULL;
                                          QUERY PLAN                                         
 --------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1902,7 +1902,7 @@ explain select * from ds_4 where case when month_id::int = 200800 then count_vas
 explain select * from ds_4 where month_id::int in (200801, 1,55,6,6,6,6,66,565,65,65,200803);
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    ->  Sequence  (cost=0.00..431.00 rows=1 width=80)
          ->  Partition Selector for ds_4 (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
          ->  Dynamic Table Scan on ds_4 (dynamic scan id: 1)  (cost=0.00..431.00 rows=1 width=80)
@@ -1973,7 +1973,7 @@ set optimizer_segments=2;
 explain select * from ds_2 where month_id::int in (200808, 1315) order by month_id;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    Merge Key: month_id
    ->  Sort  (cost=0.00..431.00 rows=1 width=80)
          Sort Key: month_id
@@ -1990,7 +1990,7 @@ explain select * from ds_2 where month_id::int in (200808, 1315) order by month_
 explain  select * from ds_2 where month_id::int in (200808, 200801, 2008010) order by month_id;
                                             QUERY PLAN                                            
 --------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..431.00 rows=1 width=80)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=80)
    Merge Key: month_id
    ->  Sort  (cost=0.00..431.00 rows=1 width=80)
          Sort Key: month_id
@@ -2848,7 +2848,7 @@ NOTICE:  building index for child partition "sales_1_prt_5_2_prt_other_regions"
 explain select * from sales where date = '2011-01-01' and region = 'usa';
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..3.00 rows=1 width=24)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..3.00 rows=1 width=24)
    ->  Sequence  (cost=0.00..3.00 rows=1 width=24)
          ->  Partition Selector for sales (dynamic scan id: 1)  (cost=10.00..100.00 rows=50 width=4)
                Filter: date = '01-01-2011'::date AND region = 'usa'::text

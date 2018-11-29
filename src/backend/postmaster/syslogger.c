@@ -13,7 +13,7 @@
  *
  * Author: Andreas Pflug <pgadmin@pse-consulting.de>
  *
- * Copyright (c) 2004-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2004-2014, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -39,14 +39,16 @@
 #include "postmaster/fork_process.h"
 #include "postmaster/postmaster.h"
 #include "postmaster/syslogger.h"
-#include "postmaster/sendalert.h"
+#include "storage/dsm.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/pg_shmem.h"
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/timestamp.h"
+
 #include "cdb/cdbvars.h"
+#include "postmaster/sendalert.h"
 
 #define READ_BUF_SIZE (2 * PIPE_CHUNK_SIZE)
 
@@ -64,7 +66,7 @@ extern bool Gp_entry_postmaster;
 
 
 /*
- * GUC parameters.	Logging_collector cannot be changed after postmaster
+ * GUC parameters.  Logging_collector cannot be changed after postmaster
  * start, but the rest can change at SIGHUP.
  */
 bool		Logging_collector = false;
@@ -278,7 +280,7 @@ SysLoggerMain(int argc, char *argv[])
 	/*
 	 * If we restarted, our stderr is already redirected into our own input
 	 * pipe.  This is of course pretty useless, not to mention that it
-	 * interferes with detecting pipe EOF.	Point stderr to /dev/null. This
+	 * interferes with detecting pipe EOF.  Point stderr to /dev/null. This
 	 * assumes that all interesting messages generated in the syslogger will
 	 * come through elog.c and will be sent to write_syslogger_file.
 	 */
@@ -287,16 +289,21 @@ SysLoggerMain(int argc, char *argv[])
 
 		/*
 		 * The closes might look redundant, but they are not: we want to be
-		 * darn sure the pipe gets closed even if the open failed.	We can
+		 * darn sure the pipe gets closed even if the open failed.  We can
 		 * survive running with stderr pointing nowhere, but we can't afford
 		 * to have extra pipe input descriptors hanging around.
+		 *
+		 * As we're just trying to reset these to go to DEVNULL, there's not
+		 * much point in checking for failure from the close/dup2 calls here,
+		 * if they fail then presumably the file descriptors are closed and
+		 * any writes will go into the bitbucket anyway.
 		 */
 		close(fileno(stdout));
 		close(fileno(stderr));
 		if (fd != -1)
 		{
-			dup2(fd, fileno(stdout));
-			dup2(fd, fileno(stderr));
+			(void) dup2(fd, fileno(stdout));
+			(void) dup2(fd, fileno(stderr));
 			close(fd);
 		}
 	}
@@ -330,7 +337,7 @@ SysLoggerMain(int argc, char *argv[])
 
 	/*
 	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.	(syslogger probably never has any
+	 * can signal any child processes too.  (syslogger probably never has any
 	 * child processes, but for consistency we make all postmaster child
 	 * processes do this.)
 	 */
@@ -534,7 +541,7 @@ SysLoggerMain(int argc, char *argv[])
 
 		/*
 		 * Calculate time till next time-based rotation, so that we don't
-		 * sleep longer than that.	We assume the value of "now" obtained
+		 * sleep longer than that.  We assume the value of "now" obtained
 		 * above is still close enough.  Note we can't make this calculation
 		 * until after calling logfile_rotate(), since it will advance
 		 * next_rotation_time.
@@ -760,7 +767,7 @@ SysLoggerMain(int argc, char *argv[])
 					(errmsg("logger shutting down")));
 
             /*
-             * Normal exit from the syslogger is here.	Note that we
+             * Normal exit from the syslogger is here.  Note that we
              * deliberately do not close syslogFile before exiting; this is to
              * allow for the possibility of elog messages being generated
              * inside proc_exit.  Regular exit() will take care of flushing
@@ -897,8 +904,9 @@ SysLogger_Start(void)
                 /* Lose the postmaster's on-exit routines */
                 on_exit_reset();
 
-                /* Drop our connection to postmaster's shared memory, as well */
-                PGSharedMemoryDetach();
+				/* Drop our connection to postmaster's shared memory, as well */
+				dsm_detach_all();
+				PGSharedMemoryDetach();
 
                 /* do the work */
                 SysLoggerMain(0, NULL);
@@ -908,9 +916,23 @@ SysLogger_Start(void)
             default:
                 /* success, in postmaster */
 
-                /* now we redirect stderr, if not done already */
-                if (!redirection_done)
-                {
+				/* now we redirect stderr, if not done already */
+				if (!redirection_done)
+				{
+#ifdef WIN32
+					int			fd;
+#endif
+
+					/*
+					 * Leave a breadcrumb trail when redirecting, in case the user
+					 * forgets that redirection is active and looks only at the
+					 * original stderr target file.
+					 */
+					ereport(LOG,
+							(errmsg("redirecting log output to logging collector process"),
+							 errhint("Future log output will appear in directory \"%s\".",
+									 Log_directory)));
+
 #ifndef WIN32
                     fflush(stdout);
                     if (dup2(syslogPipe[1], fileno(stdout)) < 0)
@@ -926,7 +948,6 @@ SysLogger_Start(void)
                     close(syslogPipe[1]);
                     syslogPipe[1] = -1;
 #else
-                    int			fd;
 
                     /*
 				 	 * open the pipe in binary mode and make sure stderr is binary
@@ -1032,7 +1053,7 @@ syslogger_forkexec(void)
  *
  * Extract data from the arglist for exec'ed syslogger process
  */
-    static void
+static void
 syslogger_parseArgs(int argc, char *argv[])
 {
     int			fd;
@@ -1042,24 +1063,24 @@ syslogger_parseArgs(int argc, char *argv[])
     argv += 3;
 
 #ifndef WIN32
-    fd = atoi(*argv++);
-    if (fd != -1)
-    {
-        syslogFile = fdopen(fd, "a");
-        setvbuf(syslogFile, NULL, LBF_MODE, 0);
-    }
+	fd = atoi(*argv++);
+	if (fd != -1)
+	{
+		syslogFile = fdopen(fd, "a");
+		setvbuf(syslogFile, NULL, PG_IOLBF, 0);
+	}
 #else							/* WIN32 */
-    fd = atoi(*argv++);
-    if (fd != 0)
-    {
-        fd = _open_osfhandle(fd, _O_APPEND | _O_TEXT);
-        if (fd > 0)
-        {
-            syslogFile = fdopen(fd, "a");
-            setvbuf(syslogFile, NULL, LBF_MODE, 0);
-        }
-    }
-#endif
+	fd = atoi(*argv++);
+	if (fd != 0)
+	{
+		fd = _open_osfhandle(fd, _O_APPEND | _O_TEXT);
+		if (fd > 0)
+		{
+			syslogFile = fdopen(fd, "a");
+			setvbuf(syslogFile, NULL, PG_IOLBF, 0);
+		}
+	}
+#endif   /* WIN32 */
 
     if (alert_log_level_opened)
     {
@@ -1068,7 +1089,7 @@ syslogger_parseArgs(int argc, char *argv[])
         if (alertFd != -1)
         {
             alertLogFile = fdopen(alertFd, "a");
-            setvbuf(alertLogFile, NULL, LBF_MODE, 0);
+            setvbuf(alertLogFile, NULL, PG_IOLBF, 0);
         }
 #else							/* WIN32 */
         if (alertFd != 0)
@@ -1077,7 +1098,7 @@ syslogger_parseArgs(int argc, char *argv[])
             if (alertFd > 0)
             {
                 alertLogFile = fdopen(alertFd, "a");
-                setvbuf(alertLogFile, NULL, LBF_MODE, 0);
+                setvbuf(alertLogFile, NULL, PG_IOLBF, 0);
             }
         }
 #endif   /* WIN32 */
@@ -2112,7 +2133,7 @@ logfile_open(const char *filename, const char *mode, bool allow_errors)
 
 	if (fh)
 	{
-		setvbuf(fh, NULL, LBF_MODE, 0);
+		setvbuf(fh, NULL, PG_IOLBF, 0);
 
 #ifdef WIN32
 		/* use CRLF line endings on Windows */
@@ -2306,17 +2327,17 @@ set_next_rotation_time(void)
     struct pg_tm *tm;
     int			rotinterval;
 
-    /* nothing to do if time-based rotation is disabled */
-    if (Log_RotationAge <= 0)
-        return;
+	/* nothing to do if time-based rotation is disabled */
+	if (Log_RotationAge <= 0)
+		return;
 
-    /*
-     * The requirements here are to choose the next time > now that is a
-     * "multiple" of the log rotation interval.  "Multiple" can be interpreted
-     * fairly loosely.	In this version we align to log_timezone rather than
-     * GMT.
-     */
-    rotinterval = Log_RotationAge * SECS_PER_MINUTE;	/* convert to seconds */
+	/*
+	 * The requirements here are to choose the next time > now that is a
+	 * "multiple" of the log rotation interval.  "Multiple" can be interpreted
+	 * fairly loosely.  In this version we align to log_timezone rather than
+	 * GMT.
+	 */
+	rotinterval = Log_RotationAge * SECS_PER_MINUTE;	/* convert to seconds */
 	now = (pg_time_t) time(NULL);
     tm = pg_localtime(&now, log_timezone);
     now += tm->tm_gmtoff;

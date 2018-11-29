@@ -21,7 +21,7 @@ NOTICE:  Success:
 -- injected on content 0 primary.
 select gp_inject_fault_infinite('fts_handle_message', 'error', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15439)
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=23250)
  gp_inject_fault_infinite 
 --------------------------
  t
@@ -39,7 +39,7 @@ NOTICE:  Success:
 
 select gp_inject_fault('fts_handle_message', 'reset', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=15439)
+NOTICE:  Success:  (seg0 127.0.1.1:25432 pid=23250)
  gp_inject_fault 
 -----------------
  t
@@ -49,6 +49,14 @@ select gp_inject_fault('fts_update_config', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------
+ t
+(1 row)
+
+-- Postmaster should have restarted FTS by now. Trigger a scan and
+-- validate that configuration is sane.
+select gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
  t
 (1 row)
 
@@ -60,21 +68,6 @@ relation = 'gp_configuration_history'::regclass;
  locktype | mode | relation | pid | granted 
 ----------+------+----------+-----+---------
 (0 rows)
-
-select gp_inject_fault('fts_update_config', 'reset', 1);
-NOTICE:  Success:
- gp_inject_fault 
------------------
- t
-(1 row)
-
--- Postmaster should have restarted FTS by now.  Trigger a scan and
--- validate that configuration is sane.
-select gp_request_fts_probe_scan();
- gp_request_fts_probe_scan 
----------------------------
- t
-(1 row)
 
 select count(*) = 2 as in_sync from gp_segment_configuration
 where content = 0 and mode = 's';

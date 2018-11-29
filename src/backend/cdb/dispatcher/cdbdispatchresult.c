@@ -15,7 +15,6 @@
  */
 
 #include "postgres.h"
-#include <pthread.h>
 
 #include "libpq-fe.h"		/* prerequisite for libpq-int.h */
 #include "libpq-int.h"		/* PQExpBufferData */
@@ -29,12 +28,6 @@
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbdispatchresult.h"
 #include "commands/tablecmds.h"
-
-/*
- * This mutex serializes writes by dispatcher threads to the
- * iFirstError and errcode fields of CdbDispatchResults objects.
- */
-static pthread_mutex_t setErrcodeMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int cdbdisp_snatchPGresults(CdbDispatchResult *dispatchResult,
 						struct pg_result **pgresultptrs, int maxresults);
@@ -203,8 +196,6 @@ cdbdisp_resetResult(CdbDispatchResult *dispatchResult)
 /*
  * Take note of an error.
  * 'errcode' is the ERRCODE_xxx value for setting the client's SQLSTATE.
- * NB: This can be called from a dispatcher thread, so it must not use
- * palloc/pfree or elog/ereport because they are not thread safe.
  */
 void
 cdbdisp_seterrcode(int errcode, /* ERRCODE_xxx or 0 */
@@ -257,69 +248,9 @@ cdbdisp_seterrcode(int errcode, /* ERRCODE_xxx or 0 */
 			 (meleeResults->errcode == ERRCODE_GP_INTERCONNECTION_ERROR &&
 			  errcode != ERRCODE_GP_INTERCONNECTION_ERROR))
 	{
-		pthread_mutex_lock(&setErrcodeMutex);
-		if (meleeResults->errcode == 0 ||
-			(meleeResults->errcode == ERRCODE_GP_INTERCONNECTION_ERROR &&
-			 errcode != ERRCODE_GP_INTERCONNECTION_ERROR))
-		{
-			meleeResults->errcode = errcode;
-			meleeResults->iFirstError = dispatchResult->meleeIndex;
-		}
-		pthread_mutex_unlock(&setErrcodeMutex);
+		meleeResults->errcode = errcode;
+		meleeResults->iFirstError = dispatchResult->meleeIndex;
 	}
-}
-
-/*
- * Format a message, printf-style, and append to the error_message buffer.
- * Also write it to stderr if logging is enabled for messages of the
- * given severity level 'elevel' (for example, DEBUG1; or 0 to suppress).
- * 'errcode' is the ERRCODE_xxx value for setting the client's SQLSTATE.
- * NB: This can be called from a dispatcher thread, so it must not use
- * palloc/pfree or elog/ereport because they are not thread safe.
- */
-void
-cdbdisp_appendMessage(CdbDispatchResult *dispatchResult,
-					  int elevel, const char *fmt,...)
-{
-	va_list		args;
-	int			msgoff;
-
-	/*
-	 * Remember first error.
-	 */
-	cdbdisp_seterrcode(ERRCODE_GP_INTERCONNECTION_ERROR, -1, dispatchResult);
-
-	/*
-	 * Allocate buffer if first message. Insert newline between previous
-	 * message and new one.
-	 */
-	Assert(dispatchResult->error_message != NULL);
-	oneTrailingNewlinePQ(dispatchResult->error_message);
-
-	msgoff = dispatchResult->error_message->len;
-
-	/*
-	 * Format the message and append it to the buffer.
-	 */
-	va_start(args, fmt);
-	appendPQExpBufferVA(dispatchResult->error_message, fmt, args);
-	va_end(args);
-
-	/*
-	 * Display the message on stderr for debugging, if requested. This helps
-	 * to clarify the actual timing of threaded events.
-	 */
-	if (elevel >= log_min_messages)
-	{
-		oneTrailingNewlinePQ(dispatchResult->error_message);
-		write_log("%s", dispatchResult->error_message->data + msgoff);
-	}
-
-	/*
-	 * In case the caller wants to hand the buffer to ereport(), follow the
-	 * ereport() convention of not ending with a newline.
-	 */
-	noTrailingNewlinePQ(dispatchResult->error_message);
 }
 
 
@@ -734,7 +665,7 @@ cdbdisp_sumRejectedRows(CdbDispatchResults *results)
 	CdbDispatchResult *dispatchResult;
 	CdbDispatchResult *resultEnd = cdbdisp_resultEnd(results, -1);
 	PGresult   *pgresult;
-	int			totalRejected = 0;
+	uint64		totalRejected = 0;
 
 	for (dispatchResult = cdbdisp_resultBegin(results, -1);
 		 dispatchResult < resultEnd; ++dispatchResult)
@@ -942,7 +873,7 @@ cdbdisp_makeDispatchResults(CdbDispatcherState *ds,
 	Assert(DispatcherContext);
 	oldContext = MemoryContextSwitchTo(DispatcherContext);
 
-	resultCapacity = largestGangsize() * sliceCapacity;
+	resultCapacity = ds->largestGangSize * sliceCapacity;
 	nbytes = resultCapacity * sizeof(results->resultArray[0]);
 
 	results = palloc0(sizeof(*results));

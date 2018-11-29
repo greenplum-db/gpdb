@@ -574,7 +574,6 @@ Check constraints:
     "constraint_pt3_day_check" CHECK (day > 0)
     "constraint_pt3_month_check" CHECK (month > 0)
 Inherits: constraint_pt3_1_prt_2_2_prt_3
-Has OIDs: no
 Distributed by: (id)
 Options: appendonly=true
 

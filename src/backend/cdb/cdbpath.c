@@ -13,6 +13,7 @@
  */
 #include "postgres.h"
 
+#include "access/skey.h"
 #include "catalog/pg_operator.h"
 #include "catalog/pg_proc.h"	/* CDB_PROC_TIDTOI8 */
 #include "catalog/pg_type.h"	/* INT8OID */
@@ -32,11 +33,8 @@
 #include "cdb/cdbhash.h"		/* isGreenplumDbHashable() */
 
 #include "cdb/cdbpath.h"		/* me */
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
-
-#ifdef small					/* <socket.h> might #define small */
-#undef small					/* but I want it for a variable name */
-#endif
 
 
 /*
@@ -57,6 +55,7 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 		! IsA(subpath, IndexPath) && 
 		! IsA(subpath, UniquePath) &&
 		CdbPathLocus_IsReplicated(motionpath->path.locus))
+		/* FIXME: should use other.numsegments instead of cdbpath_segments */
 		motionpath->path.rows = subpath->rows * root->config->cdbpath_segments;
 	else
 		motionpath->path.rows = subpath->rows;
@@ -100,21 +99,40 @@ cdbpath_create_motion_path(PlannerInfo *root,
 						   CdbPathLocus locus)
 {
 	CdbMotionPath *pathnode;
+	int numsegments;
 
 	UnusedArg(root);
 	Assert(cdbpathlocus_is_valid(locus) &&
 		   cdbpathlocus_is_valid(subpath->locus));
 
+	numsegments = CdbPathLocus_CommonSegments(subpath->locus, locus);
+	Assert(numsegments > 0);
+
 	/* Moving subpath output to a single executor process (qDisp or qExec)? */
 	if (CdbPathLocus_IsBottleneck(locus))
 	{
-		/* entry-->entry or singleQE-->singleQE?  No motion needed. */
-		if (CdbPathLocus_IsEqual(subpath->locus, locus))
+		/* entry-->entry?  No motion needed. */
+		if (CdbPathLocus_IsEntry(subpath->locus) &&
+			CdbPathLocus_IsEntry(locus))
+		{
+			/* FIXME: how to reach here? what's the proper value for numsegments? */
+			subpath->locus.numsegments = GP_POLICY_ENTRY_NUMSEGMENTS;
 			return subpath;
+		}
+		/* singleQE-->singleQE?  No motion needed. */
+		if (CdbPathLocus_IsSingleQE(subpath->locus) &&
+			CdbPathLocus_IsSingleQE(locus))
+		{
+			subpath->locus.numsegments = numsegments;
+			return subpath;
+		}
 
 		/* entry-->singleQE?  Don't move.  Slice's QE will run on entry db. */
 		if (CdbPathLocus_IsEntry(subpath->locus))
+		{
+			subpath->locus.numsegments = numsegments;
 			return subpath;
+		}
 
 		/* singleQE-->entry?  Don't move.  Slice's QE will run on entry db. */
 		if (CdbPathLocus_IsSingleQE(subpath->locus))
@@ -134,6 +152,8 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.rows = subpath->rows;
 			pathnode->path.pathkeys = pathkeys;
 			pathnode->subpath = subpath;
+
+			Assert(pathnode->path.locus.numsegments > 0);
 
 			/* Costs, etc, are same as subpath. */
 			pathnode->path.startup_cost = subpath->total_cost;
@@ -165,6 +185,8 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			pathnode->path.pathkeys = pathkeys;
 			pathnode->subpath = subpath;
 
+			Assert(pathnode->path.locus.numsegments > 0);
+
 			/* Costs, etc, are same as subpath. */
 			pathnode->path.startup_cost = subpath->total_cost;
 			pathnode->path.total_cost = subpath->total_cost;
@@ -178,7 +200,15 @@ cdbpath_create_motion_path(PlannerInfo *root,
 
 		/* No motion needed if subpath can run anywhere giving same output. */
 		if (CdbPathLocus_IsGeneral(subpath->locus))
+		{
+			if (CdbPathLocus_NumSegments(subpath->locus) <
+				CdbPathLocus_NumSegments(locus))
+			{
+				/* FIXME: is a motion needed? */
+			}
+			subpath->locus.numsegments = numsegments;
 			return subpath;
+		}
 
 		/* Fail if caller refuses motion. */
 		if (require_existing_order &&
@@ -223,7 +253,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		if (CdbPathLocus_IsPartitioned(locus))
 		{
 			/* No motion if subpath partitioning matches caller's request. */
-			if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal, subpath->locus, locus))
+			if (cdbpathlocus_equal(subpath->locus, locus))
 				return subpath;
 		}
 
@@ -248,7 +278,10 @@ cdbpath_create_motion_path(PlannerInfo *root,
 		/* No motion needed if general-->general or general-->replicated. */
 		if (CdbPathLocus_IsGeneral(locus) ||
 			CdbPathLocus_IsReplicated(locus))
+		{
+			subpath->locus.numsegments = numsegments;
 			return subpath;
+		}
 
 		/* Must be general-->partitioned. */
 		if (!CdbPathLocus_IsPartitioned(locus))
@@ -268,11 +301,37 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	{
 		/* No-op if replicated-->replicated. */
 		if (CdbPathLocus_IsReplicated(locus))
+		{
+			Assert(CdbPathLocus_NumSegments(locus) <=
+				   CdbPathLocus_NumSegments(subpath->locus));
+			subpath->locus.numsegments = numsegments;
 			return subpath;
+		}
 
 		/* Other destinations aren't used or supported at present. */
 		goto invalid_motion_request;
 	}
+
+	/* Most motions from SegmentGeneral (replicated table) are disallowed */
+	else if (CdbPathLocus_IsSegmentGeneral(subpath->locus))
+	{
+		/*
+		 * The only allowed case is a SegmentGeneral to Hashed motion,
+		 * and SegmentGeneral's numsegments is smaller than Hashed's.
+		 * In such a case we redistribute SegmentGeneral to Hashed.
+		 *
+		 * FIXME: HashedOJ?
+		 */
+		if (CdbPathLocus_IsHashed(locus) &&
+			(CdbPathLocus_NumSegments(locus) >
+			 CdbPathLocus_NumSegments(subpath->locus)))
+		{
+			pathkeys = subpath->pathkeys;
+		}
+		else
+			goto invalid_motion_request;
+	}
+
 	else
 		goto invalid_motion_request;
 
@@ -333,33 +392,32 @@ typedef struct
 
 
 /*
- * A helper function to create a PathKey for an EquivalenceClass. This is used
- * to construct a PathKey in a hash locus, rather than sort ordering, so we
- * don't care about the particular opfamily being used, the strategy, nor
- * nulls_first.
+ * A helper function to create a DistributionKey for an EquivalenceClass.
  */
-static PathKey *
-makePathKeyForEC(EquivalenceClass *eclass)
+static DistributionKey *
+makeDistributionKeyForEC(EquivalenceClass *eclass)
 {
-	PathKey    *pk = makeNode(PathKey);
+	DistributionKey *dk = makeNode(DistributionKey);
 
-	pk->pk_eclass = eclass;
-	pk->pk_opfamily = linitial_oid(eclass->ec_opfamilies);
-	pk->pk_strategy = BTLessStrategyNumber;
-	pk->pk_nulls_first = false;
+	dk->dk_eclasses = list_make1(eclass);
 
-	return pk;
+	return dk;
 }
 
 static bool
-cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
-									ListCell *partkeycell)
+cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
+									ListCell *distkeycell)
 {
-	PathKey    *copathkey;
+	DistributionKey *distkey = (DistributionKey *) lfirst(distkeycell);
+	DistributionKey *codistkey;
+	ListCell   *cell;
 	ListCell   *rcell;
 
+	Assert(CdbPathLocus_IsHashed(ctx->locus) ||
+		   CdbPathLocus_IsHashedOJ(ctx->locus));
+
 	/*----------------
-	 * Is there a "<partkey item> = <constant expr>" predicate?
+	 * Is there a "<distkey item> = <constant expr>" predicate?
 	 *
 	 * If table T is distributed on cols (C,D,E) and query contains preds
 	 *		T.C = U.A AND T.D = <constant expr> AND T.E = U.B
@@ -370,35 +428,21 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 	 * because it isn't a join pred.)
 	 *----------------
 	 */
-	copathkey = NULL;
+	codistkey = NULL;
 
-	if (ctx->locus.locustype == CdbLocusType_Hashed)
+	foreach(cell, distkey->dk_eclasses)
 	{
-		PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
+		EquivalenceClass *ec = (EquivalenceClass *) lfirst(cell);
 
-		if (CdbPathkeyEqualsConstant(pathkey))
-			copathkey = pathkey;
-	}
-	else if (ctx->locus.locustype == CdbLocusType_HashedOJ)
-	{
-		List	   *sublist = (List *) lfirst(partkeycell);
-		ListCell   *cell;
-
-		foreach(cell, sublist)
+		if (CdbEquivClassIsConstant(ec))
 		{
-			PathKey    *pathkey = (PathKey *) lfirst(cell);
-
-			if (CdbPathkeyEqualsConstant(pathkey))
-			{
-				copathkey = pathkey;
-				break;
-			}
+			codistkey = distkey;
+			break;
 		}
 	}
-	else
-		elog(ERROR, "unexpected locus type: %u", ctx->locus.locustype);
-	/* Look for an equijoin comparison to the partkey item. */
-	if (!copathkey)
+
+	/* Look for an equijoin comparison to the distkey item. */
+	if (!codistkey)
 	{
 		foreach(rcell, ctx->mergeclause_list)
 		{
@@ -407,8 +451,8 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 			ListCell   *i;
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
-			if (!rinfo->left_ec)
-				update_mergeclause_eclasses(ctx->root, rinfo);
+			Assert(rinfo->left_ec);
+			update_mergeclause_eclasses(ctx->root, rinfo);
 
 			if (bms_is_subset(rinfo->right_relids, ctx->path->parent->relids))
 			{
@@ -422,44 +466,32 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 				Assert(bms_is_subset(rinfo->left_relids, ctx->path->parent->relids));
 			}
 
-			if (CdbPathLocus_IsHashed(ctx->locus))
+			foreach(i, distkey->dk_eclasses)
 			{
-				PathKey    *pathkey = (PathKey *) lfirst(partkeycell);
+				EquivalenceClass *dk_eclass = (EquivalenceClass *) lfirst(i);
 
-				if (pathkey->pk_eclass == a_ec)
-					copathkey = makePathKeyForEC(b_ec);
-			}
-			else if (CdbPathLocus_IsHashedOJ(ctx->locus))
-			{
-				List	   *sublist = (List *) lfirst(partkeycell);
-
-				foreach(i, sublist)
-				{
-					PathKey    *pathkey = (PathKey *) lfirst(i);
-
-					if (pathkey->pk_eclass == a_ec)
-						copathkey = makePathKeyForEC(b_ec); /* break earlier? */
-				}
+				if (dk_eclass == a_ec)
+					codistkey = makeDistributionKeyForEC(b_ec); /* break earlier? */
 			}
 
-			if (copathkey)
+			if (codistkey)
 				break;
 		}
-
-		/* Fail if didn't find a match for this partkey item. */
-		if (!copathkey)
-			return false;
 	}
 
+	/* Fail if didn't find a match for this distkey item. */
+	if (!codistkey)
+		return false;
+
 	/* Might need to build co-locus if locus is outer join source or result. */
-	if (copathkey != lfirst(partkeycell))
+	if (codistkey != lfirst(distkeycell))
 		ctx->colocus_eq_locus = false;
 
 	/* Match remaining partkey items. */
-	partkeycell = lnext(partkeycell);
-	if (partkeycell)
+	distkeycell = lnext(distkeycell);
+	if (distkeycell)
 	{
-		if (!cdbpath_match_preds_to_partkey_tail(ctx, partkeycell))
+		if (!cdbpath_match_preds_to_distkey_tail(ctx, distkeycell))
 			return false;
 	}
 
@@ -468,17 +500,12 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
 	{
 		if (ctx->colocus_eq_locus)
 			*ctx->colocus = ctx->locus;
-		else if (!partkeycell)
-			CdbPathLocus_MakeHashed(ctx->colocus, list_make1(copathkey));
+		else if (!distkeycell)
+			CdbPathLocus_MakeHashed(ctx->colocus, list_make1(codistkey),
+									CdbPathLocus_NumSegments(ctx->locus));
 		else
 		{
-			if (CdbPathLocus_IsHashed(*ctx->colocus))
-				ctx->colocus->partkey_h = lcons(copathkey, ctx->colocus->partkey_h);
-			else
-			{
-				Assert(CdbPathLocus_IsHashedOJ(*ctx->colocus));
-				ctx->colocus->partkey_oj = lcons(copathkey, ctx->colocus->partkey_oj);
-			}
+			ctx->colocus->distkey = lcons(codistkey, ctx->colocus->distkey);
 			Assert(cdbpathlocus_is_valid(*ctx->colocus));
 		}
 	}
@@ -500,7 +527,7 @@ cdbpath_match_preds_to_partkey_tail(CdbpathMatchPredsContext *ctx,
  *          find_mergeclauses_for_pathkeys() in pathkeys.c
  */
 static bool
-cdbpath_match_preds_to_partkey(PlannerInfo *root,
+cdbpath_match_preds_to_distkey(PlannerInfo *root,
 							   List *mergeclause_list,
 							   Path *path,
 							   CdbPathLocus locus,
@@ -521,38 +548,36 @@ cdbpath_match_preds_to_partkey(PlannerInfo *root,
 	ctx.colocus = colocus;
 	ctx.colocus_eq_locus = true;
 
-	if (CdbPathLocus_IsHashed(locus))
-		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_h));
-	else
-		return cdbpath_match_preds_to_partkey_tail(&ctx, list_head(locus.partkey_oj));
-}								/* cdbpath_match_preds_to_partkey */
+	return cdbpath_match_preds_to_distkey_tail(&ctx, list_head(locus.distkey));
+}
 
 
 /*
- * cdbpath_match_preds_to_both_partkeys
+ * cdbpath_match_preds_to_both_distkeys
  *
  * Returns true if the mergeclause_list contains equijoin
- * predicates between each item of the outer_locus partkey and
- * the corresponding item of the inner_locus partkey.
+ * predicates between each item of the outer_locus distkey and
+ * the corresponding item of the inner_locus distkey.
  *
  * Readers may refer also to these related functions:
  *          select_mergejoin_clauses() in joinpath.c
  *          find_mergeclauses_for_pathkeys() in pathkeys.c
  */
 static bool
-cdbpath_match_preds_to_both_partkeys(PlannerInfo *root,
+cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 									 List *mergeclause_list,
 									 CdbPathLocus outer_locus,
 									 CdbPathLocus inner_locus)
 {
 	ListCell   *outercell;
 	ListCell   *innercell;
-	List	   *outer_partkey;
-	List	   *inner_partkey;
+	List	   *outer_distkey;
+	List	   *inner_distkey;
 
 	if (!mergeclause_list ||
-		CdbPathLocus_Degree(outer_locus) == 0 || CdbPathLocus_Degree(inner_locus) == 0 ||
-		CdbPathLocus_Degree(outer_locus) != CdbPathLocus_Degree(inner_locus))
+		CdbPathLocus_NumSegments(outer_locus) != CdbPathLocus_NumSegments(inner_locus) ||
+		outer_locus.distkey == NIL || inner_locus.distkey == NIL ||
+		list_length(outer_locus.distkey) != list_length(inner_locus.distkey))
 		return false;
 
 	Assert(CdbPathLocus_IsHashed(outer_locus) ||
@@ -560,48 +585,48 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo *root,
 	Assert(CdbPathLocus_IsHashed(inner_locus) ||
 		   CdbPathLocus_IsHashedOJ(inner_locus));
 
-	if (CdbPathLocus_IsHashed(outer_locus))
-		outer_partkey = outer_locus.partkey_h;
-	else
-		outer_partkey = outer_locus.partkey_oj;
+	outer_distkey = outer_locus.distkey;
+	inner_distkey = inner_locus.distkey;
 
-	if (CdbPathLocus_IsHashed(inner_locus))
-		inner_partkey = inner_locus.partkey_h;
-	else
-		inner_partkey = inner_locus.partkey_oj;
-
-	forboth(outercell, outer_partkey, innercell, inner_partkey)
+	forboth(outercell, outer_distkey, innercell, inner_distkey)
 	{
-		List	   *outersublist = (List *) lfirst(outercell);
-		List	   *innersublist = (List *) lfirst(innercell);
+		DistributionKey *outer_dk = (DistributionKey *) lfirst(outercell);
+		DistributionKey *inner_dk = (DistributionKey *) lfirst(innercell);
 		ListCell   *rcell;
 
 		foreach(rcell, mergeclause_list)
 		{
 			bool		not_found = false;
 			RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
+			ListCell   *i;
 
 			if (!rinfo->left_ec)
 				update_mergeclause_eclasses(root, rinfo);
 
-			/* Skip predicate if neither side matches outer partkey item. */
-			if (CdbPathLocus_IsHashed(outer_locus))
+			/* Skip predicate if neither side matches outer distkey item. */
+			foreach(i, outer_dk->dk_eclasses)
 			{
-				PathKey    *pathkey = (PathKey *) outersublist;
+				EquivalenceClass *outer_ec = (EquivalenceClass *) lfirst(i);
 
-				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					continue;
+				if (outer_ec != rinfo->left_ec && outer_ec != rinfo->right_ec)
+				{
+					not_found = true;
+					break;
+				}
 			}
-			else
+			if (not_found)
+				continue;
+
+			/* Skip predicate if neither side matches inner distkey item. */
+			if (inner_dk != outer_dk)
 			{
-				Assert(CdbPathLocus_IsHashedOJ(outer_locus));
 				ListCell   *i;
 
-				foreach(i, outersublist)
+				foreach(i, inner_dk->dk_eclasses)
 				{
-					PathKey    *pathkey = (PathKey *) lfirst(i);
+					EquivalenceClass *inner_ec = (EquivalenceClass *) lfirst(i);
 
-					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
+					if (inner_ec != rinfo->left_ec && inner_ec != rinfo->right_ec)
 					{
 						not_found = true;
 						break;
@@ -611,46 +636,16 @@ cdbpath_match_preds_to_both_partkeys(PlannerInfo *root,
 					continue;
 			}
 
-			/* Skip predicate if neither side matches inner partkey item. */
-			if (innersublist == outersublist)
-			{
-			}					/* do nothing */
-			else if (CdbPathLocus_IsHashed(inner_locus))
-			{
-				PathKey    *pathkey = (PathKey *) innersublist;
-
-				if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					continue;
-			}
-			else
-			{
-				Assert(CdbPathLocus_IsHashedOJ(inner_locus));
-				ListCell   *i;
-
-				foreach(i, innersublist)
-				{
-					PathKey    *pathkey = (PathKey *) lfirst(i);
-
-					if (pathkey->pk_eclass != rinfo->left_ec && pathkey->pk_eclass != rinfo->right_ec)
-					{
-						not_found = true;
-						break;
-					}
-				}
-				if (not_found)
-					continue;
-			}
-
-			/* Found equijoin between outer partkey item & inner partkey item */
+			/* Found equijoin between outer distkey item & inner distkey item */
 			break;
 		}
 
-		/* Fail if didn't find equijoin between this pair of partkey items. */
+		/* Fail if didn't find equijoin between this pair of distkey items. */
 		if (!rcell)
 			return false;
 	}
 	return true;
-}								/* cdbpath_match_preds_to_both_partkeys */
+}								/* cdbpath_match_preds_to_both_distkeys */
 
 
 
@@ -679,7 +674,7 @@ cdbpath_eclass_isGreenplumDbHashable(EquivalenceClass *ec)
 
 
 /*
- * cdbpath_partkeys_from_preds
+ * cdbpath_distkeys_from_preds
  *
  * Makes a CdbPathLocus for repartitioning, driven by
  * the equijoin predicates in the mergeclause_list (a List of RestrictInfo).
@@ -690,25 +685,24 @@ cdbpath_eclass_isGreenplumDbHashable(EquivalenceClass *ec)
  *      make_pathkeys_for_mergeclauses() in pathkeys.c
  */
 static bool
-cdbpath_partkeys_from_preds(PlannerInfo *root,
+cdbpath_distkeys_from_preds(PlannerInfo *root,
 							List *mergeclause_list,
 							Path *a_path,
 							CdbPathLocus *a_locus,	/* OUT */
 							CdbPathLocus *b_locus)	/* OUT */
 {
-	List	   *a_partkey = NIL;
-	List	   *b_partkey = NIL;
+	List	   *a_distkeys = NIL;
+	List	   *b_distkeys = NIL;
 	ListCell   *rcell;
 
 	foreach(rcell, mergeclause_list)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
 
-		if (!rinfo->left_ec)
-		{
-			update_mergeclause_eclasses(root, rinfo);
-			Assert(rinfo->left_ec);
-		}
+		Assert(rinfo->left_ec != NULL);
+		Assert(rinfo->right_ec != NULL);
+
+		update_mergeclause_eclasses(root, rinfo);
 
 		/*
 		 * skip non-hashable keys
@@ -720,16 +714,24 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 		}
 
 		/* Left & right pathkeys are usually the same... */
-		if (!b_partkey && rinfo->left_ec == rinfo->right_ec)
+		if (!b_distkeys && rinfo->left_ec == rinfo->right_ec)
 		{
 			ListCell   *i;
 			bool        found = false;
 
-			foreach(i, a_partkey)
+			foreach(i, a_distkeys)
 			{
-				PathKey    *pathkey = (PathKey *) lfirst(i);
+				DistributionKey *distkey = (DistributionKey *) lfirst(i);
+				EquivalenceClass *dk_eclass;
 
-				if (pathkey->pk_eclass == rinfo->left_ec)
+				/*
+				 * we only create Hashed DistributionKeys with a single eclass
+				 * in this function.
+				 */
+				Assert(list_length(distkey->dk_eclasses) == 1);
+				dk_eclass = (EquivalenceClass *) linitial(distkey->dk_eclasses);
+
+				if (dk_eclass == rinfo->left_ec)
 				{
 					found = true;
 					break;
@@ -737,8 +739,8 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 			}
 			if (!found)
 			{
-				PathKey    *a_pk = makePathKeyForEC(rinfo->left_ec);
-				a_partkey = lappend(a_partkey, a_pk);
+				DistributionKey *a_dk = makeDistributionKeyForEC(rinfo->left_ec);
+				a_distkeys = lappend(a_distkeys, a_dk);
 			}
 		}
 
@@ -749,7 +751,6 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 			EquivalenceClass *b_ec;
 			ListCell   *i;
 			bool		found = false;
-
 
 			if (bms_is_subset(rinfo->right_relids, a_path->parent->relids))
 			{
@@ -767,15 +768,23 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 				b_ec = a_ec;
 
 			/*
-			 * Convoluted logic to ensure that (a_ec not in a_partkey) AND
-			 * (b_ec not in b_partkey)
+			 * Convoluted logic to ensure that (a_ec not in a_distkeys) AND
+			 * (b_ec not in b_distkeys)
 			 */
 			found = false;
-			foreach(i, a_partkey)
+			foreach(i, a_distkeys)
 			{
-				PathKey    *pathkey = (PathKey *) lfirst(i);
+				DistributionKey *distkey = (DistributionKey *) lfirst(i);
+				EquivalenceClass *dk_eclass;
 
-				if (pathkey->pk_eclass == a_ec)
+				/*
+				 * we only create Hashed DistributionKeys with a single eclass
+				 * in this function.
+				 */
+				Assert(list_length(distkey->dk_eclasses) == 1);
+				dk_eclass = (EquivalenceClass *) linitial(distkey->dk_eclasses);
+
+				if (dk_eclass == a_ec)
 				{
 					found = true;
 					break;
@@ -783,11 +792,19 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 			}
 			if (!found)
 			{
-				foreach(i, b_partkey)
+				foreach(i, b_distkeys)
 				{
-					PathKey    *pathkey = (PathKey *) lfirst(i);
+					DistributionKey *distkey = (DistributionKey *) lfirst(i);
+					EquivalenceClass *dk_eclass;
 
-					if (pathkey->pk_eclass == b_ec)
+					/*
+					 * we only create Hashed DistributionKeys with a single eclass
+					 * in this function.
+					 */
+					Assert(list_length(distkey->dk_eclasses) == 1);
+					dk_eclass = (EquivalenceClass *) linitial(distkey->dk_eclasses);
+
+					if (dk_eclass == b_ec)
 					{
 						found = true;
 						break;
@@ -797,28 +814,32 @@ cdbpath_partkeys_from_preds(PlannerInfo *root,
 
 			if (!found)
 			{
-				PathKey    *a_pk = makePathKeyForEC(a_ec);
-				PathKey    *b_pk = makePathKeyForEC(b_ec);
+				DistributionKey *a_dk = makeDistributionKeyForEC(a_ec);
+				DistributionKey *b_dk = makeDistributionKeyForEC(b_ec);
 
-				a_partkey = lappend(a_partkey, a_pk);
-				b_partkey = lappend(b_partkey, b_pk);
+				a_distkeys = lappend(a_distkeys, a_dk);
+				b_distkeys = lappend(b_distkeys, b_dk);
 			}
 		}
 
-		if (list_length(a_partkey) >= 20)
+		if (list_length(a_distkeys) >= 20)
 			break;
 	}
 
-	if (!a_partkey)
+	if (!a_distkeys)
 		return false;
 
-	CdbPathLocus_MakeHashed(a_locus, a_partkey);
-	if (b_partkey)
-		CdbPathLocus_MakeHashed(b_locus, b_partkey);
+	/*
+	 * Callers of this functions must correct numsegments themselves
+	 */
+
+	CdbPathLocus_MakeHashed(a_locus, a_distkeys, __GP_POLICY_EVIL_NUMSEGMENTS);
+	if (b_distkeys)
+		CdbPathLocus_MakeHashed(b_locus, b_distkeys, __GP_POLICY_EVIL_NUMSEGMENTS);
 	else
 		*b_locus = *a_locus;
 	return true;
-}								/* cdbpath_partkeys_from_preds */
+}								/* cdbpath_distkeys_from_preds */
 
 
 /*
@@ -857,19 +878,24 @@ cdbpath_motion_for_join(PlannerInfo *root,
 {
 	CdbpathMfjRel outer;
 	CdbpathMfjRel inner;
+	int			numsegments;
 
 	outer.path = *p_outer_path;
 	inner.path = *p_inner_path;
 	outer.locus = outer.path->locus;
 	inner.locus = inner.path->locus;
-	CdbPathLocus_MakeNull(&outer.move_to);
-	CdbPathLocus_MakeNull(&inner.move_to);
+	CdbPathLocus_MakeNull(&outer.move_to,
+						  CdbPathLocus_NumSegments(outer.path->locus));
+	CdbPathLocus_MakeNull(&inner.move_to,
+						  CdbPathLocus_NumSegments(inner.path->locus));
 
 	Assert(cdbpathlocus_is_valid(outer.locus));
 	Assert(cdbpathlocus_is_valid(inner.locus));
 
 	outer.has_wts = cdbpath_contains_wts(outer.path);
 	inner.has_wts = cdbpath_contains_wts(inner.path);
+
+	/* FIXME: special optimization for numsegments=1 */
 
 	/* For now, inner path should not contain WorkTableScan */
 	Assert(!inner.has_wts);
@@ -879,8 +905,9 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	 * unfortunately we have to pretend that inner is randomly distributed,
 	 * otherwise we may end up with redistributing outer rel.
 	 */
-	if (outer.has_wts && CdbPathLocus_Degree(inner.locus) != 0)
-		CdbPathLocus_MakeStrewn(&inner.locus);
+	if (outer.has_wts && inner.locus.distkey != NIL)
+		CdbPathLocus_MakeStrewn(&inner.locus,
+								CdbPathLocus_NumSegments(inner.locus));
 
 	/*
 	 * Caller can specify an ordering for each source path that is the same as
@@ -898,6 +925,7 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	 *
 	 * Path that contains WorkTableScan cannot be replicated.
 	 */
+	/* ok_to_replicate means broadcast */
 	outer.ok_to_replicate = !outer.has_wts;
 	inner.ok_to_replicate = true;
 	switch (jointype)
@@ -942,10 +970,12 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	{
 		if (!outer.ok_to_replicate &&
 			CdbPathLocus_IsPartitioned(inner.locus))
-			CdbPathLocus_MakeSingleQE(&inner.move_to);
+			CdbPathLocus_MakeSingleQE(&inner.move_to,
+									  CdbPathLocus_NumSegments(inner.locus));
 		else if (!outer.ok_to_replicate &&
 			CdbPathLocus_IsSegmentGeneral(inner.locus))
-			CdbPathLocus_MakeSingleQE(&inner.move_to);
+			CdbPathLocus_MakeSingleQE(&inner.move_to,
+									  CdbPathLocus_NumSegments(inner.locus));
 		else
 			return inner.locus;
 	}
@@ -953,10 +983,12 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	{
 		if (!inner.ok_to_replicate &&
 			CdbPathLocus_IsPartitioned(outer.locus))
-			CdbPathLocus_MakeSingleQE(&outer.move_to);
+			CdbPathLocus_MakeSingleQE(&outer.move_to,
+									  CdbPathLocus_NumSegments(outer.locus));
 		else if (!inner.ok_to_replicate &&
 			CdbPathLocus_IsSegmentGeneral(outer.locus))
-			CdbPathLocus_MakeSingleQE(&outer.move_to);
+			CdbPathLocus_MakeSingleQE(&outer.move_to,
+									  CdbPathLocus_NumSegments(outer.locus));
 		else
 			return outer.locus;
 	}
@@ -968,6 +1000,20 @@ cdbpath_motion_for_join(PlannerInfo *root,
 
 		if (CdbPathLocus_IsEqual(outer.locus, inner.locus))
 			return inner.locus;
+		else if (CdbPathLocus_IsSegmentGeneral(outer.locus) &&
+				 CdbPathLocus_IsSegmentGeneral(inner.locus))
+		{
+			/*
+			 * Can join directly on one of the common segments.
+			 */
+			numsegments = CdbPathLocus_CommonSegments(inner.locus,
+													  outer.locus);
+
+			outer.locus.numsegments = numsegments;
+			inner.locus.numsegments = numsegments;
+
+			return inner.locus;
+		}
 
 		if (CdbPathLocus_IsSegmentGeneral(outer.locus))
 		{
@@ -983,6 +1029,33 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		if (CdbPathLocus_IsReplicated(other->locus))
 		{
 			Assert(root->upd_del_replicated_table > 0);
+
+			/*
+			 * It only appear when we UPDATE a replicated table.
+			 * All the segment which replicated table storaged must execute
+			 * the plan to delete tuple on himself, so if the segments count
+			 * of broadcast(locus is Replicated) if less than the replicated
+			 * table, we can not execute the plan correctly.
+			 */
+			Assert(CdbPathLocus_NumSegments(segGeneral->locus) <=
+				   CdbPathLocus_NumSegments(other->locus));
+
+			/*
+			 * FIXME: if "replicate table" in below comments means the
+			 * DISTRIBUTED REPLICATED table then maybe the logic should
+			 * not be put here.
+			 */
+			/*
+			 * execute the plan in the segment which replicate table is
+			 * storaged.
+			 */
+			if (CdbPathLocus_NumSegments(segGeneral->locus) <
+				CdbPathLocus_NumSegments(other->locus))
+			{
+				other->locus.numsegments =
+						CdbPathLocus_NumSegments(segGeneral->locus);
+			}
+
 			return other->locus;
 		}
 
@@ -1004,23 +1077,92 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			bms_is_subset(bms_make_singleton(root->upd_del_replicated_table),
 						  segGeneral->path->parent->relids))
 		{
-			CdbPathLocus_MakeReplicated(&other->move_to);
+			CdbPathLocus_MakeReplicated(&other->move_to,
+										CdbPathLocus_NumSegments(segGeneral->locus));
 		}
 		/*
 		 * other is bottleneck, move inner to other
 		 */
 		else if (CdbPathLocus_IsBottleneck(other->locus))
 		{
+			/*
+			 * if the locus type is equal and segment count is unequal,
+			 * we will dispatch the one on more segments to the other
+			 */
+			numsegments = CdbPathLocus_CommonSegments(segGeneral->locus,
+													  other->locus);
 			segGeneral->move_to = other->locus;
+			segGeneral->move_to.numsegments = numsegments;
 		}
 		else if (!segGeneral->ok_to_replicate)
 		{
+			int numsegments = CdbPathLocus_CommonSegments(segGeneral->locus,
+														  other->locus);
 			/* put both inner and outer to single QE */
-			CdbPathLocus_MakeSingleQE(&segGeneral->move_to);
-			CdbPathLocus_MakeSingleQE(&other->move_to);
+			CdbPathLocus_MakeSingleQE(&segGeneral->move_to, numsegments);
+			CdbPathLocus_MakeSingleQE(&other->move_to, numsegments);
 		}
 		else
-			return other->locus;
+		{
+			/*
+			 * If all other's segments have segGeneral stored, then no motion
+			 * is needed.
+			 *
+			 * A sql to reach here:
+			 *     select * from d2 a join r1 b using (c1);
+			 * where d2 is a replicated table on 2 segment,
+			 *       r1 is a random table on 1 segments.
+			 */
+			if (CdbPathLocus_NumSegments(segGeneral->locus) >=
+				CdbPathLocus_NumSegments(other->locus))
+			{
+				return other->locus;
+			}
+
+			/*
+			 * Otherwise there is some segments where other is on but
+			 * segGeneral is not, in such a case motions are needed.
+			 */
+
+			/*
+			 * For the case that other is a Hashed table and redistribute
+			 * clause matches other's distribute keys, we could redistribute
+			 * segGeneral to other.
+			 */
+			if (CdbPathLocus_IsHashed(other->locus) &&
+				cdbpath_match_preds_to_distkey(root,
+											   redistribution_clauses,
+											   other->path,
+											   other->locus,
+											   &segGeneral->move_to))	/* OUT */
+			{
+				/*
+				 * XXX: if we require replicated tables to be reshuffled
+				 * before any other tables, then we could avoid such a case
+				 */
+
+				/* the result is distributed on the same segments with other */
+				AssertEquivalent(CdbPathLocus_NumSegments(other->locus),
+								 CdbPathLocus_NumSegments(segGeneral->move_to));
+			}
+			/*
+			 * Otherwise gather both of them to a SingleQE, this is not usually
+			 * a best choice as the SingleQE might be on QD, so although the
+			 * overall cost is low it increases the load on QD.
+			 *
+			 * FIXME: is it possible to only gather other to segGeneral?
+			 */
+			else
+			{
+				int numsegments = CdbPathLocus_NumSegments(segGeneral->locus);
+
+				Assert(CdbPathLocus_NumSegments(segGeneral->locus) <
+					   CdbPathLocus_NumSegments(other->locus));
+
+				CdbPathLocus_MakeSingleQE(&segGeneral->move_to, numsegments);
+				CdbPathLocus_MakeSingleQE(&other->move_to, numsegments);
+			}
+		}
 	}
 	/*
 	 * Replicated paths shouldn't occur except UPDATE/DELETE on replicated table.
@@ -1028,7 +1170,8 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	else if (CdbPathLocus_IsReplicated(outer.locus))
 	{
 		if (root->upd_del_replicated_table > 0)
-			CdbPathLocus_MakeReplicated(&inner.move_to);
+			CdbPathLocus_MakeReplicated(&inner.move_to,
+										CdbPathLocus_NumSegments(outer.locus));
 		else
 		{
 			Assert(false);
@@ -1038,7 +1181,8 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	else if (CdbPathLocus_IsReplicated(inner.locus))
 	{
 		if (root->upd_del_replicated_table > 0)
-			CdbPathLocus_MakeReplicated(&outer.move_to);
+			CdbPathLocus_MakeReplicated(&outer.move_to,
+										CdbPathLocus_NumSegments(inner.locus));
 		else
 		{
 			Assert(false);
@@ -1073,7 +1217,16 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		else if (CdbPathLocus_IsSingleQE(single->locus))
 		{
 			if (CdbPathLocus_IsBottleneck(other->locus))
+			{
+				/*
+				 * Can join directly on one of the common segments.
+				 */
+				numsegments = CdbPathLocus_CommonSegments(outer.locus,
+														  inner.locus);
+
+				other->locus.numsegments = numsegments;
 				return other->locus;
+			}
 		}
 
 		/* Let 'single' be the source whose locus is singleQE or entry. */
@@ -1094,27 +1247,37 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		}
 
 		/* Redistribute single rel if joining on other rel's partitioning key */
-		else if (cdbpath_match_preds_to_partkey(root,
+		else if (cdbpath_match_preds_to_distkey(root,
 												redistribution_clauses,
 												other->path,
 												other->locus,
 												&single->move_to))	/* OUT */
 		{
+			AssertEquivalent(CdbPathLocus_NumSegments(other->locus),
+							 CdbPathLocus_NumSegments(single->move_to));
 		}
 
 		/* Replicate single rel if cheaper than redistributing both rels. */
 		else if (single->ok_to_replicate &&
-				 single->bytes * root->config->cdbpath_segments < single->bytes + other->bytes)
-			CdbPathLocus_MakeReplicated(&single->move_to);
+				 (single->bytes * CdbPathLocus_NumSegments(other->locus) <
+				  single->bytes + other->bytes))
+			CdbPathLocus_MakeReplicated(&single->move_to,
+										CdbPathLocus_NumSegments(other->locus));
 
 		/* Redistribute both rels on equijoin cols. */
 		else if (!other_immovable &&
-				 cdbpath_partkeys_from_preds(root,
+				 cdbpath_distkeys_from_preds(root,
 											 redistribution_clauses,
 											 single->path,
 											 &single->move_to,	/* OUT */
 											 &other->move_to))	/* OUT */
 		{
+			/*
+			 * Redistribute both to the same segments, here we choose the
+			 * same segments with other.
+			 */
+			single->move_to.numsegments = CdbPathLocus_NumSegments(other->locus);
+			other->move_to.numsegments = CdbPathLocus_NumSegments(other->locus);
 		}
 
 		/*
@@ -1123,11 +1286,13 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		 */
 		else if (single->ok_to_replicate &&
 				 single->bytes < other->bytes)
-			CdbPathLocus_MakeReplicated(&single->move_to);
+			CdbPathLocus_MakeReplicated(&single->move_to,
+										CdbPathLocus_NumSegments(other->locus));
 
 		/* Broadcast single rel if other rel has WorkTableScan */
 		else if (single->ok_to_replicate && other->has_wts)
-			CdbPathLocus_MakeReplicated(&single->move_to);
+			CdbPathLocus_MakeReplicated(&single->move_to,
+										CdbPathLocus_NumSegments(other->locus));
 
 		/* Last resort: Move all partitions of other rel to single QE. */
 		else
@@ -1137,68 +1302,110 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	/*
 	 * No motion if partitioned alike and joining on the partitioning keys.
 	 */
-	else if (cdbpath_match_preds_to_both_partkeys(root, redistribution_clauses,
+	else if (cdbpath_match_preds_to_both_distkeys(root, redistribution_clauses,
 												  outer.locus, inner.locus))
-		return cdbpathlocus_join(outer.locus, inner.locus);
+		return cdbpathlocus_join(jointype, outer.locus, inner.locus);
 
 	/*
 	 * Both sources are partitioned.  Redistribute or replicate one or both.
 	 */
 	else
 	{							/* partitioned */
-		CdbpathMfjRel *large = &outer;
-		CdbpathMfjRel *small = &inner;
+		CdbpathMfjRel *large_rel = &outer;
+		CdbpathMfjRel *small_rel = &inner;
 
 		/* Which rel is bigger? */
-		if (large->bytes < small->bytes)
-			CdbSwap(CdbpathMfjRel *, large, small);
+		if (large_rel->bytes < small_rel->bytes)
+			CdbSwap(CdbpathMfjRel *, large_rel, small_rel);
+
+		/* Both side are distribued in 1 segment, it can join without motion. */
+		if (CdbPathLocus_NumSegments(large_rel->locus) == 1 &&
+			CdbPathLocus_NumSegments(small_rel->locus) == 1)
+			return large_rel->locus;
 
 		/* If joining on larger rel's partitioning key, redistribute smaller. */
-		if (!small->require_existing_order &&
-			cdbpath_match_preds_to_partkey(root,
+		if (!small_rel->require_existing_order &&
+			cdbpath_match_preds_to_distkey(root,
 										   redistribution_clauses,
-										   large->path,
-										   large->locus,
-										   &small->move_to))	/* OUT */
+										   large_rel->path,
+										   large_rel->locus,
+										   &small_rel->move_to))	/* OUT */
 		{
+			AssertEquivalent(CdbPathLocus_NumSegments(large_rel->locus),
+							 CdbPathLocus_NumSegments(small_rel->move_to));
 		}
 
 		/*
 		 * Replicate smaller rel if cheaper than redistributing larger rel.
 		 * But don't replicate a rel that is to be preserved in outer join.
 		 */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate &&
-				 small->bytes * root->config->cdbpath_segments < large->bytes)
-			CdbPathLocus_MakeReplicated(&small->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate &&
+				 (small_rel->bytes * CdbPathLocus_NumSegments(large_rel->locus) <
+				  large_rel->bytes))
+			CdbPathLocus_MakeReplicated(&small_rel->move_to,
+										CdbPathLocus_NumSegments(large_rel->locus));
+
+		/*
+		 * Replicate larger rel if cheaper than redistributing smaller rel.
+		 * But don't replicate a rel that is to be preserved in outer join.
+		 */
+		else if (!large_rel->require_existing_order &&
+				 large_rel->ok_to_replicate &&
+				 (large_rel->bytes * CdbPathLocus_NumSegments(small_rel->locus) <
+				  small_rel->bytes))
+			CdbPathLocus_MakeReplicated(&large_rel->move_to,
+										CdbPathLocus_NumSegments(small_rel->locus));
 
 		/* If joining on smaller rel's partitioning key, redistribute larger. */
-		else if (!large->require_existing_order &&
-				 cdbpath_match_preds_to_partkey(root,
+		else if (!large_rel->require_existing_order &&
+				 cdbpath_match_preds_to_distkey(root,
 												redistribution_clauses,
-												small->path,
-												small->locus,
-												&large->move_to))	/* OUT */
+												small_rel->path,
+												small_rel->locus,
+												&large_rel->move_to))	/* OUT */
 		{
+			AssertEquivalent(CdbPathLocus_NumSegments(small_rel->locus),
+							 CdbPathLocus_NumSegments(large_rel->move_to));
 		}
 
 		/* Replicate smaller rel if cheaper than redistributing both rels. */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate &&
-				 small->bytes * root->config->cdbpath_segments < large->bytes + small->bytes)
-			CdbPathLocus_MakeReplicated(&small->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate &&
+				 (small_rel->bytes * CdbPathLocus_NumSegments(large_rel->locus) <
+				  small_rel->bytes + large_rel->bytes))
+			CdbPathLocus_MakeReplicated(&small_rel->move_to,
+										CdbPathLocus_NumSegments(large_rel->locus));
+
+		/* Replicate largeer rel if cheaper than redistributing both rels. */
+		else if (!large_rel->require_existing_order &&
+				 large_rel->ok_to_replicate &&
+				 (large_rel->bytes * CdbPathLocus_NumSegments(small_rel->locus) <
+				  large_rel->bytes + small_rel->bytes))
+			CdbPathLocus_MakeReplicated(&large_rel->move_to,
+										CdbPathLocus_NumSegments(small_rel->locus));
 
 		/* Redistribute both rels on equijoin cols. */
-		else if (!small->require_existing_order &&
-				 !small->has_wts &&
-				 !large->require_existing_order &&
-				 !large->has_wts &&
-				 cdbpath_partkeys_from_preds(root,
+		else if (!small_rel->require_existing_order &&
+				 !small_rel->has_wts &&
+				 !large_rel->require_existing_order &&
+				 !large_rel->has_wts &&
+				 cdbpath_distkeys_from_preds(root,
 											 redistribution_clauses,
-											 large->path,
-											 &large->move_to,
-											 &small->move_to))
+											 large_rel->path,
+											 &large_rel->move_to,
+											 &small_rel->move_to))
 		{
+			/*
+			 * the two results should all be distributed on the same segments,
+			 * here we make them the same with common segments for safe
+			 * TODO: how about distribute them both to ALL segments?
+			 */
+			numsegments = CdbPathLocus_CommonSegments(large_rel->locus,
+													  small_rel->locus);
+
+			large_rel->move_to.numsegments = numsegments;
+			small_rel->move_to.numsegments = numsegments;
 		}
 
 		/*
@@ -1206,18 +1413,22 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		 * motion. Replicate one rel if possible. MPP TODO: Consider number of
 		 * seg dbs per host.
 		 */
-		else if (!small->require_existing_order &&
-				 small->ok_to_replicate)
-			CdbPathLocus_MakeReplicated(&small->move_to);
-		else if (!large->require_existing_order &&
-				 large->ok_to_replicate)
-			CdbPathLocus_MakeReplicated(&large->move_to);
+		else if (!small_rel->require_existing_order &&
+				 small_rel->ok_to_replicate)
+			CdbPathLocus_MakeReplicated(&small_rel->move_to,
+										CdbPathLocus_NumSegments(large_rel->locus));
+		else if (!large_rel->require_existing_order &&
+				 large_rel->ok_to_replicate)
+			CdbPathLocus_MakeReplicated(&large_rel->move_to,
+										CdbPathLocus_NumSegments(small_rel->locus));
 
 		/* Last resort: Move both rels to a single qExec. */
 		else
 		{
-			CdbPathLocus_MakeSingleQE(&outer.move_to);
-			CdbPathLocus_MakeSingleQE(&inner.move_to);
+			int numsegments = CdbPathLocus_CommonSegments(outer.locus,
+														  inner.locus);
+			CdbPathLocus_MakeSingleQE(&outer.move_to, numsegments);
+			CdbPathLocus_MakeSingleQE(&inner.move_to, numsegments);
 		}
 	}							/* partitioned */
 
@@ -1256,10 +1467,10 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	*p_inner_path = inner.path;
 
 	/* Tell caller where the join will be done. */
-	return cdbpathlocus_join(outer.path->locus, inner.path->locus);
+	return cdbpathlocus_join(jointype, outer.path->locus, inner.path->locus);
 
 fail:							/* can't do this join */
-	CdbPathLocus_MakeNull(&outer.move_to);
+	CdbPathLocus_MakeNull(&outer.move_to, __GP_POLICY_EVIL_NUMSEGMENTS);
 	return outer.move_to;
 }								/* cdbpath_motion_for_join */
 
@@ -1313,7 +1524,7 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 	List	   *ctid_operators;
 	List	   *other_vars = NIL;
 	List	   *other_operators = NIL;
-	List	   *partkey = NIL;
+	List	   *distkeys = NIL;
 	List	   *eq = NIL;
 	ListCell   *cell;
 	bool		save_need_segment_id = ctx->need_segment_id;
@@ -1379,36 +1590,20 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 		/* ctid? */
 		if (var->varattno == SelfItemPointerAttributeNumber)
 		{
-			/*
-			 * The tid type has a full set of comparison operators, but oddly
-			 * its "=" operator is not marked hashable.  So 'ctid' is directly
-			 * usable for sorted duplicate removal; but we cast it to 64-bit
-			 * integer for hashed duplicate removal.
-			 */
-			if (uniquePath->umethod == UNIQUE_PATH_HASH)
-			{
-				ctid_exprs = lappend(ctid_exprs,
-									 makeFuncExpr(CDB_PROC_TIDTOI8, INT8OID,
-												  list_make1(var),
-												  InvalidOid, InvalidOid,
-												  COERCE_EXPLICIT_CAST));
-				ctid_operators = lappend_oid(ctid_operators, Int8EqualOperator);
-			}
-			else
-			{
-				ctid_exprs = lappend(ctid_exprs, var);
-				ctid_operators = lappend_oid(ctid_operators, TIDEqualOperator);
-			}
+			Assert(var->vartype == TIDOID);
 
-			/* Add to repartitioning key.  Can use tid type without coercion. */
+			ctid_exprs = lappend(ctid_exprs, var);
+			ctid_operators = lappend_oid(ctid_operators, TIDEqualOperator);
+
+			/* Add to repartitioning key. */
 			if (uniquePath->must_repartition)
 			{
-				PathKey    *cpathkey;
+				DistributionKey *cdistkey;
 
 				if (!eq)
 					eq = list_make1(makeString("="));
-				cpathkey = cdb_make_pathkey_for_expr(ctx->root, (Node *) var, eq);
-				partkey = lappend(partkey, cpathkey);
+				cdistkey = cdb_make_distkey_for_expr(ctx->root, (Node *) var, eq);
+				distkeys = lappend(distkeys, cdistkey);
 			}
 		}
 
@@ -1435,8 +1630,9 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 	{
 		CdbPathLocus locus;
 
-		Assert(partkey);
-		CdbPathLocus_MakeHashed(&locus, partkey);
+		Assert(distkeys);
+		CdbPathLocus_MakeHashed(&locus, distkeys,
+								CdbPathLocus_NumSegments(uniquePath->subpath->locus));
 
 		uniquePath->subpath = cdbpath_create_motion_path(ctx->root,
 														 uniquePath->subpath,

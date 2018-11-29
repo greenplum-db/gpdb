@@ -48,6 +48,7 @@ def configure():
     p_env['LDFLAGS'] = '-L/usr/local/gpdb/lib'
     return subprocess.call(["./configure",
                             "--enable-mapreduce",
+                            "--enable-orafce",
                             "--with-gssapi",
                             "--with-perl",
                             "--with-libxml",

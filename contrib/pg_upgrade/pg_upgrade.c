@@ -3,7 +3,7 @@
  *
  *	main source file
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	Portions Copyright (c) 2016-Present, Pivotal Software Inc
  *	contrib/pg_upgrade/pg_upgrade.c
  */
@@ -16,13 +16,12 @@
  *	oids are the same between old and new clusters.  This is important
  *	because toast oids are stored as toast pointers in user tables.
  *
- *	FYI, while pg_class.oid and pg_class.relfilenode are initially the same
- *	in a cluster, but they can diverge due to CLUSTER, REINDEX, or VACUUM
- *	FULL.  The new cluster will have matching pg_class.oid and
- *	pg_class.relfilenode values and be based on the old oid value.  This can
- *	cause the old and new pg_class.relfilenode values to differ.  In summary,
- *	old and new pg_class.oid and new pg_class.relfilenode will have the
- *	same value, and old pg_class.relfilenode might differ.
+ *	While pg_class.oid and pg_class.relfilenode are initially the same
+ *	in a cluster, they can diverge due to CLUSTER, REINDEX, or VACUUM
+ *	FULL.  In the new cluster, pg_class.oid and pg_class.relfilenode will
+ *	be the same and will match the old pg_class.oid value.  Because of
+ *	this, old/new pg_class.relfilenode values will not match if CLUSTER,
+ *	REINDEX, or VACUUM FULL have been performed in the old cluster.
  *
  *	We control all assignments of pg_type.oid because these oids are stored
  *	in user composite type values.
@@ -49,6 +48,7 @@ static void prepare_new_databases(void);
 static void create_new_objects(void);
 static void copy_clog_xlog_xid(void);
 static void set_frozenxids(bool minmxid_only);
+static void freeze_master_data(void);
 static void setup(char *argv0, bool *live_check);
 static void cleanup(void);
 static void	get_restricted_token(const char *progname);
@@ -104,7 +104,7 @@ main(int argc, char **argv)
 	adjust_data_dir(&new_cluster);
 
 	setup(argv[0], &live_check);
-	
+
 	report_progress(NULL, CHECK, "Checking cluster compatibility");
 	output_check_banner(live_check);
 
@@ -146,16 +146,32 @@ main(int argc, char **argv)
 	/* New now using xids of the old system */
 
 	/* -- NEW -- */
+	start_postmaster(&new_cluster, true);
+
 	if (user_opts.segment_mode == DISPATCHER)
 	{
-		start_postmaster(&new_cluster, true);
-
 		prepare_new_databases();
 
 		create_new_objects();
-
-		stop_postmaster(false);
 	}
+
+	/*
+	 * In a segment, the data directory already contains all the objects,
+	 * because the segment is initialized by taking a physical copy of the
+	 * upgraded QD data directory. The auxiliary AO tables - containing
+	 * information about the segment files, are different in each server,
+	 * however. So we still need to restore those separately on each
+	 * server.
+	 */
+	restore_aosegment_tables();
+
+	if (user_opts.segment_mode == DISPATCHER)
+	{
+		/* freeze master data *right before* stopping */
+		freeze_master_data();
+	}
+
+	stop_postmaster(false);
 
 	/*
 	 * Most failures happen in create_new_objects(), which has completed at
@@ -397,8 +413,8 @@ setup(char *argv0, bool *live_check)
 		else
 		{
 			if (!user_opts.check)
-				pg_log(PG_FATAL, "There seems to be a postmaster servicing the old cluster.\n"
-					   "Please shutdown that postmaster and try again.\n");
+				pg_fatal("There seems to be a postmaster servicing the old cluster.\n"
+						 "Please shutdown that postmaster and try again.\n");
 			else
 				*live_check = true;
 		}
@@ -410,13 +426,13 @@ setup(char *argv0, bool *live_check)
 		if (start_postmaster(&new_cluster, false))
 			stop_postmaster(false);
 		else
-			pg_log(PG_FATAL, "There seems to be a postmaster servicing the new cluster.\n"
-				   "Please shutdown that postmaster and try again.\n");
+			pg_fatal("There seems to be a postmaster servicing the new cluster.\n"
+					 "Please shutdown that postmaster and try again.\n");
 	}
 
 	/* get path to pg_upgrade executable */
 	if (find_my_exec(argv0, exec_path) < 0)
-		pg_log(PG_FATAL, "Could not get path name to pg_upgrade: %s\n", getErrorText(errno));
+		pg_fatal("Could not get path name to pg_upgrade: %s\n", getErrorText(errno));
 
 	/* Trim off program name and keep just path */
 	*last_dir_separator(exec_path) = '\0';
@@ -432,13 +448,20 @@ prepare_new_cluster(void)
 	 * It would make more sense to freeze after loading the schema, but that
 	 * would cause us to lose the frozenids restored by the load. We use
 	 * --analyze so autovacuum doesn't update statistics later
+	 *
+	 * GPDB: after we've copied the master data directory to the segments,
+	 * AO tables can't be analyzed because their aoseg tuple counts don't match
+	 * those on disk. We therefore skip this step for segments.
 	 */
-	prep_status("Analyzing all rows in the new cluster");
-	exec_prog(UTILITY_LOG_FILE, NULL, true,
-			  "PGOPTIONS='-c gp_session_role=utility' \"%s/vacuumdb\" %s --all --analyze %s",
-			  new_cluster.bindir, cluster_conn_opts(&new_cluster),
-			  log_opts.verbose ? "--verbose" : "");
-	check_ok();
+	if (user_opts.segment_mode == DISPATCHER)
+	{
+		prep_status("Analyzing all rows in the new cluster");
+		exec_prog(UTILITY_LOG_FILE, NULL, true,
+				  "PGOPTIONS='-c gp_session_role=utility' \"%s/vacuumdb\" %s --all --analyze %s",
+				  new_cluster.bindir, cluster_conn_opts(&new_cluster),
+				  log_opts.verbose ? "--verbose" : "");
+		check_ok();
+	}
 
 	/*
 	 * We do freeze after analyze so pg_statistic is also frozen. template0 is
@@ -563,8 +586,6 @@ create_new_objects(void)
 	end_progress_output();
 	check_ok();
 
-	restore_aosegment_tables();
-
 	/*
 	 * We don't have minmxids for databases or relations in pre-9.3
 	 * clusters, so set those after we have restored the schema.
@@ -594,6 +615,127 @@ create_new_objects(void)
 	}
 }
 
+
+/*
+ * Greenplum upgrade involves copying the MASTER_DATA_DIRECTORY to
+ * each primary segment. We need to freeze the master data *after* the master
+ * schema has been restored to allow the data to be visible on the segments.
+ * All databases need to be frozen including those where datallowconn is false.
+ *
+ * Note: No further updates should occur after freezing the master data
+ * directory.
+ */
+static void
+freeze_master_data(void)
+{
+	PGconn 			*conn;
+	PGconn			*conn_template1;
+	PGresult		*dbres;
+	PGresult		*txid_res;
+	PGresult		*dbage_res;
+	int				dbnum;
+	int				ntups;
+	int				i_datallowconn;
+	int				i_datname;
+	TransactionId	txid_before;
+	TransactionId	txid_after;
+	int32 			txns_from_freeze;
+
+	prep_status("Freezing all rows in new master after pg_restore");
+
+	/* Temporarily allow connections to all databases for vacuum freeze */
+	conn_template1 = connectToServer(&new_cluster, "template1");
+
+	PQclear(executeQueryOrDie(conn_template1, "set allow_system_table_mods=true"));
+
+	dbres = executeQueryOrDie(conn_template1,
+							  "SELECT datname, datallowconn "
+							  "FROM	pg_catalog.pg_database");
+
+	i_datname = PQfnumber(dbres, "datname");
+	i_datallowconn = PQfnumber(dbres, "datallowconn");
+
+	ntups = PQntuples(dbres);
+	for (dbnum = 0; dbnum < ntups; dbnum++)
+	{
+		char *datallowconn = PQgetvalue(dbres, dbnum, i_datallowconn);
+		char *datname = PQgetvalue(dbres, dbnum, i_datname);
+		char *escaped_datname = pg_malloc(strlen(datname) * 2 + 1);
+		PQescapeStringConn(conn_template1, escaped_datname, datname, strlen(datname), NULL);
+
+		/* For vacuum freeze, temporarily set datallowconn to true. */
+		if (strcmp(datallowconn, "f") == 0)
+			PQclear(executeQueryOrDie(conn_template1,
+									  "UPDATE pg_catalog.pg_database "
+									  "SET datallowconn = true "
+									  "WHERE datname = '%s'", escaped_datname));
+
+		conn = connectToServer(&new_cluster, datname);
+
+		/* Obtain txid_current before vacuum freeze. */
+		txid_res = executeQueryOrDie(conn, "SELECT txid_current()");
+		txid_before = str2uint(PQgetvalue(txid_res, 0, PQfnumber(txid_res, "txid_current")));
+		PQclear(txid_res);
+
+		PQclear(executeQueryOrDie(conn, "VACUUM FREEZE"));
+
+		/*
+		 * Obtain txid_current and age after vacuum freeze.
+		 *
+		 * Note: It is important that this occurs before any other transactions
+		 * are executed so verification succeeds.
+		 */
+		dbage_res = executeQueryOrDie(conn,
+									  "SELECT txid_current(), age(datfrozenxid) "
+									  "FROM pg_catalog.pg_database "
+									  "WHERE datname = '%s'", escaped_datname);
+		txid_after = str2uint(PQgetvalue(dbage_res, 0, PQfnumber(dbage_res, "txid_current")));
+		uint datfrozenxid_age = str2uint(PQgetvalue(dbage_res, 0, PQfnumber(dbage_res, "age")));
+		PQclear(dbage_res);
+
+		/*
+		 * Verify that the database was frozen by checking that the database age
+		 * is less than the number of transactions taken by "VACUUM FREEZE".
+		 * This implies that all transaction ids that are older than the
+		 * "VACUUM FREEZE" transaction are frozen, and that the oldest
+		 * transaction in the database is newer than the "VACUUM FREEZE"
+		 * transaction.
+		 */
+		txns_from_freeze = txid_after - txid_before;
+		if (txns_from_freeze < 0)
+		{
+			/* Needed if a wrap around occurs between txid after and before. */
+			txns_from_freeze = INT32_MAX - Abs(txns_from_freeze);
+		}
+
+		/* Reset datallowconn flag before possibly raising an error. */
+		if (strcmp(datallowconn, "f") == 0)
+			PQclear(executeQueryOrDie(conn_template1,
+									  "UPDATE pg_catalog.pg_database "
+									  "SET datallowconn = false "
+									  "WHERE datname = '%s'", escaped_datname));
+
+		pg_free(escaped_datname);
+		PQfinish(conn);
+
+		if (datfrozenxid_age > txns_from_freeze)
+		{
+			PQfinish(conn_template1);
+			pg_fatal("Error database '%s' was not properly frozen. Database age of %d is older than %d.\n",
+					 datname, datfrozenxid_age, txns_from_freeze);
+		}
+	}
+
+	/* Freeze the tuples updated from resetting datallowconn flag */
+	PQclear(executeQueryOrDie(conn_template1, "VACUUM FREEZE pg_catalog.pg_database"));
+
+	PQclear(dbres);
+
+	PQfinish(conn_template1);
+
+	check_ok();
+}
+
 /*
  * Delete the given subdirectory contents from the new cluster
  */
@@ -606,7 +748,7 @@ remove_new_subdir(char *subdir, bool rmtopdir)
 
 	snprintf(new_path, sizeof(new_path), "%s/%s", new_cluster.pgdata, subdir);
 	if (!rmtree(new_path, rmtopdir))
-		pg_log(PG_FATAL, "could not delete directory \"%s\"\n", new_path);
+		pg_fatal("could not delete directory \"%s\"\n", new_path);
 
 	check_ok();
 }
@@ -793,8 +935,11 @@ set_frozenxids(bool minmxid_only)
 	ntups = PQntuples(dbres);
 	for (dbnum = 0; dbnum < ntups; dbnum++)
 	{
+
 		char	   *datname = PQgetvalue(dbres, dbnum, i_datname);
+		char	   *escaped_datname = NULL;
 		char	   *datallowconn = PQgetvalue(dbres, dbnum, i_datallowconn);
+
 
 		/*
 		 * We must update databases where datallowconn = false, e.g.
@@ -804,10 +949,14 @@ set_frozenxids(bool minmxid_only)
 		 * this, we temporarily change datallowconn.
 		 */
 		if (strcmp(datallowconn, "f") == 0)
+		{
+			escaped_datname = pg_malloc(strlen(datname) * 2 + 1);
+			PQescapeStringConn(conn_template1, escaped_datname, datname, strlen(datname), NULL);
 			PQclear(executeQueryOrDie(conn_template1,
 									  "UPDATE pg_catalog.pg_database "
 									  "SET	datallowconn = true "
-									  "WHERE datname = '%s'", datname));
+									  "WHERE datname = '%s'", escaped_datname));
+		}
 
 		conn = connectToServer(&new_cluster, datname);
 
@@ -847,10 +996,13 @@ set_frozenxids(bool minmxid_only)
 
 		/* Reset datallowconn flag */
 		if (strcmp(datallowconn, "f") == 0)
+		{
 			PQclear(executeQueryOrDie(conn_template1,
 									  "UPDATE pg_catalog.pg_database "
 									  "SET	datallowconn = false "
-									  "WHERE datname = '%s'", datname));
+									  "WHERE datname = '%s'", escaped_datname));
+			pg_free(escaped_datname);
+		}
 	}
 
 	PQclear(dbres);

@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-    <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html"/>
+    <topicref href="../../600/homenav.html" scope="external" navtitle="Greenplum Database® 6.0 Documentation"
+        format="html" otherprops="oss-only"/>
+    <topicref href="../../600/homenav.html" scope="external" navtitle="Pivotal Greenplum® 6.0 Documentation"
+        format="html" otherprops="pivotal"/>
     <topicref href="utility_guide.xml" navtitle="Utility Guide">
         <topicref href="admin_utilities/util_ref.xml" linking="targetonly">
             <topicref href="admin_utilities/analyzedb.xml"/>
@@ -19,8 +21,10 @@
             <topicref href="admin_utilities/gpfdist.xml"/>
             <topicref href="admin_utilities/gpinitstandby.xml"/>
             <topicref href="admin_utilities/gpinitsystem.xml"/>
+            <topicref href="../greenplum-kafka/gpkafka.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka"/>
             <topicref href="../greenplum-kafka/gpkafka-check.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka check"/>
             <topicref href="../greenplum-kafka/gpkafka-load.xml" otherprops="pivotal" scope="peer" navtitle= "gpkafka load"/>
+            <topicref href="../greenplum-kafka/gpkafka-yaml-v2.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka.yaml"/>
             <topicref href="../greenplum-kafka/gpkafka-yaml.xml" otherprops="pivotal" scope="peer" navtitle="gpkafka.yaml"/>
             <topicref href="admin_utilities/gpload.xml"/>
             <topicref href="admin_utilities/gplogfilter.xml"/>

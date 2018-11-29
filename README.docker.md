@@ -17,7 +17,7 @@ After installing, in Docker preferences, you may want to increase the CPUs/memor
 Note that the -v switch is used to mount the OS X’s gpdb folder into the container. The privileged and seccomp flags are used to allow gdb to work in Docker.
 
 ```bash
-docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security-opt seccomp:unconfined -i pivotaldata/centos-gpdb-dev:7 bash
+docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security-opt seccomp:unconfined -i pivotaldata/centos-gpdb-dev:7-gcc6.2-llvm3.7 bash
 ```
 
 ## Set up Container Dependencies and the gpadmin User

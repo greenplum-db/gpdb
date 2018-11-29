@@ -4,7 +4,7 @@
  *	  functions related to setting up a connection to the backend
  *
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -152,7 +152,7 @@ int     getpeereid(int, uid_t *__restrict__, gid_t *__restrict__);
  *
  * PQconninfoOptions[] is a constant static array that we use to initialize
  * a dynamically allocated working copy.  All the "val" fields in
- * PQconninfoOptions[] *must* be NULL.	In a working copy, non-null "val"
+ * PQconninfoOptions[] *must* be NULL.  In a working copy, non-null "val"
  * fields point to malloc'd strings that should be freed when the working
  * array is freed (see PQconninfoFree).
  *
@@ -279,7 +279,7 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 	offsetof(struct pg_conn, sslmode)},
 #else
 	{"sslmode", "PGSSLMODE", DefaultSSLMode, NULL,
-		"SSL-Mode", "", 8,		/* sizeof("disable") == 8 */
+		"SSL-Mode", "", 12,		/* sizeof("verify-full") == 12 */
 	offsetof(struct pg_conn, sslmode)},
 #endif
 
@@ -307,7 +307,7 @@ static const internalPQconninfoOption PQconninfoOptions[] = {
 		"Require-Peer", "", 10,
 	offsetof(struct pg_conn, requirepeer)},
 
-#if defined(KRB5) || defined(ENABLE_GSS) || defined(ENABLE_SSPI)
+#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	/* Kerberos and GSSAPI authentication support specifying the service name */
 	{"krbsrvname", "PGKRBSRVNAME", PG_KRB_SRVNAM, NULL,
 		"Kerberos-service-name", "", 20,
@@ -434,7 +434,7 @@ pgthreadlock_t pg_g_threadlock = default_threadlock;
  *		pqDropConnection
  *
  * Close any physical connection to the server, and reset associated
- * state inside the connection object.	We don't release state that
+ * state inside the connection object.  We don't release state that
  * would be needed to reconnect, though.
  */
 void
@@ -443,9 +443,9 @@ pqDropConnection(PGconn *conn)
 	/* Drop any SSL state */
 	pqsecure_close(conn);
 	/* Close the socket itself */
-	if (conn->sock >= 0)
+	if (conn->sock != PGINVALID_SOCKET)
 		closesocket(conn->sock);
-	conn->sock = -1;
+	conn->sock = PGINVALID_SOCKET;
 	/* Discard any unread/unsent data */
 	conn->inStart = conn->inCursor = conn->inEnd = 0;
 	conn->outCount = 0;
@@ -589,7 +589,7 @@ PQping(const char *conninfo)
  * See comment for PQconnectdbParams for the definition of the string format.
  *
  * Returns a PGconn*.  If NULL is returned, a malloc error has occurred, and
- * you should not attempt to proceed with this connection.	If the status
+ * you should not attempt to proceed with this connection.  If the status
  * field of the connection returned is CONNECTION_BAD, an error has
  * occurred. In this case you should call PQfinish on the result, (perhaps
  * inspecting the error message first).  Other fields of the structure may not
@@ -669,7 +669,7 @@ PQconnectStartParams(const char *const * keywords,
  * See comment for PQconnectdb for the definition of the string format.
  *
  * Returns a PGconn*.  If NULL is returned, a malloc error has occurred, and
- * you should not attempt to proceed with this connection.	If the status
+ * you should not attempt to proceed with this connection.  If the status
  * field of the connection returned is CONNECTION_BAD, an error has
  * occurred. In this case you should call PQfinish on the result, (perhaps
  * inspecting the error message first).  Other fields of the structure may not
@@ -949,7 +949,7 @@ oom_error:
  * and their current default values.
  *
  * NOTE: as of PostgreSQL 7.0, the returned array is dynamically allocated
- * and should be freed when no longer needed via PQconninfoFree().	(In prior
+ * and should be freed when no longer needed via PQconninfoFree().  (In prior
  * versions, the returned array was static, but that's not thread-safe.)
  * Pre-7.0 applications that use this function will see a small memory leak
  * until they are updated to call PQconninfoFree.
@@ -968,7 +968,8 @@ PQconndefaults(void)
 	connOptions = conninfo_init(&errorBuf);
 	if (connOptions != NULL)
 	{
-		if (!conninfo_add_defaults(connOptions, &errorBuf))
+		/* pass NULL errorBuf to ignore errors */
+		if (!conninfo_add_defaults(connOptions, NULL))
 		{
 			PQconninfoFree(connOptions);
 			connOptions = NULL;
@@ -1597,7 +1598,7 @@ connectDBComplete(PGconn *conn)
 	for (;;)
 	{
 		/*
-		 * Wait, if necessary.	Note that the initial state (just after
+		 * Wait, if necessary.  Note that the initial state (just after
 		 * PQconnectStart) is to wait for the socket to select for writing.
 		 */
 		switch (flag)
@@ -1659,7 +1660,7 @@ connectDBComplete(PGconn *conn)
  *		will not block.
  *	 o	If you do not supply an IP address for the remote host (i.e. you
  *		supply a host name instead) then PQconnectStart will block on
- *		gethostbyname.	You will be fine if using Unix sockets (i.e. by
+ *		gethostbyname.  You will be fine if using Unix sockets (i.e. by
  *		supplying neither a host name nor a host address).
  *	 o	If your backend wants to use Kerberos authentication then you must
  *		supply both a host name and a host address, otherwise this function
@@ -1719,11 +1720,11 @@ PQconnectPoll(PGconn *conn)
 			break;
 
 		default:
-			appendPQExpBuffer(&conn->errorMessage,
-							  libpq_gettext(
-											"invalid connection state, "
+			appendPQExpBufferStr(&conn->errorMessage,
+								 libpq_gettext(
+											   "invalid connection state, "
 								 "probably indicative of memory corruption\n"
-											));
+											   ));
 			goto error_return;
 	}
 
@@ -1748,9 +1749,8 @@ keep_going:						/* We will come back to here until there is
 						   addr_cur->ai_addrlen);
 					conn->raddr.salen = addr_cur->ai_addrlen;
 
-					/* Open a socket */
 					conn->sock = socket(addr_cur->ai_family, SOCK_STREAM, 0);
-					if (conn->sock < 0)
+					if (conn->sock == PGINVALID_SOCKET)
 					{
 						/*
 						 * ignore socket() failure if we have more addresses
@@ -1813,8 +1813,8 @@ keep_going:						/* We will come back to here until there is
 
 						if (usekeepalives < 0)
 						{
-							appendPQExpBuffer(&conn->errorMessage,
-											  libpq_gettext("keepalives parameter must be an integer\n"));
+							appendPQExpBufferStr(&conn->errorMessage,
+												 libpq_gettext("keepalives parameter must be an integer\n"));
 							err = 1;
 						}
 						else if (usekeepalives == 0)
@@ -1898,9 +1898,10 @@ keep_going:						/* We will come back to here until there is
 								addr_cur->ai_addrlen) < 0)
 					{
 						if (SOCK_ERRNO == EINPROGRESS ||
+#ifdef WIN32
 							SOCK_ERRNO == EWOULDBLOCK ||
-							SOCK_ERRNO == EINTR ||
-							SOCK_ERRNO == 0)
+#endif
+							SOCK_ERRNO == EINTR)
 						{
 							/*
 							 * This is fine - we're in non-blocking mode, and
@@ -1926,7 +1927,7 @@ keep_going:						/* We will come back to here until there is
 					/*
 					 * This connection failed --- set up error report, then
 					 * close socket (do it this way in case close() affects
-					 * the value of errno...).	We will ignore the connect()
+					 * the value of errno...).  We will ignore the connect()
 					 * failure and keep going if there are more addresses.
 					 */
 					connectFailureMessage(conn, SOCK_ERRNO);
@@ -2037,8 +2038,8 @@ keep_going:						/* We will come back to here until there is
 						 * stub
 						 */
 						if (errno == ENOSYS)
-							appendPQExpBuffer(&conn->errorMessage,
-											  libpq_gettext("requirepeer parameter is not supported on this platform\n"));
+							appendPQExpBufferStr(&conn->errorMessage,
+												 libpq_gettext("requirepeer parameter is not supported on this platform\n"));
 						else
 							appendPQExpBuffer(&conn->errorMessage,
 											  libpq_gettext("could not get peer credentials: %s\n"),
@@ -2201,8 +2202,8 @@ keep_going:						/* We will come back to here until there is
 														 * "verify-full" */
 						{
 							/* Require SSL, but server does not want it */
-							appendPQExpBuffer(&conn->errorMessage,
-											  libpq_gettext("server does not support SSL, but SSL was required\n"));
+							appendPQExpBufferStr(&conn->errorMessage,
+												 libpq_gettext("server does not support SSL, but SSL was required\n"));
 							goto error_return;
 						}
 						/* Otherwise, proceed with normal startup */
@@ -2214,7 +2215,7 @@ keep_going:						/* We will come back to here until there is
 					{
 						/*
 						 * Server failure of some sort, such as failure to
-						 * fork a backend process.	We need to process and
+						 * fork a backend process.  We need to process and
 						 * report the error message, which might be formatted
 						 * according to either protocol 2 or protocol 3.
 						 * Rather than duplicate the code for that, we flip
@@ -2587,15 +2588,15 @@ keep_going:						/* We will come back to here until there is
 				if (res)
 				{
 					if (res->resultStatus != PGRES_FATAL_ERROR)
-						appendPQExpBuffer(&conn->errorMessage,
-										  libpq_gettext("unexpected message from server during startup\n"));
+						appendPQExpBufferStr(&conn->errorMessage,
+											 libpq_gettext("unexpected message from server during startup\n"));
 					else if (conn->send_appname &&
 							 (conn->appname || conn->fbappname))
 					{
 						/*
 						 * If we tried to send application_name, check to see
 						 * if the error is about that --- pre-9.0 servers will
-						 * reject it at this stage of the process.	If so,
+						 * reject it at this stage of the process.  If so,
 						 * close the connection and retry without sending
 						 * application_name.  We could possibly get a false
 						 * SQLSTATE match here and retry uselessly, but there
@@ -2741,9 +2742,9 @@ internal_ping(PGconn *conn)
 
 	/*
 	 * If we failed to get any ERROR response from the postmaster, report
-	 * PQPING_NO_RESPONSE.	This result could be somewhat misleading for a
+	 * PQPING_NO_RESPONSE.  This result could be somewhat misleading for a
 	 * pre-7.4 server, since it won't send back a SQLSTATE, but those are long
-	 * out of support.	Another corner case where the server could return a
+	 * out of support.  Another corner case where the server could return a
 	 * failure without a SQLSTATE is fork failure, but NO_RESPONSE isn't
 	 * totally unreasonable for that anyway.  We expect that every other
 	 * failure case in a modern server will produce a report with a SQLSTATE.
@@ -2822,7 +2823,7 @@ makeEmptyPGconn(void)
 	conn->client_encoding = PG_SQL_ASCII;
 	conn->std_strings = false;	/* unless server says differently */
 	conn->verbosity = PQERRORS_DEFAULT;
-	conn->sock = -1;
+	conn->sock = PGINVALID_SOCKET;
 	conn->auth_req_received = false;
 	conn->password_needed = false;
 	conn->dot_pgpass_used = false;
@@ -2953,7 +2954,7 @@ freePGconn(PGconn *conn)
 		free(conn->sslcompression);
 	if (conn->requirepeer)
 		free(conn->requirepeer);
-#if defined(KRB5) || defined(ENABLE_GSS) || defined(ENABLE_SSPI)
+#if defined(ENABLE_GSS) || defined(ENABLE_SSPI)
 	if (conn->krbsrvname)
 		free(conn->krbsrvname);
 #endif
@@ -3000,7 +3001,7 @@ freePGconn(PGconn *conn)
  *	 - properly close a connection to the backend
  *
  * This should reset or release all transient state, but NOT the connection
- * parameters.	On exit, the PGconn should be in condition to start a fresh
+ * parameters.  On exit, the PGconn should be in condition to start a fresh
  * connection with the same parameters (see PQreset()).
  */
 static void
@@ -3013,7 +3014,7 @@ closePGconn(PGconn *conn)
 	 * Note that the protocol doesn't allow us to send Terminate messages
 	 * during the startup phase.
 	 */
-	if (conn->sock >= 0 && conn->status == CONNECTION_OK)
+	if (conn->sock != PGINVALID_SOCKET && conn->status == CONNECTION_OK)
 	{
 		/*
 		 * Try to send "close connection" message to backend. Ignore any
@@ -3021,7 +3022,7 @@ closePGconn(PGconn *conn)
 		 */
 		pqPutMsgStart('X', false, conn);
 		pqPutMsgEnd(conn);
-		pqFlush(conn);
+		(void) pqFlush(conn);
 	}
 
 	/*
@@ -3129,7 +3130,7 @@ PQreset(PGconn *conn)
 		if (connectDBStart(conn) && connectDBComplete(conn))
 		{
 			/*
-			 * Notify event procs of successful reset.	We treat an event proc
+			 * Notify event procs of successful reset.  We treat an event proc
 			 * failure as disabling the connection ... good idea?
 			 */
 			int			i;
@@ -3189,7 +3190,7 @@ PQresetPoll(PGconn *conn)
 		if (status == PGRES_POLLING_OK)
 		{
 			/*
-			 * Notify event procs of successful reset.	We treat an event proc
+			 * Notify event procs of successful reset.  We treat an event proc
 			 * failure as disabling the connection ... good idea?
 			 */
 			int			i;
@@ -3234,7 +3235,7 @@ PQgetCancel(PGconn *conn)
 	if (!conn)
 		return NULL;
 
-	if (conn->sock < 0)
+	if (conn->sock == PGINVALID_SOCKET)
 		return NULL;
 
 	cancel = malloc(sizeof(PGcancel));
@@ -3282,7 +3283,7 @@ internal_cancel(SockAddr *raddr, int be_pid, int be_key,
 				char *errbuf, int errbufsize, bool requestFinish)
 {
 	int			save_errno = SOCK_ERRNO;
-	int			tmpsock = -1;
+	pgsocket	tmpsock = PGINVALID_SOCKET;
 	char		sebuf[256];
 	int			maxlen;
 	struct
@@ -3301,7 +3302,7 @@ retry2:
 	 * We need to open a temporary connection to the postmaster. Do this with
 	 * only kernel calls.
 	 */
-	if ((tmpsock = socket(raddr->addr.ss_family, SOCK_STREAM, 0)) < 0)
+	if ((tmpsock = socket(raddr->addr.ss_family, SOCK_STREAM, 0)) == PGINVALID_SOCKET)
 	{
 		strlcpy(errbuf, "PQcancel() -- socket() failed: ", errbufsize);
 		goto cancel_errReturn;
@@ -3407,7 +3408,7 @@ cancel_errReturn:
 				maxlen);
 		strcat(errbuf, "\n");
 	}
-	if (tmpsock >= 0)
+	if (tmpsock != PGINVALID_SOCKET)
 		closesocket(tmpsock);
 	SOCK_ERRNO_SET(save_errno);
 	return FALSE;
@@ -3419,7 +3420,7 @@ cancel_errReturn:
  * Returns TRUE if able to send the cancel request, FALSE if not.
  *
  * On failure, an error message is stored in *errbuf, which must be of size
- * errbufsize (recommended size is 256 bytes).	*errbuf is not changed on
+ * errbufsize (recommended size is 256 bytes).  *errbuf is not changed on
  * success return.
  */
 int
@@ -3475,7 +3476,7 @@ PQrequestCancel(PGconn *conn)
 	if (!conn)
 		return FALSE;
 
-	if (conn->sock < 0)
+	if (conn->sock == PGINVALID_SOCKET)
 	{
 		strlcpy(conn->errorMessage.data,
 				"PQrequestCancel() -- connection is not open\n",
@@ -3570,11 +3571,13 @@ ldapServiceLookup(const char *purl, PQconninfoOption *options,
 	int			port = LDAP_DEF_PORT,
 				scope,
 				rc,
-				msgid,
 				size,
 				state,
 				oldstate,
 				i;
+#ifndef WIN32
+	int			msgid;
+#endif
 	bool		found_keyword;
 	char	   *url,
 			   *hostname,
@@ -3718,12 +3721,39 @@ ldapServiceLookup(const char *purl, PQconninfoOption *options,
 	}
 
 	/*
-	 * Initialize connection to the server.  We do an explicit bind because we
-	 * want to return 2 if the bind fails.
+	 * Perform an explicit anonymous bind.
+	 *
+	 * LDAP does not require that an anonymous bind is performed explicitly,
+	 * but we want to distinguish between the case where LDAP bind does not
+	 * succeed within PGLDAP_TIMEOUT seconds (return 2 to continue parsing the
+	 * service control file) and the case where querying the LDAP server fails
+	 * (return 1 to end parsing).
+	 *
+	 * Unfortunately there is no way of setting a timeout that works for both
+	 * Windows and OpenLDAP.
 	 */
+#ifdef WIN32
+	/* the nonstandard ldap_connect function performs an anonymous bind */
+	if (ldap_connect(ld, &time) != LDAP_SUCCESS)
+	{
+		/* error or timeout in ldap_connect */
+		free(url);
+		ldap_unbind(ld);
+		return 2;
+	}
+#else							/* !WIN32 */
+	/* in OpenLDAP, use the LDAP_OPT_NETWORK_TIMEOUT option */
+	if (ldap_set_option(ld, LDAP_OPT_NETWORK_TIMEOUT, &time) != LDAP_SUCCESS)
+	{
+		free(url);
+		ldap_unbind(ld);
+		return 3;
+	}
+
+	/* anonymous bind */
 	if ((msgid = ldap_simple_bind(ld, NULL, NULL)) == -1)
 	{
-		/* error in ldap_simple_bind() */
+		/* error or network timeout */
 		free(url);
 		ldap_unbind(ld);
 		return 2;
@@ -3734,17 +3764,24 @@ ldapServiceLookup(const char *purl, PQconninfoOption *options,
 	if ((rc = ldap_result(ld, msgid, LDAP_MSG_ALL, &time, &res)) == -1 ||
 		res == NULL)
 	{
+		/* error or timeout */
 		if (res != NULL)
-		{
-			/* timeout */
 			ldap_msgfree(res);
-		}
-		/* error in ldap_result() */
 		free(url);
 		ldap_unbind(ld);
 		return 2;
 	}
 	ldap_msgfree(res);
+
+	/* reset timeout */
+	time.tv_sec = -1;
+	if (ldap_set_option(ld, LDAP_OPT_NETWORK_TIMEOUT, &time) != LDAP_SUCCESS)
+	{
+		free(url);
+		ldap_unbind(ld);
+		return 3;
+	}
+#endif   /* WIN32 */
 
 	/* search */
 	res = NULL;
@@ -3966,7 +4003,8 @@ ldapServiceLookup(const char *purl, PQconninfoOption *options,
 
 	return 0;
 }
-#endif
+
+#endif   /* USE_LDAP */
 
 #define MAXBUFSIZE 256
 
@@ -4193,7 +4231,7 @@ parseServiceFile(const char *serviceFile,
  *		PQconninfoParse
  *
  * Parse a string like PQconnectdb() would do and return the
- * resulting connection options array.	NULL is returned on failure.
+ * resulting connection options array.  NULL is returned on failure.
  * The result contains only options specified directly in the string,
  * not any possible default values.
  *
@@ -4542,7 +4580,7 @@ conninfo_array_parse(const char *const * keywords, const char *const * values,
 		const char *pname = keywords[i];
 		const char *pvalue = values[i];
 
-		if (pvalue != NULL)
+		if (pvalue != NULL && pvalue[0] != '\0')
 		{
 			/* Search for the param record */
 			for (option = options; option->keyword != NULL; option++)
@@ -4641,9 +4679,10 @@ conninfo_array_parse(const char *const * keywords, const char *const * values,
  *
  * Defaults are obtained from a service file, environment variables, etc.
  *
- * Returns TRUE if successful, otherwise FALSE; errorMessage is filled in
- * upon failure.  Note that failure to locate a default value is not an
- * error condition here --- we just leave the option's value as NULL.
+ * Returns TRUE if successful, otherwise FALSE; errorMessage, if supplied,
+ * is filled in upon failure.  Note that failure to locate a default value
+ * is not an error condition here --- we just leave the option's value as
+ * NULL.
  */
 static bool
 conninfo_add_defaults(PQconninfoOption *options, PQExpBuffer errorMessage)
@@ -4653,9 +4692,10 @@ conninfo_add_defaults(PQconninfoOption *options, PQExpBuffer errorMessage)
 
 	/*
 	 * If there's a service spec, use it to obtain any not-explicitly-given
-	 * parameters.
+	 * parameters.  Ignore error if no error message buffer is passed because
+	 * there is no way to pass back the failure message.
 	 */
-	if (parseServiceInfo(options, errorMessage) != 0)
+	if (parseServiceInfo(options, errorMessage) != 0 && errorMessage)
 		return false;
 
 	/*
@@ -4677,8 +4717,9 @@ conninfo_add_defaults(PQconninfoOption *options, PQExpBuffer errorMessage)
 				option->val = strdup(tmp);
 				if (!option->val)
 				{
-					printfPQExpBuffer(errorMessage,
-									  libpq_gettext("out of memory\n"));
+					if (errorMessage)
+						printfPQExpBuffer(errorMessage,
+										  libpq_gettext("out of memory\n"));
 					return false;
 				}
 				continue;
@@ -4718,8 +4759,9 @@ conninfo_add_defaults(PQconninfoOption *options, PQExpBuffer errorMessage)
 			option->val = strdup(option->compiled);
 			if (!option->val)
 			{
-				printfPQExpBuffer(errorMessage,
-								  libpq_gettext("out of memory\n"));
+				if (errorMessage)
+					printfPQExpBuffer(errorMessage,
+									  libpq_gettext("out of memory\n"));
 				return false;
 			}
 			continue;
@@ -4730,7 +4772,14 @@ conninfo_add_defaults(PQconninfoOption *options, PQExpBuffer errorMessage)
 		 */
 		if (strcmp(option->keyword, "user") == 0)
 		{
-			option->val = pg_fe_getauthname(errorMessage);
+			option->val = pg_fe_getauthname();
+			if (!option->val)
+			{
+				if (errorMessage)
+					printfPQExpBuffer(errorMessage,
+									  libpq_gettext("out of memory\n"));
+				return false;
+			}
 			continue;
 		}
 	}
@@ -4998,7 +5047,7 @@ cleanup:
  * Connection URI parameters parser routine
  *
  * If successful, returns true while connOptions is filled with parsed
- * parameters.	Otherwise, returns false and fills errorMessage appropriately.
+ * parameters.  Otherwise, returns false and fills errorMessage appropriately.
  *
  * Destructively modifies 'params' buffer.
  */
@@ -5436,7 +5485,24 @@ PQhost(const PGconn *conn)
 {
 	if (!conn)
 		return NULL;
-	return conn->pghost ? conn->pghost : conn->pgunixsocket;
+	if (conn->pghost != NULL && conn->pghost[0] != '\0')
+		return conn->pghost;
+	else
+	{
+#ifdef HAVE_UNIX_SOCKETS
+		return conn->pgunixsocket;
+#else
+		return DefaultHost;
+#endif
+	}
+}
+
+char *
+PQhostaddr(const PGconn *conn)
+{
+	if (!conn)
+		return NULL;
+	return conn->pghostaddr;
 }
 
 char *
@@ -5525,12 +5591,21 @@ PQerrorMessage(const PGconn *conn)
 	return conn->errorMessage.data;
 }
 
+/*
+ * In Windows, socket values are unsigned, and an invalid socket value
+ * (INVALID_SOCKET) is ~0, which equals -1 in comparisons (with no compiler
+ * warning). Ideally we would return an unsigned value for PQsocket() on
+ * Windows, but that would cause the function's return value to differ from
+ * Unix, so we just return -1 for invalid sockets.
+ * http://msdn.microsoft.com/en-us/library/windows/desktop/cc507522%28v=vs.85%29.aspx
+ * http://stackoverflow.com/questions/10817252/why-is-invalid-socket-defined-as-0-in-winsock2-h-c
+ */
 int
 PQsocket(const PGconn *conn)
 {
 	if (!conn)
 		return -1;
-	return conn->sock;
+	return (conn->sock != PGINVALID_SOCKET) ? conn->sock : -1;
 }
 
 int

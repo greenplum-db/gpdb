@@ -2,22 +2,14 @@
  * Portions Copyright (c) 1987, 1993, 1994
  * The Regents of the University of California.  All rights reserved.
  *
- * Portions Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * src/include/getopt_long.h
  */
 #ifndef GETOPT_LONG_H
 #define GETOPT_LONG_H
 
-#ifdef HAVE_GETOPT_H
-#include <getopt.h>
-#endif
-
-/* These are picked up from the system's getopt() facility. */
-extern int	opterr;
-extern int	optind;
-extern int	optopt;
-extern char *optarg;
+#include "pg_getopt.h"
 
 #ifndef HAVE_STRUCT_OPTION
 

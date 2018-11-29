@@ -75,7 +75,6 @@ Compression Type: None
 Compression Level: 0
 Block Size: 32768
 Checksum: t
-Has OIDs: no
 Distributed randomly
 Options: appendonly=true
 

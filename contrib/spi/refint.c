@@ -16,10 +16,6 @@
 
 PG_MODULE_MAGIC;
 
-extern Datum check_primary_key(PG_FUNCTION_ARGS);
-extern Datum check_foreign_key(PG_FUNCTION_ARGS);
-
-
 typedef struct
 {
 	char	   *ident;
@@ -634,8 +630,7 @@ find_plan(char *ident, EPlan **eplan, int *nplans)
 		(*nplans) = i = 0;
 	}
 
-	newp->ident = (char *) malloc(strlen(ident) + 1);
-	strcpy(newp->ident, ident);
+	newp->ident = strdup(ident);
 	newp->nplans = 0;
 	newp->splan = NULL;
 	(*nplans)++;

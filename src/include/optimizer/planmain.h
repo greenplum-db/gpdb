@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/planmain.h
@@ -74,11 +74,8 @@ typedef void (*query_pathkeys_callback) (PlannerInfo *root, void *extra);
 /*
  * prototypes for plan/planmain.c
  */
-extern void query_planner(PlannerInfo *root, List *tlist,
-			  double tuple_fraction, double limit_tuples,
-			  query_pathkeys_callback qp_callback, void *qp_extra,
-			  Path **cheapest_path, Path **sorted_path,
-			  double *num_groups);
+extern RelOptInfo *query_planner(PlannerInfo *root, List *tlist,
+			  query_pathkeys_callback qp_callback, void *qp_extra);
 
 /*
  * prototypes for plan/planagg.c
@@ -212,19 +209,19 @@ extern Repeat *make_repeat(List *tlist,
 						   Plan *subplan);
 extern ModifyTable *make_modifytable(PlannerInfo *root,
 				 CmdType operation, bool canSetTag,
-				 List *resultRelations, List *subplans, List *returningLists,
+				 List *resultRelations, List *subplans,
+				 List *withCheckOptionLists, List *returningLists,
+				 List *is_split_updates,
 				 List *rowMarks, int epqParam);
 extern bool is_projection_capable_plan(Plan *plan);
 extern Plan *add_sort_cost(PlannerInfo *root, Plan *input, 
-						   int numCols, 
-						   AttrNumber *sortColIdx, Oid *sortOperators,
 						   double limit_tuples);
 extern Plan *add_agg_cost(PlannerInfo *root, Plan *plan, 
 		 List *tlist, List *qual,
 		 AggStrategy aggstrategy, 
 		 bool streaming, 
-		 int numGroupCols, AttrNumber *grpColIdx,
-		 long numGroups, int num_nullcols,
+		 int numGroupCols,
+		 long numGroups,
 		 const AggClauseCosts *aggcosts);
 extern Plan *plan_pushdown_tlist(PlannerInfo *root, Plan *plan, List *tlist);      /*CDB*/
 

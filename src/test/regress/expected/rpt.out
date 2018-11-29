@@ -535,6 +535,15 @@ select * from foo;
 ---+---
 (0 rows)
 
+-- Test replicate table within init plan
+insert into foo values (1, 1), (2, 1);
+select * from bar where exists (select * from foo);
+ x | y 
+---+---
+ 2 | 2
+ 1 | 2
+(2 rows)
+
 drop schema rpt cascade;
 NOTICE:  drop cascades to 2 other objects
 DETAIL:  drop cascades to table foo

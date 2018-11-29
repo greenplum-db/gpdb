@@ -4,7 +4,7 @@
  *	  utilities routines for the postgres inverted index access method.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -67,9 +67,32 @@ initGinState(GinState *state, Relation index)
 		fmgr_info_copy(&(state->extractQueryFn[i]),
 					   index_getprocinfo(index, i + 1, GIN_EXTRACTQUERY_PROC),
 					   CurrentMemoryContext);
-		fmgr_info_copy(&(state->consistentFn[i]),
-					   index_getprocinfo(index, i + 1, GIN_CONSISTENT_PROC),
-					   CurrentMemoryContext);
+
+		/*
+		 * Check opclass capability to do tri-state or binary logic consistent
+		 * check.
+		 */
+		if (index_getprocid(index, i + 1, GIN_TRICONSISTENT_PROC) != InvalidOid)
+		{
+			fmgr_info_copy(&(state->triConsistentFn[i]),
+					 index_getprocinfo(index, i + 1, GIN_TRICONSISTENT_PROC),
+						   CurrentMemoryContext);
+		}
+
+		if (index_getprocid(index, i + 1, GIN_CONSISTENT_PROC) != InvalidOid)
+		{
+			fmgr_info_copy(&(state->consistentFn[i]),
+						index_getprocinfo(index, i + 1, GIN_CONSISTENT_PROC),
+						   CurrentMemoryContext);
+		}
+
+		if (state->consistentFn[i].fn_oid == InvalidOid &&
+			state->triConsistentFn[i].fn_oid == InvalidOid)
+		{
+			elog(ERROR, "missing GIN support function (%d or %d) for attribute %d of index \"%s\"",
+				 GIN_CONSISTENT_PROC, GIN_TRICONSISTENT_PROC,
+				 i + 1, RelationGetRelationName(index));
+		}
 
 		/*
 		 * Check opclass capability to do partial match.
@@ -436,7 +459,7 @@ ginExtractEntries(GinState *ginstate, OffsetNumber attnum,
 	 * If there's more than one key, sort and unique-ify.
 	 *
 	 * XXX Using qsort here is notationally painful, and the overhead is
-	 * pretty bad too.	For small numbers of keys it'd likely be better to use
+	 * pretty bad too.  For small numbers of keys it'd likely be better to use
 	 * a simple insertion sort.
 	 */
 	if (*nentries > 1)

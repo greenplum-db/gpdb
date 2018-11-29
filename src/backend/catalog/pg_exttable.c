@@ -223,7 +223,7 @@ GetExtTableEntryIfExists(Oid relid)
 				ObjectIdGetDatum(relid));
 
 	scan = systable_beginscan(pg_exttable_rel, ExtTableReloidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tuple = systable_getnext(scan);
 
 	if (!HeapTupleIsValid(tuple))
@@ -448,7 +448,7 @@ RemoveExtTableEntry(Oid relid)
 				ObjectIdGetDatum(relid));
 
 	scan = systable_beginscan(pg_exttable_rel, ExtTableReloidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,

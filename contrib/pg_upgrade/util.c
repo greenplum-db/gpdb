@@ -3,12 +3,13 @@
  *
  *	utility functions
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/util.c
  */
 
 #include "postgres_fe.h"
 
+#include "common/username.h"
 #include "pg_upgrade.h"
 
 #include <signal.h>
@@ -80,15 +81,14 @@ prep_status(const char *fmt,...)
 }
 
 
+static
+__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 0)))
 void
-pg_log(eLogType type, char *fmt,...)
+pg_log_v(eLogType type, const char *fmt, va_list ap)
 {
-	va_list		args;
 	char		message[MAX_STRING];
 
-	va_start(args, fmt);
-	vsnprintf(message, sizeof(message), fmt, args);
-	va_end(args);
+	vsnprintf(message, sizeof(message), fmt, ap);
 
 	/* PG_VERBOSE and PG_STATUS are only output in verbose mode */
 	/* fopen() on log_opts.internal might have failed, so check it */
@@ -141,6 +141,30 @@ pg_log(eLogType type, char *fmt,...)
 			break;
 	}
 	fflush(stdout);
+}
+
+
+void
+pg_log(eLogType type, const char *fmt,...)
+{
+	va_list		args;
+
+	va_start(args, fmt);
+	pg_log_v(type, fmt, args);
+	va_end(args);
+}
+
+
+void
+pg_fatal(const char *fmt,...)
+{
+	va_list		args;
+
+	va_start(args, fmt);
+	pg_log_v(PG_FATAL, fmt, args);
+	va_end(args);
+	printf("Failure, exiting\n");
+	exit(1);
 }
 
 
@@ -387,32 +411,26 @@ appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
 
 /*
  * get_user_info()
- * (copied from initdb.c) find the current user
  */
 int
-get_user_info(char **user_name)
+get_user_info(char **user_name_p)
 {
 	int			user_id;
+	const char *user_name;
+	char	   *errstr;
 
 #ifndef WIN32
-	struct passwd *pw = getpwuid(geteuid());
-
 	user_id = geteuid();
-#else							/* the windows code */
-	struct passwd_win32
-	{
-		int			pw_uid;
-		char		pw_name[128];
-	}			pass_win32;
-	struct passwd_win32 *pw = &pass_win32;
-	DWORD		pwname_size = sizeof(pass_win32.pw_name) - 1;
-
-	GetUserName(pw->pw_name, &pwname_size);
-
+#else
 	user_id = 1;
 #endif
 
-	*user_name = pg_strdup(pw->pw_name);
+	user_name = get_user_name(&errstr);
+	if (!user_name)
+		pg_fatal("%s\n", errstr);
+
+	/* make a copy */
+	*user_name_p = pg_strdup(user_name);
 
 	return user_id;
 }
@@ -462,10 +480,9 @@ pg_putenv(const char *var, const char *val)
 	if (val)
 	{
 #ifndef WIN32
-		char	   *envstr = (char *) pg_malloc(strlen(var) +
-												strlen(val) + 2);
+		char	   *envstr;
 
-		sprintf(envstr, "%s=%s", var, val);
+		envstr = psprintf("%s=%s", var, val);
 		putenv(envstr);
 
 		/*

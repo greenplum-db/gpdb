@@ -9,7 +9,7 @@ $$
 -- Input to this function must be oid and not table name.  A distinct
 -- query fails to find the temp table in the right namespace
 -- otherwise.
-select segno from gp_toolkit.__gp_@aoseg@_name($1::regclass::text)
+select segno from gp_toolkit.__gp_@aoseg@($1::regclass::text)
  where tupcount > 0;
 $$ language sql;
 begin;

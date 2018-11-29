@@ -16,9 +16,6 @@
         <xref href="#topic_hhc_z5w_r4/configuring_rg" format="dita"/>
       </li>
       <li>
-        <xref href="#topic_hhc_z5w_r4/section_upm_rbl_zt" format="dita"/>
-      </li>
-      <li>
         <xref href="#topic_hhc_z5w_r4/section113x" format="dita"/>
       </li>
       <li>
@@ -113,40 +110,6 @@
           to create and manage resource groups, and to define the criteria under which
           Command Center dynamically assigns a transaction to a resource group.</li>
       </ul>
-    </section>
-    <section id="section_upm_rbl_zt">
-      <title>Example Memory Configuration Calculations</title>
-      <p>This section provides example memory calculations for a Greenplum Database system with
-        the following specifications:</p>
-      <ul id="ul_q4x_g1g_zt">
-        <li>Total RAM = 256GB </li>
-        <li>Swap = 64GB </li>
-        <li>8 primary segments and 8 mirror segments per host, in blocks of 4 hosts</li>
-        <li>Maximum number of primaries per host during failure is 11</li>
-      </ul>
-      <p>The usable memory available on a host is a function of 
-        the amount of RAM and swap space configured for the system, as well as the
-        <codeph>vm.overcommit_ratio</codeph> system parameter setting:</p>
-        <codeblock>
-total_node_usable_memory = RAM * (vm.overcommit_ratio / 100) + Swap
-                         = 256GB * (50/100) + 64GB
-                         = 192GB</codeblock>
-      <p>Assuming the default <codeph>gp_resource_group_memory_limit</codeph> value (.7),
-        the memory allocated to a Greenplum Database host with the example configuration is:</p>
-        <codeblock>
-total_gp_memory = total_node_usable_memory * gp_resource_group_memory_limit
-                = 192GB * .7
-                = 134.4GB</codeblock>
-      <p>The memory available to a Greenplum Database segment on a segment host is a function
-        of the memory reserved for Greenplum on the host and the number of active primary
-        segments on the host. On cluster startup:</p>
-        <codeblock>
-gp_seg_memory = total_gp_memory / number_of_active_primary_segments
-              = 134.4GB / 8
-              = 16.8GB</codeblock>
-      <p>Note that when 3 mirror segments switch to primary segments, the per-segment
-        memory is still 16.8GB. Total memory usage on the segment host may approach:
-        <codeblock>total_gp_memory_with_primaries = 16.8GB * 11 = 184.8GB</codeblock></p>
     </section>
     <section id="section113x" xml:lang="en">
       <title>Low Memory Queries</title>

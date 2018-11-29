@@ -633,6 +633,7 @@ SELECT user_relns() AS user_relns
  interval_tbl
  iportaltest
  kd_point_tbl
+ line_tbl
  log_table
  lseg_tbl
  main_table
@@ -674,6 +675,7 @@ SELECT user_relns() AS user_relns
  test_range_gist
  test_range_spgist
  test_tsvector
+ testjsonb
  text_tbl
  time_tbl
  timestamp_tbl
@@ -683,7 +685,7 @@ SELECT user_relns() AS user_relns
  toyemp
  usr_define_type
  varchar_tbl
-(168 rows)
+(170 rows)
 
 SELECT name(equipment(hobby_construct(text 'skywalking', text 'mer')));
  name 

@@ -4,7 +4,7 @@
  *
  * Routines to support SELinux labels (security context)
  *
- * Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -106,7 +106,7 @@ sepgsql_get_client_label(void)
  * sepgsql_set_client_label
  *
  * This routine tries to switch the current security label of the client, and
- * checks related permissions.	The supplied new label shall be added to the
+ * checks related permissions.  The supplied new label shall be added to the
  * client_label_pending list, then saved at transaction-commit time to ensure
  * transaction-awareness.
  */
@@ -161,7 +161,7 @@ sepgsql_set_client_label(const char *new_label)
 /*
  * sepgsql_xact_callback
  *
- * A callback routine of transaction commit/abort/prepare.	Commmit or abort
+ * A callback routine of transaction commit/abort/prepare.  Commmit or abort
  * changes in the client_label_pending list.
  */
 static void
@@ -727,7 +727,7 @@ exec_object_restorecon(struct selabel_handle * sehnd, Oid catalogId)
 	rel = heap_open(catalogId, AccessShareLock);
 
 	sscan = systable_beginscan(rel, InvalidOid, false,
-							   SnapshotNow, 0, NULL);
+							   NULL, 0, NULL);
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		Form_pg_database datForm;

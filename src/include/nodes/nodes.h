@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/nodes.h
@@ -107,6 +107,7 @@ typedef enum NodeTag
 	T_RowTrigger,
 	T_AssertOp,
 	T_PartitionSelector,
+	T_Reshuffle,
 	T_Plan_End,
 	/* these aren't subclasses of Plan: */
 	T_NestLoopParam,
@@ -173,6 +174,7 @@ typedef enum NodeTag
 	T_RowTriggerState,
 	T_AssertOpState,
 	T_PartitionSelectorState,
+	T_ReshuffleState,
 
 	/*
 	 * TupleDesc and ParamListInfo are not Nodes as such, but you can wrap
@@ -230,6 +232,7 @@ typedef enum NodeTag
 	T_JoinExpr,
 	T_FromExpr,
 	T_IntoClause,
+	T_CopyIntoClause,
 	T_Flow,
 	T_Grouping,
 	T_GroupId,
@@ -243,6 +246,7 @@ typedef enum NodeTag
 	T_PartListRuleExpr,
 	T_PartListNullTestExpr,
 	T_TableOidInfo,
+    T_ReshuffleExpr,
 
 	/*
 	 * TAGS FOR EXPRESSION STATE NODES (execnodes.h)
@@ -285,6 +289,7 @@ typedef enum NodeTag
 	T_PartBoundOpenExprState,
 	T_PartListRuleExprState,
 	T_PartListNullTestExprState,
+    T_ReshuffleExprState,
 
 	/*
 	 * TAGS FOR PLANNER NODES (relation.h)
@@ -335,6 +340,7 @@ typedef enum NodeTag
     T_CdbMotionPath = 580,
 	T_PartitionSelectorPath,
     T_CdbRelColumnInfo,
+	T_DistributionKey,
 
 	/*
 	 * TAGS FOR MEMORY NODES (memnodes.h)
@@ -459,6 +465,7 @@ typedef enum NodeTag
 	T_AlterUserMappingStmt,
 	T_DropUserMappingStmt,
 	T_AlterTableSpaceOptionsStmt,
+	T_AlterTableSpaceMoveStmt,
 	T_SecLabelStmt,
 	T_CreateForeignTableStmt,
 	T_CreateExtensionStmt,
@@ -467,6 +474,8 @@ typedef enum NodeTag
 	T_CreateEventTrigStmt,
 	T_AlterEventTrigStmt,
 	T_RefreshMatViewStmt,
+	T_ReplicaIdentityStmt,
+	T_AlterSystemStmt,
 
 	/* GPDB additions */
 	T_PartitionBy,
@@ -486,6 +495,7 @@ typedef enum NodeTag
 	T_DenyLoginPoint,
 	T_AlterTypeStmt,
 	T_SetDistributionCmd,
+	T_ExpandStmtSpec,
 
 	/*
 	 * TAGS FOR PARSE TREE NODES (parsenodes.h)
@@ -512,6 +522,8 @@ typedef enum NodeTag
 	T_Constraint,
 	T_DefElem,
 	T_RangeTblEntry,
+	T_RangeTblFunction,
+	T_WithCheckOption,
 	T_GroupingClause,
 	T_GroupingFunc,
 	T_SortGroupClause,
@@ -534,6 +546,8 @@ typedef enum NodeTag
 	 */
 	T_IdentifySystemCmd,
 	T_BaseBackupCmd,
+	T_CreateReplicationSlotCmd,
+	T_DropReplicationSlotCmd,
 	T_StartReplicationCmd,
 	T_TimeLineHistoryCmd,
 
@@ -714,7 +728,7 @@ typedef enum JoinType
 	/*
 	 * Semijoins and anti-semijoins (as defined in relational theory) do not
 	 * appear in the SQL JOIN syntax, but there are standard idioms for
-	 * representing them (e.g., using EXISTS).	The planner recognizes these
+	 * representing them (e.g., using EXISTS).  The planner recognizes these
 	 * cases and converts them to joins.  So the planner and executor must
 	 * support these codes.  NOTE: in JOIN_SEMI output, it is unspecified
 	 * which matching RHS row is joined to.  In JOIN_ANTI output, the row is
@@ -753,7 +767,7 @@ typedef enum JoinType
 /*
  * OUTER joins are those for which pushed-down quals must behave differently
  * from the join's own quals.  This is in fact everything except INNER and
- * SEMI joins.	However, this macro must also exclude the JOIN_UNIQUE symbols
+ * SEMI joins.  However, this macro must also exclude the JOIN_UNIQUE symbols
  * since those are temporary proxies for what will eventually be an INNER
  * join.
  *

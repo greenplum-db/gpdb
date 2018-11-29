@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <access/aomd.h>
 
 #include "access/aomd.h"
 #include "access/appendonlytid.h"
@@ -35,6 +36,9 @@
 #include "cdb/cdbappendonlyxlog.h"
 #include "common/relpath.h"
 #include "utils/guc.h"
+
+static bool mdunlink_ao_perFile(const int segno, void *ctx);
+static bool copy_append_only_data_perFile(const int segno, void *ctx);
 
 int
 AOSegmentFilePathNameLen(Relation rel)
@@ -198,119 +202,54 @@ TruncateAOSegmentFile(File fd, Relation rel, int32 segFileNum, int64 offset)
 		xlog_ao_truncate(rel->rd_node, segFileNum, offset);
 }
 
-/*
- * Delete All segment file extensions, in case it was an AO or AOCS
- * table. Ideally the logic works even for heap tables, but is only used
- * currently for AO and AOCS tables to avoid merge conflicts.
- *
- * There are different rules for the naming of the files, depending on
- * the type of table:
- *
- *   Heap Tables: contiguous extensions, no upper bound
- *   AO Tables: non contiguous extensions [.1 - .127]
- *   CO Tables: non contiguous extensions
- *          [  .1 - .127] for first column
- *          [.129 - .255] for second column
- *          [.257 - .283] for third column
- *          etc
- *
- *  Algorithm is coded with the assumption for CO tables that for a given
- *  concurrency level either all columns have the file or none.
- *
- *  1) Finds for which concurrency levels the table has files. This is
- *     calculated based off the first column. It performs 127
- *     (MAX_AOREL_CONCURRENCY) unlink().
- *  2) Iterates over the single column and deletes all concurrency level files.
- *     For AO tables this will exit fast.
- */
+struct mdunlink_ao_callback_ctx {
+	char *segPath;
+	char *segpathSuffixPosition;
+};
+
 void
 mdunlink_ao(const char *path)
 {
-	int path_size = strlen(path);
-	char *segpath = (char *) palloc(path_size + 12);
-	int segNumberArray[AOTupleId_MaxSegmentFileNum];
-	int segNumberArraySize;
-	char *segpath_suffix_position = segpath + path_size;
+	int pathSize = strlen(path);
+	char *segPath = (char *) palloc(pathSize + 12);
+	char *segPathSuffixPosition = segPath + pathSize;
+	struct mdunlink_ao_callback_ctx unlinkFiles = { 0 };
 
-	strncpy(segpath, path, path_size);
+	strncpy(segPath, path, pathSize);
 
-	/*
-	 * The 0 based extensions such as .128, .256, ... for CO tables are
-	 * created by ALTER table or utility mode insert. These also need to be
-	 * deleted; however, they may not exist hence are treated separately
-	 * here. Column 0 concurrency level 0 file is always
-	 * present. MaxHeapAttributeNumber is used as a sanity check; we expect
-	 * the loop to terminate based on unlink return value.
-	 */
-	for(int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
+	unlinkFiles.segPath = segPath;
+	unlinkFiles.segpathSuffixPosition = segPathSuffixPosition;
+
+    ao_foreach_extent_file(mdunlink_ao_perFile, &unlinkFiles);
+
+	pfree(segPath);
+}
+
+static bool
+mdunlink_ao_perFile(const int segno, void *ctx)
+{
+	const struct mdunlink_ao_callback_ctx *unlinkFiles = ctx;
+
+	char *segPath = unlinkFiles->segPath;
+	char *segPathSuffixPosition = unlinkFiles->segpathSuffixPosition;
+
+	sprintf(segPathSuffixPosition, ".%u", segno);
+	if (unlink(segPath) != 0)
 	{
-		sprintf(segpath_suffix_position, ".%u", colnum*AOTupleId_MultiplierSegmentFileNum);
-		if (unlink(segpath) != 0)
-		{
-			/* ENOENT is expected after the end of the extensions */
-			if (errno != ENOENT)
-				ereport(WARNING,
-						(errcode_for_file_access(),
-						 errmsg("could not remove file \"%s\": %m", segpath)));
-			else
-				break;
-		}
+		/* ENOENT is expected after the end of the extensions */
+		if (errno != ENOENT)
+			ereport(WARNING,
+					(errcode_for_file_access(),
+							errmsg("could not remove file \"%s\": %m", segPath)));
+		else
+			return false;
 	}
 
-	segNumberArraySize = 0;
-	/* Collect all the segmentNumbers in [1..127]. */
-	for (int concurrency_index = 1; concurrency_index < MAX_AOREL_CONCURRENCY;
-		 concurrency_index++)
-	{
-		sprintf(segpath_suffix_position, ".%u", concurrency_index);
-		if (unlink(segpath) != 0)
-		{
-			if (errno != ENOENT)
-				ereport(WARNING,
-						(errcode_for_file_access(),
-						 errmsg("could not remove file \"%s\": %m", segpath)));
-			continue;
-		}
-		segNumberArray[segNumberArraySize] = concurrency_index;
-		segNumberArraySize++;
-	}
-
-	if (segNumberArraySize == 0)
-	{
-		pfree(segpath);
-		return;
-	}
-
-	for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
-	{
-		bool finished = false;
-		for (int i = 0; i < segNumberArraySize; i++)
-		{
-			sprintf(segpath_suffix_position, ".%u",
-					colnum*AOTupleId_MultiplierSegmentFileNum + segNumberArray[i]);
-			if (unlink(segpath) != 0)
-			{
-				/* ENOENT is expected after the end of the extensions */
-				if (errno != ENOENT)
-					ereport(WARNING,
-							(errcode_for_file_access(),
-							 errmsg("could not remove file \"%s\": %m", segpath)));
-				else
-				{
-					finished = true;
-					break;
-				}
-			}
-		}
-		if (finished)
-			break;
-	}
-
-	pfree(segpath);
+	return true;
 }
 
 static void
-copy_file(char *srcsegpath, char* dstsegpath,
+copy_file(char *srcsegpath, char *dstsegpath,
 		  RelFileNode dst, int segfilenum, bool use_wal)
 {
 	File		srcFile;
@@ -389,104 +328,66 @@ copy_file(char *srcsegpath, char* dstsegpath,
 	pfree(buffer);
 }
 
+struct copy_append_only_data_callback_ctx {
+	char *srcPath;
+	char *dstPath;
+	RelFileNode dst;
+	bool useWal;
+};
+
 /*
  * Like copy_relation_data(), but for AO tables.
  *
  * Currently, AO tables don't have any extra forks.
  */
 void
-copy_append_only_data(RelFileNode src, RelFileNode dst, BackendId backendid, char relpersistence)
+copy_append_only_data(RelFileNode src, RelFileNode dst,
+        BackendId backendid, char relpersistence)
 {
-	char *srcpath;
-	char *dstpath;
-	char srcsegpath[MAXPGPATH + 12];
-	char dstsegpath[MAXPGPATH + 12];
-	int segNumberArray[AOTupleId_MaxSegmentFileNum];
-	int segNumberArraySize;
-	bool use_wal;
-
+	char *srcPath;
+	char *dstPath;
+	bool useWal;
+	struct copy_append_only_data_callback_ctx copyFiles = { 0 };
 	/*
 	 * We need to log the copied data in WAL iff WAL archiving/streaming is
 	 * enabled AND it's a permanent relation.
 	 */
-	use_wal = XLogIsNeeded() && relpersistence == RELPERSISTENCE_PERMANENT;
+	useWal = XLogIsNeeded() && relpersistence == RELPERSISTENCE_PERMANENT;
 
-	srcpath = relpathbackend(src, backendid, MAIN_FORKNUM);
-	dstpath = relpathbackend(dst, backendid, MAIN_FORKNUM);
+	srcPath = relpathbackend(src, backendid, MAIN_FORKNUM);
+	dstPath = relpathbackend(dst, backendid, MAIN_FORKNUM);
 
-	/*
-	 * For CO table, ALTER table, or utility mode insert files .128.. .256 0
-	 * based extensions are created. These also need to be copied; however,
-	 * they may not exist hence are treated separately here. Column 0
-	 * concurrency level 0 file is always present. MaxHeapAttributeNumber is
-	 * used as a sanity check; we expect the loop to terminate based on
-	 * access()'s return value.
-	 */
-	copy_file(srcpath, dstpath, dst, 0, use_wal);
-	for(int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
-	{
-		int suffix = colnum*AOTupleId_MultiplierSegmentFileNum;
-		sprintf(srcsegpath, "%s.%u", srcpath, suffix);
-		if (access(srcsegpath, F_OK) != 0)
-		{
-			/* ENOENT is expected after the end of the extensions */
-			if (errno != ENOENT)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("access failed for file \"%s\": %m", srcsegpath)));
-			break;
-		}
-		sprintf(dstsegpath, "%s.%u", dstpath, suffix);
-		copy_file(srcsegpath, dstsegpath, dst, suffix, use_wal);
-	}
+	copy_file(srcPath, dstPath, dst, 0, useWal);
 
-	segNumberArraySize=0;
-	/* Collect all the segmentNumbers in [1..127]. */
-	for (int concurrency_index = 1; concurrency_index < MAX_AOREL_CONCURRENCY;
-		 concurrency_index++)
-	{
-		sprintf(srcsegpath, "%s.%u", srcpath, concurrency_index);
-		if (access(srcsegpath, F_OK) != 0)
-		{
-			if (errno != ENOENT)
-				ereport(ERROR,
-						(errcode_for_file_access(),
-						 errmsg("access failed for file \"%s\": %m", srcsegpath)));
-			continue;
-		}
-		sprintf(dstsegpath, "%s.%u", dstpath, concurrency_index);
-		copy_file(srcsegpath, dstsegpath, dst, concurrency_index, use_wal);
+	copyFiles.srcPath = srcPath;
+	copyFiles.dstPath = dstPath;
+	copyFiles.dst = dst;
+	copyFiles.useWal = useWal;
 
-		segNumberArray[segNumberArraySize] = concurrency_index;
-		segNumberArraySize++;
-	}
-
-	if (segNumberArraySize == 0)
-		return;
-
-	for (int colnum = 1; colnum <= MaxHeapAttributeNumber; colnum++)
-	{
-		bool finished = false;
-		for (int concurrency_index = 0; concurrency_index < segNumberArraySize;
-			 concurrency_index++)
-		{
-			int suffix =
-				colnum*AOTupleId_MultiplierSegmentFileNum + segNumberArray[concurrency_index];
-			sprintf(srcsegpath, "%s.%u", srcpath, suffix);
-			if (access(srcsegpath, F_OK) != 0)
-			{
-				/* ENOENT is expected after the end of the extensions */
-				if (errno != ENOENT)
-					ereport(ERROR,
-							(errcode_for_file_access(),
-							 errmsg("access failed for file \"%s\": %m", srcsegpath)));
-				finished = true;
-				break;
-			}
-			sprintf(dstsegpath, "%s.%u", dstpath, suffix);
-			copy_file(srcsegpath, dstsegpath, dst, suffix, use_wal);
-		}
-		if (finished)
-			break;
-	}
+    ao_foreach_extent_file(copy_append_only_data_perFile, &copyFiles);
 }
+
+static bool
+copy_append_only_data_perFile(const int segno, void *ctx)
+{
+	const struct copy_append_only_data_callback_ctx *copyFiles = ctx;
+
+	char srcSegPath[MAXPGPATH + 12];
+	char dstSegPath[MAXPGPATH + 12];
+
+	sprintf(srcSegPath, "%s.%u", copyFiles->srcPath, segno);
+	if (access(srcSegPath, F_OK) != 0)
+	{
+		/* ENOENT is expected after the end of the extensions */
+		if (errno != ENOENT)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+							errmsg("access failed for file \"%s\": %m", srcSegPath)));
+		return false;
+	}
+	sprintf(dstSegPath, "%s.%u", copyFiles->dstPath, segno);
+	copy_file(srcSegPath, dstSegPath, copyFiles->dst, segno, copyFiles->useWal);
+
+	return true;
+}
+

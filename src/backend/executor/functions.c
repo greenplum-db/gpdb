@@ -3,7 +3,7 @@
  * functions.c
  *	  Execution of SQL-language functions
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -58,7 +58,7 @@ typedef struct
 } DR_sqlfunction;
 
 /*
- * We have an execution_state record for each query in a function.	Each
+ * We have an execution_state record for each query in a function.  Each
  * record contains a plantree for its query.  If the query is currently in
  * F_EXEC_RUN state then there's a QueryDesc too.
  *
@@ -402,12 +402,20 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
 	 *			(the first possibility takes precedence)
 	 * A.B.C	A = function name, B = record-typed parameter name,
 	 *			C = field name
+	 * A.*		Whole-row reference to composite parameter A.
+	 * A.B.*	Same, with A = function name, B = parameter name
+	 *
+	 * Here, it's sufficient to ignore the "*" in the last two cases --- the
+	 * main parser will take care of expanding the whole-row reference.
 	 *----------
 	 */
 	nnames = list_length(cref->fields);
 
 	if (nnames > 3)
 		return NULL;
+
+	if (IsA(llast(cref->fields), A_Star))
+		nnames--;
 
 	field1 = (Node *) linitial(cref->fields);
 	Assert(IsA(field1, String));
@@ -472,7 +480,8 @@ sql_fn_post_column_ref(ParseState *pstate, ColumnRef *cref, Node *var)
 		param = ParseFuncOrColumn(pstate,
 								  list_make1(subfield),
 								  list_make1(param),
-								  NULL, cref->location);
+								  NULL,
+								  cref->location);
 	}
 
 	return param;
@@ -549,7 +558,7 @@ sql_fn_resolve_param_name(SQLFunctionParseInfoPtr pinfo,
  * Set up the per-query execution_state records for a SQL function.
  *
  * The input is a List of Lists of parsed and rewritten, but not planned,
- * querytrees.	The sublist structure denotes the original query boundaries.
+ * querytrees.  The sublist structure denotes the original query boundaries.
  */
 static List *
 init_execution_state(List *queryTree_list,
@@ -673,7 +682,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
 	bool		isNull;
 
 	/*
-	 * Create memory context that holds all the SQLFunctionCache data.	It
+	 * Create memory context that holds all the SQLFunctionCache data.  It
 	 * must be a child of whatever context holds the FmgrInfo.
 	 */
 	fcontext = AllocSetContextCreate(finfo->fn_mcxt,
@@ -685,7 +694,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
 	oldcontext = MemoryContextSwitchTo(fcontext);
 
 	/*
-	 * Create the struct proper, link it to fcontext and fn_extra.	Once this
+	 * Create the struct proper, link it to fcontext and fn_extra.  Once this
 	 * is done, we'll be able to recover the memory after failure, even if the
 	 * FmgrInfo is long-lived.
 	 */
@@ -755,7 +764,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
 	fcache->src = TextDatumGetCString(tmp);
 
 	/*
-	 * Parse and rewrite the queries in the function text.	Use sublists to
+	 * Parse and rewrite the queries in the function text.  Use sublists to
 	 * keep track of the original query boundaries.  But we also build a
 	 * "flat" list of the rewritten queries to pass to check_sql_fn_retval.
 	 * This is because the last canSetTag query determines the result type
@@ -815,7 +824,7 @@ init_sql_fcache(FmgrInfo *finfo, Oid collation, bool lazyEvalOK)
 	 * any polymorphic arguments.
 	 *
 	 * Note: we set fcache->returnsTuple according to whether we are returning
-	 * the whole tuple result or just a single column.	In the latter case we
+	 * the whole tuple result or just a single column.  In the latter case we
 	 * clear returnsTuple because we need not act different from the scalar
 	 * result case, even if it's a rowtype column.  (However, we have to force
 	 * lazy eval mode in that case; otherwise we'd need extra code to expand
@@ -1090,7 +1099,7 @@ postquel_get_single_result(TupleTableSlot *slot,
 	/*
 	 * Set up to return the function value.  For pass-by-reference datatypes,
 	 * be sure to allocate the result in resultcontext, not the current memory
-	 * context (which has query lifespan).	We can't leave the data in the
+	 * context (which has query lifespan).  We can't leave the data in the
 	 * TupleTableSlot because we intend to clear the slot before returning.
 	 */
 	oldcontext = MemoryContextSwitchTo(resultcontext);
@@ -1100,7 +1109,6 @@ postquel_get_single_result(TupleTableSlot *slot,
 		/* We must return the whole tuple as a Datum. */
 		fcinfo->isnull = false;
 		value = ExecFetchSlotTupleDatum(slot);
-		value = datumCopy(value, fcache->typbyval, fcache->typlen);
 	}
 	else
 	{
@@ -1199,7 +1207,7 @@ fmgr_sql(PG_FUNCTION_ARGS)
 	/*
 	 * Switch to context in which the fcache lives.  This ensures that our
 	 * tuplestore etc will have sufficient lifetime.  The sub-executor is
-	 * responsible for deleting per-tuple information.	(XXX in the case of a
+	 * responsible for deleting per-tuple information.  (XXX in the case of a
 	 * long-lived FmgrInfo, this policy represents more memory leakage, but
 	 * it's not entirely clear where to keep stuff instead.)
 	 */
@@ -1413,7 +1421,7 @@ PG_END_TRY();
 		else if (fcache->lazyEval)
 		{
 			/*
-			 * We are done with a lazy evaluation.	Clean up.
+			 * We are done with a lazy evaluation.  Clean up.
 			 */
 			tuplestore_clear(fcache->tstore);
 
@@ -1437,8 +1445,8 @@ PG_END_TRY();
 		else
 		{
 			/*
-			 * We are done with a non-lazy evaluation.	Return whatever is in
-			 * the tuplestore.	(It is now caller's responsibility to free the
+			 * We are done with a non-lazy evaluation.  Return whatever is in
+			 * the tuplestore.  (It is now caller's responsibility to free the
 			 * tuplestore when done.)
 			 */
 			rsi->returnMode = SFRM_Materialize;
@@ -1550,7 +1558,7 @@ sql_exec_error_callback(void *arg)
 
 	/*
 	 * Try to determine where in the function we failed.  If there is a query
-	 * with non-null QueryDesc, finger it.	(We check this rather than looking
+	 * with non-null QueryDesc, finger it.  (We check this rather than looking
 	 * for F_EXEC_RUN state, so that errors during ExecutorStart or
 	 * ExecutorEnd are blamed on the appropriate query; see postquel_start and
 	 * postquel_end.)
@@ -1842,7 +1850,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 		 * the function that's calling it.
 		 *
 		 * XXX Note that if rettype is RECORD, the IsBinaryCoercible check
-		 * will succeed for any composite restype.	For the moment we rely on
+		 * will succeed for any composite restype.  For the moment we rely on
 		 * runtime type checking to catch any discrepancy, but it'd be nice to
 		 * do better at parse time.
 		 */
@@ -1888,7 +1896,7 @@ check_sql_fn_retval(Oid func_id, Oid rettype, List *queryTreeList,
 		/*
 		 * Verify that the targetlist matches the return tuple type. We scan
 		 * the non-deleted attributes to ensure that they match the datatypes
-		 * of the non-resjunk columns.	For deleted attributes, insert NULL
+		 * of the non-resjunk columns.  For deleted attributes, insert NULL
 		 * result columns if the caller asked for that.
 		 */
 		tupnatts = tupdesc->natts;

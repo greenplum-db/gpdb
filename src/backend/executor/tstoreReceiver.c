@@ -5,11 +5,11 @@
  *	  a Tuplestore.
  *
  * Optionally, we can force detoasting (but not decompression) of out-of-line
- * toasted values.	This is to support cursors WITH HOLD, which must retain
+ * toasted values.  This is to support cursors WITH HOLD, which must retain
  * data even if the underlying table is dropped.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION

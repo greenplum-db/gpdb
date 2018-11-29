@@ -9,14 +9,17 @@ include $(top_builddir)/src/Makefile.global
 # asks Python directly.  But because this has been broken in Debian
 # for a long time (http://bugs.debian.org/695979), and to support
 # older Python versions, we see if there is a file that is named like
-# a shared library as a fallback.  (Note that this is wrong on OS X,
-# where DLSUFFIX is .so, but libpython is a .dylib.  Python <2.5 is
-# therefore not supported on OS X.)
+# a shared library as a fallback.
 ifeq (1,$(python_enable_shared))
+shared_libpython = yes
+else
+ifeq ($(PORTNAME), darwin)
+# OS X does supply a .dylib even though Py_ENABLE_SHARED does not get set
 shared_libpython = yes
 else
 ifneq (,$(wildcard $(python_libdir)/libpython*$(DLSUFFIX)*))
 shared_libpython = yes
+endif
 endif
 endif
 
@@ -28,20 +31,6 @@ python_includespec := $(subst \,/,$(python_includespec))
 override python_libspec =
 endif
 
-# GPDB_93_MERGE_FIXME: This OS X block was removed in upstream, but we had some
-# GPDB hacks in it. Do we still need something special here?
-# Darwin (OS X) has its own ideas about how to do this.
-
-# ifeq ($(PORTNAME), darwin)
-# shared_libpython = yes
-# # Replaced to allow use of Greenplum-provided Python
-# #override python_libspec = -framework Python
-# #override python_additional_libs =
-# # sys.prefix reflects the runtime location of the python tree;
-# # the GP install has the dylib in the lib directory of that tree.
-# override python_libspec = -L$(shell ${PYTHON} -c "import sys, os; print (os.path.join(sys.prefix, 'lib'))") -lpython${python_version}
-# endif
-
 override python_libspec := -L${python_configdir}/../.. ${python_libspec}
 
 # If we don't have a shared library, we have to skip it.
@@ -50,7 +39,6 @@ ifeq ($(shared_libpython),yes)
 # do not fail build due to warnings in this code
 #override CPPFLAGS := -Wno-error -I. -I$(srcdir) $(python_includespec) $(CPPFLAGS) -DPLPYTHON_SHOW_DEBUG_INFO
 override CPPFLAGS := -Wno-error -I. -I$(srcdir) $(python_includespec) $(CPPFLAGS)
-
 
 rpathdir = $(python_libdir):$(INSTLOC)/ext/python/lib
 
@@ -80,14 +68,19 @@ endif
 # which are not compatible with mingw gcc. Therefore we need to build a
 # new import library to link with.
 ifeq ($(PORTNAME), win32)
+
 pytverstr=$(subst .,,${python_version})
+PYTHONDLL=$(subst \,/,$(WINDIR))/system32/python${pytverstr}.dll
+
 OBJS += libpython${pytverstr}.a
+
 libpython${pytverstr}.a: python${pytverstr}.def
-	dlltool --dllname python${pytverstr}.dll --def python${pytverstr}.def --output-lib  libpython${pytverstr}.a
-WD=$(subst \,/,$(WINDIR))
-python${pytverstr}.def:
-	pexports $(WD)/system32/python${pytverstr}.dll > python${pytverstr}.def
-endif
+	dlltool --dllname python${pytverstr}.dll --def python${pytverstr}.def --output-lib libpython${pytverstr}.a
+
+python${pytverstr}.def: $(PYTHONDLL)
+	pexports $^ > $@
+
+endif # win32
 
 
 SHLIB_LINK = $(python_libspec) $(python_additional_libs) $(filter -lintl,$(LIBS))

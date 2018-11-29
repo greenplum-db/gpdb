@@ -14,12 +14,13 @@ main(void)
 	int val1output = 2, val2i = 0;
 	int val2null = -1;
 	int ind1, ind2;
+	char desc1[8] = "outdesc";
 	EXEC SQL END DECLARE SECTION;
 
 	ECPGdebug(1, stderr);
 
 	EXEC SQL ALLOCATE DESCRIPTOR indesc;
-	EXEC SQL ALLOCATE DESCRIPTOR outdesc;
+	EXEC SQL ALLOCATE DESCRIPTOR :desc1;
 
 	EXEC SQL SET DESCRIPTOR indesc VALUE 1 DATA = :val1;
 	EXEC SQL SET DESCRIPTOR indesc VALUE 2 INDICATOR = :val2i, DATA = :val2;
@@ -49,9 +50,9 @@ main(void)
 	EXEC SQL SET DESCRIPTOR indesc VALUE 1 DATA = :val1;
 	EXEC SQL SET DESCRIPTOR indesc VALUE 2 INDICATOR = :val2i, DATA = :val2;
 
-	EXEC SQL EXECUTE foo2 USING SQL DESCRIPTOR indesc INTO SQL DESCRIPTOR outdesc;
+	EXEC SQL EXECUTE foo2 USING SQL DESCRIPTOR indesc INTO SQL DESCRIPTOR :desc1;
 
-	EXEC SQL GET DESCRIPTOR outdesc VALUE 1 :val2output = DATA;
+	EXEC SQL GET DESCRIPTOR :desc1 VALUE 1 :val2output = DATA;
 	printf("output = %s\n", val2output);
 
 	EXEC SQL DECLARE c1 CURSOR FOR foo2;
@@ -82,7 +83,7 @@ main(void)
 	EXEC SQL DISCONNECT;
 
 	EXEC SQL DEALLOCATE DESCRIPTOR indesc;
-	EXEC SQL DEALLOCATE DESCRIPTOR outdesc;
+	EXEC SQL DEALLOCATE DESCRIPTOR :desc1;
 
 	return 0;
 }

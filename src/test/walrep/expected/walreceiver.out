@@ -1,8 +1,8 @@
 -- negative cases
 SELECT test_receive();
-ERROR:  could not receive data from WAL stream: connection pointer is NULL (gp_libpqwalreceiver.c:506)
+ERROR:  could not receive data from WAL stream: connection pointer is NULL (libpqwalreceiver.c:530)
 SELECT test_send();
-ERROR:  could not send data to WAL stream: connection pointer is NULL (gp_libpqwalreceiver.c:526)
+ERROR:  could not send data to WAL stream: connection pointer is NULL (libpqwalreceiver.c:549)
 SELECT test_disconnect();
  test_disconnect 
 -----------------
@@ -10,7 +10,7 @@ SELECT test_disconnect();
 (1 row)
 
 -- Wait until number of replication sessions drop to 0 or timeout
--- occurs. Returns false if timeout occured.
+-- occurs. Returns false if timeout occurred.
 create function check_and_wait_for_replication(
    timeout int)
 returns boolean as
@@ -85,10 +85,8 @@ SELECT check_and_wait_for_replication(10);
 (1 row)
 
 -- create table and store current_xlog_location.
-create TEMP table tmp(startpoint text);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'startpoint' as the Greenplum Database data distribution key for this table.
-HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-CREATE FUNCTION select_tmp() RETURNS text AS $$
+create TEMP table tmp(startpoint pg_lsn) distributed randomly;
+CREATE FUNCTION select_tmp() RETURNS pg_lsn AS $$
 select startpoint from tmp;
 $$ LANGUAGE SQL;
 insert into tmp select pg_current_xlog_location();

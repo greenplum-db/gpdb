@@ -61,7 +61,6 @@
 #include "utils/resgroup-ops.h"
 #include "utils/resgroup.h"
 #include "utils/resource_manager.h"
-#include "utils/resowner.h"
 #include "utils/session_state.h"
 #include "utils/tqual.h"
 #include "utils/vmem_tracker.h"
@@ -259,7 +258,7 @@ static ResGroupProcData *self = &__self;
 /* If we are waiting on a group, this points to the associated group */
 static ResGroupData *groupAwaited = NULL;
 
-/* the resource group self is running in in bypass mode */
+/* the resource group self is running in bypass mode */
 static ResGroupData *bypassedGroup = NULL;
 /* a fake slot used in bypass mode */
 static ResGroupSlotData bypassedSlot;
@@ -515,7 +514,6 @@ InitResGroups(void)
 	HeapTuple	tuple;
 	SysScanDesc	sscan;
 	int			numGroups;
-	CdbComponentDatabases *cdbComponentDBs;
 	CdbComponentDatabaseInfo *qdinfo;
 	ResGroupCaps		caps;
 	Relation			relResGroup;
@@ -531,18 +529,11 @@ InitResGroups(void)
 	 */
 	if (pResGroupControl->loaded)
 		return;
-	/*
-	 * Need a resource owner to keep the heapam code happy.
-	 */
-	Assert(CurrentResourceOwner == NULL);
-	ResourceOwner owner = ResourceOwnerCreate(NULL, "InitResGroups");
-	CurrentResourceOwner = owner;
 
 	if (Gp_role == GP_ROLE_DISPATCH && pResGroupControl->segmentsOnMaster == 0)
 	{
 		Assert(IS_QUERY_DISPATCHER());
-		cdbComponentDBs = getCdbComponentDatabases();
-		qdinfo = &cdbComponentDBs->entry_db_info[0];
+		qdinfo = cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
 		pResGroupControl->segmentsOnMaster = qdinfo->hostSegs;
 		Assert(pResGroupControl->segmentsOnMaster > 0);
 	}
@@ -582,7 +573,7 @@ InitResGroups(void)
 	}
 
 	numGroups = 0;
-	sscan = systable_beginscan(relResGroup, InvalidOid, false, SnapshotNow, 0, NULL);
+	sscan = systable_beginscan(relResGroup, InvalidOid, false, NULL, 0, NULL);
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		ResGroupData	*group;
@@ -686,8 +677,6 @@ exit:
 	 */
 	heap_close(relResGroup, AccessShareLock);
 	heap_close(relResGroupCapability, AccessShareLock);
-	CurrentResourceOwner = NULL;
-	ResourceOwnerDelete(owner);
 }
 
 /*
@@ -2794,7 +2783,7 @@ groupHashNew(Oid groupId)
 	Assert(i < pResGroupControl->nGroups);
 
 	entry = (ResGroupHashEntry *)
-		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_ENTER_NULL, &found);
+		hash_search(pResGroupControl->htbl, (void *) &groupId, HASH_ENTER, &found);
 	/* caller should test that the group does not exist already */
 	Assert(!found);
 	entry->index = i;
@@ -3490,8 +3479,6 @@ ResGroupDumpInfo(StringInfo str)
 	if (!IsResGroupEnabled())
 		return;
 
-	verifyGpIdentityIsSet();
-
 	appendStringInfo(str, "{\"segid\":%d,", GpIdentity.segindex);
 	/* dump fields in pResGroupControl. */
 	appendStringInfo(str, "\"segmentsOnMaster\":%d,", pResGroupControl->segmentsOnMaster);
@@ -3894,7 +3881,6 @@ groupMemOnDumpForCgroup(ResGroupData *group, StringInfo str)
 
 /*
  * Parse cpuset to bitset
- * if onlyCheck is true, the function only check whether cpuset is valid
  * If cpuset is "1,3-5", Bitmapset 1,3,4,5 are set.
  */
 Bitmapset *

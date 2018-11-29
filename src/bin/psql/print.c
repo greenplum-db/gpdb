@@ -1,7 +1,7 @@
 /*
  * psql - the PostgreSQL interactive terminal
  *
- * Copyright (c) 2000-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2000-2014, PostgreSQL Global Development Group
  *
  * src/bin/psql/print.c
  */
@@ -256,7 +256,7 @@ print_separator(struct separator sep, FILE *fout)
 
 /*
  * Return the list of explicitly-requested footers or, when applicable, the
- * default "(xx rows)" footer.	Always omit the default footer when given
+ * default "(xx rows)" footer.  Always omit the default footer when given
  * non-default footers, "\pset footer off", or a specific instruction to that
  * effect from a calling backslash command.  Vertical formats number each row,
  * making the default footer redundant; they do not call this function.
@@ -692,7 +692,7 @@ print_aligned_text(const printTableContent *cont, FILE *fout)
 		 * Optional optimized word wrap. Shrink columns with a high max/avg
 		 * ratio.  Slighly bias against wider columns. (Increases chance a
 		 * narrow column will fit in its cell.)  If available columns is
-		 * positive...	and greater than the width of the unshrinkable column
+		 * positive...  and greater than the width of the unshrinkable column
 		 * headers
 		 */
 		if (output_columns > 0 && output_columns >= total_header_width)
@@ -1173,7 +1173,7 @@ print_aligned_vertical(const printTableContent *cont, FILE *fout)
 	if (cont->cells[0] == NULL && cont->opt->start_table &&
 		cont->opt->stop_table)
 	{
-		if (!opt_tuples_only)
+		if (!opt_tuples_only && cont->opt->default_footer)
 			fprintf(fout, _("(No rows)\n"));
 		return;
 	}
@@ -2377,7 +2377,7 @@ printTableAddCell(printTableContent *const content, char *cell,
  * strdup'd, so there is no need to keep the original footer string around.
  *
  * Footers are never translated by the function.  If you want the footer
- * translated you must do so yourself, before calling printTableAddFooter.	The
+ * translated you must do so yourself, before calling printTableAddFooter.  The
  * reason this works differently to headers and cells is that footers tend to
  * be made of up individually translated components, rather than being
  * translated as a whole.
@@ -2598,6 +2598,10 @@ printQuery(const PGresult *result, const printQueryOpt *opt, FILE *fout, FILE *f
 	printTableInit(&cont, &opt->topt, opt->title,
 				   PQnfields(result), PQntuples(result));
 
+	/* Assert caller supplied enough translate_columns[] entries */
+	Assert(opt->translate_columns == NULL ||
+		   opt->n_translate_columns >= cont.ncolumns);
+
 	for (i = 0; i < cont.ncolumns; i++)
 	{
 		char		align;
@@ -2718,7 +2722,7 @@ get_line_style(const printTableOpt *opt)
 
 /*
  * Compute the byte distance to the end of the string or *target_width
- * display character positions, whichever comes first.	Update *target_width
+ * display character positions, whichever comes first.  Update *target_width
  * to be the number of display character positions actually filled.
  */
 static int

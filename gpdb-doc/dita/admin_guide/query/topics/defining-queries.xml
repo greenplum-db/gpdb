@@ -361,7 +361,7 @@
             <body>
                 <p>A type cast specifies a conversion from one data type to another. A cast applied
                     to a value expression of a known type is a run-time type conversion. The cast
-                    succeeds only if a suitable type conversion function is defined. This differs
+                    succeeds only if a suitable type conversion is defined. This differs
                     from the use of casts with constants. A cast applied to a string literal
                     represents the initial assignment of a type to a literal constant value, so it
                     succeeds for any type if the contents of the string literal are acceptable input
@@ -373,7 +373,7 @@
                             accepts two equivalent syntaxes for explicit type casts:<p>
                                 <codeblock>CAST ( expression AS type )
 expression::type</codeblock>
-                            </p><p>The <codeph>CAST</codeph> syntax conforms to SQL; the syntax with
+                            </p><p>The <codeph>CAST</codeph> syntax conforms to SQL; the syntax using
                                     <codeph>::</codeph> is historical PostgreSQL usage.</p></li>
                         <li><i>Assignment cast</i> - Greenplum Database implicitly invokes a cast in
                             assignment contexts, when assigning a value to a column of the target
@@ -399,13 +399,13 @@ expression::type</codeblock>
                             type.<codeblock>SELECT * FROM tbl1 WHERE tbl1.c2 = (4.3 + tbl1.c1) ;</codeblock></li>
                     </ul></p>
                 <p>You can usually omit an explicit type cast if there is no ambiguity about the
-                    type a value expression must produce; for example, when it is assigned to a
-                    table column, the system automatically applies a type cast. Greenplum Database
-                    implicitly applies casts only to casts where the is defined with the cast
-                    context of assignment or implicit in the system catalogs. Other casts must be
+                    type a value expression must produce (for example, when it is assigned to a
+                    table column); the system automatically applies a type cast. Greenplum Database
+                    implicitly applies casts only to casts defined with a cast context of
+                    assignment or explicit in the system catalogs. Other casts must be
                     invoked with explicit casting syntax to prevent unexpected conversions from
                     being applied without the user's knowledge. </p>
-                <p>You can display cast information with the <codeph>psql</codeph> metacommand
+                <p>You can display cast information with the <codeph>psql</codeph> meta-command
                         <codeph>\dC</codeph>. Cast information is stored in the catalog table
                         <codeph>pg_cast</codeph>, and type information is stored in the catalog
                     table <codeph>pg_type</codeph>. </p>

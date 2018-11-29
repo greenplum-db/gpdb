@@ -231,29 +231,31 @@
           namely <codeph>-d</codeph>, <codeph>-h</codeph>, <codeph>-p</codeph>, and
             <codeph>-U</codeph> respectively. If an argument is found that does not belong to any
           option it will be interpreted as the database name (or the user name, if the database name
-          is already given). Not all these options are required; there are useful defaults. If you
-          omit the host name, <codeph>psql</codeph> will connect via a UNIX-domain socket to a
+          is already given). Not all of these options are required; there are useful defaults. If
+          you omit the host name, <codeph>psql</codeph> will connect via a UNIX-domain socket to a
           master server on the local host, or via TCP/IP to <codeph>localhost</codeph> on machines
           that do not have UNIX-domain sockets. The default master port number is 5432. If you use a
           different port for the master, you must specify the port. The default database user name
-          is your UNIX user name, as is the default database name. Note that you cannot just connect
-          to any database under any user name. Your database administrator should have informed you
-          about your access rights.</p>
+          is your operating system user name, as is the default database name. Note that you cannot
+          just connect to any database under any user name. Your database administrator should have
+          informed you about your access rights.</p>
         <p>When the defaults are not right, you can save yourself some typing by setting any or all
           of the environment variables <codeph>PGAPPNAME</codeph>, <codeph>PGDATABASE</codeph>,
             <codeph>PGHOST</codeph>, <codeph>PGPORT</codeph>, and <codeph>PGUSER</codeph> to
-          appropriate values. </p>
-        <p>It is also convenient to have a <codeph>~/.pgpass</codeph> file to avoid regularly having
-          to type in passwords. This file should reside in your home directory and contain lines of
-          the following format:</p>
-        <codeblock><varname>hostname</varname>:<varname>port</varname>:<varname>database</varname>:<varname>username</varname>:<varname>password</varname></codeblock>
+          appropriate values. </p><p>It is also convenient to have a <codeph>~/.pgpass</codeph> file
+          to avoid regularly having to type in passwords. This file should reside in your home
+          directory and contain lines of the following format:</p><codeblock><varname>hostname</varname>:<varname>port</varname>:<varname>database</varname>:<varname>username</varname>:<varname>password</varname></codeblock>
         <p>The permissions on <codeph>.pgpass</codeph> must disallow any access to world or group
           (for example: <codeph>chmod 0600 ~/.pgpass</codeph>). If the permissions are less strict
           than this, the file will be ignored. (The file permissions are not currently checked on
           Microsoft Windows clients, however.)</p>
-        <p>If the connection could not be made for any reason (insufficient privileges, server is
-          not running, etc.), <codeph>psql</codeph> will return an error and terminate.</p>
-      </sectiondiv>
+        <p>An alternative way to specify connection parameters is in a <codeph>conninfo</codeph>
+          string or a URI, which is used instead of a database name. This mechanism gives you very
+          wide control over the connection. For
+          example:</p><codeblock>$ psql "service=myservice sslmode=require"
+$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>If
+          the connection could not be made for any reason (insufficient privileges, server is not
+          running, etc.), <codeph>psql</codeph> will return an error and terminate.</p></sectiondiv>
       <sectiondiv id="section9">
         <b>Entering SQL Commands</b>
         <p>In normal operation, <codeph>psql</codeph> provides a prompt with the name of the
@@ -727,7 +729,7 @@ lo_import 152801</codeblock>
                 here, as that is already taken care of by <codeph>\pset border</codeph>. </li>
               <li id="kb151808"><b><codeph>tuples_only</codeph></b> | <b><codeph>t </codeph></b>
                   [<varname>novalue</varname> | <varname>on</varname> | <varname>off</varname>] –
-                The <codeph>\pset tuples_only</codeph> command by itselt toggles between tuples only
+                The <codeph>\pset tuples_only</codeph> command by itself toggles between tuples only
                 and full display. The values <varname>on</varname> and <varname>off</varname> set
                 the tuples display, regardless of the current setting. Full display may show extra
                 information such as column headers, titles, and various footers. In tuples only
@@ -846,7 +848,7 @@ lo_import 152801</codeblock>
         quotes loses its special meaning and is matched literally.</p>
       <p>Advanced users can use regular-expression notations. All regular expression special
         characters work as specified in the <xref
-          href="https://www.postgresql.org/docs/8.3/static/functions-matching.html#FUNCTIONS-POSIX-REGEXP"
+          href="https://www.postgresql.org/docs/8.3/functions-matching.html#FUNCTIONS-POSIX-REGEXP"
           scope="external" format="html">PostgreSQL documentation on regular expressions</xref>,
         except for <codeph>.</codeph> which is taken as a separator as mentioned above,
           <codeph>*</codeph> which is translated to the regular-expression notation

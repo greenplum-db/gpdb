@@ -62,7 +62,7 @@
  * In the 2nd stage, the automaton is transformed into a graph based on the
  * original NFA.  Each state in the expanded graph represents a state from
  * the original NFA, plus a prefix identifying the last two characters
- * (colors, to be precise) seen before entering the state.	There can be
+ * (colors, to be precise) seen before entering the state.  There can be
  * multiple states in the expanded graph for each state in the original NFA,
  * depending on what characters can precede it.  A prefix position can be
  * "unknown" if it's uncertain what the preceding character was, or "blank"
@@ -74,7 +74,7 @@
  * "enter key".
  *
  * Each arc of the expanded graph is labelled with a trigram that must be
- * present in the string to match.	We can construct this from an out-arc of
+ * present in the string to match.  We can construct this from an out-arc of
  * the underlying NFA state by combining the expanded state's prefix with the
  * color label of the underlying out-arc, if neither prefix position is
  * "unknown".  But note that some of the colors in the trigram might be
@@ -106,7 +106,7 @@
  *
  * When building the graph, if the number of states or arcs exceed pre-defined
  * limits, we give up and simply mark any states not yet processed as final
- * states.	Roughly speaking, that means that we make use of some portion from
+ * states.  Roughly speaking, that means that we make use of some portion from
  * the beginning of the regexp.  Also, any colors that have too many member
  * characters are treated as "unknown", so that we can't derive trigrams
  * from them.
@@ -122,9 +122,23 @@
  * thousands of trigrams would be slow, and would likely produce so many
  * false positives that we would have to traverse a large fraction of the
  * index, the graph is simplified further in a lossy fashion by removing
- * color trigrams until the number of trigrams after expansion is below
- * the MAX_TRGM_COUNT threshold.  When a color trigram is removed, the states
- * connected by any arcs labelled with that trigram are merged.
+ * color trigrams. When a color trigram is removed, the states connected by
+ * any arcs labelled with that trigram are merged.
+ *
+ * Trigrams do not all have equivalent value for searching: some of them are
+ * more frequent and some of them are less frequent. Ideally, we would like
+ * to know the distribution of trigrams, but we don't. But because of padding
+ * we know for sure that the empty character is more frequent than others,
+ * so we can penalize trigrams according to presence of whitespace. The
+ * penalty assigned to each color trigram is the number of simple trigrams
+ * it would produce, times the penalties[] multiplier associated with its
+ * whitespace content. (The penalties[] constants were calculated by analysis
+ * of some real-life text.) We eliminate color trigrams starting with the
+ * highest-penalty one, until we get to a total penalty of no more than
+ * WISH_TRGM_PENALTY. However, we cannot remove a color trigram if that would
+ * lead to merging the initial and final states, so we may not be able to
+ * reach WISH_TRGM_PENALTY. It's still okay so long as we have no more than
+ * MAX_TRGM_COUNT simple trigrams in total, otherwise we fail.
  *
  * 4) Pack the graph into a compact representation
  * -----------------------------------------------
@@ -159,15 +173,15 @@
  * 1) Create state 1 with enter key (UNKNOWN, UNKNOWN, 1).
  * 2) Add key (UNKNOWN, "a", 2) to state 1.
  * 3) Add key ("a", "b", 3) to state 1.
- * 4) Create new state 2 with enter key ("b", "c", 4).	Add an arc
+ * 4) Create new state 2 with enter key ("b", "c", 4).  Add an arc
  *	  from state 1 to state 2 with label trigram "abc".
  * 5) Mark state 2 final because state 4 of source NFA is marked as final.
- * 6) Create new state 3 with enter key ("b", "d", 5).	Add an arc
+ * 6) Create new state 3 with enter key ("b", "d", 5).  Add an arc
  *	  from state 1 to state 3 with label trigram "abd".
  * 7) Mark state 3 final because state 5 of source NFA is marked as final.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -199,12 +213,29 @@
  *	MAX_EXPANDED_STATES - How many states we allow in expanded graph
  *	MAX_EXPANDED_ARCS - How many arcs we allow in expanded graph
  *	MAX_TRGM_COUNT - How many simple trigrams we allow to be extracted
+ *	WISH_TRGM_PENALTY - Maximum desired sum of color trigram penalties
  *	COLOR_COUNT_LIMIT - Maximum number of characters per color
  */
 #define MAX_EXPANDED_STATES 128
 #define MAX_EXPANDED_ARCS	1024
 #define MAX_TRGM_COUNT		256
+#define WISH_TRGM_PENALTY	16
 #define COLOR_COUNT_LIMIT	256
+
+/*
+ * Penalty multipliers for trigram counts depending on whitespace contents.
+ * Numbers based on analysis of real-life texts.
+ */
+const float4 penalties[8] = {
+	1.0f,						/* "aaa" */
+	3.5f,						/* "aa " */
+	0.0f,						/* "a a" (impossible) */
+	0.0f,						/* "a  " (impossible) */
+	4.2f,						/* " aa" */
+	2.1f,						/* " a " */
+	25.0f,						/* "  a" */
+	0.0f						/* "   " (impossible) */
+};
 
 /* Struct representing a single pg_wchar, converted back to multibyte form */
 typedef struct
@@ -242,10 +273,10 @@ typedef struct
  *
  * We call a prefix ambiguous if at least one of its colors is unknown.  It's
  * fully ambiguous if both are unknown, partially ambiguous if only the first
- * is unknown.	(The case of first color known, second unknown is not valid.)
+ * is unknown.  (The case of first color known, second unknown is not valid.)
  *
  * Wholly- or partly-blank prefixes are mostly handled the same as regular
- * color prefixes.	This allows us to generate appropriate partly-blank
+ * color prefixes.  This allows us to generate appropriate partly-blank
  * trigrams when the NFA requires word character(s) to appear adjacent to
  * non-word character(s).
  */
@@ -271,7 +302,7 @@ typedef struct
 
 /*
  * Key identifying a state of our expanded graph: color prefix, and number
- * of the corresponding state in the underlying regex NFA.	The color prefix
+ * of the corresponding state in the underlying regex NFA.  The color prefix
  * shows how we reached the regex state (to the extent that we know it).
  */
 typedef struct
@@ -339,6 +370,7 @@ typedef struct
 	ColorTrgm	ctrgm;
 	int			number;
 	int			count;
+	float4		penalty;
 	bool		expanded;
 	List	   *arcs;
 } ColorTrgmInfo;
@@ -405,7 +437,7 @@ struct TrgmPackedGraph
 	 * colorTrigramsCount and colorTrigramsGroups contain information about
 	 * how trigrams are grouped into color trigrams.  "colorTrigramsCount" is
 	 * the count of color trigrams and "colorTrigramGroups" contains number of
-	 * simple trigrams for each color trigram.	The array of simple trigrams
+	 * simple trigrams for each color trigram.  The array of simple trigrams
 	 * (stored separately from this struct) is ordered so that the simple
 	 * trigrams for each color trigram are consecutive, and they're in order
 	 * by color trigram number.
@@ -459,7 +491,7 @@ static TRGM *expandColorTrigrams(TrgmNFA *trgmNFA, MemoryContext rcontext);
 static void fillTrgm(trgm *ptrgm, trgm_mb_char s[3]);
 static void mergeStates(TrgmState *state1, TrgmState *state2);
 static int	colorTrgmInfoCmp(const void *p1, const void *p2);
-static int	colorTrgmInfoCountCmp(const void *p1, const void *p2);
+static int	colorTrgmInfoPenaltyCmp(const void *p1, const void *p2);
 static TrgmPackedGraph *packGraph(TrgmNFA *trgmNFA, MemoryContext rcontext);
 static int	packArcInfoCmp(const void *a1, const void *a2);
 
@@ -492,7 +524,7 @@ createTrgmNFA(text *text_re, Oid collation,
 	/*
 	 * This processing generates a great deal of cruft, which we'd like to
 	 * clean up before returning (since this function may be called in a
-	 * query-lifespan memory context).	Make a temp context we can work in so
+	 * query-lifespan memory context).  Make a temp context we can work in so
 	 * that cleanup is easy.
 	 */
 	tmpcontext = AllocSetContextCreate(CurrentMemoryContext,
@@ -808,7 +840,7 @@ convertPgWchar(pg_wchar c, trgm_mb_char *result)
 
 	/*
 	 * We can ignore the NUL character, since it can never appear in a PG text
-	 * string.	This avoids the need for various special cases when
+	 * string.  This avoids the need for various special cases when
 	 * reconstructing trigrams.
 	 */
 	if (c == 0)
@@ -819,7 +851,7 @@ convertPgWchar(pg_wchar c, trgm_mb_char *result)
 	pg_wchar2mb_with_len(&c, s, 1);
 
 	/*
-	 * In IGNORECASE mode, we can ignore uppercase characters.	We assume that
+	 * In IGNORECASE mode, we can ignore uppercase characters.  We assume that
 	 * the regex engine generated both uppercase and lowercase equivalents
 	 * within each color, since we used the REG_ICASE option; so there's no
 	 * need to process the uppercase version.
@@ -901,7 +933,7 @@ transformGraph(TrgmNFA *trgmNFA)
 
 	/*
 	 * Recursively build the expanded graph by processing queue of states
-	 * (breadth-first search).	getState already put initstate in the queue.
+	 * (breadth-first search).  getState already put initstate in the queue.
 	 */
 	while (trgmNFA->queue != NIL)
 	{
@@ -910,7 +942,7 @@ transformGraph(TrgmNFA *trgmNFA)
 		trgmNFA->queue = list_delete_first(trgmNFA->queue);
 
 		/*
-		 * If we overflowed then just mark state as final.	Otherwise do
+		 * If we overflowed then just mark state as final.  Otherwise do
 		 * actual processing.
 		 */
 		if (trgmNFA->overflowed)
@@ -936,7 +968,7 @@ processState(TrgmNFA *trgmNFA, TrgmState *state)
 
 	/*
 	 * Add state's own key, and then process all keys added to keysQueue until
-	 * queue is empty.	But we can quit if the state gets marked final.
+	 * queue is empty.  But we can quit if the state gets marked final.
 	 */
 	addKey(trgmNFA, state, &state->stateKey);
 	while (trgmNFA->keysQueue != NIL && !state->fin)
@@ -990,7 +1022,7 @@ addKey(TrgmNFA *trgmNFA, TrgmState *state, TrgmStateKey *key)
 
 	/*
 	 * Compare key to each existing enter key of the state to check for
-	 * redundancy.	We can drop either old key(s) or the new key if we find
+	 * redundancy.  We can drop either old key(s) or the new key if we find
 	 * redundancy.
 	 */
 	prev = NULL;
@@ -1064,7 +1096,7 @@ addKey(TrgmNFA *trgmNFA, TrgmState *state, TrgmStateKey *key)
 		else if (pg_reg_colorisend(trgmNFA->regex, arc->co))
 		{
 			/*
-			 * End of line/string ($).	We must consider this arc as a
+			 * End of line/string ($).  We must consider this arc as a
 			 * transition that doesn't read anything.  The reason for adding
 			 * this enter key to the state is that if the arc leads to the
 			 * NFA's final state, we must mark this expanded state as final.
@@ -1109,7 +1141,7 @@ addKey(TrgmNFA *trgmNFA, TrgmState *state, TrgmStateKey *key)
 					 * We can reach the arc destination after reading a word
 					 * character, but the prefix is not something that addArc
 					 * will accept, so no trigram arc can get made for this
-					 * transition.	We must make an enter key to show that the
+					 * transition.  We must make an enter key to show that the
 					 * arc destination is reachable.  The prefix for the enter
 					 * key should reflect the info we have for this arc.
 					 */
@@ -1122,9 +1154,9 @@ addKey(TrgmNFA *trgmNFA, TrgmState *state, TrgmStateKey *key)
 			else
 			{
 				/*
-				 * Unexpandable color.	Add enter key with ambiguous prefix,
+				 * Unexpandable color.  Add enter key with ambiguous prefix,
 				 * showing we can reach the destination from this state, but
-				 * the preceding colors will be uncertain.	(We do not set the
+				 * the preceding colors will be uncertain.  (We do not set the
 				 * first prefix color to key->prefix.colors[1], because a
 				 * prefix of known followed by unknown is invalid.)
 				 */
@@ -1313,9 +1345,9 @@ validArcLabel(TrgmStateKey *key, TrgmColor co)
 		return false;
 
 	/*
-	 * We also reject nonblank-blank-anything.	The nonblank-blank-nonblank
+	 * We also reject nonblank-blank-anything.  The nonblank-blank-nonblank
 	 * case doesn't correspond to any trigram the trigram extraction code
-	 * would make.	The nonblank-blank-blank case is also not possible with
+	 * would make.  The nonblank-blank-blank case is also not possible with
 	 * RPADDING = 1.  (Note that in many cases we'd fail to generate such a
 	 * trigram even if it were valid, for example processing "foo bar" will
 	 * not result in considering the trigram "o  ".  So if you want to support
@@ -1424,6 +1456,7 @@ selectColorTrigrams(TrgmNFA *trgmNFA)
 	TrgmState  *state;
 	ColorTrgmInfo *colorTrgms;
 	int64		totalTrgmCount;
+	float4		totalTrgmPenalty;
 	int			number;
 
 	/* Collect color trigrams from all arcs */
@@ -1482,52 +1515,66 @@ selectColorTrigrams(TrgmNFA *trgmNFA)
 	}
 
 	/*
-	 * Count number of simple trigrams generated by each color trigram.
+	 * Count number of simple trigrams generated by each color trigram, and
+	 * also compute a penalty value, which is the number of simple trigrams
+	 * times a multiplier that depends on its whitespace content.
 	 *
 	 * Note: per-color-trigram counts cannot overflow an int so long as
 	 * COLOR_COUNT_LIMIT is not more than the cube root of INT_MAX, ie about
 	 * 1290.  However, the grand total totalTrgmCount might conceivably
-	 * overflow an int, so we use int64 for that within this routine.
+	 * overflow an int, so we use int64 for that within this routine.  Also,
+	 * penalties are calculated in float4 arithmetic to avoid any overflow
+	 * worries.
 	 */
 	totalTrgmCount = 0;
+	totalTrgmPenalty = 0.0f;
 	for (i = 0; i < trgmNFA->colorTrgmsCount; i++)
 	{
 		ColorTrgmInfo *trgmInfo = &colorTrgms[i];
 		int			j,
-					count = 1;
+					count = 1,
+					typeIndex = 0;
 
 		for (j = 0; j < 3; j++)
 		{
 			TrgmColor	c = trgmInfo->ctrgm.colors[j];
 
-			if (c != COLOR_BLANK)
+			typeIndex *= 2;
+			if (c == COLOR_BLANK)
+				typeIndex++;
+			else
 				count *= trgmNFA->colorInfo[c].wordCharsCount;
 		}
 		trgmInfo->count = count;
 		totalTrgmCount += count;
+		trgmInfo->penalty = penalties[typeIndex] * (float4) count;
+		totalTrgmPenalty += trgmInfo->penalty;
 	}
 
-	/* Sort color trigrams in descending order of simple trigram counts */
+	/* Sort color trigrams in descending order of their penalties */
 	qsort(colorTrgms, trgmNFA->colorTrgmsCount, sizeof(ColorTrgmInfo),
-		  colorTrgmInfoCountCmp);
+		  colorTrgmInfoPenaltyCmp);
 
 	/*
-	 * Remove color trigrams from the graph so long as total number of simple
-	 * trigrams exceeds MAX_TRGM_COUNT.  We prefer to remove color trigrams
-	 * with the most associated simple trigrams, since those are the most
-	 * promising for reducing the total number of simple trigrams.	When
-	 * removing a color trigram we have to merge states connected by arcs
-	 * labeled with that trigram.  It's necessary to not merge initial and
-	 * final states, because our graph becomes useless if that happens; so we
-	 * cannot always remove the trigram we'd prefer to.
+	 * Remove color trigrams from the graph so long as total penalty of color
+	 * trigrams exceeds WISH_TRGM_PENALTY.  (If we fail to get down to
+	 * WISH_TRGM_PENALTY, it's OK so long as total count is no more than
+	 * MAX_TRGM_COUNT.)  We prefer to remove color trigrams with higher
+	 * penalty, since those are the most promising for reducing the total
+	 * penalty.  When removing a color trigram we have to merge states
+	 * connected by arcs labeled with that trigram.  It's necessary to not
+	 * merge initial and final states, because our graph becomes useless if
+	 * that happens; so we cannot always remove the trigram we'd prefer to.
 	 */
-	for (i = 0;
-		 (i < trgmNFA->colorTrgmsCount) && (totalTrgmCount > MAX_TRGM_COUNT);
-		 i++)
+	for (i = 0; i < trgmNFA->colorTrgmsCount; i++)
 	{
 		ColorTrgmInfo *trgmInfo = &colorTrgms[i];
 		bool		canRemove = true;
 		ListCell   *cell;
+
+		/* Done if we've reached the target */
+		if (totalTrgmPenalty <= WISH_TRGM_PENALTY)
+			break;
 
 		/*
 		 * Does any arc of this color trigram connect initial and final
@@ -1570,9 +1617,10 @@ selectColorTrigrams(TrgmNFA *trgmNFA)
 				mergeStates(source, target);
 		}
 
-		/* Mark trigram unexpanded, and update totalTrgmCount */
+		/* Mark trigram unexpanded, and update totals */
 		trgmInfo->expanded = false;
 		totalTrgmCount -= trgmInfo->count;
+		totalTrgmPenalty -= trgmInfo->penalty;
 	}
 
 	/* Did we succeed in fitting into MAX_TRGM_COUNT? */
@@ -1746,17 +1794,17 @@ colorTrgmInfoCmp(const void *p1, const void *p2)
 
 /*
  * Compare function for sorting color trigrams in descending order of
- * their simple trigrams counts.
+ * their penalty fields.
  */
 static int
-colorTrgmInfoCountCmp(const void *p1, const void *p2)
+colorTrgmInfoPenaltyCmp(const void *p1, const void *p2)
 {
-	const ColorTrgmInfo *c1 = (const ColorTrgmInfo *) p1;
-	const ColorTrgmInfo *c2 = (const ColorTrgmInfo *) p2;
+	float4		penalty1 = ((const ColorTrgmInfo *) p1)->penalty;
+	float4		penalty2 = ((const ColorTrgmInfo *) p2)->penalty;
 
-	if (c1->count < c2->count)
+	if (penalty1 < penalty2)
 		return 1;
-	else if (c1->count == c2->count)
+	else if (penalty1 == penalty2)
 		return 0;
 	else
 		return -1;
@@ -1972,7 +2020,7 @@ printSourceNFA(regex_t *regex, TrgmColorInfo *colors, int ncolors)
 
 	initStringInfo(&buf);
 
-	appendStringInfo(&buf, "\ndigraph sourceNFA {\n");
+	appendStringInfoString(&buf, "\ndigraph sourceNFA {\n");
 
 	for (state = 0; state < nstates; state++)
 	{
@@ -1982,8 +2030,8 @@ printSourceNFA(regex_t *regex, TrgmColorInfo *colors, int ncolors)
 
 		appendStringInfo(&buf, "s%d", state);
 		if (pg_reg_getfinalstate(regex) == state)
-			appendStringInfo(&buf, " [shape = doublecircle]");
-		appendStringInfo(&buf, ";\n");
+			appendStringInfoString(&buf, " [shape = doublecircle]");
+		appendStringInfoString(&buf, ";\n");
 
 		arcsCount = pg_reg_getnumoutarcs(regex, state);
 		arcs = (regex_arc_t *) palloc(sizeof(regex_arc_t) * arcsCount);
@@ -1998,13 +2046,13 @@ printSourceNFA(regex_t *regex, TrgmColorInfo *colors, int ncolors)
 		pfree(arcs);
 	}
 
-	appendStringInfo(&buf, " node [shape = point ]; initial;\n");
+	appendStringInfoString(&buf, " node [shape = point ]; initial;\n");
 	appendStringInfo(&buf, " initial -> s%d;\n",
 					 pg_reg_getinitialstate(regex));
 
 	/* Print colors */
-	appendStringInfo(&buf, " { rank = sink;\n");
-	appendStringInfo(&buf, "  Colors [shape = none, margin=0, label=<\n");
+	appendStringInfoString(&buf, " { rank = sink;\n");
+	appendStringInfoString(&buf, "  Colors [shape = none, margin=0, label=<\n");
 
 	for (i = 0; i < ncolors; i++)
 	{
@@ -2020,17 +2068,17 @@ printSourceNFA(regex_t *regex, TrgmColorInfo *colors, int ncolors)
 
 				memcpy(s, color->wordChars[j].bytes, MAX_MULTIBYTE_CHAR_LEN);
 				s[MAX_MULTIBYTE_CHAR_LEN] = '\0';
-				appendStringInfo(&buf, "%s", s);
+				appendStringInfoString(&buf, s);
 			}
 		}
 		else
-			appendStringInfo(&buf, "not expandable");
-		appendStringInfo(&buf, "\n");
+			appendStringInfoString(&buf, "not expandable");
+		appendStringInfoChar(&buf, '\n');
 	}
 
-	appendStringInfo(&buf, "  >];\n");
-	appendStringInfo(&buf, " }\n");
-	appendStringInfo(&buf, "}\n");
+	appendStringInfoString(&buf, "  >];\n");
+	appendStringInfoString(&buf, " }\n");
+	appendStringInfoString(&buf, "}\n");
 
 	{
 		/* dot -Tpng -o /tmp/source.png < /tmp/source.dot */
@@ -2056,7 +2104,7 @@ printTrgmNFA(TrgmNFA *trgmNFA)
 
 	initStringInfo(&buf);
 
-	appendStringInfo(&buf, "\ndigraph transformedNFA {\n");
+	appendStringInfoString(&buf, "\ndigraph transformedNFA {\n");
 
 	hash_seq_init(&scan_status, trgmNFA->states);
 	while ((state = (TrgmState *) hash_seq_search(&scan_status)) != NULL)
@@ -2065,11 +2113,11 @@ printTrgmNFA(TrgmNFA *trgmNFA)
 
 		appendStringInfo(&buf, "s%p", (void *) state);
 		if (state->fin)
-			appendStringInfo(&buf, " [shape = doublecircle]");
+			appendStringInfoString(&buf, " [shape = doublecircle]");
 		if (state->init)
 			initstate = state;
 		appendStringInfo(&buf, " [label = \"%d\"]", state->stateKey.nstate);
-		appendStringInfo(&buf, ";\n");
+		appendStringInfoString(&buf, ";\n");
 
 		foreach(cell, state->arcs)
 		{
@@ -2078,21 +2126,21 @@ printTrgmNFA(TrgmNFA *trgmNFA)
 			appendStringInfo(&buf, "  s%p -> s%p [label = \"",
 							 (void *) state, (void *) arc->target);
 			printTrgmColor(&buf, arc->ctrgm.colors[0]);
-			appendStringInfo(&buf, " ");
+			appendStringInfoChar(&buf, ' ');
 			printTrgmColor(&buf, arc->ctrgm.colors[1]);
-			appendStringInfo(&buf, " ");
+			appendStringInfoChar(&buf, ' ');
 			printTrgmColor(&buf, arc->ctrgm.colors[2]);
-			appendStringInfo(&buf, "\"];\n");
+			appendStringInfoString(&buf, "\"];\n");
 		}
 	}
 
 	if (initstate)
 	{
-		appendStringInfo(&buf, " node [shape = point ]; initial;\n");
+		appendStringInfoString(&buf, " node [shape = point ]; initial;\n");
 		appendStringInfo(&buf, " initial -> s%p;\n", (void *) initstate);
 	}
 
-	appendStringInfo(&buf, "}\n");
+	appendStringInfoString(&buf, "}\n");
 
 	{
 		/* dot -Tpng -o /tmp/transformed.png < /tmp/transformed.dot */
@@ -2112,9 +2160,9 @@ static void
 printTrgmColor(StringInfo buf, TrgmColor co)
 {
 	if (co == COLOR_UNKNOWN)
-		appendStringInfo(buf, "u");
+		appendStringInfoChar(buf, 'u');
 	else if (co == COLOR_BLANK)
-		appendStringInfo(buf, "b");
+		appendStringInfoChar(buf, 'b');
 	else
 		appendStringInfo(buf, "%d", (int) co);
 }
@@ -2131,7 +2179,7 @@ printTrgmPackedGraph(TrgmPackedGraph *packedGraph, TRGM *trigrams)
 
 	initStringInfo(&buf);
 
-	appendStringInfo(&buf, "\ndigraph packedGraph {\n");
+	appendStringInfoString(&buf, "\ndigraph packedGraph {\n");
 
 	for (i = 0; i < packedGraph->statesCount; i++)
 	{
@@ -2140,7 +2188,7 @@ printTrgmPackedGraph(TrgmPackedGraph *packedGraph, TRGM *trigrams)
 
 		appendStringInfo(&buf, " s%d", i);
 		if (i == 1)
-			appendStringInfo(&buf, " [shape = doublecircle]");
+			appendStringInfoString(&buf, " [shape = doublecircle]");
 
 		appendStringInfo(&buf, " [label = <s%d>];\n", i);
 
@@ -2153,12 +2201,12 @@ printTrgmPackedGraph(TrgmPackedGraph *packedGraph, TRGM *trigrams)
 		}
 	}
 
-	appendStringInfo(&buf, " node [shape = point ]; initial;\n");
+	appendStringInfoString(&buf, " node [shape = point ]; initial;\n");
 	appendStringInfo(&buf, " initial -> s%d;\n", 0);
 
 	/* Print trigrams */
-	appendStringInfo(&buf, " { rank = sink;\n");
-	appendStringInfo(&buf, "  Trigrams [shape = none, margin=0, label=<\n");
+	appendStringInfoString(&buf, " { rank = sink;\n");
+	appendStringInfoString(&buf, "  Trigrams [shape = none, margin=0, label=<\n");
 
 	p = GETARR(trigrams);
 	for (i = 0; i < packedGraph->colorTrigramsCount; i++)
@@ -2171,7 +2219,7 @@ printTrgmPackedGraph(TrgmPackedGraph *packedGraph, TRGM *trigrams)
 		for (j = 0; j < count; j++)
 		{
 			if (j > 0)
-				appendStringInfo(&buf, ", ");
+				appendStringInfoString(&buf, ", ");
 
 			/*
 			 * XXX This representation is nice only for all-ASCII trigrams.
@@ -2181,9 +2229,9 @@ printTrgmPackedGraph(TrgmPackedGraph *packedGraph, TRGM *trigrams)
 		}
 	}
 
-	appendStringInfo(&buf, "  >];\n");
-	appendStringInfo(&buf, " }\n");
-	appendStringInfo(&buf, "}\n");
+	appendStringInfoString(&buf, "  >];\n");
+	appendStringInfoString(&buf, " }\n");
+	appendStringInfoString(&buf, "}\n");
 
 	{
 		/* dot -Tpng -o /tmp/packed.png < /tmp/packed.dot */

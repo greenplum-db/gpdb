@@ -173,6 +173,7 @@ def impl(context, qualified_table):
 
 
 @given('{num_rows} rows are inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
+@then('{num_rows} rows are inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 @when('{num_rows} rows are inserted into table "{tablename}" in schema "{schemaname}" with column type list "{column_type_list}"')
 def impl(context, num_rows, tablename, schemaname, column_type_list):
     insert_data_into_table(context.conn, schemaname, tablename, column_type_list, num_rows)

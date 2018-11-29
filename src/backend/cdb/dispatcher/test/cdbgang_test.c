@@ -136,111 +136,6 @@ mockLibpq(PGconn *pgConn, uint32 motionListener, int qePid)
 	will_return_count(PQbackendPID, qePid, -1);
 }
 
-static void
-test__createWriterGang(void **state)
-{
-	int			segmentCount = TOTOAL_SEGMENTS;
-	uint8		ftsVersion = 1;
-	PGconn	   *conn = &pgconn;
-	uint32		motionListener = 10000;
-	int			qePid = 2000;
-	int			i = 0;
-	CdbDispatcherState ds;
-	ds.allocatedGangs = NIL;
-
-	will_return(IsTransactionOrTransactionBlock, true);
-	will_return(getCdbComponentDatabases, s_cdb);
-	will_return_count(getgpsegmentCount, segmentCount, -1);
-	will_return_count(getFtsVersion, ftsVersion, 1);
-
-	expect_any(FaultInjector_InjectFaultIfSet, identifier);
-	expect_any(FaultInjector_InjectFaultIfSet, ddlStatement);
-	expect_any(FaultInjector_InjectFaultIfSet, databaseName);
-	expect_any(FaultInjector_InjectFaultIfSet, tableName);
-	will_return(FaultInjector_InjectFaultIfSet, false);
-
-	mockLibpq(conn, motionListener, qePid);
-
-	cdbgang_setAsync(false);
-
-	Gang	   *gang = AllocateWriterGang(&ds);
-
-	/* validate gang */
-	assert_int_equal(gang->size, TOTOAL_SEGMENTS);
-	assert_int_equal(gang->gang_id, 1);
-	assert_int_equal(gang->portal_name, NULL);
-	assert_int_equal(gang->type, GANGTYPE_PRIMARY_WRITER);
-	assert_int_equal(gang->noReuse, false);
-	assert_int_equal(gang->dispatcherActive, false);
-	assert_int_equal(gang->allocated, true);
-
-	for (i = 0; i < gang->size; i++)
-	{
-		SegmentDatabaseDescriptor *segdb = &gang->db_descriptors[i];
-		CdbComponentDatabaseInfo *cdbinfo = segdb->segment_database_info;
-
-		assert_int_equal(segdb->backendPid, qePid);
-		assert_int_equal(segdb->conn, conn);
-		assert_int_equal(segdb->errcode, 0);
-		assert_int_equal(segdb->error_message.len, 0);
-		assert_int_equal(segdb->motionListener, motionListener);
-		assert_int_equal(segdb->segindex, i);
-
-		validateCdbInfo(segdb->segment_database_info, segdb->segindex);
-	}
-}
-
-static void
-test__createReaderGang(void **state)
-{
-	int			segmentCount = TOTOAL_SEGMENTS;
-	uint8		ftsVersion = 1;
-	PGconn	   *conn = &pgconn;
-	const char *portalName = "portal1";
-	uint32		motionListener = 10000;
-	int			qePid = 2000;
-	int			i = 0;
-	CdbDispatcherState ds;
-	ds.allocatedGangs = NIL;
-
-	will_return_count(getgpsegmentCount, segmentCount, -1);
-	will_return_count(getFtsVersion, ftsVersion, 1);
-
-	expect_any(FaultInjector_InjectFaultIfSet, identifier);
-	expect_any(FaultInjector_InjectFaultIfSet, ddlStatement);
-	expect_any(FaultInjector_InjectFaultIfSet, databaseName);
-	expect_any(FaultInjector_InjectFaultIfSet, tableName);
-	will_return(FaultInjector_InjectFaultIfSet, false);
-	mockLibpq(conn, motionListener, qePid);
-
-	cdbgang_setAsync(false);
-	Gang	   *gang = AllocateReaderGang(&ds, GANGTYPE_PRIMARY_READER, portalName);
-
-	/* validate gang */
-	assert_int_equal(gang->size, TOTOAL_SEGMENTS);
-	assert_int_equal(gang->gang_id, 2);
-	assert_string_equal(gang->portal_name, portalName);
-	assert_int_equal(gang->type, GANGTYPE_PRIMARY_READER);
-	assert_int_equal(gang->noReuse, false);
-	assert_int_equal(gang->dispatcherActive, false);
-	assert_int_equal(gang->allocated, true);
-
-	for (i = 0; i < gang->size; i++)
-	{
-		SegmentDatabaseDescriptor *segdb = &gang->db_descriptors[i];
-		CdbComponentDatabaseInfo *cdbinfo = segdb->segment_database_info;
-
-		assert_int_equal(segdb->backendPid, qePid);
-		assert_int_equal(segdb->conn, conn);
-		assert_int_equal(segdb->errcode, 0);
-		assert_int_equal(segdb->error_message.len, 0);
-		assert_int_equal(segdb->motionListener, motionListener);
-		assert_int_equal(segdb->segindex, i);
-
-		validateCdbInfo(segdb->segment_database_info, segdb->segindex);
-	}
-}
-
 /*
  * Make sure resetSessionForPrimaryGangLoss doesn't access catalog.
  */
@@ -270,8 +165,7 @@ main(int argc, char *argv[])
 	const		UnitTest tests[] =
 	{
 		unit_test(test__resetSessionForPrimaryGangLoss),
-		unit_test(test__createWriterGang),
-	unit_test(test__createReaderGang),};
+	};
 
 	MemoryContextInit();
 	DispatcherContext = AllocSetContextCreate(TopMemoryContext,
@@ -282,10 +176,8 @@ main(int argc, char *argv[])
 
 	CurrentResourceOwner = ResourceOwnerCreate(NULL, "gang test");
 	Gp_role = GP_ROLE_DISPATCH;
-	GpIdentity.numsegments = TOTOAL_SEGMENTS;
 	GpIdentity.dbid = 1;
 	GpIdentity.segindex = -1;
-	gp_connections_per_thread = 64;
 
 	Port		procport;
 

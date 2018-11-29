@@ -111,15 +111,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>datconfig</codeph>
-            </entry>
-            <entry colname="col2">text[]</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Session defaults for user-settable server configuration
-              parameters.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>datacl</codeph>
             </entry>
             <entry colname="col2">aclitem[]</entry>

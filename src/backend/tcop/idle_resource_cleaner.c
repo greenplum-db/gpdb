@@ -13,6 +13,8 @@
  */
 #include "postgres.h"
 
+#include <signal.h>
+
 #include "cdb/cdbgang.h"
 #include "commands/async.h"
 #include "storage/sinval.h"
@@ -37,7 +39,7 @@ static volatile sig_atomic_t idle_gang_timeout_occurred;
 void
 StartIdleResourceCleanupTimers()
 {
-	if (IdleSessionGangTimeout <= 0 || !GangsExist())
+	if (IdleSessionGangTimeout <= 0 || !cdbcomponent_qesExist())
 		return;
 
 	enable_timeout_after(GANG_TIMEOUT, IdleSessionGangTimeout);
@@ -108,7 +110,7 @@ IdleGangTimeoutHandler(void)
 
 		idle_gang_timeout_occurred = 0;
 
-		DisconnectAndDestroyUnusedGangs();
+		DisconnectAndDestroyUnusedQEs();
 
 		if (notify_enabled)
 			EnableNotifyInterrupt();

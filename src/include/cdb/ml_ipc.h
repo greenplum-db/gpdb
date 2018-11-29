@@ -315,8 +315,8 @@ extern void markUDPConnInactiveIFC(MotionConn *conn);
 extern void CleanupMotionTCP(void);
 extern void CleanupMotionUDPIFC(void);
 extern void WaitInterconnectQuitUDPIFC(void);
-extern ChunkTransportState *SetupTCPInterconnect(SliceTable *sliceTable);
-extern ChunkTransportState *SetupUDPIFCInterconnect(SliceTable *sliceTable);
+extern void SetupTCPInterconnect(EState *estate);
+extern void SetupUDPIFCInterconnect(EState *estate);
 extern void TeardownTCPInterconnect(ChunkTransportState *transportStates,
 								 bool forceEOS, bool hasError);
 extern void TeardownUDPIFCInterconnect(ChunkTransportState *transportStates,

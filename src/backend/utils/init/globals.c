@@ -3,7 +3,7 @@
  * globals.c
  *	  global variable declarations
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -18,6 +18,7 @@
  */
 #include "postgres.h"
 
+#include "libpq/libpq-be.h"
 #include "libpq/pqcomm.h"
 #include "miscadmin.h"
 #include "storage/backendid.h"
@@ -99,8 +100,6 @@ bool		ExitOnAnyError = false;
 int			DateStyle = USE_ISO_DATES;
 int			DateOrder = DATEORDER_MDY;
 int			IntervalStyle = INTSTYLE_POSTGRES;
-bool		HasCTZSet = false;
-int			CTimeZone = 0;
 
 bool		enableFsync = true;
 bool		allowSystemTableMods = false;
@@ -123,6 +122,7 @@ int			maintenance_work_mem = 65536;
  */
 int			NBuffers = 4096;
 int			MaxConnections = 90;
+int			max_worker_processes = 8;
 int			MaxBackends = 0;
 
 int			gp_workfile_max_entries = 8192; /* Number of unique entries we can hold in the workfile directory */
@@ -139,8 +139,6 @@ int			VacuumPageDirty = 0;
 
 int			VacuumCostBalance = 0;		/* working state for vacuum */
 bool		VacuumCostActive = false;
-
-int			GinFuzzySearchLimit = 0;
 
 /* gpperfmon port number */
 int 	gpperfmon_port = 8888;

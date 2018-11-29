@@ -388,13 +388,6 @@ select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
 select '1'::text in (select '1'::name union all select '1'::name);
 
 --
--- Check sane behavior with nested IN SubLinks
---
-select * from int4_tbl where
-  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
-  (select ten from tenk1 b);
-
---
 -- Check for incorrect optimization when IN subquery contains a SRF
 --
 set enable_hashjoin to 0;
@@ -426,3 +419,37 @@ where a.thousand = b.thousand
   and exists ( select 1 from tenk1 c where b.hundred = c.hundred
                    and not exists ( select 1 from tenk1 d
                                     where a.thousand = d.thousand ) );
+
+--
+-- Check that nested sub-selects are not pulled up if they contain volatiles
+--
+explain (verbose, costs off)
+  select x, x from
+    (select (select current_database()) as x from (values(1),(2)) v(y)) ss;
+explain (verbose, costs off)
+  select x, x from
+    (select (select random()) as x from (values(1),(2)) v(y)) ss;
+explain (verbose, costs off)
+  select x, x from
+    (select (select current_database() where y=y) as x from (values(1),(2)) v(y)) ss;
+explain (verbose, costs off)
+  select x, x from
+    (select (select random() where y=y) as x from (values(1),(2)) v(y)) ss;
+
+--
+-- Check we behave sanely in corner case of empty SELECT list (bug #8648)
+--
+create temp table nocolumns();
+select exists(select * from nocolumns);
+
+--
+-- Check sane behavior with nested IN SubLinks
+-- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
+--
+explain (verbose, costs off)
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);
+select * from int4_tbl where
+  (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
+  (select ten from tenk1 b);

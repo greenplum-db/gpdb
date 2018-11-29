@@ -246,3 +246,18 @@ ResGroupOps_GetCpuSet(Oid group, char *cpuset, int len)
 {
 	unsupported_system();
 }
+
+/*
+ * Convert the cpu usage to percentage within the duration.
+ *
+ * usage is the delta of GetCpuUsage() of a duration,
+ * duration is in micro seconds.
+ *
+ * When fully consuming one cpu core the return value will be 100.0 .
+ */
+float
+ResGroupOps_ConvertCpuUsageToPercent(int64 usage, int64 duration)
+{
+	unsupported_system();
+	return 0.0;
+}

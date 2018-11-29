@@ -4,7 +4,7 @@
  *	  Support getaddrinfo() on platforms that don't have it.
  *
  * We also supply getnameinfo() here, assuming that the platform will have
- * it if and only if it has getaddrinfo().	If this proves false on some
+ * it if and only if it has getaddrinfo().  If this proves false on some
  * platform, we'll need to split this file and provide a separate configure
  * test for getnameinfo().
  *
@@ -13,7 +13,7 @@
  * use the Windows native routines, but if not, we use our own.
  *
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/port/getaddrinfo.c
@@ -182,7 +182,7 @@ getaddrinfo(const char *node, const char *service,
 		else if (hints.ai_flags & AI_NUMERICHOST)
 		{
 			if (!inet_aton(node, &sin.sin_addr))
-				return EAI_FAIL;
+				return EAI_NONAME;
 		}
 		else
 		{
@@ -349,8 +349,8 @@ gai_strerror(int errcode)
 /*
  * Convert an ipv4 address to a hostname.
  *
- * Bugs:	- Only supports NI_NUMERICHOST and NI_NUMERICSERV
- *		  It will never resolv a hostname.
+ * Bugs:	- Only supports NI_NUMERICHOST and NI_NUMERICSERV behavior.
+ *		  It will never resolve a hostname.
  *		- No IPv6 support.
  */
 int
@@ -378,6 +378,10 @@ getnameinfo(const struct sockaddr * sa, int salen,
 		return EAI_FAMILY;
 #endif
 
+	/* Unsupported flags. */
+	if (flags & NI_NAMEREQD)
+		return EAI_AGAIN;
+
 	if (node)
 	{
 		if (sa->sa_family == AF_INET)
@@ -400,7 +404,7 @@ getnameinfo(const struct sockaddr * sa, int salen,
 			ret = snprintf(service, servicelen, "%d",
 						   ntohs(((struct sockaddr_in *) sa)->sin_port));
 		}
-		if (ret == -1 || ret > servicelen)
+		if (ret == -1 || ret >= servicelen)
 			return EAI_MEMORY;
 	}
 

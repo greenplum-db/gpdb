@@ -31,14 +31,6 @@ bitmap_desc(StringInfo buf, XLogRecord *record)
 
 	switch (info)
 	{
-		case XLOG_BITMAP_INSERT_NEWLOV:
-		{
-			xl_bm_newpage *xlrec = (xl_bm_newpage *)rec;
-
-			appendStringInfo(buf, "insert a new LOV page: ");
-			out_target(buf, &(xlrec->bm_node));
-			break;
-		}
 		case XLOG_BITMAP_INSERT_LOVITEM:
 		{
 			xl_bm_lovitem *xlrec = (xl_bm_lovitem *)rec;

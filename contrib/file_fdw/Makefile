@@ -5,9 +5,9 @@ MODULES = file_fdw
 EXTENSION = file_fdw
 DATA = file_fdw--1.0.sql
 
-REGRESS = file_fdw
+REGRESS = file_fdw gp_file_fdw
 
-EXTRA_CLEAN = sql/file_fdw.sql expected/file_fdw.out
+EXTRA_CLEAN = sql/file_fdw.sql expected/file_fdw.out sql/gp_file_fdw.sql expected/gp_file_fdw.out
 
 ifdef USE_PGXS
 PG_CONFIG = pg_config

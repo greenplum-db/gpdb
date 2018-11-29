@@ -26,7 +26,7 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         0 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
@@ -175,7 +175,7 @@ analyze;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         0 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
@@ -226,7 +226,7 @@ vacuum analyze;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         0 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
@@ -256,7 +256,7 @@ select * from pg_stats where tablename like 'p3_sales%' order by tablename, attn
 select count(*) from pg_stat_last_operation pgl, pg_class pgc where pgl.objid=pgc.oid and pgc.relname like 'p3_sales%';
  count 
 -------
-    47
+    45
 (1 row)
 
 -- Case 6: Analyzing root table with ROOTPARTITION keyword should only update the stats of the root table when the GUC optimizer_analyze_root_partition and optimizer_analyze_midlevel_partition are set off
@@ -283,7 +283,7 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        0
@@ -428,7 +428,7 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
@@ -484,7 +484,7 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        0
@@ -535,20 +535,20 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
- p3_sales_1_prt_2                                                |         2 |        1
- p3_sales_1_prt_2_2_prt_2                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
+ p3_sales_1_prt_2                                                |         0 |        0
+ p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
  p3_sales_1_prt_2_2_prt_2_3_prt_usa                              |         2 |        1
- p3_sales_1_prt_2_2_prt_other_months                             |         0 |        1
+ p3_sales_1_prt_2_2_prt_other_months                             |         0 |        0
  p3_sales_1_prt_2_2_prt_other_months_3_prt_other_regions         |         0 |        1
  p3_sales_1_prt_2_2_prt_other_months_3_prt_usa                   |         0 |        1
- p3_sales_1_prt_outlying_years                                   |         0 |        1
- p3_sales_1_prt_outlying_years_2_prt_2                           |         0 |        1
+ p3_sales_1_prt_outlying_years                                   |         0 |        0
+ p3_sales_1_prt_outlying_years_2_prt_2                           |         0 |        0
  p3_sales_1_prt_outlying_years_2_prt_2_3_prt_other_regions       |         0 |        1
  p3_sales_1_prt_outlying_years_2_prt_2_3_prt_usa                 |         0 |        1
  p3_sales_1_prt_outlying_years_2_prt_other_m_3_prt_other_regions |         0 |        1
- p3_sales_1_prt_outlying_years_2_prt_other_months                |         0 |        1
+ p3_sales_1_prt_outlying_years_2_prt_other_months                |         0 |        0
  p3_sales_1_prt_outlying_years_2_prt_other_months_3_prt_usa      |         0 |        1
 (15 rows)
 
@@ -601,7 +601,7 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        0
@@ -652,7 +652,7 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        0
@@ -703,20 +703,20 @@ analyze p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         0 |        1
- p3_sales_1_prt_2                                                |         2 |        1
- p3_sales_1_prt_2_2_prt_2                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
+ p3_sales_1_prt_2                                                |         0 |        0
+ p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        1
  p3_sales_1_prt_2_2_prt_2_3_prt_usa                              |         2 |        1
- p3_sales_1_prt_2_2_prt_other_months                             |         0 |        1
+ p3_sales_1_prt_2_2_prt_other_months                             |         0 |        0
  p3_sales_1_prt_2_2_prt_other_months_3_prt_other_regions         |         0 |        1
  p3_sales_1_prt_2_2_prt_other_months_3_prt_usa                   |         0 |        1
- p3_sales_1_prt_outlying_years                                   |         0 |        1
- p3_sales_1_prt_outlying_years_2_prt_2                           |         0 |        1
+ p3_sales_1_prt_outlying_years                                   |         0 |        0
+ p3_sales_1_prt_outlying_years_2_prt_2                           |         0 |        0
  p3_sales_1_prt_outlying_years_2_prt_2_3_prt_other_regions       |         0 |        1
  p3_sales_1_prt_outlying_years_2_prt_2_3_prt_usa                 |         0 |        1
  p3_sales_1_prt_outlying_years_2_prt_other_m_3_prt_other_regions |         0 |        1
- p3_sales_1_prt_outlying_years_2_prt_other_months                |         0 |        1
+ p3_sales_1_prt_outlying_years_2_prt_other_months                |         0 |        0
  p3_sales_1_prt_outlying_years_2_prt_other_months_3_prt_usa      |         0 |        1
 (15 rows)
 
@@ -764,7 +764,7 @@ analyze rootpartition p3_sales;
 select relname, reltuples, relpages from pg_class where relname like 'p3_sales%' order by relname;
                              relname                             | reltuples | relpages 
 -----------------------------------------------------------------+-----------+----------
- p3_sales                                                        |         2 |        1
+ p3_sales                                                        |         0 |        0
  p3_sales_1_prt_2                                                |         0 |        0
  p3_sales_1_prt_2_2_prt_2                                        |         0 |        0
  p3_sales_1_prt_2_2_prt_2_3_prt_other_regions                    |         0 |        0
@@ -843,3 +843,78 @@ SELECT schemaname, tablename, attname, null_frac, avg_width, n_distinct, most_co
 (4 rows)
 
 DROP TABLE IF EXISTS foo_stats;
+--
+-- Test statistics collection with a "partially distributed" table. That is, with a table
+-- that has a smaller 'numsegments' in the distribution policy than the segment count
+-- of the cluster.
+--
+set allow_system_table_mods=true;
+create table twoseg_table(a int, b int, c int) distributed by (a);
+update gp_distribution_policy set numsegments=2 where localoid='twoseg_table'::regclass;
+insert into twoseg_table select i, i % 10, 0 from generate_series(1, 50) I;
+analyze twoseg_table;
+select relname, reltuples, relpages from pg_class where relname ='twoseg_table' order by relname;
+   relname    | reltuples | relpages 
+--------------+-----------+----------
+ twoseg_table |        50 |        2
+(1 row)
+
+select attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='twoseg_table' ORDER BY attname;
+ attname | null_frac | avg_width | n_distinct |   most_common_vals    |             most_common_freqs             |                                                                histogram_bounds                                                                
+---------+-----------+-----------+------------+-----------------------+-------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------
+ a       |         0 |         4 |         -1 |                       |                                           | {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50}
+ b       |         0 |         4 |       -0.2 | {0,1,2,3,4,5,6,7,8,9} | {0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1} | 
+ c       |         0 |         4 |          1 | {0}                   | {1}                                       | 
+(3 rows)
+
+drop table twoseg_table;
+--
+-- Test statistics collection on a replicated table.
+--
+create table rep_table(a int, b int, c int) distributed replicated;
+insert into rep_table select i, i % 10, 0 from generate_series(1, 50) I;
+analyze rep_table;
+select relname, reltuples, relpages from pg_class where relname ='rep_table' order by relname;
+  relname  | reltuples | relpages 
+-----------+-----------+----------
+ rep_table |        50 |        1
+(1 row)
+
+select attname, null_frac, avg_width, n_distinct, most_common_vals, most_common_freqs, histogram_bounds FROM pg_stats WHERE tablename='rep_table' ORDER BY attname;
+ attname | null_frac | avg_width | n_distinct |   most_common_vals    |             most_common_freqs             |                                                                histogram_bounds                                                                
+---------+-----------+-----------+------------+-----------------------+-------------------------------------------+------------------------------------------------------------------------------------------------------------------------------------------------
+ a       |         0 |         4 |         -1 |                       |                                           | {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50}
+ b       |         0 |         4 |       -0.2 | {0,1,2,3,4,5,6,7,8,9} | {0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1} | 
+ c       |         0 |         4 |          1 | {0}                   | {1}                                       | 
+(3 rows)
+
+drop table rep_table;
+--
+-- Test relpages collection for AO tables.
+--
+-- use a lower target, so that the whole table doesn't fit in the sample.
+set default_statistics_target=10;
+create table ao_analyze_test (i int4) with (appendonly=true);
+insert into ao_analyze_test select g from generate_series(1, 100000) g;
+create index ao_analyze_test_idx on ao_analyze_test (i);
+analyze ao_analyze_test;
+select relname, reltuples from pg_class where relname like 'ao_analyze_test%' order by relname;
+       relname       | reltuples 
+---------------------+-----------
+ ao_analyze_test     |    100000
+ ao_analyze_test_idx |    100000
+(2 rows)
+
+-- and same for AOCS
+create table aocs_analyze_test (i int4) with (appendonly=true, orientation=column);
+insert into aocs_analyze_test select g from generate_series(1, 100000) g;
+create index aocs_analyze_test_idx on aocs_analyze_test (i);
+analyze aocs_analyze_test;
+select relname, reltuples from pg_class where relname like 'aocs_analyze_test%' order by relname;
+        relname        | reltuples 
+-----------------------+-----------
+ aocs_analyze_test     |    100000
+ aocs_analyze_test_idx |    100000
+(2 rows)
+
+reset default_statistics_target;

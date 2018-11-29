@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -20,6 +20,7 @@
 #include <math.h>
 
 #include "catalog/pg_class.h"
+#include "catalog/pg_operator.h"
 #include "foreign/fdwapi.h"
 #include "nodes/nodeFuncs.h"
 #ifdef OPTIMIZER_DEBUG
@@ -75,6 +76,9 @@ static bool has_multiple_baserels(PlannerInfo *root);
 static void generate_mergeappend_paths(PlannerInfo *root, RelOptInfo *rel,
 						   List *live_childrels,
 						   List *all_child_pathkeys);
+static Path *get_cheapest_parameterized_child_path(PlannerInfo *root,
+									  RelOptInfo *rel,
+									  Relids required_outer);
 static List *accumulate_append_subpath(List *subpaths, Path *path);
 static void set_dummy_rel_pathlist(PlannerInfo *root, RelOptInfo *rel);
 static void set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
@@ -378,17 +382,6 @@ set_plain_rel_size(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 
 	/* Mark rel with estimated output rows, width, etc */
 	set_baserel_size_estimates(root, rel);
-
-	/*
-	 * Check to see if we can extract any restriction conditions from join
-	 * quals that are OR-of-AND structures.  If so, add them to the rel's
-	 * restriction list, and redo the above steps.
-	 */
-	if (create_or_index_quals(root, rel))
-	{
-		check_partial_indexes(root, rel);
-		set_baserel_size_estimates(root, rel);
-	}
 }
 
 /*
@@ -404,8 +397,7 @@ set_plain_rel_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/*
 	 * We don't support pushing join clauses into the quals of a seqscan, but
 	 * it could still have required parameterization due to LATERAL refs in
-	 * its tlist.  (That can only happen if the seqscan is on a relation
-	 * pulled up out of a UNION ALL appendrel.)
+	 * its tlist.
 	 */
 	required_outer = rel->lateral_relids;
 
@@ -500,7 +492,7 @@ set_foreign_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
  * set_append_rel_size
  *	  Set size estimates for an "append relation"
  *
- * The passed-in rel and RTE represent the entire append relation.	The
+ * The passed-in rel and RTE represent the entire append relation.  The
  * relation's contents are computed by appending together the output of
  * the individual member relations.  Note that in the inheritance case,
  * the first member relation is actually the same table as is mentioned in
@@ -568,7 +560,7 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 
 		/*
 		 * We have to copy the parent's targetlist and quals to the child,
-		 * with appropriate substitution of variables.	However, only the
+		 * with appropriate substitution of variables.  However, only the
 		 * baserestrictinfo quals are needed before we can check for
 		 * constraint exclusion; so do that first and then check to see if we
 		 * can disregard this child.
@@ -618,8 +610,8 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 		 * Note: the resulting childrel->reltargetlist may contain arbitrary
 		 * expressions, which otherwise would not occur in a reltargetlist.
 		 * Code that might be looking at an appendrel child must cope with
-		 * such.  Note in particular that "arbitrary expression" can include
-		 * "Var belonging to another relation", due to LATERAL references.
+		 * such.  (Normally, a reltargetlist would only include Vars and
+		 * PlaceHolderVars.)
 		 */
 		childrel->joininfo = (List *)
 			adjust_appendrel_attrs(root,
@@ -656,7 +648,7 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 
 		/*
 		 * We have to make child entries in the EquivalenceClass data
-		 * structures as well.	This is needed either if the parent
+		 * structures as well.  This is needed either if the parent
 		 * participates in some eclass joins (because we will want to consider
 		 * inner-indexscan joins on the individual children) or if the parent
 		 * has useful pathkeys (because we should try to build MergeAppend
@@ -698,7 +690,7 @@ set_append_rel_size(PlannerInfo *root, RelOptInfo *rel,
 
 			/*
 			 * Accumulate per-column estimates too.  We need not do anything
-			 * for PlaceHolderVars in the parent list.	If child expression
+			 * for PlaceHolderVars in the parent list.  If child expression
 			 * isn't a Var, or we didn't record a width estimate for it, we
 			 * have to fall back on a datatype-based estimate.
 			 *
@@ -774,7 +766,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 	/*
 	 * Generate access paths for each member relation, and remember the
-	 * cheapest path for each one.	Also, identify all pathkeys (orderings)
+	 * cheapest path for each one.  Also, identify all pathkeys (orderings)
 	 * and parameterizations (required_outer sets) available for the member
 	 * relations.
 	 */
@@ -824,7 +816,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 
 		/*
 		 * Collect lists of all the available path orderings and
-		 * parameterizations for all the children.	We use these as a
+		 * parameterizations for all the children.  We use these as a
 		 * heuristic to indicate which sort orderings and parameterizations we
 		 * should build Append and MergeAppend paths for.
 		 */
@@ -916,7 +908,7 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	 * so that not that many cases actually get considered here.)
 	 *
 	 * The Append node itself cannot enforce quals, so all qual checking must
-	 * be done in the child paths.	This means that to have a parameterized
+	 * be done in the child paths.  This means that to have a parameterized
 	 * Append path, we must have the exact same parameterization for each
 	 * child path; otherwise some children might be failing to check the
 	 * moved-down quals.  To make them match up, we can try to increase the
@@ -933,28 +925,18 @@ set_append_rel_pathlist(PlannerInfo *root, RelOptInfo *rel,
 		foreach(lcr, live_childrels)
 		{
 			RelOptInfo *childrel = (RelOptInfo *) lfirst(lcr);
-			Path	   *cheapest_total;
+			Path	   *subpath;
 
-			cheapest_total =
-				get_cheapest_path_for_pathkeys(childrel->pathlist,
-											   NIL,
-											   required_outer,
-											   TOTAL_COST);
-			Assert(cheapest_total != NULL);
-
-			/* Children must have exactly the desired parameterization */
-			if (!bms_equal(PATH_REQ_OUTER(cheapest_total), required_outer))
+			subpath = get_cheapest_parameterized_child_path(root,
+															childrel,
+															required_outer);
+			if (subpath == NULL)
 			{
-				cheapest_total = reparameterize_path(root, cheapest_total,
-													 required_outer, 1.0);
-				if (cheapest_total == NULL)
-				{
-					subpaths_valid = false;
-					break;
-				}
+				/* failed to make a suitable path for this child */
+				subpaths_valid = false;
+				break;
 			}
-
-			subpaths = accumulate_append_subpath(subpaths, cheapest_total);
+			subpaths = accumulate_append_subpath(subpaths, subpath);
 		}
 
 		if (subpaths_valid)
@@ -1065,13 +1047,91 @@ generate_mergeappend_paths(PlannerInfo *root, RelOptInfo *rel,
 }
 
 /*
+ * get_cheapest_parameterized_child_path
+ *		Get cheapest path for this relation that has exactly the requested
+ *		parameterization.
+ *
+ * Returns NULL if unable to create such a path.
+ */
+static Path *
+get_cheapest_parameterized_child_path(PlannerInfo *root, RelOptInfo *rel,
+									  Relids required_outer)
+{
+	Path	   *cheapest;
+	ListCell   *lc;
+
+	/*
+	 * Look up the cheapest existing path with no more than the needed
+	 * parameterization.  If it has exactly the needed parameterization, we're
+	 * done.
+	 */
+	cheapest = get_cheapest_path_for_pathkeys(rel->pathlist,
+											  NIL,
+											  required_outer,
+											  TOTAL_COST);
+	Assert(cheapest != NULL);
+	if (bms_equal(PATH_REQ_OUTER(cheapest), required_outer))
+		return cheapest;
+
+	/*
+	 * Otherwise, we can "reparameterize" an existing path to match the given
+	 * parameterization, which effectively means pushing down additional
+	 * joinquals to be checked within the path's scan.  However, some existing
+	 * paths might check the available joinquals already while others don't;
+	 * therefore, it's not clear which existing path will be cheapest after
+	 * reparameterization.  We have to go through them all and find out.
+	 */
+	cheapest = NULL;
+	foreach(lc, rel->pathlist)
+	{
+		Path	   *path = (Path *) lfirst(lc);
+
+		/* Can't use it if it needs more than requested parameterization */
+		if (!bms_is_subset(PATH_REQ_OUTER(path), required_outer))
+			continue;
+
+		/*
+		 * Reparameterization can only increase the path's cost, so if it's
+		 * already more expensive than the current cheapest, forget it.
+		 */
+		if (cheapest != NULL &&
+			compare_path_costs(cheapest, path, TOTAL_COST) <= 0)
+			continue;
+
+		/* Reparameterize if needed, then recheck cost */
+		if (!bms_equal(PATH_REQ_OUTER(path), required_outer))
+		{
+			path = reparameterize_path(root, path, required_outer, 1.0);
+			if (path == NULL)
+				continue;		/* failed to reparameterize this one */
+			Assert(bms_equal(PATH_REQ_OUTER(path), required_outer));
+
+			if (cheapest != NULL &&
+				compare_path_costs(cheapest, path, TOTAL_COST) <= 0)
+				continue;
+		}
+
+		/* We have a new best path */
+		cheapest = path;
+	}
+
+	/* Return the best path, or NULL if we found no suitable candidate */
+	return cheapest;
+}
+
+/*
  * accumulate_append_subpath
  *		Add a subpath to the list being built for an Append or MergeAppend
  *
- * It's possible that the child is itself an Append path, in which case
- * we can "cut out the middleman" and just add its child paths to our
- * own list.  (We don't try to do this earlier because we need to
- * apply both levels of transformation to the quals.)
+ * It's possible that the child is itself an Append or MergeAppend path, in
+ * which case we can "cut out the middleman" and just add its child paths to
+ * our own list.  (We don't try to do this earlier because we need to apply
+ * both levels of transformation to the quals.)
+ *
+ * Note that if we omit a child MergeAppend in this way, we are effectively
+ * omitting a sort step, which seems fine: if the parent is to be an Append,
+ * its result would be unsorted anyway, while if the parent is to be a
+ * MergeAppend, there's no point in a separate sort on a child.
  */
 static List *
 accumulate_append_subpath(List *subpaths, Path *path)
@@ -1082,6 +1142,13 @@ accumulate_append_subpath(List *subpaths, Path *path)
 
 		/* list_copy is important here to avoid sharing list substructure */
 		return list_concat(subpaths, list_copy(apath->subpaths));
+	}
+	else if (IsA(path, MergeAppendPath))
+	{
+		MergeAppendPath *mpath = (MergeAppendPath *) path;
+
+		/* list_copy is important here to avoid sharing list substructure */
+		return list_concat(subpaths, list_copy(mpath->subpaths));
 	}
 	else
 		return lappend(subpaths, path);
@@ -1138,7 +1205,7 @@ has_multiple_baserels(PlannerInfo *root)
  *
  * We don't currently support generating parameterized paths for subqueries
  * by pushing join clauses down into them; it seems too expensive to re-plan
- * the subquery multiple times to consider different alternatives.	So the
+ * the subquery multiple times to consider different alternatives.  So the
  * subquery will have exactly one path.  (The path will be parameterized
  * if the subquery contains LATERAL references, otherwise not.)  Since there's
  * no freedom of action here, there's no need for a separate set_subquery_size
@@ -1278,7 +1345,8 @@ set_subquery_pathlist(PlannerInfo *root, RelOptInfo *rel,
 	subquery_path = create_subqueryscan_path(root, rel, pathkeys, required_outer);
 
 	if (forceDistRand)
-		CdbPathLocus_MakeStrewn(&subquery_path->locus);
+		CdbPathLocus_MakeStrewn(&subquery_path->locus,
+								CdbPathLocus_NumSegments(subquery_path->locus));
 
 	add_path(rel, subquery_path);
 
@@ -1294,6 +1362,7 @@ static void
 set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 {
 	Relids		required_outer;
+	List	   *pathkeys = NIL;
 
 	/*
 	 * We don't support pushing join clauses into the quals of a function
@@ -1302,8 +1371,55 @@ set_function_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	 */
 	required_outer = rel->lateral_relids;
 
+	/*
+	 * The result is considered unordered unless ORDINALITY was used, in which
+	 * case it is ordered by the ordinal column (the last one).  See if we
+	 * care, by checking for uses of that Var in equivalence classes.
+	 */
+	if (rte->funcordinality)
+	{
+		AttrNumber	ordattno = rel->max_attr;
+		Var		   *var = NULL;
+		ListCell   *lc;
+
+		/*
+		 * Is there a Var for it in reltargetlist?	If not, the query did not
+		 * reference the ordinality column, or at least not in any way that
+		 * would be interesting for sorting.
+		 */
+		foreach(lc, rel->reltargetlist)
+		{
+			Var		   *node = (Var *) lfirst(lc);
+
+			/* checking varno/varlevelsup is just paranoia */
+			if (IsA(node, Var) &&
+				node->varattno == ordattno &&
+				node->varno == rel->relid &&
+				node->varlevelsup == 0)
+			{
+				var = node;
+				break;
+			}
+		}
+
+		/*
+		 * Try to build pathkeys for this Var with int8 sorting.  We tell
+		 * build_expression_pathkey not to build any new equivalence class; if
+		 * the Var isn't already mentioned in some EC, it means that nothing
+		 * cares about the ordering.
+		 */
+		if (var)
+			pathkeys = build_expression_pathkey(root,
+												(Expr *) var,
+												NULL,	/* below outer joins */
+												Int8LessOperator,
+												rel->relids,
+												false);
+	}
+
 	/* Generate appropriate path */
-	add_path(rel, create_functionscan_path(root, rel, rte, required_outer));
+	add_path(rel, create_functionscan_path(root, rel, rte,
+										   pathkeys, required_outer));
 
 	/* Select cheapest path (pretty easy in this case...) */
 	set_cheapest(rel);
@@ -1318,13 +1434,18 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 {
 	PlannerConfig *config;
 	PlannerInfo *subroot = NULL;
-	FuncExpr   *fexpr = (FuncExpr *) rte->funcexpr;
+	RangeTblFunction *rtfunc;
+	FuncExpr   *fexpr;
 	ListCell   *arg;
 	Relids		required_outer;
 
 	/* Cannot be a preplanned subquery from window_planner. */
 	Assert(!rte->subquery_plan);
-	Assert(fexpr && IsA(fexpr, FuncExpr));
+
+	Assert(list_length(rte->functions) == 1);
+	rtfunc = (RangeTblFunction *) linitial(rte->functions);
+	Assert(rtfunc->funcexpr && IsA(rtfunc->funcexpr, FuncExpr));
+	fexpr= (FuncExpr *) rtfunc->funcexpr;
 
 	/*
 	 * We don't support pushing join clauses into the quals of a function
@@ -1360,13 +1481,14 @@ set_tablefunction_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rt
 	}
 
 	/* Could the function return more than one row? */
-	rel->onerow = !expression_returns_set(rte->funcexpr);
+	rel->onerow = !expression_returns_set((Node *) fexpr);
 
 	/* Mark rel with estimated output rows, width, etc */
 	set_table_function_size_estimates(root, rel);
 
 	/* Generate appropriate path */
-	add_path(rel, create_tablefunction_path(root, rel, rte, required_outer));
+	add_path(rel, create_tablefunction_path(root, rel, rte,
+											required_outer));
 
 	/* Select cheapest path (pretty easy in this case...) */
 	set_cheapest(rel);
@@ -1594,8 +1716,7 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/*
 	 * We don't support pushing join clauses into the quals of a CTE scan, but
 	 * it could still have required parameterization due to LATERAL refs in
-	 * its tlist.  (That can only happen if the CTE scan is on a relation
-	 * pulled up out of a UNION ALL appendrel.)
+	 * its tlist.
 	 */
 	required_outer = rel->lateral_relids;
 
@@ -1648,10 +1769,8 @@ set_worktable_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 	/*
 	 * We don't support pushing join clauses into the quals of a worktable
 	 * scan, but it could still have required parameterization due to LATERAL
-	 * refs in its tlist.  (That can only happen if the worktable scan is on a
-	 * relation pulled up out of a UNION ALL appendrel.  I'm not sure this is
-	 * actually possible given the restrictions on recursive references, but
-	 * it's easy enough to support.)
+	 * refs in its tlist.  (I'm not sure this is actually possible given the
+	 * restrictions on recursive references, but it's easy enough to support.)
 	 */
 	required_outer = rel->lateral_relids;
 
@@ -1754,7 +1873,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
  *		independent jointree items in the query.  This is > 1.
  *
  * 'initial_rels' is a list of RelOptInfo nodes for each independent
- *		jointree item.	These are the components to be joined together.
+ *		jointree item.  These are the components to be joined together.
  *		Note that levels_needed == list_length(initial_rels).
  *
  * Returns the final level of join relations, i.e., the relation that is
@@ -1770,7 +1889,7 @@ make_rel_from_joinlist(PlannerInfo *root, List *joinlist)
  * needed for these paths need have been instantiated.
  *
  * Note to plugin authors: the functions invoked during standard_join_search()
- * modify root->join_rel_list and root->join_rel_hash.	If you want to do more
+ * modify root->join_rel_list and root->join_rel_hash.  If you want to do more
  * than one join-order search, you'll probably need to save and restore the
  * original states of those data structures.  See geqo_eval() for an example.
  */
@@ -1832,7 +1951,7 @@ standard_join_search(PlannerInfo *root, int levels_needed, List *initial_rels)
 	 * We should have a single rel at the final level.
 	 */
 	if (root->join_rel_level[levels_needed] == NIL)
-		return NULL;
+		elog(ERROR, "failed to build any %d-way joins", levels_needed);
 	Assert(list_length(root->join_rel_level[levels_needed]) == 1);
 
 	rel = (RelOptInfo *) linitial(root->join_rel_level[levels_needed]);
@@ -1942,7 +2061,7 @@ push_down_restrict(PlannerInfo *root, RelOptInfo *rel,
  * column k is found to be unsafe to reference, we set unsafeColumns[k] to
  * TRUE, but we don't reject the subquery overall since column k might
  * not be referenced by some/all quals.  The unsafeColumns[] array will be
- * consulted later by qual_is_pushdown_safe().	It's better to do it this
+ * consulted later by qual_is_pushdown_safe().  It's better to do it this
  * way than to make the checks directly in qual_is_pushdown_safe(), because
  * when the subquery involves set operations we have to check the output
  * expressions in each arm of the set op.
@@ -2040,7 +2159,7 @@ recurse_pushdown_safe(Node *setOp, Query *topquery,
  * check_output_expressions - check subquery's output expressions for safety
  *
  * There are several cases in which it's unsafe to push down an upper-level
- * qual if it references a particular output column of a subquery.	We check
+ * qual if it references a particular output column of a subquery.  We check
  * each output column of the subquery and set unsafeColumns[k] to TRUE if
  * that column is unsafe for a pushed-down qual to reference.  The conditions
  * checked here are:
@@ -2058,7 +2177,7 @@ recurse_pushdown_safe(Node *setOp, Query *topquery,
  * of rows returned.  (This condition is vacuous for DISTINCT, because then
  * there are no non-DISTINCT output columns, so we needn't check.  But note
  * we are assuming that the qual can't distinguish values that the DISTINCT
- * operator sees as equal.	This is a bit shaky but we have no way to test
+ * operator sees as equal.  This is a bit shaky but we have no way to test
  * for the case, and it's unlikely enough that we shouldn't refuse the
  * optimization just because it could theoretically happen.)
  */
@@ -2111,9 +2230,9 @@ check_output_expressions(Query *subquery, bool *unsafeColumns)
 
 		/* MPP-19244:
 		 * if subquery has WINDOW clause, it is safe to push-down quals that
-		 * use columns included in in the Partition-By clauses of every OVER
+		 * use columns included in the Partition-By clauses of every OVER
 		 * clause in the subquery
-		 * */
+		 */
 		if (subquery->windowClause != NIL)
 		{
 			ListCell   *lc;
@@ -2285,7 +2404,7 @@ qual_is_pushdown_safe(Query *subquery, RangeTblEntry *rte, Index rti, Node *qual
 
 	/*
 	 * It would be unsafe to push down window function calls, but at least for
-	 * the moment we could never see any in a qual anyhow.	(The same applies
+	 * the moment we could never see any in a qual anyhow.  (The same applies
 	 * to aggregates, which we check for in pull_var_clause below.)
 	 */
 	if (NULL != subquery->setOperations &&

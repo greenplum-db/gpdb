@@ -4,7 +4,7 @@
  *	  Routines to multiplex SIGALRM interrupts for multiple timeout reasons.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/timeout.h
@@ -68,6 +68,7 @@ typedef struct
 /* timeout setup */
 extern void InitializeTimeouts(void);
 extern TimeoutId RegisterTimeout(TimeoutId id, timeout_handler_proc handler);
+extern void reschedule_timeouts(void);
 
 /* timeout operation */
 extern void enable_timeout_after(TimeoutId id, int delay_ms);

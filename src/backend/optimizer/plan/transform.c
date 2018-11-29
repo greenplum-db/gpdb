@@ -12,9 +12,9 @@
  *
  *-------------------------------------------------------------------------
  */
-
 #include "postgres.h"
 
+#include "funcapi.h"
 #include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/clauses.h"
@@ -26,7 +26,7 @@
 #include "catalog/namespace.h"
 #include "parser/parse_oper.h"
 #include "parser/parse_coerce.h"
-#include "lib/stringinfo.h"
+#include "parser/parse_relation.h"
 #include "catalog/pg_operator.h"
 #include "utils/fmgroids.h"
 
@@ -37,13 +37,12 @@ static Node* normalize_query_jointree(Node *node);
 static Node *normalize_query_jointree_mutator(Node *node, void *context);
 static Node *replace_sirv_functions_mutator(Node *node, void *context);
 static void replace_sirvf_tle(Query *query, int tleOffset);
-static void replace_sirvf_rte(Query *query, int rteIndex);
+static RangeTblEntry *replace_sirvf_rte(Query *query, RangeTblEntry *rte);
 static Node *replace_sirvf_tle_expr_mutator(Node *node, void *context);
 static SubLink *make_sirvf_subselect(FuncExpr *fe);
 static Query *make_sirvf_subquery(FuncExpr *fe);
 static bool safe_to_replace_sirvf_tle(Query *query);
 static bool safe_to_replace_sirvf_rte(Query *query);
-static void wrap_vars_with_fieldselect(List *targetlist, int varno, Oid newvartype);
 
 /**
  * Preprocess query structure for consumption by the optimizer
@@ -69,21 +68,54 @@ preprocess_query_optimizer(PlannerInfo *root, Query *query, ParamListInfo boundP
 /**
  * Normalize query before planning.
  */
-Query *normalize_query(Query *query)
+Query *
+normalize_query(Query *query)
 {
 #ifdef USE_ASSERT_CHECKING
 	Query *qcopy = (Query *) copyObject(query);
 #endif
 
-	/**
+	/*
 	 * Normalize the jointree
 	 */
 	Query *res = (Query *) normalize_query_jointree_mutator((Node *) query, NULL);
 
-	/**
-	 * MPP-12635 Replace all instances of single row returning volatile (sirv) functions
+	/*
+	 * MPP-12635 Replace all instances of single row returning volatile (sirv)
+	 * functions.
+	 *
+	 * Only do the transformation on the target list for INSERT/UPDATE/DELETE
+	 * and CREATE TABLE AS commands; there's no need to complicate simple
+	 * queries like "SELECT function()", which would be executed on the QD
+	 * anyway.
 	 */
-	res = (Query *) replace_sirv_functions_mutator((Node *) res, NULL);
+	if (res->commandType != CMD_SELECT || res->parentStmtType != PARENTSTMTTYPE_NONE)
+	{
+		if (safe_to_replace_sirvf_tle(res))
+		{
+			for (int tleOffset = 0; tleOffset < list_length(res->targetList); tleOffset++)
+			{
+				replace_sirvf_tle(res, tleOffset + 1);
+			}
+		}
+	}
+
+	/*
+	 * Find sirv functions in the range table entries and replace them
+	 */
+	if (safe_to_replace_sirvf_rte(res))
+	{
+		ListCell *lc;
+
+		foreach(lc, res->rtable)
+		{
+			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+			replace_sirvf_rte(res, rte);
+		}
+	}
+
+	res = query_tree_mutator(res, replace_sirv_functions_mutator, NULL, 0);
 
 #ifdef USE_ASSERT_CHECKING
 	Assert(equal(qcopy, query) && "Normalization should not modify original query object");
@@ -256,11 +288,24 @@ static Node *replace_sirv_functions_mutator(Node *node, void *context)
 		/**
 		 * Find sirv functions in the range table entries and replace them
 		 */
+
+		// GPDB_94_MERGE_FIXME: replace_sirvf_rte() is broken, it needs to be refactored
+		// for the change that a FunctionScan node can now contain multiple RangeTblFunctions.
+		// However, this will be obsoleted/changed also by PR:
+		// https://github.com/greenplum-db/gpdb/pull/5477.
+		// Let's come back to this after that PR has been pushed and merged to the merge
+		// iteration branch
 		if (safe_to_replace_sirvf_rte(query))
 		{
-			for (int rteOffset = 0; rteOffset < list_length(query->rtable); rteOffset++)
+			ListCell *lc;
+
+			foreach(lc, query->rtable)
 			{
-				replace_sirvf_rte(query, rteOffset + 1);
+				RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+				rte = replace_sirvf_rte(query, rte);
+
+				lfirst(lc) = rte;
 			}
 		}
 
@@ -296,23 +341,31 @@ static void replace_sirvf_tle(Query *query, int tleOffset)
 /**
  * Is a function expression a sirvf?
  */
-static bool is_sirv_funcexpr(FuncExpr *fe)
+static bool
+is_sirv_funcexpr(FuncExpr *fe)
 {
-	bool res = (!fe->funcretset /* Set returning functions cannot become initplans */
-			&& !fe->is_tablefunc /* Ignore table functions */
-			&& !contain_vars_of_level_or_above((Node *) fe->args, 0) /* Must be variable free */
-			&& !contain_subplans((Node *) fe->args) /* Must not contain sublinks */
-			&& func_volatile(fe->funcid) == PROVOLATILE_VOLATILE /* Must be a volatile function */
-			&& fe->funcresulttype != RECORDOID /* Record types cannot be handled currently */
-			);
+	if (fe->funcretset)
+		return false;	/* Set returning functions cannot become initplans */
 
-	/**
-	 * Function cannot be sequence related
-	 */
-	Oid funcid = fe->funcid;
-	res = res && !(funcid == F_NEXTVAL_OID || funcid == F_CURRVAL_OID || funcid == F_SETVAL_OID);
+	if (fe->is_tablefunc)
+		return false;	/* Ignore table functions */
 
-	return res;
+	if (contain_vars_of_level_or_above((Node *) fe->args, 0))
+		return false;	/* Must be variable free */
+
+	if (contain_subplans((Node *) fe->args))
+		return false;	/* Must not contain sublinks */
+
+	if (func_volatile(fe->funcid) != PROVOLATILE_VOLATILE)
+		return false;	/* Must be a volatile function */
+
+	if (fe->funcresulttype == RECORDOID)
+		return false;	/* Record types cannot be handled currently */
+
+	if (fe->funcid == F_NEXTVAL_OID || fe->funcid == F_CURRVAL_OID || fe-> funcid == F_SETVAL_OID)
+		return false;	/* Function cannot be sequence related */
+
+	return true;
 }
 
 /**
@@ -360,19 +413,94 @@ static SubLink *make_sirvf_subselect(FuncExpr *fe)
 
 /**
  * Given a sirv function expression, create a subquery (derived table) from it.
+ *
+ * For example, in a query like:
+ *
+ * SELECT * FROM func();
+ *
+ * The 'fe' argument represents the function call. The function returns a
+ * subquery to replace the func() RTE.
+ *
+ * If the function returns a scalar type, it's transformed into:
+ *
+ * (SELECT func())
+ *
+ * If it returns a composite (or record) type, we need to work a bit harder, to
+ * get a subquery with a targetlist that's compatible with the original one.
+ * It's transformed into:
+ *
+ * (SELECT (func).col1, (func).col2, ... FROM (SELECT func()) AS func)
  */
-static Query *make_sirvf_subquery(FuncExpr *fe)
+static Query *
+make_sirvf_subquery(FuncExpr *fe)
 {
-	SubLink *sl = make_sirvf_subselect(fe);
+	SubLink	   *sl;
+	TargetEntry *tle;
+	TypeFuncClass funcclass;
+	Oid			resultTypeId;
+	TupleDesc	resultTupleDesc;
+	Query	   *sq;
+	char	   *funcname = get_func_name(fe->funcid);
 
-	Query *sq = makeNode(Query);
+	sq = makeNode(Query);
 	sq->commandType = CMD_SELECT;
 	sq->querySource = QSRC_PLANNER;
 	sq->jointree = makeNode(FromExpr);
 
-	TargetEntry *tle = (TargetEntry *) makeTargetEntry((Expr *) sl, 1, "sirvf_sq", false);
+	sl = make_sirvf_subselect(fe);
+	tle = (TargetEntry *) makeTargetEntry((Expr *) sl, 1, funcname, false);
 	sq->targetList = list_make1(tle);
 	sq->hasSubLinks = true;
+
+	funcclass = get_expr_result_type((Node *) fe, &resultTypeId, &resultTupleDesc);
+
+	if (funcclass == TYPEFUNC_COMPOSITE ||
+		funcclass == TYPEFUNC_RECORD)
+	{
+		Query	   *sub_sq = sq;
+		RangeTblEntry *rte;
+		RangeTblRef *rtref;
+		int			attno;
+		Var		   *var;
+
+		// FIXME: does this need to be lateral?
+		rte = addRangeTableEntryForSubquery(NULL,
+											sub_sq,
+											makeAlias("sirvf_sq", NIL),
+											false, /* isLateral? */
+											true);
+		rtref = makeNode(RangeTblRef);
+		rtref->rtindex = 1;
+
+		sq = makeNode(Query);
+		sq->commandType = CMD_SELECT;
+		sq->querySource = QSRC_PLANNER;
+		sq->rtable = list_make1(rte);
+		sq->jointree = makeFromExpr(list_make1(rtref), NULL);
+		/*
+		 * XXX: I'm not sure if we need so set this in this middle subquery.
+		 * This query doesn't have SubLinks, but its subquery does.
+		 */
+		sq->hasSubLinks = true;
+
+		var = makeVar(1, 1, exprType((Node *) sl), -1, 0, 0);
+
+		for (attno = 1; attno <= resultTupleDesc->natts; attno++)
+		{
+			Form_pg_attribute attr = resultTupleDesc->attrs[attno - 1];
+			FieldSelect *fs;
+
+			fs = (FieldSelect *) makeNode(FieldSelect);
+			fs->arg = (Expr *) var;
+			fs->fieldnum = attno;
+			fs->resulttype = attr->atttypid;
+			fs->resulttypmod = attr->atttypmod;
+			fs->resultcollid = attr->attcollation;
+
+			tle = (TargetEntry *) makeTargetEntry((Expr *) fs, attno, NameStr(attr->attname), false);
+			sq->targetList = lappend(sq->targetList, tle);
+		}
+	}
 
 	return sq;
 }
@@ -411,11 +539,29 @@ static bool single_row_query(Query *query)
 		{
 			case RTE_FUNCTION:
 			{
-				FuncExpr *fe = (FuncExpr *) rte->funcexpr;
-				if (fe->funcretset)
-				{
-					/* SRF in FROM clause */
+				ListCell *lcrtfunc;
+
+				/* GPDB_94_MERGE_FIXME: The SIRV transformation can't handle WITH ORDINALITY
+				 * currently */
+				if (rte->funcordinality)
 					return false;
+
+				foreach(lcrtfunc, rte->functions)
+				{
+					RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lcrtfunc);
+
+					/*
+					 * This runs before const-evaluation, so the expressions should
+					 * be FuncExprs still. But better safe than sorry.
+					 */
+					if (!IsA(rtfunc->funcexpr, FuncExpr))
+						return false;
+
+					if (((FuncExpr *) rtfunc->funcexpr)->funcretset)
+					{
+						/* SRF in FROM clause */
+						return false;
+					}
 				}
 				break;
 			}
@@ -452,134 +598,67 @@ static bool safe_to_replace_sirvf_rte(Query *query)
 }
 
 /**
- * If a range table entry contains a sirv function, this must be replaced with a derived table (subquery)
- * with a sublink - this will eventually be turned into an initplan.
- * Conceptually, SELECT * FROM FOO(1) t1 is turned into SELECT * FROM (SELECT (SELECT FOO(1))) t1.
+ * If a range table entry contains a sirv function, this must be replaced
+ * with a derived table (subquery) with a sublink - this will eventually be
+ * turned into an initplan.
+ *
+ * Conceptually,
+ *
+ * SELECT * FROM FOO(1) t1
+ *
+ * is turned into
+ *
+ * SELECT * FROM (SELECT FOO(1)) t1
  */
-static void replace_sirvf_rte(Query *query, int rteIndex)
+static RangeTblEntry *
+replace_sirvf_rte(Query *query, RangeTblEntry *rte)
 {
 	Assert(query);
 	Assert(safe_to_replace_sirvf_rte(query));
-	RangeTblEntry *rte = (RangeTblEntry *) list_nth(query->rtable, rteIndex - 1);
+
 	if (rte->rtekind == RTE_FUNCTION)
 	{
-		FuncExpr *fe = (FuncExpr *) rte->funcexpr;
-		Assert(fe);
-
-		/**
-		 * Transform function expression's inputs
+		/*
+		 * We only deal with the simple cases, with a single function.
+		 * I.e. not ROWS FROM() with multiple functions.
 		 */
-		fe->args = (List *) replace_sirvf_tle_expr_mutator((Node *) fe->args, NULL);
-
-		/**
-		 * If the resulting targetlist entry has a sublink, the query's flag must be set
-		 */
-		if (contain_subplans((Node *) fe->args))
+		if (list_length(rte->functions) == 1)
 		{
-			query->hasSubLinks = true;
-		}
-
-		/**
-		 * If function expression is a SIRV, then further transformations
-		 * need to happen
-		 */
-		if (is_sirv_funcexpr(fe))
-		{
-			bool returns_record = (get_typtype(fe->funcresulttype) == 'c');
-
-			if (returns_record)
-			{
-				/**
-				 * Need to extract out relevant vars using fieldselect
-				 */
-				wrap_vars_with_fieldselect(query->targetList,
-						rteIndex,
-						fe->funcresulttype
-				);
-			}
-
-			Query *subquery = make_sirvf_subquery(fe);
-
-			rte->funcexpr = NULL;
-			rte->funccoltypes = NIL;
-			rte->funcuserdata = NULL;
-			rte->funccoltypmods = NIL;
-			rte->funccolcollations = NIL;
+			RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
+			FuncExpr *fe = (FuncExpr *) rtfunc->funcexpr;
+			Assert(fe);
 
 			/**
-			 * Turn the range table entry to the kind RTE_SUBQUERY
+			 * Transform function expression's inputs
 			 */
-			rte->rtekind = RTE_SUBQUERY;
-			rte->subquery = subquery;
+			fe->args = (List *) replace_sirvf_tle_expr_mutator((Node *) fe->args, NULL);
+
+			/**
+			 * If the resulting targetlist entry has a sublink, the query's flag must be set
+			 */
+			if (contain_subplans((Node *) fe->args))
+			{
+				query->hasSubLinks = true;
+			}
+
+			/**
+			 * If function expression is a SIRV, then further transformations
+			 * need to happen
+			 */
+			if (is_sirv_funcexpr(fe))
+			{
+				Query *subquery = make_sirvf_subquery(fe);
+
+				rte->functions = NIL;
+
+				/**
+				 * Turn the range table entry to the kind RTE_SUBQUERY
+				 */
+				rte->rtekind = RTE_SUBQUERY;
+				rte->subquery = subquery;
+			}
 		}
 	}
 
+	return rte;
 }
-
-/**
- * Context for mutator
- */
-typedef struct fieldselect_mutator_context
-{
-	plan_tree_base_prefix base;
-	int varno;		/* What is the relid of vars that are to be changed? */
-	Oid recordtype;
-
-} fieldselect_mutator_context;
-
-static Node *wrap_vars_with_fieldselect_mutator(Node *node, fieldselect_mutator_context *ctx);
-
-/**
- * Iterate over expression and wrap vars with specific varno
- * with a fieldselect
- */
-static Node *wrap_vars_with_fieldselect_mutator(Node *node, fieldselect_mutator_context *ctx)
-{
-	Assert(ctx);
-	if (node == NULL)
-	{
-		return NULL;
-	}
-
-	if (IsA(node, Var))
-	{
-		Var *v = (Var *) node;
-
-		if (v->varno == ctx->varno)
-		{
-			Var *v1 = (Var *) copyObject(v);
-			v1->varattno = 1;	/* Attribute is a record */
-			v1->vartype = ctx->recordtype;	/* What is the composite type */
-			v1->vartypmod = -1;
-			FieldSelect *fs = (FieldSelect *) makeNode(FieldSelect);
-			fs->arg = (Expr *) v1;
-			fs->fieldnum = v->varattno;
-			fs->resulttype = v->vartype;
-			fs->resulttypmod = v->vartypmod;
-			return (Node *) fs;
-		}
-		return (Node *) v;
-	}
-
-	return expression_tree_mutator(node, wrap_vars_with_fieldselect_mutator, ctx);
-}
-
-/**
- * Wrap vars with specified varno with a fieldselect.
- */
-static void wrap_vars_with_fieldselect(List *targetlist, int varno, Oid recordtype)
-{
-	fieldselect_mutator_context ctx;
-	ctx.base.node = NULL;
-	ctx.varno = varno;
-	ctx.recordtype = recordtype;
-
-	ListCell *lc = NULL;
-	int tleOffset = 0;
-	foreach_with_count(lc, targetlist, tleOffset)
-	{
-		TargetEntry *tle = (TargetEntry *) lfirst(lc);
-		lfirst(lc) = (TargetEntry *) wrap_vars_with_fieldselect_mutator((Node *) tle, &ctx);
-	}
-}
-

@@ -32,7 +32,6 @@ from gppylib.operations.rebalanceSegments import GpSegmentRebalanceOperation
 from gppylib.programs import programIoUtils
 from gppylib.system import configurationInterface as configInterface
 from gppylib.system.environment import GpMasterEnvironment
-from gppylib.testold.testUtils import *
 from gppylib.parseutils import line_reader, parse_gprecoverseg_line, canonicalize_address
 from gppylib.utils import ParsedConfigFile, ParsedConfigFileRow, writeLinesToFile, \
      normalizeAndValidateInputPath, TableLogger

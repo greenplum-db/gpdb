@@ -156,7 +156,18 @@ CTranslatorQueryToDXL::CTranslatorQueryToDXL
 {
 	GPOS_ASSERT(NULL != query);
 	CheckSupportedCmdType(query);
-	
+
+	CheckRangeTable(query);
+
+	// GPDB_94_MERGE_FIXME: WITH CHECK OPTION views are not supported yet.
+	// I'm not sure what would be needed to support them; maybe need to
+	// just pass through the withCheckOptions to the ModifyTable / DML node?
+	if (query->withCheckOptions)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature,
+			   GPOS_WSZ_LIT("View with WITH CHECK OPTION"));
+	}
+
 	m_query_level_to_cte_map = GPOS_NEW(m_mp) HMUlCTEListEntry(m_mp);
 	m_dxl_cte_producers = GPOS_NEW(m_mp) CDXLNodeArray(m_mp);
 	m_cteid_at_current_query_level_map = GPOS_NEW(m_mp) UlongBoolHashMap(m_mp);
@@ -418,9 +429,13 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 		// refactoring commit 9dbf2b7d . We are temporarily *always* falling
 		// back. Detect CTAS harder when we get back to it.
 
-		if (!optimizer_enable_ctas && query->isCTAS)
+		if (!optimizer_enable_ctas && query->parentStmtType == PARENTSTMTTYPE_CTAS)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("CTAS. Set optimizer_enable_ctas to on to enable CTAS with GPORCA"));
+		}
+		if (query->parentStmtType == PARENTSTMTTYPE_COPY)
+		{
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("COPY. Copy select statement to file on segment is not supported with GPORCA"));
 		}
 		
 		// supported: regular select or CTAS when it is enabled
@@ -439,6 +454,34 @@ CTranslatorQueryToDXL::CheckSupportedCmdType
 		if (mapelem.m_cmd_type == query->commandType)
 		{
 			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, mapelem.m_cmd_name);
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorQueryToDXL::CheckRangeTable
+//
+//	@doc:
+//		Check for supported stuff in range table, throws an exception
+//		if there is something that is not yet supported
+//---------------------------------------------------------------------------
+void
+CTranslatorQueryToDXL::CheckRangeTable
+	(
+	Query *query
+	)
+{
+	ListCell *lc;
+	ForEach (lc, query->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+		if (rte->security_barrier || rte->securityQuals)
+		{
+			GPOS_ASSERT(RTE_SUBQUERY == rte->rtekind);
+			// otherwise ORCA most likely pushes potentially leaky filters down
+			GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("views with security_barrier ON"));
 		}
 	}
 }
@@ -642,7 +685,7 @@ CTranslatorQueryToDXL::TranslateQueryToDXL()
 	switch (m_query->commandType)
 	{
 		case CMD_SELECT:
-			if (!m_query->isCTAS)
+			if (m_query->parentStmtType == PARENTSTMTTYPE_NONE)
 			{
 				return TranslateSelectQueryToDXL();
 			}
@@ -1598,10 +1641,6 @@ CTranslatorQueryToDXL::TranslateWindowToDXL
 		CDXLNode *project_elem_dxlnode =  TranslateExprToDXLProject(target_entry->expr, target_entry->resname);
 		ULONG colid = CDXLScalarProjElem::Cast(project_elem_dxlnode->GetOperator())->Id();
 
-		if (IsA(target_entry->expr, WindowFunc))
-		{
-			CTranslatorUtils::CheckAggregateWindowFn((Node*) target_entry->expr);
-		}
 		if (!target_entry->resjunk)
 		{
 			if (IsA(target_entry->expr, Var) || IsA(target_entry->expr, WindowFunc))
@@ -3334,16 +3373,26 @@ CTranslatorQueryToDXL::TranslateTVFToDXL
 	ULONG //current_query_level
 	)
 {
-	GPOS_ASSERT(NULL != rte->funcexpr);
+	/*
+	 * GPDB_94_MERGE_FIXME: RangeTblEntry for functions can now contain multiple function calls.
+	 * ORCA isn't prepared for that yet. See upstream commit 784e762e88.
+	 */
+	if (list_length(rte->functions) != 1)
+	{
+		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("Multi-argument UNNEST() or TABLE()"));
+	}
+	RangeTblFunction *rtfunc = (RangeTblFunction *) linitial(rte->functions);
+	FuncExpr *funcexpr = (FuncExpr *) rtfunc->funcexpr;
+	GPOS_ASSERT(funcexpr);
 
 	// if this is a folded function expression, generate a project over a CTG
-	if (!IsA(rte->funcexpr, FuncExpr))
+	if (!IsA(funcexpr, FuncExpr))
 	{
 		CDXLNode *const_tbl_get_dxlnode = DXLDummyConstTableGet();
 
 		CDXLNode *project_list_dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLScalarProjList(m_mp));
 
-		CDXLNode *project_elem_dxlnode =  TranslateExprToDXLProject((Expr *) rte->funcexpr, rte->eref->aliasname, true /* insist_new_colids */);
+		CDXLNode *project_elem_dxlnode =  TranslateExprToDXLProject((Expr *) funcexpr, rte->eref->aliasname, true /* insist_new_colids */);
 		project_list_dxlnode->AddChild(project_elem_dxlnode);
 
 		CDXLNode *project_dxlnode = GPOS_NEW(m_mp) CDXLNode(m_mp, GPOS_NEW(m_mp) CDXLLogicalProject(m_mp));
@@ -3361,17 +3410,16 @@ CTranslatorQueryToDXL::TranslateTVFToDXL
 	// make note of new columns from function
 	m_var_to_colid_map->LoadColumns(m_query_level, rt_index, tvf_dxlop->GetDXLColumnDescrArray());
 
-	FuncExpr *func_expr = (FuncExpr *) rte->funcexpr;
 	BOOL is_subquery_in_args = false;
 
 	// check if arguments contain SIRV functions
-	if (NIL != func_expr->args && HasSirvFunctions((Node *) func_expr->args))
+	if (NIL != funcexpr->args && HasSirvFunctions((Node *) funcexpr->args))
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("SIRV functions"));
 	}
 
 	ListCell *lc = NULL;
-	ForEach (lc, func_expr->args)
+	ForEach (lc, funcexpr->args)
 	{
 		Node *arg_node = (Node *) lfirst(lc);
 		is_subquery_in_args = is_subquery_in_args || CTranslatorUtils::HasSubquery(arg_node);
@@ -3381,7 +3429,7 @@ CTranslatorQueryToDXL::TranslateTVFToDXL
 		tvf_dxlnode->AddChild(func_expr_arg_dxlnode);
 	}
 
-	CMDIdGPDB *mdid_func = GPOS_NEW(m_mp) CMDIdGPDB(func_expr->funcid);
+	CMDIdGPDB *mdid_func = GPOS_NEW(m_mp) CMDIdGPDB(funcexpr->funcid);
 	const IMDFunction *pmdfunc = m_md_accessor->RetrieveFunc(mdid_func);
 	if (is_subquery_in_args && IMDFunction::EfsVolatile == pmdfunc->GetFuncStability())
 	{
@@ -3458,13 +3506,6 @@ CTranslatorQueryToDXL::TranslateDerivedTablesToDXL
 	ULONG current_query_level
 	)
 {
-
-	if (true == rte->security_barrier)
-	{
-		GPOS_ASSERT(RTE_SUBQUERY == rte->rtekind);
-		// otherwise ORCA most likely pushes potentially leaky filters down
-		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("views with security_barrier ON"));
-	}
 	Query *query_derived_tbl = rte->subquery;
 	GPOS_ASSERT(NULL != query_derived_tbl);
 

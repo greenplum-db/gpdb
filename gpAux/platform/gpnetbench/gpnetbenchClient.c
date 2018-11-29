@@ -10,26 +10,27 @@
 #include <sys/time.h>
 
 #define INIT_RETRIES 5
-void send_buffer(int fd, char* buffer, int bytes);
-void print_headers();
-double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
 
-void usage()
+static void send_buffer(int fd, char* buffer, int bytes);
+static void print_headers(void);
+static double subtractTimeOfDay(struct timeval* begin, struct timeval* end);
+static void usage(void);
+
+static void
+usage(void)
 {
-	fprintf(stdout, "usage: gpnetbench -p PORT -H HOST [-l SECONDS] [-t EXPERIMENT] [-f UNITS] [-P HEADERS] [-b KB] [-h]\n");
-	fprintf(stdout, "where\n");
-	fprintf(stdout, "       PORT is the port to connect to for the server\n");
-	fprintf(stdout, "       HOST is the hostname to connect to for the server\n");
-	fprintf(stdout, "       SECONDS is the number of seconds to sample the network, where the default is 60\n");
-	fprintf(stdout, "       EXPERIMENT is the experiment name to run, where the default is TCP_STREAM\n");
-	fprintf(stdout, "       UNITS is the output units, where the default is M megabytes\n");
-	fprintf(stdout, "       HEADERS is 0 (don't) or 1 (do) display headers in the output\n");
-	fprintf(stdout, "       KB is the size of the send buffer in kilobytes, where the default is 32\n");
+	printf("usage: gpnetbenchClient -p PORT -H HOST [OPTIONS]\n\n");
 
-	fprintf(stdout, "       -h shows this help message\n");
+	printf(" -p PORT        port to connect to for the server\n");
+	printf(" -H HOST        hostname to connect to for the server\n");
+	printf(" -l SECONDS     number of seconds to sample the network, default is 60\n");
+	printf(" -P {0|1}       0 (don't) or 1 (do) display headers in the output, default is 1\n");
+	printf(" -b SIZE        size of the send buffer in kilobytes, default is 32\n");
+	printf(" -h             show this help message\n");
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
 	int socketFd;
 	int retVal;
@@ -75,10 +76,10 @@ int main(int argc, char** argv)
 				hostname = optarg;
 				break;
 			case 'f':
-				// backward compat
+				fprintf(stderr, "NOTICE: -f is deprecated, and has no effect\n");
 				break;
 			case 't':
-				// backward compat
+				fprintf(stderr, "NOTICE: -t is deprecated, and has no effect\n");
 				break;
 			case 'h':
 			case '?':
@@ -90,13 +91,13 @@ int main(int argc, char** argv)
 
 	if (!serverPort)
 	{
-		fprintf(stdout, "-p port not specified\n");
+		fprintf(stderr, "-p port not specified\n");
 		usage();
 		return 1;
 	}
 	if (!hostname)
 	{
-		fprintf(stdout, "-H hostname not specified\n");
+		fprintf(stderr, "-H hostname not specified\n");
 		usage();
 		return 1;
 	}
@@ -104,26 +105,29 @@ int main(int argc, char** argv)
 	// validate a sensible value for duration
 	if (duration < 5 || duration > 3600)
 	{
-		fprintf(stdout, "duration must be between 5 and 3600 seconds\n");
+		fprintf(stderr, "duration must be between 5 and 3600 seconds\n");
 		return 1;
 	}
 
 	// validate a sensible value for buffer size
 	if (kilobytesBufSize < 1 || kilobytesBufSize > 10240)
 	{
-		fprintf(stdout, "buffer size for sending must be between 1 and 10240 KB\n");
+		fprintf(stderr, "buffer size for sending must be between 1 and 10240 KB\n");
 		return 1;
 	}
 	bytesBufSize = kilobytesBufSize * 1024;
 
-	sendBuffer = malloc(bytesBufSize);
-	memset(sendBuffer, 0, bytesBufSize);
+	sendBuffer = calloc(1, bytesBufSize);
+	if (!sendBuffer)
+	{
+		fprintf(stderr, "buffer allocation failed\n");
+		return 1;
+	}
 
 	socketFd = socket(PF_INET, SOCK_STREAM, 0); 
-
 	if (socketFd < 0)
 	{ 
-		fprintf(stdout, "socket call failed\n");
+		fprintf(stderr, "socket call failed\n");
 		return 1;
 	}   
 
@@ -135,15 +139,15 @@ int main(int argc, char** argv)
 
 	for (i = 0; i < INIT_RETRIES; ++i)
 	{
-    		retVal = connect(socketFd,(struct sockaddr *)&address, sizeof(address));
-    		if (retVal == 0)
+		retVal = connect(socketFd,(struct sockaddr *)&address, sizeof(address));
+		if (retVal == 0)
 			break;
 		sleep(1);
 	}
 
 	if (retVal < 0)
 	{
-		fprintf(stdout, "Could not connect to server after %d retries\n", INIT_RETRIES);
+		fprintf(stderr, "Could not connect to server after %d retries\n", INIT_RETRIES);
 		return 1;
 	}
 	printf("Connected to server\n");
@@ -169,7 +173,8 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void send_buffer(int fd, char* buffer, int bytes)
+static void
+send_buffer(int fd, char* buffer, int bytes)
 {
 	ssize_t retval;
 
@@ -183,7 +188,7 @@ void send_buffer(int fd, char* buffer, int bytes)
 		}
 		if (retval > bytes)
 		{
-			fprintf(stdout, "unexpected large return code from send %d with only %d bytes in send buffer\n", (int)retval, bytes);
+			fprintf(stderr, "unexpected large return code from send %d with only %d bytes in send buffer\n", (int)retval, bytes);
 		}
 
 		// advance the  buffer by number of bytes sent and reduce number of bytes remaining to be sent
@@ -192,7 +197,8 @@ void send_buffer(int fd, char* buffer, int bytes)
 	}
 }
 
-double subtractTimeOfDay(struct timeval* begin, struct timeval* end)
+static double
+subtractTimeOfDay(struct timeval* begin, struct timeval* end)
 {
 	double seconds;
 
@@ -209,7 +215,8 @@ double subtractTimeOfDay(struct timeval* begin, struct timeval* end)
 	return seconds;
 }
 
-void print_headers()
+static void
+print_headers()
 {
 	printf("               Send\n");
 	printf("               Message  Elapsed\n");

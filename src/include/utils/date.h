@@ -4,7 +4,7 @@
  *	  Definitions for the SQL "date" and "time" types.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/date.h
@@ -108,11 +108,13 @@ static inline DateADT date_pl_days(DateADT date, int32 days)
 
 /* date.c */
 extern double date2timestamp_no_overflow(DateADT dateVal);
+extern void EncodeSpecialDate(DateADT dt, char *str);
 
 extern Datum date_in(PG_FUNCTION_ARGS);
 extern Datum date_out(PG_FUNCTION_ARGS);
 extern Datum date_recv(PG_FUNCTION_ARGS);
 extern Datum date_send(PG_FUNCTION_ARGS);
+extern Datum make_date(PG_FUNCTION_ARGS);
 extern Datum date_eq(PG_FUNCTION_ARGS);
 extern Datum date_ne(PG_FUNCTION_ARGS);
 extern Datum date_lt(PG_FUNCTION_ARGS);
@@ -170,6 +172,7 @@ extern Datum time_recv(PG_FUNCTION_ARGS);
 extern Datum time_send(PG_FUNCTION_ARGS);
 extern Datum timetypmodin(PG_FUNCTION_ARGS);
 extern Datum timetypmodout(PG_FUNCTION_ARGS);
+extern Datum make_time(PG_FUNCTION_ARGS);
 extern Datum time_transform(PG_FUNCTION_ARGS);
 extern Datum time_scale(PG_FUNCTION_ARGS);
 extern Datum time_eq(PG_FUNCTION_ARGS);

@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2012, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -29,6 +29,7 @@
 #include "bootstrap/bootstrap.h"
 #include "catalog/catalog.h"
 #include "catalog/heap.h"
+#include "catalog/namespace.h"
 #include "catalog/pg_am.h"
 #include "catalog/pg_attribute.h"
 #include "catalog/pg_authid.h"
@@ -304,6 +305,7 @@ Boot_DeclareIndexStmt:
 		  XDECLARE INDEX boot_ident oidspec ON boot_ident USING boot_ident LPAREN boot_index_params RPAREN
 				{
 					IndexStmt *stmt = makeNode(IndexStmt);
+					Oid		relationId;
 
 					do_start();
 
@@ -325,7 +327,12 @@ Boot_DeclareIndexStmt:
 					stmt->initdeferred = false;
 					stmt->concurrent = false;
 
-					DefineIndex(stmt,
+					/* locks and races need not concern us in bootstrap mode */
+					relationId = RangeVarGetRelid(stmt->relation, NoLock,
+												  false);
+
+					DefineIndex(relationId,
+								stmt,
 								$4,
 								false,
 								false,
@@ -339,6 +346,7 @@ Boot_DeclareUniqueIndexStmt:
 		  XDECLARE UNIQUE INDEX boot_ident oidspec ON boot_ident USING boot_ident LPAREN boot_index_params RPAREN
 				{
 					IndexStmt *stmt = makeNode(IndexStmt);
+					Oid		relationId;
 
 					do_start();
 
@@ -360,7 +368,12 @@ Boot_DeclareUniqueIndexStmt:
 					stmt->initdeferred = false;
 					stmt->concurrent = false;
 
-					DefineIndex(stmt,
+					/* locks and races need not concern us in bootstrap mode */
+					relationId = RangeVarGetRelid(stmt->relation, NoLock,
+												  false);
+
+					DefineIndex(relationId,
+								stmt,
 								$5,
 								false,
 								false,

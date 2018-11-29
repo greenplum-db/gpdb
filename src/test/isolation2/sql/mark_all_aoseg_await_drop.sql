@@ -18,7 +18,7 @@ CREATE TABLE mark_all_aoseg_await_drop (a int) WITH (appendonly=true);
 DELETE FROM mark_all_aoseg_await_drop;
 
 -- We should see all 3 aosegs in state 1
-0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg_name('mark_all_aoseg_await_drop');
+0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg('mark_all_aoseg_await_drop');
 
 -- VACUUM while another session holds lock
 1: BEGIN;
@@ -33,4 +33,4 @@ DELETE FROM mark_all_aoseg_await_drop;
 -- it and did not commit before the vacuum got to it. The vacuum
 -- correctly skipped segno 1 and continued to cycle through the aoseg
 -- entries.
-0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg_name('mark_all_aoseg_await_drop');
+0U: SELECT segno, state FROM gp_toolkit.__gp_aoseg('mark_all_aoseg_await_drop');

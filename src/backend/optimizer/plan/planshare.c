@@ -20,14 +20,8 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
-#include "optimizer/tlist.h"
 #include "optimizer/subselect.h"
 #include "optimizer/planshare.h"
-
-#include "cdb/cdbgroup.h"					/* cdbpathlocus_collocates() */
-#include "cdb/cdbpath.h"
-#include "cdb/cdbsetop.h"					/* make_motion... routines */
-#include "cdb/cdbvars.h"
 
 int get_plan_share_id(Plan *p)
 {

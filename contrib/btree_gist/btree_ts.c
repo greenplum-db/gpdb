@@ -28,17 +28,6 @@ PG_FUNCTION_INFO_V1(gbt_tstz_distance);
 PG_FUNCTION_INFO_V1(gbt_ts_penalty);
 PG_FUNCTION_INFO_V1(gbt_ts_same);
 
-Datum		gbt_ts_compress(PG_FUNCTION_ARGS);
-Datum		gbt_tstz_compress(PG_FUNCTION_ARGS);
-Datum		gbt_ts_union(PG_FUNCTION_ARGS);
-Datum		gbt_ts_picksplit(PG_FUNCTION_ARGS);
-Datum		gbt_ts_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_ts_distance(PG_FUNCTION_ARGS);
-Datum		gbt_tstz_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_tstz_distance(PG_FUNCTION_ARGS);
-Datum		gbt_ts_penalty(PG_FUNCTION_ARGS);
-Datum		gbt_ts_same(PG_FUNCTION_ARGS);
-
 
 #ifdef USE_FLOAT8_BYVAL
 #define TimestampGetDatumFast(X) TimestampGetDatum(X)
@@ -138,6 +127,7 @@ static const gbtree_ninfo tinfo =
 {
 	gbt_t_ts,
 	sizeof(Timestamp),
+	16,							/* sizeof(gbtreekey16) */
 	gbt_tsgt,
 	gbt_tsge,
 	gbt_tseq,
@@ -149,7 +139,6 @@ static const gbtree_ninfo tinfo =
 
 
 PG_FUNCTION_INFO_V1(ts_dist);
-Datum		ts_dist(PG_FUNCTION_ARGS);
 Datum
 ts_dist(PG_FUNCTION_ARGS)
 {
@@ -178,7 +167,6 @@ ts_dist(PG_FUNCTION_ARGS)
 }
 
 PG_FUNCTION_INFO_V1(tstz_dist);
-Datum		tstz_dist(PG_FUNCTION_ARGS);
 Datum
 tstz_dist(PG_FUNCTION_ARGS)
 {

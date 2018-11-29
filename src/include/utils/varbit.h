@@ -5,7 +5,7 @@
  *
  * Code originally contributed by Adriaan Joubert.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/varbit.h
@@ -88,6 +88,7 @@ extern Datum bitle(PG_FUNCTION_ARGS);
 extern Datum bitgt(PG_FUNCTION_ARGS);
 extern Datum bitge(PG_FUNCTION_ARGS);
 extern Datum bitcmp(PG_FUNCTION_ARGS);
+extern Datum bithash(PG_FUNCTION_ARGS);
 
 /* avoid the names bitand and bitor, since they are C++ keywords */
 extern Datum bit_and(PG_FUNCTION_ARGS);

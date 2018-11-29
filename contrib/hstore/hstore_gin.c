@@ -13,7 +13,7 @@
 /*
  * When using a GIN index for hstore, we choose to index both keys and values.
  * The storage format is "text" values, with K, V, or N prepended to the string
- * to indicate key, value, or null values.	(As of 9.1 it might be better to
+ * to indicate key, value, or null values.  (As of 9.1 it might be better to
  * store null values as nulls, but we'll keep it this way for on-disk
  * compatibility.)
  */
@@ -22,7 +22,6 @@
 #define NULLFLAG	'N'
 
 PG_FUNCTION_INFO_V1(gin_extract_hstore);
-Datum		gin_extract_hstore(PG_FUNCTION_ARGS);
 
 /* Build an indexable text value */
 static text *
@@ -76,7 +75,6 @@ gin_extract_hstore(PG_FUNCTION_ARGS)
 }
 
 PG_FUNCTION_INFO_V1(gin_extract_hstore_query);
-Datum		gin_extract_hstore_query(PG_FUNCTION_ARGS);
 
 Datum
 gin_extract_hstore_query(PG_FUNCTION_ARGS)
@@ -148,7 +146,6 @@ gin_extract_hstore_query(PG_FUNCTION_ARGS)
 }
 
 PG_FUNCTION_INFO_V1(gin_consistent_hstore);
-Datum		gin_consistent_hstore(PG_FUNCTION_ARGS);
 
 Datum
 gin_consistent_hstore(PG_FUNCTION_ARGS)
@@ -168,7 +165,7 @@ gin_consistent_hstore(PG_FUNCTION_ARGS)
 	{
 		/*
 		 * Index doesn't have information about correspondence of keys and
-		 * values, so we need recheck.	However, if not all the keys are
+		 * values, so we need recheck.  However, if not all the keys are
 		 * present, we can fail at once.
 		 */
 		*recheck = true;

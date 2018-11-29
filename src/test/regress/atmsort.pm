@@ -553,7 +553,12 @@ sub format_query_output
     # EXPLAIN (COSTS OFF) output is *not* processed. The output with COSTS OFF
     # shouldn't contain anything that varies across runs, and shouldn't need
     # sanitizing.
-    if (exists($directive->{explain}) && $directive->{explain} ne 'costs_off'
+	#
+	# However when -ignore_plans is specified we also need to process
+	# EXPLAIN (COSTS OFF) to ignore the segments information.
+    if (exists($directive->{explain})
+		&& ($glob_ignore_plans
+			|| $directive->{explain} ne 'costs_off')
         && (!exists($directive->{explain_processing})
             || ($directive->{explain_processing} =~ m/on/)))
     {

@@ -8,11 +8,13 @@
 
 #define SIZE_OF_IN_PROGRESS_ARRAY (10 * sizeof(DistributedTransactionId))
 #define MAX_PROCS 100
+VariableCacheData vcdata;
 
 void setup(TmControlBlock *controlBlock)
 {
 	PGPROC *tmp_proc;
 
+	ShmemVariableCache = &vcdata;
 	shmNextSnapshotId = &controlBlock->NextSnapshotId;
 	shmDistribTimeStamp = &controlBlock->distribTimeStamp;
 	shmNumCommittedGxacts = &controlBlock->num_committed_xacts;
@@ -52,11 +54,11 @@ test__CreateDistributedSnapshot(void **state)
 	setup(&controlBlock);
 
 #ifdef USE_ASSERT_CHECKING
-	expect_value_count(LWLockHeldByMe, lockid, ProcArrayLock, -1);
+	expect_value_count(LWLockHeldByMe, l, ProcArrayLock, -1);
 	will_return_count(LWLockHeldByMe, true, -1);
 #endif
 
-	will_return_count(getMaxDistributedXid, 25, -1);
+	ShmemVariableCache->latestCompletedDxid = 24;
 
 	/* This is going to act as our gxact */
 	allTmGxact[procArray->pgprocnos[0]].gxid = 20;
@@ -104,6 +106,8 @@ test__CreateDistributedSnapshot(void **state)
 	assert_true(ds->xmin == 10);
 	assert_true(ds->xmax == 30);
 	assert_true(ds->count == 2);
+	assert_true(ds->inProgressXidArray[0] == 10);
+	assert_true(ds->inProgressXidArray[1] == 30);
 	assert_true(MyTmGxact->xminDistributedSnapshot == 10);
 
 	/*************************************************************************

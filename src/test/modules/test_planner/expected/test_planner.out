@@ -1,0 +1,17 @@
+-- start_matchsubs
+-- # Remove all successful
+-- m/INFO:  Success.*\.c:\d+/
+-- s/\d+/###/
+-- end_matchsubs
+--start_ignore
+CREATE EXTENSION IF NOT EXISTS test_planner;
+--end_ignore
+SELECT test_planner();
+INFO:  Success test_stable_function_in_subquery_is_evaluated_to_const - integration_tests/planner_integration_tests.c:70
+INFO:  Success test_stable_function_in_simple_query_is_not_evaluated_in_planner - integration_tests/planner_integration_tests.c:83
+ test_planner 
+--------------
+ 
+(1 row)
+
+DROP EXTENSION test_planner;

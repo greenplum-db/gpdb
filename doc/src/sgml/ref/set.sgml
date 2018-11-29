@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-SET">
+ <indexterm zone="sql-set">
+  <primary>SET</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>SET</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -14,10 +18,6 @@ PostgreSQL documentation
   <refname>SET</refname>
   <refpurpose>change a run-time parameter</refpurpose>
  </refnamediv>
-
- <indexterm zone="sql-set">
-  <primary>SET</primary>
- </indexterm>
 
  <refsynopsisdiv>
 <synopsis>
@@ -110,10 +110,9 @@ SET [ SESSION | LOCAL ] TIME ZONE { <replaceable class="PARAMETER">timezone</rep
      <para>
       Specifies that the command takes effect for only the current
       transaction.  After <command>COMMIT</> or <command>ROLLBACK</>,
-      the session-level setting takes effect again.  Note that
-      <command>SET LOCAL</> will appear to have no effect if it is
-      executed outside a <command>BEGIN</> block, since the
-      transaction will end immediately.
+      the session-level setting takes effect again.  Issuing this
+      outside of a transaction block emits a warning and otherwise has
+      no effect.
      </para>
     </listitem>
    </varlistentry>
@@ -244,7 +243,16 @@ SELECT setseed(<replaceable>value</replaceable>);
          </listitem>
         </varlistentry>
        </variablelist>
+      </para>
 
+      <para>
+       Timezone settings given as numbers or intervals are internally
+       translated to POSIX timezone syntax.  For example, after
+       <literal>SET TIME ZONE -7</>, <command>SHOW TIME ZONE</> would
+       report <literal>&lt;-07&gt;+07</>.
+      </para>
+
+      <para>
        See <xref linkend="datatype-timezones"> for more information
        about time zones.
       </para>

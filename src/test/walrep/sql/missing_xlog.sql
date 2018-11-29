@@ -10,7 +10,7 @@ returns text as $$
     if command in ('stop', 'restart'):
         cmd = cmd + '-w -m immediate %s' % command
     elif command == 'start':
-        opts = '-p %d -\-gp_dbid=0 -i -\-gp_contentid=%d -\-gp_num_contents_in_cluster=3' % (port, contentid)
+        opts = '-p %d -\-gp_dbid=0 -i -\-gp_contentid=%d' % (port, contentid)
         cmd = cmd + '-o "%s" start' % opts
     elif command == 'reload':
         cmd = cmd + 'reload'
@@ -35,8 +35,8 @@ create or replace function checkpoint_and_wait_for_replication_replay (retries i
 $$
 declare
 	i int;
-	checkpoint_locs text[];
-	replay_locs text[];
+	checkpoint_locs pg_lsn[];
+	replay_locs pg_lsn[];
 	failed_for_segment text[];
 	r record;
 	all_caught_up bool;
@@ -65,11 +65,8 @@ begin
 	loop
 		all_caught_up = true;
 		for r in select gp_segment_id, replay_location as loc from gp_stat_replication loop
-			-- PostgreSQL 9.4 got a pg_lsn datatype that we could
-			-- use here, once we merge up to 9.4. Till then using
-			-- GPDB type gpxlogloc.
 			replay_locs[r.gp_segment_id] = r.loc;
-			if ('(' || r.loc || ')')::gpxlogloc < ('(' || checkpoint_locs[r.gp_segment_id] || ')')::gpxlogloc then
+			if r.loc < checkpoint_locs[r.gp_segment_id] then
 				all_caught_up = false;
 				failed_for_segment[r.gp_segment_id] = 1;
 			else
@@ -131,7 +128,7 @@ select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' a
 -- checkpoint and switch the xlog to avoid corrupting the xlog due to background processes
 checkpoint;
 -- substring() function is used to ignore the output, but not the error
-select substring(pg_switch_xlog(), 0, 0) from gp_dist_random('gp_id') where gp_segment_id = 0;
+select substring(pg_switch_xlog()::text, 0, 0) from gp_dist_random('gp_id') where gp_segment_id = 0;
 
 -- hide old xlog on segment 0
 select move_xlog((select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0), '/tmp/missing_xlog');

@@ -4,7 +4,7 @@
  *	  prototypes for functions in backend/catalog/namespace.c
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/namespace.h
@@ -19,7 +19,7 @@
 
 /*
  *	This structure holds a list of possible functions or operators
- *	found by namespace lookup.	Each function/operator is identified
+ *	found by namespace lookup.  Each function/operator is identified
  *	by OID and by argument types; the list must be pruned by type
  *	resolution rules that are embodied in the parser, not here.
  *	See FuncnameGetCandidates's comments for more info.
@@ -72,11 +72,13 @@ extern bool TypeIsVisible(Oid typid);
 extern FuncCandidateList FuncnameGetCandidates(List *names,
 					  int nargs, List *argnames,
 					  bool expand_variadic,
-					  bool expand_defaults);
+					  bool expand_defaults,
+					  bool missing_ok);
 extern bool FunctionIsVisible(Oid funcid);
 
 extern Oid	OpernameGetOprid(List *names, Oid oprleft, Oid oprright);
-extern FuncCandidateList OpernameGetCandidates(List *names, char oprkind);
+extern FuncCandidateList OpernameGetCandidates(List *names, char oprkind,
+					  bool missing_schema_ok);
 extern bool OperatorIsVisible(Oid oprid);
 
 extern Oid	OpclassnameGetOpcid(Oid amid, const char *opcname);

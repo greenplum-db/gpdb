@@ -211,7 +211,7 @@ def validate_options(options, args, parser):
         parser.exit()
 
     if not os.path.exists(options.master_data_directory):
-        logger.error('Master data directory does not exist.')
+        logger.error('Master data directory %s does not exist.' % options.master_data_directory)
         parser.exit()
 
     if options.database and (options.database.lower() == 'template0'
@@ -693,6 +693,7 @@ class SegmentTemplate:
         """Deploys the template tar file and configures the new segments"""
         self.statusLogger.set_status('BUILD_SEGMENTS_STARTED', self.segTarFile)
         self._distribute_template()
+        # FIXME: truncate the qd only tables' underlying files instead of delete the tuples
         self._configure_new_segments()
         numNewSegments = len(self.gparray.getExpansionSegDbList())
         self.statusLogger.set_status('BUILD_SEGMENTS_DONE', numNewSegments)
@@ -708,20 +709,6 @@ class SegmentTemplate:
         self.oldSegCount = self.gparray.get_segment_count()
 
         self.conn.close()
-
-        GpStop.local('gpexpand _create_template stop gpdb', masterOnly=True, fast=True)
-
-        # Verify that we actually stopped
-        self.logger.debug('Validating array state')
-        pgControlDataCmd = PgControlData('Validate stopped', self.masterDataDirectory)
-        state = None
-        try:
-            pgControlDataCmd.run(validateAfter=True)
-        except Exception, e:
-            raise SegmentTemplateError(e)
-        state = pgControlDataCmd.get_value('Database cluster state')
-        if state != 'shut down':
-            raise SegmentTemplateError('Failed to stop the array.  pg_controldata return state of %s' % state)
 
         try:
             masterSeg = self.gparray.master
@@ -1014,15 +1001,11 @@ class gpexpand:
         This state will depend on if this is a new expansion setup,
         a continuation of a previous expansion or a rollback """
         # Get the database in the expected state for the expansion/rollback
+        # If gpexpand status file exists ,the last run of gpexpand didn't finish properly
         status_file_exists = os.path.exists(options.master_data_directory + '/gpexpand.status')
         gpexpand_db_status = None
 
-        if status_file_exists:
-            # gpexpand status file exists so the last run of gpexpand didn't finish properly
-            gpexpand.get_gpdb_in_state(GPDB_UTILITY, options)
-        else:
-            gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
-
+        if not status_file_exists:
             logger.info('Querying gpexpand schema for current expansion state')
             try:
                 gpexpand_db_status = gpexpand.get_status_from_db(dburl, options)
@@ -1030,41 +1013,7 @@ class gpexpand:
                 raise Exception('Error while trying to query the gpexpand schema: %s' % e)
             logger.debug('Expansion status returned is %s' % gpexpand_db_status)
 
-            if (not gpexpand_db_status and options.filename) and not options.clean:
-                # New expansion, need to be in master only
-                logger.info('Readying Greenplum Database for a new expansion')
-                gpexpand.get_gpdb_in_state(GPDB_UTILITY, options)
-
         return gpexpand_db_status
-
-    @staticmethod
-    def get_gpdb_in_state(state, options):
-        runningStatus = chk_local_db_running(options.master_data_directory, options.pgport)
-        gpdb_running = runningStatus[0] and runningStatus[1] and runningStatus[2] and runningStatus[3]
-        if gpdb_running:
-            gpdb_mode = get_local_db_mode(options.master_data_directory)
-
-        if state == GPDB_STARTED:
-            if gpdb_running:
-                if gpdb_mode != 'UTILITY':
-                    return
-                else:
-                    GpStop.local('Stop GPDB', masterOnly=True, fast=True)
-            GpStart.local('Start GPDB')
-        elif state == GPDB_STOPPED:
-            if gpdb_running:
-                if gpdb_mode != 'UTILITY':
-                    GpStop.local('Stop GPDB', fast=True)
-                else:
-                    GpStop.local('Stop GPDB', masterOnly=True, fast=True)
-        elif state == GPDB_UTILITY:
-            if gpdb_running:
-                if gpdb_mode == 'UTILITY':
-                    return
-                GpStop.local('Stop GPDB', fast=True)
-            GpStart.local('Start GPDB in master only mode', masterOnly=True)
-        else:
-            raise Exception('Unkown gpdb state')
 
     @staticmethod
     def get_status_from_db(dburl, options):
@@ -1268,10 +1217,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         self.conn.close()
 
-        GpStop.local('gpexpand rollback', masterOnly=True, fast=True)
-
         if cleanSchema:
-            GpStart.local('gpexpand rollback start database restricted', restricted=True)
             self.logger.info('Dropping expansion expansion schema')
             schema_conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods=True)
             try:
@@ -1280,7 +1226,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 schema_conn.close()
             except:
                 pass  # schema wasn't created yet.
-            GpStop('gpexpand rollback stop database', fast=True)
 
         self.statusLogger.remove_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()
@@ -1350,19 +1295,19 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                         = parse_gpexpand_segment_line(inputFilename, line, l)
 
                     # Check that input values look reasonable.
-                    if hostname == None or len(hostname) == 0:
+                    if hostname is None or len(hostname) == 0:
                         raise ExpansionError("Invalid host name on line " + str(line))
-                    if address == None or len(address) == 0:
+                    if address is None or len(address) == 0:
                         raise ExpansionError("Invaid address on line " + str(line))
-                    if port == None or str(port).isdigit() == False or int(port) < 0:
+                    if port is None or str(port).isdigit() == False or int(port) < 0:
                         raise ExpansionError("Invalid port number on line " + str(line))
-                    if datadir == None or len(datadir) == 0:
+                    if datadir is None or len(datadir) == 0:
                         raise ExpansionError("Invalid data directory on line " + str(line))
-                    if dbid == None or str(dbid).isdigit() == False or int(dbid) < 0:
+                    if dbid is None or str(dbid).isdigit() == False or int(dbid) < 0:
                         raise ExpansionError("Invalid dbid on line " + str(line))
-                    if contentId == None or str(contentId).isdigit() == False or int(contentId) < 0:
+                    if contentId is None or str(contentId).isdigit() == False or int(contentId) < 0:
                         raise ExpansionError("Invalid contentId on line " + str(line))
-                    if role == None or len(role) > 1 or (role != 'p' and role != 'm'):
+                    if role is None or len(role) > 1 or (role != 'p' and role != 'm'):
                         raise ExpansionError("Invalid role on line " + str(line))
 
                     retValue.append(NewSegmentInput(hostname=hostname
@@ -1382,6 +1327,22 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             return retValue
         except IOError:
             raise ExpansionError('Input file %s not found' % self.options.filename)
+
+    def lock_catalog(self):
+        self.conn_catalog_lock = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+        self.logger.info('Locking catalog')
+        dbconn.execSQL(self.conn_catalog_lock, "BEGIN")
+        # FIXME: is CHECKPOINT inside BEGIN the one wanted by us?
+        dbconn.execSQL(self.conn_catalog_lock, "select gp_expand_lock_catalog()")
+        dbconn.execSQL(self.conn_catalog_lock, "CHECKPOINT")
+        self.logger.info('Locked catalog')
+
+    def unlock_catalog(self):
+        self.logger.info('Unlocking catalog')
+        dbconn.execSQL(self.conn_catalog_lock, "COMMIT")
+        self.conn_catalog_lock.close()
+        self.conn_catalog_lock = None
+        self.logger.info('Unlocked catalog')
 
     def add_segments(self):
         """Starts the process of adding the new segments to the array"""
@@ -1466,6 +1427,8 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         if self.segTemplate:
             self.segTemplate.cleanup()
 
+        # FIXME: update postmaster.opts
+
         self.statusLogger.set_status('UPDATE_OLD_SEGMENTS_DONE')
 
     def restore_original_segments(self):
@@ -1530,10 +1493,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
 
-        self.logger.info('Starting Greenplum Database in restricted mode')
-        startCmd = GpStart('gpexpand update master start database restricted mode', restricted=True, verbose=True)
-        startCmd.run(validateAfter=True)
-
         # Put expansion segment primaries in change tracking
         for seg in self.gparray.getExpansionSegDbList():
             if seg.isSegmentMirror() == True:
@@ -1564,10 +1523,10 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         dbconn.execSQL(self.conn, "CHECKPOINT")
         self.conn.close()
 
-        self.logger.info('Stopping database')
-        stopCmd = GpStop('gpexpand update master stop database', verbose=True, ctxt=LOCAL, force=True)
-        # We do not check the results of GpStop becuase we will get errors for all the new segments.
-        stopCmd.run(validateAfter=False)
+        # increase expand version 
+        self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
+        dbconn.execSQL(self.conn, "select gp_expand_bump_version()")
+        self.conn.close()
 
         self.statusLogger.set_status('UPDATE_CATALOG_DONE')
 
@@ -1581,17 +1540,9 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         newSegments = self.gparray.getExpansionSegDbList()
 
         """ Get a list of databases. """
-        self.logger.info('Starting master in utility mode')
-
-        startCmd = GpStart('gpexpand update master start database master only', masterOnly=True)
-        startCmd.run(validateAfter=True)
-
         conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8')
         databases = catalog.getDatabaseList(conn)
         conn.close()
-
-        self.logger.info('Stopping master in utility mode')
-        GpStop.local('gpexpand update master stop database', masterOnly=True, fast=True)
 
         """
         Connect to each database in each segment and do some cleanup of tables that have stuff in them as a result of copying the segment from the master.
@@ -1604,7 +1555,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             segStartCmd = SegmentStart(
                 name="Starting new segment dbid %s on host %s." % (str(seg.getSegmentDbId()), seg.getSegmentHostName())
                 , gpdb=seg
-                , numContentsInCluster=0  # Starting seg on it's own.
+                , numContentsInCluster=self.newPrimaryCount  # Starting seg on it's own.
                 , era=None
                 , mirrormode=MIRROR_MODE_MIRRORLESS
                 , utilityMode=True
@@ -1646,31 +1597,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                 ### need to fix self.pool.check_results(). Call getCompletedItems to clear the queue for now.
                 self.pool.check_results()
                 self.pool.getCompletedItems()
-
-        """
-        Stop all the new segments.
-        """
-        for seg in newSegments:
-            if seg.isSegmentMirror() == True:
-                continue
-            segStopCmd = SegmentStop(
-                name="Stopping new segment dbid %s on host %s." % (str(seg.getSegmentDbId), seg.getSegmentHostName())
-                , dataDir=seg.getSegmentDataDirectory()
-                , mode='smart'
-                , nowait=False
-                , ctxt=REMOTE
-                , remoteHost=seg.getSegmentHostName()
-            )
-            self.pool.addCommand(segStopCmd)
-        self.pool.join()
-        self.pool.check_results()
-
-        self.logger.info('Starting Greenplum Database in restricted mode')
-        startCmd = GpStart('gpexpand update master start database restricted', restricted=True, verbose=True)
-        startCmd.run(validateAfter=True)
-
-        # Need to restore the connection used by the expansion
-        self.conn = dbconn.connect(self.dburl, encoding='UTF8')
 
     # --------------------------------------------------------------------------
     def restore_master(self):
@@ -1772,6 +1698,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         """Used to setup the gpexpand schema"""
         self.statusLogger.set_status('SETUP_EXPANSION_SCHEMA_STARTED')
         self.logger.info('Creating expansion schema')
+        self.conn = dbconn.connect(self.dburl, encoding='UTF8')
         dbconn.execSQL(self.conn, create_schema_sql)
         dbconn.execSQL(self.conn, status_table_sql)
         dbconn.execSQL(self.conn, status_detail_table_sql)
@@ -1826,9 +1753,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         # At this point, no rollback is possible and the the system
         # including new segments has been started once before so finalize
         self.finalize_prepare()
-
-        self.logger.info('Stopping Greenplum Database')
-        GpStop.local('gpexpand setup complete', fast=True)
 
     def _populate_regular_tables(self, dbname):
         """ we don't do 3.2+ style partitioned tables here, but we do
@@ -2066,7 +1990,7 @@ UPDATE gp_distribution_policy
         return (' , '.join(name_list), ' , '.join(oid_list))
 
     def perform_expansion(self):
-        """Performs the actual table re-organiations"""
+        """Performs the actual table re-organizations"""
         expansionStart = datetime.datetime.now()
 
         # setup a threadpool
@@ -2087,11 +2011,15 @@ UPDATE gp_distribution_policy
         sql = "SELECT * FROM %s.%s WHERE status = 'NOT STARTED' ORDER BY rank" % (gpexpand_schema, status_detail_table)
         cursor = dbconn.execSQL(self.conn, sql)
 
+        # get the total number of primaries in the cluster after expansion
+        # we need it to update the numsegments column in gp_distribution_policy before redistribution
+        num_segments_after_expansion = len(self.gparray.segmentPairs)
+
         for row in cursor:
             self.logger.debug(row)
             name = "name"
             tbl = ExpandTable(options=self.options, row=row)
-            cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options)
+            cmd = ExpandCommand(name=name, status_url=self.dburl, table=tbl, options=self.options, num_segments=num_segments_after_expansion)
             self.queue.addCommand(cmd)
 
         table_expand_error = False
@@ -2342,28 +2270,31 @@ class ExpandTable():
         dbconn.execSQL(status_conn, sql)
         status_conn.commit()
 
-    def expand(self, table_conn, cancel_flag):
-        foo = self.distrib_policy_names.strip()
+    def expand(self, table_conn, cancel_flag, num_segments):
+        policy_names = self.distrib_policy_names.strip()
         new_storage_options = ''
         if self.storage_options:
             new_storage_options = ',' + self.storage_options
 
         (schema_name, table_name) = self.fq_name.split('.')
 
-        logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), foo.decode('utf-8')))
-        # logger.info("Storage options for table %s is %s" % (self.fq_name, self.storage_options))
+        logger.info("Distribution policy for table %s is '%s' " % (self.fq_name.decode('utf-8'), policy_names.decode('utf-8')))
 
+        # The UPDATE query below updates the numsegments value on the master only.
+        # The following ALTER TABLE query updates the segment values as part of the redistribution process.
+        sql = """UPDATE gp_distribution_policy SET numsegments=%d WHERE localoid=%d; """ % (
+                num_segments, self.table_oid)
         if self.distrib_policy_type.strip() == 'r':
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED REPLICATED' % (
                 schema_name, table_name, new_storage_options)
-        elif foo == "" or foo == "None" or foo is None:
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
+        elif policy_names == "" or policy_names == "None" or policy_names is None:
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED RANDOMLY' % (
                 schema_name, table_name, new_storage_options)
         else:
-            dist_cols = foo.split(',')
+            dist_cols = policy_names.split(',')
             dist_cols = ['"%s"' % x.strip() for x in dist_cols]
             dist_cols = ','.join(dist_cols)
-            sql = 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
+            sql += 'ALTER TABLE ONLY "%s"."%s" SET WITH(REORGANIZE=TRUE%s) DISTRIBUTED BY (%s)' % (
                 schema_name, table_name, new_storage_options, dist_cols)
 
         logger.info('Expanding %s.%s' % (self.dbname.decode('utf-8'), self.fq_name.decode('utf-8')))
@@ -2479,10 +2410,11 @@ class ExecuteSQLStatementsCommand(SQLCommand):
 
 # -----------------------------------------------
 class ExpandCommand(SQLCommand):
-    def __init__(self, name, status_url, table, options):
+    def __init__(self, name, status_url, table, options, num_segments):
         self.status_url = status_url
         self.table = table
         self.options = options
+        self.num_segments = num_segments
         self.cmdStr = "Expand %s.%s" % (table.dbname, table.fq_name)
         self.table_url = copy.deepcopy(status_url)
         self.table_url.pgdb = table.dbname
@@ -2499,7 +2431,7 @@ class ExpandCommand(SQLCommand):
 
         try:
             status_conn = dbconn.connect(self.status_url, encoding='UTF8')
-            table_conn = dbconn.connect(self.table_url, encoding='UTF8')
+            table_conn = dbconn.connect(self.table_url, encoding='UTF8', allowSystemTableMods=True) # need to modify gp_distribution_policy
         except DatabaseError, ex:
             if self.options.verbose:
                 logger.exception(ex)
@@ -2534,7 +2466,7 @@ class ExpandCommand(SQLCommand):
                 if not self.options.simple_progress:
                     self.table.mark_started(status_conn, table_conn, start_time, self.cancel_flag)
 
-                table_exp_success = self.table.expand(table_conn, self.cancel_flag)
+                table_exp_success = self.table.expand(table_conn, self.cancel_flag, self.num_segments)
 
         except Exception, ex:
             if ex.__str__().find('canceling statement due to user request') == -1 and not self.cancel_flag:
@@ -2799,7 +2731,6 @@ def main(options, args, parser):
             logger.error('Greenplum instance you wish to expand is running')
             logger.error('and that your environment is correct, then rerun')
             logger.error('gexpand ' + ' '.join(sys.argv[1:]))
-            gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
             sys.exit(1)
 
         _gp_expand = gpexpand(logger, gparray, dburl, options, parallel=options.parallel)
@@ -2844,7 +2775,7 @@ def main(options, args, parser):
             logger.info('Expansion has already completed.')
             logger.info('If you want to expand again, run gpexpand -c to remove')
             logger.info('the gpexpand schema and begin a new expansion')
-        elif gpexpand_db_status == None and gpexpand_file_status == None and options.filename:
+        elif gpexpand_db_status is None and gpexpand_file_status is None and options.filename:
             if not _gp_expand.validate_unalterable_tables():
                 raise ValidationError()
             if _gp_expand.check_unique_indexes():
@@ -2859,21 +2790,21 @@ def main(options, args, parser):
             _gp_expand.addNewSegments(newSegList)
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
+            _gp_expand.lock_catalog()
             _gp_expand.add_segments()
             _gp_expand.update_original_segments()
-            _gp_expand.update_catalog()
             _gp_expand.cleanup_new_segments()
+            _gp_expand.update_catalog()
+            _gp_expand.unlock_catalog()
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
-            logger.info('Starting Greenplum Database')
-            GpStart.local('gpexpand expansion prepare final start')
             _gp_expand.sync_new_mirrors()
             logger.info('************************************************')
             logger.info('Initialization of the system expansion complete.')
             logger.info('To begin table expansion onto the new segments')
             logger.info('rerun gpexpand')
             logger.info('************************************************')
-        elif options.filename is None and gpexpand_file_status == None:
+        elif options.filename is None and gpexpand_file_status is None:
             interview_setup(gparray, options)
         else:
             logger.error('The last gpexpand setup did not complete successfully.')
@@ -2886,7 +2817,6 @@ def main(options, args, parser):
         logger.info('Bringing Greenplum Database back online...')
         if _gp_expand is not None:
             _gp_expand.shutdown()
-        gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
         sys.exit()
     except Exception, e:
         if options and options.verbose:
@@ -2897,10 +2827,7 @@ def main(options, args, parser):
             logger.error(
                 'gpexpand is past the point of rollback. Any remaining issues must be addressed outside of gpexpand.')
         if _gp_expand is not None:
-            if gpexpand_db_status is None and _gp_expand.get_state() is None:
-                logger.info('Bringing Greenplum Database back online...')
-                gpexpand.get_gpdb_in_state(GPDB_STARTED, options)
-            else:
+            if not (gpexpand_db_status is None and _gp_expand.get_state() is None):
                 if _gp_expand.pastThePointOfNoReturn == False:
                     logger.error('Please run \'gpexpand -r%s\' to rollback to the original state.' % (
                         '' if not options.database else ' -D %s' % options.database))

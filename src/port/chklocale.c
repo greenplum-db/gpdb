@@ -4,7 +4,7 @@
  *		Functions for handling locale-related info
  *
  *
- * Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -162,6 +162,7 @@ static const struct encoding_match encoding_match_list[] = {
 	{PG_SJIS, "SJIS"},
 	{PG_SJIS, "PCK"},
 	{PG_SJIS, "CP932"},
+	{PG_SJIS, "SHIFT_JIS"},
 
 	{PG_BIG5, "BIG5"},
 	{PG_BIG5, "BIG5HKSCS"},
@@ -235,6 +236,32 @@ win32_langinfo(const char *ctype)
 
 	return r;
 }
+
+#ifndef FRONTEND
+/*
+ * Given a Windows code page identifier, find the corresponding PostgreSQL
+ * encoding.  Issue a warning and return -1 if none found.
+ */
+int
+pg_codepage_to_encoding(UINT cp)
+{
+	char		sys[16];
+	int			i;
+
+	sprintf(sys, "CP%u", cp);
+
+	/* Check the table */
+	for (i = 0; encoding_match_list[i].system_enc_name; i++)
+		if (pg_strcasecmp(sys, encoding_match_list[i].system_enc_name) == 0)
+			return encoding_match_list[i].pg_enc_code;
+
+	ereport(WARNING,
+			(errmsg("could not determine encoding for codeset \"%s\"", sys),
+		   errdetail("Please report this to <pgsql-bugs@postgresql.org>.")));
+
+	return -1;
+}
+#endif
 #endif   /* WIN32 */
 
 #if (defined(HAVE_LANGINFO_H) && defined(CODESET)) || defined(WIN32)
@@ -248,6 +275,9 @@ win32_langinfo(const char *ctype)
  *
  * If the result is PG_SQL_ASCII, callers should treat it as being compatible
  * with any desired encoding.
+ *
+ * If running in the backend and write_message is false, this function must
+ * cope with the possibility that elog() and palloc() are not yet usable.
  */
 int
 pg_get_encoding_from_locale(const char *ctype, bool write_message)
@@ -343,7 +373,7 @@ pg_get_encoding_from_locale(const char *ctype, bool write_message)
 
 	/*
 	 * We print a warning if we got a CODESET string but couldn't recognize
-	 * it.	This means we need another entry in the table.
+	 * it.  This means we need another entry in the table.
 	 */
 	if (write_message)
 	{

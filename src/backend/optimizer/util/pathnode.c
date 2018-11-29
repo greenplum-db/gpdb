@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -38,6 +38,7 @@
 #include "utils/selfuncs.h"
 
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
+#include "cdb/cdbutil.h"		/* getgpsegmentCount() */
 
 typedef enum
 {
@@ -310,11 +311,11 @@ compare_fractional_path_costs(Path *path1, Path *path2,
  *
  * The fuzz_factor argument must be 1.0 plus delta, where delta is the
  * fraction of the smaller cost that is considered to be a significant
- * difference.	For example, fuzz_factor = 1.01 makes the fuzziness limit
+ * difference.  For example, fuzz_factor = 1.01 makes the fuzziness limit
  * be 1% of the smaller cost.
  *
  * The two paths are said to have "equal" costs if both startup and total
- * costs are fuzzily the same.	Path1 is said to be better than path2 if
+ * costs are fuzzily the same.  Path1 is said to be better than path2 if
  * it has fuzzily better startup cost and fuzzily no worse total cost,
  * or if it has fuzzily better total cost and fuzzily no worse startup cost.
  * Path2 is better than path1 if the reverse holds.  Finally, if one path
@@ -390,12 +391,12 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
  *
  * cheapest_total_path is normally the cheapest-total-cost unparameterized
  * path; but if there are no unparameterized paths, we assign it to be the
- * best (cheapest least-parameterized) parameterized path.	However, only
+ * best (cheapest least-parameterized) parameterized path.  However, only
  * unparameterized paths are considered candidates for cheapest_startup_path,
  * so that will be NULL if there are no unparameterized paths.
  *
  * The cheapest_parameterized_paths list collects all parameterized paths
- * that have survived the add_path() tournament for this relation.	(Since
+ * that have survived the add_path() tournament for this relation.  (Since
  * add_path ignores pathkeys and startup cost for a parameterized path,
  * these will be paths that have best total cost or best row count for their
  * parameterization.)  cheapest_parameterized_paths always includes the
@@ -625,7 +626,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
 		p1_next = lnext(p1);
 
 		/*
-		 * Do a fuzzy cost comparison with 1% fuzziness limit.	(XXX does this
+		 * Do a fuzzy cost comparison with 1% fuzziness limit.  (XXX does this
 		 * percentage need to be user-configurable?)
 		 */
 		costcmp = compare_path_costs_fuzzily(new_path, old_path, 1.01,
@@ -858,7 +859,7 @@ cdb_add_join_path(PlannerInfo *root, RelOptInfo *parent_rel, JoinType orig_joint
  *	  and have lower bounds for its costs.
  *
  * Note that we do not know the path's rowcount, since getting an estimate for
- * that is too expensive to do before prechecking.	We assume here that paths
+ * that is too expensive to do before prechecking.  We assume here that paths
  * of a superset parameterization will generate fewer rows; if that holds,
  * then paths with different parameterizations cannot dominate each other
  * and so we can simply ignore existing paths of another parameterization.
@@ -1258,7 +1259,7 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths, Relids re
 	 * Compute rows and costs as sums of subplan rows and costs.  We charge
 	 * nothing extra for the Append itself, which perhaps is too optimistic,
 	 * but since it doesn't do any selection or projection, it is a pretty
-	 * cheap node.	If you change this, see also make_append().
+	 * cheap node.  If you change this, see also make_append().
 	 */
 	pathnode->path.rows = 0;
 	pathnode->path.startup_cost = 0;
@@ -1387,6 +1388,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	ListCell   *l;
 	bool		fIsNotPartitioned = false;
 	bool		fIsPartitionInEntry = false;
+	int			numsegments;
 	List	   *subpaths;
 	List	  **subpaths_out;
 	List	   *new_subpaths;
@@ -1403,8 +1405,25 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	/* If no subpath, any worker can execute this Append.  Result has 0 rows. */
 	if (!subpaths)
 	{
-		CdbPathLocus_MakeGeneral(&pathnode->locus);
+		/* FIXME: do not hard code to ALL */
+		CdbPathLocus_MakeGeneral(&pathnode->locus,
+								 GP_POLICY_ALL_NUMSEGMENTS);
 		return;
+	}
+
+	/* By default put Append node on all the segments */
+	numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	foreach(l, subpaths)
+	{
+		Path	   *subpath = (Path *) lfirst(l);
+
+		/* If any subplan is SingleQE, align Append numsegments with it */
+		if (CdbPathLocus_IsSingleQE(subpath->locus))
+		{
+			/* When there are multiple SingleQE, use the common segments */
+			numsegments = Min(numsegments,
+							  CdbPathLocus_NumSegments(subpath->locus));
+		}
 	}
 
 	/*
@@ -1462,9 +1481,16 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 				if (!CdbPathLocus_IsSingleQE(subpath->locus))
 				{
 					CdbPathLocus    singleQE;
-					CdbPathLocus_MakeSingleQE(&singleQE);
+
+					/* Gather to SingleQE */
+					CdbPathLocus_MakeSingleQE(&singleQE, numsegments);
 
 					subpath = cdbpath_create_motion_path(root, subpath, subpath->pathkeys, false, singleQE);
+				}
+				else
+				{
+					/* Align all SingleQE to the common segments */
+					subpath->locus.numsegments = numsegments;
 				}
 			}
 		}
@@ -1495,8 +1521,7 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		 */
 		if (l == list_head(subpaths))
 			pathnode->locus = projectedlocus;
-		else if (cdbpathlocus_compare(CdbPathLocus_Comparison_Equal,
-									  pathnode->locus, projectedlocus))
+		else if (cdbpathlocus_equal(pathnode->locus, projectedlocus))
 		{
 			/* compatible */
 		}
@@ -1511,7 +1536,16 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 		}
 		else if (CdbPathLocus_IsPartitioned(pathnode->locus) &&
 				 CdbPathLocus_IsPartitioned(projectedlocus))
-			CdbPathLocus_MakeStrewn(&pathnode->locus);
+		{
+			/*
+			 * subpaths have different distributed policy, mark it as random
+			 * distributed and set the numsegments to the maximum of all
+			 * subpaths to not missing any tuples.
+			 */
+			CdbPathLocus_MakeStrewn(&pathnode->locus,
+									Max(CdbPathLocus_NumSegments(pathnode->locus),
+										CdbPathLocus_NumSegments(projectedlocus)));
+		}
 		else
 			ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							errmsg_internal("cannot append paths with incompatible distribution")));
@@ -1551,7 +1585,8 @@ create_result_path(List *quals)
 	pathnode->path.startup_cost = 0;
 	pathnode->path.total_cost = cpu_tuple_cost;
 
-	CdbPathLocus_MakeGeneral(&pathnode->path.locus);
+	/* Result can be on any segments */
+	CdbPathLocus_MakeGeneral(&pathnode->path.locus, GP_POLICY_ALL_NUMSEGMENTS);
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
 
@@ -1626,6 +1661,7 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	int			numCols;
 	ListCell   *lc;
 	CdbPathLocus locus;
+	bool		add_motion = false;
 
 	/* Caller made a mistake if subpath isn't cheapest_total ... */
 	Assert(subpath == rel->cheapest_total_path);
@@ -1790,12 +1826,28 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 
 	/* Repartition first if duplicates might be on different QEs. */
 	if (!CdbPathLocus_IsBottleneck(subpath->locus) &&
-		!cdbpathlocus_is_hashed_on_exprs(subpath->locus, uniq_exprs))
+		!cdbpathlocus_is_hashed_on_exprs(subpath->locus, uniq_exprs, false))
 	{
-		// GPDB_90_MERGE_FIXME: this looks very wrong.
-		goto no_unique_path;
-        locus = cdbpathlocus_from_exprs(root, uniq_exprs);
+		/*
+		 * We want to use numsegments from rel->cdbpolicy, however it might
+		 * be NULL.  Subpath is the cheapest path of rel, so it has the same
+		 * numsegments with rel.
+		 */
+		if (rel->cdbpolicy)
+		{
+			AssertEquivalent(rel->cdbpolicy->numsegments,
+							 subpath->locus.numsegments);
+		}
+		int			numsegments = CdbPathLocus_NumSegments(subpath->locus);
+
+        locus = cdbpathlocus_from_exprs(root, uniq_exprs, numsegments);
         subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
+		/*
+		 * We probably add agg/sort node above the added motion node, but it is
+		 * possible to add an agg/sort node below this motion node also,
+		 * which might be optimal in some cases?
+		 */
+		add_motion = true;
         Insist(subpath);
 	}
 	else
@@ -1832,6 +1884,14 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 		relation_has_unique_index_for(root, rel, NIL,
 									  uniq_exprs, in_operators))
 	{
+		/*
+		 * For UNIQUE_PATH_NOOP, it is possible that subpath could be a
+		 * motion node. It is not allowed to add a motion node above a
+		 * motion node so we simply disallow this unique path although
+		 * in theory we could improve this.
+		 */
+		if (add_motion)
+			goto no_unique_path;
 		pathnode->umethod = UNIQUE_PATH_NOOP;
 		pathnode->path.rows = rel->rows;
 		pathnode->path.startup_cost = subpath->startup_cost;
@@ -1865,6 +1925,9 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 			query_is_distinct_for(rte->subquery,
 								  sub_tlist_colnos, in_operators))
 		{
+			/* Subpath node could be a motion. See previous comment for details. */
+			if (add_motion)
+				goto no_unique_path;
 			pathnode->umethod = UNIQUE_PATH_NOOP;
 			pathnode->path.rows = rel->rows;
 			pathnode->path.startup_cost = subpath->startup_cost;
@@ -2211,7 +2274,8 @@ create_unique_rowid_path(PlannerInfo *root,
         pathnode->must_repartition = true;
 
         /* Set a fake locus.  Repartitioning key won't be built until later. */
-        CdbPathLocus_MakeStrewn(&pathnode->path.locus);
+        CdbPathLocus_MakeStrewn(&pathnode->path.locus,
+								CdbPathLocus_NumSegments(subpath->locus));
 		pathnode->path.sameslice_relids = NULL;
 
         /* Estimate repartitioning cost. */
@@ -2290,7 +2354,7 @@ translate_sub_tlist(List *tlist, int relid)
  *
  * colnos is an integer list of output column numbers (resno's).  We are
  * interested in whether rows consisting of just these columns are certain
- * to be distinct.	"Distinctness" is defined according to whether the
+ * to be distinct.  "Distinctness" is defined according to whether the
  * corresponding upper-level equality operators listed in opids would think
  * the values are distinct.  (Note: the opids entries could be cross-type
  * operators, and thus not exactly the equality operators that the subquery
@@ -2428,7 +2492,7 @@ query_is_distinct_for(Query *query, List *colnos, List *opids)
  * distinct_col_search - subroutine for query_is_distinct_for
  *
  * If colno is in colnos, return the corresponding element of opids,
- * else return InvalidOid.	(We expect colnos does not contain duplicates,
+ * else return InvalidOid.  (We expect colnos does not contain duplicates,
  * so the result is well-defined.)
  */
 static Oid
@@ -2480,15 +2544,18 @@ create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel,
 Path *
 create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 						 RangeTblEntry *rte,
-						 Relids required_outer)
+						 List *pathkeys, Relids required_outer)
 {
 	Path	   *pathnode = makeNode(Path);
+	ListCell   *lc;
+	char		exec_location;
+	bool		contain_mutables = false;
 
 	pathnode->pathtype = T_FunctionScan;
 	pathnode->parent = rel;
 	pathnode->param_info = get_baserel_parampathinfo(root, rel,
 													 required_outer);
-	pathnode->pathkeys = NIL;	/* for now, assume unordered result */
+	pathnode->pathkeys = pathkeys;
 
 	/*
 	 * If the function desires to run on segments, mark randomly-distributed.
@@ -2497,56 +2564,105 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 	 */
 	Assert(rte->rtekind == RTE_FUNCTION);
 
-	if (rte->funcexpr && IsA(rte->funcexpr, FuncExpr))
+	/*
+	 * Decide where to execute the FunctionScan.
+	 */
+	contain_mutables = false;
+	exec_location = PROEXECLOCATION_ANY;
+	foreach (lc, rte->functions)
 	{
-		char		exec_location;
+		RangeTblFunction *rtfunc = (RangeTblFunction *) lfirst(lc);
 
-		exec_location = func_exec_location(((FuncExpr *) rte->funcexpr)->funcid);
-
-		switch (exec_location)
+		if (rtfunc->funcexpr && IsA(rtfunc->funcexpr, FuncExpr))
 		{
-			case PROEXECLOCATION_ANY:
-				CdbPathLocus_MakeGeneral(&pathnode->locus);
+			FuncExpr   *funcexpr = (FuncExpr *) rtfunc->funcexpr;
+			char		this_exec_location;
 
-				/*
-				 * If the function is ON ANY, we presumably could execute the
-				 * function anywhere. However, historically, before the
-				 * EXECUTE ON syntax was introduced, we always executed
-				 * non-IMMUTABLE functions on the master. Keep that behavior
-				 * for backwards compatibility.
-				 */
-				if (contain_mutable_functions(rte->funcexpr))
-					CdbPathLocus_MakeEntry(&pathnode->locus);
-				else
-					CdbPathLocus_MakeGeneral(&pathnode->locus);
-				break;
-			case PROEXECLOCATION_MASTER:
-				CdbPathLocus_MakeEntry(&pathnode->locus);
-				break;
-			case PROEXECLOCATION_ALL_SEGMENTS:
-				CdbPathLocus_MakeStrewn(&pathnode->locus);
-				break;
-			default:
-				elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+			this_exec_location = func_exec_location(funcexpr->funcid);
+
+			switch (this_exec_location)
+			{
+				case PROEXECLOCATION_ANY:
+					/*
+					 * This can be executed anywhere. Remember if it was
+					 * mutable (or contained any mutable arguments), that
+					 * will affect the decision after this loop on where
+					 * to actually execute it.
+					 */
+					if (!contain_mutables)
+						contain_mutables = contain_mutable_functions((Node *) funcexpr);
+					break;
+				case PROEXECLOCATION_MASTER:
+					/*
+					 * This function forces the execution to master.
+					 */
+					if (exec_location == PROEXECLOCATION_ALL_SEGMENTS)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+					}
+					exec_location = PROEXECLOCATION_MASTER;
+					break;
+				case PROEXECLOCATION_ALL_SEGMENTS:
+					/*
+					 * This function forces the execution to segments.
+					 */
+					if (exec_location == PROEXECLOCATION_MASTER)
+					{
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+								 (errmsg("cannot mix EXECUTE ON MASTER and ALL SEGMENTS functions in same function scan"))));
+					}
+					exec_location = PROEXECLOCATION_ALL_SEGMENTS;
+					break;
+				default:
+					elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
+			}
+		}
+		else
+		{
+			/*
+			 * The expression might've been simplified into a Const. Which can
+			 * be executed anywhere.
+			 */
 		}
 	}
-	else
+	switch (exec_location)
 	{
-		/*
-		 * The expression might've been simplified into a Const. Which can
-		 * be executed anywhere.
-		 */
-		/* The default behavior is */
-		if (contain_mutable_functions(rte->funcexpr))
+		case PROEXECLOCATION_ANY:
+			/*
+			 * If all the functions are ON ANY, we presumably could execute
+			 * the function scan anywhere. However, historically, before the
+			 * EXECUTE ON syntax was introduced, we always executed
+			 * non-IMMUTABLE functions on the master. Keep that behavior
+			 * for backwards compatibility.
+			 */
+			if (contain_mutables)
+				CdbPathLocus_MakeEntry(&pathnode->locus);
+			else
+				CdbPathLocus_MakeGeneral(&pathnode->locus,
+										 GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		case PROEXECLOCATION_MASTER:
 			CdbPathLocus_MakeEntry(&pathnode->locus);
-		else
-			CdbPathLocus_MakeGeneral(&pathnode->locus);
+			break;
+		case PROEXECLOCATION_ALL_SEGMENTS:
+			CdbPathLocus_MakeStrewn(&pathnode->locus,
+									GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		default:
+			elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
 	}
 
 	pathnode->motionHazard = false;
 
-	/* For now, be conservative. */
-	pathnode->rescannable = false;
+	/*
+	 * FunctionScan is always rescannable. It uses a tuplestore to
+	 * materialize the results all by itself.
+	 */
+	pathnode->rescannable = true;
+
 	pathnode->sameslice_relids = NULL;
 
 	cost_functionscan(pathnode, root, rel, pathnode->param_info);
@@ -2589,7 +2705,8 @@ create_tablefunction_path(PlannerInfo *root, RelOptInfo *rel,
 
 	/* Mark the output as random if the input is partitioned */
 	if (CdbPathLocus_IsPartitioned(pathnode->locus))
-		CdbPathLocus_MakeStrewn(&pathnode->locus);
+		CdbPathLocus_MakeStrewn(&pathnode->locus,
+								CdbPathLocus_NumSegments(pathnode->locus));
 	pathnode->sameslice_relids = NULL;
 
 	cost_tablefunction(pathnode, root, rel, pathnode->param_info);
@@ -2623,7 +2740,10 @@ create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel,
 	if (contain_mutable_functions((Node *)rte->values_lists))
 		CdbPathLocus_MakeEntry(&pathnode->locus);
 	else
-		CdbPathLocus_MakeGeneral(&pathnode->locus);
+		/*
+		 * ValuesScan can be on any segment.
+		 */
+		CdbPathLocus_MakeGeneral(&pathnode->locus, GP_POLICY_ALL_NUMSEGMENTS);
 
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
@@ -2678,17 +2798,23 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 {
 	Path	   *pathnode = makeNode(Path);
 	CdbPathLocus result;
+	int			numsegments;
+
+	if (rel->cdbpolicy)
+		numsegments = rel->cdbpolicy->numsegments;
+	else
+		numsegments = GP_POLICY_ALL_NUMSEGMENTS; /* FIXME */
 
 	if (ctelocus == CdbLocusType_Entry)
 		CdbPathLocus_MakeEntry(&result);
 	else if (ctelocus == CdbLocusType_SingleQE)
-		CdbPathLocus_MakeSingleQE(&result);
+		CdbPathLocus_MakeSingleQE(&result, numsegments);
 	else if (ctelocus == CdbLocusType_General)
-		CdbPathLocus_MakeGeneral(&result);
+		CdbPathLocus_MakeGeneral(&result, numsegments);
 	else if (ctelocus == CdbLocusType_SegmentGeneral)
-		CdbPathLocus_MakeSegmentGeneral(&result);
+		CdbPathLocus_MakeSegmentGeneral(&result, numsegments);
 	else
-		CdbPathLocus_MakeStrewn(&result);
+		CdbPathLocus_MakeStrewn(&result, numsegments);
 
 	pathnode->pathtype = T_WorkTableScan;
 	pathnode->parent = rel;
@@ -2768,7 +2894,21 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->path.startup_cost = startup_cost;
 	pathnode->path.total_cost = total_cost;
 	pathnode->path.pathkeys = pathkeys;
-	pathnode->path.locus = cdbpathlocus_from_baserel(root, rel);
+
+	switch (rel->ftEntry->exec_location)
+	{
+		case FTEXECLOCATION_ANY:
+			CdbPathLocus_MakeGeneral(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		case FTEXECLOCATION_ALL_SEGMENTS:
+			CdbPathLocus_MakeStrewn(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			break;
+		case FTEXECLOCATION_MASTER:
+			CdbPathLocus_MakeEntry(&(pathnode->path.locus));
+			break;
+		default:
+			elog(ERROR, "unrecognized exec_location '%c'", rel->ftEntry->exec_location);
+	}
 
 	pathnode->fdw_private = fdw_private;
 
@@ -3225,10 +3365,10 @@ create_hashjoin_path(PlannerInfo *root,
 
 	/*
 	 * A hashjoin never has pathkeys, since its output ordering is
-	 * unpredictable due to possible batching.	XXX If the inner relation is
+	 * unpredictable due to possible batching.  XXX If the inner relation is
 	 * small enough, we could instruct the executor that it must not batch,
 	 * and then we could assume that the output inherits the outer relation's
-	 * ordering, which might save a sort step.	However there is considerable
+	 * ordering, which might save a sort step.  However there is considerable
 	 * downside if our estimate of the inner relation size is badly off. For
 	 * the moment we don't risk it.  (Note also that if we wanted to take this
 	 * seriously, joinpath.c would have to consider many more paths for the
@@ -3280,7 +3420,7 @@ create_hashjoin_path(PlannerInfo *root,
  * same parameterization level, ensuring that they all enforce the same set
  * of join quals (and thus that that parameterization can be attributed to
  * an append path built from such paths).  Currently, only a few path types
- * are supported here, though more could be added at need.	We return NULL
+ * are supported here, though more could be added at need.  We return NULL
  * if we can't reparameterize the given path.
  *
  * Note: we intentionally do not pass created paths to add_path(); it would
@@ -3312,7 +3452,7 @@ reparameterize_path(PlannerInfo *root, Path *path,
 				/*
 				 * We can't use create_index_path directly, and would not want
 				 * to because it would re-compute the indexqual conditions
-				 * which is wasted effort.	Instead we hack things a bit:
+				 * which is wasted effort.  Instead we hack things a bit:
 				 * flat-copy the path node, revise its param_info, and redo
 				 * the cost estimate.
 				 */

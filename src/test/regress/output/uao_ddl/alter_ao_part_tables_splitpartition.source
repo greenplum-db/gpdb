@@ -52,6 +52,8 @@ visimapidxid is not NULL AND relid in (SELECT c.oid FROM pg_class c
 insert into sto_alt_uao_part_splitpartition
  select i, ('2013-'||i||'-11')::date, i from generate_series(1,12)i;
 delete from sto_alt_uao_part_splitpartition where date < '2013-07-10';
+-- avoid warnings about missing stats with ORCA.
+ANALYZE sto_alt_uao_part_splitpartition;
 Insert into sto_alt_uao_part_splitpartition values
  (10,'2013-01-22',12.52), (11,'2013-02-22',13.53), (12,'2013-07-22',14.54);
 select * from sto_alt_uao_part_splitpartition;

@@ -3,7 +3,7 @@
  * hashutil.c
  *	  Utility code for Postgres hash implementation.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -160,7 +160,7 @@ _hash_checkpage(Relation rel, Buffer buf, int flags)
 	/*
 	 * ReadBuffer verifies that every newly-read page passes
 	 * PageHeaderIsValid, which means it either contains a reasonably sane
-	 * page header or is all-zero.	We have to defend against the all-zero
+	 * page header or is all-zero.  We have to defend against the all-zero
 	 * case, however.
 	 */
 	if (PageIsNew(page))
@@ -284,7 +284,7 @@ _hash_form_tuple(Relation index, Datum *values, bool *isnull)
  *
  * Returns the offset of the first index entry having hashkey >= hash_value,
  * or the page's max offset plus one if hash_value is greater than all
- * existing hash keys in the page.	This is the appropriate place to start
+ * existing hash keys in the page.  This is the appropriate place to start
  * a search, or to insert a new item.
  */
 OffsetNumber

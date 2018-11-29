@@ -20,7 +20,7 @@
  * point, but for now that seems useless complexity.
  *
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/nodes/tidbitmap.c
@@ -91,7 +91,7 @@ struct TIDBitmap
 
 /*
  * When iterating over a bitmap in sorted order, a TBMIterator is used to
- * track our progress.	There can be several iterators scanning the same
+ * track our progress.  There can be several iterators scanning the same
  * bitmap concurrently.  Note that the bitmap becomes read-only as soon as
  * any iterator is created.
  */
@@ -388,7 +388,7 @@ tbm_union_page(TIDBitmap *a, const PagetableEntry *bpage)
 	if (bpage->ischunk)
 	{
 		/* Scan b's chunk, mark each indicated page lossy in a */
-		for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
+		for (wordnum = 0; wordnum < WORDS_PER_CHUNK; wordnum++)
 		{
 			tbm_bitmapword w = bpage->words[wordnum];
 
@@ -425,6 +425,7 @@ tbm_union_page(TIDBitmap *a, const PagetableEntry *bpage)
 			/* Both pages are exact, merge at the bit level */
 			for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
 				apage->words[wordnum] |= bpage->words[wordnum];
+			apage->recheck |= bpage->recheck;
 		}
 	}
 
@@ -502,7 +503,7 @@ tbm_intersect_page(TIDBitmap *a, PagetableEntry *apage, const TIDBitmap *b)
 		/* Scan each bit in chunk, try to clear */
 		bool		candelete = true;
 
-		for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
+		for (wordnum = 0; wordnum < WORDS_PER_CHUNK; wordnum++)
 		{
 			tbm_bitmapword w = apage->words[wordnum];
 
@@ -778,8 +779,8 @@ tbm_iterate_page(PagetableEntry *page, TBMIterateResult *output)
 	if (page->ischunk)
 	{
 		ntuples = -1;
+		output->recheck = true;
 	}
-
 	else
 	{
 		/* scan bitmap to extract individual offset numbers */
@@ -801,11 +802,11 @@ tbm_iterate_page(PagetableEntry *page, TBMIterateResult *output)
 				}
 			}
 		}
+		output->recheck = page->recheck;
 	}
 
 	output->blockno = page->blockno;
 	output->ntuples = ntuples;
-	output->recheck = page->recheck;
 
 	return true;
 }
@@ -896,7 +897,6 @@ tbm_next_page(TBMIterator *iterator, bool *more)
 			nextpage = (PagetableEntry *) palloc(sizeof(PagetableEntry));
 			nextpage->ischunk = true;
 			nextpage->blockno = chunk_blockno;
-			nextpage->recheck = true;
 			iterator->schunkbit++;
 			return nextpage;
 		}
@@ -1011,7 +1011,7 @@ tbm_find_pageentry(const TIDBitmap *tbm, BlockNumber pageno)
  *
  * If new, the entry is marked as an exact (non-chunk) entry.
  *
- * This may cause the table to exceed the desired memory size.	It is
+ * This may cause the table to exceed the desired memory size.  It is
  * up to the caller to call tbm_lossify() at the next safe point if so.
  */
 static PagetableEntry *
@@ -1091,7 +1091,7 @@ tbm_page_is_lossy(const TIDBitmap *tbm, BlockNumber pageno)
 /*
  * tbm_mark_page_lossy - mark the page number as lossily stored
  *
- * This may cause the table to exceed the desired memory size.	It is
+ * This may cause the table to exceed the desired memory size.  It is
  * up to the caller to call tbm_lossify() at the next safe point if so.
  */
 static void
@@ -1112,7 +1112,7 @@ tbm_mark_page_lossy(TIDBitmap *tbm, BlockNumber pageno)
 	chunk_pageno = pageno - bitno;
 
 	/*
-	 * Remove any extant non-lossy entry for the page.	If the page is its own
+	 * Remove any extant non-lossy entry for the page.  If the page is its own
 	 * chunk header, however, we skip this and handle the case below.
 	 */
 	if (bitno != 0)
@@ -1178,7 +1178,7 @@ tbm_lossify(TIDBitmap *tbm)
 	 *
 	 * Since we are called as soon as nentries exceeds maxentries, we should
 	 * push nentries down to significantly less than maxentries, or else we'll
-	 * just end up doing this again very soon.	We shoot for maxentries/2.
+	 * just end up doing this again very soon.  We shoot for maxentries/2.
 	 */
 	Assert(!tbm->iterating);
 	Assert(tbm->status == TBM_HASH);
@@ -1546,6 +1546,7 @@ opstream_iterate(StreamBMIterator *iterator, PagetableEntry *e)
 	List	   *matches;
 	bool		empty;
 
+	Assert(n->type == BMS_OR || n->type == BMS_AND);
 
 	/*
 	 * First, iterate through each input bitmap stream and save the block
@@ -1636,7 +1637,7 @@ restart:
 				continue;
 			}
 
-			/* already initialised, so OR together */
+			/* already initialised, so OR/AND together */
 			if (tmp->ischunk == true)
 			{
 				/*
@@ -1648,6 +1649,7 @@ restart:
 				list_free_deep(matches);
 				return res;
 			}
+
 			/* union/intersect existing output and new matches */
 			for (wordnum = 0; wordnum < WORDS_PER_PAGE; wordnum++)
 			{
@@ -1656,6 +1658,7 @@ restart:
 				else
 					e->words[wordnum] &= tmp->words[wordnum];
 			}
+			e->recheck |= tmp->recheck;
 		}
 		else if (n->type == BMS_AND)
 		{

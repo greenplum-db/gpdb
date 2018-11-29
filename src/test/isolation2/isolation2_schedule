@@ -1,3 +1,6 @@
+# test update hash col under utility mode
+test: update_hash_col_utilitymode
+
 # Tests on global deadlock detector
 test: select_for_update
 test: gdd/prepare
@@ -13,6 +16,10 @@ test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_view
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation
+
+# below case will cause failures on catalog changes,
+# please keep it in a separate test group
+test: gpexpand_catalog_lock
 
 test: reindex
 test: reindex_gpfastsequence
@@ -71,6 +78,7 @@ test: uao/vacuum_self_serializable3_row
 test: uao/vacuum_while_insert_row
 test: uao/vacuum_while_vacuum_row
 test: uao/vacuum_cleanup_row
+test: uao/insert_should_not_use_awaiting_drop_row
 test: reorganize_after_ao_vacuum_skip_drop truncate_after_ao_vacuum_skip_drop mark_all_aoseg_await_drop
 
 # Tests on Append-Optimized tables (column-oriented).
@@ -117,11 +125,12 @@ test: uao/vacuum_self_serializable3_column
 test: uao/vacuum_while_insert_column
 test: uao/vacuum_while_vacuum_column
 test: uao/vacuum_cleanup_column
+test: uao/insert_should_not_use_awaiting_drop_column
 test: add_column_after_vacuum_skip_drop_column
 test: vacuum_after_vacuum_skip_drop_column
 
 # Tests for FTS
-test: fts_dns_error
+test: fts_errors
 test: segwalrep/commit_blocking
 test: segwalrep/fts_unblock_primary
 test: segwalrep/mirror_promotion
@@ -156,3 +165,5 @@ test: reindex/vacuum_while_reindex_ao_bitmap reindex/vacuum_while_reindex_heap_b
 
 # Cancel test
 test: cancel_plpython
+
+test: concurrent_update

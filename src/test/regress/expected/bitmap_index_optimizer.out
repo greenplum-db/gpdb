@@ -433,7 +433,7 @@ set optimizer_enable_bitmapscan=off;
 explain select * from bm_test where j = 1;
                                    QUERY PLAN                                    
 -----------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1; segments: 2)  (cost=0.00..2.03 rows=1 width=8)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..2.03 rows=1 width=8)
    ->  Table Scan on bm_test  (cost=0.00..1.03 rows=1 width=8)
          Filter: j = 1
  Settings:  enable_bitmapscan=off; enable_indexscan=on; enable_seqscan=off; optimizer=on
@@ -579,3 +579,83 @@ select * from unlogged_test where c1 = 100;
 (1 row)
 
 drop table unlogged_test;
+--
+-- Test crash recovery
+--
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
+CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
+CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);
+CREATE INDEX bm_b_idx ON bm_test_update USING bitmap(b);
+INSERT INTO bm_test_update SELECT i,i FROM generate_series (1, 10000) i;
+-- flush the data to disk
+CHECKPOINT;
+-- skip all further checkpoint
+SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=69866)
+NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=69867)
+NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=69868)
+ gp_inject_fault_infinite 
+--------------------------
+ t
+ t
+ t
+(3 rows)
+
+INSERT INTO bm_test_insert SELECT generate_series (1, 10000);
+UPDATE bm_test_update SET b=b+1;
+-- trigger recovery on primaries 
+SELECT gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=69866)
+NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=69867)
+NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=69868)
+ gp_inject_fault_infinite 
+--------------------------
+ t
+ t
+ t
+(3 rows)
+
+SET client_min_messages='ERROR';
+CREATE TABLE trigger_recovery_on_primaries(c int);
+RESET client_min_messages;
+-- reconnect to the database after restart
+\c
+SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=69945)
+NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=69946)
+NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=69944)
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+(3 rows)
+
+SELECT gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+NOTICE:  Success:  (seg1 172.17.0.10:25433 pid=69945)
+NOTICE:  Success:  (seg2 172.17.0.10:25434 pid=69946)
+NOTICE:  Success:  (seg0 172.17.0.10:25435 pid=69944)
+ gp_inject_fault 
+-----------------
+ t
+ t
+ t
+(3 rows)
+
+SET enable_seqscan=off;
+SET enable_indexscan=off;
+SELECT * FROM bm_test_insert WHERE a=1;
+ a 
+---
+ 1
+(1 row)
+
+SELECT * FROM bm_test_update WHERE b=1;
+ a | b 
+---+---
+(0 rows)
+
+DROP TABLE trigger_recovery_on_primaries;
+DROP TABLE bm_test_insert;
+DROP TABLE bm_test_update;

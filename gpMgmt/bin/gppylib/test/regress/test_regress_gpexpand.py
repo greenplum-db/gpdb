@@ -56,7 +56,7 @@ class GpExpandTestCase(unittest.TestCase):
                                             from pg_catalog.gp_segment_configuration \
                                             where role='m'").fetchall()[0][0]
 
-            if next_mir_port == None or next_mir_port == ' ' or next_mir_port == 0:
+            if next_mir_port is None or next_mir_port == ' ' or next_mir_port == 0:
                 mirroring_on = False 
             else:
                 mirroring_on = True 
@@ -72,7 +72,7 @@ class GpExpandTestCase(unittest.TestCase):
                                  from gp_segment_configuration \
                                  where content >= 0 and preferred_role = 'm' and hostname != '%s'" % self.primary_host_name
                 mirror_name_row = dbconn.execSQL(conn, select_mirror).fetchall()
-                if mirror_name_row == None or len(mirror_name_row) == 0:
+                if mirror_name_row is None or len(mirror_name_row) == 0:
                     self.mirror_host_name = self.primary_host_name
                 else:
                     self.mirror_host_name = mirror_name_row[0][0]

@@ -3,7 +3,7 @@ CREATE TABLE generate_ao_xlog_table(a INT, b INT) WITH (APPENDONLY=TRUE);
 
 -- Store the location of xlog in a temporary table so that we can
 -- use it to request walsender to start streaming from this point
-CREATE TEMP TABLE tmp(dummy int, dbid int, startpoint TEXT) distributed by (dummy);
+CREATE TEMP TABLE tmp(dummy int, dbid int, startpoint pg_lsn) distributed by (dummy);
 INSERT INTO tmp SELECT 1, gp_execution_segment(), pg_current_xlog_location()
 FROM gp_dist_random('gp_id');
 

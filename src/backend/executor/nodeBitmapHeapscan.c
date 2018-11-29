@@ -4,19 +4,19 @@
  *	  Routines to support bitmapped scans of relations
  *
  * NOTE: it is critical that this plan type only be used with MVCC-compliant
- * snapshots (ie, regular snapshots, not SnapshotNow or one of the other
- * special snapshots).	The reason is that since index and heap scans are
+ * snapshots (ie, regular snapshots, not SnapshotAny or one of the other
+ * special snapshots).  The reason is that since index and heap scans are
  * decoupled, there can be no assurance that the index tuple prompting a
  * visit to a particular heap TID still exists when the visit is made.
  * Therefore the tuple might not exist anymore either (which is OK because
  * heap_fetch will cope) --- but worse, the tuple slot could have been
  * re-used for a newer tuple.  With an MVCC snapshot the newer tuple is
- * certain to fail the time qual and so it will not be mistakenly returned.
- * With SnapshotNow we might return a tuple that doesn't meet the required
- * index qual conditions.
+ * certain to fail the time qual and so it will not be mistakenly returned,
+ * but with anything else we might return a tuple that doesn't meet the
+ * required index qual conditions.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -128,7 +128,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 
 	OffsetNumber targoffset;
 	TupleTableSlot *slot;
-	bool		more = true;
 
 	/*
 	 * extract necessary information from index scan node
@@ -193,9 +192,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 				return NULL;
 
 			node->tbmres = tbmres = tbm_generic_iterate(tbmiterator);
-			more = (tbmres != NULL);
 
-			if (!more)
+			if (tbmres == NULL)
 			{
 				/* no more entries in the bitmap */
 				break;
@@ -225,7 +223,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			 */
 			if (tbmres->blockno >= scan->rs_nblocks)
 			{
-				more = false;
 				tbmres->ntuples = 0;
 				continue;
 			}
@@ -238,6 +235,11 @@ BitmapHeapNext(BitmapHeapScanState *node)
 			 * Fetch the current heap page and identify candidate tuples.
 			 */
 			bitgetpage(scan, tbmres);
+
+			if (tbmres->ntuples >= 0)
+				node->exact_pages++;
+			else
+				node->lossy_pages++;
 
 			CheckSendPlanStateGpmonPkt(&node->ss.ps);
 
@@ -288,7 +290,6 @@ BitmapHeapNext(BitmapHeapScanState *node)
 		 */
 		if (scan->rs_cindex < 0 || scan->rs_cindex >= scan->rs_ntuples)
 		{
-			more = false;
 			tbmres->ntuples = 0;
 			continue;
 		}
@@ -331,6 +332,9 @@ BitmapHeapNext(BitmapHeapScanState *node)
 
 		scan->rs_ctup.t_data = (HeapTupleHeader) PageGetItem((Page) dp, lp);
 		scan->rs_ctup.t_len = ItemIdGetLength(lp);
+#if 0
+		scan->rs_ctup.t_tableOid = scan->rs_rd->rd_id;
+#endif
 		ItemPointerSet(&scan->rs_ctup.t_self, tbmres->blockno, targoffset);
 
 		pgstat_count_heap_fetch(scan->rs_rd);
@@ -345,8 +349,8 @@ BitmapHeapNext(BitmapHeapScanState *node)
 					   false);
 
 		/*
-		 * We recheck the qual conditions for every tuple, since the bitmap
-		 * may contain invalid entries from deleted tuples.
+		 * If we are using lossy info, we have to recheck the qual conditions
+		 * at every tuple.
 		 */
 		if (tbmres->recheck)
 		{
@@ -405,12 +409,11 @@ bitgetpage(HeapScanDesc scan, TBMIterateResult *tbmres)
 	/*
 	 * Prune and repair fragmentation for the whole page, if possible.
 	 */
-	Assert(TransactionIdIsValid(RecentGlobalXmin));
-	heap_page_prune_opt(scan->rs_rd, buffer, RecentGlobalXmin);
+	heap_page_prune_opt(scan->rs_rd, buffer);
 
 	/*
 	 * We must hold share lock on the buffer content while examining tuple
-	 * visibility.	Afterwards, however, the tuples we have found to be
+	 * visibility.  Afterwards, however, the tuples we have found to be
 	 * visible are guaranteed good as long as we hold the buffer pin.
 	 */
 	LockBuffer(buffer, BUFFER_LOCK_SHARE);
@@ -618,6 +621,8 @@ ExecInitBitmapHeapScan(BitmapHeapScan *node, EState *estate, int eflags)
 	scanstate->tbm = NULL;
 	scanstate->tbmiterator = NULL;
 	scanstate->tbmres = NULL;
+	scanstate->exact_pages = 0;
+	scanstate->lossy_pages = 0;
 	scanstate->prefetch_iterator = NULL;
 	scanstate->prefetch_pages = 0;
 	scanstate->prefetch_target = 0;

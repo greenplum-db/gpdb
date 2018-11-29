@@ -156,12 +156,12 @@ checkIODataDirectory(void)
 				errmsg("could not unlink file \"%s\": %m", FTS_PROBE_FILE_NAME)));
 		}
 	}
-	pfree(data);
 
 	if (failure)
 		ereport(ERROR,
 				(errmsg("disk IO check during FTS probe failed.")));
 
+	pfree(data);
 	return failure;
 }
 

@@ -25,6 +25,8 @@
 struct CdbDispatchResults; /* #include "cdb/cdbdispatchresult.h" */
 struct CdbPgResults;
 struct Gang; /* #include "cdb/cdbgang.h" */
+struct ResourceOwnerData;
+enum GangType;
 
 /*
  * Types of message to QE when we wait for it.
@@ -43,27 +45,23 @@ typedef struct CdbDispatchDirectDesc
 	uint16 content[1];
 } CdbDispatchDirectDesc;
 
-extern CdbDispatchDirectDesc default_dispatch_direct_desc;
-#define DEFAULT_DISP_DIRECT (&default_dispatch_direct_desc)
-
 typedef struct CdbDispatcherState
 {
 	bool isExtendedQuery;
 	List *allocatedGangs;
-	bool recycleGang;
+	bool destroyGang;
 	struct CdbDispatchResults *primaryResults;
 	void *dispatchParams;
+	int	largestGangSize;
 } CdbDispatcherState;
 
 typedef struct DispatcherInternalFuncs
 {
-	void (*procExitCallBack)(void);
 	bool (*checkForCancel)(struct CdbDispatcherState *ds);
 	int (*getWaitSocketFd)(struct CdbDispatcherState *ds);
-	void* (*makeDispatchParams)(int maxSlices, char *queryText, int queryTextLen);
+	void* (*makeDispatchParams)(int maxSlices, int largestGangSize, char *queryText, int queryTextLen);
 	void (*checkResults)(struct CdbDispatcherState *ds, DispatchWaitMode waitMode);
-	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp,
-			int sliceIndex, CdbDispatchDirectDesc *direct);
+	void (*dispatchToGang)(struct CdbDispatcherState *ds, struct Gang *gp, int sliceIndex);
 	void (*waitDispatchFinish)(struct CdbDispatcherState *ds);
 
 }DispatcherInternalFuncs;
@@ -75,9 +73,7 @@ typedef struct DispatcherInternalFuncs
  * specified by the gang parameter. cancelOnError indicates whether an error
  * occurring on one of the qExec segdbs should cause all still-executing commands to cancel
  * on other qExecs. Normally this would be true. The commands are sent over the libpq
- * connections that were established during cdblink_setup. They are run inside of threads.
- * The number of segdbs handled by any one thread is determined by the
- * guc variable gp_connections_per_thread.
+ * connections that were established during cdblink_setup.
  *
  * The caller must provide a CdbDispatchResults object having available
  * resultArray slots sufficient for the number of QEs to be dispatched:
@@ -101,15 +97,14 @@ typedef struct DispatcherInternalFuncs
 void
 cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
-					   int sliceIndex,
-					   CdbDispatchDirectDesc *direct);
+					   int sliceIndex);
 
 /*
  * cdbdisp_waitDispatchFinish:
  *
  * For asynchronous dispatcher, we have to wait all dispatch to finish before we move on to query execution,
  * otherwise we may get into a deadlock situation, e.g, gather motion node waiting for data,
- * while segments waiting for plan. This is skipped in threaded dispatcher as data is sent in blocking style.
+ * while segments waiting for plan.
  */
 void
 cdbdisp_waitDispatchFinish(struct CdbDispatcherState *ds);
@@ -181,15 +176,15 @@ cdbdisp_makeDispatchParams(CdbDispatcherState *ds,
 bool cdbdisp_checkForCancel(CdbDispatcherState * ds);
 int cdbdisp_getWaitSocketFd(CdbDispatcherState *ds);
 
-void cdbdisp_onProcExit(void);
-
-void cdbdisp_setAsync(bool async);
-
 void cdbdisp_markNamedPortalGangsDestroyed(void);
 
-void cdbdisp_cleanupAllDispatcherState(void);
+void cdbdisp_cleanupDispatcherHandle(const struct ResourceOwnerData * owner);
 
 void AtAbort_DispatcherState(void);
 
 void AtSubAbort_DispatcherState(void);
+
+char *
+segmentsToContentStr(List *segments);
+
 #endif   /* CDBDISP_H */

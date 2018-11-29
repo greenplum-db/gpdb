@@ -115,7 +115,7 @@
             </entry>
             <entry colname="col2">text[]</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Session defaults for run-time configuration variables</entry>
+            <entry colname="col4">Role-specific defaults for run-time configuration variables</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -168,7 +168,7 @@
               protocol.</entry>
           </row>
           <row>
-            <entry colname="col1">rolcreatewexthdfs</entry>
+            <entry colname="col1"><codeph>rolcreatewexthdfs</codeph></entry>
             <entry colname="col2">bool</entry>
             <entry colname="col3"/>
             <entry colname="col4">Role may create writable external tables that use the gphdfs

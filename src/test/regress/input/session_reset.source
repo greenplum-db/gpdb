@@ -1,11 +1,11 @@
 
 set log_min_messages to ERROR;
 
-CREATE FUNCTION gp_execute_on_server(content smallint, query cstring) returns boolean
+CREATE OR REPLACE FUNCTION gp_execute_on_server(content int, query text) returns text
 language C as '@abs_builddir@/regress@DLSUFFIX@', 'gp_execute_on_server';
 
 -- terminate backend process for this session on segment with content ID = 0
-select gp_execute_on_server(0::smallint, 'select pg_terminate_backend(pg_backend_pid())'::cstring);
+select gp_execute_on_server(0, 'select pg_terminate_backend(pg_backend_pid())');
 
 -- session is reset and gp_session_id value changes
 -- sess_id in pg_stat_activity should be consistent with gp_session_id

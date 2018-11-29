@@ -124,6 +124,8 @@ create table foo (a int, b int) distributed by (a,aA,A);
 create table foo (a int, b int) distributed by (a,aA);
 create table foo (a int, b int) distributed by (b,a,aabb);
 create table foo (a int, b int) distributed by (c,C);
+create table foo (a int, b int, c int) distributed by (b, c, c);
+create table foo (a int, b int, c int) distributed by (c, c, b);
 create table foo ("I" int, i int) distributed by ("I",I);
 select attrnums from gp_distribution_policy where localoid='foo'::regclass;
 create table fooctas as select * from foo distributed by (i,i);

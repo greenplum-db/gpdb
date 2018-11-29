@@ -53,6 +53,7 @@
             <topicref href="guc-list.xml#debug_print_slice_table"/>
             <topicref href="guc-list.xml#default_statistics_target"/>
             <topicref href="guc-list.xml#default_tablespace"/>
+            <topicref href="guc-list.xml#default_text_search_config"/>
             <topicref href="guc-list.xml#default_transaction_isolation"/>
             <topicref href="guc-list.xml#default_transaction_read_only"/>
             <topicref href="guc-list.xml#dynamic_library_path"/>
@@ -81,7 +82,6 @@
             <topicref href="guc-list.xml#gp_cached_segworkers_threshold"/>
             <topicref href="guc-list.xml#gp_command_count"/>
             <topicref href="guc-list.xml#gp_connection_send_timeout"/>
-            <topicref href="guc-list.xml#gp_connections_per_thread"/>
             <topicref href="guc-list.xml#gp_content"/>
             <topicref href="guc-list.xml#gp_create_table_random_default_distribution"/>
             <topicref href="guc-list.xml#gp_dbid"/>
@@ -142,7 +142,6 @@
             <topicref href="guc-list.xml#gp_max_slices"/>
             <topicref href="guc-list.xml#memory_spill_ratio"/>
             <topicref href="guc-list.xml#gp_motion_cost_per_row"/>
-            <topicref href="guc-list.xml#gp_num_contents_in_cluster"/>
             <topicref href="guc-list.xml#gp_recursive_cte_prototype"/>
             <topicref href="guc-list.xml#gp_reject_percent_threshold"/>
             <topicref href="guc-list.xml#gp_reraise_signal"/>

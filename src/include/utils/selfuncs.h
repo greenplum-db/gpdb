@@ -5,7 +5,7 @@
  *	  standard operators and index access methods.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/selfuncs.h
@@ -23,7 +23,7 @@
 /*
  * Note: the default selectivity estimates are not chosen entirely at random.
  * We want them to be small enough to ensure that indexscans will be used if
- * available, for typical table densities of ~100 tuples/page.	Thus, for
+ * available, for typical table densities of ~100 tuples/page.  Thus, for
  * example, 0.01 is not quite small enough, since that makes it appear that
  * nearly all pages will be hit anyway.  Also, since we sometimes estimate
  * eqsel as 1/num_distinct, we probably want DEFAULT_NUM_DISTINCT to equal

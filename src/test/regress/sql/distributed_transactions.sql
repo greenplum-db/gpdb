@@ -61,6 +61,7 @@ INSERT INTO distxact1_2 VALUES (25);
 INSERT INTO distxact1_2 VALUES (26);
 INSERT INTO distxact1_2 VALUES (27);
 INSERT INTO distxact1_2 VALUES (28);
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "prepare";
@@ -84,11 +85,13 @@ INSERT INTO distxact1_3 VALUES (35);
 INSERT INTO distxact1_3 VALUES (36);
 INSERT INTO distxact1_3 VALUES (37);
 INSERT INTO distxact1_3 VALUES (38);
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "commit_prepared";
 COMMIT;
 SELECT * FROM distxact1_3;
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
 RESET debug_dtm_action_protocol;
@@ -106,12 +109,14 @@ INSERT INTO distxact1_4 VALUES (45);
 INSERT INTO distxact1_4 VALUES (46);
 INSERT INTO distxact1_4 VALUES (47);
 INSERT INTO distxact1_4 VALUES (48);
+SET debug_dtm_action_segment=1;
 SET debug_abort_after_distributed_prepared = true;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "abort_prepared";
 COMMIT;
 SELECT * FROM distxact1_4;
+RESET debug_dtm_action_segment;
 RESET debug_abort_after_distributed_prepared;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -126,10 +131,12 @@ RESET debug_dtm_action_protocol;
 -- Invoke a failure during a CREATE TABLE command.  
 --
 --SET debug_print_full_dtm=true;
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "sql";
 SET debug_dtm_action_sql_command_tag = "MPPEXEC UTILITY";
 CREATE TABLE distxact2_1 (a int);
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action_sql_command_tag;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -145,11 +152,12 @@ DROP TABLE distxact2_1;
 -- Invoke a failure during a CREATE TABLE command.  
 -- Action_Target = 2 is SQL.
 --
-
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_end_command";
 SET debug_dtm_action_target = "sql";
 SET debug_dtm_action_sql_command_tag = "MPPEXEC UTILITY";
 CREATE TABLE distxact2_2 (a int);
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action_sql_command_tag;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -169,6 +177,7 @@ DROP TABLE distxact2_2;
 -- Invoke a failure during a SAVEPOINT command.  
 --
 --SET debug_print_full_dtm=true;
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "sql";
 SET debug_dtm_action_sql_command_tag = "SAVEPOINT";
@@ -176,6 +185,7 @@ BEGIN;
 CREATE TABLE distxact3_1 (a int);
 SAVEPOINT s;
 ROLLBACK;
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action_sql_command_tag;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -191,6 +201,7 @@ DROP TABLE distxact3_1;
 -- Invoke a failure during a RELEASE SAVEPOINT command.  
 --
 --SET debug_print_full_dtm=true;
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "sql";
 SET debug_dtm_action_sql_command_tag = "RELEASE";
@@ -207,6 +218,7 @@ INSERT INTO distxact3_2 VALUES (27);
 INSERT INTO distxact3_2 VALUES (28);
 RELEASE SAVEPOINT s;
 ROLLBACK;
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action_sql_command_tag;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -223,6 +235,7 @@ DROP TABLE distxact3_2;
 -- Invoke a failure during a ROLLBACK TO SAVEPOINT command.  
 --
 --SET debug_print_full_dtm=true;
+SET debug_dtm_action_segment=1;
 SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "sql";
 SET debug_dtm_action_sql_command_tag = "ROLLBACK";
@@ -239,6 +252,7 @@ INSERT INTO distxact3_3 VALUES (37);
 INSERT INTO distxact3_3 VALUES (38);
 ROLLBACK TO SAVEPOINT s;
 ROLLBACK;
+RESET debug_dtm_action_segment;
 RESET debug_dtm_action_sql_command_tag;
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;

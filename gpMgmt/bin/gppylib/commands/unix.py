@@ -218,14 +218,8 @@ class GenericPlatform():
     def getName(self):
         "unsupported"
 
-    def getDefaultLocale(self):
-        return 'en_US.utf-8'
-
     def get_machine_arch_cmd(self):
         return 'uname -i'
-
-    def getPingOnceCmd(self):
-        pass
 
     def getDiskFreeCmd(self):
         return findCmdInPath('df') + " -k"
@@ -233,17 +227,8 @@ class GenericPlatform():
     def getTarCmd(self):
         return findCmdInPath('tar')
 
-    def getCpCmd(self):
-        return findCmdInPath('cp')
-
-    def getSadcCmd(self, interval, outfilename):
-        return None
-
     def getIfconfigCmd(self):
         return findCmdInPath('ifconfig')
-
-    def getMountDevFirst(self):
-        return True
 
 
 class LinuxPlatform(GenericPlatform):
@@ -253,20 +238,10 @@ class LinuxPlatform(GenericPlatform):
     def getName(self):
         return "linux"
 
-    def getDefaultLocale(self):
-        return 'en_US.utf8'
-
     def getDiskFreeCmd(self):
         # -P is for POSIX formatting.  Prevents error 
         # on lines that would wrap
         return findCmdInPath('df') + " -Pk"
-
-    def getSadcCmd(self, interval, outfilename):
-        cmd = "/usr/lib64/sa/sadc -F -d " + str(interval) + " " + outfilename
-        return cmd
-
-    def getMountDevFirst(self):
-        return True
 
     def getPing6(self):
         return findCmdInPath('ping6')
@@ -279,24 +254,14 @@ class SolarisPlatform(GenericPlatform):
     def getName(self):
         return "sunos"
 
-    def getDefaultLocale(self):
-        return 'en_US.UTF-8'
-
     def getDiskFreeCmd(self):
         return findCmdInPath('df') + " -bk"
 
     def getTarCmd(self):
         return findCmdInPath('gtar')
 
-    def getSadcCmd(self, interval, outfilename):
-        cmd = "/usr/lib/sa/sadc " + str(interval) + " 100000 " + outfilename
-        return cmd
-
     def getIfconfigCmd(self):
         return findCmdInPath('ifconfig') + ' -a inet'
-
-    def getMountDevFirst(self):
-        return False
 
 
 class DarwinPlatform(GenericPlatform):
@@ -308,9 +273,6 @@ class DarwinPlatform(GenericPlatform):
 
     def get_machine_arch_cmd(self):
         return 'uname -m'
-
-    def getMountDevFirst(self):
-        return True
 
     def getPing6(self):
         return findCmdInPath('ping6')
@@ -326,9 +288,6 @@ class FreeBsdPlatform(GenericPlatform):
     def get_machine_arch_cmd(self):
         return 'uname -m'
 
-    def getMountDevFirst(self):
-        return True
-
 class OpenBSDPlatform(GenericPlatform):
     def __init__(self):
         pass
@@ -339,48 +298,8 @@ class OpenBSDPlatform(GenericPlatform):
     def get_machine_arch_cmd(self):
         return 'uname -m'
 
-    def getMountDevFirst(self):
-        return True
-
     def getPing6(self):
         return findCmdInPath('ping6')
-
-
-""" if self.SYSTEM == 'sunos':
-            self.PS_TXT='ef'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.ZCAT='gzcat'
-            self.PG_METHOD='trust'
-            self.NOLINE_ECHO='/usr/bin/echo'
-            self.MAIL='/bin/mailx'
-            self.PING_TIME='1'
-            self.DF=findCmdInPath('df')
-            self.DU_TXT='-s'
-        elif self.SYSTEM == 'linux':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO='%s -e' % self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='c'
-        elif self.SYSTEM == 'darwin':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='DYLD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO= self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='-c'
-        elif self.SYSTEM == 'freebsd':
-            self.PS_TXT='ax'
-            self.LIB_TYPE='LD_LIBRARY_PATH'
-            self.PG_METHOD='ident sameuser'
-            self.NOLINE_ECHO='%s -e' % self.ECHO
-            self.PING_TIME='-c 1'
-            self.DF='%s -P' % findCmdInPath('df')
-            self.DU_TXT='-c'
-"""
 
 
 # ---------------ping--------------------
@@ -427,8 +346,7 @@ class Ping(Command):
         p = Ping(name, hostToPing, ctxt=REMOTE, remoteHost=hostToPingFrom)
         p.run(validateAfter=True)
 
-        # ---------------du--------------------
-
+# ---------------du--------------------
 
 class DiskUsage(Command):
     def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
@@ -645,44 +563,7 @@ class FileDirExists(Command):
         return self.results.stdout.strip().upper() == 'TRUE'
 
 
-class CreateDirIfNecessary(Command):
-    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-        cmdStr = """python -c "import sys, os, errno; 
-try:
-	os.mkdir('%s')
-except OSError, ex:
-	if ex.errno != errno.EEXIST:
-		raise
-" """ % (directory)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, remote_host, directory):
-        cmd = CreateDirIfNecessary(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-
-
-class DirectoryIsEmpty(Command):
-    def __init__(self, name, directory, ctxt=LOCAL, remoteHost=None):
-        self.directory = directory
-        cmdStr = """python -c "import os;
-for root, dirs, files in os.walk('%s'):
-    print (len(dirs) != 0 or len(files) != 0)
-" """ % self.directory
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, remote_host, directory):
-        cmd = DirectoryIsEmpty(name, directory, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-        return cmd.isEmpty()
-
-    def isEmpty(self):
-        return bool(self.results.stdout.strip())
-
-        # -------------scp------------------
-
+# -------------scp------------------
 
 # MPP-13617
 def canonicalize(addr):
@@ -709,7 +590,6 @@ class Scp(Command):
 
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
-
 # -------------local copy------------------
 class LocalDirCopy(Command):
     def __init__(self, name, srcDirectory, dstDirectory):
@@ -719,21 +599,6 @@ class LocalDirCopy(Command):
         tarCmd = SYSTEM.getTarCmd()
         cmdStr = "%s -cf - -C %s . | %s -xf - -C %s" % (tarCmd, srcDirectory, tarCmd, dstDirectory)
         Command.__init__(self, name, cmdStr, LOCAL, None)
-
-
-# -------------local copy------------------
-class LocalCopy(Command):
-    def __init__(self, name, srcFile, dstFile):
-        # tar is much faster than cp for directories with lots of files
-        cpCmd = SYSTEM.getCpCmd()
-        cmdStr = "%s %s %s" % (cpCmd, srcFile, dstFile)
-        Command.__init__(self, name, cmdStr, LOCAL, None)
-
-
-# ------------ ssh + tar ------------------
-# TODO:  impl this.
-# tar czf - srcDir/ | ssh user@dstHost tar xzf - -C dstDir
-
 
 # -------------create tar------------------
 class CreateTar(Command):
@@ -754,7 +619,6 @@ class ExtractTar(Command):
         cmdStr = "%s -C %s -xf %s" % (tarCmd, dstDirectory, srcTarFile)
         Command.__init__(self, name, cmdStr, ctxt, remoteHost)
 
-
 # --------------kill ----------------------
 class Kill(Command):
     def __init__(self, name, pid, signal, ctxt=LOCAL, remoteHost=None):
@@ -773,9 +637,7 @@ class Kill(Command):
         cmd = Kill(name, pid, signal, ctxt=REMOTE, remoteHost=remote_host)
         cmd.run(validateAfter=True)
 
-        # --------------hostname ----------------------
-
-
+# --------------hostname ----------------------
 class Hostname(Command):
     def __init__(self, name, ctxt=LOCAL, remoteHost=None):
         self.remotehost = remoteHost
@@ -875,18 +737,6 @@ class Echo(Command):
         cmd.run(validateAfter=True)
 
 
-# --------------touch ----------------------
-class Touch(Command):
-    def __init__(self, name, file, ctxt=LOCAL, remoteHost=None):
-        cmdStr = '%s %s' % (findCmdInPath('touch'), file)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, file, hostname):
-        cmd = Touch(name, file, ctxt=REMOTE, remoteHost=hostname)
-        cmd.run(validateAfter=True)
-
-
 # --------------get user id ----------------------
 class UserId(Command):
     def __init__(self, name, ctxt=LOCAL, remoteHost=None):
@@ -903,40 +753,7 @@ class UserId(Command):
         return cmd.results.stdout.strip()
 
 
-# -------------- test file for setuid bit ----------------------
-class FileTestSuid(Command):
-    def __init__(self, name, filename, ctxt=LOCAL, remoteHost=None):
-        cmdStr = """python -c "import os; import stat; testRes = os.stat('%s'); print (testRes.st_mode & stat.S_ISUID) == stat.S_ISUID" """ % filename
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, remote_host, filename):
-        cmd = FileTestSuid(name, filename, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-        return cmd.file_is_suid()
-
-    def file_is_suid(self):
-        return self.results.stdout.strip().upper() == 'TRUE'
-
-
-# -------------- get file owner ----------------------
-class FileGetOwnerUid(Command):
-    def __init__(self, name, filename, ctxt=LOCAL, remoteHost=None):
-        cmdStr = """python -c "import os; import stat; testRes = os.stat('%s'); print testRes.st_uid " """ % filename
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def remote(name, remote_host, filename):
-        cmd = FileGetOwnerUid(name, filename, ctxt=REMOTE, remoteHost=remote_host)
-        cmd.run(validateAfter=True)
-        return cmd.file_uid()
-
-    def file_uid(self):
-        return int(self.results.stdout.strip().upper())
-
-
-# --------------get list of desecendant processes -------------------
-
+# --------------get list of descendant processes -------------------
 def getDescendentProcesses(pid):
     ''' return all process pids which are descendant from the given processid '''
 

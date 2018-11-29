@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2010, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/builtins.h
@@ -327,7 +327,7 @@ extern Datum btnamecmp(PG_FUNCTION_ARGS);
 extern Datum bttextcmp(PG_FUNCTION_ARGS);
 
 /*
- *		Per-opclass sort support functions for new btrees.	Like the
+ *		Per-opclass sort support functions for new btrees.  Like the
  *		functions above, these are stored in pg_amproc; most are defined in
  *		access/nbtree/nbtcompare.c
  */
@@ -481,16 +481,19 @@ extern Datum pg_size_pretty_numeric(PG_FUNCTION_ARGS);
 extern Datum pg_table_size(PG_FUNCTION_ARGS);
 extern Datum pg_indexes_size(PG_FUNCTION_ARGS);
 extern Datum pg_relation_filenode(PG_FUNCTION_ARGS);
+extern Datum pg_filenode_relation(PG_FUNCTION_ARGS);
 extern Datum pg_relation_filepath(PG_FUNCTION_ARGS);
-extern Datum gp_statistics_estimate_reltuples_relpages_oid(PG_FUNCTION_ARGS);
+
+extern int64 get_size_from_segDBs(const char *cmd);
 
 /* genfile.c */
-extern bytea *read_binary_file(const char *filename,
-				 int64 seek_offset, int64 bytes_to_read);
 extern Datum pg_stat_file(PG_FUNCTION_ARGS);
+extern Datum pg_stat_file_1arg(PG_FUNCTION_ARGS);
 extern Datum pg_read_file(PG_FUNCTION_ARGS);
+extern Datum pg_read_file_off_len(PG_FUNCTION_ARGS);
 extern Datum pg_read_file_all(PG_FUNCTION_ARGS);
 extern Datum pg_read_binary_file(PG_FUNCTION_ARGS);
+extern Datum pg_read_binary_file_off_len(PG_FUNCTION_ARGS);
 extern Datum pg_read_binary_file_all(PG_FUNCTION_ARGS);
 extern Datum pg_ls_dir(PG_FUNCTION_ARGS);
 extern Datum pg_file_write(PG_FUNCTION_ARGS);
@@ -498,6 +501,7 @@ extern Datum pg_file_rename(PG_FUNCTION_ARGS);
 extern Datum pg_file_unlink(PG_FUNCTION_ARGS);
 extern Datum pg_logdir_ls(PG_FUNCTION_ARGS);
 extern Datum pg_file_length(PG_FUNCTION_ARGS);
+extern Datum pg_ls_dir_1arg(PG_FUNCTION_ARGS);
 
 /* misc.c */
 extern Datum current_database(PG_FUNCTION_ARGS);
@@ -631,6 +635,8 @@ extern char *regexp_fixed_prefix(text *text_re, bool case_insensitive,
 /* regproc.c */
 extern Datum regprocin(PG_FUNCTION_ARGS);
 extern Datum regprocout(PG_FUNCTION_ARGS);
+extern Datum to_regproc(PG_FUNCTION_ARGS);
+extern Datum to_regprocedure(PG_FUNCTION_ARGS);
 extern Datum regprocrecv(PG_FUNCTION_ARGS);
 extern Datum regprocsend(PG_FUNCTION_ARGS);
 extern Datum regprocedurein(PG_FUNCTION_ARGS);
@@ -641,6 +647,8 @@ extern Datum regoperin(PG_FUNCTION_ARGS);
 extern Datum regoperout(PG_FUNCTION_ARGS);
 extern Datum regoperrecv(PG_FUNCTION_ARGS);
 extern Datum regopersend(PG_FUNCTION_ARGS);
+extern Datum to_regoper(PG_FUNCTION_ARGS);
+extern Datum to_regoperator(PG_FUNCTION_ARGS);
 extern Datum regoperatorin(PG_FUNCTION_ARGS);
 extern Datum regoperatorout(PG_FUNCTION_ARGS);
 extern Datum regoperatorrecv(PG_FUNCTION_ARGS);
@@ -649,10 +657,12 @@ extern Datum regclassin(PG_FUNCTION_ARGS);
 extern Datum regclassout(PG_FUNCTION_ARGS);
 extern Datum regclassrecv(PG_FUNCTION_ARGS);
 extern Datum regclasssend(PG_FUNCTION_ARGS);
+extern Datum to_regclass(PG_FUNCTION_ARGS);
 extern Datum regtypein(PG_FUNCTION_ARGS);
 extern Datum regtypeout(PG_FUNCTION_ARGS);
 extern Datum regtyperecv(PG_FUNCTION_ARGS);
 extern Datum regtypesend(PG_FUNCTION_ARGS);
+extern Datum to_regtype(PG_FUNCTION_ARGS);
 extern Datum regconfigin(PG_FUNCTION_ARGS);
 extern Datum regconfigout(PG_FUNCTION_ARGS);
 extern Datum regconfigrecv(PG_FUNCTION_ARGS);
@@ -680,6 +690,13 @@ extern Datum record_gt(PG_FUNCTION_ARGS);
 extern Datum record_le(PG_FUNCTION_ARGS);
 extern Datum record_ge(PG_FUNCTION_ARGS);
 extern Datum btrecordcmp(PG_FUNCTION_ARGS);
+extern Datum record_image_eq(PG_FUNCTION_ARGS);
+extern Datum record_image_ne(PG_FUNCTION_ARGS);
+extern Datum record_image_lt(PG_FUNCTION_ARGS);
+extern Datum record_image_gt(PG_FUNCTION_ARGS);
+extern Datum record_image_le(PG_FUNCTION_ARGS);
+extern Datum record_image_ge(PG_FUNCTION_ARGS);
+extern Datum btrecordimagecmp(PG_FUNCTION_ARGS);
 
 /* ruleutils.c */
 extern bool quote_all_identifiers;
@@ -708,10 +725,9 @@ extern Datum pg_get_functiondef(PG_FUNCTION_ARGS);
 extern Datum pg_get_function_arguments(PG_FUNCTION_ARGS);
 extern Datum pg_get_function_identity_arguments(PG_FUNCTION_ARGS);
 extern Datum pg_get_function_result(PG_FUNCTION_ARGS);
+extern Datum pg_get_function_arg_default(PG_FUNCTION_ARGS);
 extern char *deparse_expression(Node *expr, List *dpcontext,
 				   bool forceprefix, bool showimplicit);
-extern char *deparse_expr_sweet(Node *expr, List *dpcontext,
-				   bool forceprefix, bool showimplicit);                /*CDB*/
 extern List *deparse_context_for(const char *aliasname, Oid relid);
 extern List *deparse_context_for_planstate(Node *planstate, List *ancestors,
 							  List *rtable, List *rtable_names);
@@ -745,23 +761,9 @@ extern Datum tidge(PG_FUNCTION_ARGS);
 extern Datum bttidcmp(PG_FUNCTION_ARGS);
 extern Datum tidlarger(PG_FUNCTION_ARGS);
 extern Datum tidsmaller(PG_FUNCTION_ARGS);
+extern Datum hashtid(PG_FUNCTION_ARGS);
 extern Datum currtid_byreloid(PG_FUNCTION_ARGS);
 extern Datum currtid_byrelname(PG_FUNCTION_ARGS);
-
-/* xlog.c */
-extern Datum gpxloglocin(PG_FUNCTION_ARGS);
-extern Datum gpxloglocout(PG_FUNCTION_ARGS);
-extern Datum gpxloglocrecv(PG_FUNCTION_ARGS);
-extern Datum gpxloglocsend(PG_FUNCTION_ARGS);
-extern Datum gpxlogloclarger(PG_FUNCTION_ARGS);
-extern Datum gpxloglocsmaller(PG_FUNCTION_ARGS);
-extern Datum gpxlogloceq(PG_FUNCTION_ARGS);
-extern Datum gpxloglocne(PG_FUNCTION_ARGS);
-extern Datum gpxlogloclt(PG_FUNCTION_ARGS);
-extern Datum gpxloglocle(PG_FUNCTION_ARGS);
-extern Datum gpxloglocgt(PG_FUNCTION_ARGS);
-extern Datum gpxloglocge(PG_FUNCTION_ARGS);
-extern Datum btgpxlogloccmp(PG_FUNCTION_ARGS);
 
 /* varchar.c */
 extern Datum bpcharin(PG_FUNCTION_ARGS);
@@ -960,6 +962,7 @@ extern Datum network_sub(PG_FUNCTION_ARGS);
 extern Datum network_subeq(PG_FUNCTION_ARGS);
 extern Datum network_sup(PG_FUNCTION_ARGS);
 extern Datum network_supeq(PG_FUNCTION_ARGS);
+extern Datum network_overlap(PG_FUNCTION_ARGS);
 extern Datum network_network(PG_FUNCTION_ARGS);
 extern Datum network_netmask(PG_FUNCTION_ARGS);
 extern Datum network_hostmask(PG_FUNCTION_ARGS);
@@ -1260,6 +1263,7 @@ extern Datum ginarrayextract(PG_FUNCTION_ARGS);
 extern Datum ginarrayextract_2args(PG_FUNCTION_ARGS);
 extern Datum ginqueryarrayextract(PG_FUNCTION_ARGS);
 extern Datum ginarrayconsistent(PG_FUNCTION_ARGS);
+extern Datum ginarraytriconsistent(PG_FUNCTION_ARGS);
 
 /* access/transam/twophase.c */
 extern Datum pg_prepared_xact(PG_FUNCTION_ARGS);
@@ -1331,12 +1335,6 @@ extern Datum gp_prep_new_segment(PG_FUNCTION_ARGS);
 extern Datum gp_request_fts_probe_scan(PG_FUNCTION_ARGS);
 
 /* storage/compress.c */
-extern Datum quicklz_constructor(PG_FUNCTION_ARGS);
-extern Datum quicklz_destructor(PG_FUNCTION_ARGS);
-extern Datum quicklz_compress(PG_FUNCTION_ARGS);
-extern Datum quicklz_decompress(PG_FUNCTION_ARGS);
-extern Datum quicklz_validator(PG_FUNCTION_ARGS);
-
 extern Datum zlib_constructor(PG_FUNCTION_ARGS);
 extern Datum zlib_destructor(PG_FUNCTION_ARGS);
 extern Datum zlib_compress(PG_FUNCTION_ARGS);
@@ -1348,12 +1346,6 @@ extern Datum rle_type_destructor(PG_FUNCTION_ARGS);
 extern Datum rle_type_compress(PG_FUNCTION_ARGS);
 extern Datum rle_type_decompress(PG_FUNCTION_ARGS);
 extern Datum rle_type_validator(PG_FUNCTION_ARGS);
-
-extern Datum zstd_constructor(PG_FUNCTION_ARGS);
-extern Datum zstd_destructor(PG_FUNCTION_ARGS);
-extern Datum zstd_compress(PG_FUNCTION_ARGS);
-extern Datum zstd_decompress(PG_FUNCTION_ARGS);
-extern Datum zstd_validator(PG_FUNCTION_ARGS);
 
 extern Datum delta_constructor(PG_FUNCTION_ARGS);
 extern Datum delta_destructor(PG_FUNCTION_ARGS);
@@ -1369,7 +1361,6 @@ extern Datum dummy_compression_validator(PG_FUNCTION_ARGS);
 
 extern Datum gp_compressor(PG_FUNCTION_ARGS);
 extern Datum gp_decompressor(PG_FUNCTION_ARGS);
-extern Datum test_quicklz_compression(PG_FUNCTION_ARGS);
 
 /* percentile.c */
 extern Datum percentile_cont_trans(PG_FUNCTION_ARGS);

@@ -1,0 +1,198 @@
+/*
+ * Copyright (c) 2013 EMC Corporation All Rights Reserved
+ *
+ * This software is protected, without limitation, by copyright law
+ * and international treaties. Use of this software and the intellectual
+ * property contained therein is expressly limited to the terms and
+ * conditions of the License Agreement under which it is provided by
+ * or on behalf of EMC.
+ *
+ * ---------------------------------------------------------------------
+ *
+ * Interface to functions related to checking the correct distribution in GPDB.
+ *
+ * This is used to expose these functions in a dynamically linked library
+ * so that they can be referenced by using CREATE FUNCTION command in SQL,
+ * like below:
+ *
+ *CREATE OR REPLACE FUNCTION gp_distribution_policy_heap_table_check(oid, smallint[])
+ * RETURNS bool
+ * AS '$libdir/gp_distribution_policy.so','gp_distribution_policy_heap_table_check'
+ * LANGUAGE C VOLATILE STRICT; *
+ */
+
+#include "postgres.h"
+
+#include "fmgr.h"
+#include "funcapi.h"
+#include "utils/builtins.h"
+#include "utils/snapmgr.h"
+#include "cdb/cdbhash.h"
+#include "cdb/cdbvars.h"
+#include "utils/lsyscache.h"
+#include "miscadmin.h"
+#include "catalog/gp_policy.h"
+#include "utils/array.h"
+#include "utils/tqual.h"
+
+
+#ifdef PG_MODULE_MAGIC
+PG_MODULE_MAGIC;
+#endif
+
+extern Datum gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(gp_distribution_policy_heap_table_check);
+
+/* Extracts array of the form {1,2,3} to an ArrayType. */
+static void
+extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp);
+
+/* Allocate GpPolicy struct from an ArrayType */
+static GpPolicy *
+set_distribution_policy (Datum array_distribution, Datum numsegments);
+
+
+/*
+ * Extract len and pointer to buffer from an int16[] (vector) Datum
+ * representing a PostgreSQL INT2OID type.
+ */
+static void
+extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp)
+{
+	ArrayType  *array_type;
+	
+	Assert(lenp != NULL);
+	Assert(vecp != NULL);
+
+	array_type = DatumGetArrayTypeP(array_datum);
+	
+	Assert(ARR_NDIM(array_type) == 1);
+	Assert(ARR_ELEMTYPE(array_type) == INT2OID);
+	Assert(ARR_LBOUND(array_type)[0] == 1);
+	*lenp = ARR_DIMS(array_type)[0];
+	*vecp = (int16 *) ARR_DATA_PTR(array_type);
+	
+	return;
+}
+
+/* 
+ * Allocate GpPolicy from a given distribution in an Array of OIDs 
+ */
+static GpPolicy *
+set_distribution_policy (Datum array_distribution, Datum numsegments)
+{
+	GpPolicy  *policy = NULL;
+	
+	int nattrs = 0;
+	int16      *attrnums = NULL;
+	
+	extract_INT2OID_array(array_distribution, &nattrs, &attrnums);
+	
+	/* Validate that there is a distribution policy */
+	if (0 >= nattrs)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				errmsg("there is no distribution set in target table")));
+	}
+
+	/*
+	 * FIXME_TABLE_EXPAND: set_distribution_policy function only used for checking
+	 * the distribution policy of the relation, we set the EVIL numbers for the
+	 * segment count simply, it need to be fixed in the future.
+	 */
+	policy = makeGpPolicy(POLICYTYPE_PARTITIONED, nattrs,
+						  DatumGetInt32(numsegments));
+	
+	for (int i = 0; i < nattrs; i++)
+	{
+		policy->attrs[i] = attrnums[i];
+	}
+	
+	return policy;
+}
+
+/* 
+ * Verifies the correct data distribution (given a GpPolicy) 
+ * of a heap table in a segment. 
+ */
+Datum
+gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
+{
+	bool result = true;
+	
+	Assert(3 == PG_NARGS());
+
+	Oid relOid = PG_GETARG_OID(0);
+	Datum  array_distribution = PG_GETARG_DATUM(1);
+	Datum  numsegments = PG_GETARG_DATUM(2);
+	Oid		   *typeoids;
+
+	Assert(array_distribution);
+
+	/* Get distribution policy from arguments */
+	GpPolicy  *policy = set_distribution_policy(array_distribution,
+												numsegments);
+
+	/* Open relation in segment */
+	Relation rel = heap_open(relOid, AccessShareLock);
+
+	/* Validate that the relation is a heap table */
+	if (!RelationIsHeap(rel))
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				errmsg("input relation is not a heap table")));
+	}
+
+	HeapScanDesc scandesc = heap_beginscan(rel, GetActiveSnapshot(), 0, NULL);
+	HeapTuple    tuple = heap_getnext(scandesc, ForwardScanDirection);
+	TupleDesc	desc = RelationGetDescr(rel);
+
+	/* Initialize hash function and structure */
+	CdbHash *hash;
+
+	typeoids = palloc(policy->nattrs * sizeof(Oid));
+	for(int i = 0; i < policy->nattrs; i++)
+	{
+		AttrNumber	attnum = policy->attrs[i];
+		Oid			att_type = desc->attrs[attnum]->atttypid;
+
+		typeoids[i] = att_type;
+	}
+	hash = makeCdbHash(policy->numsegments, policy->nattrs, typeoids);
+
+	while (HeapTupleIsValid(tuple))
+	{
+		CHECK_FOR_INTERRUPTS();
+
+		cdbhashinit(hash);
+
+		/* Add every attribute in the distribution policy to the hash */
+		for (int i = 0; i < policy->nattrs; i++)
+		{
+			int			attnum = policy->attrs[i];
+			bool		isNull;
+			Datum		attr;
+
+			attr = heap_getattr(tuple, attnum, desc, &isNull);
+
+			cdbhash(hash, i + 1, attr, isNull);
+		}
+
+		/* End check if one tuple is in the wrong segment */
+		if (cdbhashreduce(hash) != GpIdentity.segindex)
+		{
+			result = false;
+			break;
+		}
+
+		tuple = heap_getnext(scandesc, ForwardScanDirection);
+	}
+
+	heap_endscan(scandesc);
+	heap_close(rel, AccessShareLock);
+	
+	PG_RETURN_BOOL(result);
+}

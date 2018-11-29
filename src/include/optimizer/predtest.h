@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/predtest.h
@@ -47,18 +47,18 @@ typedef struct
 	bool isAnyValuePossible;
 } PossibleValueSet;
 
-extern PossibleValueSet
-DeterminePossibleValueSet( Node *clause, Node *variable);
+extern PossibleValueSet DeterminePossibleValueSet(Node *clause, Node *variable);
 
 /* returns a newly allocated list */
-extern Node **
-GetPossibleValuesAsArray( PossibleValueSet *pvs, int *numValuesOut );
+extern Node **GetPossibleValuesAsArray(PossibleValueSet *pvs, int *numValuesOut);
 
-extern void
-DeletePossibleValueSetData(PossibleValueSet *pvs);
+extern void DeletePossibleValueSetData(PossibleValueSet *pvs);
 
-extern void
-InitPossibleValueSetData(PossibleValueSet *pvs);
+extern void InitPossibleValueSetData(PossibleValueSet *pvs);
+
+extern void AddUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck);
+extern void RemoveUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck);
+extern bool TryProcessEqualityNodeForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet *resultOut);
 
 /**
  * END functions and structures for determining set of possible values from a clause

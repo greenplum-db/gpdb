@@ -3,7 +3,7 @@
  * pg_aggregate.c
  *	  routines to support manipulation of the pg_aggregate relation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -159,10 +159,10 @@ AggregateCreate(const char *aggName,
 				 errdetail("An aggregate using a polymorphic transition type must have at least one polymorphic argument.")));
 
 	/*
-	 * An ordered-set aggregate that is VARIADIC must be VARIADIC ANY.	In
+	 * An ordered-set aggregate that is VARIADIC must be VARIADIC ANY.  In
 	 * principle we could support regular variadic types, but it would make
 	 * things much more complicated because we'd have to assemble the correct
-	 * subsets of arguments into array values.	Since no standard aggregates
+	 * subsets of arguments into array values.  Since no standard aggregates
 	 * have use for such a case, we aren't bothering for now.
 	 */
 	if (AGGKIND_IS_ORDERED_SET(aggKind) && OidIsValid(variadicArgType) &&
@@ -174,7 +174,7 @@ AggregateCreate(const char *aggName,
 	/*
 	 * If it's a hypothetical-set aggregate, there must be at least as many
 	 * direct arguments as aggregated ones, and the last N direct arguments
-	 * must match the aggregated ones in type.	(We have to check this again
+	 * must match the aggregated ones in type.  (We have to check this again
 	 * when the aggregate is called, in case ANY is involved, but it makes
 	 * sense to reject the aggregate definition now if the declared arg types
 	 * don't match up.)  It's unconditionally OK if numDirectArgs == numArgs,
@@ -331,9 +331,9 @@ AggregateCreate(const char *aggName,
 		if (rettype != aggmTransType)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATATYPE_MISMATCH),
-					 errmsg("return type of inverse transition function %s is not %s",
-							NameListToString(aggminvtransfnName),
-							format_type_be(aggmTransType))));
+			errmsg("return type of inverse transition function %s is not %s",
+				   NameListToString(aggminvtransfnName),
+				   format_type_be(aggmTransType))));
 
 		tup = SearchSysCache1(PROCOID, ObjectIdGetDatum(minvtransfn));
 		if (!HeapTupleIsValid(tup))
@@ -352,7 +352,7 @@ AggregateCreate(const char *aggName,
 
 		ReleaseSysCache(tup);
 	}
-	
+
 	/* handle finalfn, if supplied */
 	if (aggfinalfnName)
 	{
@@ -537,7 +537,7 @@ AggregateCreate(const char *aggName,
 			}
 
 			mfinalfn = lookup_agg_function(aggmfinalfnName, nargs_finalfn,
-										   fnArgs, variadicArgType,
+										   fnArgs, ffnVariadicArgType,
 										   &rettype);
 
 			/* As above, check strictness if mfinalfnExtraArgs is given */
@@ -592,8 +592,7 @@ AggregateCreate(const char *aggName,
 	{
 		aclresult = pg_type_aclcheck(aggmTransType, GetUserId(), ACL_USAGE);
 		if (aclresult != ACLCHECK_OK)
-			aclcheck_error(aclresult, ACL_KIND_TYPE,
-						   format_type_be(aggmTransType));
+			aclcheck_error_type(aclresult, aggmTransType);
 	}
 
 	aclresult = pg_type_aclcheck(finaltype, GetUserId(), ACL_USAGE);

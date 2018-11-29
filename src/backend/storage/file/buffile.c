@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -25,8 +25,14 @@
  * will go away automatically at transaction end.  If the underlying
  * virtual File is made with OpenTemporaryFile, then all resources for
  * the file are certain to be cleaned up even if processing is aborted
- * by ereport(ERROR).	To avoid confusion, the caller should take care that
- * all calls for a single BufFile are made in the same palloc context.
+ * by ereport(ERROR).  The data structures required are made in the
+ * palloc context that was current when the BufFile was created, and
+ * any external resources such as temp files are owned by the ResourceOwner
+ * that was current at that time.
+ *
+ * BufFile also supports temporary files that exceed the OS file size limit
+ * (by opening multiple fd.c temporary files).  This is an essential feature
+ * for sorts and hashjoins on large amounts of data.
  *-------------------------------------------------------------------------
  */
 
@@ -36,7 +42,8 @@
 #include "storage/fd.h"
 #include "storage/buffile.h"
 #include "storage/buf_internals.h"
-#include "miscadmin.h"
+//#include "miscadmin.h"
+#include "utils/resowner.h"
 
 #include "cdb/cdbvars.h"
 #include "utils/workfile_mgr.h"
@@ -56,6 +63,14 @@ struct BufFile
 
 	int64		offset;			/* offset part of current pos */
 	int64		pos;			/* next read/write position in buffer */
+
+	/*
+	 * resowner is the ResourceOwner to use for underlying temp files.  (We
+	 * don't need to remember the memory context we're using explicitly,
+	 * because after creation we only repalloc our arrays larger.)
+	 */
+	ResourceOwner resowner;
+
 	int			nbytes;			/* total # of valid bytes in buffer */
 	int64		maxoffset;		/* maximum offset that this file has reached, for disk usage */
 
@@ -85,6 +100,7 @@ makeBufFile(File firstfile)
 	 * Position as seen by user of Buffile is (offset+pos).
 	 * */
 	file->offset = 0L;
+	file->resowner = CurrentResourceOwner;
 	file->pos = 0;
 	file->nbytes = 0;
 	file->maxoffset = 0L;
@@ -126,7 +142,8 @@ BufFileCreateTemp(const char *filePrefix, bool interXact)
  * at end of transaction.
  *
  * Note: if interXact is true, the caller had better be calling us in a
- * memory context that will survive across transaction boundaries.
+ * memory context, and with a resource owner, that will survive across
+ * transaction boundaries.
  */
 BufFile *
 BufFileCreateNamedTemp(const char *fileName, bool delOnClose, bool interXact)
@@ -522,7 +539,7 @@ BufFileSeek(BufFile *file, int fileno, off_t offset, int whence)
 	{
 		/*
 		 * Seek is to a point within existing buffer; we can just adjust
-		 * pos-within-buffer, without flushing buffer.	Note this is OK
+		 * pos-within-buffer, without flushing buffer.  Note this is OK
 		 * whether reading or writing, but buffer remains dirty if we were
 		 * writing.
 		 */

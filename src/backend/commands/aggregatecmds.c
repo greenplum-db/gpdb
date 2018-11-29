@@ -4,7 +4,7 @@
  *
  *	  Routines for aggregate-manipulation commands
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -56,7 +56,7 @@
  */
 Oid
 DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
-				bool ordered, const char *queryString)
+				const char *queryString)
 {
 	char	   *aggName;
 	Oid			aggNamespace;
@@ -230,7 +230,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 		if (mtransfuncName != NIL)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-					 errmsg("aggregate msfunc must not be specified without mstype")));
+			errmsg("aggregate msfunc must not be specified without mstype")));
 		if (minvtransfuncName != NIL)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
@@ -321,7 +321,7 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 	 *
 	 * transtype can't be a pseudo-type, since we need to be able to store
 	 * values of the transtype.  However, we can allow polymorphic transtype
-	 * in some cases (AggregateCreate will check).	Also, we allow "internal"
+	 * in some cases (AggregateCreate will check).  Also, we allow "internal"
 	 * for functions that want to pass pointers to private data structures;
 	 * but allow that only to superusers, since you could crash the system (or
 	 * worse) by connecting up incompatible internal-using functions in an
@@ -399,6 +399,18 @@ DefineAggregate(List *name, List *args, bool oldstyle, List *parameters,
 
 		getTypeInputInfo(transTypeId, &typinput, &typioparam);
 		(void) OidInputFunctionCall(typinput, initval, typioparam, -1);
+	}
+
+	/*
+	 * Likewise for moving-aggregate initval.
+	 */
+	if (minitval && mtransTypeType != TYPTYPE_PSEUDO)
+	{
+		Oid			typinput,
+					typioparam;
+
+		getTypeInputInfo(mtransTypeId, &typinput, &typioparam);
+		(void) OidInputFunctionCall(typinput, minitval, typioparam, -1);
 	}
 
 	/*

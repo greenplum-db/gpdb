@@ -82,15 +82,15 @@ CreateAOAuxiliaryTable(
 	switch(relkind)
 	{
 		case RELKIND_AOVISIMAP:
-			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL,
+			GetAppendOnlyEntryAuxOids(relOid, NULL, NULL,
 				NULL, NULL, &aoauxiliary_relid, &aoauxiliary_idxid);
 			break;
 		case RELKIND_AOBLOCKDIR:
-			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow, NULL,
+			GetAppendOnlyEntryAuxOids(relOid, NULL, NULL,
 				&aoauxiliary_relid, &aoauxiliary_idxid, NULL, NULL);
 			break;
 		case RELKIND_AOSEGMENTS:
-			GetAppendOnlyEntryAuxOids(relOid, SnapshotNow,
+			GetAppendOnlyEntryAuxOids(relOid, NULL,
 				&aoauxiliary_relid,
 				NULL, NULL, NULL, NULL);
 			break;

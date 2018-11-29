@@ -43,13 +43,14 @@ ERROR:  cannot change inheritance of typed table
 CREATE TABLE personsx OF person_type (myname WITH OPTIONS NOT NULL); -- error
 ERROR:  column "myname" does not exist
 -- This test comes from postgres, and we expect it to fail on Greenplum
--- because Greenplum does not support both primary keys and unique constraints
--- at the same time.
+-- because Greenplum does not support having two primary key / unique
+-- constraints with no columns in common.
 CREATE TABLE persons2 OF person_type (
     id WITH OPTIONS PRIMARY KEY,
     UNIQUE (name)
 );
-ERROR:  Greenplum Database does not allow having both PRIMARY KEY and UNIQUE constraints
+ERROR:  UNIQUE or PRIMARY KEY definitions are incompatible with each other
+HINT:  When there are multiple PRIMARY KEY / UNIQUE constraints, they must have at least one column in common.
 \d persons2
 -- These are added for Greenplum, as the previous table creation statement
 -- should have failed.

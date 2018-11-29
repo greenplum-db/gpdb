@@ -10,7 +10,7 @@
  * analyze.c and related files.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -67,7 +67,7 @@ raw_parser(const char *str)
  * Intermediate filter between parser and core lexer (core_yylex in scan.l).
  *
  * The filter is needed because in some cases the standard SQL grammar
- * requires more than one token lookahead.	We reduce these cases to one-token
+ * requires more than one token lookahead.  We reduce these cases to one-token
  * lookahead by combining tokens here, in order to keep the grammar LALR(1).
  *
  * Using a filter is simpler than trying to recognize multiword tokens
@@ -135,7 +135,7 @@ base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 		case WITH:
 
 			/*
-			 * WITH TIME must be reduced to one token
+			 * WITH TIME and WITH ORDINALITY must each be reduced to one token
 			 */
 			cur_yylval = lvalp->core_yystype;
 			cur_yylloc = *llocp;
@@ -144,6 +144,9 @@ base_yylex(YYSTYPE *lvalp, YYLTYPE *llocp, core_yyscan_t yyscanner)
 			{
 				case TIME:
 					cur_token = WITH_TIME;
+					break;
+				case ORDINALITY:
+					cur_token = WITH_ORDINALITY;
 					break;
 				default:
 					/* save the lookahead token for next time */

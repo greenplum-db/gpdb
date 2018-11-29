@@ -40,22 +40,22 @@ Enabling more verbose logging may aid PXF troubleshooting efforts. PXF provides 
 
 ### <a id="pxfsvclogmsg"></a>Service-Level Logging
 
-PXF utilizes `log4j` for service-level logging. PXF-service-related log messages are captured in a log file specified by PXF's `log4j` properties file, `$GPHOME/pxf/conf/pxf-log4j.properties`. The default PXF logging configuration will write `INFO` and more severe level logs to `$GPHOME/pxf/logs/pxf-service.log`. You can configure the logging level and log file location.
+PXF utilizes `log4j` for service-level logging. PXF-service-related log messages are captured in a log file specified by PXF's `log4j` properties file, `$PXF_CONF/conf/pxf-log4j.properties`. The default PXF logging configuration will write `INFO` and more severe level logs to `$PXF_CONF/logs/pxf-service.log`. You can configure the logging level and log file location.
 
 PXF provides more detailed logging when the `DEBUG` level is enabled.  To configure PXF `DEBUG` logging, uncomment the following line in `pxf-log4j.properties`:
 
 ``` shell
-#log4j.logger.org.apache.hawq.pxf=DEBUG
+#log4j.logger.org.greenplum.pxf=DEBUG
 ```
 
-Copy the `pxf-log4j.properties` file to each segment host and restart the PXF service on *each* Greenplum Database segment host. For example:
+Copy the `pxf-log4j.properties` file to each segment host and restart the PXF service on *each* Greenplum Database segment host. For example, if `PXF_CONF=/etc/pxf/usercfg`:
 
 ``` shell
-gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-log4j.properties :=/usr/local/greenplum-db/pxf/conf/pxf-log4j.properties
+gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-log4j.properties :=/ect/pxf/usercfg/conf/pxf-log4j.properties
 gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
 ```
 
-With `DEBUG` level logging now enabled, perform your PXF operations; for example, create and query an external table. (Make note of the time; this will direct you to the relevant log messages in `$GPHOME/pxf/logs/pxf-service.log`.)
+With `DEBUG` level logging now enabled, perform your PXF operations; for example, create and query an external table. (Make note of the time; this will direct you to the relevant log messages in `$PXF_CONF/logs/pxf-service.log`.)
 
 ``` shell
 $ date
@@ -74,7 +74,7 @@ dbname=> SELECT * FROM hdfstest;
 Examine/collect the log messages from `pxf-service.log`.
 
 **Note**: `DEBUG` logging is quite verbose and has a performance impact.  Remember to turn off PXF service `DEBUG` logging after you have collected the desired information.
- 
+
 
 ### <a id="pxfdblogmsg"></a>Client-Level Logging
 
@@ -132,10 +132,10 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-2. Edit the `$GPHOME/pxf/conf/pxf-env.sh` file. For example:
+2. Recall the location of the PXF user configuration directory ($PXF_CONF). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
     ```
 
 3. Locate the `PXF_JVM_OPTS` setting in the `pxf-env.sh` file, and update the `-Xmx` and/or `-Xms` options to the desired value. For example:
@@ -144,10 +144,10 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     PXF_JVM_OPTS="-Xmx3g -Xms3g"
     ```
 
-4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-env.sh =:/usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/ect/pxf/usercfg/conf/pxf-env.sh
     ```
 
 5. Restart PXF on each Greenplum Database segment host. For example:
@@ -197,4 +197,26 @@ Perform the following procedure to decrease the maximum number of Tomcat threads
     ``` shell
     $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
     ```
+
+## <a id="pxf-timezonecfg"></a>Addressing PXF JDBC Connector Time Zone Errors
+
+You use the PXF JDBC connector to access data stored in an external SQL database. Depending upon the JDBC driver, the driver may return an error if there is a mismatch between the default time zone set for the PXF server and the time zone set for the external SQL database.
+
+For example, if you use the PXF JDBC connector to access an Oracle database with a conflicting time zone, PXF logs an error similar to the following:
+
+``` pre
+SEVERE: Servlet.service() for servlet [PXF REST Service] in context with path [/pxf] threw exception
+java.io.IOException: ORA-00604: error occurred at recursive SQL level 1
+ORA-01882: timezone region not found
+```
+
+Should you encounter this error, you can set default time zone option(s) for the PXF server in the `$PXF_CONF/conf/pxf-env.sh` configuration file, `PXF_JVM_OPTS` property setting. For example, to set the time zone:
+
+``` pre
+export PXF_JVM_OPTS="<current_settings> -Duser.timezone=America/Chicago"
+```
+
+You can use the `PXF_JVM_OPTS` property to set other Java options as well.
+
+As described in previous sections, you must copy the updated configuration file to each Greenplum Database segment host and restart the PXF server on each host.
 

@@ -3,7 +3,7 @@
  * gistdesc.c
  *	  rmgr descriptor routines for access/gist/gistxlog.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -35,7 +35,7 @@ out_gistxlogPageUpdate(StringInfo buf, gistxlogPageUpdate *xlrec)
 static void
 out_gistxlogPageSplit(StringInfo buf, gistxlogPageSplit *xlrec)
 {
-	appendStringInfo(buf, "page_split: ");
+	appendStringInfoString(buf, "page_split: ");
 	out_target(buf, xlrec->node);
 	appendStringInfo(buf, "; block number %u splits to %d pages",
 					 xlrec->origblkno, xlrec->npage);
@@ -50,7 +50,7 @@ gist_desc(StringInfo buf, XLogRecord *record)
 	switch (info)
 	{
 		case XLOG_GIST_PAGE_UPDATE:
-			appendStringInfo(buf, "page_update: ");
+			appendStringInfoString(buf, "page_update: ");
 			out_gistxlogPageUpdate(buf, (gistxlogPageUpdate *) rec);
 			break;
 		case XLOG_GIST_PAGE_SPLIT:

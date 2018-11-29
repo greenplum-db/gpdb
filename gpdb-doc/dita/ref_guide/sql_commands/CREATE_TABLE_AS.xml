@@ -13,7 +13,8 @@
    [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
    [TABLESPACE <varname>tablespace</varname>]
    AS <varname>query</varname>
-   [DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY]</codeblock>
+   [DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY 
+      | DISTRIBUTED REPLICATED ]</codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   APPENDONLY={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}
@@ -134,12 +135,16 @@
         <plentry>
           <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
           <pt>DISTRIBUTED RANDOMLY</pt>
+          <pt>DISTRIBUTED REPLICATED</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the table.
-              <codeph>DISTIBUTED BY</codeph> uses hash distribution with one or more columns
+              <codeph>DISTRIBUTED BY</codeph> uses hash distribution with one or more columns
             declared as the distribution key. For the most even data distribution, the distribution
             key should be the primary key of the table or a unique column (or set of columns). If
             that is not possible, then you may choose <codeph>DISTRIBUTED RANDOMLY</codeph>, which
-            will send the data round-robin to the segment instances. </pd>
+            will send the data round-robin to the segment instances.</pd>
+          <pd><codeph>DISTRIBUTED REPLICATED</codeph> replicates all rows in the table to all
+            Greenplum Database segments. It cannot be used with partitioned tables or with tables
+            that inhert from other tables.</pd>
           <pd>The Greenplum Database server configuration parameter
               <codeph>gp_create_table_random_default_distribution</codeph> controls the default
             table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
@@ -151,11 +156,14 @@
               <li>If the legacy query optimizer creates the table, and the value of the parameter is
                   <codeph>on</codeph>, the table distribution policy is random.</li>
               <li>If GPORCA creates the table, the table distribution policy is random. The
-                parameter value has no affect. </li>
+                parameter value has no effect. </li>
             </ul></pd>
-          <pd>For information about the parameter, see "Server Configuration Parameters." For
-            information about the legacy query optimizer and GPORCA, see "Querying Data" in the
-              <cite>Greenplum Database Administrator Guide</cite>. </pd>
+          <pd>For more information about setting the default table distribution policy, see <xref
+              href="../config_params/guc-list.xml#gp_create_table_random_default_distribution"
+                ><codeph>gp_create_table_random_default_distribution</codeph></xref>. For
+            information about the legacy query optimizer and GPORCA, see <xref
+              href="../../admin_guide/query/topics/query.xml#topic1">Querying Data</xref> in the
+              <cite>Greenplum Database Administrator Guide</cite>.</pd>
         </plentry>
       </parml>
     </section>

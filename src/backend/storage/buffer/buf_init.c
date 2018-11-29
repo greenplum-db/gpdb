@@ -3,7 +3,7 @@
  * buf_init.c
  *	  buffer manager initialization routines
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -73,7 +73,7 @@ ProtectMemoryPoolBuffers()
  *
  * IO_IN_PROGRESS -- this is a flag in the buffer descriptor.
  *		It must be set when an IO is initiated and cleared at
- *		the end of the IO.	It is there to make sure that one
+ *		the end of the IO.  It is there to make sure that one
  *		process doesn't start to use a buffer while another is
  *		faulting it in.  see WaitIO and related routines.
  *
@@ -83,7 +83,7 @@ ProtectMemoryPoolBuffers()
  *
  * PrivateRefCount -- Each buffer also has a private refcount that keeps
  *		track of the number of times the buffer is pinned in the current
- *		process.	This is used for two purposes: first, if we pin a
+ *		process.    This is used for two purposes: first, if we pin a
  *		a buffer more than once, we only need to change the shared refcount
  *		once, thus only lock the shared state once; second, when a transaction
  *		aborts, it should only unpin the buffers exactly the number of times it

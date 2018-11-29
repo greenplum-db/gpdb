@@ -28,18 +28,18 @@
 #ifdef _ECPG_INFORMIX_H
 
 #include "sqlda-compat.h"
-typedef struct sqlvar_compat	sqlvar_t;
-typedef struct sqlda_compat	sqlda_t;
+typedef struct sqlvar_compat sqlvar_t;
+typedef struct sqlda_compat sqlda_t;
 
 #else
 
 #include "sqlda-native.h"
-typedef struct sqlvar_struct	sqlvar_t;
-typedef struct sqlda_struct	sqlda_t;
+typedef struct sqlvar_struct sqlvar_t;
+typedef struct sqlda_struct sqlda_t;
 
 #endif
 
-#endif /* ECPG_SQLDA_H */
+#endif   /* ECPG_SQLDA_H */
 
 #line 5 "describe.pgc"
 
@@ -172,12 +172,12 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 	strcpy(msg, "describe");
 	{ ECPGdescribe(__LINE__, 0, 0, NULL, "st_id1",
-	ECPGt_descriptor, "desc1", 0L, 0L, 0L, 
+	ECPGt_descriptor, "desc1", 1L, 1L, 1L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);}
 #line 60 "describe.pgc"
 
 	{ ECPGdescribe(__LINE__, 0, 0, NULL, "st_id1",
-	ECPGt_descriptor, "desc2", 0L, 0L, 0L, 
+	ECPGt_descriptor, "desc2", 1L, 1L, 1L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);}
 #line 61 "describe.pgc"
 
@@ -334,12 +334,12 @@ if (sqlca.sqlcode < 0) exit (1);}
 
 	strcpy(msg, "describe");
 	{ ECPGdescribe(__LINE__, 0, 0, NULL, "st_id2",
-	ECPGt_descriptor, "desc1", 0L, 0L, 0L, 
+	ECPGt_descriptor, "desc1", 1L, 1L, 1L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);}
 #line 146 "describe.pgc"
 
 	{ ECPGdescribe(__LINE__, 0, 0, NULL, "st_id2",
-	ECPGt_descriptor, "desc2", 0L, 0L, 0L, 
+	ECPGt_descriptor, "desc2", 1L, 1L, 1L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);}
 #line 147 "describe.pgc"
 

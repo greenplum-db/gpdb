@@ -42,17 +42,6 @@ typedef struct SegmentDatabaseDescriptor
 	 * established connection to the segment database.
 	 */
 	PGconn				   *conn;		
-	
-	/*
-	 * Error info saved when connection cannot be established.
-	 * ERRCODE_xxx (sqlstate encoded as an int) of first error, or 0.
-	 *
-	 * errcode and error_message are only used in threaded implementation.
-	 */
-    int                     errcode;
-
-    /* message text; '\n' at end */
-	PQExpBufferData         error_message;
 
     /*
      * Connection info saved at most recent PQconnectdb.
@@ -62,15 +51,13 @@ typedef struct SegmentDatabaseDescriptor
     uint32		            motionListener; /* interconnect listener port */
     int32					backendPid;
     char                   *whoami;         /* QE identifier for msgs */
-
+	bool					isWriter;
+	int						identifier;		/* unique identifier in the cdbcomponent segment pool */
 } SegmentDatabaseDescriptor;
 
+SegmentDatabaseDescriptor *
 
-/* Initialize a segment descriptor in storage provided by the caller. */
-void
-cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor        *segdbDesc,
-                              struct CdbComponentDatabaseInfo  *cdbinfo);
-
+cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo  *cdbinfo, int identifier, bool isWriter);
 
 /* Free all memory owned by a segment descriptor. */
 void
@@ -79,20 +66,11 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc);
 
 /* Connect to a QE as a client via libpq. */
 void
-cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-				  const char *gpqeid,
-				  const char *options);
-
-void
 cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 					   const char *gpqeid,
 					   const char *options);
 void
 cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc);
-
-
-/* Disconnect from QE */
-void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
 
 /*
  * Read result from connection and discard it.
@@ -110,11 +88,8 @@ bool cdbconn_isBadConnection(SegmentDatabaseDescriptor *segdbDesc);
 /* Return if it's a connection OK */
 bool cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc);
 
-/* Reset error message buffer */
-void cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc);
-
 /* Set the slice index for error messages related to this QE. */
-void setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex, MemoryContext mcxt);
+void cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc, int sliceIndex);
 
 /*
  * Send cancel/finish signal to still-running QE through libpq.

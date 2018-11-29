@@ -4,7 +4,7 @@
  *
  *	  Routines for operator manipulation commands
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -217,7 +217,7 @@ DefineOperator(List *names, List *parameters)
 	functionOid = LookupFuncName(functionName, nargs, typeId, false);
 
 	/*
-	 * We require EXECUTE rights for the function.	This isn't strictly
+	 * We require EXECUTE rights for the function.  This isn't strictly
 	 * necessary, since EXECUTE will be checked at any attempted use of the
 	 * operator, but it seems like a good idea anyway.
 	 */

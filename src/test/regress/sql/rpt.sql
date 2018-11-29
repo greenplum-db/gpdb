@@ -267,4 +267,8 @@ select * from foo;
 delete from foo where y = 1;
 select * from foo;
 
+-- Test replicate table within init plan
+insert into foo values (1, 1), (2, 1);
+select * from bar where exists (select * from foo);
+
 drop schema rpt cascade;

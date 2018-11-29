@@ -9,7 +9,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -55,7 +55,7 @@
  *	  * ExecInitNode() notices that it is looking at a nest loop and
  *		as the code below demonstrates, it calls ExecInitNestLoop().
  *		Eventually this calls ExecInitNode() on the right and left subplans
- *		and so forth until the entire plan is initialized.	The result
+ *		and so forth until the entire plan is initialized.  The result
  *		of ExecInitNode() is a plan state tree built with the same structure
  *		as the underlying plan tree.
  *
@@ -103,6 +103,7 @@
 #include "executor/nodeModifyTable.h"
 #include "executor/nodeNestloop.h"
 #include "executor/nodeRecursiveunion.h"
+#include "executor/nodeReshuffle.h"
 #include "executor/nodeResult.h"
 #include "executor/nodeSetOp.h"
 #include "executor/nodeSort.h"
@@ -158,6 +159,54 @@ static CdbVisitOpt planstate_walk_kids(PlanState *planstate,
 				 CdbVisitOpt (*walker) (PlanState *planstate, void *context),
 					void *context,
 					int flags);
+
+/*
+ * saveExecutorMemoryAccount saves an operator specific memory account
+ * into the PlanState of that operator
+ */
+static inline void
+saveExecutorMemoryAccount(PlanState *execState,
+						  MemoryAccountIdType curMemoryAccountId)
+{
+	Assert(curMemoryAccountId != MEMORY_OWNER_TYPE_Undefined);
+	Assert(MEMORY_OWNER_TYPE_Undefined == execState->memoryAccountId);
+	execState->memoryAccountId = curMemoryAccountId;
+}
+
+
+/*
+ * CREATE_EXECUTOR_MEMORY_ACCOUNT is a convenience macro to create a new
+ * operator specific memory account *if* the operator will be executed in
+ * the current slice, i.e., it is not part of some other slice (alien
+ * plan node). We assign a shared AlienExecutorMemoryAccount for plan nodes
+ * that will not be executed in current slice
+ *
+ * If the operator is a child of an 'X_NestedExecutor' account, the operator
+ * is also assigned to the 'X_NestedExecutor' account, unless the
+ * explain_memory_verbosity guc is set to 'debug' or above.
+ */
+#define CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, planNode, NodeType)    \
+	MemoryAccounting_CreateExecutorAccountWithType(                            \
+		(isAlienPlanNode), (planNode), MEMORY_OWNER_TYPE_Exec_##NodeType)
+
+static inline MemoryAccountIdType
+MemoryAccounting_CreateExecutorAccountWithType(bool isAlienPlanNode,
+											   Plan *node,
+											   MemoryOwnerType ownerType)
+{
+	if (isAlienPlanNode)
+		return MEMORY_OWNER_TYPE_Exec_AlienShared;
+	else
+		if (MemoryAccounting_IsUnderNestedExecutor() &&
+			explain_memory_verbosity < EXPLAIN_MEMORY_VERBOSITY_DEBUG)
+			return MemoryAccounting_GetOrCreateNestedExecutorAccount();
+		else
+		{
+			long maxLimit =
+				node->operatorMemKB == 0 ? work_mem : node->operatorMemKB;
+			return MemoryAccounting_CreateAccount(maxLimit, ownerType);
+		}
+}
 
 /*
  * setSubplanSliceId
@@ -219,7 +268,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 	int			origSliceIdInPlan = estate->currentSliceIdInPlan;
 	int			origExecutingSliceId = estate->currentExecutingSliceId;
 
-	MemoryAccountIdType curMemoryAccountId = MEMORY_OWNER_TYPE_Undefined;
+	MemoryAccountIdType curMemoryAccountId;
 
 
 	int localMotionId = LocallyExecutingSliceIndex(estate);
@@ -794,6 +843,16 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 			}
 			END_MEMORY_ACCOUNT();
 			break;
+		case T_Reshuffle:
+			curMemoryAccountId = CREATE_EXECUTOR_MEMORY_ACCOUNT(isAlienPlanNode, node, Reshuffle);
+
+			START_MEMORY_ACCOUNT(curMemoryAccountId);
+			{
+				result = (PlanState *) ExecInitReshuffle((Reshuffle *) node,
+														 estate, eflags);
+			}
+			END_MEMORY_ACCOUNT();
+			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;		/* keep compiler quiet */
@@ -835,7 +894,7 @@ ExecInitNode(Plan *node, EState *estate, int eflags)
 
 	if (result != NULL)
 	{
-		SAVE_EXECUTOR_MEMORY_ACCOUNT(result, curMemoryAccountId);
+		saveExecutorMemoryAccount(result, curMemoryAccountId);
 	}
 	return result;
 }
@@ -894,7 +953,7 @@ ExecProcNode(PlanState *node)
 {
 	TupleTableSlot *result = NULL;
 
-	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(node->memoryAccountId);
 	{
 
 	CHECK_FOR_INTERRUPTS();
@@ -915,7 +974,7 @@ ExecProcNode(PlanState *node)
 		ExecReScan(node);		/* let ReScan handle this */
 
 	if (node->instrument)
-		INSTR_START_NODE(node->instrument);
+		InstrStartNode(node->instrument);
 
 	if(!node->fHadSentGpmon)
 		CheckSendPlanStateGpmonPkt(node);
@@ -1120,6 +1179,10 @@ ExecProcNode(PlanState *node)
 			result = ExecPartitionSelector((PartitionSelectorState *) node);
 			break;
 
+		case T_ReshuffleState:
+			result = ExecReshuffle((ReshuffleState *) node);
+			break;
+
 		default:
 			elog(ERROR, "unrecognized node type: %d", (int) nodeTag(node));
 			result = NULL;
@@ -1133,7 +1196,7 @@ ExecProcNode(PlanState *node)
 	}
 
 	if (node->instrument)
-		INSTR_STOP_NODE(node->instrument, TupIsNull(result) ? 0 : 1);
+		InstrStopNode(node->instrument, TupIsNull(result) ? 0 : 1);
 
 	if (node->plan)
 		TRACE_POSTGRESQL_EXECPROCNODE_EXIT(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
@@ -1190,7 +1253,7 @@ MultiExecProcNode(PlanState *node)
 
 	Assert(NULL != node->plan);
 
-	START_MEMORY_ACCOUNT(node->plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(node->memoryAccountId);
 {
 	TRACE_POSTGRESQL_EXECPROCNODE_ENTER(GpIdentity.segindex, currentSliceId, nodeTag(node), node->plan->plan_node_id);
 
@@ -1346,7 +1409,7 @@ ExecUpdateTransportState(PlanState *node, ChunkTransportState * state)
  *		at 'node'.
  *
  *		After this operation, the query plan will not be able to be
- *		processed any further.	This should be called only after
+ *		processed any further.  This should be called only after
  *		the query plan has been fully executed.
  * ----------------------------------------------------------------
  */
@@ -1589,6 +1652,10 @@ ExecEndNode(PlanState *node)
 			break;
 		case T_PartitionSelectorState:
 			ExecEndPartitionSelector((PartitionSelectorState *) node);
+			break;
+
+		case T_ReshuffleState:
+			ExecEndReshuffle((ReshuffleState *) node);
 			break;
 
 		default:
@@ -1860,7 +1927,8 @@ planstate_walk_kids(PlanState *planstate,
 			SubPlanState *sps = (SubPlanState *) lfirst(lc);
 			PlanState  *ips = sps->planstate;
 
-			Assert(ips);
+			if (!ips)
+				elog(ERROR, "subplan has no planstate");
 			if (v1 == CdbVisit_Walk)
 			{
 				v1 = planstate_walk_node_extended(ips, walker, context, flags);

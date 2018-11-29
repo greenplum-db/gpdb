@@ -26,6 +26,7 @@
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbsetop.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpullup.h"
 
@@ -273,7 +274,7 @@ copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 	if (model_flow == NULL)
 		return NULL;
 
-	new_flow = makeFlow(model_flow->flotype);
+	new_flow = makeFlow(model_flow->flotype, model_flow->numsegments);
 	new_flow->locustype = model_flow->locustype;
 
 	if (model_flow->flotype == FLOW_PARTITIONED)
@@ -309,7 +310,7 @@ copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 Motion *
 make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(root, subplan, -1, sortPathKeys);
+	return make_motion_gather(root, subplan, sortPathKeys);
 }
 
 /*
@@ -321,7 +322,7 @@ make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 Motion *
 make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
-	return make_motion_gather(root, subplan, gp_singleton_segindex, sortPathKeys);
+	return make_motion_gather(root, subplan, sortPathKeys);
 }
 
 /*
@@ -331,7 +332,7 @@ make_motion_gather_to_QE(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
  *      subplan.
  */
 Motion *
-make_motion_gather(PlannerInfo *root, Plan *subplan, int segindex, List *sortPathKeys)
+make_motion_gather(PlannerInfo *root, Plan *subplan, List *sortPathKeys)
 {
 	Motion	   *motion;
 
@@ -356,25 +357,25 @@ make_motion_gather(PlannerInfo *root, Plan *subplan, int segindex, List *sortPat
 									   -1.0,
 									   false /* useExecutorVarFormat */ );
 
+		/* FIXME: numsegments */
+
 		motion = make_sorted_union_motion(root,
 										  subplan,
 										  sort->numCols,
 										  sort->sortColIdx,
 										  sort->sortOperators,
-										  sort->collations,
-										  sort->nullsFirst,
-										  segindex,
-										  false /* useExecutorVarFormat */ );
+										  sort->collations,sort->nullsFirst,
+										  false,
+										  subplan->flow->numsegments);
 
 		/* throw away the Sort */
 		pfree(sort);
 	}
 	else
 	{
-		motion = make_union_motion(
-								   subplan,
-								   segindex,
-								   false /* useExecutorVarFormat */ );
+		/* FIXME: numsegments */
+
+		motion = make_union_motion(subplan, false, subplan->flow->numsegments);
 	}
 
 	return motion;
@@ -411,7 +412,14 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 	}
 
 	if (hashexprs)
-		return make_motion_hash(root, subplan, hashexprs);
+		/*
+		 * FIXME: ALL as numsegments is correct,
+		 *        but can we decide a better value?
+		 */
+		return make_hashed_motion(subplan,
+								  hashexprs,
+								  false /* useExecutorVarFormat */,
+								  GP_POLICY_ALL_NUMSEGMENTS);
 	else
 	{
 		/*
@@ -421,7 +429,7 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 		 * produce a different plan, with Sorts in the segments, and an
 		 * order-preserving gather on the top.)
 		 */
-		return make_motion_gather(root, subplan, -1, NIL);
+		return make_motion_gather(root, subplan, NIL);
 	}
 }
 
@@ -438,10 +446,13 @@ make_motion_hash(PlannerInfo *root __attribute__((unused)), Plan *subplan, List 
 
 	Assert(subplan->flow != NULL);
 
+	/* FIXME: numsegments */
+
 	motion = make_hashed_motion(
 								subplan,
 								hashexprs,
-								false /* useExecutorVarFormat */ );
+								false /* useExecutorVarFormat */,
+								subplan->flow->numsegments);
 
 	return motion;
 }
@@ -453,22 +464,27 @@ make_motion_hash(PlannerInfo *root __attribute__((unused)), Plan *subplan, List 
 void
 mark_append_locus(Plan *plan, GpSetOpType optype)
 {
+	/*
+	 * FIXME: for append we forcely collect data on all segments
+	 */
+	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+
 	switch (optype)
 	{
 		case PSETOP_GENERAL:
-			mark_plan_general(plan);
+			mark_plan_general(plan, numsegments);
 			break;
 		case PSETOP_PARALLEL_PARTITIONED:
-			mark_plan_strewn(plan);
+			mark_plan_strewn(plan, numsegments);
 			break;
 		case PSETOP_PARALLEL_REPLICATED:
-			mark_plan_replicated(plan);
+			mark_plan_replicated(plan, numsegments);
 			break;
 		case PSETOP_SEQUENTIAL_QD:
 			mark_plan_entry(plan);
 			break;
 		case PSETOP_SEQUENTIAL_QE:
-			mark_plan_singleQE(plan);
+			mark_plan_singleQE(plan, numsegments);
 		case PSETOP_NONE:
 			break;
 	}
@@ -531,27 +547,27 @@ mark_sort_locus(Plan *plan)
 }
 
 void
-mark_plan_general(Plan *plan)
+mark_plan_general(Plan *plan, int numsegments)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON);
+	plan->flow = makeFlow(FLOW_SINGLETON, numsegments);
 	plan->flow->segindex = 0;
 	plan->flow->locustype = CdbLocusType_General;
 }
 
 void
-mark_plan_strewn(Plan *plan)
+mark_plan_strewn(Plan *plan, int numsegments)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_PARTITIONED);
+	plan->flow = makeFlow(FLOW_PARTITIONED, numsegments);
 	plan->flow->locustype = CdbLocusType_Strewn;
 }
 
 void
-mark_plan_replicated(Plan *plan)
+mark_plan_replicated(Plan *plan, int numsegments)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_REPLICATED);
+	plan->flow = makeFlow(FLOW_REPLICATED, numsegments);
 	plan->flow->locustype = CdbLocusType_Replicated;
 }
 
@@ -559,25 +575,25 @@ void
 mark_plan_entry(Plan *plan)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON);
+	plan->flow = makeFlow(FLOW_SINGLETON, GP_POLICY_ENTRY_NUMSEGMENTS);
 	plan->flow->segindex = -1;
 	plan->flow->locustype = CdbLocusType_Entry;
 }
 
 void
-mark_plan_singleQE(Plan *plan)
+mark_plan_singleQE(Plan *plan, int numsegments)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON);
+	plan->flow = makeFlow(FLOW_SINGLETON, numsegments);
 	plan->flow->segindex = 0;
 	plan->flow->locustype = CdbLocusType_SingleQE;
 }
 
 void
-mark_plan_segment_general(Plan *plan)
+mark_plan_segment_general(Plan *plan, int numsegments)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON);
+	plan->flow = makeFlow(FLOW_SINGLETON, numsegments);
 	plan->flow->segindex = 0;
 	plan->flow->locustype = CdbLocusType_SegmentGeneral;
 }

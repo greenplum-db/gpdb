@@ -19,8 +19,6 @@
 extern DynamicTableScanState *ExecInitDynamicTableScan(DynamicTableScan *node, EState *estate, int eflags);
 extern TupleTableSlot *ExecDynamicTableScan(DynamicTableScanState *node);
 extern void ExecEndDynamicTableScan(DynamicTableScanState *node);
-extern void ExecDynamicTableMarkPos(DynamicTableScanState *node);
-extern void ExecDynamicTableRestrPos(DynamicTableScanState *node);
 extern void ExecReScanDynamicTable(DynamicTableScanState *node);
 
 #endif

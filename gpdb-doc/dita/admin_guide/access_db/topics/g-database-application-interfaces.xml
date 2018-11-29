@@ -63,7 +63,7 @@
                   <entry colname="col1">libpq C Library</entry>
                   <entry colname="col2">libpq</entry>
                   <entry colname="col3">
-                     <xref href="https://www.postgresql.org/docs/8.3/static/libpq.html" scope="external" format="html"/>
+                     <xref href="https://www.postgresql.org/docs/8.3/libpq.html" scope="external" format="html"/>
                   </entry>
                </row>
             </tbody>

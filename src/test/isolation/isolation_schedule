@@ -2,6 +2,11 @@
 # statements.  This invalidates most of the isolation tests from upstream below.
 # E.g. an UPDATE step executed by isolationtester never returns because another
 # session run in the same permutation holds ExclusiveLock that blocks the step.
+# GPDB_94_MERGE_FIXME: Since the introduction of Global Deadlock Detector, an
+# UPDATE/DELETE no longer acquires ExclusiveLock. So we could perhaps enable
+# some of these now.
+# GPDB_94_MERGE_FIXME: But SELECT FOR UPDATE still acquires a whole-table
+# ExclusiveLock. Why?
 
 #test: simple-write-skew
 #test: receipt-report
@@ -24,7 +29,11 @@
 test: delete-abort-savept
 #test: delete-abort-savept-2
 #test: aborted-keyrevoke
+test: multixact-no-deadlock
+#test: multixact-no-forget
+#test: propagate-lock-delete
 test: drop-index-concurrently-1
+test: alter-table-1
 test: timeouts
 
 #test: prepared-transactions

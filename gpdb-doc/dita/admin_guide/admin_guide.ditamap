@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
 <map>
-    <topicref href="../../homenav.html" scope="external" navtitle="Greenplum Database Docs Home"
-        format="html"/>
+    <topicref href="../../600/homenav.html" scope="external" navtitle="Greenplum Database® 6.0 Documentation"
+        format="html" otherprops="oss-only"/>
+    <topicref href="../../600/homenav.html" scope="external" navtitle="Pivotal Greenplum® 6.0 Documentation"
+        format="html" otherprops="pivotal"/>
     <topicref href="admin_guide.xml" navtitle="Administration Guide">
         <topicref href="intro/partI.xml" id="partI" format="dita">
             <topicref href="intro/arch_overview.xml" id="arch_overview"/>
@@ -58,11 +60,10 @@
             <topicref href="wlmgmt_intro.xml" navtitle="Workload Management Resource Overview"
                 id="wlmgmt_intro"/>
             <topicref href="wlmgmt.xml" navtitle="Managing Workload and Resources" id="wlmgmt">
+                <topicref href="workload_mgmt_resgroups.xml"
+                    navtitle="Managing Workloads with Resource Groups" id="workload_mgmt_resgroups"/>
                 <topicref href="workload_mgmt.xml"
                     navtitle="Managing Workloads with Resource Queues" id="workload_mgmt"/>
-                <topicref href="workload_mgmt_resgroups.xml"
-                    navtitle="Managing Workloads with Resource Groups" id="workload_mgmt_resgroups"
-                />
             </topicref>
             <topicref href="perf_troubleshoot.xml" navtitle="Investigating a Performance Problem"
                 id="perf_troubleshoot"/>

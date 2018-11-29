@@ -188,3 +188,17 @@ ALTER TABLE s_priv_test.t_priv_table OWNER TO r_priv_test;
 VACUUM ANALYZE s_priv_test.t_priv_table;
 DROP SCHEMA s_priv_test CASCADE;
 DROP ROLE r_priv_test;
+
+-- Check how reltuples/relpages are updated on a partitioned table, on
+-- VACUUM and ANALYZE.
+set gp_autostats_mode='none';
+CREATE TABLE vacuum_gp_pt (a int, b int) DISTRIBUTED BY (a) PARTITION BY range (b) (END(5), START(5));
+INSERT INTO vacuum_gp_pt SELECT 0, 6 FROM generate_series(1, 12);
+SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
+ANALYZE vacuum_gp_pt;
+SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
+VACUUM vacuum_gp_pt;
+SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
+VACUUM ANALYZE vacuum_gp_pt;
+SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
+reset gp_autostats_mode;

@@ -10,7 +10,7 @@
  *	  Over time, this has also become the preferred place for widely known
  *	  resource-limitation stuff, such as work_mem and check_stack_depth().
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/miscadmin.h
@@ -29,6 +29,8 @@
 #define PG_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 #define PG_BACKEND_VERSIONSTR "postgres (Greenplum Database) " PG_VERSION "\n"
 
+#define InvalidPid				(-1)
+
 
 /*****************************************************************************
  *	  System interrupt and critical section handling
@@ -38,7 +40,7 @@
  * In both cases, we need to be able to clean up the current transaction
  * gracefully, so we can't respond to the interrupt instantaneously ---
  * there's no guarantee that internal data structures would be self-consistent
- * if the code is interrupted at an arbitrary instant.	Instead, the signal
+ * if the code is interrupted at an arbitrary instant.  Instead, the signal
  * handlers set flags that are checked periodically during execution.
  *
  * The CHECK_FOR_INTERRUPTS() macro is called at strategically located spots
@@ -47,13 +49,13 @@
  * might sometimes be called in contexts that do *not* want to allow a cancel
  * or die interrupt.  The HOLD_INTERRUPTS() and RESUME_INTERRUPTS() macros
  * allow code to ensure that no cancel or die interrupt will be accepted,
- * even if CHECK_FOR_INTERRUPTS() gets called in a subroutine.	The interrupt
+ * even if CHECK_FOR_INTERRUPTS() gets called in a subroutine.  The interrupt
  * will be held off until CHECK_FOR_INTERRUPTS() is done outside any
  * HOLD_INTERRUPTS() ... RESUME_INTERRUPTS() section.
  *
  * Special mechanisms are used to let an interrupt be accepted when we are
  * waiting for a lock or when we are waiting for command input (but, of
- * course, only if the interrupt holdoff counter is zero).	See the
+ * course, only if the interrupt holdoff counter is zero).  See the
  * related code for details.
  *
  * A lost connection is handled similarly, although the loss of connection
@@ -64,7 +66,7 @@
  * A related, but conceptually distinct, mechanism is the "critical section"
  * mechanism.  A critical section not only holds off cancel/die interrupts,
  * but causes any ereport(ERROR) or ereport(FATAL) to become ereport(PANIC)
- * --- that is, a system-wide reset is forced.	Needless to say, only really
+ * --- that is, a system-wide reset is forced.  Needless to say, only really
  * *critical* code should be marked as a critical section!	Currently, this
  * mechanism is only used for XLOG-related code.
  *
@@ -73,17 +75,17 @@
 /* in globals.c */
 /* these are marked volatile because they are set by signal handlers: */
 extern PGDLLIMPORT volatile bool InterruptPending;
-extern volatile bool QueryCancelPending;
-extern volatile bool QueryCancelCleanup; /* GPDB only */
-extern volatile bool QueryFinishPending;
-extern volatile bool ProcDiePending;
+extern PGDLLIMPORT volatile bool QueryCancelPending;
+extern PGDLLIMPORT volatile bool QueryCancelCleanup; /* GPDB only */
+extern PGDLLIMPORT volatile bool QueryFinishPending;
+extern PGDLLIMPORT volatile bool ProcDiePending;
 
 extern volatile bool ClientConnectionLost;
 
 /* these are marked volatile because they are examined by signal handlers: */
-extern volatile bool ImmediateInterruptOK;
-extern volatile bool ImmediateDieOK;
-extern volatile bool TermSignalReceived;
+extern PGDLLIMPORT volatile bool ImmediateInterruptOK;
+extern PGDLLIMPORT volatile bool ImmediateDieOK;
+extern PGDLLIMPORT volatile bool TermSignalReceived;
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
 extern PGDLLIMPORT volatile int32 CritSectionCount;
 
@@ -201,6 +203,7 @@ extern PGDLLIMPORT char *DataDir;
 extern PGDLLIMPORT int NBuffers;
 extern int	MaxBackends;
 extern int	MaxConnections;
+extern int	max_worker_processes;
 extern int gp_workfile_max_entries;
 
 extern PGDLLIMPORT int MyProcPid;
@@ -270,8 +273,8 @@ extern PGDLLIMPORT Oid MyDatabaseTableSpace;
 #define DATEORDER_DMY			1
 #define DATEORDER_MDY			2
 
-extern int	DateStyle;
-extern int	DateOrder;
+extern PGDLLIMPORT int DateStyle;
+extern PGDLLIMPORT int DateOrder;
 
 /*
  * IntervalStyles
@@ -285,30 +288,7 @@ extern int	DateOrder;
 #define INTSTYLE_SQL_STANDARD		2
 #define INTSTYLE_ISO_8601			3
 
-extern int	IntervalStyle;
-
-/*
- * IntervalStyles
- *	 INTSTYLE_POSTGRES			   Like Postgres < 8.4 when DateStyle = 'iso'
- *	 INTSTYLE_POSTGRES_VERBOSE	   Like Postgres < 8.4 when DateStyle != 'iso'
- *	 INTSTYLE_SQL_STANDARD		   SQL standard interval literals
- *	 INTSTYLE_ISO_8601			   ISO-8601-basic formatted intervals
- */
-#define INTSTYLE_POSTGRES			0
-#define INTSTYLE_POSTGRES_VERBOSE	1
-#define INTSTYLE_SQL_STANDARD		2
-#define INTSTYLE_ISO_8601			3
-
-extern int	IntervalStyle;
-
-/*
- * HasCTZSet is true if user has set timezone as a numeric offset from UTC.
- * If so, CTimeZone is the timezone offset in seconds (using the Unix-ish
- * sign convention, ie, positive offset is west of UTC, rather than the
- * SQL-ish convention that positive is east of UTC).
- */
-extern bool HasCTZSet;
-extern int	CTimeZone;
+extern PGDLLIMPORT int IntervalStyle;
 
 #define MAXTZLEN		10		/* max TZ name len, not counting tr. null */
 
@@ -363,7 +343,7 @@ extern int	trace_recovery(int trace_level);
 
 /*****************************************************************************
  *	  pdir.h --																 *
- *			POSTGRES directory path definitions.							 *
+ *			POSTGRES directory path definitions.                             *
  *****************************************************************************/
 
 /* flags to be OR'd to form sec_context */
@@ -396,7 +376,6 @@ extern void SetCurrentRoleId(Oid roleid, bool is_superuser);
 
 extern void SetDataDir(const char *dir);
 extern void ChangeToDataDir(void);
-extern char *make_absolute_path(const char *path);
 
 /* in utils/misc/superuser.c */
 extern bool superuser(void);	/* current user is superuser */
@@ -406,7 +385,7 @@ extern bool superuser_arg(Oid roleid);	/* given user is superuser */
 
 /*****************************************************************************
  *	  pmod.h --																 *
- *			POSTGRES processing mode definitions.							 *
+ *			POSTGRES processing mode definitions.                            *
  *****************************************************************************/
 
 /*
@@ -421,7 +400,7 @@ extern bool superuser_arg(Oid roleid);	/* given user is superuser */
  * is used during the initial generation of template databases.
  *
  * Initialization mode: used while starting a backend, until all normal
- * initialization is complete.	Some code behaves differently when executed
+ * initialization is complete.  Some code behaves differently when executed
  * in this mode to enable system bootstrapping.
  *
  * If a POSTGRES backend process is in normal mode, then all code may be
@@ -453,7 +432,7 @@ extern ProcessingMode Mode;
 
 
 /*
- * Auxiliary-process type identifiers.	These used to be in bootstrap.h
+ * Auxiliary-process type identifiers.  These used to be in bootstrap.h
  * but it seems saner to have them here, with the ProcessingMode stuff.
  * The MyAuxProcType global is defined and set in bootstrap.c.
  */
@@ -484,7 +463,7 @@ extern AuxProcType MyAuxProcType;
 
 /*****************************************************************************
  *	  pinit.h --															 *
- *			POSTGRES initialization and cleanup definitions.				 *
+ *			POSTGRES initialization and cleanup definitions.                 *
  *****************************************************************************/
 
 /* in utils/init/postinit.c */
@@ -498,6 +477,7 @@ extern void BaseInit(void);
 /* in utils/init/miscinit.c */
 extern bool IgnoreSystemIndexes;
 extern PGDLLIMPORT bool process_shared_preload_libraries_in_progress;
+extern char *session_preload_libraries_string;
 extern char *shared_preload_libraries_string;
 extern char *local_preload_libraries_string;
 
@@ -533,7 +513,7 @@ extern void TouchSocketLockFiles(void);
 extern void AddToDataDirLockFile(int target_line, const char *str);
 extern void ValidatePgVersion(const char *path);
 extern void process_shared_preload_libraries(void);
-extern void process_local_preload_libraries(void);
+extern void process_session_preload_libraries(void);
 extern void pg_bindtextdomain(const char *domain);
 extern bool has_rolreplication(Oid roleid);
 

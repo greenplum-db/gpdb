@@ -2,17 +2,26 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_lv4_czp_fz">
   <title>dblink Functions</title>
-  <shortdesc>The <codeph>dblink</codeph> module supports connections to other Greenplum
-    Database databases from within a database session. These databases may reside on the
-    same database host, or on a remote host. </shortdesc>
+  <shortdesc>The <codeph>dblink</codeph> module supports connections to other Greenplum Database
+    databases from within a database session. These databases can reside in the same Greenplum
+    Database system, or in a remote system. </shortdesc>
   <body>
-    <p>Greenplum Database supports <codeph>dblink</codeph> connections between databases
-     in Greenplum Database installations with the same major version number.
-     <codeph>dblink</codeph> may also connect to other Greenplum Database 
-      installations that use compatible <codeph>libpq</codeph> libraries.</p>
+    <p>Greenplum Database supports <codeph>dblink</codeph> connections between databases in
+      Greenplum Database installations with the same major version number. <codeph>dblink</codeph>
+      may also connect to other Greenplum Database installations that use compatible
+        <codeph>libpq</codeph> libraries.</p>
+    <p>You create a <codeph>dblink</codeph> connection to a database and execute an SQL command in
+      the database as a Greenplum Database user. The user must have the appropriate access
+      privileges to the database tables referenced in the SQL command. If the database is in a
+      remote system, the user must be defined as a Greenplum Database user in the remote system with
+      the appropriate access privileges. </p>
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
       other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
-      tables or for administrative tools such as <codeph>gptransfer</codeph>.</p>
+      tables or for administrative tools such as <codeph>gpcopy</codeph> or
+        <codeph>gptransfer</codeph>.</p>
+    <p>Refer to <xref href="https://www.postgresql.org/docs/8.4/dblink.html" format="html"
+        scope="external">dblink</xref> in the PostgreSQL documentation for more information about
+      individual <codeph>dblink</codeph> functions. </p>
   </body>
   <topic id="topic_ikh_dsm_bdb">
     <title>Limitations</title>
@@ -30,82 +39,124 @@ INSERT 0 2</codeblock></p>
           <li><codeph>dblink_is_busy()</codeph></li>
           <li><codeph>dblink_get_result()</codeph></li>
         </ul></p>
-      <p>See <xref href="https://www.postgresql.org/docs/8.3/static/dblink.html" format="html"
-          scope="external">dblink</xref> in the PostgreSQL documentation for more information about
-        individual functions.</p>
     </body>
   </topic>
   <topic id="topic_tvb_csm_bdb">
     <title>Using dblink</title>
     <body>
       <p>The following procedure identifies the basic steps for configuring and using
-          <codeph>dblink</codeph> in Greenplum Database. Refer to <xref
-          href="https://www.postgresql.org/docs/8.4/static/dblink.html" format="html"
-          scope="external">dblink</xref> in the PostgreSQL documentation for more information about
-        individual <codeph>dblink</codeph> functions. </p>
-      <note>You must specify both a hostname and a password to connect with <codeph>dblink</codeph>
-        as a non-superuser.</note>
+          <codeph>dblink</codeph> in Greenplum Database. The examples use
+          <codeph>dblink_connect()</codeph> to create a connection to a database and
+          <codeph>dblink()</codeph> to execute an SQL query. </p>
+      <p>Only superusers can use <codeph>dblink_connect()</codeph> to create connections that do not
+        require a password. If non-superusers need this capability, use
+          <codeph>dblink_connect_u()</codeph> instead. See <xref href="#topic_tvb_csm_bdb/dblink_u"
+          format="dita"/>.</p>
       <ol id="ol_axw_csm_bdb">
         <li>Begin by creating a sample table to query using the <codeph>dblink</codeph> functions.
           These commands create a small table in the <codeph>postgres</codeph> database, which you
-          will later query from the <codeph>gpadmin</codeph> database using
+          will later query from the <codeph>testdb</codeph> database using
           <codeph>dblink</codeph>:<codeblock>$ <b>psql -d postgres</b>
 psql (8.3.23)
 Type "help" for help.
 
 postgres=# <b>CREATE TABLE testdblink (a int, b text) DISTRIBUTED BY (a);</b>
 CREATE TABLE
-postgres=# <b>INSERT INTO testdblink VALUES (1, 'Cheese');</b>
-INSERT 0 1
-postgres=# <b>INSERT INTO testdblink VALUES (2, 'Fish');</b>
-INSERT 0 1
+postgres=# <b>INSERT INTO testdblink VALUES (1, 'Cheese'), (2, 'Fish');</b>
+INSERT 0 2
 postgres=# <b>\q
 </b>$</codeblock></li>
-        <li>Log into a different database (<codeph>gpadmin</codeph> in this example) and install the
-            <codeph>dblink</codeph> functions if they are not already available. You install the
-            <codeph>dblink</codeph> functions using the
-            <codeph>$GPHOME/share/postgresql/contrib/dblink.sql</codeph>
-          script:<codeblock>$ <b>psql -d gpadmin</b>
-psql (8.3.23)
+        <li>Log into a different database as a superuser. In this example, the superuser
+            <codeph>gpadmin</codeph> logs into the database <codeph>testdb</codeph>. If the
+            <codeph>dblink</codeph> functions are not already available, register the
+            <codeph>dblink</codeph> extension in the
+          database:<codeblock>$ <b>psql -d testdb</b>
+psql (9.4beta1)
 Type "help" for help.
 
-gpadmin=# <b>\i /usr/local/greenplum-db/share/postgresql/contrib/dblink.sql</b>
-SET
-CREATE FUNCTION
-CREATE FUNCTION
-CREATE FUNCTION
-CREATE FUNCTION
-REVOKE
-REVOKE
-CREATE FUNCTION
-CREATE FUNCTION
-...</codeblock></li>
-        <li>Use the <codeph>dblink_connect()</codeph> function to create both implicit and named
-          connections to other databases. The connection string that you provide should be a
-          libpq-style keyword/value string. For example, to create a named connection to the
-            <codeph>postgres</codeph> database on the local Greenplum Database
-            system:<codeblock>gpadmin=# <b>SELECT dblink_connect('mylocalconn', 'dbname=postgres');</b>
+testdb=# <b>CREATE EXTENSION dblink</b>;
+CREATE EXENSION</codeblock></li>
+        <li>Use the <codeph>dblink_connect()</codeph> function to create either an implicit or a
+          named connection to another database. The connection string that you provide should be a
+          libpq-style keyword/value string. This example creates a connection named
+            <codeph>mylocalconn</codeph> to the <codeph>postgres</codeph> database on the local
+          Greenplum Database system:<codeblock>testdb=# <b>SELECT dblink_connect('mylocalconn', 'dbname=postgres user=gpadmin');</b>
  dblink_connect
 ----------------
  OK
-(1 row)</codeblock><p>To
-            make a connection to a remote database system, simply include host and port information
-            in the connection string. For example, to create an implicit <codeph>dblink</codeph>
-            connection to a remote
-            system:<codeblock>gpadmin=# <b>SELECT dblink_connect('host=remotehost port=5432 dbname=postgres');</b></codeblock></p><note>You
-            must specify both a hostname and a password in the connection string to connect as a
-            non-superuser.</note></li>
-        <li>Use the basic <codeph>dblink()</codeph> function to query a database using a configured
+(1 row)</codeblock>
+          <note>If a <codeph>user</codeph> is not specified, <codeph>dblink_connect()</codeph> uses
+            the value of the <codeph>PGUSER</codeph> environment variable when Greenplum Database
+            was started. If <codeph>PGUSER</codeph> is not set, the default is the system user that
+            started Greenplum Database.</note></li>
+        <li>Use the <codeph>dblink()</codeph> function to query a database using a configured
           connection. Keep in mind that this function returns a record type, so you must assign the
           columns returned in the <codeph>dblink()</codeph> query. For example, the following
-          command uses the named connection to query the table you created in Step
-          1:<codeblock>gpadmin=# <b>SELECT * FROM dblink('mylocalconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b>
+          command uses the named connection to query the table you created
+          earlier:<codeblock>testdb=# <b>SELECT * FROM dblink('mylocalconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b>
  id | product
 ----+---------
   1 | Cheese
   2 | Fish
 (2 rows)</codeblock></li>
       </ol>
+      <p>To connect to the local database as another user, specify the <codeph>user</codeph> in the
+        connection string. This example connects to the database as the user
+          <codeph>test_user</codeph>. Using <codeph>dblink_connect()</codeph>, a superuser can
+        create a connection to another local database without specifying a password.</p>
+      <codeblock>testdb=# <b>SELECT dblink_connect('localconn2', 'dbname=postgres user=test_user');</b></codeblock>
+      <p>To make a connection to a remote database system, include host and password information in
+        the connection string. For example, to create an implicit <codeph>dblink</codeph> connection
+        to a remote
+        system:<codeblock>testdb=# <b>SELECT dblink_connect('host=remotehost port=5432 dbname=postgres user=gpadmin password=secret');</b></codeblock></p>
+      <section id="dblink_u">
+        <title>Using dblink as a Non-Superuser</title>
+        <p>To make a connection to a database with <codeph>dblink_connect()</codeph>, non-superusers
+          must include host, user, and password information in the connection string. The host,
+          user, and password information must be included even when connecting to a local database.
+          For example, the user <codeph>test_user</codeph> can create a <codeph>dblink</codeph>
+          connection to the local system <codeph>mdw</codeph> with this
+          command:<codeblock>testdb=> <b>SELECT dblink_connect('host=mdw port=5432 dbname=postgres user=test_user password=secret');</b></codeblock></p>
+        <p>If non-superusers need to create <codeph>dblink</codeph> connections that do not require
+          a password, they can use the <codeph>dblink_connect_u()</codeph> function. The
+            <codeph>dblink_connect_u()</codeph> function is identical to
+            <codeph>dblink_connect()</codeph>, except that it allows non-superusers to create
+          connections that do not require a password. </p>
+        <p>In some situations, it may be appropriate to grant <codeph>EXECUTE</codeph> permission on
+            <codeph>dblink_connect_u()</codeph> to specific users who are considered trustworthy,
+          but this should be done with care.</p>
+        <note type="warning">If a Greenplum Database system has configured users with an
+          authentication method that does not involve a password, then impersonation and subsequent
+          escalation of privileges can occur when a non-superuser executes
+            <codeph>dblink_connect_u()</codeph>. The <codeph>dblink</codeph> connection will appear
+          to have originated from the user specified by the function. For example, a non-superuser
+          can execute <codeph>dblink_connect_u()</codeph> and specify a user that is configured with
+            <codeph>trust</codeph> authentication. <p>Also, even if the <codeph>dblink</codeph>
+            connection requires a password, it is possible for the password to be supplied from the
+            server environment, such as a <codeph>~/.pgpass</codeph> file belonging to the server's
+            user.</p></note>
+        <ol id="ol_dpt_ll3_5fb">
+          <li>As a superuser, grant the <codeph>EXECUTE</codeph> privilege on the
+              <codeph>dblink_connect_u()</codeph> functions in the user database. This example
+            grants the privilege to the non-superuser <codeph>test_user</codeph> on the functions
+            with the signatures for creating an implicit or a named <codeph>dblink</codeph>
+            connection.<codeblock>testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text) TO test_user;</b>
+testdb=# <b>GRANT EXECUTE ON FUNCTION dblink_connect_u(text, text) TO test_user;</b></codeblock></li>
+          <li>Now <codeph>test_user</codeph> can create a connection to another local database
+            without a password. For example, <codeph>test_user</codeph> can log into the
+              <codeph>testdb</codeph> database and execute this command to create a connection named
+              <codeph>testconn</codeph> to the local <codeph>postgres</codeph> database.<codeblock>testdb=> <b>SELECT dblink_connect_u('testconn', 'dbname=postgres user=test_user');</b></codeblock>
+            <note>If a <codeph>user</codeph> is not specified, <codeph>dblink_connect_u()</codeph>
+              uses the value of the <codeph>PGUSER</codeph> environment variable when Greenplum
+              Database was started. If <codeph>PGUSER</codeph> is not set, the default is the system
+              user that started Greenplum Database.</note></li>
+          <li><codeph>test_user</codeph> can use the <codeph>dblink()</codeph> function to execute a
+            query using a <codeph>dblink</codeph> connection. For example, this command uses the
+              <codeph>dblink</codeph> connection named <codeph>testconn</codeph> created in the
+            previous step. <codeph>test_user</codeph> must have appropriate access to the
+            table.<codeblock>testdb=> <b>SELECT * FROM dblink('testconn', 'SELECT * FROM testdblink') AS dbltab(id int, product text);</b></codeblock></li>
+        </ol>
+      </section>
     </body>
   </topic>
 </topic>

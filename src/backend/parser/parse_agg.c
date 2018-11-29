@@ -3,7 +3,7 @@
  * parse_agg.c
  *	  handle aggregates in parser
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -872,7 +872,7 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 	/*
 	 * If there are join alias vars involved, we have to flatten them to the
 	 * underlying vars, so that aliased and unaliased vars will be correctly
-	 * taken as equal.	We can skip the expense of doing this if no rangetable
+	 * taken as equal.  We can skip the expense of doing this if no rangetable
 	 * entries are RTE_JOIN kind. We use the planner's flatten_join_alias_vars
 	 * routine to do the flattening; it wants a PlannerInfo root node, which
 	 * fortunately can be mostly dummy.
@@ -907,6 +907,11 @@ parseCheckAggregates(ParseState *pstate, Query *qry)
 
 	/*
 	 * Check the targetlist and HAVING clause for ungrouped variables.
+	 *
+	 * Note: because we check resjunk tlist elements as well as regular ones,
+	 * this will also find ungrouped variables that came from ORDER BY and
+	 * WINDOW clauses.  For that matter, it's also going to examine the
+	 * grouping expressions themselves --- but they'll all pass the test ...
 	 */
 	clause = (Node *) qry->targetList;
 	if (hasJoinRTEs)
@@ -1036,7 +1041,7 @@ check_ungrouped_columns_walker(Node *node,
 	/*
 	 * If we have an ungrouped Var of the original query level, we have a
 	 * failure.  Vars below the original query level are not a problem, and
-	 * neither are Vars from above it.	(If such Vars are ungrouped as far as
+	 * neither are Vars from above it.  (If such Vars are ungrouped as far as
 	 * their own query level is concerned, that's someone else's problem...)
 	 */
 	if (IsA(node, Var))
@@ -1067,7 +1072,7 @@ check_ungrouped_columns_walker(Node *node,
 
 		/*
 		 * Check whether the Var is known functionally dependent on the GROUP
-		 * BY columns.	If so, we can allow the Var to be used, because the
+		 * BY columns.  If so, we can allow the Var to be used, because the
 		 * grouping is really a no-op for this table.  However, this deduction
 		 * depends on one or more constraints of the table, so we have to add
 		 * those constraints to the query's constraintDeps list, because it's
@@ -1353,6 +1358,7 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 			argp->paramid = -1;
 			argp->paramtype = agg_input_types[i];
 			argp->paramtypmod = -1;
+			argp->paramcollid = agg_input_collation;
 			argp->location = -1;
 			args = lappend(args, argp);
 		}
@@ -1363,6 +1369,7 @@ build_aggregate_fnexprs(Oid *agg_input_types,
 											 InvalidOid,
 											 agg_input_collation,
 											 COERCE_EXPLICIT_CALL);
+		/* finalfn is currently never treated as variadic */
 	}
 
 	/* combine function */

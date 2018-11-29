@@ -21,6 +21,7 @@ typedef struct TypInfo
 	int16 typlen;
 	Oid ltFuncOp; /* oid of 'less than' operator function id of this type */
 	Oid eqFuncOp; /* oid of equality operator function id of this type */
+	FmgrInfo hashfunc;		/* hash function */
 } TypInfo;
 
 /* Functions and structures used for aggregating leaf partition stats */

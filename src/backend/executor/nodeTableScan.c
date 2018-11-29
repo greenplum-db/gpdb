@@ -72,18 +72,6 @@ ExecReScanTable(TableScanState *node)
 }
 
 void
-ExecTableMarkPos(TableScanState *node)
-{
-	MarkPosScanRelation((ScanState *)node);
-}
-
-void
-ExecTableRestrPos(TableScanState *node)
-{
-	RestrPosScanRelation((ScanState *)node);
-}
-
-void
 ExecEagerFreeTableScan(TableScanState *node)
 {
 	if (node->ss.scan_state != SCAN_INIT &&

@@ -4,7 +4,7 @@
  *	  Selectivity routines registered in the operator catalog in the
  *	  "oprrest" and "oprjoin" attributes.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -22,7 +22,7 @@
 
 
 /*
- *	Selectivity functions for geometric operators.	These are bogus -- unless
+ *	Selectivity functions for geometric operators.  These are bogus -- unless
  *	we know the actual key distribution in the index, we can't make a good
  *	prediction of the selectivity of these operators.
  *
@@ -34,7 +34,7 @@
  *	In general, GiST needs to search multiple subtrees in order to guarantee
  *	that all occurrences of the same key have been found.  Because of this,
  *	the estimated cost for scanning the index ought to be higher than the
- *	output selectivity would indicate.	gistcostestimate(), over in selfuncs.c,
+ *	output selectivity would indicate.  gistcostestimate(), over in selfuncs.c,
  *	ought to be adjusted accordingly --- but until we can generate somewhat
  *	realistic numbers here, it hardly matters...
  */

@@ -20,7 +20,7 @@
          <topicref href="topics/g-moving-data-between-tables.xml"/>
       </topicref>
       <topicref href="topics/g-loading-data-with-gpload.xml"/>
-      <topicref href="../../greenplum-kafka/intro.xml" otherprops="pivotal" scope="peer" navtitle="Loading Kafka Data with the Greenplum-Kafka Connector"/>
+      <topicref href="../../greenplum-kafka/intro.xml" otherprops="pivotal" scope="peer" navtitle="Loading Kafka Data with the Greenplum-Kafka Integration"/>
       <topicref href="topics/transforming-xml-data.xml"/>
       <topicref href="topics/g-loading-data-with-copy.xml"/>
       <topicref href="topics/g-running-copy-in-single-row-error-isolation-mode.xml"/>

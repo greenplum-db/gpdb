@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -290,36 +290,6 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
 				|| (var->varno > 0 && var->varno <= list_length(glob->finalrtable)))
 				&& "Plan contains var that refer outside the rtable.");
 		Assert(var->varattno > FirstLowInvalidHeapAttributeNumber && "Invalid attribute number in plan");
-
-		/*
-		 * GPDB_93_MERGE_FIXME: The code blow will fail with this query.
-		 *
-		 * postgres=# SELECT pid FROM pg_stat_activity WHERE pid != pg_backend_pid();
-		 * ERROR:  function in FROM has unsupported return type (parse_relation.c:2065)
-		 *
-		 * This is because that we change to flat copy of RTE (see
-		 * add_rte_to_flat_rtable()) during PG 9.3 merge, following PG upstream,
-		 * although we are not sure whether the modification is correct or not
-		 * at this moment (we are trying to boot up gpdb cluster).
-		 *
-		 * We do not fix in add_rte_to_flat_rtable(), etc but comment out these
-		 * sanity check code instead. Let's remove this FIXME and the code
-		 * if the code below is really useless later.
-		 */
-#if 0
-		if (var->varno > 0 && var->varno <= list_length(glob->finalrtable))
-		{
-			List *colNames = NULL;
-			RangeTblEntry *rte = rt_fetch(var->varno, glob->finalrtable);
-			Assert(rte && "Invalid RTE");
-			Assert(rte->rtekind != RTE_VOID && "Var points to a void RTE!");
-
-			/* Make sure attnum refers to a column in the relation */
-			expandRTE(rte, var->varno, 0, -1, true, &colNames, NULL);
-
-			AssertImply(var->varattno >= 0, var->varattno <= list_length(colNames) + list_length(rte->pseudocols)); /* Only asserting on non-system attributes */
-		}
-#endif
 	}
 
 	/** All subquery scan nodes should have their scanrelids point to a subquery entry in the finalrtable */
@@ -346,7 +316,7 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
 /*
  * set_plan_references
  *
- * This is the final processing pass of the planner/optimizer.	The plan
+ * This is the final processing pass of the planner/optimizer.  The plan
  * tree is complete; we just have to adjust some representational details
  * for the convenience of the executor:
  *
@@ -390,7 +360,7 @@ static void set_plan_references_output_asserts(PlannerGlobal *glob, Plan *plan)
  * and root->glob->invalItems (for everything else).
  *
  * Notice that we modify Plan nodes in-place, but use expression_tree_mutator
- * to process targetlist and qual expressions.	We can assume that the Plan
+ * to process targetlist and qual expressions.  We can assume that the Plan
  * nodes were just built by the planner and are not multiply referenced, but
  * it's not so safe to assume that for expression tree nodes.
  */
@@ -480,7 +450,7 @@ add_rtes_to_flat_rtable(PlannerInfo *root, bool recursing)
 	/*
 	 * If there are any dead subqueries, they are not referenced in the Plan
 	 * tree, so we must add RTEs contained in them to the flattened rtable
-	 * separately.	(If we failed to do this, the executor would not perform
+	 * separately.  (If we failed to do this, the executor would not perform
 	 * expected permission checks for tables mentioned in such subqueries.)
 	 *
 	 * Note: this pass over the rangetable can't be combined with the previous
@@ -498,7 +468,8 @@ add_rtes_to_flat_rtable(PlannerInfo *root, bool recursing)
 		 * RTEs without matching RelOptInfos, as they likewise have been
 		 * pulled up.
 		 */
-		if (rte->rtekind == RTE_SUBQUERY && !rte->inh)
+		if (rte->rtekind == RTE_SUBQUERY && !rte->inh &&
+			rti < root->simple_rel_array_size)
 		{
 			RelOptInfo *rel = root->simple_rel_array[rti];
 
@@ -509,7 +480,7 @@ add_rtes_to_flat_rtable(PlannerInfo *root, bool recursing)
 				/*
 				 * The subquery might never have been planned at all, if it
 				 * was excluded on the basis of self-contradictory constraints
-				 * in our query level.	In this case apply
+				 * in our query level.  In this case apply
 				 * flatten_unplanned_rtes.
 				 *
 				 * If it was planned but the plan is dummy, we assume that it
@@ -599,11 +570,7 @@ add_rte_to_flat_rtable(PlannerGlobal *glob, RangeTblEntry *rte)
 	/* zap unneeded sub-structure */
 	newrte->subquery = NULL;
 	newrte->joinaliasvars = NIL;
-	newrte->funcexpr = NULL;
-	newrte->funccoltypes = NIL;
-	newrte->funccoltypmods = NIL;
-	newrte->funccolcollations = NIL;
-	newrte->funcuserdata = NULL;
+	newrte->functions = NIL;
 	newrte->values_lists = NIL;
 	newrte->values_collations = NIL;
 	newrte->ctecoltypes = NIL;
@@ -857,13 +824,11 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 				if (cdb_expr_requires_full_eval((Node *)plan->targetlist))
 					return cdb_insert_result_node(root, plan, rtoffset);
 
-				/* recursively process the subplan */
-				/* GPDB_90_MERGE_FIXME: How about rowmarks here? Do we need to stash them
-				 * in TableFunctionScan? */
 				/* Need to look up the subquery's RelOptInfo, since we need its subroot */
 				rel = find_base_rel(root, tplan->scan.scanrelid);
 				Assert(rel->subplan == subplan);
 
+				/* recursively process the subplan */
 				plan->lefttree = set_plan_references(rel->subroot, subplan);
 
 				/* adjust for the new range table offset */
@@ -872,8 +837,8 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					fix_scan_list(root, tplan->scan.plan.targetlist, rtoffset);
 				tplan->scan.plan.qual =
 					fix_scan_list(root, tplan->scan.plan.qual, rtoffset);
-				tplan->funcexpr =
-					fix_scan_expr(root, tplan->funcexpr, rtoffset);
+				tplan->function = (RangeTblFunction *)
+					fix_scan_expr(root, (Node *) tplan->function, rtoffset);
 
 				return plan;
 			}
@@ -889,8 +854,8 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					fix_scan_list(root, splan->scan.plan.targetlist, rtoffset);
 				splan->scan.plan.qual =
 					fix_scan_list(root, splan->scan.plan.qual, rtoffset);
-				splan->funcexpr =
-					fix_scan_expr(root, splan->funcexpr, rtoffset);
+				splan->functions =
+					fix_scan_list(root, splan->functions, rtoffset);
 			}
 			break;
 		case T_ValuesScan:
@@ -975,7 +940,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			/*
 			 * These plan types don't actually bother to evaluate their
 			 * targetlists, because they just return their unmodified input
-			 * tuples.	Even though the targetlist won't be used by the
+			 * tuples.  Even though the targetlist won't be used by the
 			 * executor, we fix it up for possible use by EXPLAIN (not to
 			 * mention ease of debugging --- wrong varnos are very confusing).
 			 */
@@ -1054,7 +1019,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 
 				/*
 				 * Like the plan types above, LockRows doesn't evaluate its
-				 * tlist or quals.	But we have to fix up the RT indexes in
+				 * tlist or quals.  But we have to fix up the RT indexes in
 				 * its rowmarks.
 				 */
 				set_dummy_tlist_references(plan, rtoffset);
@@ -1188,7 +1153,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					 * Set up the visible plan targetlist as being the same as
 					 * the first RETURNING list. This is for the use of
 					 * EXPLAIN; the executor won't pay any attention to the
-					 * targetlist.	We postpone this step until here so that
+					 * targetlist.  We postpone this step until here so that
 					 * we don't have to do set_returning_clause_references()
 					 * twice on identical targetlists.
 					 */
@@ -1337,6 +1302,7 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			 * when we make the target list for SplitUpdate node, we
 			 * have used the OUTER as the varno, so we can skip to fix the varno.
 			 */
+		case T_Reshuffle:
 			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d",
@@ -1461,7 +1427,7 @@ set_subqueryscan_references(PlannerInfo *root,
 	else
 	{
 		/*
-		 * Keep the SubqueryScan node.	We have to do the processing that
+		 * Keep the SubqueryScan node.  We have to do the processing that
 		 * set_plan_references would otherwise have done on it.  Notice we do
 		 * not do set_upper_references() here, because a SubqueryScan will
 		 * always have been created with correct references to its subplan's
@@ -1991,7 +1957,7 @@ set_dummy_tlist_references(Plan *plan, int rtoffset)
  *
  * In most cases, subplan tlists will be "flat" tlists with only Vars,
  * so we try to optimize that case by extracting information about Vars
- * in advance.	Matching a parent tlist to a child is still an O(N^2)
+ * in advance.  Matching a parent tlist to a child is still an O(N^2)
  * operation, but at least with a much smaller constant factor than plain
  * tlist_member() searches.
  *
@@ -2564,7 +2530,7 @@ fix_upper_expr_mutator(Node *node, fix_upper_expr_context *context)
  * adjust any Vars that refer to other tables to reference junk tlist
  * entries in the top subplan's targetlist.  Vars referencing the result
  * table should be left alone, however (the executor will evaluate them
- * using the actual heap tuple, after firing triggers if any).	In the
+ * using the actual heap tuple, after firing triggers if any).  In the
  * adjusted RETURNING list, result-table Vars will have their original
  * varno (plus rtoffset), but Vars for other rels will have varno OUTER_VAR.
  *

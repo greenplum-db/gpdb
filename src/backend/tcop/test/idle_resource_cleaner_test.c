@@ -31,7 +31,7 @@ test__StartIdleResourceCleanupTimersWhenIdleGangTimeoutIs0AndNoSessionTimeoutHoo
 	get_idle_session_timeout_hook = NULL;
 
 	/*
-	 * cmockery implicitly asserts that GangsExist and enable_sig_alarm are
+	 * cmockery implicitly asserts that cdbcomponent_segdbsExist and enable_sig_alarm are
 	 * not called
 	 */
 
@@ -44,7 +44,7 @@ test__StartIdleResourceCleanupTimersWhenNoGangsExistAndNoSessionTimeoutHook(
 {
 	IdleSessionGangTimeout = 10000;
 
-	will_return(GangsExist, false);
+	will_return(cdbcomponent_segdbsExist, false);
 	/* cmockery implicitly asserts that enable_sig_alarm is not called */
 
 	StartIdleResourceCleanupTimers();
@@ -58,7 +58,7 @@ test__StartIdleResourceCleanupTimersWhenGangsExistAndNoSessionTimeoutHook(
 
 	NextTimeoutAction = -1;
 
-	will_return(GangsExist, true);
+	will_return(cdbcomponent_segdbsExist, true);
 	expect_value(enable_sig_alarm, delayms, 10000);
 	expect_value(enable_sig_alarm, is_statement_timeout, false);
 	will_return(enable_sig_alarm, true);

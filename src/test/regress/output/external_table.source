@@ -81,6 +81,7 @@ select * from check_env;
  GP_HADOOP_CONN_VERSION=CE_1.0.0.0
  GP_MASTER_HOST=127.0.0.1
  GP_MASTER_PORT=5432
+ GP_QUERY_STRING=select * from check_env;
  GP_SEGMENT_COUNT=2
  GP_SEGMENT_ID=0
  GP_SEG_DATADIR=/Users/@gpcurusername@/greenplum-db-data/dbfast1/gpseg0
@@ -127,6 +128,38 @@ select * from check_env;
 (55 rows)
 
 -- end_ignore
+-- table to get shell command "env" output which list all environment variable
+CREATE EXTERNAL WEB TABLE table_env (val TEXT)
+  EXECUTE E'env' ON SEGMENT 0
+  FORMAT 'TEXT' (ESCAPE 'OFF');
+SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%' ORDER BY val ASC;
+                                         val                                          
+--------------------------------------------------------------------------------------
+ GP_QUERY_STRING=SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%' ORDER BY val ASC;
+(1 row)
+
+SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%\%' ESCAPE '&' ORDER BY val ASC;
+                                                val                                                
+---------------------------------------------------------------------------------------------------
+ GP_QUERY_STRING=SELECT * FROM table_env WHERE val LIKE 'GP_QUERY%\%' ESCAPE '&' ORDER BY val ASC;
+(1 row)
+
+-- echo will behave differently on different platforms, force to use bash with -E option
+CREATE EXTERNAL WEB TABLE table_qry (val TEXT)
+  EXECUTE E'/usr/bin/env bash -c ''echo -E "$GP_QUERY_STRING"''' ON SEGMENT 0
+  FORMAT 'TEXT' (ESCAPE 'OFF');
+SELECT * FROM table_qry WHERE val LIKE '%\\%' ORDER BY val ASC;
+                               val                               
+-----------------------------------------------------------------
+ SELECT * FROM table_qry WHERE val LIKE '%\\%' ORDER BY val ASC;
+(1 row)
+
+SELECT * FROM table_qry WHERE val LIKE '%\%' ESCAPE '&' ORDER BY val ASC;
+                                    val                                    
+---------------------------------------------------------------------------
+ SELECT * FROM table_qry WHERE val LIKE '%\%' ESCAPE '&' ORDER BY val ASC;
+(1 row)
+
 -- --------------------------------------
 -- some negative tests
 -- --------------------------------------
@@ -236,6 +269,11 @@ CREATE TRUSTED PROTOCOL demoprot (readfunc = 'read_from_file', writefunc = 'writ
 CREATE PROTOCOL demoprot_untrusted (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
 ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2;
 ALTER PROTOCOL demoprot_untrusted2 RENAME TO demoprot_untrusted;
+CREATE PROTOCOL demoprot_untrusted2 (readfunc = 'read_from_file', writefunc = 'write_to_file'); -- should succeed
+ALTER PROTOCOL demoprot_untrusted RENAME TO demoprot_untrusted2; -- should failed
+ERROR:  protocol "demoprot_untrusted2" already exists
+ALTER PROTOCOL demoprot_untrustedx RENAME TO demoprot_untrusted2; --should failed
+ERROR:  protocol "demoprot_untrustedx" does not exist
 CREATE ROLE extprotu NOSUPERUSER;
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 SET SESSION AUTHORIZATION extprotu;

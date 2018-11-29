@@ -17,6 +17,6 @@
 
 #include "cdb/cdbgang.h"
 
-extern CreateGangFunc pCreateGangFuncAsync;
+extern Gang *cdbgang_createGang_async(List *segments, SegmentType segmentType);
 
 #endif

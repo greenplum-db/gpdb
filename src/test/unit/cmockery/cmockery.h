@@ -220,7 +220,7 @@
 #define assert_true(c) _assert_true(cast_to_largest_integral_type(c), #c, \
                                     __FILE__, __LINE__)
 // Assert that the given expression is false.
-#define assert_false(c) _assert_true(!(cast_to_largest_integral_type(c)), #c, \
+#define assert_false(c) _assert_false(!(cast_to_largest_integral_type(c)), #c, \
                                      __FILE__, __LINE__)
 
 // Assert that the two given integers are equal, otherwise fail.
@@ -275,6 +275,12 @@
 
 // Forces the test to fail immediately and quit.
 #define fail() _fail(__FILE__, __LINE__)
+
+// Write an error message and forces the test to fail immediately and quit
+#define fail_msg(msg, ...) do { \
+    print_error("ERROR: " msg "\n", ##__VA_ARGS__); \
+    fail(); \
+} while (0)
 
 // Generic method to kick off testing
 #define run_test(f) _run_test(#f, f, NULL, UNIT_TEST_FUNCTION_TYPE_TEST, NULL)
@@ -514,6 +520,9 @@ void _will_be_called(const char * const function_name, const char * const file,
         const int count);
 
 void _assert_true(const LargestIntegralType result,
+                  const char* const expression,
+                  const char * const file, const int line);
+void _assert_false(const LargestIntegralType result,
                   const char* const expression,
                   const char * const file, const int line);
 void _assert_int_equal(

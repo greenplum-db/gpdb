@@ -109,7 +109,10 @@ select avg(f1) from interval_tbl;
 select '4 millenniums 5 centuries 4 decades 1 year 4 months 4 days 17 minutes 31 seconds'::interval;
 
 -- test long interval output
-select '100000000y 10mon -1000000000d -1000000000h -10min -10.000001s ago'::interval;
+-- Note: the actual maximum length of the interval output is longer,
+-- but we need the test to work for both integer and floating-point
+-- timestamps.
+select '100000000y 10mon -1000000000d -100000h -10min -10.000001s ago'::interval;
 
 -- test justify_hours() and justify_days()
 
@@ -261,3 +264,17 @@ select interval '0:0:0.7', interval '@ 0.70 secs', interval '0.7 seconds';
 -- check that '30 days' equals '1 month' according to the hash function
 select '30 days'::interval = '1 month'::interval as t;
 select interval_hash('30 days'::interval) = interval_hash('1 month'::interval) as t;
+
+-- numeric constructor
+select make_interval(years := 2);
+select make_interval(years := 1, months := 6);
+select make_interval(years := 1, months := -1, weeks := 5, days := -7, hours := 25, mins := -180);
+
+select make_interval() = make_interval(years := 0, months := 0, weeks := 0, days := 0, mins := 0, secs := 0.0);
+select make_interval(hours := -2, mins := -10, secs := -25.3);
+
+select make_interval(years := 'inf'::float::int);
+select make_interval(months := 'NaN'::float::int);
+select make_interval(secs := 'inf');
+select make_interval(secs := 'NaN');
+select make_interval(secs := 7e12);

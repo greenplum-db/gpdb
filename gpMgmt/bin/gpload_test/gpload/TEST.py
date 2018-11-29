@@ -91,13 +91,13 @@ def psql_run(ifile = None, ofile = None, cmd = None,
     @param port    : port where gpdb is running
     @param PGOPTIONS: connects to postgres via utility mode
     '''
-    if dbname == None:
+    if dbname is None:
         dbname = DBNAME
 
-    if username == None:
+    if username is None:
         username = PGUSER  # Use the default login user
 
-    if PGOPTIONS == None:
+    if PGOPTIONS is None:
         PGOPTIONS = ""
     else:
         PGOPTIONS = "PGOPTIONS='%s'" % PGOPTIONS

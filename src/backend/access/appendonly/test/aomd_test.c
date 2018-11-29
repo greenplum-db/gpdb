@@ -9,11 +9,9 @@
 #include "catalog/pg_tablespace.h"
 
 #define PATH_TO_DATA_FILE "/tmp/md_test/1234"
-/*
- * file_present is a 1-based array used to determine return values for
- * access/unlink.
- */
-static bool file_present[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber + 2];
+
+#define MAX_SEGNO_FILES (MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber)
+static bool file_present[MAX_SEGNO_FILES];
 static int num_unlink_called = 0;
 static bool unlink_passing = true;
 
@@ -217,11 +215,14 @@ test_mdunlink_co_all_columns_full_concurrency(void **state)
 	setup_test_structures();
 
 	memset(file_present, true, sizeof(file_present));
-	file_present[MAX_AOREL_CONCURRENCY * MaxHeapAttributeNumber + 1] = false;
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
 
-	assert_true(num_unlink_called == MaxHeapAttributeNumber * MAX_AOREL_CONCURRENCY);
+	/*
+	 * Note num_unlink_called is one less than total files because .0 is NOT unlinked
+	 * by mdunlink_ao()
+	 */
+	assert_true(num_unlink_called == (MAX_SEGNO_FILES - 1));
 	assert_true(unlink_passing);
 	return;
 }
@@ -244,11 +245,12 @@ test_mdunlink_co_one_columns_full_concurrency(void **state)
 {
 	setup_test_structures();
 
+	file_present[0] = true;
 	for (int filenum=1; filenum < MAX_AOREL_CONCURRENCY; filenum++)
 		file_present[filenum] = true;
 
 	mdunlink_ao(PATH_TO_DATA_FILE);
-	assert_true(num_unlink_called == 127);
+	assert_true(num_unlink_called == (MAX_AOREL_CONCURRENCY - 1));
 	assert_true(unlink_passing);
 	return;
 }

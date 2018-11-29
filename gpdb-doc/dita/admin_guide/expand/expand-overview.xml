@@ -30,7 +30,7 @@
         <li>Transparency of process. The expansion process employs standard Greenplum Database
           mechanisms, so administrators can diagnose and troubleshoot any problems.</li>
         <li>Configurable process. Expansion can be a long running process, but it can be fit into a
-          schedule of ongoing operations. The expansion schema's tables allow adminstrators to
+          schedule of ongoing operations. The expansion schema's tables allow administrators to
           prioritize the order in which tables are redistributed, and the expansion activity can be
           paused and resumed.</li>
       </ul></p>

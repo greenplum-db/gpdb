@@ -20,7 +20,6 @@ typedef enum UserAuth
 {
 	uaReject,
 	uaImplicitReject,
-	uaKrb5,
 	uaTrust,
 	uaIdent,
 	uaPassword,
@@ -76,7 +75,6 @@ typedef struct HbaLine
 	char	   *ldapprefix;
 	char	   *ldapsuffix;
 	bool		clientcert;
-	char	   *krb_server_hostname;
 	char	   *krb_realm;
 	bool		include_realm;
 	char	   *radiusserver;

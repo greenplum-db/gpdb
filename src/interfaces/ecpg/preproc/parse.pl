@@ -3,10 +3,10 @@
 # parser generater for ecpg version 2
 # call with backend parser as stdin
 #
-# Copyright (c) 2007-2013, PostgreSQL Global Development Group
+# Copyright (c) 2007-2014, PostgreSQL Global Development Group
 #
 # Written by Mike Aubury <mike.aubury@aubit.com>
-#	     Michael Meskes <meskes@postgresql.org>
+#            Michael Meskes <meskes@postgresql.org>
 #            Andy Colson <andy@squeakycode.net>
 #
 # Placed under the same license as PostgreSQL.
@@ -46,6 +46,7 @@ my %replace_string = (
 	'WITH_LOCAL'    => 'with local',
 	'WITH_CHECK'    => 'with check',
 	'WITH_TIME'    => 'with time',
+	'WITH_ORDINALITY' => 'with ordinality',
 	'NULLS_FIRST'  => 'nulls first',
 	'NULLS_LAST'   => 'nulls last',
 	'TYPECAST'     => '::',
@@ -619,7 +620,7 @@ sub dump_line
 
 =top
 	load addons into cache
-	%addons = { 
+	%addons = {
 		stmtClosePortalStmt => { 'type' => 'block', 'lines' => [ "{", "if (INFORMIX_MODE)" ..., "}" ] },
 		stmtViewStmt => { 'type' => 'rule', 'lines' => [ "| ECPGAllocateDescr", ... ] }
 	}
@@ -673,5 +674,3 @@ sub preload_addons
 		}
 	}
 }
-
-

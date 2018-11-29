@@ -26,7 +26,6 @@ from gppylib.db import catalog
 from gppylib.db import dbconn
 from gppylib.system import configurationInterface, fileSystemInterface, osInterface
 from gppylib import pgconf
-from gppylib.testold.testUtils import testOutput
 from gppylib.system.environment import GpMasterEnvironment
 
 logger = gplog.get_default_logger()
@@ -165,7 +164,6 @@ class GpInjectFaultProgram:
     def injectFaults(self, segments, messageText):
 
         inputFile = self.writeToTempFile(messageText)
-        testOutput("Injecting fault on %d segment(s)" % len(segments))
 
         # run the command in serial to each target
         for segment in segments :

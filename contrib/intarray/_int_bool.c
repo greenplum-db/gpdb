@@ -12,17 +12,9 @@
 
 PG_FUNCTION_INFO_V1(bqarr_in);
 PG_FUNCTION_INFO_V1(bqarr_out);
-Datum		bqarr_in(PG_FUNCTION_ARGS);
-Datum		bqarr_out(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(boolop);
-Datum		boolop(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(rboolop);
-Datum		rboolop(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(querytree);
-Datum		querytree(PG_FUNCTION_ARGS);
 
 
 /* parser's states */
@@ -355,7 +347,7 @@ gin_bool_consistent(QUERYTYPE *query, bool *check)
 		return FALSE;
 
 	/*
-	 * Set up data for checkcondition_gin.	This must agree with the query
+	 * Set up data for checkcondition_gin.  This must agree with the query
 	 * extraction code in ginint4_queryextract.
 	 */
 	gcv.first = items;
@@ -450,6 +442,9 @@ boolop(PG_FUNCTION_ARGS)
 static void
 findoprnd(ITEM *ptr, int32 *pos)
 {
+	/* since this function recurses, it could be driven to stack overflow. */
+	check_stack_depth();
+
 #ifdef BS_DEBUG
 	elog(DEBUG3, (ptr[*pos].type == OPR) ?
 		 "%d  %c" : "%d  %d", *pos, ptr[*pos].val);
@@ -510,7 +505,13 @@ bqarr_in(PG_FUNCTION_ARGS)
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("empty query")));
 
+	if (state.num > QUERYTYPEMAXITEMS)
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+		errmsg("number of query items (%d) exceeds the maximum allowed (%d)",
+			   state.num, (int) QUERYTYPEMAXITEMS)));
 	commonlen = COMPUTESIZE(state.num);
+
 	query = (QUERYTYPE *) palloc(commonlen);
 	SET_VARSIZE(query, commonlen);
 	query->size = state.num;

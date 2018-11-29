@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2007-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/executor/hashjoin.h
@@ -48,7 +48,7 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
  * If nbatch > 1 then tuples that don't belong in first batch get saved
  * into inner-batch temp files. The same statements apply for the
  * first scan of the outer relation, except we write tuples to outer-batch
- * temp files.	After finishing the first scan, we do the following for
+ * temp files.  After finishing the first scan, we do the following for
  * each remaining batch:
  *	1. Read tuples from inner batch file, load into hash buckets.
  *	2. Read tuples from outer batch file, match to hash buckets and output.

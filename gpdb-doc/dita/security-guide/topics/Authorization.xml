@@ -229,7 +229,7 @@ Segment value: SHA-256 </codeblock></p></li>
     # SELECT rolpassword FROM pg_authid WHERE rolname = 'testdb';
     Rolpassword
     -----------
-    sha256&lt;64 hexidecimal characters&gt;
+    sha256&lt;64 hexadecimal characters&gt;
   </codeblock></li>
 
         </ol>
@@ -385,7 +385,7 @@ DENY DAY 'Sunday'</codeblock>
       <p> Any constraint containing all or part of the conditions in a DROP clause is removed. For
         example, if an existing constraint denies access on Mondays and Tuesdays, and the DROP
         clause removes constraints for Mondays, the existing constraint is completely dropped. The
-        DROP clause completely removes all constraints that overlap with the contraint in the drop
+        DROP clause completely removes all constraints that overlap with the constraint in the drop
         clause. The overlapping constraints are completely removed even if they contain more
         restrictions that the restrictions mentioned in the DROP clause. </p>
       <p> Example 1 - Remove a Time-based Restriction from a Role </p>

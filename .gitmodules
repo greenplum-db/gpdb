@@ -14,6 +14,6 @@
 	path = src/bin/gpfdist/ext
 	url = https://github.com/greenplum-db/gpfdist-ext.git
 	branch = master
-[submodule "gpAux/extensions/googletest"]
-	path = gpAux/extensions/googletest
+[submodule "gpcontrib/gpcloud/test/googletest"]
+	path = gpcontrib/gpcloud/test/googletest
 	url = https://github.com/google/googletest.git

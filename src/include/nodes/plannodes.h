@@ -7,7 +7,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/plannodes.h
@@ -20,6 +20,7 @@
 #include "access/sdir.h"
 #include "nodes/bitmapset.h"
 #include "nodes/primnodes.h"
+#include "parsenodes.h"
 
 typedef struct DirectDispatchInfo
 {
@@ -138,14 +139,12 @@ typedef struct PlannedStmt
 	/* What is the memory reserved for this query's execution? */
 	uint64		query_mem;
 
-	/* The overall memory consumption account (i.e., outside of an operator) */
-	MemoryAccountIdType memoryAccountId;
-
 	/*
 	 * GPDB: Used to keep target information for CTAS and it is needed
 	 * to be dispatched to QEs.
 	 */
 	IntoClause *intoClause;
+	CopyIntoClause *copyIntoClause;
 } PlannedStmt;
 
 /*
@@ -274,9 +273,6 @@ typedef struct Plan
 	 */
 	uint64 operatorMemKB;
 
-	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
-	MemoryAccountIdType memoryAccountId;
-
 	/*
 	 * The parent motion node of a plan node.
 	 */
@@ -360,6 +356,7 @@ typedef struct ModifyTable
 	List	   *resultRelations;	/* integer list of RT indexes */
 	int			resultRelIndex; /* index of first resultRel in plan's list */
 	List	   *plans;			/* plan(s) producing source data */
+	List	   *withCheckOptionLists;	/* per-target-table WCO lists */
 	List	   *returningLists; /* per-target-table RETURNING tlists */
 	List	   *fdwPrivLists;	/* per-target-table FDW private data lists */
 	List	   *rowMarks;		/* PlanRowMarks (non-locking only) */
@@ -432,7 +429,7 @@ typedef struct RecursiveUnion
  *	 BitmapAnd node -
  *		Generate the intersection of the results of sub-plans.
  *
- * The subplans must be of types that yield tuple bitmaps.	The targetlist
+ * The subplans must be of types that yield tuple bitmaps.  The targetlist
  * and qual fields of the plan are unused and are always NIL.
  * ----------------
  */
@@ -446,7 +443,7 @@ typedef struct BitmapAnd
  *	 BitmapOr node -
  *		Generate the union of the results of sub-plans.
  *
- * The subplans must be of types that yield tuple bitmaps.	The targetlist
+ * The subplans must be of types that yield tuple bitmaps.  The targetlist
  * and qual fields of the plan are unused and are always NIL.
  * ----------------
  */
@@ -522,7 +519,7 @@ typedef struct LogicalIndexInfo
  * in the same form it appeared in the query WHERE condition.  Each should
  * be of the form (indexkey OP comparisonval) or (comparisonval OP indexkey).
  * The indexkey is a Var or expression referencing column(s) of the index's
- * base table.	The comparisonval might be any expression, but it won't use
+ * base table.  The comparisonval might be any expression, but it won't use
  * any columns of the base table.  The expressions are ordered by index
  * column position (but items referencing the same index column can appear
  * in any order).  indexqualorig is used at runtime only if we have to recheck
@@ -537,7 +534,7 @@ typedef struct LogicalIndexInfo
  * that are being implemented by the index, while indexorderby is modified to
  * have index column Vars on the left-hand side.  Here, multiple expressions
  * must appear in exactly the ORDER BY order, and this is not necessarily the
- * index column order.	Only the expressions are provided, not the auxiliary
+ * index column order.  Only the expressions are provided, not the auxiliary
  * sort-order information from the ORDER BY SortGroupClauses; it's assumed
  * that the sort ordering is fully determinable from the top-level operators.
  * indexorderbyorig is unused at run time, but is needed for EXPLAIN.
@@ -608,7 +605,7 @@ typedef struct IndexOnlyScan
  *		bitmap index scan node
  *
  * BitmapIndexScan delivers a bitmap of potential tuple locations;
- * it does not access the heap itself.	The bitmap is used by an
+ * it does not access the heap itself.  The bitmap is used by an
  * ancestor BitmapHeapScan node, possibly after passing through
  * intermediate BitmapAnd and/or BitmapOr nodes to combine it with
  * the results of other BitmapIndexScans.
@@ -713,7 +710,7 @@ typedef struct TidScan
  * purposes.
  *
  * Note: we store the sub-plan in the type-specific subplan field, not in
- * the generic lefttree field as you might expect.	This is because we do
+ * the generic lefttree field as you might expect.  This is because we do
  * not want plan-tree-traversal routines to recurse into the subplan without
  * knowing that they are changing Query contexts.
  * ----------------
@@ -731,26 +728,22 @@ typedef struct SubqueryScan
 typedef struct FunctionScan
 {
 	Scan		scan;
-	Node	   *funcexpr;		/* expression tree for func call */
-	List	   *funccolnames;	/* output column names (string Value nodes) */
-	List	   *funccoltypes;	/* OID list of column type OIDs */
-	List	   *funccoltypmods; /* integer list of column typmods */
-	List	   *funccolcollations;		/* OID list of column collation OIDs */
+	List	   *functions;		/* list of RangeTblFunction nodes */
+	bool		funcordinality; /* WITH ORDINALITY */
 } FunctionScan;
 
 /* ----------------
  *      TableFunctionScan node
+ *
+ * This is similar to a FunctionScan, but we only support one function,
+ * and WITH ORDINALITY is not supported.
+ *
  * ----------------
  */
 typedef struct TableFunctionScan
 {
 	Scan		scan;
-	Node	   *funcexpr;		/* expression tree for func call */
-	List	   *funccolnames;	/* output column names (string Value nodes) */
-	List	   *funccoltypes;	/* OID list of column type OIDs */
-	List	   *funccoltypmods; /* integer list of column typmods */
-	List	   *funccolcollations;		/* OID list of column collation OIDs */
-	bytea	   *funcuserdata;	/* describe function user data. assume bytea */
+	struct RangeTblFunction *function;
 } TableFunctionScan;
 
 /* ----------------
@@ -1278,9 +1271,17 @@ typedef struct Motion
 	List		*hashExpr;			/* list of hash expressions */
 	List		*hashDataTypes;	    /* list of hash expr data type oids */
 
-	/* Output segments */
-	int 	  	numOutputSegs;		/* number of seg indexes in outputSegIdx array, 0 for broadcast */
-	int 	 	*outputSegIdx; 	 	/* array of output segindexes */
+	/*
+	 * The isBroadcast field is only used for motionType=MOTIONTYPE_FIXED,
+	 * if it is other kind of motion, please do not access this field.
+	 * The field is set true for Broadcast motion, and set false for
+	 * Gather motion.
+	 *
+	 * TODO: Historically, broadcast motion and gather motion's motiontype
+	 * are both MOTIONTYPE_FIXED. It is not a good idea. They should belong
+	 * to different motiontypes. We should refactor the motion types in future.
+	 */
+	bool 	  	isBroadcast;
 
 	/* For Explicit */
 	AttrNumber segidColIdx;			/* index of the segid column in the target list */
@@ -1318,8 +1319,20 @@ typedef struct SplitUpdate
 	AttrNumber	tupleoidColIdx;		/* index of tuple oid column into the target list */
 	List		*insertColIdx;		/* list of columns to INSERT into the target list */
 	List		*deleteColIdx;		/* list of columns to DELETE into the target list */
-
 } SplitUpdate;
+
+/*
+ * Reshuffle Node
+ * More details please read the description in the nodeReshuffle.c
+ */
+typedef struct Reshuffle
+{
+	Plan plan;
+	AttrNumber tupleSegIdx;
+	List *policyAttrs;
+	int oldSegs;
+	GpPolicyType ptype;
+} Reshuffle;
 
 /*
  * AssertOp Node
@@ -1374,7 +1387,7 @@ typedef struct RowTrigger
  * fortunately the case is not performance-critical in practice.  Note that
  * we use ROW_MARK_COPY for non-target foreign tables, even if the FDW has a
  * concept of rowid and so could theoretically support some form of
- * ROW_MARK_REFERENCE.	Although copying the whole row value is inefficient,
+ * ROW_MARK_REFERENCE.  Although copying the whole row value is inefficient,
  * it's probably still faster than doing a second remote fetch, so it doesn't
  * seem worth the extra complexity to permit ROW_MARK_REFERENCE.
  */
@@ -1399,7 +1412,7 @@ typedef enum RowMarkType
  *	   plan-time representation of FOR [KEY] UPDATE/SHARE clauses
  *
  * When doing UPDATE, DELETE, or SELECT FOR UPDATE/SHARE, we create a separate
- * PlanRowMark node for each non-target relation in the query.	Relations that
+ * PlanRowMark node for each non-target relation in the query.  Relations that
  * are not specified as FOR UPDATE/SHARE are marked ROW_MARK_REFERENCE (if
  * regular tables) or ROW_MARK_COPY (if not).
  *
@@ -1445,7 +1458,7 @@ typedef struct PlanRowMark
  *
  * We track the objects on which a PlannedStmt depends in two ways:
  * relations are recorded as a simple list of OIDs, and everything else
- * is represented as a list of PlanInvalItems.	A PlanInvalItem is designed
+ * is represented as a list of PlanInvalItems.  A PlanInvalItem is designed
  * to be used with the syscache invalidation mechanism, so it identifies a
  * system catalog entry by cache ID and hash value.
  */

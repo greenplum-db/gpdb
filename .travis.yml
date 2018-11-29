@@ -23,6 +23,7 @@ os:
 language: c
 sudo: false
 
+cache: ccache
 git:
   submodules: false
 
@@ -37,6 +38,7 @@ addons:
     - python-dev
     - python-yaml
     - libsnmp-dev
+    - libapr1-dev
 
 ## ----------------------------------------------------------------------
 ## Build tools
@@ -59,46 +61,21 @@ install:
   - pip install --user paramiko
   - pip install --user setuptools
 
-## ----------------------------------------------------------------------
-## Build APR & APR-UTIL used to build gpfdist
-## ----------------------------------------------------------------------
-
 env:
-  - APR=apr-1.6.5
-    APR_UTIL=apr-util-1.6.1
-    CC=gcc-6
+  - CC=gcc-6
     CXX=g++-6
-
-before_script:
-  - export PATH=${TRAVIS_BUILD_DIR}/tools/bin:$PATH
-  - cd ${TRAVIS_BUILD_DIR}
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR}.tar.gz
-  - wget http://ftp.jaist.ac.jp/pub/apache/apr/${APR_UTIL}.tar.gz
-  - tar xf ${APR}.tar.gz
-  - tar xf ${APR_UTIL}.tar.gz
-  - cd ${TRAVIS_BUILD_DIR}/${APR}
-  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools
-  - make install
-  - cd ${TRAVIS_BUILD_DIR}/${APR_UTIL}
-  - ./configure --prefix=${TRAVIS_BUILD_DIR}/tools --with-apr=${TRAVIS_BUILD_DIR}/${APR}
-  - make install
 
 ## ----------------------------------------------------------------------
 ## Perform build:
-##   GPDB
-##   orafce
 ## ----------------------------------------------------------------------
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --with-apr-config=${TRAVIS_BUILD_DIR}/tools/bin/apr-1-config --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl --enable-snmp
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl --enable-snmp --enable-orafce
 
   - make
   - make install
   - source ${TRAVIS_BUILD_DIR}/gpsql/greenplum_path.sh
-  - cd ${TRAVIS_BUILD_DIR}/gpAux/extensions/orafce
-  - make install USE_PGXS=1
-  - cd ${TRAVIS_BUILD_DIR}/
   - make unittest-check
   - postgres --version
   - initdb --version
@@ -117,3 +94,5 @@ notifications:
       - releng@pivotal.io
     on_success: change
     on_failure: always
+
+after_script: ccache -s

@@ -14,19 +14,20 @@
 
 #include "postgres.h"
 
-#include "nodes/memnodes.h"
-#include "inttypes.h"
-#include "utils/palloc.h"
-#include "utils/memutils.h"
-#include "nodes/plannodes.h"
+#include "access/xact.h"
 #include "cdb/cdbdef.h"
 #include "cdb/cdbvars.h"
-#include "access/xact.h"
+#include "commands/explain.h"
+#include "inttypes.h"
 #include "miscadmin.h"
-#include "utils/vmem_tracker.h"
-#include "utils/memaccounting_private.h"
-#include "utils/gp_alloc.h"
+#include "nodes/memnodes.h"
+#include "nodes/plannodes.h"
 #include "utils/ext_alloc.h"
+#include "utils/gp_alloc.h"
+#include "utils/memaccounting_private.h"
+#include "utils/memutils.h"
+#include "utils/palloc.h"
+#include "utils/vmem_tracker.h"
 
 #define MEMORY_REPORT_FILE_NAME_LENGTH 255
 #define SHORT_LIVING_MEMORY_ACCOUNT_ARRAY_INIT_LEN 64
@@ -41,6 +42,12 @@ typedef struct MemoryAccountSerializerCxt
 	/* Prefix to add before each line */
 	char *prefix;
 } MemoryAccountSerializerCxt;
+
+typedef struct MemoryAccountExplainContext
+{
+	int				count;
+	ExplainState   *es;
+} MemoryAccountExplainContext;
 
 /*
  * A tree representation of the memory account array.
@@ -73,12 +80,41 @@ MemoryAccountIdType liveAccountStartId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
  */
 MemoryAccountIdType nextAccountId = MEMORY_OWNER_TYPE_START_SHORT_LIVING;
 
+MemoryAccountIdType mainOptimizerAccount = MEMORY_OWNER_TYPE_Undefined;
+
+/*
+ * The memory account for the primary executor account. This will be assigned to the
+ * first executor created during query execution.
+ */
+MemoryAccountIdType mainExecutorAccount = MEMORY_OWNER_TYPE_Undefined;
+
+/*
+ * MemoryAccountId for the 'X_NestedExecutor' account. This account is a direct
+ * child of the mainExecutorAccount. This is intended for accounts created
+ * during a "nested" ExecutorStart (indirectly called by ExecutorRun), anything
+ * that would normally create another account should instead collapse into the
+ * mainNestedExecutorAccount.
+ *
+ * You would think that it would be okay to create short living memory accounts
+ * then roll them over to the X_NestedExecutor account in the same way that we
+ * use the Rollover account. Unfortunately, this does not work because we need
+ * a way to to keep track of which account IDs have been rolled over. In the
+ * case of the Rollover account, we 'retire' any old memory account by calling
+ * AdvanceMemoryAccountingGeneration() to retire all accounts older than the
+ * liveAccountStartId, but when using live accounts the problem is a lot more
+ * complicated. Keeping a list of 'retired' shortLivingMemoryAccounts does not
+ * solve the problem, because the list of retired accounts is unbounded. Even
+ * if we store the list of accounts as a vector, it does not necessarily
+ * resolve the issue, because it is possible to have a 'hole' in the list of
+ * accounts, and we shouldn't assume that all of the retired accounts are
+ * contiguous.
+ */
+MemoryAccountIdType mainNestedExecutorAccount= MEMORY_OWNER_TYPE_Undefined;
+
 /*
  ******************************************************
  * Internal methods declarations
  */
-static void
-CheckMemoryAccountingLeak(void);
 
 static void
 InitializeMemoryAccount(MemoryAccount *newAccount, long maxLimit,
@@ -96,7 +132,7 @@ static void
 AdvanceMemoryAccountingGeneration(void);
 
 static void
-MemoryAccounting_ToString(MemoryAccountTree *root, StringInfoData *str, uint32 indentation);
+MemoryAccounting_ToExplain(MemoryAccountTree *root, ExplainState *es);
 
 static void
 InitMemoryAccounting(void);
@@ -115,7 +151,7 @@ MemoryAccountTreeWalkKids(MemoryAccountTree *memoryAccountTreeNode,
 		uint32 *totalWalked, uint32 parentWalkSerial);
 
 static CdbVisitOpt
-MemoryAccountToString(MemoryAccountTree *memoryAccount, void *context,
+MemoryAccountToExplain(MemoryAccountTree *memoryAccount, void *context,
 		uint32 depth, uint32 parentWalkSerial, uint32 curWalkSerial);
 
 static CdbVisitOpt
@@ -218,7 +254,6 @@ MemoryAccounting_Reset()
 		Assert(MemoryAccountMemoryContext->firstchild == NULL);
 
 		AdvanceMemoryAccountingGeneration();
-		CheckMemoryAccountingLeak();
 
 		/* Outstanding balance will come from either the rollover or the shared chunk header account */
 		Assert((RolloverMemoryAccount->allocated - RolloverMemoryAccount->freed) +
@@ -411,35 +446,15 @@ MemoryAccounting_Serialize(StringInfoData *buffer)
 }
 
 /*
- * MemoryAccounting_PrettyPrint
- *    Prints (using elog-WARNING) the current memory accounting tree. Useful debugging
- *    tool from inside gdb.
- */
-void
-MemoryAccounting_PrettyPrint()
-{
-	StringInfoData memBuf;
-	initStringInfo(&memBuf);
-
-	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&longLivingMemoryAccountArray[MEMORY_OWNER_TYPE_Undefined],
-			shortLivingMemoryAccountArray->allAccounts, shortLivingMemoryAccountArray->accountCount);
-
-	MemoryAccounting_ToString(&tree[MEMORY_OWNER_TYPE_LogicalRoot], &memBuf, 0);
-
-	elog(WARNING, "%s\n", memBuf.data);
-
-	pfree(memBuf.data);
-}
-
-/*
  * MemoryAccounting_CombinedAccountArrayToString
  *    Converts a unified array of long and short living accounts to string.
  */
 void
-MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
-		MemoryAccountIdType accountCount, StringInfoData *str, uint32 indentation)
+MemoryAccounting_CombinedAccountArrayToExplain(void *accountArrayBytes,
+		MemoryAccountIdType accountCount, void *explainstate)
 {
 	MemoryAccount *combinedArray = (MemoryAccount *) accountArrayBytes;
+	ExplainState *es = (ExplainState *) explainstate;
 	/* 1 extra account pointer to reserve for undefined account */
 	MemoryAccount **combinedArrayOfPointers = palloc(sizeof(MemoryAccount *) * (accountCount + 1));
 	combinedArrayOfPointers[MEMORY_OWNER_TYPE_Undefined] = NULL;
@@ -451,7 +466,7 @@ MemoryAccounting_CombinedAccountArrayToString(void *accountArrayBytes,
 	MemoryAccountTree *tree = ConvertMemoryAccountArrayToTree(&combinedArrayOfPointers[MEMORY_OWNER_TYPE_Undefined],
 			&combinedArrayOfPointers[MEMORY_OWNER_TYPE_START_SHORT_LIVING], accountCount - MEMORY_OWNER_TYPE_END_LONG_LIVING);
 
-	MemoryAccounting_ToString(&tree[MEMORY_OWNER_TYPE_LogicalRoot], str, indentation);
+	MemoryAccounting_ToExplain(&tree[MEMORY_OWNER_TYPE_LogicalRoot], es);
 
 	pfree(tree);
 	pfree(combinedArrayOfPointers);
@@ -807,17 +822,6 @@ CreateMemoryAccountImpl(long maxLimit, MemoryOwnerType ownerType, MemoryAccountI
 }
 
 /*
- * CheckMemoryAccountingLeak
- *		Checks for leaks (i.e., memory accounts with balance) after everything
- *		is reset.
- */
-static void
-CheckMemoryAccountingLeak()
-{
-	/* Just an API. Not yet implemented. */
-}
-
-/*
  * Returns a combined array index where the long and short living accounts are together.
  * The first MEMORY_OWNER_TYPE_END_LONG_LIVING number of indices are reserved for long
  * living accounts and short living accounts follow after that.
@@ -1001,46 +1005,82 @@ MemoryAccountTreeWalkKids(MemoryAccountTree *memoryAccountTreeNode,
 	return CdbVisit_Walk;
 }
 
-/**
- * MemoryAccountToString:
- * 		A visitor function that can convert a memory account to string.
- * 		Called repeatedly from the walker to convert the entire tree to string
- * 		through MemoryAccountTreeToString.
+/*
+ * MemoryAccountToExplain:
+ * 		A visitor function for converting a memory account to EXPLAIN output
  *
- * memoryAccount: The memory account which will be represented as string
- * context: context information to pass between successive function call
- * depth: The depth in the tree for current node. Used to generate indentation.
- * parentWalkSerial: parent node's "walk serial". Not used right now. Part
- * 		of the uniform "walker" function prototype
- * curWalkSerial: current node's "walk serial". Not used right now. Part
- * 		of the uniform "walker" function prototype
+ * The function is called repeatedly from the walker to convert the entire
+ * tree to EXPLAIN output via MemoryAccountTreeToExplain.
  */
 static CdbVisitOpt
-MemoryAccountToString(MemoryAccountTree *memoryAccountTreeNode, void *context, uint32 depth,
-		uint32 parentWalkSerial, uint32 curWalkSerial)
+MemoryAccountToExplain(MemoryAccountTree *memoryAccountTreeNode, void *context,
+					   uint32 depth, uint32 parentWalkSerial, uint32 curWalkSerial)
 {
-	if (memoryAccountTreeNode == NULL) return CdbVisit_Walk;
+	MemoryAccount	*account;
+	MemoryAccountExplainContext	*ctx;
+	const char		*owner;
 
-	MemoryAccount *memoryAccount = memoryAccountTreeNode->account;
+	if (memoryAccountTreeNode == NULL)
+		return CdbVisit_Walk;
 
-	if (memoryAccount->ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool) return CdbVisit_Walk;
+	account = memoryAccountTreeNode->account;
 
-	MemoryAccountSerializerCxt *memAccountCxt = (MemoryAccountSerializerCxt*) context;
+	if (account->ownerType == MEMORY_OWNER_TYPE_Exec_RelinquishedPool)
+		return CdbVisit_Walk;
 
-	appendStringInfoSpaces(memAccountCxt->buffer, 2 * depth);
+	ctx = (MemoryAccountExplainContext *) context;
+	ctx->es->indent = depth;
 
-	Assert(memoryAccount->peak >= MemoryAccounting_GetBalance(memoryAccount));
-	/* We print only integer valued memory consumption, in standard GPDB KB unit */
-	appendStringInfo(memAccountCxt->buffer, "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: " UINT64_FORMAT " bytes.",
-			MemoryAccounting_GetOwnerName(memoryAccount->ownerType),
-			memoryAccount->peak, MemoryAccounting_GetBalance(memoryAccount), memoryAccount->maxLimit);
-	if (memoryAccount->relinquishedMemory > 0)
-		appendStringInfo(memAccountCxt->buffer, " Relinquished Memory: " UINT64_FORMAT " bytes. ", memoryAccount->relinquishedMemory);
-	if (memoryAccount->acquiredMemory > 0)
-		appendStringInfo(memAccountCxt->buffer, " Acquired Additional Memory: " UINT64_FORMAT " bytes.", memoryAccount->acquiredMemory);
-	appendStringInfo(memAccountCxt->buffer, "\n");
+	Assert(account->peak >= MemoryAccounting_GetBalance(account));
 
-	memAccountCxt->memoryAccountCount++;
+	owner = MemoryAccounting_GetOwnerName(account->ownerType);
+
+	if (ctx->es->format == EXPLAIN_FORMAT_TEXT)
+	{
+		appendStringInfoSpaces(ctx->es->str, 2 * depth);
+
+		/*
+		 * We print only integer valued memory consumption, in standard GPDB
+		 * KB unit,
+		 */
+		appendStringInfo(ctx->es->str,
+						 "%s: Peak/Cur " UINT64_FORMAT "/" UINT64_FORMAT " bytes. Quota: " UINT64_FORMAT " bytes.",
+						 owner,
+						 account->peak,
+						 MemoryAccounting_GetBalance(account),
+						 account->maxLimit);
+
+		if (account->relinquishedMemory > 0)
+			appendStringInfo(ctx->es->str,
+							 " Relinquished Memory: " UINT64_FORMAT " bytes. ",
+							 account->relinquishedMemory);
+
+		if (account->acquiredMemory > 0)
+			appendStringInfo(ctx->es->str,
+							 " Acquired Additional Memory: " UINT64_FORMAT " bytes.",
+							 account->acquiredMemory);
+
+		appendStringInfo(ctx->es->str, "\n");
+	}
+	else
+	{
+		ExplainOpenGroup(owner, owner, true, ctx->es);
+		ExplainPropertyLong("Peak", account->peak, ctx->es);
+		ExplainPropertyLong("Current", MemoryAccounting_GetBalance(account), ctx->es);
+		ExplainPropertyLong("Quota", account->maxLimit, ctx->es);
+
+		if (account->relinquishedMemory > 0)
+			ExplainPropertyLong("Relinquished Memory",
+								account->relinquishedMemory, ctx->es);
+
+		if (account->acquiredMemory > 0)
+			ExplainPropertyLong("Acquired Additional Memory",
+								account->acquiredMemory, ctx->es);
+
+		ExplainCloseGroup(owner, owner, true, ctx->es);
+	}
+
+	ctx->count++;
 
 	return CdbVisit_Walk;
 }
@@ -1184,10 +1224,14 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_RecursiveUnion";
 	case MEMORY_OWNER_TYPE_Exec_CteScan:
 		return "X_CteScan";
+	case MEMORY_OWNER_TYPE_Exec_Reshuffle:
+		return "X_Reshuffle";
 	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
 		return "X_WorkTableScan";
 	case MEMORY_OWNER_TYPE_Exec_ForeignScan:
 		return "X_ForeignScan";
+	case MEMORY_OWNER_TYPE_Exec_NestedExecutor:
+		return "X_NestedExecutor";
 	default:
 		Assert(false);
 		break;
@@ -1267,24 +1311,28 @@ PsuedoAccountsToCSV(StringInfoData *str, char *prefix)
 }
 
 /*
- * MemoryAccounting_ToString
- *		Converts a memory account tree rooted at "root" to string using tree
- *		walker and repeated calls of MemoryAccountToString
+ * MemoryAccounting_ToExplain
+ *		Converts a memory account tree rooted at "root" to EXPLAIN output
  *
- * root: The root of the tree (used recursively)
- * str: The output buffer
- * indentation: The indentation of the root
+ * Output is generated using tree walker and repeated calls of
+ * MemoryAccountToExplain.
  */
 static void
-MemoryAccounting_ToString(MemoryAccountTree *root, StringInfoData *str, uint32 indentation)
+MemoryAccounting_ToExplain(MemoryAccountTree *root, ExplainState *es)
 {
-	MemoryAccountSerializerCxt cxt;
-	cxt.buffer = str;
-	cxt.memoryAccountCount = 0;
-	cxt.prefix = NULL;
+	MemoryAccountExplainContext	ctx;
+	uint32				totalWalked;
+	int 				prev_indent;
 
-	uint32 totalWalked = 0;
-	MemoryAccountTreeWalkNode(root, MemoryAccountToString, &cxt, 0 + indentation, &totalWalked, totalWalked);
+	totalWalked = 0;
+	prev_indent = es->indent;
+
+	ctx.es = es;
+	ctx.count = 0;
+
+	MemoryAccountTreeWalkNode(root, MemoryAccountToExplain, &ctx, ctx.es->indent + 1, &totalWalked, totalWalked);
+
+	es->indent = prev_indent;
 }
 
 /*
@@ -1431,6 +1479,17 @@ AdvanceMemoryAccountingGeneration()
 
 	liveAccountStartId = nextAccountId;
 
+	/*
+	 * Currently this is the only place where we reset the mainExecutorAccount.
+	 * XXX: We have a flawed assumption that the first "executor" account is
+	 * the main one and that all subsequently created "executor" accounts are
+	 * nested. Rewrite rules and constant folding during planning are examples
+	 * of false detection of nested executor.
+	 */
+	mainExecutorAccount = MEMORY_OWNER_TYPE_Undefined;
+	mainNestedExecutorAccount = MEMORY_OWNER_TYPE_Undefined;
+	mainOptimizerAccount = MEMORY_OWNER_TYPE_Undefined;
+
 	Assert(RolloverMemoryAccount->peak >= MemoryAccountingPeakBalance);
 }
 
@@ -1472,3 +1531,89 @@ SaveMemoryBufToDisk(struct StringInfoData *memoryBuf, char *prefix)
 
 	fclose(file);
 }
+
+/*
+ * CreateMainExecutor
+ *    Creates the mainExecutorAccount
+ */
+MemoryAccountIdType
+MemoryAccounting_CreateMainExecutor()
+{
+	Assert(mainExecutorAccount == MEMORY_OWNER_TYPE_Undefined);
+	mainExecutorAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_EXECUTOR);
+
+	return mainExecutorAccount;
+}
+
+
+/*
+ * GetOrCreateNestedExecutorAccount
+ *    Returns the MemoryAccountId for the 'X_NestedExecutor' account. Creates the
+ *    mainNestedExecutorAccount if it does not already exist.
+ */
+MemoryAccountIdType
+MemoryAccounting_GetOrCreateNestedExecutorAccount()
+{
+	if (mainNestedExecutorAccount == MEMORY_OWNER_TYPE_Undefined)
+	{
+		Assert(mainExecutorAccount != MEMORY_OWNER_TYPE_Undefined);
+		START_MEMORY_ACCOUNT(mainExecutorAccount);
+		mainNestedExecutorAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Exec_NestedExecutor);
+		END_MEMORY_ACCOUNT();
+	}
+	return mainNestedExecutorAccount;
+}
+
+/*
+ * GetOrCreateOptimizerAccount
+ *    Returns the MemoryAccountId for the 'Optimizer' account. Creates the
+ *    mainOptimizerAccount if it does not already exist.
+ *
+ *    ORCA has a metadata cache that persists between calls to create a plan.
+ *    This memory is tracked in the memory accounting system using a global
+ *    OptimizerOutstandingMemoryBalance. Any time we create an Optimizer
+ *    account we initialize the memory to the
+ *    OptimizerOutstandingMemoryBalance, if we create more than one optimizer
+ *    account, this memory will be double accounted for. Therefore, restrict
+ *    the memory accounting system to only creating one Optimizer account.
+ */
+MemoryAccountIdType
+MemoryAccounting_GetOrCreateOptimizerAccount()
+{
+	if (mainOptimizerAccount == MEMORY_OWNER_TYPE_Undefined)
+		mainOptimizerAccount = MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Optimizer);
+
+	return mainOptimizerAccount;
+}
+
+MemoryAccountIdType
+MemoryAccounting_GetOrCreatePlannerAccount()
+{
+	if (explain_memory_verbosity >= EXPLAIN_MEMORY_VERBOSITY_DEBUG)
+		return MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Planner);
+	else if (MemoryAccounting_IsMainExecutorCreated())
+		return MemoryAccounting_GetOrCreateNestedExecutorAccount();
+	else
+		return MemoryAccounting_CreateAccount(0, MEMORY_OWNER_TYPE_Planner);
+}
+
+/*
+ *  IsUnderNestedExecutor
+ *    Return weather the currently active memory account is 'X_NestedExecutor'.
+ */
+bool
+MemoryAccounting_IsUnderNestedExecutor()
+{
+	return ActiveMemoryAccountId == mainNestedExecutorAccount;
+}
+
+/*
+ * IsMainExecutorCreated
+ *    Returns whether the top level executor account has been created.
+ */
+bool
+MemoryAccounting_IsMainExecutorCreated()
+{
+	return mainExecutorAccount != MEMORY_OWNER_TYPE_Undefined;
+}
+

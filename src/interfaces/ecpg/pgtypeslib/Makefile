@@ -2,7 +2,7 @@
 #
 # Makefile for ecpg pgtypes library
 #
-# Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+# Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
 # Portions Copyright (c) 1994, Regents of the University of California
 #
 # src/interfaces/ecpg/pgtypeslib/Makefile
@@ -15,7 +15,7 @@ include $(top_builddir)/src/Makefile.global
 
 NAME= pgtypes
 SO_MAJOR_VERSION= 3
-SO_MINOR_VERSION= 4
+SO_MINOR_VERSION= 5
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
 LIBS := $(filter-out -lresolv -lbz2, $(LIBS))

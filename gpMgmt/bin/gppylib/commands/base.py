@@ -352,7 +352,6 @@ class ExecutionError(Exception):
 # specify types of execution contexts.
 LOCAL = 1
 REMOTE = 2
-RMI = 3
 NAKED = 4
 
 gExecutionContextFactory = None
@@ -375,8 +374,6 @@ def createExecutionContext(execution_context_id, remoteHost, stdin, nakedExecuti
         if remoteHost is None:
             raise Exception("Programmer Error.  Specified REMOTE execution context but didn't provide a remoteHost")
         return RemoteExecutionContext(remoteHost, stdin, gphome)
-    elif execution_context_id == RMI:
-        return RMIExecutionContext()
     elif execution_context_id == NAKED:
         if remoteHost is None:
             raise Exception("Programmer Error.  Specified NAKED execution context but didn't provide a remoteHost")
@@ -664,16 +661,6 @@ class RemoteExecutionContext(LocalExecutionContext):
         LocalExecutionContext.execute(self, cmd)
         if (cmd.get_results().stderr.startswith('ssh_exchange_identification: Connection closed by remote host')):
             self.__retry(cmd, count + 1)
-
-
-class RMIExecutionContext(ExecutionContext):
-    """ Leave this as a big old TODO: for now.  see agent.py for some more details"""
-
-    def __init__(self):
-        ExecutionContext.__init__(self)
-        raise Exception("RMIExecutionContext - Not implemented")
-        pass
-
 
 class Command(object):
     """ TODO:

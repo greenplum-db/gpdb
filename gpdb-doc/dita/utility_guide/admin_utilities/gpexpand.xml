@@ -9,7 +9,7 @@
       <title>Synopsis</title>
       <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
         | {<b>-i</b>|<b>--input</b>} <varname>input_file</varname> [<b>-B</b> <varname>batch_size</varname>]
-        | {{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'} 
+        | [{<b>-d</b> | <b>--duration</b>} <varname>hh:mm:ss</varname> | {<b>-e</b>|<b>--end</b>} '<varname>YYYY-MM-DD hh:mm:ss</varname>'] 
           [<b>-a</b>|<b>-analyze</b>] 
           [<b>-n </b> <varname>parallel_processes</varname>]
         | {<b>-r</b>|<b>--rollback</b>}
@@ -65,13 +65,15 @@
       </ul>
       <note>Data redistribution should be performed during low-use hours. Redistribution can divided
         into batches over an extended period.</note>
-      <p>To begin the redistribution phase, you must run <codeph>gpexpand</codeph> with either the
-          <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options. Until the
-        specified end time or duration is reached, the utility will redistribute tables in the
-        expansion schema. Each table is reorganized using <codeph>ALTER TABLE</codeph> commands to
-        rebalance the tables across new segments, and to set tables to their original distribution
-        policy. If <codeph>gpexpand</codeph> completes the reorganization of all tables before the
-        specified duration, it displays a success message and ends.</p>
+      <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
+          <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
+        options. If you specify an end time or duration, then the utility redistributes tables in
+        the expansion schema until the specified end time or duration is reached.  If you specify no
+        options, then the utility redistribution phase continues until all tables in the expansion
+        schema are reorganized. Each table is reorganized using <codeph>ALTER TABLE</codeph>
+        commands to rebalance the tables across new segments, and to set tables to their original
+        distribution policy. If <codeph>gpexpand</codeph> completes the reorganization of all
+        tables, it displays a success message and ends.</p>
       <note>This utility uses secure shell (SSH) connections between systems to perform its tasks.
         In large Greenplum Database deployments, cloud deployments, or deployments with a large
         number of segments per host, this utility may exceed the host's maximum threshold for

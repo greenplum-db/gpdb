@@ -34,7 +34,11 @@ SET
 SET
 
 SET
-*U: UPDATE pg_index SET indisvalid = false FROM pg_class heap, pg_class toast WHERE indexrelid = toast.reltoastidxid AND toast.oid  = heap.reltoastrelid AND heap.oid   = 'toastable_heap'::regclass;
+*U: UPDATE pg_index
+        SET indisvalid = false
+        FROM pg_class heap
+        WHERE indrelid = heap.reltoastrelid
+          AND heap.oid = 'toastable_heap'::regclass;
 UPDATE 1
 
 UPDATE 1

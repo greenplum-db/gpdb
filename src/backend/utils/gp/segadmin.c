@@ -104,7 +104,7 @@ get_maxdbid()
 	HeapTuple	tuple;
 	SysScanDesc sscan;
 
-	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	sscan = systable_beginscan(rel, InvalidOid, false, NULL, 0, NULL);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		dbid = Max(dbid,
@@ -145,7 +145,7 @@ get_availableDbId()
 	HeapTuple	tuple;
 	SysScanDesc sscan;
 
-	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	sscan = systable_beginscan(rel, InvalidOid, false, NULL, 0, NULL);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		int32		dbid = (int32) ((Form_gp_segment_configuration) GETSTRUCT(tuple))->dbid;
@@ -184,7 +184,7 @@ get_maxcontentid()
 	HeapTuple	tuple;
 	SysScanDesc sscan;
 
-	sscan = systable_beginscan(rel, InvalidOid, false, SnapshotNow, 0, NULL);
+	sscan = systable_beginscan(rel, InvalidOid, false, NULL, 0, NULL);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		contentid = Max(contentid,
@@ -318,7 +318,7 @@ remove_segment_config(int16 dbid)
 				Int16GetDatum(dbid));
 
 	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		simple_heap_delete(rel, &tuple->t_self);
@@ -737,7 +737,7 @@ segment_config_activate_standby(int16 standbydbid, int16 newdbid)
 				BTEqualStrategyNumber, F_INT2EQ,
 				Int16GetDatum(newdbid));
 	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 	while ((tuple = systable_getnext(sscan)) != NULL)
 	{
 		simple_heap_delete(rel, &tuple->t_self);
@@ -754,7 +754,7 @@ segment_config_activate_standby(int16 standbydbid, int16 newdbid)
 				BTEqualStrategyNumber, F_INT2EQ,
 				Int16GetDatum(standbydbid));
 	sscan = systable_beginscan(rel, GpSegmentConfigDbidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	tuple = systable_getnext(sscan);
 

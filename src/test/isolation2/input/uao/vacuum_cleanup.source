@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- The age of the table is 1 after the following statement
 2: create table ao_@orientation@_vacuum_cleanup2(a int, b int) with(appendonly=true, orientation=@orientation@);
 -- The age of the table is 2 after the following statement
-2: insert into ao_@orientation@_vacuum_cleanup2 select 1, i from generate_series(1, 100) i;
+2: insert into ao_@orientation@_vacuum_cleanup2 select 0, i from generate_series(1, 100) i;
 -- The age of the table is 7 after the following 5 statements
 2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
 2: update ao_@orientation@_vacuum_cleanup2 set b = b + 1;
@@ -56,6 +56,6 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- (AWAITING_DROP)
 -- This result is related to data distribution.
 -- Current hash algorithm is jump-consistent-hash.
-1: SELECT gp_ao_or_aocs_seg_name('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
+1: SELECT gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
 
 2: commit;

@@ -334,7 +334,7 @@ getPartitionIndexNode(Oid rootOid,
 				BoolGetDatum(inctemplate));
 
 	sscan = systable_beginscan(partRel, PartitionParrelidParlevelParistemplateIndexId, true,
-							   SnapshotNow, 3, scankey);
+							   NULL, 3, scankey);
 	tuple = systable_getnext(sscan);
 
 	if (HeapTupleIsValid(tuple))
@@ -381,7 +381,7 @@ getPartitionIndexNode(Oid rootOid,
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(parent));
 	sscan = systable_beginscan(partRuleRel, PartitionRuleParoidParparentruleParruleordIndexId, true,
-							   SnapshotNow, 2, scankey);
+							   NULL, 2, scankey);
 	while (HeapTupleIsValid(tuple = systable_getnext(sscan)))
 	{
 		PartitionIndexNode *child;
@@ -858,7 +858,7 @@ getPartConstraints(Oid partOid, Oid rootOid, List *partKey)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(partOid));
 	sscan = systable_beginscan(conRel, ConstraintRelidIndexId, true,
-							   SnapshotNow, 1, &scankey);
+							   NULL, 1, &scankey);
 
 	/* list of keys referenced in the found constraints */
 	List	   *keys = NIL;

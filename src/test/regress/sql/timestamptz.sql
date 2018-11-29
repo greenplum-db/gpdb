@@ -244,6 +244,56 @@ SELECT '' AS to_char_10, to_char(d1, 'IYYY IYY IY I IW IDDD ID')
 SELECT '' AS to_char_11, to_char(d1, 'FMIYYY FMIYY FMIY FMI FMIW FMIDDD FMID')
    FROM TIMESTAMPTZ_TBL;
 
+CREATE TABLE TIMESTAMPTZ_TST (a int , b timestamptz);
+
+-- Test year field value with len > 4
+INSERT INTO TIMESTAMPTZ_TST VALUES(1, 'Sat Mar 12 23:58:48 1000 IST');
+INSERT INTO TIMESTAMPTZ_TST VALUES(2, 'Sat Mar 12 23:58:48 10000 IST');
+INSERT INTO TIMESTAMPTZ_TST VALUES(3, 'Sat Mar 12 23:58:48 100000 IST');
+INSERT INTO TIMESTAMPTZ_TST VALUES(3, '10000 Mar 12 23:58:48 IST');
+INSERT INTO TIMESTAMPTZ_TST VALUES(4, '100000312 23:58:48 IST');
+INSERT INTO TIMESTAMPTZ_TST VALUES(4, '1000000312 23:58:48 IST');
+--Verify data
+SELECT * FROM TIMESTAMPTZ_TST;
+--Cleanup
+DROP TABLE TIMESTAMPTZ_TST;
+
+-- test timestamptz constructors
+set TimeZone to 'America/New_York';
+
+-- numeric timezone
+SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33);
+SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33, '+2');
+SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33, '-2');
+WITH tzs (tz) AS (VALUES
+    ('+1'), ('+1:'), ('+1:0'), ('+100'), ('+1:00'), ('+01:00'),
+    ('+10'), ('+1000'), ('+10:'), ('+10:0'), ('+10:00'), ('+10:00:'),
+    ('+10:00:1'), ('+10:00:01'),
+    ('+10:00:10'))
+     SELECT make_timestamptz(2010, 2, 27, 3, 45, 00, tz), tz FROM tzs;
+
+-- these should fail
+SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33, '2');
+SELECT make_timestamptz(2014, 12, 10, 10, 10, 10, '+16');
+SELECT make_timestamptz(2014, 12, 10, 10, 10, 10, '-16');
+
+-- should be true
+SELECT make_timestamptz(1973, 07, 15, 08, 15, 55.33, '+2') = '1973-07-15 08:15:55.33+02'::timestamptz;
+
+-- full timezone names
+SELECT make_timestamptz(2014, 12, 10, 0, 0, 0, 'Europe/Prague') = timestamptz '2014-12-10 00:00:00 Europe/Prague';
+SELECT make_timestamptz(2014, 12, 10, 0, 0, 0, 'Europe/Prague') AT TIME ZONE 'UTC';
+SELECT make_timestamptz(1846, 12, 10, 0, 0, 0, 'Asia/Manila') AT TIME ZONE 'UTC';
+SELECT make_timestamptz(1881, 12, 10, 0, 0, 0, 'Europe/Paris') AT TIME ZONE 'UTC';
+SELECT make_timestamptz(1910, 12, 24, 0, 0, 0, 'Nehwon/Lankhmar');
+
+-- abbreviations
+SELECT make_timestamptz(2008, 12, 10, 10, 10, 10, 'EST');
+SELECT make_timestamptz(2008, 12, 10, 10, 10, 10, 'EDT');
+SELECT make_timestamptz(2014, 12, 10, 10, 10, 10, 'PST8PDT');
+
+RESET TimeZone;
+
 -- TO_TIMESTAMP()
 SELECT '' AS to_timestamp_1, to_timestamp('0097/Feb/16 --> 08:14:30', 'YYYY/Mon/DD --> HH:MI:SS');
 	

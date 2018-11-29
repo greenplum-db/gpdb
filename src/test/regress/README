@@ -1,325 +1,36 @@
-                              Regression Tests
+Documentation concerning how to run these regression tests and interpret
+the results can be found in the PostgreSQL manual, in the chapter
+"Regression Tests".
 
-   The regression tests are a comprehensive set of tests for the SQL
-   implementation in PostgreSQL. They test standard SQL operations as well
-   as the extended capabilities of PostgreSQL.
-     __________________________________________________________________
+UAO row and column test generation
+----------------------------------
 
-                              Running the Tests
+Row and column orientation tests can be generated from one .source test
+for Updatable Append Optimized (UAO) tables.  Place the UAO .source
+tests under input/uao*/ directory, e.g. input/uao_ddl/.  Place
+corresponding answer files, also named as .source, into output/uao*/
+directory.  The .source files must begin with the following header:
 
-   The regression tests can be run against an already installed and
-   running server, or using a temporary installation within the build
-   tree. Furthermore, there is a "parallel" and a "sequential" mode for
-   running the tests. The sequential method runs each test script in turn,
-   whereas the parallel method starts up multiple server processes to run
-   groups of tests in parallel. Parallel testing gives confidence that
-   interprocess communication and locking are working correctly. For
-   historical reasons, the sequential test is usually run against an
-   existing installation and the parallel method against a temporary
-   installation, but there are no technical reasons for this.
+    create schema <filename_prefix>@orientation@;
+    set search_path="$user",<filename_prefix>@orientation@,public;
+    SET gp_default_storage_options='orientation=@orientation@';
 
-   To run the regression tests after building but before installation,
-   type
-gmake check
+The schema creation is necessary to ensure tables created by _row.sql
+files don't conflict with those created by _column.sql.  Using the
+filename part of .source files is the easiest way to ensure uniqueness.
+Replace "<filename_prefix>" with actual filename of .source files.
 
-   in the top-level directory. (Or you can change to "src/test/regress"
-   and run the command there.) This will first build several auxiliary
-   files, such as some sample user-defined trigger functions, and then run
-   the test driver script. At the end you should see something like
-======================
- All 100 tests passed.
-======================
+UAO tables can then be created in the .source test by specifying "with
+(appendonly=true)" in the create table command.  Orientation of this
+table is determined by the gp_default_storage_options value.
 
-   or otherwise a note about which tests failed. See the Section called
-   Test Evaluation below before assuming that a "failure" represents a
-   serious problem.
+Optimizer specific answer files may be named the usual way.
+E.g. create_ao_tables.source and create_ao_tables_optimizer.source.
 
-   Because this test method runs a temporary server, it will not work when
-   you are the root user (since the server will not start as root). If you
-   already did the build as root, you do not have to start all over.
-   Instead, make the regression test directory writable by some other
-   user, log in as that user, and restart the tests. For example
-root# chmod -R a+w src/test/regress
-root# chmod -R a+w contrib/spi
-root# su - joeuser
-joeuser$ cd top-level build directory
-joeuser$ gmake check
+The option "--ao-dir" must be specified on pg_regress command line to
+generate the UAO row and column tests.  E.g. if create_ao_tables.source
+test files are placed under input/uao_ddl/ and output/uao_ddl/, run
+pg_regress as:
 
-   (The only possible "security risk" here is that other users might be
-   able to alter the regression test results behind your back. Use common
-   sense when managing user permissions.)
-
-   Alternatively, run the tests after installation.
-
-   If you have configured PostgreSQL to install into a location where an
-   older PostgreSQL installation already exists, and you perform gmake
-   check before installing the new version, you may find that the tests
-   fail because the new programs try to use the already-installed shared
-   libraries. (Typical symptoms are complaints about undefined symbols.)
-   If you wish to run the tests before overwriting the old installation,
-   you'll need to build with configure --disable-rpath. It is not
-   recommended that you use this option for the final installation,
-   however.
-
-   The parallel regression test starts quite a few processes under your
-   user ID. Presently, the maximum concurrency is twenty parallel test
-   scripts, which means forty processes: there's a server process and a
-   psql process for each test script. So if your system enforces a
-   per-user limit on the number of processes, make sure this limit is at
-   least fifty or so, else you may get random-seeming failures in the
-   parallel test. If you are not in a position to raise the limit, you can
-   cut down the degree of parallelism by setting the MAX_CONNECTIONS
-   parameter. For example,
-gmake MAX_CONNECTIONS=10 check
-
-   runs no more than ten tests concurrently.
-
-   To run the tests after installation, initialize a data area and start
-   the server, then type
-gmake installcheck
-
-   or for a parallel test
-gmake installcheck-parallel
-
-   The tests will expect to contact the server at the local host and the
-   default port number, unless directed otherwise by PGHOST and PGPORT
-   environment variables.
-
-   The source distribution also contains regression tests for the optional
-   procedural languages and for some of the "contrib" modules. At present,
-   these tests can be used only against an already-installed server. To
-   run the tests for all procedural languages that have been built and
-   installed, change to the "src/pl" directory of the build tree and type
-gmake installcheck
-
-   You can also do this in any of the subdirectories of "src/pl" to run
-   tests for just one procedural language. To run the tests for all
-   "contrib" modules that have them, change to the "contrib" directory of
-   the build tree and type
-gmake installcheck
-
-   The "contrib" modules must have been built and installed first. You can
-   also do this in a subdirectory of "contrib" to run the tests for just
-   one module.
-     __________________________________________________________________
-
-                               Test Evaluation
-
-   Some properly installed and fully functional PostgreSQL installations
-   can "fail" some of these regression tests due to platform-specific
-   artifacts such as varying floating-point representation and message
-   wording. The tests are currently evaluated using a simple "diff"
-   comparison against the outputs generated on a reference system, so the
-   results are sensitive to small system differences. When a test is
-   reported as "failed", always examine the differences between expected
-   and actual results; you may well find that the differences are not
-   significant. Nonetheless, we still strive to maintain accurate
-   reference files across all supported platforms, so it can be expected
-   that all tests pass.
-
-   The actual outputs of the regression tests are in files in the
-   "src/test/regress/results" directory. The test script uses "diff" to
-   compare each output file against the reference outputs stored in the
-   "src/test/regress/expected" directory. Any differences are saved for
-   your inspection in "src/test/regress/regression.diffs". (Or you can run
-   "diff" yourself, if you prefer.)
-
-   If for some reason a particular platform generates a "failure" for a
-   given test, but inspection of the output convinces you that the result
-   is valid, you can add a new comparison file to silence the failure
-   report in future test runs. See the Section called Variant Comparison
-   Files for details.
-     __________________________________________________________________
-
-Error message differences
-
-   Some of the regression tests involve intentional invalid input values.
-   Error messages can come from either the PostgreSQL code or from the
-   host platform system routines. In the latter case, the messages may
-   vary between platforms, but should reflect similar information. These
-   differences in messages will result in a "failed" regression test that
-   can be validated by inspection.
-     __________________________________________________________________
-
-Locale differences
-
-   If you run the tests against an already-installed server that was
-   initialized with a collation-order locale other than C, then there may
-   be differences due to sort order and follow-up failures. The regression
-   test suite is set up to handle this problem by providing alternative
-   result files that together are known to handle a large number of
-   locales.
-     __________________________________________________________________
-
-Date and time differences
-
-   Most of the date and time results are dependent on the time zone
-   environment. The reference files are generated for time zone PST8PDT
-   (Berkeley, California), and there will be apparent failures if the
-   tests are not run with that time zone setting. The regression test
-   driver sets environment variable PGTZ to PST8PDT, which normally
-   ensures proper results.
-     __________________________________________________________________
-
-Floating-point differences
-
-   Some of the tests involve computing 64-bit floating-point numbers
-   (double precision) from table columns. Differences in results involving
-   mathematical functions of double precision columns have been observed.
-   The float8 and geometry tests are particularly prone to small
-   differences across platforms, or even with different compiler
-   optimization options. Human eyeball comparison is needed to determine
-   the real significance of these differences which are usually 10 places
-   to the right of the decimal point.
-
-   Some systems display minus zero as -0, while others just show 0.
-
-   Some systems signal errors from pow() and exp() differently from the
-   mechanism expected by the current PostgreSQL code.
-     __________________________________________________________________
-
-Row ordering differences
-
-   You might see differences in which the same rows are output in a
-   different order than what appears in the expected file. In most cases
-   this is not, strictly speaking, a bug. Most of the regression test
-   scripts are not so pedantic as to use an ORDER BY for every single
-   SELECT, and so their result row orderings are not well-defined
-   according to the letter of the SQL specification. In practice, since we
-   are looking at the same queries being executed on the same data by the
-   same software, we usually get the same result ordering on all
-   platforms, and so the lack of ORDER BY isn't a problem. Some queries do
-   exhibit cross-platform ordering differences, however. When testing
-   against an already-installed server, ordering differences can also be
-   caused by non-C locale settings or non-default parameter settings, such
-   as custom values of work_mem or the planner cost parameters.
-
-   Therefore, if you see an ordering difference, it's not something to
-   worry about, unless the query does have an ORDER BY that your result is
-   violating. But please report it anyway, so that we can add an ORDER BY
-   to that particular query and thereby eliminate the bogus "failure" in
-   future releases.
-
-   You might wonder why we don't order all the regression test queries
-   explicitly to get rid of this issue once and for all. The reason is
-   that that would make the regression tests less useful, not more, since
-   they'd tend to exercise query plan types that produce ordered results
-   to the exclusion of those that don't.
-     __________________________________________________________________
-
-Insufficient stack depth
-
-   If the errors test results in a server crash at the select
-   infinite_recurse() command, it means that the platform's limit on
-   process stack size is smaller than the max_stack_depth parameter
-   indicates. This can be fixed by running the server under a higher stack
-   size limit (4MB is recommended with the default value of
-   max_stack_depth). If you are unable to do that, an alternative is to
-   reduce the value of max_stack_depth.
-     __________________________________________________________________
-
-The "random" test
-
-   The random test script is intended to produce random results. In rare
-   cases, this causes the random regression test to fail. Typing
-diff results/random.out expected/random.out
-
-   should produce only one or a few lines of differences. You need not
-   worry unless the random test fails repeatedly.
-     __________________________________________________________________
-
-                          Variant Comparison Files
-
-   Since some of the tests inherently produce environment-dependent
-   results, we have provided ways to specify alternative "expected" result
-   files. Each regression test can have several comparison files showing
-   possible results on different platforms. There are two independent
-   mechanisms for determining which comparison file is used for each test.
-
-   The first mechanism allows comparison files to be selected for specific
-   platforms. There is a mapping file, "src/test/regress/resultmap", that
-   defines which comparison file to use for each platform. To eliminate
-   bogus test "failures" for a particular platform, you first choose or
-   make a variant result file, and then add a line to the "resultmap"
-   file.
-
-   Each line in the mapping file is of the form
-testname/platformpattern=comparisonfilename
-
-   The test name is just the name of the particular regression test
-   module. The platform pattern is a pattern in the style of the Unix tool
-   "expr" (that is, a regular expression with an implicit ^ anchor at the
-   start). It is matched against the platform name as printed by
-   "config.guess". The comparison file name is the base name of the
-   substitute result comparison file.
-
-   For example: some systems interpret very small floating-point values as
-   zero, rather than reporting an underflow error. This causes a few
-   differences in the "float8" regression test. Therefore, we provide a
-   variant comparison file, "float8-small-is-zero.out", which includes the
-   results to be expected on these systems. To silence the bogus "failure"
-   message on OpenBSD platforms, "resultmap" includes
-float8/i.86-.*-openbsd=float8-small-is-zero
-
-   which will trigger on any machine for which the output of
-   "config.guess" matches i.86-.*-openbsd. Other lines in "resultmap"
-   select the variant comparison file for other platforms where it's
-   appropriate.
-
-   The second selection mechanism for variant comparison files is much
-   more automatic: it simply uses the "best match" among several supplied
-   comparison files. The regression test driver script considers both the
-   standard comparison file for a test, testname.out, and variant files
-   named testname_digit.out (where the "digit" is any single digit 0-9).
-   If any such file is an exact match, the test is considered to pass;
-   otherwise, the one that generates the shortest diff is used to create
-   the failure report. (If "resultmap" includes an entry for the
-   particular test, then the base "testname" is the substitute name given
-   in "resultmap".)
-
-   For example, for the char test, the comparison file "char.out" contains
-   results that are expected in the C and POSIX locales, while the file
-   "char_1.out" contains results sorted as they appear in many other
-   locales.
-
-   The best-match mechanism was devised to cope with locale-dependent
-   results, but it can be used in any situation where the test results
-   cannot be predicted easily from the platform name alone. A limitation
-   of this mechanism is that the test driver cannot tell which variant is
-   actually "correct" for the current environment; it will just pick the
-   variant that seems to work best. Therefore it is safest to use this
-   mechanism only for variant results that you are willing to consider
-   equally valid in all contexts.
-     __________________________________________________________________
-
-                    UAO row and column test generation
-
-   Row and column orientation tests can be generated from one .source test
-   for Updatable Append Optimized (UAO) tables.  Place the UAO .source
-   tests under input/uao*/ directory, e.g. input/uao_ddl/.  Place
-   corresponding answer files, also named as .source, into output/uao*/
-   directory.  The .source files must begin with the following header:
-
-       create schema <filename_prefix>@orientation@;
-       set search_path="$user",<filename_prefix>@orientation@,public;
-       SET gp_default_storage_options='orientation=@orientation@';
-
-   The schema creation is necessary to ensure tables created by _row.sql
-   files don't conflict with those created by _column.sql.  Using the
-   filename part of .source files is the easiest way to ensure uniqueness.
-   Replace "<filename_prefix>" with actual filename of .source files.
-
-   UAO tables can then be created in the .source test by specifying "with
-   (appendonly=true)" in the create table command.  Orientation of this
-   table is determined by the gp_default_storage_options value.
-
-   Optimizer specific answer files may be named the usual way.
-   E.g. create_ao_tables.source and create_ao_tables_optimizer.source.
-
-   The option "--ao-dir" must be specified on pg_regress command line to
-   generate the UAO row and column tests.  E.g. if create_ao_tables.source
-   test files are placed under input/uao_ddl/ and output/uao_ddl/, run
-   pg_regress as:
-
-       ./pg_regress --ao-dir=uao uao_ddl/create_ao_tables_row \
-       uao_ddl/create_ao_tables_column
+    ./pg_regress --ao-dir=uao uao_ddl/create_ao_tables_row \
+    uao_ddl/create_ao_tables_column

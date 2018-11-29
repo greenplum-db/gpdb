@@ -12,46 +12,21 @@ create extension if not exists gp_inject_fault;
 !\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
 !\retcode gpstop -u;
 
--- skip FTS probes firstly
-select gp_inject_fault_infinite('fts_probe', 'skip', 1);
-select gp_request_fts_probe_scan();
-select gp_wait_until_triggered_fault('fts_probe', 1, 1);
-
 -- no down segment in the beginning
 select count(*) from gp_segment_configuration where status = 'd';
 
--- inject dns error
+-- probe to make sure when we call gp_request_fts_probe_scan() next
+-- time below, don't overlap with auto-trigger of FTS scans by FTS
+-- process. As if that happens, due to race condition will not trigger
+-- the fault and fail the test.
+select gp_request_fts_probe_scan();
+-- trigger a DNS error
 select gp_inject_fault_infinite('get_dns_cached_address', 'skip', 1);
--- specify database name, so gdd backend will not be affected
-SELECT gp_inject_fault('before_fts_notify', 'suspend', '', 'isolation2test', '', 1, -1, 1, 1);
-
-
--- trigger a DNS error in segment 0 in session 0,
--- Before error out,QD will notify the FTS to do
--- a probe, fts probe is currently skipped, so this
--- query will get stuck 
-0&: create table fts_dns_error_test (c1 int, c2 int);
-
-select gp_wait_until_triggered_fault('before_fts_notify', 1, 1);
-
--- enable fts probe
-select gp_inject_fault_infinite('fts_probe', 'reset', 1);
-
--- resume fts notify for session 0 to notify fts to probe
-select gp_inject_fault_infinite('before_fts_notify', 'resume', 1);
-select gp_inject_fault_infinite('before_fts_notify', 'reset', 1);
-
--- wait until fts done the probe and this query will fail 
-0<:
+select gp_request_fts_probe_scan();
+select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
 
 -- verify a fts failover happens
 select count(*) from gp_segment_configuration where status = 'd';
-
--- fts failover happens, so the following query will success.
-0: create table fts_dns_error_test (c1 int, c2 int);
-
--- reset dns fault so segment can be recovered
-select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
 
 -- fully recover the failed primary as new mirror
 !\retcode gprecoverseg -aF;

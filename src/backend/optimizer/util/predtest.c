@@ -4,7 +4,7 @@
  *	  Routines to attempt to prove logical implications between predicate
  *	  expressions.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -27,17 +27,10 @@
 #include "utils/inval.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
-#include "cdb/cdbhash.h"
-#include "access/hash.h"
 #include "nodes/makefuncs.h"
 
 #include "catalog/pg_operator.h"
 #include "optimizer/paths.h"
-
-#define INT16MAX (32767)
-#define INT16MIN (-32768)
-#define INT32MAX (2147483647)
-#define INT32MIN (-2147483648)
 
 static const bool kUseFnEvaluationForPredicates = true;
 
@@ -113,15 +106,6 @@ static bool btree_predicate_proof(Expr *predicate, Node *clause,
 static Oid	get_btree_test_op(Oid pred_op, Oid clause_op, bool refute_it);
 static void InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashvalue);
 
-static HTAB* CreateNodeSetHashTable();
-static void AddValue(PossibleValueSet *pvs, Const *valueToCopy);
-static void RemoveValue(PossibleValueSet *pvs, Const *value);
-static bool ContainsValue(PossibleValueSet *pvs, Const *value);
-static void AddUnmatchingValues( PossibleValueSet *pvs, PossibleValueSet *toCheck );
-static void RemoveUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck);
-static PossibleValueSet ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable);
-static PossibleValueSet ProcessOrClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable);
-static bool TryProcessEqualityNodeForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet *resultOut );
 
 static bool simple_equality_predicate_refuted(Node *clause, Node *predicate);
 
@@ -157,7 +141,7 @@ predicate_implied_by(List *predicate_list, List *restrictinfo_list)
 
 	/*
 	 * If either input is a single-element list, replace it with its lone
-	 * member; this avoids one useless level of AND-recursion.	We only need
+	 * member; this avoids one useless level of AND-recursion.  We only need
 	 * to worry about this at top level, since eval_const_expressions should
 	 * have gotten rid of any trivial ANDs or ORs below that.
 	 */
@@ -215,7 +199,7 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
 
 	/*
 	 * If either input is a single-element list, replace it with its lone
-	 * member; this avoids one useless level of AND-recursion.	We only need
+	 * member; this avoids one useless level of AND-recursion.  We only need
 	 * to worry about this at top level, since eval_const_expressions should
 	 * have gotten rid of any trivial ANDs or ORs below that.
 	 */
@@ -254,7 +238,7 @@ predicate_refuted_by(List *predicate_list, List *restrictinfo_list)
  *	OR-expr A => AND-expr B iff:	A => each of B's components
  *	OR-expr A => OR-expr B iff:		each of A's components => any of B's
  *
- * An "atom" is anything other than an AND or OR node.	Notice that we don't
+ * An "atom" is anything other than an AND or OR node.  Notice that we don't
  * have any special logic to handle NOT nodes; these should have been pushed
  * down or eliminated where feasible by prepqual.c.
  *
@@ -689,7 +673,7 @@ predicate_refuted_by_recurse(Node *clause, Node *predicate)
 			 * We cannot make the stronger conclusion that B is refuted if B
 			 * implies A's arg; that would only prove that B is not-TRUE, not
 			 * that it's not NULL either.  Hence use equal() rather than
-			 * predicate_implied_by_recurse().	We could do the latter if we
+			 * predicate_implied_by_recurse().  We could do the latter if we
 			 * ever had a need for the weak form of refutation.
 			 */
 			not_arg = extract_strong_not_arg(clause);
@@ -851,7 +835,7 @@ predicate_classify(Node *clause, PredIterInfo info)
 }
 
 /*
- * PredIterInfo routines for iterating over regular Lists.	The iteration
+ * PredIterInfo routines for iterating over regular Lists.  The iteration
  * state variable is the next ListCell to visit.
  */
 static void
@@ -1045,13 +1029,13 @@ arrayexpr_cleanup_fn(PredIterInfo info)
  * implies another:
  *
  * A simple and general way is to see if they are equal(); this works for any
- * kind of expression.	(Actually, there is an implied assumption that the
+ * kind of expression.  (Actually, there is an implied assumption that the
  * functions in the expression are immutable, ie dependent only on their input
  * arguments --- but this was checked for the predicate by the caller.)
  *
  * When the predicate is of the form "foo IS NOT NULL", we can conclude that
  * the predicate is implied if the clause is a strict operator or function
- * that has "foo" as an input.	In this case the clause must yield NULL when
+ * that has "foo" as an input.  In this case the clause must yield NULL when
  * "foo" is NULL, which we can take as equivalent to FALSE because we know
  * we are within an AND/OR subtree of a WHERE clause.  (Again, "foo" is
  * already known immutable, so the clause will certainly always fail.)
@@ -1431,7 +1415,7 @@ list_member_strip(List *list, Expr *datum)
  *
  * The strategy numbers defined by btree indexes (see access/skey.h) are:
  *		(1) <	(2) <=	 (3) =	 (4) >=   (5) >
- * and in addition we use (6) to represent <>.	<> is not a btree-indexable
+ * and in addition we use (6) to represent <>.  <> is not a btree-indexable
  * operator, but we assume here that if an equality operator of a btree
  * opfamily has a negator operator, the negator behaves as <> for the opfamily.
  * (This convention is also known to get_op_btree_interpretation().)
@@ -1515,7 +1499,7 @@ static const StrategyNumber BT_refute_table[6][6] = {
  * if not able to prove it.
  *
  * What we look for here is binary boolean opclauses of the form
- * "foo op constant", where "foo" is the same in both clauses.	The operators
+ * "foo op constant", where "foo" is the same in both clauses.  The operators
  * and constants can be different but the operators must be in the same btree
  * operator family.  We use the above operator implication tables to
  * derive implications between nonidentical clauses.  (Note: "foo" is known
@@ -1605,7 +1589,7 @@ btree_predicate_proof(Expr *predicate, Node *clause, bool refute_it)
 	/*
 	 * Check for matching subexpressions on the non-Const sides.  We used to
 	 * only allow a simple Var, but it's about as easy to allow any
-	 * expression.	Remember we already know that the pred expression does not
+	 * expression.  Remember we already know that the pred expression does not
 	 * contain any non-immutable functions, so identical expressions should
 	 * yield identical results.
 	 */
@@ -1877,7 +1861,7 @@ get_btree_test_op(Oid pred_op, Oid clause_op, bool refute_it)
 			 * Last check: test_op must be immutable.
 			 *
 			 * Note that we require only the test_op to be immutable, not the
-			 * original clause_op.	(pred_op is assumed to have been checked
+			 * original clause_op.  (pred_op is assumed to have been checked
 			 * immutable by the caller.)  Essentially we are assuming that the
 			 * opfamily is consistent even if it contains operators that are
 			 * merely stable.
@@ -1939,261 +1923,6 @@ InvalidateOprProofCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
 	}
 }
 
-typedef struct ConstHashValue
-{
-	Const * c;
-} ConstHashValue;
-
-static void
-CalculateHashWithHashAny(void *clientData, void *buf, size_t len)
-{
-	uint32 *result = (uint32*) clientData;
-	*result = hash_any((unsigned char *)buf, len );
-}
-
-static uint32
-ConstHashTableHash(const void *keyPtr, Size keysize)
-{
-	uint32 result;
-	Const *c = *((Const **)keyPtr);
-
-	if ( c->constisnull)
-	{
-		hashNullDatum(CalculateHashWithHashAny, &result);
-	}
-	else
-	{
-		hashDatum(c->constvalue, c->consttype, CalculateHashWithHashAny, &result);
-	}
-	return result;
-}
-
-static int
-ConstHashTableMatch(const void*keyPtr1, const void *keyPtr2, Size keysize)
-{
-	Node *left = *((Node **)keyPtr1);
-	Node *right = *((Node **)keyPtr2);
-	return equal(left, right) ? 0 : 1;
-}
-
-/**
- * returns a hashtable that can be used to map from a node to itself
- */
-static HTAB*
-CreateNodeSetHashTable(MemoryContext memoryContext)
-{
-	HASHCTL	hash_ctl;
-
-	MemSet(&hash_ctl, 0, sizeof(hash_ctl));
-
-	hash_ctl.keysize = sizeof(Const**);
-	hash_ctl.entrysize = sizeof(ConstHashValue);
-	hash_ctl.hash = ConstHashTableHash;
-	hash_ctl.match = ConstHashTableMatch;
-	hash_ctl.hcxt = memoryContext;
-
-	return hash_create("ConstantSet", 16, &hash_ctl, HASH_ELEM | HASH_FUNCTION | HASH_COMPARE | HASH_CONTEXT);
-}
-
-/**
- * basic operation on PossibleValueSet:  initialize to "any value possible"
- */
-void
-InitPossibleValueSetData(PossibleValueSet *pvs)
-{
-	pvs->memoryContext = NULL;
-	pvs->set = NULL;
-	pvs->isAnyValuePossible = true;
-}
-
-/**
- * Take the values from the given PossibleValueSet and return them as an allocated array.
- *
- * @param pvs the set to turn into an array
- * @param numValuesOut receives the length of the returned array
- * @return the array of Node objects
- */
-Node **
-GetPossibleValuesAsArray( PossibleValueSet *pvs, int *numValuesOut )
-{
-	HASH_SEQ_STATUS status;
-	ConstHashValue *value;
-	List *list = NULL;
-	Node ** result;
-	int numValues, i;
-	ListCell *lc;
-
-	if ( pvs->set == NULL)
-	{
-		*numValuesOut = 0;
-		return NULL;
-	}
-
-	hash_seq_init(&status, pvs->set);
-	while ((value = (ConstHashValue*) hash_seq_search(&status)) != NULL)
-	{
-		list = lappend(list, copyObject(value->c));
-	}
-
-	numValues = list_length(list);
-	result = palloc(sizeof(Node*) * numValues);
-	foreach_with_count( lc, list, i)
-	{
-		result[i] = (Node*) lfirst(lc);
-	}
-
-	*numValuesOut = numValues;
-	return result;
-}
-
-/**
- * basic operation on PossibleValueSet:  cleanup
- */
-void
-DeletePossibleValueSetData(PossibleValueSet *pvs)
-{
-	if ( pvs->set != NULL)
-	{
-		Assert(pvs->memoryContext != NULL);
-
-		MemoryContextDelete(pvs->memoryContext);
-		pvs->memoryContext = NULL;
-		pvs->set = NULL;
-	}
-	pvs->isAnyValuePossible = true;
-}
-
-/**
- * basic operation on PossibleValueSet:  add a value to the set field of PossibleValueSet
- *
- * The caller must verify that the valueToCopy is greenplum hashable
- */
-static void
-AddValue(PossibleValueSet *pvs, Const *valueToCopy)
-{
-	Assert( isGreenplumDbHashable(valueToCopy->consttype));
-
-	if ( pvs->set == NULL)
-	{
-		Assert(pvs->memoryContext == NULL);
-
-		pvs->memoryContext = AllocSetContextCreate(CurrentMemoryContext,
-													   "PossibleValueSet",
-													   ALLOCSET_DEFAULT_MINSIZE,
-													   ALLOCSET_DEFAULT_INITSIZE,
-													   ALLOCSET_DEFAULT_MAXSIZE);
-		pvs->set = CreateNodeSetHashTable(pvs->memoryContext);
-	}
-
-	if ( ! ContainsValue(pvs, valueToCopy))
-	{
-		bool found; /* unused but needed in call */
-		MemoryContext oldContext = MemoryContextSwitchTo(pvs->memoryContext);
-
-		Const *key = copyObject(valueToCopy);
-		void *entry = hash_search(pvs->set, &key, HASH_ENTER, &found);
-
-		if ( entry == NULL)
-		{
-			ereport(ERROR, (errcode(ERRCODE_OUT_OF_MEMORY), errmsg("out of memory")));
-		}
-		((ConstHashValue*)entry)->c = key;
-
-		MemoryContextSwitchTo(oldContext);
-	}
-}
-
-static void
-SetToNoValuesPossible(PossibleValueSet *pvs)
-{
-	if ( pvs->memoryContext )
-	{
-		MemoryContextDelete(pvs->memoryContext);
-	}
-	pvs->memoryContext = AllocSetContextCreate(CurrentMemoryContext,
-												   "PossibleValueSet",
-												   ALLOCSET_DEFAULT_MINSIZE,
-												   ALLOCSET_DEFAULT_INITSIZE,
-												   ALLOCSET_DEFAULT_MAXSIZE);
-	pvs->set = CreateNodeSetHashTable(pvs->memoryContext);
-	pvs->isAnyValuePossible = false;
-}
-
-/**
- * basic operation on PossibleValueSet:  remove a value from the set field of PossibleValueSet
- */
-static void
-RemoveValue(PossibleValueSet *pvs, Const *value)
-{
-	bool found; /* unused, needed in call */
-	Assert( pvs->set != NULL);
-	hash_search(pvs->set, &value, HASH_REMOVE, &found);
-}
-
-/**
- * basic operation on PossibleValueSet:  determine if a value is contained in the set field of PossibleValueSet
- */
-static bool
-ContainsValue(PossibleValueSet *pvs, Const *value)
-{
-	bool found = false;
-	Assert(!pvs->isAnyValuePossible);
-	if ( pvs->set != NULL)
-		hash_search(pvs->set, &value, HASH_FIND, &found);
-	return found;
-}
-
-/**
- * in-place union operation
- */
-static void
-AddUnmatchingValues( PossibleValueSet *pvs, PossibleValueSet *toCheck )
-{
-	HASH_SEQ_STATUS status;
-	ConstHashValue *value;
-
-	Assert(!pvs->isAnyValuePossible);
-	Assert(!toCheck->isAnyValuePossible);
-
-	hash_seq_init(&status, toCheck->set);
-	while ((value = (ConstHashValue*) hash_seq_search(&status)) != NULL)
-	{
-		AddValue(pvs, value->c);
-	}
-}
-
-/**
- * in-place intersection operation
- */
-static void
-RemoveUnmatchingValues(PossibleValueSet *pvs, PossibleValueSet *toCheck)
-{
-	List *toRemove = NULL;
-	ListCell *lc;
-	HASH_SEQ_STATUS status;
-	ConstHashValue *value;
-
-	Assert(!pvs->isAnyValuePossible);
-	Assert(!toCheck->isAnyValuePossible);
-
-	hash_seq_init(&status, pvs->set);
-	while ((value = (ConstHashValue*) hash_seq_search(&status)) != NULL)
-	{
-		if ( ! ContainsValue(toCheck, value->c ))
-		{
-			toRemove = lappend(toRemove, value->c);
-		}
-	}
-
-	/* remove after so we don't mod hashtable underneath iteration */
-	foreach(lc, toRemove)
-	{
-		Const *value = (Const*) lfirst(lc);
-		RemoveValue(pvs, value);
-	}
-	list_free(toRemove);
-}
-
 /**
  * Process an AND clause -- this can do a INTERSECTION between sets learned from child clauses
  */
@@ -2201,6 +1930,7 @@ static PossibleValueSet
 ProcessAndClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, Node *variable)
 {
 	PossibleValueSet result;
+
 	InitPossibleValueSetData(&result);
 
 	iterate_begin(child, clause, *clauseInfo)
@@ -2272,231 +2002,6 @@ ProcessOrClauseForPossibleValues( PredIterInfoData *clauseInfo, Node *clause, No
 	return result;
 }
 
-/**
- * Check to see if the given OpExpr is a valid equality between the listed variable and a constant.
- *
- * @param expr the expression to check for being a valid quality
- * @param variable the variable to look for
- * @param resultOut will be updated with the modified values
- */
-static bool
-TryProcessEqualityNodeForPossibleValues(OpExpr *expr, Node *variable, PossibleValueSet *resultOut )
-{
-	Node *leftop, *rightop, *varExpr;
-    Const *constExpr;
-    bool constOnRight;
-
-	InitPossibleValueSetData(resultOut);
-
-	leftop = get_leftop((Expr*)expr);
-	rightop = get_rightop((Expr*)expr);
-	if (!leftop || !rightop)
-		return false;
-
-	/* check if one operand is a constant */
-	if ( IsA(rightop, Const))
-	{
-		varExpr = leftop;
-		constExpr = (Const *) rightop;
-		constOnRight = true;
-	}
-	else if ( IsA(leftop, Const))
-	{
-		constExpr = (Const *) leftop;
-		varExpr = rightop;
-		constOnRight = false;
-	}
-	else
-	{
-		/** not a constant?  Learned nothing */
-		return false;
-	}
-
-	if ( constExpr->constisnull)
-	{
-		/* null doesn't help us */
-		return false;
-	}
-
-	if ( IsA(varExpr, RelabelType))
-	{
-		RelabelType *rt = (RelabelType*) varExpr;
-		varExpr = (Node*) rt->arg;
-	}
-
-	if ( ! equal(varExpr, variable))
-	{
-		/**
-		 * Not talking about our variable?  Learned nothing
-		 */
-		return false;
-	}
-
-	/* check if it's equality operation */
-	if ( is_builtin_greenplum_hashable_equality_between_same_type(expr->opno))
-	{
-		if ( isGreenplumDbHashable(constExpr->consttype))
-		{
-			/**
-			 * Found a constant match!
-			 */
-			resultOut->isAnyValuePossible = false;
-			AddValue(resultOut, constExpr);
-		}
-		else
-		{
-			/**
-			 * Not cdb hashable, can't determine the value
-			 */
-			resultOut->isAnyValuePossible = true;
-		}
-		return true;
-	}
-	else
-	{
-		Oid consttype;
-		Datum constvalue;
-
-		/* try to handle equality between differently-sized integer types */
-		bool isOverflow = false;
-		switch ( expr->opno )
-		{
-			case Int84EqualOperator:
-			case Int48EqualOperator:
-			{
-				bool bigOnRight = expr->opno == Int48EqualOperator;
-				if ( constOnRight == bigOnRight )
-				{
-					// convert large constant to small
-					int64 val =  DatumGetInt64(constExpr->constvalue);
-
-					if ( val > INT32MAX || val < INT32MIN )
-					{
-						isOverflow = true;
-					}
-					else
-					{
-						consttype = INT4OID;
-						constvalue = Int32GetDatum((int32)val);
-					}
-				}
-				else
-				{
-					// convert small constant to small
-					int32 val =  DatumGetInt32(constExpr->constvalue);
-
-					consttype = INT8OID;
-					constvalue = Int64GetDatum(val);
-				}
-				break;
-			}
-			case Int24EqualOperator:
-			case Int42EqualOperator:
-			{
-				bool bigOnRight = expr->opno == Int24EqualOperator;
-				if ( constOnRight == bigOnRight )
-				{
-					// convert large constant to small
-					int32 val =  DatumGetInt32(constExpr->constvalue);
-
-					if ( val > INT16MAX || val < INT16MIN )
-					{
-						isOverflow = true;
-					}
-					else
-					{
-						consttype = INT2OID;
-						constvalue = Int16GetDatum((int16)val);
-					}
-				}
-				else
-				{
-					// convert small constant to small
-					int16 val =  DatumGetInt16(constExpr->constvalue);
-
-					consttype = INT4OID;
-					constvalue = Int32GetDatum(val);
-				}
-				break;
-			}
-			case Int28EqualOperator:
-			case Int82EqualOperator:
-			{
-				bool bigOnRight = expr->opno == Int28EqualOperator;
-				if ( constOnRight == bigOnRight )
-				{
-					// convert large constant to small
-					int64 val =  DatumGetInt64(constExpr->constvalue);
-
-					if ( val > INT16MAX || val < INT16MIN )
-					{
-						isOverflow = true;
-					}
-					else
-					{
-						consttype = INT2OID;
-						constvalue = Int16GetDatum((int16)val);
-					}
-				}
-				else
-				{
-					// convert small constant to small
-					int16 val =  DatumGetInt16(constExpr->constvalue);
-
-					consttype = INT8OID;
-					constvalue = Int64GetDatum(val);
-				}
-				break;
-			}
-			default:
-				/* not a useful operator ... */
-				return false;
-		}
-
-		if ( isOverflow )
-		{
-			SetToNoValuesPossible(resultOut);
-		}
-		else
-		{
-			/* okay, got a new constant value .. set it and done!*/
-			Const *newConst;
-			int constlen = 0;
-
-			Assert(isGreenplumDbHashable(consttype));
-
-			switch ( consttype)
-			{
-				case INT8OID:
-					constlen = sizeof(int64);
-					break;
-				case INT4OID:
-					constlen = sizeof(int32);
-					break;
-				case INT2OID:
-					constlen = sizeof(int16);
-					break;
-				default:
-					Assert(!"unreachable");
-			}
-
-			newConst = makeConst(consttype,
-								 /* consttypmod */ 0,
-								 /* constcollid */ InvalidOid,
-								 constlen,
-								 constvalue,
-								 /* constisnull */ false,
-								 /* constbyval */ true);
-
-
-			resultOut->isAnyValuePossible = false;
-			AddValue(resultOut, newConst);
-
-			pfree(newConst);
-		}
-		return true;
-	}
-}
 
 /**
  *
@@ -2510,7 +2015,7 @@ TryProcessEqualityNodeForPossibleValues(OpExpr *expr, Node *variable, PossibleVa
  *    possible values is within the cross-product of the two variables' sets
  */
 PossibleValueSet
-DeterminePossibleValueSet( Node *clause, Node *variable)
+DeterminePossibleValueSet(Node *clause, Node *variable)
 {
 	PredIterInfoData clauseInfo;
 	PossibleValueSet result;

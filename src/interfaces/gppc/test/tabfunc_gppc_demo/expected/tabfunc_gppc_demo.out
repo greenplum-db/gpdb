@@ -2495,9 +2495,9 @@ HINT:  No operator matches the given name and argument type(s). You might need t
  a      | text    |           | extended | 
  b      | integer |           | plain    | 
 View definition:
- SELECT transform.a, 
+ SELECT transform.a,
     transform.b
-   FROM transform(TABLE( SELECT t1.a, 
+   FROM transform(TABLE( SELECT t1.a,
             t1.e
            FROM t1
           WHERE t1.a < 10
@@ -2531,9 +2531,9 @@ LINE 2:     transform(
  a      | text    |           | extended | 
  b      | integer |           | plain    | 
 View definition:
- SELECT transform.a, 
+ SELECT transform.a,
     transform.b
-   FROM transform(TABLE( SELECT t1_view.a, 
+   FROM transform(TABLE( SELECT t1_view.a,
             t1_view.e
            FROM t1_view
           ORDER BY t1_view.b

@@ -1077,8 +1077,8 @@ order by locid, country_code;
  country_code | character(2) |           | extended | 
  region       | text         |           | extended | 
 View definition:
- SELECT locations.bus_name, 
-    locations.country_code, 
+ SELECT locations.bus_name,
+    locations.country_code,
         CASE locations.country_code
             WHEN IS NOT DISTINCT FROM 'US'::bpchar THEN 'Americas'::text
             WHEN IS NOT DISTINCT FROM 'CA'::bpchar THEN 'Americas'::text

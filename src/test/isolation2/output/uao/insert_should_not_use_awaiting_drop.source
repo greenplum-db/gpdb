@@ -1,0 +1,150 @@
+-- Test to validate that AWAITING_DROP segment files are never chosen
+-- for inserts.
+
+-- start_matchsubs
+-- s/\s+\(.*\.[ch]:\d+\)/ (SOMEFILE:SOMEFUNC)/
+-- m/relid \d+/
+-- s/relid \d+/relid /
+-- end_matchsubs
+create extension if not exists gp_inject_fault;
+CREATE
+
+select gp_inject_fault('all', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- Given an append only table that is ready to be compacted
+
+drop table if exists test_table_@orientation@;
+DROP
+create table test_table_@orientation@ (a int, b int) with(appendonly=true);
+CREATE
+insert into test_table_@orientation@ select i,i from generate_series(1,12)i;
+INSERT 12
+update test_table_@orientation@ set b = -b;
+UPDATE 12
+
+select gp_toolkit.__gp_remove_ao_entry_from_cache('test_table_@orientation@'::regclass::oid);
+__gp_remove_ao_entry_from_cache
+-------------------------------
+                               
+(1 row)
+
+select gp_inject_fault('before_creating_an_ao_hash_entry', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+
+-- And an insert transaction is blocked before assigning a segment
+-- file for insertion
+1&: INSERT INTO test_table_@orientation@ VALUES (1,1);  <waiting ...>
+
+select gp_wait_until_triggered_fault('before_creating_an_ao_hash_entry', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+
+select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'suspend', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+2&: VACUUM test_table_@orientation@;  <waiting ...>
+
+select gp_wait_until_triggered_fault('vacuum_relation_open_relation_during_drop_phase', 1, 1);
+gp_wait_until_triggered_fault
+-----------------------------
+t                            
+(1 row)
+
+-- Then vacuum should have completed compaction leaving segment file 1
+-- in default state on QD but in awaiting drop state on QEs
+select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
+segno|state
+-----+-----
+1    |1    
+2    |1    
+(2 rows)
+0U: select segno, state from gp_ao_or_aocs_seg('test_table_@orientation@');
+segno|state
+-----+-----
+1    |2    
+2    |1    
+(2 rows)
+
+-- And the entry in append only hash table for segno 1 is in awaiting drop state
+select segno, state from gp_toolkit.__gp_get_ao_entry_from_cache('test_table_@orientation@'::regclass::oid) where segno <= 2;
+segno|state
+-----+-----
+0    |1    
+1    |6    
+2    |1    
+(3 rows)
+
+-- And the entry for test_table is removed from append only hash table
+select gp_toolkit.__gp_remove_ao_entry_from_cache('test_table_@orientation@'::regclass::oid);
+__gp_remove_ao_entry_from_cache
+-------------------------------
+                               
+(1 row)
+
+-- And the insert succeeds
+select gp_inject_fault('before_creating_an_ao_hash_entry', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+1<:  <... completed>
+INSERT 1
+
+-- The insert recreates the entry in append only hash with segno 1 in
+-- awaiting drop state
+select segno, state from gp_toolkit.__gp_get_ao_entry_from_cache('test_table_@orientation@'::regclass::oid) where segno <= 2;
+segno|state
+-----+-----
+0    |1    
+1    |2    
+2    |1    
+(3 rows)
+
+-- And the vacuum completes
+select gp_inject_fault('vacuum_relation_open_relation_during_drop_phase', 'reset', 1);
+gp_inject_fault
+---------------
+t              
+(1 row)
+2<:  <... completed>
+VACUUM
+
+-- Then inserts into test table should be visible
+select count(1) from test_table_@orientation@;
+count
+-----
+13   
+(1 row)
+
+-- And additional inserts should continue to succeed
+insert into test_table_@orientation@ values (1,1);
+INSERT 1
+
+-- When the appendonly hash entry is removed
+select gp_toolkit.__gp_remove_ao_entry_from_cache('test_table_@orientation@'::regclass::oid);
+__gp_remove_ao_entry_from_cache
+-------------------------------
+                               
+(1 row)
+
+-- Then inserts should continue to succeed
+insert into test_table_@orientation@ values (1,1);
+INSERT 1
+
+-- And inserted data should be visible
+select count(1) from test_table_@orientation@;
+count
+-----
+15   
+(1 row)

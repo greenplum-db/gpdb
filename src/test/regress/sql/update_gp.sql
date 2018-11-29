@@ -52,6 +52,19 @@ update target set b = 10 where c = 10;
 
 drop table todelete;
 drop table target;
+
+--
+-- Test updated on inheritance parent table, where some child tables need a
+-- Split Update, but not all.
+--
+create table base_tbl (a int4, b int4) distributed by (a);
+create table child_a (a int4, b int4) inherits (base_tbl) distributed by (a);
+create table child_b (a int4, b int4) inherits (base_tbl) distributed by (b);
+insert into base_tbl select g, g from generate_series(1, 5) g;
+
+explain (costs off) update base_tbl set a=a+1;
+update base_tbl set a = 5;
+
 --
 -- Explicit Distribution motion must be added if any of the child nodes
 -- contains any motion excluding the motions in initplans.

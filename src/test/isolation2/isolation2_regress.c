@@ -1,4 +1,5 @@
 #include "postgres.h"
+
 #include "funcapi.h"
 #include "tablefuncapi.h"
 #include "miscadmin.h"
@@ -7,58 +8,22 @@
 #include "access/heapam.h"
 #include "storage/bufmgr.h"
 #include "utils/numeric.h"
+#include "utils/snapmgr.h"
 
 PG_MODULE_MAGIC;
 
-extern void flush_relation_buffers(PG_FUNCTION_ARGS);
-
 /* numeric upgrade tests */
-extern Datum convertNumericToGPDB4(PG_FUNCTION_ARGS);
 extern Datum setAOFormatVersion(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(flush_relation_buffers);
-void
+Datum
 flush_relation_buffers(PG_FUNCTION_ARGS)
 {
 	Oid relid = PG_GETARG_OID(0);
 	Relation r = heap_open(relid, AccessShareLock);
 	FlushRelationBuffers(r);
 	heap_close(r, AccessShareLock);
-}
-
-/* Mangle a numeric Datum to match the GPDB4 (Postgres 8.2) format. */
-PG_FUNCTION_INFO_V1(convertNumericToGPDB4);
-Datum
-convertNumericToGPDB4(PG_FUNCTION_ARGS)
-{
-	Datum	numeric = PG_GETARG_DATUM(0);
-	void   *varlena = DatumGetPointer(numeric);
-	void   *newvarlena;
-	char  *newdata;
-	uint16	tmp;
-
-	/*
-	 * Postgres 9.1 added the short format to numeric types. To convert to 8.2,
-	 * we must force the use of the long format. This has the useful side effect
-	 * of making a copy for us that we can scratch over.
-	 */
-	newvarlena = numeric_force_long_format(DatumGetNumeric(numeric));
-	if (newvarlena == varlena)
-	{
-		/* Already in long format; we have to manually copy ourselves. */
-		size_t datalen = VARSIZE_ANY(varlena);
-
-		newvarlena = palloc(datalen);
-		memcpy(newvarlena, varlena, datalen);
-	}
-
-	newdata = VARDATA_ANY(newvarlena);
-
-	memcpy(&tmp, &newdata[0], 2);
-	memcpy(&newdata[0], &newdata[2], 2);
-	memcpy(&newdata[2], &tmp, 2);
-
-	PG_RETURN_POINTER(newvarlena);
+	PG_RETURN_BOOL(true);
 }
 
 /* Override the format version for an AO/CO table. */
@@ -110,7 +75,7 @@ setAOFormatVersion(PG_FUNCTION_ARGS)
 			 (int) aosegrelid);
 
 	/* Scan over the rows, overriding the formatversion for each entry. */
-	scan = heap_beginscan(aosegrel, SnapshotNow, 0, NULL);
+	scan = heap_beginscan(aosegrel, GetActiveSnapshot(), 0, NULL);
 	while ((oldtuple = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		newtuple = heap_modify_tuple(oldtuple, tupdesc, values, isnull, replace);

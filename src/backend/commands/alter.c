@@ -3,7 +3,7 @@
  * alter.c
  *	  Drivers for generic alter commands
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -36,6 +36,7 @@
 #include "catalog/pg_ts_dict.h"
 #include "catalog/pg_ts_parser.h"
 #include "catalog/pg_ts_template.h"
+#include "catalog/pg_extprotocol.h"
 #include "commands/alter.h"
 #include "commands/collationcmds.h"
 #include "commands/conversioncmds.h"
@@ -90,6 +91,9 @@ report_name_conflict(Oid classId, const char *name)
 			break;
 		case LanguageRelationId:
 			msgfmt = gettext_noop("language \"%s\" already exists");
+			break;
+		case ExtprotocolRelationId:
+			msgfmt = gettext_noop("protocol \"%s\" already exists");
 			break;
 		default:
 			elog(ERROR, "unsupported object class %u", classId);
@@ -300,7 +304,7 @@ AlterObjectRename_internal(Relation rel, Oid objectId, const char *new_name)
 }
 
 /*
- * Executes an ALTER OBJECT / RENAME TO statement.	Based on the object
+ * Executes an ALTER OBJECT / RENAME TO statement.  Based on the object
  * type, the function appropriate to that type is executed.
  */
 static Oid
@@ -347,11 +351,6 @@ ExecRenameStmt_internal(RenameStmt *stmt)
 			return RenameType(stmt);
 
 		case OBJECT_EXTPROTOCOL:
-			// GPDB_93_MERGE_FIXME: this probably could be refactored to
-			// use the generic AlterObjectRename_internal() function, like
-			// below.
-			return RenameExtProtocol(stmt->subname, stmt->newname);
-
 		case OBJECT_AGGREGATE:
 		case OBJECT_COLLATION:
 		case OBJECT_CONVERSION:
@@ -400,7 +399,11 @@ ExecRenameStmt(RenameStmt *stmt)
 
 	result = ExecRenameStmt_internal(stmt);
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Dispatch to the segments. Except for event triggers, they're only stored
+	 * in the QD node.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && stmt->renameType != OBJECT_EVENT_TRIGGER)
 	{
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR|
@@ -488,7 +491,12 @@ ExecAlterObjectSchemaStmt(AlterObjectSchemaStmt *stmt)
 
 	result = ExecAlterObjectSchemaStmt_internal(stmt);
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Dispatch to the segments. Except for event triggers, they're only stored
+	 * in the QD node. (Event triggers have no schema, so that exception doesn't
+	 * really apply here, but keep this consistent with all the other commands.)
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && stmt->objectType != OBJECT_EVENT_TRIGGER)
 	{
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR|
@@ -752,12 +760,6 @@ ExecAlterOwnerStmt_internal(AlterOwnerStmt *stmt)
 										  newowner);
 
 		case OBJECT_EXTPROTOCOL:
-			// GPDB_93_MERGE_FIXME: this probably could be refactored to
-			// follow the generic case below
-			return AlterExtProtocolOwner(strVal(linitial(stmt->object)),
-										 newowner);
-
-			/* Generic cases */
 		case OBJECT_AGGREGATE:
 		case OBJECT_COLLATION:
 		case OBJECT_CONVERSION:
@@ -817,7 +819,11 @@ ExecAlterOwnerStmt(AlterOwnerStmt *stmt)
 
 	result = ExecAlterOwnerStmt_internal(stmt);
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	/*
+	 * Dispatch to the segments. Except for event triggers, they're only stored
+	 * in the QD node.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH && stmt->objectType != OBJECT_EVENT_TRIGGER)
 	{
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR|
@@ -919,6 +925,34 @@ AlterObjectOwner_internal(Relation rel, Oid objectId, Oid new_ownerId)
 					aclcheck_error(aclresult, ACL_KIND_NAMESPACE,
 								   get_namespace_name(namespaceId));
 			}
+		}
+
+		/* MPP-14592: untrusted? don't allow ALTER OWNER to non-super user */
+		if(classId == ExtprotocolRelationId) 
+		{
+			char *old_name;
+			bool is_trusted;
+
+			datum = heap_getattr(oldtup, Anum_name,
+                                                 RelationGetDescr(rel), &isnull);
+
+			Assert(!isnull);
+		
+			old_name = NameStr(*(DatumGetName(datum)));
+		
+			datum = heap_getattr(oldtup, Anum_pg_extprotocol_ptctrusted,
+						 RelationGetDescr(rel), &isnull);
+			if (isnull)
+				ereport(ERROR,
+					(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 	errmsg("internal error: protocol \"%s\" has no trust attribute defined", old_name)));
+			
+			is_trusted = DatumGetBool(datum);
+			
+			if(!is_trusted && !superuser_arg(new_ownerId))
+				ereport(ERROR,
+					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					errmsg("untrusted protocol \"%s\" can't be owned by non superuser", old_name)));
 		}
 
 		/* Build a modified tuple */

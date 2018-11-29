@@ -4,7 +4,7 @@
  *	  prototypes for tablecmds.c.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/tablecmds.h
@@ -122,7 +122,7 @@ extern Oid get_settable_tablespace_oid(char *tablespacename);
 extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 			List **supOids, List **supconstr, int *supOidCount);
 
-extern DistributedBy *make_dist_clause(Relation rel);
+extern DistributedBy *make_distributedby_for_rel(Relation rel);
 
 extern Oid transformFkeyCheckAttrs(Relation pkrel,
 								   int numattrs, int16 *attnums,
@@ -131,4 +131,6 @@ extern Oid transformFkeyCheckAttrs(Relation pkrel,
 extern void RangeVarCallbackOwnsTable(const RangeVar *relation,
 						  Oid relId, Oid oldRelId, void *arg);
 
+extern void RangeVarCallbackOwnsRelation(const RangeVar *relation,
+							 Oid relId, Oid oldRelId, void *noCatalogs);
 #endif   /* TABLECMDS_H */

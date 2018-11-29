@@ -303,7 +303,7 @@ on (x1 = xx1) where (xx2 is not null);
 -- to outside an IN
 --
 create table foo (unique1 int, unique2 int) distributed replicated;
-insert into foo vaules (1, 2), (2, 42);
+insert into foo values (1, 2), (2, 42);
 
 select count(*) from foo a where unique1 in
   (select unique1 from foo b join foo c using (unique1)

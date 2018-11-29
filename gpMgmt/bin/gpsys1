@@ -96,7 +96,7 @@ def getMemory():
 	return '?'
 
     if getPlatform() == 'darwin':
-	ok, out = run("sysctl hw.physmem")
+	ok, out = run("sysctl hw.memsize")
 	if not ok: return '?'
 	list = out.strip().split(' ')
 	val = int(list[1])

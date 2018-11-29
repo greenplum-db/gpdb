@@ -43,7 +43,7 @@ create function check_pkey1_exists(int4, bpchar) returns bool as E'
         set GD(plan) [spi_prepare				\\
 	    "select 1 from T_pkey1				\\
 	        where key1 = \\$1 and key2 = \\$2"		\\
-    	    {int4 bpchar}]
+	    {int4 bpchar}]
     }
 
     set n [spi_execp -count 1 $GD(plan) [list $1 $2]]
@@ -65,8 +65,8 @@ CREATE VIEW trigger_test_view AS SELECT * FROM trigger_test;
 CREATE FUNCTION trigger_data() returns trigger language pltcl as $_$
 
 	if { [info exists TG_relid] } {
-    	set TG_relid "bogus:12345"
-   	}
+	set TG_relid "bogus:12345"
+	}
 
 	set dnames [info locals {[a-zA-Z]*} ]
 
@@ -82,10 +82,10 @@ CREATE FUNCTION trigger_data() returns trigger language pltcl as $_$
 				set str "$str$akey: $val"
 			}
 			set str "$str}"
-    		elog NOTICE "$key: $str"
+		elog NOTICE "$key: $str"
 		} else {
 			set val [eval list "\$$key" ]
-    		elog NOTICE "$key: $val"
+		elog NOTICE "$key: $val"
 		}
 	}
 
@@ -559,3 +559,21 @@ $$ language pltcl immutable;
 
 select tcl_date_week(2010,1,24);
 select tcl_date_week(2001,10,24);
+
+-- test pltcl event triggers
+create or replace function tclsnitch() returns event_trigger language pltcl as $$
+  elog NOTICE "tclsnitch: $TG_event $TG_tag"
+$$;
+
+create event trigger tcl_a_snitch on ddl_command_start execute procedure tclsnitch();
+create event trigger tcl_b_snitch on ddl_command_end execute procedure tclsnitch();
+
+create or replace function foobar() returns int language sql as $$select 1;$$;
+alter function foobar() cost 77;
+drop function foobar();
+
+create table foo();
+drop table foo;
+
+drop event trigger tcl_a_snitch;
+drop event trigger tcl_b_snitch;

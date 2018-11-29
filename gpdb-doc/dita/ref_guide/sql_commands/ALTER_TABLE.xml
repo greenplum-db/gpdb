@@ -16,7 +16,8 @@ ALTER TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 ALTER TABLE [ONLY] <varname>name</varname> SET 
      WITH (REORGANIZE=true|false)
    | DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) 
-   | DISTRIBUTED RANDOMLY 
+   | DISTRIBUTED RANDOMLY
+   | DISTRIBUTED REPLICATED 
  
 ALTER TABLE [ONLY] <varname>name</varname> <varname>action</varname> [, ... ]
 
@@ -205,10 +206,11 @@ ALTER TABLE <varname>name</varname>
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
                                         need to rewrite the table to get the desired effects.</li>
-                                <li id="ay141947"><b>SET DISTRIBUTED</b> —Changes the distribution
-                                        policy of a table. Changes to a hash distribution policy
-                                        will cause the table data to be physically redistributed on
-                                        disk, which can be resource intensive.</li>
+                                <li id="ay141947"><b>SET DISTRIBUTED</b> — Changes the distribution
+                                        policy of a table. Changing a hash distribution policy, or
+                                        changing to or from a  replicated policy, will cause the
+                                        table data to be physically redistributed on disk, which can
+                                        be resource intensive.</li>
                                 <li id="ay137232"><b>INHERIT <varname>parent_table</varname> / NO
                                                 INHERIT <varname>parent_table</varname></b> — Adds
                                         or removes the target table as a child of the specified
@@ -217,12 +219,12 @@ ALTER TABLE <varname>name</varname>
                                         target table must already contain all the same columns as
                                         the parent (it could have additional columns, too). The
                                         columns must have matching data types, and if they have
-                                                <codeph>NOT</codeph><codeph>NULL</codeph>
-                                        constraints in the parent then they must also have
-                                                <codeph>NOT NULL</codeph> constraints in the child.
-                                        There must also be matching child-table constraints for all
-                                                <codeph>CHECK</codeph> constraints of the
-                                        parent.</li>
+                                                <codeph>NOT NULL</codeph> constraints in the parent
+                                        then they must also have <codeph>NOT NULL</codeph>
+                                        constraints in the child. There must also be matching
+                                        child-table constraints for all <codeph>CHECK</codeph>
+                                        constraints of the parent. Neither the target table nor the
+                                        parent table may be replicated tables.</li>
                                 <li id="ay137262"><b>OWNER</b> — Changes the owner of the table,
                                         sequence, or view to the specified user. </li>
                                 <li id="ay137271"><b>SET TABLESPACE</b> — Changes the table's
@@ -412,15 +414,16 @@ ALTER TABLE <varname>name</varname>
                                 </plentry>
                                 <plentry>
                                         <pt>DISTRIBUTED BY (<varname>column</varname>) | DISTRIBUTED
-                                                RANDOMLY</pt>
+                                                RANDOMLY | DISTRIBUTED REPLICATED</pt>
                                         <pd>Specifies the distribution policy for a table. Changing
-                                                a hash distribution policy will cause the table data
-                                                to be physically redistributed on disk, which can be
-                                                resource intensive. If you declare the same hash
-                                                distribution policy or change from hash to random
-                                                distribution, data will not be redistributed unless
-                                                you declare <codeph>SET WITH
-                                                  (REORGANIZE=true)</codeph>.</pd>
+                                                a hash distribution policy causes the table data to
+                                                be physically redistributed, which can be resource
+                                                intensive. If you declare the same hash distribution
+                                                policy or change from hash to random distribution,
+                                                data will not be redistributed unless you declare
+                                                  <codeph>SET WITH (REORGANIZE=true)</codeph>.</pd>
+                                        <pd>Changing to or from a replicated distribution policy
+                                                causes the table data to be redistributed.</pd>
                                 </plentry>
                                 <plentry>
                                         <pt>REORGANIZE=true|false</pt>
@@ -583,7 +586,9 @@ ALTER TABLE <varname>name</varname>
                                                 You can exchange a table where the table data is
                                                 stored in the database. For example, the table is
                                                 created with the <codeph>CREATE TABLE</codeph>
-                                                command. </pd>
+                                                command. The table must have the same number of
+                                                columns, column order, column names, column types,
+                                                and distribution policy as the parent table.</pd>
                                         <pd>With the <codeph>EXCHANGE PARTITION</codeph> clause, you
                                                 can also exchange a readable external table (created
                                                 with the <codeph>CREATE EXTERNAL TABLE</codeph>
@@ -751,10 +756,11 @@ ALTER TABLE <varname>name</varname>
                                         <codeph>OWNER</codeph>, and <codeph>TABLESPACE</codeph>
                                 actions never recurse to descendant tables; that is, they always act
                                 as though <codeph>ONLY</codeph> were specified. Adding a constraint
-                                can recurse only for <codeph>CHECK</codeph> constraints.</p>
+                                can recurse only for <codeph>CHECK</codeph> constraints, and is
+                                required to do so for such constraints.</p>
                         <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
                                 data is changed on a partitioned table that contains a leaf child
-                                partition that has been exchanged to use an external table
+                                partition that has been exchanged to use an external table.
                                 Otherwise, an error is returned.<ul id="ul_hcw_mrn_qs">
                                         <li>Adding or dropping a column.</li>
                                         <li>Changing the data type of column.</li>
@@ -783,11 +789,19 @@ ALTER TABLE <varname>name</varname>
                         <codeblock>ALTER TABLE distributors RENAME TO suppliers;</codeblock>
                         <p>Add a not-null constraint to a column:</p>
                         <codeblock>ALTER TABLE distributors ALTER COLUMN street SET NOT NULL;</codeblock>
-                        <p>Add a check constraint to a table:</p>
+                        <p>Add a check constraint to a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
+                        <p>Remove a check constraint from  a table and all of its children:</p>
+                        <codeblock>ALTER TABLE distributors DROP CONSTRAINT zipchk;</codeblock>
+                        <p>Remove a check constraint from a table only:</p>
+                        <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>
+                        <p>(The check constraint remains in place for any child tables that inherit
+                                        <codeph>distributors</codeph>.)</p>
                         <p>Move a table to a different schema:</p>
                         <codeblock>ALTER TABLE myschema.distributors SET SCHEMA yourschema;</codeblock>
+                        <p>Change the distribution policy of a table to replicated:</p>
+                        <codeblock>ALTER TABLE myschema.distributors SET DISTRIBUTED REPLICATED;</codeblock>
                         <p>Add a new partition to a partitioned table:</p>
                         <codeblock>ALTER TABLE sales ADD PARTITION 
             START (date '2017-02-01') INCLUSIVE 

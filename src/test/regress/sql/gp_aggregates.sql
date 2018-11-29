@@ -90,13 +90,14 @@ reset enable_mergejoin;
 
 drop table l, ps;
 
--- This wouldn't work in GPDB, if the MIN/MAX optimization in the planner
--- didn't turn this into an index scan with a Limit.
--- This is the same test we have in the upstream 'aggregates' test.
-select max(unique2), generate_series(1,3) as g from tenk1 order by g desc;
-
--- Same test with avg(), so that the optimization doesn't apply. Fails,
--- currently.
+-- Test having a SRF in the targetlist, with an aggregate. GPDB used to not
+-- handle this, because the SRF-in-targetlist support was removed from Agg
+-- node, as an optimization. It's been put back since, so this works now.
+--
+-- We have this same test in the upstream 'aggregates' test, but with MAX().
+-- That's picked up by the MIN/MAX optimization, and turned into an
+-- LIMIT 1 query, however, and doesn't exercise from the SRF-in-targetlist
+-- support.
 select avg(unique2), generate_series(1,3) as g from tenk1 order by g desc;
 
 
@@ -117,3 +118,19 @@ create aggregate mysum_prefunc(int4) (
   prefunc=int8pl_with_notice
 );
 select mysum_prefunc(a::int4) from aggtest;
+
+
+-- Test an aggregate with 'internal' transition type, and a combine function,
+-- but no serial/deserial functions. This is valid, but we have no use for
+-- the combine function in GPDB in that case.
+
+CREATE AGGREGATE my_numeric_avg(numeric) (
+  stype = internal,
+  sfunc = numeric_avg_accum,
+  finalfunc = numeric_avg,
+  combinefunc = numeric_avg_combine
+);
+
+create temp table numerictesttab as select g::numeric as n from generate_series(1,10) g;
+
+select my_numeric_avg(n) from numerictesttab;

@@ -30,9 +30,9 @@
       <p>Notice how the backslash character that is part of the data is escaped with another
          backslash character, and the pipe character that is part of the data is escaped with a
          backslash character.</p>
-      <p>You can use the escape character to escape octal and hexidecimal sequences. The escaped
+      <p>You can use the escape character to escape octal and hexadecimal sequences. The escaped
          value is converted to the equivalent character when loaded into Greenplum Database. For example, to load the ampersand character
-            (<codeph>&amp;</codeph>), use the escape character to escape its equivalent hexidecimal
+            (<codeph>&amp;</codeph>), use the escape character to escape its equivalent hexadecimal
             (<codeph>\0x26</codeph>) or octal (<codeph>\046</codeph>) representation.</p>
       <p>You can disable escaping in <codeph>TEXT</codeph>-formatted files using the
             <codeph>ESCAPE</codeph> clause of <codeph>COPY</codeph>, <codeph>CREATE EXTERNAL TABLE

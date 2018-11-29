@@ -3,7 +3,7 @@
  * indexam.c
  *	  general index access method routines
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -67,7 +67,10 @@
 
 #include "access/relscan.h"
 #include "access/transam.h"
+#include "access/xlog.h"
+
 #include "catalog/index.h"
+#include "catalog/catalog.h"
 #include "pgstat.h"
 #include "storage/bufmgr.h"
 #include "storage/lmgr.h"
@@ -81,7 +84,7 @@
  *
  * Note: the ReindexIsProcessingIndex() check in RELATION_CHECKS is there
  * to check that we don't try to scan or do retail insertions into an index
- * that is currently being rebuilt or pending rebuild.	This helps to catch
+ * that is currently being rebuilt or pending rebuild.  This helps to catch
  * things that don't work when reindexing system catalogs.  The assertion
  * doesn't prevent the actual rebuild because we don't use RELATION_CHECKS
  * when calling the index AM's ambuild routine, and there is no reason for
@@ -146,7 +149,7 @@ static IndexScanDesc index_beginscan_internal(Relation indexRelation,
  *		index_open - open an index relation by relation OID
  *
  *		If lockmode is not "NoLock", the specified kind of lock is
- *		obtained on the index.	(Generally, NoLock should only be
+ *		obtained on the index.  (Generally, NoLock should only be
  *		used if the caller knows it has some appropriate lock on the
  *		index already.)
  *
@@ -411,7 +414,7 @@ index_markpos(IndexScanDesc scan)
  * returnable tuple in each HOT chain, and so restoring the prior state at the
  * granularity of the index AM is sufficient.  Since the only current user
  * of mark/restore functionality is nodeMergejoin.c, this effectively means
- * that merge-join plans only work for MVCC snapshots.	This could be fixed
+ * that merge-join plans only work for MVCC snapshots.  This could be fixed
  * if necessary, but for now it seems unimportant.
  * ----------------
  */
@@ -519,12 +522,8 @@ index_fetch_heap(IndexScanDesc scan)
 		/*
 		 * Prune page, but only if we weren't already on this page
 		 */
-		if (prev_buf != scan->xs_cbuf &&
-			TransactionIdIsValid(RecentGlobalXmin))
-		{
-			heap_page_prune_opt(scan->heapRelation, scan->xs_cbuf,
-								RecentGlobalXmin);
-		}
+		if (prev_buf != scan->xs_cbuf)
+			heap_page_prune_opt(scan->heapRelation, scan->xs_cbuf);
 	}
 
 	/* Obtain share-lock on the buffer so we can examine visibility */
@@ -554,7 +553,7 @@ index_fetch_heap(IndexScanDesc scan)
 	/*
 	 * If we scanned a whole HOT chain and found only dead tuples, tell index
 	 * AM to kill its entry for that TID (this will take effect in the next
-	 * amgettuple call, in index_getnext_tid).	We do not do this when in
+	 * amgettuple call, in index_getnext_tid).  We do not do this when in
 	 * recovery because it may violate MVCC to do so.  See comments in
 	 * RelationGetIndexScan().
 	 */
@@ -591,7 +590,7 @@ index_getnext(IndexScanDesc scan, ScanDirection direction)
 		{
 			/*
 			 * We are resuming scan of a HOT chain after having returned an
-			 * earlier member.	Must still hold pin on current heap page.
+			 * earlier member.  Must still hold pin on current heap page.
 			 */
 			Assert(BufferIsValid(scan->xs_cbuf));
 			Assert(ItemPointerGetBlockNumber(&scan->xs_ctup.t_self) ==
@@ -748,7 +747,7 @@ index_can_return(Relation indexRelation)
  *		particular indexed attribute are those with both types equal to
  *		the index opclass' opcintype (note that this is subtly different
  *		from the indexed attribute's own type: it may be a binary-compatible
- *		type instead).	Only the default functions are stored in relcache
+ *		type instead).  Only the default functions are stored in relcache
  *		entries --- access methods can use the syscache to look up non-default
  *		functions.
  *
@@ -782,7 +781,7 @@ index_getprocid(Relation irel,
  *		index_getprocinfo
  *
  *		This routine allows index AMs to keep fmgr lookup info for
- *		support procs in the relcache.	As above, only the "default"
+ *		support procs in the relcache.  As above, only the "default"
  *		functions for any particular indexed attribute are cached.
  *
  * Note: the return value points into cached data that will be lost during

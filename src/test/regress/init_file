@@ -8,6 +8,10 @@
 # of the test. Ignore the NOTICE if it exists already.
 m/^NOTICE:  extension "gp_inject_fault" already exists, skipping/
 
+# Some tests use the gp_debug_numsegments extension, and create it at the beginning
+# of the test. Ignore the NOTICE if it exists already.
+m/NOTICE:  extension "gp_debug_numsegments" already exists, skipping/
+
 # match ignore the gpmon WARNING message
 m/^WARNING:  gpmon:.*Connection refused.*/
 
@@ -99,8 +103,8 @@ m/Table "pg_temp_\d+.temp/
 s/Table "pg_temp_\d+.temp/Table "pg_temp_#####/
 
 # Mask out some numbers (part of temp table schema) that vary from run to run.
-m/Hash Cond: pg_temp_\d+/
-s/Hash Cond: pg_temp_\d+/Hash Cond: pg_temp_#####/
+m/Hash Cond: \(pg_temp_\d+/
+s/Hash Cond: \(pg_temp_\d+/Hash Cond: \(pg_temp_#####/
 
 # Mask out oid in error concurrent drop message
 m/\d+ was concurrently dropped/
@@ -115,4 +119,8 @@ m/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have cons
 s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge.*/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have consistent hyperloglog statistics for merge (analyze.c:XXX)/
 m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
 s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
+
+# Mask out schema name of the reshuffle notice
+m/NOTICE:  Do not need to reshuffle /
+s/NOTICE:  Do not need to reshuffle .*\./NOTICE:  Do not need to reshuffle SCHEMA./
 -- end_matchsubs

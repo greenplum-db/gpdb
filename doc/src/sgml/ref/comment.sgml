@@ -4,6 +4,10 @@ PostgreSQL documentation
 -->
 
 <refentry id="SQL-COMMENT">
+ <indexterm zone="sql-comment">
+  <primary>COMMENT</primary>
+ </indexterm>
+
  <refmeta>
   <refentrytitle>COMMENT</refentrytitle>
   <manvolnum>7</manvolnum>
@@ -15,16 +19,12 @@ PostgreSQL documentation
   <refpurpose>define or change the comment of an object</refpurpose>
  </refnamediv>
 
- <indexterm zone="sql-comment">
-  <primary>COMMENT</primary>
- </indexterm>
-
  <refsynopsisdiv>
 <synopsis>
 COMMENT ON
 {
-  AGGREGATE <replaceable class="PARAMETER">agg_name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) |
-  CAST (<replaceable>sourcetype</replaceable> AS <replaceable>target_type</replaceable>) |
+  AGGREGATE <replaceable class="PARAMETER">aggregate_name</replaceable> ( <replaceable>aggregate_signature</replaceable> ) |
+  CAST (<replaceable>source_type</replaceable> AS <replaceable>target_type</replaceable>) |
   COLLATION <replaceable class="PARAMETER">object_name</replaceable> |
   COLUMN <replaceable class="PARAMETER">relation_name</replaceable>.<replaceable class="PARAMETER">column_name</replaceable> |
   CONSTRAINT <replaceable class="PARAMETER">constraint_name</replaceable> ON <replaceable class="PARAMETER">table_name</replaceable> |
@@ -63,8 +63,8 @@ COMMENT ON
 <phrase>where <replaceable>aggregate_signature</replaceable> is:</phrase>
 
 * |
-[ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] |
-[ [ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] ] ORDER BY [ <replaceable>argmode</replaceable> ] <replaceable>argtype</replaceable> [ , ... ]
+[ <replaceable>argmode</replaceable> ] [ <replaceable>argname</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] |
+[ [ <replaceable>argmode</replaceable> ] [ <replaceable>argname</replaceable> ] <replaceable>argtype</replaceable> [ , ... ] ] ORDER BY [ <replaceable>argmode</replaceable> ] [ <replaceable>argname</replaceable> ] <replaceable>argtype</replaceable> [ , ... ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -108,7 +108,7 @@ COMMENT ON
    <varlistentry>
     <term><replaceable class="parameter">object_name</replaceable></term>
     <term><replaceable class="parameter">relation_name</replaceable>.<replaceable>column_name</replaceable></term>
-    <term><replaceable class="parameter">agg_name</replaceable></term>
+    <term><replaceable class="parameter">aggregate_name</replaceable></term>
     <term><replaceable class="parameter">constraint_name</replaceable></term>
     <term><replaceable class="parameter">function_name</replaceable></term>
     <term><replaceable class="parameter">operator_name</replaceable></term>
@@ -149,7 +149,8 @@ COMMENT ON
     <term><replaceable class="parameter">argmode</replaceable></term>
     <listitem>
      <para>
-      The mode of a function argument: <literal>IN</>, <literal>OUT</>,
+      The mode of a function or aggregate
+      argument: <literal>IN</>, <literal>OUT</>,
       <literal>INOUT</>, or <literal>VARIADIC</>.
       If omitted, the default is <literal>IN</>.
       Note that <command>COMMENT</command> does not actually pay
@@ -165,7 +166,7 @@ COMMENT ON
     <term><replaceable class="parameter">argname</replaceable></term>
     <listitem>
      <para>
-      The name of a function argument.
+      The name of a function or aggregate argument.
       Note that <command>COMMENT</command> does not actually pay
       any attention to argument names, since only the argument data
       types are needed to determine the function's identity.

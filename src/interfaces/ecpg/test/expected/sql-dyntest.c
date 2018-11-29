@@ -105,7 +105,7 @@ struct sqlca_t
 	/* Element 0: set to 'W' if at least one other is 'W'	*/
 	/* 1: if 'W' at least one character string		*/
 	/* value was truncated when it was			*/
-	/* stored into a host variable.				*/
+	/* stored into a host variable.             */
 
 	/*
 	 * 2: if 'W' a (hopefully) non-fatal notice occurred
@@ -273,7 +273,7 @@ if (sqlca.sqlcode < 0) error ( );}
   while (1)
     {
       { ECPGdo(__LINE__, 0, 1, NULL, 0, ECPGst_normal, "fetch in MYCURS", ECPGt_EOIT, 
-	ECPGt_descriptor, "MYDESC", 0L, 0L, 0L, 
+	ECPGt_descriptor, "MYDESC", 1L, 1L, 1L, 
 	ECPGt_NO_INDICATOR, NULL , 0L, 0L, 0L, ECPGt_EORT);
 #line 64 "dyntest.pgc"
 

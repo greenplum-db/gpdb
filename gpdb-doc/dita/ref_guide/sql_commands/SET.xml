@@ -94,7 +94,7 @@ SET [SESSION | LOCAL] TIME ZONE {<varname>timezone</varname> | LOCAL | DEFAULT}<
           <pt>DEFAULT</pt>
           <pd>Set the time zone to your local time zone (the one that the server's operating system
             defaults to). See the <xref
-              href="https://www.postgresql.org/docs/8.3/static/datatype-datetime.html#DATATYPE-TIMEZONES"
+              href="https://www.postgresql.org/docs/8.3/datatype-datetime.html#DATATYPE-TIMEZONES"
               scope="external" format="html">Time zone section of the PostgreSQL
               documentation</xref> for more information about time zones in Greenplum Database.</pd>
         </plentry>

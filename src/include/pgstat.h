@@ -3,7 +3,7 @@
  *
  *	Definitions for the PostgreSQL statistics collector daemon.
  *
- *	Copyright (c) 2001-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2001-2014, PostgreSQL Global Development Group
  *
  *	src/include/pgstat.h
  * ----------
@@ -15,9 +15,21 @@
 #include "fmgr.h"
 #include "libpq/pqcomm.h"
 #include "portability/instr_time.h"
+#include "postmaster/pgarch.h"
 #include "utils/hsearch.h"
 #include "utils/relcache.h"
 
+
+/* ----------
+ * Paths for the statistics files (relative to installation's $PGDATA).
+ * ----------
+ */
+#define PGSTAT_STAT_PERMANENT_DIRECTORY		"pg_stat"
+#define PGSTAT_STAT_PERMANENT_FILENAME		"pg_stat/global.stat"
+#define PGSTAT_STAT_PERMANENT_TMPFILE		"pg_stat/global.tmp"
+
+/* Default directory to store temporary statistics data in */
+#define PG_STAT_TMP_DIR		"pg_stat_tmp"
 
 /* Values for track_functions GUC variable --- order is significant! */
 typedef enum TrackFunctionsLevel
@@ -44,6 +56,7 @@ typedef enum StatMsgType
 	PGSTAT_MTYPE_AUTOVAC_START,
 	PGSTAT_MTYPE_VACUUM,
 	PGSTAT_MTYPE_ANALYZE,
+	PGSTAT_MTYPE_ARCHIVER,
 	PGSTAT_MTYPE_QUEUESTAT, /* GPDB */
 	PGSTAT_MTYPE_BGWRITER,
 	PGSTAT_MTYPE_FUNCSTAT,
@@ -103,6 +116,7 @@ typedef struct PgStat_TableCounts
 /* Possible targets for resetting cluster-wide shared values */
 typedef enum PgStat_Shared_Reset_Target
 {
+	RESET_ARCHIVER,
 	RESET_BGWRITER
 } PgStat_Shared_Reset_Target;
 
@@ -124,7 +138,7 @@ typedef enum PgStat_Single_Reset_Type
  *
  * Many of the event counters are nontransactional, ie, we count events
  * in committed and aborted transactions alike.  For these, we just count
- * directly in the PgStat_TableStatus.	However, delta_live_tuples,
+ * directly in the PgStat_TableStatus.  However, delta_live_tuples,
  * delta_dead_tuples, and changed_tuples must be derived from event counts
  * with awareness of whether the transaction or subtransaction committed or
  * aborted.  Hence, we also keep a stack of per-(sub)transaction status
@@ -178,11 +192,13 @@ typedef struct PgStat_MsgHdr
 
 /* ----------
  * Space available in a message.  This will keep the UDP packets below 1K,
- * which should fit unfragmented into the MTU of the lo interface on most
- * platforms. Does anybody care for platforms where it doesn't?
+ * which should fit unfragmented into the MTU of the loopback interface.
+ * (Larger values of PGSTAT_MAX_MSG_SIZE would work for that on most
+ * platforms, but we're being conservative here.)
  * ----------
  */
-#define PGSTAT_MSG_PAYLOAD	(1000 - sizeof(PgStat_MsgHdr))
+#define PGSTAT_MAX_MSG_SIZE 1000
+#define PGSTAT_MSG_PAYLOAD	(PGSTAT_MAX_MSG_SIZE - sizeof(PgStat_MsgHdr))
 
 
 /* ----------
@@ -226,7 +242,7 @@ typedef struct PgStat_TableEntry
  * ----------
  */
 #define PGSTAT_NUM_TABENTRIES  \
-	((PGSTAT_MSG_PAYLOAD - sizeof(Oid) - 3 * sizeof(int))  \
+	((PGSTAT_MSG_PAYLOAD - sizeof(Oid) - 3 * sizeof(int) - 2 * sizeof(PgStat_Counter))	\
 	 / sizeof(PgStat_TableEntry))
 
 typedef struct PgStat_MsgTabstat
@@ -332,7 +348,8 @@ typedef struct PgStat_MsgVacuum
 	Oid			m_tableoid;
 	bool		m_autovacuum;
 	TimestampTz m_vacuumtime;
-	PgStat_Counter m_tuples;
+	PgStat_Counter m_live_tuples;
+	PgStat_Counter m_dead_tuples;
 } PgStat_MsgVacuum;
 
 
@@ -354,6 +371,18 @@ typedef struct PgStat_MsgAnalyze
 
 
 /* ----------
+ * PgStat_MsgArchiver			Sent by the archiver to update statistics.
+ * ----------
+ */
+typedef struct PgStat_MsgArchiver
+{
+	PgStat_MsgHdr m_hdr;
+	bool		m_failed;		/* Failed attempt */
+	char		m_xlog[MAX_XFN_CHARS + 1];
+	TimestampTz m_timestamp;
+} PgStat_MsgArchiver;
+
+/* ----------
  * PgStat_MsgQueuestat			Sent by the backend to report resource queue
  *								activity statistics.
  * ----------  GPDB 
@@ -367,7 +396,6 @@ typedef struct PgStat_MsgQueuestat
 	PgStat_Counter	m_elapsed_exec;
 	PgStat_Counter	m_elapsed_wait;
 } PgStat_MsgQueuestat;
-
 
 /* ----------
  * PgStat_MsgBgWriter			Sent by the bgwriter to update statistics.
@@ -516,6 +544,7 @@ typedef union PgStat_Msg
 	PgStat_MsgAutovacStart msg_autovacuum;
 	PgStat_MsgVacuum msg_vacuum;
 	PgStat_MsgAnalyze msg_analyze;
+	PgStat_MsgArchiver msg_archiver;
 	PgStat_MsgQueuestat msg_queuestat;  /* GPDB */
 	PgStat_MsgBgWriter msg_bgwriter;
 	PgStat_MsgFuncstat msg_funcstat;
@@ -533,7 +562,7 @@ typedef union PgStat_Msg
  * ------------------------------------------------------------
  */
 
-#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9B
+#define PGSTAT_FILE_FORMAT_ID	0x01A5BC9C
 
 /* ----------
  * PgStat_StatDBEntry			The collector's data per database
@@ -669,6 +698,22 @@ typedef struct PgStat_StatPortalEntry
 
 
 /*
+ * Archiver statistics kept in the stats collector
+ */
+typedef struct PgStat_ArchiverStats
+{
+	PgStat_Counter archived_count;		/* archival successes */
+	char		last_archived_wal[MAX_XFN_CHARS + 1];	/* last WAL file
+														 * archived */
+	TimestampTz last_archived_timestamp;		/* last archival success time */
+	PgStat_Counter failed_count;	/* failed archival attempts */
+	char		last_failed_wal[MAX_XFN_CHARS + 1];		/* WAL file involved in
+														 * last failure */
+	TimestampTz last_failed_timestamp;	/* last archival failure time */
+	TimestampTz stat_reset_timestamp;
+} PgStat_ArchiverStats;
+
+/*
  * Global statistics kept in the stats collector
  */
 typedef struct PgStat_GlobalStats
@@ -700,7 +745,7 @@ typedef enum BackendState
 	STATE_IDLEINTRANSACTION,
 	STATE_FASTPATH,
 	STATE_IDLEINTRANSACTION_ABORTED,
-	STATE_DISABLED,
+	STATE_DISABLED
 } BackendState;
 
 /* ----------
@@ -768,6 +813,34 @@ typedef struct PgBackendStatus
 
 	Oid			st_rsgid;
 } PgBackendStatus;
+
+/* ----------
+ * LocalPgBackendStatus
+ *
+ * When we build the backend status array, we use LocalPgBackendStatus to be
+ * able to add new values to the struct when needed without adding new fields
+ * to the shared memory. It contains the backend status as a first member.
+ * ----------
+ */
+typedef struct LocalPgBackendStatus
+{
+	/*
+	 * Local version of the backend status entry.
+	 */
+	PgBackendStatus backendStatus;
+
+	/*
+	 * The xid of the current transaction if available, InvalidTransactionId
+	 * if not.
+	 */
+	TransactionId backend_xid;
+
+	/*
+	 * The xmin of the current session if available, InvalidTransactionId if
+	 * not.
+	 */
+	TransactionId backend_xmin;
+} LocalPgBackendStatus;
 
 /*
  * Working state needed to accumulate per-function-call timing statistics.
@@ -851,7 +924,7 @@ extern void pgstat_reset_single_counter(Oid objectid, PgStat_Single_Reset_Type t
 
 extern void pgstat_report_autovac(Oid dboid);
 extern void pgstat_report_vacuum(Oid tableoid, bool shared,
-					 PgStat_Counter tuples);
+					 PgStat_Counter livetuples, PgStat_Counter deadtuples);
 extern void pgstat_report_analyze(Relation rel,
 					  PgStat_Counter livetuples, PgStat_Counter deadtuples);
 
@@ -1056,6 +1129,7 @@ extern void pgstat_twophase_postcommit(TransactionId xid, uint16 info,
 extern void pgstat_twophase_postabort(TransactionId xid, uint16 info,
 						  void *recdata, uint32 len);
 
+extern void pgstat_send_archiver(const char *xlog, bool failed);
 extern void pgstat_send_bgwriter(void);
 
 /* ----------
@@ -1067,8 +1141,10 @@ extern PgStat_StatDBEntry *pgstat_fetch_stat_dbentry(Oid dbid);
 extern PgStat_StatTabEntry *pgstat_fetch_stat_tabentry(Oid relid);
 extern PgStat_StatQueueEntry *pgstat_fetch_stat_queueentry(Oid queueid);  /* GPDB */
 extern PgBackendStatus *pgstat_fetch_stat_beentry(int beid);
+extern LocalPgBackendStatus *pgstat_fetch_stat_local_beentry(int beid);
 extern PgStat_StatFuncEntry *pgstat_fetch_stat_funcentry(Oid funcid);
 extern int	pgstat_fetch_stat_numbackends(void);
+extern PgStat_ArchiverStats *pgstat_fetch_stat_archiver(void);
 extern PgStat_GlobalStats *pgstat_fetch_global(void);
 
 #endif   /* PGSTAT_H */

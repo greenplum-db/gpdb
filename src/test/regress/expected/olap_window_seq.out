@@ -1610,7 +1610,7 @@ from sale_ord;
 ---------------------------------------------------------------------------
  WindowAgg  (cost=2.34..2.67 rows=12 width=12)
    Order By: ord, cn
-   ->  Gather Motion 2:1  (slice1)  (cost=2.34..2.61 rows=12 width=12)
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=2.34..2.61 rows=12 width=12)
          Merge Key: ord, cn
          ->  Sort  (cost=2.34..2.37 rows=6 width=12)
                Sort Key: ord, cn
@@ -7377,10 +7377,10 @@ from sale group by rollup(cn,dt);
  dt     | date   |           | plain   | 
  sum    | bigint |           | plain   | 
 View definition:
- SELECT "Window".dt, 
+ SELECT "Window".dt,
     sum("Window".cn) OVER (ORDER BY "Window".att_3 RANGE "Window".att_3 PRECEDING) AS sum
-   FROM ( SELECT sale.cn, 
-            sale.dt, 
+   FROM ( SELECT sale.cn,
+            sale.dt,
             grouping(sale.cn) AS att_3
            FROM sale
           GROUP BY ROLLUP (sale.cn, sale.dt)) "Window"(cn, dt, att_3);
@@ -7889,23 +7889,20 @@ select count(*) over (partition by 1 order by cn rows between 1 preceding and 1 
 -- MPP-13710
 create table redundant_sort_check (i int, j int, k int) distributed by (i);
 explain select count(*) over (order by i), count(*) over (partition by i order by j) from redundant_sort_check;
-                                               QUERY PLAN                                               
---------------------------------------------------------------------------------------------------------
- WindowAgg  (cost=14900.48..16458.48 rows=77900 width=8)
-   Partition By: i
-   Order By: j
-   ->  Sort  (cost=14900.48..15095.23 rows=77900 width=8)
-         Sort Key: i, j
-         ->  WindowAgg  (cost=7208.12..8571.37 rows=77900 width=8)
-               Order By: i
-               ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7208.12..7402.87 rows=77900 width=8)
-                     Merge Key: i
-                     ->  Sort  (cost=7208.12..7402.87 rows=25967 width=8)
-                           Sort Key: i
-                           ->  Seq Scan on redundant_sort_check  (cost=0.00..879.00 rows=25967 width=8)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(14 rows)
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ WindowAgg  (cost=7208.12..9934.62 rows=77900 width=8)
+   Order By: i
+   ->  Gather Motion 3:1  (slice1; segments: 3)  (cost=7208.12..8766.12 rows=77900 width=8)
+         Merge Key: i, j
+         ->  WindowAgg  (cost=7208.12..8766.12 rows=25967 width=8)
+               Partition By: i
+               Order By: j
+               ->  Sort  (cost=7208.12..7402.87 rows=25967 width=8)
+                     Sort Key: i, j
+                     ->  Seq Scan on redundant_sort_check  (cost=0.00..879.00 rows=25967 width=8)
+ Optimizer: legacy query optimizer
+(11 rows)
 
 -- End of MPP-13710
 -- MPP-13879
@@ -8099,7 +8096,7 @@ select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar wher
 explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, bar where foo.a = bar.a;
                                                    QUERY PLAN                                                   
 ----------------------------------------------------------------------------------------------------------------
- Gather Motion 2:1  (slice2; segments: 2)  (cost=3.46..3.50 rows=5 width=12)
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=3.46..3.50 rows=5 width=12)
    ->  WindowAgg  (cost=3.46..3.50 rows=3 width=12)
          Partition By: bar.a
          Order By: bar.b
@@ -8109,7 +8106,7 @@ explain select foo.a, sum(b) over (partition by bar.a order by bar.b) from foo, 
                      Hash Cond: foo.a = bar.a
                      ->  Seq Scan on foo  (cost=0.00..2.10 rows=5 width=4)
                      ->  Hash  (cost=1.15..1.15 rows=3 width=8)
-                           ->  Redistribute Motion 2:2  (slice1; segments: 2)  (cost=0.00..1.15 rows=3 width=8)
+                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.15 rows=3 width=8)
                                  Hash Key: bar.a
                                  ->  Seq Scan on bar  (cost=0.00..1.05 rows=3 width=8)
 (14 rows)
@@ -8151,39 +8148,34 @@ EXPLAIN SELECT count(*) over (PARTITION BY a ORDER BY b, c, d) as count1,
        count(*) over (PARTITION BY a ORDER BY c, b) as count2,
        count(*) over (PARTITION BY a ORDER BY c, b, d) as count3
 FROM foo;
-                                                      QUERY PLAN                                                      
-----------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=4.81..5.06 rows=10 width=16)
-   ->  WindowAgg  (cost=4.81..5.06 rows=4 width=16)
+                                                QUERY PLAN                                                
+----------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=4.06..4.68 rows=10 width=16)
+   ->  WindowAgg  (cost=4.06..4.68 rows=4 width=16)
          Partition By: a
-         Order By: c, b, d
-         ->  Sort  (cost=4.81..4.84 rows=4 width=16)
-               Sort Key: a, c, b, d
-               ->  WindowAgg  (cost=4.42..4.65 rows=4 width=16)
+         Order By: b
+         ->  WindowAgg  (cost=4.06..4.51 rows=4 width=16)
+               Partition By: a
+               Order By: b, c
+               ->  WindowAgg  (cost=4.06..4.31 rows=4 width=16)
                      Partition By: a
-                     Order By: c, b
-                     ->  Sort  (cost=4.42..4.45 rows=4 width=16)
-                           Sort Key: a, c, b
-                           ->  WindowAgg  (cost=4.06..4.26 rows=4 width=16)
+                     Order By: b, c, d
+                     ->  Sort  (cost=4.06..4.08 rows=4 width=16)
+                           Sort Key: a, b, c, d
+                           ->  WindowAgg  (cost=3.27..3.89 rows=4 width=16)
                                  Partition By: a
                                  Order By: c
-                                 ->  Sort  (cost=4.06..4.08 rows=4 width=16)
-                                       Sort Key: a, c
-                                       ->  WindowAgg  (cost=3.27..3.89 rows=4 width=16)
+                                 ->  WindowAgg  (cost=3.27..3.72 rows=4 width=16)
+                                       Partition By: a
+                                       Order By: c, b
+                                       ->  WindowAgg  (cost=3.27..3.52 rows=4 width=16)
                                              Partition By: a
-                                             Order By: b
-                                             ->  WindowAgg  (cost=3.27..3.72 rows=4 width=16)
-                                                   Partition By: a
-                                                   Order By: b, c
-                                                   ->  WindowAgg  (cost=3.27..3.52 rows=4 width=16)
-                                                         Partition By: a
-                                                         Order By: b, c, d
-                                                         ->  Sort  (cost=3.27..3.29 rows=4 width=16)
-                                                               Sort Key: a, b, c, d
-                                                               ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=16)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(30 rows)
+                                             Order By: c, b, d
+                                             ->  Sort  (cost=3.27..3.29 rows=4 width=16)
+                                                   Sort Key: a, c, b, d
+                                                   ->  Seq Scan on foo  (cost=0.00..3.10 rows=4 width=16)
+ Optimizer: legacy query optimizer
+(25 rows)
 
 drop table foo;
 -- test predicate push down in subqueries for quals containing windowref nodes
@@ -8388,4 +8380,106 @@ explain with CTE as (select i, row_number() over (partition by j) j from window_
 (21 rows)
 
 insert into window_preds with CTE as (select i, row_number() over (partition by j) j from window_preds union all select i, row_number() over (partition by j) from window_preds) select * from cte where i = 1;
+--
+-- Tests for DISTINCT-qualified window aggregates
+--
+-- This is a GPDB extension, not implemented in PostgreSQL.
+--
+select dt, pn, count(distinct pn) over (partition by dt) from sale;
+     dt     | pn  | count 
+------------+-----+-------
+ 01-01-1401 | 100 |     1
+ 03-01-1401 | 200 |     1
+ 04-01-1401 | 200 |     1
+ 05-01-1401 | 100 |     1
+ 05-02-1401 | 300 |     1
+ 06-01-1401 | 400 |     5
+ 06-01-1401 | 400 |     5
+ 06-01-1401 | 500 |     5
+ 06-01-1401 | 500 |     5
+ 06-01-1401 | 600 |     5
+ 06-01-1401 | 700 |     5
+ 06-01-1401 | 800 |     5
+(12 rows)
+
+select dt, pn, count(distinct pn) over (partition by dt), sum(distinct pn) over (partition by dt) from sale;
+     dt     | pn  | count | sum  
+------------+-----+-------+------
+ 01-01-1401 | 100 |     1 |  100
+ 03-01-1401 | 200 |     1 |  200
+ 04-01-1401 | 200 |     1 |  200
+ 05-01-1401 | 100 |     1 |  100
+ 05-02-1401 | 300 |     1 |  300
+ 06-01-1401 | 400 |     5 | 3000
+ 06-01-1401 | 400 |     5 | 3000
+ 06-01-1401 | 500 |     5 | 3000
+ 06-01-1401 | 500 |     5 | 3000
+ 06-01-1401 | 600 |     5 | 3000
+ 06-01-1401 | 700 |     5 | 3000
+ 06-01-1401 | 800 |     5 | 3000
+(12 rows)
+
+select dt, pn, sum(distinct pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
+     dt     | pn  | sum  | sum  
+------------+-----+------+------
+ 01-01-1401 | 100 |  100 |  100
+ 03-01-1401 | 200 |  200 |  200
+ 04-01-1401 | 200 |  200 |  200
+ 05-01-1401 | 100 |  100 |  100
+ 05-02-1401 | 300 |  300 |  300
+ 06-01-1401 | 400 | 3000 | 3900
+ 06-01-1401 | 400 | 3000 | 3900
+ 06-01-1401 | 500 | 3000 | 3900
+ 06-01-1401 | 500 | 3000 | 3900
+ 06-01-1401 | 600 | 3000 | 3900
+ 06-01-1401 | 700 | 3000 | 3900
+ 06-01-1401 | 800 | 3000 | 3900
+(12 rows)
+
+-- Also test with a pass-by-ref type, to make sure we don't get confused with memory contexts.
+select pcolor, pname, count(distinct pname) over (partition by pcolor) from product;
+  pcolor   |   pname   | count 
+-----------+-----------+-------
+ Black     | Dream     |     2
+ Black     | Sword     |     2
+ Chocolate | Donuts    |     1
+ Clear     | Justice   |     1
+ Grey      | Castle    |     3
+ Grey      | Fries     |     3
+ Grey      | Hamburger |     3
+ Plain     | Donuts    |     1
+(8 rows)
+
+-- Disallowed or not-implemented cases
+select dt, pn, count(distinct pn) over (partition by pn order by dt) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing an ORDER BY clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn orde...
+                       ^
+select dt, pn, count(distinct pn) over (partition by pn rows unbounded preceding ) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing a framing clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn rows...
+                       ^
+select dt, pn, count(distinct pn) over (partition by pn rows between unbounded preceding and unbounded following ) from sale;
+ERROR:  DISTINCT cannot be used with window specification containing a framing clause
+LINE 1: select dt, pn, count(distinct pn) over (partition by pn rows...
+                       ^
+-- not supported with true window functions.
+select dt, pn, lead(distinct pn) over (partition by pn) from sale;
+ERROR:  DISTINCT is not implemented for window functions
+LINE 1: select dt, pn, lead(distinct pn) over (partition by pn) from...
+                       ^
+-- not supported with aggregates with multiple arguments.
+select dt, pn, corr(distinct pn, pn) over (partition by dt), sum(pn) over (partition by dt) from sale;
+ERROR:  DISTINCT is supported only for single-argument window aggregates
+-- Test deparsing (for \d+ and pg_dump)
+create view distinct_windowagg_view as select sum(distinct g/2) OVER (partition by g/4) from generate_series (1, 5) g;
+\d+ distinct_windowagg_view
+   View "olap_window_seq.distinct_windowagg_view"
+ Column |  Type  | Modifiers | Storage | Description 
+--------+--------+-----------+---------+-------------
+ sum    | bigint |           | plain   | 
+View definition:
+ SELECT sum(DISTINCT g.g / 2) OVER (PARTITION BY g.g / 4) AS sum
+   FROM generate_series(1, 5) g(g);
+
 -- End of Test

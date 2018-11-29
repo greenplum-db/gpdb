@@ -3,7 +3,7 @@
  * getrusage.c
  *	  get information about resource utilisation
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -32,7 +32,6 @@ int
 getrusage(int who, struct rusage * rusage)
 {
 #ifdef WIN32
-
 	FILETIME	starttime;
 	FILETIME	exittime;
 	FILETIME	kerneltime;

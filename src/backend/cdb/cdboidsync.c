@@ -33,6 +33,8 @@ get_max_oid_from_segDBs(void)
 	int			i;
 	CdbPgResults cdb_pgresults = {NULL, 0};
 
+	Assert(Gp_role == GP_ROLE_DISPATCH);
+
 	const char *cmd = "select pg_catalog.pg_highest_oid()";
 
 	CdbDispatchCommand(cmd, DF_WITH_SNAPSHOT, &cdb_pgresults);
@@ -70,7 +72,18 @@ get_max_oid_from_segDBs(void)
 			DirectFunctionCall1(oidin,
 								CStringGetDatum(PQgetvalue(res, 0, 0))));
 
-		/* XXX: This doesn't do the right thing at OID wraparound. */
+		/*
+		 * We take the *numerically* maximum OID among the primaries.
+		 *
+		 * It might be tempting to find the "logically highest" OID among the
+		 * primaries because we do pair-wise OID logical comparison
+		 * elsewhere. However, that "logically maximum" of N Oids is undefined
+		 * for N > 2 primaries. This is because "logically precedes" is not a
+		 * transitive relationship.
+		 *
+		 * For example, take into consideration this set of four Oids:
+		 * {0, 1<<30, 1<<31, 3 * (1 << 30)}.
+		 */
 		if (tempoid > oid)
 			oid = tempoid;
 	}
@@ -91,7 +104,13 @@ pg_highest_oid(PG_FUNCTION_ARGS __attribute__((unused)))
 	{
 		max_from_segdbs = get_max_oid_from_segDBs();
 
-		if (max_from_segdbs > result)
+		/*
+		 * Return the logically larger Oid between the numeric maximum of the
+		 * primaries and the master's Oid counter. This is not 100% accurate
+		 * because the primaries can be in a wide range of Oids... but this is
+		 * good enough for the majority of production clusters.
+		 */
+		if (OidFollowsNextOid(max_from_segdbs))
 			result = max_from_segdbs;
 	}
 
@@ -103,13 +122,8 @@ cdb_sync_oid_to_segments(void)
 {
 	if (Gp_role == GP_ROLE_DISPATCH && IsNormalProcessingMode())
 	{
-		Oid			max_oid = get_max_oid_from_segDBs();
+		Oid max_oid_from_primaries = get_max_oid_from_segDBs();
 
-		/* Move our oid counter ahead of QEs */
-		while (GetNewObjectId() <= max_oid);
-
-		/* Burn a few extra just for safety */
-		for (int i = 0; i < 10; i++)
-			GetNewObjectId();
+		AdvanceObjectId(max_oid_from_primaries + 1);
 	}
 }

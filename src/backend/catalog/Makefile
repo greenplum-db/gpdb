@@ -10,10 +10,6 @@ subdir = src/backend/catalog
 top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
-ifndef ADDON_DIR
-QUICKLZ_COMPRESSION = quicklz_compression.o
-endif
-
 OBJS = catalog.o dependency.o heap.o index.o indexing.o namespace.o aclchk.o \
        objectaccess.o objectaddress.o pg_aggregate.o pg_collation.o \
        pg_constraint.o pg_conversion.o \
@@ -26,7 +22,7 @@ OBJS += pg_exttable.o pg_extprotocol.o \
        aoseg.o aoblkdir.o gp_fastsequence.o gp_segment_config.o \
        pg_attribute_encoding.o pg_compression.o aovisimap.o \
        pg_appendonly.o \
-       oid_dispatch.o aocatalog.o zstd_compression.o $(QUICKLZ_COMPRESSION)
+       oid_dispatch.o aocatalog.o
 
 BKIFILES = postgres.bki postgres.description postgres.shdescription
 
@@ -101,7 +97,8 @@ $(CATALOG_JSON): process_foreign_keys.pl $(POSTGRES_BKI_SRCS) $(top_srcdir)/src/
 # even in distribution tarballs.  So this is cheating a bit, but it
 # will achieve the goal of updating the version number when it
 # changes.
-postgres.bki: genbki.pl Catalog.pm $(POSTGRES_BKI_SRCS) $(top_srcdir)/configure
+postgres.bki: genbki.pl Catalog.pm $(POSTGRES_BKI_SRCS) $(top_srcdir)/configure $(top_srcdir)/src/include/catalog/duplicate_oids
+	cd $(top_srcdir)/src/include/catalog && $(PERL) ./duplicate_oids
 	$(PERL) -I $(catalogdir) $< $(pg_includes) --set-version=$(PG_MAJORVERSION) $(POSTGRES_BKI_SRCS)
 
 .PHONY: install-data

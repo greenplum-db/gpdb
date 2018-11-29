@@ -163,7 +163,7 @@ $ chmod 400 /home/gpadmin/gpdb-kerberos.keytab</codeblock>
               <codeph>include_realm</codeph> option to <codeph>0</codeph>
             excludes the realm name from the authenticated user name. For
             information about the <codeph>pg_hba.conf</codeph> file, see <xref
-              href="https://www.postgresql.org/docs/8.4/static/auth-pg-hba-conf.html"
+              href="https://www.postgresql.org/docs/8.4/auth-pg-hba-conf.html"
               scope="external" format="html">The pg_hba.conf file</xref> in the
             Postgres documentation.</p>
         </li>
@@ -277,7 +277,7 @@ mymap       /^(.*)_gp)@GPDB.KRB$   \1</codeblock>
           <codeph>pg_ident.conf</codeph> file, so the order of entries is
         significant.</p>
       <p>For more information about using username maps see <xref
-          href="https://www.postgresql.org/docs/8.4/static/auth-username-maps.html"
+          href="https://www.postgresql.org/docs/8.4/auth-username-maps.html"
           scope="external" format="html">Username maps</xref> in the PostgreSQL
         documentation.</p>
     </body>

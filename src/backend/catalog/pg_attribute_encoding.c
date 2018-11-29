@@ -116,7 +116,7 @@ get_rel_attoptions(Oid relid, AttrNumber max_attno)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(relid));
 	scan = systable_beginscan(pgae, AttributeEncodingAttrelidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 
 	while (HeapTupleIsValid(tuple = systable_getnext(scan)))
 	{
@@ -303,7 +303,7 @@ RemoveAttributeEncodingsByRelid(Oid relid)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(relid));
 	scan = systable_beginscan(rel, AttributeEncodingAttrelidIndexId, true,
-							  SnapshotNow, 1, &skey);
+							  NULL, 1, &skey);
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
 		simple_heap_delete(rel, &tup->t_self);

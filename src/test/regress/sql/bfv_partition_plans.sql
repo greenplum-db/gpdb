@@ -534,15 +534,17 @@ deallocate f3;
 create table r_part(a int, b int) partition by range(a) (start (1) end(10) every(1));
 create table r_co(a int, b int) with (orientation=column, appendonly=true) partition by range(a) (start (1) end(10) every(1)) ;
 
-insert into r_part values (1,1), (2,2), (3,3);
+insert into r_part values (1,1), (2,2), (3,3), (4,4), (5,5), (6,6), (7,7), (8,8);
 
-select * from r_part order by a,b;
+-- following tests rely on the data distribution, verify them
+select gp_segment_id, * from r_part order by a,b;
 
 analyze r_part;
 
 explain select * from r_part r1, r_part r2 where r1.a=1; -- should eliminate partitions in the r1 copy of r_part
 
-explain select * from r_part where a in (1,2); -- should eliminate partitions
+-- the numbers in the filter should be both on segment 0
+explain select * from r_part where a in (7,8); -- should eliminate partitions
 
 -- Test partition elimination in prepared statements
 prepare f1(int) as select * from r_part where a = 1 order by a,b; 

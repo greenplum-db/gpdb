@@ -21,11 +21,11 @@ void AssertFailed()
 static void
 expect_lwlock(LWLockMode lockmode)
 {
-	expect_value(LWLockAcquire, lockid, SyncRepLock);
+	expect_value(LWLockAcquire, l, SyncRepLock);
 	expect_value(LWLockAcquire, mode, lockmode);
-	will_be_called(LWLockAcquire);
+	will_return(LWLockAcquire, true);
 
-	expect_value(LWLockRelease, lockid, SyncRepLock);
+	expect_value(LWLockRelease, l, SyncRepLock);
 	will_be_called(LWLockRelease);
 }
 

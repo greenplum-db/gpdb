@@ -1,7 +1,7 @@
 /* ----------
  *	DTrace probes for PostgreSQL backend
  *
- *	Copyright (c) 2006-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2006-2014, PostgreSQL Global Development Group
  *
  *	src/backend/utils/probes.d
  * ----------
@@ -15,7 +15,6 @@
  * in probe definitions, as they cause compilation errors on Mac OS X 10.5.
  */
 #define LocalTransactionId unsigned int
-#define LWLockId int
 #define LWLockMode int
 #define LOCKMODE int
 #define BlockNumber unsigned int
@@ -42,14 +41,14 @@ provider postgresql {
 	probe backoff__localcheck(int);
 	probe backoff__globalcheck();
 
-	probe lwlock__acquire(LWLockId, LWLockMode);
-	probe lwlock__release(LWLockId);
-	probe lwlock__wait__start(LWLockId, LWLockMode);
-	probe lwlock__wait__done(LWLockId, LWLockMode);
-	probe lwlock__condacquire(LWLockId, LWLockMode);
-	probe lwlock__condacquire__fail(LWLockId, LWLockMode);
-	probe lwlock__wait__until__free(LWLockId, LWLockMode);
-	probe lwlock__wait__until__free__fail(LWLockId, LWLockMode);
+	probe lwlock__acquire(const char *, int, LWLockMode);
+	probe lwlock__release(const char *, int);
+	probe lwlock__wait__start(const char *, int, LWLockMode);
+	probe lwlock__wait__done(const char *, int, LWLockMode);
+	probe lwlock__condacquire(const char *, int, LWLockMode);
+	probe lwlock__condacquire__fail(const char *, int, LWLockMode);
+	probe lwlock__acquire__or__wait(const char *, int, LWLockMode);
+	probe lwlock__acquire__or__wait__fail(const char *, int, LWLockMode);
 
 	probe lock__wait__start(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);
 	probe lock__wait__done(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, LOCKMODE);

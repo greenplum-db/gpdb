@@ -3,7 +3,7 @@
  * mxactdesc.c
  *	  rmgr descriptor routines for access/transam/multixact.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -77,5 +77,5 @@ multixact_desc(StringInfo buf, XLogRecord *record)
 			out_member(buf, &xlrec->members[i]);
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

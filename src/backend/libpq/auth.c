@@ -3,7 +3,7 @@
  * auth.c
  *	  Routines to handle network authentication
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -56,9 +56,9 @@ int     getpeereid(int, uid_t *__restrict__, gid_t *__restrict__);
  *----------------------------------------------------------------
  */
 static void sendAuthRequest(Port *port, AuthRequest areq);
-static void auth_failed(Port *port, int status);
+static void auth_failed(Port *port, int status, char *logdetail);
 static char *recv_password_packet(Port *port);
-static int	recv_and_check_password_packet(Port *port);
+static int	recv_and_check_password_packet(Port *port, char **logdetail);
 
 
 /*----------------------------------------------------------------
@@ -68,7 +68,7 @@ static int	recv_and_check_password_packet(Port *port);
 /* Max size of username ident server can return */
 #define IDENT_USERNAME_MAX 512
 
-/* Standard TCP port number for Ident service.	Assigned by IANA */
+/* Standard TCP port number for Ident service.  Assigned by IANA */
 #define IDENT_PORT 113
 
 static int	ident_inet(hbaPort *port);
@@ -147,31 +147,7 @@ static int	CheckCertAuth(Port *port);
  *----------------------------------------------------------------
  */
 char	   *pg_krb_server_keyfile;
-char	   *pg_krb_srvnam;
 bool		pg_krb_caseins_users;
-
-
-/*----------------------------------------------------------------
- * MIT Kerberos authentication system - protocol version 5
- *----------------------------------------------------------------
- */
-#ifdef KRB5
-static int	pg_krb5_recvauth(Port *port);
-
-#include <krb5.h>
-/* Some old versions of Kerberos do not include <com_err.h> in <krb5.h> */
-#if !defined(__COM_ERR_H) && !defined(__COM_ERR_H__)
-#include <com_err.h>
-#endif
-/*
- * Various krb5 state which is not connection specific, and a flag to
- * indicate whether we have initialised it yet.
- */
-static int	pg_krb5_initialised;
-static krb5_context pg_krb5_context;
-static krb5_keytab pg_krb5_keytab;
-static krb5_principal pg_krb5_server;
-#endif   /* KRB5 */
 
 
 /*----------------------------------------------------------------
@@ -249,12 +225,14 @@ ClientAuthentication_hook_type ClientAuthentication_hook = NULL;
  * in use, and these are items that must be presumed known to an attacker
  * anyway.
  * Note that many sorts of failure report additional information in the
- * postmaster log, which we hope is only readable by good guys.
+ * postmaster log, which we hope is only readable by good guys.  In
+ * particular, if logdetail isn't NULL, we send that string to the log.
  */
 static void
-auth_failed(Port *port, int status)
+auth_failed(Port *port, int status, char *logdetail)
 {
 	const char *errstr;
+	char	   *cdetail;
 	int			errcode_return = ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION;
 
 	/*
@@ -283,9 +261,6 @@ auth_failed(Port *port, int status)
 		case uaReject:
 		case uaImplicitReject:
 			errstr = gettext_noop("authentication failed for user \"%s\": host rejected");
-			break;
-		case uaKrb5:
-			errstr = gettext_noop("Kerberos 5 authentication failed for user \"%s\"");
 			break;
 		case uaTrust:
 			errstr = gettext_noop("\"trust\" authentication failed for user \"%s\"");
@@ -326,15 +301,17 @@ auth_failed(Port *port, int status)
 	  }
 	}
 
-	if (port->hba)
-		ereport(FATAL,
-				(errcode(errcode_return),
-				 errmsg(errstr, port->user_name),
-				 errdetail_log("Connection matched pg_hba.conf line %d: \"%s\"", port->hba->linenumber, port->hba->rawline)));
+	cdetail = psprintf(_("Connection matched pg_hba.conf line %d: \"%s\""),
+					   port->hba->linenumber, port->hba->rawline);
+	if (logdetail)
+		logdetail = psprintf("%s\n%s", logdetail, cdetail);
 	else
-		ereport(FATAL,
-				(errcode(errcode_return),
-				 errmsg(errstr, port->user_name)));
+		logdetail = cdetail;
+
+	ereport(FATAL,
+			(errcode(errcode_return),
+			 errmsg(errstr, port->user_name),
+			 logdetail ? errdetail_log("%s", logdetail) : 0));
 
 	/* doesn't return */
 }
@@ -448,6 +425,7 @@ void
 ClientAuthentication(Port *port)
 {
 	int			status = STATUS_ERROR;
+	char	   *logdetail = NULL;
 
 	/*
 	 * If this is a QD to QE connection, we might be able to short circuit
@@ -590,15 +568,25 @@ ClientAuthentication(Port *port)
 								   NI_NUMERICHOST);
 
 #define HOSTNAME_LOOKUP_DETAIL(port) \
-				(port->remote_hostname				  \
-				 ? (port->remote_hostname_resolv == +1					\
-					? errdetail_log("Client IP address resolved to \"%s\", forward lookup matches.", port->remote_hostname) \
-					: (port->remote_hostname_resolv == 0				\
-					   ? errdetail_log("Client IP address resolved to \"%s\", forward lookup not checked.", port->remote_hostname) \
-					   : (port->remote_hostname_resolv == -1			\
-						  ? errdetail_log("Client IP address resolved to \"%s\", forward lookup does not match.", port->remote_hostname) \
-						  : 0)))										\
-				 : 0)
+				(port->remote_hostname ? \
+				 (port->remote_hostname_resolv == +1 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup matches.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == 0 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup not checked.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == -1 ? \
+				  errdetail_log("Client IP address resolved to \"%s\", forward lookup does not match.", \
+								port->remote_hostname) : \
+				  port->remote_hostname_resolv == -2 ? \
+				  errdetail_log("Could not translate client host name \"%s\" to IP address: %s.", \
+								port->remote_hostname, \
+								gai_strerror(port->remote_hostname_errcode)) : \
+				  0) \
+				 : (port->remote_hostname_resolv == -2 ? \
+					errdetail_log("Could not resolve client IP address to a host name: %s.", \
+								  gai_strerror(port->remote_hostname_errcode)) : \
+					0))
 
 				if (am_walsender)
 				{
@@ -638,15 +626,6 @@ ClientAuthentication(Port *port)
 				}
 				break;
 			}
-
-		case uaKrb5:
-#ifdef KRB5
-			sendAuthRequest(port, AUTH_REQ_KRB5);
-			status = pg_krb5_recvauth(port);
-#else
-			Assert(false);
-#endif
-			break;
 
 		case uaGSS:
 #ifdef ENABLE_GSS
@@ -692,12 +671,12 @@ ClientAuthentication(Port *port)
 						(errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
 						 errmsg("MD5 authentication is not supported when \"db_user_namespace\" is enabled")));
 			sendAuthRequest(port, AUTH_REQ_MD5);
-			status = recv_and_check_password_packet(port);
+			status = recv_and_check_password_packet(port, &logdetail);
 			break;
 
 		case uaPassword:
 			sendAuthRequest(port, AUTH_REQ_PASSWORD);
-			status = recv_and_check_password_packet(port);
+			status = recv_and_check_password_packet(port, &logdetail);
 			break;
 
 		case uaPAM:
@@ -746,7 +725,7 @@ ClientAuthentication(Port *port)
 	if (status == STATUS_OK)
 		sendAuthRequest(port, AUTH_REQ_OK);
 	else
-		auth_failed(port, status);
+		auth_failed(port, status, logdetail);
 
 	/* Done with authentication, so we should turn off immediate interrupts */
 	ImmediateInterruptOK = false;
@@ -863,7 +842,7 @@ recv_password_packet(Port *port)
 			(errmsg("received password packet")));
 
 	/*
-	 * Return the received string.	Note we do not attempt to do any
+	 * Return the received string.  Note we do not attempt to do any
 	 * character-set conversion on it; since we don't yet know the client's
 	 * encoding, there wouldn't be much point.
 	 */
@@ -879,9 +858,10 @@ recv_password_packet(Port *port)
 /*
  * Called when we have sent an authorization request for a password.
  * Get the response and check it.
+ * On error, optionally store a detail string at *logdetail.
  */
 static int
-recv_and_check_password_packet(Port *port)
+recv_and_check_password_packet(Port *port, char **logdetail)
 {
 	char	   *passwd;
 	int			result;
@@ -891,195 +871,13 @@ recv_and_check_password_packet(Port *port)
 	if (passwd == NULL)
 		return STATUS_EOF;		/* client wouldn't send password */
 
-	result = hashed_passwd_verify(port, port->user_name, passwd);
+	result = hashed_passwd_verify(port, port->user_name, passwd, logdetail);
 
 	pfree(passwd);
 
 	return result;
 }
 
-
-/*----------------------------------------------------------------
- * MIT Kerberos authentication system - protocol version 5
- *----------------------------------------------------------------
- */
-#ifdef KRB5
-
-static int
-pg_krb5_init(Port *port)
-{
-	krb5_error_code retval;
-	char	   *khostname;
-
-	if (pg_krb5_initialised)
-		return STATUS_OK;
-
-	retval = krb5_init_context(&pg_krb5_context);
-	if (retval)
-	{
-		ereport(LOG,
-				(errmsg("Kerberos initialization returned error %d",
-						retval)));
-		com_err("postgres", retval, "while initializing krb5");
-		return STATUS_ERROR;
-	}
-
-	retval = krb5_kt_resolve(pg_krb5_context, pg_krb_server_keyfile, &pg_krb5_keytab);
-	if (retval)
-	{
-		ereport(LOG,
-				(errmsg("Kerberos keytab resolving returned error %d",
-						retval)));
-		com_err("postgres", retval, "while resolving keytab file \"%s\"",
-				pg_krb_server_keyfile);
-		krb5_free_context(pg_krb5_context);
-		return STATUS_ERROR;
-	}
-
-	/*
-	 * If no hostname was specified, pg_krb_server_hostname is already NULL.
-	 * If it's set to blank, force it to NULL.
-	 */
-	khostname = port->hba->krb_server_hostname;
-	if (khostname && khostname[0] == '\0')
-		khostname = NULL;
-
-	retval = krb5_sname_to_principal(pg_krb5_context,
-									 khostname,
-									 pg_krb_srvnam,
-									 KRB5_NT_SRV_HST,
-									 &pg_krb5_server);
-	if (retval)
-	{
-		ereport(LOG,
-				(errmsg("Kerberos sname_to_principal(\"%s\", \"%s\") returned error %d",
-		 khostname ? khostname : "server hostname", pg_krb_srvnam, retval)));
-		com_err("postgres", retval,
-		"while getting server principal for server \"%s\" for service \"%s\"",
-				khostname ? khostname : "server hostname", pg_krb_srvnam);
-		krb5_kt_close(pg_krb5_context, pg_krb5_keytab);
-		krb5_free_context(pg_krb5_context);
-		return STATUS_ERROR;
-	}
-
-	pg_krb5_initialised = 1;
-	return STATUS_OK;
-}
-
-
-/*
- * pg_krb5_recvauth -- server routine to receive authentication information
- *					   from the client
- *
- * We still need to compare the username obtained from the client's setup
- * packet to the authenticated name.
- *
- * We have our own keytab file because postgres is unlikely to run as root,
- * and so cannot read the default keytab.
- */
-static int
-pg_krb5_recvauth(Port *port)
-{
-	krb5_error_code retval;
-	int			ret;
-	krb5_auth_context auth_context = NULL;
-	krb5_ticket *ticket;
-	char	   *kusername;
-	char	   *cp;
-
-	ret = pg_krb5_init(port);
-	if (ret != STATUS_OK)
-		return ret;
-
-	retval = krb5_recvauth(pg_krb5_context, &auth_context,
-						   (krb5_pointer) & port->sock, pg_krb_srvnam,
-						   pg_krb5_server, 0, pg_krb5_keytab, &ticket);
-	if (retval)
-	{
-		ereport(LOG,
-				(errmsg("Kerberos recvauth returned error %d",
-						retval)));
-		com_err("postgres", retval, "from krb5_recvauth");
-		return STATUS_ERROR;
-	}
-
-	/*
-	 * The "client" structure comes out of the ticket and is therefore
-	 * authenticated.  Use it to check the username obtained from the
-	 * postmaster startup packet.
-	 */
-#if defined(HAVE_KRB5_TICKET_ENC_PART2)
-	retval = krb5_unparse_name(pg_krb5_context,
-							   ticket->enc_part2->client, &kusername);
-#elif defined(HAVE_KRB5_TICKET_CLIENT)
-	retval = krb5_unparse_name(pg_krb5_context,
-							   ticket->client, &kusername);
-#else
-#error "bogus configuration"
-#endif
-	if (retval)
-	{
-		ereport(LOG,
-				(errmsg("Kerberos unparse_name returned error %d",
-						retval)));
-		com_err("postgres", retval, "while unparsing client name");
-		krb5_free_ticket(pg_krb5_context, ticket);
-		krb5_auth_con_free(pg_krb5_context, auth_context);
-		return STATUS_ERROR;
-	}
-
-	cp = strchr(kusername, '@');
-	if (cp)
-	{
-		/*
-		 * If we are not going to include the realm in the username that is
-		 * passed to the ident map, destructively modify it here to remove the
-		 * realm. Then advance past the separator to check the realm.
-		 */
-		if (!port->hba->include_realm)
-			*cp = '\0';
-		cp++;
-
-		if (port->hba->krb_realm != NULL && strlen(port->hba->krb_realm))
-		{
-			/* Match realm against configured */
-			if (pg_krb_caseins_users)
-				ret = pg_strcasecmp(port->hba->krb_realm, cp);
-			else
-				ret = strcmp(port->hba->krb_realm, cp);
-
-			if (ret)
-			{
-				elog(DEBUG2,
-					 "krb5 realm (%s) and configured realm (%s) don't match",
-					 cp, port->hba->krb_realm);
-
-				krb5_free_ticket(pg_krb5_context, ticket);
-				krb5_auth_con_free(pg_krb5_context, auth_context);
-				return STATUS_ERROR;
-			}
-		}
-	}
-	else if (port->hba->krb_realm && strlen(port->hba->krb_realm))
-	{
-		elog(DEBUG2,
-			 "krb5 did not return realm but realm matching was requested");
-
-		krb5_free_ticket(pg_krb5_context, ticket);
-		krb5_auth_con_free(pg_krb5_context, auth_context);
-		return STATUS_ERROR;
-	}
-
-	ret = check_usermap(port->hba->usermap, port->user_name, kusername,
-						pg_krb_caseins_users);
-
-	krb5_free_ticket(pg_krb5_context, ticket);
-	krb5_auth_con_free(pg_krb5_context, auth_context);
-	free(kusername);
-
-	return ret;
-}
-#endif   /* KRB5 */
 
 
 /*----------------------------------------------------------------
@@ -1706,8 +1504,7 @@ pg_SSPI_recvauth(Port *port)
 		char	   *namebuf;
 		int			retval;
 
-		namebuf = palloc(strlen(accountname) + strlen(domainname) + 2);
-		sprintf(namebuf, "%s@%s", accountname, domainname);
+		namebuf = psprintf("%s@%s", accountname, domainname);
 		retval = check_usermap(port->hba->usermap, port->user_name, namebuf, true);
 		pfree(namebuf);
 		return retval;
@@ -1808,7 +1605,7 @@ interpret_ident_response(const char *ident_response,
 /*
  *	Talk to the ident server on host "remote_ip_addr" and find out who
  *	owns the tcp connection from his port "remote_port" to port
- *	"local_port_addr" on host "local_ip_addr".	Return the user name the
+ *	"local_port_addr" on host "local_ip_addr".  Return the user name the
  *	ident server gives as "*ident_user".
  *
  *	IP addresses and port numbers are in network byte order.
@@ -1883,7 +1680,7 @@ ident_inet(hbaPort *port)
 
 	sock_fd = socket(ident_serv->ai_family, ident_serv->ai_socktype,
 					 ident_serv->ai_protocol);
-	if (sock_fd < 0)
+	if (sock_fd == PGINVALID_SOCKET)
 	{
 		ereport(LOG,
 				(errcode_for_socket_access(),
@@ -1963,7 +1760,7 @@ ident_inet(hbaPort *port)
 					ident_response)));
 
 ident_inet_done:
-	if (sock_fd >= 0)
+	if (sock_fd != PGINVALID_SOCKET)
 		closesocket(sock_fd);
 	if (ident_serv)
 		pg_freeaddrinfo_all(remote_addr.addr.ss_family, ident_serv);
@@ -1991,9 +1788,8 @@ auth_peer(hbaPort *port)
 	char		ident_user[IDENT_USERNAME_MAX + 1];
 	uid_t		uid;
 	gid_t		gid;
-	struct passwd *pass;
+	struct passwd *pw;
 
-	errno = 0;
 	if (getpeereid(port->sock, &uid, &gid) != 0)
 	{
 		/* Provide special error message if getpeereid is a stub */
@@ -2008,17 +1804,17 @@ auth_peer(hbaPort *port)
 		return STATUS_ERROR;
 	}
 
-	pass = getpwuid(uid);
-
-	if (pass == NULL)
+	errno = 0;					/* clear errno before call */
+	pw = getpwuid(uid);
+	if (!pw)
 	{
 		ereport(LOG,
-				(errmsg("local user with ID %d does not exist",
-						(int) uid)));
+				(errmsg("failed to look up local user id %ld: %s",
+		   (long) uid, errno ? strerror(errno) : _("user does not exist"))));
 		return STATUS_ERROR;
 	}
 
-	strlcpy(ident_user, pass->pw_name, IDENT_USERNAME_MAX + 1);
+	strlcpy(ident_user, pw->pw_name, IDENT_USERNAME_MAX + 1);
 
 	/*
 	 * GPDB: check for port->hba == NULL here, because auth_peer is used
@@ -2169,7 +1965,7 @@ CheckPAMAuth(Port *port, char *user, char *password)
 	pam_port_cludge = port;
 
 	/*
-	 * Set the application data portion of the conversation struct This is
+	 * Set the application data portion of the conversation struct.  This is
 	 * later used inside the PAM conversation to pass the password to the
 	 * authentication module.
 	 */
@@ -2457,10 +2253,9 @@ CheckLDAPAuth(Port *port)
 		attributes[0] = port->hba->ldapsearchattribute ? port->hba->ldapsearchattribute : "uid";
 		attributes[1] = NULL;
 
-		filter = palloc(strlen(attributes[0]) + strlen(port->user_name) + 4);
-		sprintf(filter, "(%s=%s)",
-				attributes[0],
-				port->user_name);
+		filter = psprintf("(%s=%s)",
+						  attributes[0],
+						  port->user_name);
 
 		r = ldap_search_s(ldap,
 						  port->hba->ldapbasedn,
@@ -2547,17 +2342,10 @@ CheckLDAPAuth(Port *port)
 		}
 	}
 	else
-	{
-		fulluser = palloc((port->hba->ldapprefix ? strlen(port->hba->ldapprefix) : 0) +
-						  strlen(port->user_name) +
-				(port->hba->ldapsuffix ? strlen(port->hba->ldapsuffix) : 0) +
-						  1);
-
-		sprintf(fulluser, "%s%s%s",
-				port->hba->ldapprefix ? port->hba->ldapprefix : "",
-				port->user_name,
-				port->hba->ldapsuffix ? port->hba->ldapsuffix : "");
-	}
+		fulluser = psprintf("%s%s%s",
+						  port->hba->ldapprefix ? port->hba->ldapprefix : "",
+							port->user_name,
+						 port->hba->ldapsuffix ? port->hba->ldapsuffix : "");
 
 	r = ldap_simple_bind_s(ldap, fulluser, passwd);
 	ldap_unbind(ldap);
@@ -2821,7 +2609,7 @@ CheckRADIUSAuth(Port *port)
 	packet->length = htons(packet->length);
 
 	sock = socket(serveraddrs[0].ai_family, SOCK_DGRAM, 0);
-	if (sock < 0)
+	if (sock == PGINVALID_SOCKET)
 	{
 		ereport(LOG,
 				(errmsg("could not create RADIUS socket: %m")));
@@ -3171,7 +2959,7 @@ check_auth_time_constraints_internal(char *rolname, TimestampTz timestamp)
 	 * another example of this sort of logic.
 	 */
 	scan = systable_beginscan(reltimeconstr, AuthTimeConstraintAuthIdIndexId,
-							  criticalSharedRelcachesBuilt, SnapshotNow, 1,
+							  criticalSharedRelcachesBuilt, NULL, 1,
 							  entry);
 
 	/*

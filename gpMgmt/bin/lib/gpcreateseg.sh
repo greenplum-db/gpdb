@@ -212,9 +212,11 @@ PROCESS_QE () {
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          $USER_NAME         $CIDR_ADDR      trust >> ${GP_DIR}/$PG_HBA"
         done
     else
-        # cleanup the pg_hba.conf
-        $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
-        $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+        # clean up localhost CIDR in pg_hba.conf if exists
+        if [ -f ${GP_DIR}/$PG_HBA ]; then
+            $GREP "^#" ${GP_DIR}/$PG_HBA > $TMP_PG_HBA
+            $MV $TMP_PG_HBA ${GP_DIR}/$PG_HBA
+        fi
 
         # add localhost
         $TRUSTED_SHELL ${GP_HOSTADDRESS} "$ECHO host     all          all         localhost      trust >> ${GP_DIR}/$PG_HBA"
@@ -253,7 +255,7 @@ STOP_QE() {
 START_QE() {
 	LOG_MSG "[INFO][$INST_COUNT]:-Starting Functioning instance on segment ${GP_HOSTADDRESS}"
 	PG_CTL_WAIT=$1
-	$TRUSTED_SHELL ${GP_HOSTADDRESS} "$EXPORT_LIB_PATH;export PGPORT=${GP_PORT}; $PG_CTL $PG_CTL_WAIT -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o \"-i -p ${GP_PORT} --gp_dbid=${GP_DBID} --gp_contentid=${GP_CONTENT} --gp_num_contents_in_cluster=${TOTAL_SEG}\" start" >> $LOG_FILE 2>&1
+	$TRUSTED_SHELL ${GP_HOSTADDRESS} "$EXPORT_LIB_PATH;export PGPORT=${GP_PORT}; $PG_CTL $PG_CTL_WAIT -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o \"-i -p ${GP_PORT} --gp_dbid=${GP_DBID} --gp_contentid=${GP_CONTENT}\" start" >> $LOG_FILE 2>&1
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		BACKOUT_COMMAND "$TRUSTED_SHELL $GP_HOSTADDRESS \"${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop\""

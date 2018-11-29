@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_trigger.h
@@ -22,7 +22,7 @@
 #include "catalog/genbki.h"
 
 /* ----------------
- *		pg_trigger definition.	cpp turns this into
+ *		pg_trigger definition.  cpp turns this into
  *		typedef struct FormData_pg_trigger
  *
  * Note: when tgconstraint is nonzero, tgconstrrelid, tgconstrindid,

@@ -1,0 +1,152 @@
+-------------------------------------------------------------------------
+
+Revisions as of Thu, Jan 17, 2013  3:50:01 PM
+
+Version 5.10 of stream.c has been released.
+This version includes improved validation code and will automatically
+use 64-bit array indices on 64-bit systems to allow very large arrays.
+
+-------------------------------------------------------------------------
+
+Revisions as of Thu Feb 19 08:16:57 CST 2009
+
+Note that the codes in the "Versions" subdirectory should be
+considered obsolete -- the versions of stream.c and stream.f
+in this main directory include the OpenMP directives and structure
+for creating "TUNED" versions.  
+
+Only the MPI version in the "Versions" subdirectory should be
+of any interest, and I have not recently checked that version for
+errors or compliance with the current versions of stream.c and
+stream.f.
+
+I added a simple Makefile to this directory.  It works under Cygwin
+on my Windows XP box (using gcc and g77).
+
+A user suggested a sneaky trick for "mysecond.c" -- instead of using
+the #ifdef UNDERSCORE to generate the function name that the Fortran
+compiler expects, the new version simply defines both "mysecond()"
+and "mysecond_()", so it should automagically link with most Fortran
+compilers.
+
+-------------------------------------------------------------------------
+
+Revisions as of Wed Nov 17 09:15:37 CST 2004
+
+The most recent "official" versions have been renamed "stream.f" and
+"stream.c" -- all other versions have been moved to the "Versions"
+subdirectory.
+
+The "official" timer (was "second_wall.c") has been renamed "mysecond.c".
+This is embedded in the C version ("stream.c"), but still needs to be
+externally linked to the FORTRAN version ("stream.f").
+
+-------------------------------------------------------------------------
+
+Revisions as of Tue May 27 11:51:23 CDT 2003
+
+Copyright and License info added to stream_d.f, stream_mpi.f, and
+stream_tuned.f
+
+
+-------------------------------------------------------------------------
+
+Revisions as of Tue Apr  8 10:26:48 CDT 2003
+
+I changed the name of the timer interface from "second" to "mysecond"
+and removed the dummy argument in all versions of the source code (but
+not the "Contrib" versions).
+
+
+-------------------------------------------------------------------------
+
+Revisions as of Mon Feb 25 06:48:14 CST 2002
+
+Added an OpenMP version of stream_d.c, called stream_d_omp.c.  This is
+still not up to date with the Fortran version, which includes error
+checking and advanced data flow to prevent overoptimization, but it is
+a good start....
+
+
+-------------------------------------------------------------------------
+
+Revisions as of Tue Jun  4 16:31:31 EDT 1996
+
+I have fixed an "off-by-one" error in the RMS time calculation in
+stream_d.f.  This was already corrected in stream_d.c.  No results are
+invalidated, since I use minimum time instead of RMS time anyway....
+
+-------------------------------------------------------------------------
+
+Revisions as of Fri Dec  8 14:49:56 EST 1995
+
+I have renamed the timer routines to:
+	second_cpu.c
+	second_wall.c
+	second_cpu.f
+
+All have a function interface named 'second' which returns a double
+precision floating point number.  It should be possible to link
+second_wall.c with stream_d.f without too much trouble, though the
+details will depend on your environment.
+
+If anyone builds versions of these timers for machines running the
+Macintosh O/S or DOS/Windows, I would appreciate getting a copy.
+
+To clarify:
+  * For single-user machines, the wallclock timer is preferred.
+  * For parallel machines, the wallclock timer is required.
+  * For time-shared systems, the cpu timer is more reliable,
+        though less accurate.
+    
+
+-------------------------------------------------------------------------
+
+Revisions as of Wed Oct 25 09:40:32 EDT 1995
+
+(1) NOTICE to C users:
+
+    stream_d.c has been updated to version 4.0 (beta), and
+    should be functionally identical to stream_d.f
+
+    Two timers are provided --- second_cpu.c and second_wall.c
+    second_cpu.c measures cpu time, while second_wall.c measures
+    elapsed (real) time.   
+
+    For single-user machines, the wallclock timer is preferred.
+    For parallel machines, the wallclock timer is required.
+    For time-shared systems, the cpu timer is more reliable,
+    though less accurate.
+    
+(2) cstream.c has been removed -- use stream_d.c
+
+(3) stream_wall.f has been removed --- to do parallel aggregate
+    bandwidth runs, comment out the definition of FUNCTION SECOND
+    in stream_d.f and compile/link with second_wall.c
+
+(4) stream_offset has been deprecated.  It is still here
+    and usable, but stream_d.f is the "standard" version.
+    There are easy hooks in stream_d.f to change the
+    array offsets if you want to.
+
+(5) The rules of the game are clarified as follows:
+
+    The reference case uses array sizes of 2,000,000 elements
+    and no additional offsets.  I would like to see results
+    for this case.
+
+    But, you are free to use any array size and any offset
+    you want, provided that the arrays are each bigger than
+    the last-level of cache.  The output will show me what
+    parameters you chose.
+
+    I expect that I will report just the best number, but
+    if there is a serious discrepancy between the reference
+    case and the "best" case, I reserve the right to report 
+    both.
+
+    Of course, I also reserve the right to reject any results
+    that I do not trust....
+--
+John D. McCalpin, Ph.D.        
+john@mccalpin.com

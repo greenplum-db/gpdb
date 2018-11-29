@@ -93,28 +93,29 @@ WHERE tq.sym = tt.symbol AND
       tt.event_ts <  tq.end_ts
 GROUP BY 1
 ORDER BY 1 asc ;
-                                                                                                       QUERY PLAN                                                                                                        
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1396.76 rows=413 width=16)
-   Merge Key: (my_tt_agg_small.event_ts / 100000 / 5 * 5)
-   ->  GroupAggregate  (cost=0.00..1396.73 rows=138 width=16)
-         Group By: (my_tt_agg_small.event_ts / 100000 / 5 * 5)
-         ->  Sort  (cost=0.00..1396.72 rows=138 width=16)
-               Sort Key: (my_tt_agg_small.event_ts / 100000 / 5 * 5)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1396.58 rows=138 width=16)
-                     Hash Key: (my_tt_agg_small.event_ts / 100000 / 5 * 5)
-                     ->  Result  (cost=0.00..1396.57 rows=138 width=16)
-                           ->  HashAggregate  (cost=0.00..1396.57 rows=138 width=16)
-                                 Group By: my_tt_agg_small.event_ts / 100000 / 5 * 5
-                                 ->  Result  (cost=0.00..1378.65 rows=94594 width=8)
-                                       ->  Nested Loop  (cost=0.00..1377.51 rows=94594 width=8)
-                                             Join Filter: my_tq_agg_small.sym::bpchar = my_tt_agg_small.symbol AND my_tt_agg_small.event_ts >= my_tq_agg_small.ets AND my_tt_agg_small.event_ts < my_tq_agg_small.end_ts
-                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.29 rows=280 width=25)
-                                                   ->  Table Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
-                                             ->  Table Scan on my_tq_agg_small  (cost=0.00..431.04 rows=676 width=20)
- Settings:  enable_hashjoin=off; enable_indexscan=on; enable_mergejoin=off; enable_nestloop=on; enable_seqscan=off; optimizer=on; optimizer_nestloop_factor=1; optimizer_segments=2
- Optimizer status: PQO version 2.32.0
-(19 rows)
+                                                                                                            QUERY PLAN                                                                                                             
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1359.12 rows=413 width=16)
+   Merge Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+   ->  GroupAggregate  (cost=0.00..1359.09 rows=138 width=16)
+         Group Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+         ->  Sort  (cost=0.00..1359.08 rows=138 width=16)
+               Sort Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1358.94 rows=138 width=16)
+                     Hash Key: ((((my_tt_agg_small.event_ts / 100000) / 5) * 5))
+                     ->  Result  (cost=0.00..1358.93 rows=138 width=16)
+                           ->  HashAggregate  (cost=0.00..1358.93 rows=138 width=16)
+                                 Group Key: (((my_tt_agg_small.event_ts / 100000) / 5) * 5)
+                                 ->  Result  (cost=0.00..1341.01 rows=94594 width=8)
+                                       ->  Nested Loop  (cost=0.00..1339.87 rows=94594 width=8)
+                                             Join Filter: (((my_tq_agg_small.sym)::bpchar = my_tt_agg_small.symbol) AND (my_tt_agg_small.event_ts >= my_tq_agg_small.ets) AND (my_tt_agg_small.event_ts < my_tq_agg_small.end_ts))
+                                             ->  Table Scan on my_tt_agg_small  (cost=0.00..431.01 rows=140 width=25)
+                                             ->  Materialize  (cost=0.00..431.16 rows=676 width=20)
+                                                   ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.14 rows=676 width=20)
+                                                         Hash Key: (my_tq_agg_small.sym)::bpchar
+                                                         ->  Table Scan on my_tq_agg_small  (cost=0.00..431.03 rows=676 width=20)
+ Optimizer: PQO version 3.1.0
+(20 rows)
 
 reset optimizer_segments;
 reset optimizer_nestloop_factor;

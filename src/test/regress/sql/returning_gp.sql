@@ -47,3 +47,19 @@ select * from returning_parttab;
 CREATE TEMP TABLE returning_aotab (id int4) WITH (appendonly=true);
 INSERT INTO returning_aotab VALUES (1);
 DELETE FROM returning_aotab RETURNING *;
+
+
+--
+-- Test UPDATE RETURNING with a split update, i.e. an update of the distribution
+-- key.
+--
+CREATE TEMP TABLE returning_disttest (id int4) DISTRIBUTED BY (id);
+INSERT INTO returning_disttest VALUES (1), (2);
+
+-- Disable QUIET mode, so that we get some testing of the command tag as well.
+-- (At one point, each split update incorrectly counted as two updated rows.)
+\set QUIET off
+
+UPDATE returning_disttest SET id = id + 1;
+
+SELECT * FROM returning_disttest;

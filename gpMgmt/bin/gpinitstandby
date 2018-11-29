@@ -226,7 +226,7 @@ def print_summary(options, array, standby_datadir):
         if standby_datadir:
             logger.info('Greenplum standby master data directory = %s' % standby_datadir)
         else:
-            GpInitStandbyException('No data directory specified for standby master')
+            raise GpInitStandbyException('No data directory specified for standby master')
 
     if not options.remove and options.no_update:
         logger.info('Greenplum update system catalog         = Off')
@@ -414,7 +414,7 @@ def create_standby(options):
                                    standby.dbid,
                                    array.getNumSegmentContents())
         except Exception, ex:
-            raise('failed to start standby')
+            raise GpInitStandbyException('failed to start standby')
 
     except Exception, ex:
         # Something went wrong.  Based on the current state, we can rollback

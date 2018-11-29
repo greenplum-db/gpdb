@@ -231,4 +231,7 @@ extern void AtCommit_AppendOnly(void);
 extern void AtAbort_AppendOnly(void);
 extern void AtEOXact_AppendOnly(void);
 
+extern void GpFetchEntryFromAppendOnlyHash(Oid relid, AORelHashEntry foundAoEntry);
+extern void GpRemoveEntryFromAppendOnlyHash(Oid relid);
+
 #endif							/* APPENDONLYWRITER_H */

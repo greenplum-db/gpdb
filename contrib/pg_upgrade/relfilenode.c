@@ -3,7 +3,7 @@
  *
  *	relfilenode functions
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade/relfilenode.c
  */
 
@@ -12,6 +12,9 @@
 #include "pg_upgrade.h"
 
 #include "catalog/pg_class.h"
+#include "access/aomd.h"
+#include "access/appendonlytid.h"
+#include "access/htup_details.h"
 #include "access/transam.h"
 
 
@@ -19,7 +22,10 @@ static void transfer_single_new_db(pageCnvCtx *pageConverter,
 					   FileNameMap *maps, int size, char *old_tablespace);
 static void transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 				 const char *suffix);
-
+static bool transfer_relfile_segment(int segno, pageCnvCtx *pageConverter,
+									 FileNameMap *map, const char *suffix);
+static void transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map);
+static bool transfer_ao_perFile(const int segno, void *ctx);
 
 /*
  * transfer_all_new_tablespaces()
@@ -107,8 +113,8 @@ transfer_all_new_dbs(DbInfoArr *old_db_arr, DbInfoArr *new_db_arr,
 		}
 
 		if (new_dbnum >= new_db_arr->ndbs)
-			pg_log(PG_FATAL, "old database \"%s\" not found in the new cluster\n",
-				   old_db->db_name);
+			pg_fatal("old database \"%s\" not found in the new cluster\n",
+					 old_db->db_name);
 
 		n_maps = 0;
 		mappings = gen_db_file_maps(old_db, new_db, &n_maps, old_pgdata,
@@ -187,23 +193,31 @@ transfer_single_new_db(pageCnvCtx *pageConverter,
 		if (old_tablespace == NULL ||
 			strcmp(maps[mapnum].old_tablespace, old_tablespace) == 0)
 		{
-			/* transfer primary file */
-			transfer_relfile(pageConverter, &maps[mapnum], "");
+			RelType type = maps[mapnum].type;
 
-			/* fsm/vm files added in PG 8.4 */
-			if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
+			if (type == AO || type == AOCS)
 			{
-				/*
-				 * Copy/link any fsm and vm files, if they exist
-				 */
-				transfer_relfile(pageConverter, &maps[mapnum], "_fsm");
-				if (vm_crashsafe_match)
-					transfer_relfile(pageConverter, &maps[mapnum], "_vm");
+				transfer_ao(pageConverter, &maps[mapnum]);
+			}
+			else
+			{
+				/* transfer primary file */
+				transfer_relfile(pageConverter, &maps[mapnum], "");
+
+				/* fsm/vm files added in PG 8.4 */
+				if (GET_MAJOR_VERSION(old_cluster.major_version) >= 804)
+				{
+					/*
+					 * Copy/link any fsm and vm files, if they exist
+					 */
+					transfer_relfile(pageConverter, &maps[mapnum], "_fsm");
+					if (vm_crashsafe_match)
+						transfer_relfile(pageConverter, &maps[mapnum], "_vm");
+				}
 			}
 		}
 	}
 }
-
 
 /*
  * transfer_relfile()
@@ -214,12 +228,7 @@ static void
 transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 				 const char *type_suffix)
 {
-	const char *msg;
-	char		old_file[MAXPGPATH * 3];
-	char		new_file[MAXPGPATH * 3];
-	int			fd;
 	int			segno;
-	char		extent_suffix[65];
 
 	/*
 	 * Now copy/link any related segments as well. Remember, PG breaks large
@@ -228,6 +237,36 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 	 */
 	for (segno = 0;; segno++)
 	{
+		if (!transfer_relfile_segment(segno, pageConverter, map, type_suffix))
+			break;
+	}
+}
+
+/*
+ * GPDB: the body of transfer_relfile(), above, has moved into this function to
+ * facilitate the implementation of transfer_ao().
+ *
+ * Returns true if the segment file was found, and false if it was not. Failures
+ * during transfer are fatal. The case where we cannot find the segment-zero
+ * file (the one without an extent suffix) for a relation is also fatal, since
+ * we expect that to exist for both heap and AO tables in any case.
+ *
+ * TODO: verify that AO tables must always have a segment zero.
+ */
+static bool
+transfer_relfile_segment(int segno, pageCnvCtx *pageConverter, FileNameMap *map,
+						 const char *type_suffix)
+{
+	const char *msg;
+	char		old_file[MAXPGPATH * 3];
+	char		new_file[MAXPGPATH * 3];
+	int			fd;
+	char		extent_suffix[65];
+
+	/*
+	 * Extra indentation is on purpose, to reduce merge conflicts with upstream.
+	 */
+
 		if (segno == 0)
 			extent_suffix[0] = '\0';
 		else
@@ -256,11 +295,11 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 			{
 				/* File does not exist?  That's OK, just return */
 				if (errno == ENOENT)
-					return;
+					return false;
 				else
-					pg_log(PG_FATAL, "error while checking for file existence \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-						   map->nspname, map->relname, old_file, new_file,
-						   getErrorText(errno));
+					pg_fatal("error while checking for file existence \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
+							 map->nspname, map->relname, old_file, new_file,
+							 getErrorText(errno));
 			}
 			close(fd);
 		}
@@ -279,18 +318,22 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 		{
 			pg_log(PG_VERBOSE, "copying and converting \"%s\" to \"%s\"\n",
 				   old_file, new_file);
-	
+
 			if ((msg = convert_gpdb4_heap_file(old_file, new_file,
 											   map->has_numerics, map->atts, map->natts)) != NULL)
 				pg_log(PG_FATAL, "error while copying and converting relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
 					   map->nspname, map->relname, old_file, new_file, msg);
-	
-			return;
+
+			/*
+			 * XXX before the split into transfer_relfile_segment(), this simply
+			 * returned from transfer_relfile() directly. Was that correct?
+			 */
+			return true;
 		}
 
 		if ((user_opts.transfer_mode == TRANSFER_MODE_LINK) && (pageConverter != NULL))
-			pg_log(PG_FATAL, "This upgrade requires page-by-page conversion, "
-				   "you must use copy mode instead of link mode.\n");
+			pg_fatal("This upgrade requires page-by-page conversion, "
+					 "you must use copy mode instead of link mode.\n");
 
 		if (user_opts.transfer_mode == TRANSFER_MODE_COPY)
 		{
@@ -306,8 +349,8 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 				pg_log(PG_VERBOSE, "copying \"%s\" to \"%s\"\n", old_file, new_file);
 
 				if ((msg = copyAndUpdateFile(pageConverter, old_file, new_file, true)) != NULL)
-					pg_log(PG_FATAL, "error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-						   map->nspname, map->relname, old_file, new_file, msg);
+					pg_fatal("error while copying relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
+							 map->nspname, map->relname, old_file, new_file, msg);
 			}
 		}
 		else
@@ -315,11 +358,39 @@ transfer_relfile(pageCnvCtx *pageConverter, FileNameMap *map,
 			pg_log(PG_VERBOSE, "linking \"%s\" to \"%s\"\n", old_file, new_file);
 
 			if ((msg = linkAndUpdateFile(pageConverter, old_file, new_file)) != NULL)
-				pg_log(PG_FATAL,
-					   "error while creating link for relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
-					   map->nspname, map->relname, old_file, new_file, msg);
+				pg_fatal("error while creating link for relation \"%s.%s\" (\"%s\" to \"%s\"): %s\n",
+						 map->nspname, map->relname, old_file, new_file, msg);
 		}
-	}
 
-	return;
+	return true;
+}
+
+struct transfer_ao_callback_ctx {
+	pageCnvCtx *pageConverter;
+	FileNameMap *map;
+};
+
+static void
+transfer_ao(pageCnvCtx *pageConverter, FileNameMap *map)
+{
+	struct transfer_ao_callback_ctx upgradeFiles = { 0 };
+
+	transfer_relfile_segment(0, pageConverter, map, "");
+
+	upgradeFiles.pageConverter = pageConverter;
+	upgradeFiles.map = map;
+
+    ao_foreach_extent_file(transfer_ao_perFile, &upgradeFiles);
+}
+
+static bool
+transfer_ao_perFile(const int segno, void *ctx)
+{
+	const struct transfer_ao_callback_ctx *upgradeFiles = ctx;
+
+	if (!transfer_relfile_segment(segno, upgradeFiles->pageConverter,
+								  upgradeFiles->map , ""))
+		return false;
+
+	return true;
 }

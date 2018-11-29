@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2009, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/execnodes.h
@@ -106,14 +106,14 @@ typedef struct ExprContext_CB
  *
  *		This class holds the "current context" information
  *		needed to evaluate expressions for doing tuple qualifications
- *		and tuple projections.	For example, if an expression refers
+ *		and tuple projections.  For example, if an expression refers
  *		to an attribute in the current inner tuple then we need to know
  *		what the current inner tuple is and so we look at the expression
  *		context.
  *
  *	There are two memory contexts associated with an ExprContext:
  *	* ecxt_per_query_memory is a query-lifespan context, typically the same
- *	  context the ExprContext node itself is allocated in.	This context
+ *	  context the ExprContext node itself is allocated in.  This context
  *	  can be used for purposes such as storing function call cache info.
  *	* ecxt_per_tuple_memory is a short-term context for expression results.
  *	  As the name suggests, it will typically be reset once per tuple,
@@ -221,9 +221,9 @@ typedef struct ReturnSetInfo
  *		Nodes which need to do projections create one of these.
  *
  *		ExecProject() evaluates the tlist, forms a tuple, and stores it
- *		in the given slot.	Note that the result will be a "virtual" tuple
+ *		in the given slot.  Note that the result will be a "virtual" tuple
  *		unless ExecMaterializeSlot() is then called to force it to be
- *		converted to a physical tuple.	The slot must have a tupledesc
+ *		converted to a physical tuple.  The slot must have a tupledesc
  *		that matches the output of the tlist!
  *
  *		The planner very often produces tlists that consist entirely of
@@ -278,7 +278,7 @@ typedef struct ProjectionInfo
  *	  in emitted tuples.  For example, when we do an UPDATE query,
  *	  the planner adds a "junk" entry to the targetlist so that the tuples
  *	  returned to ExecutePlan() contain an extra attribute: the ctid of
- *	  the tuple to be updated.	This is needed to do the update, but we
+ *	  the tuple to be updated.  This is needed to do the update, but we
  *	  don't want the ctid to be part of the stored new tuple!  So, we
  *	  apply a "junk filter" to remove the junk attributes and form the
  *	  real output tuple.  The junkfilter code also provides routines to
@@ -329,6 +329,8 @@ typedef void *RelationDeleteDesc;
  *		TrigInstrument			optional runtime measurements for triggers
  *		FdwRoutine				FDW callback functions, if foreign table
  *		FdwState				available to save private state of FDW
+ *		WithCheckOptions		list of WithCheckOption's for views
+ *		WithCheckOptionExprs	list of WithCheckOption expr states
  *		ConstraintExprs			array of constraint-checking expr states
  *		junkFilter				for removing junk attributes from tuples
  *		projectReturning		for computing a RETURNING list
@@ -359,6 +361,8 @@ typedef struct ResultRelInfo
 	Instrumentation *ri_TrigInstrument;
 	struct FdwRoutine *ri_FdwRoutine;
 	void	   *ri_FdwState;
+	List	   *ri_WithCheckOptions;
+	List	   *ri_WithCheckOptionExprs;
 	List	  **ri_ConstraintExprs;
 	JunkFilter *ri_junkFilter;
 	ProjectionInfo *ri_projectReturning;
@@ -607,7 +611,7 @@ typedef struct EState
 
 	/*
 	 * These fields are for re-evaluating plan quals when an updated tuple is
-	 * substituted in READ COMMITTED mode.	es_epqTuple[] contains tuples that
+	 * substituted in READ COMMITTED mode.  es_epqTuple[] contains tuples that
 	 * scan plan nodes should return instead of whatever they'd normally
 	 * return, or NULL if nothing to return; es_epqTupleSet[] is true if a
 	 * particular array entry is valid; and es_epqScanDone[] is state to
@@ -966,7 +970,7 @@ typedef struct FuncExprState
 
 	/*
 	 * In some cases we need to compute a tuple descriptor for the function's
-	 * output.	If so, it's stored here.
+	 * output.  If so, it's stored here.
 	 */
 	TupleDesc	funcResultDesc;
 	bool		funcReturnsTuple;		/* valid when funcResultDesc isn't
@@ -990,7 +994,7 @@ typedef struct FuncExprState
 
 	/*
 	 * Flag to remember whether we have registered a shutdown callback for
-	 * this FuncExprState.	We do so only if funcResultStore or setArgsValid
+	 * this FuncExprState.  We do so only if funcResultStore or setArgsValid
 	 * has been set at least once (since all the callback is for is to release
 	 * the tuplestore or clear setArgsValid).
 	 */
@@ -1345,6 +1349,18 @@ typedef struct CoerceToDomainState
 	List	   *constraints;	/* list of DomainConstraintState nodes */
 } CoerceToDomainState;
 
+/* ----------------
+ *		ReshuffleExprState node
+ * ----------------
+ */
+typedef struct ReshuffleExprState
+{
+	ExprState	xprstate;
+	ExprState  *arg;
+	List	   *hashKeys;
+	struct CdbHash *cdbhash;	/* hash api object */
+} ReshuffleExprState;
+
 /*
  * DomainConstraintState - one item to check during CoerceToDomain
  *
@@ -1442,6 +1458,9 @@ typedef struct PlanState
 	gpmon_packet_t gpmon_pkt;
 
 	bool		fHadSentNodeStart;
+
+	/* MemoryAccount to use for recording the memory usage of different plan nodes. */
+	MemoryAccountIdType memoryAccountId;
 } PlanState;
 
 /* Gpperfmon helper functions defined in execGpmon.c */
@@ -1950,6 +1969,8 @@ typedef struct DynamicBitmapIndexScanState
  *		tbm				   bitmap obtained from child index scan(s)
  *		tbmiterator		   iterator for scanning current pages
  *		tbmres			   current-page data
+ *		exact_pages		   total number of exact pages retrieved
+ *		lossy_pages		   total number of lossy pages retrieved
  *		prefetch_iterator  iterator for prefetching ahead of current page
  *		prefetch_pages	   # pages prefetch iterator is ahead of current
  *		prefetch_target    target prefetch distance
@@ -1963,6 +1984,8 @@ typedef struct BitmapHeapScanState
 	Node	   *tbm;
 	GenericBMIterator *tbmiterator;
 	TBMIterateResult *tbmres;
+	long		exact_pages;
+	long		lossy_pages;
 	GenericBMIterator *prefetch_iterator;
 	int			prefetch_pages;
 	int			prefetch_target;
@@ -2064,21 +2087,29 @@ typedef struct SubqueryScanState
  *		function appearing in FROM (typically a function returning set).
  *
  *		eflags				node's capability flags
- *		tupdesc				expected return tuple description
- *		tuplestorestate		private state of tuplestore.c
- *		funcexpr			state for function expression being evaluated
+ *		ordinality			is this scan WITH ORDINALITY?
+ *		simple				true if we have 1 function and no ordinality
+ *		ordinal				current ordinal column value
+ *		nfuncs				number of functions being executed
+ *		funcstates			per-function execution states (private in
+ *							nodeFunctionscan.c)
  *		cdb_want_ctid		true => ctid is referenced in targetlist
  *		cdb_fake_ctid
  *		cdb_mark_ctid
  * ----------------
  */
+struct FunctionScanPerFuncState;
+
 typedef struct FunctionScanState
 {
 	ScanState	ss;				/* its first field is NodeTag */
 	int			eflags;
-	TupleDesc	tupdesc;
-	Tuplestorestate *tuplestorestate;
-	ExprState  *funcexpr;
+	bool		ordinality;
+	bool		simple;
+	int64		ordinal;
+	int			nfuncs;
+	struct FunctionScanPerFuncState *funcstates;		/* array of length
+														 * nfuncs */
 	bool		cdb_want_ctid;
 	ItemPointerData cdb_fake_ctid;
 	ItemPointerData cdb_mark_ctid;
@@ -2163,7 +2194,7 @@ typedef struct CteScanState
  *	 WorkTableScanState information
  *
  *		WorkTableScan nodes are used to scan the work table created by
- *		a RecursiveUnion node.	We locate the RecursiveUnion node
+ *		a RecursiveUnion node.  We locate the RecursiveUnion node
  *		during executor startup.
  * ----------------
  */
@@ -2629,6 +2660,13 @@ typedef struct AggState
 	/* set if the operator created workfiles */
 	bool		workfiles_created;
 
+	/*
+	 * Most executor nodes in GPDB don't support SRFs in target lists, the
+	 * planner tries to insulate them from SRFs by adding Result nodes. But
+	 * Agg needs to handle them, because a Result can't evaluate Aggrefs,
+	 * which an Agg's target list usually has.
+	 */
+	bool		ps_TupFromTlist;
 } AggState;
 
 /* ----------------
@@ -2726,7 +2764,7 @@ typedef struct WindowAggState
  *	 UniqueState information
  *
  *		Unique nodes are used "on top of" sort nodes to discard
- *		duplicate tuples returned from the sort phase.	Basically
+ *		duplicate tuples returned from the sort phase.  Basically
  *		all it does is compare the current tuple from the subplan
  *		with the previously fetched tuple (stored in its result slot).
  *		If the two are identical in all interesting fields, then
@@ -2958,13 +2996,31 @@ typedef struct PartitionSelectorState
 	PartitionAccessMethods *accessMethods;              /* Access method for partition */
 	struct PartitionRule **levelPartRules; 				/* accepted partitions for all levels */
 	List *levelEqExprStates;                            /* ExprState for equality expressions for all levels */
-	List *levelExprStates;                              /* ExprState for general expressions for all levels */
-	ExprState *residualPredicateExprState;              /* ExprState for evaluating residual predicate */
+	List *levelExprStateLists;                          /* ExprState list for general expressions for all levels */
+	List *residualPredicateExprStateList;               /* ExprState list for evaluating residual predicate */
 	ExprState *propagationExprState;                    /* ExprState for evaluating propagation expression */
 
 	TupleDesc	partTabDesc;
 	TupleTableSlot *partTabSlot;
 	ProjectionInfo *partTabProj;
 } PartitionSelectorState;
+
+/*
+ * ExecNode for ReshuffleState.
+ * This operator contains a Plannode in PlanState.
+ * It is used by the Reshuffle operator, which is used
+ * to reshuffle table data.
+ */
+typedef struct ReshuffleState
+{
+	PlanState ps;
+	List	   *destList;
+	int			newTargetIdx;
+
+	struct CdbHash *cdbhash;	/* hash api object for computing new segment */
+	struct CdbHash *oldcdbhash;	/* hash api object for computing old segment */
+
+	TupleTableSlot *savedSlot;
+} ReshuffleState;
 
 #endif   /* EXECNODES_H */

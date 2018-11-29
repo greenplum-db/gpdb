@@ -29,7 +29,7 @@
  * When the caller requests backward-scan capability, we write the temp file
  * in a format that allows either forward or backward scan.  Otherwise, only
  * forward scan is allowed.  A request for backward scan must be made before
- * putting any tuples into the tuplestore.	Rewind is normally allowed but
+ * putting any tuples into the tuplestore.  Rewind is normally allowed but
  * can be turned off via tuplestore_set_eflags; turning off rewind for all
  * read pointers enables truncation of the tuplestore at the oldest read point
  * for minimal memory usage.  (The caller must explicitly call tuplestore_trim
@@ -45,7 +45,7 @@
  *
  * Portions Copyright (c) 2007-2010, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -88,7 +88,7 @@ typedef enum
  *
  * Special case: if eof_reached is true, then the pointer's read position is
  * implicitly equal to the write position, and current/file/offset aren't
- * maintained.	This way we need not update all the read pointers each time
+ * maintained.  This way we need not update all the read pointers each time
  * we write.
  */
 typedef struct
@@ -110,8 +110,8 @@ struct Tuplestorestate
 	bool		backward;		/* store extra length words in file? */
 	bool		interXact;		/* keep open through transactions? */
 	bool		truncated;		/* tuplestore_trim has removed tuples? */
-	long		availMem;		/* remaining memory available, in bytes */
-	long		allowedMem;		/* total memory allowed, in bytes */
+	int64		availMem;		/* remaining memory available, in bytes */
+	int64		allowedMem;		/* total memory allowed, in bytes */
 	BufFile    *myfile;			/* underlying file, or NULL if none */
 	MemoryContext context;		/* memory context for holding tuples */
 	ResourceOwner resowner;		/* resowner for holding temp files */
@@ -219,7 +219,7 @@ struct Tuplestorestate
  * If state->backward is true, then the stored representation of
  * the tuple must be followed by another "unsigned int" that is a copy of the
  * length --- so the total tape space used is actually sizeof(unsigned int)
- * more than the stored length value.  This allows read-backwards.	When
+ * more than the stored length value.  This allows read-backwards.  When
  * state->backward is not set, the write/read routines may omit the extra
  * length word.
  *
@@ -324,7 +324,7 @@ tuplestore_begin_common(int eflags, bool interXact, int maxKBytes)
  * tuple store are allowed.
  *
  * interXact: if true, the files used for on-disk storage persist beyond the
- * end of the current transaction.	NOTE: It's the caller's responsibility to
+ * end of the current transaction.  NOTE: It's the caller's responsibility to
  * create such a tuplestore in a memory context and resource owner that will
  * also survive transaction boundaries, and to ensure the tuplestore is closed
  * when it's no longer wanted.
@@ -590,25 +590,26 @@ tuplestore_ateof(Tuplestorestate *state)
 }
 
 /*
- * Grow the memtuples[] array, if possible within our memory constraint.
- * Return TRUE if we were able to enlarge the array, FALSE if not.
+ * Grow the memtuples[] array, if possible within our memory constraint.  We
+ * must not exceed INT_MAX tuples in memory or the caller-provided memory
+ * limit.  Return TRUE if we were able to enlarge the array, FALSE if not.
  *
- * Normally, at each increment we double the size of the array.  When we no
- * longer have enough memory to do that, we attempt one last, smaller increase
- * (and then clear the growmemtuples flag so we don't try any more).  That
- * allows us to use allowedMem as fully as possible; sticking to the pure
- * doubling rule could result in almost half of allowedMem going unused.
- * Because availMem moves around with tuple addition/removal, we need some
- * rule to prevent making repeated small increases in memtupsize, which would
- * just be useless thrashing.  The growmemtuples flag accomplishes that and
- * also prevents useless recalculations in this function.
+ * Normally, at each increment we double the size of the array.  When doing
+ * that would exceed a limit, we attempt one last, smaller increase (and then
+ * clear the growmemtuples flag so we don't try any more).  That allows us to
+ * use memory as fully as permitted; sticking to the pure doubling rule could
+ * result in almost half going unused.  Because availMem moves around with
+ * tuple addition/removal, we need some rule to prevent making repeated small
+ * increases in memtupsize, which would just be useless thrashing.  The
+ * growmemtuples flag accomplishes that and also prevents useless
+ * recalculations in this function.
  */
 static bool
 grow_memtuples(Tuplestorestate *state)
 {
 	int			newmemtupsize;
 	int			memtupsize = state->memtupsize;
-	long		memNowUsed = state->allowedMem - state->availMem;
+	int64		memNowUsed = state->allowedMem - state->availMem;
 
 	/* Forget it if we've already maxed out memtuples, per comment above */
 	if (!state->growmemtuples)
@@ -618,14 +619,16 @@ grow_memtuples(Tuplestorestate *state)
 	if (memNowUsed <= state->availMem)
 	{
 		/*
-		 * It is surely safe to double memtupsize if we've used no more than
-		 * half of allowedMem.
-		 *
-		 * Note: it might seem that we need to worry about memtupsize * 2
-		 * overflowing an int, but the MaxAllocSize clamp applied below
-		 * ensures the existing memtupsize can't be large enough for that.
+		 * We've used no more than half of allowedMem; double our usage,
+		 * clamping at INT_MAX tuples.
 		 */
-		newmemtupsize = memtupsize * 2;
+		if (memtupsize < INT_MAX / 2)
+			newmemtupsize = memtupsize * 2;
+		else
+		{
+			newmemtupsize = INT_MAX;
+			state->growmemtuples = false;
+		}
 	}
 	else
 	{
@@ -641,7 +644,8 @@ grow_memtuples(Tuplestorestate *state)
 		 * we've already seen, and thus we can extrapolate from the space
 		 * consumption so far to estimate an appropriate new size for the
 		 * memtuples array.  The optimal value might be higher or lower than
-		 * this estimate, but it's hard to know that in advance.
+		 * this estimate, but it's hard to know that in advance.  We again
+		 * clamp at INT_MAX tuples.
 		 *
 		 * This calculation is safe against enlarging the array so much that
 		 * LACKMEM becomes true, because the memory currently used includes
@@ -649,16 +653,18 @@ grow_memtuples(Tuplestorestate *state)
 		 * new array elements even if no other memory were currently used.
 		 *
 		 * We do the arithmetic in float8, because otherwise the product of
-		 * memtupsize and allowedMem could overflow.  (A little algebra shows
-		 * that grow_ratio must be less than 2 here, so we are not risking
-		 * integer overflow this way.)	Any inaccuracy in the result should be
-		 * insignificant; but even if we computed a completely insane result,
-		 * the checks below will prevent anything really bad from happening.
+		 * memtupsize and allowedMem could overflow.  Any inaccuracy in the
+		 * result should be insignificant; but even if we computed a
+		 * completely insane result, the checks below will prevent anything
+		 * really bad from happening.
 		 */
 		double		grow_ratio;
 
 		grow_ratio = (double) state->allowedMem / (double) memNowUsed;
-		newmemtupsize = (int) (memtupsize * grow_ratio);
+		if (memtupsize * grow_ratio < INT_MAX)
+			newmemtupsize = (int) (memtupsize * grow_ratio);
+		else
+			newmemtupsize = INT_MAX;
 
 		/* We won't make any further enlargement attempts */
 		state->growmemtuples = false;
@@ -669,12 +675,15 @@ grow_memtuples(Tuplestorestate *state)
 		goto noalloc;
 
 	/*
-	 * On a 64-bit machine, allowedMem could be more than MaxAllocSize.  Clamp
-	 * to ensure our request won't be rejected by palloc.
+	 * On a 32-bit machine, allowedMem could exceed MaxAllocHugeSize.  Clamp
+	 * to ensure our request won't be rejected.  Note that we can easily
+	 * exhaust address space before facing this outcome.  (This is presently
+	 * impossible due to guc.c's MAX_KILOBYTES limitation on work_mem, but
+	 * don't rely on that at this distance.)
 	 */
-	if ((Size) newmemtupsize >= MaxAllocSize / sizeof(void *))
+	if ((Size) newmemtupsize >= MaxAllocHugeSize / sizeof(void *))
 	{
-		newmemtupsize = (int) (MaxAllocSize / sizeof(void *));
+		newmemtupsize = (int) (MaxAllocHugeSize / sizeof(void *));
 		state->growmemtuples = false;	/* can't grow any more */
 	}
 
@@ -682,22 +691,22 @@ grow_memtuples(Tuplestorestate *state)
 	 * We need to be sure that we do not cause LACKMEM to become true, else
 	 * the space management algorithm will go nuts.  The code above should
 	 * never generate a dangerous request, but to be safe, check explicitly
-	 * that the array growth fits within availMem.	(We could still cause
+	 * that the array growth fits within availMem.  (We could still cause
 	 * LACKMEM if the memory chunk overhead associated with the memtuples
-	 * array were to increase.	That shouldn't happen with any sane value of
+	 * array were to increase.  That shouldn't happen with any sane value of
 	 * allowedMem, because at any array size large enough to risk LACKMEM,
 	 * palloc would be treating both old and new arrays as separate chunks.
 	 * But we'll check LACKMEM explicitly below just in case.)
 	 */
-	if (state->availMem < (long) ((newmemtupsize - memtupsize) * sizeof(void *)))
+	if (state->availMem < (int64) ((newmemtupsize - memtupsize) * sizeof(void *)))
 		goto noalloc;
 
 	/* OK, do it */
 	FREEMEM(state, GetMemoryChunkSpace(state->memtuples));
 	state->memtupsize = newmemtupsize;
 	state->memtuples = (void **)
-		repalloc(state->memtuples,
-				 state->memtupsize * sizeof(void *));
+		repalloc_huge(state->memtuples,
+					  state->memtupsize * sizeof(void *));
 	USEMEM(state, GetMemoryChunkSpace(state->memtuples));
 	if (LACKMEM(state))
 		elog(ERROR, "unexpected out-of-memory situation during sort");
@@ -753,7 +762,7 @@ tuplestore_puttuple(Tuplestorestate *state, HeapTuple tuple)
 	MemoryContext oldcxt = MemoryContextSwitchTo(state->context);
 
 	/*
-	 * Copy the tuple.	(Must do this even in WRITEFILE case.  Note that
+	 * Copy the tuple.  (Must do this even in WRITEFILE case.  Note that
 	 * COPYTUP includes USEMEM, so we needn't do that here.)
 	 */
 	tuple = COPYTUP(state, tuple);
@@ -1165,7 +1174,7 @@ tuplestore_advance(Tuplestorestate *state, bool forward)
 
 /*
  * Advance over N tuples in either forward or back direction,
- * without returning any data.	N<=0 is a no-op.
+ * without returning any data.  N<=0 is a no-op.
  * Returns TRUE if successful, FALSE if ran out of tuples.
  */
 bool

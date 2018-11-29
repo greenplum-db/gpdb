@@ -128,7 +128,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>See "Working with Exteral Tables" in the <cite>Greenplum Database Administrator Guide</cite>
+      <p>See "Working with External Tables" in the <cite>Greenplum Database Administrator Guide</cite>
         for detailed information about external tables.</p>
       <p><codeph>CREATE EXTERNAL TABLE</codeph> or <codeph>CREATE EXTERNAL WEB TABLE</codeph>
         creates a new readable external table definition in Greenplum Database. Readable external

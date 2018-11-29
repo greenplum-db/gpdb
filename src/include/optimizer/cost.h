@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2005-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/optimizer/cost.h
@@ -29,7 +29,7 @@
 #define DEFAULT_CPU_INDEX_TUPLE_COST 0.005
 #define DEFAULT_CPU_OPERATOR_COST  0.0025
 
-#define DEFAULT_EFFECTIVE_CACHE_SIZE  16384		/* measured in pages */
+#define DEFAULT_EFFECTIVE_CACHE_SIZE  524288	/* measured in pages */
 
 typedef enum
 {
@@ -234,7 +234,7 @@ extern Selectivity clause_selectivity(PlannerInfo *root,
 				   JoinType jointype,
 				   SpecialJoinInfo *sjinfo,
 				   bool use_damping);
-extern int planner_segment_count(void);
+extern int planner_segment_count(GpPolicy *policy);
 extern double global_work_mem(PlannerInfo *root);
 
 #endif   /* COST_H */

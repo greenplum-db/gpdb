@@ -127,3 +127,31 @@ RESET gp_create_table_random_default_distribution;
 -- Test duplicate distribute keys
 CREATE TABLE ctas_dup_dk as SELECT distinct age as c1, age as c2 from distpol_person; 
 SELECT distinct age c1, age c2 into ctas_dup_dk_1 from distpol_person;
+--
+-- Test deriving distribution key from the query's distribution in
+-- CREATE TABLE AS
+--
+create temporary table foo (i int) distributed by (i);
+-- In both these cases, the query results are distributed by foo.i. In the
+-- first case, it becomes a table column, so it's chosen as the distribution
+-- key. In the second case, it's not, so we follow the default rule to use
+-- the first column. (That's with the Postgres planner. ORCA uses different
+-- rules.)
+create table distpol_ctas1 as select 1 as col1, i from (select i from foo) x;
+create table distpol_ctas2 as select 1 as col1 from (select i from foo) x;
+-- Multiple columns. All the query's distribution key columns have to become
+-- table columns, otherwise we can't use it.
+drop table foo;
+create temporary table foo (i int, j int) distributed by (i, j);
+create table distpol_ctas3 as select 1 as col1, i from (select i, j from foo) x;
+create table distpol_ctas4 as select 1 as col1, i, j from (select i, j from foo) x;
+-- Check the results.
+select localoid::regclass, attrnums from gp_distribution_policy where localoid::regclass::text like 'distpol_ctas%';
+   localoid    | attrnums 
+---------------+----------
+ distpol_ctas1 | 
+ distpol_ctas2 | 
+ distpol_ctas3 | 
+ distpol_ctas4 | 
+(4 rows)
+

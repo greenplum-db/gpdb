@@ -4,7 +4,7 @@
  *	  This file contains routines to support indexes defined on system
  *	  catalogs.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -149,7 +149,7 @@ CatalogIndexInsert(CatalogIndexState indstate, HeapTuple heapTuple)
  * CatalogUpdateIndexes - do all the indexing work for a new catalog tuple
  *
  * This is a convenience routine for the common case where we only need
- * to insert or update a single tuple in a system catalog.	Avoid using it for
+ * to insert or update a single tuple in a system catalog.  Avoid using it for
  * multiple tuples, since opening the indexes and building the index info
  * structures is moderately expensive.
  */

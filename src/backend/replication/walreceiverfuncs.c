@@ -6,7 +6,7 @@
  * with the walreceiver process. Functions implementing walreceiver itself
  * are in walreceiver.c.
  *
- * Portions Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -235,28 +235,18 @@ ShutdownWalRcv(void)
 /*
  * Request postmaster to start walreceiver.
  *
- * recptr indicates the position where streaming should begin, and conninfo
- * is a libpq connection string to use.
+ * recptr indicates the position where streaming should begin, conninfo
+ * is a libpq connection string to use, and slotname is, optionally, the name
+ * of a replication slot to acquire.
  */
 void
-RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo)
+RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
+					 const char *slotname)
 {
 	/* use volatile pointer to prevent code rearrangement */
 	volatile WalRcvData *walrcv = WalRcv;
 	bool		launch = false;
 	pg_time_t	now = (pg_time_t) time(NULL);
-
-	/*
-	 * If it's not stopped, nothing to do.
-	 */
-	if (walrcv->walRcvState != WALRCV_STOPPED)
-	{
-		elogif(debug_xlog_record_read, LOG,
-			   "request streaming -- walreceiver state is %s. Hence, no need "
-			   "to request streaming.", WalRcvGetStateString(walrcv->walRcvState));
-
-		return;
-	}
 
 	/*
 	 * We always start at the beginning of the segment. That prevents a broken
@@ -277,6 +267,11 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo)
 		strlcpy((char *) walrcv->conninfo, conninfo, MAXCONNINFO);
 	else
 		walrcv->conninfo[0] = '\0';
+
+	if (slotname != NULL)
+		strlcpy((char *) walrcv->slotname, slotname, NAMEDATALEN);
+	else
+		walrcv->slotname[0] = '\0';
 
 	if (walrcv->walRcvState == WALRCV_STOPPED)
 	{
@@ -312,7 +307,7 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo)
  * Returns the last+1 byte position that walreceiver has written.
  *
  * Optionally, returns the previous chunk start, that is the first byte
- * written in the most recent walreceiver flush cycle.	Callers not
+ * written in the most recent walreceiver flush cycle.  Callers not
  * interested in that value may pass NULL for latestChunkStart. Same for
  * receiveTLI.
  */

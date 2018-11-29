@@ -3,7 +3,7 @@
  * array_userfuncs.c
  *	  Misc user-visible array support functions
  *
- * Copyright (c) 2003-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2003-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/utils/adt/array_userfuncs.c
@@ -503,7 +503,7 @@ array_agg_transfn(PG_FUNCTION_ARGS)
 
 	/*
 	 * The transition type for array_agg() is declared to be "internal", which
-	 * is a pass-by-value type the same size as a pointer.	So we can safely
+	 * is a pass-by-value type the same size as a pointer.  So we can safely
 	 * pass the ArrayBuildState pointer through nodeAgg.c's machinations.
 	 */
 	PG_RETURN_POINTER(state);
@@ -518,7 +518,7 @@ array_agg_finalfn(PG_FUNCTION_ARGS)
 	int			lbs[1];
 
 	/*
-	 * Test for null before Asserting we are in right context.	This is to
+	 * Test for null before Asserting we are in right context.  This is to
 	 * avoid possible Assert failure in 8.4beta installations, where it is
 	 * possible for users to create NULL constants of type internal.
 	 */

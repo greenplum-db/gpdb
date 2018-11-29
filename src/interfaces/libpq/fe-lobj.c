@@ -3,7 +3,7 @@
  * fe-lobj.c
  *	  Front-end large object interface
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -899,7 +899,7 @@ lo_initialize(PGconn *conn)
 	MemSet((char *) lobjfuncs, 0, sizeof(PGlobjfuncs));
 
 	/*
-	 * Execute the query to get all the functions at once.	In 7.3 and later
+	 * Execute the query to get all the functions at once.  In 7.3 and later
 	 * we need to be schema-safe.  lo_create only exists in 8.1 and up.
 	 * lo_truncate only exists in 8.3 and up.
 	 */

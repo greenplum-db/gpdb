@@ -8,7 +8,7 @@
  * referenced by storage/checksum.h.  (Note: you may need to redefine
  * Assert() as empty to compile this successfully externally.)
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/checksum_impl.h
@@ -141,7 +141,7 @@ pg_checksum_block(char *data, uint32 size)
 	uint32		sums[N_SUMS];
 	uint32		(*dataArr)[N_SUMS] = (uint32 (*)[N_SUMS]) data;
 	uint32		result = 0;
-	int			i,
+	uint32		i,
 				j;
 
 	/* ensure that the size is compatible with the algorithm */

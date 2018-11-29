@@ -44,7 +44,7 @@ a|b
 3|42
 4|4 
 (4 rows)
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap_name('ao');
+2U: SELECT * FROM gp_toolkit.__gp_aovisimap('ao');
 tid             |segno|row_num
 ----------------+-----+-------
 (33554432,32769)|1    |1      

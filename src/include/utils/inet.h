@@ -4,7 +4,7 @@
  *	  Declarations for operations on INET datatypes.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/utils/inet.h
@@ -40,7 +40,7 @@ typedef struct
 /*
  * Both INET and CIDR addresses are represented within Postgres as varlena
  * objects, ie, there is a varlena header in front of the struct type
- * depicted above.	This struct depicts what we actually have in memory
+ * depicted above.  This struct depicts what we actually have in memory
  * in "uncompressed" cases.  Note that since the maximum data size is only
  * 18 bytes, INET/CIDR will invariably be stored into tuples using the
  * 1-byte-header varlena format.  However, we have to be prepared to cope
@@ -52,6 +52,38 @@ typedef struct
 	char		vl_len_[4];		/* Do not touch this field directly! */
 	inet_struct inet_data;
 } inet;
+
+/*
+ *	Access macros.  We use VARDATA_ANY so that we can process short-header
+ *	varlena values without detoasting them.  This requires a trick:
+ *	VARDATA_ANY assumes the varlena header is already filled in, which is
+ *	not the case when constructing a new value (until SET_INET_VARSIZE is
+ *	called, which we typically can't do till the end).  Therefore, we
+ *	always initialize the newly-allocated value to zeroes (using palloc0).
+ *	A zero length word will look like the not-1-byte case to VARDATA_ANY,
+ *	and so we correctly construct an uncompressed value.
+ *
+ *	Note that ip_addrsize(), ip_maxbits(), and SET_INET_VARSIZE() require
+ *	the family field to be set correctly.
+ */
+#define ip_family(inetptr) \
+	(((inet_struct *) VARDATA_ANY(inetptr))->family)
+
+#define ip_bits(inetptr) \
+	(((inet_struct *) VARDATA_ANY(inetptr))->bits)
+
+#define ip_addr(inetptr) \
+	(((inet_struct *) VARDATA_ANY(inetptr))->ipaddr)
+
+#define ip_addrsize(inetptr) \
+	(ip_family(inetptr) == PGSQL_AF_INET ? 4 : 16)
+
+#define ip_maxbits(inetptr) \
+	(ip_family(inetptr) == PGSQL_AF_INET ? 32 : 128)
+
+#define SET_INET_VARSIZE(dst) \
+	SET_VARSIZE(dst, VARHDRSZ + offsetof(inet_struct, ipaddr) + \
+				ip_addrsize(dst))
 
 
 /*
@@ -81,5 +113,28 @@ typedef struct macaddr
 #define MacaddrPGetDatum(X)    PointerGetDatum(X)
 #define PG_GETARG_MACADDR_P(n) DatumGetMacaddrP(PG_GETARG_DATUM(n))
 #define PG_RETURN_MACADDR_P(x) return MacaddrPGetDatum(x)
+
+/*
+ * Support functions in network.c
+ */
+extern int	bitncmp(const unsigned char *l, const unsigned char *r, int n);
+extern int	bitncommon(const unsigned char *l, const unsigned char *r, int n);
+
+/*
+ * GiST support functions in network_gist.c
+ */
+extern Datum inet_gist_consistent(PG_FUNCTION_ARGS);
+extern Datum inet_gist_union(PG_FUNCTION_ARGS);
+extern Datum inet_gist_compress(PG_FUNCTION_ARGS);
+extern Datum inet_gist_decompress(PG_FUNCTION_ARGS);
+extern Datum inet_gist_penalty(PG_FUNCTION_ARGS);
+extern Datum inet_gist_picksplit(PG_FUNCTION_ARGS);
+extern Datum inet_gist_same(PG_FUNCTION_ARGS);
+
+/*
+ * Estimation functions in network_selfuncs.c
+ */
+extern Datum networksel(PG_FUNCTION_ARGS);
+extern Datum networkjoinsel(PG_FUNCTION_ARGS);
 
 #endif   /* INET_H */

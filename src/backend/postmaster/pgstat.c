@@ -11,7 +11,7 @@
  *			- Add a pgstat config column to pg_database, so this
  *			  entire thing can be enabled/disabled on a per db basis.
  *
- *	Copyright (c) 2001-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2001-2014, PostgreSQL Global Development Group
  *
  *	src/backend/postmaster/pgstat.c
  * ----------
@@ -49,31 +49,27 @@
 #include "postmaster/autovacuum.h"
 #include "postmaster/fork_process.h"
 #include "postmaster/postmaster.h"
+#include "storage/proc.h"
 #include "storage/backendid.h"
+#include "storage/dsm.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/latch.h"
 #include "storage/pg_shmem.h"
 #include "storage/procsignal.h"
+#include "storage/sinvaladt.h"
 #include "utils/ascii.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/rel.h"
+#include "utils/snapmgr.h"
 #include "utils/timestamp.h"
 #include "utils/tqual.h"
 #include "cdb/cdbvars.h"
 
 // for mkdir
 #include "sys/stat.h"
-
-/* ----------
- * Paths for the statistics files (relative to installation's $PGDATA).
- * ----------
- */
-#define PGSTAT_STAT_PERMANENT_DIRECTORY		"pg_stat"
-#define PGSTAT_STAT_PERMANENT_FILENAME		"pg_stat/global.stat"
-#define PGSTAT_STAT_PERMANENT_TMPFILE		"pg_stat/global.tmp"
 
 /* ----------
  * Timer definitions.
@@ -223,7 +219,7 @@ static HTAB *pgStatDBHash = NULL;
 static HTAB *pgStatQueueHash = NULL;		/* GPDB */
 static HTAB *localStatPortalHash = NULL;	/* GPDB. per backend portal queue stats.*/
 
-static PgBackendStatus *localBackendStatusTable = NULL;
+static LocalPgBackendStatus *localBackendStatusTable = NULL;
 static int	localNumBackends = 0;
 
 /*
@@ -231,6 +227,7 @@ static int	localNumBackends = 0;
  * Contains statistics that are not collected per database
  * or per table.
  */
+static PgStat_ArchiverStats archiverStats;
 static PgStat_GlobalStats globalStats;
 
 /* Write request info for each database */
@@ -312,6 +309,7 @@ static void pgstat_recv_resetsinglecounter(PgStat_MsgResetsinglecounter *msg, in
 static void pgstat_recv_autovac(PgStat_MsgAutovacStart *msg, int len);
 static void pgstat_recv_vacuum(PgStat_MsgVacuum *msg, int len);
 static void pgstat_recv_analyze(PgStat_MsgAnalyze *msg, int len);
+static void pgstat_recv_archiver(PgStat_MsgArchiver *msg, int len);
 static void pgstat_recv_queuestat(PgStat_MsgQueuestat *msg, int len); /* GPDB */
 static void pgstat_recv_bgwriter(PgStat_MsgBgWriter *msg, int len);
 static void pgstat_recv_funcstat(PgStat_MsgFuncstat *msg, int len);
@@ -351,17 +349,27 @@ pgstat_init(void)
 #define TESTBYTEVAL ((char) 199)
 
 	/*
+	 * This static assertion verifies that we didn't mess up the calculations
+	 * involved in selecting maximum payload sizes for our UDP messages.
+	 * Because the only consequence of overrunning PGSTAT_MAX_MSG_SIZE would
+	 * be silent performance loss from fragmentation, it seems worth having a
+	 * compile-time cross-check that we didn't.
+	 */
+	StaticAssertStmt(sizeof(PgStat_Msg) <= PGSTAT_MAX_MSG_SIZE,
+				   "maximum stats message size exceeds PGSTAT_MAX_MSG_SIZE");
+
+	/*
 	 * Create stats temp directory if not present; ignore errors.
 	 * This avoids the need to initdb... This is temporary code, and
 	 * can be removed in the future, as initdb does this for us.
 	 */
 	mkdir("pg_stat_tmp", 0700);
-	
+
 	/*
 	 * Create the UDP socket for sending and receiving statistic messages
 	 */
 	hints.ai_flags = AI_PASSIVE;
-	hints.ai_family = PF_UNSPEC;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_protocol = 0;
 	hints.ai_addrlen = 0;
@@ -381,7 +389,7 @@ pgstat_init(void)
 	 * On some platforms, pg_getaddrinfo_all() may return multiple addresses
 	 * only one of which will actually work (eg, both IPv6 and IPv4 addresses
 	 * when kernel will reject IPv6).  Worse, the failure may occur at the
-	 * bind() or perhaps even connect() stage.	So we must loop through the
+	 * bind() or perhaps even connect() stage.  So we must loop through the
 	 * results till we find a working combination. We will generate LOG
 	 * messages, but no error, for bogus combinations.
 	 */
@@ -592,15 +600,35 @@ pgstat_reset_remove_files(const char *directory)
 	struct dirent *entry;
 	char		fname[MAXPGPATH];
 
-	dir = AllocateDir(pgstat_stat_directory);
-	while ((entry = ReadDir(dir, pgstat_stat_directory)) != NULL)
+	dir = AllocateDir(directory);
+	while ((entry = ReadDir(dir, directory)) != NULL)
 	{
-		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+		int			nchars;
+		Oid			tmp_oid;
+
+		/*
+		 * Skip directory entries that don't match the file names we write.
+		 * See get_dbstat_filename for the database-specific pattern.
+		 */
+		if (strncmp(entry->d_name, "global.", 7) == 0)
+			nchars = 7;
+		else
+		{
+			nchars = 0;
+			(void) sscanf(entry->d_name, "db_%u.%n",
+						  &tmp_oid, &nchars);
+			if (nchars <= 0)
+				continue;
+			/* %u allows leading whitespace, so reject that */
+			if (strchr("0123456789", entry->d_name[3]) == NULL)
+				continue;
+		}
+
+		if (strcmp(entry->d_name + nchars, "tmp") != 0 &&
+			strcmp(entry->d_name + nchars, "stat") != 0)
 			continue;
 
-		/* XXX should we try to ignore files other than the ones we write? */
-
-		snprintf(fname, MAXPGPATH, "%s/%s", pgstat_stat_directory,
+		snprintf(fname, MAXPGPATH, "%s/%s", directory,
 				 entry->d_name);
 		unlink(fname);
 	}
@@ -610,7 +638,7 @@ pgstat_reset_remove_files(const char *directory)
 /*
  * pgstat_reset_all() -
  *
- * Remove the stats files.	This is currently used only if WAL
+ * Remove the stats files.  This is currently used only if WAL
  * recovery is needed after a crash.
  */
 void
@@ -671,7 +699,7 @@ pgstat_start(void)
 	/*
 	 * Do nothing if too soon since last collector start.  This is a safety
 	 * valve to protect against continuous respawn attempts if the collector
-	 * is dying immediately at launch.	Note that since we will be re-called
+	 * is dying immediately at launch.  Note that since we will be re-called
 	 * from the postmaster main loop, we will get another chance later.
 	 */
 	curtime = time(NULL);
@@ -704,6 +732,7 @@ pgstat_start(void)
 			on_exit_reset();
 
 			/* Drop our connection to postmaster's shared memory, as well */
+			dsm_detach_all();
 			PGSharedMemoryDetach();
 
 			PgstatCollectorMain(0, NULL);
@@ -1115,7 +1144,7 @@ pgstat_vacuum_stat(void)
  *
  *	Collect the OIDs of all objects listed in the specified system catalog
  *	into a temporary hash table.  Caller should hash_destroy the result
- *	when done with it.	(However, we make the table in CurrentMemoryContext
+ *	when done with it.  (However, we make the table in CurrentMemoryContext
  *	so that it will be freed properly in event of an error.)
  * ----------
  */
@@ -1127,6 +1156,7 @@ pgstat_collect_oids(Oid catalogid)
 	Relation	rel;
 	HeapScanDesc scan;
 	HeapTuple	tup;
+	Snapshot	snapshot;
 
 	memset(&hash_ctl, 0, sizeof(hash_ctl));
 	hash_ctl.keysize = sizeof(Oid);
@@ -1139,7 +1169,8 @@ pgstat_collect_oids(Oid catalogid)
 					   HASH_ELEM | HASH_FUNCTION | HASH_CONTEXT);
 
 	rel = heap_open(catalogid, AccessShareLock);
-	scan = heap_beginscan(rel, SnapshotNow, 0, NULL);
+	snapshot = RegisterSnapshot(GetLatestSnapshot());
+	scan = heap_beginscan(rel, snapshot, 0, NULL);
 	while ((tup = heap_getnext(scan, ForwardScanDirection)) != NULL)
 	{
 		Oid			thisoid = HeapTupleGetOid(tup);
@@ -1149,6 +1180,7 @@ pgstat_collect_oids(Oid catalogid)
 		(void) hash_search(htab, (void *) &thisoid, HASH_ENTER, NULL);
 	}
 	heap_endscan(scan);
+	UnregisterSnapshot(snapshot);
 	heap_close(rel, AccessShareLock);
 
 	return htab;
@@ -1253,13 +1285,15 @@ pgstat_reset_shared_counters(const char *target)
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 				 errmsg("must be superuser to reset statistics counters")));
 
-	if (strcmp(target, "bgwriter") == 0)
+	if (strcmp(target, "archiver") == 0)
+		msg.m_resettarget = RESET_ARCHIVER;
+	else if (strcmp(target, "bgwriter") == 0)
 		msg.m_resettarget = RESET_BGWRITER;
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("unrecognized reset target: \"%s\"", target),
-				 errhint("Target must be \"bgwriter\".")));
+				 errhint("Target must be \"archiver\" or \"bgwriter\".")));
 
 	pgstat_setheader(&msg.m_hdr, PGSTAT_MTYPE_RESETSHAREDCOUNTER);
 	pgstat_send(&msg, sizeof(msg));
@@ -1323,7 +1357,8 @@ pgstat_report_autovac(Oid dboid)
  * ---------
  */
 void
-pgstat_report_vacuum(Oid tableoid, bool shared, PgStat_Counter tuples)
+pgstat_report_vacuum(Oid tableoid, bool shared,
+					 PgStat_Counter livetuples, PgStat_Counter deadtuples)
 {
 	PgStat_MsgVacuum msg;
 
@@ -1335,7 +1370,8 @@ pgstat_report_vacuum(Oid tableoid, bool shared, PgStat_Counter tuples)
 	msg.m_tableoid = tableoid;
 	msg.m_autovacuum = IsAutoVacuumWorkerProcess();
 	msg.m_vacuumtime = GetCurrentTimestamp();
-	msg.m_tuples = tuples;
+	msg.m_live_tuples = livetuples;
+	msg.m_dead_tuples = deadtuples;
 	pgstat_send(&msg, sizeof(msg));
 }
 
@@ -1360,7 +1396,7 @@ pgstat_report_analyze(Relation rel,
 	 * have counted such rows as live or dead respectively. Because we will
 	 * report our counts of such rows at transaction end, we should subtract
 	 * off these counts from what we send to the collector now, else they'll
-	 * be double-counted after commit.	(This approach also ensures that the
+	 * be double-counted after commit.  (This approach also ensures that the
 	 * collector ends up with the right numbers if we abort instead of
 	 * committing.)
 	 */
@@ -1591,7 +1627,7 @@ pgstat_end_function_usage(PgStat_FunctionCallUsage *fcu, bool finalize)
 
 	/*
 	 * Compute the new f_total_time as the total elapsed time added to the
-	 * pre-call value of f_total_time.	This is necessary to avoid
+	 * pre-call value of f_total_time.  This is necessary to avoid
 	 * double-counting any time taken by recursive calls of myself.  (We do
 	 * not need any similar kluge for self time, since that already excludes
 	 * any recursive calls.)
@@ -2077,7 +2113,7 @@ AtPrepare_PgStat(void)
  *		Clean up after successful PREPARE.
  *
  * All we need do here is unlink the transaction stats state from the
- * nontransactional state.	The nontransactional action counts will be
+ * nontransactional state.  The nontransactional action counts will be
  * reported to the stats collector immediately, while the effects on live
  * and dead tuple counts are preserved in the 2PC state file.
  *
@@ -2296,6 +2332,28 @@ pgstat_fetch_stat_beentry(int beid)
 	if (beid < 1 || beid > localNumBackends)
 		return NULL;
 
+	return &localBackendStatusTable[beid - 1].backendStatus;
+}
+
+
+/* ----------
+ * pgstat_fetch_stat_local_beentry() -
+ *
+ *	Like pgstat_fetch_stat_beentry() but with locally computed addtions (like
+ *	xid and xmin values of the backend)
+ *
+ *	NB: caller is responsible for a check if the user is permitted to see
+ *	this info (especially the querystring).
+ * ----------
+ */
+LocalPgBackendStatus *
+pgstat_fetch_stat_local_beentry(int beid)
+{
+	pgstat_read_current_status();
+
+	if (beid < 1 || beid > localNumBackends)
+		return NULL;
+
 	return &localBackendStatusTable[beid - 1];
 }
 
@@ -2314,6 +2372,23 @@ pgstat_fetch_stat_numbackends(void)
 
 	return localNumBackends;
 }
+
+/*
+ * ---------
+ * pgstat_fetch_stat_archiver() -
+ *
+ *	Support function for the SQL-callable pgstat* functions. Returns
+ *	a pointer to the archiver statistics struct.
+ * ---------
+ */
+PgStat_ArchiverStats *
+pgstat_fetch_stat_archiver(void)
+{
+	backend_read_statsfile();
+
+	return &archiverStats;
+}
+
 
 /*
  * ---------
@@ -2530,7 +2605,11 @@ pgstat_bestart(void)
 	beentry->st_userid = userid;
 	beentry->st_session_id = gp_session_id;  /* GPDB only */
 	beentry->st_clientaddr = clientaddr;
-	beentry->st_clienthostname[0] = '\0';
+	if (MyProcPort && MyProcPort->remote_hostname)
+		strlcpy(beentry->st_clienthostname, MyProcPort->remote_hostname,
+				NAMEDATALEN);
+	else
+		beentry->st_clienthostname[0] = '\0';
 	beentry->st_waiting = PGBE_WAITING_NONE;
 	beentry->st_state = STATE_UNDEFINED;
 	beentry->st_appname[0] = '\0';
@@ -2543,9 +2622,6 @@ pgstat_bestart(void)
 
 	beentry->st_changecount++;
 	Assert((beentry->st_changecount & 1) == 0);
-
-	if (MyProcPort && MyProcPort->remote_hostname)
-		strlcpy(beentry->st_clienthostname, MyProcPort->remote_hostname, NAMEDATALEN);
 
 	/*
 	 * GPDB: Initialize per-portal statistics hash for resource queues.
@@ -2625,7 +2701,7 @@ pgstat_report_activity(BackendState state, const char *cmd_str)
 		{
 			/*
 			 * track_activities is disabled, but we last reported a
-			 * non-disabled state.	As our final update, change the state and
+			 * non-disabled state.  As our final update, change the state and
 			 * clear fields we will not be updating anymore.
 			 */
 			beentry->st_changecount++;
@@ -2841,8 +2917,8 @@ static void
 pgstat_read_current_status(void)
 {
 	volatile PgBackendStatus *beentry;
-	PgBackendStatus *localtable;
-	PgBackendStatus *localentry;
+	LocalPgBackendStatus *localtable;
+	LocalPgBackendStatus *localentry;
 	char	   *localappname,
 			   *localactivity;
 	int			i;
@@ -2853,9 +2929,9 @@ pgstat_read_current_status(void)
 
 	pgstat_setup_memcxt();
 
-	localtable = (PgBackendStatus *)
+	localtable = (LocalPgBackendStatus *)
 		MemoryContextAlloc(pgStatLocalContext,
-						   sizeof(PgBackendStatus) * MaxBackends);
+						   sizeof(LocalPgBackendStatus) * MaxBackends);
 	localappname = (char *)
 		MemoryContextAlloc(pgStatLocalContext,
 						   NAMEDATALEN * MaxBackends);
@@ -2879,19 +2955,19 @@ pgstat_read_current_status(void)
 		{
 			int			save_changecount = beentry->st_changecount;
 
-			localentry->st_procpid = beentry->st_procpid;
-			if (localentry->st_procpid > 0)
+			localentry->backendStatus.st_procpid = beentry->st_procpid;
+			if (localentry->backendStatus.st_procpid > 0)
 			{
-				memcpy(localentry, (char *) beentry, sizeof(PgBackendStatus));
+				memcpy(&localentry->backendStatus, (char *) beentry, sizeof(PgBackendStatus));
 
 				/*
 				 * strcpy is safe even if the string is modified concurrently,
 				 * because there's always a \0 at the end of the buffer.
 				 */
 				strcpy(localappname, (char *) beentry->st_appname);
-				localentry->st_appname = localappname;
+				localentry->backendStatus.st_appname = localappname;
 				strcpy(localactivity, (char *) beentry->st_activity);
-				localentry->st_activity = localactivity;
+				localentry->backendStatus.st_activity = localactivity;
 			}
 
 			if (save_changecount == beentry->st_changecount &&
@@ -2904,8 +2980,12 @@ pgstat_read_current_status(void)
 
 		beentry++;
 		/* Only valid entries get included into the local array */
-		if (localentry->st_procpid > 0)
+		if (localentry->backendStatus.st_procpid > 0)
 		{
+			BackendIdGetTransactionIds(i,
+									   &localentry->backend_xid,
+									   &localentry->backend_xmin);
+
 			localentry++;
 			localappname += NAMEDATALEN;
 			localactivity += pgstat_track_activity_query_size;
@@ -2922,12 +3002,12 @@ pgstat_read_current_status(void)
  * pgstat_get_backend_current_activity() -
  *
  *	Return a string representing the current activity of the backend with
- *	the specified PID.	This looks directly at the BackendStatusArray,
+ *	the specified PID.  This looks directly at the BackendStatusArray,
  *	and so will provide current information regardless of the age of our
  *	transaction's snapshot of the status array.
  *
  *	It is the caller's responsibility to invoke this only for backends whose
- *	state is expected to remain stable while the result is in use.	The
+ *	state is expected to remain stable while the result is in use.  The
  *	only current use is in deadlock reporting, where we can expect that
  *	the target backend is blocked on a lock.  (There are corner cases
  *	where the target's wait could get aborted while we are looking at it,
@@ -2995,7 +3075,7 @@ pgstat_get_backend_current_activity(int pid, bool checkUser)
  * pgstat_get_crashed_backend_activity() -
  *
  *	Return a string representing the current activity of the backend with
- *	the specified PID.	Like the function above, but reads shared memory with
+ *	the specified PID.  Like the function above, but reads shared memory with
  *	the expectation that it may be corrupt.  On success, copy the string
  *	into the "buffer" argument and return that pointer.  On failure,
  *	return NULL.
@@ -3004,7 +3084,7 @@ pgstat_get_backend_current_activity(int pid, bool checkUser)
  *	query that crashed a backend.  In particular, no attempt is made to
  *	follow the correct concurrency protocol when accessing the
  *	BackendStatusArray.  But that's OK, in the worst case we'll return a
- *	corrupted message.	We also must take care not to trip on ereport(ERROR).
+ *	corrupted message.  We also must take care not to trip on ereport(ERROR).
  * ----------
  */
 const char *
@@ -3115,6 +3195,28 @@ pgstat_send(void *msg, int len)
 }
 
 /* ----------
+ * pgstat_send_archiver() -
+ *
+ *	Tell the collector about the WAL file that we successfully
+ *	archived or failed to archive.
+ * ----------
+ */
+void
+pgstat_send_archiver(const char *xlog, bool failed)
+{
+	PgStat_MsgArchiver msg;
+
+	/*
+	 * Prepare and send the message
+	 */
+	pgstat_setheader(&msg.m_hdr, PGSTAT_MTYPE_ARCHIVER);
+	msg.m_failed = failed;
+	strncpy(msg.m_xlog, xlog, sizeof(msg.m_xlog));
+	msg.m_timestamp = GetCurrentTimestamp();
+	pgstat_send(&msg, sizeof(msg));
+}
+
+/* ----------
  * pgstat_send_bgwriter() -
  *
  *		Send bgwriter statistics to the collector
@@ -3150,7 +3252,7 @@ pgstat_send_bgwriter(void)
 /* ----------
  * PgstatCollectorMain() -
  *
- *	Start up the statistics collector process.	This is the body of the
+ *	Start up the statistics collector process.  This is the body of the
  *	postmaster child process.
  *
  *	The argc/argv parameters are valid only in EXEC_BACKEND case.
@@ -3171,7 +3273,7 @@ PgstatCollectorMain(int argc, char *argv[])
 
 	/*
 	 * If possible, make this process a group leader, so that the postmaster
-	 * can signal any child processes too.	(pgstat probably never has any
+	 * can signal any child processes too.  (pgstat probably never has any
 	 * child processes, but for consistency we make all postmaster child
 	 * processes do this.)
 	 */
@@ -3357,6 +3459,10 @@ PgstatCollectorMain(int argc, char *argv[])
 					pgstat_recv_analyze((PgStat_MsgAnalyze *) &msg, len);
 					break;
 
+				case PGSTAT_MTYPE_ARCHIVER:
+					pgstat_recv_archiver((PgStat_MsgArchiver *) &msg, len);
+					break;
+
 				case PGSTAT_MTYPE_BGWRITER:
 					pgstat_recv_bgwriter((PgStat_MsgBgWriter *) &msg, len);
 					break;
@@ -3400,7 +3506,7 @@ PgstatCollectorMain(int argc, char *argv[])
 
 		/*
 		 * Windows, at least in its Windows Server 2003 R2 incarnation,
-		 * sometimes loses FD_READ events.	Waking up and retrying the recv()
+		 * sometimes loses FD_READ events.  Waking up and retrying the recv()
 		 * fixes that, so don't sleep indefinitely.  This is a crock of the
 		 * first water, but until somebody wants to debug exactly what's
 		 * happening there, this is the best we can do.  The two-second
@@ -3648,6 +3754,12 @@ pgstat_write_statsfiles(bool permanent, bool allDbs)
 	(void) rc;					/* we'll check for error with ferror */
 
 	/*
+	 * Write archiver stats struct
+	 */
+	rc = fwrite(&archiverStats, sizeof(archiverStats), 1, fpout);
+	(void) rc;					/* we'll check for error with ferror */
+
+	/*
 	 * Walk through the database table.
 	 */
 	hash_seq_init(&hstat, pgStatDBHash);
@@ -3729,6 +3841,13 @@ pgstat_write_statsfiles(bool permanent, bool allDbs)
 	{
 		slist_mutable_iter iter;
 
+		/*
+		 * Strictly speaking we should do slist_delete_current() before
+		 * freeing each request struct.  We skip that and instead
+		 * re-initialize the list header at the end.  Nonetheless, we must use
+		 * slist_foreach_modify, not just slist_foreach, since we will free
+		 * the node's storage before advancing.
+		 */
 		slist_foreach_modify(iter, &last_statrequests)
 		{
 			DBWriteRequest *req;
@@ -3751,6 +3870,7 @@ get_dbstat_filename(bool permanent, bool tempname, Oid databaseid,
 {
 	int			printed;
 
+	/* NB -- pgstat_reset_remove_files knows about the pattern this uses */
 	printed = snprintf(filename, len, "%s/db_%u.%s",
 					   permanent ? PGSTAT_STAT_PERMANENT_DIRECTORY :
 					   pgstat_stat_directory,
@@ -3930,16 +4050,18 @@ pgstat_read_statsfiles(Oid onlydb, bool permanent, bool deep)
 	pgStatQueueHash = queuehash;
 
 	/*
-	 * Clear out global statistics so they start from zero in case we can't
-	 * load an existing statsfile.
+	 * Clear out global and archiver statistics so they start from zero in
+	 * case we can't load an existing statsfile.
 	 */
 	memset(&globalStats, 0, sizeof(globalStats));
+	memset(&archiverStats, 0, sizeof(archiverStats));
 
 	/*
 	 * Set the current timestamp (will be kept only in case we can't load an
 	 * existing statsfile).
 	 */
 	globalStats.stat_reset_timestamp = GetCurrentTimestamp();
+	archiverStats.stat_reset_timestamp = globalStats.stat_reset_timestamp;
 
 	/*
 	 * Try to open the stats file. If it doesn't exist, the backends simply
@@ -3975,6 +4097,16 @@ pgstat_read_statsfiles(Oid onlydb, bool permanent, bool deep)
 	 * Read global stats struct
 	 */
 	if (fread(&globalStats, 1, sizeof(globalStats), fpin) != sizeof(globalStats))
+	{
+		ereport(pgStatRunningInCollector ? LOG : WARNING,
+				(errmsg("corrupted statistics file \"%s\"", statfile)));
+		goto done;
+	}
+
+	/*
+	 * Read archiver stats struct
+	 */
+	if (fread(&archiverStats, 1, sizeof(archiverStats), fpin) != sizeof(archiverStats))
 	{
 		ereport(pgStatRunningInCollector ? LOG : WARNING,
 				(errmsg("corrupted statistics file \"%s\"", statfile)));
@@ -4296,7 +4428,7 @@ done:
  *	stats_timestamp value.
  *
  *	- if there's no db stat entry (e.g. for a new or inactive database),
- *	there's no stat_timestamp value, but also nothing to write so we return
+ *	there's no stats_timestamp value, but also nothing to write so we return
  *	the timestamp of the global statfile.
  * ----------
  */
@@ -4307,12 +4439,13 @@ pgstat_read_db_statsfile_timestamp(Oid databaseid, bool permanent,
 	PgStat_StatDBEntry dbentry;
 	PgStat_StatQueueEntry queuebuf;	/* GPDB */
 	PgStat_GlobalStats myGlobalStats;
+	PgStat_ArchiverStats myArchiverStats;
 	FILE	   *fpin;
 	int32		format_id;
 	const char *statfile = permanent ? PGSTAT_STAT_PERMANENT_FILENAME : pgstat_stat_filename;
 
 	/*
-	 * Try to open the stats file.	As above, anything but ENOENT is worthy of
+	 * Try to open the stats file.  As above, anything but ENOENT is worthy of
 	 * complaining about.
 	 */
 	if ((fpin = AllocateFile(statfile, PG_BINARY_R)) == NULL)
@@ -4342,6 +4475,18 @@ pgstat_read_db_statsfile_timestamp(Oid databaseid, bool permanent,
 	 */
 	if (fread(&myGlobalStats, 1, sizeof(myGlobalStats),
 			  fpin) != sizeof(myGlobalStats))
+	{
+		ereport(pgStatRunningInCollector ? LOG : WARNING,
+				(errmsg("corrupted statistics file \"%s\"", statfile)));
+		FreeFile(fpin);
+		return false;
+	}
+
+	/*
+	 * Read archiver stats struct
+	 */
+	if (fread(&myArchiverStats, 1, sizeof(myArchiverStats),
+			  fpin) != sizeof(myArchiverStats))
 	{
 		ereport(pgStatRunningInCollector ? LOG : WARNING,
 				(errmsg("corrupted statistics file \"%s\"", statfile)));
@@ -4462,7 +4607,7 @@ backend_read_statsfile(void)
 			 *
 			 * We don't recompute min_ts after sleeping, except in the
 			 * unlikely case that cur_ts went backwards.  So we might end up
-			 * accepting a file a bit older than PGSTAT_STAT_INTERVAL.	In
+			 * accepting a file a bit older than PGSTAT_STAT_INTERVAL.  In
 			 * practice that shouldn't happen, though, as long as the sleep
 			 * time is less than PGSTAT_STAT_INTERVAL; and we don't want to
 			 * tell the collector that our cutoff time is less than what we'd
@@ -4557,7 +4702,7 @@ pgstat_setup_memcxt(void)
 /* ----------
  * pgstat_clear_snapshot() -
  *
- *	Discard any data collected in the current transaction.	Any subsequent
+ *	Discard any data collected in the current transaction.  Any subsequent
  *	request will cause new snapshots to be read.
  *
  *	This is also invoked during transaction commit or abort to discard
@@ -4820,7 +4965,7 @@ pgstat_recv_dropdb(PgStat_MsgDropdb *msg, int len)
 	{
 		char		statfile[MAXPGPATH];
 
-		get_dbstat_filename(true, false, dbid, statfile, MAXPGPATH);
+		get_dbstat_filename(false, false, dbid, statfile, MAXPGPATH);
 
 		elog(DEBUG2, "removing %s", statfile);
 		unlink(statfile);
@@ -4891,6 +5036,12 @@ pgstat_recv_resetsharedcounter(PgStat_MsgResetsharedcounter *msg, int len)
 		/* Reset the global background writer statistics for the cluster. */
 		memset(&globalStats, 0, sizeof(globalStats));
 		globalStats.stat_reset_timestamp = GetCurrentTimestamp();
+	}
+	else if (msg->m_resettarget == RESET_ARCHIVER)
+	{
+		/* Reset the archiver statistics for the cluster. */
+		memset(&archiverStats, 0, sizeof(archiverStats));
+		archiverStats.stat_reset_timestamp = GetCurrentTimestamp();
 	}
 
 	/*
@@ -4965,9 +5116,8 @@ pgstat_recv_vacuum(PgStat_MsgVacuum *msg, int len)
 
 	tabentry = pgstat_get_tab_entry(dbentry, msg->m_tableoid, true);
 
-	tabentry->n_live_tuples = msg->m_tuples;
-	/* Resetting dead_tuples to 0 is an approximation ... */
-	tabentry->n_dead_tuples = 0;
+	tabentry->n_live_tuples = msg->m_live_tuples;
+	tabentry->n_dead_tuples = msg->m_dead_tuples;
 
 	if (msg->m_autovacuum)
 	{
@@ -5021,6 +5171,33 @@ pgstat_recv_analyze(PgStat_MsgAnalyze *msg, int len)
 	}
 }
 
+
+/* ----------
+ * pgstat_recv_archiver() -
+ *
+ *	Process a ARCHIVER message.
+ * ----------
+ */
+static void
+pgstat_recv_archiver(PgStat_MsgArchiver *msg, int len)
+{
+	if (msg->m_failed)
+	{
+		/* Failed archival attempt */
+		++archiverStats.failed_count;
+		memcpy(archiverStats.last_failed_wal, msg->m_xlog,
+			   sizeof(archiverStats.last_failed_wal));
+		archiverStats.last_failed_timestamp = msg->m_timestamp;
+	}
+	else
+	{
+		/* Successful archival operation */
+		++archiverStats.archived_count;
+		memcpy(archiverStats.last_archived_wal, msg->m_xlog,
+			   sizeof(archiverStats.last_archived_wal));
+		archiverStats.last_archived_timestamp = msg->m_timestamp;
+	}
+}
 
 /* ----------
  * pgstat_recv_bgwriter() -

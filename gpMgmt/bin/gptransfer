@@ -1953,7 +1953,7 @@ FROM (
                 and relkind='S'
                 and pg_class.oid in (
                     select
-                        substring(adsrc from '%%nextval#(''#"%%#"''::regclass#)' for '#')::regclass::oid
+                        substring(pg_catalog.pg_get_expr(adbin, adrelid) from '%%nextval#(''#"%%#"''::regclass#)' for '#')::regclass::oid
                     from pg_attrdef
                     where adrelid='%s.%s'::regclass
                         and adsrc like '%%nextval(%%'

@@ -5,7 +5,7 @@
  *	  along with the relation's initial contents.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/catalog/pg_aggregate.h
@@ -103,6 +103,7 @@ typedef FormData_pg_aggregate *Form_pg_aggregate;
  *		compiler constants for pg_aggregate
  * ----------------
  */
+
 #define Natts_pg_aggregate					20
 #define Anum_pg_aggregate_aggfnoid			1
 #define Anum_pg_aggregate_aggkind			2
@@ -126,7 +127,7 @@ typedef FormData_pg_aggregate *Form_pg_aggregate;
 #define Anum_pg_aggregate_aggminitval		20
 
 /*
- * Symbolic values for aggkind column.	We distinguish normal aggregates
+ * Symbolic values for aggkind column.  We distinguish normal aggregates
  * from ordered-set aggregates (which have two sets of arguments, namely
  * direct and aggregated arguments) and from hypothetical-set aggregates
  * (which are a subclass of ordered-set aggregates in which the last
@@ -191,7 +192,6 @@ DATA(insert ( 2050	n 0 array_larger	-				array_larger		-	-	-				-				-				f f 10
 DATA(insert ( 2244	n 0 bpchar_larger	-				bpchar_larger		-	-	-				-				-				f f 1060	1042	0	0		0	_null_ _null_ ));
 DATA(insert ( 2797	n 0 tidlarger		-				tidlarger			-	-	-				-				-				f f 2800	27		0	0		0	_null_ _null_ ));
 DATA(insert ( 3526	n 0 enum_larger		-				enum_larger			-	-	-				-				-				f f 3519	3500	0	0		0	_null_ _null_ ));
-DATA(insert ( 3332	n 0 gpxlogloclarger	-				gpxlogloclarger		-	-	-				-				-				f f 3328	3310	0		0	0	_null_ _null_ ));
 
 /* min */
 DATA(insert ( 2131	n 0 int8smaller		-				int8smaller			-	-	-				-				-				f f 412		20		0	0		0	_null_ _null_ ));
@@ -214,7 +214,6 @@ DATA(insert ( 2051	n 0 array_smaller	-				array_smaller		-	-	-				-				-				f f 
 DATA(insert ( 2245	n 0 bpchar_smaller	-				bpchar_smaller		-	-	-				-				-				f f 1058	1042	0	0		0	_null_ _null_ ));
 DATA(insert ( 2798	n 0 tidsmaller		-				tidsmaller			-	-	-				-				-				f f 2799	27		0	0		0	_null_ _null_ ));
 DATA(insert ( 3527	n 0 enum_smaller	-				enum_smaller		-	-	-				-				-				f f 3518	3500	0	0		0	_null_ _null_ ));
-DATA(insert ( 3333	n 0 gpxloglocsmaller -				gpxloglocsmaller	-	-	-				-				-				f f 3327	3310	0	0		0	_null_ _null_ ));
 
 /* count */
 DATA(insert ( 2147	n 0 int8inc_any		-				int8pl	-	-	int8inc_any		int8dec_any		-				f f 0		20		0	20		0	"0" "0" ));
@@ -301,15 +300,15 @@ DATA(insert ( 2243	n 0 bitor		-				bitor	-	-	-				-				-				f f 0	1560	0	0		0	_n
 DATA(insert ( 6013	n 0 array_add	-				array_add	-	-			-	-	-	f f 0	1007 0	0	0	"{}" _null_ ));
 
 /* sum(array[]) */
-DATA(insert ( 3216  n 0 int2_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 3217  n 0 int4_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 3218  n 0 int8_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 3219  n 0 float8_matrix_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
+DATA(insert ( 6216  n 0 int2_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6217  n 0 int4_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6218  n 0 int8_matrix_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6219  n 0 float8_matrix_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
 
 /* pivot_sum(...) */
-DATA(insert ( 3226  n 0 int4_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1007 0	0	0	_null_ _null_ ));
-DATA(insert ( 3228  n 0 int8_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
-DATA(insert ( 3230  n 0 float8_pivot_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
+DATA(insert ( 6226  n 0 int4_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1007 0	0	0	_null_ _null_ ));
+DATA(insert ( 6228  n 0 int8_pivot_accum		-	int8_matrix_accum	-	-	-	-	-	f f 0	1016 0	0	0	_null_ _null_ ));
+DATA(insert ( 6230  n 0 float8_pivot_accum		-	float8_matrix_accum	-	-	-	-	-	f f 0	1022 0	0	0	_null_ _null_ ));
 
 /* xml */
 DATA(insert ( 2901  n 0 xmlconcat2				-	-					-	-	-	-	-	f f 0	142	0	0	0	_null_ _null_ ));
@@ -353,6 +352,7 @@ DATA(insert ( 7164	n 0 hyperloglog_add_item_agg_default hyperloglog_comp		hyperl
 
 /* json */
 DATA(insert ( 3175	n 0 json_agg_transfn				json_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));
+DATA(insert ( 3197	n 0 json_object_agg_transfn json_object_agg_finalfn -	-	-	-				-				-				f f 0	2281	0	0		0	_null_ _null_ ));
 
 /*
  * prototypes for functions in pg_aggregate.c

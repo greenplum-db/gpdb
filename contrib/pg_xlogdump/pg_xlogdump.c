@@ -2,7 +2,7 @@
  *
  * pg_xlogdump.c - decode and display WAL
  *
- * Copyright (c) 2013, PostgreSQL Global Development Group
+ * Copyright (c) 2013-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *		  contrib/pg_xlogdump/pg_xlogdump.c
@@ -19,7 +19,6 @@
 #include "access/xlogreader.h"
 #include "access/transam.h"
 #include "common/fe_memutils.h"
-#include "common/relpath.h"
 #include "getopt_long.h"
 #include "rmgrdesc.h"
 
@@ -32,6 +31,7 @@ typedef struct XLogDumpPrivate
 	char	   *inpath;
 	XLogRecPtr	startptr;
 	XLogRecPtr	endptr;
+	bool		endptr_reached;
 } XLogDumpPrivate;
 
 typedef struct XLogDumpConfig
@@ -40,6 +40,7 @@ typedef struct XLogDumpConfig
 	bool		bkp_details;
 	int			stop_after_records;
 	int			already_displayed_records;
+	bool		follow;
 
 	/* filter options */
 	int			filter_by_rmgr;
@@ -308,7 +309,10 @@ XLogDumpReadPage(XLogReaderState *state, XLogRecPtr targetPagePtr, int reqLen,
 		else if (targetPagePtr + reqLen <= private->endptr)
 			count = private->endptr - targetPagePtr;
 		else
+		{
+			private->endptr_reached = true;
 			return -1;
+		}
 	}
 
 	XLogDumpXLogRead(private->inpath, private->timeline, targetPagePtr,
@@ -386,6 +390,7 @@ usage(void)
 	printf("\nOptions:\n");
 	printf("  -b, --bkp-details      output detailed information about backup blocks\n");
 	printf("  -e, --end=RECPTR       stop reading at log position RECPTR\n");
+	printf("  -f, --follow           keep retrying after reaching end of WAL\n");
 	printf("  -n, --limit=N          number of records to display\n");
 	printf("  -p, --path=PATH        directory in which to find log segment files\n");
 	printf("                         (default: ./pg_xlog)\n");
@@ -414,6 +419,7 @@ main(int argc, char **argv)
 	static struct option long_options[] = {
 		{"bkp-details", no_argument, NULL, 'b'},
 		{"end", required_argument, NULL, 'e'},
+		{"follow", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, '?'},
 		{"limit", required_argument, NULL, 'n'},
 		{"path", required_argument, NULL, 'p'},
@@ -436,10 +442,12 @@ main(int argc, char **argv)
 	private.timeline = 1;
 	private.startptr = InvalidXLogRecPtr;
 	private.endptr = InvalidXLogRecPtr;
+	private.endptr_reached = false;
 
 	config.bkp_details = false;
 	config.stop_after_records = -1;
 	config.already_displayed_records = 0;
+	config.follow = false;
 	config.filter_by_rmgr = -1;
 	config.filter_by_xid = InvalidTransactionId;
 	config.filter_by_xid_enabled = false;
@@ -450,7 +458,7 @@ main(int argc, char **argv)
 		goto bad_argument;
 	}
 
-	while ((option = getopt_long(argc, argv, "be:?n:p:r:s:t:Vx:",
+	while ((option = getopt_long(argc, argv, "be:?fn:p:r:s:t:Vx:",
 								 long_options, &optindex)) != -1)
 	{
 		switch (option)
@@ -466,6 +474,9 @@ main(int argc, char **argv)
 					goto bad_argument;
 				}
 				private.endptr = (uint64) xlogid << 32 | xrecoff;
+				break;
+			case 'f':
+				config.follow = true;
 				break;
 			case '?':
 				usage();
@@ -683,9 +694,22 @@ main(int argc, char **argv)
 			   (uint32) (first_record >> 32), (uint32) first_record,
 			   (uint32) (first_record - private.startptr));
 
-	while ((record = XLogReadRecord(xlogreader_state, first_record, &errormsg)))
+	for (;;)
 	{
-		/* continue after the last record */
+		/* try to read the next record */
+		record = XLogReadRecord(xlogreader_state, first_record, &errormsg);
+		if (!record)
+		{
+			if (!config.follow || private.endptr_reached)
+				break;
+			else
+			{
+				pg_usleep(1000000L);	/* 1 second */
+				continue;
+			}
+		}
+
+		/* after reading the first record, continue at next one */
 		first_record = InvalidXLogRecPtr;
 		XLogDumpDisplayRecord(&config, xlogreader_state->ReadRecPtr, record);
 

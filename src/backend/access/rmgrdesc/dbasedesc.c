@@ -3,7 +3,7 @@
  * dbasedesc.c
  *	  rmgr descriptor routines for commands/dbcommands.c
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -40,5 +40,5 @@ dbase_desc(StringInfo buf, XLogRecord *record)
 						 xlrec->db_id, xlrec->tablespace_id);
 	}
 	else
-		appendStringInfo(buf, "UNKNOWN");
+		appendStringInfoString(buf, "UNKNOWN");
 }

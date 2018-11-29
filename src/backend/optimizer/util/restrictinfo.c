@@ -3,7 +3,7 @@
  * restrictinfo.c
  *	  RestrictInfo node manipulation routines.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -15,7 +15,6 @@
 #include "postgres.h"
 
 #include "optimizer/clauses.h"
-#include "optimizer/predtest.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/var.h"
 
@@ -85,192 +84,6 @@ make_restrictinfo(Expr *clause,
 									  required_relids,
 									  outer_relids,
 									  nullable_relids);
-}
-
-/*
- * make_restrictinfo_from_bitmapqual
- *
- * Given the bitmapqual Path structure for a bitmap indexscan, generate
- * RestrictInfo node(s) equivalent to the condition represented by the
- * indexclauses of the Path structure.
- *
- * The result is a List (effectively, implicit-AND representation) of
- * RestrictInfos.
- *
- * The caller must pass is_pushed_down, but we assume outerjoin_delayed
- * and pseudoconstant are false while outer_relids and nullable_relids
- * are NULL (no other kind of qual should ever get into a bitmapqual).
- *
- * If include_predicates is true, we add any partial index predicates to
- * the explicit index quals.  When this is not true, we return a condition
- * that might be weaker than the actual scan represents.
- *
- * To do this through the normal make_restrictinfo() API, callers would have
- * to strip off the RestrictInfo nodes present in the indexclauses lists, and
- * then make_restrictinfo() would have to build new ones.  It's better to have
- * a specialized routine to allow sharing of RestrictInfos.
- *
- * The qual manipulations here are much the same as in create_bitmap_subplan;
- * keep the two routines in sync!
- */
-List *
-make_restrictinfo_from_bitmapqual(Path *bitmapqual,
-								  bool is_pushed_down,
-								  bool include_predicates)
-{
-	List	   *result;
-	ListCell   *l;
-
-	if (IsA(bitmapqual, BitmapAndPath))
-	{
-		BitmapAndPath *apath = (BitmapAndPath *) bitmapqual;
-
-		/*
-		 * There may well be redundant quals among the subplans, since a
-		 * top-level WHERE qual might have gotten used to form several
-		 * different index quals.  We don't try exceedingly hard to eliminate
-		 * redundancies, but we do eliminate obvious duplicates by using
-		 * list_concat_unique.
-		 */
-		result = NIL;
-		foreach(l, apath->bitmapquals)
-		{
-			List	   *sublist;
-
-			sublist = make_restrictinfo_from_bitmapqual((Path *) lfirst(l),
-														is_pushed_down,
-														include_predicates);
-			result = list_concat_unique(result, sublist);
-		}
-	}
-	else if (IsA(bitmapqual, BitmapOrPath))
-	{
-		BitmapOrPath *opath = (BitmapOrPath *) bitmapqual;
-		List	   *withris = NIL;
-		List	   *withoutris = NIL;
-
-		/*
-		 * Here, we only detect qual-free subplans.  A qual-free subplan would
-		 * cause us to generate "... OR true ..."  which we may as well reduce
-		 * to just "true".	We do not try to eliminate redundant subclauses
-		 * because (a) it's not as likely as in the AND case, and (b) we might
-		 * well be working with hundreds or even thousands of OR conditions,
-		 * perhaps from a long IN list.  The performance of list_append_unique
-		 * would be unacceptable.
-		 */
-		foreach(l, opath->bitmapquals)
-		{
-			List	   *sublist;
-
-			sublist = make_restrictinfo_from_bitmapqual((Path *) lfirst(l),
-														is_pushed_down,
-														include_predicates);
-			if (sublist == NIL)
-			{
-				/*
-				 * If we find a qual-less subscan, it represents a constant
-				 * TRUE, and hence the OR result is also constant TRUE, so we
-				 * can stop here.
-				 */
-				return NIL;
-			}
-
-			/*
-			 * If the sublist contains multiple RestrictInfos, we create an
-			 * AND subclause.  If there's just one, we have to check if it's
-			 * an OR clause, and if so flatten it to preserve AND/OR flatness
-			 * of our output.
-			 *
-			 * We construct lists with and without sub-RestrictInfos, so as
-			 * not to have to regenerate duplicate RestrictInfos below.
-			 */
-			if (list_length(sublist) > 1)
-			{
-				withris = lappend(withris, make_andclause(sublist));
-				sublist = get_actual_clauses(sublist);
-				withoutris = lappend(withoutris, make_andclause(sublist));
-			}
-			else
-			{
-				RestrictInfo *subri = (RestrictInfo *) linitial(sublist);
-
-				Assert(IsA(subri, RestrictInfo));
-				if (restriction_is_or_clause(subri))
-				{
-					BoolExpr   *subor = (BoolExpr *) subri->orclause;
-
-					Assert(or_clause((Node *) subor));
-					withris = list_concat(withris,
-										  list_copy(subor->args));
-					subor = (BoolExpr *) subri->clause;
-					Assert(or_clause((Node *) subor));
-					withoutris = list_concat(withoutris,
-											 list_copy(subor->args));
-				}
-				else
-				{
-					withris = lappend(withris, subri);
-					withoutris = lappend(withoutris, subri->clause);
-				}
-			}
-		}
-
-		/*
-		 * Avoid generating one-element ORs, which could happen due to
-		 * redundancy elimination or ScalarArrayOpExpr quals.
-		 */
-		if (list_length(withris) <= 1)
-			result = withris;
-		else
-		{
-			/* Here's the magic part not available to outside callers */
-			result =
-				list_make1(make_restrictinfo_internal(make_orclause(withoutris),
-													  make_orclause(withris),
-													  is_pushed_down,
-													  false,
-													  false,
-													  NULL,
-													  NULL,
-													  NULL));
-		}
-	}
-	else if (IsA(bitmapqual, IndexPath))
-	{
-		IndexPath  *ipath = (IndexPath *) bitmapqual;
-
-		result = list_copy(ipath->indexclauses);
-		if (include_predicates && ipath->indexinfo->indpred != NIL)
-		{
-			foreach(l, ipath->indexinfo->indpred)
-			{
-				Expr	   *pred = (Expr *) lfirst(l);
-
-				/*
-				 * We know that the index predicate must have been implied by
-				 * the query condition as a whole, but it may or may not be
-				 * implied by the conditions that got pushed into the
-				 * bitmapqual.	Avoid generating redundant conditions.
-				 */
-				if (!predicate_implied_by(list_make1(pred), result))
-					result = lappend(result,
-									 make_restrictinfo(pred,
-													   is_pushed_down,
-													   false,
-													   false,
-													   NULL,
-													   NULL,
-													   NULL));
-			}
-		}
-	}
-	else
-	{
-		elog(ERROR, "unrecognized node type: %d", nodeTag(bitmapqual));
-		result = NIL;			/* keep compiler quiet */
-	}
-
-	return result;
 }
 
 /*
@@ -410,7 +223,7 @@ make_restrictinfo_internal(Expr *clause,
 
 	/*
 	 * Fill in all the cacheable fields with "not yet set" markers. None of
-	 * these will be computed until/unless needed.	Note in particular that we
+	 * these will be computed until/unless needed.  Note in particular that we
 	 * don't mark a binary opclause as mergejoinable or hashjoinable here;
 	 * that happens only if it appears in the right context (top level of a
 	 * joinclause list).
@@ -664,24 +477,32 @@ extract_actual_join_clauses(List *restrictinfo_list,
  * outer join, as that would change the results (rows would be suppressed
  * rather than being null-extended).
  *
- * And the target relation must not be in the clause's nullable_relids, i.e.,
+ * Also the target relation must not be in the clause's nullable_relids, i.e.,
  * there must not be an outer join below the clause that would null the Vars
  * coming from the target relation.  Otherwise the clause might give results
  * different from what it would give at its normal semantic level.
+ *
+ * Also, the join clause must not use any relations that have LATERAL
+ * references to the target relation, since we could not put such rels on
+ * the outer side of a nestloop with the target relation.
  */
 bool
-join_clause_is_movable_to(RestrictInfo *rinfo, Index baserelid)
+join_clause_is_movable_to(RestrictInfo *rinfo, RelOptInfo *baserel)
 {
 	/* Clause must physically reference target rel */
-	if (!bms_is_member(baserelid, rinfo->clause_relids))
+	if (!bms_is_member(baserel->relid, rinfo->clause_relids))
 		return false;
 
 	/* Cannot move an outer-join clause into the join's outer side */
-	if (bms_is_member(baserelid, rinfo->outer_relids))
+	if (bms_is_member(baserel->relid, rinfo->outer_relids))
 		return false;
 
 	/* Target rel must not be nullable below the clause */
-	if (bms_is_member(baserelid, rinfo->nullable_relids))
+	if (bms_is_member(baserel->relid, rinfo->nullable_relids))
+		return false;
+
+	/* Clause must not use any rels with LATERAL references to this rel */
+	if (bms_overlap(baserel->lateral_referencers, rinfo->clause_relids))
 		return false;
 
 	return true;
@@ -707,6 +528,11 @@ join_clause_is_movable_to(RestrictInfo *rinfo, Index baserelid)
  * a unique place in a parameterized join tree.  And we check that we're
  * not pushing the clause into its outer-join outer side, nor down into
  * a lower outer join's inner side.
+ *
+ * There's no check here equivalent to join_clause_is_movable_to's test on
+ * lateral_referencers.  We assume the caller wouldn't be inquiring unless
+ * it'd verified that the proposed outer rels don't have lateral references
+ * to the current rel(s).
  *
  * Note: get_joinrel_parampathinfo depends on the fact that if
  * current_and_outer is NULL, this function will always return false

@@ -3,7 +3,7 @@
  * tsginidx.c
  *	 GIN support functions for tsvector_ops
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  *
  * IDENTIFICATION
@@ -15,6 +15,7 @@
 
 #include "access/gin.h"
 #include "access/skey.h"
+#include "miscadmin.h"
 #include "tsearch/ts_type.h"
 #include "tsearch/ts_utils.h"
 #include "utils/builtins.h"
@@ -172,12 +173,12 @@ gin_extract_tsquery(PG_FUNCTION_ARGS)
 typedef struct
 {
 	QueryItem  *first_item;
-	bool	   *check;
+	GinTernaryValue *check;
 	int		   *map_item_operand;
 	bool	   *need_recheck;
 } GinChkVal;
 
-static bool
+static GinTernaryValue
 checkcondition_gin(void *checkval, QueryOperand *val)
 {
 	GinChkVal  *gcv = (GinChkVal *) checkval;
@@ -192,6 +193,69 @@ checkcondition_gin(void *checkval, QueryOperand *val)
 
 	/* return presence of current entry in indexed value */
 	return gcv->check[j];
+}
+
+/*
+ * Evaluate tsquery boolean expression using ternary logic.
+ *
+ * chkcond is a callback function used to evaluate each VAL node in the query.
+ * checkval can be used to pass information to the callback. TS_execute doesn't
+ * do anything with it.
+ */
+static GinTernaryValue
+TS_execute_ternary(QueryItem *curitem, void *checkval,
+			  GinTernaryValue (*chkcond) (void *checkval, QueryOperand *val))
+{
+	GinTernaryValue val1,
+				val2,
+				result;
+
+	/* since this function recurses, it could be driven to stack overflow */
+	check_stack_depth();
+
+	if (curitem->type == QI_VAL)
+		return chkcond(checkval, (QueryOperand *) curitem);
+
+	switch (curitem->qoperator.oper)
+	{
+		case OP_NOT:
+			result = TS_execute_ternary(curitem + 1, checkval, chkcond);
+			if (result == GIN_MAYBE)
+				return result;
+			return !result;
+
+		case OP_AND:
+			val1 = TS_execute_ternary(curitem + curitem->qoperator.left,
+									  checkval, chkcond);
+			if (val1 == GIN_FALSE)
+				return GIN_FALSE;
+			val2 = TS_execute_ternary(curitem + 1, checkval, chkcond);
+			if (val2 == GIN_FALSE)
+				return GIN_FALSE;
+			if (val1 == GIN_TRUE && val2 == GIN_TRUE)
+				return GIN_TRUE;
+			else
+				return GIN_MAYBE;
+
+		case OP_OR:
+			val1 = TS_execute_ternary(curitem + curitem->qoperator.left,
+									  checkval, chkcond);
+			if (val1 == GIN_TRUE)
+				return GIN_TRUE;
+			val2 = TS_execute_ternary(curitem + 1, checkval, chkcond);
+			if (val2 == GIN_TRUE)
+				return GIN_TRUE;
+			if (val1 == GIN_FALSE && val2 == GIN_FALSE)
+				return GIN_FALSE;
+			else
+				return GIN_MAYBE;
+
+		default:
+			elog(ERROR, "unrecognized operator: %d", curitem->qoperator.oper);
+	}
+
+	/* not reachable, but keep compiler quiet */
+	return false;
 }
 
 Datum
@@ -233,11 +297,52 @@ gin_tsquery_consistent(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(res);
 }
 
+Datum
+gin_tsquery_triconsistent(PG_FUNCTION_ARGS)
+{
+	GinTernaryValue *check = (GinTernaryValue *) PG_GETARG_POINTER(0);
+
+	/* StrategyNumber strategy = PG_GETARG_UINT16(1); */
+	TSQuery		query = PG_GETARG_TSQUERY(2);
+
+	/* int32	nkeys = PG_GETARG_INT32(3); */
+	Pointer    *extra_data = (Pointer *) PG_GETARG_POINTER(4);
+	GinTernaryValue res = GIN_FALSE;
+	bool		recheck;
+
+	/* The query requires recheck only if it involves weights */
+	recheck = false;
+
+	if (query->size > 0)
+	{
+		QueryItem  *item;
+		GinChkVal	gcv;
+
+		/*
+		 * check-parameter array has one entry for each value (operand) in the
+		 * query.
+		 */
+		gcv.first_item = item = GETQUERY(query);
+		gcv.check = check;
+		gcv.map_item_operand = (int *) (extra_data[0]);
+		gcv.need_recheck = &recheck;
+
+		res = TS_execute_ternary(GETQUERY(query),
+								 &gcv,
+								 checkcondition_gin);
+
+		if (res == GIN_TRUE && recheck)
+			res = GIN_MAYBE;
+	}
+
+	PG_RETURN_GIN_TERNARY_VALUE(res);
+}
+
 /*
  * Formerly, gin_extract_tsvector had only two arguments.  Now it has three,
  * but we still need a pg_proc entry with two args to support reloading
  * pre-9.1 contrib/tsearch2 opclass declarations.  This compatibility
- * function should go away eventually.	(Note: you might say "hey, but the
+ * function should go away eventually.  (Note: you might say "hey, but the
  * code above is only *using* two args, so let's just declare it that way".
  * If you try that you'll find the opr_sanity regression test complains.)
  */

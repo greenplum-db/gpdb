@@ -1,18 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes the definition of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW <varname>name</varname> RENAME TO <varname>newname</varname>
-</codeblock></section><section id="section3">
+<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes properties of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname>
+ SET DEFAULT <varname>expression</varname>
+
+ALTER VIEW <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname> DROP DEFAULT
+
+ALTER VIEW <varname>name</varname> OWNER TO <varname>new_owner</varname>
+
+ALTER VIEW <varname>name</varname> RENAME TO <varname>new_name</varname>
+
+ALTER VIEW <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3">
       <title>Description</title>
-      <p><codeph>ALTER VIEW</codeph> changes the definition of a view. The only currently available
-        functionality is to rename the view. To execute this command you must be the owner of the
-        view.</p>
-    </section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The (optionally schema-qualified) name of an existing filespace. </pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the view. </pd></plentry></parml></section>
+      <p><codeph>ALTER VIEW</codeph> changes various auxiliary properties of a view. (If you want to
+        modify the view's defining query, use <codeph>CREATE OR REPLACE VIEW</codeph>. </p>
+      <p>To execute this command you must be the owner of the view. To change a view's schema you
+        must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you
+        must also be a direct or indirect member of the new owning role, and that role must have
+          <codeph>CREATE</codeph> privilege on the view's schema. These restrictions enforce that
+        altering the owner does not do anything you could not do by dropping and recreating the
+        view. However, a superuser can alter ownership of any view.</p>
+    </section><section id="section4"><title>Parameters</title><parml><plentry><pt><codeph>SET</codeph>/<codeph>DROP DEFAULT</codeph></pt><pd>These forms set or remove the default value for a column. A default value associated with a view
+            column is inserted into <codeph>INSERT</codeph> statements on the view before the view's
+              <codeph>ON INSERT</codeph> rule is applied, if the <codeph>INSERT</codeph> does not
+            specify a value for the column. </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new schema for the view. </pd></plentry>
+        <plentry>
+          <pt><varname>newname</varname></pt>
+          <pd>The new name of the view.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>new_schema</varname></pt>
+          <pd>The new schema for the view.</pd>
+        </plentry></parml></section>
     <section>
       <title>Notes</title>
-      <p>Some variants of <codeph>ALTER TABLE</codeph> can be used with views as well; for example,
-        to rename a view, it is also possible to use <codeph>ALTER TABLE RENAME</codeph>. To change
-        the schema or owner of a view, you currently must use <codeph>ALTER TABLE</codeph>.</p>
-    </section><section id="section5"><title>Examples</title><p>Rename the  view <codeph>myview</codeph> to <codeph>newview</codeph>:</p><codeblock>ALTER VIEW myview RENAME TO newview;</codeblock><p>Change the owner of tablespace <codeph>myfs</codeph>:</p><codeblock>ALTER FILESPACE myfs OWNER TO dba;</codeblock></section><section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref></codeph>, <codeph><xref
+      <p>For historical reasons, <codeph>ALTER TABLE</codeph> can be used with views, too; however,
+        the only variants of <codeph>ALTER TABLE</codeph> that are allowed with views are equivalent
+        to the statements shown above.</p>
+      <p>Rename the view <codeph>myview</codeph> to <codeph>newview</codeph>:</p>
+      <codeblock>ALTER VIEW myview RENAME TO newview;</codeblock>
+    </section><section id="section6"><title>Compatibility</title><p><codeph>ALTER VIEW</codeph> is a Greenplum Database extension of the SQL standard.</p></section><section id="section7"><title>See Also</title><p><codeph><xref href="CREATE_VIEW.xml#topic1/cj20941">CREATE VIEW</xref></codeph>, <codeph><xref
             href="DROP_VIEW.xml#topic1/dn20941">DROP VIEW</xref></codeph> in the <i>Greenplum
           Database Utility Guide</i></p></section></body></topic>

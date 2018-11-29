@@ -1,8 +1,0 @@
-# This is a brief schedule to test backup and restore
-test: create_bkupdb
-test: bkup_bkupdb
-test: restore_restoredb
-test: restore_check
-test: bkuprestore_advance
-test: bkuprestore_advance_check
-test: bkuprestore_cleanup

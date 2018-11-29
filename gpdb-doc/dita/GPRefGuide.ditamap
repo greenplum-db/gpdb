@@ -90,7 +90,11 @@
 		<topicref href="ref_guide/sql_commands/ALTER_SCHEMA.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_SEQUENCE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_TABLE.xml"/>
-		<topicref href="ref_guide/sql_commands/ALTER_TABLESPACE.xml"/>
+    <topicref href="ref_guide/sql_commands/ALTER_TABLESPACE.xml"/>
+		<topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/>
+    <topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_DICTIONARY.xml"/>
+    <topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_PARSER.xml"/>
+    <topicref href="ref_guide/sql_commands/ALTER_TEXT_SEARCH_TEMPLATE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_TRIGGER.xml" otherprops="op-hidden"/>
 		<topicref href="ref_guide/sql_commands/ALTER_TYPE.xml"/>
 		<topicref href="ref_guide/sql_commands/ALTER_USER.xml"/>
@@ -126,6 +130,10 @@
 		<topicref href="ref_guide/sql_commands/CREATE_TABLE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_TABLE_AS.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_TABLESPACE.xml"/>
+    <topicref href="ref_guide/sql_commands/CREATE_TEXT_SEARCH_CONFIGURATION.xml"/>
+    <topicref href="ref_guide/sql_commands/CREATE_TEXT_SEARCH_DICTIONARY.xml"/>
+    <topicref href="ref_guide/sql_commands/CREATE_TEXT_SEARCH_PARSER.xml"/>
+    <topicref href="ref_guide/sql_commands/CRETE_TEXT_SEARCH_TEMPLATE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_TRIGGER.xml" otherprops="op-hidden"/>
 		<topicref href="ref_guide/sql_commands/CREATE_TYPE.xml"/>
 		<topicref href="ref_guide/sql_commands/CREATE_USER.xml"/>
@@ -158,6 +166,10 @@
 		<topicref href="ref_guide/sql_commands/DROP_SEQUENCE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_TABLE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_TABLESPACE.xml"/>
+    <topicref href="ref_guide/sql_commands/DROP_TEXT_SEARCH_CONFIGURATION.xml"/>
+    <topicref href="ref_guide/sql_commands/DROP_TEXT_SEARCH_DICTIONARY.xml"/>
+    <topicref href="ref_guide/sql_commands/DROP_TEXT_SEARCH_PARSER.xml"/>
+    <topicref href="ref_guide/sql_commands/DROP_TEXT_SEARCH_TEMPLATE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_TRIGGER.xml" otherprops="op-hidden"/>
 		<topicref href="ref_guide/sql_commands/DROP_TYPE.xml"/>
 		<topicref href="ref_guide/sql_commands/DROP_USER.xml"/>

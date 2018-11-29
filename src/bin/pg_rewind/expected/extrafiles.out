@@ -1,0 +1,23 @@
+Master initialized.
+Master running.
+Standby initialized and running.
+Standby promoted.
+Running pg_rewind...
+Old master restarted after rewind.
+SELECT state FROM pg_stat_replication;
+   state   
+-----------
+ streaming
+(1 row)
+
+Master promoted.
+tst_both_dir
+tst_both_dir/both_file1
+tst_both_dir/both_file2
+tst_both_dir/both_subdir
+tst_both_dir/both_subdir/both_file3
+tst_standby_dir
+tst_standby_dir/standby_file1
+tst_standby_dir/standby_file2
+tst_standby_dir/standby_subdir
+tst_standby_dir/standby_subdir/standby_file3

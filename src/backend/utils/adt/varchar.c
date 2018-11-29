@@ -3,7 +3,7 @@
  * varchar.c
  *	  Functions for the built-in types char(n) and varchar(n).
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -257,7 +257,7 @@ bpcharsend(PG_FUNCTION_ARGS)
  *
  * Truncation rules: for an explicit cast, silently truncate to the given
  * length; for an implicit cast, raise error unless extra characters are
- * all spaces.	(This is sort-of per SQL: the spec would actually have us
+ * all spaces.  (This is sort-of per SQL: the spec would actually have us
  * raise a "completion condition" for the explicit cast case, but Postgres
  * hasn't got such a concept.)
  */
@@ -584,7 +584,7 @@ varchar_transform(PG_FUNCTION_ARGS)
  *
  * Truncation rules: for an explicit cast, silently truncate to the given
  * length; for an implicit cast, raise error unless extra characters are
- * all spaces.	(This is sort-of per SQL: the spec would actually have us
+ * all spaces.  (This is sort-of per SQL: the spec would actually have us
  * raise a "completion condition" for the explicit cast case, but Postgres
  * hasn't got such a concept.)
  */

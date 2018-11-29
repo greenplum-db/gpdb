@@ -16,7 +16,7 @@ OBJS = clog.o transam.o varsup.o xact.o rmgr.o slru.o subtrans.o multixact.o \
 	timeline.o twophase.o twophase_rmgr.o xlog.o xlogarchive.o xlogfuncs.o \
 	xlogreader.o xlogutils.o
 
-OBJS +=  distributedlog.o gp_transaction_log.o gp_distributed_log.o xlogloc.o
+OBJS +=  distributedlog.o gp_transaction_log.o gp_distributed_log.o
 
 include $(top_srcdir)/src/backend/common.mk
 

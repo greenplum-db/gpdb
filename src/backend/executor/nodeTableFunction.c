@@ -301,6 +301,7 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	PlanState           *subplan;
 	Oid					 funcrettype;
 	TypeFuncClass		 functypclass;
+	RangeTblFunction *rtfunc;
 	FuncExpr            *func;
 	ExprContext         *econtext;
 	TupleDesc            inputdesc  = NULL;
@@ -346,12 +347,13 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	 * the planner didn't try to perform constant folding or other inlining
 	 * on a function invoked as a table function.
 	 */
-	if (!node->funcexpr || !IsA(node->funcexpr, FuncExpr))
+	rtfunc = node->function;
+	if (!rtfunc->funcexpr || !IsA(rtfunc->funcexpr, FuncExpr))
 	{
 		/* should not be possible */
 		elog(ERROR, "table function expression is not a function expression");
 	}
-	func = (FuncExpr *) node->funcexpr;
+	func = (FuncExpr *) rtfunc->funcexpr;
 	functypclass = get_expr_result_type((Node*) func, &funcrettype, &resultdesc);
 	
 	switch (functypclass)
@@ -368,10 +370,10 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 		case TYPEFUNC_RECORD:
 		{
 			/* Record data type: Construct tuple desc based on rangeTable */
-			resultdesc = BuildDescFromLists(node->funccolnames,
-											node->funccoltypes,
-											node->funccoltypmods,
-											node->funccolcollations);
+			resultdesc = BuildDescFromLists(rtfunc->funccolnames,
+											rtfunc->funccoltypes,
+											rtfunc->funccoltypmods,
+											rtfunc->funccolcollations);
 			scanstate->is_rowtype = true;
 			break;
 		}
@@ -379,7 +381,12 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 		case TYPEFUNC_SCALAR:
 		{
 			/* Scalar data type: Construct a tuple descriptor manually */
-			char	   *attname = strVal(linitial(node->funccolnames));
+			char	   *attname;
+
+			if (rtfunc->funccolnames)
+				attname = strVal(linitial(rtfunc->funccolnames));
+			else
+				attname = NULL;
 
 			resultdesc = CreateTemplateTupleDesc(1, false);
 			TupleDescInitEntry(resultdesc,
@@ -390,7 +397,7 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 							   0);
 			TupleDescInitEntryCollation(resultdesc,
 										(AttrNumber) 1,
-										exprCollation(node->funcexpr));
+										exprCollation(rtfunc->funcexpr));
 			scanstate->is_rowtype = false;
 			break;
 		}
@@ -416,7 +423,7 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	 * Other node-specific setup
 	 */
 	scanstate->fcache = (FuncExprState*)
-		ExecInitExpr((Expr *) node->funcexpr, (PlanState *) scanstate);
+		ExecInitExpr((Expr *) rtfunc->funcexpr, (PlanState *) scanstate);
 	Assert(scanstate->fcache && IsA(scanstate->fcache, FuncExprState));
 
 	scanstate->rsinfo.type		   = T_ReturnSetInfo;
@@ -428,7 +435,7 @@ ExecInitTableFunction(TableFunctionScan *node, EState *estate, int eflags)
 	scanstate->rsinfo.setResult    = NULL;
 	scanstate->rsinfo.setDesc	   = NULL;
 
-	scanstate->userdata = node->funcuserdata;
+	scanstate->userdata = rtfunc->funcuserdata;
 	/* Initialize a function cache for the function expression */
 	init_fcache(func->funcid, func->inputcollid, scanstate->fcache, 
 				econtext->ecxt_per_query_memory, true);
@@ -538,15 +545,18 @@ AnyTable_GetNextTuple(AnyTable t)
 void
 tf_set_userdata_internal(FunctionCallInfo fcinfo, bytea *userdata)
 {
-	if (!fcinfo->context || !IsA(fcinfo->context, RangeTblEntry))
+	RangeTblFunction *rtfunc;
+
+	if (!fcinfo->context || !IsA(fcinfo->context, RangeTblFunction))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("expected RangeTblEntry node, found %d",
+				 errmsg("expected RangeTblFunction node, found %d",
 				 fcinfo->context ? nodeTag(fcinfo->context) : 0)));
+	rtfunc = (RangeTblFunction *) fcinfo->context;
 
 	/* Make sure it gets detoasted, but packed is allowed */
-	((RangeTblEntry *) fcinfo->context)->funcuserdata =
-						userdata ? pg_detoast_datum_packed(userdata) : NULL;
+	rtfunc->funcuserdata =
+		userdata ? pg_detoast_datum_packed(userdata) : NULL;
 }
 
 /*

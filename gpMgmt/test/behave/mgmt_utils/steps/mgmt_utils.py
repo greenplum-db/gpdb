@@ -1,3 +1,4 @@
+import math
 import fnmatch
 import getpass
 import glob
@@ -23,6 +24,7 @@ from time import sleep
 
 
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
+from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
 from gppylib.operations.startSegments import MIRROR_MODE_MIRRORLESS
 from gppylib.operations.unix import ListRemoteFilesByPattern, CheckRemoteFile
@@ -30,7 +32,9 @@ from test.behave_utils.gpfdist_utils.gpfdist_mgmt import Gpfdist
 from test.behave_utils.utils import *
 from test.behave_utils.cluster_setup import TestCluster, reset_hosts
 from test.behave_utils.cluster_expand import Gpexpand
+from test.behave_utils.gpexpand_dml import TestDML
 from gppylib.commands.base import Command, REMOTE
+from gppylib import pgconf
 
 
 master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
@@ -77,11 +81,45 @@ def impl(context, checksum_toggle):
                num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
                with_mirrors='true',
                checksum_toggle=checksum_toggle)
+    run_command(context, cmd)
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
+@given('the cluster is generated with "{num_primaries}" primaries only')
+def impl(context, num_primaries):
+    cmd = """
+    cd ../gpAux/gpdemo; \
+        export MASTER_DEMO_PORT={master_port} && \
+        export DEMO_PORT_BASE={port_base} && \
+        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
+        export WITH_MIRRORS=false && \
+        export WITH_STANDBY=false && \
+        ./demo_cluster.sh -d && ./demo_cluster.sh
+    """.format(master_port=os.getenv('MASTER_PORT', 15432),
+               port_base=os.getenv('PORT_BASE', 25432),
+               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', num_primaries))
+
+    os.environ['PGPORT'] = '15432'
+    demoDir = os.path.abspath("%s/../gpAux/gpdemo" % os.getcwd())
+    os.environ['MASTER_DATA_DIRECTORY'] = "%s/datadirs/qddir/demoDataDir-1" % demoDir
+    run_command(context, cmd)
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
+    context.gpexpand_mirrors_enabled = False
+
+
+@given('the user runs psql with "{psql_cmd}" against database "{dbname}"')
+def impl(context, dbname, psql_cmd):
+    cmd = "psql -d %s %s" % (dbname, psql_cmd)
 
     run_command(context, cmd)
 
     if context.ret_code != 0:
         raise Exception('%s' % context.error_message)
+
 
 @given('the database is running')
 @then('the database is running')
@@ -154,7 +192,7 @@ def impl(context, dbname):
 @then('database "{dbname}" is created if not exists on host "{HOST}" with port "{PORT}" with user "{USER}"')
 def impl(context, dbname, HOST, PORT, USER):
     host = os.environ.get(HOST)
-    port = 0 if os.environ.get(PORT) == None else int(os.environ.get(PORT))
+    port = 0 if os.environ.get(PORT) is None else int(os.environ.get(PORT))
     user = os.environ.get(USER)
     create_database_if_not_exists(context, dbname, host, port, user)
 
@@ -276,6 +314,8 @@ def impl(context, command, gphome):
 @then('the user runs command "{command}"')
 def impl(context, command):
     run_command(context, command)
+    if has_exception(context):
+        raise context.exception
 
 
 @when('the user runs async command "{command}"')
@@ -1531,6 +1571,29 @@ def impl(context, file, dbname):
             dbname, host, port, query)
             Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd).run(validateAfter=True)
 
+@then('The user runs sql "{query}" in "{dbname}" on specified segment {host}:{port} in utility mode')
+@when('The user runs sql "{query}" in "{dbname}" on specified segment {host}:{port} in utility mode')
+@given('The user runs sql "{query}" in "{dbname}" on specified segment {host}:{port} in utility mode')
+def impl(context, query, dbname, host, port):
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+    dbname, host, port, query)
+    cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
+    cmd.run(validateAfter=True)
+    context.stdout_message = cmd.get_stdout()
+
+@then('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
+@when('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
+@given('table {table_name} exists in "{dbname}" on specified segment {host}:{port}')
+def impl(context, table_name, dbname, host, port):
+    query = "SELECT COUNT(*) FROM pg_class WHERE relname = '%s'" % table_name
+    psql_cmd = "PGDATABASE=\'%s\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (
+    dbname, host, port, query)
+    cmd = Command(name='Running Remote command: %s' % psql_cmd, cmdStr=psql_cmd)
+    cmd.run(validateAfter=True)
+    keyword = "1 row"
+    if keyword not in cmd.get_stdout():
+        raise Exception(context.stdout_message)
+
 
 @then('The path "{path}" is removed from current working directory')
 @when('The path "{path}" is removed from current working directory')
@@ -1962,9 +2025,15 @@ def step_impl(context, abbreviated_timezone):
 @given("a working directory of the test as '{working_directory}'")
 def impl(context, working_directory):
     context.working_directory = working_directory
+    # Don't fail if directory already exists, which can occur for the first scenario
+    shutil.rmtree(context.working_directory, ignore_errors=True)
+    os.mkdir(context.working_directory)
 
 def _create_cluster(context, master_host, segment_host_list):
-    segment_host_list = segment_host_list.split(",")
+    if segment_host_list == "":
+        segment_host_list = []
+    else:
+        segment_host_list = segment_host_list.split(",")
     del os.environ['MASTER_DATA_DIRECTORY']
     os.environ['MASTER_DATA_DIRECTORY'] = os.path.join(context.working_directory,
                                                        'data/master/gpseg-1')
@@ -1983,6 +2052,7 @@ def _create_cluster(context, master_host, segment_host_list):
     testcluster.create_cluster(with_mirrors=False)
     context.gpexpand_mirrors_enabled = False
 
+@then('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 @given('a cluster is created with no mirrors on "{master_host}" and "{segment_host_list}"')
 def impl(context, master_host, segment_host_list):
     _create_cluster(context, master_host, segment_host_list)
@@ -2008,6 +2078,7 @@ def impl(context, master_host, segment_host):
     context.gpexpand_mirrors_enabled = True
 
 @given('the user runs gpexpand interview to add {num_of_segments} new segment and {num_of_hosts} new host "{hostnames}"')
+@when('the user runs gpexpand interview to add {num_of_segments} new segment and {num_of_hosts} new host "{hostnames}"')
 def impl(context, num_of_segments, num_of_hosts, hostnames):
     num_of_segments = int(num_of_segments)
     num_of_hosts = int(num_of_hosts)
@@ -2044,25 +2115,28 @@ def impl(context):
 @when('the user runs gpexpand with the latest gpexpand_inputfile')
 def impl(context):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    gpexpand.initialize_segments()
+    ret_code, std_err, std_out = gpexpand.initialize_segments()
+    if ret_code != 0:
+        raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
-@when('the user runs gpexpand to redistribute')
-def impl(context):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    context.command = gpexpand
-    gpexpand.redistribute()
+@when('the user runs gpexpand against database "{dbname}" to redistribute with duration "{duration}"')
+def impl(context, dbname, duration):
+    _gpexpand_redistribute(context, dbname, duration)
 
-@when('the user runs gpexpand to redistribute with the --end flag')
-def impl(context):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    context.command = gpexpand
-    gpexpand.redistribute(endtime=True)
+@when('the user runs gpexpand against database "{dbname}" to redistribute with the --end flag')
+def impl(context, dbname):
+    _gpexpand_redistribute(context, dbname, endtime=True)
 
-@when('the user runs gpexpand to redistribute with the --duration flag')
-def impl(context):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+@when('the user runs gpexpand against database "{dbname}" to redistribute')
+def impl(context, dbname):
+    _gpexpand_redistribute(context, dbname)
+
+def _gpexpand_redistribute(context, dbname, duration=False, endtime=False):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database=dbname)
     context.command = gpexpand
-    gpexpand.redistribute(duration=True)
+    ret_code, std_err, std_out = gpexpand.redistribute(duration, endtime)
+    if ret_code != 0:
+        raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
 @when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors')
 def impl(context):
@@ -2076,15 +2150,105 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
         fd.write(inputfile_contents)
 
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    gpexpand.initialize_segments()
+    ret_code, std_err, std_out = gpexpand.initialize_segments()
+    if ret_code != 0:
+        raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
+
+@given('the master pid has been saved')
+def impl(context):
+    data_dir = os.path.join(context.working_directory,
+                            'data/master/gpseg-1')
+    context.master_pid = gp.get_postmaster_pid_locally(data_dir)
+
+@then('verify that the master pid has not been changed')
+def impl(context):
+    data_dir = os.path.join(context.working_directory,
+                            'data/master/gpseg-1')
+    current_master_pid = gp.get_postmaster_pid_locally(data_dir)
+    if context.master_pid == current_master_pid:
+        return
+
+    raise Exception("The master pid has been changed.\nprevious: %s\ncurrent: %s" % (context.master_pid, current_master_pid))
 
 @given('the number of segments have been saved')
+@then('the number of segments have been saved')
 def impl(context):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
         context.start_data_segments = dbconn.execSQLForSingleton(conn, query)
 
+@given('user has created {table_name} table')
+def impl(context, table_name):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """CREATE TABLE %s(a INT)""" % table_name
+        dbconn.execSQL(conn, query)
+        conn.commit()
+
+@given('a long-run read-only transaction exists on {table_name}')
+def impl(context, table_name):
+    dbname = 'gptest'
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+    context.long_run_select_only_conn = conn
+
+    query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
+    data_result = dbconn.execSQL(conn, query).fetchall()
+    context.long_run_select_only_data_result = data_result
+
+    query = """SELECT txid_current()"""
+    xid = dbconn.execSQLForSingleton(conn, query)
+    context.long_run_select_only_xid = xid
+
+@then('verify that long-run read-only transaction still exists on {table_name}')
+def impl(context, table_name):
+    dbname = 'gptest'
+    conn = context.long_run_select_only_conn
+
+    query = """SELECT gp_segment_id, * from %s order by 1, 2""" % table_name
+    data_result = dbconn.execSQL(conn, query).fetchall()
+
+    query = """SELECT txid_current()"""
+    xid = dbconn.execSQLForSingleton(conn, query)
+
+    if (xid != context.long_run_select_only_xid or
+        data_result != context.long_run_select_only_data_result):
+        error_str = "Incorrect xid or select result of long run read-only transaction: \
+                xid(before %s, after %), result(before %s, after %s)"
+        raise Exception(error_str % (context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
+
+@given('a long-run transaction starts')
+def impl(context):
+    dbname = 'gptest'
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+    context.long_run_conn = conn
+
+    query = """SELECT txid_current()"""
+    xid = dbconn.execSQLForSingleton(conn, query)
+    context.long_run_xid = xid
+
+@then('verify that long-run transaction aborted for changing the catalog by creating table {table_name}')
+def impl(context, table_name):
+    dbname = 'gptest'
+    conn = context.long_run_conn
+
+    query = """SELECT txid_current()"""
+    xid = dbconn.execSQLForSingleton(conn, query)
+    if context.long_run_xid != xid:
+        raise Exception("Incorrect xid of long run transaction: before %s, after %s" %
+                        (context.long_run_xid, xid));
+
+    query = """CREATE TABLE %s (a INT)""" % table_name
+    try:
+        data_result = dbconn.execSQL(conn, query)
+    except Exception, msg:
+        key_msg = "FATAL:  cluster is expaneded"
+        if key_msg not in msg.__str__():
+            raise Exception("transaction not abort correctly, errmsg:%s" % msg)
+    else:
+        raise Exception("transaction not abort, result:%s" % data_result)
+
+@when('verify that the cluster has {num_of_segments} new segments')
 @then('verify that the cluster has {num_of_segments} new segments')
 def impl(context, num_of_segments):
     dbname = 'gptest'
@@ -2118,6 +2282,7 @@ def impl(context, hostnames):
     reset_hosts(hosts, context.working_directory)
     reset_hosts(hosts, context.temp_base_dir)
 
+@then('the database is killed on hosts "{hostnames}"')
 @given('the database is killed on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
@@ -2129,6 +2294,7 @@ def impl(context, hostnames):
         cmd.run(validateAfter=True)
 
 @given('user has created expansionranktest tables')
+@then('user has created expansionranktest tables')
 def impl(context):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
@@ -2141,6 +2307,7 @@ def impl(context):
 
 @given('user has fixed the expansion order for tables')
 @when('user has fixed the expansion order for tables')
+@then('user has fixed the expansion order for tables')
 def impl(context):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
@@ -2248,3 +2415,114 @@ def impl(context, config_file):
 def impl(context, config_file):
     run_gpcommand(context, 'gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O %s' % config_file)
     check_return_code(context, 0)
+
+@when('check segment conf: postgresql.conf pg_hba.conf')
+@then('check segment conf: postgresql.conf pg_hba.conf')
+def step_impl(context):
+    query = "select dbid, port, hostname, datadir from gp_segment_configuration where content >= 0"
+    conn = dbconn.connect(dbconn.DbURL(dbname='postgres'))
+    segments = dbconn.execSQL(conn, query).fetchall()
+    for segment in segments:
+        dbid = "'%s'" % segment[0]
+        port = "'%s'" % segment[1]
+        hostname = segment[2]
+        datadir = segment[3]
+
+        ## check postgresql.conf
+        remote_postgresql_conf = "%s/%s" % (datadir, 'postgresql.conf')
+        local_conf_copy = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), "%s.%s" % ('postgresql.conf', hostname))
+        cmd = Command(name="Copy remote conf to local to diff",
+                    cmdStr='scp %s:%s %s' % (hostname, remote_postgresql_conf, local_conf_copy))
+        cmd.run(validateAfter=True)
+
+        dic = pgconf.readfile(filename=local_conf_copy)
+        if str(dic['port']) != port:
+            raise Exception("port value in postgresql.conf of %s is incorrect. Expected:%s, given:%s" %
+                            (hostname, port, dic['port']))
+
+        ## check pg_hba.conf
+        remote_hba_conf = "%s/%s" % (datadir, 'pg_hba.conf')
+        local_hba_copy = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), "%s.%s" % ('pg_hba.conf', hostname))
+        cmd = Command(name="Copy remote conf to local to diff",
+                    cmdStr='scp %s:%s %s' % (hostname, remote_hba_conf, local_hba_copy))
+        cmd.run(validateAfter=True)
+
+        f = open(local_hba_copy, 'r')
+        hba_content = f.read()
+        f.close()
+
+        addrinfo = socket.getaddrinfo(hostname, None)
+        ipaddrlist = list(set([(ai[0], ai[4][0]) for ai in addrinfo]))
+        key_word = '# %s\n' % hostname
+        for addr in ipaddrlist:
+            key_word += 'host\tall\tall\t%s/%s\ttrust\n' % (addr[1], '32' if addr[0] == socket.AF_INET else '128')
+        if key_word not in hba_content:
+            raise Exception("Expected line not in pg_hba.conf,%s" % key_word)
+
+@given('the transactions are started for dml')
+def impl(context):
+    dbname = 'gptest'
+    context.dml_jobs = []
+    for dml in ['insert', 'update', 'delete']:
+        job = TestDML.create(dbname, dml)
+        job.start()
+        context.dml_jobs.append((dml, job))
+
+@then('verify the dml results and commit')
+def impl(context):
+    dbname = 'gptest'
+
+    for dml, job in context.dml_jobs:
+        code, message = job.stop()
+        if not code:
+            raise Exception(message)
+
+@then('verify the dml results again in a new transaction')
+def impl(context):
+    dbname = 'gptest'
+    conn = dbconn.connect(dbconn.DbURL(dbname=dbname))
+
+    for dml, job in context.dml_jobs:
+        code, message = job.reverify(conn)
+        if not code:
+            raise Exception(message)
+@given('distribution information from table "{table}" with data in "{dbname}" is saved')
+def impl(context, table, dbname):
+    context.pre_redistribution_row_count = _get_row_count_per_segment(table, dbname)
+
+@then('distribution information from table "{table}" with data in "{dbname}" is verified against saved data')
+def impl(context, table, dbname):
+    pre_distribution_row_count = context.pre_redistribution_row_count
+    post_distribution_row_count = _get_row_count_per_segment(table, dbname)
+
+    if len(pre_distribution_row_count) >= len(post_distribution_row_count):
+        raise Exception("Failed to redistribute table. Expected to have more than %d segments, got %d segments" % (len(pre_distribution_row_count), len(post_distribution_row_count)))
+
+    post_distribution_num_segments = 0
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "SELECT count(DISTINCT content) FROM gp_segment_configuration WHERE content != -1;"
+        cursor = dbconn.execSQL(conn, query)
+        post_distribution_num_segments = cursor.fetchone()[0]
+
+    if len(post_distribution_row_count) != post_distribution_num_segments:
+        raise Exception("Failed to redistribute table %s. Expected table to have data on %d segments, but found %d segments" % (table, post_distribution_num_segments, len(post_distribution_row_count)))
+
+    if sum(pre_distribution_row_count) != sum(post_distribution_row_count):
+        raise Exception("Redistributed data does not match pre-redistribution data. Actual: %d, Expected: %d" % (sum(post_distribution_row_count), sum(pre_distribution_row_count)))
+
+    mean = sum(post_distribution_row_count) / len(post_distribution_row_count)
+    variance = sum(pow(row_count - mean, 2) for row_count in post_distribution_row_count) / len(post_distribution_row_count)
+    std_deviation = math.sqrt(variance)
+    std_error = std_deviation / math.sqrt(len(post_distribution_row_count))
+    relative_std_error = std_error / mean
+    tolerance = 0.01
+    if relative_std_error > tolerance:
+        raise Exception("Unexpected variance for redistributed data in table %s. Relative standard error %f exceeded tolerance factor of %f." %
+                (table, relative_std_error, tolerance))
+
+def _get_row_count_per_segment(table, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = "SELECT gp_segment_id,COUNT(i) FROM %s GROUP BY gp_segment_id;" % table
+        cursor = dbconn.execSQL(conn, query)
+        rows = cursor.fetchall()
+        return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly

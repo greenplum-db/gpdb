@@ -28,7 +28,7 @@ $$
             where oid=$1);
 $$ language sql;
 -- Wait until number of dirty buffers for the specified relfiles drops
--- to 0 or timeout occurs.  Returns false if timeout occured.
+-- to 0 or timeout occurs.  Returns false if timeout occurred.
 create function wait_for_bgwriter(
    relid oid,
    timeout int)

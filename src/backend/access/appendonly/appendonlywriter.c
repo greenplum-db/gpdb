@@ -30,6 +30,7 @@
 #include "miscadmin.h"
 #include "storage/lmgr.h"
 #include "utils/builtins.h"
+#include "utils/faultinjector.h"
 #include "utils/int8.h"
 #include "utils/lsyscache.h"
 #include "utils/snapmgr.h"
@@ -60,8 +61,23 @@ static AORelHashEntry AppendOnlyRelHashNew(Oid relid, bool *exists);
 static AORelHashEntry AORelGetHashEntry(Oid relid);
 static AORelHashEntry AORelLookupHashEntry(Oid relid);
 static bool AORelCreateHashEntry(Oid relid);
-static bool *GetFileSegStateInfoFromSegments(Relation parentrel);
+static bool *get_awaiting_drop_status_from_segments(Relation parentrel);
 static int64 *GetTotalTupleCountFromSegments(Relation parentrel, int segno);
+
+static void
+acquire_lightweight_lock() {
+	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+}
+
+static void
+release_lightweight_lock() {
+	LWLockRelease(AOSegFileLock);
+}
+
+static bool
+is_entry_in_use_by_other_transactions(AORelHashEntry aoentry) {
+	return aoentry->txns_using_rel != 0;
+}
 
 /*
  * AppendOnlyWriterShmemSize -- estimate size the append only writer structures
@@ -181,6 +197,7 @@ AORelCreateHashEntry(Oid relid)
 	AORelHashEntry aoHashEntry = NULL;
 	Relation	aorel;
 	bool	   *awaiting_drop = NULL;
+	Snapshot	appendOnlyMetaDataSnapshot;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 
@@ -188,7 +205,9 @@ AORelCreateHashEntry(Oid relid)
 	 * Momentarily release the AOSegFileLock so we can safely access the
 	 * system catalog (i.e. without risking a deadlock).
 	 */
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
+
+	SIMPLE_FAULT_INJECTOR(BeforeCreatingAnAOHashEntry);
 
 	/*
 	 * Now get all the segment files information for this relation from the QD
@@ -196,21 +215,19 @@ AORelCreateHashEntry(Oid relid)
 	 */
 	aorel = heap_open(relid, RowExclusiveLock);
 
-	/*
-	 * Use SnapshotNow since we have an exclusive lock on the relation.
-	 */
+	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 	if (RelationIsAoRows(aorel))
 	{
-		allfsinfo = GetAllFileSegInfo(aorel, SnapshotNow, &total_segfiles);
+		allfsinfo = GetAllFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 	}
 	else
 	{
 		Assert(RelationIsAoCols(aorel));
-		aocsallfsinfo = GetAllAOCSFileSegInfo(aorel, SnapshotNow, &total_segfiles);
+		aocsallfsinfo = GetAllAOCSFileSegInfo(aorel, appendOnlyMetaDataSnapshot, &total_segfiles);
 	}
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 
-	/* Ask segment DBs about the segfile status */
-	awaiting_drop = GetFileSegStateInfoFromSegments(aorel);
+	awaiting_drop = get_awaiting_drop_status_from_segments(aorel);
 
 	heap_close(aorel, RowExclusiveLock);
 
@@ -219,7 +236,7 @@ AORelCreateHashEntry(Oid relid)
 	 *
 	 * Note: Another session may have raced-in and created it.
 	 */
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	aoHashEntry = AppendOnlyRelHashNew(relid, &exists);
 
@@ -330,7 +347,7 @@ AORelCreateHashEntry(Oid relid)
 }
 
 /*
- * AORelRemoveEntry -- remove the hash entry for a given relation.
+ * AORelRemoveHashEntry -- remove the hash entry for a given relation.
  *
  * Notes
  *	The append only lightweight lock (AOSegFileLock) *must* be held for
@@ -434,7 +451,7 @@ AORelGetOrCreateHashEntry(Oid relid)
 	 */
 	if (!AORelCreateHashEntry(relid))
 	{
-		LWLockRelease(AOSegFileLock);
+		release_lightweight_lock();
 		ereport(ERROR, (errmsg("can't have more than %d different append-only "
 							   "tables open for writing data at the same time. "
 							   "if tables are heavily partitioned or if your "
@@ -697,7 +714,7 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 		return;
 	}
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	aoentry = AORelGetOrCreateHashEntry(relid);
 	Assert(aoentry);
@@ -721,7 +738,7 @@ DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 		}
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 	return;
 }
 
@@ -743,7 +760,7 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 		return;
 	}
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	aoentry = AORelGetOrCreateHashEntry(relid);
 	Assert(aoentry);
@@ -760,14 +777,13 @@ RegisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFileList)
 							  "relation \"%s\" (%d)", i,
 							  get_rel_name(relid), relid)));
 
-			Assert(segfilestat->state == COMPACTED_AWAITING_DROP);
-			segfilestat->xid = CurrentXid;
 			appendOnlyInsertXact = true;
+			segfilestat->xid = CurrentXid;
 			segfilestat->state = DROP_USE;
 		}
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 	return;
 }
 
@@ -838,7 +854,7 @@ SetSegnoForCompaction(Relation rel,
 		pfree(total_tupcount);
 	}
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 	Assert(aoentry);
@@ -950,7 +966,7 @@ SetSegnoForCompaction(Relation rel,
 						  RelationGetRelationName(rel), RelationGetRelid(rel))));
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 
 	Assert(usesegno >= 0 || usesegno == APPENDONLY_COMPACTION_SEGNO_INVALID);
 
@@ -1000,7 +1016,7 @@ SetSegnoForCompactionInsert(Relation rel,
 					  "relation \"%s\" (%d)",
 					  RelationGetRelationName(rel), RelationGetRelid(rel))));
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 	Assert(aoentry);
@@ -1051,7 +1067,7 @@ SetSegnoForCompactionInsert(Relation rel,
 
 	if (!segno_chosen)
 	{
-		LWLockRelease(AOSegFileLock);
+		release_lightweight_lock();
 		ereport(ERROR, (errmsg("could not find segment file to use for "
 							   "inserting into relation %s (%d).",
 							   RelationGetRelationName(rel), RelationGetRelid(rel))));
@@ -1062,7 +1078,7 @@ SetSegnoForCompactionInsert(Relation rel,
 	aoentry->relsegfiles[usesegno].state = INSERT_USE;
 	aoentry->relsegfiles[usesegno].xid = CurrentXid;
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 	appendOnlyInsertXact = true;
 
 	Assert(usesegno >= 0);
@@ -1141,7 +1157,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 							  "relation \"%s\" (%d) ",
 							  RelationGetRelationName(rel), RelationGetRelid(rel))));
 
-			LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+			acquire_lightweight_lock();
 
 			aoentry = AORelGetOrCreateHashEntry(RelationGetRelid(rel));
 			Assert(aoentry);
@@ -1210,7 +1226,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 
 			if (!segno_chosen)
 			{
-				LWLockRelease(AOSegFileLock);
+				release_lightweight_lock();
 				ereport(ERROR, (errmsg("could not find segment file to use for "
 									   "inserting into relation %s (%d).",
 									   RelationGetRelationName(rel), RelationGetRelid(rel))));
@@ -1220,7 +1236,7 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 			aoentry->relsegfiles[usesegno].state = INSERT_USE;
 			aoentry->relsegfiles[usesegno].xid = CurrentXid;
 
-			LWLockRelease(AOSegFileLock);
+			release_lightweight_lock();
 			appendOnlyInsertXact = true;
 
 			Assert(usesegno >= 0);
@@ -1401,7 +1417,7 @@ GetTotalTupleCountFromSegments(Relation parentrel,
  * dispatch cost increases as the number of segment becomes large.
  */
 static bool *
-GetFileSegStateInfoFromSegments(Relation parentrel)
+get_awaiting_drop_status_from_segments(Relation parentrel)
 {
 	StringInfoData sqlstmt;
 	Relation	aosegrel;
@@ -1452,7 +1468,23 @@ GetFileSegStateInfoFromSegments(Relation parentrel)
 
 	PG_TRY();
 	{
-		CdbDispatchCommand(sqlstmt.data, DF_WITH_SNAPSHOT, &cdb_pgresults);
+		/*
+		 * DF_NONE causes QEs to use SnapshotNow instead of our MVCC snapshot
+		 * to scan the aoseg table.  A lot can happen between the time we
+		 * acquired the MVCC snapshot and now.  Specifically, a transaction
+		 * that changed the state of an appendonly segment file may commit.  If
+		 * MVCC snapshot is used, effects of such a transaction may not be
+		 * visible.  SnapshotNow ensures the latest committed value of segment
+		 * file state is obtained from QEs.
+		 *
+		 * Note that the status is fetched from the segments only if the
+		 * AppendOnlyHash does not contain an entry for the table. As long as a
+		 * transaction that updates the state of an appendonly segment file on
+		 * segments (e.g. vacuum compaction) is in-progress, the AppendOnlyHash
+		 * is guaranteed to contain an entry for the AO table. Fetching the
+		 * state from segments is not needed in such a case.
+		 */
+		CdbDispatchCommand(sqlstmt.data, DF_NONE, &cdb_pgresults);
 
 		/* Restore userid */
 		SetUserIdAndContext(save_userid, save_secdefcxt);
@@ -1571,8 +1603,13 @@ UpdateMasterAosegTotalsFromSegments(Relation parentrel,
 
 			Assert(RelationIsAoCols(parentrel));
 
+			/* GPDB_94_MERGE_FIXME: We used to call this with SnapshotNow,
+			 * even though in the row-oriented case above, we use
+			 * appendOnlyMetaDataSnapshot. Was that on purpose?
+			 * I changed this to also use appendOnlyMetaDataSnapshot.
+			 */
 			seginfo = GetAOCSFileSegInfo(parentrel,
-										 SnapshotNow, qe_segno);
+										 appendOnlyMetaDataSnapshot, qe_segno);
 
 			if (seginfo !=NULL)
 			{
@@ -1616,6 +1653,7 @@ void
 UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 modcount_added)
 {
 	AORelHashEntry aoHashEntry = NULL;
+	Snapshot	appendOnlyMetaDataSnapshot;
 
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(segno >= 0);
@@ -1632,17 +1670,18 @@ UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 mod
 									  AccessExclusiveLock,
 									   /* dontWait */ false);
 
+	/*
+	 * Get the snapshot after locking the segment-file entry.
+	 */
+	appendOnlyMetaDataSnapshot = RegisterSnapshot(GetLatestSnapshot());
+
 	if (RelationIsAoRows(parentrel))
 	{
 		FileSegInfo *fsinfo;
 
 		/* get the information for the file segment we inserted into */
 
-		/*
-		 * Since we have an exclusive lock on the segment-file entry, we can
-		 * use SnapshotNow.
-		 */
-		fsinfo = GetFileSegInfo(parentrel, SnapshotNow, segno);
+		fsinfo = GetFileSegInfo(parentrel, appendOnlyMetaDataSnapshot, segno);
 		if (fsinfo == NULL)
 		{
 			InsertInitialSegnoEntry(parentrel, segno);
@@ -1666,9 +1705,8 @@ UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 mod
 		/* AO column store */
 		Assert(RelationIsAoCols(parentrel));
 
-		seginfo = GetAOCSFileSegInfo(
-									 parentrel,
-									 SnapshotNow,
+		seginfo = GetAOCSFileSegInfo(parentrel,
+									 appendOnlyMetaDataSnapshot,
 									 segno);
 
 		if (seginfo == NULL)
@@ -1692,6 +1730,8 @@ UpdateMasterAosegTotals(Relation parentrel, int segno, int64 tupcount, int64 mod
 	 */
 	aoHashEntry = AORelGetHashEntry(RelationGetRelid(parentrel));
 	aoHashEntry->relsegfiles[segno].tupsadded += tupcount;
+
+	UnregisterSnapshot(appendOnlyMetaDataSnapshot);
 }
 
 
@@ -1726,7 +1766,7 @@ AtCommit_AppendOnly(void)
 	/* We should have an XID if we modified AO tables */
 	Assert(CurrentXid != InvalidTransactionId);
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	/*
 	 * for each AO table hash entry
@@ -1784,7 +1824,7 @@ AtCommit_AppendOnly(void)
 		}
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 }
 
 /*
@@ -1816,7 +1856,7 @@ AtAbort_AppendOnly(void)
 
 	hash_seq_init(&status, AppendOnlyHash);
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	/*
 	 * for each AO table hash entry
@@ -1826,7 +1866,7 @@ AtAbort_AppendOnly(void)
 		/*
 		 * Only look at tables that are marked in use currently
 		 */
-		if (aoentry->txns_using_rel == 0)
+		if (!is_entry_in_use_by_other_transactions(aoentry))
 		{
 			continue;
 		}
@@ -1846,12 +1886,6 @@ AtAbort_AppendOnly(void)
 			}
 			/* bingo! */
 
-			Assert(segfilestat->state == INSERT_USE ||
-				   segfilestat->state == COMPACTION_USE ||
-				   segfilestat->state == DROP_USE ||
-				   segfilestat->state == PSEUDO_COMPACTION_USE ||
-				   segfilestat->state == COMPACTED_DROP_SKIPPED);
-
 			ereportif(Debug_appendonly_print_segfile_choice, LOG,
 					  (errmsg("AtAbort_AppendOnly: found a segno that inserted in our txn for "
 							  "table %d. Cleaning segno %d tupcount: old "
@@ -1869,7 +1903,7 @@ AtAbort_AppendOnly(void)
 		}
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 }
 
 /*
@@ -1885,7 +1919,8 @@ AtEOXact_AppendOnly_StateTransition(AORelHashEntry aoentry, int segno,
 	AOSegfileState oldstate;
 
 	Assert(segfilestat);
-	Assert(segfilestat->state == INSERT_USE ||
+	Assert(segfilestat->aborted ||
+		   segfilestat->state == INSERT_USE ||
 		   segfilestat->state == COMPACTION_USE ||
 		   segfilestat->state == DROP_USE ||
 		   segfilestat->state == PSEUDO_COMPACTION_USE ||
@@ -1935,7 +1970,7 @@ AtEOXact_AppendOnly_StateTransition(AORelHashEntry aoentry, int segno,
 	}
 	else
 	{
-		Assert(false);
+		Assert(segfilestat->aborted);
 	}
 
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
@@ -1959,7 +1994,7 @@ AtEOXact_AppendOnly_Relation(AORelHashEntry aoentry, TransactionId currentXid)
 	/*
 	 * Only look at tables that are marked in use currently
 	 */
-	if (aoentry->txns_using_rel == 0)
+	if (!is_entry_in_use_by_other_transactions(aoentry))
 	{
 		return;
 	}
@@ -1999,7 +2034,7 @@ AtEOXact_AppendOnly_Relation(AORelHashEntry aoentry, TransactionId currentXid)
 		 * hash-table gets full. So perform the same here if the above GUC is
 		 * set.
 		 */
-		if (aoentry->txns_using_rel == 0)
+		if (!is_entry_in_use_by_other_transactions(aoentry))
 		{
 			AORelRemoveHashEntry(aoentry->relid);
 		}
@@ -2034,7 +2069,7 @@ AtEOXact_AppendOnly(void)
 
 	hash_seq_init(&status, AppendOnlyHash);
 
-	LWLockAcquire(AOSegFileLock, LW_EXCLUSIVE);
+	acquire_lightweight_lock();
 
 	/*
 	 * for each AO table hash entry
@@ -2044,7 +2079,68 @@ AtEOXact_AppendOnly(void)
 		AtEOXact_AppendOnly_Relation(aoentry, CurrentXid);
 	}
 
-	LWLockRelease(AOSegFileLock);
+	release_lightweight_lock();
 
 	appendOnlyInsertXact = false;
 }
+
+
+/*
+ * Fetches a record from the in memory AO Rel Hash
+ *
+ * For external use. Use `AORelGetHashEntry` for
+ * internal access to an AO hash entry.
+ */
+void
+GpFetchEntryFromAppendOnlyHash(Oid relid, AORelHashEntry foundAoEntry) {
+	acquire_lightweight_lock();
+	AORelHashEntry aoentry = AORelGetHashEntry(relid);
+	memcpy(foundAoEntry, aoentry, sizeof(AORelHashEntryData));
+	release_lightweight_lock();
+}
+
+
+static void successfully_removed_ao_entry(Oid relid) {
+	elog(NOTICE, "AO entry removed from cache for %d", relid);
+}
+
+static void ao_entry_not_in_cache(Oid relid) {
+	elog(NOTICE, "AO entry does not exist in cache for %d", relid);
+}
+
+static void entry_in_use_error(Oid relid, int numberOfUsages) {
+	elog(ERROR, "relid %d is used by %d transactions, cannot remove it yet",
+	     relid, numberOfUsages);
+}
+
+/*
+ * Remove an entry from the Append-only hash
+ *
+ * For external use. Use `AORelRemoveHashEntry`
+ * for internal removal of an AO hash entry.
+ */
+void
+GpRemoveEntryFromAppendOnlyHash(Oid relid) {
+	bool removeWasSuccess;
+	AORelHashEntry aoentry;
+
+	acquire_lightweight_lock();
+
+	aoentry = AORelGetHashEntry(relid);
+
+	if (is_entry_in_use_by_other_transactions(aoentry)) {
+		release_lightweight_lock();
+		entry_in_use_error(relid, aoentry->txns_using_rel);
+		return;
+	}
+
+	removeWasSuccess = AORelRemoveHashEntry(relid);
+
+	release_lightweight_lock();
+
+	if (removeWasSuccess)
+		successfully_removed_ao_entry(relid);
+	else
+		ao_entry_not_in_cache(relid);
+}
+

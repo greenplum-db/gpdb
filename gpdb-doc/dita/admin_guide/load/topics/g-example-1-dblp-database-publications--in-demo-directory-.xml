@@ -23,7 +23,7 @@
       <p>The goal is to import these <codeph>&lt;mastersthesis&gt;</codeph> and
             <codeph>&lt;phdthesis&gt;</codeph> records into the Greenplum Database. The sample
          document, <i>dblp.xml</i>, is about 130MB in size uncompressed. The input contains no tabs,
-         so the relevent information can be converted into tab-delimited records as follows:</p>
+         so the relevant information can be converted into tab-delimited records as follows:</p>
       <codeblock>ms/Brown92 <i>tab</i> masters <i>tab</i> Kurt P. Brown <i>tab</i> PRPL: A Database 
 Workload Specification Language, v1.3. <i>tab</i> 1992 <i>tab</i> Univ. of 
 Wisconsin-Madison <i>newline</i>

@@ -5,7 +5,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -42,6 +42,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbexplain.h"
+#include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 
 static void ExecHashIncreaseNumBatches(HashJoinTable hashtable);
@@ -281,7 +282,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	ListCell   *ho;
 	MemoryContext oldcxt;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	Hash *node = (Hash *) hashState->ps.plan;
 
@@ -418,7 +419,7 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 
 	/*
 	 * Set up for skew optimization, if possible and there's a need for more
-	 * than one batch.	(In a one-batch join, there's no point in it.)
+	 * than one batch.  (In a one-batch join, there's no point in it.)
 	 */
 	if (nbatch > 1)
 		ExecHashBuildSkewHash(hashtable, node, num_skew_mcvs);
@@ -472,7 +473,7 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 
 	/*
 	 * Estimate tupsize based on footprint of tuple in hashtable... note this
-	 * does not allow for any palloc overhead.	The manipulations of spaceUsed
+	 * does not allow for any palloc overhead.  The manipulations of spaceUsed
 	 * don't count palloc overhead either.
 	 */
 	tupsize = ExecHashRowSize(tupwidth);
@@ -522,7 +523,7 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	/*
 	 * Set nbuckets to achieve an average bucket load of gp_hashjoin_tuples_per_bucket when
 	 * memory is filled.  Set nbatch to the smallest power of 2 that appears
-	 * sufficient.	The Min() steps limit the results so that the pointer
+	 * sufficient.  The Min() steps limit the results so that the pointer
 	 * arrays we'll try to allocate do not exceed work_mem.
 	 */
 	max_pointers = (operatorMemKB * 1024L) / sizeof(void *);
@@ -543,8 +544,8 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 
 		/*
 		 * Both nbuckets and nbatch must be powers of 2 to make
-		 * ExecHashGetBucketAndBatch fast.	We already fixed nbatch; now inflate
-		 * nbuckets to the next larger power of 2.	We also force nbuckets to not
+		 * ExecHashGetBucketAndBatch fast.  We already fixed nbatch; now inflate
+		 * nbuckets to the next larger power of 2.  We also force nbuckets to not
 		 * be real small, by starting the search at 2^10.
 		 */
 		i = 10;
@@ -621,8 +622,8 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 
 		/*
 		 * Both nbuckets and nbatch must be powers of 2 to make
-		 * ExecHashGetBucketAndBatch fast.	We already fixed nbatch; now inflate
-		 * nbuckets to the next larger power of 2.	We also force nbuckets to not
+		 * ExecHashGetBucketAndBatch fast.  We already fixed nbatch; now inflate
+		 * nbuckets to the next larger power of 2.  We also force nbuckets to not
 		 * be real small, by starting the search at 2^10.  (Note: above we made
 		 * sure that nbuckets is not more than INT_MAX / 2, so this loop cannot
 		 * overflow, nor can the final shift to recalculate nbuckets.)
@@ -654,7 +655,7 @@ ExecHashTableDestroy(HashState *hashState, HashJoinTable hashtable)
 	Assert(hashtable);
 	Assert(!hashtable->eagerlyReleased);
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 
 	/*
@@ -879,7 +880,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 	int			batchno;
 	int			hashTupleSize;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	PlanState *ps = &hashState->ps;
 
@@ -984,7 +985,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 	MemoryContext oldContext;
 	bool		result = true;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 
 	Assert(hashkeys_null);
@@ -1033,7 +1034,7 @@ ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
 		 * the hash support function as strict even if the operator is not.
 		 *
 		 * Note: currently, all hashjoinable operators must be strict since
-		 * the hash index AM assumes that.	However, it takes so little extra
+		 * the hash index AM assumes that.  However, it takes so little extra
 		 * code here to allow non-strict that we may as well do it.
 		 */
 		if (isNull)
@@ -1125,7 +1126,7 @@ ExecScanHashBucket(HashState *hashState, HashJoinState *hjstate,
 	HashJoinTuple hashTuple = hjstate->hj_CurTuple;
 	uint32		hashvalue = hjstate->hj_CurHashValue;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	/*
 	 * hj_CurTuple is the address of the tuple last returned from the current
@@ -1275,7 +1276,7 @@ ExecHashTableReset(HashState *hashState, HashJoinTable hashtable)
 	MemoryContext oldcxt;
 	int			nbuckets = hashtable->nbuckets;
 
-	START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+	START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
 	{
 	Assert(!hashtable->eagerlyReleased);
 
@@ -1350,7 +1351,7 @@ ExecHashTableExplainInit(HashState *hashState, HashJoinState *hjstate,
 	MemoryContext oldcxt;
 	int			nbatch = Max(hashtable->nbatch, 1);
 
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
     {
     /* Switch to a memory context that survives until ExecutorEnd. */
     oldcxt = MemoryContextSwitchTo(hjstate->js.ps.state->es_query_cxt);
@@ -1481,16 +1482,15 @@ ExecHashTableExplainEnd(PlanState *planstate, struct StringInfoData *buf)
     {
         appendStringInfo(buf,
                          "Hash chain length"
-                         " %.1f avg, %.0f max, using %d of %d buckets.  ",
+                         " %.1f avg, %.0f max, using %d of %d buckets.",
                          cdbexplain_agg_avg(&stats->chainlength),
                          stats->chainlength.vmax,
                          stats->chainlength.vcnt,
                          total_buckets);
         if (hashtable->nbatch > stats->nonemptybatches)
             appendStringInfo(buf,
-                             "Skipped %d empty batches.",
+                             "  Skipped %d empty batches.",
                              hashtable->nbatch - stats->nonemptybatches);
-        appendStringInfoChar(buf, '\n');
     }
 }                               /* ExecHashTableExplainEnd */
 
@@ -1630,7 +1630,7 @@ ExecHashTableExplainBatchEnd(HashState *hashState, HashJoinTable hashtable)
     HashJoinBatchStats *batchstats = &stats->batchstats[curbatch];
     int                 i;
     
-    START_MEMORY_ACCOUNT(hashState->ps.plan->memoryAccountId);
+    START_MEMORY_ACCOUNT(hashState->ps.memoryAccountId);
     {
     Assert(!hashtable->eagerlyReleased);
 
@@ -1835,7 +1835,7 @@ ExecHashBuildSkewHash(HashJoinTable hashtable, Hash *node, int mcvsToUse)
 			/*
 			 * While we have not hit a hole in the hashtable and have not hit
 			 * the desired bucket, we have collided with some previous hash
-			 * value, so try the next bucket location.	NB: this code must
+			 * value, so try the next bucket location.  NB: this code must
 			 * match ExecHashGetSkewBucket.
 			 */
 			bucket = hashvalue & (nbuckets - 1);
@@ -2036,7 +2036,7 @@ ExecHashRemoveNextSkewBucket(HashState *hashState, HashJoinTable hashtable)
 	 * NOTE: this is not nearly as simple as it looks on the surface, because
 	 * of the possibility of collisions in the hashtable.  Suppose that hash
 	 * values A and B collide at a particular hashtable entry, and that A was
-	 * entered first so B gets shifted to a different table entry.	If we were
+	 * entered first so B gets shifted to a different table entry.  If we were
 	 * to remove A first then ExecHashGetSkewBucket would mistakenly start
 	 * reporting that B is not in the hashtable, because it would hit the NULL
 	 * before finding B.  However, we always remove entries in the reverse

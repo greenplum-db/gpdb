@@ -135,7 +135,7 @@ GetCompressionImplementation(char *comptype)
 				NameGetDatum(&compname));
 
 	scan = systable_beginscan(comprel, CompressionCompnameIndexId, true,
-							  SnapshotNow, 1, &scankey);
+							  NULL, 1, &scankey);
 	tuple = systable_getnext(scan);
 	if (!HeapTupleIsValid(tuple))
 		ereport(ERROR,

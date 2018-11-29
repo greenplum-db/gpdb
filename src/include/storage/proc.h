@@ -6,7 +6,7 @@
  *
  * Portions Copyright (c) 2006-2008, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/storage/proc.h
@@ -29,7 +29,7 @@
 
 /*
  * Each backend advertises up to PGPROC_MAX_CACHED_SUBXIDS TransactionIds
- * for non-aborted subtransactions of its current top transaction.	These
+ * for non-aborted subtransactions of its current top transaction.  These
  * have to be treated as running XIDs by other backends.
  *
  * We also keep track of whether the cache overflowed (ie, the transaction has
@@ -51,10 +51,13 @@ struct XidCache
 #define		PROC_IN_VACUUM		0x02	/* currently running lazy vacuum */
 #endif
 #define		PROC_IN_ANALYZE		0x04	/* currently running analyze */
-#define		PROC_VACUUM_FOR_WRAPAROUND 0x08		/* set by autovac only */
+#define		PROC_VACUUM_FOR_WRAPAROUND	0x08	/* set by autovac only */
+#define		PROC_IN_LOGICAL_DECODING	0x10	/* currently doing logical
+												 * decoding */
 
 /* flags reset at EOXact */
-#define		PROC_VACUUM_STATE_MASK (0x0E)
+#define		PROC_VACUUM_STATE_MASK \
+	(/* PROC_IN_VACUUM | */ PROC_IN_ANALYZE | PROC_VACUUM_FOR_WRAPAROUND)
 
 /*
  * We allow a small number of "weak" relation locks (AccesShareLock,
@@ -68,7 +71,7 @@ struct XidCache
  * Each backend has a PGPROC struct in shared memory.  There is also a list of
  * currently-unused PGPROC structs that will be reallocated to new backends.
  *
- * links: list link for any list the PGPROC is in.	When waiting for a lock,
+ * links: list link for any list the PGPROC is in.  When waiting for a lock,
  * the PGPROC is linked into that lock's waitProcs queue.  A recycled PGPROC
  * is linked into ProcGlobal's freeProcs list.
  *
@@ -174,8 +177,8 @@ struct PGPROC
    							 * NULL indicates the resource group is
 							 * locked for drop. */
 
-	/* Per-backend LWLock.	Protects fields below. */
-	LWLockId	backendLock;	/* protects the fields below */
+	/* Per-backend LWLock.  Protects fields below. */
+	LWLock	   *backendLock;	/* protects the fields below */
 
 	/* Lock manager data, recording fast-path locks taken by this backend. */
 	uint64		fpLockBits;		/* lock modes held for each fast-path slot */
@@ -197,7 +200,7 @@ extern PGDLLIMPORT PGPROC *lockHolderProcPtr;
 
 /*
  * Prior to PostgreSQL 9.2, the fields below were stored as part of the
- * PGPROC.	However, benchmarking revealed that packing these particular
+ * PGPROC.  However, benchmarking revealed that packing these particular
  * members into a separate array as tightly as possible sped up GetSnapshotData
  * considerably on systems with many CPU cores, by reducing the number of
  * cache lines needing to be fetched.  Thus, think very carefully before adding

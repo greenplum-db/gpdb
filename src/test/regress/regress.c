@@ -7,7 +7,9 @@
 #include <float.h>
 #include <math.h>
 
+#include "access/htup_details.h"
 #include "access/transam.h"
+#include "access/tuptoaster.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
 #include "commands/sequence.h"
@@ -18,6 +20,8 @@
 #include "utils/builtins.h"
 #include "utils/geo_decls.h"
 #include "utils/rel.h"
+#include "utils/typcache.h"
+#include "utils/memutils.h"
 
 
 #define P_MAXDIG 12
@@ -25,24 +29,10 @@
 #define RDELIM			')'
 #define DELIM			','
 
-extern Datum regress_dist_ptpath(PG_FUNCTION_ARGS);
-extern Datum regress_path_dist(PG_FUNCTION_ARGS);
 extern PATH *poly2path(POLYGON *poly);
-extern Datum interpt_pp(PG_FUNCTION_ARGS);
 extern void regress_lseg_construct(LSEG *lseg, Point *pt1, Point *pt2);
-extern Datum overpaid(PG_FUNCTION_ARGS);
-extern Datum boxarea(PG_FUNCTION_ARGS);
 extern char *reverse_name(char *string);
 extern int	oldstyle_length(int n, text *t);
-extern Datum int44in(PG_FUNCTION_ARGS);
-extern Datum int44out(PG_FUNCTION_ARGS);
-
-/*
- * GPDB_94_MERGE_FIXME: test_atomic_ops was backported from 9.5. This prototype
- * doesn't appear in the upstream version, because the PG_FUNCTION_INFO_V1()
- * macro includes it since 9.4.
- */
-extern Datum test_atomic_ops(PG_FUNCTION_ARGS);
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
@@ -235,11 +225,10 @@ typedef struct
 {
 	Point		center;
 	double		radius;
-}	WIDGET;
+} WIDGET;
 
 WIDGET	   *widget_in(char *str);
-char	   *widget_out(WIDGET * widget);
-extern Datum pt_in_widget(PG_FUNCTION_ARGS);
+char	   *widget_out(WIDGET *widget);
 
 #define NARGS	3
 
@@ -270,17 +259,13 @@ widget_in(char *str)
 }
 
 char *
-widget_out(WIDGET * widget)
+widget_out(WIDGET *widget)
 {
-	char	   *result;
-
 	if (widget == NULL)
 		return NULL;
 
-	result = (char *) palloc(60);
-	sprintf(result, "(%g,%g,%g)",
-			widget->center.x, widget->center.y, widget->radius);
-	return result;
+	return psprintf("(%g,%g,%g)",
+					widget->center.x, widget->center.y, widget->radius);
 }
 
 PG_FUNCTION_INFO_V1(pt_in_widget);
@@ -348,7 +333,6 @@ static int	fd17b_level = 0;
 static int	fd17a_level = 0;
 static bool fd17b_recursion = true;
 static bool fd17a_recursion = true;
-extern Datum funny_dup17(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(funny_dup17);
 
@@ -459,9 +443,6 @@ funny_dup17(PG_FUNCTION_ARGS)
 
 	return PointerGetDatum(tuple);
 }
-
-extern Datum ttdummy(PG_FUNCTION_ARGS);
-extern Datum set_ttdummy(PG_FUNCTION_ARGS);
 
 #define TTDUMMY_INFINITY	999999
 
@@ -753,6 +734,105 @@ int44out(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(result);
 }
 
+PG_FUNCTION_INFO_V1(make_tuple_indirect);
+Datum
+make_tuple_indirect(PG_FUNCTION_ARGS)
+{
+	HeapTupleHeader rec = PG_GETARG_HEAPTUPLEHEADER(0);
+	HeapTupleData tuple;
+	int			ncolumns;
+	Datum	   *values;
+	bool	   *nulls;
+
+	Oid			tupType;
+	int32		tupTypmod;
+	TupleDesc	tupdesc;
+
+	HeapTuple	newtup;
+
+	int			i;
+
+	MemoryContext old_context;
+
+	/* Extract type info from the tuple itself */
+	tupType = HeapTupleHeaderGetTypeId(rec);
+	tupTypmod = HeapTupleHeaderGetTypMod(rec);
+	tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
+	ncolumns = tupdesc->natts;
+
+	/* Build a temporary HeapTuple control structure */
+	tuple.t_len = HeapTupleHeaderGetDatumLength(rec);
+	ItemPointerSetInvalid(&(tuple.t_self));
+#if 0
+	tuple.t_tableOid = InvalidOid;
+#endif
+	tuple.t_data = rec;
+
+	values = (Datum *) palloc(ncolumns * sizeof(Datum));
+	nulls = (bool *) palloc(ncolumns * sizeof(bool));
+
+	heap_deform_tuple(&tuple, tupdesc, values, nulls);
+
+	old_context = MemoryContextSwitchTo(TopTransactionContext);
+
+	for (i = 0; i < ncolumns; i++)
+	{
+		struct varlena *attr;
+		struct varlena *new_attr;
+		struct varatt_indirect redirect_pointer;
+
+		/* only work on existing, not-null varlenas */
+		if (tupdesc->attrs[i]->attisdropped ||
+			nulls[i] ||
+			tupdesc->attrs[i]->attlen != -1)
+			continue;
+
+		attr = (struct varlena *) DatumGetPointer(values[i]);
+
+		/* don't recursively indirect */
+		if (VARATT_IS_EXTERNAL_INDIRECT(attr))
+			continue;
+
+		/* copy datum, so it still lives later */
+		if (VARATT_IS_EXTERNAL_ONDISK(attr))
+			attr = heap_tuple_fetch_attr(attr);
+		else
+		{
+			struct varlena *oldattr = attr;
+
+			attr = palloc0(VARSIZE_ANY(oldattr));
+			memcpy(attr, oldattr, VARSIZE_ANY(oldattr));
+		}
+
+		/* build indirection Datum */
+		new_attr = (struct varlena *) palloc0(INDIRECT_POINTER_SIZE);
+		redirect_pointer.pointer = attr;
+		SET_VARTAG_EXTERNAL(new_attr, VARTAG_INDIRECT);
+		memcpy(VARDATA_EXTERNAL(new_attr), &redirect_pointer,
+			   sizeof(redirect_pointer));
+
+		values[i] = PointerGetDatum(new_attr);
+	}
+
+	newtup = heap_form_tuple(tupdesc, values, nulls);
+	pfree(values);
+	pfree(nulls);
+	ReleaseTupleDesc(tupdesc);
+
+	MemoryContextSwitchTo(old_context);
+
+	/*
+	 * We intentionally don't use PG_RETURN_HEAPTUPLEHEADER here, because that
+	 * would cause the indirect toast pointers to be flattened out of the
+	 * tuple immediately, rendering subsequent testing irrelevant.  So just
+	 * return the HeapTupleHeader pointer as-is.  This violates the general
+	 * rule that composite Datums shouldn't contain toast pointers, but so
+	 * long as the regression test scripts don't insert the result of this
+	 * function into a container type (record, array, etc) it should be OK.
+	 */
+	PG_RETURN_POINTER(newtup->t_data);
+}
+
 #ifndef PG_HAVE_ATOMIC_FLAG_SIMULATION
 static void
 test_atomic_flag(void)
@@ -990,4 +1070,3 @@ test_atomic_ops(PG_FUNCTION_ARGS)
 
 	PG_RETURN_BOOL(true);
 }
-

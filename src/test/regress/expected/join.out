@@ -2129,7 +2129,6 @@ on (x1 = xx1) where (xx2 is not null);
 -- regression test: check for bug with propagation of implied equality
 -- to outside an IN
 --
-analyze tenk1;		-- ensure we get consistent plans here
 select count(*) from tenk1 a where unique1 in
   (select unique1 from tenk1 b join tenk1 c using (unique1)
    where b.unique2 = 42);
@@ -2544,16 +2543,16 @@ SELECT qq, unique1
   ( SELECT COALESCE(q2, -1) AS qq FROM int8_tbl b ) AS ss2
   USING (qq)
   INNER JOIN tenk1 c ON qq = unique2;
-                                              QUERY PLAN                                              
-------------------------------------------------------------------------------------------------------
+                                              QUERY PLAN                                               
+--------------------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Hash Join
-         Hash Cond: c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint)))
+         Hash Cond: (c.unique2 = COALESCE((COALESCE(a.q1, 0::bigint)), (COALESCE(b.q2, (-1)::bigint))))
          ->  Seq Scan on tenk1 c
          ->  Hash
                ->  Broadcast Motion 3:3  (slice3; segments: 3)
                      ->  Hash Full Join
-                           Hash Cond: COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint)
+                           Hash Cond: (COALESCE(a.q1, 0::bigint) = COALESCE(b.q2, (-1)::bigint))
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                  Hash Key: COALESCE(a.q1, 0::bigint)
                                  ->  Seq Scan on int8_tbl a
@@ -2579,6 +2578,85 @@ SELECT qq, unique1
 (3 rows)
 
 --
+-- nested nestloops can require nested PlaceHolderVars
+--
+create temp table nt1 (
+  id int primary key,
+  a1 boolean,
+  a2 boolean
+);
+create temp table nt2 (
+  id int primary key,
+  nt1_id int,
+  b1 boolean,
+  b2 boolean,
+  foreign key (nt1_id) references nt1(id)
+);
+create temp table nt3 (
+  id int primary key,
+  nt2_id int,
+  c1 boolean,
+  foreign key (nt2_id) references nt2(id)
+);
+insert into nt1 values (1,true,true);
+insert into nt1 values (2,true,false);
+insert into nt1 values (3,false,false);
+insert into nt2 values (1,1,true,true);
+insert into nt2 values (2,2,true,false);
+insert into nt2 values (3,3,false,false);
+insert into nt3 values (1,1,true);
+insert into nt3 values (2,2,false);
+insert into nt3 values (3,3,true);
+explain (costs off)
+select nt3.id
+from nt3 as nt3
+  left join
+    (select nt2.*, (nt2.b1 and ss1.a3) AS b3
+     from nt2 as nt2
+       left join
+         (select nt1.*, (nt1.id is not null) as a3 from nt1) as ss1
+         on ss1.id = nt2.nt1_id
+    ) as ss2
+    on ss2.id = nt3.nt2_id
+where nt3.id = 1 and ss2.b3;
+                               QUERY PLAN                               
+------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Join
+         Hash Cond: (nt2.id = nt3.nt2_id)
+         ->  Redistribute Motion 3:3  (slice2; segments: 3)
+               Hash Key: 1
+               ->  Hash Join
+                     Hash Cond: (nt2.nt1_id = nt1.id)
+                     Join Filter: (nt2.b1 AND ((nt1.id IS NOT NULL)))
+                     ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                           Hash Key: nt2.nt1_id
+                           ->  Seq Scan on nt2
+                     ->  Hash
+                           ->  Seq Scan on nt1
+         ->  Hash
+               ->  Seq Scan on nt3
+                     Filter: (id = 1)
+ Optimizer: legacy query optimizer
+(17 rows)
+
+select nt3.id
+from nt3 as nt3
+  left join
+    (select nt2.*, (nt2.b1 and ss1.a3) AS b3
+     from nt2 as nt2
+       left join
+         (select nt1.*, (nt1.id is not null) as a3 from nt1) as ss1
+         on ss1.id = nt2.nt1_id
+    ) as ss2
+    on ss2.id = nt3.nt2_id
+where nt3.id = 1 and ss2.b3;
+ id 
+----
+  1
+(1 row)
+
+--
 -- test case where a PlaceHolderVar is propagated into a subquery
 --
 explain (costs off)
@@ -2596,8 +2674,8 @@ order by 1,2;
    ->  Sort
          Sort Key: t1.q1, t1.q2
          ->  Hash Left Join
-               Hash Cond: t1.q2 = t2.q1
-               Filter: 1 = ((SubPlan 1))
+               Hash Cond: (t1.q2 = t2.q1)
+               Filter: (1 = (SubPlan 1))
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: t1.q2
                      ->  Seq Scan on int8_tbl t1
@@ -2607,7 +2685,7 @@ order by 1,2;
                  ->  Limit
                        ->  Limit
                              ->  Result
-                                   One-Time Filter: (42) IS NOT NULL
+                                   One-Time Filter: ((42) IS NOT NULL)
                                    ->  Result
                                          ->  Materialize
                                                ->  Broadcast Motion 3:3  (slice1; segments: 3)
@@ -2712,24 +2790,22 @@ select * from
   int4(sin(1)) q1,
   int4(sin(0)) q2
 where q1 = thousand or q2 = thousand;
-                                QUERY PLAN                                 
----------------------------------------------------------------------------
+                                 QUERY PLAN                                  
+-----------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Nested Loop
-         Join Filter: q1.q1 = tenk1.thousand OR q2.q2 = tenk1.thousand
+         Join Filter: ((q1.q1 = tenk1.thousand) OR (q2.q2 = tenk1.thousand))
          ->  Nested Loop
                ->  Hash Join
-                     Hash Cond: tenk1.twothousand = int4_tbl.f1
+                     Hash Cond: (tenk1.twothousand = int4_tbl.f1)
                      ->  Seq Scan on tenk1
                      ->  Hash
                            ->  Broadcast Motion 3:3  (slice1; segments: 3)
                                  ->  Seq Scan on int4_tbl
-               ->  Materialize
-                     ->  Function Scan on q1
-         ->  Materialize
-               ->  Function Scan on q2
+               ->  Function Scan on q1
+         ->  Function Scan on q2
  Optimizer: legacy query optimizer
-(15 rows)
+(13 rows)
 
 explain (costs off)
 select * from
@@ -2741,20 +2817,57 @@ where thousand = (q1 + q2);
 ---------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Join
-         Hash Cond: tenk1.twothousand = int4_tbl.f1
+         Hash Cond: (tenk1.twothousand = int4_tbl.f1)
          ->  Hash Join
-               Hash Cond: tenk1.thousand = (q1.q1 + q2.q2)
+               Hash Cond: (tenk1.thousand = (q1.q1 + q2.q2))
                ->  Seq Scan on tenk1
                ->  Hash
                      ->  Nested Loop
                            ->  Function Scan on q1
-                           ->  Materialize
-                                 ->  Function Scan on q2
+                           ->  Function Scan on q2
          ->  Hash
                ->  Broadcast Motion 3:3  (slice1; segments: 3)
                      ->  Seq Scan on int4_tbl
  Optimizer: legacy query optimizer
-(15 rows)
+(14 rows)
+
+--
+-- test extraction of restriction OR clauses from join OR clause
+-- (we used to only do this for indexable clauses)
+--
+explain (costs off)
+select * from tenk1 a join tenk1 b on
+  (a.unique1 = 1 and b.unique1 = 2) or (a.unique2 = 3 and b.hundred = 4);
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         Join Filter: (((a.unique1 = 1) AND (b.unique1 = 2)) OR ((a.unique2 = 3) AND (b.hundred = 4)))
+         ->  Seq Scan on tenk1 b
+               Filter: ((unique1 = 2) OR (hundred = 4))
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on tenk1 a
+                           Filter: ((unique1 = 1) OR (unique2 = 3))
+ Optimizer: legacy query optimizer
+(10 rows)
+
+explain (costs off)
+select * from tenk1 a join tenk1 b on
+  (a.unique1 = 1 and b.unique1 = 2) or (a.unique2 = 3 and b.ten = 4);
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   ->  Nested Loop
+         Join Filter: (((a.unique1 = 1) AND (b.unique1 = 2)) OR ((a.unique2 = 3) AND (b.ten = 4)))
+         ->  Seq Scan on tenk1 b
+               Filter: ((unique1 = 2) OR (ten = 4))
+         ->  Materialize
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                     ->  Seq Scan on tenk1 a
+                           Filter: ((unique1 = 1) OR (unique2 = 3))
+ Optimizer: legacy query optimizer
+(10 rows)
 
 --
 -- test placement of movable quals in a parameterized join tree
@@ -2768,11 +2881,11 @@ where t1.unique1 = 1;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Hash Right Join
-         Hash Cond: t2.hundred = t1.hundred AND t3.ten = t1.ten
+         Hash Cond: ((t2.hundred = t1.hundred) AND (t3.ten = t1.ten))
          ->  Redistribute Motion 3:3  (slice3; segments: 3)
                Hash Key: 1
                ->  Hash Join
-                     Hash Cond: t2.thousand = t3.unique2
+                     Hash Cond: (t2.thousand = t3.unique2)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Hash Key: t2.thousand
                            ->  Seq Scan on tenk1 t2
@@ -2782,7 +2895,7 @@ where t1.unique1 = 1;
                                  ->  Seq Scan on tenk1 t3
          ->  Hash
                ->  Index Scan using tenk1_unique1 on tenk1 t1
-                     Index Cond: unique1 = 1
+                     Index Cond: (unique1 = 1)
  Optimizer: legacy query optimizer
 (18 rows)
 
@@ -2795,12 +2908,12 @@ where t1.unique1 = 1;
 ------------------------------------------------------------------------------
  Gather Motion 3:1  (slice4; segments: 3)
    ->  Hash Right Join
-         Hash Cond: t2.hundred = t1.hundred
-         Join Filter: (t1.ten + t2.ten) = t3.ten
+         Hash Cond: (t2.hundred = t1.hundred)
+         Join Filter: ((t1.ten + t2.ten) = t3.ten)
          ->  Redistribute Motion 3:3  (slice3; segments: 3)
                Hash Key: 1
                ->  Hash Join
-                     Hash Cond: t2.thousand = t3.unique2
+                     Hash Cond: (t2.thousand = t3.unique2)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Hash Key: t2.thousand
                            ->  Seq Scan on tenk1 t2
@@ -2810,7 +2923,7 @@ where t1.unique1 = 1;
                                  ->  Seq Scan on tenk1 t3
          ->  Hash
                ->  Index Scan using tenk1_unique1 on tenk1 t1
-                     Index Cond: unique1 = 1
+                     Index Cond: (unique1 = 1)
  Optimizer: legacy query optimizer
 (19 rows)
 
@@ -2825,8 +2938,8 @@ select count(*) from
    ->  Gather Motion 3:1  (slice5; segments: 3)
          ->  Aggregate
                ->  Hash Right Join
-                     Hash Cond: c.thousand = a.thousand
-                     Join Filter: a.unique2 = b.unique1
+                     Hash Cond: (c.thousand = a.thousand)
+                     Join Filter: (a.unique2 = b.unique1)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Hash Key: c.thousand
                            ->  Seq Scan on tenk1 c
@@ -2834,13 +2947,13 @@ select count(*) from
                            ->  Redistribute Motion 3:3  (slice4; segments: 3)
                                  Hash Key: a.thousand
                                  ->  Hash Join
-                                       Hash Cond: a.unique1 = b.unique2
+                                       Hash Cond: (a.unique1 = b.unique2)
                                        ->  Seq Scan on tenk1 a
                                        ->  Hash
                                              ->  Redistribute Motion 3:3  (slice3; segments: 3)
                                                    Hash Key: b.unique2
                                                    ->  Hash Join
-                                                         Hash Cond: b.thousand = int4_tbl.f1
+                                                         Hash Cond: (b.thousand = int4_tbl.f1)
                                                          ->  Seq Scan on tenk1 b
                                                          ->  Hash
                                                                ->  Broadcast Motion 3:3  (slice2; segments: 3)
@@ -2871,12 +2984,12 @@ select b.unique1 from
    ->  Sort
          Sort Key: b.unique1
          ->  Hash Right Join
-               Hash Cond: b.tenthous = i2.f1
+               Hash Cond: (b.tenthous = i2.f1)
                ->  Redistribute Motion 3:3  (slice5; segments: 3)
                      Hash Key: b.tenthous
                      ->  Hash Right Join
-                           Hash Cond: c.thousand = a.thousand
-                           Join Filter: b.unique1 = 42
+                           Hash Cond: (c.thousand = a.thousand)
+                           Join Filter: (b.unique1 = 42)
                            ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                  Hash Key: c.thousand
                                  ->  Seq Scan on tenk1 c
@@ -2884,13 +2997,13 @@ select b.unique1 from
                                  ->  Redistribute Motion 3:3  (slice4; segments: 3)
                                        Hash Key: a.thousand
                                        ->  Hash Join
-                                             Hash Cond: a.unique1 = b.unique2
+                                             Hash Cond: (a.unique1 = b.unique2)
                                              ->  Seq Scan on tenk1 a
                                              ->  Hash
                                                    ->  Redistribute Motion 3:3  (slice3; segments: 3)
                                                          Hash Key: b.unique2
                                                          ->  Hash Join
-                                                               Hash Cond: b.thousand = i1.f1
+                                                               Hash Cond: (b.thousand = i1.f1)
                                                                ->  Seq Scan on tenk1 b
                                                                ->  Hash
                                                                      ->  Broadcast Motion 3:3  (slice2; segments: 3)
@@ -2923,12 +3036,12 @@ select * from
 ) ss
 where fault = 122
 order by fault;
-                             QUERY PLAN                              
----------------------------------------------------------------------
+                              QUERY PLAN                               
+-----------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Right Join
-         Hash Cond: tenk1.unique2 = int8_tbl.q2
-         Filter: (COALESCE(tenk1.unique1, (-1)) + int8_tbl.q1) = 122
+         Hash Cond: (tenk1.unique2 = int8_tbl.q2)
+         Filter: ((COALESCE(tenk1.unique1, (-1)) + int8_tbl.q1) = 122)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: tenk1.unique2
                ->  Seq Scan on tenk1
@@ -2958,12 +3071,12 @@ explain (costs off)
 select q1, unique2, thousand, hundred
   from int8_tbl a left join tenk1 b on q1 = unique2
   where coalesce(thousand,123) = q1 and q1 = coalesce(hundred,123);
-                                      QUERY PLAN                                      
---------------------------------------------------------------------------------------
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Right Join
-         Hash Cond: b.unique2 = a.q1
-         Filter: COALESCE(b.thousand, 123) = a.q1 AND a.q1 = COALESCE(b.hundred, 123)
+         Hash Cond: (b.unique2 = a.q1)
+         Filter: ((COALESCE(b.thousand, 123) = a.q1) AND (a.q1 = COALESCE(b.hundred, 123)))
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: b.unique2
                ->  Seq Scan on tenk1 b
@@ -2983,12 +3096,12 @@ explain (costs off)
 select f1, unique2, case when unique2 is null then f1 else 0 end
   from int4_tbl a left join tenk1 b on f1 = unique2
   where (case when unique2 is null then f1 else 0 end) = 0;
-                              QUERY PLAN                              
-----------------------------------------------------------------------
+                                QUERY PLAN                                
+--------------------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Right Join
-         Hash Cond: b.unique2 = a.f1
-         Filter: CASE WHEN b.unique2 IS NULL THEN a.f1 ELSE 0 END = 0
+         Hash Cond: (b.unique2 = a.f1)
+         Filter: (CASE WHEN (b.unique2 IS NULL) THEN a.f1 ELSE 0 END = 0)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: b.unique2
                ->  Seq Scan on tenk1 b
@@ -3006,6 +3119,102 @@ select f1, unique2, case when unique2 is null then f1 else 0 end
 (1 row)
 
 --
+-- another case with equivalence clauses above outer joins (bug #8591)
+--
+explain (costs off)
+select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
+  from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
+  where a.unique2 = 5530 and coalesce(b.twothousand, a.twothousand) = 44;
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   ->  Hash Left Join
+         Hash Cond: (COALESCE(b.twothousand, a.twothousand) = c.unique2)
+         ->  Hash Right Join
+               Hash Cond: (b.thousand = a.unique1)
+               Filter: (COALESCE(b.twothousand, a.twothousand) = 44)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Hash Key: b.thousand
+                     ->  Seq Scan on tenk1 b
+               ->  Hash
+                     ->  Index Scan using tenk1_unique2 on tenk1 a
+                           Index Cond: (unique2 = 5530)
+         ->  Hash
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                     ->  Index Scan using tenk1_unique2 on tenk1 c
+                           Index Cond: (unique2 = 44)
+ Optimizer: legacy query optimizer
+(17 rows)
+
+select a.unique1, b.unique1, c.unique1, coalesce(b.twothousand, a.twothousand)
+  from tenk1 a left join tenk1 b on b.thousand = a.unique1                        left join tenk1 c on c.unique2 = coalesce(b.twothousand, a.twothousand)
+  where a.unique2 = 5530 and coalesce(b.twothousand, a.twothousand) = 44;
+ unique1 | unique1 | unique1 | coalesce 
+---------+---------+---------+----------
+(0 rows)
+
+--
+-- check handling of join aliases when flattening multiple levels of subquery
+--
+explain (verbose, costs off)
+select foo1.join_key as foo1_id, foo3.join_key AS foo3_id, bug_field from
+  (values (0),(1)) foo1(join_key)
+left join
+  (select join_key, bug_field from
+    (select ss1.join_key, ss1.bug_field from
+      (select f1 as join_key, 666 as bug_field from int4_tbl i1) ss1
+    ) foo2
+   left join
+    (select unique2 as join_key from tenk1 i2) ss2
+   using (join_key)
+  ) foo3
+using (join_key);
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Hash Right Join
+   Output: "*VALUES*".column1, i1.f1, (666)
+   Hash Cond: (i1.f1 = "*VALUES*".column1)
+   ->  Gather Motion 3:1  (slice2; segments: 3)
+         Output: i1.f1, (666)
+         ->  Hash Right Join
+               Output: i1.f1, 666
+               Hash Cond: (i2.unique2 = i1.f1)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)
+                     Output: i2.unique2, i2.unique1
+                     Hash Key: i2.unique2
+                     ->  Seq Scan on public.tenk1 i2
+                           Output: i2.unique2, i2.unique1
+               ->  Hash
+                     Output: i1.f1
+                     ->  Seq Scan on public.int4_tbl i1
+                           Output: i1.f1
+   ->  Hash
+         Output: "*VALUES*".column1
+         ->  Values Scan on "*VALUES*"
+               Output: "*VALUES*".column1
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(23 rows)
+
+select foo1.join_key as foo1_id, foo3.join_key AS foo3_id, bug_field from
+  (values (0),(1)) foo1(join_key)
+left join
+  (select join_key, bug_field from
+    (select ss1.join_key, ss1.bug_field from
+      (select f1 as join_key, 666 as bug_field from int4_tbl i1) ss1
+    ) foo2
+   left join
+    (select unique2 as join_key from tenk1 i2) ss2
+   using (join_key)
+  ) foo3
+using (join_key);
+ foo1_id | foo3_id | bug_field 
+---------+---------+-----------
+       0 |       0 |       666
+       1 |         |          
+(2 rows)
+
+--
 -- test ability to push constants through outer join clauses
 --
 explain (costs off)
@@ -3014,14 +3223,14 @@ explain (costs off)
 -------------------------------------------------------------
  Gather Motion 3:1  (slice2; segments: 3)
    ->  Hash Right Join
-         Hash Cond: b.unique2 = a.f1
+         Hash Cond: (b.unique2 = a.f1)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: 0
                ->  Index Scan using tenk1_unique2 on tenk1 b
-                     Index Cond: unique2 = 0
+                     Index Cond: (unique2 = 0)
          ->  Hash
                ->  Seq Scan on int4_tbl a
-                     Filter: f1 = 0
+                     Filter: (f1 = 0)
  Optimizer: legacy query optimizer
 (11 rows)
 
@@ -3031,16 +3240,16 @@ explain (costs off)
 -------------------------------------------------------------------
  Gather Motion 3:1  (slice3; segments: 3)
    ->  Hash Full Join
-         Hash Cond: a.unique2 = b.unique2
+         Hash Cond: (a.unique2 = b.unique2)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)
                Hash Key: a.unique2
                ->  Index Scan using tenk1_unique2 on tenk1 a
-                     Index Cond: unique2 = 42
+                     Index Cond: (unique2 = 42)
          ->  Hash
                ->  Redistribute Motion 3:3  (slice2; segments: 3)
                      Hash Key: b.unique2
                      ->  Index Scan using tenk1_unique2 on tenk1 b
-                           Index Cond: unique2 = 42
+                           Index Cond: (unique2 = 42)
  Optimizer: legacy query optimizer
 (13 rows)
 
@@ -3090,7 +3299,7 @@ select id from a where id in (
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Semi Join
-         Hash Cond: a.id = b.id
+         Hash Cond: (a.id = b.id)
          ->  Seq Scan on a
          ->  Hash
                ->  Seq Scan on b
@@ -3139,7 +3348,7 @@ explain (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Left Join
-         Hash Cond: p.k = c.k
+         Hash Cond: (p.k = c.k)
          ->  Seq Scan on parent p
          ->  Hash
                ->  Seq Scan on child c
@@ -3222,6 +3431,24 @@ SELECT * FROM
 (5 rows)
 
 rollback;
+-- bug #8444: we've historically allowed duplicate aliases within aliased JOINs
+select * from
+  int8_tbl x join (int4_tbl x cross join int4_tbl y) j on q1 = f1; -- error
+ERROR:  column reference "f1" is ambiguous
+LINE 2: ..._tbl x join (int4_tbl x cross join int4_tbl y) j on q1 = f1;
+                                                                    ^
+select * from
+  int8_tbl x join (int4_tbl x cross join int4_tbl y) j on q1 = y.f1; -- error
+ERROR:  invalid reference to FROM-clause entry for table "y"
+LINE 2: ...bl x join (int4_tbl x cross join int4_tbl y) j on q1 = y.f1;
+                                                                  ^
+HINT:  There is an entry for table "y", but it cannot be referenced from this part of the query.
+select * from
+  int8_tbl x join (int4_tbl x cross join int4_tbl y(ff)) j on q1 = f1; -- ok
+ q1 | q2 | f1 | ff 
+----+----+----+----
+(0 rows)
+
 --
 -- Test LATERAL
 --
@@ -3239,7 +3466,7 @@ explain (costs off)
 ------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: a.unique1 = b.f1
+         Hash Cond: (a.unique1 = b.f1)
          ->  Seq Scan on tenk1 a
          ->  Hash
                ->  Seq Scan on int4_tbl b
@@ -3256,11 +3483,11 @@ from int4_tbl x, lateral (select unique2 from tenk1 where f1 = unique1) ss;
 explain (costs off)
   select unique2, x.*
   from int4_tbl x, lateral (select unique2 from tenk1 where f1 = unique1) ss;
-                QUERY PLAN                
-------------------------------------------
+                 QUERY PLAN                
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: tenk1.unique1 = x.f1
+         Hash Cond: (tenk1.unique1 = x.f1)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
@@ -3270,11 +3497,11 @@ explain (costs off)
 explain (costs off)
   select unique2, x.*
   from int4_tbl x cross join lateral (select unique2 from tenk1 where f1 = unique1) ss;
-                QUERY PLAN                
-------------------------------------------
+                QUERY PLAN                 
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Join
-         Hash Cond: tenk1.unique1 = x.f1
+         Hash Cond: (tenk1.unique1 = x.f1)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
@@ -3296,10 +3523,10 @@ explain (costs off)
   select unique2, x.*
   from int4_tbl x left join lateral (select unique1, unique2 from tenk1 where f1 = unique1) ss on true;
                 QUERY PLAN                
-------------------------------------------
+-------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    ->  Hash Right Join
-         Hash Cond: tenk1.unique1 = x.f1
+         Hash Cond: (tenk1.unique1 = x.f1)
          ->  Seq Scan on tenk1
          ->  Hash
                ->  Seq Scan on int4_tbl x
@@ -3337,46 +3564,43 @@ select count(*) from tenk1 a, lateral generate_series(1,two) g;
 
 explain (costs off)
   select count(*) from tenk1 a, lateral generate_series(1,two) g;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
-                     ->  Materialize
-                           ->  Function Scan on generate_series g
+                     ->  Function Scan on generate_series g
  Optimizer: legacy query optimizer
-(8 rows)
+(7 rows)
 
 explain (costs off)
   select count(*) from tenk1 a cross join lateral generate_series(1,two) g;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
-                     ->  Materialize
-                           ->  Function Scan on generate_series g
+                     ->  Function Scan on generate_series g
  Optimizer: legacy query optimizer
-(8 rows)
+(7 rows)
 
 -- don't need the explicit LATERAL keyword for functions
 explain (costs off)
   select count(*) from tenk1 a, generate_series(1,two) g;
-                            QUERY PLAN                            
-------------------------------------------------------------------
+                         QUERY PLAN                         
+------------------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
          ->  Aggregate
                ->  Nested Loop
                      ->  Seq Scan on tenk1 a
-                     ->  Materialize
-                           ->  Function Scan on generate_series g
+                     ->  Function Scan on generate_series g
  Optimizer: legacy query optimizer
-(8 rows)
+(7 rows)
 
 -- lateral with UNION ALL subselect
 explain (costs off)
@@ -3391,9 +3615,9 @@ explain (costs off)
          ->  Materialize
                ->  Append
                      ->  Seq Scan on int8_tbl a
-                           Filter: g.g = q1
+                           Filter: (g.g = q1)
                      ->  Seq Scan on int8_tbl b
-                           Filter: g.g = q2
+                           Filter: (g.g = q2)
  Optimizer: legacy query optimizer
 (10 rows)
 
@@ -3417,7 +3641,7 @@ explain (costs off)
    ->  Gather Motion 3:1  (slice3; segments: 3)
          ->  Aggregate
                ->  Hash Join
-                     Hash Cond: "*VALUES*".column1 = b.unique2
+                     Hash Cond: ("*VALUES*".column1 = b.unique2)
                      ->  Redistribute Motion 3:3  (slice1; segments: 3)
                            Hash Key: "*VALUES*".column1
                            ->  Nested Loop
@@ -3748,6 +3972,296 @@ select v.* from
  -4567890123456789 |                  
 (20 rows)
 
+explain (verbose, costs off)
+select * from
+  int8_tbl a left join
+  lateral (select *, a.q2 as x from int8_tbl b) ss on a.q2 = ss.q1;
+                         QUERY PLAN                         
+------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: a.q1, a.q2, b.q1, b.q2, (a.q2)
+   ->  Nested Loop Left Join
+         Output: a.q1, a.q2, b.q1, b.q2, (a.q2)
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Output: a.q1, a.q2
+               Hash Key: a.q2
+               ->  Seq Scan on public.int8_tbl a
+                     Output: a.q1, a.q2
+         ->  Seq Scan on public.int8_tbl b
+               Output: b.q1, b.q2, a.q2
+               Filter: (a.q2 = b.q1)
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(14 rows)
+
+select * from
+  int8_tbl a left join
+  lateral (select *, a.q2 as x from int8_tbl b) ss on a.q2 = ss.q1;
+        q1        |        q2         |        q1        |        q2         |        x         
+------------------+-------------------+------------------+-------------------+------------------
+              123 |               456 |                  |                   |                 
+              123 |  4567890123456789 | 4567890123456789 |               123 | 4567890123456789
+              123 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+              123 |  4567890123456789 | 4567890123456789 | -4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 |              123 |               456 |              123
+ 4567890123456789 |               123 |              123 |  4567890123456789 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |               123 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | -4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 |                  |                   |                 
+(10 rows)
+
+explain (verbose, costs off)
+select * from
+  int8_tbl a left join
+  lateral (select *, coalesce(a.q2, 42) as x from int8_tbl b) ss on a.q2 = ss.q1;
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+   ->  Nested Loop Left Join
+         Output: a.q1, a.q2, b.q1, b.q2, (COALESCE(a.q2, 42::bigint))
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Output: a.q1, a.q2
+               Hash Key: a.q2
+               ->  Seq Scan on public.int8_tbl a
+                     Output: a.q1, a.q2
+         ->  Seq Scan on public.int8_tbl b
+               Output: b.q1, b.q2, COALESCE(a.q2, 42::bigint)
+               Filter: (a.q2 = b.q1)
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(14 rows)
+
+select * from
+  int8_tbl a left join
+  lateral (select *, coalesce(a.q2, 42) as x from int8_tbl b) ss on a.q2 = ss.q1;
+        q1        |        q2         |        q1        |        q2         |        x         
+------------------+-------------------+------------------+-------------------+------------------
+              123 |               456 |                  |                   |                 
+              123 |  4567890123456789 | 4567890123456789 |               123 | 4567890123456789
+              123 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+              123 |  4567890123456789 | 4567890123456789 | -4567890123456789 | 4567890123456789
+ 4567890123456789 |               123 |              123 |               456 |              123
+ 4567890123456789 |               123 |              123 |  4567890123456789 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |               123 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |  4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | -4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 |                  |                   |                 
+(10 rows)
+
+-- lateral can result in join conditions appearing below their
+-- real semantic level
+explain (verbose, costs off)
+select * from int4_tbl i left join
+  lateral (select * from int2_tbl j where i.f1 = j.f1) k on true;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i.f1, j.f1
+   ->  Hash Left Join
+         Output: i.f1, j.f1
+         Hash Cond: (i.f1 = j.f1)
+         ->  Seq Scan on public.int4_tbl i
+               Output: i.f1
+         ->  Hash
+               Output: j.f1
+               ->  Seq Scan on public.int2_tbl j
+                     Output: j.f1
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(13 rows)
+
+select * from int4_tbl i left join
+  lateral (select * from int2_tbl j where i.f1 = j.f1) k on true;
+     f1      | f1 
+-------------+----
+           0 |  0
+      123456 |   
+     -123456 |   
+  2147483647 |   
+ -2147483647 |   
+(5 rows)
+
+explain (verbose, costs off)
+select * from int4_tbl i left join
+  lateral (select coalesce(i) from int2_tbl j where i.f1 = j.f1) k on true;
+                QUERY PLAN                 
+-------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: i.f1, (COALESCE(i.*))
+   ->  Nested Loop Left Join
+         Output: i.f1, (COALESCE(i.*))
+         ->  Seq Scan on public.int4_tbl i
+               Output: i.f1, i.*
+         ->  Seq Scan on public.int2_tbl j
+               Output: j.f1, COALESCE(i.*)
+               Filter: (i.f1 = j.f1)
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(11 rows)
+
+select * from int4_tbl i left join
+  lateral (select coalesce(i) from int2_tbl j where i.f1 = j.f1) k on true;
+     f1      | coalesce 
+-------------+----------
+           0 | (0)
+      123456 | 
+     -123456 | 
+  2147483647 | 
+ -2147483647 | 
+(5 rows)
+
+explain (verbose, costs off)
+select * from int4_tbl a,
+  lateral (
+    select * from int4_tbl b left join int8_tbl c on (b.f1 = q1 and a.f1 = q2)
+  ) ss;
+                         QUERY PLAN                          
+-------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: a.f1, b.f1, c.q1, c.q2
+   ->  Nested Loop
+         Output: a.f1, b.f1, c.q1, c.q2
+         ->  Broadcast Motion 3:3  (slice1; segments: 3)
+               Output: a.f1
+               ->  Seq Scan on public.int4_tbl a
+                     Output: a.f1
+         ->  Materialize
+               Output: b.f1, c.q1, c.q2
+               ->  Hash Right Join
+                     Output: b.f1, c.q1, c.q2
+                     Hash Cond: (c.q1 = b.f1)
+                     ->  Seq Scan on public.int8_tbl c
+                           Output: c.q1, c.q2
+                           Filter: (a.f1 = c.q2)
+                     ->  Hash
+                           Output: b.f1
+                           ->  Seq Scan on public.int4_tbl b
+                                 Output: b.f1
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(22 rows)
+
+select * from int4_tbl a,
+  lateral (
+    select * from int4_tbl b left join int8_tbl c on (b.f1 = q1 and a.f1 = q2)
+  ) ss;
+     f1      |     f1      | q1 | q2 
+-------------+-------------+----+----
+           0 |           0 |    |   
+           0 |      123456 |    |   
+           0 |     -123456 |    |   
+           0 |  2147483647 |    |   
+           0 | -2147483647 |    |   
+      123456 |           0 |    |   
+      123456 |      123456 |    |   
+      123456 |     -123456 |    |   
+      123456 |  2147483647 |    |   
+      123456 | -2147483647 |    |   
+     -123456 |           0 |    |   
+     -123456 |      123456 |    |   
+     -123456 |     -123456 |    |   
+     -123456 |  2147483647 |    |   
+     -123456 | -2147483647 |    |   
+  2147483647 |           0 |    |   
+  2147483647 |      123456 |    |   
+  2147483647 |     -123456 |    |   
+  2147483647 |  2147483647 |    |   
+  2147483647 | -2147483647 |    |   
+ -2147483647 |           0 |    |   
+ -2147483647 |      123456 |    |   
+ -2147483647 |     -123456 |    |   
+ -2147483647 |  2147483647 |    |   
+ -2147483647 | -2147483647 |    |   
+(25 rows)
+
+-- lateral reference in a PlaceHolderVar evaluated at join level
+explain (verbose, costs off)
+select * from
+  int8_tbl a left join lateral
+  (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
+   int8_tbl b cross join int8_tbl c) ss
+  on a.q2 = ss.bq1;
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   Output: a.q1, a.q2, b.q1, c.q1, (LEAST(a.q1, b.q1, c.q1))
+   ->  Nested Loop Left Join
+         Output: a.q1, a.q2, b.q1, c.q1, (LEAST(a.q1, b.q1, c.q1))
+         ->  Redistribute Motion 3:3  (slice1; segments: 3)
+               Output: a.q1, a.q2
+               Hash Key: a.q2
+               ->  Seq Scan on public.int8_tbl a
+                     Output: a.q1, a.q2
+         ->  Materialize
+               Output: b.q1, c.q1, (LEAST(a.q1, b.q1, c.q1))
+               ->  Nested Loop
+                     Output: b.q1, c.q1, LEAST(a.q1, b.q1, c.q1)
+                     Join Filter: (a.q2 = b.q1)
+                     ->  Seq Scan on public.int8_tbl b
+                           Output: b.q1, b.q2
+                     ->  Materialize
+                           Output: c.q1
+                           ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                                 Output: c.q1
+                                 ->  Seq Scan on public.int8_tbl c
+                                       Output: c.q1
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(24 rows)
+
+select * from
+  int8_tbl a left join lateral
+  (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
+   int8_tbl b cross join int8_tbl c) ss
+  on a.q2 = ss.bq1;
+        q1        |        q2         |       bq1        |       cq1        |      least       
+------------------+-------------------+------------------+------------------+------------------
+              123 |               456 |                  |                  |                 
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 |              123 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+              123 |  4567890123456789 | 4567890123456789 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 |              123 |              123
+ 4567890123456789 |               123 |              123 |              123 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 |              123 |              123
+ 4567890123456789 |               123 |              123 |              123 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |               123 |              123 | 4567890123456789 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 |              123 |              123
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 |  4567890123456789 | 4567890123456789 | 4567890123456789 | 4567890123456789
+ 4567890123456789 | -4567890123456789 |                  |                  |                 
+(42 rows)
+
 -- case requiring nested PlaceHolderVars
 explain (verbose, costs off)
 select * from
@@ -3758,23 +4272,22 @@ select * from
     lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
   ) on c.q2 = ss2.q1,
   lateral (select ss2.y) ss3;
-                                                                                QUERY PLAN                                                                                
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                                  QUERY PLAN                                                                                  
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Nested Loop
-   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE(COALESCE(b.q2, 42::bigint), d.q2)), ((COALESCE(COALESCE(b.q2, 42::bigint), d.q2)))
-   ->  Gather Motion 3:1  (slice5; segments: 3)
-         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
+   Output: c.q1, c.q2, a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint)), d.q1, (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)), ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+   ->  Gather Motion 3:1  (slice4; segments: 3)
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
          ->  Hash Right Join
-               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
-               Hash Cond: d.q1 = c.q2
-               ->  Redistribute Motion 3:3  (slice3; segments: 3)
-                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
-                     Hash Key: d.q1
-                     ->  Nested Loop
-                           Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+               Hash Cond: (d.q1 = c.q2)
+               ->  Nested Loop
+                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE(b.q2, 42::bigint)), (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+                     ->  Broadcast Motion 3:3  (slice2; segments: 3)
+                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
                            ->  Hash Left Join
                                  Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, 42::bigint))
-                                 Hash Cond: a.q2 = b.q1
+                                 Hash Cond: (a.q2 = b.q1)
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)
                                        Output: a.q1, a.q2
                                        Hash Key: a.q2
@@ -3784,12 +4297,72 @@ select * from
                                        Output: b.q1, (COALESCE(b.q2, 42::bigint))
                                        ->  Seq Scan on public.int8_tbl b
                                              Output: b.q1, COALESCE(b.q2, 42::bigint)
-                           ->  Materialize
-                                 Output: d.q1, (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
-                                 ->  Broadcast Motion 3:3  (slice2; segments: 3)
-                                       Output: d.q1, (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
-                                       ->  Seq Scan on public.int8_tbl d
-                                             Output: d.q1, COALESCE(COALESCE(b.q2, 42::bigint), d.q2)
+                     ->  Seq Scan on public.int8_tbl d
+                           Output: d.q1, COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)
+               ->  Hash
+                     Output: c.q1, c.q2
+                     ->  Redistribute Motion 3:3  (slice3; segments: 3)
+                           Output: c.q1, c.q2
+                           Hash Key: c.q2
+                           ->  Seq Scan on public.int8_tbl c
+                                 Output: c.q1, c.q2
+   ->  Materialize
+         Output: ((COALESCE((COALESCE(b.q2, 42::bigint)), d.q2)))
+         ->  Result
+               Output: (COALESCE((COALESCE(b.q2, 42::bigint)), d.q2))
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(38 rows)
+
+-- case that breaks the old ph_may_need optimization
+explain (verbose, costs off)
+select c.*,a.*,ss1.q1,ss2.q1,ss3.* from
+  int8_tbl c left join (
+    int8_tbl a left join
+      (select q1, coalesce(q2,f1) as x from int8_tbl b, int4_tbl b2
+       where q1 < f1) ss1
+      on a.q2 = ss1.q1
+    cross join
+    lateral (select q1, coalesce(ss1.x,q2) as y from int8_tbl d) ss2
+  ) on c.q2 = ss2.q1,
+  lateral (select * from int4_tbl i where ss2.y > f1) ss3;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice6; segments: 3)
+   Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, i.f1
+   ->  Nested Loop
+         Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, i.f1
+         Join Filter: ((COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)) > i.f1)
+         ->  Hash Right Join
+               Output: c.q1, c.q2, a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+               Hash Cond: (d.q1 = c.q2)
+               ->  Nested Loop
+                     Output: a.q1, a.q2, b.q1, d.q1, (COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2))
+                     ->  Broadcast Motion 3:3  (slice3; segments: 3)
+                           Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                           ->  Hash Right Join
+                                 Output: a.q1, a.q2, b.q1, (COALESCE(b.q2, (b2.f1)::bigint))
+                                 Hash Cond: (b.q1 = a.q2)
+                                 ->  Nested Loop
+                                       Output: b.q1, COALESCE(b.q2, (b2.f1)::bigint)
+                                       Join Filter: (b.q1 < b2.f1)
+                                       ->  Seq Scan on public.int8_tbl b
+                                             Output: b.q1, b.q2
+                                       ->  Materialize
+                                             Output: b2.f1
+                                             ->  Broadcast Motion 3:3  (slice1; segments: 3)
+                                                   Output: b2.f1
+                                                   ->  Seq Scan on public.int4_tbl b2
+                                                         Output: b2.f1
+                                 ->  Hash
+                                       Output: a.q1, a.q2
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                                             Output: a.q1, a.q2
+                                             Hash Key: a.q2
+                                             ->  Seq Scan on public.int8_tbl a
+                                                   Output: a.q1, a.q2
+                     ->  Seq Scan on public.int8_tbl d
+                           Output: d.q1, COALESCE((COALESCE(b.q2, (b2.f1)::bigint)), d.q2)
                ->  Hash
                      Output: c.q1, c.q2
                      ->  Redistribute Motion 3:3  (slice4; segments: 3)
@@ -3797,13 +4370,43 @@ select * from
                            Hash Key: c.q2
                            ->  Seq Scan on public.int8_tbl c
                                  Output: c.q1, c.q2
-   ->  Materialize
-         Output: ((COALESCE(COALESCE(b.q2, 42::bigint), d.q2)))
-         ->  Result
-               Output: (COALESCE(COALESCE(b.q2, 42::bigint), d.q2))
+         ->  Materialize
+               Output: i.f1
+               ->  Broadcast Motion 3:3  (slice5; segments: 3)
+                     Output: i.f1
+                     ->  Seq Scan on public.int4_tbl i
+                           Output: i.f1
  Optimizer: legacy query optimizer
  Settings: optimizer=off
-(43 rows)
+(50 rows)
+
+-- check processing of postponed quals (bug #9041)
+explain (verbose, costs off)
+select * from
+  (select 1 as x) x cross join (select 2 as y) y
+  left join lateral (
+    select * from (select 3 as z) z where z.z = x.x
+  ) zz on zz.z = y.y;
+                 QUERY PLAN                 
+--------------------------------------------
+ Hash Left Join
+   Output: (1), (2), (3)
+   Hash Cond: (((1) = (3)) AND ((2) = (3)))
+   ->  Nested Loop
+         Output: (1), (2)
+         ->  Result
+               Output: 1
+         ->  Materialize
+               Output: (2)
+               ->  Result
+                     Output: 2
+   ->  Hash
+         Output: (3)
+         ->  Result
+               Output: 3
+ Optimizer: legacy query optimizer
+ Settings: optimizer=off
+(17 rows)
 
 -- test some error cases where LATERAL should have been used but wasn't
 select f1,g from int4_tbl a, (select f1 as g) ss;
@@ -3837,36 +4440,52 @@ ERROR:  invalid reference to FROM-clause entry for table "a"
 LINE 1: ...m int4_tbl a full join lateral generate_series(0, a.f1) g on...
                                                              ^
 DETAIL:  The combining JOIN type must be INNER or LEFT for a LATERAL reference.
+-- check we complain about ambiguous table references
+select * from
+  int8_tbl x cross join (int4_tbl x cross join lateral (select x.f1) ss);
+ERROR:  table reference "x" is ambiguous
+LINE 2: ...cross join (int4_tbl x cross join lateral (select x.f1) ss);
+                                                             ^
 -- LATERAL can be used to put an aggregate into the FROM clause of its query
 select 1 from tenk1 a, lateral (select max(a.unique1) from int4_tbl b) ss;
 ERROR:  aggregate functions are not allowed in FROM clause of their own query level
 LINE 1: select 1 from tenk1 a, lateral (select max(a.unique1) from i...
                                                ^
--- github issue 5370 cases
-drop table if exists t5370;
-NOTICE:  table "t5370" does not exist, skipping
-drop table if exists t5370_2;
-NOTICE:  table "t5370_2" does not exist, skipping
-create table t5370(id int,name text) distributed by(id);
-insert into t5370 select i,i from  generate_series(1,1000) i;
-create table t5370_2 as select * from t5370 distributed by (id);
-analyze t5370_2;
-analyze t5370;
-explain select * from t5370 a , t5370_2 b where a.name=b.name;
-                                              QUERY PLAN                                               
--------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=45.50..92.25 rows=1000 width=14)
-   ->  Hash Join  (cost=45.50..92.25 rows=334 width=14)
-         Hash Cond: a.name = b.name
-         ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..33.00 rows=334 width=7)
-               Hash Key: a.name
-               ->  Seq Scan on t5370 a  (cost=0.00..13.00 rows=334 width=7)
-         ->  Hash  (cost=33.00..33.00 rows=334 width=7)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..33.00 rows=334 width=7)
-                     Hash Key: b.name
-                     ->  Seq Scan on t5370_2 b  (cost=0.00..13.00 rows=334 width=7)
- Optimizer: legacy query optimizer
-(11 rows)
-
-drop table t5370;
-drop table t5370_2;
+-- check behavior of LATERAL in UPDATE/DELETE
+create temp table xx1 as select f1 as x1, -f1 as x2 from int4_tbl;
+-- error, can't do this:
+update xx1 set x2 = f1 from (select * from int4_tbl where f1 = x1) ss;
+ERROR:  column "x1" does not exist
+LINE 1: ... set x2 = f1 from (select * from int4_tbl where f1 = x1) ss;
+                                                                ^
+HINT:  There is a column named "x1" in table "xx1", but it cannot be referenced from this part of the query.
+update xx1 set x2 = f1 from (select * from int4_tbl where f1 = xx1.x1) ss;
+ERROR:  invalid reference to FROM-clause entry for table "xx1"
+LINE 1: ...t x2 = f1 from (select * from int4_tbl where f1 = xx1.x1) ss...
+                                                             ^
+HINT:  There is an entry for table "xx1", but it cannot be referenced from this part of the query.
+-- can't do it even with LATERAL:
+update xx1 set x2 = f1 from lateral (select * from int4_tbl where f1 = x1) ss;
+ERROR:  invalid reference to FROM-clause entry for table "xx1"
+LINE 1: ...= f1 from lateral (select * from int4_tbl where f1 = x1) ss;
+                                                                ^
+HINT:  There is an entry for table "xx1", but it cannot be referenced from this part of the query.
+-- we might in future allow something like this, but for now it's an error:
+update xx1 set x2 = f1 from xx1, lateral (select * from int4_tbl where f1 = x1) ss;
+ERROR:  table name "xx1" specified more than once
+-- also errors:
+delete from xx1 using (select * from int4_tbl where f1 = x1) ss;
+ERROR:  column "x1" does not exist
+LINE 1: ...te from xx1 using (select * from int4_tbl where f1 = x1) ss;
+                                                                ^
+HINT:  There is a column named "x1" in table "xx1", but it cannot be referenced from this part of the query.
+delete from xx1 using (select * from int4_tbl where f1 = xx1.x1) ss;
+ERROR:  invalid reference to FROM-clause entry for table "xx1"
+LINE 1: ...from xx1 using (select * from int4_tbl where f1 = xx1.x1) ss...
+                                                             ^
+HINT:  There is an entry for table "xx1", but it cannot be referenced from this part of the query.
+delete from xx1 using lateral (select * from int4_tbl where f1 = x1) ss;
+ERROR:  invalid reference to FROM-clause entry for table "xx1"
+LINE 1: ...xx1 using lateral (select * from int4_tbl where f1 = x1) ss;
+                                                                ^
+HINT:  There is an entry for table "xx1", but it cannot be referenced from this part of the query.

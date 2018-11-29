@@ -13,7 +13,8 @@
             <title>Synopsis</title>
             <codeblock><b>gpcopy</b>
    { <b>--full </b>|
-     <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] |
+     { <b>--dbname</b> <varname>database1</varname>[, <varname>database2</varname> ... ] 
+        [<b>--dest-dbname</b> <varname>dest-db1</varname>[, <varname>dest-db2</varname> ... ]] } |
      <b>--include-table</b> <varname>db</varname>.<varname>schema</varname>.<varname>table</varname>[, <varname>db</varname>.<varname>schema1</varname>.<varname>table1</varname> ... ] |
      <b>--include-table-file</b> <varname>table-file1</varname>
         [ <b>--include-table-file</b> <varname>table-file2</varname>] ... ] }
@@ -21,6 +22,7 @@
    [<b>--exclude-table-file</b> <varname>table-file1</varname>]
       [ <b>--exclude-table-file</b> <varname>table-file2</varname>] ... ]]
    [<b>--skip-existing</b> | <b>--truncate</b> | <b>--drop</b> | <b>--append</b> ]
+   [<b>--parallelize-leaf-partitions</b>] 
    [<b>--dry-run</b>]
    [<b>--analyze</b>]
    [<b>--validate</b> <varname>type</varname>]
@@ -32,6 +34,7 @@
    [<b>--source-host</b> <varname>source_host</varname> [<b>--source-port</b> <varname>source_port</varname>]
    [<b>--source-user</b> <varname>source_user</varname>]]
    [<b>--no-compression</b>]
+   [<b>--on-segment-threshold</b> <varname>int</varname>]
    [<b>--jobs</b> <varname>int</varname>]
    [<b>--quiet</b> | <b>--debug</b>]
 
@@ -46,19 +49,19 @@
             <ul>
                 <li id="pk138459">Copy a Greenplum Database system with the <codeph>--full</codeph>
                     option. This option copies all database objects including, tables, table data,
-                    indexes, views, users, roles, functions, and resource queues for all user
-                    defined databases to a different destination system. </li>
-                <li id="pk138461">Copy a set of user defined database tables to a destination
+                    indexes, views, users, roles, functions, and resource queues for all
+                    user-defined databases to a different destination system. </li>
+                <li id="pk138461">Copy a set of user-defined database tables to a destination
                     system. <ul id="ul_ly3_v5c_vdb">
-                        <li>The <codeph>--dbname</codeph> option copies all user defined tables,
+                        <li>The <codeph>--dbname</codeph> option copies all user-defined tables,
                             table data, and re-creates the table indexes from specified
                             databases.</li>
                         <li>The <codeph>--include-table</codeph> or
                                 <codeph>--include-table-file</codeph> option copies a specified set
-                            of user defined tables, table data, and re-creates the table indexes. </li>
+                            of user-defined tables, table data, and re-creates the table indexes. </li>
                         <li>The <codeph>--exclude-table</codeph> and
                                 <codeph>--exclude-table-file</codeph> options exclude a specified
-                            set of user defined tables and table data to be copied. </li>
+                            set of user-defined tables and table data to be copied. </li>
                     </ul></li>
                 <li>Copy only the database schemas with the <codeph>--metadata-only</codeph>
                     option.</li>
@@ -97,11 +100,6 @@
                 You must configure the system to use resource groups and create filespaces for the
                 tablespaces. </p>
         </section>
-        <section><title>Limitation for the Source and Destination Systems</title><p dir="ltr"
-                id="docs-internal-guid-872b07d9-60bd-1131-d5a6-3fb4dc225771">The
-                    <codeph>gpcopy</codeph> utility supports copying only between source and
-                destination Greenplum Database systems with the same number of segment instances.
-            </p></section>
         <section id="section6">
             <title>Options</title>
             <parml>
@@ -142,8 +140,9 @@
                 <plentry>
                     <pt>--dbname <varname>database</varname></pt>
                     <pd>A source database to copy. To copy multiple databases to the destination
-                        system specify a comma separated list of databases. All the user defined
-                        tables and table data are copied to the destination system. </pd>
+                        system specify a comma-separated list of databases with no spaces between
+                        the names. All the user-defined tables and table data are copied to the
+                        destination system. </pd>
                     <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
                         error and quits. If a destination database does not exist a database is
                         created. </pd>
@@ -159,6 +158,23 @@
                     <pd>If specified, debug messages are displayed at the command prompt.</pd>
                     <pd>This option cannot be specified with the <codeph>--quiet</codeph>
                         option.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--dest-dbname <varname>database</varname></pt>
+                    <pd>To copy a database to a different destination database, specify the name of
+                        the destination database. For multiple databases, specify a comma-separated
+                        list of databases with no spaces between the names. The number of database
+                        names must match the number of names specified in the
+                            <codeph>--dbname</codeph> option. The utility copies the source
+                        databases to the destination databases in the listed order. In this example,
+                            <codeph>db1</codeph> is copied to <codeph>destdb1</codeph>,
+                            <codeph>db2</codeph> is copied to <codeph>destdb2</codeph>, and
+                            <codeph>db3</codeph> is copied to <codeph>db3</codeph>.
+                        <codeblock>gpcopy --dest-host mdw-2 --dbname=db1,db2,db3 --dest-dbname=destdb1,destdb2,db3 --drop</codeblock></pd>
+                    <pd>If the source database does not exist, <codeph>gpcopy</codeph> returns an
+                        error and quits. If a destination database does not exist a database is
+                        created. </pd>
+                    <pd>Valid only with the <codeph>--dbname</codeph> option.</pd>
                 </plentry>
                 <plentry>
                     <pt>--dest-host <varname>dest_host</varname></pt>
@@ -189,7 +205,7 @@
                     <pd>A table from the source database system to exclude from transfer. The fully
                         qualified table name must be specified
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>). </pd>
-                    <pd>To exclude multiple tables, specify a comma separated list of table
+                    <pd>To exclude multiple tables, specify a comma-separated list of table
                         names.</pd>
                     <pd>A set of tables can be specified using the Go language regular expression
                         syntax. See the <codeph><xref href="#topic1/include-file-gpcopy"
@@ -234,7 +250,7 @@
                         name must be specified
                             (<varname>database</varname>.<varname>schema</varname>.<varname>table</varname>).
                         You cannot specify views or system catalog tables. To copy multiple tables,
-                        specify a comma separated list of table names.</pd>
+                        specify a comma-separated list of table names.</pd>
                     <pd>A set of tables can be specified using the Go language regular expression
                         syntax. You can use regular expressions in table names and schema names.
                         Regular expressions are not supported for database names. </pd>
@@ -280,8 +296,8 @@
                     <pd>This option performs a migration of a Greenplum Database source system to a
                         destination system. </pd>
                     <pd>A migration copies all database objects including, tables, indexes, views,
-                        roles, functions, user defined types (UDT), resource queues, and resource
-                        groups for all user defined databases. The default databases,
+                        roles, functions, user-defined types (UDT), resource queues, and resource
+                        groups for all user-defined databases. The default databases,
                             <codeph>postgres</codeph>, <codeph>template0</codeph>, and
                             <codeph>template1</codeph>, are not copied.</pd>
                     <pd>This option cannot be specified with the <codeph>--dbname</codeph>,
@@ -304,14 +320,35 @@
                     <pd>The utility does not support table data distribution checking when copying a
                         partitioned table that is defined with a leaf table that is an external
                         table or if a leaf table is defined with a distribution policy that is
-                        different from the root partitioned table. <note type="warning">Before you
-                            perform a <codeph>gpcopy</codeph> operation with the
-                                <codeph>--no-distribution-check</codeph> option, ensure that you
-                            have a backup of the destination database and that the distribution
+                        different from the root partitioned table.
+                        <note type="warning">Before you perform a <codeph>gpcopy</codeph> operation
+                            with the <codeph>--no-distribution-check</codeph> option, ensure that
+                            you have a backup of the destination database and that the distribution
                             policies of the tables that are being copied are the same in the source
                             and destination database. Copying data into segment instances with
                             incorrect data distribution can cause incorrect query results and can
                             cause database corruption.</note></pd>
+                </plentry>
+                <plentry>
+                    <pt>--on-segment-threshold <varname>int</varname></pt>
+                    <pd>Specifies the number of rows that determines when <codeph>gpcopy</codeph>
+                        copies a table using the Greenplum Database source and destination master
+                        instead of the source and destination segment instances. The default value
+                        is 10000 rows. If a table contains 10000 rows or less, the table is copied
+                        using the Greenplum Database master. </pd>
+                    <pd>The value <codeph>-1</codeph> disables copying tables using the master. All
+                        tables are copied using the segment instances.</pd>
+                    <pd>For smaller tables, copying tables using the Greenplum Database master is
+                        more efficient than using segment instances.</pd>
+                </plentry>
+                <plentry>
+                    <pt>--parallelize-leaf-partitions</pt>
+                    <pd>If specified, the utility copies the leaf partition tables of a partitioned
+                        table in parallel. The default is to copy the partitioned table as a single
+                        table based on the root partition table. </pd>
+                    <pd>If the <codeph>--validate</codeph> option is also specified, the utility
+                        validates each leaf partition table during the copy process and then
+                        validates the entire partitioned table.</pd>
                 </plentry>
                 <plentry>
                     <pt>--quiet</pt>
@@ -327,8 +364,9 @@
                         transferred.</pd>
                     <pd>If specified with the <codeph>--full</codeph> option,
                             <codeph>gpcopy</codeph> replicates the complete database schema,
-                        including all tables, indexes, views, user defined types (UDT), and user
-                        defined functions (UDF) for the source databases. No data is transferred. </pd>
+                        including all tables, indexes, views, user-defined types (UDT), and
+                        user-defined functions (UDF) for the source databases. No data is
+                        transferred. </pd>
                     <pd>If you specify databases with the <codeph>--dbname</codeph> option or tables
                         with the <codeph>--include-table</codeph> or
                             <codeph>--include-table-file</codeph> options, <codeph>gpcopy</codeph>
@@ -467,8 +505,12 @@
                 <p><b>Copying Partitioned Tables</b></p>
                 <p>When copying data for a partitioned table, if a leaf partition has been exchanged
                     with an external table, that leaf partition is created, but data is not copied. </p>
-                <p>You cannot copy an individual leaf partition, you must copy the entire
-                    partitioned table.</p>
+                <p>If you specify copying leaf partitions of a partitioned table with an option such
+                    as <codeph>--include-table</codeph> or <codeph>--exclude-table</codeph>,
+                        <codeph>gpcopy</codeph> creates the partitioned table if it does not exist.
+                    Only the data for the specified leaf partitions are added to the partitioned
+                    table. Specifying individual leaf partitions is useful when the entire
+                    partitioned tabled does not need to be copied.</p>
                 <p><codeph>gpcopy</codeph> does not support table data distribution checking when
                     copying a partitioned table that is defined with a leaf table that is an
                     external table or if a leaf table is defined with a distribution policy that is
@@ -559,7 +601,7 @@
    --truncate --analyze --validate count</codeblock>
             <p dir="ltr">This command specifies the <codeph>--full</codeph> and
                     <codeph>--metadata-only</codeph> options to copy the complete database schema,
-                including all tables, indexes, views, user defined types (UDT), and user defined
+                including all tables, indexes, views, user-defined types (UDT), and user-defined
                 functions (UDF) from all the source databases. No data is copied, The
                     <codeph>--drop</codeph> option specifies that the table is dropped in the
                 destination database before it is created again if the table exists in both the

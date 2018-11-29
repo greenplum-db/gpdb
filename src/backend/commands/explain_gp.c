@@ -240,6 +240,7 @@ typedef struct CdbExplain_ShowStatCtx
 	double		workmemused_max;
 	double		workmemwanted_max;
 
+	bool		stats_gathered;
 	/* Per-slice statistics are deposited in this SliceSummary array */
 	int			nslice;			/* num of slots in slices array */
 	CdbExplain_SliceSummary *slices;	/* -> array[0..nslice-1] of
@@ -355,10 +356,6 @@ static void show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys,
 static void explain_partition_selector(PartitionSelector *ps,
 						   PlanState *parentstate,
 						   List *ancestors, ExplainState *es);
-static void show_grouping_keys(PlanState *planstate, int numCols,
-							   AttrNumber *subplanColIdx,
-							   const char  *qlabel,
-							   List *ancestors, ExplainState *es);
 static void
 gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
                              struct EState *estate,
@@ -777,6 +774,9 @@ cdbexplain_recvExecStats(struct PlanState *planstate,
 	/* Transfer worker counts to SliceSummary. */
 	showstatctx->slices[sliceIndex].dispatchSummary = ds;
 
+	/* Signal that we've gathered all the statistics */
+	showstatctx->stats_gathered = true;
+
 	/* Clean up. */
 	if (ctx.msgptrs)
 		pfree(ctx.msgptrs);
@@ -981,7 +981,7 @@ cdbexplain_collectStatsFromNode(PlanState *planstate, CdbExplain_SendStatCtx *ct
 	si->workmemused = instr->workmemused;
 	si->workmemwanted = instr->workmemwanted;
 	si->workfileCreated = instr->workfileCreated;
-	si->peakMemBalance = MemoryAccounting_GetAccountPeakBalance(planstate->plan->memoryAccountId);
+	si->peakMemBalance = MemoryAccounting_GetAccountPeakBalance(planstate->memoryAccountId);
 	si->firststart = instr->firststart;
 	si->numPartScanned = instr->numPartScanned;
 	si->sortMethod = String2ExplainSortMethod(instr->sortMethod);
@@ -1357,7 +1357,8 @@ cdbexplain_formatExtraText(StringInfo str,
 					appendStringInfoChar(str, ' ');
 			}
 			appendBinaryStringInfo(str, cp, dp - cp);
-			appendStringInfoChar(str, '\n');
+			if (nlp)
+				appendStringInfoChar(str, '\n');
 		}
 
 		if (!nlp)
@@ -1402,7 +1403,7 @@ cdbexplain_formatMemory(char *outbuf, int bufsize, double bytes)
  *		seconds: [input] a value representing no. of seconds to be written to outbuf
  */
 static void
-cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds)
+cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds, bool unit)
 {
 	Assert(outbuf != NULL && "CDBEXPLAIN: char buffer is null");
 	Assert(bufsize > 0 && "CDBEXPLAIN: size of char buffer is zero");
@@ -1412,9 +1413,9 @@ cdbexplain_formatSeconds(char *outbuf, int bufsize, double seconds)
 #ifdef USE_ASSERT_CHECKING
 	int			nchars_written =
 #endif							/* USE_ASSERT_CHECKING */
-	snprintf(outbuf, bufsize, "%.*f ms",
+	snprintf(outbuf, bufsize, "%.*f%s",
 			 (ms < 10.0 && ms != 0.0 && ms > -10.0) ? 3 : 0,
-			 ms);
+			 ms, (unit ? " ms" : ""));
 
 	Assert(nchars_written < bufsize &&
 		   "CDBEXPLAIN:  size of char buffer is smaller than the required number of chars");
@@ -1535,21 +1536,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		return;
 
 	Assert(instr != NULL);
-	const char *noRowRequested = "";
-
-	if (!instr->running)
-	{
-		noRowRequested = "(No row requested) ";
-	}
-
-	/* Time from start of query on qDisp to this worker's first result row */
-	if (!(INSTR_TIME_IS_ZERO(instr->firststart)))
-	{
-		INSTR_TIME_SET_ZERO(timediff);
-		INSTR_TIME_ACCUM_DIFF(timediff, instr->firststart, ctx->querystarttime);
-		cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-		appendStringInfo(es->str, ", start offset by %s", startbuf);
-	}
 
 	if ((EXPLAIN_MEMORY_VERBOSITY_DETAIL <= explain_memory_verbosity)
 		&& planstate->type == T_MotionState)
@@ -1557,17 +1543,25 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		Motion	   *pMotion = (Motion *) planstate->plan;
 		int			curSliceId = pMotion->motionID;
 
-		/*
-		 * FIXME: Only displayed in text format
-		 * [#159442827]
-		 */
 		for (int iWorker = 0; iWorker < ctx->slices[curSliceId].nworker; iWorker++)
 		{
-			appendStringInfoSpaces(es->str, es->indent * 2);
-			appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
+			if (es->format == EXPLAIN_FORMAT_TEXT)
+			{
+				appendStringInfoSpaces(es->str, es->indent * 2);
+				appendStringInfo(es->str, "slice %d, seg %d\n", curSliceId, iWorker);
+			}
+			else
+			{
+				ExplainOpenGroup("MemoryAccounting", NULL, false, es);
+				ExplainPropertyInteger("Slice", curSliceId, es);
+				ExplainPropertyInteger("Segment", iWorker, es);
+			}
 
-			MemoryAccounting_CombinedAccountArrayToString(ctx->slices[curSliceId].memoryAccounts[iWorker],
-														  ctx->slices[curSliceId].memoryAccountCount[iWorker], es->str, es->indent + 1);
+			MemoryAccounting_CombinedAccountArrayToExplain(ctx->slices[curSliceId].memoryAccounts[iWorker],
+														   ctx->slices[curSliceId].memoryAccountCount[iWorker],
+														   es);
+			if (es->format != EXPLAIN_FORMAT_TEXT)
+				ExplainCloseGroup("MemoryAccounting", NULL, false, es);
 		}
 	}
 
@@ -1596,7 +1590,7 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 	}
 
 	/*
-	 * Actual work_mem used.
+	 * Actual work_mem used and wanted
 	 */
 	if (es->analyze && es->verbose && ns->workmemused.vcnt > 0)
 	{
@@ -1618,13 +1612,37 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 								 ns->totalWorkfileCreated.vcnt);
 
 			appendStringInfo(es->str, "\n");
+
+			if (ns->workmemwanted.vcnt > 0)
+			{
+				appendStringInfoSpaces(es->str, es->indent * 2);
+				cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
+				if (ns->ninst == 1)
+				{
+					appendStringInfo(es->str,
+								 "Work_mem wanted: %s to lessen workfile I/O.",
+								 maxbuf);
+				}
+				else
+				{
+					cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemwanted));
+					cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
+					appendStringInfo(es->str,
+									 "Work_mem wanted: %s avg, %s max%s"
+									 " to lessen workfile I/O affecting %d workers.",
+									 avgbuf, maxbuf, segbuf, ns->workmemwanted.vcnt);
+				}
+
+				appendStringInfo(es->str, "\n");
+			}
 		}
 		else
 		{
-			ExplainPropertyLong("work_mem", (long) kb(ns->workmemused.vsum), es);
-			ExplainPropertyInteger("work_mem Segments", ns->workmemused.vcnt, es);
-			ExplainPropertyLong("work_mem Max Memory", (long) kb(ns->workmemused.vmax), es);
-			ExplainPropertyLong("work_mem Max Memory Segment", ns->workmemused.imax, es);
+			ExplainOpenGroup("work_mem", "work_mem", true, es);
+			ExplainPropertyLong("Used", (long) kb(ns->workmemused.vsum), es);
+			ExplainPropertyInteger("Segments", ns->workmemused.vcnt, es);
+			ExplainPropertyLong("Max Memory", (long) kb(ns->workmemused.vmax), es);
+			ExplainPropertyLong("Max Memory Segment", ns->workmemused.imax, es);
 
 			/*
 			 * Total number of segments in which this node reuses cached or
@@ -1632,6 +1650,20 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			 */
 			if (nodeSupportWorkfileCaching(planstate))
 				ExplainPropertyInteger("Workfile Spilling", ns->totalWorkfileCreated.vcnt, es);
+
+			if (ns->workmemwanted.vcnt > 0)
+			{
+				ExplainPropertyLong("Max Memory Wanted", (long) kb(ns->workmemwanted.vmax), es);
+
+				if (ns->ninst > 1)
+				{
+					ExplainPropertyInteger("Max Memory Wanted Segment", ns->workmemwanted.imax, es);
+					ExplainPropertyLong("Avg Memory Wanted", (long) kb(cdbexplain_agg_avg(&ns->workmemwanted)), es);
+					ExplainPropertyInteger("Segments Affected", ns->ninst, es);
+				}
+			}
+
+			ExplainCloseGroup("work_mem", "work_mem", true, es);
 		}
 	}
 
@@ -1657,34 +1689,6 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 							 avgbuf,
 							 maxbuf,
 							 segbuf);
-		}
-	}
-
-	/*
-	 * What value of work_mem would suffice to eliminate workfile I/O?
-	 * [#159443489]
-	 */
-	if (es->analyze && es->verbose && ns->workmemwanted.vcnt > 0)
-	{
-		appendStringInfoSpaces(es->str, es->indent * 2);
-		cdbexplain_formatMemory(maxbuf, sizeof(maxbuf), ns->workmemwanted.vmax);
-		if (ns->ninst == 1)
-		{
-			appendStringInfo(es->str,
-							 "Work_mem wanted: %s to lessen workfile I/O.\n",
-							 maxbuf);
-		}
-		else
-		{
-			cdbexplain_formatMemory(avgbuf, sizeof(avgbuf), cdbexplain_agg_avg(&ns->workmemwanted));
-			cdbexplain_formatSeg(segbuf, sizeof(segbuf), ns->workmemwanted.imax, ns->ninst);
-			appendStringInfo(es->str,
-							 "Work_mem wanted: %s avg, %s max%s"
-							 " to lessen workfile I/O affecting %d workers.\n",
-							 avgbuf,
-							 maxbuf,
-							 segbuf,
-							 ns->workmemwanted.vcnt);
 		}
 	}
 
@@ -1793,48 +1797,48 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 		}
 	}
 
-	bool haveExtraText = false;
-	StringInfo extraData = makeStringInfo();
+	bool 			haveExtraText = false;
+	StringInfoData	extraData;
+
+	initStringInfo(&extraData);
+
 	for (i = 0; i < ns->ninst; i++)
 	{
 		CdbExplain_StatInst *nsi = &ns->insts[i];
 
 		if (nsi->bnotes < nsi->enotes)
 		{
-			if (!haveExtraText) {
+			if (!haveExtraText)
+			{
 				ExplainOpenGroup("Extra Text", "Extra Text", false, es);
 				ExplainOpenGroup("Segment", NULL, true, es);
 				haveExtraText = true;
 			}
 			
-			resetStringInfo(extraData);
+			resetStringInfo(&extraData);
 
-			cdbexplain_formatExtraText(extraData,
+			cdbexplain_formatExtraText(&extraData,
 									   0,
 									   (ns->ninst == 1) ? -1
 									   : ns->segindex0 + i,
 									   ctx->extratextbuf.data + nsi->bnotes,
 									   nsi->enotes - nsi->bnotes);
-			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData->data);
+			ExplainPropertyStringInfo("Extra Text", es, "%s", extraData.data);
 		}
 	}
 
-	if (haveExtraText) {
-		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
+	if (haveExtraText)
+	{
 		ExplainCloseGroup("Segment", NULL, true, es);
+		ExplainCloseGroup("Extra Text", "Extra Text", false, es);
 	}
-	pfree(extraData);
+	pfree(extraData.data);
 
 	/*
 	 * Dump stats for all workers.
 	 */
 	if (gp_enable_explain_allstat && ns->segindex0 >= 0 && ns->ninst > 0)
 	{
-
-		/*
-		 * FIXME: Only displyed on TEXT format
-		 * [#159443819]
-		 */
 		if (es->format == EXPLAIN_FORMAT_TEXT)
 		{
 			/*
@@ -1844,22 +1848,27 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 			appendStringInfoSpaces(es->str, es->indent * 2);
 			appendStringInfoString(es->str,
 								   "allstat: seg_firststart_total_ntuples");
+		}
+		else
+			ExplainOpenGroup("Allstat", "Allstat", true, es);
 
-			for (i = 0; i < ns->ninst; i++)
+		for (i = 0; i < ns->ninst; i++)
+		{
+			CdbExplain_StatInst *nsi = &ns->insts[i];
+
+			if (INSTR_TIME_IS_ZERO(nsi->firststart))
+				continue;
+
+			/* Time from start of query on qDisp to worker's first result row */
+			INSTR_TIME_SET_ZERO(timediff);
+			INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
+
+			if (es->format == EXPLAIN_FORMAT_TEXT)
 			{
-				CdbExplain_StatInst *nsi = &ns->insts[i];
-
-				if (INSTR_TIME_IS_ZERO(nsi->firststart))
-				{
-					continue;
-				}
-
-				/* Time from start of query on qDisp to worker's first result row */
-				INSTR_TIME_SET_ZERO(timediff);
-				INSTR_TIME_ACCUM_DIFF(timediff, nsi->firststart, ctx->querystarttime);
-				cdbexplain_formatSeconds(startbuf, sizeof(startbuf), INSTR_TIME_GET_DOUBLE(timediff));
-				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf), nsi->total);
-
+				cdbexplain_formatSeconds(startbuf, sizeof(startbuf),
+										 INSTR_TIME_GET_DOUBLE(timediff), true);
+				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf),
+										 nsi->total, true);
 				appendStringInfo(es->str,
 								 "/seg%d_%s_%s_%.0f",
 								 ns->segindex0 + i,
@@ -1867,11 +1876,44 @@ cdbexplain_showExecStats(struct PlanState *planstate, ExplainState *es)
 								 totalbuf,
 								 nsi->ntuples);
 			}
-			appendStringInfoString(es->str, "//end\n");
+			else
+			{
+				cdbexplain_formatSeconds(startbuf, sizeof(startbuf),
+										 INSTR_TIME_GET_DOUBLE(timediff), false);
+				cdbexplain_formatSeconds(totalbuf, sizeof(totalbuf),
+										 nsi->total, false);
+
+				ExplainOpenGroup("Segment", NULL, false, es);
+				ExplainPropertyInteger("Segment index", ns->segindex0 + i, es);
+				ExplainPropertyText("Time To First Result", startbuf, es);
+				ExplainPropertyText("Time To Total Result", totalbuf, es);
+				ExplainPropertyFloat("Tuples", nsi->ntuples, 1, es);
+				ExplainCloseGroup("Segment", NULL, false, es);
+			}
 		}
+
+		if (es->format == EXPLAIN_FORMAT_TEXT)
+			appendStringInfoString(es->str, "//end\n");
+		else
+			ExplainCloseGroup("Allstat", "Allstat", true, es);
 	}
 }								/* cdbexplain_showExecStats */
 
+/*
+ *	ExplainPrintExecStatsEnd
+ *			External API wrapper for cdbexplain_showExecStatsEnd
+ *
+ * This is an externally exposed wrapper for cdbexplain_showExecStatsEnd such
+ * that extensions, such as auto_explain, can leverage the Greenplum specific
+ * parts of the EXPLAIN machinery.
+ */
+void
+ExplainPrintExecStatsEnd(ExplainState *es, QueryDesc *queryDesc)
+{
+	cdbexplain_showExecStatsEnd(queryDesc->plannedstmt,
+								queryDesc->showstatctx,
+								queryDesc->estate, es);
+}
 
 /*
  * cdbexplain_showExecStatsEnd
@@ -1991,10 +2033,10 @@ gpexplain_formatSlicesOutput(struct CdbExplain_ShowStatCtx *showstatctx,
         /* Worker counts */
         slice = getCurrentSlice(estate, sliceIndex);
         if (slice &&
-            slice->numGangMembersToBeActive > 0 &&
-            slice->numGangMembersToBeActive != ss->dispatchSummary.nOk)
+            slice->gangSize > 0 &&
+            slice->gangSize != ss->dispatchSummary.nOk)
         {
-            int nNotDispatched = slice->numGangMembersToBeActive - ds->nResult + ds->nNotDispatched;
+            int nNotDispatched = slice->gangSize - ds->nResult + ds->nNotDispatched;
 
             es->str->data[flag] = (ss->dispatchSummary.nError > 0) ? 'X' : '_';
             StringInfoData workersInformationText;
@@ -2355,7 +2397,7 @@ show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys, AttrNumber *ke
 
 	    /* Deparse the expression, showing any top-level cast */
 	    if (target)
-	        exprstr = deparse_expr_sweet((Node *) target->expr, context,
+	        exprstr = deparse_expression((Node *) target->expr, context,
 								         useprefix, true);
         else
         {
@@ -2374,7 +2416,7 @@ show_motion_keys(PlanState *planstate, List *hashExpr, int nkeys, AttrNumber *ke
     if (hashExpr)
     {
 	    /* Deparse the expression */
-	    exprstr = deparse_expr_sweet((Node *)hashExpr, context, useprefix, true);
+	    exprstr = deparse_expression((Node *)hashExpr, context, useprefix, true);
 		ExplainPropertyText("Hash Key", exprstr, es);
     }
 }
@@ -2401,7 +2443,7 @@ explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
 		useprefix = list_length(es->rtable) > 1;
 
 		/* Deparse the expression */
-		exprstr = deparse_expr_sweet(ps->printablePredicate, context, useprefix, false);
+		exprstr = deparse_expression(ps->printablePredicate, context, useprefix, false);
 
 		ExplainPropertyText("Filter", exprstr, es);
 	}
@@ -2413,74 +2455,4 @@ explain_partition_selector(PartitionSelector *ps, PlanState *parentstate,
 
 		ExplainPropertyStringInfo("Partitions selected", es, "%d (out of %d)", nPartsSelected, nPartsTotal);
 	}
-}
-
-/*
- * Show GROUP BY keys for an Agg or Group node.
- */
-static void
-show_grouping_keys(PlanState *planstate, int nkeys, AttrNumber *subplanColIdx,
-                   const char *qlabel, List *ancestors, ExplainState *es)
-{
-	Plan	   *plan = planstate->plan;
-	PlanState  *subplanstate = outerPlanState(planstate);
-	Plan	   *subplan = subplanstate->plan;
-    List	   *context;
-	List	   *result = NIL;
-    char	   *exprstr;
-    bool		useprefix;
-    int			keyno;
-	int         num_null_cols = 0;
-	int         rollup_gs_times = 0;
-
-    if (nkeys <= 0)
-		return;
-
-	/* Set up deparse context */
-	context = deparse_context_for_planstate((Node *) subplanstate,
-											ancestors,
-											es->rtable,
-											es->rtable_names);
-	useprefix = (list_length(es->rtable) > 1 || es->verbose);
-
-	if (IsA(plan, Agg))
-	{
-		num_null_cols = ((Agg*)plan)->numNullCols;
-		rollup_gs_times = ((Agg*)plan)->rollupGSTimes;
-	}
-
-    for (keyno = 0; keyno < nkeys - num_null_cols; keyno++)
-    {
-	    /* find key expression in tlist */
-	    AttrNumber      keyresno = subplanColIdx[keyno];
-	    TargetEntry    *target = get_tle_by_resno(subplan->targetlist, keyresno);
-
-	    if (!target)
-		    elog(ERROR, "no tlist entry for key %d", keyresno);
-
-		if (IsA(target->expr, Grouping))
-		{
-			/* Append "grouping" explicitly. */
-			exprstr = "grouping";
-		}
-		else if (IsA(target->expr, GroupId))
-		{
-			/* Append "groupid" explicitly. */
-			exprstr = "groupid";
-		}
-		else
-			/* Deparse the expression, showing any top-level cast */
-			exprstr = deparse_expr_sweet((Node *) target->expr, context,
-										 useprefix, true);
-
-		result = lappend(result, exprstr);
-    }
-
-	ExplainPropertyList(qlabel, result, es);
-
-	/*
-	 * GPDB_90_MERGE_FIXME: handle rollup times printing
-	 * if (rollup_gs_times > 1)
-	 *	appendStringInfo(es->str, " (%d times)", rollup_gs_times);
-	 */
 }

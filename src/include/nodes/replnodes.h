@@ -4,7 +4,7 @@
  *	  definitions for replication grammar parse nodes
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/nodes/replnodes.h
@@ -16,6 +16,12 @@
 
 #include "access/xlogdefs.h"
 #include "nodes/pg_list.h"
+
+typedef enum ReplicationKind
+{
+	REPLICATION_KIND_PHYSICAL,
+	REPLICATION_KIND_LOGICAL
+} ReplicationKind;
 
 
 /* ----------------------
@@ -40,14 +46,41 @@ typedef struct BaseBackupCmd
 
 
 /* ----------------------
+ *		CREATE_REPLICATION_SLOT command
+ * ----------------------
+ */
+typedef struct CreateReplicationSlotCmd
+{
+	NodeTag		type;
+	char	   *slotname;
+	ReplicationKind kind;
+	char	   *plugin;
+} CreateReplicationSlotCmd;
+
+
+/* ----------------------
+ *		DROP_REPLICATION_SLOT command
+ * ----------------------
+ */
+typedef struct DropReplicationSlotCmd
+{
+	NodeTag		type;
+	char	   *slotname;
+} DropReplicationSlotCmd;
+
+
+/* ----------------------
  *		START_REPLICATION command
  * ----------------------
  */
 typedef struct StartReplicationCmd
 {
 	NodeTag		type;
+	ReplicationKind kind;
+	char	   *slotname;
 	TimeLineID	timeline;
 	XLogRecPtr	startpoint;
+	List	   *options;
 } StartReplicationCmd;
 
 

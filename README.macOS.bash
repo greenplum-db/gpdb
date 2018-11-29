@@ -85,12 +85,5 @@ export GOPATH=\$HOME/go
 export PATH=\$HOME/go/bin:\$PATH
 EOF
 
-# Step: speed up compile time (optional)
-cat >> ~/.bashrc << EOF
-
-# This assumes that the macOS machine has 8 threads
-export MAKEFLAGS='-j8'
-EOF
-
 # Step: install any optional tools
 brew install gdb

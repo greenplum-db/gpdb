@@ -462,27 +462,6 @@ gpdb::DatumSize
 	return 0;
 }
 
-void
-gpdb::DeconstructArray
-	(
-	struct ArrayType *array,
-	Oid elmtype,
-	int elmlen,
-	bool elmbyval,
-	char elmalign,
-	Datum **elemsp,
-	bool **nullsp,
-	int *nelemsp
-	)
-{
-	GP_WRAP_START;
-	{
-		deconstruct_array(array, elmtype, elmlen, elmbyval, elmalign, elemsp, nullsp, nelemsp);
-		return;
-	}
-	GP_WRAP_END;
-}
-
 Node *
 gpdb::MutateExpressionTree
 	(
@@ -765,7 +744,7 @@ gpdb::IsOrderedAgg
 }
 
 bool
-gpdb::AggHasCombineFunc
+gpdb::IsAggPartialCapable
 	(
 	Oid aggid
 	)
@@ -773,7 +752,7 @@ gpdb::AggHasCombineFunc
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_aggregate */
-		return has_agg_combinefunc(aggid);
+		return is_agg_partial_capable(aggid);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2164,20 +2143,6 @@ gpdb::GPDBFree
 	GP_WRAP_END;
 }
 
-struct varlena *
-gpdb::DetoastDatum
-	(
-	struct varlena * datum
-	)
-{
-	GP_WRAP_START;
-	{
-		return pg_detoast_datum(datum);
-	}
-	GP_WRAP_END;
-	return NULL;
-}
-
 bool
 gpdb::WalkQueryOrExpressionTree
 	(
@@ -2381,24 +2346,6 @@ gpdb::RelationExists
 }
 
 void
-gpdb::EstimateRelationSize
-	(
-	Relation rel,
-	int32 *attr_widths,
-	BlockNumber *pages,
-	double *tuples,
-	double *allvisfrac
-	)
-{
-	GP_WRAP_START;
-	{
-		estimate_rel_size(rel, attr_widths, pages, tuples, allvisfrac);
-		return;
-	}
-	GP_WRAP_END;
-}
-
-void
 gpdb::CdbEstimateRelationSize
 	(
 	RelOptInfo   *relOptInfo,
@@ -2413,6 +2360,20 @@ gpdb::CdbEstimateRelationSize
 	{
 		cdb_estimate_rel_size(relOptInfo, rel, attr_widths, pages, tuples, allvisfrac);
 		return;
+	}
+	GP_WRAP_END;
+}
+
+double
+gpdb::CdbEstimatePartitionedNumTuples
+	(
+	Relation rel,
+	bool *stats_missing_p
+	)
+{
+	GP_WRAP_START;
+	{
+		return cdb_estimate_partitioned_numtuples(rel, stats_missing_p);
 	}
 	GP_WRAP_END;
 }
@@ -2647,7 +2608,7 @@ gpdb::GetComponentDatabases(void)
 	GP_WRAP_START;
 	{
 		/* catalog tables: gp_segment_config */
-		return getCdbComponentDatabases();
+		return cdbcomponent_getCdbComponents(true);
 	}
 	GP_WRAP_END;
 	return NULL;
@@ -2779,22 +2740,6 @@ gpdb::ResolvePolymorphicArgType
 	}
 	GP_WRAP_END;
 	return false;
-}
-
-// hash a const value with GPDB's hash function
-int32 
-gpdb::CdbHashConst
-	(
-	Const *constant,
-	int num_segments
-	)
-{
-	GP_WRAP_START;
-	{
-		return cdbhash_const(constant, num_segments);
-	}
-	GP_WRAP_END;
-	return 0;
 }
 
 // hash a list of const values with GPDB's hash function
@@ -3190,15 +3135,18 @@ gpdb::IsAbortRequested
 
 GpPolicy *
 gpdb::MakeGpPolicy
-       (
-               MemoryContext mcxt,
-               GpPolicyType ptype,
-               int nattrs
-       )
+		(
+			GpPolicyType ptype,
+			int nattrs,
+			int numsegments
+		)
 {
 	GP_WRAP_START;
 	{
-		return makeGpPolicy(mcxt, ptype, nattrs);
+		/*
+		 * FIXME_TABLE_EXPAND: it used by ORCA, help...
+		 */
+		return makeGpPolicy(ptype, nattrs, numsegments);
 	}
 	GP_WRAP_END;
 }

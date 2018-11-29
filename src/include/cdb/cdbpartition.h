@@ -139,11 +139,6 @@ rel_get_part_path_pretty(Oid relid, char *separator, char *lastsep);
 extern bool 
 partition_policies_equal(GpPolicy *p, PartitionNode *pn);
 
-extern void 
-partition_get_policies_attrs(PartitionNode *pn,
-										 GpPolicy *master_policy,
-							             List **cols);
-
 /* RelationBuildPartitionDesc is built from get_parts */
 extern PartitionNode *get_parts(Oid relid, int16 level, Oid parent, bool inctemplate,
 		  bool includesubparts);

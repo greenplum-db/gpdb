@@ -283,6 +283,16 @@ where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispat
 
 select gp_inject_fault('after_one_slice_dispatched', 'reset', 1);
 
+-- Case 1.6
+-- For a query need two phase commit, if error happens before commands are actually
+-- dispatched, the query can be cancelled correctly.
+-- 
+select gp_inject_fault('before_one_slice_dispatched', 'error', 1);
+update dispatch_test_t1 set c2 = 3 from dispatch_test_t2, dispatch_test_t3
+where dispatch_test_t1.c2 = dispatch_test_t2.c2 and dispatch_test_t2.c3 = dispatch_test_t3.c3;
+
+select gp_inject_fault('before_one_slice_dispatched', 'reset', 1);
+
 -- test logging of gang management
 SET gp_log_gang = 'debug';
 
@@ -379,8 +389,8 @@ insert into disp_temp_test values (1, 2);
 savepoint s1;
 create temp table disp_temp_test1 (c1 int, c2 int);
 insert into disp_temp_test1 values (1, 2);
-select gp_inject_fault('cleanup_gang', 'skip', 1);
--- Let cleanupGang return false and writer gang be destroyed
+-- Let cleanupSegdb() return false and writer gang be destroyed
+select gp_inject_fault('cleanup_qe', 'skip', 1);
 select * from disp_temp_test1 where c1 / 0 = 9;
 rollback to savepoint s1;
 rollback;
@@ -388,7 +398,7 @@ rollback;
 select * from disp_temp_test;
 select * from disp_temp_test1;
 -- reset fault
-select gp_inject_fault('cleanup_gang', 'reset', 1);
+select gp_inject_fault('cleanup_qe', 'reset', 1);
 
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);

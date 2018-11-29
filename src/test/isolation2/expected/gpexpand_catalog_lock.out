@@ -1,0 +1,249 @@
+drop table if exists t20;
+DROP
+drop table if exists t30;
+DROP
+
+create table t20 (c1 int, c2 int) distributed by (c1);
+CREATE
+create table t30 (c1 int, c2 int) distributed by (c1);
+CREATE
+
+-- c10, c11 simulate gpexpand's catalog lock protection
+-- they will acquire the catalog lock in exclusive mode
+
+-- c20, c30 simulate client sessions
+-- they will acquire the catalog lock in shared mode
+
+--
+-- the catalog lock can not be acquired concurrently in exclusive mode
+--
+
+10: begin;
+BEGIN
+11: begin;
+BEGIN
+
+-- c10 acquired the catalog lock in exclusive mode
+10: select gp_expand_lock_catalog();
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+
+-- c11 has to wait for c10
+11&: select gp_expand_lock_catalog();  <waiting ...>
+
+10: end;
+END
+
+-- c10 released the lock, c11 acquired it now
+11<:  <... completed>
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+11: end;
+END
+
+--
+-- client sessions do not block each other on catalog changes
+--
+
+20: begin;
+BEGIN
+30: begin;
+BEGIN
+
+-- c20 and c30 both acquired the catalog lock in shared mode
+20: create table t21 (c1 int, c2 int) distributed by (c1);
+CREATE
+30: create table t31 (c1 int, c2 int) distributed by (c1);
+CREATE
+
+20: insert into t21 values (1,1);
+INSERT 1
+30: insert into t31 values (1,1);
+INSERT 1
+
+20: rollback;
+ROLLBACK
+30: rollback;
+ROLLBACK
+
+--
+-- gpexpand must wait for in progress catalog changes to commit/rollback
+--
+
+10: begin;
+BEGIN
+20: begin;
+BEGIN
+30: begin;
+BEGIN
+
+-- c20 and c30 both acquired the catalog lock in shared mode
+20: create table t21 (c1 int, c2 int) distributed by (c1);
+CREATE
+30: create table t31 (c1 int, c2 int) distributed by (c1);
+CREATE
+
+-- c10 can not acquire the lock in exclusive mode ...
+10&: select gp_expand_lock_catalog();  <waiting ...>
+
+20: insert into t21 values (1,1);
+INSERT 1
+30: insert into t31 values (1,1);
+INSERT 1
+
+20: rollback;
+ROLLBACK
+30: rollback;
+ROLLBACK
+
+-- ... until both c20 and c30 released it
+10<:  <... completed>
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+10: end;
+END
+
+--
+-- the catalog lock can be acquired in order
+--
+
+10: begin;
+BEGIN
+20: begin;
+BEGIN
+30: begin;
+BEGIN
+
+-- c20 acquired the catalog lock in shared mode
+20: create table t21 (c1 int, c2 int) distributed by (c1);
+CREATE
+
+-- c10 has to wait for c20
+10&: select gp_expand_lock_catalog();  <waiting ...>
+
+-- c30 can not acquire it already, even in shared mode
+30: create table t31 (c1 int, c2 int) distributed by (c1);
+ERROR:  gpexpand in progress, catalog changes are disallowed.
+30: rollback;
+ROLLBACK
+
+-- c20 can still make catalog changes
+20: drop table t21;
+DROP
+
+20: rollback;
+ROLLBACK
+
+-- c20 released the lock, c10 acquired it now
+10<:  <... completed>
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+10: end;
+END
+
+--
+-- gpexpand does not block DMLs or readonly queries to catalogs
+--
+
+10: begin;
+BEGIN
+20: begin;
+BEGIN
+30: begin;
+BEGIN
+
+-- c10 acquired the catalog lock in exclusive mode
+10: select gp_expand_lock_catalog();
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+
+-- c20 and c30 can still run DMLs
+20: insert into t20 values (1,1);
+INSERT 1
+20: select * from t20;
+c1|c2
+--+--
+1 |1 
+(1 row)
+20: update t20 set c2=c1+1;
+UPDATE 1
+20: delete from t20;
+DELETE 1
+
+30: insert into t30 values (1,1);
+INSERT 1
+30: select * from t30;
+c1|c2
+--+--
+1 |1 
+(1 row)
+30: update t30 set c2=c1+1;
+UPDATE 1
+30: delete from t30;
+DELETE 1
+
+-- c20 and c30 can also run query catalogs
+20: select relname from pg_class where oid='t20'::regclass;
+relname
+-------
+t20    
+(1 row)
+30: select relname from pg_class where oid='t30'::regclass;
+relname
+-------
+t30    
+(1 row)
+
+20: rollback;
+ROLLBACK
+30: rollback;
+ROLLBACK
+
+10: end;
+END
+
+--
+-- catalog changes are disallowed when gpexpand is in progress
+--
+
+10: begin;
+BEGIN
+
+-- c20 has an old transaction
+20: begin;
+BEGIN
+
+-- c10 acquired the catalog lock in exclusive mode
+10: select gp_expand_lock_catalog();
+gp_expand_lock_catalog
+----------------------
+                      
+(1 row)
+
+-- c30 has a new transaction
+30: begin;
+BEGIN
+
+-- neither c20 nor c30 are allowed to make catalog changes
+20: create table t21 (c1 int, c2 int) distributed by (c1);
+ERROR:  gpexpand in progress, catalog changes are disallowed.
+30: create table t31 (c1 int, c2 int) distributed by (c1);
+ERROR:  gpexpand in progress, catalog changes are disallowed.
+
+20: rollback;
+ROLLBACK
+30: rollback;
+ROLLBACK
+
+10: end;
+END

@@ -243,13 +243,17 @@ CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (poli);
 ERROR:  access method "gist" does not support unique indexes
 CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (bullseye);
 ERROR:  access method "gist" does not support unique indexes
--- Test whether geometric types can be part of a primary key.
+-- Test whether geometric types can be part of a distribution key.
 CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED BY (property);
-ERROR:  type "box" can't be a part of a distribution key
+ERROR:  type "box" cannot be a part of a distribution key
 CREATE TABLE GistTable2 (id INTEGER, poli POLYGON) DISTRIBUTED BY (poli);
-ERROR:  type "polygon" can't be a part of a distribution key
+ERROR:  type "polygon" cannot be a part of a distribution key
 CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE) DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" can't be a part of a distribution key
+ERROR:  type "circle" cannot be a part of a distribution key
+-- Same with ALTER TABLE.
+CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED RANDOMLY;
+ALTER TABLE GistTable2 SET DISTRIBUTED BY (property);
+ERROR:  type "box" cannot be a part of a distribution key
 -- ----------------------------------------------------------------------
 -- Test: test09NegativeTests.sql
 -- ----------------------------------------------------------------------
@@ -291,11 +295,12 @@ ERROR:  hash indexes are not supported
 -- ----------------------------------------------------------------------
 -- start_ignore
 drop schema qp_gist_indexes3 cascade;
-NOTICE:  drop cascades to 6 other objects
+NOTICE:  drop cascades to 7 other objects
 DETAIL:  drop cascades to table gisttable3
 drop cascades to function to_box(text)
 drop cascades to function insertintogisttable3(integer)
 drop cascades to function insertmanyintogisttable3(integer,integer)
 drop cascades to table gisttable_pktest
+drop cascades to table gisttable2
 drop cascades to table gisttable14
 -- end_ignore

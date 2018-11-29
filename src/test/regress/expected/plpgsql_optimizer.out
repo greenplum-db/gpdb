@@ -1576,121 +1576,101 @@ insert into PLine values ('PL.001', '-0', 'Central call', 'PS.base.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.002', '-101', '', 'PS.base.ta2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.003', '-102', '', 'PS.base.ta3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.004', '-103', '', 'PS.base.ta5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.005', '-104', '', 'PS.base.ta6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.006', '-106', '', 'PS.base.tb2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.007', '-108', '', 'PS.base.tb3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.008', '-109', '', 'PS.base.tb4');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.009', '-121', '', 'PS.base.tb5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.010', '-122', '', 'PS.base.tb6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.015', '-134', '', 'PS.first.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.016', '-137', '', 'PS.first.ta3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.017', '-139', '', 'PS.first.ta4');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.018', '-362', '', 'PS.first.tb1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.019', '-363', '', 'PS.first.tb2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.020', '-364', '', 'PS.first.tb3');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg1 127.0.0.1:40001 pid=1761)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.021', '-365', '', 'PS.first.tb5');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.022', '-367', '', 'PS.first.tb6');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.028', '-501', 'Fax entrance', 'PS.base.ta2');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 insert into PLine values ('PL.029', '-502', 'Fax first floor', 'PS.first.ta1');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.pslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from PSlot where slotname = myname"
 PL/pgSQL function tg_backlink_set(character,character) line 18 at SQL statement
-SQL statement "SELECT tg_backlink_set(new.backlink, new.slotname)"
 PL/pgSQL function tg_backlink_a() line 7 at assignment
 --
 -- Buy some phones, plug them into the wall and patch the
@@ -1700,28 +1680,24 @@ insert into PHone values ('PH.hc001', 'Hicom standard', 'WS.001.1a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta1' where slotname = 'PS.base.a1';
 insert into PHone values ('PH.hc002', 'Hicom standard', 'WS.002.1a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg2 127.0.0.1:40002 pid=1762)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta5' where slotname = 'PS.base.b1';
 insert into PHone values ('PH.hc003', 'Hicom standard', 'WS.002.2a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.tb2' where slotname = 'PS.base.b3';
 insert into PHone values ('PH.fax001', 'Canon fax', 'WS.001.2a');
 ERROR:  function cannot execute on a QE slice because it accesses relation "public.wslot"  (seg0 127.0.0.1:40000 pid=1760)
 CONTEXT:  SQL statement "select          * from WSlot where slotname = myname"
 PL/pgSQL function tg_slotlink_set(character,character) line 38 at SQL statement
-SQL statement "SELECT tg_slotlink_set(new.slotlink, new.slotname)"
 PL/pgSQL function tg_slotlink_a() line 7 at assignment
 update PSlot set slotlink = 'PS.base.ta2' where slotname = 'PS.base.a3';
 --
@@ -1733,7 +1709,6 @@ ERROR:  function cannot execute on a QE slice because it issues a non-SELECT sta
 CONTEXT:  SQL statement "insert into HSlot (slotname, hubname, slotno, slotlink)
 		values ('HS.dummy', hname, i, '')"
 PL/pgSQL function tg_hub_adjustslots(character,integer,integer) line 11 at SQL statement
-SQL statement "SELECT tg_hub_adjustslots(new.name, 0, new.nslots)"
 PL/pgSQL function tg_hub_a() line 7 at assignment
 insert into System values ('orion', 'PC');
 insert into IFace values ('IF', 'orion', 'eth0', 'WS.002.1b');
@@ -2839,7 +2814,7 @@ create function excpt_test2() returns void as $$
 begin
     begin
         begin
-    	    raise notice '% %', sqlstate, sqlerrm;
+            raise notice '% %', sqlstate, sqlerrm;
         end;
     end;
 end; $$ language plpgsql;
@@ -2853,7 +2828,7 @@ CONTEXT:  PL/pgSQL function excpt_test2() line 5 at RAISE
 create function excpt_test3() returns void as $$
 begin
     begin
-    	raise exception 'user exception';
+        raise exception 'user exception';
     exception when others then
 	    raise notice 'caught exception % %', sqlstate, sqlerrm;
 	    begin
@@ -3345,6 +3320,232 @@ select footest();
 ERROR:  query returned more than one row
 CONTEXT:  PL/pgSQL function footest() line 5 at EXECUTE statement
 drop function footest();
+-- test printing parameters after failure due to STRICT
+set plpgsql.print_strict_params to true;
+create or replace function footest() returns void as $$
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- no rows
+  select * from foo where f1 = p1 and f1::text = p3 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned no rows
+DETAIL:  parameters: p1 = '2', p3 = 'foo'
+CONTEXT:  PL/pgSQL function footest() line 8 at SQL statement
+create or replace function footest() returns void as $$
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+DETAIL:  parameters: p1 = '2', p3 = 'foo'
+CONTEXT:  PL/pgSQL function footest() line 8 at SQL statement
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows, no params
+  select * from foo where f1 > 3 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+CONTEXT:  PL/pgSQL function footest() line 5 at SQL statement
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- no rows
+  execute 'select * from foo where f1 = $1 or f1::text = $2' using 0, 'foo' into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned no rows
+DETAIL:  parameters: $1 = '0', $2 = 'foo'
+CONTEXT:  PL/pgSQL function footest() line 5 at EXECUTE statement
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows
+  execute 'select * from foo where f1 > $1' using 1 into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+DETAIL:  parameters: $1 = '1'
+CONTEXT:  PL/pgSQL function footest() line 5 at EXECUTE statement
+create or replace function footest() returns void as $$
+declare x record;
+begin
+  -- too many rows, no parameters
+  execute 'select * from foo where f1 > 3' into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+CONTEXT:  PL/pgSQL function footest() line 5 at EXECUTE statement
+create or replace function footest() returns void as $$
+-- override the global
+#print_strict_params off
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+CONTEXT:  PL/pgSQL function footest() line 10 at SQL statement
+reset plpgsql.print_strict_params;
+create or replace function footest() returns void as $$
+-- override the global
+#print_strict_params on
+declare
+x record;
+p1 int := 2;
+p3 text := 'foo';
+begin
+  -- too many rows
+  select * from foo where f1 > p1 or f1::text = p3  into strict x;
+  raise notice 'x.f1 = %, x.f2 = %', x.f1, x.f2;
+end$$ language plpgsql;
+select footest();
+ERROR:  query returned more than one row
+DETAIL:  parameters: p1 = '2', p3 = 'foo'
+CONTEXT:  PL/pgSQL function footest() line 10 at SQL statement
+-- test warnings and errors
+set plpgsql.extra_warnings to 'all';
+set plpgsql.extra_warnings to 'none';
+set plpgsql.extra_errors to 'all';
+set plpgsql.extra_errors to 'none';
+-- test warnings when shadowing a variable
+set plpgsql.extra_warnings to 'shadowed_variables';
+-- simple shadowing of input and output parameters
+create or replace function shadowtest(in1 int)
+	returns table (out1 int) as $$
+declare
+in1 int;
+out1 int;
+begin
+end
+$$ language plpgsql;
+WARNING:  variable "in1" shadows a previously defined variable
+LINE 4: in1 int;
+        ^
+WARNING:  variable "out1" shadows a previously defined variable
+LINE 5: out1 int;
+        ^
+select shadowtest(1);
+ shadowtest 
+------------
+(0 rows)
+
+set plpgsql.extra_warnings to 'shadowed_variables';
+select shadowtest(1);
+ shadowtest 
+------------
+(0 rows)
+
+create or replace function shadowtest(in1 int)
+	returns table (out1 int) as $$
+declare
+in1 int;
+out1 int;
+begin
+end
+$$ language plpgsql;
+WARNING:  variable "in1" shadows a previously defined variable
+LINE 4: in1 int;
+        ^
+WARNING:  variable "out1" shadows a previously defined variable
+LINE 5: out1 int;
+        ^
+select shadowtest(1);
+ shadowtest 
+------------
+(0 rows)
+
+drop function shadowtest(int);
+-- shadowing in a second DECLARE block
+create or replace function shadowtest()
+	returns void as $$
+declare
+f1 int;
+begin
+	declare
+	f1 int;
+	begin
+	end;
+end$$ language plpgsql;
+WARNING:  variable "f1" shadows a previously defined variable
+LINE 7:  f1 int;
+         ^
+drop function shadowtest();
+-- several levels of shadowing
+create or replace function shadowtest(in1 int)
+	returns void as $$
+declare
+in1 int;
+begin
+	declare
+	in1 int;
+	begin
+	end;
+end$$ language plpgsql;
+WARNING:  variable "in1" shadows a previously defined variable
+LINE 4: in1 int;
+        ^
+WARNING:  variable "in1" shadows a previously defined variable
+LINE 7:  in1 int;
+         ^
+drop function shadowtest(int);
+-- shadowing in cursor definitions
+create or replace function shadowtest()
+	returns void as $$
+declare
+f1 int;
+c1 cursor (f1 int) for select 1;
+begin
+end$$ language plpgsql;
+WARNING:  variable "f1" shadows a previously defined variable
+LINE 5: c1 cursor (f1 int) for select 1;
+                   ^
+drop function shadowtest();
+-- test errors when shadowing a variable
+set plpgsql.extra_errors to 'shadowed_variables';
+create or replace function shadowtest(f1 int)
+	returns boolean as $$
+declare f1 int; begin return 1; end $$ language plpgsql;
+ERROR:  variable "f1" shadows a previously defined variable
+LINE 3: declare f1 int; begin return 1; end $$ language plpgsql;
+                ^
+select shadowtest(1);
+ERROR:  function shadowtest(integer) does not exist
+LINE 1: select shadowtest(1);
+               ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+reset plpgsql.extra_errors;
+reset plpgsql.extra_warnings;
+create or replace function shadowtest(f1 int)
+	returns boolean as $$
+declare f1 int; begin return 1; end $$ language plpgsql;
+select shadowtest(1);
+ shadowtest 
+------------
+ t
+(1 row)
+
 -- test scrollable cursor support
 create function sc_test() returns setof integer as $$
 declare
@@ -3819,24 +4020,24 @@ drop table tabwithcols;
 --
 -- Tests for composite-type results
 --
-create type footype as (x int, y varchar);
+create type compostype as (x int, y varchar);
 -- test: use of variable of composite type in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 declare
-  v footype;
+  v compostype;
 begin
   v := (1, 'hello');
   return v;
 end;
 $$ language plpgsql;
-select foo();
-    foo    
+select compos();
+  compos   
 -----------
  (1,hello)
 (1 row)
 
 -- test: use of variable of record type in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 declare
   v record;
 begin
@@ -3844,49 +4045,49 @@ begin
   return v;
 end;
 $$ language plpgsql;
-select foo();
-    foo    
+select compos();
+  compos   
 -----------
  (1,hello)
 (1 row)
 
 -- test: use of row expr in return statement
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return (1, 'hello'::varchar);
 end;
 $$ language plpgsql;
-select foo();
-    foo    
+select compos();
+  compos   
 -----------
  (1,hello)
 (1 row)
 
 -- this does not work currently (no implicit casting)
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return (1, 'hello');
 end;
 $$ language plpgsql;
-select foo();
+select compos();
 ERROR:  returned record type does not match expected record type
 DETAIL:  Returned type unknown does not match expected type character varying in column 2.
-CONTEXT:  PL/pgSQL function foo() while casting return value to function's return type
+CONTEXT:  PL/pgSQL function compos() while casting return value to function's return type
 -- ... but this does
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
-  return (1, 'hello')::footype;
+  return (1, 'hello')::compostype;
 end;
 $$ language plpgsql;
-select foo();
-    foo    
+select compos();
+  compos   
 -----------
  (1,hello)
 (1 row)
 
-drop function foo();
+drop function compos();
 -- test: return a row expr as record.
-create or replace function foorec() returns record as $$
+create or replace function composrec() returns record as $$
 declare
   v record;
 begin
@@ -3894,37 +4095,37 @@ begin
   return v;
 end;
 $$ language plpgsql;
-select foorec();
-  foorec   
+select composrec();
+ composrec 
 -----------
  (1,hello)
 (1 row)
 
 -- test: return row expr in return statement.
-create or replace function foorec() returns record as $$
+create or replace function composrec() returns record as $$
 begin
   return (1, 'hello');
 end;
 $$ language plpgsql;
-select foorec();
-  foorec   
+select composrec();
+ composrec 
 -----------
  (1,hello)
 (1 row)
 
-drop function foorec();
+drop function composrec();
 -- test: row expr in RETURN NEXT statement.
-create or replace function foo() returns setof footype as $$
+create or replace function compos() returns setof compostype as $$
 begin
   for i in 1..3
   loop
     return next (1, 'hello'::varchar);
   end loop;
-  return next null::footype;
-  return next (2, 'goodbye')::footype;
+  return next null::compostype;
+  return next (2, 'goodbye')::compostype;
 end;
 $$ language plpgsql;
-select * from foo();
+select * from compos();
  x |    y    
 ---+---------
  1 | hello
@@ -3934,18 +4135,18 @@ select * from foo();
  2 | goodbye
 (5 rows)
 
-drop function foo();
+drop function compos();
 -- test: use invalid expr in return statement.
-create or replace function foo() returns footype as $$
+create or replace function compos() returns compostype as $$
 begin
   return 1 + 1;
 end;
 $$ language plpgsql;
-select foo();
+select compos();
 ERROR:  cannot return non-composite value from function returning composite type
-CONTEXT:  PL/pgSQL function foo() line 3 at RETURN
-drop function foo();
-drop type footype;
+CONTEXT:  PL/pgSQL function compos() line 3 at RETURN
+drop function compos();
+drop type compostype;
 --
 -- Tests for 8.4's new RAISE features
 --
@@ -4166,6 +4367,40 @@ select raise_test();
 NOTICE:  22012
 ERROR:  substitute message
 drop function raise_test();
+-- test passing column_name, constraint_name, datatype_name, table_name
+-- and schema_name error fields
+create or replace function stacked_diagnostics_test() returns void as $$
+declare _column_name text;
+        _constraint_name text;
+        _datatype_name text;
+        _table_name text;
+        _schema_name text;
+begin
+  raise exception using
+    column = '>>some column name<<',
+    constraint = '>>some constraint name<<',
+    datatype = '>>some datatype name<<',
+    table = '>>some table name<<',
+    schema = '>>some schema name<<';
+exception when others then
+  get stacked diagnostics
+        _column_name = column_name,
+        _constraint_name = constraint_name,
+        _datatype_name = pg_datatype_name,
+        _table_name = table_name,
+        _schema_name = schema_name;
+  raise notice 'column %, constraint %, type %, table %, schema %',
+    _column_name, _constraint_name, _datatype_name, _table_name, _schema_name;
+end;
+$$ language plpgsql;
+select stacked_diagnostics_test();
+NOTICE:  column >>some column name<<, constraint >>some constraint name<<, type >>some datatype name<<, table >>some table name<<, schema >>some schema name<<
+ stacked_diagnostics_test 
+--------------------------
+ 
+(1 row)
+
+drop function stacked_diagnostics_test();
 -- test CASE statement
 create or replace function case_test(bigint) returns text as $$
 declare a int = 10;
@@ -4568,7 +4803,6 @@ SAVEPOINT a;
 select error2('nonexistent.stuffs');
 ERROR:  schema "nonexistent" does not exist
 CONTEXT:  SQL function "error1" statement 1
-SQL statement "SELECT error1(p_name_table)"
 PL/pgSQL function error2(text) line 3 at RETURN
 ROLLBACK TO a;
 select error2('public.stuffs');
@@ -5085,3 +5319,199 @@ ERROR:  value for domain orderedarray violates check constraint "sorted"
 CONTEXT:  PL/pgSQL function testoa(integer,integer,integer) line 5 at assignment
 drop function arrayassign1();
 drop function testoa(x1 int, x2 int, x3 int);
+-- access to call stack
+create function inner_func(int)
+returns int as $$
+declare _context text;
+begin
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  -- lets do it again, just for fun..
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  raise notice 'lets make sure we didnt break anything';
+  return 2 * $1;
+end;
+$$ language plpgsql;
+create or replace function outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into inner_func()';
+  myresult := inner_func($1);
+  raise notice 'inner_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+create or replace function outer_outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into outer_func()';
+  myresult := outer_func($1);
+  raise notice 'outer_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+select outer_outer_func(10);
+NOTICE:  calling down into outer_func()
+NOTICE:  calling down into inner_func()
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 4 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 7 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  lets make sure we didnt break anything
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  inner_func() done
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  outer_func() done
+ outer_outer_func 
+------------------
+               20
+(1 row)
+
+-- repeated call should to work
+select outer_outer_func(20);
+NOTICE:  calling down into outer_func()
+NOTICE:  calling down into inner_func()
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 4 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 7 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  lets make sure we didnt break anything
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  inner_func() done
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  outer_func() done
+ outer_outer_func 
+------------------
+               40
+(1 row)
+
+drop function outer_outer_func(int);
+drop function outer_func(int);
+drop function inner_func(int);
+-- access to call stack from exception
+create function inner_func(int)
+returns int as $$
+declare
+  _context text;
+  sx int := 5;
+begin
+  begin
+    perform sx / 0;
+  exception
+    when division_by_zero then
+      get diagnostics _context = pg_context;
+      raise notice '***%***', _context;
+  end;
+
+  -- lets do it again, just for fun..
+  get diagnostics _context = pg_context;
+  raise notice '***%***', _context;
+  raise notice 'lets make sure we didnt break anything';
+  return 2 * $1;
+end;
+$$ language plpgsql;
+create or replace function outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into inner_func()';
+  myresult := inner_func($1);
+  raise notice 'inner_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+create or replace function outer_outer_func(int)
+returns int as $$
+declare
+  myresult int;
+begin
+  raise notice 'calling down into outer_func()';
+  myresult := outer_func($1);
+  raise notice 'outer_func() done';
+  return myresult;
+end;
+$$ language plpgsql;
+select outer_outer_func(10);
+NOTICE:  calling down into outer_func()
+NOTICE:  calling down into inner_func()
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 10 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 15 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  lets make sure we didnt break anything
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  inner_func() done
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  outer_func() done
+ outer_outer_func 
+------------------
+               20
+(1 row)
+
+-- repeated call should to work
+select outer_outer_func(20);
+NOTICE:  calling down into outer_func()
+NOTICE:  calling down into inner_func()
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 10 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  ***PL/pgSQL function inner_func(integer) line 15 at GET DIAGNOSTICS
+DETAIL:  
+PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment***
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  lets make sure we didnt break anything
+CONTEXT:  PL/pgSQL function outer_func(integer) line 6 at assignment
+PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  inner_func() done
+CONTEXT:  PL/pgSQL function outer_outer_func(integer) line 6 at assignment
+NOTICE:  outer_func() done
+ outer_outer_func 
+------------------
+               40
+(1 row)
+
+drop function outer_outer_func(int);
+drop function outer_func(int);
+drop function inner_func(int);

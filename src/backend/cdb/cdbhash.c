@@ -15,8 +15,6 @@
  */
 #include "postgres.h"
 
-#include <sys/socket.h>
-
 #include "access/tuptoaster.h"
 #include "commands/dbcommands.h"
 #include "utils/builtins.h"
@@ -61,9 +59,6 @@ static int MyDatabaseHashMethod = INVALID_HASH_METHOD;
 /* Constant used for hashing an invalid value  */
 #define INVALID_VAL ((uint32)0XD0D0D0D1)
 
-/* Constant used to help defining upper limit for random generator */
-#define UPPER_VAL ((uint32)0XA0B0C0D1)
-
 /* Fast mod using a bit mask, assuming that y is a power of 2 */
 #define FASTMOD(x,y)		((x) & ((y)-1))
 
@@ -75,6 +70,8 @@ static int	ispowof2(int numsegs);
 static inline void set_database_hash_method(void);
 static inline int32 jump_consistent_hash(uint64 key, int32 num_segments);
 
+static Oid get_cdbhash_base_type(Oid typeoid);
+static bool isGreenplumDbHashableBaseType(Oid typid);
 
 /*================================================================
  *
@@ -92,13 +89,15 @@ static inline int32 jump_consistent_hash(uint64 key, int32 num_segments);
  *
  * 1 - number of segments in Greenplum Database.
  * 2 - reduction method.
+ * 3 - distribution key column data types.
  *
  * The hash value itself will be initialized for every tuple in cdbhashinit()
  */
 CdbHash *
-makeCdbHash(int numsegs)
+makeCdbHash(int numsegs, int natts, Oid *typeoids)
 {
 	CdbHash    *h;
+	int			i;
 
 	Assert(numsegs > 0);		/* verify number of segments is legal. */
 
@@ -106,8 +105,13 @@ makeCdbHash(int numsegs)
 
 	Assert(MyDatabaseHashMethod != INVALID_HASH_METHOD);
 
-	/* Create a pointer to a CdbHash that includes the hash properties */
-	h = palloc(sizeof(CdbHash));
+	if (numsegs == __GP_POLICY_EVIL_NUMSEGMENTS)
+	{
+		Assert(!"what's the proper value of numsegments?");
+	}
+
+	/* Allocate a new CdbHash, with space for the datatype OIDs. */
+	h = palloc(offsetof(CdbHash, typeoids) + natts * sizeof(Oid));
 
 	/*
 	 * set this hash session characteristics.
@@ -133,16 +137,20 @@ makeCdbHash(int numsegs)
 					 errmsg("invalid hash_method: %d", MyDatabaseHashMethod)));
 	}
 
-	/*
-	 * if we distribute into a relation with an empty partitioning policy, we
-	 * will round robin the tuples starting off from this index. Note that the
-	 * random number is created one per makeCdbHash. This means that commands
-	 * that create a cdbhash object only once for all tuples (like COPY,
-	 * INSERT-INTO-SELECT) behave more like a round-robin distribution, while
-	 * commands that create a cdbhash per row (like INSERT) behave more like a
-	 * random distribution.
-	 */
-	h->rrindex = cdb_randint(0, UPPER_VAL);
+	for (i = 0; i < natts; i++)
+	{
+		Oid			type = typeoids[i];
+
+		type = get_cdbhash_base_type(type);
+		if (!OidIsValid(type))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+					 errmsg("Type %u is not hashable.", type)));
+		}
+		h->typeoids[i] = type;
+	}
+	h->natts = natts;
 
 	ereport(DEBUG4,
 			(errmsg("CDBHASH hashing into %d segment databases", h->numsegs)));
@@ -150,6 +158,37 @@ makeCdbHash(int numsegs)
 	return h;
 }
 
+/*
+ * Convenience routine, to create a CdbHash according to a relation's
+ * distribution policy.
+ */
+CdbHash *
+makeCdbHashForRelation(Relation rel)
+{
+	int			numsegs;
+	int			natts;
+	int			i;
+	Oid		   *typeoids;
+	TupleDesc	tdesc = rel->rd_att;
+	CdbHash	   *h;
+
+	numsegs = rel->rd_cdbpolicy->numsegments;
+	natts = rel->rd_cdbpolicy->nattrs;
+
+	typeoids = palloc(natts * sizeof(Oid));
+	for (i = 0; i < natts; i++)
+	{
+		AttrNumber attnum = rel->rd_cdbpolicy->attrs[i];
+
+		typeoids[i] = tdesc->attrs[attnum - 1]->atttypid;
+	}
+
+	h = makeCdbHash(numsegs, natts, typeoids);
+
+	pfree(typeoids);
+
+	return h;
+}
 
 /*
  * Initialize CdbHash for hashing the next tuple values.
@@ -162,41 +201,15 @@ cdbhashinit(CdbHash *h)
 }
 
 /*
- * Implements datumHashFunction
- */
-static void
-addToCdbHash(void *cdbHash, void *buf, size_t len)
-{
-	CdbHash    *h = (CdbHash *) cdbHash;
-
-	h->hash = fnv1_32_buf(buf, len, h->hash);
-}
-
-/*
  * Add an attribute to the CdbHash calculation.
- */
-void
-cdbhash(CdbHash *h, Datum datum, Oid type)
-{
-	hashDatum(datum, type, addToCdbHash, (void *) h);
-}
-
-/*
- * Add an attribute to the hash calculation.
+ *
  * **IMPORTANT: any new hard coded support for a data type in here
- * must be added to isGreenplumDbHashable() below!
- *
- * Note that the caller should provide the base type if the datum is
- * of a domain type. It is quite expensive to call get_typtype() and
- * getBaseType() here since this function gets called a lot for the
- * same set of Datums.
- *
- * @param hashFn called to update the hash value.
- * @param clientData passed to hashFn.
+ * must be added to isGreenplumDbHashableBaseType() below!
  */
 void
-hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
+cdbhash(CdbHash *h, int attno, Datum datum, bool isnull)
 {
+	Oid			type;
 	void	   *buf = NULL;		/* pointer to the data */
 	size_t		len = 0;		/* length for the data buffer */
 
@@ -247,15 +260,26 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 
 	void	   *tofree = NULL;
 
-	if (typeIsEnumType(type))
-		type = ANYENUMOID;
+	/*
+	 * Add a NULL attribute to the hash calculation.
+	 */
+	if (isnull)
+	{
+		uint32		nullbuf = NULL_VAL; /* stores the constant value that
+										 * represents a NULL */
+		void	   *buf = &nullbuf; /* stores the address of the buffer					*/
+		size_t		len = sizeof(nullbuf);	/* length of the value								*/
 
-	if (typeIsRangeType(type))
-		type = ANYRANGEOID;
+		h->hash = fnv1_32_buf(buf, len, h->hash);
+
+		return;
+	}
+
 	/*
 	 * Select the hash to be performed according to the field type we are
 	 * adding to the hash.
 	 */
+	type = h->typeoids[attno - 1];
 	switch (type)
 	{
 			/*
@@ -629,54 +653,20 @@ hashDatum(Datum datum, Oid type, datumHashFunction hashFn, void *clientData)
 	}							/* switch(type) */
 
 	/* do the hash using the selected algorithm */
-	hashFn(clientData, buf, len);
+	h->hash = fnv1_32_buf(buf, len, h->hash);
 	if (tofree)
 		pfree(tofree);
 }
 
 /*
- * Add a NULL attribute to the hash calculation.
- */
-void
-cdbhashnull(CdbHash *h)
-{
-	hashNullDatum(addToCdbHash, (void *) h);
-}
-
-/*
- * Update the hash value for a null Datum
- *
- * @param hashFn called to update the hash value.
- * @param clientData passed to hashFn.
- */
-void
-hashNullDatum(datumHashFunction hashFn, void *clientData)
-{
-	uint32		nullbuf = NULL_VAL; /* stores the constant value that
-									 * represents a NULL */
-	void	   *buf = &nullbuf; /* stores the address of the buffer					*/
-	size_t		len = sizeof(nullbuf);	/* length of the value								*/
-
-	hashFn(clientData, buf, len);
-}
-
-/*
- * Hash a tuple of a relation with an empty policy (no hash
- * key exists) via round robin with a random initial value.
+ * Pick a random hash value, for a tuple in a relation with an empty
+ * policy (i.e. DISTRIBUTED RANDOMLY).
  */
 void
 cdbhashnokey(CdbHash *h)
 {
-	uint32		rrbuf = h->rrindex;
-	void	   *buf = &rrbuf;
-	size_t		len = sizeof(rrbuf);
-
-	/* compute the hash */
-	h->hash = fnv1_32_buf(buf, len, h->hash);
-
-	h->rrindex++;				/* increment for next time around */
+	h->hash = (uint32) random();
 }
-
 
 /*
  * Reduce the hash to a segment number.
@@ -684,7 +674,6 @@ cdbhashnokey(CdbHash *h)
 unsigned int
 cdbhashreduce(CdbHash *h)
 {
-
 	int			result = 0;		/* TODO: what is a good initialization value?
 								 * could we guarantee at this point that there
 								 * will not be a negative segid in Greenplum
@@ -716,55 +705,84 @@ cdbhashreduce(CdbHash *h)
 	return result;
 }
 
-bool
-typeIsArrayType(Oid typeoid)
+/*
+ * Return a random segment number, for randomly distributed policy.
+ *
+ * This is functionally equivalent to calling makeCdbHash() + cdbhashnokey()
+ * + cdbhashreduce().
+ */
+unsigned int
+cdbhashrandomseg(int numsegs)
 {
-	Type		tup = typeidType(typeoid);
+	/*
+	 * Note: Using modulo like this has a bias towards low values. But that's
+	 * accceptable for our use case.
+	 *
+	 * For example, if MAX_RANDOM_VALUE was 5, and you did "random() % 4",
+	 * value 0 would occur twice as often as others, because you would get 0
+	 * when random() returns 0 or 4, while other values would only be returned
+	 * with one return value of random(). But in reality, MAX_RANDOM_VALUE is
+	 * 2^31, and the effect is not significant when the upper bound is much
+	 * smaller than MAX_RANDOM_VALUE. This function is intended for choosing a
+	 * segment in random, and the number of segments is much smaller than
+	 * 2^31, so we're good. (The cdbhashnokey() + cdbhashreduce() method is
+	 * not susceptible to modulo bias, when jump consistent hash is used.)
+	 */
+	return random() % numsegs;
+}
+
+/*
+ * Given a type OID, return the "canonical" base datatype that cdbhash
+ * understands, or InvalidOid if this datatype is not supported by cdbhash.
+ */
+static Oid
+get_cdbhash_base_type(Oid typeoid)
+{
+	Type		tup;
 	Form_pg_type typeform;
-	bool		res = false;
 
+	/*
+	 * If it's directly one of the supported built-in datatypes, we're
+	 * done. Check this first, to avoid the syscache lookup in the
+	 * common case.
+	 */
+	if (isGreenplumDbHashableBaseType(typeoid))
+		return typeoid;
+
+	/* look through domains */
+	typeoid = getBaseType(typeoid);
+	if (isGreenplumDbHashableBaseType(typeoid))
+		return typeoid;
+
+	/*
+	 * Is it an array, enum, or range type? cdbhash() likes to handle
+	 * these as anyarray, anyenum or anyrange.
+	 */
+	tup = typeidType(typeoid);
 	typeform = (Form_pg_type) GETSTRUCT(tup);
-
 	if (typeform->typelem != InvalidOid &&
 		typeform->typtype != 'd' &&
 		NameStr(typeform->typname)[0] == '_' &&
 		typeform->typinput == F_ARRAY_IN)
-		res = true;
-
+	{
+		typeoid = ANYARRAYOID;
+	}
+	else if (typeform->typtype == 'e' && typeform->typinput == F_ENUM_IN)
+	{
+		typeoid = ANYENUMOID;
+	}
+	else if (typeform->typtype == 'r' && typeform->typinput == F_RANGE_IN)
+	{
+		typeoid = ANYRANGEOID;
+	}
+	else
+	{
+		/* Not GPDB hashable */
+		typeoid = InvalidOid;
+	}
 	ReleaseSysCache(tup);
-	return res;
-}
 
-bool
-typeIsEnumType(Oid typeoid)
-{
-	Type		tup = typeidType(typeoid);
-	Form_pg_type typeform;
-	bool		res = false;
-
-	typeform = (Form_pg_type) GETSTRUCT(tup);
-
-	if (typeform->typtype == 'e' && typeform->typinput == F_ENUM_IN)
-		res = true;
-
-	ReleaseSysCache(tup);
-	return res;
-}
-
-bool
-typeIsRangeType(Oid typeoid)
-{
-	Type		tup = typeidType(typeoid);
-	Form_pg_type typeform;
-	bool		res = false;
-
-	typeform = (Form_pg_type) GETSTRUCT(tup);
-
-	if (typeform->typtype == 'r' && typeform->typinput == F_RANGE_IN)
-		res = true;
-
-	ReleaseSysCache(tup);
-	return res;
+	return typeoid;
 }
 
 /*
@@ -774,21 +792,12 @@ typeIsRangeType(Oid typeoid)
 bool
 isGreenplumDbHashable(Oid typid)
 {
-	/* we can hash all arrays */
-	if (typeIsArrayType(typid))
-		return true;
+	return OidIsValid(get_cdbhash_base_type(typid));
+}
 
-	/* if this type is a domain type, get its base type */
-	if (get_typtype(typid) == 'd')
-		typid = getBaseType(typid);
-
-	/* we can hash all enums */
-	if (typeIsEnumType(typid))
-		return true;
-
-	if (typeIsRangeType(typid))
-		return true;
-
+static bool
+isGreenplumDbHashableBaseType(Oid typid)
+{
 	/*
 	 * NB: Every GPDB-hashable datatype must also be mergejoinable, i.e. must
 	 * have a B-tree operator family. There is a sanity check for that in the
@@ -842,12 +851,17 @@ isGreenplumDbHashable(Oid typid)
 		case BITOID:
 		case VARBITOID:
 		case BOOLOID:
-		case ANYARRAYOID:
 		case OIDVECTOROID:
 		case CASHOID:
 		case UUIDOID:
 		case COMPLEXOID:
 			return true;
+
+		case ANYARRAYOID:
+		case ANYENUMOID:
+		case ANYRANGEOID:
+			return true;
+
 		default:
 			return false;
 	}

@@ -73,8 +73,7 @@ complex_out(PG_FUNCTION_ARGS)
 	Complex    *complex = (Complex *) PG_GETARG_POINTER(0);
 	char	   *result;
 
-	result = (char *) palloc(100);
-	snprintf(result, 100, "(%g,%g)", complex->x, complex->y);
+	result = psprintf("(%g,%g)", complex->x, complex->y);
 	PG_RETURN_CSTRING(result);
 }
 
@@ -140,7 +139,7 @@ complex_add(PG_FUNCTION_ARGS)
  * It's essential that the comparison operators and support function for a
  * B-tree index opclass always agree on the relative ordering of any two
  * data values.  Experience has shown that it's depressingly easy to write
- * unintentionally inconsistent functions.	One way to reduce the odds of
+ * unintentionally inconsistent functions.  One way to reduce the odds of
  * making a mistake is to make all the functions simple wrappers around
  * an internal three-way-comparison function, as we do here.
  *****************************************************************************/

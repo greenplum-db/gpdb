@@ -441,6 +441,8 @@ select Tbl04.* from Tbl04 where (Tbl04.a,Tbl04.b) not in ((1,2));
 
 select Tbl04.* from Tbl04 where (Tbl04.a,Tbl04.b) not in (select Tbl06.a,Tbl06.b from Tbl06) and (Tbl04.a,Tbl04.b) not in (select i3.a, i3.b from i3); -- expected: (5,6)
 
+explain (costs off)
+select Tbl04.* from Tbl04 where not ((Tbl04.a,Tbl04.b) in (select Tbl06.a,Tbl06.b from Tbl06) or (Tbl04.a,Tbl04.b) in (select i3.a, i3.b from i3));
 select Tbl04.* from Tbl04 where not ((Tbl04.a,Tbl04.b) in (select Tbl06.a,Tbl06.b from Tbl06) or (Tbl04.a,Tbl04.b) in (select i3.a, i3.b from i3)); -- expected: (5,6)
 
 -- single column in the target list should always give a HLASJ

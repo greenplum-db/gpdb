@@ -333,7 +333,7 @@ EXPLAIN (COSTS OFF ) UPDATE tab3 SET C1 = C1 + 1, C5 = C5+1;
 ------------------------------------------------------
  Update on tab3
    ->  Redistribute Motion 3:3  (slice1; segments: 3)
-         Hash Key: (c1 + 1), c2, c3
+         Hash Key: ((c1 + 1)), c2, c3
          ->  Split
                ->  Seq Scan on tab3
  Optimizer: legacy query optimizer

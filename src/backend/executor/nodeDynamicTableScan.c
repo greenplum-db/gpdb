@@ -307,15 +307,3 @@ ExecReScanDynamicTable(DynamicTableScanState *node)
 		ResetExprContext(econtext);
 	}
 }
-
-void
-ExecDynamicTableMarkPos(DynamicTableScanState *node)
-{
-	MarkRestrNotAllowed((ScanState *)node);
-}
-
-void
-ExecDynamicTableRestrPos(DynamicTableScanState *node)
-{
-	MarkRestrNotAllowed((ScanState *)node);
-}

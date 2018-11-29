@@ -4,7 +4,7 @@
  *	Catalog routines used by pg_dump; long ago these were shared
  *	by another dump tool, but not anymore.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -37,7 +37,7 @@ static int	numCatalogIds = 0;
 
 /*
  * These variables are static to avoid the notational cruft of having to pass
- * them into findTableByOid() and friends.	For each of these arrays, we
+ * them into findTableByOid() and friends.  For each of these arrays, we
  * build a sorted-by-OID index array immediately after it's built, and then
  * we use binary search in findTableByOid() and friends.  (qsort'ing the base
  * arrays themselves would be simpler, but it doesn't work because pg_dump.c
@@ -50,6 +50,7 @@ static DumpableObject **oprinfoindex;
 static DumpableObject **collinfoindex;
 static DumpableObject **nspinfoindex;
 static DumpableObject **extinfoindex;
+static DumpableObject **binaryupgradeinfoindex;
 static int	numTables;
 static int	numTypes;
 static int	numFuncs;
@@ -80,7 +81,7 @@ static int	strInArray(const char *pattern, char **arr, int arr_size);
  *	  Collect information about all potentially dumpable objects
  */
 TableInfo *
-getSchemaData(Archive *fout, int *numTablesPtr)
+getSchemaData(Archive *fout, int *numTablesPtr, int binary_upgrade)
 {
 	TableInfo  *tblinfo;
 	TypeInfo   *typinfo;
@@ -109,6 +110,17 @@ getSchemaData(Archive *fout, int *numTablesPtr)
 
 	/* GPDB specific variables */
 	int			numExtProtocols;
+
+	if (binary_upgrade)
+	{
+		BinaryUpgradeInfo *binfo;
+
+		if (g_verbose)
+			write_msg(NULL, "identifying required binary upgrade calls\n");
+
+		binfo = getBinaryUpgradeObjects();
+		binaryupgradeinfoindex = buildIndexArray(binfo, 1, sizeof(BinaryUpgradeInfo));
+	}
 
 	/*
 	 * We must read extensions and extension membership info first, because
@@ -296,7 +308,7 @@ flagInhTables(TableInfo *tblinfo, int numTables,
 
 	for (i = 0; i < numTables; i++)
 	{
-		/* Sequences, views and external tables never have parents */
+		/* Some kinds never have parents */
 		if (tblinfo[i].relkind == RELKIND_SEQUENCE ||
 			tblinfo[i].relkind == RELKIND_VIEW ||
 			tblinfo[i].relkind == RELKIND_MATVIEW ||
@@ -344,7 +356,7 @@ flagInhAttrs(TableInfo *tblinfo, int numTables)
 		int			numParents;
 		TableInfo **parents;
 
-		/* Sequences, views and external tables never have parents */
+		/* Some kinds never have parents */
 		if (tbinfo->relkind == RELKIND_SEQUENCE ||
 			tbinfo->relkind == RELKIND_VIEW ||
 			tbinfo->relkind == RELKIND_MATVIEW ||
@@ -518,7 +530,7 @@ findObjectByDumpId(DumpId dumpId)
  *
  * We use binary search in a sorted list that is built on first call.
  * If AssignDumpId() and findObjectByCatalogId() calls were freely intermixed,
- * the code would work, but possibly be very slow.	In the current usage
+ * the code would work, but possibly be very slow.  In the current usage
  * pattern that does not happen, indeed we build the list at most twice.
  */
 DumpableObject *

@@ -320,7 +320,7 @@ done</codeblock></p>
             <p>This is an example Avro schema. When reading the data from the Avro file the
                 <codeph>gphdfs</codeph> protocol performs these conversions:<ul id="ul_hry_hcb_dt">
                 <li><codeph>name</codeph> and <codeph>color</codeph> data are converted to Greenplum
-                  Database <codeph>sting</codeph>.</li>
+                  Database <codeph>string</codeph>.</li>
                 <li><codeph>age</codeph> data is converted to Greenplum Database
                     <codeph>int</codeph>.</li>
                 <li><codeph>clist</codeph> records are converted to <codeph>XML</codeph>.</li>
@@ -400,7 +400,7 @@ done</codeblock></p>
             source, Greenplum Database uses the schema when reading data from the Avro file. The
             specified schema overrides the Avro file schema.</p>
           <p dir="ltr">You can specify a file that contains an Avro schema as part of the location
-            paramter <codeph>CREATE EXTERNAL TABLE</codeph> command, to override the Avro file
+            parameter <codeph>CREATE EXTERNAL TABLE</codeph> command, to override the Avro file
             schema. If a set of Avro files contain different, related schemas, you can specify an
             Avro schema to retrieve the data common to all the files.</p>
           <p dir="ltr">Greenplum Database extracts the data from the Avro files based on the field

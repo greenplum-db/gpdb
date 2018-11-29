@@ -86,7 +86,7 @@ primary location 1&gt; <i>/gpfs1/seg1
             <li id="im198894">Check that the filespace exists and is different from the filespace
               used to store all other user data.</li>
             <li id="im198895">Issue smart shutdown to bring the Greenplum Database offline.<p>If any
-                connections are still in progess,the gpfilespace --movetempfiles utility will
+                connections are still in progress, the gpfilespace --movetempfiles utility will
                 fail.</p></li>
             <li id="im198897">Bring Greenplum Database online with no active session and run the
               following command:<p>
@@ -102,7 +102,7 @@ primary location 1&gt; <i>/gpfs1/seg1
             <li id="im198901">Check that the filespace exists and is different from the filespace
               used to store all other user data.</li>
             <li id="im198902">Issue smart shutdown to bring the Greenplum Database offline.<p>If any
-                connections are still in progess, the <codeph>gpfilespace --movetransfiles</codeph>
+                connections are still in progress, the <codeph>gpfilespace --movetransfiles</codeph>
                 utility will fail.</p></li>
             <li id="im198904">Bring Greenplum Database online with no active session and run the
               following command:<p>

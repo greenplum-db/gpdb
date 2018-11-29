@@ -21,6 +21,7 @@
 #include "utils/lsyscache.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
+#include "utils/snapmgr.h"
 
 #define APPENDONLY_VISIMAP_INDEX_SCAN_KEY_NUM 2
 
@@ -31,8 +32,7 @@
  * after this function call.
  */
 void
-AppendOnlyVisimapStore_Finish(
-							  AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_Finish(AppendOnlyVisimapStore *visiMapStore,
 							  LOCKMODE lockmode)
 {
 	if (visiMapStore->scanKeys)
@@ -41,6 +41,7 @@ AppendOnlyVisimapStore_Finish(
 		visiMapStore->scanKeys = NULL;
 	}
 
+	UnregisterSnapshot(visiMapStore->snapshot);
 	index_close(visiMapStore->visimapIndex, lockmode);
 	heap_close(visiMapStore->visimapRelation, lockmode);
 }
@@ -53,8 +54,7 @@ AppendOnlyVisimapStore_Finish(
  * Assumes that the visimap memory context is active.
  */
 void
-AppendOnlyVisimapStore_Init(
-							AppendOnlyVisimapStore *visiMapStore,
+AppendOnlyVisimapStore_Init(AppendOnlyVisimapStore *visiMapStore,
 							Oid visimapRelid,
 							Oid visimapIdxid,
 							LOCKMODE lockmode,
@@ -69,7 +69,7 @@ AppendOnlyVisimapStore_Init(
 	Assert(OidIsValid(visimapRelid));
 	Assert(OidIsValid(visimapIdxid));
 
-	visiMapStore->snapshot = snapshot;
+	visiMapStore->snapshot = RegisterSnapshot(snapshot);
 	visiMapStore->memoryContext = memoryContext;
 
 	visiMapStore->visimapRelation = heap_open(

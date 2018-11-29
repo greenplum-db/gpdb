@@ -48,7 +48,7 @@ class GpLoadTestCase(unittest.TestCase):
         gploader.locations = [ 'gpfdist://localhost:8080/test' ]
         rejectLimit = '9999'
 
-        sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False)
+        sql = gploader.get_reuse_exttable_query('csv', 'header', None, {}, None, False, None)
         self.assertTrue('NOT pgext.logerrors' in sql)
         self.assertTrue('pgext.rejectlimit IS NULL' in sql)
 

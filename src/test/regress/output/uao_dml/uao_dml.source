@@ -1120,7 +1120,7 @@ INSERT INTO bar SELECT i as a, 2 as b, '' as c  FROM generate_series(1, 100000) 
 ANALYZE foo;
 ANALYZE bar;
 -- MPP-23546.  The following update statements ensure that
--- appendonly_udpate() sees tuples out of order with respect to their
+-- appendonly_update() sees tuples out of order with respect to their
 -- row numbers / tuple ids and also that the tuples seen by update
 -- span more than one visimap entry.
 set enable_nestloop=false;

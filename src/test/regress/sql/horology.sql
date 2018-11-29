@@ -642,6 +642,26 @@ SELECT to_timestamp(' 2005 03 02', 'YYYYMMDD');
 SELECT to_timestamp('  20050302', 'YYYYMMDD');
 
 --
+-- Check handling of multiple spaces in format and/or input
+--
+
+SELECT to_timestamp('2011-12-18 23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
+SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
+SELECT to_timestamp('2011-12-18   23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
+
+SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD HH24:MI:SS');
+SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD  HH24:MI:SS');
+SELECT to_timestamp('2011-12-18  23:38:15', 'YYYY-MM-DD   HH24:MI:SS');
+
+SELECT to_date('2011 12  18', 'YYYY MM DD');
+SELECT to_date('2011 12  18', 'YYYY MM  DD');
+SELECT to_date('2011 12  18', 'YYYY MM   DD');
+
+SELECT to_date('2011 12 18', 'YYYY  MM DD');
+SELECT to_date('2011  12 18', 'YYYY  MM DD');
+SELECT to_date('2011   12 18', 'YYYY  MM DD');
+
+--
 -- Check errors for some incorrect usages of to_timestamp()
 --
 
@@ -662,6 +682,22 @@ SELECT to_timestamp('199711xy', 'YYYYMMDD');
 
 -- Input that doesn't fit in an int:
 SELECT to_timestamp('10000000000', 'FMYYYY');
+
+--
+-- Check behavior with SQL-style fixed-GMT-offset time zone (cf bug #8572)
+--
+
+SET TIME ZONE 'America/New_York';
+SET TIME ZONE '-1.5';
+
+SHOW TIME ZONE;
+
+SELECT '2012-12-12 12:00'::timestamptz;
+SELECT '2012-12-12 12:00 America/New_York'::timestamptz;
+
+SELECT to_char('2012-12-12 12:00'::timestamptz, 'YYYY-MM-DD HH:MI:SS TZ');
+
+RESET TIME ZONE;
 
 
 -- Clean up

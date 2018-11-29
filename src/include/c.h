@@ -11,7 +11,7 @@
  *
  * Portions Copyright (c) 2006-2011, Greenplum inc
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/c.h
@@ -39,7 +39,7 @@
  *		9)		system-specific hacks
  *
  * NOTE: since this file is included by both frontend and backend modules, it's
- * almost certainly wrong to put an "extern" declaration here.	typedefs and
+ * almost certainly wrong to put an "extern" declaration here.  typedefs and
  * macros are the kind of thing that might go here.
  *
  *----------------------------------------------------------------
@@ -63,6 +63,15 @@ extern "C" {
 
 #include "pg_config.h"
 #include "pg_config_manual.h"	/* must be after pg_config.h */
+
+/*
+ * We always rely on the WIN32 macro being set by our build system,
+ * but _WIN32 is the compiler pre-defined macro. So make sure we define
+ * WIN32 whenever _WIN32 is set, to facilitate standalone building.
+ */
+#if defined(_WIN32) && !defined(WIN32)
+#define WIN32
+#endif
 
 #if !defined(WIN32) && !defined(__CYGWIN__)		/* win32 includes further down */
 #include "pg_config_os.h"		/* must be before any system header files */
@@ -119,7 +128,7 @@ extern "C" {
 
 /*
  *	Use this to mark string constants as needing translation at some later
- *	time, rather than immediately.	This is useful for cases where you need
+ *	time, rather than immediately.  This is useful for cases where you need
  *	access to the original string and translated string, and for cases where
  *	immediate translation is not possible, like when initializing global
  *	variables.
@@ -141,28 +150,12 @@ extern "C" {
  * CppConcat
  *		Concatenate two arguments together, using the C preprocessor.
  *
- * Note: the standard Autoconf macro AC_C_STRINGIZE actually only checks
- * whether #identifier works, but if we have that we likely have ## too.
+ * Note: There used to be support here for pre-ANSI C compilers that didn't
+ * support # and ##.  Nowadays, these macros are just for clarity and/or
+ * backward compatibility with existing PostgreSQL code.
  */
-#if defined(HAVE_STRINGIZE)
-
 #define CppAsString(identifier) #identifier
 #define CppConcat(x, y)			x##y
-#else							/* !HAVE_STRINGIZE */
-
-#define CppAsString(identifier) "identifier"
-
-/*
- * CppIdentity -- On Reiser based cpp's this is used to concatenate
- *		two tokens.  That is
- *				CppIdentity(A)B ==> AB
- *		We renamed it to _private_CppIdentity because it should not
- *		be referenced outside this file.  On other cpp's it
- *		produces  A  B.
- */
-#define _priv_CppIdentity(x)x
-#define CppConcat(x, y)			_priv_CppIdentity(x)y
-#endif   /* !HAVE_STRINGIZE */
 
 /*
  * dummyret is used to set return values in macros that use ?: to make
@@ -428,6 +421,7 @@ typedef uint32 CommandId;
 typedef int32  gpsegmentId;        /* CDB: type of gp_segment_id system col */
 
 #define FirstCommandId	((CommandId) 0)
+#define InvalidCommandId	(~(CommandId)0)
 
 /*
  * Array indexing support
@@ -442,7 +436,7 @@ typedef struct
  *		Variable-length datatypes all share the 'struct varlena' header.
  *
  * NOTE: for TOASTable types, this is an oversimplification, since the value
- * may be compressed or moved out-of-line.	However datatype-specific routines
+ * may be compressed or moved out-of-line.  However datatype-specific routines
  * are mostly content to deal with de-TOASTed values only, and of course
  * client-side routines should never see a TOASTed value.  But even in a
  * de-TOASTed value, beware of touching vl_len_ directly, as its representation
@@ -472,7 +466,7 @@ typedef struct varlena VarChar; /* var-length char, ie SQL varchar(n) */
 /*
  * Specialized array types.  These are physically laid out just the same
  * as regular arrays (so that the regular array subscripting code works
- * with them).	They exist as distinct types mostly for historical reasons:
+ * with them).  They exist as distinct types mostly for historical reasons:
  * they have nonstandard I/O behavior which we don't want to change for fear
  * of breaking applications that look at the system catalogs.  There is also
  * an implementation issue for oidvector: it's part of the primary key for
@@ -515,7 +509,7 @@ typedef NameData *Name;
 
 /*
  * Support macros for escaping strings.  escape_backslash should be TRUE
- * if generating a non-standard-conforming string.	Prefixing a string
+ * if generating a non-standard-conforming string.  Prefixing a string
  * with ESCAPE_STRING_SYNTAX guarantees it is non-standard-conforming.
  * Beware of multiple evaluation of the "ch" argument!
  */
@@ -545,7 +539,7 @@ typedef NameData *Name;
  *		True iff pointer is properly aligned to point to the given type.
  */
 #define PointerIsAligned(pointer, type) \
-		(((intptr_t)(pointer) % (sizeof (type))) == 0)
+		(((uintptr_t)(pointer) % (sizeof (type))) == 0)
 
 #define OidIsValid(objectId)  ((bool) ((objectId) != InvalidOid))
 
@@ -591,7 +585,7 @@ typedef NameData *Name;
  */
 
 #define TYPEALIGN(ALIGNVAL,LEN)  \
-	(((intptr_t) (LEN) + ((ALIGNVAL) - 1)) & ~((intptr_t) ((ALIGNVAL) - 1)))
+	(((uintptr_t) (LEN) + ((ALIGNVAL) - 1)) & ~((uintptr_t) ((ALIGNVAL) - 1)))
 
 #define SHORTALIGN(LEN)			TYPEALIGN(ALIGNOF_SHORT, (LEN))
 #define INTALIGN(LEN)			TYPEALIGN(ALIGNOF_INT, (LEN))
@@ -602,13 +596,25 @@ typedef NameData *Name;
 #define BUFFERALIGN(LEN)		TYPEALIGN(ALIGNOF_BUFFER, (LEN))
 
 #define TYPEALIGN_DOWN(ALIGNVAL,LEN)  \
-	(((intptr_t) (LEN)) & ~((intptr_t) ((ALIGNVAL) - 1)))
+	(((uintptr_t) (LEN)) & ~((uintptr_t) ((ALIGNVAL) - 1)))
 
 #define SHORTALIGN_DOWN(LEN)	TYPEALIGN_DOWN(ALIGNOF_SHORT, (LEN))
 #define INTALIGN_DOWN(LEN)		TYPEALIGN_DOWN(ALIGNOF_INT, (LEN))
 #define LONGALIGN_DOWN(LEN)		TYPEALIGN_DOWN(ALIGNOF_LONG, (LEN))
 #define DOUBLEALIGN_DOWN(LEN)	TYPEALIGN_DOWN(ALIGNOF_DOUBLE, (LEN))
 #define MAXALIGN_DOWN(LEN)		TYPEALIGN_DOWN(MAXIMUM_ALIGNOF, (LEN))
+
+/*
+ * The above macros will not work with types wider than uintptr_t, like with
+ * uint64 on 32-bit platforms.  That's not problem for the usual use where a
+ * pointer or a length is aligned, but for the odd case that you need to
+ * align something (potentially) wider, use TYPEALIGN64.
+ */
+#define TYPEALIGN64(ALIGNVAL,LEN)  \
+	(((uint64) (LEN) + ((ALIGNVAL) - 1)) & ~((uint64) ((ALIGNVAL) - 1)))
+
+/* we don't currently need wider versions of the other ALIGN macros */
+#define MAXALIGN64(LEN)			TYPEALIGN64(MAXIMUM_ALIGNOF, (LEN))
 
 
 /* ----------------
@@ -676,9 +682,12 @@ typedef NameData *Name;
 #define AssertMacro(condition)	((void)true)
 #define AssertArg(condition)
 #define AssertState(condition)
+#define AssertPointerAlignment(ptr, bndr)   ((void)true)
 #define AssertImply(condition1, condition2)
 #define AssertEquivalent(cond1, cond2)
-#define AssertPointerAlignment(ptr, bndr)   ((void)true)
+#define Trap(condition, errorType)
+#define TrapMacro(condition, errorType) (true)
+
 #elif defined(FRONTEND)
 
 #include <assert.h>
@@ -746,7 +755,7 @@ typedef NameData *Name;
  * throw a compile error using the "errmessage" (a string literal).
  *
  * gcc 4.6 and up supports _Static_assert(), but there are bizarre syntactic
- * placement restrictions.	These macros make it safe to use as a statement
+ * placement restrictions.  These macros make it safe to use as a statement
  * or in an expression, respectively.
  *
  * Otherwise we fall back on a kluge that assumes the compiler will complain
@@ -828,7 +837,7 @@ typedef NameData *Name;
  *	datum) and add a null, do not do it with StrNCpy(..., len+1).  That
  *	might seem to work, but it fetches one byte more than there is in the
  *	text object.  One fine day you'll have a SIGSEGV because there isn't
- *	another byte before the end of memory.	Don't laugh, we've had real
+ *	another byte before the end of memory.  Don't laugh, we've had real
  *	live bug reports from real live users over exactly this mistake.
  *	Do it honestly with "memcpy(dst,src,len); dst[len] = '\0';", instead.
  */
@@ -854,7 +863,7 @@ typedef NameData *Name;
  *	Exactly the same as standard library function memset(), but considerably
  *	faster for zeroing small word-aligned structures (such as parsetree nodes).
  *	This has to be a macro because the main point is to avoid function-call
- *	overhead.	However, we have also found that the loop is faster than
+ *	overhead.   However, we have also found that the loop is faster than
  *	native libc memset() on some platforms, even those with assembler
  *	memset() functions.  More research needs to be done, perhaps with
  *	MEMSET_LOOP_LIMIT tests in configure.
@@ -867,7 +876,7 @@ typedef NameData *Name;
 		int		_val = (val); \
 		Size	_len = (len); \
 \
-		if ((((intptr_t) _vstart) & LONG_ALIGN_MASK) == 0 && \
+		if ((((uintptr_t) _vstart) & LONG_ALIGN_MASK) == 0 && \
 			(_len & LONG_ALIGN_MASK) == 0 && \
 			_val == 0 && \
 			_len <= MEMSET_LOOP_LIMIT && \
@@ -984,7 +993,7 @@ typedef NameData *Name;
  *
  * The function bodies must be defined in the module header prefixed by
  * STATIC_IF_INLINE, protected by a cpp symbol that the module's .c file must
- * define.	If the compiler doesn't support inline functions, the function
+ * define.  If the compiler doesn't support inline functions, the function
  * definitions are pulled in by the .c file as regular (not inline) symbols.
  *
  * The header must also declare the functions' prototypes, protected by
@@ -1064,7 +1073,7 @@ typedef NameData *Name;
  *				Section 9: system-specific hacks
  *
  *		This should be limited to things that absolutely have to be
- *		included in every source file.	The port-specific header file
+ *		included in every source file.  The port-specific header file
  *		is usually a better place for this sort of thing.
  * ----------------------------------------------------------------
  */
@@ -1073,7 +1082,7 @@ typedef NameData *Name;
  *	NOTE:  this is also used for opening text files.
  *	WIN32 treats Control-Z as EOF in files opened in text mode.
  *	Therefore, we open files in binary mode on Win32 so we can read
- *	literal control-Z.	The other affect is that we see CRLF, but
+ *	literal control-Z.  The other affect is that we see CRLF, but
  *	that is OK because we can already handle those cleanly.
  */
 #if defined(WIN32) || defined(__CYGWIN__)

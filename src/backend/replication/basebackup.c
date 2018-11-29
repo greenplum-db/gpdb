@@ -3,7 +3,7 @@
  * basebackup.c
  *	  code for taking a base backup and streaming it to a standby
  *
- * Portions Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *
  * IDENTIFICATION
  *	  src/backend/replication/basebackup.c
@@ -27,12 +27,13 @@
 #include "catalog/pg_database.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/pg_type.h"
-#include "common/relpath.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
 #include "nodes/pg_list.h"
+#include "pgtar.h"
+#include "pgstat.h"
 #include "replication/basebackup.h"
 #include "replication/walsender.h"
 #include "replication/walsender_private.h"
@@ -47,7 +48,8 @@
 #include "utils/guc.h"
 #include "utils/ps_status.h"
 #include "utils/snapmgr.h"
-#include "pgtar.h"
+#include "utils/timestamp.h"
+
 
 typedef struct
 {
@@ -56,6 +58,7 @@ typedef struct
 	bool		fastcheckpoint;
 	bool		nowait;
 	bool		includewal;
+	uint32		maxrate;
 	List	   *exclude;
 } basebackup_options;
 
@@ -75,14 +78,35 @@ static void perform_base_backup(basebackup_options *opt, DIR *tblspcdir);
 static void parse_basebackup_options(List *options, basebackup_options *opt);
 static void SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli);
 static int	compareWalFileNames(const void *a, const void *b);
+static void throttle(size_t increment);
 
 /* Was the backup currently in-progress initiated in recovery mode? */
 static bool backup_started_in_recovery = false;
+
+/* Relative path of temporary statistics directory */
+static char *statrelpath = NULL;
 
 /*
  * Size of each block sent into the tar stream for larger files.
  */
 #define TAR_SEND_SIZE 32768
+
+/*
+ * How frequently to throttle, as a fraction of the specified rate-second.
+ */
+#define THROTTLING_FREQUENCY	8
+
+/* The actual number of bytes, transfer of which may cause sleep. */
+static uint64 throttling_sample;
+
+/* Amount of data already transfered but not yet throttled.  */
+static int64 throttling_counter;
+
+/* The minimum time required to transfer throttling_sample bytes. */
+static int64 elapsed_min_unit;
+
+/* The last check of the transfer rate. */
+static int64 throttled_last;
 
 typedef struct
 {
@@ -140,6 +164,13 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 
 	SIMPLE_FAULT_INJECTOR(BaseBackupPostCreateCheckpoint);
 
+	/*
+	 * Once do_pg_start_backup has been called, ensure that any failure causes
+	 * us to abort the backup so we don't "leak" a backup counter. For this reason,
+	 * *all* functionality between do_pg_start_backup() and do_pg_stop_backup()
+	 * should be inside the error cleanup block!
+	 */
+
 	PG_ENSURE_ERROR_CLEANUP(base_backup_cleanup, (Datum) 0);
 	{
 		List	   *tablespaces = NIL;
@@ -149,13 +180,24 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 
 		SendXlogRecPtrResult(startptr, starttli);
 
+		/*
+		 * Calculate the relative path of temporary statistics directory in order
+		 * to skip the files which are located in that directory later.
+		 */
+		if (is_absolute_path(pgstat_stat_directory) &&
+			strncmp(pgstat_stat_directory, DataDir, datadirpathlen) == 0)
+			statrelpath = psprintf("./%s", pgstat_stat_directory + datadirpathlen + 1);
+		else if (strncmp(pgstat_stat_directory, "./", 2) != 0)
+			statrelpath = psprintf("./%s", pgstat_stat_directory);
+		else
+			statrelpath = pgstat_stat_directory;
+
 		/* Collect information about all tablespaces */
 		while ((de = ReadDir(tblspcdir, "pg_tblspc")) != NULL)
 		{
 			char		fullpath[MAXPGPATH];
 			char		linkpath[MAXPGPATH];
 			char	   *relpath = NULL;
-
 			int			rllen;
 
 			/* Skip special stuff */
@@ -218,6 +260,30 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 
 		/* Send tablespace header */
 		SendBackupHeader(tablespaces);
+
+		/* Setup and activate network throttling, if client requested it */
+		if (opt->maxrate > 0)
+		{
+			throttling_sample =
+				(int64) opt->maxrate * (int64) 1024 / THROTTLING_FREQUENCY;
+
+			/*
+			 * The minimum amount of time for throttling_sample bytes to be
+			 * transfered.
+			 */
+			elapsed_min_unit = USECS_PER_SEC / THROTTLING_FREQUENCY;
+
+			/* Enable throttling. */
+			throttling_counter = 0;
+
+			/* The 'real data' starts now (header was ignored). */
+			throttled_last = GetCurrentIntegerTimestamp();
+		}
+		else
+		{
+			/* Disable throttling. */
+			throttling_counter = -1;
+		}
 
 		/* Send off our tablespaces one by one */
 		foreach(lc, tablespaces)
@@ -352,6 +418,14 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 		qsort(walFiles, nWalFiles, sizeof(char *), compareWalFileNames);
 
 		/*
+		 * There must be at least one xlog file in the pg_xlog directory,
+		 * since we are doing backup-including-xlog.
+		 */
+		if (nWalFiles < 1)
+			ereport(ERROR,
+					(errmsg("could not find any WAL files")));
+
+		/*
 		 * Sanity check: the first and last segment should cover startptr and
 		 * endptr, with no gaps in between.
 		 */
@@ -438,6 +512,8 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 							(errmsg("base backup could not send data, aborting backup")));
 
 				len += cnt;
+				throttle(cnt);
+
 				if (len == XLogSegSize)
 					break;
 			}
@@ -511,6 +587,7 @@ parse_basebackup_options(List *options, basebackup_options *opt)
 	bool		o_fast = false;
 	bool		o_nowait = false;
 	bool		o_wal = false;
+	bool		o_maxrate = false;
 
 	MemSet(opt, 0, sizeof(*opt));
 	opt->exclude = NIL;
@@ -562,6 +639,25 @@ parse_basebackup_options(List *options, basebackup_options *opt)
 						 errmsg("duplicate option \"%s\"", defel->defname)));
 			opt->includewal = true;
 			o_wal = true;
+		}
+		else if (strcmp(defel->defname, "max_rate") == 0)
+		{
+			long		maxrate;
+
+			if (o_maxrate)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("duplicate option \"%s\"", defel->defname)));
+
+			maxrate = intVal(defel->arg);
+			if (maxrate < MAX_RATE_LOWER || maxrate > MAX_RATE_UPPER)
+				ereport(ERROR,
+						(errcode(ERRCODE_NUMERIC_VALUE_OUT_OF_RANGE),
+						 errmsg("%d is outside the valid range for parameter \"%s\" (%d .. %d)",
+				(int) maxrate, "MAX_RATE", MAX_RATE_LOWER, MAX_RATE_UPPER)));
+
+			opt->maxrate = (uint32) maxrate;
+			o_maxrate = true;
 		}
 		else if (strcmp(defel->defname, "exclude") == 0)
 		{
@@ -908,6 +1004,12 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 					strlen(PG_TEMP_FILE_PREFIX)) == 0)
 			continue;
 
+		/* skip auto conf temporary file */
+		if (strncmp(de->d_name,
+					PG_AUTOCONF_FILENAME ".tmp",
+					sizeof(PG_AUTOCONF_FILENAME) + 4) == 0)
+			continue;
+
 		/*
 		 * If there's a backup_label file, it belongs to a backup started by
 		 * the user with pg_start_backup(). It is *not* correct for this
@@ -953,6 +1055,32 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 								pathbuf)));
 
 			/* If the file went away while scanning, it's no error. */
+			continue;
+		}
+
+		/*
+		 * Skip temporary statistics files. PG_STAT_TMP_DIR must be skipped
+		 * even when stats_temp_directory is set because PGSS_TEXT_FILE is
+		 * always created there.
+		 */
+		if ((statrelpath != NULL && strcmp(pathbuf, statrelpath) == 0) ||
+		  strncmp(de->d_name, PG_STAT_TMP_DIR, strlen(PG_STAT_TMP_DIR)) == 0)
+		{
+			if (!sizeonly)
+				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
+			size += 512;
+			continue;
+		}
+
+		/*
+		 * Skip pg_replslot, not useful to copy. But include it as an empty
+		 * directory anyway, so we get permissions right.
+		 */
+		if (strcmp(de->d_name, "pg_replslot") == 0)
+		{
+			if (!sizeonly)
+				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
+			size += 512;		/* Size of the header just added */
 			continue;
 		}
 
@@ -1161,6 +1289,7 @@ sendFile(char *readfilename, char *tarfilename, struct stat * statbuf,
 			   (errmsg("base backup could not send data, aborting backup")));
 
 		len += cnt;
+		throttle(cnt);
 
 		if (len >= statbuf->st_size)
 		{
@@ -1182,10 +1311,14 @@ sendFile(char *readfilename, char *tarfilename, struct stat * statbuf,
 			cnt = Min(sizeof(buf), statbuf->st_size - len);
 			pq_putmessage('d', buf, cnt);
 			len += cnt;
+			throttle(cnt);
 		}
 	}
 
-	/* Pad to 512 byte boundary, per tar format requirements */
+	/*
+	 * Pad to 512 byte boundary, per tar format requirements. (This small
+	 * piece of data is probably not worth throttling.)
+	 */
 	pad = ((len + 511) & ~511) - len;
 	if (pad > 0)
 	{
@@ -1210,4 +1343,66 @@ _tarWriteHeader(const char *filename, const char *linktarget,
 					statbuf->st_mtime);
 
 	pq_putmessage('d', h, 512);
+}
+
+/*
+ * Increment the network transfer counter by the given number of bytes,
+ * and sleep if necessary to comply with the requested network transfer
+ * rate.
+ */
+static void
+throttle(size_t increment)
+{
+	int64		elapsed,
+				elapsed_min,
+				sleep;
+	int			wait_result;
+
+	if (throttling_counter < 0)
+		return;
+
+	throttling_counter += increment;
+	if (throttling_counter < throttling_sample)
+		return;
+
+	/* Time elapsed since the last measurement (and possible wake up). */
+	elapsed = GetCurrentIntegerTimestamp() - throttled_last;
+	/* How much should have elapsed at minimum? */
+	elapsed_min = elapsed_min_unit * (throttling_counter / throttling_sample);
+	sleep = elapsed_min - elapsed;
+	/* Only sleep if the transfer is faster than it should be. */
+	if (sleep > 0)
+	{
+		ResetLatch(&MyWalSnd->latch);
+
+		/*
+		 * (TAR_SEND_SIZE / throttling_sample * elapsed_min_unit) should be
+		 * the maximum time to sleep. Thus the cast to long is safe.
+		 */
+		wait_result = WaitLatch(&MyWalSnd->latch,
+							 WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+								(long) (sleep / 1000));
+	}
+	else
+	{
+		/*
+		 * The actual transfer rate is below the limit.  A negative value
+		 * would distort the adjustment of throttled_last.
+		 */
+		wait_result = 0;
+		sleep = 0;
+	}
+
+	/*
+	 * Only a whole multiple of throttling_sample was processed. The rest will
+	 * be done during the next call of this function.
+	 */
+	throttling_counter %= throttling_sample;
+
+	/* Once the (possible) sleep has ended, new period starts. */
+	if (wait_result & WL_TIMEOUT)
+		throttled_last += elapsed + sleep;
+	else if (sleep > 0)
+		/* Sleep was necessary but might have been interrupted. */
+		throttled_last = GetCurrentIntegerTimestamp();
 }

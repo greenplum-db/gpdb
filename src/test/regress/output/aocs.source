@@ -903,7 +903,7 @@ select * from tenk_aocs5 where unique1=1;
 -- UAO
 ---------------------
 -- DELETE
-select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
+select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 0;
  count 
 -------
      0
@@ -912,7 +912,7 @@ select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount >
 DELETE FROM tenk_aocs1 WHERE unique1 = 1;
 -- modcount after DELETE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 0;
+select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 0;
  count 
 -------
     16
@@ -923,7 +923,7 @@ UPDATE tenk_aocs1 SET unique2 = 1 WHERE unique2 = 2;
 UPDATE tenk_aocs1 SET two = 2;
 -- modcount after UPDATE must increment to flag table should be included in
 -- incremental backup
-select count(*) from gp_toolkit.__gp_aocsseg_name('tenk_aocs1') where modcount > 1;
+select count(*) from gp_toolkit.__gp_aocsseg('tenk_aocs1') where modcount > 1;
  count 
 -------
     16

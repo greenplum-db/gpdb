@@ -138,11 +138,12 @@ test_TransactionIdIsCurrentTransactionIdInternal(void **state)
 
 }
 
-void helper_ExpectLWLock(LWLockId slotLock) {
-	expect_value(LWLockAcquire, lockid, slotLock);
+void helper_ExpectLWLock()
+{
+	expect_any(LWLockAcquire, l);
 	expect_value(LWLockAcquire, mode, LW_SHARED);
-	will_be_called(LWLockAcquire);
-	expect_value(LWLockRelease, lockid, slotLock);
+	will_return(LWLockAcquire, true);
+	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 }
 
@@ -151,15 +152,16 @@ test_IsCurrentTransactionIdForReader(void **state)
 {
 	PGPROC testProc = {0};
 	PGXACT testXAct = {0};
+	LWLock localslotLock;
 
 	SharedSnapshotSlot testSlot = {0};
 	SharedLocalSnapshotSlot = &testSlot;
 	/* lwlock is mocked, so assign any integer ID to slotLock. */
-	testSlot.slotLock = 0;
+	testSlot.slotLock = &localslotLock;
 
 	/* test: writer_proc is null */
 	SharedLocalSnapshotSlot->writer_proc = NULL;
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	PG_TRY();
 	{
 		IsCurrentTransactionIdForReader(100);
@@ -174,7 +176,7 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testSlot.writer_proc = &testProc;
 	testSlot.writer_xact = &testXAct;
 	testProc.pid = 0;
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	PG_TRY();
 	{
 		IsCurrentTransactionIdForReader(100);
@@ -192,7 +194,7 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testProc.pid = 1234;
 	testXAct.xid = 0;
 
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	assert_false(IsCurrentTransactionIdForReader(100));
 
 	/*
@@ -201,7 +203,7 @@ test_IsCurrentTransactionIdForReader(void **state)
 	 */
 	testXAct.xid = 100;
 
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	assert_true(IsCurrentTransactionIdForReader(100));
 
 	/* test: subtransaction found in writer_proc cache */
@@ -210,11 +212,11 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testProc.subxids.xids[0] = 100;
 	testProc.subxids.xids[1] = 110;
 
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	assert_true(IsCurrentTransactionIdForReader(100));
 
 	/* test: no subtransaction found in writer_proc cache */
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 	assert_false(IsCurrentTransactionIdForReader(120));
 
 	/* test: overflow, with top xid matching writer's xid */
@@ -222,7 +224,7 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testXAct.nxids = 0;
 	testXAct.overflowed = true;
 
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 
 	expect_value(SubTransGetTopmostTransaction, xid, 100);
 	will_return(SubTransGetTopmostTransaction, 90);
@@ -234,7 +236,7 @@ test_IsCurrentTransactionIdForReader(void **state)
 	testXAct.nxids = 0;
 	testXAct.overflowed = true;
 
-	helper_ExpectLWLock(testSlot.slotLock);
+	helper_ExpectLWLock();
 
 	expect_value(SubTransGetTopmostTransaction, xid, 100);
 	will_return(SubTransGetTopmostTransaction, 90);

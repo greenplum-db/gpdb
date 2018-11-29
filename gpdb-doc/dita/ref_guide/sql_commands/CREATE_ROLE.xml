@@ -88,11 +88,17 @@
                     <pd>If <codeph>CREATEEXTTABLE</codeph> is specified, the role being defined is
                         allowed to create external tables. The default <codeph>type</codeph> is
                             <codeph>readable</codeph> and the default <codeph>protocol</codeph> is
-                            <codeph>gpfdist</codeph> if not specified.
-                            <codeph>NOCREATEEXTTABLE</codeph> (the default) denies the role the
+                            <codeph>gpfdist</codeph>, if not specified.  Valid types are
+                            <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>,
+                            <codeph>http</codeph>, and <codeph>https</codeph>.
+                            <codeph>NOCREATEEXTTABLE</codeph> (the default type) denies the role the
                         ability to create external tables. Note that external tables that use the
                             <codeph>file</codeph> or <codeph>execute</codeph> protocols can only be
                         created by superusers. </pd>
+                    <pd>Use the <codeph>GRANT...ON PROTOCOL</codeph> command to allow users to
+                        create and use external tables with a custom protocol type, including the
+                            <codeph>gphdfs</codeph>, <codeph>s3</codeph>, and <codeph>pxf</codeph>
+                        protocols included with Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>INHERIT</pt>
@@ -276,6 +282,10 @@
             <codeblock>CREATE ROLE admin WITH CREATEDB CREATEROLE;</codeblock>
             <p>Create a role that does not allow login access on Sundays:</p>
             <codeblock>CREATE ROLE user3 DENY DAY 'Sunday';</codeblock>
+            <p>Create a role that can create readable and writable external tables of type
+                'gpfdist':</p>
+            <codeblock>CREATE ROLE jan WITH CREATEEXTTABLE(type='readable', protocol='gpfdist')
+   CREATEEXTTABLE(type='writable', protocol='gpfdist'); </codeblock>
             <p>Create a role, assigning a resource group:</p>
             <codeblock>CREATE ROLE bill RESOURCE GROUP rg_light;</codeblock>
         </section>

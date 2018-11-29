@@ -6,7 +6,7 @@
  * access control decisions recently used, and reduce number of kernel
  * invocations to avoid unnecessary performance hit.
  *
- * Copyright (c) 2011-2013, PostgreSQL Global Development Group
+ * Copyright (c) 2011-2014, PostgreSQL Global Development Group
  *
  * -------------------------------------------------------------------------
  */
@@ -142,7 +142,7 @@ sepgsql_avc_reclaim(void)
  * Access control decisions must be atomic, but multiple system calls may
  * be required to make a decision; thus, when referencing the access vector
  * cache, we must loop until we complete without an intervening cache flush
- * event.  In practice, looping even once should be very rare.	Callers should
+ * event.  In practice, looping even once should be very rare.  Callers should
  * do something like this:
  *
  *	 sepgsql_avc_check_valid();

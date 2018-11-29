@@ -1155,7 +1155,7 @@ SOFTWARE.
 
 
 =================================================================
------------------ OpenLDAP Publlic License ----------------------
+----------------- OpenLDAP Public License ----------------------
 =================================================================
 
 The OpenLDAP Public License
@@ -1910,9 +1910,9 @@ Network Circle, Santa  Clara, California 95054, U.S.A.
 ------------------------- stream-1 ------------------------------
 =================================================================
 
-*----------------------------------------------------------------
+*-----------------------------------------------------------------------
 * Copyright 1991-2003: John D. McCalpin
-*----------------------------------------------------------------
+*-----------------------------------------------------------------------
 * License:
 *  1. You are free to use this program and/or to redistribute
 *     this program.
@@ -1942,7 +1942,7 @@ Network Circle, Santa  Clara, California 95054, U.S.A.
 *  4. Use of this program or creation of derived works based on this
 *     program constitutes acceptance of these licensing restrictions.
 *  5. Absolutely no warranty is expressed or implied.
-*----------------------------------------------------------------
+*-----------------------------------------------------------------------
 
 
 =================================================================
@@ -2355,3 +2355,35 @@ The Apache Software Foundation (http://www.apache.org/).
 
 You may obtain a copy of the License at
 http://www.apache.org/licenses/LICENSE-2.0
+
+============================================================================================
+    For: HyperLogLog
+--------------------------------------------------------------------------------------------
+Copyright 2012, Tomas Vondra (tv@fuzzy.cz). All rights reserved.
+Copyright 2015, Conversant, Inc. All rights reserved.
+Copyright 2018, Pivotal Software, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are
+permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice, this list of
+      conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright notice, this list
+      of conditions and the following disclaimer in the documentation and/or other materials
+      provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY TOMAS VONDRA, CONVERSANT INC, PIVOTAL SOFTWARE INC. AND ANY
+OTHER CONTRIBUTORS (THE "AUTHORS") ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those of the
+Authors and should not be interpreted as representing official policies, either expressed
+or implied, of the Authors.
+============================================================================================

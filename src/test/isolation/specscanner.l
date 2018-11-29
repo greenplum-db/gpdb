@@ -4,7 +4,7 @@
  * specscanner.l
  *	  a lexical scanner for an isolation test specification
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *-------------------------------------------------------------------------
@@ -12,8 +12,10 @@
 
 static int	yyline = 1;			/* line number for error reporting */
 
-static char litbuf[1024];
-static int litbufpos = 0;
+#define LITBUF_INIT	1024		/* initial size of litbuf */
+static char *litbuf = NULL;
+static size_t litbufsize = 0;
+static size_t litbufpos = 0;
 
 static void addlitchar(char c);
 
@@ -39,11 +41,16 @@ comment			("#"{non_newline}*)
 
 %%
 
-permutation		{ return(PERMUTATION); }
-session			{ return(SESSION); }
-setup			{ return(SETUP); }
-step			{ return(STEP); }
-teardown		{ return(TEARDOWN); }
+%{
+	litbuf = pg_malloc(LITBUF_INIT);
+	litbufsize = LITBUF_INIT;
+%}
+
+permutation		{ return PERMUTATION; }
+session			{ return SESSION; }
+setup			{ return SETUP; }
+step			{ return STEP; }
+teardown		{ return TEARDOWN; }
 
 [\n]			{ yyline++; }
 {comment}		{ /* ignore */ }
@@ -96,10 +103,12 @@ teardown		{ return(TEARDOWN); }
 static void
 addlitchar(char c)
 {
-	if (litbufpos >= sizeof(litbuf) - 1)
+	/* We must always leave room to add a trailing \0 */
+	if (litbufpos >= litbufsize - 1)
 	{
-		fprintf(stderr, "SQL step too long\n");
-		exit(1);
+		/* Double the size of litbuf if it gets full */
+		litbufsize += litbufsize;
+		litbuf = pg_realloc(litbuf, litbufsize);
 	}
 	litbuf[litbufpos++] = c;
 }

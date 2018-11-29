@@ -15,7 +15,7 @@
  * this module.
  *
  * To allow reusing existing combo cids, we also keep a hash table that
- * maps cmin,cmax pairs to combo cids.	This keeps the data structure size
+ * maps cmin,cmax pairs to combo cids.  This keeps the data structure size
  * reasonable in most cases, since the number of unique pairs used by any
  * one transaction is likely to be small.
  *
@@ -30,7 +30,7 @@
  * destroyed at the end of each transaction.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -41,6 +41,7 @@
 
 #include "postgres.h"
 
+#include "miscadmin.h"
 #include "access/htup_details.h"
 #include "access/xact.h"
 #include "cdb/cdbvars.h"
@@ -153,9 +154,16 @@ HeapTupleHeaderGetCmax(HeapTupleHeader tup)
 	Assert(!(tup->t_infomask & HEAP_MOVED));
 
 	/*
+	 * Because GetUpdateXid() performs memory allocations if xmax is a
+	 * multixact we can't Assert() if we're inside a critical section. This
+	 * weakens the check, but not using GetCmax() inside one would complicate
+	 * things too much.
+	 */
+	/*
 	 * MPP-8317: cursors can't always *tell* that this is the current transaction.
 	 */
 	Assert(QEDtxContextInfo.cursorContext ||
+		   CritSectionCount > 0 ||
 		   TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetUpdateXid(tup)));
 
 	if (tup->t_infomask & HEAP_COMBOCID)
@@ -185,11 +193,11 @@ HeapTupleHeaderAdjustCmax(HeapTupleHeader tup,
 	/*
 	 * If we're marking a tuple deleted that was inserted by (any
 	 * subtransaction of) our transaction, we need to use a combo command id.
-	 * Test for HEAP_XMIN_COMMITTED first, because it's cheaper than a
-	 * TransactionIdIsCurrentTransactionId call.
+	 * Test for HeapTupleHeaderXminCommitted() first, because it's cheaper
+	 * than a TransactionIdIsCurrentTransactionId call.
 	 */
-	if (!(tup->t_infomask & HEAP_XMIN_COMMITTED) &&
-		TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetXmin(tup)))
+	if (!HeapTupleHeaderXminCommitted(tup) &&
+		TransactionIdIsCurrentTransactionId(HeapTupleHeaderGetRawXmin(tup)))
 	{
 		CommandId	cmin = HeapTupleHeaderGetCmin(tup);
 

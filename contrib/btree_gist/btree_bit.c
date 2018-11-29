@@ -19,14 +19,6 @@ PG_FUNCTION_INFO_V1(gbt_bit_consistent);
 PG_FUNCTION_INFO_V1(gbt_bit_penalty);
 PG_FUNCTION_INFO_V1(gbt_bit_same);
 
-Datum		gbt_bit_compress(PG_FUNCTION_ARGS);
-Datum		gbt_bit_union(PG_FUNCTION_ARGS);
-Datum		gbt_bit_picksplit(PG_FUNCTION_ARGS);
-Datum		gbt_bit_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_bit_penalty(PG_FUNCTION_ARGS);
-Datum		gbt_bit_same(PG_FUNCTION_ARGS);
-
-
 
 /* define for comparison */
 
@@ -83,10 +75,14 @@ static bytea *
 gbt_bit_xfrm(bytea *leaf)
 {
 	bytea	   *out = leaf;
-	int			s = INTALIGN(VARBITBYTES(leaf) + VARHDRSZ);
+	int			sz = VARBITBYTES(leaf) + VARHDRSZ;
+	int			padded_sz = INTALIGN(sz);
 
-	out = palloc(s);
-	SET_VARSIZE(out, s);
+	out = (bytea *) palloc(padded_sz);
+	/* initialize the padding bytes to zero */
+	while (sz < padded_sz)
+		((char *) out)[sz++] = 0;
+	SET_VARSIZE(out, padded_sz);
 	memcpy((void *) VARDATA(out), (void *) VARBITS(leaf), VARBITBYTES(leaf));
 	return out;
 }

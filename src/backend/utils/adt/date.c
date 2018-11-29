@@ -3,7 +3,7 @@
  * date.c
  *	  implements DATE and TIME data types specified in SQL standard
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994-5, Regents of the University of California
  *
  *
@@ -40,7 +40,6 @@
 #endif
 
 
-static void EncodeSpecialDate(DateADT dt, char *str);
 static int	time2tm(TimeADT time, struct pg_tm * tm, fsec_t *fsec);
 static int	timetz2tm(TimeTzADT *time, struct pg_tm * tm, fsec_t *fsec, int *tzp);
 static int	tm2time(struct pg_tm * tm, fsec_t fsec, TimeADT *result);
@@ -91,14 +90,12 @@ anytime_typmodin(bool istz, ArrayType *ta)
 static char *
 anytime_typmodout(bool istz, int32 typmod)
 {
-	char	   *res = (char *) palloc(64);
 	const char *tz = istz ? " with time zone" : " without time zone";
 
 	if (typmod >= 0)
-		snprintf(res, 64, "(%d)%s", (int) typmod, tz);
+		return psprintf("(%d)%s", (int) typmod, tz);
 	else
-		snprintf(res, 64, "%s", tz);
-	return res;
+		return psprintf("%s", tz);
 }
 
 
@@ -236,9 +233,46 @@ date_send(PG_FUNCTION_ARGS)
 }
 
 /*
+ *		make_date			- date constructor
+ */
+Datum
+make_date(PG_FUNCTION_ARGS)
+{
+	struct pg_tm tm;
+	DateADT		date;
+	int			dterr;
+
+	tm.tm_year = PG_GETARG_INT32(0);
+	tm.tm_mon = PG_GETARG_INT32(1);
+	tm.tm_mday = PG_GETARG_INT32(2);
+
+	/*
+	 * Note: we'll reject zero or negative year values.  Perhaps negatives
+	 * should be allowed to represent BC years?
+	 */
+	dterr = ValidateDate(DTK_DATE_M, false, false, false, &tm);
+
+	if (dterr != 0)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_FIELD_OVERFLOW),
+				 errmsg("date field value out of range: %d-%02d-%02d",
+						tm.tm_year, tm.tm_mon, tm.tm_mday)));
+
+	if (!IS_VALID_JULIAN(tm.tm_year, tm.tm_mon, tm.tm_mday))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+				 errmsg("date out of range: %d-%02d-%02d",
+						tm.tm_year, tm.tm_mon, tm.tm_mday)));
+
+	date = date2j(tm.tm_year, tm.tm_mon, tm.tm_mday) - POSTGRES_EPOCH_JDATE;
+
+	PG_RETURN_DATEADT(date);
+}
+
+/*
  * Convert reserved date values to string.
  */
-static void
+void
 EncodeSpecialDate(DateADT dt, char *str)
 {
 	if (DATE_IS_NOBEGIN(dt))
@@ -1208,6 +1242,39 @@ timetypmodout(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(anytime_typmodout(false, typmod));
 }
 
+/*
+ *		make_time			- time constructor
+ */
+Datum
+make_time(PG_FUNCTION_ARGS)
+{
+	int			tm_hour = PG_GETARG_INT32(0);
+	int			tm_min = PG_GETARG_INT32(1);
+	double		sec = PG_GETARG_FLOAT8(2);
+	TimeADT		time;
+
+	/* This should match the checks in DecodeTimeOnly */
+	if (tm_hour < 0 || tm_min < 0 || tm_min > MINS_PER_HOUR - 1 ||
+		sec < 0 || sec > SECS_PER_MINUTE ||
+		tm_hour > HOURS_PER_DAY ||
+	/* test for > 24:00:00 */
+		(tm_hour == HOURS_PER_DAY && (tm_min > 0 || sec > 0)))
+		ereport(ERROR,
+				(errcode(ERRCODE_DATETIME_FIELD_OVERFLOW),
+				 errmsg("time field value out of range: %d:%02d:%02g",
+						tm_hour, tm_min, sec)));
+
+	/* This should match tm2time */
+#ifdef HAVE_INT64_TIMESTAMP
+	time = (((tm_hour * MINS_PER_HOUR + tm_min) * SECS_PER_MINUTE)
+			* USECS_PER_SEC) + rint(sec * USECS_PER_SEC);
+#else
+	time = ((tm_hour * MINS_PER_HOUR + tm_min) * SECS_PER_MINUTE) + sec;
+#endif
+
+	PG_RETURN_TIMEADT(time);
+}
+
 
 /* time_transform()
  * Flatten calls to time_scale() and timetz_scale() that solely represent
@@ -1290,7 +1357,7 @@ AdjustTimeForTypmod(TimeADT *time, int32 typmod)
 		 * Note: this round-to-nearest code is not completely consistent about
 		 * rounding values that are exactly halfway between integral values.
 		 * On most platforms, rint() will implement round-to-nearest-even, but
-		 * the integer code always rounds up (away from zero).	Is it worth
+		 * the integer code always rounds up (away from zero).  Is it worth
 		 * trying to be consistent?
 		 */
 #ifdef HAVE_INT64_TIMESTAMP
@@ -1638,7 +1705,7 @@ time_interval(PG_FUNCTION_ARGS)
  * Convert interval to time data type.
  *
  * This is defined as producing the fractional-day portion of the interval.
- * Therefore, we can just ignore the months field.	It is not real clear
+ * Therefore, we can just ignore the months field.  It is not real clear
  * what to do with negative intervals, but we choose to subtract the floor,
  * so that, say, '-2 hours' becomes '22:00:00'.
  */
@@ -2701,7 +2768,7 @@ timetz_zone(PG_FUNCTION_ARGS)
 	pg_tz	   *tzp;
 
 	/*
-	 * Look up the requested timezone.	First we look in the date token table
+	 * Look up the requested timezone.  First we look in the date token table
 	 * (to handle cases like "EST"), and if that fails, we look in the
 	 * timezone database (to handle cases like "America/New_York").  (This
 	 * matches the order in which timestamp input checks the cases; it's

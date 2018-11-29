@@ -57,6 +57,7 @@
 #include "utils/faultinjector.h"
 #include "utils/lsyscache.h"
 #include "utils/memutils.h"
+#include "utils/snapmgr.h"
 
 #define SCANNED_SEGNO  \
 	(&scan->aos_segfile_arr[ \
@@ -471,7 +472,9 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	}
 
 	/* Never insert into a segment that is awaiting a drop */
-	Assert(aoInsertDesc->fsInfo->state != AOSEG_STATE_AWAITING_DROP);
+	elogif(aoInsertDesc->fsInfo->state == AOSEG_STATE_AWAITING_DROP,
+		   ERROR, "cannot insert into segno (%d) from AO relid %d that is in state AOSEG_STATE_AWAITING_DROP",
+		   aoInsertDesc->cur_segno, RelationGetRelid(aoInsertDesc->aoi_rel));
 
 	fsinfo = aoInsertDesc->fsInfo;
 	Assert(fsinfo);
@@ -2618,7 +2621,7 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 	 * Writers uses this since they have exclusive access to the lock acquired
 	 * with LockRelationAppendOnlySegmentFile for the segment-file.
 	 */
-	aoInsertDesc->appendOnlyMetaDataSnapshot = SnapshotNow;
+	aoInsertDesc->appendOnlyMetaDataSnapshot = RegisterSnapshot(GetCatalogSnapshot(InvalidOid));
 
 	aoInsertDesc->mt_bind = create_memtuple_binding(RelationGetDescr(rel));
 
@@ -3092,6 +3095,8 @@ appendonly_insert_finish(AppendOnlyInsertDesc aoInsertDesc)
 
 	AppendOnlyStorageWrite_FinishSession(&aoInsertDesc->storageWrite);
 
+	UnregisterSnapshot(aoInsertDesc->appendOnlyMetaDataSnapshot);
+
 	pfree(aoInsertDesc->title);
 	pfree(aoInsertDesc);
 }
@@ -3110,5 +3115,5 @@ BlockNumber
 RelationGuessNumberOfBlocks(double totalbytes)
 {
 	/* for now it's very simple */
-	return (BlockNumber) (totalbytes / BLCKSZ) + 1;
+	return (BlockNumber) ceil(totalbytes / BLCKSZ);
 }

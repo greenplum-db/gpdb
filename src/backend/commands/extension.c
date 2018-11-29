@@ -12,7 +12,7 @@
  * postgresql.conf and recovery.conf.  An extension also has an installation
  * script file, containing SQL commands to create the extension's objects.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -25,6 +25,8 @@
 
 #include <dirent.h>
 #include <limits.h>
+#include <sys/file.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "access/htup_details.h"
@@ -51,6 +53,7 @@
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/lsyscache.h"
+#include "utils/memutils.h"
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/tqual.h"
@@ -108,12 +111,13 @@ static void ApplyExtensionUpdates(Oid extensionOid,
 					  ExtensionControlFile *pcontrol,
 					  const char *initialVersion,
 					  List *updateVersions);
+static char *read_whole_file(const char *filename, int *length);
 
 
 /*
  * get_extension_oid - given an extension name, look up the OID
  *
- * If missing_ok is false, throw an error if extension name not found.	If
+ * If missing_ok is false, throw an error if extension name not found.  If
  * true, just return InvalidOid.
  */
 Oid
@@ -133,7 +137,7 @@ get_extension_oid(const char *extname, bool missing_ok)
 				CStringGetDatum(extname));
 
 	scandesc = systable_beginscan(rel, ExtensionNameIndexId, true,
-								  SnapshotNow, 1, entry);
+								  NULL, 1, entry);
 
 	tuple = systable_getnext(scandesc);
 
@@ -178,7 +182,7 @@ get_extension_name(Oid ext_oid)
 				ObjectIdGetDatum(ext_oid));
 
 	scandesc = systable_beginscan(rel, ExtensionOidIndexId, true,
-								  SnapshotNow, 1, entry);
+								  NULL, 1, entry);
 
 	tuple = systable_getnext(scandesc);
 
@@ -217,7 +221,7 @@ get_extension_schema(Oid ext_oid)
 				ObjectIdGetDatum(ext_oid));
 
 	scandesc = systable_beginscan(rel, ExtensionOidIndexId, true,
-								  SnapshotNow, 1, entry);
+								  NULL, 1, entry);
 
 	tuple = systable_getnext(scandesc);
 
@@ -262,9 +266,9 @@ check_valid_extension_name(const char *extensionname)
 				 errdetail("Extension names must not contain \"--\".")));
 
 	/*
-	 * No leading or trailing dash either.	(We could probably allow this, but
+	 * No leading or trailing dash either.  (We could probably allow this, but
 	 * it would require much care in filename parsing and would make filenames
-	 * visually if not formally ambiguous.	Since there's no real-world use
+	 * visually if not formally ambiguous.  Since there's no real-world use
 	 * case, let's just forbid it.)
 	 */
 	if (extensionname[0] == '-' || extensionname[namelen - 1] == '-')
@@ -440,7 +444,7 @@ get_extension_script_filename(ExtensionControlFile *control,
 
 /*
  * Parse contents of primary or auxiliary control file, and fill in
- * fields of *control.	We parse primary file if version == NULL,
+ * fields of *control.  We parse primary file if version == NULL,
  * else the optional auxiliary file for that version.
  *
  * Control files are supposed to be very short, half a dozen lines,
@@ -640,38 +644,27 @@ read_extension_script_file(const ExtensionControlFile *control,
 						   const char *filename)
 {
 	int			src_encoding;
-	int			dest_encoding = GetDatabaseEncoding();
-	bytea	   *content;
 	char	   *src_str;
 	char	   *dest_str;
 	int			len;
 
-	content = read_binary_file(filename, 0, -1);
+	src_str = read_whole_file(filename, &len);
 
 	/* use database encoding if not given */
 	if (control->encoding < 0)
-		src_encoding = dest_encoding;
+		src_encoding = GetDatabaseEncoding();
 	else
 		src_encoding = control->encoding;
 
 	/* make sure that source string is valid in the expected encoding */
-	len = VARSIZE_ANY_EXHDR(content);
-	src_str = VARDATA_ANY(content);
 	pg_verify_mbstr_len(src_encoding, src_str, len, false);
 
-	/* convert the encoding to the database encoding */
-	dest_str = (char *) pg_do_encoding_conversion((unsigned char *) src_str,
-												  len,
-												  src_encoding,
-												  dest_encoding);
-
-	/* if no conversion happened, we have to arrange for null termination */
-	if (dest_str == src_str)
-	{
-		dest_str = (char *) palloc(len + 1);
-		memcpy(dest_str, src_str, len);
-		dest_str[len] = '\0';
-	}
+	/*
+	 * Convert the encoding to the database encoding. read_whole_file
+	 * null-terminated the string, so if no conversion happens the string is
+	 * valid as is.
+	 */
+	dest_str = pg_any_to_server(src_str, len, src_encoding);
 
 	return dest_str;
 }
@@ -682,7 +675,7 @@ read_extension_script_file(const ExtensionControlFile *control,
  * filename is used only to report errors.
  *
  * Note: it's tempting to just use SPI to execute the string, but that does
- * not work very well.	The really serious problem is that SPI will parse,
+ * not work very well.  The really serious problem is that SPI will parse,
  * analyze, and plan the whole string before executing any of it; of course
  * this fails if there are any plannable statements referring to objects
  * created earlier in the script.  A lesser annoyance is that SPI insists
@@ -858,7 +851,7 @@ execute_extension_script(CreateExtensionStmt *stmt,
 	/*
 	 * Set creating_extension and related variables so that
 	 * recordDependencyOnCurrentExtension and other functions do the right
-	 * things.	On failure, ensure we reset these variables.
+	 * things.  On failure, ensure we reset these variables.
 	 */
 	creating_extension = true;
 	CurrentExtensionObject = extensionOid;
@@ -1136,7 +1129,7 @@ identify_update_path(ExtensionControlFile *control,
  * is still good.
  *
  * Result is a List of names of versions to transition through (the initial
- * version is *not* included).	Returns NIL if no such path.
+ * version is *not* included).  Returns NIL if no such path.
  */
 static List *
 find_update_path(List *evi_list,
@@ -1237,7 +1230,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 	check_valid_extension_name(stmt->extname);
 
 	/*
-	 * Check for duplicate extension name.	The unique index on
+	 * Check for duplicate extension name.  The unique index on
 	 * pg_extension.extname would catch this anyway, and serves as a backstop
 	 * in case of race conditions; but this is a friendlier error message, and
 	 * besides we need a check to support IF NOT EXISTS.
@@ -1274,7 +1267,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 			case CREATE_EXTENSION_END:		/* Mark creating_extension flag = false */
 				creating_extension = false;
 				CurrentExtensionObject = InvalidOid;
-				return InvalidOid;		/* GPDB_93_MERGE_FIXME: can we get the real OID from somewhere? Do we need it? */
+				return get_extension_oid(stmt->extname, true);
 
 			default:
 				elog(ERROR, "unrecognized create_ext_state: %d",
@@ -1459,7 +1452,7 @@ CreateExtension(CreateExtensionStmt *stmt)
 		 */
 		List	   *search_path = fetch_search_path(false);
 
-		if (search_path == NIL)	/* nothing valid in search_path? */
+		if (search_path == NIL) /* nothing valid in search_path? */
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_SCHEMA),
 					 errmsg("no schema has been selected to create in")));
@@ -1680,7 +1673,7 @@ RemoveExtensionById(Oid extId)
 	 * might write "DROP EXTENSION foo" in foo's own script files, as because
 	 * errors in dependency management in extension script files could give
 	 * rise to cases where an extension is dropped as a result of recursing
-	 * from some contained object.	Because of that, we must test for the case
+	 * from some contained object.  Because of that, we must test for the case
 	 * here, not at some higher level of the DROP EXTENSION command.
 	 */
 	if (extId == CurrentExtensionObject)
@@ -1696,7 +1689,7 @@ RemoveExtensionById(Oid extId)
 				BTEqualStrategyNumber, F_OIDEQ,
 				ObjectIdGetDatum(extId));
 	scandesc = systable_beginscan(rel, ExtensionOidIndexId, true,
-								  SnapshotNow, 1, entry);
+								  NULL, 1, entry);
 
 	tuple = systable_getnext(scandesc);
 
@@ -1711,7 +1704,7 @@ RemoveExtensionById(Oid extId)
 
 /*
  * This function lists the available extensions (one row per primary control
- * file in the control directory).	We parse each control file and report the
+ * file in the control directory).  We parse each control file and report the
  * interesting fields.
  *
  * The system view pg_available_extensions provides a user interface to this
@@ -1820,7 +1813,7 @@ pg_available_extensions(PG_FUNCTION_ARGS)
 
 /*
  * This function lists the available extension versions (one row per
- * extension installation script).	For each version, we parse the related
+ * extension installation script).  For each version, we parse the related
  * control file(s) and report the interesting fields.
  *
  * The system view pg_available_extension_versions provides a user interface
@@ -2194,7 +2187,7 @@ pg_extension_config_dump(PG_FUNCTION_ARGS)
 				ObjectIdGetDatum(CurrentExtensionObject));
 
 	extScan = systable_beginscan(extRel, ExtensionOidIndexId, true,
-								 SnapshotNow, 1, key);
+								 NULL, 1, key);
 
 	extTup = systable_getnext(extScan);
 
@@ -2343,7 +2336,7 @@ extension_config_remove(Oid extensionoid, Oid tableoid)
 				ObjectIdGetDatum(extensionoid));
 
 	extScan = systable_beginscan(extRel, ExtensionOidIndexId, true,
-								 SnapshotNow, 1, key);
+								 NULL, 1, key);
 
 	extTup = systable_getnext(extScan);
 
@@ -2551,7 +2544,7 @@ AlterExtensionNamespace(List *names, const char *newschema)
 				ObjectIdGetDatum(extensionOid));
 
 	extScan = systable_beginscan(extRel, ExtensionOidIndexId, true,
-								 SnapshotNow, 1, key);
+								 NULL, 1, key);
 
 	extTup = systable_getnext(extScan);
 
@@ -2599,7 +2592,7 @@ AlterExtensionNamespace(List *names, const char *newschema)
 				ObjectIdGetDatum(extensionOid));
 
 	depScan = systable_beginscan(depRel, DependReferenceIndexId, true,
-								 SnapshotNow, 2, key);
+								 NULL, 2, key);
 
 	while (HeapTupleIsValid(depTup = systable_getnext(depScan)))
 	{
@@ -2608,7 +2601,7 @@ AlterExtensionNamespace(List *names, const char *newschema)
 		Oid			dep_oldNspOid;
 
 		/*
-		 * Ignore non-membership dependencies.	(Currently, the only other
+		 * Ignore non-membership dependencies.  (Currently, the only other
 		 * case we could see here is a normal dependency from another
 		 * extension.)
 		 */
@@ -2709,7 +2702,7 @@ ExecAlterExtensionStmt(AlterExtensionStmt *stmt)
 				CStringGetDatum(stmt->extname));
 
 	extScan = systable_beginscan(extRel, ExtensionNameIndexId, true,
-								 SnapshotNow, 1, key);
+								 NULL, 1, key);
 
 	extTup = systable_getnext(extScan);
 
@@ -2859,7 +2852,7 @@ ApplyExtensionUpdates(Oid extensionOid,
 					ObjectIdGetDatum(extensionOid));
 
 		extScan = systable_beginscan(extRel, ExtensionOidIndexId, true,
-									 SnapshotNow, 1, key);
+									 NULL, 1, key);
 
 		extTup = systable_getnext(extScan);
 
@@ -3021,7 +3014,7 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
 
 		/*
 		 * Prevent a schema from being added to an extension if the schema
-		 * contains the extension.	That would create a dependency loop.
+		 * contains the extension.  That would create a dependency loop.
 		 */
 		if (object.classId == NamespaceRelationId &&
 			object.objectId == get_extension_schema(extension.objectId))
@@ -3077,4 +3070,50 @@ ExecAlterExtensionContentsStmt(AlterExtensionContentsStmt *stmt)
 		relation_close(relation, NoLock);
 
 	return extension.objectId;
+}
+
+/*
+ * Read the whole of file into memory.
+ *
+ * The file contents are returned as a single palloc'd chunk. For convenience
+ * of the callers, an extra \0 byte is added to the end.
+ */
+static char *
+read_whole_file(const char *filename, int *length)
+{
+	char	   *buf;
+	FILE	   *file;
+	size_t		bytes_to_read;
+	struct stat fst;
+
+	if (stat(filename, &fst) < 0)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not stat file \"%s\": %m", filename)));
+
+	if (fst.st_size > (MaxAllocSize - 1))
+		ereport(ERROR,
+				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
+				 errmsg("file too large")));
+	bytes_to_read = (size_t) fst.st_size;
+
+	if ((file = AllocateFile(filename, PG_BINARY_R)) == NULL)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not open file \"%s\" for reading: %m",
+						filename)));
+
+	buf = (char *) palloc(bytes_to_read + 1);
+
+	*length = fread(buf, 1, bytes_to_read, file);
+
+	if (ferror(file))
+		ereport(ERROR,
+				(errcode_for_file_access(),
+				 errmsg("could not read file \"%s\": %m", filename)));
+
+	FreeFile(file);
+
+	buf[*length] = '\0';
+	return buf;
 }

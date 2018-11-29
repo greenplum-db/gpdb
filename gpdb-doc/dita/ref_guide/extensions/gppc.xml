@@ -61,7 +61,7 @@
     <title id="py21716799">Using the GPPC API</title>
     <body>
       <p>The GPPC API shares some concepts with C language functions as defined
-        by PostgreSQL. Refer to <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html" format="html" scope="external">C-Language Functions</xref>
+        by PostgreSQL. Refer to <xref href="https://www.postgresql.org/docs/8.3/xfunc-c.html" format="html" scope="external">C-Language Functions</xref>
         in the PostgreSQL documentation for detailed information about developing
         C language functions.</p>
       <p>The GPPC API is a wrapper that makes a C/C++ function SQL-invokable
@@ -611,7 +611,7 @@ GppcReport(GPPC_ERROR, "Unknown user name: %s", GppcTextGetCString(uname));</cod
         <p>The Greenplum Database Server Programming Interface (SPI) provides
           writers of C/C++ functions the ability to run SQL commands within a
           GPPC function. For additional information on SPI functions, refer to
-           <xref href="https://www.postgresql.org/docs/8.3/static/spi.html"
+           <xref href="https://www.postgresql.org/docs/8.3/spi.html"
              scope="external"
              format="html">Server Programming Interface</xref>
             in the PostgreSQL documentation.</p>
@@ -732,12 +732,12 @@ GppcSPIFinish();
           descriptor. A tuple descriptor defines the following for each
           attribute in the tuple:<ul>
            <li>attribute name</li>
-           <li>object identifer of the attribute data type</li>
+           <li>object identifier of the attribute data type</li>
            <li>byte length of the attribute data type</li>
            <li>object identifier of the attribute modifer</li>
         </ul></p>
         <p>The GPPC API defines an abstract type, <codeph>GppcTupleDesc</codeph>,
-          to represent a tuple/row desriptor. The API also provides functions
+          to represent a tuple/row descriptor. The API also provides functions
           that you can use to create, access, and set tuple descriptors:</p>
         <table id="in201681">
           <tgroup cols="2">
@@ -803,7 +803,7 @@ int32_t GppcTupleDescAttrTypmod(GppcTupleDesc tupdesc, int16_t attno);</codebloc
                <codeblock>GppcTupleDesc       tdesc;
 GppcTupleDesc       indesc = some_input_descriptor;
 
-// initalize the tuple descriptor with 2 attributes
+// initialize the tuple descriptor with 2 attributes
 tdesc = GppcCreateTemplateTupleDesc(2);
 
 // use third attribute from the input descriptor
@@ -1060,7 +1060,7 @@ ntuple = GppcAnyTableGetNextTuple(intbl);</codeblock></p>
         <p>To use the PGXS infrastructure to generate a shared library for
           functions that you create with the GPPC API, create a simple
           <codeph>Makefile</codeph> that sets PGXS-specific variables.</p>
-        <note>Refer to <xref href="https://www.postgresql.org/docs/8.3/static/xfunc-c.html#XFUNC-C-PGXS" format="html" scope="external">Extension Building Infrastructure</xref>
+        <note>Refer to <xref href="https://www.postgresql.org/docs/8.3/xfunc-c.html#XFUNC-C-PGXS" format="html" scope="external">Extension Building Infrastructure</xref>
           in the PostgreSQL documentation for information about the
           <codeph>Makefile</codeph> variables supported by PGXS.</note>
         <p>For example, the following <codeph>Makefile</codeph> generates
@@ -1133,7 +1133,7 @@ LANGUAGE C STRICT;</codeblock></p>
         <li>If the shared library file name is specified without a directory
           prefix, Greenplum Database searches for the file in the directory
           identified by the <codeph>dynamic_library_path</codeph> server
-          configuration paramater value.</li>
+          configuration parameter value.</li>
         <li>The current working directory.</li></ol>
     </body>
   </topic>
@@ -1322,8 +1322,8 @@ return_tbl(GPPC_FUNCTION_ARGS)
     }
 
     // log the attribute names of the output tuple descriptor
-    GppcReport(level, "ouput tuple descriptor attr0 name: %s", GppcTupleDescAttrName(out_tupdesc, 0));
-    GppcReport(level, "ouput tuple descriptor attr1 name: %s", GppcTupleDescAttrName(out_tupdesc, 1));
+    GppcReport(level, "output tuple descriptor attr0 name: %s", GppcTupleDescAttrName(out_tupdesc, 0));
+    GppcReport(level, "output tuple descriptor attr1 name: %s", GppcTupleDescAttrName(out_tupdesc, 1));
 
     // retrieve the attribute values by name from the tuple
     bool text_isnull, int_isnull;

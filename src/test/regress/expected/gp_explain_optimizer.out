@@ -106,10 +106,10 @@ select * from mpp22263, (values(147, 'RFAAAA'), (931, 'VJAAAA')) as v (i, j)
 WHERE mpp22263.unique1 = v.i and mpp22263.stringu1 = v.j;
   $$) as et
 WHERE et like '%Filter: %';
-                           et                            
----------------------------------------------------------
+                             et                              
+-------------------------------------------------------------
          Join Filter: true
-               Filter: stringu1::text = "Values".column2
+               Filter: ((stringu1)::text = "Values".column2)
 (2 rows)
 
 --
@@ -122,20 +122,20 @@ SELECT trim(et) et from
 get_explain_output($$ 
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b join foo on true join foo as foo2 on true $$) as et
 WHERE et like '%Join Filter:%' or et like '%Hash Cond:%';
-                      et                      
-----------------------------------------------
+                       et                       
+------------------------------------------------
  Join Filter: true
  Join Filter: true
- Hash Cond: "outer".column1 = "outer".column1
+ Hash Cond: ("outer".column1 = "outer".column1)
 (3 rows)
 
 SELECT trim(et) et from
 get_explain_output($$
 	select * from (values (1)) as f(a) join (values(2)) b(b) on a = b$$) as et
 WHERE et like '%Hash Cond:%';
-              et              
-------------------------------
- Hash Cond: column1 = column1
+               et               
+--------------------------------
+ Hash Cond: (column1 = column1)
 (1 row)
 
 --
@@ -277,3 +277,50 @@ explain (format xml, costs off) insert into dummy_aotab values (1);
  </explain>
 (1 row)
 
+-- github issues 5795. explain fails previously.
+explain SELECT * from information_schema.key_column_usage;
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Hash Join  (cost=102.67..1432.09 rows=13 width=389)
+   Hash Cond: ((ss.roid = a.attrelid) AND ((ss.x).x = a.attnum))
+   Join Filter: (pg_has_role(ss.relowner, 'USAGE'::text) OR has_column_privilege(ss.roid, a.attnum, 'SELECT, INSERT, UPDATE, REFERENCES'::text))
+   ->  Subquery Scan on ss  (cost=3.34..106.09 rows=5825 width=333)
+         ->  Result  (cost=3.34..47.85 rows=5825 width=341)
+               ->  Hash Join  (cost=3.34..47.85 rows=5825 width=341)
+                     Hash Cond: (c.connamespace = nc.oid)
+                     ->  Hash Join  (cost=2.19..16.06 rows=6 width=281)
+                           Hash Cond: (r.relnamespace = nr.oid)
+                           ->  Hash Join  (cost=1.04..14.84 rows=7 width=221)
+                                 Hash Cond: (r.oid = c.conrelid)
+                                 ->  Seq Scan on pg_class r  (cost=0.00..13.41 rows=85 width=76)
+                                       Filter: (relkind = 'r'::"char")
+                                 ->  Hash  (cost=1.03..1.03 rows=1 width=149)
+                                       ->  Seq Scan on pg_constraint c  (cost=0.00..1.03 rows=1 width=149)
+                                             Filter: (contype = ANY ('{p,u,f}'::"char"[]))
+                           ->  Hash  (cost=1.09..1.09 rows=2 width=68)
+                                 ->  Seq Scan on pg_namespace nr  (cost=0.00..1.09 rows=5 width=68)
+                                       Filter: (NOT pg_is_other_temp_schema(oid))
+                     ->  Hash  (cost=1.07..1.07 rows=3 width=68)
+                           ->  Seq Scan on pg_namespace nc  (cost=0.00..1.07 rows=7 width=68)
+   ->  Hash  (cost=49.33..49.33 rows=1111 width=70)
+         ->  Seq Scan on pg_attribute a  (cost=0.00..49.33 rows=3333 width=70)
+               Filter: (NOT attisdropped)
+ Optimizer: legacy query optimizer
+(25 rows)
+
+-- github issue 5794.
+set gp_enable_explain_allstat=on;
+explain analyze SELECT * FROM explaintest;
+                                                          QUERY PLAN                                                           
+-------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.00 rows=10 width=4) (actual time=0.298..0.302 rows=5 loops=2)
+   ->  Table Scan on explaintest  (cost=0.00..431.00 rows=4 width=4) (actual time=0.013..0.015 rows=2 loops=2)
+         allstat: seg_firststart_total_ntuples/seg0_0.938 ms_0.027 ms_3/seg1_0.880 ms_0.029 ms_5/seg2_0.866 ms_0.029 ms_2//end
+   (slice0)    Executor memory: 290K bytes.
+   (slice1)    Executor memory: 50K bytes avg x 3 workers, 50K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: PQO version 3.2.0
+ Total runtime: 1.577 ms
+(8 rows)
+
+set gp_enable_explain_allstat=DEFAULT;

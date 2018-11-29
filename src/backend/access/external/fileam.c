@@ -34,6 +34,7 @@
 #include "postgres.h"
 
 #include <fstream/gfile.h>
+#include <tcop/tcopprot.h>
 
 #include "funcapi.h"
 #include "access/fileam.h"
@@ -573,7 +574,7 @@ external_insert_init(Relation rel)
 		Value	   *v;
 		char	   *uri_str;
 		int			segindex = GpIdentity.segindex;
-		int			num_segs = GpIdentity.numsegments;
+		int			num_segs = getgpsegmentCount();
 		int			num_urls = list_length(extentry->urilocations);
 		int			my_url = segindex % num_urls;
 
@@ -876,7 +877,7 @@ externalgettup_defined(FileScanDesc scan)
 		PG_CATCH();
 		{
 			/*
-			 * got here? encoding conversion error occured on the
+			 * got here? encoding conversion error occurred on the
 			 * header line (first row).
 			 */
 			if (pstate->errMode == ALL_OR_NOTHING)
@@ -2253,8 +2254,8 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	}
 	else
 	{
-		CdbComponentDatabases *cdb_component_dbs = getCdbComponentDatabases();
-		CdbComponentDatabaseInfo *qdinfo = &cdb_component_dbs->entry_db_info[0];
+		CdbComponentDatabaseInfo *qdinfo = 
+				cdbcomponent_getComponentInfo(MASTER_CONTENT_ID); 
 
 		pg_ltoa(qdinfo->port, result);
 		extvar->GP_MASTER_PORT = result;
@@ -2263,8 +2264,6 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostip);
 		else
 			extvar->GP_MASTER_HOST = pstrdup(qdinfo->hostname);
-
-		freeCdbComponentDatabases(cdb_component_dbs);
 	}
 
 	if (MyProcPort)
@@ -2291,7 +2290,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	sprintf(extvar->GP_SEGMENT_ID, "%d", GpIdentity.segindex);
 	sprintf(extvar->GP_SEG_PORT, "%d", PostPortNumber);
 	sprintf(extvar->GP_SESSION_ID, "%d", gp_session_id);
-	sprintf(extvar->GP_SEGMENT_COUNT, "%d", GpIdentity.numsegments);
+	sprintf(extvar->GP_SEGMENT_COUNT, "%d", getgpsegmentCount());
 
 	/*
 	 * Hadoop Connector env var
@@ -2307,6 +2306,7 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	extvar->GP_HADOOP_CONN_JARDIR = gp_hadoop_connector_jardir;
 	extvar->GP_HADOOP_CONN_VERSION = gp_hadoop_connector_version;
 	extvar->GP_HADOOP_HOME = gp_hadoop_home;
+	extvar->GP_QUERY_STRING = (char *)debug_query_string;
 
 	if (NULL != params)
 	{

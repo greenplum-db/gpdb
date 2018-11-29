@@ -242,7 +242,22 @@ struct MotionConn
 
 	int			tupleCount;
 
+	/*
+	 * false means 1) received a stop message and has handled it. 2) received
+	 * EOS message or sent out EOS message 3) received a QueryFinishPending
+	 * notify and has handled it.
+	 */
 	bool		stillActive;
+	/*
+	 * used both by motion sender and motion receiver
+	 *
+	 * sender: true means receiver don't need to consume tuples any more, sender
+	 * is also responsible to send stop message to its senders.
+	 *
+	 * receiver: true means have sent out a stop message to its senders. The stop
+	 * message might be lost, stopRequested can also tell sender that no more
+	 * data needed in the ack message.
+	 */
 	bool		stopRequested;
 
     MotionConnState state;

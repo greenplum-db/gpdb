@@ -4,7 +4,7 @@
  *	  Definitions for using the POSTGRES copy command.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/include/commands/copy.h
@@ -34,7 +34,6 @@ typedef enum CopyDest
 } CopyDest;
 
 /* CopyStateData is private in commands/copy.c */
-typedef struct CopyStateData *CopyState;
 typedef int (*copy_data_source_cb) (void *outbuf, int datasize, void *extra);
 
 /*
@@ -151,6 +150,8 @@ typedef struct CopyStateData
 	bool	   *force_quote_flags;		/* per-column CSV FQ flags */
 	List	   *force_notnull;	/* list of column names */
 	bool	   *force_notnull_flags;	/* per-column CSV FNN flags */
+	List	   *force_null;		/* list of column names */
+	bool	   *force_null_flags;		/* per-column CSV FN flags */
 	bool		convert_selectively;	/* do selective binary conversion? */
 	List	   *convert_select; /* list of column names (can be NIL) */
 	bool	   *convert_select_flags;	/* per-column CSV/TEXT CS flags */
@@ -246,7 +247,6 @@ typedef struct CopyStateData
 	bool		is_copy_in;		/* copy in or out? */
 	bool		escape_off;		/* treat backslashes as non-special? */
 	bool		delimiter_off;  /* no delimiter. 1-column external tabs only */
-	int			last_hash_field;
 	bool		end_marker;
 	char	   *begloc;
 	char	   *endloc;
@@ -281,6 +281,17 @@ typedef struct CopyStateData
 /* end Greenplum Database specific variables */
 } CopyStateData;
 
+typedef struct CopyStateData *CopyState;
+
+/* DestReceiver for COPY (SELECT) TO */
+typedef struct
+{
+	DestReceiver pub;			/* publicly-known function pointers */
+	CopyState	cstate;			/* CopyStateData for the command */
+	QueryDesc  *queryDesc;		/* QueryDesc for the copy*/
+	uint64		processed;		/* # of tuples processed */
+} DR_copy;
+
 /*
  * Some platforms like macOS (since Yosemite) already define 64 bit versions
  * of htonl and nhohl so we need to guard against redefinition.
@@ -301,6 +312,9 @@ extern CopyState BeginCopyFrom(Relation rel, const char *filename,
 			  bool is_program, copy_data_source_cb data_source_cb,
 			  void *data_source_cb_extra,
 			  List *attnamelist, List *options, List *ao_segnos);
+extern CopyState
+BeginCopyToOnSegment(QueryDesc *queryDesc);
+extern void EndCopyToOnSegment(CopyState cstate);
 extern CopyState BeginCopyToForExternalTable(Relation extrel, List *options);
 extern void EndCopyFrom(CopyState cstate);
 extern bool NextCopyFrom(CopyState cstate, ExprContext *econtext,
@@ -324,43 +338,27 @@ extern void truncateEolStr(char *str, EolType eol_type);
 extern void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
 extern void CopyEolStrToType(CopyState cstate);
 
+/*
+ * This is used to hold information about the target's distribution policy,
+ * during COPY FROM.
+ *
+ * For a regular, non-partitioned table, 'policy' and 'cdbHash' are filled in,
+ * and 'relid' and 'hashmap' are unused.
+ *
+ * For a partitioned table, there is one "main" GpDistributionData for the
+ * whole operation, and a separate GpDistributionData object for each
+ * partition. The per-table objects are stored in the 'hashmap' of the main
+ * GpDistributionData object, keyed by the partition's OID. 'policy' and
+ * 'cdbHash' in the main GpDistributionData are unused.
+ */
 typedef struct GpDistributionData
 {
-	GpPolicy *policy;	/* the partitioning policy for this table */
-	AttrNumber p_nattrs; /* num of attributes in the distribution policy */
-	Oid *p_attr_types;   /* types for each policy attribute */
-	CdbHash *cdbHash;
-	HTAB *hashmap;
+	Oid			relid;		/* hash key, must be first */
+
+	GpPolicy   *policy;		/* partitioning policy for this table */
+	CdbHash	   *cdbHash;	/* corresponding CdbHash object */
+
+	HTAB	   *hashmap;
 } GpDistributionData;
-
-typedef struct PartitionData
-{
-	/* variables for partitioning */
-	Datum *part_values ;
-	Oid *part_attr_types; /* types for partitioning */
-	Oid *part_typio ;
-	FmgrInfo *part_infuncs ;
-	AttrNumber *part_attnum ;
-	int part_attnums ;
-} PartitionData;
-
-typedef struct GetAttrContext
-{
-	TupleDesc tupDesc;
-	Form_pg_attribute *attr;
-	AttrNumber num_phys_attrs;
-	int *attr_offsets;
-	bool *nulls;
-	Datum *values;
-	CdbCopy *cdbCopy;
-	int original_lineno_for_qe;
-} GetAttrContext;
-
-typedef struct  cdbhashdata
-{
-	Oid relid;
-	CdbHash *cdbHash; /* a CdbHash API object */
-	GpPolicy *policy; /* policy for this cdb hash */
-} cdbhashdata;
 
 #endif /* COPY_H */

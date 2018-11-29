@@ -1,3 +1,16 @@
+-- create a tablespace using WITH clause
+CREATE TABLESPACE testspacewith LOCATION '@testtablespace@' WITH (some_nonexistent_parameter = true); -- fail
+ERROR:  unrecognized parameter "some_nonexistent_parameter"
+CREATE TABLESPACE testspacewith LOCATION '@testtablespace@' WITH (random_page_cost = 3.0); -- ok
+-- check to see the parameter was used
+SELECT spcoptions FROM pg_tablespace WHERE spcname = 'testspacewith';
+       spcoptions       
+------------------------
+ {random_page_cost=3.0}
+(1 row)
+
+-- drop the tablespace so we can re-use the location
+DROP TABLESPACE testspacewith;
 -- create a tablespace we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
 -- create a schema we can use
@@ -66,11 +79,25 @@ ERROR:  tablespace "nosuchspace" does not exist
 -- Fail, not empty
 DROP TABLESPACE testspace;
 ERROR:  tablespace "testspace" is not empty
+CREATE ROLE tablespace_testuser1 login;
+CREATE ROLE tablespace_testuser2 login;
+ALTER TABLESPACE testspace OWNER TO tablespace_testuser1;
+SET SESSION ROLE tablespace_testuser2;
+CREATE TABLE tablespace_table (i int) TABLESPACE testspace; -- fail
+ERROR:  permission denied for tablespace testspace
+\c -
+ALTER TABLESPACE testspace RENAME TO testspace_renamed;
+ALTER TABLESPACE testspace_renamed MOVE ALL TO pg_default;
+-- Should show notice that nothing was done
+ALTER TABLESPACE testspace_renamed MOVE ALL TO pg_default;
+NOTICE:  no matching relations in tablespace "testspace_renamed" found
+-- Should succeed
+DROP TABLESPACE testspace_renamed;
 DROP SCHEMA testschema CASCADE;
 NOTICE:  drop cascades to 4 other objects
 DETAIL:  drop cascades to table testschema.foo
 drop cascades to table testschema.asselect
 drop cascades to table testschema.asexecute
 drop cascades to table testschema.atable
--- Should succeed
-DROP TABLESPACE testspace;
+DROP ROLE tablespace_testuser1;
+DROP ROLE tablespace_testuser2;

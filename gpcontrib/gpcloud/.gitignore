@@ -1,0 +1,75 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+core.*
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+# backup files
+*~
+\#.*\#
+
+*.orig
+
+.DS_Store
+
+tags
+TAGS
+GPATH
+GTAGS
+GRTAGS
+core
+
+*.d
+*.gcov
+*.gcda
+*.gcno
+
+gpcloud_test
+bin/gpcheckcloud/gpcheckcloud
+
+s3.conf
+
+sql
+expected
+results
+source_replaced
+
+*.out
+*.diffs
+
+.idea
+
+*.sln
+*.suo
+*.vcxproj
+*.vcxproj.user
+*.filters
+*.VC.db
+*.VC.opendb
+
+CMakeLists.txt

@@ -31,7 +31,7 @@ static char *get_source_line(const char *src, int lineno);
 /*
  * Emit a PG error or notice, together with any available info about
  * the current Python error, previously set by PLy_exception_set().
- * This should be used to propagate Python errors into PG.	If fmt is
+ * This should be used to propagate Python errors into PG.  If fmt is
  * NULL, the Python error becomes the primary error message, otherwise
  * it becomes the detail.  If there is a Python traceback, it is put
  * in the context.
@@ -80,14 +80,14 @@ PLy_elog(int elevel, const char *fmt,...)
 		for (;;)
 		{
 			va_list		ap;
-			bool		success;
+			int			needed;
 
 			va_start(ap, fmt);
-			success = appendStringInfoVA(&emsg, dgettext(TEXTDOMAIN, fmt), ap);
+			needed = appendStringInfoVA(&emsg, dgettext(TEXTDOMAIN, fmt), ap);
 			va_end(ap);
-			if (success)
+			if (needed == 0)
 				break;
-			enlargeStringInfo(&emsg, emsg.maxlen);
+			enlargeStringInfo(&emsg, needed);
 		}
 		primary = emsg.data;
 

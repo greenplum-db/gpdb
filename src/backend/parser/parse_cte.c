@@ -3,7 +3,7 @@
  * parse_cte.c
  *	  handle CTEs (common table expressions) in parser
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -183,7 +183,7 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 		checkWellFormedRecursion(&cstate);
 
 		/*
-		 * Set up the ctenamespace for parse analysis.	Per spec, all the WITH
+		 * Set up the ctenamespace for parse analysis.  Per spec, all the WITH
 		 * items are visible to all others, so stuff them all in before parse
 		 * analysis.  We build the list in safe processing order so that the
 		 * planner can process the queries in sequence.
@@ -209,7 +209,7 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	{
 		/*
 		 * For non-recursive WITH, just analyze each CTE in sequence and then
-		 * add it to the ctenamespace.	This corresponds to the spec's
+		 * add it to the ctenamespace.  This corresponds to the spec's
 		 * definition of the scope of each WITH name.  However, to allow error
 		 * reports to be aware of the possibility of an erroneous reference,
 		 * we maintain a list in p_future_ctes of the not-yet-visible CTEs.
@@ -247,7 +247,7 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 	cte->ctequery = (Node *) query;
 
 	/*
-	 * Check that we got something reasonable.	These first two cases should
+	 * Check that we got something reasonable.  These first two cases should
 	 * be prevented by the grammar.
 	 */
 	if (!IsA(query, Query))
@@ -339,41 +339,6 @@ analyzeCTE(ParseState *pstate, CommonTableExpr *cte)
 }
 
 /*
- * reportDuplicateNames
- *    Report error when a given list of names (in String) contain duplicate values for a given
- * query name.
- */
-static void
-reportDuplicateNames(const char *queryName, List *names)
-{
-	if (names == NULL)
-		return;
-
-	ListCell *lc;
-	foreach (lc, names)
-	{
-		Value *string = (Value *)lfirst(lc);
-		Assert(IsA(string, String));
-
-		ListCell *rest;
-		for_each_cell(rest, lnext(lc))
-		{
-			Value *string2 = (Value *)lfirst(rest);
-			Assert(IsA(string, String));
-			
-			if (strcmp(strVal(string), strVal(string2)) == 0)
-			{
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("WITH query \"%s\" must not have duplicate column name: %s",
-								queryName, strVal(string)),
-						 errhint("Specify a column list without duplicate names")));
-			}
-		}
-	}
-}
-
-/*
  * Compute derived fields of a CTE, given the transformed output targetlist
  *
  * For a nonrecursive CTE, this is called after transforming the CTE's query.
@@ -430,7 +395,7 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 
 		/*
 		 * If the CTE is recursive, force the exposed column type of any
-		 * "unknown" column to "text".	This corresponds to the fact that
+		 * "unknown" column to "text".  This corresponds to the fact that
 		 * SELECT 'foo' UNION SELECT 'bar' will ultimately produce text. We
 		 * might see "unknown" as a result of an untyped literal in the
 		 * non-recursive term's select list, and if we don't convert to text
@@ -456,8 +421,6 @@ analyzeCTETargetList(ParseState *pstate, CommonTableExpr *cte, List *tlist)
 				 errmsg("WITH query \"%s\" has %d columns available but %d columns specified",
 						cte->ctename, varattno, numaliases),
 				 parser_errposition(pstate, cte->location)));
-
-	reportDuplicateNames(cte->ctename, cte->ctecolnames);
 }
 
 

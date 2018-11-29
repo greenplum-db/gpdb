@@ -1,0 +1,187 @@
+================================================
+Diagnostic functions for Append-optimized tables
+================================================
+
+ The procedure described in this utility will allow a user to retrieve 
+ internal information about an AO or CO table.
+ 
+ When an AO or CO table is created, another table is implicitly created, which
+ contains metadata information about the current state of the table such as 
+ the number of records in each segment. Note a "segment" in this context refers
+ to an individual table's segment. For example, an AO table with a relation id
+ of 123 might have three segments (i.e. 123.1, 123.2 and 123.3).
+
+ The utility consists of two files:
+
+   README                   - This file.
+   
+   gp_ao_co_diagnostics.so  - The shared library that contains the utility's 
+                              functions.
+
+
+The "gp_ao_co_diagnostics" shared library contains nine functions.
+
+  gp_aoseg_history_wrapper(oid) 
+  
+  	 oid - The oid of an AO table.
+  
+     Returns metadata information contained in the AO table's 
+     pg_aoseg.pg_aoseg_<segrelid>, including non-visable rows.
+     Non-visible rows can be interpreted as historic entries 
+     in the table, and therefore aid in debugging.
+
+  gp_aocsseg_wrapper(oid)
+
+     oid - The oid of a CO table.
+  
+     Returns metadata information contained in the CO table's 
+     pg_aoseg.pg_aocsseg_<segrelid>, not including non-visable 
+     rows.
+  
+  gp_aocsseg_history_wrapper(oid) 
+
+     oid - The oid of a CO table.
+
+     Returns metadata information contained in the CO table's 
+     pg_aoseg.pg_aocsseg_<segrelid>, including non-visable rows.
+     Non-visible rows can be interpreted as historic entries 
+     in the table, and therefore aid in debugging.
+
+  gp_aovisimap_wrapper(regclass)
+
+     regclass = The oid or name of an append-only table.
+
+     Returns the tuple id, the segment file, and the row number
+     of each obsolete tuples according to the visibility map.
+
+  gp_aovisimap_entry_wrapper(regclass)
+
+     regclass = The oid or name of an append-only table.
+
+     Returns information about each visibility map entry of 
+     the table. The information contains the segment number,
+     the first row number of the entry, the number of hidden
+     tuple in the entry, and a text-representation of the
+     visibility bitmap. 
+
+  gp_aovisimap_hidden_info_wrapper(regclass)
+
+     regclass = The oid or name of an append-only table.
+
+     Returns the number of hidden (obsolete) tuples and
+     the number of total tuples per segment file of
+     the table.
+
+
+ To install and use:
+
+  1. Copy the gp_ao_co_diagnostics library file to each host in the cluster. For example,
+
+       gpscp -f hosts gp_ao_co_diagnostics.so =:$GPHOME/lib   
+
+  2. Create a postgresql function references on the master to the functions.
+
+       CREATE FUNCTION get_gp_aoseg_history(oid)
+         RETURNS TABLE( 
+           gp_tid tid
+         , gp_xmin integer
+         , gp_xmin_status text
+         , gp_xmin_commit_distrib_id text
+         , gp_xmax integer
+         , gp_xmax_status text
+         , gp_xmax_commit_distrib_id text
+         , gp_command_id integer
+         , gp_infomask text
+         , gp_update_tid tid
+         , gp_visibility text
+         , segno integer
+         , tupcount bigint
+         , eof bigint
+         , eof_uncompressed bigint
+         , modcount bigint
+         , state smallint
+         ) 
+         AS '$libdir/gp_ao_co_diagnostics.so'
+        , 'gp_aoseg_history_wrapper' LANGUAGE C STRICT;
+
+
+       CREATE FUNCTION get_gp_aocsseg(oid)
+         RETURNS TABLE ( gp_tid tid
+                       , segno integer
+                       , column_num smallint
+                       , physical_segno integer
+                       , tupcount bigint
+                       , eof bigint
+                       , eof_uncompressed bigint
+                       , state smallint
+                       )
+         AS '$libdir/gp_ao_co_diagnostics.so'
+          , 'gp_aocsseg_wrapper' LANGUAGE C STRICT;
+
+
+       CREATE FUNCTION get_gp_aocsseg_history(oid)
+         RETURNS TABLE ( gp_tid tid
+                       , gp_xmin integer
+                       , gp_xmin_status text
+                       , gp_xmin_distrib_id text
+                       , gp_xmax integer
+                       , gp_xmax_status text
+                       , gp_xmax_distrib_id text
+                       , gp_command_id integer
+                       , gp_infomask text
+                       , gp_update_tid tid
+                       , gp_visibility text
+                       , segno integer
+                       , column_num smallint
+                       , physical_segno integer
+                       , tupcount bigint
+                       , eof bigint
+                       , eof_uncompressed bigint
+                       , modcount bigint
+                       , state smallint
+                       )
+         AS '$libdir/gp_ao_co_diagnostics.so'
+          , 'gp_aocsseg_history_wrapper' LANGUAGE C STRICT;
+
+
+       CREATE FUNCTION gp_aovisimap(oid) 
+        RETURNS TABLE ( tid tid
+                      , segno integer
+                      , row_num bigint) 
+         AS '$libdir/gp_ao_co_diagnostics.so'
+          , 'gp_aovisimap_wrapper' LANGUAGE C STRICT;
+
+
+       CREATE FUNCTION gp_aovisimap_hidden_info(oid)
+        RETURNS TABLE (segno integer
+                       , hidden_tupcount bigint
+                       , total_tupcount bigint) 
+        AS '$libdir/gp_ao_co_diagnostics.so'
+         ,'gp_aovisimap_hidden_info_wrapper' LANGUAGE C STRICT;
+
+
+       CREATE FUNCTION gp_aovisimap_entry(oid) 
+        RETURNS TABLE(segno integer
+                       , first_row_num bigint
+                       , hidden_tupcount int
+                       , bitmap text) 
+        AS '$libdir/gp_ao_co_diagnostics.so'
+         ,'gp_aovisimap_entry' LANGUAGE C STRICT;
+ 
+
+  3. Connect to the segment you wish to evaluate.
+
+       PGOPTIONS=' -c gp_session_role=utility ' psql
+
+
+  4. Get the Oid of the table you are interested in.
+
+       SELECT oid FROM pg_class WHERE relname = '<table name>';
+
+
+  5. Call the function using the table's oid.
+
+       SELECT * FROM <get_gp_ function>(<table's oid>);
+
+
+

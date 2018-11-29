@@ -88,7 +88,7 @@ set enable_seqscan to off;
 explain select * from atsdb where i = 1;
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1)  (cost=0.00..200.27 rows=1 width=6)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..200.27 rows=1 width=6)
    ->  Index Scan using atsdb_i_idx on atsdb  (cost=0.00..200.27 rows=1 width=6)
          Index Cond: i = 1
  Settings:  enable_seqscan=off
@@ -104,7 +104,7 @@ alter table atsdb set distributed by (i);
 explain select * from atsdb where i = 1;
                                    QUERY PLAN                                    
 ---------------------------------------------------------------------------------
- Gather Motion 2:1  (slice1)  (cost=0.00..200.27 rows=1 width=6)
+ Gather Motion 1:1  (slice1; segments: 1)  (cost=0.00..200.27 rows=1 width=6)
    ->  Index Scan using atsdb_i_idx on atsdb  (cost=0.00..200.27 rows=1 width=6)
          Index Cond: i = 1
  Settings:  enable_seqscan=off
@@ -356,7 +356,7 @@ select * from distcheck where rel = 'atsdb';
 
 alter table atsdb drop column n;
 alter table atsdb set with(appendonly = true, compresslevel = 3);
-ERROR:  option "appendonly" not supported
+ERROR:  cannot specify more than one option in WITH clause
 select relname, segrelid != 0, reloptions from pg_class, pg_appendonly where pg_class.oid =
 'atsdb'::regclass and relid = pg_class.oid;
  relname | ?column? | reloptions 
@@ -600,7 +600,7 @@ alter table atsdb set with (fgdfgef = asds);
 ERROR:  option "fgdfgef" not supported
 alter table atsdb set with(reorganize = true, reorganize = false) distributed
 randomly;
-ERROR:  "reorganize" specified more than once
+ERROR:  cannot specify more than one option in WITH clause
 drop table atsdb;
 -- check distribution after dropping distribution key column.
 create table atsdb (i int, j int, t text, n numeric) distributed by (i, j);
@@ -823,7 +823,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into mpp5746 select array[i], i from generate_series(1, 100) i;
 alter table mpp5746 set with (reorganize=true, appendonly = true);
-ERROR:  option "appendonly" not supported
+ERROR:  cannot specify more than one option in WITH clause
 select * from mpp5746 order by 1;
    c   |  t  
 -------+-----
@@ -1036,7 +1036,7 @@ select * from mpp5746 order by 1;
 (100 rows)
 
 alter table mpp5746 set with (reorganize=true, appendonly = false);
-ERROR:  option "appendonly" not supported
+ERROR:  cannot specify more than one option in WITH clause
 select * from mpp5746 order by 1;
    c   
 -------
@@ -1233,12 +1233,13 @@ alter table owner_test set with (reorganize = true) distributed by (i);
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from pg_class a, pg_class b, pg_class c,
+       z.rolname as toastidxowner
+from pg_class a
+     inner join pg_class b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join pg_class c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid = b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner;
@@ -1251,14 +1252,13 @@ where a.reltoastrelid = b.oid
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a,
-	 gp_dist_random('pg_class') b,
-	 gp_dist_random('pg_class') c,
+       z.rolname as toastidxowner
+from gp_dist_random('pg_class') a
+     inner join gp_dist_random('pg_class') b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join gp_dist_random('pg_class') c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid=b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner
@@ -1277,14 +1277,13 @@ alter table owner_test set with (reorganize = true) distributed by (i);
 select a.relname,
        x.rolname as relowner,
        y.rolname as toastowner,
-	   z.rolname as toastidxowner
-from gp_dist_random('pg_class') a,
-	 gp_dist_random('pg_class') b,
-	 gp_dist_random('pg_class') c,
+       z.rolname as toastidxowner
+from gp_dist_random('pg_class') a
+     inner join gp_dist_random('pg_class') b on b.oid = a.reltoastrelid
+     inner join pg_index ti on ti.indrelid = b.oid
+     inner join gp_dist_random('pg_class') c on c.oid = ti.indexrelid,
      pg_authid x, pg_authid y, pg_authid z
-where a.reltoastrelid=b.oid
-  and b.reltoastidxid=c.oid
-  and a.relname='owner_test'
+where a.relname='owner_test'
   and x.oid = a.relowner
   and y.oid = b.relowner
   and z.oid = c.relowner
@@ -1367,7 +1366,7 @@ ALTER TABLE public.distrib_part_test SET with (reorganize=false) DISTRIBUTED RAN
 CREATE TABLE t_dist1(col1 INTEGER, col2 INTEGER, CONSTRAINT pk_t_dist1 PRIMARY KEY(col2)) DISTRIBUTED BY(col2);
 ALTER TABLE t_dist1 SET DISTRIBUTED BY(col1);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+HINT:  the DISTRIBUTED BY columns must be a subset of the UNIQUE INDEX columns.
 -- case 2
 CREATE TABLE t_dist2(col1 INTEGER, col2 INTEGER, col3 INTEGER, col4 INTEGER) DISTRIBUTED BY(col1);
 CREATE UNIQUE INDEX idx1_t_dist2 ON t_dist2(col1, col2);
@@ -1380,13 +1379,13 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col2);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+HINT:  the DISTRIBUTED BY columns must be a subset of the UNIQUE INDEX columns.
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+HINT:  the DISTRIBUTED BY columns must be a subset of the UNIQUE INDEX columns.
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
 ERROR:  UNIQUE INDEX and DISTRIBUTED BY definitions incompatible
-HINT:  the DISTRIBUTED BY columns must be equal to or a left-subset of the UNIQUE INDEX columns.
+HINT:  the DISTRIBUTED BY columns must be a subset of the UNIQUE INDEX columns.
 -- Altering distribution policy for subpartitioned tables
 CREATE TABLE mpp6489
 (

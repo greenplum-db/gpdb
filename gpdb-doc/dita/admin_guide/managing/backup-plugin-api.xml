@@ -334,7 +334,7 @@ gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh</codeblock></li>
       <ul>
         <li>The backup/restore storage plugin must be installed in the same file system location on
           every host in the Greenplum Database cluster. Provide installation instructions for the
-          plugin indentifying the same.</li>
+          plugin identifying the same.</li>
         <li>The <codeph>gpadmin</codeph> user must have permission to traverse the file system path
           to the backup/restore plugin executable program.</li>
         <li>Include a template configuration file with the plugin.</li>

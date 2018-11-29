@@ -3,7 +3,7 @@
  * execAmi.c
  *	  miscellaneous executor access method routines
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	src/backend/executor/execAmi.c
@@ -326,24 +326,20 @@ ExecReScan(PlanState *node)
  * ExecMarkPos
  *
  * Marks the current scan position.
+ *
+ * NOTE: mark/restore capability is currently needed only for plan nodes
+ * that are the immediate inner child of a MergeJoin node.  Since MergeJoin
+ * requires sorted input, there is never any need to support mark/restore in
+ * node types that cannot produce sorted output.  There are some cases in
+ * which a node can pass through sorted data from its child; if we don't
+ * implement mark/restore for such a node type, the planner compensates by
+ * inserting a Material node above that node.
  */
 void
 ExecMarkPos(PlanState *node)
 {
 	switch (nodeTag(node))
 	{
-		case T_TableScanState:
-			ExecTableMarkPos((TableScanState *) node);
-			break;
-
-		case T_DynamicTableScanState:
-			ExecDynamicTableMarkPos((DynamicTableScanState *) node);
-			break;
-
-		case T_SeqScanState:
-			insist_log(false, "SeqScan/AppendOnlyScan/AOCSScan are defunct");
-			break;
-
 		case T_IndexScanState:
 			ExecIndexMarkPos((IndexScanState *) node);
 			break;
@@ -401,7 +397,7 @@ ExecMarkPos(PlanState *node)
  *
  * NOTE: the semantics of this are that the first ExecProcNode following
  * the restore operation will yield the same tuple as the first one following
- * the mark operation.	It is unspecified what happens to the plan node's
+ * the mark operation.  It is unspecified what happens to the plan node's
  * result TupleTableSlot.  (In most cases the result slot is unchanged by
  * a restore, but the node may choose to clear it or to load it with the
  * restored-to tuple.)	Hence the caller should discard any previously
@@ -412,18 +408,6 @@ ExecRestrPos(PlanState *node)
 {
 	switch (nodeTag(node))
 	{
-		case T_TableScanState:
-			ExecTableRestrPos((TableScanState *) node);
-			break;
-
-		case T_DynamicTableScanState:
-			ExecDynamicTableRestrPos((DynamicTableScanState *) node);
-			break;
-
-		case T_SeqScanState:
-			elog(ERROR, "SeqScan is defunct");
-			break;
-
 		case T_IndexScanState:
 			ExecIndexRestrPos((IndexScanState *) node);
 			break;
@@ -493,7 +477,6 @@ ExecSupportsMarkRestore(NodeTag plantype)
 {
 	switch (plantype)
 	{
-		case T_SeqScan:
 		case T_IndexScan:
 		case T_IndexOnlyScan:
 		case T_TidScan:
@@ -508,7 +491,7 @@ ExecSupportsMarkRestore(NodeTag plantype)
 			/*
 			 * T_Result only supports mark/restore if it has a child plan that
 			 * does, so we do not have enough information to give a really
-			 * correct answer.	However, for current uses it's enough to
+			 * correct answer.  However, for current uses it's enough to
 			 * always say "false", because this routine is not asked about
 			 * gating Result plans, only base-case Results.
 			 */

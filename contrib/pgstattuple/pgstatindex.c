@@ -40,12 +40,18 @@
 #include "utils/rel.h"
 
 
-extern Datum pgstatindex(PG_FUNCTION_ARGS);
-extern Datum pg_relpages(PG_FUNCTION_ARGS);
-extern Datum pgstatginindex(PG_FUNCTION_ARGS);
-
+/*
+ * Because of backward-compatibility issue, we have decided to have
+ * two types of interfaces, with regclass-type input arg and text-type
+ * input arg, for each function.
+ *
+ * Those functions which have text-type input arg will be deprecated
+ * in the future release.
+ */
 PG_FUNCTION_INFO_V1(pgstatindex);
+PG_FUNCTION_INFO_V1(pgstatindexbyid);
 PG_FUNCTION_INFO_V1(pg_relpages);
+PG_FUNCTION_INFO_V1(pg_relpagesbyid);
 PG_FUNCTION_INFO_V1(pgstatginindex);
 
 #define IS_INDEX(r) ((r)->rd_rel->relkind == RELKIND_INDEX)
@@ -88,6 +94,8 @@ typedef struct GinIndexStat
 	int64		pending_tuples;
 } GinIndexStat;
 
+static Datum pgstatindex_impl(Relation rel, FunctionCallInfo fcinfo);
+
 /* ------------------------------------------------------
  * pgstatindex()
  *
@@ -100,11 +108,6 @@ pgstatindex(PG_FUNCTION_ARGS)
 	text	   *relname = PG_GETARG_TEXT_P(0);
 	Relation	rel;
 	RangeVar   *relrv;
-	Datum		result;
-	BlockNumber nblocks;
-	BlockNumber blkno;
-	BTIndexStat indexStat;
-	BufferAccessStrategy bstrategy = GetAccessStrategy(BAS_BULKREAD);
 
 	if (!superuser())
 		ereport(ERROR,
@@ -113,6 +116,34 @@ pgstatindex(PG_FUNCTION_ARGS)
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	rel = relation_openrv(relrv, AccessShareLock);
+
+	PG_RETURN_DATUM(pgstatindex_impl(rel, fcinfo));
+}
+
+Datum
+pgstatindexbyid(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	Relation	rel;
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to use pgstattuple functions"))));
+
+	rel = relation_open(relid, AccessShareLock);
+
+	PG_RETURN_DATUM(pgstatindex_impl(rel, fcinfo));
+}
+
+static Datum
+pgstatindex_impl(Relation rel, FunctionCallInfo fcinfo)
+{
+	Datum		result;
+	BlockNumber nblocks;
+	BlockNumber blkno;
+	BTIndexStat indexStat;
+	BufferAccessStrategy bstrategy = GetAccessStrategy(BAS_BULKREAD);
 
 	if (!IS_INDEX(rel) || !IS_BTREE(rel))
 		elog(ERROR, "relation \"%s\" is not a btree index",
@@ -225,39 +256,29 @@ pgstatindex(PG_FUNCTION_ARGS)
 			elog(ERROR, "return type must be a row type");
 
 		j = 0;
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.version);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%d", indexStat.level);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, INT64_FORMAT,
-				 (indexStat.root_pages +
-				  indexStat.leaf_pages +
-				  indexStat.internal_pages +
-				  indexStat.deleted_pages +
-				  indexStat.empty_pages) * BLCKSZ);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, "%u", indexStat.root_blkno);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, INT64_FORMAT, indexStat.internal_pages);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, INT64_FORMAT, indexStat.leaf_pages);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, INT64_FORMAT, indexStat.empty_pages);
-		values[j] = palloc(32);
-		snprintf(values[j++], 32, INT64_FORMAT, indexStat.deleted_pages);
-		values[j] = palloc(32);
+		values[j++] = psprintf("%d", indexStat.version);
+		values[j++] = psprintf("%d", indexStat.level);
+		values[j++] = psprintf(INT64_FORMAT,
+							   (indexStat.root_pages +
+								indexStat.leaf_pages +
+								indexStat.internal_pages +
+								indexStat.deleted_pages +
+								indexStat.empty_pages) * BLCKSZ);
+		values[j++] = psprintf("%u", indexStat.root_blkno);
+		values[j++] = psprintf(INT64_FORMAT, indexStat.internal_pages);
+		values[j++] = psprintf(INT64_FORMAT, indexStat.leaf_pages);
+		values[j++] = psprintf(INT64_FORMAT, indexStat.empty_pages);
+		values[j++] = psprintf(INT64_FORMAT, indexStat.deleted_pages);
 		if (indexStat.max_avail > 0)
-			snprintf(values[j++], 32, "%.2f",
-					 100.0 - (double) indexStat.free_space / (double) indexStat.max_avail * 100.0);
+			values[j++] = psprintf("%.2f",
+								   100.0 - (double) indexStat.free_space / (double) indexStat.max_avail * 100.0);
 		else
-			snprintf(values[j++], 32, "NaN");
-		values[j] = palloc(32);
+			values[j++] = pstrdup("NaN");
 		if (indexStat.leaf_pages > 0)
-			snprintf(values[j++], 32, "%.2f",
-					 (double) indexStat.fragments / (double) indexStat.leaf_pages * 100.0);
+			values[j++] = psprintf("%.2f",
+								   (double) indexStat.fragments / (double) indexStat.leaf_pages * 100.0);
 		else
-			snprintf(values[j++], 32, "NaN");
+			values[j++] = pstrdup("NaN");
 
 		tuple = BuildTupleFromCStrings(TupleDescGetAttInMetadata(tupleDesc),
 									   values);
@@ -265,7 +286,7 @@ pgstatindex(PG_FUNCTION_ARGS)
 		result = HeapTupleGetDatum(tuple);
 	}
 
-	PG_RETURN_DATUM(result);
+	return result;
 }
 
 /* --------------------------------------------------------
@@ -292,6 +313,29 @@ pg_relpages(PG_FUNCTION_ARGS)
 
 	relrv = makeRangeVarFromNameList(textToQualifiedNameList(relname));
 	rel = relation_openrv(relrv, AccessShareLock);
+
+	/* note: this will work OK on non-local temp tables */
+
+	relpages = RelationGetNumberOfBlocks(rel);
+
+	relation_close(rel, AccessShareLock);
+
+	PG_RETURN_INT64(relpages);
+}
+
+Datum
+pg_relpagesbyid(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	int64		relpages;
+	Relation	rel;
+
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 (errmsg("must be superuser to use pgstattuple functions"))));
+
+	rel = relation_open(relid, AccessShareLock);
 
 	/* note: this will work OK on non-local temp tables */
 

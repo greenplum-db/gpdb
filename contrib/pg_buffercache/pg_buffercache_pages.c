@@ -19,8 +19,6 @@
 
 PG_MODULE_MAGIC;
 
-Datum		pg_buffercache_pages(PG_FUNCTION_ARGS);
-
 
 /*
  * Record structure holding the to be exposed cache data.
@@ -116,7 +114,7 @@ pg_buffercache_pages(PG_FUNCTION_ARGS)
 		 * possible deadlocks.
 		 */
 		for (i = 0; i < NUM_BUFFER_PARTITIONS; i++)
-			LWLockAcquire(FirstBufMappingLock + i, LW_SHARED);
+			LWLockAcquire(BufMappingPartitionLockByIndex(i), LW_SHARED);
 
 		/*
 		 * Scan though all the buffers, saving the relevant fields in the
@@ -157,7 +155,7 @@ pg_buffercache_pages(PG_FUNCTION_ARGS)
 		 * avoids O(N^2) behavior inside LWLockRelease.
 		 */
 		for (i = NUM_BUFFER_PARTITIONS; --i >= 0;)
-			LWLockRelease(FirstBufMappingLock + i);
+			LWLockRelease(BufMappingPartitionLockByIndex(i));
 	}
 
 	funcctx = SRF_PERCALL_SETUP();

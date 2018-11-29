@@ -15,6 +15,7 @@
  */
 #include "postgres.h"
 
+#include "commands/dbcommands.h"
 #include "libpq-fe.h"
 #include "libpq-int.h"
 #include "miscadmin.h"
@@ -30,8 +31,11 @@ static uint32 cdbconn_get_motion_listener_port(PGconn *conn);
 #include "cdb/cdbconn.h"		/* me */
 #include "cdb/cdbutil.h"		/* CdbComponentDatabaseInfo */
 #include "cdb/cdbvars.h"
+#include "cdb/cdbgang.h"
 
 int			gp_segment_connect_timeout = 180;
+
+static void cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc);
 
 static const char *
 transStatusToString(PGTransactionStatusType status)
@@ -235,12 +239,17 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 	pq_flush();
 }
 
-/* Initialize a QE connection descriptor in storage provided by the caller. */
-void
-cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
-							  struct CdbComponentDatabaseInfo *cdbinfo)
+/* Initialize a QE connection descriptor in CdbComponentsContext */
+SegmentDatabaseDescriptor *
+cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int identifier, bool isWriter)
 {
-	MemSet(segdbDesc, 0, sizeof(*segdbDesc));
+	MemoryContext oldContext;
+	SegmentDatabaseDescriptor *segdbDesc = NULL;
+
+	Assert(CdbComponentsContext);
+	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
+
+	segdbDesc = (SegmentDatabaseDescriptor *)palloc0(sizeof(SegmentDatabaseDescriptor));
 
 	/* Segment db info */
 	segdbDesc->segment_database_info = cdbinfo;
@@ -253,19 +262,20 @@ cdbconn_initSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc,
 
 	/* whoami */
 	segdbDesc->whoami = NULL;
+	segdbDesc->identifier = identifier;
+	segdbDesc->isWriter = isWriter;
 
-	/* Connection error info */
-	segdbDesc->errcode = 0;
-	initPQExpBuffer(&segdbDesc->error_message);
+	MemoryContextSwitchTo(oldContext);
+	return segdbDesc;
 }
 
 /* Free memory of segment descriptor. */
 void
 cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 {
-	/* Free the error message buffer. */
-	segdbDesc->errcode = 0;
-	termPQExpBuffer(&segdbDesc->error_message);
+	Assert(CdbComponentsContext);
+
+	cdbconn_disconnect(segdbDesc);
 
 	if (segdbDesc->whoami != NULL)
 	{
@@ -273,152 +283,6 @@ cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 		segdbDesc->whoami = NULL;
 	}
 }								/* cdbconn_termSegmentDescriptor */
-
-/*
- * Connect to a QE as a client via libpq. Returns a PGconn object in
- * segdbDesc->conn which can be tested for connection status.
- */
-void
-cdbconn_doConnect(SegmentDatabaseDescriptor *segdbDesc,
-				  const char *gpqeid,
-				  const char *options)
-{
-#define MAX_KEYWORDS 10
-#define MAX_INT_STRING_LEN 20
-	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
-	const char *keywords[MAX_KEYWORDS];
-	const char *values[MAX_KEYWORDS];
-	char		portstr[MAX_INT_STRING_LEN];
-	char		timeoutstr[MAX_INT_STRING_LEN];
-	int			nkeywords = 0;
-
-	keywords[nkeywords] = "gpqeid";
-	values[nkeywords] = gpqeid;
-	nkeywords++;
-
-	/*
-	 * Build the connection string
-	 */
-	if (options)
-	{
-		keywords[nkeywords] = "options";
-		values[nkeywords] = options;
-		nkeywords++;
-	}
-
-	/*
-	 * For entry DB connection, we make sure both "hostaddr" and "host" are
-	 * empty string. Or else, it will fall back to environment variables and
-	 * won't use domain socket in function connectDBStart.
-	 *
-	 * For other QE connections, we set "hostaddr". "host" is not used.
-	 */
-	if (segdbDesc->segindex == MASTER_CONTENT_ID &&
-		IS_QUERY_DISPATCHER())
-	{
-		keywords[nkeywords] = "hostaddr";
-		values[nkeywords] = "";
-		nkeywords++;
-	}
-	else
-	{
-		Assert(cdbinfo->hostip != NULL);
-		keywords[nkeywords] = "hostaddr";
-		values[nkeywords] = cdbinfo->hostip;
-		nkeywords++;
-	}
-
-	keywords[nkeywords] = "host";
-	values[nkeywords] = "";
-	nkeywords++;
-
-	snprintf(portstr, sizeof(portstr), "%u", cdbinfo->port);
-	keywords[nkeywords] = "port";
-	values[nkeywords] = portstr;
-	nkeywords++;
-
-	if (MyProcPort->database_name)
-	{
-		keywords[nkeywords] = "dbname";
-		values[nkeywords] = MyProcPort->database_name;
-		nkeywords++;
-	}
-
-	Assert(MyProcPort->user_name);
-	keywords[nkeywords] = "user";
-	values[nkeywords] = MyProcPort->user_name;
-	nkeywords++;
-
-	snprintf(timeoutstr, sizeof(timeoutstr), "%d", gp_segment_connect_timeout);
-	keywords[nkeywords] = "connect_timeout";
-	values[nkeywords] = timeoutstr;
-	nkeywords++;
-
-	keywords[nkeywords] = NULL;
-	values[nkeywords] = NULL;
-
-	Assert(nkeywords < MAX_KEYWORDS);
-
-	/*
-	 * Call libpq to connect
-	 */
-	segdbDesc->conn = PQconnectdbParams(keywords, values, false);
-
-	/*
-	 * Check for connection failure.
-	 */
-	if (PQstatus(segdbDesc->conn) == CONNECTION_BAD)
-	{
-		if (!segdbDesc->errcode)
-			segdbDesc->errcode = ERRCODE_GP_INTERCONNECTION_ERROR;
-
-		appendPQExpBuffer(&segdbDesc->error_message, "%s", PQerrorMessage(segdbDesc->conn));
-
-		/* Don't use elog, it's not thread-safe */
-		if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-			write_log("%s\n", segdbDesc->error_message.data);
-
-		PQfinish(segdbDesc->conn);
-		segdbDesc->conn = NULL;
-	}
-
-	/*
-	 * Successfully connected.
-	 */
-	else
-	{
-		PQsetNoticeReceiver(segdbDesc->conn, &MPPnoticeReceiver, segdbDesc);
-
-		/*
-		 * Command the QE to initialize its motion layer. Wait for it to
-		 * respond giving us the TCP port number where it listens for
-		 * connections from the gang below.
-		 */
-		segdbDesc->motionListener = cdbconn_get_motion_listener_port(segdbDesc->conn);
-		segdbDesc->backendPid = PQbackendPID(segdbDesc->conn);
-		if (segdbDesc->motionListener == 0)
-		{
-			segdbDesc->errcode = ERRCODE_INTERNAL_ERROR;
-			appendPQExpBuffer(&segdbDesc->error_message,
-							  "Internal error: No motion listener port");
-
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("%s\n", segdbDesc->error_message.data);
-
-			PQfinish(segdbDesc->conn);
-			segdbDesc->conn = NULL;
-		}
-		else
-		{
-			if (gp_log_gang >= GPVARS_VERBOSITY_DEBUG)
-				write_log("Connected to %s motionListener=%u/%u with options: %s\n",
-						  segdbDesc->whoami,
-						  (segdbDesc->motionListener & 0x0ffff),
-						  ((segdbDesc->motionListener >> 16) & 0x0ffff),
-						  options);
-		}
-	}
-}
 
 /*
  * Establish socket connection via libpq.
@@ -482,16 +346,35 @@ cdbconn_doConnectStart(SegmentDatabaseDescriptor *segdbDesc,
 	values[nkeywords] = portstr;
 	nkeywords++;
 
-	if (MyProcPort->database_name)
+	keywords[nkeywords] = "dbname";
+	if(MyProcPort && MyProcPort->database_name)
 	{
-		keywords[nkeywords] = "dbname";
-		values[nkeywords] = MyProcPort->database_name;
-		nkeywords++;
+		values[nkeywords] = MyProcPort->database_name;	
 	}
+	else
+	{
+		/*
+		 * get database name from MyDatabaseId, which is initialized
+		 * in InitPostgres()
+		 */
+		Assert(MyDatabaseId != InvalidOid);
+		values[nkeywords] = get_database_name(MyDatabaseId);
+	}
+	nkeywords++;
 
-	Assert(MyProcPort->user_name);
 	keywords[nkeywords] = "user";
-	values[nkeywords] = MyProcPort->user_name;
+	if (MyProcPort && MyProcPort->user_name)
+	{
+		values[nkeywords] = MyProcPort->user_name;
+	}
+	else
+	{
+		/*
+		 * get user name from AuthenticatedUserId which is initialized
+		 * in InitPostgres()
+		 */
+		values[nkeywords] = GetUserNameFromId(GetAuthenticatedUserId());
+	}
 	nkeywords++;
 
 	keywords[nkeywords] = NULL;
@@ -528,7 +411,7 @@ cdbconn_doConnectComplete(SegmentDatabaseDescriptor *segdbDesc)
 }
 
 /* Disconnect from QE */
-void
+static void
 cdbconn_disconnect(SegmentDatabaseDescriptor *segdbDesc)
 {
 	if (PQstatus(segdbDesc->conn) != CONNECTION_BAD)
@@ -627,25 +510,20 @@ cdbconn_isConnectionOk(SegmentDatabaseDescriptor *segdbDesc)
 	return (PQstatus(segdbDesc->conn) == CONNECTION_OK);
 }
 
-/* Reset error message buffer */
-void
-cdbconn_resetQEErrorMessage(SegmentDatabaseDescriptor *segdbDesc)
-{
-	segdbDesc->errcode = 0;
-	resetPQExpBuffer(&segdbDesc->error_message);
-}
-
 /*
  * Build text to identify this QE in error messages.
  * Don't call this function in threads.
  */
 void
-setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
-				int sliceIndex, MemoryContext mcxt)
+cdbconn_setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
+				int sliceIndex)
 {
 	CdbComponentDatabaseInfo *cdbinfo = segdbDesc->segment_database_info;
-	MemoryContext oldContext = MemoryContextSwitchTo(mcxt);
 	StringInfoData string;
+	MemoryContext oldContext;
+
+	Assert(CdbComponentsContext);
+	oldContext = MemoryContextSwitchTo(CdbComponentsContext);
 
 	initStringInfo(&string);
 
@@ -670,7 +548,9 @@ setQEIdentifier(SegmentDatabaseDescriptor *segdbDesc,
 
 	if (segdbDesc->whoami != NULL)
 		pfree(segdbDesc->whoami);
+
 	segdbDesc->whoami = string.data;
+
 	MemoryContextSwitchTo(oldContext);
 }
 

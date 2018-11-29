@@ -8,7 +8,7 @@
  * Perhaps someday that code should be moved here, but it'd have to be
  * disentangled from other stuff such as pg_depend updates.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -82,7 +82,7 @@ find_inheritance_children(Oid parentrelId, LOCKMODE lockmode)
 				ObjectIdGetDatum(parentrelId));
 
 	scan = systable_beginscan(relation, InheritsParentIndexId, true,
-							  SnapshotNow, 1, key);
+							  NULL, 1, key);
 
 	while ((inheritsTuple = systable_getnext(scan)) != NULL)
 	{
@@ -354,7 +354,7 @@ typeInheritsFrom(Oid subclassTypeId, Oid superclassTypeId)
 					ObjectIdGetDatum(this_relid));
 
 		inhscan = systable_beginscan(inhrel, InheritsRelidSeqnoIndexId, true,
-									 SnapshotNow, 1, &skey);
+									 NULL, 1, &skey);
 
 		while ((inhtup = systable_getnext(inhscan)) != NULL)
 		{

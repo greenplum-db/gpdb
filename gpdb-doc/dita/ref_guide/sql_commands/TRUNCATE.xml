@@ -1,17 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] <varname>name</varname> [, ...] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes all rows from a table or set of tables. It has the same
+<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] <varname>name</varname> [, ...] 
+    [ RESTART IDENTITY | CONTINUE IDENTITY ] [CASCADE | RESTRICT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes all rows from a table or set of tables. It has the same
         effect as an unqualified <codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"
           /></codeph> on each table, but since it does not actually scan the tables it is faster.
         This is most useful on large tables.</p>
       <p>You must have the <codeph>TRUNCATE</codeph> privilege on the table to truncate table
         rows.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a table to be truncated.</pd></plentry><plentry><pt>CASCADE</pt><pd>Since this key word applies to foreign key references (which are
-not supported in Greenplum Database) it has no effect.</pd></plentry><plentry><pt>RESTRICT</pt><pd>Since this key word applies to foreign key references (which are
+not supported in Greenplum Database) it has no effect.</pd></plentry>
+        <plentry>
+          <pt>RESTART IDENTITY</pt>
+          <pd>Automatically restart sequences owned by columns of the truncated table(s).</pd>
+        </plentry>
+        <plentry>
+          <pt>CONTINUE IDENTITY</pt>
+          <pd>Do not change the values of sequences. This is the default.</pd>
+        </plentry><plentry><pt>RESTRICT</pt><pd>Since this key word applies to foreign key references (which are
 not supported in Greenplum Database) it has no effect.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>TRUNCATE</codeph> will not run any user-defined <codeph>ON
 DELETE</codeph> triggers that might exist for the tables. </p><p><codeph>TRUNCATE</codeph> will not truncate any tables that inherit
 from the named table. Only the named table is truncated, not its child
 tables.</p><p><codeph>TRUNCATE</codeph> will not truncate any sub-tables of a partitioned
 table. If you specify a sub-table of a partitioned table, <codeph>TRUNCATE</codeph>
-  will not remove rows from the sub-table and its child tables.</p></section><section id="section6"><title>Examples</title><p>Empty the table <codeph>films</codeph>:</p><codeblock>TRUNCATE films;</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>TRUNCATE</codeph> command in the SQL standard.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+  will not remove rows from the sub-table and its child tables.</p>
+      <p><codeph>TRUNCATE</codeph> is transaction-safe with respect to the data in the tables: the
+        truncation will be safely rolled back if the surrounding transaction does not commit. </p>
+      <note>Any <codeph>ALTER SEQUENCE RESTART</codeph> operations performed as a consequence of
+        using the <codeph>RESTART IDENTITY</codeph> option are nontransactional and will not be
+        rolled back on failure. To minimize the risk, these operations are performed only after all
+        the rest of <codeph>TRUNCATE</codeph>'s work is done. However, there is still a risk if
+          <codeph>TRUNCATE</codeph> is performed inside a transaction block that is aborted
+        afterwards.  For example,
+          consider<codeblock>BEGIN;
+TRUNCATE TABLE foo RESTART IDENTITY;
+COPY foo FROM ...;
+COMMIT;</codeblock><p>If
+          the <codeph>COPY</codeph> fails partway through, the table data rolls back correctly, but
+          the sequences will be left with values that are probably smaller than they had before,
+          possibly leading to duplicate-key failures or other problems in later transactions. If
+          this is likely to be  problem, it's best to avoid using <codeph>RESTART IDENTITY</codeph>,
+          and accept that the new contents of the table will have higher serial numbers than the
+          old.</p></note></section><section id="section6"><title>Examples</title><p>Empty the tables <codeph>films</codeph> and <codeph>distributors</codeph>:</p><codeblock>TRUNCATE films, distributors;</codeblock>
+      <p>The same, and also reset any associated sequence generators:</p>
+      <codeblock>TRUNCATE films, distributors RESTART IDENTITY;</codeblock></section><section id="section7"><title>Compatibility</title><p>The draft SQL 2008 standard includes a <codeph>TRUNCATE</codeph> command, but at this writing it
+        is uncertain whether it will reach standardization or be fully compatible with the Greenplum
+        Database implementation.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="DELETE.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
             href="DROP_TABLE.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

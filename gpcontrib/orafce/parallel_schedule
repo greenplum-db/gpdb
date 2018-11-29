@@ -1,0 +1,2 @@
+test: init
+test: dbms_pipe_session_A dbms_pipe_session_B

@@ -1,0 +1,35 @@
+Master initialized.
+Master running.
+CREATE TABLE tbl1 (d text);
+CREATE TABLE
+INSERT INTO tbl1 VALUES ('in master');
+INSERT 0 1
+CHECKPOINT;
+CHECKPOINT
+Standby initialized and running.
+INSERT INTO tbl1 values ('in master, before promotion');
+INSERT 0 1
+CHECKPOINT;
+CHECKPOINT
+Standby promoted.
+INSERT INTO tbl1 VALUES ('in master, after promotion');
+INSERT 0 1
+INSERT INTO tbl1 VALUES ('in standby, after promotion');
+INSERT 0 1
+Running pg_rewind...
+Old master restarted after rewind.
+SELECT state FROM pg_stat_replication;
+   state   
+-----------
+ streaming
+(1 row)
+
+Master promoted.
+SELECT * from tbl1
+              d              
+-----------------------------
+ in master
+ in master, before promotion
+ in standby, after promotion
+(3 rows)
+

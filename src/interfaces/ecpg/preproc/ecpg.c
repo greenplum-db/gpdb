@@ -1,7 +1,7 @@
 /* src/interfaces/ecpg/preproc/ecpg.c */
 
 /* Main for ecpg, the PostgreSQL embedded SQL precompiler. */
-/* Copyright (c) 1996-2013, PostgreSQL Global Development Group */
+/* Copyright (c) 1996-2014, PostgreSQL Global Development Group */
 
 #include "postgres_fe.h"
 
@@ -138,7 +138,11 @@ main(int argc, char *const argv[])
 
 	progname = get_progname(argv[0]);
 
-	find_my_exec(argv[0], my_exec_path);
+	if (find_my_exec(argv[0], my_exec_path) < 0)
+	{
+		fprintf(stderr, _("%s: could not locate my own executable path\n"), argv[0]);
+		return (ILLEGAL_OPTION);
+	}
 
 	output_filename = NULL;
 	while ((c = getopt_long(argc, argv, "vcio:I:tD:dC:r:h?", ecpg_options, NULL)) != -1)
@@ -171,7 +175,7 @@ main(int argc, char *const argv[])
 				regression_mode = true;
 				break;
 			case 'o':
-				output_filename = strdup(optarg);
+				output_filename = mm_strdup(optarg);
 				if (strcmp(output_filename, "-") == 0)
 					yyout = stdout;
 				else
@@ -320,7 +324,7 @@ main(int argc, char *const argv[])
 					yyout = stdout;
 				else
 				{
-					output_filename = strdup(input_filename);
+					output_filename = mm_strdup(input_filename);
 
 					ptr2ext = strrchr(output_filename, '.');
 					/* make extension = .c resp. .h */

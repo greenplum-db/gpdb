@@ -55,11 +55,11 @@ test_GetNewTransactionId_xid_stop_limit(void **state)
 
 	will_return(RecoveryInProgress, false);
 
-	expect_any(LWLockAcquire, lockid);
+	expect_any(LWLockAcquire, l);
 	expect_any(LWLockAcquire, mode);
-	will_be_called(LWLockAcquire);
+	will_return(LWLockAcquire, true);
 
-	expect_any(LWLockRelease, lockid);
+	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 
 	expect_any(get_database_name, dbid);
@@ -101,11 +101,11 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 
 	will_return(RecoveryInProgress, false);
 
-	expect_any(LWLockAcquire, lockid);
+	expect_any(LWLockAcquire, l);
 	expect_any(LWLockAcquire, mode);
-	will_be_called(LWLockAcquire);
+	will_return(LWLockAcquire, true);
 
-	expect_any(LWLockRelease, lockid);
+	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 
 	expect_any(get_database_name, dbid);
@@ -116,9 +116,9 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	/*
 	 * verify rest of function logic, including assign MyProc->xid
 	 */
-	expect_any(LWLockAcquire, lockid);
+	expect_any(LWLockAcquire, l);
 	expect_any(LWLockAcquire, mode);
-	will_be_called(LWLockAcquire);
+	will_return(LWLockAcquire, true);
 
 	expect_any(ExtendCLOG, newestXact);
 	will_be_called(ExtendCLOG);
@@ -127,7 +127,7 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	expect_any(DistributedLog_Extend, newestXact);
 	will_be_called(DistributedLog_Extend);
 
-	expect_any(LWLockRelease, lockid);
+	expect_any(LWLockRelease, l);
 	will_be_called(LWLockRelease);
 	
 	PG_TRY();
@@ -142,6 +142,89 @@ test_GetNewTransactionId_xid_warn_limit(void **state)
 	PG_END_TRY();
 }
 
+static void
+should_acquire_and_release_oid_gen_lock()
+{
+	expect_value(LWLockAcquire, l, OidGenLock);
+	expect_value(LWLockAcquire, mode, LW_EXCLUSIVE);
+	will_be_called(LWLockAcquire);
+
+	expect_value(LWLockRelease, l, OidGenLock);
+	will_be_called(LWLockRelease);
+}
+
+static void
+should_generate_xlog_for_next_oid(Oid expected_oid_in_xlog_rec)
+{
+	expect_value(XLogPutNextOid, nextOid, expected_oid_in_xlog_rec);
+	will_be_called(XLogPutNextOid);
+}
+
+/*
+ * QD wrapped around before QE did
+ * QD nextOid: FirstNormalObjectId, QE nextOid: PG_UINT32_MAX
+ * QE should set its nextOid to FirstNormalObjectId and create an xlog
+ */
+void
+test_AdvanceObjectId_QD_wrapped_before_QE(void **state)
+{
+	VariableCacheData data = {.nextOid = PG_UINT32_MAX, .oidCount = 1};
+	ShmemVariableCache = &data;
+
+	should_generate_xlog_for_next_oid(FirstNormalObjectId + VAR_OID_PREFETCH);
+
+	should_acquire_and_release_oid_gen_lock();
+
+	/* Run the test */
+	AdvanceObjectId(FirstNormalObjectId);
+
+	/* Check if shared memory Oid values have been changed correctly */
+	assert_int_equal(ShmemVariableCache->nextOid, FirstNormalObjectId);
+	assert_int_equal(ShmemVariableCache->oidCount, VAR_OID_PREFETCH);
+}
+
+/*
+ * QE wrapped around but QD did not
+ * QD nextOid: PG_UINT32_MAX, QE nextOid: FirstNormalObjectId
+ * QE should do nothing
+ */
+void
+test_AdvanceObjectId_QE_wrapped_before_QD(void **state)
+{
+	VariableCacheData data = {.nextOid = FirstNormalObjectId, .oidCount = VAR_OID_PREFETCH};
+	ShmemVariableCache = &data;
+
+	should_acquire_and_release_oid_gen_lock();
+
+	/* Run the test */
+	AdvanceObjectId(PG_UINT32_MAX);
+
+	/* Check if shared memory Oid values have been changed correctly */
+	assert_int_equal(ShmemVariableCache->nextOid, FirstNormalObjectId);
+	assert_int_equal(ShmemVariableCache->oidCount, VAR_OID_PREFETCH);
+}
+
+/*
+ * Regular normal operation flow
+ * QD nextOid: FirstNormalObjectId + 2, QE nextOid: FirstNormalObjectId
+ * QE should set its nextOid to FirstNormalObjectId + 2 and not create an xlog
+ */
+void
+test_AdvanceObjectId_normal_flow(void **state)
+{
+	VariableCacheData data = {.nextOid = FirstNormalObjectId, .oidCount = VAR_OID_PREFETCH};
+	ShmemVariableCache = &data;
+
+	should_acquire_and_release_oid_gen_lock();
+
+	/* Run the test */
+	AdvanceObjectId(FirstNormalObjectId + 2);
+
+	/* Check if shared memory Oid values have been changed correctly */
+	assert_int_equal(ShmemVariableCache->nextOid, FirstNormalObjectId + 2);
+	assert_int_equal(ShmemVariableCache->oidCount, VAR_OID_PREFETCH -2);
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -149,7 +232,10 @@ main(int argc, char* argv[])
 
 	const UnitTest tests[] = {
 		unit_test(test_GetNewTransactionId_xid_stop_limit),
-		unit_test(test_GetNewTransactionId_xid_warn_limit)
+		unit_test(test_GetNewTransactionId_xid_warn_limit),
+		unit_test(test_AdvanceObjectId_QD_wrapped_before_QE),
+		unit_test(test_AdvanceObjectId_QE_wrapped_before_QD),
+		unit_test(test_AdvanceObjectId_normal_flow)
 	};
 
 	return run_tests(tests);

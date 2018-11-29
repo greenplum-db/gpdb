@@ -22,6 +22,8 @@ from gp_segment_configuration where content = 0 and role = 'p';
 \!gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
+-- Wait a few seconds, to ensure the config changes take effect.
+select pg_sleep(5);
 show gp_fts_probe_retries;
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_conn_startup_packet', 3, dbid)

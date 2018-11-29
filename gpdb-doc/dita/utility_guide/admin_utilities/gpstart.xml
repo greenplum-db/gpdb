@@ -43,7 +43,7 @@
                     Features</xref> in the <cite>Greenplum Database Admininstartor Guide</cite>.</p>
             <note>Before you can start a Greenplum Database system, you must have initialized the
                 system using <codeph>gpinitsystem</codeph>. Enabling or disabing heap checksums is
-                set when you initalize the system and cannot be changed after initalization.</note>
+                set when you initialize the system and cannot be changed after initialization.</note>
         </section>
         <section id="section4">
             <title>Options</title>

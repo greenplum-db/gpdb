@@ -3,7 +3,7 @@
  * twophase.c
  *		Two-phase commit support functions.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -51,6 +51,7 @@
 #include "access/twophase.h"
 #include "access/twophase_rmgr.h"
 #include "access/xact.h"
+#include "access/xlog.h"
 #include "access/xlogutils.h"
 #include "catalog/pg_type.h"
 #include "catalog/storage.h"
@@ -148,24 +149,23 @@ typedef struct TwoPhaseStateData
 
 static TwoPhaseStateData *TwoPhaseState;
 
-
-/*
- * The following list is
- */
-static HTAB *crashRecoverPostCheckpointPreparedTransactions_map_ht = NULL;
-
-static void add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, XLogRecPtr *m, char *caller);
-
-static void remove_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, char *caller);
-
-static TwoPhaseStateData *TwoPhaseState;
-
 /*
  * Global transaction entry currently locked by us, if any.
  */
 static GlobalTransaction MyLockedGxact = NULL;
 
 static bool twophaseExitRegistered = false;
+
+/*
+ * The following list is
+ */
+static HTAB *crashRecoverPostCheckpointPreparedTransactions_map_ht = NULL;
+
+static void add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, XLogRecPtr *m);
+
+static void remove_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid);
+
+static TwoPhaseStateData *TwoPhaseState;
 
 static void RecordTransactionCommitPrepared(TransactionId xid,
 								const char *gid,
@@ -182,7 +182,7 @@ static void RecordTransactionAbortPrepared(TransactionId xid,
 							   int nrels,
 							   RelFileNodeWithStorageType *rels);
 static void ProcessRecords(char *bufptr, TransactionId xid,
-                           const TwoPhaseCallback callbacks[]);
+			   const TwoPhaseCallback callbacks[]);
 static void RemoveGXact(GlobalTransaction gxact);
 
 /*
@@ -210,7 +210,7 @@ init_hash(const char *name, Size keysize, Size entrysize, int initialSize)
  * Add a new mapping to the recover post checkpoint prepared transactions hash table.
  */
 static void
-add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, XLogRecPtr *m, char *caller)
+add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, XLogRecPtr *m)
 {
   prpt_map *entry = NULL;
   bool      found = false;
@@ -249,7 +249,7 @@ add_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, X
  * Remove a mapping from the recover post checkpoint prepared transactions hash table.
  */
 static void
-remove_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid, char *caller)
+remove_recover_post_checkpoint_prepared_transactions_map_entry(TransactionId xid)
 {
   bool      found = false;;
 
@@ -404,7 +404,6 @@ PostPrepare_Twophase()
 	MyLockedGxact = NULL;
 }
 
-
 /*
  * MarkAsPreparing
  *		Reserve the GID for the given transaction.
@@ -445,6 +444,13 @@ MarkAsPreparing(TransactionId xid,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("prepared transactions are disabled"),
 			  errhint("Set max_prepared_transactions to a nonzero value.")));
+
+	/* on first call, register the exit hook */
+	if (!twophaseExitRegistered)
+	{
+		before_shmem_exit(AtProcExit_Twophase, 0);
+		twophaseExitRegistered = true;
+	}
 
 	LWLockAcquire(TwoPhaseStateLock, LW_EXCLUSIVE);
 
@@ -595,7 +601,7 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 	/* on first call, register the exit hook */
 	if (!twophaseExitRegistered)
 	{
-		on_shmem_exit(AtProcExit_Twophase, 0);
+		before_shmem_exit(AtProcExit_Twophase, 0);
 		twophaseExitRegistered = true;
 	}
 
@@ -619,7 +625,7 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 			ereport(ERROR,
 					(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 					 errmsg("prepared transaction with identifier \"%s\" is busy",
-						 gid)));
+							gid)));
 
 		if (user != gxact->owner && !superuser_arg(user))
 		{
@@ -633,7 +639,7 @@ LockGXact(const char *gid, Oid user, bool raiseErrorIfNotFound)
 		/*
 		 * Note: it probably would be possible to allow committing from
 		 * another database; but at the moment NOTIFY is known not to work and
-		 * there may be some other issues as well.	Hence disallow until
+		 * there may be some other issues as well.  Hence disallow until
 		 * someone gets motivated to make it work.
 		 */
 		if (MyDatabaseId != proc->databaseId &&  (Gp_role != GP_ROLE_EXECUTE))
@@ -1154,7 +1160,7 @@ EndPrepare(GlobalTransaction gxact)
 	gxact->prepare_begin_lsn = XLogLastInsertBeginLoc();
 
 	/* Add the prepared record to our global list */
-	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn, "EndPrepare");
+	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, &gxact->prepare_begin_lsn);
 
 	XLogFlush(gxact->prepare_lsn);
 
@@ -1171,7 +1177,7 @@ EndPrepare(GlobalTransaction gxact)
 	 */
 
 	/*
-	 * Mark the prepared transaction as valid.	As soon as xact.c marks
+	 * Mark the prepared transaction as valid.  As soon as xact.c marks
 	 * MyPgXact as not running our XID (which it will do immediately after
 	 * this function returns), others can commit/rollback the xact.
 	 *
@@ -1201,7 +1207,6 @@ EndPrepare(GlobalTransaction gxact)
 	MyPgXact->delayChkpt = false;
 
 	SIMPLE_FAULT_INJECTOR(EndPreparedTwoPhaseSleep);
-
 
 	/*
 	 * Wait for synchronous replication, if required.
@@ -1418,7 +1423,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
      * Check for recovery control file, and if so set up state for offline
      * recovery
      */
-    XLogReadRecoveryCommandFile(DEBUG5);
+	readRecoveryCommandFile();
 
     /* Now we can determine the list of expected TLIs */
     expectedTLIs = readTimeLineHistory(ThisTimeLineID);
@@ -1501,7 +1506,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	/*
 	 * In case we fail while running the callbacks, mark the gxact invalid so
 	 * no one else will try to commit/rollback, and so it will be recycled
-	 * if we fail after this point.      It is still locked by our backend so it
+	 * if we fail after this point.  It is still locked by our backend so it
 	 * won't go away yet.
 	 *
 	 * (We assume it's safe to do this without taking TwoPhaseStateLock.)
@@ -1559,7 +1564,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	/*
 	 * And now we can clean up our mess.
 	 */
-	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid, "FinishPreparedTransaction");
+	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid);
 
 	RemoveGXact(gxact);
 	MyLockedGxact = NULL;
@@ -1611,8 +1616,7 @@ ProcessRecords(char *bufptr, TransactionId xid,
 void
 RemoveTwoPhaseFile(TransactionId xid, bool giveWarning)
 {
-	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid,
-        "RemoveTwoPhaseFile: Removing from list");
+	remove_recover_post_checkpoint_prepared_transactions_map_entry(xid);
 }
 
 /*
@@ -1623,7 +1627,7 @@ void
 RecreateTwoPhaseFile(TransactionId xid, void *content, int len,
 					 XLogRecPtr *xlogrecptr)
 {
-	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, xlogrecptr, "RecreateTwoPhaseFile: add entry to hash list");
+	add_recover_post_checkpoint_prepared_transactions_map_entry(xid, xlogrecptr);
 }
 
 /*
@@ -1750,7 +1754,7 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 			 * XID, and they may force us to advance nextXid.
 			 *
 			 * We don't expect anyone else to modify nextXid, hence we don't
-			 * need to hold a lock while examining it.	We still acquire the
+			 * need to hold a lock while examining it.  We still acquire the
 			 * lock to modify it, though.
 			 */
 			subxids = (TransactionId *)
@@ -1849,7 +1853,7 @@ SetupCheckpointPreparedTransactionList(prepared_transaction_agg_state *ptas)
 
 		xid          = m[iPrep].xid;
 		tfXLogRecPtr = &(m[iPrep]).xlogrecptr;
-		add_recover_post_checkpoint_prepared_transactions_map_entry(xid, tfXLogRecPtr, "SetupCheckpointPreparedTransactionList: add entry to hash list");
+		add_recover_post_checkpoint_prepared_transactions_map_entry(xid, tfXLogRecPtr);
 	}
 }
 
@@ -2035,7 +2039,10 @@ RecordTransactionCommitPrepared(TransactionId xid,
 	xlrec.xid = xid;
 	xlrec.distribTimeStamp = distribTimeStamp;
 	xlrec.distribXid = distribXid;
-	xlrec.crec.xtime = time(NULL);
+
+	xlrec.crec.dbId = MyDatabaseId;
+	xlrec.crec.tsId = MyDatabaseTableSpace;
+	xlrec.crec.xact_time = GetCurrentTimestamp();
 	xlrec.crec.nrels = nrels;
 	xlrec.crec.nsubxacts = nchildren;
 	xlrec.crec.nmsgs = ninvalmsgs;
@@ -2199,7 +2206,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
  * and pass that information back to the caller.
  */
 void
-getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *caller)
+getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas)
 {
 	int			numberOfPrepareXacts     = TwoPhaseState->numPrepXacts;
 	GlobalTransaction *globalTransactionArray   = TwoPhaseState->prepXacts;
@@ -2223,8 +2230,7 @@ getTwoPhasePreparedTransactionData(prepared_transaction_agg_state **ptas, char *
 		TwoPhaseAddPreparedTransaction(ptas,
 									   &maxCount,
 									   xid,
-									   recordPtr,
-									   caller);
+									   recordPtr);
     }
 }  /* end getTwoPhasePreparedTransactionData */
 
@@ -2254,8 +2260,7 @@ void
 TwoPhaseAddPreparedTransaction(prepared_transaction_agg_state **ptas,
 							   int *maxCount,
 							   TransactionId xid,
-							   XLogRecPtr *xlogPtr,
-							   char *caller)
+							   XLogRecPtr *xlogPtr)
 {
 	int			len;
 	int			count;

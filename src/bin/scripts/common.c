@@ -4,7 +4,7 @@
  *		Common support routines for bin/scripts/
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * src/bin/scripts/common.c
@@ -14,7 +14,6 @@
 
 #include "postgres_fe.h"
 
-#include <pwd.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -28,38 +27,6 @@ static PGcancel *volatile cancelConn = NULL;
 #ifdef WIN32
 static CRITICAL_SECTION cancelConnLock;
 #endif
-
-/*
- * Returns the current user name.
- */
-const char *
-get_user_name(const char *progname)
-{
-#ifndef WIN32
-	struct passwd *pw;
-
-	pw = getpwuid(geteuid());
-	if (!pw)
-	{
-		fprintf(stderr, _("%s: could not obtain information about current user: %s\n"),
-				progname, strerror(errno));
-		exit(1);
-	}
-	return pw->pw_name;
-#else
-	static char username[128];	/* remains after function exit */
-	DWORD		len = sizeof(username) - 1;
-
-	if (!GetUserName(username, &len))
-	{
-		fprintf(stderr, _("%s: could not get current user name: %s\n"),
-				progname, strerror(errno));
-		exit(1);
-	}
-	return username;
-#endif
-}
-
 
 /*
  * Provide strictly harmonized handling of --help and --version
@@ -277,7 +244,7 @@ executeMaintenanceCommand(PGconn *conn, const char *query, bool echo)
 }
 
 /*
- * Check yes/no answer in a localized way.	1=yes, 0=no, -1=neither.
+ * Check yes/no answer in a localized way.  1=yes, 0=no, -1=neither.
  */
 
 /* translator: abbreviation for "yes" */

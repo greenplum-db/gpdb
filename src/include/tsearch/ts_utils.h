@@ -3,7 +3,7 @@
  * ts_utils.h
  *	  helper utilities for tsearch
  *
- * Copyright (c) 1998-2013, PostgreSQL Global Development Group
+ * Copyright (c) 1998-2014, PostgreSQL Global Development Group
  *
  * src/include/tsearch/ts_utils.h
  *
@@ -149,6 +149,7 @@ extern Datum gin_cmp_tslexeme(PG_FUNCTION_ARGS);
 extern Datum gin_cmp_prefix(PG_FUNCTION_ARGS);
 extern Datum gin_extract_tsquery(PG_FUNCTION_ARGS);
 extern Datum gin_tsquery_consistent(PG_FUNCTION_ARGS);
+extern Datum gin_tsquery_triconsistent(PG_FUNCTION_ARGS);
 extern Datum gin_extract_tsvector_2args(PG_FUNCTION_ARGS);
 extern Datum gin_extract_tsquery_5args(PG_FUNCTION_ARGS);
 extern Datum gin_tsquery_consistent_6args(PG_FUNCTION_ARGS);

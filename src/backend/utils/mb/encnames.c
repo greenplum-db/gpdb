@@ -29,7 +29,13 @@
  * Karel Zak, Aug 2001
  * ----------
  */
-pg_encname	pg_encname_tbl[] =
+typedef struct pg_encname
+{
+	const char *name;
+	pg_enc		encoding;
+} pg_encname;
+
+static const pg_encname pg_encname_tbl[] =
 {
 	{
 		"abc", PG_WIN1258
@@ -285,14 +291,8 @@ pg_encname	pg_encname_tbl[] =
 	},							/* alias for UHC */
 	{
 		"windows950", PG_BIG5
-	},							/* alias for BIG5 */
-	{
-		NULL, 0
-	}							/* last */
+	}							/* alias for BIG5 */
 };
-
-unsigned int pg_encname_tbl_sz = \
-sizeof(pg_encname_tbl) / sizeof(pg_encname_tbl[0]) - 1;
 
 /* ----------
  * These are "official" encoding names.
@@ -304,7 +304,7 @@ sizeof(pg_encname_tbl) / sizeof(pg_encname_tbl[0]) - 1;
 #else
 #define DEF_ENC2NAME(name, codepage) { #name, PG_##name, codepage }
 #endif
-pg_enc2name pg_enc2name_tbl[] =
+const pg_enc2name pg_enc2name_tbl[] =
 {
 	DEF_ENC2NAME(SQL_ASCII, 0),
 	DEF_ENC2NAME(EUC_JP, 20932),
@@ -352,10 +352,13 @@ pg_enc2name pg_enc2name_tbl[] =
 
 /* ----------
  * These are encoding names for gettext.
+ *
+ * This covers all encodings except MULE_INTERNAL, which is alien to gettext.
  * ----------
  */
-pg_enc2gettext pg_enc2gettext_tbl[] =
+const pg_enc2gettext pg_enc2gettext_tbl[] =
 {
+	{PG_SQL_ASCII, "US-ASCII"},
 	{PG_UTF8, "UTF-8"},
 	{PG_LATIN1, "LATIN1"},
 	{PG_LATIN2, "LATIN2"},
@@ -389,6 +392,13 @@ pg_enc2gettext pg_enc2gettext_tbl[] =
 	{PG_EUC_KR, "EUC-KR"},
 	{PG_EUC_TW, "EUC-TW"},
 	{PG_EUC_JIS_2004, "EUC-JP"},
+	{PG_SJIS, "SHIFT-JIS"},
+	{PG_BIG5, "BIG5"},
+	{PG_GBK, "GBK"},
+	{PG_UHC, "UHC"},
+	{PG_GB18030, "GB18030"},
+	{PG_JOHAB, "JOHAB"},
+	{PG_SHIFT_JIS_2004, "SHIFT_JISX0213"},
 	{0, NULL}
 };
 
@@ -457,13 +467,15 @@ clean_encoding_name(const char *key, char *newkey)
 
 /* ----------
  * Search encoding by encoding name
+ *
+ * Returns encoding ID, or -1 for error
  * ----------
  */
-pg_encname *
-pg_char_to_encname_struct(const char *name)
+int
+pg_char_to_encoding(const char *name)
 {
-	unsigned int nel = pg_encname_tbl_sz;
-	pg_encname *base = pg_encname_tbl,
+	unsigned int nel = lengthof(pg_encname_tbl);
+	const pg_encname *base = pg_encname_tbl,
 			   *last = base + nel - 1,
 			   *position;
 	int			result;
@@ -471,13 +483,13 @@ pg_char_to_encname_struct(const char *name)
 			   *key;
 
 	if (name == NULL || *name == '\0')
-		return NULL;
+		return -1;
 
 	if (strlen(name) >= NAMEDATALEN)
 	{
 #ifdef FRONTEND
 		fprintf(stderr, "encoding name too long\n");
-		return NULL;
+		return -1;
 #else
 		ereport(ERROR,
 				(errcode(ERRCODE_NAME_TOO_LONG),
@@ -495,29 +507,14 @@ pg_char_to_encname_struct(const char *name)
 		{
 			result = strcmp(key, position->name);
 			if (result == 0)
-				return position;
+				return position->encoding;
 		}
 		if (result < 0)
 			last = position - 1;
 		else
 			base = position + 1;
 	}
-	return NULL;
-}
-
-/*
- * Returns encoding or -1 for error
- */
-int
-pg_char_to_encoding(const char *name)
-{
-	pg_encname *p;
-
-	if (!name)
-		return -1;
-
-	p = pg_char_to_encname_struct(name);
-	return p ? p->encoding : -1;
+	return -1;
 }
 
 #ifndef FRONTEND
@@ -535,7 +532,7 @@ pg_encoding_to_char(int encoding)
 {
 	if (PG_VALID_ENCODING(encoding))
 	{
-		pg_enc2name *p = &pg_enc2name_tbl[encoding];
+		const pg_enc2name *p = &pg_enc2name_tbl[encoding];
 
 		Assert(encoding == p->encoding);
 		return p->name;

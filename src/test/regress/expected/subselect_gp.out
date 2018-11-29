@@ -1606,80 +1606,86 @@ EXPLAIN SELECT '' AS five, f1 AS "Correlated Field"
 EXPLAIN select count(*) from
   (select 1 from tenk1 a
    where unique1 IN (select hundred from tenk1 b)) ss;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=728.58..728.59 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=728.51..728.56 rows=1 width=8)
-         ->  Aggregate  (cost=728.51..728.52 rows=1 width=8)
-               ->  Hash Semi Join  (cost=512.09..728.00 rows=34 width=0)
-                     Hash Cond: a.unique1 = b.hundred
-                     ->  Seq Scan on tenk1 a  (cost=0.00..188.55 rows=3319 width=4)
-                     ->  Hash  (cost=387.65..387.65 rows=3319 width=4)
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.65 rows=3319 width=4)
-                                 Hash Key: b.hundred
-                                 ->  Seq Scan on tenk1 b  (cost=0.00..188.55 rows=3319 width=4)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(12 rows)
-
-EXPLAIN select count(distinct ss.ten) from
-  (select ten from tenk1 a
-   where unique1 IN (select hundred from tenk1 b)) ss;
                                                         QUERY PLAN                                                         
 ---------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=728.80..728.81 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=728.74..728.79 rows=1 width=8)
-         ->  Aggregate  (cost=728.74..728.75 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=512.00..728.49 rows=34 width=4)
-                     Hash Key: a.ten
-                     ->  Hash Semi Join  (cost=512.00..726.49 rows=34 width=4)
-                           Hash Cond: a.unique1 = b.hundred
-                           ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=8)
-                           ->  Hash  (cost=387.00..387.00 rows=3334 width=4)
+ Aggregate  (cost=640.06..640.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=640.00..640.05 rows=1 width=8)
+         ->  Aggregate  (cost=640.00..640.01 rows=1 width=8)
+               ->  Hash Join  (cost=414.25..639.75 rows=34 width=0)
+                     Hash Cond: a.unique1 = b.hundred
+                     ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=4)
+                     ->  Hash  (cost=413.00..413.00 rows=34 width=4)
+                           ->  HashAggregate  (cost=412.00..413.00 rows=34 width=4)
+                                 Group Key: b.hundred
                                  ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
                                        Hash Key: b.hundred
                                        ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
  Optimizer: legacy query optimizer
 (13 rows)
 
+EXPLAIN select count(distinct ss.ten) from
+  (select ten from tenk1 a
+   where unique1 IN (select hundred from tenk1 b)) ss;
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=642.06..642.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=642.00..642.05 rows=1 width=8)
+         ->  Aggregate  (cost=642.00..642.01 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.25..641.75 rows=34 width=4)
+                     Hash Key: a.ten
+                     ->  Hash Join  (cost=414.25..639.75 rows=34 width=4)
+                           Hash Cond: a.unique1 = b.hundred
+                           ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=8)
+                           ->  Hash  (cost=413.00..413.00 rows=34 width=4)
+                                 ->  HashAggregate  (cost=412.00..413.00 rows=34 width=4)
+                                       Group Key: b.hundred
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
+                                             Hash Key: b.hundred
+                                             ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
+ Optimizer: legacy query optimizer
+(15 rows)
+
 EXPLAIN select count(*) from
   (select 1 from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
-                                                     QUERY PLAN                                                      
----------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=729.85..729.86 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=729.78..729.83 rows=1 width=8)
-         ->  Aggregate  (cost=729.78..729.79 rows=1 width=8)
-               ->  Hash Semi Join  (cost=513.07..729.27 rows=34 width=0)
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=640.06..640.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=640.00..640.05 rows=1 width=8)
+         ->  Aggregate  (cost=640.00..640.01 rows=1 width=8)
+               ->  Hash Join  (cost=414.25..639.75 rows=34 width=0)
                      Hash Cond: a.unique1 = b.hundred
-                     ->  Seq Scan on tenk1 a  (cost=0.00..188.78 rows=3326 width=4)
-                     ->  Hash  (cost=388.34..388.34 rows=3326 width=4)
-                           ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..388.34 rows=3326 width=4)
-                                 Hash Key: b.hundred
-                                 ->  Seq Scan on tenk1 b  (cost=0.00..188.78 rows=3326 width=4)
- Settings:  optimizer=off
- Optimizer status: legacy query optimizer
-(12 rows)
+                     ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=4)
+                     ->  Hash  (cost=413.00..413.00 rows=34 width=4)
+                           ->  HashAggregate  (cost=412.00..413.00 rows=34 width=4)
+                                 Group Key: b.hundred
+                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
+                                       Hash Key: b.hundred
+                                       ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
+ Optimizer: legacy query optimizer
+(13 rows)
 
 EXPLAIN select count(distinct ss.ten) from
   (select ten from tenk1 a
    where unique1 IN (select distinct hundred from tenk1 b)) ss;
-                                                        QUERY PLAN                                                         
----------------------------------------------------------------------------------------------------------------------------
- Aggregate  (cost=729.07..729.08 rows=1 width=8)
-   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=729.01..729.06 rows=1 width=8)
-         ->  Aggregate  (cost=729.01..729.02 rows=1 width=8)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=512.21..728.76 rows=34 width=4)
+                                                           QUERY PLAN                                                            
+---------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=642.06..642.07 rows=1 width=8)
+   ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=642.00..642.05 rows=1 width=8)
+         ->  Aggregate  (cost=642.00..642.01 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=414.25..641.75 rows=34 width=4)
                      Hash Key: a.ten
-                     ->  Hash Semi Join  (cost=512.21..726.76 rows=34 width=4)
+                     ->  Hash Join  (cost=414.25..639.75 rows=34 width=4)
                            Hash Cond: a.unique1 = b.hundred
-                           ->  Seq Scan on tenk1 a  (cost=0.00..187.05 rows=3335 width=8)
-                           ->  Hash  (cost=387.15..387.15 rows=3335 width=4)
-                                 ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.15 rows=3335 width=4)
-                                       Hash Key: b.hundred
-                                       ->  Seq Scan on tenk1 b  (cost=0.00..187.05 rows=3335 width=4)
+                           ->  Seq Scan on tenk1 a  (cost=0.00..187.00 rows=3334 width=8)
+                           ->  Hash  (cost=413.00..413.00 rows=34 width=4)
+                                 ->  HashAggregate  (cost=412.00..413.00 rows=34 width=4)
+                                       Group Key: b.hundred
+                                       ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..387.00 rows=3334 width=4)
+                                             Hash Key: b.hundred
+                                             ->  Seq Scan on tenk1 b  (cost=0.00..187.00 rows=3334 width=4)
  Optimizer: legacy query optimizer
-(13 rows)
+(15 rows)
 
 --
 -- In case of simple exists query, planner can generate alternative

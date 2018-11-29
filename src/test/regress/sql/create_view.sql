@@ -396,6 +396,52 @@ select pg_get_viewdef('vv2', true);
 select pg_get_viewdef('vv3', true);
 select pg_get_viewdef('vv4', true);
 
+-- Implicit coercions in a JOIN USING create issues similar to FULL JOIN
+
+create table tt7a (x date, xx int, y int);
+alter table tt7a drop column xx;
+create table tt8a (x timestamptz, z int);
+
+create view vv2a as
+select * from (values(now(),2,3,now(),5)) v(a,b,c,d,e)
+union all
+select * from tt7a left join tt8a using (x), tt8a tt8ax;
+
+select pg_get_viewdef('vv2a', true);
+
+--
+-- Also check dropping a column that existed when the view was made
+--
+
+create table tt9 (x int, xx int, y int);
+create table tt10 (x int, z int);
+
+create view vv5 as select x,y,z from tt9 join tt10 using(x);
+
+select pg_get_viewdef('vv5', true);
+
+alter table tt9 drop column xx;
+
+select pg_get_viewdef('vv5', true);
+
+--
+-- Another corner case is that we might add a column to a table below a
+-- JOIN USING, and thereby make the USING column name ambiguous
+--
+
+create table tt11 (x int, y int);
+create table tt12 (x int, z int);
+create table tt13 (z int, q int);
+
+create view vv6 as select x,y,z,q from
+  (tt11 join tt12 using(x)) join tt13 using(z);
+
+select pg_get_viewdef('vv6', true);
+
+alter table tt11 add column z int;
+
+select pg_get_viewdef('vv6', true);
+
 -- clean up all the random objects we made above
 set client_min_messages = warning;
 DROP SCHEMA temp_view_test CASCADE;

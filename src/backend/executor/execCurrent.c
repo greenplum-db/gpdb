@@ -3,7 +3,7 @@
  * execCurrent.c
  *	  executor support for WHERE CURRENT OF cursor
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *	src/backend/executor/execCurrent.c
@@ -290,7 +290,7 @@ getCurrentOf(CurrentOfExpr *cexpr,
 
 		/*
 		 * This table didn't produce the cursor's current row; some other
-		 * inheritance child of the same parent must have.	Signal caller to
+		 * inheritance child of the same parent must have.  Signal caller to
 		 * do nothing on this table.
 		 */
 		return false;

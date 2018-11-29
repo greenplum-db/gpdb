@@ -3,7 +3,6 @@ Jinja2==2.10
 parse-type==0.4.2
 pexpect==4.4.0
 PSI==0.3b2
-pysql==0.16
 PyYAML==3.12
 ptyprocess==0.5.2
 six==1.11.0

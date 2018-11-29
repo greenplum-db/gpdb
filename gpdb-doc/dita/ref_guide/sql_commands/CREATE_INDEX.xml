@@ -91,7 +91,7 @@
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
                                                   <codeph>gist</codeph>, and <codeph>gin</codeph>.
                                                 The default method is <codeph>btree</codeph>. </pd>
-                                        <pd>Currently, only the B-tree, GiST and GIN index methods
+                                        <pd>Currently, only the B-tree, GiST, and GIN index methods
                                                 support multicolumn indexes. Up to 32 fields can be
                                                 specified by default. Only B-tree currently supports
                                                 unique indexes.</pd>
@@ -191,7 +191,7 @@
                                                 disables or enables the GIN index fast update
                                                 technique. A value of ON enables fast update (the
                                                 default), and OFF disables it. See <xref
-                                                  href="https://www.postgresql.org/docs/8.4/static/gin-implementation.html#GIN-FAST-UPDATE"
+                                                  href="https://www.postgresql.org/docs/8.4/gin-implementation.html#GIN-FAST-UPDATE"
                                                   format="html" scope="external">GIN fast update
                                                   technique</xref> in the PostgreSQL documentation
                                                 for more information.<note>Turning
@@ -285,7 +285,7 @@
                                 specified, <codeph>CREATE INDEX</codeph> will interpret it as
                                         <codeph>USING gist</codeph>. </p>
                         <p>For more information on the GiST index type, refer to the <xref
-                                        href="https://www.postgresql.org/docs/8.3/static/indexes-types.html"
+                                        href="https://www.postgresql.org/docs/8.3/indexes-types.html"
                                         scope="external" format="html">PostgreSQL
                                         documentation</xref>.</p>
                         <p>The use of hash indexes has been disabled in Greenplum Database.</p>

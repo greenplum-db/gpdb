@@ -1,6 +1,7 @@
 *=======================================================================
 * Program: STREAM
 * Programmer: John D. McCalpin
+* RCS Revision: $Id: stream.f,v 5.6 2005/10/04 00:20:48 mccalpin Exp mccalpin $
 *-----------------------------------------------------------------------
 * Copyright 1991-2003: John D. McCalpin
 *-----------------------------------------------------------------------
@@ -134,7 +135,7 @@ C     ..
       nbpw = realsize()
 
       PRINT *,'----------------------------------------------'
-      PRINT *,'STREAM Version $Revision$'
+      PRINT *,'STREAM Version $Revision: 5.6 $'
       PRINT *,'----------------------------------------------'
       WRITE (*,FMT=9010) 'Array size = ',n
       WRITE (*,FMT=9010) 'Offset     = ',offset

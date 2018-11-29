@@ -1,0 +1,40 @@
+-- Test that dropping a database will drop pages in the shared buffer cache.
+CREATE OR REPLACE FUNCTION check_shared_buffer_cache_for_dboid(Oid) RETURNS BOOL
+AS '@abs_srcdir@/regress.so', 'check_shared_buffer_cache_for_dboid'
+LANGUAGE C;
+-- Create a new database and a table. This should create entries in the shared
+-- buffer cache with the database Oid in the entries' buffer tag.
+CREATE DATABASE dropdb_check_shared_buffer_cache;
+\c dropdb_check_shared_buffer_cache
+CREATE TABLE dropdb_check_shared_buffer_cache_table (a int);
+\c regression
+-- Store the new database's Oid for later use
+-- start_ignore
+SELECT oid AS dropdb_check_shared_buffer_cache_dboid
+  FROM pg_database WHERE datname = 'dropdb_check_shared_buffer_cache';
+ dropdb_check_shared_buffer_cache_dboid 
+----------------------------------------
+                         <database oid>
+(1 row)
+
+-- end_ignore
+\gset
+-- We expect 'true' that the shared buffer cache contains pages related to our
+-- newly created database.
+SELECT check_shared_buffer_cache_for_dboid(:dropdb_check_shared_buffer_cache_dboid);
+ check_shared_buffer_cache_for_dboid 
+-------------------------------------
+ t
+(1 row)
+
+-- Now drop our database. This should trigger dropping of pages for this
+-- database that are in the shared buffer cache.
+DROP DATABASE dropdb_check_shared_buffer_cache;
+-- We expect 'false' that the shared buffer cache contains pages related to our
+-- dropped database.
+SELECT check_shared_buffer_cache_for_dboid(:dropdb_check_shared_buffer_cache_dboid);
+ check_shared_buffer_cache_for_dboid 
+-------------------------------------
+ f
+(1 row)
+

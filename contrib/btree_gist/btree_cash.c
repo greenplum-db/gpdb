@@ -24,14 +24,6 @@ PG_FUNCTION_INFO_V1(gbt_cash_distance);
 PG_FUNCTION_INFO_V1(gbt_cash_penalty);
 PG_FUNCTION_INFO_V1(gbt_cash_same);
 
-Datum		gbt_cash_compress(PG_FUNCTION_ARGS);
-Datum		gbt_cash_union(PG_FUNCTION_ARGS);
-Datum		gbt_cash_picksplit(PG_FUNCTION_ARGS);
-Datum		gbt_cash_consistent(PG_FUNCTION_ARGS);
-Datum		gbt_cash_distance(PG_FUNCTION_ARGS);
-Datum		gbt_cash_penalty(PG_FUNCTION_ARGS);
-Datum		gbt_cash_same(PG_FUNCTION_ARGS);
-
 static bool
 gbt_cashgt(const void *a, const void *b)
 {
@@ -86,6 +78,7 @@ static const gbtree_ninfo tinfo =
 {
 	gbt_t_cash,
 	sizeof(Cash),
+	16,							/* sizeof(gbtreekey16) */
 	gbt_cashgt,
 	gbt_cashge,
 	gbt_casheq,
@@ -97,7 +90,6 @@ static const gbtree_ninfo tinfo =
 
 
 PG_FUNCTION_INFO_V1(cash_dist);
-Datum		cash_dist(PG_FUNCTION_ARGS);
 Datum
 cash_dist(PG_FUNCTION_ARGS)
 {

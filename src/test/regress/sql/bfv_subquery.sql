@@ -271,6 +271,14 @@ select * from foo where foo.a = (select min(bar.c) from bar where foo.b || bar.d
 drop table foo, bar;
 
 --
+-- Test subquery with rescan of RESULT node
+--
+create table foo_rescan_result(a, b) as (values (1, 2), (1, 1));
+create table bar_rescan_result(a, b) as (values (1, 1));
+
+select * from foo_rescan_result t1
+where (select count(*) from bar_rescan_result where t1.a=t1.b) > 0;
+--
 -- subqueries with unnest in projectlist
 --
 -- start_ignore

@@ -308,7 +308,8 @@ AddForeignUpdateTargets (Query *parsetree,
      extra values to be fetched.  Each such entry must be marked
      <structfield>resjunk</> = <literal>true</>, and must have a distinct
      <structfield>resname</> that will identify it at execution time.
-     Avoid using names matching <literal>ctid<replaceable>N</></literal> or
+     Avoid using names matching <literal>ctid<replaceable>N</></literal>,
+     <literal>wholerow</literal>, or
      <literal>wholerow<replaceable>N</></literal>, as the core system can
      generate junk columns of these names.
     </para>
@@ -447,11 +448,12 @@ ExecForeignInsert (EState *estate,
 
     <para>
      The data in the returned slot is used only if the <command>INSERT</>
-     query has a <literal>RETURNING</> clause.  Hence, the FDW could choose
-     to optimize away returning some or all columns depending on the contents
-     of the <literal>RETURNING</> clause.  However, some slot must be
-     returned to indicate success, or the query's reported row count will be
-     wrong.
+     query has a <literal>RETURNING</> clause or the foreign table has
+     an <literal>AFTER ROW</> trigger.  Triggers require all columns, but the
+     FDW could choose to optimize away returning some or all columns depending
+     on the contents of the <literal>RETURNING</> clause.  Regardless, some
+     slot must be returned to indicate success, or the query's reported row
+     count will be wrong.
     </para>
 
     <para>
@@ -492,11 +494,12 @@ ExecForeignUpdate (EState *estate,
 
     <para>
      The data in the returned slot is used only if the <command>UPDATE</>
-     query has a <literal>RETURNING</> clause.  Hence, the FDW could choose
-     to optimize away returning some or all columns depending on the contents
-     of the <literal>RETURNING</> clause.  However, some slot must be
-     returned to indicate success, or the query's reported row count will be
-     wrong.
+     query has a <literal>RETURNING</> clause or the foreign table has
+     an <literal>AFTER ROW</> trigger.  Triggers require all columns, but the
+     FDW could choose to optimize away returning some or all columns depending
+     on the contents of the <literal>RETURNING</> clause.  Regardless, some
+     slot must be returned to indicate success, or the query's reported row
+     count will be wrong.
     </para>
 
     <para>
@@ -535,11 +538,12 @@ ExecForeignDelete (EState *estate,
 
     <para>
      The data in the returned slot is used only if the <command>DELETE</>
-     query has a <literal>RETURNING</> clause.  Hence, the FDW could choose
-     to optimize away returning some or all columns depending on the contents
-     of the <literal>RETURNING</> clause.  However, some slot must be
-     returned to indicate success, or the query's reported row count will be
-     wrong.
+     query has a <literal>RETURNING</> clause or the foreign table has
+     an <literal>AFTER ROW</> trigger.  Triggers require all columns, but the
+     FDW could choose to optimize away returning some or all columns depending
+     on the contents of the <literal>RETURNING</> clause.  Regardless, some
+     slot must be returned to indicate success, or the query's reported row
+     count will be wrong.
     </para>
 
     <para>
@@ -869,11 +873,11 @@ GetForeignServerByName(const char *name, bool missing_ok);
 
     <para>
      In <function>GetForeignPlan</>, generally the passed-in target list can
-     be copied into the plan node as-is.  The passed scan_clauses list
+     be copied into the plan node as-is.  The passed <literal>scan_clauses</> list
      contains the same clauses as <literal>baserel-&gt;baserestrictinfo</>,
      but may be re-ordered for better execution efficiency.  In simple cases
      the FDW can just strip <structname>RestrictInfo</> nodes from the
-     scan_clauses list (using <function>extract_actual_clauses</>) and put
+     <literal>scan_clauses</> list (using <function>extract_actual_clauses</>) and put
      all the clauses into the plan node's qual list, which means that all the
      clauses will be checked by the executor at run time.  More complex FDWs
      may be able to check some of the clauses internally, in which case those
@@ -891,7 +895,7 @@ GetForeignServerByName(const char *name, bool missing_ok);
      affect the cost estimate for the path.  The path's
      <structfield>fdw_private</> field would probably include a pointer to
      the identified clause's <structname>RestrictInfo</> node.  Then
-     <function>GetForeignPlan</> would remove that clause from scan_clauses,
+     <function>GetForeignPlan</> would remove that clause from <literal>scan_clauses</>,
      but add the <replaceable>sub_expression</> to <structfield>fdw_exprs</>
      to ensure that it gets massaged into executable form.  It would probably
      also put control information into the plan node's

@@ -5,13 +5,14 @@
  *	to control oid and relfilenode assignment, and do other special
  *	hacks needed for pg_upgrade.
  *
- *	Copyright (c) 2010-2013, PostgreSQL Global Development Group
+ *	Copyright (c) 2010-2014, PostgreSQL Global Development Group
  *	contrib/pg_upgrade_support/pg_upgrade_support.c
  */
 
 #include "postgres.h"
-
 #include "fmgr.h"
+#include "access/transam.h"
+#include "catalog/binary_upgrade.h"
 #include "catalog/namespace.h"
 #include "catalog/oid_dispatch.h"
 #include "catalog/pg_authid.h"
@@ -36,21 +37,6 @@ extern PGDLLIMPORT Oid binary_upgrade_next_toast_pg_class_oid;
 
 #define GET_STR(textp) DatumGetCString(DirectFunctionCall1(textout, PointerGetDatum(textp)))
 
-Datum		set_next_pg_type_oid(PG_FUNCTION_ARGS);
-Datum		set_next_array_pg_type_oid(PG_FUNCTION_ARGS);
-Datum		set_next_toast_pg_type_oid(PG_FUNCTION_ARGS);
-
-Datum		set_next_heap_pg_class_oid(PG_FUNCTION_ARGS);
-Datum		set_next_index_pg_class_oid(PG_FUNCTION_ARGS);
-Datum		set_next_toast_pg_class_oid(PG_FUNCTION_ARGS);
-
-Datum		set_next_pg_enum_oid(PG_FUNCTION_ARGS);
-Datum		set_next_pg_authid_oid(PG_FUNCTION_ARGS);
-
-Datum		create_empty_extension(PG_FUNCTION_ARGS);
-
-Datum		set_next_pg_namespace_oid(PG_FUNCTION_ARGS);
-
 PG_FUNCTION_INFO_V1(set_next_pg_type_oid);
 PG_FUNCTION_INFO_V1(set_next_array_pg_type_oid);
 PG_FUNCTION_INFO_V1(set_next_toast_pg_type_oid);
@@ -65,6 +51,8 @@ PG_FUNCTION_INFO_V1(set_next_pg_authid_oid);
 PG_FUNCTION_INFO_V1(create_empty_extension);
 
 PG_FUNCTION_INFO_V1(set_next_pg_namespace_oid);
+
+PG_FUNCTION_INFO_V1(set_preassigned_oids);
 
 Datum
 set_next_pg_type_oid(PG_FUNCTION_ARGS)
@@ -240,6 +228,27 @@ set_next_pg_namespace_oid(PG_FUNCTION_ARGS)
 	{
 		AddPreassignedOidFromBinaryUpgrade(nspid, NamespaceRelationId, nspname,
 										   InvalidOid, InvalidOid, InvalidOid);
+	}
+
+	PG_RETURN_VOID();
+}
+
+Datum
+set_preassigned_oids(PG_FUNCTION_ARGS)
+{
+	ArrayType  *array = PG_GETARG_ARRAYTYPE_P(0);
+	Datum	   *oids;
+	int			nelems;
+	int			i;
+
+	deconstruct_array(array, OIDOID, sizeof(Oid), true, 'i',
+					  &oids, NULL, &nelems);
+
+	for (i = 0; i < nelems; i++)
+	{
+		Datum		oid = DatumGetObjectId(oids[i]);
+
+		MarkOidPreassignedFromBinaryUpgrade(oid);
 	}
 
 	PG_RETURN_VOID();

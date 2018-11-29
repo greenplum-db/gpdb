@@ -4,7 +4,7 @@
  *	  Routines to support inter-object dependencies.
  *
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  * IDENTIFICATION
@@ -278,7 +278,7 @@ performDeletion(const ObjectAddress *object,
 	depRel = heap_open(DependRelationId, RowExclusiveLock);
 
 	/*
-	 * Acquire deletion lock on the target object.	(Ideally the caller has
+	 * Acquire deletion lock on the target object.  (Ideally the caller has
 	 * done this already, but many places are sloppy about it.)
 	 */
 	AcquireDeletionLock(object, 0);
@@ -390,7 +390,7 @@ performMultipleDeletions(const ObjectAddresses *objects,
 
 /*
  * deleteWhatDependsOn: attempt to drop everything that depends on the
- * specified object, though not the object itself.	Behavior is always
+ * specified object, though not the object itself.  Behavior is always
  * CASCADE.
  *
  * This is currently used only to clean out the contents of a schema
@@ -416,7 +416,7 @@ deleteWhatDependsOn(const ObjectAddress *object,
 	depRel = heap_open(DependRelationId, RowExclusiveLock);
 
 	/*
-	 * Acquire deletion lock on the target object.	(Ideally the caller has
+	 * Acquire deletion lock on the target object.  (Ideally the caller has
 	 * done this already, but many places are sloppy about it.)
 	 */
 	AcquireDeletionLock(object, 0);
@@ -458,7 +458,7 @@ deleteWhatDependsOn(const ObjectAddress *object,
 		 * Since this function is currently only used to clean out temporary
 		 * schemas, we pass PERFORM_DELETION_INTERNAL here, indicating that
 		 * the operation is an automatic system operation rather than a user
-		 * action.	If, in the future, this function is used for other
+		 * action.  If, in the future, this function is used for other
 		 * purposes, we might need to revisit this.
 		 */
 		deleteOneObject(thisobj, &depRel, PERFORM_DELETION_INTERNAL);
@@ -475,7 +475,7 @@ deleteWhatDependsOn(const ObjectAddress *object,
  *
  * For every object that depends on the starting object, acquire a deletion
  * lock on the object, add it to targetObjects (if not already there),
- * and recursively find objects that depend on it.	An object's dependencies
+ * and recursively find objects that depend on it.  An object's dependencies
  * will be placed into targetObjects before the object itself; this means
  * that the finished list's order represents a safe deletion order.
  *
@@ -527,7 +527,7 @@ findDependentObjects(const ObjectAddress *object,
 	 * will not break a loop at an internal dependency: if we enter the loop
 	 * at an "owned" object we will switch and start at the "owning" object
 	 * instead.  We could probably hack something up to avoid breaking at an
-	 * auto dependency, too, if we had to.	However there are no known cases
+	 * auto dependency, too, if we had to.  However there are no known cases
 	 * where that would be necessary.
 	 */
 	if (stack_address_present_add_flags(object, flags, stack))
@@ -548,7 +548,7 @@ findDependentObjects(const ObjectAddress *object,
 	/*
 	 * The target object might be internally dependent on some other object
 	 * (its "owner"), and/or be a member of an extension (also considered its
-	 * owner).	If so, and if we aren't recursing from the owning object, we
+	 * owner).  If so, and if we aren't recursing from the owning object, we
 	 * have to transform this deletion request into a deletion request of the
 	 * owning object.  (We'll eventually recurse back to this object, but the
 	 * owning object has to be visited first so it will be deleted after.) The
@@ -585,7 +585,7 @@ findDependentObjects(const ObjectAddress *object,
 		nkeys = 2;
 
 	scan = systable_beginscan(*depRel, DependDependerIndexId, true,
-							  SnapshotNow, nkeys, key);
+							  NULL, nkeys, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -621,7 +621,7 @@ findDependentObjects(const ObjectAddress *object,
 					/*
 					 * Exception 1a: if the owning object is listed in
 					 * pendingObjects, just release the caller's lock and
-					 * return.	We'll eventually complete the DROP when we
+					 * return.  We'll eventually complete the DROP when we
 					 * reach that entry in the pending list.
 					 */
 					if (pendingObjects &&
@@ -674,7 +674,7 @@ findDependentObjects(const ObjectAddress *object,
 				 * owning object.
 				 *
 				 * First, release caller's lock on this object and get
-				 * deletion lock on the owning object.	(We must release
+				 * deletion lock on the owning object.  (We must release
 				 * caller's lock to avoid deadlock against a concurrent
 				 * deletion of the owning object.)
 				 */
@@ -760,7 +760,7 @@ findDependentObjects(const ObjectAddress *object,
 		nkeys = 2;
 
 	scan = systable_beginscan(*depRel, DependReferenceIndexId, true,
-							  SnapshotNow, nkeys, key);
+							  NULL, nkeys, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -836,7 +836,7 @@ findDependentObjects(const ObjectAddress *object,
 	systable_endscan(scan);
 
 	/*
-	 * Finally, we can add the target object to targetObjects.	Be careful to
+	 * Finally, we can add the target object to targetObjects.  Be careful to
 	 * include any flags that were passed back down to us from inner recursion
 	 * levels.
 	 */
@@ -891,7 +891,7 @@ reportDependentObjects(const ObjectAddresses *targetObjects,
 	/*
 	 * We limit the number of dependencies reported to the client to
 	 * MAX_REPORTED_DEPS, since client software may not deal well with
-	 * enormous error strings.	The server log always gets a full report.
+	 * enormous error strings.  The server log always gets a full report.
 	 */
 #define MAX_REPORTED_DEPS 100
 
@@ -924,7 +924,7 @@ reportDependentObjects(const ObjectAddresses *targetObjects,
 							DEPFLAG_EXTENSION))
 		{
 			/*
-			 * auto-cascades are reported at DEBUG2, not msglevel.	We don't
+			 * auto-cascades are reported at DEBUG2, not msglevel.  We don't
 			 * try to combine them with the regular message because the
 			 * results are too confusing when client_min_messages and
 			 * log_min_messages are different.
@@ -1114,7 +1114,7 @@ deleteOneObject(const ObjectAddress *object, Relation *depRel, int flags)
 		nkeys = 2;
 
 	scan = systable_beginscan(*depRel, DependDependerIndexId, true,
-							  SnapshotNow, nkeys, key);
+							  NULL, nkeys, key);
 
 	while (HeapTupleIsValid(tup = systable_getnext(scan)))
 	{
@@ -1124,7 +1124,7 @@ deleteOneObject(const ObjectAddress *object, Relation *depRel, int flags)
 	systable_endscan(scan);
 
 	/*
-	 * Delete shared dependency references related to this object.	Again, if
+	 * Delete shared dependency references related to this object.  Again, if
 	 * subId = 0, remove records for sub-objects too.
 	 */
 	deleteSharedDependencyRecordsFor(object->classId, object->objectId,
@@ -1424,13 +1424,13 @@ recordDependencyOnExpr(const ObjectAddress *depender,
  * recordDependencyOnSingleRelExpr - find expression dependencies
  *
  * As above, but only one relation is expected to be referenced (with
- * varno = 1 and varlevelsup = 0).	Pass the relation OID instead of a
+ * varno = 1 and varlevelsup = 0).  Pass the relation OID instead of a
  * range table.  An additional frammish is that dependencies on that
  * relation (or its component columns) will be marked with 'self_behavior',
  * whereas 'behavior' is used for everything else.
  *
  * NOTE: the caller should ensure that a whole-table dependency on the
- * specified relation is created separately, if one is needed.	In particular,
+ * specified relation is created separately, if one is needed.  In particular,
  * a whole-row Var "relation.*" will not cause this routine to emit any
  * dependency item.  This is appropriate behavior for subexpressions of an
  * ordinary query, so other cases need to cope as necessary.
@@ -1550,7 +1550,7 @@ find_expr_references_walker(Node *node,
 
 		/*
 		 * A whole-row Var references no specific columns, so adds no new
-		 * dependency.	(We assume that there is a whole-table dependency
+		 * dependency.  (We assume that there is a whole-table dependency
 		 * arising from each underlying rangetable entry.  While we could
 		 * record such a dependency when finding a whole-row Var that
 		 * references a relation directly, it's quite unclear how to extend
@@ -1609,7 +1609,7 @@ find_expr_references_walker(Node *node,
 
 		/*
 		 * If it's a regclass or similar literal referring to an existing
-		 * object, add a reference to that object.	(Currently, only the
+		 * object, add a reference to that object.  (Currently, only the
 		 * regclass and regconfig cases have any likely use, but we may as
 		 * well handle all the OID-alias datatypes consistently.)
 		 */
@@ -1837,8 +1837,7 @@ find_expr_references_walker(Node *node,
 
 		/*
 		 * Add whole-relation refs for each plain relation mentioned in the
-		 * subquery's rtable, as well as refs for any datatypes and collations
-		 * used in a RECORD function's output.
+		 * subquery's rtable.
 		 *
 		 * Note: query_tree_walker takes care of recursing into RTE_FUNCTION
 		 * RTEs, subqueries, etc, so no need to do that here.  But keep it
@@ -1846,35 +1845,19 @@ find_expr_references_walker(Node *node,
 		 *
 		 * Note: we don't need to worry about collations mentioned in
 		 * RTE_VALUES or RTE_CTE RTEs, because those must just duplicate
-		 * collations referenced in other parts of the Query.
+		 * collations referenced in other parts of the Query.  We do have to
+		 * worry about collations mentioned in RTE_FUNCTION, but we take care
+		 * of those when we recurse to the RangeTblFunction node(s).
 		 */
 		foreach(lc, query->rtable)
 		{
 			RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
-			ListCell   *ct;
 
 			switch (rte->rtekind)
 			{
 				case RTE_RELATION:
 					add_object_address(OCLASS_CLASS, rte->relid, 0,
 									   context->addrs);
-					break;
-				case RTE_TABLEFUNCTION:
-				case RTE_FUNCTION:
-					foreach(ct, rte->funccoltypes)
-					{
-						add_object_address(OCLASS_TYPE, lfirst_oid(ct), 0,
-										   context->addrs);
-					}
-					foreach(ct, rte->funccolcollations)
-					{
-						Oid			collid = lfirst_oid(ct);
-
-						if (OidIsValid(collid) &&
-							collid != DEFAULT_COLLATION_OID)
-							add_object_address(OCLASS_COLLATION, collid, 0,
-											   context->addrs);
-					}
 					break;
 				default:
 					break;
@@ -1942,6 +1925,30 @@ find_expr_references_walker(Node *node,
 		/* we need to look at the groupClauses for operator references */
 		find_expr_references_walker((Node *) setop->groupClauses, context);
 		/* fall through to examine child nodes */
+	}
+	else if (IsA(node, RangeTblFunction))
+	{
+		RangeTblFunction *rtfunc = (RangeTblFunction *) node;
+		ListCell   *ct;
+
+		/*
+		 * Add refs for any datatypes and collations used in a column
+		 * definition list for a RECORD function.  (For other cases, it should
+		 * be enough to depend on the function itself.)
+		 */
+		foreach(ct, rtfunc->funccoltypes)
+		{
+			add_object_address(OCLASS_TYPE, lfirst_oid(ct), 0,
+							   context->addrs);
+		}
+		foreach(ct, rtfunc->funccolcollations)
+		{
+			Oid			collid = lfirst_oid(ct);
+
+			if (OidIsValid(collid) && collid != DEFAULT_COLLATION_OID)
+				add_object_address(OCLASS_COLLATION, collid, 0,
+								   context->addrs);
+		}
 	}
 
 	return expression_tree_walker(node, find_expr_references_walker,
@@ -2202,7 +2209,7 @@ object_address_present_add_flags(const ObjectAddress *object,
 			{
 				/*
 				 * We get here if we find a need to delete a column after
-				 * having already decided to drop its whole table.	Obviously
+				 * having already decided to drop its whole table.  Obviously
 				 * we no longer need to drop the column.  But don't plaster
 				 * its flags on the table.
 				 */

@@ -5,7 +5,7 @@
  *		  Prototypes and macros around system calls, used to help make
  *		  threaded libraries reentrant and safe to use from threaded applications.
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  *
  * src/port/thread.c
  *
@@ -28,12 +28,12 @@
  *	Additional confusion exists because many operating systems that
  *	use pthread_setspecific/pthread_getspecific() also have *_r versions
  *	of standard library functions for compatibility with operating systems
- *	that require them.	However, internally, these *_r functions merely
+ *	that require them.  However, internally, these *_r functions merely
  *	call the thread-safe standard library functions.
  *
  *	For example, BSD/OS 4.3 uses Bind 8.2.3 for getpwuid().  Internally,
  *	getpwuid() calls pthread_setspecific/pthread_getspecific() to return
- *	static data to the caller in a thread-safe manner.	However, BSD/OS
+ *	static data to the caller in a thread-safe manner.  However, BSD/OS
  *	also has getpwuid_r(), which merely calls getpwuid() and shifts
  *	around the arguments to match the getpwuid_r() function declaration.
  *	Therefore, while BSD/OS has getpwuid_r(), it isn't required.  It also

@@ -250,3 +250,35 @@ analyze unlogged_test;
 explain select * from unlogged_test where c1 = 100;
 select * from unlogged_test where c1 = 100;
 drop table unlogged_test;
+
+--
+-- Test crash recovery
+--
+CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
+CREATE TABLE bm_test_insert(a int) DISTRIBUTED BY (a);
+CREATE INDEX bm_a_idx ON bm_test_insert USING bitmap(a);
+CREATE TABLE bm_test_update(a int, b int) DISTRIBUTED BY (a);
+CREATE INDEX bm_b_idx ON bm_test_update USING bitmap(b);
+INSERT INTO bm_test_update SELECT i,i FROM generate_series (1, 10000) i;
+-- flush the data to disk
+CHECKPOINT;
+-- skip all further checkpoint
+SELECT gp_inject_fault_infinite('checkpoint', 'skip', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+INSERT INTO bm_test_insert SELECT generate_series (1, 10000);
+UPDATE bm_test_update SET b=b+1;
+-- trigger recovery on primaries 
+SELECT gp_inject_fault_infinite('finish_prepared_after_record_commit_prepared', 'panic', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+SET client_min_messages='ERROR';
+CREATE TABLE trigger_recovery_on_primaries(c int);
+RESET client_min_messages;
+-- reconnect to the database after restart
+\c
+SELECT gp_inject_fault('checkpoint', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+SELECT gp_inject_fault('finish_prepared_after_record_commit_prepared', 'reset', dbid) FROM gp_segment_configuration WHERE role = 'p' AND content > -1;
+SET enable_seqscan=off;
+SET enable_indexscan=off;
+SELECT * FROM bm_test_insert WHERE a=1;
+SELECT * FROM bm_test_update WHERE b=1;
+DROP TABLE trigger_recovery_on_primaries;
+DROP TABLE bm_test_insert;
+DROP TABLE bm_test_update;

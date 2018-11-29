@@ -244,8 +244,14 @@ plan_tree_walker(Node *node,
 		case T_BitmapAppendOnlyScan:
 		case T_BitmapTableScan:
 		case T_WorkTableScan:
+			if (walk_scan_node_fields((Scan *) node, walker, context))
+				return true;
+			break;
+
 		case T_ForeignScan:
 			if (walk_scan_node_fields((Scan *) node, walker, context))
+				return true;
+			if (walker(((ForeignScan *) node)->fdw_exprs, context))
 				return true;
 			break;
 
@@ -257,14 +263,14 @@ plan_tree_walker(Node *node,
 			break;
 
 		case T_TableFunctionScan:
-			if (walker((Node *) ((FunctionScan *) node)->funcexpr, context))
+			if (walker((Node *) ((TableFunctionScan *) node)->function, context))
 				return true;
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
 			break;
 
 		case T_FunctionScan:
-			if (walker((Node *) ((FunctionScan *) node)->funcexpr, context))
+			if (walker((Node *) ((FunctionScan *) node)->functions, context))
 				return true;
 			if (walk_scan_node_fields((Scan *) node, walker, context))
 				return true;
@@ -466,6 +472,8 @@ plan_tree_walker(Node *node,
 				return true;
 			if (walker((Node *) ((ModifyTable *) node)->plans, context))
 				return true;
+			if (walker((Node *) ((ModifyTable *) node)->withCheckOptionLists, context))
+				return true;
 			break;
 
 		case T_LockRows:
@@ -475,6 +483,7 @@ plan_tree_walker(Node *node,
 
 		case T_DML:
 		case T_SplitUpdate:
+		case T_Reshuffle:
 		case T_RowTrigger:
 		case T_AssertOp:
 			if (walk_plan_node_fields((Plan *) node, walker, context))
@@ -920,9 +929,11 @@ check_collation_walker(Node *node, check_collation_context *context)
 			}
 			break;
 		case T_RangeTblEntry:
-			check_collation_in_list(((RangeTblEntry *) node)->funccolcollations, context);
 			check_collation_in_list(((RangeTblEntry *) node)->values_collations, context);
 			check_collation_in_list(((RangeTblEntry *) node)->ctecolcollations, context);
+			break;
+		case T_RangeTblFunction:
+			check_collation_in_list(((RangeTblFunction *) node)->funccolcollations, context);
 			break;
 		case T_CommonTableExpr:
 			check_collation_in_list(((CommonTableExpr *) node)->ctecolcollations, context);

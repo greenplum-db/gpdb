@@ -118,14 +118,6 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph>rolconfig</codeph>
-            </entry>
-            <entry colname="col2">text[]</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">Session defaults for server configuration parameters</entry>
-          </row>
-          <row>
-            <entry colname="col1">
               <codeph>rolresqueue</codeph>
             </entry>
             <entry colname="col2">oid</entry>

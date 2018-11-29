@@ -15,96 +15,9 @@ ifneq (${ENV_JAVA_HOME},)
 	JAVA_HOME=${ENV_JAVA_HOME}
 endif
 
-.PHONY: all install clean distclean installcheck mapreduce pxf gpcloud gphdfs mkgphdfs mkorafce
-
-#
-# targets built via top_builddir/GNUmakefile
-#
-
-all: mapreduce gpcloud pxf gphdfs
-
-mapreduce:
-	@if [ "$(enable_mapreduce)" = "yes" ]; then \
-		echo "gpmapreduce enabled"; \
-		$(MAKE) -C gpmapreduce; \
-	fi
-
-gpcloud:
-	@if [ "$(enable_gpcloud)" = "yes" ]; then \
-		echo "gpcloud enabled"; \
-		$(MAKE) -C gpcloud && \
-		$(MAKE) -C gpcloud/bin/gpcheckcloud; \
-	fi
-
-pxf:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
-		$(MAKE) -C pxf; \
-	fi
-
-gphdfs:
-	@if [ "$(enable_gphdfs)" = "yes" ]; then \
-		echo "gphdfs enabled"; \
-		$(MAKE) -C gphdfs; \
-	fi
-
-install:
-	@if [ "$(enable_mapreduce)" = "yes" ]; then \
-		$(MAKE) -C gpmapreduce install; \
-	fi
-	@if [ "$(enable_gpcloud)" = "yes" ]; then \
-		$(MAKE) -C gpcloud install && \
-		$(MAKE) -C gpcloud/bin/gpcheckcloud install; \
-	fi
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		$(MAKE) -C pxf install; \
-	fi
-	@if [ "$(enable_gphdfs)" = "yes" ]; then \
-		$(MAKE) -C gphdfs docdir=$(INSTLOC)/docs install; \
-	fi
-
-clean:
-	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce clean; fi
-	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud cleanall; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf clean; fi
-	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs clean; fi
-
-distclean:
-	if [ "$(enable_mapreduce)" = "yes" ]; then $(MAKE) -C gpmapreduce distclean; fi
-	if [ "$(enable_gpcloud)" = "yes" ]; then $(MAKE) -C gpcloud distclean; fi
-	if [ "$(enable_pxf)" = "yes" ]; then $(MAKE) -C pxf distclean; fi
-	if [ "$(enable_gphdfs)" = "yes" ]; then $(MAKE) -C gphdfs distclean; fi
-
-installcheck:
-	if [ -d "$(ext_dir)" ]; then \
-		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce installcheck USE_PGXS=1 && \
-		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
-	fi; \
-	if [ "$(enable_mapreduce)" = "yes" ]; then \
-		$(MAKE) -C gpmapreduce installcheck; \
-	fi
-
-unittest-check:
-	@if [ "$(enable_pxf)" = "yes" ]; then \
-		echo "pxf enabled"; \
-		$(MAKE) -C pxf unittest-check; \
-	fi
-
 #
 # below targets will be built via top_builddir/gpAux/Makefile
 #
-
-mkgphdfs:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs USE_PGXS=1 docdir=$(INSTLOC)/docs install \
-		ANT=/opt/releng/apache-ant/bin/ant \
-		JAVA_HOME=${JAVA_HOME}
-
-# Only include these files when running enterprise build
-ENTERPRISE_TARGETS="mkgphdfs mkorafce"
-ifneq ($(findstring $(MAKECMDGOALS), $(ENTERPRISE_TARGETS)),)
-include $(BLD_TOP)/Makefile.global
-include $(BLD_TOP)/Makefile.thirdparty
-endif
 
 # Use $JAVA_HOME if specified, otherwise look for java in the likely places.
 ifeq ($(wildcard "${JAVA_HOME}/bin/java"),)
@@ -125,6 +38,3 @@ JAVAC=${JAVA_HOME}/bin/javac
 JAVAH=${JAVA_HOME}/bin/javah
 JAR=${JAVA_HOME}/bin/jar
 JAVADOC=${JAVA_HOME}/bin/javadoc
-
-mkorafce:
-	PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C orafce install USE_PGXS=1

@@ -110,24 +110,6 @@ typedef struct ContentIdAssignmentData
 static bool AssignContentIdsToPlanData_Walker(Node *node, void *context);
 
 /**
- * Add the given constant to the given hash, properly checking for null and
- *   using the constant's type and value otherwise
- */
-static
-void
-CdbHashConstValue(CdbHash *h, Const *c)
-{
-	if (c->constisnull)
-	{
-		cdbhashnull(h);
-	}
-	else
-	{
-		cdbhash(h, c->constvalue, typeIsArrayType(c->consttype) ? ANYARRAYOID : c->consttype);
-	}
-}
-
-/**
  * Initialize a DirectDispatchCalculationInfo.
  */
 static void
@@ -278,10 +260,12 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 		}
 		else if (totalCombinations > 0 &&
 			/* don't bother for ones which will likely hash to many segments */
-				 totalCombinations < GpIdentity.numsegments * 3)
+				 totalCombinations < policy->numsegments * 3)
 		{
-			CdbHash    *h = makeCdbHash(GpIdentity.numsegments);
-			long		index = 0;
+			CdbHash    *h;
+			long		index;
+
+			h = makeCdbHashForRelation(relation);
 
 			result.dd.isDirectDispatch = true;
 			result.dd.contentIds = NULL;
@@ -303,7 +287,9 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 
 					if (IsA(val, Const))
 					{
-						CdbHashConstValue(h, (Const *) val);
+						Const		*c = (Const *) val;
+
+						cdbhash(h, i + 1, c->constvalue, c->constisnull);
 					}
 					else
 					{
@@ -318,16 +304,7 @@ GetContentIdsFromPlanForSingleRelation(List *rtable, Plan *plan, int rangeTableI
 
 				hashCode = cdbhashreduce(h);
 
-				/*
-				 * right now we only allow ONE contentid
-				 */
-				if (result.dd.contentIds == NULL)
-					result.dd.contentIds = list_make1_int(hashCode);
-				else if (linitial_int(result.dd.contentIds) != hashCode)
-				{
-					result.dd.isDirectDispatch = false;
-					break;
-				}
+				result.dd.contentIds = list_append_unique_int(result.dd.contentIds, hashCode);
 			}
 		}
 		else
@@ -370,20 +347,10 @@ MergeDirectDispatchCalculationInfo(DirectDispatchCalculationInfo *to, DirectDisp
 		/* to didn't even think it needed to run so accept from */
 		to->dd.contentIds = from->dd.contentIds;
 	}
-	else if (linitial_int(to->dd.contentIds) != linitial_int(from->dd.contentIds))
-	{
-		/*
-		 * we only support dispatch to single segment or all segments, so
-		 * can't support this right now
-		 */
-		/* but this needs to be a union of the segments */
-		to->dd.isDirectDispatch = false;
-	}
 	else
 	{
-		/* they matched -- no merge required! */
-
-		Assert(list_length(to->dd.contentIds) == list_length(from->dd.contentIds));
+		/* union to with from */
+		to->dd.contentIds = list_union_int(to->dd.contentIds, from->dd.contentIds);
 	}
 
 	to->haveProcessedAnyCalculations = true;
@@ -434,7 +401,10 @@ FinalizeDirectDispatchDataForSlice(Node *node, ContentIdAssignmentData *data, bo
 
 				if (ddcr->dd.contentIds == NULL)
 				{
-					ddcr->dd.contentIds = list_make1_int(cdb_randint(GpIdentity.numsegments - 1, 0));
+					int			random_segno;
+
+					random_segno = cdbhashrandomseg(getgpsegmentCount());
+					ddcr->dd.contentIds = list_make1_int(random_segno);
 					if (ShouldPrintTestMessages())
 						elog(INFO, "DDCR learned no content dispatch is required");
 				}
@@ -659,6 +629,7 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 														 * so disable */
 				break;
 			case T_SplitUpdate:
+			case T_Reshuffle:
 				break;
 			default:
 				elog(ERROR, "Invalid plan node %d", nodeTag(node));

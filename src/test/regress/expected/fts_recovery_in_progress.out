@@ -33,6 +33,13 @@ NOTICE:  Success:  (seg0 127.0.0.1:25432 pid=26540)
 \!gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly
 \!gpstop -u
 -- end_ignore
+-- Wait a few seconds, to ensure the config changes take effect.
+select pg_sleep(5);
+ pg_sleep 
+----------
+ 
+(1 row)
+
 show gp_fts_probe_retries;
  gp_fts_probe_retries 
 ----------------------

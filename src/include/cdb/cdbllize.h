@@ -30,12 +30,14 @@ extern Plan *cdbparallelize(struct PlannerInfo *root, Plan *plan, Query *query,
 
 extern bool is_plan_node(Node *node);
 
-extern Flow *makeFlow(FlowType flotype);
+extern Flow *makeFlow(FlowType flotype, int numsegments);
 
 extern Flow *pull_up_Flow(Plan *plan, Plan *subplan);
 
 extern bool focusPlan(Plan *plan, bool stable, bool rescannable);
-extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable, List *hashExpr);
-extern bool broadcastPlan(Plan *plan, bool stable, bool rescannable);
+extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable,
+							List *hashExpr, int numsegments);
+extern bool broadcastPlan(Plan *plan, bool stable, bool rescannable,
+						  int numsegments);
 
 #endif   /* CDBLLIZE_H */

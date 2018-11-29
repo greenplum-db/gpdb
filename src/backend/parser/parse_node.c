@@ -3,7 +3,7 @@
  * parse_node.c
  *	  various routines that make nodes for querytrees
  *
- * Portions Copyright (c) 1996-2013, PostgreSQL Global Development Group
+ * Portions Copyright (c) 1996-2014, PostgreSQL Global Development Group
  * Portions Copyright (c) 1994, Regents of the University of California
  *
  *
@@ -137,8 +137,8 @@ parser_get_namecache(ParseState *pstate)
  * is a dummy (always 0, in fact).
  *
  * The locations stored in raw parsetrees are byte offsets into the source
- * string.	We have to convert them to 1-based character indexes for reporting
- * to clients.	(We do things this way to avoid unnecessary overhead in the
+ * string.  We have to convert them to 1-based character indexes for reporting
+ * to clients.  (We do things this way to avoid unnecessary overhead in the
  * normal non-error case: computing character indexes would be much more
  * expensive than storing token offsets.)
  */
@@ -167,7 +167,7 @@ parser_errposition(ParseState *pstate, int location)
  * Sometimes the parser calls functions that aren't part of the parser
  * subsystem and can't reasonably be passed a ParseState; yet we would
  * like any errors thrown in those functions to be tagged with a parse
- * error location.	Use this function to set up an error context stack
+ * error location.  Use this function to set up an error context stack
  * entry that will accomplish that.  Usage pattern:
  *
  *		declare a local variable "ParseCallbackState pcbstate"
@@ -259,10 +259,22 @@ transformArrayType(Oid *arrayType, int32 *arrayTypmod)
 	 * If the input is a domain, smash to base type, and extract the actual
 	 * typmod to be applied to the base type.  Subscripting a domain is an
 	 * operation that necessarily works on the base array type, not the domain
-	 * itself.	(Note that we provide no method whereby the creator of a
+	 * itself.  (Note that we provide no method whereby the creator of a
 	 * domain over an array type could hide its ability to be subscripted.)
 	 */
 	*arrayType = getBaseTypeAndTypmod(*arrayType, arrayTypmod);
+
+	/*
+	 * We treat int2vector and oidvector as though they were domains over
+	 * int2[] and oid[].  This is needed because array slicing could create an
+	 * array that doesn't satisfy the dimensionality constraints of the
+	 * xxxvector type; so we want the result of a slice operation to be
+	 * considered to be of the more general type.
+	 */
+	if (*arrayType == INT2VECTOROID)
+		*arrayType = INT2ARRAYOID;
+	else if (*arrayType == OIDVECTOROID)
+		*arrayType = OIDARRAYOID;
 
 	/* Get the type tuple for the array */
 	type_tuple_array = SearchSysCache1(TYPEOID, ObjectIdGetDatum(*arrayType));
@@ -295,12 +307,13 @@ transformArrayType(Oid *arrayType, int32 *arrayTypmod)
  *
  * In an array assignment, we are given a destination array value plus a
  * source value that is to be assigned to a single element or a slice of
- * that array.	We produce an expression that represents the new array value
+ * that array.  We produce an expression that represents the new array value
  * with the source data inserted into the right part of the array.
  *
  * For both cases, if the source array is of a domain-over-array type,
  * the result is of the base array type or its element type; essentially,
  * we must fold a domain to its base type before applying subscripting.
+ * (Note that int2vector and oidvector are treated as domains here.)
  *
  * pstate		Parse state
  * arrayBase	Already-transformed expression for the array as a whole
