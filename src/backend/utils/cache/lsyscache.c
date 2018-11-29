@@ -4084,7 +4084,7 @@ child_distribution_mismatch(Relation rel)
 	GpPolicy *rootPolicy = rel->rd_cdbpolicy;
 	Assert(NULL != rootPolicy && "Partitioned tables cannot be master-only");
 
-	if (POLICYTYPE_PARTITIONED == rootPolicy->ptype && 0 == rootPolicy->nattrs)
+	if (GpPolicyIsRandomly(rootPolicy))
 	{
 		/* root partition policy already marked as Random, no mismatch possible as
 		 * all children must be random as well */
@@ -4101,7 +4101,8 @@ child_distribution_mismatch(Relation rel)
 		Assert(NULL != relChild);
 
 		GpPolicy *childPolicy = relChild->rd_cdbpolicy;
-		if (POLICYTYPE_PARTITIONED == childPolicy->ptype && 0 == childPolicy->nattrs)
+
+		if (GpPolicyIsRandomly(childPolicy))
 		{
 			/* child partition is Random, and parent is not */
 			RelationClose(relChild);

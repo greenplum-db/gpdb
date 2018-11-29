@@ -1623,6 +1623,18 @@ ANALYZE onetimefilter2;
 EXPLAIN WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onetimefilter2 WHERE onetimefilter1.a=onetimefilter2.a) SELECT (SELECT 1 FROM abc WHERE f1.b = f2.b LIMIT 1), COALESCE((SELECT 2 FROM abc WHERE f1.a=random() AND f1.a=2), 0), (SELECT b FROM abc WHERE b=f1.b) FROM onetimefilter1 f1, onetimefilter2 f2 WHERE f1.b = f2.b;
 
+-- queries on partition table with rewritten rule should not crash
+-- github issue #5913
+create table rewrite_rules (id int, stamp date, amount int)
+with (appendonly=false) distributed by (id)
+partition by range (stamp) (
+  start ('2018-01-01') end ('2019-01-01') every(interval '1 year'),
+  default partition extra
+);
+create rule "_RETURN" as on select to rewrite_rules_1_prt_2 do instead 
+select 1 as id, current_date as stamp, 1 as amount;
+select * from rewrite_rules;
+
 -- start_ignore
 DROP SCHEMA orca CASCADE;
 -- end_ignore

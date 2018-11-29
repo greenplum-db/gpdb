@@ -10588,3 +10588,17 @@ WITH abc AS (SELECT onetimefilter1.a, onetimefilter1.b FROM onetimefilter1, onet
         1 |        0 |        2
 (10 rows)
 
+-- queries on partition table with rewritten rule should not crash
+-- github issue #5913
+create table rewrite_rules (id int, stamp date, amount int)
+with (appendonly=false) distributed by (id)
+partition by range (stamp) (
+  start ('2018-01-01') end ('2019-01-01') every(interval '1 year'),
+  default partition extra
+);
+NOTICE:  CREATE TABLE will create partition "rewrite_rules_1_prt_extra" for table "rewrite_rules"
+NOTICE:  CREATE TABLE will create partition "rewrite_rules_1_prt_2" for table "rewrite_rules"
+create rule "_RETURN" as on select to rewrite_rules_1_prt_2 do instead 
+select 1 as id, current_date as stamp, 1 as amount;
+select * from rewrite_rules;
+ERROR:  plan contains range table with relstorage='v' (allpaths.c:346)
