@@ -325,6 +325,17 @@ class GpCheckCatTestCase(GpTestCase):
         report_cfg = self.subject.getReportConfiguration()
         self.assertEqual("content -1", report_cfg[-1]['segname'])
 
+    def test_RelationObject_reportAllIssues_handles_None_fields(self):
+        uut = self.subject.RelationObject(None, 'pg_class')
+        uut.setRelInfo(relname=None, nspname=None, relkind='t', paroid=0)
+
+        uut.reportAllIssues()
+        log_messages = [args[0][1].strip() for args in self.subject.logger.log.call_args_list]
+
+        self.assertIn('Relation oid: N/A', log_messages)
+        self.assertIn('Relation schema: N/A', log_messages)
+        self.assertIn('Relation name: N/A', log_messages)
+
     ####################### PRIVATE METHODS #######################
 
     def _run_batch_size_experiment(self, num_primaries):

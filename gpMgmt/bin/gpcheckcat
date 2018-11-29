@@ -4558,7 +4558,7 @@ class RelationObject(GPObject):
         self.paroid = None
 
     def reportAllIssues(self):
-        oid = 'N/A' if self.oid is None else self.oid
+        oid = 'N/A' if self.oid is None else str(self.oid)
         nspname = 'N/A' if self.nspname is None else self.nspname
         relname = 'N/A' if self.relname is None else self.relname
 
@@ -4567,14 +4567,14 @@ class RelationObject(GPObject):
             myprint('----------------------------------------------------')
 
             objname = 'Type' if self.relkind == 'c' else 'Relation'
-            myprint('%s oid: %d' % (objname, oid))
+            myprint('%s oid: %s' % (objname, oid))
             myprint('%s schema: %s' % (objname, nspname))
             myprint('%s name: %s' % (objname, relname))
 
         else:
             myprint('    Sub-object: ')
             myprint('    ----------------------------------------------------')
-            myprint('    Relation oid: %d' % oid)
+            myprint('    Relation oid: %s' % oid)
             myprint('    Relation schema: %s' % nspname)
             myprint('    Relation name: %s' % relname)
         myprint('')
