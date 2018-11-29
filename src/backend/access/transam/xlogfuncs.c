@@ -228,7 +228,7 @@ pg_last_xlog_receive_location(PG_FUNCTION_ARGS)
 {
 	XLogRecPtr	recptr;
 
-	recptr = GetWalRcvWriteRecPtr(NULL, NULL);
+	recptr = GetWalRcvWriteRecPtrForwardOnly();
 
 	if (recptr == 0)
 		PG_RETURN_NULL();

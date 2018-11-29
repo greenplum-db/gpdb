@@ -284,16 +284,16 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 
 	/*
 	 * If this is the first startup of walreceiver (on this timeline),
-	 * initialize receivedUpto and latestChunkStart to the starting point.
+	 * initialize receivedUptoForwardOnly and latestChunkStart to the starting point.
 	 */
-	if (walrcv->receiveStart == 0 || walrcv->receivedTLI != tli)
+	if (walrcv->receivedUpto == 0 || walrcv->receivedUptoForwardOnlyTLI != tli)
 	{
-		walrcv->receivedUpto = recptr;
-		walrcv->receivedTLI = tli;
-		walrcv->latestChunkStart = recptr;
+		walrcv->receivedUptoForwardOnly = recptr;
+		walrcv->receivedUptoForwardOnlyTLI = tli;
 	}
-	walrcv->receiveStart = recptr;
-	walrcv->receiveStartTLI = tli;
+	walrcv->receivedUpto = recptr;
+	walrcv->receivedUptoTLI = tli;
+	walrcv->latestChunkStart = recptr;
 
 	SpinLockRelease(&walrcv->mutex);
 
@@ -301,6 +301,23 @@ RequestXLogStreaming(TimeLineID tli, XLogRecPtr recptr, const char *conninfo,
 		SendPostmasterSignal(PMSIGNAL_START_WALRECEIVER);
 	else
 		SetLatch(&walrcv->latch);
+}
+
+/*
+ * Returns the maximum last+1 byte position that walreceiver has ever written.
+ */
+XLogRecPtr
+GetWalRcvWriteRecPtrForwardOnly()
+{
+	/* use volatile pointer to prevent code rearrangement */
+	volatile WalRcvData *walrcv = WalRcv;
+	XLogRecPtr	recptr;
+
+	SpinLockAcquire(&walrcv->mutex);
+	recptr = walrcv->receivedUptoForwardOnly;
+	SpinLockRelease(&walrcv->mutex);
+
+	return recptr;
 }
 
 /*
@@ -323,7 +340,7 @@ GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID *receiveTLI)
 	if (latestChunkStart)
 		*latestChunkStart = walrcv->latestChunkStart;
 	if (receiveTLI)
-		*receiveTLI = walrcv->receivedTLI;
+		*receiveTLI = walrcv->receivedUptoTLI;
 	SpinLockRelease(&walrcv->mutex);
 
 	return recptr;
