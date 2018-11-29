@@ -102,6 +102,16 @@
                             this option if you need to override the version check.</pd>
                     </plentry>
                     <plentry>
+                        <pt>--lock-wait-timeout=<varname>timeout</varname></pt>
+                        <pd>Do not wait forever to acquire shared table locks at the beginning of
+                            the dump. Instead, fail if unable to lock a table within the specified
+                                <varname>timeout</varname>. The timeout may be specified in any of
+                            the formats accepted by <codeph>SET statement_timeout</codeph>. (Allowed
+                            values vary depending on the server version you are dumping from, but an
+                            integer number of milliseconds is accepted by all Greenplum Database
+                            versions.)</pd>
+                    </plentry>
+                    <plentry>
                         <pt>-o | --oids</pt>
                         <pd>Dump object identifiers (OIDs) as part of the data for every table. Use
                             of this option is not recommended for files that are intended to be

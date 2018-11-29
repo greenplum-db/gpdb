@@ -16,6 +16,7 @@ CREATE TYPE <varname>name</varname> (
     [, PASSEDBYVALUE]
     [, ALIGNMENT = <varname>alignment</varname>]
     [, STORAGE = <varname>storage</varname>]
+    [, LIKE = <varname>like_type</varname>
     [, CATEGORY = <varname>category</varname>]
     [, PREFERRED = <varname>preferred</varname>]
     [, DEFAULT = <varname>default</varname>]
@@ -42,21 +43,25 @@ type is useful as the argument or return type of a function.</p></sectiondiv>
 PostgreSQL documentation. Enum types take a list of one or more quoted labels, each of which must be less than 
 <codeph>NAMEDATALEN</codeph> bytes long (64 in a standard build).</p>
 </sectiondiv>
-<sectiondiv id="section5"><b>Base Types</b><p>The third form of <codeph>CREATE TYPE</codeph>
-                    creates a new base type (scalar type). You must be a superuser to create a new base type.
-                    The parameters may appear in any order,
-                    not only that shown in the syntax, and most are optional. You must register two
-                    or more functions (using <codeph>CREATE FUNCTION</codeph>) before defining the
-                    type. The support functions <varname>input_function</varname> and <varname>output_function</varname> are
-                    required, while the functions <varname>receive_function</varname>, <varname>send_function</varname>, <varname>type_modifier_input_function</varname>, <varname>type_modifier_output_function</varname>, and
-                        <varname>analyze_function</varname> are optional. Generally these functions have to be
-                    coded in C or another low-level language. In Greenplum Database, any function
-                    used to implement a data type must be defined as
-                    <codeph>IMMUTABLE</codeph>.</p><p>The <varname>input_function</varname> converts the type's
-                    external textual representation to the internal representation used by the
-                    operators and functions defined for the type. <varname>output_function</varname> performs
-                    the reverse transformation. The input function may be declared as taking one
-                    argument of type <codeph>cstring</codeph>, or as taking three arguments of types
+<sectiondiv id="section5"><b>Base Types</b><p>The third form of <codeph>CREATE TYPE</codeph> creates
+                    a new base type (scalar type). You must be a superuser to create a new base
+                    type. The parameters may appear in any order, not only that shown in the syntax,
+                    and most are optional. You must register two or more functions (using
+                        <codeph>CREATE FUNCTION</codeph>) before defining the type. The support
+                    functions <varname>input_function</varname> and
+                        <varname>output_function</varname> are required, while the functions
+                        <varname>receive_function</varname>, <varname>send_function</varname>,
+                        <varname>type_modifier_input_function</varname>,
+                        <varname>type_modifier_output_function</varname>, and
+                        <varname>analyze_function</varname> are optional. Generally these functions
+                    have to be coded in C or another low-level language. In Greenplum Database, any
+                    function used to implement a data type must be defined as
+                        <codeph>IMMUTABLE</codeph>.</p><p>The <varname>input_function</varname>
+                    converts the type's external textual representation to the internal
+                    representation used by the operators and functions defined for the type.
+                        <varname>output_function</varname> performs the reverse transformation. The
+                    input function may be declared as taking one argument of type
+                        <codeph>cstring</codeph>, or as taking three arguments of types
                         <codeph>cstring</codeph>, <codeph>oid</codeph>, <codeph>integer</codeph>.
                     The first argument is the input text as a C string, the second argument is the
                     type's own OID (except for array types, which instead receive their element
@@ -71,124 +76,129 @@ PostgreSQL documentation. Enum types take a list of one or more quoted labels, e
                     function must be declared as taking one argument of the new data type. The
                     output function must return type <codeph>cstring</codeph>. Output functions are
                     not invoked for <codeph>NULL</codeph> values. </p><p>The optional
-                        <varname>receive_function</varname> converts the type's external binary representation
-                    to the internal representation. If this function is not supplied, the type
-                    cannot participate in binary input. The binary representation should be chosen
-                    to be cheap to convert to internal form, while being reasonably portable. (For
-                    example, the standard integer data types use network byte order as the external
-                    binary representation, while the internal representation is in the machine's
-                    native byte order.) The receive function should perform adequate checking to
-                    ensure that the value is valid. The receive function may be declared as taking
-                    one argument of type <codeph>internal</codeph>, or as taking three arguments of
-                    types <codeph>internal</codeph>, <codeph>oid</codeph>, <codeph>integer</codeph>.
-                    The first argument is a pointer to a <codeph>StringInfo</codeph> buffer holding
-                    the received byte string; the optional arguments are the same as for the text
-                    input function. The receive function must return a value of the data type
-                    itself. Usually, a receive function should be declared <codeph>STRICT</codeph>;
-                    if it is not, it will be called with a <codeph>NULL</codeph> first parameter
-                    when reading a NULL input value. The function must still return
-                        <codeph>NULL</codeph> in this case, unless it raises an error. (This case is
-                    mainly meant to support domain receive functions, which may need to reject
-                        <codeph>NULL</codeph> inputs.) Similarly, the optional <varname>send_function</varname>
-                    converts from the internal representation to the external binary representation.
-                    If this function is not supplied, the type cannot participate in binary output.
-                    The send function must be declared as taking one argument of the new data type.
-                    The send function must return type <codeph>bytea</codeph>. Send functions are
-                    not invoked for <codeph>NULL</codeph> values. </p>
-                    <p>The optional <varname>type_modifier_input_function</varname> and
-                      <varname>type_modifier_output_function</varname> are required if the type
-                      supports modifiers. Modifiers are optional constraints attached to a type
-                      declaration, such as <codeph>char(5)</codeph> or 
-                      <codeph>numeric(30,2)</codeph>. While Greenplum Database
-                      allows user-defined types to take one or more simple constants or identifiers
-                      as modifiers, this information must fit into a single
-                      non-negative integer value for storage in the system catalogs. Greenplum
-                      Database passes the declared modifier(s) to the
-                      <varname>type_modifier_input_function</varname> in the form of a
-                      <codeph>cstring</codeph> array. The modifier input function must check the
-                      values for validity, throwing an error if they are incorrect. If the values
-                      are correct, the modifier input function returns a single non-negative integer
-                      value that Greenplum Database stores as the column <codeph>typmod</codeph>. Type modifiers
-                      are rejected if the type
-                      was not defined with a <varname>type_modifier_input_function</varname>.
-                      The <varname>type_modifier_output_function</varname> converts the internal
-                      integer <codeph>typmod</codeph> value back to the correct form for user display. The 
-                      modifier output function must return a <codeph>cstring</codeph> value that
-                      is the exact string to append to the type name. For example,
-                      <codeph>numeric</codeph>'s function might return <codeph>(30,2)</codeph>.
-                      The <varname>type_modifier_output_function</varname> is optional. When not
-                      specified, the default display format is the stored <codeph>typmod</codeph> integer value
-                      enclosed in parentheses.</p>
-                    <p>You should at this point be
+                        <varname>receive_function</varname> converts the type's external binary
+                    representation to the internal representation. If this function is not supplied,
+                    the type cannot participate in binary input. The binary representation should be
+                    chosen to be cheap to convert to internal form, while being reasonably portable.
+                    (For example, the standard integer data types use network byte order as the
+                    external binary representation, while the internal representation is in the
+                    machine's native byte order.) The receive function should perform adequate
+                    checking to ensure that the value is valid. The receive function may be declared
+                    as taking one argument of type <codeph>internal</codeph>, or as taking three
+                    arguments of types <codeph>internal</codeph>, <codeph>oid</codeph>,
+                        <codeph>integer</codeph>. The first argument is a pointer to a
+                        <codeph>StringInfo</codeph> buffer holding the received byte string; the
+                    optional arguments are the same as for the text input function. The receive
+                    function must return a value of the data type itself. Usually, a receive
+                    function should be declared <codeph>STRICT</codeph>; if it is not, it will be
+                    called with a <codeph>NULL</codeph> first parameter when reading a NULL input
+                    value. The function must still return <codeph>NULL</codeph> in this case, unless
+                    it raises an error. (This case is mainly meant to support domain receive
+                    functions, which may need to reject <codeph>NULL</codeph> inputs.) Similarly,
+                    the optional <varname>send_function</varname> converts from the internal
+                    representation to the external binary representation. If this function is not
+                    supplied, the type cannot participate in binary output. The send function must
+                    be declared as taking one argument of the new data type. The send function must
+                    return type <codeph>bytea</codeph>. Send functions are not invoked for
+                        <codeph>NULL</codeph> values. </p><p>The optional
+                        <varname>type_modifier_input_function</varname> and
+                        <varname>type_modifier_output_function</varname> are required if the type
+                    supports modifiers. Modifiers are optional constraints attached to a type
+                    declaration, such as <codeph>char(5)</codeph> or <codeph>numeric(30,2)</codeph>.
+                    While Greenplum Database allows user-defined types to take one or more simple
+                    constants or identifiers as modifiers, this information must fit into a single
+                    non-negative integer value for storage in the system catalogs. Greenplum
+                    Database passes the declared modifier(s) to the
+                        <varname>type_modifier_input_function</varname> in the form of a
+                        <codeph>cstring</codeph> array. The modifier input function must check the
+                    values for validity, throwing an error if they are incorrect. If the values are
+                    correct, the modifier input function returns a single non-negative integer value
+                    that Greenplum Database stores as the column <codeph>typmod</codeph>. Type
+                    modifiers are rejected if the type was not defined with a
+                        <varname>type_modifier_input_function</varname>. The
+                        <varname>type_modifier_output_function</varname> converts the internal
+                    integer <codeph>typmod</codeph> value back to the correct form for user display.
+                    The modifier output function must return a <codeph>cstring</codeph> value that
+                    is the exact string to append to the type name. For example,
+                        <codeph>numeric</codeph>'s function might return <codeph>(30,2)</codeph>.
+                    The <varname>type_modifier_output_function</varname> is optional. When not
+                    specified, the default display format is the stored <codeph>typmod</codeph>
+                    integer value enclosed in parentheses.</p><p>You should at this point be
                     wondering how the input and output functions can be declared to have results or
                     arguments of the new type, when they have to be created before the new type can
                     be created. The answer is that the type should first be defined as a shell type,
                     which is a placeholder type that has no properties except a name and an owner.
-                    This is done by issuing the command <codeph>CREATE TYPE <varname>name</varname></codeph>,
-                    with no additional parameters. Then the I/O functions can be defined referencing
-                    the shell type. Finally, <codeph>CREATE TYPE</codeph> with a full definition
-                    replaces the shell entry with a complete, valid type definition, after which the
-                    new type can be used normally. </p><p>While the details of the new type's
-                    internal representation are only known to the I/O functions and other functions
-                    you create to work with the type, there are several properties of the internal
-                    representation that must be declared to Greenplum Database. Foremost of these is
-                        <varname>internallength</varname>. Base data types can be fixed-length, in which case
-                        <varname>internallength</varname> is a positive integer, or variable length, indicated
-                    by setting <varname>internallength</varname> to <codeph>VARIABLE</codeph>. (Internally, this
-                    is represented by setting <codeph>typlen</codeph> to <codeph>-1</codeph>.) The
-                    internal representation of all variable-length types must start with a 4-byte
-                    integer giving the total length of this value of the type.</p><p>The optional
-                    flag <codeph>PASSEDBYVALUE</codeph> indicates that values of this data type are
+                    This is done by issuing the command <codeph>CREATE TYPE
+                        <varname>name</varname></codeph>, with no additional parameters. Then the
+                    I/O functions can be defined referencing the shell type. Finally, <codeph>CREATE
+                        TYPE</codeph> with a full definition replaces the shell entry with a
+                    complete, valid type definition, after which the new type can be used normally.
+                    </p><p>The <varname>like_type</varname> parameter provides an alternative method
+                    for specifying the basic representation properties of a data type: copy them
+                    from some existing type. The values <codeph>internallength</codeph>,
+                        <codeph>passedbyvalue</codeph>, <codeph>alignment</codeph>, and
+                        <codeph>storage</codeph> are copied from the named type. (It is possible,
+                    though usually undesirable, to override some of these values by specifying them
+                    along with the <codeph>LIKE</codeph> clause.) Specifying representation this way
+                    is especially useful when the low-level implementation of the new type
+                    "piggybacks" on an existing type in some fashion.</p><p>While the details of the
+                    new type's internal representation are only known to the I/O functions and other
+                    functions you create to work with the type, there are several properties of the
+                    internal representation that must be declared to Greenplum Database. Foremost of
+                    these is <varname>internallength</varname>. Base data types can be fixed-length,
+                    in which case <varname>internallength</varname> is a positive integer, or
+                    variable length, indicated by setting <varname>internallength</varname> to
+                        <codeph>VARIABLE</codeph>. (Internally, this is represented by setting
+                        <codeph>typlen</codeph> to <codeph>-1</codeph>.) The internal representation
+                    of all variable-length types must start with a 4-byte integer giving the total
+                    length of this value of the type.</p><p>The optional flag
+                        <codeph>PASSEDBYVALUE</codeph> indicates that values of this data type are
                     passed by value, rather than by reference. You may not pass by value types whose
                     internal representation is larger than the size of the <codeph>Datum</codeph>
-                    type (4 bytes on most machines, 8 bytes on a few). </p><p>The <varname>alignment</varname>
-                    parameter specifies the storage alignment required for the data type. The
-                    allowed values equate to alignment on 1, 2, 4, or 8 byte boundaries. Note that
-                    variable-length types must have an alignment of at least 4, since they
-                    necessarily contain an <codeph>int4</codeph> as their first component.
-                    </p><p>The <varname>storage</varname> parameter allows selection of storage strategies for
-                    variable-length data types. (Only <codeph>plain</codeph> is allowed for
-                    fixed-length types.) <codeph>plain</codeph> specifies that data of the type will
-                    always be stored in-line and not compressed. <codeph>extended</codeph> specifies
-                    that the system will first try to compress a long data value, and will move the
-                    value out of the main table row if it's still too long.
-                        <codeph>external</codeph> allows the value to be moved out of the main
-                    table, but the system will not try to compress it. <codeph>main</codeph> allows
-                    compression, but discourages moving the value out of the main table. (Data items
-                    with this storage strategy may still be moved out of the main table if there is
-                    no other way to make a row fit, but they will be kept in the main table
-                    preferentially over <codeph>extended</codeph> and <codeph>external</codeph>
-                    items.) </p><p>A default value may be specified, in case a user wants columns of
-                    the data type to default to something other than the null value. Specify the
-                    default with the <codeph>DEFAULT</codeph> key word. (Such a default may be
-                    overridden by an explicit <codeph>DEFAULT</codeph> clause attached to a
-                    particular column.) </p><p>To indicate that a type is an array, specify the type
-                    of the array elements using the <codeph>ELEMENT</codeph> key word. For example,
-                    to define an array of 4-byte integers (int4), specify <codeph>ELEMENT =
-                        int4</codeph>. More details about array types appear below. </p>
-               <p>The <i>category</i> and <i>preferred</i> parameters
-                 can be used to help control which implicit cast Greenplum Database applies in
-                 ambiguous situations. Each data type belongs to a category named by a
-                 single ASCII character, and each type is either "preferred" or not
-                 within its category. The parser will prefer casting to preferred types
-                 (but only from other types within the same category) when this rule
-                 helps resolve overloaded functions or operators. For types that
-                 have no implicit casts to or from any other types, it is sufficient to
-                 retain the default settings. However, for a group of related
-                 types that have implicit casts, it is often helpful to mark them all
-                 as belonging to a category and select one or two of the "most general"
-                 types as being preferred within the category. The <i>category</i>
-                  parameter is especially useful when you add a user-defined type to an
-                  existing built-in category, such as the numeric or string types.
-                  It is also possible to create new entirely-user-defined type categories.
-                  Select any ASCII character other than an upper-case letter to name such
-                  a category.</p>
-               <p>To
-                    indicate the delimiter to be used between values in the external representation
-                    of arrays of this type, <codeph>delimiter</codeph> can be set to a specific
-                    character. The default delimiter is the comma (,). Note that the delimiter is
-                    associated with the array element type, not the array type
-                itself.</p></sectiondiv><sectiondiv id="section6"><b>Array Types</b><p>Whenever a user-defined base data type is created, Greenplum Database
+                    type (4 bytes on most machines, 8 bytes on a few). </p><p>The
+                        <varname>alignment</varname> parameter specifies the storage alignment
+                    required for the data type. The allowed values equate to alignment on 1, 2, 4,
+                    or 8 byte boundaries. Note that variable-length types must have an alignment of
+                    at least 4, since they necessarily contain an <codeph>int4</codeph> as their
+                    first component. </p><p>The <varname>storage</varname> parameter allows
+                    selection of storage strategies for variable-length data types. (Only
+                        <codeph>plain</codeph> is allowed for fixed-length types.)
+                        <codeph>plain</codeph> specifies that data of the type will always be stored
+                    in-line and not compressed. <codeph>extended</codeph> specifies that the system
+                    will first try to compress a long data value, and will move the value out of the
+                    main table row if it's still too long. <codeph>external</codeph> allows the
+                    value to be moved out of the main table, but the system will not try to compress
+                    it. <codeph>main</codeph> allows compression, but discourages moving the value
+                    out of the main table. (Data items with this storage strategy may still be moved
+                    out of the main table if there is no other way to make a row fit, but they will
+                    be kept in the main table preferentially over <codeph>extended</codeph> and
+                        <codeph>external</codeph> items.) </p><p>A default value may be specified,
+                    in case a user wants columns of the data type to default to something other than
+                    the null value. Specify the default with the <codeph>DEFAULT</codeph> key word.
+                    (Such a default may be overridden by an explicit <codeph>DEFAULT</codeph> clause
+                    attached to a particular column.) </p><p>To indicate that a type is an array,
+                    specify the type of the array elements using the <codeph>ELEMENT</codeph> key
+                    word. For example, to define an array of 4-byte integers (int4), specify
+                        <codeph>ELEMENT = int4</codeph>. More details about array types appear
+                    below. </p><p>The <i>category</i> and <i>preferred</i> parameters can be used to
+                    help control which implicit cast Greenplum Database applies in ambiguous
+                    situations. Each data type belongs to a category named by a single ASCII
+                    character, and each type is either "preferred" or not within its category. The
+                    parser will prefer casting to preferred types (but only from other types within
+                    the same category) when this rule helps resolve overloaded functions or
+                    operators. For types that have no implicit casts to or from any other types, it
+                    is sufficient to retain the default settings. However, for a group of related
+                    types that have implicit casts, it is often helpful to mark them all as
+                    belonging to a category and select one or two of the "most general" types as
+                    being preferred within the category. The <i>category</i> parameter is especially
+                    useful when you add a user-defined type to an existing built-in category, such
+                    as the numeric or string types. It is also possible to create new
+                    entirely-user-defined type categories. Select any ASCII character other than an
+                    upper-case letter to name such a category.</p><p>To indicate the delimiter to be
+                    used between values in the external representation of arrays of this type,
+                        <codeph>delimiter</codeph> can be set to a specific character. The default
+                    delimiter is the comma (,). Note that the delimiter is associated with the array
+                    element type, not the array type itself.</p></sectiondiv><sectiondiv id="section6"><b>Array Types</b><p>Whenever a user-defined base data type is created, Greenplum Database
 automatically creates an associated array type, whose name consists of
 the base type's name prepended with an underscore. The parser understands
 this naming convention, and translates requests for columns of type <codeph>foo[]</codeph>
@@ -229,6 +239,12 @@ variable-length. </pd></plentry><plentry><pt><varname>alignment</varname></pt><p
 or <codeph>double</codeph>. The default is <codeph>int4</codeph>. </pd></plentry><plentry><pt><varname>storage</varname></pt><pd>The storage strategy for the data type. Must be one of <codeph>plain</codeph>,
 <codeph>external</codeph>, <codeph>extended</codeph>, or <codeph>main</codeph>.
 The default is <codeph>plain</codeph>. </pd></plentry>
+        <plentry><pt><varname>like_type</varname></pt>
+        <pd>The name of an existing data type that the new type will have the same representation
+            as. The values <varname>internallength</varname>, <varname>passedbyvalue</varname>,
+            <varname>alignment</varname>, and <varname>storage</varname>, are copied from that type,
+        unless overridden by explicit specification elsewhere in this <codeph>CREATE TYPE</codeph>
+            command.</pd></plentry>
         <plentry><pt><varname>category</varname></pt><pd>The category code (a single
           ASCII character) for this type. The default is '<codeph>U</codeph>', signifying a
           user-defined type. You can find the other standard category codes in

@@ -522,6 +522,19 @@ testdb=#</codeblock>
               <codeph>notepad.exe</codeph> on Windows systems.</pd>
         </plentry>
         <plentry>
+          <pt>\ef <varname>function_description</varname></pt>
+          <pd>This command fetches and edits the definition of the named function, in the form of a
+              <codeph>CREATE OR REPLACE FUNCTION</codeph> command. Editing is done in the same way
+            as for <codeph>\e</codeph>. After the editor exits, the updated command waits in the
+            query buffer; type semicolon or <codeph>\g</codeph> to send it, or <codeph>\r</codeph>
+            to cancel.</pd>
+          <pd>The target function can be specified by name alone, or by name and arguments, for
+            example <codeph>foo(integer, text)</codeph>. The argument types must be given if there
+            is more than one function with the same name.</pd>
+          <pd>If no function is specified, a blank <codeph>CREATE FUNCTION</codeph> template is
+            presented for editing.</pd>
+        </plentry>
+        <plentry>
           <pt>\echo <varname>text</varname> [ ... ]</pt>
           <pd>Prints the arguments to the standard output, separated by one space and followed by a
             newline. This can be useful to intersperse information in the output of scripts.</pd>

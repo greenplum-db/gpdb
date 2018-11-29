@@ -89,14 +89,19 @@ ROLLBACK;</codeblock></note>
       <title>Parameters</title>
       <parml>
         <plentry>
-          <pt><varname>name</varname></pt>
-          <pd>The name of the prepared statement to execute. </pd>
+          <pt>ANALYZE</pt>
+          <pd>Carry out the command and show the actual run times. </pd>
         </plentry>
         <plentry>
-          <pt><varname>parameter</varname></pt>
-          <pd>The actual value of a parameter to the prepared statement. This must be an expression
-            yielding a value that is compatible with the data type of this parameter, as was
-            determined when the prepared statement was created.</pd>
+          <pt>VERBOSE</pt>
+          <pd>Include the output column list for each node in the plan tree.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>statement</varname></pt>
+          <pd>Any <codeph>SELECT</codeph>, <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>,
+              <codeph>DELETE</codeph>, <codeph>VALUES</codeph>, <codeph>EXECUTE</codeph>,
+              <codeph>DECLARE</codeph>, or <codeph>CREATE TABLE AS</codeph> statement, whose
+            execution plan you wish to see.</pd>
         </plentry>
       </parml>
     </section>
