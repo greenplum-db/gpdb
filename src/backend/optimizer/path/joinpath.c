@@ -23,6 +23,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/planmain.h"
+#include "utils/lsyscache.h"
 
 #include "executor/nodeHash.h"                  /* ExecHashRowSize() */
 #include "cdb/cdbpath.h"                        /* cdbpath_rows() */
@@ -1552,6 +1553,9 @@ select_mergejoin_clauses(PlannerInfo *root,
 			have_nonmergeable_joinclause = true;
 			continue;			/* can't handle redundant eclasses */
 		}
+
+		if (!OidIsValid(get_commutator(((OpExpr *)(restrictinfo->clause))->opno)))
+			continue;
 
 		result_list = lappend(result_list, restrictinfo);
 	}
