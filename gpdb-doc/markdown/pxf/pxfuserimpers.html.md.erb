@@ -37,11 +37,8 @@ Perform the following procedure to turn PXF user impersonation on or off in your
     gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/etc/pxf/usercfg/conf/pxf-env.sh
     ```
 
-5. If you have previously started PXF, restart it on each Greenplum Database segment host to apply the new setting. For example:
+5. If you have previously started PXF, restart it on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf) to apply the new setting.
 
-    ``` shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
 
 ## <a id="hadoop"></a>Configure Hadoop Proxying
 
