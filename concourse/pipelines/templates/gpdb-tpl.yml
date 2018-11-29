@@ -7,8 +7,6 @@
 {% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem'] %}
-{% set CLI_gpexpand_suites = ['gpexpand_1',
-                             'gpexpand_2'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -94,9 +92,7 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites +
-                    CLI_gpexpand_suites %}
+{% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
   - gpaddmirrors
@@ -275,9 +271,7 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites +
-                    CLI_gpexpand_suites %}
+{% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
   - gpaddmirrors
@@ -1939,50 +1933,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-{% for test_name in CLI_gpexpand_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-    - get: icw_gporca_centos6_dump
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 5
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
-    image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    input_mapping: {sqldump: icw_gporca_centos6_dump}
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: [[ test_name ]]
-      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-{% endfor %}
-
 - name: gptransfer
   plan:
   - aggregate:
@@ -2402,7 +2352,6 @@ jobs:
                     CLI_2_suites %}
       - [[ test_name ]]
 {% endfor %}
-      - gpexpand_2
       - madlib_build_gppkg
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
@@ -2433,7 +2382,6 @@ jobs:
                     CLI_2_suites %}
       - [[ test_name ]]
 {% endfor %}
-      - gpexpand_2
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
       - gpexpand
