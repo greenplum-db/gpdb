@@ -1319,7 +1319,6 @@ class gpload:
         Level is either DEBUG, LOG, INFO, ERROR. a is the message
         """
         try:
-            t = time.localtime()
             str = '|'.join(
                        [datetime.datetime.today().strftime('%Y-%m-%d %H:%M:%S'),
                         self.elevel2str(level), a]) + '\n'
