@@ -6,8 +6,6 @@
 import os
 import sys
 import signal
-import shutil
-import socket
 
 # import GPDB modules
 try:
@@ -16,7 +14,6 @@ try:
     from gppylib.commands import unix, gp, base, pg
     from gppylib import gparray
     from gppylib.db import dbconn
-    from gppylib.db import catalog
     from gppylib.userinput import *
     from gppylib.gp_dbid import GpDbidFile
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment

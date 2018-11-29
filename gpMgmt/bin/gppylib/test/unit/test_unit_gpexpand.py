@@ -35,7 +35,6 @@ class GpExpand(GpTestCase):
             patch('gpexpand.GpArray.initFromCatalog', return_value=self.gparray),
             patch('__builtin__.open', mock_open(), create=True),
             patch('__builtin__.raw_input'),
-            patch('gpexpand.PgControlData', return_value=Mock()),
             patch('gpexpand.copy.deepcopy', return_value=Mock()),
             patch('gpexpand.dbconn.execSQL', return_value=FakeCursor()),
             patch('gpexpand.GpExpandStatus', return_value=Mock()),
