@@ -174,7 +174,7 @@ suse11_x86_64_CONFIGFLAGS=--enable-ddboost --enable-gpperfmon --with-gssapi ${OR
 sles11_x86_64_CONFIGFLAGS=--enable-ddboost --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
 osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu1604_amd64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+ubuntu1604_amd64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
