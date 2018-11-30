@@ -195,7 +195,6 @@ enable_gpfdist		= @enable_gpfdist@
 enable_pxf			= @enable_pxf@
 enable_gphdfs		= @enable_gphdfs@
 enable_orafce		= @enable_orafce@
-enable_snmp			= @enable_snmp@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@
 enable_gpperfmon    = @enable_gpperfmon@

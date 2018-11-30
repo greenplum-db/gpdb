@@ -88,11 +88,6 @@
             <topicref href="guc-list.xml#gp_debug_linger"/>
             <topicref href="guc-list.xml#gp_default_storage_options"/>
             <topicref href="guc-list.xml#gp_dynamic_partition_pruning"/>
-            <topicref href="guc-list.xml#gp_email_from"/>
-            <topicref href="guc-list.xml#gp_email_smtp_password"/>
-            <topicref href="guc-list.xml#gp_email_smtp_server"/>
-            <topicref href="guc-list.xml#gp_email_smtp_userid"/>
-            <topicref href="guc-list.xml#gp_email_to"/>
             <topicref href="guc-list.xml#gp_enable_adaptive_nestloop"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct"/>
             <topicref href="guc-list.xml#gp_enable_agg_distinct_pruning"/>
@@ -163,9 +158,6 @@
             <topicref href="guc-list.xml#gp_session_id"/>
             <topicref href="guc-list.xml#gp_set_proc_affinity"/>
             <topicref href="guc-list.xml#gp_set_read_only"/>
-            <topicref href="guc-list.xml#gp_snmp_community"/>
-            <topicref href="guc-list.xml#gp_snmp_monitor_address"/>
-            <topicref href="guc-list.xml#gp_snmp_use_inform_or_trap"/>
             <topicref href="guc-list.xml#gp_statistics_pullup_from_child_partition"/>
             <topicref href="guc-list.xml#gp_statistics_use_fkeys"/>
             <topicref href="guc-list.xml#gp_vmem_idle_resource_timeout"/>

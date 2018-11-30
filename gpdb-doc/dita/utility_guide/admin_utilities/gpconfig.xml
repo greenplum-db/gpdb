@@ -168,20 +168,9 @@
     </section>
     <section id="section5">
       <title>Examples</title>
-      <p>Set the <codeph>gp_snmp_community</codeph> parameter to <codeph>testenv</codeph> in the
-        master host file
-        only:<codeblock>gpconfig -c gp_snmp_community -v testenv --masteronly</codeblock></p>
       <p>Set the <codeph>max_connections</codeph> setting to 100 on all segments and 10 on the
         master:</p>
       <codeblock>gpconfig -c max_connections -v 100 -m 10</codeblock>
-      <p>Set the server configuration parameters <codeph>gp_email_to</codeph> and
-          <codeph>gp_email_from</codeph>. These parameters require single quotes around the values.
-        <codeblock>$ gpconfig -c gp_email_from -v 'gpdb-server@example.com'
-$ gpconfig -c gp_email_to -v 'gpdb-admin@example.com'</codeblock></p>
-      <p>In the <codeph>postgresql.conf</codeph> file, the parameters are set correctly, with single
-        quotes around the
-        values:<codeblock>gp_email_from='gpdb-server@example.com'
-gp_email_to='gpdb-admin@example.com'</codeblock></p>
       <p>These examples shows the syntax required due to bash shell string processing.</p>
       <codeblock>gpconfig -c search_path -v '"\$user",public'
 gpconfig -c dynamic_library_path -v '\$libdir'</codeblock>

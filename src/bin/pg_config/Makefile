@@ -18,7 +18,7 @@ include $(top_builddir)/src/Makefile.global
 OBJS=   pg_config.o $(WIN32RES)
 
 # The frontend doesn't need everything that's in LIBS, some are backend only
-LIBS := $(filter-out -lresolv -lbz2 -lnetsnmp, $(LIBS))
+LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 # This program isn't interactive, so doesn't need these
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lcrypto -lz, $(LIBS))
 

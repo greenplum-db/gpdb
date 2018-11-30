@@ -1454,8 +1454,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("xlog record is invalid"),
-				 errdetail("%s", errormsg),
-				 errSendAlert(true)));
+				 errdetail("%s", errormsg)));
 	}
 
 	buf = XLogRecGetData(tfRecord);
@@ -1728,11 +1727,15 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 				ereport(WARNING,
 						(errmsg("could not load prepare WAL record for distributed transaction")));
 
-			ereport(ERROR,
-					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("xlog record is invalid"),
-					 errormsg ? (errdetail("%s", errormsg)) : 0,
-					 errSendAlert(true)));
+			if (errormsg)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg("xlog record is invalid"),
+						 errdetail("%s", errormsg)));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg("xlog record is invalid")));
 		}
 
 		if (TransactionIdDidCommit(xid) == false && TransactionIdDidAbort(xid) == false)
@@ -1906,8 +1909,7 @@ RecoverPreparedTransactions(void)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
 					 errmsg("xlog record is invalid"),
-					 errdetail("%s", errormsg),
-					 errSendAlert(true)));
+					 errdetail("%s", errormsg)));
 		}
 
 		buf = XLogRecGetData(tfRecord);

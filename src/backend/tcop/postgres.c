@@ -3737,8 +3737,7 @@ ProcessInterrupts(const char* filename, int lineno)
 		if (IsAutoVacuumWorkerProcess())
 			ereport(FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
-					 errmsg("terminating autovacuum process due to administrator command"),
-					 errSendAlert(false)));
+					 errmsg("terminating autovacuum process due to administrator command")));
 		else if (RecoveryConflictPending && RecoveryConflictRetryable)
 		{
 			pgstat_report_recovery_conflict(RecoveryConflictReason);

@@ -37,7 +37,6 @@ addons:
     - g++-6
     - python-dev
     - python-yaml
-    - libsnmp-dev
     - libapr1-dev
 
 ## ----------------------------------------------------------------------
@@ -71,7 +70,7 @@ env:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl --enable-snmp --enable-orafce
+  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl --enable-orafce
 
   - make
   - make install

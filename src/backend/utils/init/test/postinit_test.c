@@ -50,9 +50,6 @@ test_check_superuser_connection_limit_error(void **state)
 
 	expect_ereport(FATAL);
 
-	expect_value(errSendAlert, sendAlert, true);
-	will_be_called(errSendAlert);
-
 	/*
 	 * Expect ERROR
 	 */
