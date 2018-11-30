@@ -377,8 +377,8 @@ resources:
 - name: ubuntu-gpdb-dev-16
   type: docker-image
   source:
-    repository: pivotaldata/ubuntu-gpdb-dev
-    tag: '16.04'
+    repository: pivotaldata/ubuntu16.04-build
+    tag: 'gpdb5-latest'
 
 - name: ubuntu-gpdb-debian-dev-16
   type: docker-image

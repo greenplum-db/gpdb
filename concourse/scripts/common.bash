@@ -36,9 +36,9 @@ function configure() {
       if [ "$TEST_OS" == "sles" ]; then
         # TODO: remove this line as soon as the SLES image has zstd baked in
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --enable-orafce --disable-orca ${CONFIGURE_FLAGS}
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --enable-orafce --enable-tap-tests --disable-orca ${CONFIGURE_FLAGS}
       else
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --disable-orca ${CONFIGURE_FLAGS}
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca ${CONFIGURE_FLAGS}
       fi
   popd
 }
