@@ -45,7 +45,7 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
-  - compile_gpdb_open_source_ubuntu16
+  - compile_gpdb_ubuntu16_oss
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_windows_cl
@@ -66,7 +66,6 @@ groups:
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - icw_extensions_gpcloud
-  - test_gpdb_debian_package
   - gate_icw_end
   - QP_memory-accounting
   - QP_optimizer-functional
@@ -167,7 +166,7 @@ groups:
   - compile_gpdb_centos7
   - compile_gpdb_sles11
   - compile_gpdb_ubuntu16
-  - compile_gpdb_open_source_ubuntu16
+  - compile_gpdb_ubuntu16_oss
   - compile_gpdb_open_source_centos6
   - compile_gpdb_binary_swap_centos6
   - compile_gpdb_windows_cl
@@ -192,7 +191,6 @@ groups:
   - icw_planner_ubuntu16
   - icw_gporca_conan_ubuntu16
   - icw_extensions_gpcloud
-  - test_gpdb_debian_package
   - QP_memory-accounting
   - QP_optimizer-functional
   - gate_icw_end
@@ -1207,7 +1205,7 @@ jobs:
       params:
         file: gpdb_artifacts/greenplum-db*.deb
 
-- name: compile_gpdb_open_source_ubuntu16
+- name: compile_gpdb_ubuntu16_oss
   plan:
   - aggregate:
     - get: reduced-frequency-trigger
@@ -1431,7 +1429,7 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
-      - compile_gpdb_open_source_ubuntu16
+      - compile_gpdb_ubuntu16_oss
       trigger: true
     - get: bin_gpdb_sles11
       passed:
@@ -1447,10 +1445,13 @@ jobs:
       - compile_gpdb_centos6
     - get: compiled_bits_ubuntu16
       passed:
-      - compile_gpdb_open_source_ubuntu16
+      - compile_gpdb_ubuntu16_oss
     - get: deb_package_open_source_ubuntu16
       passed:
-      - compile_gpdb_open_source_ubuntu16
+      - compile_gpdb_ubuntu16_oss
+    - get: deb_package_ubuntu16
+      passed:
+      - compile_gpdb_ubuntu16
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1673,23 +1674,6 @@ jobs:
     file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
     params:
       TEST_SUITE: "icw"
-
-- name: test_gpdb_debian_package
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - gate_icw_start
-    - get: ubuntu-gpdb-debian-dev-16
-    - get: deb_package_open_source_ubuntu16
-      passed:
-      - gate_icw_start
-      trigger: [[ test_trigger ]]
-  - task: test_gpdb_deb_package
-    file: gpdb_src/concourse/tasks/deb_test_package.yml
-    image: ubuntu-gpdb-debian-dev-16
-    params:
-      DEBIAN_PACKAGE: {{deb_package_open_source_ubuntu16_versioned_file}}
 
 - name: icw_extensions_gpcloud
   plan:
@@ -3617,7 +3601,7 @@ jobs:
       - compile_gpdb_centos7
       - compile_gpdb_sles11
       - compile_gpdb_ubuntu16
-      - compile_gpdb_open_source_ubuntu16
+      - compile_gpdb_ubuntu16_oss
       - compile_gpdb_windows_cl
       - compile_gpdb_aix7_remote
       - icw_planner_centos6
@@ -3630,7 +3614,6 @@ jobs:
       - icw_gporca_sles11
       - icw_planner_ubuntu16
       - icw_gporca_conan_ubuntu16
-      - test_gpdb_debian_package
       - icw_extensions_gpcloud
       - client_loader_remote_test_aix
       - mpp_resource_group_centos6
