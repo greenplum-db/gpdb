@@ -1502,9 +1502,8 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),	/* any better errcode? */
-				 errmsg("Using external tables with OS level commands "
-						"(EXECUTE clause) is disabled"),
-				 errhint("To enable set gp_external_enable_exec=on")));
+				 errmsg("using external tables with OS level commands (EXECUTE clause) is disabled"),
+				 errhint("To enable set gp_external_enable_exec=on.")));
 	}
 
 	/* various validations */
@@ -1533,7 +1532,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	if ((strcmp(on_clause, "MASTER_ONLY") == 0)
 		&& using_location && (uri->protocol != URI_CUSTOM)) {
 		ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("\'ON MASTER\' is not supported by this protocol yet.")));
+				errmsg("\'ON MASTER\' is not supported by this protocol yet")));
 	}
 
 	/* get the total valid primary segdb count */
@@ -1670,26 +1669,28 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("Could not assign a segment database for \"%s\". "
-						"There are more external files than primary segment "
-						"databases on host \"%s\"", uri_str, uri->hostname)));
+								 errmsg("could not assign a segment database for \"%s\"",
+										uri_str),
+								 errdetail("There are more external files than primary segment databases on host \"%s\"",
+										   uri->hostname)));
 					}
 					else
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("Could not assign a segment database for \"%s\". "
-							  "There isn't a valid primary segment database "
-								 "on host \"%s\"", uri_str, uri->hostname)));
+								 errmsg("could not assign a segment database for \"%s\"",
+										uri_str),
+								 errdetail("There isn't a valid primary segment database on host \"%s\"",
+										   uri->hostname)));
 					}
 				}
 				else	/* HTTP */
 				{
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					errmsg("Could not assign a segment database for \"%s\". "
-						   "There are more URIs than total primary segment "
-						   "databases", uri_str)));
+							 errmsg("could not assign a segment database for \"%s\"",
+									uri_str),
+							 errdetail("There are more URIs than total primary segment databases")));
 				}
 			}
 		}
@@ -1775,11 +1776,10 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			if (list_length(ext->urilocations) > num_segs_participating)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("There are more external files (URLs) than primary "
-								"segments that can read them. Found %d URLs and "
-								"%d primary segments.",
-								list_length(ext->urilocations),
-								num_segs_participating)));
+						 errmsg("there are more external files (URLs) than primary segments that can read them"),
+						 errdetail("Found %d URLs and %d primary segments.",
+								   list_length(ext->urilocations),
+								   num_segs_participating)));
 
 			/*
 			 * restart location list and fill in new list until number of
@@ -1873,16 +1873,15 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 				if (!found_match)
 				{
 					/* should never happen */
-					elog(LOG, "external tables gpfdist(s) allocation error. "
+					elog(LOG,
+						 "external tables gpfdist(s) allocation error. "
 						 "total_primaries: %d, num_segs_participating %d "
 						 "max_participants_allowed %d, total_to_skip %d",
 						 total_primaries, num_segs_participating,
 						 max_participants_allowed, total_to_skip);
 
-					ereport(ERROR,
-							(errcode(ERRCODE_INTERNAL_ERROR),
-							 errmsg("Internal error in createplan for external tables"
-									" when trying to assign segments for gpfdist(s)")));
+					elog(ERROR,
+						 "internal error in createplan for external tables when trying to assign segments for gpfdist(s)");
 				}
 			}
 		}
@@ -1991,10 +1990,10 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			if (!match_found)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("Could not assign a segment database for "
-							  "command \"%s\". No valid primary segment was "
-								"found in the requested host name \"%s\" ",
-								command, hostname)));
+						 errmsg("could not assign a segment database for command \"%s\")",
+								command),
+						 errdetail("No valid primary segment was found in the requested host name \"%s\".",
+								hostname)));
 		}
 		else if (strncmp(on_clause, "SEGMENT_ID:", strlen("SEGMENT_ID:")) == 0)
 		{
@@ -2017,10 +2016,10 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			if (!match_found)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("Could not assign a segment database for "
-								"command \"%s\". The requested segment id "
-								"%d is not a valid primary segment or doesn't "
-								"exist in the database", command, target_segid)));
+						 errmsg("could not assign a segment database for command \"%s\"",
+								command),
+						 errdetail("The requested segment id %d is not a valid primary segment or doesn't exist in the database",
+								   target_segid)));
 		}
 		else if (strncmp(on_clause, "TOTAL_SEGS:", strlen("TOTAL_SEGS:")) == 0)
 		{
@@ -2031,9 +2030,8 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 			if (num_segs_to_use > total_primaries)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("Table defined with EXECUTE ON %d but there "
-								"are only %d valid primary segments in the "
-							"database.", num_segs_to_use, total_primaries)));
+						 errmsg("table defined with EXECUTE ON %d but there are only %d valid primary segments in the database",
+								num_segs_to_use, total_primaries)));
 
 			total_to_skip = total_primaries - num_segs_to_use;
 			skip_map = makeRandomSegMap(total_primaries, total_to_skip);
@@ -2064,10 +2062,8 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 		}
 		else
 		{
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("Internal error in createplan for external tables: "
-							"got invalid ON clause code %s", on_clause)));
+			elog(ERROR, "Internal error in createplan for external tables: got invalid ON clause code %s",
+				 on_clause);
 		}
 	}
 	/* (4) */
@@ -2086,9 +2082,7 @@ create_external_scan_uri_list(ExtTableEntry *ext, bool *ismasteronly)
 	else
 	{
 		/* should never get here */
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Internal error in createplan for external tables")));
+		elog(ERROR, "Internal error in createplan for external tables");
 	}
 
 	/*
@@ -6599,8 +6593,9 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 														 false);
 
 				if (!repartitionPlan(subplan, false, false, hashExpr, targetPolicy->numsegments))
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-									errmsg("Cannot parallelize that INSERT yet")));
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+							 errmsg("cannot parallelize that INSERT yet")));
 			}
 			else if (targetPolicyType == POLICYTYPE_ENTRY)
 			{
@@ -6618,8 +6613,9 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					 * will override that to bring it to the QD instead.
 					 */
 					if (!focusPlan(subplan, false, false))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that INSERT yet")));
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								 errmsg("cannot parallelize that INSERT yet")));
 				}
 			}
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
@@ -6691,8 +6687,9 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				}
 
 				if (!broadcastPlan(subplan, false, false, targetPolicy->numsegments))
-					ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								errmsg("Cannot parallelize that INSERT yet")));
+					ereport(ERROR,
+							(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+							 errmsg("cannot parallelize that INSERT yet")));
 
 			}
 			else
@@ -6745,7 +6742,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 					{
 						ereport(ERROR,
 								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("Cannot update distribution key columns in utility mode")));
+								 errmsg("cannot update distribution key columns in utility mode")));
 					}
 
 					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte, !qry->needReshuffle);

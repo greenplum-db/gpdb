@@ -287,7 +287,8 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_7" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table bar_p (i int, j int) with (oids = true) distributed by (i);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  "foo_p" and "bar_p" must have same OIDs setting
@@ -308,7 +309,7 @@ NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_8" for table "foo_p"
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_9" for table "foo_p"
 create table barparent(i int, j int) distributed by (i);
 create table bar_p () inherits(barparent);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  cannot exchange table "bar_p" as it inherits other table(s)
@@ -317,7 +318,7 @@ drop table barparent;
 -- non-partition table involved in inheritance
 create table bar_p(i int, j int) distributed by (i);
 create table barchild () inherits(bar_p);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- should fail
 alter table foo_p exchange partition for(rank(6)) with table bar_p;
 ERROR:  cannot EXCHANGE table "bar_p" as it has child table(s)
@@ -676,13 +677,13 @@ NOTICE:  table "exh_abc" does not exist, skipping
 create table dex (i int,  j int) partition by range(j)
 (partition a start (1) end(10), partition b start(11) end(20),
 default partition abc);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 NOTICE:  CREATE TABLE will create partition "dex_1_prt_abc" for table "dex"
 NOTICE:  CREATE TABLE will create partition "dex_1_prt_a" for table "dex"
 NOTICE:  CREATE TABLE will create partition "dex_1_prt_b" for table "dex"
 create table exh_abc (like dex);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 alter table dex exchange default partition with table exh_abc;
 ERROR:  cannot exchange DEFAULT partition
 set gp_enable_exchange_default_partition = on;
@@ -844,7 +845,7 @@ c1.relname like 'sto_ao_ao%' and c2.relfrozenxid = 0 and c1.reltoastrelid = c2.o
 (18 rows)
 
 create table exh_ao_ao (like sto_ao_ao) with (appendonly=true);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- Exchange default sub-partition, should fail
 alter table sto_ao_ao alter partition for (rank(3)) exchange default partition with table exh_ao_ao;
 ERROR:  cannot exchange DEFAULT partition
@@ -855,7 +856,7 @@ NOTICE:  exchanged partition "subothers" of partition for rank 3 of relation "st
 reset gp_enable_exchange_default_partition;
 -- Exchange a non-default sub-partition of a default partition, should fail
 alter table sto_ao_ao alter default partition exchange partition for ('one') with table exh_ao_ao;
-ERROR:  Cannot specify a name, rank, or value for a DEFAULT partition in this context
+ERROR:  cannot specify a name, rank, or value for a DEFAULT partition in this context
 -- Exchange a partition that has sub partitions, should fail.
 alter table sto_ao_ao exchange partition for ('2008-01-01') with table exh_ao_ao;
 ERROR:  cannot EXCHANGE PARTITION for relation "sto_ao_ao" -- partition has children
@@ -2719,7 +2720,7 @@ NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_2" for table "ao_p"
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_3" for table "ao_p"
 NOTICE:  CREATE TABLE will create partition "ao_p_1_prt_4" for table "ao_p"
 copy ao_p from stdin log errors segment reject limit 100;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 select * from ao_p;
  i 
 ---
@@ -3105,7 +3106,7 @@ select * from rank_exc;
 
 --exchange test
 create table r (like rank_exc);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into rank_exc values(3, 3, 2004, 'F', 100);
 insert into r values(3, 3, 2004, 'F', 100000);
 alter table rank_exc alter partition girls exchange partition year4 with table r;
@@ -3468,7 +3469,7 @@ NOTICE:  CREATE TABLE will create partition "rank_damage_1_prt_9" for table "ran
 alter table rank_damage_1_prt_1 no inherit rank_damage;
 ERROR:  can't alter inheritance on "rank_damage_1_prt_1"; it is a partitioned table or part thereof
 create table rank2_damage(like rank_damage);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 alter table rank_damage_1_prt_1 inherit rank2_damage;
 ERROR:  can't alter inheritance on "rank_damage_1_prt_1"; it is a partitioned table or part thereof
 alter table rank_damage_1_prt_1 alter column i type bigint;
@@ -5999,7 +6000,7 @@ LINE 1: alter table cov1 drop partition for (funky(1));
                                                      ^
 -- no rank for default
 alter table cov1 drop default partition for (rank(1));
-ERROR:  Cannot specify a name, rank, or value for a DEFAULT partition in this context
+ERROR:  cannot specify a name, rank, or value for a DEFAULT partition in this context
 -- no default
 alter table cov1 split default partition at (9);
 ERROR:  DEFAULT partition of relation "cov1" does not exist
@@ -6007,7 +6008,7 @@ alter table cov1 drop default partition;
 ERROR:  DEFAULT partition of relation "cov1" does not exist
 -- cannot add except by name
 alter table cov1 add partition for (rank(1));
-ERROR:  Can only ADD a partition by name
+ERROR:  can only ADD a partition by name
 -- bad template
 alter table cov1 set subpartition template (values (1,2) (values (2,3)));
 ERROR:  template cannot contain specification for child partition
@@ -6159,7 +6160,7 @@ NOTICE:  CREATE TABLE will create partition "mpp6979part_1_prt_8" for table "mpp
 NOTICE:  CREATE TABLE will create partition "mpp6979part_1_prt_9" for table "mpp6979part"
 -- append-only table in new schema 
 create table mpp6979dummy.mpp6979tab(like mpp6979part) with (appendonly=true);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- check that table and all parts in public schema
 select schemaname, tablename, partitionschemaname, partitiontablename
 from pg_partitions 
@@ -6440,7 +6441,7 @@ NOTICE:  CREATE TABLE will create partition "at_1_prt_2" for table "at"
 NOTICE:  CREATE TABLE will create partition "at_1_prt_3" for table "at"
 alter table at
     add primary key (a);
-ERROR:  PRIMARY KEY constraint must contain all columns in the partition key of relation "at".
+ERROR:  PRIMARY KEY constraint must contain all columns in the partition key of relation "at"
 HINT:  Include the partition key or create a part-wise UNIQUE index instead.
 -- MPP-14471 end
 -- MPP-17606 (using table "at" from above)
@@ -7153,8 +7154,8 @@ NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_4" for table "part_t
 NOTICE:  CREATE TABLE will create partition "part_tab_1_prt_5" for table "part_tab"
 -- Wrong part
 insert into part_tab_1_prt_1 values(5,5);
-ERROR:  Trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
-DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_1
+ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
+DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_1.
 select * from part_tab;
  i | j 
 ---+---
@@ -7166,8 +7167,8 @@ select * from part_tab_1_prt_1;
 (0 rows)
 
 insert into part_tab_1_prt_2 values(5,5);
-ERROR:  Trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
-DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_2
+ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
+DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_2.
 select * from part_tab;
  i | j 
 ---+---
@@ -7215,8 +7216,8 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 insert into input2 select i, i from (select generate_series(1,10) as i) as t;
 -- Multiple range table entries in the plan
 insert into part_tab_1_prt_1 select i1.x, i2.y from input1 as i1 join input2 as i2 on i1.x = i2.x where i2.y = 5;
-ERROR:  Trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
-DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_1
+ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
+DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_1.
 select * from part_tab;
  i | j 
 ---+---
@@ -7230,8 +7231,8 @@ select * from part_tab_1_prt_1;
 (0 rows)
 
 insert into part_tab_1_prt_2 select i1.x, i2.y from input1 as i1 join input2 as i2 on i1.x = i2.x where i2.y = 5;
-ERROR:  Trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
-DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_2
+ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
+DETAIL:  Expected partition: part_tab_1_prt_3, provided partition: part_tab_1_prt_2.
 select * from part_tab;
  i | j 
 ---+---
@@ -7368,12 +7369,12 @@ NOTICE:  CREATE TABLE will create partition "deep_part_1_prt_male_2_prt_5_3_prt_
 NOTICE:  CREATE TABLE will create partition "deep_part_1_prt_male_2_prt_5_3_prt_5" for table "deep_part_1_prt_male_2_prt_5"
 -- Intermediate partition insert is not allowed
 insert into deep_part_1_prt_male_2_prt_2 values(1,1,1,'M');
-ERROR:  Directly modifying intermediate part of a partitioned table is disallowed
-HINT:  Modify either the root or a leaf partition instead
+ERROR:  directly modifying intermediate part of a partitioned table is disallowed
+HINT:  Modify either the root or a leaf partition instead.
 -- Wrong sub-partition (inserting a female value in male partition)
 insert into deep_part_1_prt_male_2_prt_2_3_prt_2 values (1, 1, 1, 'F');
-ERROR:  Trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
-DETAIL:  Expected partition: deep_part_1_prt_female_2_prt_1_3_prt_1, provided partition: deep_part_1_prt_male_2_prt_2_3_prt_2
+ERROR:  trying to insert row into wrong partition  (seg0 slarimac:40000 pid=97899)
+DETAIL:  Expected partition: deep_part_1_prt_female_2_prt_1_3_prt_1, provided partition: deep_part_1_prt_male_2_prt_2_3_prt_2.
 select * from deep_part;
  i | j | k | s 
 ---+---+---+---
@@ -7719,8 +7720,8 @@ NOTICE:  CREATE TABLE will create partition "deep_part_1_prt_male_2_prt_5_3_prt_
 NOTICE:  CREATE TABLE will create partition "deep_part_1_prt_male_2_prt_5_3_prt_5" for table "deep_part_1_prt_male_2_prt_5"
 -- Intermediate partition insert is not allowed
 insert into deep_part_1_prt_male_2_prt_2 values(1,1,1,'M');
-ERROR:  Directly modifying intermediate part of a partitioned table is disallowed
-HINT:  Modify either the root or a leaf partition instead
+ERROR:  directly modifying intermediate part of a partitioned table is disallowed
+HINT:  Modify either the root or a leaf partition instead.
 -- Wrong sub-partition (inserting a female value in male partition)
 insert into deep_part_1_prt_male_2_prt_2_3_prt_2 values (1, 1, 1, 'F');
 select * from deep_part;

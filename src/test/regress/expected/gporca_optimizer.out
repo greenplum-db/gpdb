@@ -7816,10 +7816,10 @@ with x as (select * from orca.r) select * from x order by a;
 -- with x as (select * from orca.rcte where a < 10) select * from x x1, x x2 where x2.a = x1.b limit 1;
 -- correlated execution
 select (select 1 union select 2);
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 select (select generate_series(1,5));
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 select (select a from orca.foo inner1 where inner1.a=outer1.a  union select b from orca.foo inner2 where inner2.b=outer1.b) from orca.foo outer1;
 ERROR:  more than one row returned by a subquery used as an expression  (seg1 slice3 slarimac:40001 pid=383)
@@ -8662,7 +8662,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 insert into orca.toanalyze values (1,1), (2,2), (3,3);
 alter table orca.toanalyze drop column a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 analyze orca.toanalyze;
 -- union
 create table orca.ur (a int, b int);
@@ -9914,10 +9914,10 @@ select sum(i) i_sum, sum(j) j_sum, sum(t::integer) t_sum from bm.het_bm where i=
 
 -- Drop and recreate index after we dropped column
 drop index bm.het_bm_i_idx;
-WARNING:  Only dropped the index "het_bm_i_idx"
+WARNING:  only dropped the index "het_bm_i_idx"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index bm.het_bm_j_idx;
-WARNING:  Only dropped the index "het_bm_j_idx"
+WARNING:  only dropped the index "het_bm_j_idx"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 create index het_bm_i_idx on bm.het_bm using bitmap (i);
 NOTICE:  building index for child partition "het_bm_1_prt_part0"

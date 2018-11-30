@@ -11,7 +11,8 @@
 CREATE TABLE wi (i INT,
                  n1 int, n2 int, n3 int, n4 int,
                  n5 int, n6 int, n7 int) WITH OIDS;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 CREATE TABLE wo (i INT,
                  n1 int, n2 int, n3 int, n4 int,
                  n5 int, n6 int, n7 int) WITHOUT OIDS;
@@ -67,7 +68,8 @@ CREATE TABLE create_table_test (
 COPY create_table_test FROM stdin;
 CREATE TABLE create_table_test2 WITH OIDS AS
     SELECT a + b AS c1, a - b AS c2 FROM create_table_test;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 CREATE TABLE create_table_test3 WITHOUT OIDS AS
     SELECT a + b AS c1, a - b AS c2 FROM create_table_test;
 SELECT count(oid) FROM create_table_test2;
@@ -84,7 +86,8 @@ LINE 1: SELECT count(oid) FROM create_table_test3;
 PREPARE table_source(int) AS
     SELECT a + b AS c1, a - b AS c2, $1 AS c3 FROM create_table_test;
 CREATE TABLE execute_with WITH OIDS AS EXECUTE table_source(1);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 CREATE TABLE execute_without WITHOUT OIDS AS EXECUTE table_source(2);
 SELECT count(oid) FROM execute_with;
  count 

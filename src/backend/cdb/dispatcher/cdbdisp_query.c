@@ -1210,8 +1210,9 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		/*
 		 * Strange! Not an interrupt either.
 		 */
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg_internal("Unable to dispatch plan.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg_internal("unable to dispatch plan")));
 	}
 
 	if (DEBUG1 >= log_min_messages)

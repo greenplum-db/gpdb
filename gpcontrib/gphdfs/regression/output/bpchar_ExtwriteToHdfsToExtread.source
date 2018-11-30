@@ -20,7 +20,7 @@ create readable external table bpchar_heap(
 datatype_bpchar bpchar,x_bpchar bigint, col1_bpchar bpchar,col2_bpchar bpchar, nullcol_bpchar bpchar
 ) location ('gphdfs://10.152.10.234:8020/plaintext/bpchar.txt')format 'TEXT';
 create writable external table bpchar_writehdfs(like bpchar_heap) location ('gphdfs://10.152.10.234:8020/extwrite/bpchar')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into bpchar_writehdfs select * from bpchar_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/bpchar /mapreduce/bpchar_gpdb/ 
 16/09/30 00:19:12 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

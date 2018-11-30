@@ -2340,7 +2340,7 @@ SELECT COUNT(*) FROM dml_heap_s;
 (1 row)
 
 DELETE FROM dml_heap_s WHERE a = (SELECT dml_heap_r.a FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a);
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_s;
  count 
@@ -2645,7 +2645,7 @@ SELECT COUNT(*) FROM dml_heap_pt_s;
 (1 row)
 
 DELETE FROM dml_heap_pt_s WHERE a = (SELECT dml_heap_pt_r.a FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a);
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_heap_pt_s;
  count 
@@ -3373,7 +3373,7 @@ SELECT SUM(a) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_pt_s ) FROM dml_heap_pt_s WHERE dml_heap_pt_r.b = dml_heap_pt_s.a;
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(a) FROM dml_heap_pt_r;
  sum  
@@ -3389,7 +3389,7 @@ SELECT SUM(b) FROM dml_heap_pt_r;
 (1 row)
 
 UPDATE dml_heap_pt_r SET b = (SELECT dml_heap_pt_r.b FROM dml_heap_pt_r,dml_heap_pt_s WHERE dml_heap_pt_r.a = dml_heap_pt_s.a );
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(b) FROM dml_heap_pt_r;
   sum  
@@ -4022,7 +4022,7 @@ SELECT SUM(a) FROM dml_heap_r;
 (1 row)
 
 UPDATE dml_heap_r SET a = ( SELECT DISTINCT(b) FROM dml_heap_s ) FROM dml_heap_s WHERE dml_heap_r.b = dml_heap_s.a;
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(a) FROM dml_heap_r;
  sum  
@@ -4038,7 +4038,7 @@ SELECT SUM(b) FROM dml_heap_r;
 (1 row)
 
 UPDATE dml_heap_r SET b = (SELECT dml_heap_r.b FROM dml_heap_r,dml_heap_s WHERE dml_heap_r.a = dml_heap_s.a );
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT SUM(b) FROM dml_heap_r;
  sum  

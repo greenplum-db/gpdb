@@ -127,10 +127,10 @@ AppendOnlyCompaction_ShouldCompact(Relation aoRelation,
 	if (!gp_appendonly_compaction)
 	{
 		ereport(LOG,
-				(errmsg("Append-only compaction skipped on relation %s, segment file num %d",
+				(errmsg("append-only compaction skipped on relation %s, segment file num %d",
 						RelationGetRelationName(aoRelation),
 						segno),
-				 errdetail("Compaction is disabled")));
+				 errdetail("Compaction is disabled.")));
 		/* Disable compaction by global guc. */
 		return false;
 	}

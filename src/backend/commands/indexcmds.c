@@ -475,10 +475,10 @@ DefineIndex(Oid relationId,
 	relationId = RelationGetRelid(rel);
 	namespaceId = RelationGetNamespace(rel);
 
-	if(RelationIsExternal(rel))
+	if (RelationIsExternal(rel))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("cannot create indexes on external tables.")));
+				 errmsg("cannot create indexes on external tables")));
 		
 	/* Note: during bootstrap may see uncataloged relation */
 	if (rel->rd_rel->relkind != RELKIND_RELATION &&

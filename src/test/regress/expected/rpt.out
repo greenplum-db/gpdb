@@ -142,7 +142,7 @@ CREATE TABLE parent (
 CREATE TABLE child (like parent) distributed replicated;
 CREATE TABLE child1 (like parent) DISTRIBUTED BY (name);
 CREATE TABLE child2 (like parent);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- should be replicated table
 \d child
        Table "rpt.child"
@@ -193,7 +193,7 @@ CREATE TABLE child (
         salary          int4,
         manager         name
 ) INHERITS (parent_rep) WITH OIDS;
-ERROR:  cannot inherit from replicated table "parent_rep" to create table "child".
+ERROR:  cannot inherit from replicated table "parent_rep" to create table "child"
 DETAIL:  An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.
 -- replicated table can not have parents, should fail
 CREATE TABLE child (
@@ -285,7 +285,7 @@ insert into bar values(1,1);
 alter table foo drop column x;
 -- fail
 alter table bar drop column x;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 drop table if exists foo;
 drop table if exists foo1;
 NOTICE:  table "foo1" does not exist, skipping

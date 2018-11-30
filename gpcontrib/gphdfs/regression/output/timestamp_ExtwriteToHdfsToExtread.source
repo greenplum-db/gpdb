@@ -18,7 +18,7 @@ ERROR:  table "timestamp_verification_recordcomp_mapred" does not exist
 --end_ignore
 create readable external table timestamp_heap(datatype_timestamp varchar,xcount_timestamp bigint, col1_timestamp timestamp,col2_timestamp timestamp, col3_timestamp timestamp, nullcol_timestamp timestamp) location ('gphdfs://10.152.10.234:8020/plaintext/timestamp.txt')format 'TEXT';
 create writable external table timestamp_writehdfs(like timestamp_heap) location ('gphdfs://10.152.10.234:8020/extwrite/timestamp')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into timestamp_writehdfs select * from timestamp_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/timestamp /mapreduce/timestamp_gpdb/ 
 16/09/30 01:23:14 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

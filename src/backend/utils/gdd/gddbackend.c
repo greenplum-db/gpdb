@@ -479,8 +479,9 @@ buildWaitGraph(GddCtx *ctx)
 	{
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Unable to connect to execute internal query.")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unable to connect to execute internal query")));
 		}
 
 		connected = true;

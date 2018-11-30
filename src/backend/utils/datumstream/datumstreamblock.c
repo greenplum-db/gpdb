@@ -201,9 +201,9 @@ DatumStreamBlockRead_GetReadyOrig(
 	if (bufferSize < minHeaderSize)
 	{
 		ereport(ERROR,
-				(errmsg("Bad datum stream Original block header size.  Found %d and expected the size to be at least %d",
-						bufferSize,
-						minHeaderSize),
+				(errmsg("bad datum stream Original block header size"),
+				 errdetail_internal("Found %d and expected the size to be at least %d.",
+									bufferSize, minHeaderSize),
 				 errdetail_datumstreamblockread(dsr),
 				 errcontext_datumstreamblockread(dsr)));
 	}
@@ -212,9 +212,10 @@ DatumStreamBlockRead_GetReadyOrig(
 	if (blockOrig->version != DatumStreamVersion_Original)
 	{
 		ereport(ERROR,
-				(errmsg("Bad datum stream Original block version.  Found %d and expected %d",
-						blockOrig->version,
-						DatumStreamVersion_Original),
+				(errmsg("bad datum stream Original block version"),
+				 errdetail_internal("Found %d and expected %d.",
+									blockOrig->version,
+									DatumStreamVersion_Original),
 				 errdetail_datumstreamblockread(dsr),
 				 errcontext_datumstreamblockread(dsr)));
 	}
@@ -434,7 +435,7 @@ DatumStreamBlockRead_CheckDenseGetInvariant(
 			if (dsr->nth != total_datum_index)
 			{
 				ereport(ERROR,
-						(errmsg("Nth position %d expected to match physical datum index %d + delta ON count %d when Dense block does not have RLE_TYPE compression and does not have NULLs "
+						(errmsg("nth position %d expected to match physical datum index %d + delta ON count %d when Dense block does not have RLE_TYPE compression and does not have NULLs "
 						   "(logical row count %d, physical datum count %d)",
 								dsr->nth,
 								dsr->physical_datum_index,
@@ -457,9 +458,10 @@ DatumStreamBlockRead_CheckDenseGetInvariant(
 			if (currentNullOnCount != expectedNullOnCount)
 			{
 				ereport(ERROR,
-						(errmsg("NULL bit-map ON count does not match when Dense block does not have RLE_TYPE compression.	Found %d, expected %d",
-								currentNullOnCount,
-								expectedNullOnCount),
+						(errmsg("NULL bit-map ON count does not match when Dense block does not have RLE_TYPE compression"),
+						 errdetail_internal("Found %d, expected %d.",
+											currentNullOnCount,
+											expectedNullOnCount),
 						 errdetail_datumstreamblockread(dsr),
 						 errcontext_datumstreamblockread(dsr)));
 			}

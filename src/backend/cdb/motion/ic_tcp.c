@@ -336,9 +336,10 @@ error:
 		closesocket(fd);
 	errno = errnoSave;
 	freeaddrinfo(addrs);
-	ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					errmsg("Interconnect Error: Could not set up tcp listener socket."),
-					errdetail("%s: %m", fun)));
+	ereport(ERROR,
+			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+			 errmsg("interconnect Error: Could not set up tcp listener socket"),
+			 errdetail("%s: %m", fun)));
 }								/* setupListeningSocket */
 
 /*
@@ -470,25 +471,24 @@ readPacket(MotionConn *conn, ChunkTransportState *transportStates)
 						continue;
 					else if (n < 0)
 					{
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-										errmsg("Interconnect error reading an incoming packet."),
-										errdetail("%s from seg%d at %s: %m",
-												  "select",
-												  conn->remoteContentId,
-												  conn->remoteHostAndPort)));
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								 errmsg("interconnect error reading an incoming packet"),
+								 errdetail("select from seg%d at %s: %m",
+										   conn->remoteContentId,
+										   conn->remoteHostAndPort)));
 					}
-
 				}
 				while (n < 1);
 			}
 			else
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error reading an incoming packet."),
-								errdetail("%s from seg%d at %s: %m",
-										  "read",
-										  conn->remoteContentId,
-										  conn->remoteHostAndPort)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error reading an incoming packet"),
+						 errdetail("read from seg%d at %s: %m",
+								   conn->remoteContentId,
+								   conn->remoteHostAndPort)));
 			}
 		}
 		else if (n == 0)
@@ -497,10 +497,11 @@ readPacket(MotionConn *conn, ChunkTransportState *transportStates)
 			elog(DEBUG5, "readpacket(); breaking in while (fd %d) recvBytes %d msgSize %d", conn->sockfd, conn->recvBytes, conn->msgSize);
 			print_connection(transportStates, conn->sockfd, "interconnect error on");
 #endif
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error: connection closed prematurely."),
-							errdetail("from Remote Connection: contentId=%d at %s",
-									  conn->remoteContentId, conn->remoteHostAndPort)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error: connection closed prematurely"),
+					 errdetail("from Remote Connection: contentId=%d at %s",
+							   conn->remoteContentId, conn->remoteHostAndPort)));
 			break;
 		}
 		else
@@ -705,28 +706,26 @@ setupOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportStat
 	 */
 	conn->sockfd = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
 	if (conn->sockfd < 0)
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error setting up outgoing "
-							   "connection."),
-						errdetail("%s: %m", "socket")));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error setting up outgoing connection"),
+				 errdetail("%s: %m", "socket")));
 
 	/* make socket non-blocking BEFORE we connect. */
 	if (!pg_set_noblock(conn->sockfd))
-	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error setting up outgoing "
-							   "connection."),
-						errdetail("%s: %m", "fcntl(O_NONBLOCK)")));
-	}
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error setting up outgoing connection"),
+				 errdetail("%s: %m", "fcntl(O_NONBLOCK)")));
 
 	/* Allow bind() to succeed even if the port is in TIME_WAIT state. */
 	sockopt = 1;
 	if (setsockopt(conn->sockfd, SOL_SOCKET, SO_REUSEADDR,
 				   (void *) &sockopt, sizeof(sockopt)) < 0)
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error setting up outgoing "
-							   "connection."),
-						errdetail("%s: %m", "setsockopt(SO_REUSEADDR)")));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error setting up outgoing connection"),
+				 errdetail("%s: %m", "setsockopt(SO_REUSEADDR)")));
 
 
 	/*
@@ -788,11 +787,10 @@ setupOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportStat
 
 		inet_ntop(saddr.ss_family, (struct sockaddr *) &saddr, debugmsg, sizeof(debugmsg));
 		/* Should never get EADDRINUSE because we know it's our port. */
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error setting up outgoing "
-							   "connection."),
-						errdetail("Could not bind to local addr %s. %m",
-								  debugmsg)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error setting up outgoing connection"),
+				 errdetail("Could not bind to local addr %s: %m", debugmsg)));
 	}
 
 	/*
@@ -865,13 +863,12 @@ updateOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportSta
 				   (void *) &errnoSave, &sizeoferrno))
 	{
 		/* getsockopt failed */
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect could not connect to seg%d %s",
-							   conn->remoteContentId,
-							   conn->remoteHostAndPort),
-						errdetail("%s sockfd=%d: %m",
-								  "getsockopt(SO_ERROR)",
-								  conn->sockfd)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect could not connect to seg%d %s",
+						conn->remoteContentId, conn->remoteHostAndPort),
+				 errdetail("%s sockfd=%d: %m",
+						   "getsockopt(SO_ERROR)", conn->sockfd)));
 	}
 
 	switch (errnoSave)
@@ -882,14 +879,11 @@ updateOutgoingConnection(ChunkTransportState *transportStates, ChunkTransportSta
 			return;
 		default:
 			errno = errnoSave;
-			ereport(LOG, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						  errmsg("Interconnect could not connect to seg%d %s "
-								 "pid=%d; "
-								 "will retry. %s: %m",
-								 conn->remoteContentId,
-								 conn->remoteHostAndPort,
-								 conn->cdbProc->pid,
-								 "connect")));
+			ereport(LOG,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect could not connect to seg%d %s pid=%d; will retry; %s: %m",
+							conn->remoteContentId, conn->remoteHostAndPort,
+							conn->cdbProc->pid, "connect")));
 			break;
 	}
 
@@ -937,28 +931,26 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 		addrsize = sizeof(localAddr);
 		if (getsockname(conn->sockfd, (struct sockaddr *) &localAddr, &addrsize))
 		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error after making connection."),
-							errdetail("%s sockfd=%d remote=%s: %m",
-									  "getsockname",
-									  conn->sockfd,
-									  conn->remoteHostAndPort)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error after making connection"),
+					 errdetail("getsockname sockfd=%d remote=%s: %m",
+							   conn->sockfd, conn->remoteHostAndPort)));
 		}
 		format_sockaddr((struct sockaddr *) &localAddr, conn->localHostAndPort,
 						sizeof(conn->localHostAndPort));
 
 		if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
-			ereport(LOG, (errmsg("Interconnect sending registration message "
-								 "to seg%d slice%d %s pid=%d "
-								 "from seg%d slice%d %s sockfd=%d",
-								 conn->remoteContentId,
-								 pEntry->recvSlice->sliceIndex,
-								 conn->remoteHostAndPort,
-								 conn->cdbProc->pid,
-								 GpIdentity.segindex,
-								 pEntry->sendSlice->sliceIndex,
-								 conn->localHostAndPort,
-								 conn->sockfd)));
+			ereport(LOG,
+					(errmsg("interconnect sending registration message to seg%d slice%d %s pid=%d from seg%d slice%d %s sockfd=%d",
+							conn->remoteContentId,
+							pEntry->recvSlice->sliceIndex,
+							conn->remoteHostAndPort,
+							conn->cdbProc->pid,
+							GpIdentity.segindex,
+							pEntry->sendSlice->sliceIndex,
+							conn->localHostAndPort,
+							conn->sockfd)));
 
 		regMsg->msgBytes = sizeof(*regMsg);
 		regMsg->recvSliceIndex = pEntry->recvSlice->sliceIndex;
@@ -991,16 +983,15 @@ sendRegisterMessage(ChunkTransportState *transportStates, ChunkTransportStateEnt
 			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 		else
 		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error writing registration "
-								   "message to seg%d at %s",
-								   conn->remoteContentId,
-								   conn->remoteHostAndPort),
-							errdetail("%s pid=%d sockfd=%d local=%s: %m",
-									  "write",
-									  conn->cdbProc->pid,
-									  conn->sockfd,
-									  conn->localHostAndPort)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error writing registration message to seg%d at %s",
+							conn->remoteContentId,
+							conn->remoteHostAndPort),
+					 errdetail("write pid=%d sockfd=%d local=%s: %m",
+							   conn->cdbProc->pid,
+							   conn->sockfd,
+							   conn->localHostAndPort)));
 		}
 	}
 
@@ -1071,13 +1062,13 @@ readRegisterMessage(ChunkTransportState *transportStates,
 			ML_CHECK_FOR_INTERRUPTS(transportStates->teardownActive);
 		else
 		{
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error reading register message "
-								   "from %s", conn->remoteHostAndPort),
-							errdetail("%s sockfd=%d local=%s: %m",
-									  "read",
-									  conn->sockfd,
-									  conn->localHostAndPort)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error reading register message from %s",
+							conn->remoteHostAndPort),
+					 errdetail("read sockfd=%d local=%s: %m",
+							   conn->sockfd,
+							   conn->localHostAndPort)));
 		}
 	}
 
@@ -1098,13 +1089,13 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	/* Check for valid message format. */
 	if (msg.msgBytes != sizeof(*regMsg))
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error reading register message "
-							   "from %s: format not recognized",
-							   conn->remoteHostAndPort),
-						errdetail("msgBytes=%d expected=%d sockfd=%d local=%s",
-								  msg.msgBytes, (int) sizeof(*regMsg),
-								  conn->sockfd, conn->localHostAndPort)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error reading register message from %s: format not recognized",
+						conn->remoteHostAndPort),
+				 errdetail("msgBytes=%d expected=%d sockfd=%d local=%s",
+						   msg.msgBytes, (int) sizeof(*regMsg),
+						   conn->sockfd, conn->localHostAndPort)));
 	}
 
 	/* get rid of old connections first */
@@ -1136,17 +1127,15 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	else
 	{
 		/* something is wrong */
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error: Invalid registration "
-							   "message received from %s.",
-							   conn->remoteHostAndPort),
-						errdetail("sendSlice=%d recvSlice=%d srcContentId=%d "
-								  "srcPid=%d srcListenerPort=%d "
-								  "srcSessionId=%d srcCommandCount=%d motnode=%d",
-								  msg.sendSliceIndex, msg.recvSliceIndex,
-								  msg.srcContentId, msg.srcPid,
-								  msg.srcListenerPort, msg.srcSessionId,
-								  msg.srcCommandCount, msg.sendSliceIndex)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Invalid registration message received from %s",
+						conn->remoteHostAndPort),
+				 errdetail("sendSlice=%d recvSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d srcSessionId=%d srcCommandCount=%d motnode=%d",
+						   msg.sendSliceIndex, msg.recvSliceIndex,
+						   msg.srcContentId, msg.srcPid,
+						   msg.srcListenerPort, msg.srcSessionId,
+						   msg.srcCommandCount, msg.sendSliceIndex)));
 	}
 
 	/*
@@ -1171,14 +1160,13 @@ readRegisterMessage(ChunkTransportState *transportStates,
 
 	if (iconn == list_length(pEntry->sendSlice->primaryProcesses))
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error: Invalid registration "
-							   "message received from %s.",
-							   conn->remoteHostAndPort),
-						errdetail("sendSlice=%d srcContentId=%d "
-								  "srcPid=%d srcListenerPort=%d",
-								  msg.sendSliceIndex, msg.srcContentId,
-								  msg.srcPid, msg.srcListenerPort)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Invalid registration message received from %s",
+						conn->remoteHostAndPort),
+				 errdetail("sendSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d",
+						   msg.sendSliceIndex, msg.srcContentId,
+						   msg.srcPid, msg.srcListenerPort)));
 	}
 
 	/*
@@ -1190,30 +1178,23 @@ readRegisterMessage(ChunkTransportState *transportStates,
 	if (newConn->sockfd != -1 ||
 		newConn->state != mcsNull)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error: Duplicate registration "
-							   "message received from %s.",
-							   conn->remoteHostAndPort),
-						errdetail("Already accepted registration from %s for "
-								  "sendSlice=%d srcContentId=%d "
-								  "srcPid=%d srcListenerPort=%d",
-								  newConn->remoteHostAndPort,
-								  msg.sendSliceIndex, msg.srcContentId,
-								  msg.srcPid, msg.srcListenerPort)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Duplicate registration message received from %s",
+						conn->remoteHostAndPort),
+				 errdetail("Already accepted registration from %s for sendSlice=%d srcContentId=%d srcPid=%d srcListenerPort=%d",
+						   newConn->remoteHostAndPort, msg.sendSliceIndex,
+						   msg.srcContentId, msg.srcPid, msg.srcListenerPort)));
 	}
 
 	/* message looks good */
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_VERBOSE)
 	{
-		ereport(LOG, (errmsg("Interconnect seg%d slice%d sockfd=%d accepted "
-							 "registration message from seg%d slice%d %s pid=%d",
-							 GpIdentity.segindex,
-							 msg.recvSliceIndex,
-							 conn->sockfd,
-							 msg.srcContentId,
-							 msg.sendSliceIndex,
-							 conn->remoteHostAndPort,
-							 msg.srcPid)));
+		ereport(LOG,
+				(errmsg("interconnect seg%d slice%d sockfd=%d accepted registration message from seg%d slice%d %s pid=%d",
+						GpIdentity.segindex, msg.recvSliceIndex, conn->sockfd,
+						msg.srcContentId, msg.sendSliceIndex,
+						conn->remoteHostAndPort, msg.srcPid)));
 	}
 
 	/* Copy caller's temporary MotionConn to its assigned slot. */
@@ -1308,34 +1289,30 @@ acceptIncomingConnection(void)
 #endif
 			case EOPNOTSUPP:
 				/* Shouldn't get these errors unless there is a bug. */
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error on listener port %d",
-									   Gp_listener_port),
-								errdetail("%s sockfd=%d: %m",
-										  "accept",
-										  TCP_listenerFd)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error on listener port %d",
+								Gp_listener_port),
+						 errdetail("accept sockfd=%d: %m", TCP_listenerFd)));
 				break;			/* not reached */
 			case ENOMEM:
 			case ENFILE:
 			case EMFILE:
 			case ENOBUFS:
 				/* Out of resources. */
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error on listener port %d",
-									   Gp_listener_port),
-								errdetail("%s sockfd=%d: %m",
-										  "accept",
-										  TCP_listenerFd)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error on listener port %d",
+								Gp_listener_port),
+						 errdetail("accept sockfd=%d: %m", TCP_listenerFd)));
 				break;			/* not reached */
 			default:
 				/* Network problem, connection aborted, etc.  Continue. */
-				ereport(LOG, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							  errmsg("Interconnect connection request not "
-									 "completed on listener port %d",
-									 Gp_listener_port),
-							  errdetail("%s sockfd=%d: %m",
-										"accept",
-										TCP_listenerFd)));
+				ereport(LOG,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect connection request not completed on listener port %d",
+								Gp_listener_port),
+						 errdetail("accept sockfd=%d: %m", TCP_listenerFd)));
 		}						/* switch (errno) */
 	}							/* loop until success or EWOULDBLOCK */
 
@@ -1359,12 +1336,11 @@ acceptIncomingConnection(void)
 	addrsize = sizeof(localAddr);
 	if (getsockname(newsockfd, (struct sockaddr *) &localAddr, &addrsize))
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error after accepting connection."),
-						errdetail("%s sockfd=%d remote=%s: %m",
-								  "getsockname",
-								  newsockfd,
-								  conn->remoteHostAndPort)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error after accepting connection"),
+				 errdetail("getsockname sockfd=%d remote=%s: %m",
+						   newsockfd, conn->remoteHostAndPort)));
 	}
 	format_sockaddr((struct sockaddr *) &localAddr, conn->localHostAndPort,
 					sizeof(conn->localHostAndPort));
@@ -1372,13 +1348,12 @@ acceptIncomingConnection(void)
 	/* make socket non-blocking */
 	if (!pg_set_noblock(newsockfd))
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error after accepting connection."),
-						errdetail("%s sockfd=%d remote=%s local=%s: %m",
-								  "fcntl(O_NONBLOCK)",
-								  newsockfd,
-								  conn->remoteHostAndPort,
-								  conn->localHostAndPort)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error after accepting connection"),
+				 errdetail("fcntl(O_NONBLOCK) sockfd=%d remote=%s local=%s: %m",
+						   newsockfd, conn->remoteHostAndPort,
+						   conn->localHostAndPort)));
 	}
 
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG)
@@ -1768,8 +1743,9 @@ SetupTCPInterconnect(EState *estate)
 		{
 			if (errno == EINTR)
 				continue;
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error: %s: %m", "select")));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error: %s: %m", "select")));
 		}
 
 		/*
@@ -2410,12 +2386,11 @@ flushInterconnectListenerBacklog(void)
 					addrsize = sizeof(localAddr);
 					if (getsockname(newfd, (struct sockaddr *) &localAddr, &addrsize))
 					{
-						ereport(LOG, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-									  errmsg("Interconnect error while clearing incoming connections."),
-									  errdetail("%s sockfd=%d remote=%s: %m",
-												"getsockname",
-												newfd,
-												remoteHostAndPort)));
+						ereport(LOG,
+								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								 errmsg("interconnect error while clearing incoming connections"),
+								 errdetail("getsockname sockfd=%d remote=%s: %m",
+										   newfd, remoteHostAndPort)));
 					}
 					else
 					{
@@ -2445,9 +2420,10 @@ flushInterconnectListenerBacklog(void)
 		}
 		else if (pendingConn < 0 && errno != EINTR)
 		{
-			ereport(LOG, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						  errmsg("Interconnect error during listener cleanup."),
-						  errdetail("%s sockfd=%d: %m", "select", TCP_listenerFd)));
+			ereport(LOG,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error during listener cleanup"),
+					 errdetail("select sockfd=%d: %m", TCP_listenerFd)));
 		}
 
 		/*
@@ -2741,9 +2717,10 @@ RecvTupleChunkFromAnyTCP(ChunkTransportState *transportStates,
 		{
 			if (errno == EINTR)
 				continue;
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error receiving an incoming packet."),
-							errdetail("%s: %m", "select")));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error receiving an incoming packet"),
+					 errdetail("%s: %m", "select")));
 		}
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "RecvTupleChunkFromAny() select() returned %d ready sockets", n);
@@ -2940,12 +2917,12 @@ flushBuffer(ChunkTransportState *transportStates,
 							conn->stillActive = false;
 							return false;
 						}
-						ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-										errmsg("Interconnect error writing an outgoing packet: %m"),
-										errdetail("error during select() call (error:%d).\n"
-												  "For Remote Connection: contentId=%d at %s",
-												  errno, conn->remoteContentId,
-												  conn->remoteHostAndPort)));
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+								 errmsg("interconnect error writing an outgoing packet: %m"),
+								 errdetail("Error during select() call (error: %d), for remote connection: contentId=%d at %s",
+										   errno, conn->remoteContentId,
+										   conn->remoteHostAndPort)));
 					}
 
 					/*
@@ -2977,12 +2954,12 @@ flushBuffer(ChunkTransportState *transportStates,
 					conn->stillActive = false;
 					return false;
 				}
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error writing an outgoing packet"),
-								errdetail("error during send() call (error:%d).\n"
-										  "For Remote Connection: contentId=%d at %s",
-										  errno, conn->remoteContentId,
-										  conn->remoteHostAndPort)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error writing an outgoing packet"),
+						 errdetail("Error during send() call (error:%d) for remote connection: contentId=%d at %s",
+								   errno, conn->remoteContentId,
+								   conn->remoteHostAndPort)));
 			}
 		}
 		else

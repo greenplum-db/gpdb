@@ -82,11 +82,11 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_1_prt_xyz2" for table "
 --Exchange partition
  -- Create candidate table
  create table heap_can(like pt_heap_tab);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table ao_can(like pt_heap_tab) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table co_can(like pt_heap_tab)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  -- Exchange
  alter table pt_heap_tab exchange partition for ('abc') with table ao_can ; -- Heap exchanged with  AO
 NOTICE:  exchanged partition "abc1" of relation "pt_heap_tab" with relation "ao_can"
@@ -278,11 +278,11 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
  create table heap_can(like pt_ao_tab);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table ao_can(like pt_ao_tab) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table co_can(like pt_ao_tab)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  -- Exchange
  alter table pt_ao_tab add partition pqr values ('pqr','pqr1','pqr2') WITH (appendonly=true,orientation=column,compresslevel=5);-- CO
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_1_prt_pqr" for table "pt_ao_tab"
@@ -487,11 +487,11 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
  create table heap_can(like pt_co_tab);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table ao_can(like pt_co_tab) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  create table co_can(like pt_co_tab)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  -- Exchange
  alter table pt_co_tab add partition pqr values ('pqr','pqr1','pqr2') WITH (appendonly=true,compresslevel=5);-- AO
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_1_prt_pqr" for table "pt_co_tab"
@@ -682,11 +682,11 @@ NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_co2" for tabl
   drop table if exists co_can;
 --end_ignore
   create table heap_can(like pt_heap_tab_rng);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table ao_can(like pt_heap_tab_rng) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table co_can(like pt_heap_tab_rng)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  alter table pt_heap_tab_rng add partition newco start(36) end(40) with (appendonly= true, orientation = column);
 NOTICE:  CREATE TABLE will create partition "pt_heap_tab_rng_1_prt_newco" for table "pt_heap_tab_rng"
  alter table pt_heap_tab_rng add partition newao start(40) end(45) with (appendonly= true);
@@ -874,11 +874,11 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
   create table heap_can(like pt_ao_tab_rng);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table ao_can(like pt_ao_tab_rng) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table co_can(like pt_ao_tab_rng)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  alter table pt_ao_tab_rng add partition newco start(36) end(40) with (appendonly= true, orientation = column);
 NOTICE:  CREATE TABLE will create partition "pt_ao_tab_rng_1_prt_newco" for table "pt_ao_tab_rng"
  alter table pt_ao_tab_rng add partition newheap start(40) end(45) with (appendonly= false);
@@ -1066,11 +1066,11 @@ drop table if exists ao_can cascade;
 drop table if exists co_can cascade;
 --end_ignore
   create table heap_can(like pt_co_tab_rng);  
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table ao_can(like pt_co_tab_rng) with (appendonly=true);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
   create table co_can(like pt_co_tab_rng)  with (appendonly=true,orientation=column);   
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
  alter table pt_co_tab_rng add partition newao start(36) end(40) with (appendonly= true);
 NOTICE:  CREATE TABLE will create partition "pt_co_tab_rng_1_prt_newao" for table "pt_co_tab_rng"
  alter table pt_co_tab_rng add partition newheap start(40) end(45) with (appendonly= false);

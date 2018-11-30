@@ -175,17 +175,15 @@ select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp218
 (1 row)
 
 -- CLEANUP
--- start_ignore
 drop index index_2;
-WARNING:  Only dropped the index "index_2"
+WARNING:  only dropped the index "index_2"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index index_1;
-WARNING:  Only dropped the index "index_1"
+WARNING:  only dropped the index "index_1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists mpp21834_t2;
 drop table if exists mpp21834_t1;
 reset optimizer_enable_hashjoin;
--- end_ignore
 --
 -- A rescanning of DTS with its own partition selector (under sequence node)
 --
@@ -709,17 +707,15 @@ select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
 (188 rows)
 
 -- CLEANUP
--- start_ignore
 drop index ptid_idx;
-WARNING:  Only dropped the index "ptid_idx"
+WARNING:  only dropped the index "ptid_idx"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop index pt1_idx;
-WARNING:  Only dropped the index "pt1_idx"
+WARNING:  only dropped the index "pt1_idx"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists mpp24151_t;
 drop table if exists mpp24151_pt;
-reset optimizer_enable_dynamictablescan
--- end_ignore
+reset optimizer_enable_dynamictablescan;
 --
 -- No DPE (Dynamic Partition Elimination) on second child of a union under a join
 --
@@ -972,18 +968,16 @@ select * from dbs where c2= 15 and c3 = 5;
 (0 rows)
 
 -- CLEANUP
--- start_ignore
 drop index dbs_index;
-WARNING:  Only dropped the index "dbs_index"
+WARNING:  only dropped the index "dbs_index"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists dbs;
 drop index dis_index;
-WARNING:  Only dropped the index "dis_index"
+WARNING:  only dropped the index "dis_index"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists dis;
 drop table if exists dts;
 reset optimizer_enable_dynamictablescan;
--- end_ignore
 --
 -- Partition elimination for heterogenous DynamicIndexScans
 --
@@ -1593,7 +1587,7 @@ NOTICE:  CREATE TABLE will create partition "mpp6247_foo_1_prt_8" for table "mpp
 NOTICE:  CREATE TABLE will create partition "mpp6247_foo_1_prt_9" for table "mpp6247_foo"
 NOTICE:  CREATE TABLE will create partition "mpp6247_foo_1_prt_10" for table "mpp6247_foo"
 create table mpp6247_bar (like mpp6247_foo);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- EXPECT: Single HJ after partition elimination instead of sequence of HJ under Append
 select count_operator('delete from mpp6247_foo using mpp6247_bar where mpp6247_foo.c1 = mpp6247_bar.c1 and mpp6247_foo.dt = ''2009-05-03''', 'Hash Join');
  count_operator 

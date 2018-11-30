@@ -20,7 +20,7 @@ create readable external table smallint_heap(
 datatype_smallint varchar, xcount_smallint bigint, max_smallint smallint, min_smallint smallint, x_smallint smallint, reverse_smallint smallint, increment_smallint smallint, nullcol_smallint smallint
 ) location ('gphdfs://10.152.10.234:8020/plaintext/smallint.txt')format 'TEXT';
 create writable external table smallint_writehdfs(like smallint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/smallint')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into smallint_writehdfs select * from smallint_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/smallint /mapreduce/smallint_gpdb/ 
 16/09/30 01:01:19 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

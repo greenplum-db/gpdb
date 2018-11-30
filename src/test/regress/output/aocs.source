@@ -58,17 +58,19 @@ LINE 1: ...9 (like tenk_heap_for_aocs) with (appendonly=true orientatio...
                                                              ^
 -- appendonly=false with orientation=column should not work
 CREATE TABLE tenk_aocs10 (like tenk_heap_for_aocs) with (appendonly=false, orientation=column, compresslevel=6, checksum=true) distributed by(unique1);
-ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
+ERROR:  invalid option "compresslevel" for base relation
+HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
 -- block size must be between 8KB and 2MB w/ 8KB multiple
 CREATE TABLE tenk_aocs11 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, blocksize=100) distributed by(unique1);
 ERROR:  value 100 out of bounds for option "blocksize"
 DETAIL:  Valid values are between "8192" and "2097152".
 -- cannot have compresslevel 0
 CREATE TABLE tenk_aocs12 (like tenk_heap_for_aocs) with (appendonly=true, orientation=column, compresslevel=0, compresstype=zlib) distributed by(unique1);
-ERROR:  compresstype can't be used with compresslevel 0
+ERROR:  compresstype "zlib" can't be used with compresslevel 0
 -- orientation=column must be combined with appendonly=true
 CREATE TABLE tenk_aocs13 (like tenk_heap_for_aocs) with (orientation=column) distributed by(unique1);
-ERROR:  invalid option "orientation" for base relation. Only valid for Append Only relations
+ERROR:  invalid option "orientation" for base relation
+HINT:  Table orientation only valid for Append Only relations, create an AO relation to use table orientation.
 --------------------
 -- catalog checks
 --------------------

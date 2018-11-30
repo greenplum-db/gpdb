@@ -452,12 +452,10 @@ ParallelizeCorrelatedSubPlanMutator(Node *node, ParallelizeCorrelatedPlanWalkerC
 			if (rtfunc->funcexpr &&
 				ContainsParamWalker(rtfunc->funcexpr, NULL /* ctx */ ) && ctx->subPlanDistributed)
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								errmsg("Cannot parallelize that query yet."),
-								errdetail("In a subquery FROM clause, a "
-										  "function invocation cannot contain "
-										  "a correlated reference.")
-							));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+						 errmsg("cannot parallelize that query yet"),
+						 errdetail("In a subquery FROM clause, a function invocation cannot contain a correlated reference.")));
 			}
 		}
 	}

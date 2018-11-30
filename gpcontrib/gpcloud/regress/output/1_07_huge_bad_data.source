@@ -1,6 +1,6 @@
 CREATE READABLE EXTERNAL TABLE s3regress_huge_bad (Year text, Month text, DayofMonth text, DayOfWeek text, DepTime text, CRSDepTime text, ArrTime text,CRSArrTime text, UniqueCarrier text, FlightNum text,TailNum text, ActualElapsedTime text, CRSElapsedTime text, AirTime text, ArrDelay text, DepDelay text, Origin text, Dest text, Distance text, TaxiIn text, TaxiOut text, Cancelled text, CancellationCode text, Diverted text, CarrierDelay text, WeatherDelay text, NASDelay text, SecurityDelay text, LateAircraftDelay text) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/hugefile/airlinedata2.csv config=@config_file@') format 'csv' SEGMENT REJECT LIMIT 100 PERCENT;
 SELECT count(*) FROM s3regress_huge_bad;
-NOTICE:  Found 2880938 data formatting errors (2880938 or more input rows). Rejected related input data.
+NOTICE:  found 2880938 data formatting errors (2880938 or more input rows), rejected related input data
   count   
 ----------
  43983514

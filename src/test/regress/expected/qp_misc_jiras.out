@@ -152,13 +152,13 @@ CONSTRAINT tbl1544_child_depth_1_y_2000_year_pdate_check
 CHECK (pdate >= '2000-01-01'::date AND pdate < '2001-01-01'::date))
 INHERITS (qp_misc_jiras.tbl1544)
 ;
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 CREATE TABLE qp_misc_jiras.tbl1544_child_depth_1_y_2001_year (
 CONSTRAINT tbl1544_child_depth_1_y_2001_year_pdate_check
 CHECK (pdate >= '2001-01-01'::date AND pdate < '2002-01-01'::date))
 INHERITS (qp_misc_jiras.tbl1544)
 ;
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- 
 -- Inserting redirection triggers
 -- 
@@ -418,7 +418,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'idsat
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupdatelogkey_pk PRIMARY KEY (idsatelliteupdatelog, columnname);
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogkey ADD CONSTRAINT satelliteupdatelogkey_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 CREATE TABLE qp_misc_jiras.satellite (
     id integer NOT NULL,
     name character varying NOT NULL,
@@ -450,7 +450,7 @@ CREATE INDEX fki_satelliteupdatelogserver_idsatelliteupdatelog_fk ON qp_misc_jir
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satelliteupdatelogserver_idsatellite_fk FOREIGN KEY (idsatellite) REFERENCES qp_misc_jiras.satellite(id);
 ERROR:  there is no unique constraint matching given keys for referenced table "satellite"
 ALTER TABLE ONLY qp_misc_jiras.satelliteupdatelogserver ADD CONSTRAINT satelliteupdatelogserver_idsatelliteupdatelog_fk FOREIGN KEY (idsatelliteupdatelog) REFERENCES qp_misc_jiras.satelliteupdatelog(id);
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 SELECT /* gptest */ s.id, s.action, s.type, sk.columnName AS "columnName", sk.value
 FROM qp_misc_jiras.satelliteUpdateLog AS s
 LEFT JOIN qp_misc_jiras.satelliteUpdateLogKey AS sk ON s.id = sk.idSatelliteUpdateLog
@@ -1047,7 +1047,7 @@ ERROR:  backward scan is not supported in this version of Greenplum Database
 rollback;
 drop table qp_misc_jiras.tbl5305_test;
 create external web table qp_misc_jiras.tbl_3739_foo (a text) execute E'' ON SEGMENT 0 FORMAT 'CSV';
-ERROR:  Invalid EXECUTE clause. Found an empty command string
+ERROR:  invalid EXECUTE clause, command string is empty
 show gp_interconnect_setup_timeout;
  gp_interconnect_setup_timeout 
 -------------------------------
@@ -1262,7 +1262,7 @@ FROM qp_misc_jiras.tbl4896_sale as sale ,qp_misc_jiras.tbl4896_customer as custo
 WHERE sale.cn=customer.cn
 GROUP BY CUBE((sale.dt),(newalias1,newalias2,newalias1),(sale.cn,sale.cn,sale.cn,newalias1),
 (sale.qty),(sale.pn,newalias3,sale.vn),(sale.vn,sale.vn,sale.prc),(sale.cn,newalias2)),sale.cn,sale.vn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 drop table qp_misc_jiras.tbl4896_sale;
 drop table qp_misc_jiras.tbl4896_customer;
 create table qp_misc_jiras.tbl4703_test (i int, j int);
@@ -1289,7 +1289,7 @@ select * from qp_misc_jiras.tbl_694_1;
 (0 rows)
 
 create table qp_misc_jiras.tbl_694_2 (like qp_misc_jiras.tbl_694_1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 select * from qp_misc_jiras.tbl_694_2;
  c1 | b1 
 ----+----
@@ -4065,24 +4065,24 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 --Hangs when given an invalid value for reorganize
 alter table qp_misc_jiras.tbl13409_test set with (reorganize=foo) distributed by (j);
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 --Invalid integer value. def->arg
 alter table qp_misc_jiras.tbl13409_test set with (reorganize=123) distributed by (j);
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 alter table qp_misc_jiras.tbl13409_test set with (reorganize="true");
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 alter table qp_misc_jiras.tbl13409_test set with (reorganize="TRUE");
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 alter table qp_misc_jiras.tbl13409_test set with (reorganize="FALSE");
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 alter table qp_misc_jiras.tbl13409_test set with (reorganize="false");
-ERROR:  Invalid REORGANIZE option
-HINT:  valid REORGANIZE option is "true" or "false"
+ERROR:  invalid REORGANIZE option
+HINT:  Valid REORGANIZE option is "true" or "false".
 --Valid strings
 alter table qp_misc_jiras.tbl13409_test set with (reorganize=true);
 alter table qp_misc_jiras.tbl13409_test set with (reorganize=TRUE);

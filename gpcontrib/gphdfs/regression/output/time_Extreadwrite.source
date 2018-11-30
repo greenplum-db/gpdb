@@ -10,7 +10,7 @@ ERROR:  table "time_readhdfs" does not exist
 -- end_ignore
 create readable external table time_heap(datatype_time varchar,x_time bigint, col1_time time,col2_time time, col3_time time, col4_time time, col5_time time, col6_time time, col7_time time, col8_time time, col9_time time, nullcol_time time) location ('gphdfs://10.152.10.234:8020/plaintext/time.txt')format 'TEXT';
 create writable external table time_writehdfs(like time_heap) location ('gphdfs://10.152.10.234:8020/extwrite/time')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table time_readhdfs(like time_heap) location ('gphdfs://10.152.10.234:8020/extwrite/time') format 'custom' (formatter='gphdfs_import');
 select count(*) from time_heap;
  count 

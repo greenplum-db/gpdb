@@ -29,7 +29,7 @@ select * from readcty order by id;
 create writable external table domaintype_write_error(id INT4, text text)location ('gphdfs://10.152.10.234:8020/extwrite/domainDataType')format 'custom' (formatter='gphdfs_export');
 insert into domaintype_write_error values (3,'aaa');
 select * from readcty order by id;
-NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
  id | country 
 ----+---------
   1 | US

@@ -20,7 +20,7 @@ create readable external table text_heap(
 datatype_text text,x_text bigint, col1_text text,col2_text text, nullcol_text text
 ) location ('gphdfs://10.152.10.234:8020/plaintext/text.txt')format 'TEXT';
 create writable external table text_writehdfs(like text_heap) location ('gphdfs://10.152.10.234:8020/extwrite/text')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into text_writehdfs select * from text_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/text /mapreduce/text_gpdb/ 
 16/09/30 01:07:39 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

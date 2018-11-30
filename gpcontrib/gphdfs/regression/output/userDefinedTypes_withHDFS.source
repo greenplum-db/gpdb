@@ -16,7 +16,7 @@ NOTICE:  drop cascades to external table writeudt column composit
 CREATE TYPE mytype AS (f1 int, f2 text);
 create readable external table readgpfdist_compositeType (type varchar, id bigint, composite mytype) location ('gphdfs://10.152.10.234:8020/plaintext/compositeType.txt') format 'text';
 create writable external table composite_write_hdfs(like readgpfdist_compositeType) location ('gphdfs://10.152.10.234:8020/extwrite/composite') format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into composite_write_hdfs select * from readgpfdist_compositeType;
 \echo --start_ignore
 --start_ignore

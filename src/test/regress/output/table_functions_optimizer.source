@@ -311,7 +311,7 @@ ERROR:  subquery must return only one column
 LINE 1: SELECT scalar_1((select 1, 2));
                         ^
 SELECT scalar_1((select 1 union select 2));  -- subquery returns multiple rows
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT scalar_1(TABLE(select 1));  -- TableValue expression does not match type
 ERROR:  function scalar_1(anytable) does not exist
@@ -2308,7 +2308,7 @@ DROP TABLE example_out;
 -- ===============
 DROP VIEW example_v;
 ALTER TABLE example DROP column a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- ERROR: input tuple does not conform to expectations of multiset_5
 SELECT * FROM multiset_5( TABLE( SELECT 'hello'::text) ) as tf;
 ERROR:  invalid input tuple for function multiset_example

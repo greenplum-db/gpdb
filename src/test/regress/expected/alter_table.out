@@ -323,7 +323,7 @@ ALTER TABLE tmp3 add constraint tmpconstr foreign key(a) references tmp2(b) matc
 ERROR:  column "b" referenced in foreign key constraint does not exist
 -- Try (and fail) to add constraint due to invalid data
 ALTER TABLE tmp3 add constraint tmpconstr foreign key (a) references tmp2 match full;
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 -- Delete one row, add the constraint again -- should fail
 DELETE FROM tmp3 where a=5;
 ALTER TABLE tmp3 add constraint tmpconstr foreign key (a) references tmp2 match full;
@@ -363,7 +363,7 @@ select * from tmp3;
 
 CREATE TABLE tmp6 () INHERITS (tmp3);
 CREATE TABLE tmp7 () INHERITS (tmp3);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO tmp6 VALUES (6, 30), (1, 16);
 ALTER TABLE tmp3 ADD CONSTRAINT b_le_20 CHECK (b <= 20) NOT VALID;
 ALTER TABLE tmp3 VALIDATE CONSTRAINT b_le_20;	-- fails
@@ -479,7 +479,7 @@ DROP TABLE FKTABLE;
 -- because int=int8 exists and is a member of the integer opfamily
 CREATE TEMP TABLE FKTABLE (ftest1 int8);
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 -- Check it actually works
 INSERT INTO FKTABLE VALUES(42);		-- should succeed
 INSERT INTO FKTABLE VALUES(43);		-- should fail
@@ -499,7 +499,7 @@ CREATE TEMP TABLE PKTABLE (ptest1 numeric PRIMARY KEY);
 INSERT INTO PKTABLE VALUES(42);
 CREATE TEMP TABLE FKTABLE (ftest1 int);
 ALTER TABLE FKTABLE ADD FOREIGN KEY(ftest1) references pktable;
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 -- Check it actually works
 INSERT INTO FKTABLE VALUES(42);		-- should succeed
 INSERT INTO FKTABLE VALUES(43);		-- should fail
@@ -582,7 +582,7 @@ drop table atacc1;
 create table atacc1 (test int);
 create table atacc2 (test2 int);
 create table atacc3 (test3 int) inherits (atacc1, atacc2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 alter table atacc2 add constraint foo check (test2>0);
 -- fail and then succeed on atacc2
 insert into atacc2 (test2) values (-3);
@@ -601,7 +601,7 @@ drop table atacc1;
 create table atacc1 (test int);
 create table atacc2 (test2 int);
 create table atacc3 (test3 int) inherits (atacc1, atacc2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 alter table atacc3 no inherit atacc2;
 -- fail
 alter table atacc3 no inherit atacc2;
@@ -669,7 +669,8 @@ drop table atacc2;
 drop table atacc1;
 -- test unique constraint adding
 create table atacc1 ( test int ) with oids distributed by (test);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 -- add a unique constraint
 alter table atacc1 add constraint atacc_test1 unique (test);
 -- insert first value
@@ -736,7 +737,8 @@ DETAIL:  Key (test)=(3) already exists.
 drop table atacc1;
 -- test primary key constraint adding
 create table atacc1 ( test int ) with oids distributed by (test);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 -- add a primary key constraint
 alter table atacc1 add constraint atacc_test1 primary key (test);
 -- insert first value
@@ -850,7 +852,8 @@ ERROR:  relation "non_existent" does not exist
 -- test setting columns to null and not null and vice versa
 -- test checking for null values and primary key
 create table atacc1 (test int not null) with oids distributed by (test);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 alter table atacc1 add constraint "atacc1_pkey" primary key (test);
 alter table atacc1 alter column test drop not null;
 ERROR:  column "test" is in a primary key
@@ -882,7 +885,7 @@ drop table atacc1;
 -- test inheritance
 create table parent (a int);
 create table child (b varchar(255)) inherits (parent);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 alter table parent alter a set not null;
 insert into parent values (NULL);
 ERROR:  null value in column "a" violates not-null constraint
@@ -979,10 +982,11 @@ ERROR:  relation "nosuchtable" does not exist
 -- test dropping columns
 create table atacc1 (a int4 not null, b int4, c int4 not null, d int4) with oids
 distributed by (a);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into atacc1 values (1, 2, 3, 4);
 alter table atacc1 drop a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 alter table atacc1 drop a;
 ERROR:  column "a" of relation "atacc1" does not exist
 -- SELECTs
@@ -1252,9 +1256,9 @@ drop table atacc1;
 create table parent (a int, b int, c int);
 insert into parent values (1, 2, 3);
 alter table parent drop a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 create table child (d varchar(255)) inherits (parent);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 insert into child values (12, 13, 'testing');
 select * from parent;
  b  | c  
@@ -1289,7 +1293,7 @@ drop table parent;
 create table alter_table_test (a int4, b int4, c int4);
 insert into alter_table_test values (1,2,3);
 alter table alter_table_test drop a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 copy alter_table_test to stdout;
 2	3
 copy alter_table_test(a) to stdout;
@@ -1330,9 +1334,9 @@ drop table alter_table_test;
 -- test inheritance
 create table dropColumn (a int, b int, e int);
 create table dropColumnChild (c int) inherits (dropColumn);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 create table dropColumnAnother (d int) inherits (dropColumnChild);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- these two should fail
 alter table dropColumnchild drop column a;
 ERROR:  cannot drop inherited column "a"
@@ -1342,14 +1346,14 @@ ERROR:  cannot drop inherited column "b"
 alter table only dropColumn drop column e;
 alter table dropColumnChild drop column c;
 alter table dropColumn drop column a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 create table renameColumn (a int);
 create table renameColumnChild (b int) inherits (renameColumn);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 create table renameColumnAnother (c int) inherits (renameColumnChild);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- these three should fail
 alter table renameColumnChild rename column a to d;
 ERROR:  cannot rename inherited column "a"
@@ -1373,14 +1377,14 @@ ERROR:  column must be added to child tables too
 -- Test corner cases in dropping of inherited columns
 create table p1 (f1 int, f2 int);
 create table c1 (f1 int not null) inherits(p1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "f1" with inherited definition
 -- should be rejected since c1.f1 is inherited
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 -- should work
 alter table p1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- c1.f1 is still there, but no longer inherited
 select f1 from c1;
  f1 
@@ -1388,7 +1392,7 @@ select f1 from c1;
 (0 rows)
 
 alter table c1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 select f1 from c1;
 ERROR:  column "f1" does not exist
 LINE 1: select f1 from c1;
@@ -1397,13 +1401,13 @@ drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
 create table c1 () inherits(p1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- should be rejected since c1.f1 is inherited
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table p1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- c1.f1 is dropped now, since there is no local definition for it
 select f1 from c1;
 ERROR:  column "f1" does not exist
@@ -1413,38 +1417,38 @@ drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
 create table c1 () inherits(p1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 -- should be rejected since c1.f1 is inherited
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table only p1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- c1.f1 is NOT dropped, but must now be considered non-inherited
 alter table c1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1 (f1 int, f2 int);
 create table c1 (f1 int not null) inherits(p1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "f1" with inherited definition
 -- should be rejected since c1.f1 is inherited
 alter table c1 drop column f1;
 ERROR:  cannot drop inherited column "f1"
 alter table only p1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 -- c1.f1 is still there, but no longer inherited
 alter table c1 drop column f1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 drop table p1 cascade;
 NOTICE:  drop cascades to table c1
 create table p1(id int, name text);
 create table p2(id2 int, name text, height int);
 create table c1(age int) inherits(p1,p2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "name"
 create table gc1() inherits (c1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 select relname, attname, attinhcount, attislocal
 from pg_class join pg_attribute on (pg_class.oid = pg_attribute.attrelid)
 where relname in ('p1','p2','c1','gc1') and attnum > 0 and not attisdropped
@@ -1529,7 +1533,8 @@ order by attrelid::regclass::text, attnum;
 -- Test the ALTER TABLE SET WITH/WITHOUT OIDS command
 --
 create table altstartwith (col integer) with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into altstartwith values (1);
 select oid > 0, * from altstartwith;
  ?column? | col 
@@ -1549,7 +1554,8 @@ select * from altstartwith;
 (1 row)
 
 alter table altstartwith set with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select oid > 0, * from altstartwith;
  ?column? | col 
 ----------+-----
@@ -1559,11 +1565,13 @@ select oid > 0, * from altstartwith;
 drop table altstartwith;
 -- Check inheritance cases
 create table altwithoid (col integer) with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 -- Inherits parents oid column anyway
 create table altinhoid () inherits (altwithoid) without oids;
-NOTICE:  Table has parent, setting distribution columns to match parent table
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into altinhoid values (1);
 select oid > 0, * from altwithoid;
  ?column? | col 
@@ -1599,7 +1607,8 @@ select * from altinhoid;
 (1 row)
 
 alter table altwithoid set with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select oid > 0, * from altwithoid;
  ?column? | col 
 ----------+-----
@@ -1617,7 +1626,8 @@ NOTICE:  drop cascades to table altinhoid
 create table altwithoid (col integer) without oids;
 -- child can have local oid column
 create table altinhoid () inherits (altwithoid) with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into altinhoid values (1);
 select oid > 0, * from altwithoid; -- fails
 ERROR:  column "oid" does not exist
@@ -1630,7 +1640,8 @@ select oid > 0, * from altinhoid;
 (1 row)
 
 alter table altwithoid set with oids;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 NOTICE:  merging definition of column "oid" for child "altinhoid"
 select oid > 0, * from altwithoid;
  ?column? | col 
@@ -1661,7 +1672,7 @@ NOTICE:  drop cascades to table altinhoid
 -- test renumbering of child-table columns in inherited operations
 create table p1 (f1 int);
 create table c1 (f2 text, f3 int) inherits (p1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 alter table p1 add column a1 int check (a1 > 0);
 alter table p1 add column f2 text;
 NOTICE:  merging definition of column "f2" for child "c1"
@@ -2025,7 +2036,7 @@ select * from my_locks order by 1;
 (0 rows)
 
 alter table alterlock2 add foreign key (f1) references alterlock (f1);
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 select * from my_locks order by 1;
   relname   |    max_lockmode     
 ------------+---------------------
@@ -2037,7 +2048,7 @@ rollback;
 begin;
 alter table alterlock2
 add constraint alterlock2nv foreign key (f1) references alterlock (f1) NOT VALID;
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 select * from my_locks order by 1;
   relname   |    max_lockmode     
 ------------+---------------------
@@ -2384,7 +2395,8 @@ CREATE TABLE tt4 (x int);							-- too few columns
 CREATE TABLE tt5 (x int, y numeric(8,2), z int);	-- too few columns
 CREATE TABLE tt6 () INHERITS (tt0);					-- can't have a parent
 CREATE TABLE tt7 (x int, q text, y numeric(8,2)) WITH OIDS;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 ALTER TABLE tt7 DROP q;								-- OK
 ALTER TABLE tt0 OF tt_t0;
 ALTER TABLE tt1 OF tt_t0;

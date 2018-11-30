@@ -4,4 +4,4 @@
 CREATE EXTERNAL TABLE pxf_invalid_test (a TEXT, b TEXT, c TEXT)
 LOCATION ('pxf://tmp/dummy1?FRAGMENTER=DemoFragmenter&ACCESSOR=&RESOLVER=DemoTextResolver')
 FORMAT 'TEXT' (DELIMITER ',');
-ERROR:  Invalid URI pxf://tmp/dummy1?FRAGMENTER=DemoFragmenter&ACCESSOR=&RESOLVER=DemoTextResolver: option 'ACCESSOR=' missing value after '='
+ERROR:  invalid URI pxf://tmp/dummy1?FRAGMENTER=DemoFragmenter&ACCESSOR=&RESOLVER=DemoTextResolver: option 'ACCESSOR=' missing value after '='

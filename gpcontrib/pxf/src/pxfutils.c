@@ -13,11 +13,7 @@ char *
 normalize_key_name(const char *key)
 {
 	if (!key || strlen(key) == 0)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("internal error in pxfutils.c:normalize_key_name. Parameter key is null or empty.")));
-	}
+		elog(ERROR, "internal error in pxfutils.c:normalize_key_name, parameter key is null or empty");
 
 	return psprintf("X-GP-OPTIONS-%s", asc_toupper(pstrdup(key), strlen(key)));
 }

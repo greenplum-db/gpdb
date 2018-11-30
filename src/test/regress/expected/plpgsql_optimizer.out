@@ -2301,7 +2301,7 @@ PL/pgSQL function test_variable_storage() line 8 at PERFORM
 --
 create temp table master(f1 int primary key);
 create temp table slave(f1 int references master deferrable);
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 insert into master values(1);
 insert into slave values(1);
 insert into slave values(2);	-- fails

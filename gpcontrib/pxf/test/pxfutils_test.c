@@ -38,7 +38,7 @@ test_normalize_key_name(void **state)
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("internal error in pxfutils.c:normalize_key_name. Parameter key is null or empty.");
+		char	   *expected_message = pstrdup("internal error in pxfutils.c:normalize_key_name, parameter key is null or empty");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);
@@ -57,7 +57,7 @@ test_normalize_key_name(void **state)
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("internal error in pxfutils.c:normalize_key_name. Parameter key is null or empty.");
+		char	   *expected_message = pstrdup("internal error in pxfutils.c:normalize_key_name, parameter key is null or empty");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);

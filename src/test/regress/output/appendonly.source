@@ -43,21 +43,25 @@ CREATE TABLE tenk_ao4 (like tenk_heap) with (appendonly=true, compresslevel=1, c
 CREATE TABLE tenk_ao5 (like tenk_heap) with (appendonly=true, compresslevel=6, compresstype=zlib, blocksize=1048576, checksum=true) distributed by(unique1);
 -- invalid
 CREATE TABLE tenk_ao6 (like tenk_heap) with (appendonly=false, compresslevel=6, checksum=true) distributed by(unique1);
-ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
+ERROR:  invalid option "compresslevel" for base relation
+HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
 CREATE TABLE tenk_ao7 (like tenk_heap) with (appendonly=true, compresslevel=16, compresstype=zlib) distributed by(unique1);
 ERROR:  compresslevel=16 is out of range for zlib (should be in the range 1 to 9)
 CREATE TABLE tenk_ao8 (like tenk_heap) with (appendonly=true, blocksize=100) distributed by(unique1);
 ERROR:  value 100 out of bounds for option "blocksize"
 DETAIL:  Valid values are between "8192" and "2097152".
 CREATE TABLE tenk_ao9 (like tenk_heap) with (appendonly=true, compresslevel=0, compresstype=zlib) distributed by(unique1);
-ERROR:  compresstype can't be used with compresslevel 0
+ERROR:  compresstype "zlib" can't be used with compresslevel 0
 -- these should not work without appendonly=true
 CREATE TABLE tenk_ao10 (like tenk_heap) with (compresslevel=5);
-ERROR:  invalid option 'compresslevel' for base relation. Only valid for Append Only relations
+ERROR:  invalid option "compresslevel" for base relation
+HINT:  Compression only valid for Append Only relations, create an AO relation to use compression.
 CREATE TABLE tenk_ao11 (like tenk_heap) with (blocksize=8192);
-ERROR:  invalid option 'blocksize' for base relation. Only valid for Append Only relations
+ERROR:  invalid option "blocksize" for base relation
+HINT:  "blocksize" is only valid for Append Only relations, create an AO relation to use "blocksize".
 CREATE TABLE tenk_ao12 (like tenk_heap) with (appendonly=false,blocksize=8192);
-ERROR:  invalid option 'blocksize' for base relation. Only valid for Append Only relations
+ERROR:  invalid option "blocksize" for base relation
+HINT:  "blocksize" is only valid for Append Only relations, create an AO relation to use "blocksize".
 -------------------- 
 -- catalog checks
 --------------------
@@ -663,7 +667,8 @@ WHERE relname='tenk_ao2'));
 
 -- OIDS
 CREATE TABLE aowithoids(a int, b int) WITH (appendonly=true,oids=true);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 COPY aowithoids FROM STDIN;
 SELECT * FROM aowithoids ORDER BY a; -- this should show a,b only
  a | b 

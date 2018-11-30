@@ -20,7 +20,7 @@ create readable external table float_heap(
 datatype_float varchar, x_float bigint, max_float float, min_float float, pi_float float, piX_float float, nullcol_float float
 ) location ('gphdfs://10.152.10.234:8020/plaintext/float.txt')format 'TEXT';
 create writable external table float_writehdfs(like float_heap) location ('gphdfs://10.152.10.234:8020/extwrite/float')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into float_writehdfs select * from float_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/float /mapreduce/float_gpdb/ 
 16/09/30 00:32:09 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

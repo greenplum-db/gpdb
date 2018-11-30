@@ -177,7 +177,7 @@ ExecReScanBitmapIndexScan(BitmapIndexScanState *node)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("the returning bitmap in nodeBitmapIndexScan is invalid.")));
+				 errmsg("the returning bitmap in nodeBitmapIndexScan is invalid")));
 	}
 
 	if (NULL != node->biss_result)

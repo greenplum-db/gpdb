@@ -97,7 +97,7 @@ from generate_series(0, 99) i;
 alter table vactst drop column b;
 vacuum analyze vactst;
 alter table vactst drop column i;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 vacuum analyze vactst;
 drop table vactst;
 -- vacuum analyze a table whose index has pg_statistic stats

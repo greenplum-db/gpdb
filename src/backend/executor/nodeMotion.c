@@ -1618,8 +1618,8 @@ ExecReScanMotion(MotionState *node)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Illegal rescan of motion node: invalid plan."),
-				 errhint("likely caused by bad NL-join, try setting enable_nestloop off")));
+				 errmsg("illegal rescan of motion node: invalid plan"),
+				 errhint("Likely caused by bad NL-join, try setting enable_nestloop to off")));
 	}
 	return;
 }

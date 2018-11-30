@@ -1107,9 +1107,10 @@ checkRxThreadError()
 		errno = ic_control_info.eno;
 		pthread_mutex_unlock(&ic_control_info.errorLock);
 
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect encountered an error"),
-						errdetail("%s: %m", "in receive background thread,")));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect encountered an error"),
+				 errdetail("%s: %m", "in receive background thread")));
 	}
 	pthread_mutex_unlock(&ic_control_info.errorLock);
 }
@@ -1316,9 +1317,10 @@ error:
 	if (fd >= 0)
 		closesocket(fd);
 	errno = errnoSave;
-	ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					errmsg("Interconnect Error: Could not set up udp listener socket."),
-					errdetail("%s: %m", fun)));
+	ereport(ERROR,
+			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+			 errmsg("interconnect error: Could not set up udp listener socket"),
+			 errdetail("%s: %m", fun)));
 	return;
 }
 
@@ -1375,8 +1377,9 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 
 	initConnHashTable(&ic_control_info.connHtab, ic_control_info.memContext);
 	if (!initConnHashTable(&ic_control_info.startupCacheHtab, NULL))
-		ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg("failed to initialize connection htab for startup cache")));
+		ereport(FATAL,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("failed to initialize connection htab for startup cache")));
 
 	/*
 	 * setup listening socket and sending socket for Interconnect.
@@ -1424,9 +1427,10 @@ InitMotionUDPIFC(int *listenerSocketFd, uint16 *listenerPort)
 	if (pthread_err != 0)
 	{
 		ic_control_info.threadCreated = false;
-		ereport(FATAL, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("InitMotionLayerIPC: failed to create thread"),
-						errdetail("pthread_create() failed with err %d", pthread_err)));
+		ereport(FATAL,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("InitMotionLayerIPC: failed to create thread"),
+				 errdetail("pthread_create() failed with err %d", pthread_err)));
 	}
 
 	ic_control_info.threadCreated = true;
@@ -2111,9 +2115,10 @@ error:
 	if (fd >= 0)
 		closesocket(fd);
 	errno = errnoSave;
-	ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-					errmsg("Interconnect Error: Could not set up udp listener socket."),
-					errdetail("%s: %m", fun)));
+	ereport(ERROR,
+			(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+			 errmsg("interconnect error: Could not set up udp listener socket"),
+			 errdetail("%s: %m", fun)));
 	/* Make GCC not complain. */
 	return 0;
 }
@@ -2698,12 +2703,12 @@ getSockAddr(struct sockaddr_storage *peer, socklen_t *peer_len, const char *list
 		if (addrs)
 			pg_freeaddrinfo_all(hint.ai_family, addrs);
 
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: Could not parse remote listener"
-							   "address: '%s' port '%d': %s", listenerAddr, listenerPort, gai_strerror(ret)),
-						errdetail("getaddrinfo() unable to parse address: '%s'",
-								  listenerAddr)));
-		return;
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Could not parse remote listener address: '%s' port '%d': %s",
+						listenerAddr, listenerPort, gai_strerror(ret)),
+				 errdetail("getaddrinfo() unable to parse address: '%s'",
+						   listenerAddr)));
 	}
 
 	/*
@@ -2765,9 +2770,10 @@ setupOutgoingUDPConnection(ChunkTransportState *transportStates, ChunkTransportS
 
 			if (getsockname(pEntry->txfd, (struct sockaddr *) &source_addr, &source_addr_len) == -1)
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect Error: Could not get port from socket."),
-								errdetail("%m")));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect Error: Could not get port from socket"),
+						 errdetail("%m")));
 			}
 			Assert(pEntry->txfd_family == source_addr.ss_family);
 		}
@@ -3736,9 +3742,10 @@ receiveChunksUDPIFC(ChunkTransportState *pTransportStates, ChunkTransportStateEn
 			checkQDConnectionAlive();
 
 			if (!PostmasterIsAlive())
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-								errmsg("Interconnect failed to recv chunks"),
-								errdetail("Postmaster is not alive\n")));
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("interconnect failed to recv chunks"),
+						 errdetail("Postmaster is not alive.")));
 		}
 
 		pthread_mutex_lock(&ic_control_info.lock);
@@ -4187,10 +4194,10 @@ handleAcks(ChunkTransportState *transportStates, ChunkTransportStateEntry *pEntr
 			if (errno == EINTR)
 				continue;
 
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error waiting for peer ack"),
-							errdetail("During recvfrom() call.\n")));
-			/* not reached */
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error waiting for peer ack"),
+					 errdetail("During recvfrom() call.")));
 		}
 		else if (n < sizeof(struct icpkthdr))
 		{
@@ -4954,18 +4961,22 @@ checkNetworkTimeout(ICBuffer *buf, uint64 now)
 	if (gp_log_interconnect >= GPVARS_VERBOSITY_DEBUG &&
 		buf->nRetry % Gp_interconnect_debug_retry_interval == 0)
 	{
-		ereport(LOG, (errmsg("resending packet (seq %d) to %s (pid %d cid %d) with %d retries in %lu seconds",
-							 buf->pkt->seq, buf->conn->remoteHostAndPort, buf->pkt->dstPid,
-							 buf->pkt->dstContentId, buf->nRetry, (now - buf->sentTime) / 1000 / 1000)));
+		ereport(LOG,
+				(errmsg("resending packet (seq %d) to %s (pid %d cid %d) with %d retries in %lu seconds",
+						buf->pkt->seq, buf->conn->remoteHostAndPort,
+						buf->pkt->dstPid, buf->pkt->dstContentId, buf->nRetry,
+						(now - buf->sentTime) / 1000 / 1000)));
 	}
 
 	if ((buf->nRetry > Gp_interconnect_min_retries_before_timeout) && (now - buf->sentTime) > ((uint64) Gp_interconnect_transmit_timeout * 1000 * 1000))
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect encountered a network error, please check your network"),
-						errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds",
-								  buf->pkt->seq, buf->conn->remoteHostAndPort, buf->pkt->dstPid,
-								  buf->pkt->dstContentId, buf->nRetry, Gp_interconnect_transmit_timeout)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect encountered a network error, please check your network"),
+				 errdetail("Failed to send packet (seq %d) to %s (pid %d cid %d) after %d retries in %d seconds.",
+						   buf->pkt->seq, buf->conn->remoteHostAndPort,
+						   buf->pkt->dstPid, buf->pkt->dstContentId,
+						   buf->nRetry, Gp_interconnect_transmit_timeout)));
 	}
 }
 
@@ -5087,11 +5098,14 @@ checkDeadlock(ChunkTransportStateEntry *pEntry, MotionConn *conn)
 			/* check network error. */
 			if ((now - conn->deadlockCheckBeginTime) > ((uint64) Gp_interconnect_transmit_timeout * 1000 * 1000))
 			{
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect encountered a network error, please check your network"),
-								errdetail("Did not get any response from %s (pid %d cid %d) in %d seconds",
-										  conn->remoteHostAndPort, conn->conn_info.dstPid,
-										  conn->conn_info.dstContentId, Gp_interconnect_transmit_timeout)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect encountered a network error, please check your network"),
+						 errdetail("Did not get any response from %s (pid %d cid %d) in %d seconds.",
+								   conn->remoteHostAndPort,
+								   conn->conn_info.dstPid,
+								   conn->conn_info.dstContentId,
+								   Gp_interconnect_transmit_timeout)));
 			}
 		}
 	}
@@ -5117,9 +5131,10 @@ pollAcks(ChunkTransportState *transportStates, int fd, int timeout)
 		if (errno == EINTR)
 			return false;
 
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect error waiting for peer ack"),
-						errdetail("During poll() call.\n")));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error waiting for peer ack"),
+				 errdetail("During poll() call.")));
 
 		/* not reached */
 	}
@@ -5232,9 +5247,10 @@ checkExceptions(ChunkTransportState *transportStates,
 		checkQDConnectionAlive();
 
 		if (!PostmasterIsAlive())
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Interconnect failed to send chunks"),
-							errdetail("Postmaster is not alive\n")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("interconnect failed to send chunks"),
+					 errdetail("Postmaster is not alive.")));
 	}
 }
 
@@ -5762,11 +5778,13 @@ checkQDConnectionAlive(void)
 	if (!dispatcherAYT())
 	{
 		if (Gp_role == GP_ROLE_EXECUTE)
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error segment lost contact with master (recv)")));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error segment lost contact with master (recv)")));
 		else
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error master lost contact with client (recv)")));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error master lost contact with client (recv)")));
 	}
 }
 

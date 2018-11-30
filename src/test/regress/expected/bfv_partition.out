@@ -508,13 +508,11 @@ select a, count(*) from pt where a<2 group by a;
 (2 rows)
 
 -- CLEANUP
--- start_ignore
 drop index pt_c;
-WARNING:  Only dropped the index "pt_c"
+WARNING:  only dropped the index "pt_c"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 drop table if exists pt;
 drop table if exists t;
--- end_ignore
 --
 -- Partition table with appendonly leaf, full join
 --
@@ -1566,14 +1564,14 @@ drop table mpp3594;
 CREATE TABLE mpp3512 (id int, rank int, year int, gender char(1), count int)
 DISTRIBUTED BY (id);
 create table mpp3512_part (like mpp3512) partition by range (year) ( start (2001) end (2006) every ('1'));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 NOTICE:  CREATE TABLE will create partition "mpp3512_part_1_prt_1" for table "mpp3512_part"
 NOTICE:  CREATE TABLE will create partition "mpp3512_part_1_prt_2" for table "mpp3512_part"
 NOTICE:  CREATE TABLE will create partition "mpp3512_part_1_prt_3" for table "mpp3512_part"
 NOTICE:  CREATE TABLE will create partition "mpp3512_part_1_prt_4" for table "mpp3512_part"
 NOTICE:  CREATE TABLE will create partition "mpp3512_part_1_prt_5" for table "mpp3512_part"
 create table mpp3512a (like mpp3512_part);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 \d mpp3512
    Table "bfv_partition.mpp3512"
  Column |     Type     | Modifiers 
@@ -1674,7 +1672,7 @@ CREATE TABLE mpp3762_weather (
 );
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'city' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 CREATE TABLE mpp3762_cities_partition (
         city     varchar(80) primary key,
         location point
@@ -1702,7 +1700,7 @@ NOTICE:  CREATE TABLE will create partition "mpp3762_weather_partition_1_prt_9" 
 NOTICE:  CREATE TABLE will create partition "mpp3762_weather_partition_1_prt_10" for table "mpp3762_weather_partition"
 NOTICE:  CREATE TABLE will create partition "mpp3762_weather_partition_1_prt_11" for table "mpp3762_weather_partition"
 NOTICE:  CREATE TABLE will create partition "mpp3762_weather_partition_1_prt_12" for table "mpp3762_weather_partition"
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 drop table mpp3762_cities, mpp3762_weather cascade;
 drop table mpp3762_cities_partition, mpp3762_weather_partition cascade;
 create table mpp3754a ( i int, d date, primary key (d)) partition by range(d) ( start ('2008-01-01')  inclusive end ('2008-12-01')  exclusive every (interval '1 month'));
@@ -3111,20 +3109,20 @@ NOTICE:  CREATE TABLE will create partition "mpp3817_1_prt_11" for table "mpp381
 NOTICE:  CREATE TABLE will create partition "mpp3817_1_prt_12" for table "mpp3817"
 NOTICE:  CREATE TABLE will create partition "mpp3817_1_prt_13" for table "mpp3817"
 alter table mpp3817 drop column unique1; -- Set distribution key to randomly
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 alter table mpp3817 drop column unique2;
 \d mpp3817
    Table "bfv_partition.mpp3817"
@@ -4770,7 +4768,7 @@ alter table fff_main_1_prt_1 add column c int;
 ERROR:  can't add a column to "fff_main_1_prt_1"; it is part of a partitioned table
 HINT:  You may be able to perform the operation on the partitioned table as a whole.
 create table fff_main2 (like fff_main);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 alter table fff_main_1_prt_1 inherit fff_main2;
 ERROR:  can't alter inheritance on "fff_main_1_prt_1"; it is a partitioned table or part thereof
 alter table fff_main_1_prt_1 alter column i type bigint;

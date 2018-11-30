@@ -411,7 +411,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS);
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-							 errmsg("Using default RANDOM distribution since no distribution was specified."),
+							 errmsg("using default RANDOM distribution since no distribution was specified"),
 							 errhint("Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.")));
 				}
 				else
@@ -511,9 +511,9 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					}
 
 					if (!broadcastPlan(plan, false, false, numsegments))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that SELECT INTO yet")));
-
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 				else
 				{
@@ -532,8 +532,9 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 														 true);
 
 					if (!repartitionPlan(plan, false, false, hashExpr, numsegments))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that SELECT INTO yet")));
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 
 				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
@@ -1719,16 +1720,10 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
 				elevel = NOTICE;
 		}
 
-		ereport(elevel, (errmsg("%s uses system-defined column \"%s.ctid\" "
-								"without the necessary companion column "
-								"\"%s.gp_segment_id\"",
-								cmd,
-								rte->eref->aliasname,
-								rte->eref->aliasname),
-						 errhint("To uniquely identify a row within a "
-								 "distributed table, use the \"gp_segment_id\" "
-								 "column together with the \"ctid\" column.")
-						 ));
+		ereport(elevel,
+				(errmsg("%s uses system-defined column \"%s.ctid\" without the necessary companion column \"%s.gp_segment_id\"",
+						cmd, rte->eref->aliasname, rte->eref->aliasname),
+				 errhint("To uniquely identify a row within a distributed table, use the \"gp_segment_id\" column together with the \"ctid\" column.")));
 	}
 	bms_free(relids_to_ignore);
 }								/* cdbmutate_warn_ctid_without_segid */

@@ -120,13 +120,14 @@ GPHDUri_parse_protocol(GPHDUri *uri, char **cursor)
 	if (!post_ptc)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s", uri->uri)));
+				 errmsg("invalid URI %s", uri->uri)));
 
 	uri->protocol = pnstrdup(start, post_ptc - start);
 	if (!IS_PXF_URI(uri->uri))
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: unsupported protocol '%s'", uri->uri, uri->protocol)));
+				 errmsg("invalid URI %s: unsupported protocol '%s'",
+						uri->uri, uri->protocol)));
 
 	/* set cursor to new position and return */
 	*cursor = post_ptc + strlen(PTC_SEP);
@@ -180,7 +181,7 @@ GPHDUri_parse_options(GPHDUri *uri, char **cursor)
 	if (!start || start[0] != '?')
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: missing options section", uri->uri)));
+				 errmsg("invalid URI %s: missing options section", uri->uri)));
 
 	/* skip '?' */
 	start++;
@@ -189,7 +190,7 @@ GPHDUri_parse_options(GPHDUri *uri, char **cursor)
 	if (strlen(start) < 2)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: invalid option after '?'", uri->uri)));
+				 errmsg("invalid URI %s: invalid option after '?'", uri->uri)));
 
 	/* ok, parse the options now */
 	char	   *ctx;
@@ -214,21 +215,21 @@ GPHDUri_parse_option(char *pair, GPHDUri *uri)
 	if (sep == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: option '%s' missing '='", uri->uri, pair)));
+				 errmsg("invalid URI %s: option '%s' missing '='", uri->uri, pair)));
 
 	int			key_len = sep - pair;
 
 	if (key_len == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: option '%s' missing key before '='", uri->uri, pair)));
+				 errmsg("invalid URI %s: option '%s' missing key before '='", uri->uri, pair)));
 
 	int			value_len = strlen(pair) - key_len + 1;
 
 	if (value_len == EMPTY_VALUE_LEN)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: option '%s' missing value after '='", uri->uri, pair)));
+				 errmsg("invalid URI %s: option '%s' missing value after '='", uri->uri, pair)));
 
 	option_data->key = pnstrdup(pair, key_len);
 	option_data->value = pnstrdup(sep + 1, value_len);
@@ -335,7 +336,7 @@ GPHDUri_verify_no_duplicate_options(GPHDUri *uri)
 
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: Duplicate option(s): %s", uri->uri, duplicates.data)));
+				 errmsg("invalid URI %s: Duplicate option(s): %s", uri->uri, duplicates.data)));
 		pfree(duplicates.data);
 	}
 	list_free_deep(duplicateKeys);
@@ -379,7 +380,7 @@ GPHDUri_verify_core_options_exist(GPHDUri *uri, List *coreOptions)
 		truncateStringInfo(&missing, missing.len - strlen(" and "));
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
-				 errmsg("Invalid URI %s: %s option(s) missing", uri->uri, missing.data)));
+				 errmsg("invalid URI %s: %s option(s) missing", uri->uri, missing.data)));
 	}
 	pfree(missing.data);
 }

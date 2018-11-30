@@ -135,10 +135,11 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		{
 			logChunkParseDetails(conn);
 
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error parsing message: insufficient data received."),
-							errdetail("conn->msgSize %d bytesProcessed %d < chunk-header %d",
-									  conn->msgSize, bytesProcessed, TUPLE_CHUNK_HEADER_SIZE)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error parsing message: insufficient data received"),
+					 errdetail("conn->msgSize %d bytesProcessed %d < chunk-header %d",
+							   conn->msgSize, bytesProcessed, TUPLE_CHUNK_HEADER_SIZE)));
 		}
 
 		tcSize = TUPLE_CHUNK_HEADER_SIZE + (*(uint16 *) (conn->msgPos + bytesProcessed));
@@ -162,11 +163,13 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 
 			logChunkParseDetails(conn);
 
-			ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-							errmsg("Interconnect error parsing message"),
-							errdetail("tcSize %d > max %d header %d processed %d/%d from %p",
-									  tcSize, Gp_max_packet_size,
-									  TUPLE_CHUNK_HEADER_SIZE, bytesProcessed, conn->msgSize, conn->msgPos)));
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+					 errmsg("interconnect error parsing message"),
+					 errdetail("tcSize %d > max %d header %d processed %d/%d from %p",
+							   tcSize, Gp_max_packet_size,
+							   TUPLE_CHUNK_HEADER_SIZE, bytesProcessed,
+							   conn->msgSize, conn->msgPos)));
 		}
 
 
@@ -186,9 +189,11 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 
 				logChunkParseDetails(conn);
 
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error parsing message"),
-								errdetail("tcSize %d >= conn->msgSize %d", tcSize, conn->msgSize)));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error parsing message"),
+						 errdetail("tcSize %d >= conn->msgSize %d",
+								   tcSize, conn->msgSize)));
 			}
 		}
 		Assert(tcSize < conn->msgSize);
@@ -650,9 +655,13 @@ createChunkTransportState(ChunkTransportState *transportStates,
 
 	if (pEntry->valid)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: A HTAB entry for motion node %d already exists.", motNodeID),
-						errdetail("conns %p numConns %d first sock %d", pEntry->conns, pEntry->numConns, pEntry->conns[0].sockfd)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: A HTAB entry for motion node %d already exists",
+						motNodeID),
+				 errdetail("conns %p numConns %d first sock %d",
+						   pEntry->conns, pEntry->numConns,
+						   pEntry->conns[0].sockfd)));
 	}
 
 	pEntry->valid = true;
@@ -707,15 +716,19 @@ removeChunkTransportState(ChunkTransportState *transportStates,
 
 	if (motNodeID > transportStates->size)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: Unexpected Motion Node Id: %d. During remove. (size %d)",
-							   motNodeID, transportStates->size)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Unexpected Motion Node Id: %d",
+						motNodeID),
+				 errdetail("During remove. (size %d)", transportStates->size)));
 	}
 	else if (!transportStates->states[motNodeID - 1].valid)
 	{
-		ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-						errmsg("Interconnect Error: Unexpected Motion Node Id: %d. During remove. State not valid",
-							   motNodeID)));
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("interconnect error: Unexpected Motion Node Id: %d",
+						motNodeID),
+				 errdetail("During remove. State not valid")));
 	}
 	else
 	{

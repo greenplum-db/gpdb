@@ -629,7 +629,7 @@ SELECT COUNT(*) FROM dml_union_r;
 (1 row)
 
 INSERT INTO dml_union_r SELECT (SELECT dml_union_r.d::int FROM dml_union_r INTERSECT SELECT dml_union_s.d FROM dml_union_s ORDER BY 1),1,'newval',1.000;
-ERROR:  One or more assertions failed  (entry db antova-mbp.local:5441 pid=41310)
+ERROR:  one or more assertions failed  (entry db antova-mbp.local:5441 pid=41310)
 DETAIL:  Expected no more than one row to be returned by expression
 SELECT COUNT(*) FROM dml_union_r;
  count 
@@ -1710,7 +1710,7 @@ DETAIL:  Failing row contains (3, null, s, 3).
 --
 -- like with the Postgres planner, or you get:
 --
---   ERROR:  One or more assertions failed
+--   ERROR:  one or more assertions failed
 --   DETAIL:  Expected no more than one row to be returned by expression
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.
@@ -1722,13 +1722,13 @@ SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 (1 row)
 
 UPDATE dml_union_r SET a = ( SELECT a FROM dml_union_r UNION ALL SELECT a FROM dml_union_s);
-ERROR:  One or more assertions failed
+ERROR:  one or more assertions failed
 DETAIL:  Expected no more than one row to be returned by expression
 reset optimizer_segments;
 --SELECT COUNT(DISTINCT(a)) FROM dml_union_r;
 -- @description union_update_test31: Negative Tests  more than one row returned by a sub-query used as an expression
 UPDATE dml_union_r SET b = ( SELECT a FROM dml_union_r EXCEPT ALL SELECT a FROM dml_union_s);
-ERROR:  One or more assertions failed  (seg1 antova-mbp.local:40011 pid=42293)
+ERROR:  one or more assertions failed  (seg1 antova-mbp.local:40011 pid=42293)
 DETAIL:  Expected no more than one row to be returned by expression
 --
 -- Test for creation of MergeAppend paths.

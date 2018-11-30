@@ -438,7 +438,7 @@ select localoid::regclass, attrnums, policytype, numsegments
 drop table t;
 -- INHERITS only
 create table t () inherits (t2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 select localoid::regclass, attrnums, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
  localoid | attrnums | policytype | numsegments 
@@ -449,7 +449,7 @@ select localoid::regclass, attrnums, policytype, numsegments
 drop table t;
 -- LIKE only
 create table t (like d1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 select localoid::regclass, attrnums, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
  localoid | attrnums | policytype | numsegments 
@@ -480,7 +480,7 @@ select localoid::regclass, attrnums, policytype, numsegments
 drop table t;
 -- INHERITS + LIKE
 create table t (like d1) inherits (t2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "c1" with inherited definition
 NOTICE:  merging column "c2" with inherited definition
 NOTICE:  merging column "c3" with inherited definition
@@ -509,7 +509,7 @@ select localoid::regclass, attrnums, policytype, numsegments
 drop table t;
 -- INHERITS from multiple parents
 create table t () inherits (r1, t2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "c1"
 NOTICE:  merging multiple inherited definitions of column "c2"
 NOTICE:  merging multiple inherited definitions of column "c3"
@@ -627,7 +627,7 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 create table t (like t1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 select localoid::regclass, attrnums, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
  localoid | attrnums | policytype | numsegments 

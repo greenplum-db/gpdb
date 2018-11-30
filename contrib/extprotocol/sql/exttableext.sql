@@ -674,7 +674,7 @@ DROP FUNCTION formatter_import_todrop();
 -- Note: Only STABLE is supported for formatter, this is enforced
 -- When it is not STABLE (VOLATILE, or IMMUTABLE),
 -- the expected error like:
--- ERROR: formatter function formatter_export_i is not declared STABLE. (seg1 rh55-qavm55:7533 pid=14816)
+-- ERROR: formatter function formatter_export_i is not declared STABLE (seg1 rh55-qavm55:7533 pid=14816)
 
     -- Create RET and WET using IMMUTABLE functions will succeed
     -- However query such RET or WET should fail
@@ -689,7 +689,7 @@ DROP FUNCTION formatter_import_todrop();
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_i');
 
     INSERT INTO format_w (SELECT * FROM formatsource);
-    -- ERROR:  formatter function formatter_export_i is not declared STABLE.  (seg1 rh55-qavm55:7533 pid=14816)
+    -- ERROR:  formatter function formatter_export_i is not declared STABLE  (seg1 rh55-qavm55:7533 pid=14816)
 
     -- Create RET and WET using STABLE functions 
     DROP EXTERNAL TABLE IF EXISTS format_w;

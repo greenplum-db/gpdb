@@ -10,7 +10,7 @@ ERROR:  table "bigint_readhdfs" does not exist
 -- end_ignore
 create readable external table bigint_heap(datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint, nullcol_bigint bigint) location ('gphdfs://10.152.10.234:8020/plaintext/bigint.txt')format 'TEXT';
 create writable external table bigint_writehdfs(like bigint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/bigint')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table bigint_readhdfs(like bigint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/bigint') format 'custom' (formatter='gphdfs_import');
 select count(*) from bigint_heap; 
  count 

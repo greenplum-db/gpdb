@@ -847,7 +847,7 @@ SELECT f1, f2 FROM uctest;
 
 -- Check inheritance cases
 CREATE TEMP TABLE ucchild () inherits (uctest);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO ucchild values(100, 'hundred');
 SELECT f1, f2 FROM uctest;
  f1  |   f2    

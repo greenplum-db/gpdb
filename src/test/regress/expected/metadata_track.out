@@ -321,7 +321,8 @@ drop schema mdt_dept;
           char_vary_col character varying(30),
           numeric_col numeric
           ) WITH OIDS DISTRIBUTED RANDOMLY;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
           ALTER TABLE mdt_table_with_oid SET WITHOUT OIDS;
 drop table mdt_table_with_oid;
  
@@ -879,7 +880,8 @@ drop table mdt_table_distributed_randomly;
     char_vary_col character varying(30),
     numeric_col numeric
     ) WITH OIDS DISTRIBUTED RANDOMLY;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 drop table mdt_table_with_oid;
 --
 create user mdt_user1 with superuser;
