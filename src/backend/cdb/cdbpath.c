@@ -1325,22 +1325,16 @@ cdbpath_motion_for_join(PlannerInfo *root,
 			other->move_to.numsegments = CdbPathLocus_NumSegments(other->locus);
 		}
 
-		/*
-		 * No usable equijoin preds, or caller imposed restrictions on motion.
-		 * Replicate single rel if cheaper than bottlenecking other rel.
-		 */
+		/* Broadcast single rel for below cases. */
 		else if (single->ok_to_replicate &&
-				 single->bytes < other->bytes)
+				 (other_immovable ||
+				  single->bytes < other->bytes ||
+				  other->has_wts))
 			CdbPathLocus_MakeReplicated(&single->move_to,
 										CdbPathLocus_NumSegments(other->locus));
 
-		/* Broadcast single rel if other rel has WorkTableScan */
-		else if (single->ok_to_replicate && other->has_wts)
-			CdbPathLocus_MakeReplicated(&single->move_to,
-										CdbPathLocus_NumSegments(other->locus));
-
-		/* Last resort: Move all partitions of other rel to single QE. */
-		else
+		/* Last resort: If possible, move all partitions of other rel to single QE. */
+		else if (!other_immovable)
 			other->move_to = single->locus;
 	}							/* singleQE or entry */
 
