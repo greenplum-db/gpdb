@@ -1189,7 +1189,6 @@ NOTICE:  CREATE TABLE will create partition "mdt_supplier_hybrid_part_1_prt_p1_2
 NOTICE:  CREATE TABLE will create partition "mdt_supplier_hybrid_part_1_prt_p1_2_prt_4" for table "mdt_supplier_hybrid_part_1_prt_p1"
 NOTICE:  CREATE TABLE will create partition "mdt_supplier_hybrid_part_1_prt_p1_2_prt_5" for table "mdt_supplier_hybrid_part_1_prt_p1"
 Vacuum analyse myschema.mdt_supplier_hybrid_part;
-NOTICE:  ANALYZE detected all empty sample pages for table mdt_supplier_hybrid_part, please run VACUUM FULL for accurate estimation.
 ALTER TABLE myschema.mdt_supplier_hybrid_part SET SCHEMA myschema_new;
 Vacuum myschema_new.mdt_supplier_hybrid_part;
 ALTER TABLE myschema.mdt_supplier_hybrid_part_1_prt_p1 SET SCHEMA myschema_new;

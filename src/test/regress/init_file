@@ -63,21 +63,6 @@ m/^NOTICE:.*building index for child partition ".*"/
 # E.g exchanged partition "p1" of relation "parttest_t" with relation "pg_temp_4062621"
 m/^NOTICE:.*exchanged partition ".*" with relation ".*"/
 
-# The following NOTICE is generated when a user creates a table with no
-# columns. E.g CREATE TABLE foo(). It is to inform the user that database
-# cannot find any columns on which to distribute the data. Merging tests from
-# postgres might cause the tests to output these messages and we would need to
-# manually modify the corresponding expected output. Hence we want to ignore
-# these.
-m/^NOTICE:.*Table has no attributes to distribute on./
-
-# The following NOTICE is generated when user runs ANALYZE. The NOTICE message
-# generated seems to be non deterministic in that separate test runs produce
-# the NOTICE for different tables and different number of tables. For E.g in one
-# test run it produced the following NOTICE for pg_auth and in other it
-# produced a NOTICE for pg_auth and pg_auth_constraints.
-m/^NOTICE:.*ANALYZE detected all empty sample pages for table .*, please run VACUUM FULL for accurate estimation/
-
 m/^WARNING:  could not close temporary file .*: No such file or directory/
 
 # Messages when resource group is enabled:
