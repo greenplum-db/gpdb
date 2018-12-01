@@ -1668,12 +1668,16 @@ get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
 	{
 		// String all contained in this chunk
 		out = malloc(wlen + 1);
+		if (!out)
+			return NULL;
 		memcpy(out, chunkstr->p, wlen + 1); // include the null byte
 		chunkstr->p += wlen + 1; // skip to start of next string.
 		return out;
 	}
 
 	out = malloc(wlen + 1);
+	if (!out)
+		return NULL;
 	memcpy(out, chunkstr->p, wlen);
 	out[wlen] = '\0';
 	chunkstr->p += wlen;
@@ -1692,6 +1696,8 @@ get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
 		{
 			// Remainder of String all contained in this chunk
 			out = realloc(out, strlen(out) + wlen + 1);
+			if (!out)
+				return NULL;
 			strncat(out, chunkstr->p, wlen + 1); // include the null byte
 
 			chunkstr->p += wlen + 1; // skip to start of next string.
@@ -1701,6 +1707,8 @@ get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
 		{
 			int newlen = strlen(out) + wlen;
 			out = realloc(out, newlen + 1);
+			if (!out)
+				return NULL;
 			strncat(out, chunkstr->p, wlen);
 			out[newlen] = '\0';
 
