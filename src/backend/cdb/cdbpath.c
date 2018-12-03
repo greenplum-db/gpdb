@@ -50,11 +50,7 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	double		recvrows;
 	double		sendrows;
 
-	if (! IsA(subpath, BitmapHeapPath) &&
-		! IsA(subpath, BitmapAppendOnlyPath) && 
-		! IsA(subpath, IndexPath) && 
-		! IsA(subpath, UniquePath) &&
-		CdbPathLocus_IsReplicated(motionpath->path.locus))
+	if (CdbPathLocus_IsReplicated(motionpath->path.locus))
 		/* FIXME: should use other.numsegments instead of cdbpath_segments */
 		motionpath->path.rows = subpath->rows * root->config->cdbpath_segments;
 	else
