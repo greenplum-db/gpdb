@@ -51,7 +51,6 @@ except Exception, e:
 import hashlib
 import datetime,getpass,os,signal,socket,subprocess,threading,time,traceback,re
 import uuid
-import socket
 
 thePlatform = platform.system()
 if thePlatform in ['Windows', 'Microsoft']:
@@ -67,7 +66,7 @@ EXECNAME = 'gpload'
 
 NUM_WARN_ROWS = 0
 
-# Mapping for validing our configuration file. We're only concerned with
+# Mapping for validating our configuration file. We're only concerned with
 # keys -- stuff left of ':'. It gets complex in two cases: firstly when
 # we handle blocks which have keys which are not keywords -- such as under
 # COLUMNS:. Secondly, we want to detect when users put keywords in the wrong
@@ -118,7 +117,6 @@ valid_tokens = {
     "update_columns": {'parse_children': False, 'parent': "output"},
     "update_condition": {'parse_children': True, 'parent': "output"},
     "mapping": {'parse_children': False, 'parent': "output"},
-    "including_defaults": {'parse_children': False, 'parent': 'output'},
     "preload": {'parse_children': True, 'parent': 'gpload'},
     "truncate": {'parse_children': False, 'parent': 'preload'},
     "reuse_tables": {'parse_children': False, 'parent': 'preload'},
@@ -613,7 +611,7 @@ def convertListToDelimited(identifiers):
 
 def splitUpMultipartIdentifier(id):
     """
-    Given a sql identifer like sch.tab, return a list of its
+    Given a sql identifier like sch.tab, return a list of its
     individual elements (e.g.  sch.tab would return ['sch','tab']
     """
     returnList = []
@@ -1425,7 +1423,7 @@ class gpload:
            self.schema = None
            self.table  = schemaTableList[0]
 
-        # Precendence for configuration: command line > config file > env
+        # Precedence for configuration: command line > config file > env
         # variable
 
         # host to connect to
@@ -1978,7 +1976,6 @@ class gpload:
                     for a in self.into_columns:
                         if sqlIdentifierCompare(a[0], x[0]) == True:
                            i = a
-                           found = True
                            break
                     if i:
                         if i[2] is None: i[2] = i[0]
@@ -2145,7 +2142,7 @@ class gpload:
     # 1. same target table
     # 2. same number of columns
     # 3. same names and types, in the same order
-    # 4. same distribution key (according to columns' names and thier order)
+    # 4. same distribution key (according to columns' names and their order)
     #
     def get_staging_conditions_string(self, target_table_name, staging_cols, distribution_cols):
 			
@@ -2161,7 +2158,7 @@ class gpload:
     #
     # This function will return the SQL to run in order to find out whether
     # we have an existing staging table in the catalog which could be reused for this
-    # operation, according to the mathod and the encoding conditions.
+    # operation, according to the method and the encoding conditions.
     #
     def get_reuse_staging_table_query(self, encoding_conditions):
 		
@@ -2234,7 +2231,7 @@ class gpload:
                 self.formatOpts += "%s '%s' " % (specify_str, val)
 
             else:
-                self.control_file_warning(option +''' must be single ASCII charactor, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
+                self.control_file_warning(option +''' must be single ASCII character, you can also use unprintable characters(for example: '\\x1c' / E'\\x1c' or '\\u001c' / E'\\u001c' ''')
                 self.control_file_error("Invalid option, gpload quit immediately")
                 sys.exit(2);
         else:
@@ -2421,21 +2418,8 @@ class gpload:
     #
     def create_staging_table(self):
 
-        # Do some initial work to extract the update_columns and metadata
-        # that may be needed in order to create or reuse a temp table
-        if not self.from_cols_from_user:
-            # don't put values serial columns
-            from_cols = filter(lambda a: a[3] != True, self.from_columns)
-        else:
-            from_cols = self.from_columns
-
         # make sure we set the correct distribution policy
         distcols = self.getconfig('gpload:output:match_columns', list)
-
-        # MPP-13399, CR-2227
-        including_defaults = ""
-        if self.getconfig('gpload:output:including_defaults',bool,True):
-            including_defaults = " including defaults"
 
         sql = "SELECT * FROM pg_class WHERE relname LIKE 'temp_gpload_reusable_%%';"
         resultList = self.db.query(sql.encode('utf-8')).getresult()
@@ -2617,7 +2601,6 @@ class gpload:
                 temp_update_condition = update_condition
                 updateConditionList = splitIntoLiteralsAndNonLiterals(update_condition)
                 skip = False
-                newUpdateConditionList = []
                 update_condition = ''
                 for uc in updateConditionList:
                     if skip == False:
