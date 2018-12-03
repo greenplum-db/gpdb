@@ -157,7 +157,7 @@ test_mdunlink_co_no_file_exists(void **state)
 {
 	setup_test_structures();
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 
 	// called 1 time checking column
 	assert_true(num_unlink_called == 0);
@@ -178,7 +178,7 @@ test_mdunlink_co_4_columns_1_concurrency(void **state)
 	file_present[(2*AOTupleId_MultiplierSegmentFileNum) + 1] = true;
 	file_present[(3*AOTupleId_MultiplierSegmentFileNum) + 1] = true;
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 
 	assert_true(num_unlink_called == 4);
 	assert_true(unlink_passing);
@@ -203,7 +203,7 @@ test_mdunlink_co_3_columns_2_concurrency(void **state)
 	file_present[(1*AOTupleId_MultiplierSegmentFileNum) + 5] = true;
 	file_present[(2*AOTupleId_MultiplierSegmentFileNum) + 5] = true;
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 	assert_true(num_unlink_called == 6);
 	assert_true(unlink_passing);
 	return;
@@ -216,7 +216,7 @@ test_mdunlink_co_all_columns_full_concurrency(void **state)
 
 	memset(file_present, true, sizeof(file_present));
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 
 	/*
 	 * Note num_unlink_called is one less than total files because .0 is NOT unlinked
@@ -234,8 +234,21 @@ test_mdunlink_co_one_columns_one_concurrency(void **state)
 
 	file_present[1] = true;
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 	assert_true(num_unlink_called == 1);
+	assert_true(unlink_passing);
+	return;
+}
+
+void
+test_mdunlink_does_not_unlink_for_init_fork(void **state)
+{
+	setup_test_structures();
+
+	file_present[1] = true;
+
+	mdunlink_ao(PATH_TO_DATA_FILE, INIT_FORKNUM);
+	assert_true(num_unlink_called == 0);
 	assert_true(unlink_passing);
 	return;
 }
@@ -249,7 +262,7 @@ test_mdunlink_co_one_columns_full_concurrency(void **state)
 	for (int filenum=1; filenum < MAX_AOREL_CONCURRENCY; filenum++)
 		file_present[filenum] = true;
 
-	mdunlink_ao(PATH_TO_DATA_FILE);
+	mdunlink_ao(PATH_TO_DATA_FILE, MAIN_FORKNUM);
 	assert_true(num_unlink_called == (MAX_AOREL_CONCURRENCY - 1));
 	assert_true(unlink_passing);
 	return;
@@ -269,6 +282,7 @@ main(int argc, char *argv[])
 		unit_test(test_mdunlink_co_all_columns_full_concurrency),
 		unit_test(test_mdunlink_co_3_columns_2_concurrency),
 		unit_test(test_mdunlink_co_4_columns_1_concurrency),
+		unit_test(test_mdunlink_does_not_unlink_for_init_fork),
 		unit_test(test_mdunlink_co_no_file_exists)
 	};
 

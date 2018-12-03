@@ -1015,6 +1015,9 @@ pg_relation_filepath(PG_FUNCTION_ARGS)
 		case RELKIND_INDEX:
 		case RELKIND_SEQUENCE:
 		case RELKIND_TOASTVALUE:
+		case RELKIND_AOSEGMENTS:
+		case RELKIND_AOVISIMAP:
+		case RELKIND_AOBLOCKDIR:
 			/* okay, these have storage */
 
 			/* This logic should match RelationInitPhysicalAddr */

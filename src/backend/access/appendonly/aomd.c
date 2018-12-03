@@ -208,8 +208,18 @@ struct mdunlink_ao_callback_ctx {
 };
 
 void
-mdunlink_ao(const char *path)
+mdunlink_ao(const char *path, ForkNumber forkNumber)
 {
+	/*
+	 * Unlogged AO tables have INIT_FORK, in addition to MAIN_FORK.  This
+	 * function is called for each fork type.  For INIT_FORK, the "_init"
+	 * file is unlinked generically by mdunlinkfork.
+	 */
+	if (forkNumber == INIT_FORKNUM)
+		return;
+
+	Assert(forkNumber == MAIN_FORKNUM);
+
 	int pathSize = strlen(path);
 	char *segPath = (char *) palloc(pathSize + 12);
 	char *segPathSuffixPosition = segPath + pathSize;
@@ -338,7 +348,6 @@ struct copy_append_only_data_callback_ctx {
 /*
  * Like copy_relation_data(), but for AO tables.
  *
- * Currently, AO tables don't have any extra forks.
  */
 void
 copy_append_only_data(RelFileNode src, RelFileNode dst,

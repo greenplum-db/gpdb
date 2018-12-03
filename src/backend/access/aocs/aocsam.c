@@ -162,7 +162,8 @@ open_ds_write(Relation rel, DatumStreamWrite **ds, TupleDesc relationTupleDesc,
 										blksz,
 										attr,
 										RelationGetRelationName(rel),
-										/* title */ titleBuf.data);
+										/* title */ titleBuf.data,
+										RelationNeedsWAL(rel));
 
 	}
 }
@@ -1828,7 +1829,8 @@ aocs_addcol_init(Relation rel,
 		blksz = opts[iattr]->blocksize;
 		desc->dsw[i] = create_datumstreamwrite(ct, clvl, rel->rd_appendonly->checksum, 0, blksz /* safeFSWriteSize */ ,
 											   attr, RelationGetRelationName(rel),
-											   titleBuf.data);
+											   titleBuf.data,
+											   RelationNeedsWAL(rel));
 	}
 	return desc;
 }

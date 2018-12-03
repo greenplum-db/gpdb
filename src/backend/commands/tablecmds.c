@@ -12889,25 +12889,30 @@ ATExecSetTableSpace(Oid tableOid, Oid newTableSpace, LOCKMODE lockmode)
 		/* copy main fork */
 		copy_relation_data(rel->rd_smgr, dstrel, MAIN_FORKNUM,
 						   rel->rd_rel->relpersistence);
+	}
 
-		/* copy those extra forks that exist */
-		for (forkNum = MAIN_FORKNUM + 1; forkNum <= MAX_FORKNUM; forkNum++)
+	/*
+	 * Append-only tables now include init forks for unlogged tables, so we copy
+	 * over all forks. AO tables, so far, do not have visimap or fsm forks.
+	 */
+	
+	/* copy those extra forks that exist */
+	for (forkNum = MAIN_FORKNUM + 1; forkNum <= MAX_FORKNUM; forkNum++)
+	{
+		if (smgrexists(rel->rd_smgr, forkNum))
 		{
-			if (smgrexists(rel->rd_smgr, forkNum))
-			{
-				smgrcreate(dstrel, forkNum, false);
+			smgrcreate(dstrel, forkNum, false);
 
-				/*
-				 * WAL log creation if the relation is persistent, or this is the
-				 * init fork of an unlogged relation.
-				 */
-				if (rel->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT ||
-					(rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED &&
-					 forkNum == INIT_FORKNUM))
-					log_smgrcreate(&newrnode, forkNum);
-				copy_relation_data(rel->rd_smgr, dstrel, forkNum,
-								   rel->rd_rel->relpersistence);
-			}
+			/*
+			 * WAL log creation if the relation is persistent, or this is the
+			 * init fork of an unlogged relation.
+			 */
+			if (rel->rd_rel->relpersistence == RELPERSISTENCE_PERMANENT ||
+				(rel->rd_rel->relpersistence == RELPERSISTENCE_UNLOGGED &&
+				 forkNum == INIT_FORKNUM))
+				log_smgrcreate(&newrnode, forkNum);
+			copy_relation_data(rel->rd_smgr, dstrel, forkNum,
+							   rel->rd_rel->relpersistence);
 		}
 	}
 

@@ -24,7 +24,8 @@
 #include "utils/guc.h"
 
 static void BufferedAppendWrite(
-					BufferedAppend *bufferedAppend);
+					BufferedAppend *bufferedAppend,
+					bool needsWAL);
 
 /*
  * Determines the amount of memory to supply for
@@ -139,7 +140,7 @@ BufferedAppendSetFile(BufferedAppend *bufferedAppend,
  * Perform a large write i/o.
  */
 static void
-BufferedAppendWrite(BufferedAppend *bufferedAppend)
+BufferedAppendWrite(BufferedAppend *bufferedAppend, bool needsWAL)
 {
 	int32		bytesleft;
 	int32		bytestotal;
@@ -206,7 +207,7 @@ BufferedAppendWrite(BufferedAppend *bufferedAppend)
 	 * controls the visibility of data in AO / CO files, writing xlog
 	 * record after writing to file works fine.
 	 */
-	if (!RelFileNodeBackendIsTemp(bufferedAppend->relFileNode))
+	if (needsWAL)
 		xlog_ao_insert(bufferedAppend->relFileNode.node, bufferedAppend->segmentFileNum,
 					   bufferedAppend->largeWritePosition, largeWriteMemory, bytestotal);
 
@@ -318,7 +319,8 @@ BufferedAppendCancelLastBuffer(BufferedAppend *bufferedAppend)
 void
 BufferedAppendFinishBuffer(BufferedAppend *bufferedAppend,
 						   int32 usedLen,
-						   int32 usedLen_uncompressed)
+						   int32 usedLen_uncompressed,
+						   bool needsWAL)
 {
 	int32		newLen;
 
@@ -341,7 +343,7 @@ BufferedAppendFinishBuffer(BufferedAppend *bufferedAppend,
 		 * Current large-write memory is full.
 		 */
 		bufferedAppend->largeWriteLen = bufferedAppend->maxLargeWriteLen;
-		BufferedAppendWrite(bufferedAppend);
+		BufferedAppendWrite(bufferedAppend, needsWAL);
 
 		if (newLen > bufferedAppend->maxLargeWriteLen)
 		{
@@ -392,14 +394,15 @@ BufferedAppendFinishBuffer(BufferedAppend *bufferedAppend,
 void
 BufferedAppendCompleteFile(BufferedAppend *bufferedAppend,
 						   int64 *fileLen,
-						   int64 *fileLen_uncompressed)
+						   int64 *fileLen_uncompressed,
+						   bool needsWAL)
 {
 
 	Assert(bufferedAppend != NULL);
 	Assert(bufferedAppend->file >= 0);
 
 	if (bufferedAppend->largeWriteLen > 0)
-		BufferedAppendWrite(bufferedAppend);
+		BufferedAppendWrite(bufferedAppend, needsWAL);
 
 	*fileLen = bufferedAppend->fileLen;
 	*fileLen_uncompressed = bufferedAppend->fileLen_uncompressed;

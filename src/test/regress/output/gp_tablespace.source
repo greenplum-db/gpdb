@@ -1,5 +1,37 @@
--- create a tablespace we can use
+create or replace function has_init_file_for_oid(object oid) returns boolean as $$
+	select count(pg_stat_file(p.pg_relation_filepath || '_init')) = 1 as success
+	 from (select * from pg_relation_filepath(object)) p;
+$$ language sql;
+create or replace function has_init_file(aotablename regclass, tabletype text) returns boolean as $$
+DECLARE
+	relation_id regclass;
+BEGIN
+	case tabletype
+	when 'table' then
+		relation_id := aotablename;
+	when 'index' then
+		relation_id := aotablename;
+	when 'aoseg' then
+		select segrelid into relation_id from pg_appendonly where relid = aotablename;
+	when 'blockdir' then
+		select blkdirrelid into relation_id from pg_appendonly where relid = aotablename;
+	when 'blockdirindex' then
+		select blkdiridxid into relation_id from pg_appendonly where relid = aotablename;
+	when 'visimap' then
+		select visimaprelid into relation_id from pg_appendonly where relid = aotablename;
+	when 'visimapindex' then
+		select visimapidxid into relation_id from pg_appendonly where relid = aotablename;
+	else
+		raise notice 'Invalid tabletype for has_init_file %', tabletype;
+		return false;
+	end case;
+
+	return has_init_file_for_oid(relation_id);
+END;
+$$ language plpgsql;
+-- create tablespaces we can use
 CREATE TABLESPACE testspace LOCATION '@testtablespace@';
+CREATE TABLESPACE ul_testspace LOCATION '@testtablespace@_unlogged';
 SELECT gp_segment_id,
        CASE tblspc_loc
             WHEN '@testtablespace@' THEN 'testtablespace'
@@ -14,11 +46,31 @@ FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='testsp
             -1 | testtablespace
 (4 rows)
 
+SELECT gp_segment_id,
+       CASE tblspc_loc
+            WHEN '@testtablespace@_unlogged' THEN 'testtablespace_unlogged'
+            ELSE 'testtablespace_unknown'
+       END AS tblspc_loc
+FROM gp_tablespace_location((SELECT oid FROM pg_tablespace WHERE spcname='ul_testspace'));
+ gp_segment_id |       tblspc_loc        
+---------------+-------------------------
+             2 | testtablespace_unlogged
+             1 | testtablespace_unlogged
+             0 | testtablespace_unlogged
+            -1 | testtablespace_unlogged
+(4 rows)
+
 -- Test moving AO/AOCO tables from one tablespace to another.
 CREATE TABLE ao_ts_table (id int4, t text) with (appendonly=true, orientation=row) distributed by (id);
 CREATE TABLE aoco_ts_table (id int4, t text) with (appendonly=true, orientation=column) distributed by (id);
+CREATE UNLOGGED TABLE ao_ul_ts_table (id int4, t text)
+with (appendonly=true, orientation=row) distributed by (id);
+CREATE UNLOGGED TABLE aoco_ul_ts_table (id int4, t text)
+with (appendonly=true, orientation=column) distributed by (id);
 insert into ao_ts_table select g, 'foo' || g from generate_series(1, 10000) g;
 insert into aoco_ts_table select g, 'bar' || g from generate_series(1, 10000) g;
+insert into ao_ul_ts_table select * from ao_ts_table;
+insert into aoco_ul_ts_table select * from ao_ul_ts_table;
 -- alter table to create scenario where .0 file also has data
 ALTER TABLE ao_ts_table ALTER COLUMN id TYPE bigint;
 -- to satisfy orca
@@ -29,6 +81,7 @@ ANALYZE aoco_ts_table;
 insert into ao_ts_table select g, 'foofoo' || g from generate_series(10000, 10100) g;
 insert into aoco_ts_table select g, 'barbar' || g from generate_series(10000, 10100) g;
 CREATE INDEX ao_ts_index ON ao_ts_table(id);
+CREATE INDEX ao_ul_ts_index ON ao_ul_ts_table(id);
 SELECT COUNT(*) FROM ao_ts_table;
  count 
 -------
@@ -41,9 +94,67 @@ SELECT COUNT(*) FROM aoco_ts_table;
  10101
 (1 row)
 
+SELECT COUNT(*) FROM ao_ul_ts_table;
+ count 
+-------
+ 10000
+(1 row)
+
+SELECT COUNT(*) FROM aoco_ul_ts_table;
+ count 
+-------
+ 10000
+(1 row)
+
 ALTER TABLE ao_ts_table SET TABLESPACE testspace;
 ALTER TABLE aoco_ts_table SET TABLESPACE testspace;
 ALTER INDEX ao_ts_index SET TABLESPACE testspace;
+ALTER TABLE ao_ul_ts_table SET TABLESPACE ul_testspace;
+ALTER INDEX ao_ul_ts_index SET TABLESPACE ul_testspace;
+ALTER TABLE aoco_ul_ts_table SET TABLESPACE ul_testspace;
+-- Check that init fork exists on master
+select has_init_file('ao_ul_ts_table', 'table');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_index', 'index');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_table', 'aoseg');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_table', 'blockdir');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_table', 'blockdirindex');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_table', 'visimap');
+ has_init_file 
+---------------
+ t
+(1 row)
+
+select has_init_file('ao_ul_ts_table', 'visimapindex');
+ has_init_file 
+---------------
+ t
+(1 row)
+
 INSERT INTO ao_ts_table VALUES(-1);
 INSERT INTO aoco_ts_table VALUES(-1);
 SELECT COUNT(*) FROM ao_ts_table;
@@ -56,6 +167,20 @@ SELECT COUNT(*) FROM aoco_ts_table;
  count 
 -------
  10102
+(1 row)
+
+INSERT INTO ao_ul_ts_table VALUES(-1);
+INSERT INTO aoco_ul_ts_table VALUES(-1);
+SELECT COUNT(*) FROM ao_ul_ts_table;
+ count 
+-------
+ 10001
+(1 row)
+
+SELECT COUNT(*) FROM aoco_ul_ts_table;
+ count 
+-------
+ 10001
 (1 row)
 
 -- Since count(*) for CO doesn't actually read all the columns, this query will
@@ -75,6 +200,16 @@ SELECT * FROM aoco_ts_table where id > 9995 and id < 10005;
   9999 | bar9999
 (10 rows)
 
+SELECT * FROM aoco_ul_ts_table where id > 9995 and id < 10005;
+  id   |    t     
+-------+----------
+  9999 | foo9999
+ 10000 | foo10000
+  9996 | foo9996
+  9997 | foo9997
+  9998 | foo9998
+(5 rows)
+
 -- Clean up. (It would be good to leave some extra tablespaces behind, so that
 -- they would go through the gpcheckcat, pg_upgrade, etc. passes that run
 -- after the main regression test suite. But all those tools are not up to
@@ -82,6 +217,9 @@ SELECT * FROM aoco_ts_table where id > 9995 and id < 10005;
 drop table ao_ts_table;
 drop table aoco_ts_table;
 drop tablespace testspace;
+drop table ao_ul_ts_table;
+drop table aoco_ul_ts_table;
+drop tablespace ul_testspace;
 -- Greenplum tablespaces have the option to define tablespace location for specific segments
 CREATE TABLESPACE testspace_otherloc LOCATION '@testtablespace@' WITH (content9999='@testtablespace@_otherloc'); -- should fail
 ERROR:  segment content ID 9999 does not exist

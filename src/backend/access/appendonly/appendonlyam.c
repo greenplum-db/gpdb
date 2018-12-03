@@ -2711,7 +2711,8 @@ appendonly_insert_init(Relation rel, int segno, bool update_mode)
 								aoInsertDesc->usableBlockSize,
 								RelationGetRelationName(aoInsertDesc->aoi_rel),
 								aoInsertDesc->title,
-								&aoInsertDesc->storageAttributes);
+								&aoInsertDesc->storageAttributes,
+                                RelationNeedsWAL(aoInsertDesc->aoi_rel));
 
 	aoInsertDesc->storageWrite.compression_functions = fns;
 	aoInsertDesc->storageWrite.compressionState = cs;

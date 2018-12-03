@@ -160,8 +160,8 @@ submake-contrib-dummy_seclabel:
 
 .PHONY: tablespace-setup
 tablespace-setup:
-	rm -rf ./testtablespace ./testtablespace_otherloc
-	mkdir ./testtablespace ./testtablespace_otherloc
+	rm -rf ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged
+	mkdir ./testtablespace ./testtablespace_otherloc ./testtablespace_unlogged
 
 # Check for include files that are not being shipped
 .PHONY: includecheck

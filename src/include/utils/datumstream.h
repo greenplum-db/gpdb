@@ -260,7 +260,8 @@ extern DatumStreamWrite *create_datumstreamwrite(
 						int32 maxsz,
 						Form_pg_attribute attr,
 						char *relname,
-						char *title);
+						char *title,
+						bool needsWAL);
 
 extern DatumStreamRead *create_datumstreamread(
 					   char *compName,

@@ -94,12 +94,17 @@ test__aocs_addcol_init(void **state)
 	expect_value_count(create_datumstreamwrite, safeFSWriteSize, 0, 2);
 	expect_value(create_datumstreamwrite, maxsz, 8192);
 	expect_value(create_datumstreamwrite, maxsz, 8192 * 2);
+	expect_value(create_datumstreamwrite, needsWAL, true);
+	expect_value(create_datumstreamwrite, needsWAL, true);
 	expect_any_count(create_datumstreamwrite, attr, 2);
 	expect_any_count(create_datumstreamwrite, relname, 2);
 	expect_any_count(create_datumstreamwrite, title, 2);
 	will_return_count(create_datumstreamwrite, NULL, 2);
 
 	pgappendonly.checksum = true;
+	FormData_pg_class rel;
+	rel.relpersistence = RELPERSISTENCE_PERMANENT;
+	reldata.rd_rel = &rel;
 	reldata.rd_appendonly = &pgappendonly;
 	reldata.rd_att = (TupleDesc) malloc(sizeof(struct tupleDesc));
 	reldata.rd_att->attrs =

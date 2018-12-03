@@ -486,8 +486,7 @@ mdunlinkfork(RelFileNodeBackend rnode, ForkNumber forkNum, bool isRedo, char rel
 	{
 		if (relstorage_is_ao(relstorage))
 		{
-			Assert(forkNum == MAIN_FORKNUM);
-			mdunlink_ao(path);
+			mdunlink_ao(path, forkNum);
 			pfree(path);
 			return;
 		}

@@ -1,14 +1,91 @@
 create language plpythonu;
 
-create or replace function pg_ctl(datadir text, command text)
+--
+-- pg_ctl:
+--   datadir: data directory of process to target with `pg_ctl`
+--   command: commands valid for `pg_ctl`
+--   command_mode: modes valid for `pg_ctl -m`  
+--
+create or replace function pg_ctl(datadir text, command text, command_mode text default 'immediate')
 returns text as $$
     import subprocess
 
     cmd = 'pg_ctl -D %s ' % datadir
-    if command in ('stop'):
-        cmd = cmd + '-w -m immediate %s' % command
+    if command in ('stop', 'restart'):
+        cmd = cmd + '-w -m %s %s' % (command_mode, command)
     else:
         return 'Invalid command input'
 
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
+
+--
+-- restart_primary_segments_containing_data_for(table_name text):
+--     table_name: the table containing data whose segment that needs a restart
+--
+-- Note: this does an immediate restart, which forces recovery
+--
+create or replace function restart_primary_segments_containing_data_for(table_name text) returns setof integer as $$
+declare
+	segment_id integer;
+begin
+	for segment_id in select * from primary_segments_containing_data_for(table_name)
+	loop
+		perform restart_primary_segment(segment_id); 
+	end loop;
+end;
+$$ language plpgsql;
+
+--
+-- clean_restart_primary_segments_containing_data_for(table_name text):
+--     table_name: the table containing data whose segment that needs a restart
+--
+-- Note: this does a fast restart, which does not require recovery
+--
+create or replace function clean_restart_primary_segments_containing_data_for(table_name text) returns setof integer as $$
+declare
+	segment_id integer;
+begin
+	for segment_id in select * from primary_segments_containing_data_for(table_name)
+	loop
+		perform clean_restart_primary_segment(segment_id); 
+	end loop;
+end;
+$$ language plpgsql;
+
+
+create or replace function primary_segments_containing_data_for(table_name text) returns setof integer as $$
+begin
+	return query execute 'select gp_segment_id from ' || table_name;
+end;
+$$ language plpgsql;
+
+create or replace function get_data_directory_for(segment_number int, segment_role text default 'p') returns text as $$
+BEGIN
+	return (
+		select datadir 
+		from gp_segment_configuration 
+		where role=segment_role and 
+		content=segment_number
+	);
+END;
+$$ language plpgsql;
+
+create or replace function restart_primary_segment(segment_number int) returns void as $$
+begin
+	perform pg_ctl(
+		(select get_data_directory_for(segment_number)), 
+		'restart'
+	);
+end;
+$$ language plpgsql;
+
+create or replace function clean_restart_primary_segment(segment_number int) returns void as $$
+begin
+	perform pg_ctl(
+		(select get_data_directory_for(segment_number)), 
+		'restart',
+		'fast'
+	);
+end;
+$$ language plpgsql;

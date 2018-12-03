@@ -162,7 +162,8 @@ extern void BufferedAppendCancelLastBuffer(
 extern void BufferedAppendFinishBuffer(
     BufferedAppend       *bufferedAppend,
     int32                usedLen,
-    int32				 usedLen_uncompressed);
+    int32				 usedLen_uncompressed,
+    bool 				 needsWAL);
 
 /*
  * Flushes the current file for append.  Caller is responsible for closing
@@ -171,7 +172,8 @@ extern void BufferedAppendFinishBuffer(
 extern void BufferedAppendCompleteFile(
     BufferedAppend	*bufferedAppend,
     int64 			*fileLen,
-    int64 			*fileLen_uncompressed);
+    int64 			*fileLen_uncompressed,
+    bool 			needsWAL);
 
 
 /*

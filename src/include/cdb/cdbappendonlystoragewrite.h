@@ -172,6 +172,8 @@ typedef struct AppendOnlyStorageWrite
 	PGFunction *compression_functions;	/* For AO or CO compression.                   */
 	/* The array index corresponds to COMP_FUNC_*  */
 
+	bool needsWAL;
+
 } AppendOnlyStorageWrite;
 
 extern void AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
@@ -179,7 +181,8 @@ extern void AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 										int32 maxBufferLen,
 										char *relationName,
 										char *title,
-										AppendOnlyStorageAttributes *storageAttributes);
+										AppendOnlyStorageAttributes *storageAttributes,
+										bool needsWAL);
 extern void AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite);
 
 extern void AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrite,

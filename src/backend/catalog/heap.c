@@ -1858,7 +1858,8 @@ heap_create_with_catalog(const char *relname,
 	if (relpersistence == RELPERSISTENCE_UNLOGGED)
 	{
 		Assert(relkind == RELKIND_RELATION || relkind == RELKIND_MATVIEW ||
-			   relkind == RELKIND_TOASTVALUE);
+			   relkind == RELKIND_TOASTVALUE || relkind == RELKIND_AOSEGMENTS||
+			   relkind == RELKIND_AOBLOCKDIR || relkind == RELKIND_AOVISIMAP);
 		heap_create_init_fork(new_rel_desc);
 	}
 
