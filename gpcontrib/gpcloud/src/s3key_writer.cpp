@@ -89,7 +89,7 @@ void* S3KeyWriter::UploadThreadFunc(void* data) {
     S3KeyWriter* writer = params->keyWriter;
 
     try {
-        S3DEBUG("Upload thread start: %" PRIX64 ", part number: %" PRIu64 ", data size: %" PRIu64,
+        S3DEBUG("Upload thread start: %" PRIX64 ", part number: %" PRIu64 ", data size: %zu",
                 (uint64_t) pthread_self(), params->currentNumber, params->data.size());
         string etag = writer->s3Interface->uploadPartOfData(
             params->data, writer->params.getS3Url(), params->currentNumber, writer->uploadId);
