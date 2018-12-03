@@ -3219,6 +3219,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	List	   *mergeclauses;
 	Sort	   *sort;
 	bool		prefetch = false;
+	bool		set_mat_cdb_strict = false;
 	List	   *outerpathkeys;
 	List	   *innerpathkeys;
 	int			nClauses;
@@ -3328,19 +3329,9 @@ create_mergejoin_plan(PlannerInfo *root,
 		prefetch = true;
 		if (!IsA(inner_plan, Sort))
 		{
-			if (IsA(inner_plan, Material))
-			{
-				((Material *) inner_plan)->cdb_strict = true;
-			}
-			else
-			{
-				Material   *mat;
-
-				/* need to add slack. */
-				mat = make_material(inner_plan);
-				mat->cdb_strict = true;
-				inner_plan = (Plan *) mat;
-			}
+			if (!IsA(inner_plan, Material))
+				best_path->materialize_inner = true;
+			set_mat_cdb_strict = true;
 		}
 	}
 
@@ -3352,6 +3343,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	{
 		Plan	   *matplan = (Plan *) make_material(inner_plan);
 
+		Assert(!IsA(inner_plan, Material));
+
 		/*
 		 * We assume the materialize will not spill to disk, and therefore
 		 * charge just cpu_operator_cost per tuple.  (Keep this estimate in
@@ -3362,6 +3355,9 @@ create_mergejoin_plan(PlannerInfo *root,
 
 		inner_plan = matplan;
 	}
+
+	if (set_mat_cdb_strict)
+		((Material *) inner_plan)->cdb_strict = true;
 
 	/*
 	 * Compute the opfamily/collation/strategy/nullsfirst arrays needed by the
