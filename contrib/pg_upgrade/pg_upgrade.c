@@ -570,7 +570,7 @@ create_new_objects(void)
 		parallel_exec_prog(log_file_name,
 						   NULL,
 		 "PGOPTIONS='-c gp_session_role=utility' "
-		 "\"%s/pg_restore\" %s --exit-on-error --verbose --dbname %s \"%s\"",
+		 "\"%s/pg_restore\" %s --exit-on-error --binary-upgrade --verbose --dbname %s \"%s\"",
 						   new_cluster.bindir,
 						   cluster_conn_opts(&new_cluster),
 						   escaped_connstr.data,

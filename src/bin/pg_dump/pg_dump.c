@@ -1102,6 +1102,8 @@ main(int argc, char **argv)
 
 	ropt->suppressDumpWarnings = true;	/* We've already shown them */
 
+	ropt->binary_upgrade = binary_upgrade;
+
 	SetArchiveRestoreOptions(fout, ropt);
 
 	/*
