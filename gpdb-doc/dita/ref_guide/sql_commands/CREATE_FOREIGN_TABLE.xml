@@ -12,10 +12,12 @@
       [, ... ]
 ] )
     SERVER <varname>server_name</varname>
-  [ OPTIONS ( [ mpp_execute {'any' | 'master' | 'all segments'} ], <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
         <p>where <varname>column_constraint</varname> is:</p><codeblock>
 [ CONSTRAINT <varname>constraint_name</varname> ]
-{ NOT NULL | NULL | DEFAULT <varname>default_expr</varname> }</codeblock>
+{ NOT NULL |
+  NULL |
+  DEFAULT <varname>default_expr</varname> }</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -96,11 +98,11 @@
                 <plentry>
                     <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
                     <pd>
-                      <p>Identifies the host from which the foreign data-wrapper requests data: the
-                        master, any segment, or all segments. The default option value is 
-                       '<codeph>master</codeph>'.</p>
-                      <p>Use of the <codeph>mpp_execute</codeph> option, and the specific modes
-                       supported, is foreign data-wrapper-specific.</p>
+                      <p>Option that identifies the host from which the foreign data-wrapper requests data: the
+                        master host, any segment host, or all segment hosts. The default option value
+                       is '<codeph>master</codeph>'.</p>
+                      <p>Use of the foreign table <codeph>mpp_execute</codeph> option, and the
+                       specific modes supported, is foreign data-wrapper-specific.</p>
                     </pd>
                 </plentry>
             </parml>
