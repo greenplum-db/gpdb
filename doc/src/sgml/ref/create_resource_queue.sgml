@@ -264,7 +264,7 @@ CREATE RESOURCE QUEUE myqueue WITH (MAX_COST 3e+10);
   <para> 
    Create a resource queue with both an active query limit and a query cost limit:
 <programlisting>
-CREATE RESOURCE QUEUE myqueue ITH (ACTIVE_STATEMENTS=30, MAX_COST=5000.00);
+CREATE RESOURCE QUEUE myqueue WITH (ACTIVE_STATEMENTS=30, MAX_COST=5000.00);
 </programlisting>
   </para>
  </refsect1>

@@ -51,7 +51,7 @@ PXF provides more detailed logging when the `DEBUG` level is enabled.  To config
 Copy the `pxf-log4j.properties` file to each segment host and restart the PXF service on *each* Greenplum Database segment host. For example, if `PXF_CONF=/etc/pxf/usercfg`:
 
 ``` shell
-gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-log4j.properties :=/ect/pxf/usercfg/conf/pxf-log4j.properties
+gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-log4j.properties :=/etc/pxf/usercfg/conf/pxf-log4j.properties
 gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
 ```
 
@@ -147,7 +147,7 @@ Perform the following procedure to increase the heap size for the PXF agent runn
 4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/ect/pxf/usercfg/conf/pxf-env.sh
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/etc/pxf/usercfg/conf/pxf-env.sh
     ```
 
 5. Restart PXF on each Greenplum Database segment host. For example:

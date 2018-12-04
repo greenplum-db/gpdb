@@ -195,7 +195,7 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
      ALL SEGMENTS, FDW requests for data from all segments, wrappers need to
      have a policy matching the segments to data.
 
-     For instance, file_fdw probes the mpp_execute vaule, then load different
+     For instance, file_fdw probes the mpp_execute value, then load different
      files based on the segment number. But something like gpfdist on the
      foreign side doesn't need this, which hands out a different slice of the
      data to each request, all segments could request the same location.

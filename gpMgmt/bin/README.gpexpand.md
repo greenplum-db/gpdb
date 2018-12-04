@@ -26,7 +26,7 @@ The general workflow is as below:
 - update configurations on new segments:
   - port number in `postgresql.conf`;
   - dbid;
-- update `pg_hba.conf` for the new segments to be accessable;
+- update `pg_hba.conf` for the new segments to be accessible;
 
 The catalog lock will be explained later.
 
@@ -42,7 +42,7 @@ The general workflow is as below:
 
 New segments can't and shouldn't be visible to other processes (user
 connections and auxiliary processes) until they are added to `gp_segment_
-configuration` so others can know about their existance and information;
+configuration` so others can know about their existence and information;
 
 Each global transaction will fetch or update a snapshot of `gp_segment_
 configuration` at the beginning of transaction, so new segments can be used in

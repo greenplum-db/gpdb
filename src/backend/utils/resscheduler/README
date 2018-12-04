@@ -191,8 +191,8 @@ values.
 The ignore threshold sets a lower limit for queries to be locked for execution -
 query cost < this limit means locking will be skipped.
 The overcommit parameter controls what happens for a query whose cost > cost
-limit for the queue - it either aborts (the default) or waits until noone else
-is executing. This is to avoid the situation of querys being in the wait state
+limit for the queue - it either aborts (the default) or waits until no one else
+is executing. This is to avoid the situation of queries being in the wait state
 forever.
 These last two parameters complicate the logic considerably, needless to say!
 

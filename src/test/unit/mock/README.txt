@@ -1,1 +1,1 @@
-Folder containing generated or hand-written cmockery mock files for cdb-pg
+Folder containing generated or hand-written cmockery mock files for Greenplum

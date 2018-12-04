@@ -267,7 +267,7 @@
                     <pd>If the source table does not exist, <codeph>gpcopy</codeph> returns an error
                         and quits. </pd>
                     <pd>If the destination table or database does not exist, it is created. Only the
-                        table and table data are copied, not dependant objects. Indexes are
+                        table and table data are copied, not dependent objects. Indexes are
                         re-created only if the <codeph>--drop</codeph> option is specified.
                         Dependent objects are not copied. </pd>
                     <pd>This option is not allowed with the options: <codeph>--full</codeph>,
