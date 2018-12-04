@@ -37,7 +37,6 @@ try:
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
 
-DEFAULT_NUM_WORKERS = 64
 logger = get_default_logger()
 
 
@@ -48,7 +47,7 @@ class GpStart:
                  wrapper,
                  wrapper_args,
                  skip_standby_check,
-                 parallel=DEFAULT_NUM_WORKERS,
+                 parallel=gp.DEFAULT_GPSTART_NUM_WORKERS,
                  quiet=False,
                  masteronly=False,
                  interactive=False,
@@ -426,7 +425,7 @@ class GpStart:
         # this will eventually start gpsegstart.py
         segmentStartOp = StartSegmentsOperation(self.pool, self.quiet, self.gpversion,
                                                 self.gphome, self.master_datadir, self.master_checksum_value,
-                                                self.timeout, self.specialMode, self.wrapper, self.wrapper_args,
+                                                self.timeout, self.specialMode, self.wrapper, self.wrapper_args, self.parallel,
                                                 logfileDirectory=self.logfileDirectory)
         segmentStartResult = segmentStartOp.startSegments(self.gparray, segmentsToStart, startMode, self.era)
 
@@ -789,8 +788,8 @@ class GpStart:
                          help='start master instance only in maintenance mode')
         addTo.add_option('-y', '--no_standby', dest="start_standby", action='store_false', default=True,
                          help='do not start master standby server')
-        addTo.add_option('-B', '--parallel', type="int", default=DEFAULT_NUM_WORKERS, metavar="<parallel_processes>",
-                         help='number of segment hosts to run in parallel. Default is %d' % DEFAULT_NUM_WORKERS)
+        addTo.add_option('-B', '--parallel', type="int", default=gp.DEFAULT_GPSTART_NUM_WORKERS, metavar="<parallel_processes>",
+                         help='number of segment hosts to run in parallel. Default is %d' % gp.DEFAULT_GPSTART_NUM_WORKERS)
         addTo.add_option('-R', '--restricted', action='store_true',
                          help='start in restricted mode. Only users with superuser privilege are allowed to connect.')
         addTo.add_option('-t', '--timeout', dest='timeout', default=SEGMENT_TIMEOUT_DEFAULT, type='int',

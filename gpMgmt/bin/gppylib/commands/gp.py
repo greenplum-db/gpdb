@@ -29,11 +29,11 @@ GPHOME=os.environ.get('GPHOME')
 SEGMENT_TIMEOUT_DEFAULT=600
 SEGMENT_STOP_TIMEOUT_DEFAULT=120
 
-#Maximum allowed number of workers for segstart
-SEGMENT_START_MAX_WORKERS=64
-
 #"Command not found" return code in bash
 COMMAND_NOT_FOUND=127
+
+#Default size of thread pool for gpstart and gpsegstart
+DEFAULT_GPSTART_NUM_WORKERS=64
 
 def get_postmaster_pid_locally(datadir):
     cmdStr = "ps -ef | grep postgres | grep -v grep | awk '{print $2}' | grep `cat %s/postmaster.pid | head -1` || echo -1" % (datadir)
@@ -608,6 +608,15 @@ class GpSegStartArgs(CmdArgs):
             self.append(data)
         return self
 
+    def set_parallel(self, parallel):
+        """
+        @param parallel - maximum size of a thread pool to start segments
+        """
+        if parallel is not None:
+            self.append("-B")
+            self.append(str(parallel))
+        return self
+
 
 
 class GpSegStartCmd(Command):
@@ -616,7 +625,7 @@ class GpSegStartCmd(Command):
                  timeout=SEGMENT_TIMEOUT_DEFAULT, verbose=False,
                  ctxt=LOCAL, remoteHost=None, pickledTransitionData=None,
                  specialMode=None, wrapper=None, wrapper_args=None,
-                 logfileDirectory=False):
+                 parallel=None, logfileDirectory=False):
 
         # Referenced by calling code (in operations/startSegments.py), create a clone
         self.dblist = [x for x in segments]
@@ -628,6 +637,7 @@ class GpSegStartCmd(Command):
         c.set_transition(pickledTransitionData)
         c.set_wrapper(wrapper, wrapper_args)
         c.set_segments(segments)
+        c.set_parallel(parallel)
 
         cmdStr = str(c)
         logger.debug(cmdStr)
