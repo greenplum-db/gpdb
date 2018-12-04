@@ -103,7 +103,7 @@ test: db_size_functions
 
 ignore: gp_portal_error
 test: external_table external_table_create_privs column_compression eagerfree alter_table_aocs alter_table_aocs2 alter_distribution_policy aoco_privileges aocs
-test: alter_table_set alter_table_gp alter_table_ao ao_create_alter_valid_table subtransaction_visibility oid_consistency udf_exception_blocks
+test: alter_table_set alter_table_gp alter_table_ao subtransaction_visibility oid_consistency udf_exception_blocks
 test: ic
 
 test: resource_queue
