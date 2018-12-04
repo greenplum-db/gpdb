@@ -5,6 +5,7 @@
   {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> )
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
   } [, ... ]
+
 ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> DROP
   {  OPERATOR s<varname>trategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) 
