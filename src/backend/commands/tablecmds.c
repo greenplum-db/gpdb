@@ -29,6 +29,7 @@
 #include "access/relscan.h"
 #include "access/sysattr.h"
 #include "access/xact.h"
+#include "catalog/aocatalog.h"
 #include "catalog/catalog.h"
 #include "catalog/dependency.h"
 #include "catalog/heap.h"
@@ -1948,9 +1949,7 @@ truncate_check_rel(Relation rel)
 	 * tables so that they can be wiped and recreated by the upgrade machinery.
 	 */
 	if (rel->rd_rel->relkind != RELKIND_RELATION &&
-		!(IsBinaryUpgrade && (rel->rd_rel->relkind == RELKIND_AOSEGMENTS ||
-							  rel->rd_rel->relkind == RELKIND_AOBLOCKDIR ||
-							  rel->rd_rel->relkind == RELKIND_AOVISIMAP)))
+		!(IsBinaryUpgrade && IsAppendonlyMetadataRelkind(rel->rd_rel->relkind)))
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 				 errmsg("\"%s\" is not a table",
@@ -12107,9 +12106,7 @@ ATExecChangeOwner(Oid relationOid, Oid newOwnerId, bool recursing, LOCKMODE lock
 		if (tuple_class->relkind == RELKIND_RELATION ||
 			tuple_class->relkind == RELKIND_MATVIEW ||
 			tuple_class->relkind == RELKIND_TOASTVALUE ||
-			tuple_class->relkind == RELKIND_AOSEGMENTS ||
-			tuple_class->relkind == RELKIND_AOBLOCKDIR ||
-			tuple_class->relkind == RELKIND_AOVISIMAP)
+			IsAppendonlyMetadataRelkind(tuple_class->relkind))
 		{
 			List	   *index_oid_list;
 			ListCell   *i;
@@ -15607,9 +15604,7 @@ rel_get_table_oid(Relation rel)
 
 		return toid;
 	}
-	else if (rel->rd_rel->relkind == RELKIND_AOSEGMENTS ||
-			 rel->rd_rel->relkind == RELKIND_AOBLOCKDIR ||
-			 rel->rd_rel->relkind == RELKIND_AOVISIMAP ||
+	else if (IsAppendonlyMetadataRelkind(rel->rd_rel->relkind) ||
 			 rel->rd_rel->relkind == RELKIND_TOASTVALUE)
 	{
 		/* use pg_depend to find parent */

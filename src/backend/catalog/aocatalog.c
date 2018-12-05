@@ -236,3 +236,10 @@ CreateAOAuxiliaryTable(
 
 	return true;
 }
+
+bool
+IsAppendonlyMetadataRelkind(const char relkind) {
+	return (relkind == RELKIND_AOSEGMENTS ||
+			relkind == RELKIND_AOBLOCKDIR ||
+			relkind == RELKIND_AOVISIMAP);
+}

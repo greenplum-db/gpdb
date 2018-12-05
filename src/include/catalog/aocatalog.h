@@ -30,4 +30,6 @@ extern bool CreateAOAuxiliaryTable(
 		int16 *coloptions,
 		bool is_part_parent);
 
+extern bool IsAppendonlyMetadataRelkind(const char relkind);
+
 #endif   /* AOCATALOG_H */

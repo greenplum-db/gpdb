@@ -34,6 +34,7 @@
 #include "nodes/plannodes.h"
 #include "nodes/readfuncs.h"
 #include "nodes/relation.h"
+#include "catalog/aocatalog.h"
 #include "catalog/pg_class.h"
 #include "catalog/heap.h"
 #include "cdb/cdbgang.h"
@@ -1083,9 +1084,7 @@ _readCreateStmt_common(CreateStmt *local_node)
 		   local_node->relKind == RELKIND_COMPOSITE_TYPE ||
 		   local_node->relKind == RELKIND_FOREIGN_TABLE ||
 		   local_node->relKind == RELKIND_UNCATALOGED ||
-		   local_node->relKind == RELKIND_AOSEGMENTS ||
-		   local_node->relKind == RELKIND_AOBLOCKDIR ||
-		   local_node->relKind == RELKIND_AOVISIMAP);
+		   IsAppendonlyMetadataRelkind(local_node->relKind));
 	Assert(local_node->oncommit <= ONCOMMIT_DROP);
 }
 
