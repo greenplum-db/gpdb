@@ -1,0 +1,64 @@
+-- expect: create table succeeds
+create unlogged table unlogged_heap_table_managers ( id int, name text ) distributed by (id);
+CREATE
+
+
+-- expect: insert/update/select works
+insert into unlogged_heap_table_managers values (1, 'Joe');
+INSERT 1
+insert into unlogged_heap_table_managers values (2, 'Jane');
+INSERT 1
+update unlogged_heap_table_managers set name = 'Susan' where id = 2;
+UPDATE 1
+select * from unlogged_heap_table_managers order by id;
+id|name 
+--+-----
+1 |Joe  
+2 |Susan
+(2 rows)
+
+-- ensure that operations have been written to the xlog before testing recovery
+1: checkpoint;
+CHECKPOINT
+
+-- force an unclean stop and recovery:
+! gpstop -rai > /tmp/unlogged_heap_tables_forced_restart.log;
+
+
+-- expect inserts/updates are truncated after crash recovery
+2: select * from unlogged_heap_table_managers;
+id|name
+--+----
+(0 rows)
+
+
+-- expect: insert/update/select works
+3: insert into unlogged_heap_table_managers values (1, 'Joe');
+INSERT 1
+3: insert into unlogged_heap_table_managers values (2, 'Jane');
+INSERT 1
+3: update unlogged_heap_table_managers set name = 'Susan' where id = 2;
+UPDATE 1
+3: select * from unlogged_heap_table_managers order by id;
+id|name 
+--+-----
+1 |Joe  
+2 |Susan
+(2 rows)
+
+-- force a clean stop and recovery:
+! gpstop -ra > /tmp/unlogged_heap_tables_clean_restart.log;
+
+
+-- expect: inserts/updates are persisted
+4: select * from unlogged_heap_table_managers order by id;
+id|name 
+--+-----
+1 |Joe  
+2 |Susan
+(2 rows)
+
+-- expect: drop table succeeds
+5: drop table unlogged_heap_table_managers;
+DROP
+

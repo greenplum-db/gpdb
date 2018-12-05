@@ -143,6 +143,7 @@ test: crash_recovery_redundant_dtx
 test: crash_recovery_dtm
 test: uao_crash_compaction_row
 test: uao_crash_compaction_column
+test: unlogged_heap_tables
 test: udf_exception_blocks_panic_scenarios
 
 # Reindex tests
