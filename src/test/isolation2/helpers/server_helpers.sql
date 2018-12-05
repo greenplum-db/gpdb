@@ -1,4 +1,5 @@
-create language plpythonu;
+create or replace language plpythonu;
+
 
 --
 -- pg_ctl:
@@ -9,15 +10,37 @@ create language plpythonu;
 create or replace function pg_ctl(datadir text, command text, command_mode text default 'immediate')
 returns text as $$
     import subprocess
-
-    cmd = 'pg_ctl -D %s ' % datadir
-    if command in ('stop', 'restart'):
-        cmd = cmd + '-w -m %s %s' % (command_mode, command)
-    else:
+    if command not in ('stop', 'restart'):
         return 'Invalid command input'
+
+    cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
+    cmd = cmd + '-w -m %s %s' % (command_mode, command)
 
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;
+
+
+--
+-- pg_ctl_start:
+--
+-- Start a specific greenplum segment
+--
+-- intentionally separate from pg_ctl() because it needs more information
+--
+--   datadir: data directory of process to target with `pg_ctl`
+--   port: which port the server should start on
+--   gp_contentid: argument to be passed to `pg_ctl` as the `gp_contentid`
+--   gp_dbid: argument to be passed to `pg_ctl` as the `gp_dbid`
+--
+create or replace function pg_ctl_start(datadir text, port int, contentid int, dbid int)
+returns text as $$
+    import subprocess
+    cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
+    opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
+    cmd = cmd + '-o "%s" start' % opts
+    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+$$ language plpythonu;
+
 
 --
 -- restart_primary_segments_containing_data_for(table_name text):
@@ -31,10 +54,15 @@ declare
 begin
 	for segment_id in select * from primary_segments_containing_data_for(table_name)
 	loop
-		perform restart_primary_segment(segment_id); 
+		perform pg_ctl(
+      (select get_data_directory_for(segment_id)),
+      'restart',
+      'immediate'
+    );
 	end loop;
 end;
 $$ language plpgsql;
+
 
 --
 -- clean_restart_primary_segments_containing_data_for(table_name text):
@@ -48,7 +76,11 @@ declare
 begin
 	for segment_id in select * from primary_segments_containing_data_for(table_name)
 	loop
-		perform clean_restart_primary_segment(segment_id); 
+		perform pg_ctl(
+      (select get_data_directory_for(segment_id)),
+      'restart',
+      'fast'
+    );
 	end loop;
 end;
 $$ language plpgsql;
@@ -56,9 +88,10 @@ $$ language plpgsql;
 
 create or replace function primary_segments_containing_data_for(table_name text) returns setof integer as $$
 begin
-	return query execute 'select gp_segment_id from ' || table_name;
+	return query execute 'select distinct gp_segment_id from ' || table_name;
 end;
 $$ language plpgsql;
+
 
 create or replace function get_data_directory_for(segment_number int, segment_role text default 'p') returns text as $$
 BEGIN
@@ -71,21 +104,3 @@ BEGIN
 END;
 $$ language plpgsql;
 
-create or replace function restart_primary_segment(segment_number int) returns void as $$
-begin
-	perform pg_ctl(
-		(select get_data_directory_for(segment_number)), 
-		'restart'
-	);
-end;
-$$ language plpgsql;
-
-create or replace function clean_restart_primary_segment(segment_number int) returns void as $$
-begin
-	perform pg_ctl(
-		(select get_data_directory_for(segment_number)), 
-		'restart',
-		'fast'
-	);
-end;
-$$ language plpgsql;

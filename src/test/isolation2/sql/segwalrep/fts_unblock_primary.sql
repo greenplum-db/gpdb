@@ -17,23 +17,8 @@ begin /* in func */
 end; /* in func */
 $$ language plpgsql;
 
--- start_ignore
-create language plpythonu;
--- end_ignore
+1I: helpers/server_helpers.sql;
 
-create or replace function pg_ctl(datadir text, command text, port int, contentid int, dbid int)
-returns text as $$
-    import subprocess
-    cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
-    if command in ('stop', 'restart'):
-        cmd = cmd + '-w -m immediate %s' % command
-    elif command == 'start':
-        opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
-        cmd = cmd + '-o "%s" start' % opts
-    else:
-        return 'Invalid command input'
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
-$$ language plpythonu;
 
 -- make sure we are in-sync for the primary we will be testing with
 select content, role, preferred_role, mode, status from gp_segment_configuration;
@@ -60,7 +45,7 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'stop', NULL, NULL, NULL);
+-1U: select pg_ctl((select get_data_directory_for(2, 'm')), 'stop');
 
 -- this should block since mirror is not up and sync replication is on
 2: begin;
@@ -99,7 +84,7 @@ select gp_inject_fault_infinite('initialize_wal_sender', 'suspend', dbid)
 from gp_segment_configuration where role='p' and content=2;
 
 -- bring the mirror back up and see primary s/u and mirror s/u
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), 'start', (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), 2, (select dbid from gp_segment_configuration c where c.role='m' and c.content=2));
+-1U: select pg_ctl_start((select datadir from gp_segment_configuration c where c.role='m' and c.content=2), (select port from gp_segment_configuration where content = 2 and preferred_role = 'm'), 2, (select dbid from gp_segment_configuration c where c.role='m' and c.content=2));
 select gp_wait_until_triggered_fault('initialize_wal_sender', 1, dbid)
 from gp_segment_configuration where role='p' and content=2;
 -- make sure the walsender on primary is in startup

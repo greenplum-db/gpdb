@@ -1,22 +1,8 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
 
 -- start_ignore
-create language plpythonu;
+1I: helpers/server_helpers.sql;
 -- end_ignore
-
-create or replace function pg_ctl(datadir text, command text, port int, contentid int, dbid int)
-returns text as $$
-    import subprocess
-    cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
-    if command in ('stop', 'restart'):
-        cmd = cmd + '-w -m immediate %s' % command
-    elif command == 'start':
-        opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
-        cmd = cmd + '-o "%s" start' % opts
-    else:
-        return 'Invalid command input'
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
-$$ language plpythonu;
 
 -- make sure we are in-sync for the primary we will be testing with
 select content, role, preferred_role, mode, status from gp_segment_configuration;
@@ -38,14 +24,14 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror and show commit on dbid 2 will block
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL, NULL);
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop');
 -- We should insert a tuple to segment 0.
 -- With jump consistent hash as the underlying hash algorithm,
 -- a int value of 4 is on seg0.
 0U&: insert into segwalrep_commit_blocking values (4);
 
 -- restart primary dbid 2
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart', NULL, NULL, NULL);
+-1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='p' and c.content=0), 'restart');
 
 -- should show dbid 2 utility mode connection closed because of primary restart
 0U<:
@@ -63,7 +49,7 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 4: insert into segwalrep_commit_blocking values (3);
 
 -- bring the mirror back up
--1U: select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0, (select dbid from gp_segment_configuration c where c.role='m' and c.content=0));
+-1U: select pg_ctl_start(datadir, port, content, dbid) from gp_segment_configuration where role = 'm' and content = 0;
 
 -- should unblock and commit now that mirror is back up and in-sync
 3<:
