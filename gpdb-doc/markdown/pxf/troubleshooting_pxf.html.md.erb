@@ -130,11 +130,10 @@ Each PXF agent running on a segment host is configured with a default maximum Ja
 
 Perform the following procedure to increase the heap size for the PXF agent running on each segment host in your Greenplum Database cluster.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Recall the location of the PXF user configuration directory ($PXF_CONF). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
@@ -165,11 +164,10 @@ The Tomcat default maximum number of threads is 300. Decrease the maximum number
 
 Perform the following procedure to decrease the maximum number of Tomcat threads for the PXF agent running on each segment host in your Greenplum Database deployment.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Edit the `$GPHOME/pxf/pxf-service/conf/server.xml` file. For example:

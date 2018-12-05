@@ -21,11 +21,10 @@ The PXF upgrade procedure has two parts. You perform one procedure before, and o
 
 Perform this procedure before you upgrade to a new version of Greenplum Database:
 
-1. Log in to the Greenplum Database master node and set up the environment. For example:
+1. Log in to the Greenplum Database master node. For example:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
@@ -48,11 +47,10 @@ Perform this procedure before you upgrade to a new version of Greenplum Database
 
 After you upgrade to the new version of Greenplum Database, perform the following procedure to upgrade and configure the *PXF.to* software:
 
-1. Log in to the Greenplum Database master node and set up the environment. For example:
+1. Log in to the Greenplum Database master node. For example:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Initialize PXF on each segment host as described in [Initializing PXF](cfginitstart_pxf.html#init_pxf).

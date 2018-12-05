@@ -12,11 +12,10 @@ As an alternative, you can disable PXF user impersonation. With user impersonati
 
 Perform the following procedure to turn PXF user impersonation on or off in your Greenplum Database cluster. If you are configuring PXF for the first time, user impersonation is enabled by default. You need not perform this procedure.
 
-1. Log in to your Greenplum Database master node as the administrative user and set up the environment:
+1. Log in to your Greenplum Database master node as the administrative user:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Recall the location of the PXF user configuration directory (`$PXF_CONF`). Open the `$PXF_CONF/conf/pxf-env.sh` configuration file in a text editor. For example:

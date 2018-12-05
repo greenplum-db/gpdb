@@ -57,11 +57,10 @@ Before initializing PXF in your Greenplum Database cluster, ensure that:
 
 Perform the following procedure to initialize PXF on each segment host in your Greenplum Database cluster.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 4. Run the `pxf cluster init` command to initialize the PXF service on the master and each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization.)
@@ -110,11 +109,10 @@ Before you start PXF in your Greenplum Database cluster, ensure that:
 
 Perform the following procedure to start PXF on each segment host in your Greenplum Database cluster.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 3. Run the `pxf cluster start` command to start PXF on each segment host. For example:
@@ -135,11 +133,10 @@ Before you stop PXF in your Greenplum Database cluster, ensure that your Greenpl
 
 Perform the following procedure to stop PXF on each segment host in your Greenplum Database cluster.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 3. Run the `pxf cluster stop` command to stop PXF on each segment host. For example:
@@ -162,11 +159,10 @@ Before you restart PXF in your Greenplum Database cluster, ensure that your Gree
 
 Perform the following procedure to restart PXF in your Greenplum Database cluster.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Restart PXF:
@@ -184,11 +180,10 @@ Only the `gpadmin` user can request the status of the PXF service.
 
 Perform the following procedure to request PXF status on each segment host in your Greenplum Database cluster.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Use the `gpssh` command and a seghostfile to run the `pxf status` command on each segment host:

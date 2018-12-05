@@ -19,11 +19,10 @@ Perform the following procedure to configure the desired PXF Hadoop-related conn
 
 You will use the `gpscp` utility where possible to copy files to multiple hosts.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. PXF requires information from `core-site.xml` and other Hadoop configuration files. Copy relevant configuration from your Hadoop cluster to each Greenplum Database segment host.

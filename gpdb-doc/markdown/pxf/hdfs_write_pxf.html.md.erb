@@ -348,11 +348,10 @@ public class PxfExample_CustomWritable implements Writable {
     $ scp pxfex-customwritable.jar gpadmin@gpmaster:/home/gpadmin
     ```
 
-4. Log in to your Greenplum Database master node and set up the environment:
+4. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ````
 
 5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory on each Greenplum Database segment host, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
