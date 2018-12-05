@@ -163,14 +163,14 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           by the partitioned table. </li>
         <li id="bd138204">When you run <codeph>ANALYZE</codeph> on a leaf child partition,
           statistics are collected only for that leaf child partition and the root partition. If
-          data in leaf child partition has changed, (for example, you make significant updates to
-          the leaf child partition data or exchange the leaf child partition), you can run
-            <codeph>ANALYZE</codeph> on a leaf child partition to collect table statistics. By
-          default, if all other leaf child partitions have statistics, the command updates the root
-          partition statistics. <p>For example, if you collected statistics on a partitioned table
-            with a large number partitions and then update data in only a few leaf child partitions,
-            you can run <codeph>ANALYZE</codeph> on those partitions to update statistics on the
-            partitions and the root partition statistics.</p></li>
+          data in the leaf partition has changed (for example, you made significant updates to the
+          leaf child partition data or you exchanged the leaf child partition), then you can run
+          ANALYZE on the leaf child partition to collect table statistics. By default, if all other
+          leaf child partitions have statistics, the command updates the root partition statistics.
+            <p>For example, if you collected statistics on a partitioned table with a large number
+            partitions and then updated data in only a few leaf child partitions, you can run
+              <codeph>ANALYZE</codeph> only on those partitions to update statistics on the
+            partitions and the statistics on the root partition.</p></li>
         <li>When you run <codeph>ANALYZE</codeph> on a child table that is not a leaf child
           partition, statistics are not collected. <p>For example, you can create a partitioned
             table with partitions for the years 2006 to 2016 and subpartitions for each month in
