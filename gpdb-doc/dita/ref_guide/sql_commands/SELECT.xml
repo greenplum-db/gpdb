@@ -699,11 +699,9 @@ FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblo
           use an <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique
           order. Otherwise you will get an unpredictable subset of the query's rows — you may be
           asking for the tenth through twentieth rows, but tenth through twentieth in what ordering?
-          You don't know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The
-          query optimizer takes <codeph>LIMIT</codeph> into account when generating a query plan, so
-          you are very likely to get different plans (yielding different row orders) depending on
-          what you use for <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
-            <codeph>LIMIT/OFFSET</codeph> values to select different subsets of a query result will
+          You don't know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>
+          Using different
+            <codeph>LIMIT/OFFSET</codeph> values to select different subsets of a query result can
           give inconsistent results unless you enforce a predictable result ordering with
             <codeph>ORDER BY</codeph>. This is not a defect; it is an inherent consequence of the
           fact that SQL does not promise to deliver the results of a query in any particular order
