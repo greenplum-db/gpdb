@@ -99,7 +99,7 @@
                     <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
                     <pd>
                       <p>Option that identifies the host from which the foreign data-wrapper requests data: the
-                        master host, any segment host, or all segment hosts. The default option value
+                        master host, any (master or single segment) host, or all segment hosts. The default option value
                        is '<codeph>master</codeph>'.</p>
                       <p>Use of the foreign table <codeph>mpp_execute</codeph> option, and the
                        specific modes supported, is foreign data-wrapper-specific.</p>
