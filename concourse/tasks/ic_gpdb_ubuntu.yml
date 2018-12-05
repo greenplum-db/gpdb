@@ -11,5 +11,6 @@ params:
   WITH_MIRRORS:
   TRANSFER_DIR: compiled_bits_ubuntu16
   COMPILED_BITS_FILENAME: compiled_bits_ubuntu16.tar.gz
+  GREENPLUM_INSTALL_DIR:
 run:
   path: gpdb_src/concourse/scripts/ic_gpdb_ubuntu.bash

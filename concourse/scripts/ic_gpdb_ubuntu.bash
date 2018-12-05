@@ -3,7 +3,7 @@
 set -eox pipefail
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-GREENPLUM_INSTALL_DIR=/usr/local/gpdb
+: ${GREENPLUM_INSTALL_DIR:=/usr/local/gpdb}
 
 function load_transfered_bits_into_install_dir() {
   mkdir -p $GREENPLUM_INSTALL_DIR
