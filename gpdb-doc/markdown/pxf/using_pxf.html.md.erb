@@ -173,11 +173,11 @@ A PXF profile definition includes the name of the profile, a description, and th
 
 ## <a id="profile-dependencies"></a>PXF JAR Dependencies
 
-You use PXF to access data stored on external systems. Depending upon the external data store, this access may require that you install and/or configure additional components or services for the external data store. For example, to use PXF to access a file stored in HDFS, you must install a Hadoop client on each Greenplum Database segment host.
+You use PXF to access data stored on external systems. Depending upon the external data store, this access may require that you install and/or configure additional components or services for the external data store.
 
-PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` and `$GPHOME/pxf/conf/pxf-public.classpath` configuration files identify PXF JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on your Hadoop distribution and optional Hive and HBase client installations.
+PXF depends on JAR files and other configuration information provided by these additional components. The `$GPHOME/pxf/conf/pxf-private.classpath` file identifies PXF internal JAR dependencies. In most cases, PXF manages the `pxf-private.classpath` file, adding entries as necessary based on the connectors that you use.
 
-Should you need to add additional JAR dependencies for PXF, for example a JDBC driver JAR file, you must add them to the `pxf-public.classpath` file on each segment host, and then restart PXF on each host.
+Should you need to add an additional JAR dependency for PXF, for example a JDBC driver JAR file, you must copy the JAR file to the PXF user configuration runtime library directory (`$PXF_CONF/lib`) on each segment host, and then restart PXF on each host.
 
 
 ## <a id="creatinganexternaltable"></a>Creating an External Table using PXF

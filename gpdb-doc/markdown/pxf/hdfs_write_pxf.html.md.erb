@@ -31,7 +31,7 @@ This section describes how to use PXF to write HDFS data, including how to creat
 
 Before writing HDFS data using PXF, ensure that:
 
--  You have installed and configured a Hadoop client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
+-  You have configured the PXF Hadoop connector on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions.
 - You have initialized and started PXF on your Greenplum Database segment hosts. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 - You have granted both *read and write* permissions to the HDFS directories that will be accessed as external tables in Greenplum Database. If user impersonation is enabled (the default), you must grant these permissions to each Greenplum Database user/role name that will use external tables that reference the HDFS files. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 
@@ -348,31 +348,19 @@ public class PxfExample_CustomWritable implements Writable {
     $ scp pxfex-customwritable.jar gpadmin@gpmaster:/home/gpadmin
     ```
 
-4. Log in to your Greenplum Database master node and set up the environment:
+4. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ````
 
-5. Copy the `pxfex-customwritable.jar` JAR file to the same location on each Greenplum Database segment host, and note the location. For example:
+5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory on each Greenplum Database segment host, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /home/gpadmin/pxfex-customwritable.jar =:/tmp/pxfex-customwritable.jar
+    gpadmin@gpmaster$ gpscp -v -f seghostfile /home/gpadmin/pxfex-customwritable.jar =:/etc/pxf/usercfg/lib/pxfex-customwritable.jar
     ```
 
-4. Edit the PXF Agent classpath and add the absolute path to the `pxfex-customwritable.jar` JAR file in `$GPHOME/pxf/conf/pxf-public.classpath`. For example:
-
-    ``` pre
-    /tmp/pxfex-customwritable.jar
-    ```
-
-5. Copy the updated `pxf-public.classpath` file to each segment host and then restart PXF on each host. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-public.classpath =:/usr/local/greenplum-db/pxf/conf/pxf-public.classpath
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+3. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 5. Use the PXF `SequenceWritable` profile to create a Greenplum Database writable external table. Identify the serialization/deserialization Java class you created above in the `DATA-SCHEMA` \<custom-option\>. Use `BLOCK` mode compression with `BZip2` when you create the writable table.
 

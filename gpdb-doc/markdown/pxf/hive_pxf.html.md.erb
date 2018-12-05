@@ -29,7 +29,7 @@ The PXF Hive connector reads data stored in a Hive table. This section describes
 
 Before working with Hive table data using PXF, ensure that:
 
-- You have installed and configured a Hive client on each Greenplum Database segment host. Refer to [Installing and Configuring Hadoop Clients for PXF](client_instcfg.html) for instructions.
+- You have configured the PXF Hadoop and Hive connectors on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions.
 - You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
 
 
@@ -329,7 +329,7 @@ Use the `HiveRC` profile to query RCFile-formatted data in a Hive table.
 
 The Optimized Row Columnar (ORC) file format is a columnar file format that provides a highly efficient way to both store and access HDFS data. ORC format offers improvements over text and RCFile formats in terms of both compression and performance. PXF supports ORC version 1.2.1.
 
-ORC is type-aware and specifically designed for Hadoop workloads. ORC files store both the type of and encoding information for the data in the file. All columns within a single group of row data (also known as stripe) are stored together on disk in ORC format files. The columnar nature of the ORC format type enables read projection, helping avoid accessing unecessary columns during a query.
+ORC is type-aware and specifically designed for Hadoop workloads. ORC files store both the type of and encoding information for the data in the file. All columns within a single group of row data (also known as stripe) are stored together on disk in ORC format files. The columnar nature of the ORC format type enables read projection, helping avoid accessing unneccessary columns during a query.
 
 ORC also supports predicate pushdown with built-in indexes at the file, stripe, and row levels, moving the filter operation to the data loading phase.
 
@@ -757,7 +757,7 @@ In this example, you use the `Hive` profile to query a Hive table named `sales_p
     This query reads all of the data in the `CALIFORNIA` `delivery_state` partition, regardless of the city.
 
 
-### <a id="hive_heter_part"></a>Example: Using the Hive Profile to Access Partitioned Heterogenous Data
+### <a id="hive_heter_part"></a>Example: Using the Hive Profile to Access Partitioned Heterogeneous Data
 
 You can use the PXF `Hive` profile with any Hive file storage types. With the `Hive` profile, you can access heterogeneous format data in a single Hive table where the partitions may be stored in different file formats.
 

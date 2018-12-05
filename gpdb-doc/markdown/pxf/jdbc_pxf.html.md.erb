@@ -32,13 +32,13 @@ This section describes how to use the PXF JDBC connector to access data in an ex
 Before you access an external SQL database using the PXF JDBC connector, ensure that:
 
 - You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
+- You can identify the PXF user configuration directory (`$PXF_CONF`).
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
 
 The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC JAR file(s), ensure that:
 
-- You have installed the JDBC driver JAR files for the external SQL database in the same location on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version.
-- You have added the file system locations of the external SQL database JDBC JAR files to `$GPHOME/pxf/conf/pxf-public.classpath` and restarted PXF on each segment host. See [PXF JAR Dependencies](using_pxf.html#profile-dependencies) for additional information.
+- You have installed the JDBC driver JAR files for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [PXF JAR Dependencies](using_pxf.html#profile-dependencies) for additional information.
 
 ## <a id="datatypes"></a>Data Types Supported
 
@@ -221,40 +221,23 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 #### <a id="ex_jdbconfig"></a>Configure PXF
 
-You must download the PostgreSQL driver JAR file to your system, identify the location of the JAR in the PXF `pxf-public.classpath` configuration file, and then restart PXF.
+You must download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, and then restart PXF.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. [Download](https://jdbc.postgresql.org/download.html) a PostgreSQL JDBC driver JAR file and note the location of the downloaded file.
 
-3. Add the JDBC driver JAR file location to `$GPHOME/pxf/conf/pxf-public.classpath`. For example, if the PostgreSQL JDBC jar file is located at `/usr/share/java/postgresql-42.2.5.jar`, add the following line to the `pxf-public.classpath` file:
-
-    ``` pre
-    /usr/share/java/postgresql-42.2.5.jar
-    ```
-
-4. Copy the JDBC driver JAR file to this location on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+4. Copy the JDBC driver JAR file to `$PXF_CONF/lib` on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster, and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /usr/share/java/postgresql-42.2.5.jar =:/usr/share/java/postgresql-42.2.5.jar
+    gpadmin@gpmaster$ gpscp -v -f seghostfile postgresql-42.2.5.jar =:/etc/pxf/usercfg/lib/postgresql-42.2.5.jar
     ``` 
 
-5. Copy the updated `pxf-public.classpath` file to each segment host. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /usr/local/greenplum-db/pxf/conf/pxf-public.classpath =:/usr/local/greenplum-db/pxf/conf/pxf-public.classpath
-    ``` 
-
-6. Restart PXF on *each* Greenplum Database segment host with the following command:
-
-    ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+6. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 #### <a id="ex_readjdbc"></a>Read from the PostgreSQL Table
 

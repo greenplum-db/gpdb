@@ -159,6 +159,12 @@
           <p>
             <xref href="pgbouncer-admin.xml#topic1"/>
           </p>
+          <p>
+            <xref href="../../pxf/ref/pxf.html" format="html" scope="peer">pxf</xref>
+          </p>
+          <p>
+            <xref href="../../pxf/ref/pxf-cluster.html" format="html" scope="peer">pxf cluster</xref>
+          </p>
         </stentry>
       </strow>
     </simpletable>

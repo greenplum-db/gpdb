@@ -27,11 +27,11 @@ The following table describes some errors you may encounter while using PXF:
 
 | Error Message                 | Discussion                     |
 |-------------------------------|---------------------------------|
-| Protocol "pxf" does not exist | **Cause**: The `pxf` extension was not registered.<br>**Remedy**: Create (enable) the PXF extension for the database as described in the PXF [Enable Procedure](using_pxf.html#enable-pxf-ext).|
-| Invalid URI pxf://\<path-to-data\>: missing options section | **Cause**: The `LOCATION` URI does not include the profile or other required options.<br>**Remedy**: Provide the profile and required options in the URI. |
-| org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exist. <br>**Remedy**: Provide the path to an existing HDFS file. |
-| NoSuchObjectException(message:\<schema\>.\<hivetable\> table not found) | **Cause**: The Hive table you specified with \<schema\>.\<hivetable\> does not exist. <br>**Remedy**: Provide the name of an existing Hive table. |
-| Failed to connect to \<segment-host\> port 5888: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Remedy**: Restart PXF on \<segment-host\>. |
+| Protocol "pxf" does not exist | **Cause**: The `pxf` extension was not registered.<br>**Solution**: Create (enable) the PXF extension for the database as described in the PXF [Enable Procedure](using_pxf.html#enable-pxf-ext).|
+| Invalid URI pxf://\<path-to-data\>: missing options section | **Cause**: The `LOCATION` URI does not include the profile or other required options.<br>**Solution**: Provide the profile and required options in the URI. |
+| org.apache.hadoop.mapred.InvalidInputException: Input path does not exist: hdfs://\<namenode\>:8020/\<path-to-file\> | **Cause**: The HDFS file you specified in \<path-to-file\> does not exist. <br>**Solution**: Provide the path to an existing HDFS file. |
+| NoSuchObjectException(message:\<schema\>.\<hivetable\> table not found) | **Cause**: The Hive table you specified with \<schema\>.\<hivetable\> does not exist. <br>**Solution**: Provide the name of an existing Hive table. |
+| Failed to connect to \<segment-host\> port 5888: Connection refused (libchurl.c:944)  (\<segment-id\> slice\<N\> \<segment-host\>:40000 pid=\<process-id\>)<br> ... |**Cause**: PXF is not running on \<segment-host\>.<br>**Solution**: Restart PXF on \<segment-host\>. |
 | *ERROR*: failed to acquire resources on one or more segments<br>*DETAIL*:  could not connect to server: Connection refused<br>&nbsp;&nbsp;&nbsp;&nbsp;Is the server running on host "\<segment-host\>" and accepting<br>&nbsp;&nbsp;&nbsp;&nbsp;TCP/IP connections on port 40000?(seg\<N\> \<segment-host\>:40000) | **Cause**: The Greenplum Database segment host \<segment-host\> is down. |
 | org.apache.hadoop.security.AccessControlException: Permission denied: user=<user>, access=READ, inode=&quot;<filepath>&quot;:<user>:<group>:-rw------- | **Cause**: The Greenplum Database user that executed the PXF operation does not have permission to access the underlying Hadoop service (HDFS or Hive). See [About PXF User Impersonation](pxfuserimpers.html). |
 
@@ -40,38 +40,43 @@ Enabling more verbose logging may aid PXF troubleshooting efforts. PXF provides 
 
 ### <a id="pxfsvclogmsg"></a>Service-Level Logging
 
-PXF utilizes `log4j` for service-level logging. PXF-service-related log messages are captured in a log file specified by PXF's `log4j` properties file, `$GPHOME/pxf/conf/pxf-log4j.properties`. The default PXF logging configuration will write `INFO` and more severe level logs to `$GPHOME/pxf/logs/pxf-service.log`. You can configure the logging level and log file location.
+PXF utilizes `log4j` for service-level logging. PXF-service-related log messages are captured in a log file specified by PXF's `log4j` properties file, `$PXF_CONF/conf/pxf-log4j.properties`. The default PXF logging configuration will write `INFO` and more severe level logs to `$PXF_CONF/logs/pxf-service.log`. You can configure the logging level and the log file location.
 
-PXF provides more detailed logging when the `DEBUG` level is enabled.  To configure PXF `DEBUG` logging, uncomment the following line in `pxf-log4j.properties`:
+PXF provides more detailed logging when the `DEBUG` level is enabled. To configure PXF `DEBUG` logging and examine the output:
 
-``` shell
-#log4j.logger.org.greenplum.pxf=DEBUG
-```
+1. Uncomment the following line in `pxf-log4j.properties`:
 
-Copy the `pxf-log4j.properties` file to each segment host and restart the PXF service on *each* Greenplum Database segment host. For example:
+    ``` shell
+    #log4j.logger.org.greenplum.pxf=DEBUG
+    ```
 
-``` shell
-gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-log4j.properties :=/usr/local/greenplum-db/pxf/conf/pxf-log4j.properties
-gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-```
+2. Copy the `pxf-log4j.properties` file to each segment host. For example, if `PXF_CONF=/etc/pxf/usercfg`:
 
-With `DEBUG` level logging now enabled, perform your PXF operations; for example, create and query an external table. (Make note of the time; this will direct you to the relevant log messages in `$GPHOME/pxf/logs/pxf-service.log`.)
+    ``` shell
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-log4j.properties :=/etc/pxf/usercfg/conf/pxf-log4j.properties
+    ```
 
-``` shell
-$ date
-Wed Oct  4 09:30:06 MDT 2017
-$ psql -d <dbname>
-```
+3. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
-``` sql
-dbname=> CREATE EXTERNAL TABLE hdfstest(id int, newid int)
-    LOCATION ('pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple')
-    FORMAT 'TEXT' (delimiter='E',');
-dbname=> SELECT * FROM hdfstest;
-<select output>
-```
+4. With `DEBUG` level logging now enabled, you can perform your PXF operations. Be sure to make note of the time; this will direct you to the relevant log messages in `$PXF_CONF/logs/pxf-service.log`.
 
-Examine/collect the log messages from `pxf-service.log`.
+    ``` shell
+    $ date
+    Wed Oct  4 09:30:06 MDT 2017
+    $ psql -d <dbname>
+    ```
+
+4. Create and query an external table. For example:
+
+    ``` sql
+    dbname=> CREATE EXTERNAL TABLE hdfstest(id int, newid int)
+        LOCATION ('pxf://data/dir/hdfsfile?PROFILE=HdfsTextSimple')
+        FORMAT 'TEXT' (delimiter='E',');
+    dbname=> SELECT * FROM hdfstest;
+    <select output>
+    ```
+
+5. Finally, examine/collect the log messages from `pxf-service.log`.
 
 **Note**: `DEBUG` logging is quite verbose and has a performance impact.  Remember to turn off PXF service `DEBUG` logging after you have collected the desired information.
 
@@ -125,17 +130,16 @@ Each PXF agent running on a segment host is configured with a default maximum Ja
 
 Perform the following procedure to increase the heap size for the PXF agent running on each segment host in your Greenplum Database cluster.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-2. Edit the `$GPHOME/pxf/conf/pxf-env.sh` file. For example:
+2. Recall the location of the PXF user configuration directory ($PXF_CONF). Edit the `$PXF_CONF/conf/pxf-env.sh` file. For example:
 
     ``` shell
-    gpadmin@gpmaster$ vi $GPHOME/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ vi $PXF_CONF/conf/pxf-env.sh
     ```
 
 3. Locate the `PXF_JVM_OPTS` setting in the `pxf-env.sh` file, and update the `-Xmx` and/or `-Xms` options to the desired value. For example:
@@ -144,17 +148,13 @@ Perform the following procedure to increase the heap size for the PXF agent runn
     PXF_JVM_OPTS="-Xmx3g -Xms3g"
     ```
 
-4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster:
+4. Copy the updated `pxf-env.sh` file to each Greenplum Database segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/conf/pxf-env.sh =:/usr/local/greenplum-db/pxf/conf/pxf-env.sh
+    gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-env.sh =:/etc/pxf/usercfg/conf/pxf-env.sh
     ```
 
-5. Restart PXF on each Greenplum Database segment host. For example:
-
-    ``` shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 ### <a id="pxf-threadcfg"></a>Another Option for Resource-Constrained PXF Segment Hosts
 
@@ -164,11 +164,10 @@ The Tomcat default maximum number of threads is 300. Decrease the maximum number
 
 Perform the following procedure to decrease the maximum number of Tomcat threads for the PXF agent running on each segment host in your Greenplum Database deployment.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Edit the `$GPHOME/pxf/pxf-service/conf/server.xml` file. For example:
@@ -192,11 +191,7 @@ Perform the following procedure to decrease the maximum number of Tomcat threads
     gpadmin@gpmaster$ gpscp -v -f seghostfile $GPHOME/pxf/pxf-service/conf/server.xml =:/usr/local/greenplum-db/pxf/pxf-service/conf/server.xml
     ```
 
-5. Restart PXF on each Greenplum Database segment host. For example:
-
-    ``` shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+5. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 ## <a id="pxf-timezonecfg"></a>Addressing PXF JDBC Connector Time Zone Errors
 
