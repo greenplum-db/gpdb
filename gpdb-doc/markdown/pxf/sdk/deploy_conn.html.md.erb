@@ -31,7 +31,7 @@ gpadmin@gpmaster$ gpscp my-connector.jar -v -f seghostfile =:/etc/pxf/usercfg/li
 gpadmin@gpmaster$ gpscp connector-dependency.jar -v -seghostfile /etc/pxf/usercfg/lib
 ```
 
-And then restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
+Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
 
 The administrator must also install any third-party commands or other components used by the connector on all Greenplum Database segment hosts and ensure that these programs are executable by the `gpadmin` operating system user.
 

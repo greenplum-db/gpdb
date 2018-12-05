@@ -25,10 +25,10 @@ You must initialize and start PXF before you can use the framework.
 
 PXF provides two management commands:
 
-- `pxf cluster` - manage all PXF service instances in the Greenplum Database cluster (new)
+- `pxf cluster` - manage all PXF service instances in the Greenplum Database cluster
 - `pxf` - manage the PXF service instance on a specific Greenplum Database host
 
-The [`pxf cluster`](ref/pxf-cluster.html)command supports `init`, `start`, and `stop` operations. When you run a `pxf cluster` subcommand, you perform the operation on all segment hosts in the Greenplum Database cluster.
+The [`pxf cluster`](ref/pxf-cluster.html) command supports `init`, `start`, and `stop` subcommands. When you run a `pxf cluster` subcommand, you perform the operation on all segment hosts in the Greenplum Database cluster.
 
 The [`pxf`](ref/pxf.html) command supports `init`, `start`, `stop`, `restart`, and `status` operations. These operations run locally. That is, if you want to start or stop the PXF agent on a specific Greenplum Database segment host, you log in to the host and run the command. 
 
@@ -51,7 +51,7 @@ During initialization, PXF creates the `$PXF_CONF` directory if necessary, and t
 Before initializing PXF in your Greenplum Database cluster, ensure that:
 
 - Your Greenplum Database cluster is up and running.
-- You have identified the PXF user configuration directory, `$PXF_CONF`, filesystem location.
+- You have identified the PXF user configuration directory filesystem location, `$PXF_CONF`.
  
 ### <a id="init-pxf-steps" class="no-quick-link"></a>Procedure
 
@@ -63,7 +63,7 @@ Perform the following procedure to initialize PXF on each segment host in your G
     $ ssh gpadmin@<gpmaster>
     ```
 
-4. Run the `pxf cluster init` command to initialize the PXF service on the master and each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization.)
+4. Run the `pxf cluster init` command to initialize the PXF service on the master and on each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization.)
 
     ``` shell
     gpadmin@gpmaster$ PXF_CONF=/etc/pxf/usercfg $GPHOME/pxf/bin/pxf cluster init

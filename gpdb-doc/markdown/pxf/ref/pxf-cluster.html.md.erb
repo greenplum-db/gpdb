@@ -10,7 +10,7 @@ Manage the PXF service instance on all Greenplum Database segment hosts.
 pxf cluster <command>
 ```
 
-where \<command\> is:
+where `<command>` is:
 
 ``` pre
 help
@@ -33,7 +33,7 @@ If you want to manage the PXF service instance on a specific segment host, use t
 <dd>Display the `pxf cluster` help message and then exit.</dd>
 
 <dt>init</dt>
-<dd>Initialize the PXF service instance on the master and all segment hosts. When you initialize PXF across your Greenplum Database cluster, you must identify the PXF user configuration directory via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF returns an error.</dd>
+<dd>Initialize the PXF service instance on the master and on all segment hosts. When you initialize PXF across your Greenplum Database cluster, you must identify the PXF user configuration directory via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF returns an error.</dd>
 
 <dt>start</dt>
 <dd>Start the PXF service instance on all segment hosts.</dd>
