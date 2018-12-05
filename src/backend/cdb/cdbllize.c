@@ -140,16 +140,12 @@ cdbparallelize(PlannerInfo *root,
 	PlanProfile *context = &profile;
 
 	/* Make sure we're called correctly (and need to be called).  */
-	switch (Gp_role)
-	{
-		case GP_ROLE_DISPATCH:
-			break;
-		case GP_ROLE_UTILITY:
-			return plan;
-		case GP_ROLE_EXECUTE:
-		case GP_ROLE_UNDEFINED:
-			Insist(0);
-	}
+	if (Gp_role == GP_ROLE_UTILITY)
+		return plan;
+	if (Gp_role != GP_ROLE_DISPATCH)
+		elog(ERROR, "Plan parallelization invoked for incorrect role: %s",
+			 role_to_string(Gp_role));
+
 	Assert(is_plan_node((Node *) plan));
 	Assert(query !=NULL && IsA(query, Query));
 
