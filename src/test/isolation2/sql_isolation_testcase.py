@@ -34,13 +34,20 @@ def is_digit(n):
     except ValueError:
         return  False
 
+def load_helper_file_from_sql_command(command):
+    file_to_include = command.strip().replace(";", "")
+    
+    with open(file_to_include) as file:
+        return "".join(file.readlines()).strip()
+
+
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
         # The re.S flag makes the "." in the regex match newlines.
         # When matched against a command in process_command(), all
         # lines in the command are matched and sent as SQL query.
-        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>Uq]*?)\:(.*)", re.S)
+        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>UIq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
@@ -329,6 +336,14 @@ class SQLIsolationExecutor(object):
                     print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
             else:
                 self.get_process(output_file, process_name, dbname=dbname).query(sql.strip())
+        elif flag == "I":
+            self.get_process(
+                output_file, 
+                process_name, 
+                dbname=dbname
+            ).query(
+                load_helper_file_from_sql_command(sql)
+            )
         elif flag == "&":
             self.get_process(output_file, process_name, dbname=dbname).fork(sql.strip(), True)
         elif flag == ">":
