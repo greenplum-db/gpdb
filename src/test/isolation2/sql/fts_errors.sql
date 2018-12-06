@@ -22,21 +22,8 @@ create extension if not exists gp_inject_fault;
 !\retcode gpstop -u;
 
 -- start_ignore
-create language plpythonu;
+1I: helpers/server_helpers.sql;
 -- end_ignore
-
-create or replace function pg_ctl(datadir text, command text)
-returns text as $$
-    import subprocess
-
-    cmd = 'pg_ctl -D %s ' % datadir
-    if command in ('stop'):
-        cmd = cmd + '-w -m immediate %s' % command
-    else:
-        return 'Invalid command input'
-
-    return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
-$$ language plpythonu;
 
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';
