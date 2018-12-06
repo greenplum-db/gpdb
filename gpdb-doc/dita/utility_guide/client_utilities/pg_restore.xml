@@ -216,15 +216,15 @@
           </plentry>
           <plentry>
             <pt>--role=<varname>rolename</varname></pt>
-            <pd>Specifies a role name to be used to create the dump. This option
-              causes <codeph>pg_restore</codeph> to issue a <codeph>SET ROLE
-                  <varname>rolename</varname></codeph> command after connecting
-              to the database. It is useful when the authenticated user
-              (specified by <codeph>-U</codeph>) lacks privileges needed by
+            <pd>Specifies a role name to be used to perform the restore. This
+              option causes <codeph>pg_restore</codeph> to issue a <codeph>SET
+                ROLE <varname>rolename</varname></codeph> command after
+              connecting to the database. It is useful when the authenticated
+              user (specified by <codeph>-U</codeph>) lacks privileges needed by
                 <codeph>pg_restore</codeph>, but can switch to a role with the
               required rights. Some installations have a policy against logging
-              in directly as a superuser, and use of this option allows dumps to
-              be made without violating the policy.</pd>
+              in directly as a superuser, and use of this option allows restores
+              to be performed without violating the policy.</pd>
           </plentry>
         </parml>
       </sectiondiv>
