@@ -64,7 +64,9 @@ groups:
   - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
+  - icw_planner_ubuntu16_oss
+  - icw_gporca_ubuntu16
+  - icw_gporca_ubuntu16_oss
   - icw_extensions_gpcloud
   - gate_icw_end
   - QP_memory-accounting
@@ -189,7 +191,9 @@ groups:
   - icw_gporca_oracle7
   - icw_gporca_sles11
   - icw_planner_ubuntu16
-  - icw_gporca_conan_ubuntu16
+  - icw_planner_ubuntu16_oss
+  - icw_gporca_ubuntu16
+  - icw_gporca_ubuntu16_oss
   - icw_extensions_gpcloud
   - QP_memory-accounting
   - QP_optimizer-functional
@@ -1452,6 +1456,9 @@ jobs:
     - get: deb_package_ubuntu16
       passed:
       - compile_gpdb_ubuntu16
+    - get: bin_gpdb_ubuntu16
+      passed:
+      - compile_gpdb_ubuntu16
 
 {% if "ICW" in test_sections %}
 ## ======================================================================
@@ -1485,6 +1492,9 @@ jobs:
         passed:
         - gate_compile_end
       - get: deb_package_open_source_ubuntu16
+        passed:
+        - gate_compile_end
+      - get: bin_gpdb_ubuntu16
         passed:
         - gate_compile_end
 
@@ -1646,6 +1656,26 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed: [gate_icw_start]
+    - get: bin_gpdb_ubuntu16
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: ubuntu-gpdb-dev-16
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    input_mapping:
+      compiled_bits_ubuntu16: bin_gpdb_ubuntu16
+    image: ubuntu-gpdb-dev-16
+    params:
+      GREENPLUM_INSTALL_DIR: "/usr/local/greenplum-db-devel"
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}
+      COMPILED_BITS_FILENAME: bin_gpdb.tar.gz
+
+- name: icw_planner_ubuntu16_oss
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
     - get: compiled_bits_ubuntu16
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
@@ -1657,23 +1687,41 @@ jobs:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: icw_gporca_conan_ubuntu16
+- name: icw_gporca_ubuntu16
   plan:
   - aggregate:
     - get: gpdb_src
-      params:
-        submodules: none
       passed: [gate_icw_start]
-    - get: bin_gpdb
+    - get: bin_gpdb_ubuntu16
       passed: [gate_icw_start]
-      resource: compiled_bits_ubuntu16
       trigger: [[ test_trigger ]]
     - get: ubuntu-gpdb-dev-16
-  - task: icw_with_orca
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    input_mapping:
+      compiled_bits_ubuntu16: bin_gpdb_ubuntu16
     image: ubuntu-gpdb-dev-16
-    file: gpdb_src/concourse/tasks/test_with_orca_conan.yml
     params:
-      TEST_SUITE: "icw"
+      GREENPLUM_INSTALL_DIR: "/usr/local/greenplum-db-devel"
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}
+      COMPILED_BITS_FILENAME: bin_gpdb.tar.gz
+
+- name: icw_gporca_ubuntu16_oss
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [gate_icw_start]
+    - get: compiled_bits_ubuntu16
+      passed: [gate_icw_start]
+      trigger: [[ test_trigger ]]
+    - get: ubuntu-gpdb-dev-16
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
+    image: ubuntu-gpdb-dev-16
+    params:
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_extensions_gpcloud
   plan:
@@ -1785,7 +1833,9 @@ jobs:
       - icw_planner_oracle7
       - icw_gporca_sles11
       - icw_planner_ubuntu16
-      - icw_gporca_conan_ubuntu16
+      - icw_planner_ubuntu16_oss
+      - icw_gporca_ubuntu16
+      - icw_gporca_ubuntu16_oss
       - icw_extensions_gpcloud
       - QP_memory-accounting
       - QP_optimizer-functional
@@ -3613,7 +3663,9 @@ jobs:
       - icw_gporca_oracle7
       - icw_gporca_sles11
       - icw_planner_ubuntu16
-      - icw_gporca_conan_ubuntu16
+      - icw_planner_ubuntu16_oss
+      - icw_gporca_ubuntu16
+      - icw_gporca_ubuntu16_oss
       - icw_extensions_gpcloud
       - client_loader_remote_test_aix
       - mpp_resource_group_centos6
