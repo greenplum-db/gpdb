@@ -725,6 +725,18 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
  *		callers may hold pointers to Datums within the regular tuple).
  *
  * As above, the result must be treated as read-only.
+ *
+ * Note: if the slot already contains a memtuple and it needs to be de-toasted
+ * (inline_toast = true and de-toasted length is greater than current length)
+ * the memory used by existing memtuple is freed and a new memtuple is
+ * constructed in the slot's memory context.  This has a side effect if the
+ * slot is marked "virtual".  A virtual slot may have pointers in values array
+ * pointing to addresses within the slot's memtuple (see memtuple_getattr).
+ * Upon de-toasting, if a new memtuple needs to be created, the references in
+ * the values array are no longer valid.  Therefore, this function clears the
+ * virtual flag within the slot, to guard against dereferencing invalid
+ * pointers.
+ *
  * --------------------------------
  */
 MemTuple
@@ -742,11 +754,26 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast)
 		if(!inline_toast || !memtuple_get_hasext(slot->PRIVATE_tts_memtuple))
 			return slot->PRIVATE_tts_memtuple;
 
+		/*
+		 * The memtuple must be de-toasted.  This is done in two steps.  (1)
+		 * compute the de-toasted length by de-toasting the toasted
+		 * attributes.  (2) allocate a new memtuple with required length and
+		 * perform de-toasting again and copy the de-toasted values in the new
+		 * memtuple.
+		 *
+		 * TODO: de-toasting twice should be avoided, without affecting
+		 * existing usage of memtuple_form_to.
+		 */
 		oldTuple = slot->PRIVATE_tts_mtup_buf;
 		slot->PRIVATE_tts_mtup_buf = NULL;
 		slot->PRIVATE_tts_mtup_buf_len = 0;
 	}
 
+	/*
+	 * A side effect of this is the tuple is to mark the slot as virtual - the
+	 * values array in the slot contains pointers to corresponding locations
+	 * of toasted attributes in the memtuple.
+	 */
 	slot_getallattrs(slot);
 
 	tuplen = slot->PRIVATE_tts_mtup_buf_len;
@@ -769,7 +796,17 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast)
 	slot->PRIVATE_tts_memtuple = newTuple;
 
 	if(oldTuple)
+	{
+		/*
+		 * The values array in the slot no longer points to valid memory after
+		 * the oldTuple is free'd.  Reset the virtual flag so that the
+		 * subsequent call to slot_get*() will read the values from newly
+		 * formed memtuple.
+		 */
+		slot->PRIVATE_tts_nvalid = 0;
+		TupClearVirtualTuple(slot);
 		pfree(oldTuple);
+	}
 
 	return newTuple;
 }

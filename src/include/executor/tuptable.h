@@ -222,6 +222,11 @@ static inline void TupSetVirtualTuple(TupleTableSlot *slot)
 	slot->PRIVATE_tts_flags |= TTS_VIRTUAL;
 }
 
+static inline void TupClearVirtualTuple(TupleTableSlot *slot)
+{
+	slot->PRIVATE_tts_flags &= (~TTS_VIRTUAL);
+}
+
 static inline void TupSetVirtualTupleNValid(TupleTableSlot *slot, int nvalid)
 {
         free_heaptuple_memtuple(slot);
