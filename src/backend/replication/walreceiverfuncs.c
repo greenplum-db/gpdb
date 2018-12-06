@@ -407,3 +407,17 @@ GetReplicationTransferLatency(void)
 
 	return ms;
 }
+
+bool
+IsRecievedUptoEqualsReceivedUptoForwardOnly()
+{
+	/* use volatile pointer to prevent code rearrangement */
+	volatile WalRcvData *walrcv = WalRcv;
+	bool result;
+
+	SpinLockAcquire(&walrcv->mutex);
+	result = walrcv->receivedUpto == walrcv->receivedUptoForwardOnly;
+	SpinLockRelease(&walrcv->mutex);
+
+	return result;
+}

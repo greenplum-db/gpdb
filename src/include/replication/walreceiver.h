@@ -171,5 +171,6 @@ extern int	GetReplicationApplyDelay(void);
 extern int	GetReplicationTransferLatency(void);
 extern const char *WalRcvGetStateString(WalRcvState state);
 extern XLogRecPtr WaitNextXLogAvailable(XLogRecPtr recptr, bool *finished);
+extern bool IsRecievedUptoEqualsReceivedUptoForwardOnly(void);
 
 #endif   /* _WALRECEIVER_H */

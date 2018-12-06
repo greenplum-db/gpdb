@@ -11451,7 +11451,7 @@ next_record_is_invalid:
 	readSource = 0;
 
 	/* In standby-mode, keep trying */
-	if (StandbyMode)
+	if (StandbyMode && IsRecievedUptoEqualsReceivedUptoForwardOnly())
 		goto retry;
 	else
 		return -1;
