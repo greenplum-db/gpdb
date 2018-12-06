@@ -182,6 +182,12 @@
               loaded. This option is effective only when restoring directly into a database, not
               when producing SQL script output.</pd>
           </plentry>
+          <plentry>
+            <pt>-1 | --single-transaction</pt>
+            <pd>Execute the restore as a single transaction. This ensures that
+              either all the commands complete successfully, or no changes are
+              applied.</pd>
+          </plentry>
         </parml>
       </sectiondiv>
       <sectiondiv id="section5">
@@ -209,9 +215,16 @@
             <pd>Force a password prompt.</pd>
           </plentry>
           <plentry>
-            <pt>-1 | --single-transaction</pt>
-            <pd>Execute the restore as a single transaction. This ensures that either all the
-              commands complete successfully, or no changes are applied.</pd>
+            <pt>--role=<varname>rolename</varname></pt>
+            <pd>Specifies a role name to be used to perform the restore. This
+              option causes <codeph>pg_restore</codeph> to issue a <codeph>SET
+                ROLE <varname>rolename</varname></codeph> command after
+              connecting to the database. It is useful when the authenticated
+              user (specified by <codeph>-U</codeph>) lacks privileges needed by
+                <codeph>pg_restore</codeph>, but can switch to a role with the
+              required rights. Some installations have a policy against logging
+              in directly as a superuser, and use of this option allows restores
+              to be performed without violating the policy.</pd>
           </plentry>
         </parml>
       </sectiondiv>
