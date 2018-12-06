@@ -429,10 +429,9 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
               </ul></pd>
           </plentry>
         </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The
-            <codeph>WINDOW</codeph> clause is used to define a window that can be used in the
-            <codeph>OVER()</codeph> expression of a window function such as <codeph>rank</codeph> or
-            <codeph>avg</codeph>. For
-          example:</p><codeblock>SELECT vendor, rank() OVER (mywindow) FROM sale
+          <codeph>WINDOW</codeph> clause defines a window that can be used in the
+          <codeph>OVER()</codeph> expression of a window function such as <codeph>rank</codeph>
+          or <codeph>avg</codeph>. For example:</p><codeblock>SELECT vendor, rank() OVER (mywindow) FROM sale
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general

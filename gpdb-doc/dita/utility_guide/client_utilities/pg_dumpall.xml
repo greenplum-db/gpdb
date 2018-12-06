@@ -249,6 +249,18 @@
                         <pt>-W | --password</pt>
                         <pd>Force a password prompt.</pd>
                     </plentry>
+                    <plentry>
+                        <pt>--role=<varname>rolename</varname></pt>
+                        <pd>Specifies a role name to be used to create the dump. This option causes
+                                <codeph>pg_dumpall</codeph> to issue a <codeph>SET ROLE
+                                    <varname>rolename</varname></codeph> command after connecting to
+                            the database. It is useful when the authenticated user (specified by
+                                <codeph>-U</codeph>) lacks privileges needed by
+                                <codeph>pg_dumpall</codeph>, but can switch to a role with the
+                            required rights. Some installations have a policy against logging in
+                            directly as a superuser, and use of this option allows dumps to be made
+                            without violating the policy.</pd>
+                    </plentry>
                 </parml>
             </sectiondiv>
         </section>
