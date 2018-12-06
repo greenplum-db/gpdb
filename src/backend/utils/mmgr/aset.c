@@ -273,7 +273,6 @@ static void dump_allocset_blocks(FILE *file, AllocBlock blocks);
 static void dump_allocset_freelist(FILE *file, AllocSet set);
 static void dump_mc_for(FILE *file, MemoryContext mc);
 void dump_mc(const char *fname, MemoryContext mc);
-void dump_tmc(const char *fname);
 
 #ifdef MEMORY_CONTEXT_CHECKING
 static void AllocSetCheck(MemoryContext context);
@@ -395,11 +394,6 @@ void dump_mc(const char *fname, MemoryContext mc)
 	FILE *ofile = fopen(fname, "w+");
 	dump_mc_for(ofile, mc);
 	fclose(ofile);
-}
-
-void dump_tmc(const char *fname)
-{
-	dump_mc(fname, TopMemoryContext);
 }
 
 
