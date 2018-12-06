@@ -11427,12 +11427,21 @@ retry:
 	 * Of course, this only catches errors in the page header, which is what
 	 * happens in the case of a recycled WAL segment. Other kinds of errors or
 	 * corruption still has the same problem. But this at least fixes the
-	 * common case, which can happen as part of normal operation.
+	 * common case, which can happen as part of normal operation. However, if
+	 * a crash recovery just happened, and the current record we are reading
+	 * on standby is already discarded on master, we should not bother
+	 * validating the page header but return immediately to let ReadRecord()
+	 * fail and restart reading from the previous read. If we do the
+	 * validation and retry in this case, the startup process on standby will
+	 * be stuck in WaitForWALToBecomeAvailable() until walreiver receives
+	 * enough wal from stream that WalRcv->receivedUpto, which was set
+	 * backwards after the crash recovery, proceeds the current RecPtr.
 	 *
 	 * Validating the page header is cheap enough that doing it twice
 	 * shouldn't be a big deal from a performance point of view.
 	 */
-	if (!XLogReaderValidatePageHeader(xlogreader, targetPagePtr, readBuf))
+	if (StandbyMode && IsRecievedUptoEqualsReceivedUptoForwardOnly() &&
+		!XLogReaderValidatePageHeader(xlogreader, targetPagePtr, readBuf))
 	{
 		/* reset any error XLogReaderValidatePageHeader() might have set */
 		xlogreader->errormsg_buf[0] = '\0';
@@ -11451,7 +11460,7 @@ next_record_is_invalid:
 	readSource = 0;
 
 	/* In standby-mode, keep trying */
-	if (StandbyMode && IsRecievedUptoEqualsReceivedUptoForwardOnly())
+	if (StandbyMode)
 		goto retry;
 	else
 		return -1;
