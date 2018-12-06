@@ -993,7 +993,6 @@ class gpexpand:
             self.tempDir = createTempDirectoryName(self.options.master_data_directory, "gpexpand")
         self.queue = None
         self.segTemplate = None
-        pass
 
     @staticmethod
     def prepare_gpdb_state(logger, dburl, options):
@@ -2352,7 +2351,6 @@ class ExecuteSQLStatementsCommand(SQLCommand):
         self.error = None
 
         SQLCommand.__init__(self, name)
-        pass
 
     def run(self, validateAfter=False):
         statement = None
@@ -2421,7 +2419,6 @@ class ExpandCommand(SQLCommand):
         self.table_expand_error = False
 
         SQLCommand.__init__(self, name)
-        pass
 
     def run(self, validateAfter=False):
         # connect.

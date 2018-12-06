@@ -42,7 +42,6 @@ class StartSegmentsResult:
     def __init__(self):
         self.__successfulSegments = []
         self.__failedSegments = []
-        pass
 
     def getSuccessfulSegments(self):
         return self.__successfulSegments[:]

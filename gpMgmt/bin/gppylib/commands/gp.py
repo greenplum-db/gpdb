@@ -1273,7 +1273,6 @@ def chk_gpdb_id(username):
     if not os.access(path,os.X_OK):
         raise GpError("File permission mismatch.  The current user %s does not have sufficient"
                       " privileges to run the Greenplum binaries and management utilities." % username )
-    pass
 
 
 def chk_local_db_running(datadir, port):

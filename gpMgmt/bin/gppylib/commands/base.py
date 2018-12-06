@@ -304,7 +304,6 @@ class CommandResult():
         self.stderr = stderr
         self.completed = completed
         self.halt = halt
-        pass
 
     def printResult(self):
         res = "cmd had rc=%d completed=%s halted=%s\n  stdout='%s'\n  " \
