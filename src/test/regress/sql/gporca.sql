@@ -1634,6 +1634,9 @@ partition by range (stamp) (
 create rule "_RETURN" as on select to rewrite_rules_1_prt_2 do instead 
 select 1 as id, current_date as stamp, 1 as amount;
 select * from rewrite_rules;
+set allow_system_table_mods='dml';
+delete from gp_distribution_policy where localoid='rewrite_rules_1_prt_2'::regclass;
+reset allow_system_table_mods;
 
 -- start_ignore
 DROP SCHEMA orca CASCADE;
