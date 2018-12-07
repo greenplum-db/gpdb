@@ -225,9 +225,9 @@ is likely to be inlined into the calling query, which will prevent the
 optimizer from recognizing that the query matches an index.</p><p>Any functions used to implement the operator class must be defined
 as <codeph>IMMUTABLE</codeph>.</p>
             <p>Before Greenplum Database 6.0, the <codeph>OPERATOR</codeph> clause could include a
-                    <codeph>RECHECK</codeph> option. This is no longer supported because Greenplum
-                Database determines whether an index operator is "lossy" on-the-fly at runtime. This
-                allows efficient handling of cases where an operator might or might not be
+                    <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum
+                Database now determines whether an index operator is "lossy" on-the-fly at runtime. This
+                allows more efficient handling of cases where an operator might or might not be
                 lossy.</p></section><section id="section6"><title>Examples</title><p>The following example command defines a GiST index operator class for the data type
                     <codeph>_int4</codeph> (array of int4): </p><codeblock>CREATE OPERATOR CLASS gist__int_ops
     DEFAULT FOR TYPE _int4 USING gist AS

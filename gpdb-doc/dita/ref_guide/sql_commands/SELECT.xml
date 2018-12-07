@@ -14,35 +14,14 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [WHERE <varname>condition</varname>]
   [GROUP BY <varname>grouping_element</varname> [, ...]]
   [HAVING <varname>condition</varname> [, ...]]
-  [WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)]
+  [WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>) [, ...] ]
   [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
   [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname>]
   [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock>
-      <p>where <varname>with_query:</varname> is:</p>
+      <p>where <varname>with_query</varname> is:</p>
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> )</codeblock>
-      <p>where <varname>grouping_element</varname> can be one of:</p>
-      <codeblock>  ()
-  <varname>expression</varname>
-  ROLLUP (<varname>expression</varname> [,...])
-  CUBE (<varname>expression</varname> [,...])
-  GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock>
-      <p>where <varname>window_specification</varname> can be:</p>
-      <codeblock>  [<varname>window_name</varname>]
-  [PARTITION BY <varname>expression </varname>[, ...]]
-  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
-     [{RANGE | ROWS} 
-          { UNBOUNDED PRECEDING
-          | <varname>expression</varname> PRECEDING
-          | CURRENT ROW
-          | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
-                    where <varname>window_frame_bound</varname> can be one of:
-                        UNBOUNDED PRECEDING
-                        <varname>expression</varname> PRECEDING
-                        CURRENT ROW
-                        <varname>expression</varname> FOLLOWING
-                        UNBOUNDED FOLLOWING</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
 (select) [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]<varname>
@@ -54,6 +33,27 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
               ( <varname>column_definition</varname> [, ...] )
 <varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
           [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock>
+      <p>where <varname>grouping_element</varname> can be one of:</p>
+      <codeblock>  ()
+  <varname>expression</varname>
+  ROLLUP (<varname>expression</varname> [,...])
+  CUBE (<varname>expression</varname> [,...])
+  GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock>
+      <p>where <varname>window_definition</varname> is:</p>
+      <codeblock>  [<varname>existing_window_name</varname>]
+  [PARTITION BY <varname>expression</varname> [, ...]]
+  [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] 
+    [NULLS {FIRST | LAST}] [, ...]]
+  [{ RANGE | ROWS} <varname>frame_start</varname> 
+     | {RANGE | ROWS} BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname>
+</codeblock>
+      <p>where <varname>frame_start</varname> and <varname>frame_end</varname> can be one of:
+        <codeblock>  UNBOUNDED PRECEDING
+  <varname>value</varname> PRECEDING
+  CURRENT ROW
+  <varname>value</varname> FOLLOWING
+  UNBOUNDED FOLLOWING
+</codeblock></p>
       <p><b>Note:</b>
         <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
         recommended for production use.</p>
@@ -428,55 +428,108 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
                   group_id number. </li>
               </ul></pd>
           </plentry>
-        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The
-            <codeph>WINDOW</codeph> clause is used to define a window that can be used in the
-            <codeph>OVER()</codeph> expression of a window function such as <codeph>rank</codeph> or
-            <codeph>avg</codeph>. For
+        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The optional <codeph>WINDOW</codeph> clause
+          specifies the behavior of window functions appearing in the query's
+            <codeph>SELECT</codeph> list or <codeph>ORDER BY</codeph> clause. These functions can
+          reference the <codeph>WINDOW</codeph> clause entries by name in their
+            <codeph>OVER</codeph> clauses. A <codeph>WINDOW</codeph> clause entry does not have to
+          be referenced anywhere, however; if it is not used in the query it is simply ignored. It
+          is possible to use window functions without any <codeph>WINDOW</codeph> clause at all,
+          since a window function call can specify its window definition directly in its
+            <codeph>OVER</codeph> clause. However, the <codeph>WINDOW</codeph> clause saves typing
+          when the same window definition is needed for more than one window function.</p><p>For
           example:</p><codeblock>SELECT vendor, rank() OVER (mywindow) FROM sale
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general
-          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_specification</varname>)</codeblock><p>where
-            <varname>window_specification</varname> can be:</p><codeblock>[<varname>window_name</varname>]
-[PARTITION BY <varname>expression </varname>[, ...]]
-[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]
-    [{RANGE | ROWS} 
-      { UNBOUNDED PRECEDING
-      | <varname>expression</varname> PRECEDING
-      | CURRENT ROW
-      | BETWEEN <varname>window_frame_bound</varname> AND <varname>window_frame_bound</varname> }]]
-             where <varname>window_frame_bound</varname> can be one of:
-               UNBOUNDED PRECEDING
-               <varname>expression</varname> PRECEDING
-               CURRENT ROW
-               <varname>expression</varname> FOLLOWING
-               UNBOUNDED FOLLOWING</codeblock><parml>
+          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where
+            <varname>window_definition</varname> can be:</p><codeblock>[<varname>existing_window_name</varname>]
+[PARTITION BY <varname>expression</varname> [, ...]]
+[ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...] ]
+[<varname>frame_clause</varname>] </codeblock><parml>
           <plentry>
-            <pt><varname>window_name</varname></pt>
-            <pd>Gives a name to the window specification.</pd>
+            <pt><varname>existing_window_name</varname></pt>
+            <pd>If an <codeph><varname>existing_window_name</varname></codeph> is specified it must
+              refer to an earlier entry in the <codeph>WINDOW</codeph> list; the new window copies
+              its partitioning clause from that entry, as well as its ordering clause if any. The
+              new window cannot specify its own <codeph>PARTITION BY</codeph> clause, and it can
+              specify <codeph>ORDER BY</codeph> only if the copied window does not have one. The new
+              window always uses its own frame clause; the copied window must not specify a frame
+              clause.</pd>
           </plentry>
           <plentry>
             <pt>PARTITION BY</pt>
             <pd>The <codeph>PARTITION BY</codeph> clause organizes the result set into logical
-              groups based on the unique values of the specified expression. When used with window
-              functions, the functions are applied to each partition independently. For example, if
-              you follow <codeph>PARTITION BY</codeph> with a column name, the result set is
-              partitioned by the distinct values of that column. If omitted, the entire result set
-              is considered one partition.</pd>
+              groups based on the unique values of the specified expression. This clause is
+              interpreted in much the same fashion as elements of a <codeph>GROUP BY</codeph>
+              clause, except that they are always simple expressions and never the name or number of
+              an output column. Another difference is that these expressions can contain aggregate
+              function calls, which are not allowed in a regular <codeph>GROUP BY</codeph> clause.
+              When used with window functions, the functions are applied to each partition
+              independently. For example, if you follow <codeph>PARTITION BY</codeph> with a column
+              name, the result set is partitioned by the distinct values of that column. If omitted,
+              the entire result set is considered one partition. </pd>
           </plentry>
           <plentry>
             <pt>ORDER BY</pt>
-            <pd>The <codeph>ORDER BY</codeph> clause defines how to sort the rows in each partition
-              of the result set. If omitted, rows are returned in whatever order is most efficient
-              and may vary. <b>Note:</b> Columns of data types that lack a coherent ordering, such
-              as <codeph>time</codeph>, are not good candidates for use in the <codeph>ORDER
-                BY</codeph> clause of a window specification. Time, with or without time zone, lacks
-              a coherent ordering because addition and subtraction do not have the expected effects.
-              For example, the following is not generally true: <codeph>x::time &lt; x::time + '2
-                hour'::interval</codeph></pd>
+            <pd>The elements of the <codeph>ORDER BY</codeph> clause define how to sort the rows in
+              each partition of the result set. If omitted, rows are returned in whatever order is
+              most efficient and may vary. <b>Note:</b> Columns of data types that lack a coherent
+              ordering, such as <codeph>time</codeph>, are not good candidates for use in the
+                <codeph>ORDER BY</codeph> clause of a window specification. Time, with or without
+              time zone, lacks a coherent ordering because addition and subtraction do not have the
+              expected effects. For example, the following is not generally true: <codeph>x::time
+                &lt; x::time + '2 hour'::interval</codeph></pd>
           </plentry>
           <plentry>
-            <pt>ROWS | RANGE </pt>
+            <pt><varname>frame_clause</varname>
+            </pt>
+            <pd>The optional <codeph><varname>frame_clause</varname></codeph> defines the <i>window
+                frame</i> for window functions that depend on the frame (not all do). The window
+              frame is a set of related rows for each row of the query (called the <i>current
+                row</i>). The <codeph><varname>frame_clause</varname></codeph> can be one of
+              <codeblock>{ RANGE | ROWS } <varname>frame_start</varname>
+{ RANGE | ROWS } BETWEEN <varname>frame_start</varname> AND <varname>frame_end</varname></codeblock>where
+                  <codeph><varname>frame_start</varname></codeph> and
+                  <codeph><varname>frame_end</varname></codeph> can be one of<ul id="ul_ehq_kws_1gb">
+                <li><codeph>UNBOUNDED PRECEDING</codeph></li>
+                <li><codeph><varname>value</varname> PRECEDING</codeph></li>
+                <li><codeph>CURRENT ROW</codeph></li>
+                <li><codeph><varname>value</varname></codeph> FOLLOWING</li>
+                <li><codeph>UNBOUNDED FOLLOWING</codeph></li>
+              </ul></pd>
+            <pd>If <codeph><varname>frame_end</varname></codeph> is omitted it defaults to
+                <codeph>CURRENT ROW</codeph>. Restrictions are that
+                  <codeph><varname>frame_start</varname></codeph> cannot be <codeph>UNBOUNDED
+                FOLLOWING</codeph>, <codeph><varname>frame_end</varname></codeph> cannot be
+                <codeph>UNBOUNDED PRECEDING</codeph>, and the
+                <codeph><varname>frame_end</varname></codeph> choice cannot appear earlier in the
+              above list than the <codeph><varname>frame_start</varname></codeph> choice — for
+              example <codeph>RANGE BETWEEN CURRENT ROW AND <varname>value</varname>
+                PRECEDING</codeph> is not allowed. </pd>
+            <pd>The default framing option is <codeph>RANGE UNBOUNDED PRECEDING</codeph>, which is
+              the same as <codeph>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</codeph>; it
+              sets the frame to be all rows from the partition start up through the current row's
+              last peer (a row that <codeph>ORDER BY</codeph> considers equivalent to the current
+              row, or all rows if there is no <codeph>ORDER BY</codeph> clause). <codeph>UNBOUNDED
+                PRECEDING</codeph> means that the frame starts with the first row of the partition,
+              and <codeph>UNBOUNDED FOLLOWING</codeph> means that the frame ends with the last row
+              of the partition (regardless of <codeph>RANGE</codeph> or <codeph>ROWS</codeph> mode).
+              In <codeph>ROWS</codeph> mode, <codeph>CURRENT ROW</codeph> means that the frame
+              starts or ends with the current row; but in <codeph>RANGE</codeph> mode, it means that
+              the frame starts or ends with the current row's first or last peer in the
+                <codeph>ORDER BY</codeph> ordering. The <codeph><varname>value</varname>
+                PRECEDING</codeph> and <codeph><varname>value</varname> FOLLOWING</codeph> cases are
+              currently only allowed in <codeph>ROWS</codeph> mode. They indicate that the frame
+              starts or ends with the row that many rows before or after the current row.
+                  <codeph><varname>value</varname></codeph> must be an integer expression not
+              containing any variables, aggregate functions, or window functions. The value must not
+              be null or negative; but it can be zero, which selects the current row itself.</pd>
+            <pd>Beware that the <codeph>ROWS</codeph> options can produce unpredictable results if
+              the <codeph>ORDER BY</codeph> ordering does not order the rows uniquely. The
+                <codeph>RANGE</codeph> options are designed to ensure that rows that are peers in
+              the <codeph>ORDER BY</codeph> ordering are treated alike; all peer rows will be in the
+              same frame. </pd>
             <pd>Use either a <codeph>ROWS</codeph> or <codeph>RANGE</codeph> clause to express the
               bounds of the window. The window bound can be one, many, or all rows of a partition.
               You can express the bound of the window either in terms of a range of data values

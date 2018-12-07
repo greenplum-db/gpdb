@@ -432,6 +432,7 @@ class SQLIsolationTestCase:
             U: connect in utility mode to primary contentid from gp_segment_configuration
             U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
             U<: join an existing utility mode session (does not currently support an asterisk target)
+            I: include a file of sql statements (useful for loading reusable functions)
 
         An example is:
 
@@ -531,6 +532,12 @@ class SQLIsolationTestCase:
         failures; a better long-term solution is needed.)
 
         Block/join flags are not currently supported with *U.
+
+        Including files:
+
+        -- example contents for file.sql: create function some_test_function() returning void ...
+        1I: path/to/some/file.sql;
+        1: select some_helper_function();
     """
 
     def run_sql_file(self, sql_file, out_file = None, out_dir = None, optimizer = None):

@@ -9,13 +9,15 @@
             <title>Synopsis</title>
             <codeblock id="sql_command_synopsis">ALTER SERVER <varname>server_name</varname> [ VERSION '<varname>new_version</varname>' ]
     [ OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] ) ]
-ALTER SERVER <varname>server_name</varname> OWNER TO <varname>new_owner</varname></codeblock>
+
+ALTER SERVER <varname>server_name</varname> OWNER TO <varname>new_owner</varname>
+ALTER SERVER <varname>server_name</varname> RENAME TO <varname>new_name</varname></codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
             <p><codeph>ALTER SERVER</codeph> changes the definition of a foreign server.
                 The first form of the command changes the version string or the generic options of 
-                the server. Greenplum Database requires at least one clause. The second form of the command changes the owner of the server.</p>
+                the server. Greenplum Database requires at least one clause. The second and third forms of the command change the owner or the name of the server.</p>
             <p>To alter the server, you must be the owner of the server. To alter the owner you must:<ul>
               <li>Own the server.</li>
               <li>Be a direct or indirect member of the new owning role.</li>
@@ -46,7 +48,13 @@ ALTER SERVER <varname>server_name</varname> OWNER TO <varname>new_owner</varname
                 <plentry>
                     <pt>OWNER TO <varname>new_owner</varname></pt>
                     <pd>
-                        <p>Specifies the new owner of the server.</p>
+                        <p>Specifies the new owner of the foreign server.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>RENAME TO <varname>new_name</varname></pt>
+                    <pd>
+                        <p>Specifies the new name of the foreign server.</p>
                     </pd>
                 </plentry>
             </parml>

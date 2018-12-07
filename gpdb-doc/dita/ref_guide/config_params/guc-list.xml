@@ -5542,7 +5542,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -5596,7 +5596,7 @@
             <row>
               <entry colname="col1">service name</entry>
               <entry colname="col2">postgres</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
