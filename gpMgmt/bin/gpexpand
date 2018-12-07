@@ -1036,7 +1036,7 @@ class gpexpand:
         # make sure gpexpand schema doesn't exist since it wasn't in DB provided
         if not gpexpand_db_status:
             """
-            MPP-14145 - If there's no discernable status, the schema must not exist.
+            MPP-14145 - If there's no discernible status, the schema must not exist.
 
             The checks in get_status_from_db claim to look for existence of the 'gpexpand' schema, but more accurately they're
             checking for non-emptiness of the gpexpand.status table. If the table were empty, but the schema did exist, gpexpand would presume
@@ -1297,7 +1297,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                     if hostname is None or len(hostname) == 0:
                         raise ExpansionError("Invalid host name on line " + str(line))
                     if address is None or len(address) == 0:
-                        raise ExpansionError("Invaid address on line " + str(line))
+                        raise ExpansionError("Invalid address on line " + str(line))
                     if port is None or str(port).isdigit() == False or int(port) < 0:
                         raise ExpansionError("Invalid port number on line " + str(line))
                     if datadir is None or len(datadir) == 0:
@@ -1999,11 +1999,11 @@ UPDATE gp_distribution_policy
         self.conn = dbconn.connect(self.dburl, encoding='UTF8')
         sql = "INSERT INTO %s.%s VALUES ( 'EXPANSION STARTED', '%s' ) " % (
             gpexpand_schema, status_table, expansionStart)
-        cursor = dbconn.execSQL(self.conn, sql)
+        dbconn.execSQL(self.conn, sql)
         self.conn.commit()
 
         sql = """UPDATE gpexpand.status_detail set status = '%s' WHERE status = '%s' """ % (undone_status, start_status)
-        cursor = dbconn.execSQL(self.conn, sql)
+        dbconn.execSQL(self.conn, sql)
         self.conn.commit()
 
         # read schema and queue up commands
@@ -2265,7 +2265,7 @@ class ExpandTable():
                  AND table_oid = %s """ % (gpexpand_schema, status_detail_table, undone_status,
                                            self.dbname, self.schema_oid, self.table_oid)
 
-        logger.debug('Reseting detailed_status: %s' % sql.decode('utf-8'))
+        logger.debug('Resetting detailed_status: %s' % sql.decode('utf-8'))
         dbconn.execSQL(status_conn, sql)
         status_conn.commit()
 
@@ -2484,7 +2484,7 @@ class ExpandCommand(SQLCommand):
                 "Finished expanding %s.%s" % (self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
             self.table.mark_finished(status_conn, start_time, end_time)
         elif not self.options.simple_progress:
-            logger.info("Reseting status_detail for %s.%s" % (
+            logger.info("Resetting status_detail for %s.%s" % (
                 self.table.dbname.decode('utf-8'), self.table.fq_name.decode('utf-8')))
             self.table.reset_started(status_conn)
 
