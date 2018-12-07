@@ -50,6 +50,7 @@ static Node *ParseComplexProjection(ParseState *pstate, char *funcname,
 					   Node *first_arg, int location);
 static void unknown_attribute(ParseState *pstate, Node *relref, char *attname,
 				  int location);
+static bool check_pg_get_expr_arg(ParseState *pstate, Node *arg, int netlevelsup);
 
 typedef struct
 {
@@ -656,6 +657,9 @@ ParseFuncOrColumn(ParseState *pstate, List *funcname, List *fargs,
 				state->p_hasDynamicFunction = true;
 		}
 	}
+
+	/* Hack to protect pg_get_expr() against misuse */
+	check_pg_get_expr_args(pstate, funcid, fargs);
 
 	return retval;
 }
@@ -1875,6 +1879,56 @@ checkTableFunctions_walker(Node *node, check_table_func_context *context)
 									  checkTableFunctions_walker, 
 									  (void *) context);
 	}
+}
+
+/*
+ * pg_get_expr() is a system function that exposes the expression
+ * deparsing functionality in ruleutils.c to users. Very handy, but it was
+ * later realized that the functions in ruleutils.c don't check the input
+ * rigorously, assuming it to come from system catalogs and to therefore
+ * be valid. That makes it easy for a user to crash the backend by passing
+ * a maliciously crafted string representation of an expression to
+ * pg_get_expr().
+ *
+ * There's a lot of code in ruleutils.c, so it's not feasible to add
+ * water-proof input checking after the fact. Even if we did it once, it
+ * would need to be taken into account in any future patches too.
+ *
+ * Instead, we restrict pg_rule_expr() to only allow input from system
+ * catalogs. This is a hack, but it's the most robust and easiest
+ * to backpatch way of plugging the vulnerability.
+ *
+ * This is transparent to the typical usage pattern of
+ * "pg_get_expr(systemcolumn, ...)", but will break "pg_get_expr('foo',
+ * ...)", even if 'foo' is a valid expression fetched earlier from a
+ * system catalog. Hopefully there aren't many clients doing that out there.
+ */
+void
+check_pg_get_expr_args(ParseState *pstate, Oid fnoid, List *args)
+{
+	Node	   *arg;
+
+	/* if not being called for pg_get_expr, do nothing */
+	if (fnoid != F_PG_GET_EXPR && fnoid != F_PG_GET_EXPR_EXT)
+		return;
+
+	/* superusers are allowed to call it anyway (dubious) */
+	if (superuser())
+		return;
+
+	/*
+	 * The first argument must be a Var referencing one of the allowed
+	 * system-catalog columns.  It could be a join alias Var or subquery
+	 * reference Var, though, so we need a recursive subroutine to chase
+	 * through those possibilities.
+	 */
+	Assert(list_length(args) > 1);
+	arg = (Node *) linitial(args);
+
+	if (!check_pg_get_expr_arg(pstate, arg, 0))
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("argument to pg_get_expr() must come from system catalogs")));
 }
 
 static bool
