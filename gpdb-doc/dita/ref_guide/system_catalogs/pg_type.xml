@@ -27,11 +27,19 @@
         <tbody>
           <row>
             <entry colname="col1">
+              <codeph>oid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Row identifier (hidden attribute; must be explicitly selected)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>typname</codeph>
             </entry>
             <entry colname="col2">name</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Data type name.</entry>
+            <entry colname="col4">Data type name</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -39,7 +47,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_namespace.oid</entry>
-            <entry colname="col4">The OID of the namespace that contains this type.</entry>
+            <entry colname="col4">The OID of the namespace that contains this type</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -47,7 +55,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_authid.oid</entry>
-            <entry colname="col4">Owner of the type.</entry>
+            <entry colname="col4">Owner of the type</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -101,7 +109,7 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">True if the type is a preferred cast target within
-              its <codeph>typcategory</codeph>.</entry>
+              its <codeph>typcategory</codeph></entry>
           </row>
           <row>
             <entry colname="col1">
@@ -129,7 +137,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_class.oid</entry>
-            <entry colname="col4">If this is a composite type, then this column points to the
+            <entry colname="col4">If this is a composite type (see <codeph>typtype</codeph>), then this column points to the
                 <codeph>pg_class</codeph> entry that defines the corresponding table. (For a
               free-standing composite type, the <codeph>pg_class</codeph> entry does not really
               represent a table, but it is needed anyway for the type's
@@ -144,9 +152,9 @@
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">If not <codeph>0</codeph> then it identifies another row in
               <codeph>pg_type</codeph>. The current type can then be subscripted like an array yielding values of
-              type <codeph>typelem</codeph>. A true array type is variable length
+              type <codeph>typelem</codeph>. A "true" array type is variable length
                 (<codeph>typlen</codeph> = <codeph>-1</codeph>), but some fixed-length
-                (<codeph>tylpen</codeph> &gt; <codeph>0</codeph>) types also have nonzero
+                (<codeph>typlen</codeph> &gt; <codeph>0</codeph>) types also have nonzero
                 <codeph>typelem</codeph>, for example <codeph>name</codeph> and
                 <codeph>point</codeph>. If a fixed-length type has a <codeph>typelem</codeph> then
               its internal representation must be some number of values of the
@@ -168,7 +176,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Input conversion function (text format).</entry>
+            <entry colname="col4">Input conversion function (text format)</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -176,7 +184,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Output conversion function (text format).</entry>
+            <entry colname="col4">Output conversion function (text format)</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -184,7 +192,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Input conversion function (binary format), or 0 if none.</entry>
+            <entry colname="col4">Input conversion function (binary format), or 0 if none</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -192,7 +200,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Output conversion function (binary format), or 0 if none.</entry>
+            <entry colname="col4">Output conversion function (binary format), or 0 if none</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -201,7 +209,7 @@
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">Type modifier input function, or 0 if the type does not support
-              modifiers.</entry>
+              modifiers</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -210,7 +218,7 @@
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">Type modifier output function, or 0 to use the standard 
-              format.</entry>
+              format</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -219,7 +227,7 @@
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">Custom <codeph>ANALYZE</codeph> function, or 0 to use the standard
-              function.</entry>
+              function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -321,7 +329,7 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Null if the type has no associated default value. If not null,
+            <entry colname="col4">Null if the type has no associated default value. If <codeph>typdefaultbin</codeph> is not null,
               <codeph>typdefault</codeph> must contain a human-readable version of
               the default expression represented
               by <codeph>typdefaultbin</codeph>. If <codeph>typdefaultbin</codeph> is

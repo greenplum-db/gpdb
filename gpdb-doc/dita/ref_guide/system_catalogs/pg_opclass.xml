@@ -6,14 +6,14 @@
   <body>
     <p>The <codeph>pg_opclass</codeph> system catalog table defines index access method operator
       classes. Each operator class defines semantics for index columns of a particular data type and
-      a particular index access method. Note that there can be multiple operator classes for a given
-      data type/access method combination, thus supporting multiple behaviors. The majority of the
-      information defining an operator class is actually not in its <codeph>pg_opclass</codeph> row,
-      but in the associated rows in <xref href="pg_amop.xml#topic1">pg_amop</xref> and <xref
-        href="pg_amproc.xml#topic1">pg_amproc</xref>. Those rows are considered to be part of the
-      operator class definition — this is not unlike the way that a relation is defined by a single
-        <xref href="pg_class.xml#topic1">pg_class</xref> row plus associated rows in <xref
-        href="pg_attribute.xml#topic1">pg_attribute</xref> and other tables.</p>
+      a particular index access method. An operator class essentially specifies that a particular
+      operator family is applicable to a particular indexable column data type. The set of operators
+      from the family that are actually usable with the indexed column are those that accept the
+      column's data type as their left-hand input.</p>
+    <p>An operator class's <codeph>opcmethod</codeph> must match the <codeph>opfmethod</codeph> of
+      its containing operator family. Also, there must be no more than one <codeph>pg_opclass</codeph>
+      row having <codeph>opcdefault</codeph> true for any given combination of
+      <codeph>opcmethod</codeph> and <codeph>opcintype</codeph>.</p>
     <table id="gw141982">
       <title>pg_catalog.pg_opclass</title>
       <tgroup cols="4">
@@ -32,11 +32,19 @@
         <tbody>
           <row>
             <entry colname="col1">
-              <codeph>opcamid</codeph>
+              <codeph>oid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"></entry>
+            <entry colname="col4">Row identifier (hidden attribute; must be explicitly selected)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>opcmethod</codeph>
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_am.oid</entry>
-            <entry colname="col4">Index access method operator class is for.</entry>
+            <entry colname="col4">Index access method operator class is for</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -64,11 +72,19 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>opcfamily</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_opfamily.oid</entry>
+            <entry colname="col4">Operator family containing the operator class</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>opcintype</codeph>
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Data type that the operator class indexes.</entry>
+            <entry colname="col4">Data type that the operator class indexes</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -77,7 +93,7 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">True if this operator class is the default for the data type
-              opcintype.</entry>
+              <codeph>opcintype</codeph></entry>
           </row>
           <row>
             <entry colname="col1">
@@ -86,7 +102,7 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">Type of data stored in index, or zero if same as
-              opcintype.</entry>
+              <codeph>opcintype</codeph></entry>
           </row>
         </tbody>
       </tgroup>

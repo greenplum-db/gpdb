@@ -33,6 +33,14 @@
         <tbody>
           <row>
             <entry colname="col1">
+              <codeph>oid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Row identifier (hidden attribute; must be explicitly selected)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>rolname</codeph>
             </entry>
             <entry colname="col2">name</entry>
@@ -92,6 +100,16 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>rolreplication</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Role is a replication role. That is, this role can initiate streaming
+              replication and set/unset the system backup mode using <codeph>pg_start_backup</codeph>
+              and <codeph>pg_stop_backup</codeph>.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>rolconnlimit</codeph>
             </entry>
             <entry colname="col2">int4</entry>
@@ -105,7 +123,13 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Password (possibly encrypted); NULL if none</entry>
+            <entry colname="col4">Password (possibly encrypted); NULL if none. If the password is
+              encrypted, this column will begin with the string <codeph>md5</codeph> followed by a
+              32-character hexadecimal MD5 hash. The MD5 hash will be the user's password concatenated
+              to their user name. For example, if user <codeph>joe</codeph> has password
+              <codeph>xyzzy</codeph>, Greenplum Database will store the md5 hash of
+              <codeph>xyzzyjoe</codeph>. Greenplum assumes that a password that does not follow that
+              format is unencrypted.</entry>
           </row>
           <row>
             <entry colname="col1">

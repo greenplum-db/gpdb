@@ -25,11 +25,19 @@
         <tbody>
           <row>
             <entry colname="col1">
+              <codeph>oid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Row identifier (hidden attribute, must be explicityly selected)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>oprname</codeph>
             </entry>
             <entry colname="col2">name</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Name of the operator.</entry>
+            <entry colname="col4">Name of the operator</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -37,7 +45,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_namespace.oid</entry>
-            <entry colname="col4">The OID of the namespace that contains this operator.</entry>
+            <entry colname="col4">The OID of the namespace that contains this operator</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -45,7 +53,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_authid.oid</entry>
-            <entry colname="col4">Owner of the operator. </entry>
+            <entry colname="col4">Owner of the operator</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -58,11 +66,19 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>oprcanmerge</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">This operator supports merge joins</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>oprcanhash</codeph>
             </entry>
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
-            <entry colname="col4">This operator supports hash joins.</entry>
+            <entry colname="col4">This operator supports hash joins</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -70,7 +86,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Type of the left operand.</entry>
+            <entry colname="col4">Type of the left operand</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -78,7 +94,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Type of the right operand.</entry>
+            <entry colname="col4">Type of the right operand</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -86,7 +102,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Type of the result.</entry>
+            <entry colname="col4">Type of the result</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -94,51 +110,15 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">Commutator of this operator, if any.</entry>
+            <entry colname="col4">Commutator of this operator, if any</entry>
           </row>
           <row>
             <entry colname="col1">
               <codeph>oprnegate</codeph>
             </entry>
-            <entry colname="col2"/>
-            <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">Negator of this operator, if any.</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>oprlsortop</codeph>
-            </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">If this operator supports merge joins, the operator that sorts the
-              type of the left-hand operand (<codeph>L&lt;L</codeph>).</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>oprrsortop</codeph>
-            </entry>
-            <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">If this operator supports merge joins, the operator that sorts the
-              type of the right-hand operand (<codeph>R&lt;R</codeph>).</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>oprltcmpop</codeph>
-            </entry>
-            <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">If this operator supports merge joins, the less-than operator that
-              compares the left and right operand types (<codeph>L&lt;R</codeph>).</entry>
-          </row>
-          <row>
-            <entry colname="col1">
-              <codeph>oprgtcmpop</codeph>
-            </entry>
-            <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_operator.oid</entry>
-            <entry colname="col4">If this operator supports merge joins, the greater-than operator
-              that compares the left and right operand types (<codeph>L&gt;R</codeph>).</entry>
+            <entry colname="col4">Negator of this operator, if any</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -146,7 +126,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Function that implements this operator.</entry>
+            <entry colname="col4">Function that implements this operator</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -155,7 +135,7 @@
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
             <entry colname="col4">Restriction selectivity estimation function for this
-              operator.</entry>
+              operator</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -163,7 +143,7 @@
             </entry>
             <entry colname="col2">regproc</entry>
             <entry colname="col3">pg_proc.oid</entry>
-            <entry colname="col4">Join selectivity estimation function for this operator.</entry>
+            <entry colname="col4">Join selectivity estimation function for this operator</entry>
           </row>
         </tbody>
       </tgroup>

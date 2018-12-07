@@ -7,6 +7,12 @@
     <p>The <codeph>pg_amop</codeph> table stores information about operators associated with index
       access method operator classes. There is one row for each operator that is a member of an
       operator class.</p>
+    <p>An entry's <codeph>amopmethod</codeph> must match the <codeph>opfmethod</codeph>
+        of its containing operator family (including <codeph>amopmethod</codeph> here is
+        an intentional denormalization of the catalog structure for performance reasons).
+        Also, <codeph>amoplefttype</codeph> and <codeph>amoprighttype</codeph> must match
+        the <codeph>oprleft</codeph> and <codeph>oprright</codeph> fields of the referenced
+        <codeph>pg_operator</codeph> entry.</p>
     <table id="fw143542">
       <title>pg_catalog.pg_amop</title>
       <tgroup cols="4">
@@ -24,17 +30,28 @@
         </thead>
         <tbody>
           <row>
-            <entry colname="col1"><codeph>amopclaid</codeph></entry>
+            <entry colname="col1"><codeph>oid</codeph></entry>
             <entry colname="col2">oid</entry>
-            <entry colname="col3">pg_opclass.oid</entry>
-            <entry colname="col4">The index operator class this entry is for</entry>
+            <entry colname="col3"></entry>
+            <entry colname="col4">Row identifier (hidden attribute; must be explicitly selected)</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>amopsubtype</codeph></entry>
+            <entry colname="col1"><codeph>amopfamily</codeph></entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_opfamily.oid</entry>
+            <entry colname="col4">The operator family that this entry is for</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>amoplefttype</codeph></entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Subtype to distinguish multiple entries for one strategy; zero for
-              default</entry>
+            <entry colname="col4">Left-hand input data type of operator</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>amoprighttype</codeph></entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_type.oid</entry>
+            <entry colname="col4">Right-hand input data type of operator</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>amopstrategy</codeph></entry>
@@ -43,16 +60,30 @@
             <entry colname="col4">Operator strategy number</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>amopreqcheck</codeph></entry>
-            <entry colname="col2">boolean</entry>
+            <entry colname="col1"><codeph>amoppurpose</codeph></entry>
+            <entry colname="col2">char</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Index hit must be rechecked</entry>
+            <entry colname="col4">Operator purpose, either <codeph>s</codeph> for search or
+             <codeph>o</codeph> for ordering</entry>
           </row>
           <row>
             <entry colname="col1"><codeph>amopopr</codeph></entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_operator.oid</entry>
             <entry colname="col4">OID of the operator</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>amopmethod</codeph></entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_am.oid</entry>
+            <entry colname="col4">Index access method for the operator family</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>amopsortfamily</codeph></entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3">pg_opfamily.oid</entry>
+            <entry colname="col4">If an ordering operator, the B-tree operator family that this entry
+              sorts according to; zero if a search operator</entry>
           </row>
         </tbody>
       </tgroup>

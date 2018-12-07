@@ -123,6 +123,9 @@
       <li id="eu150406">
         <xref href="./pg_operator.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="eu149938f">
+        <xref href="./pg_opfamily.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="eu150051">
         <xref href="./pg_partition.xml#topic1" type="topic" format="dita"/>
       </li>

@@ -32,11 +32,19 @@
         <tbody>
           <row>
             <entry colname="col1">
+              <codeph>oid</codeph>
+            </entry>
+            <entry colname="col2">oid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Row identifier (hidden attribute; ust be explicitly selected)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>proname</codeph>
             </entry>
             <entry colname="col2">name</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Name of the function.</entry>
+            <entry colname="col4">Name of the function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -44,7 +52,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_namespace.oid</entry>
-            <entry colname="col4">The OID of the namespace that contains this function.</entry>
+            <entry colname="col4">The OID of the namespace that contains this function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -52,7 +60,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_authid.oid</entry>
-            <entry colname="col4">Owner of the function.</entry>
+            <entry colname="col4">Owner of the function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -61,7 +69,7 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_language.oid</entry>
             <entry colname="col4">Implementation language or call interface of this
-              function.</entry>
+              function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -70,7 +78,7 @@
             <entry colname="col2">float4</entry>
             <entry colname="col3"/>
             <entry colname="col4">Estimated execution cost (in cpu_operator_cost units); if
-              proretset is <codeph>true</codeph>, identifies the cost per row returned.</entry>
+              <codeph>proretset</codeph> is <codeph>true</codeph>, identifies the cost per row returned</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -78,7 +86,7 @@
             </entry>
             <entry colname="col2">float4</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Estimated number of result rows (zero if not proretset)</entry>
+            <entry colname="col4">Estimated number of result rows (zero if not <codeph>proretset</codeph>)</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -87,7 +95,15 @@
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">Data type of the variadic array parameter's elements, or zero if
-              the function does not have a variadic parameter.</entry>
+              the function does not have a variadic parameter</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>protransform</codeph>
+            </entry>
+            <entry colname="col2">regproc</entry>
+            <entry colname="col3">pg_proc.oid</entry>
+            <entry colname="col4">Calls to this function can be simplified by this other function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -95,7 +111,7 @@
             </entry>
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Function is an aggregate function.</entry>
+            <entry colname="col4">Function is an aggregate function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -103,7 +119,7 @@
             </entry>
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Function is a window function.</entry>
+            <entry colname="col4">Function is a window function</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -112,7 +128,17 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">Function is a security definer (for example, a 'setuid'
-              function).</entry>
+              function)</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>proleakproof</codeph>
+            </entry>
+            <entry colname="col2">boolean</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The function has no side effects. No information about the arguments
+              is conveyed except via the return value. Any function that might throw an error
+              depending on the values of its arguments is not leak-proof.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -131,7 +157,7 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">Function returns a set (multiple values of the specified data
-              type).</entry>
+              type)</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -152,7 +178,7 @@
             </entry>
             <entry colname="col2">int2</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Number of arguments.</entry>
+            <entry colname="col4">Number of arguments</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -160,7 +186,7 @@
             </entry>
             <entry colname="col2">int2</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Number of arguments that have default values.</entry>
+            <entry colname="col4">Number of arguments that have default values</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -168,7 +194,7 @@
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_type.oid</entry>
-            <entry colname="col4">Data type of the return value.</entry>
+            <entry colname="col4">Data type of the return value</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -189,9 +215,9 @@
             <entry colname="col3">pg_type.oid</entry>
             <entry colname="col4">An array with the data types of the function arguments. This
               includes all arguments (including <codeph>OUT</codeph> and <codeph>INOUT</codeph>
-              arguments); however, if all the arguments are <codeph>IN</codeph> arguments, this
+              arguments); however, if all of the arguments are <codeph>IN</codeph> arguments, this
               field will be null. Note that subscripting is 1-based, whereas for historical reasons
-              proargtypes is subscripted from 0.</entry>
+              <codeph>proargtypes</codeph> is subscripted from 0.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -203,8 +229,8 @@
                 <codeph>i</codeph> = <codeph>IN</codeph>, <codeph>o</codeph> = <codeph>OUT</codeph>
               , <codeph>b</codeph> = <codeph>INOUT</codeph>, <codeph>v</codeph> =
                 <codeph>VARIADIC</codeph>. If all the arguments are IN arguments, this field will be
-              null. Note that subscripts correspond to positions of proallargtypes not
-              proargtypes.</entry>
+              null. Note that subscripts correspond to positions of <codeph>proallargtypes</codeph>,
+              not <codeph>proargtypes</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -215,18 +241,18 @@
             <entry colname="col4">An array with the names of the function arguments. Arguments
               without a name are set to empty strings in the array. If none of the arguments have a
               name, this field will be null. Note that subscripts correspond to positions of
-              proallargtypes not proargtypes.</entry>
+              <codeph>proallargtypes</codeph> not <codeph>proargtypes</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">
               <codeph>proargdefaults</codeph>
             </entry>
-            <entry colname="col2"> text </entry>
+            <entry colname="col2">pg_node_tree</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Expression trees for default argument values. This is a list with
-              pronargdefaults elements, corresponding to the last <varname>N</varname> input
-              arguments (i.e., the last <varname>N</varname> proargtypes positions). If none of the
-              arguments have defaults, this field is empty.</entry>
+            <entry colname="col4">Expression trees (in <codeph>nodeToString()</codeph> representation) for default argument values. This is a list with
+              <codeph>pronargdefaults</codeph> elements, corresponding to the last <varname>N</varname> input
+              arguments (i.e., the last <varname>N</varname> <codeph>proargtypes</codeph> positions). If none of the
+              arguments have defaults, this field will be null.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -243,7 +269,7 @@
             <entry colname="col1">
               <codeph>probin</codeph>
             </entry>
-            <entry colname="col2">bytea</entry>
+            <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">Additional information about how to invoke the function. Again,
               the interpretation is language-specific.</entry>
@@ -252,8 +278,7 @@
             <entry colname="col1"><codeph>proconfig</codeph></entry>
             <entry colname="col2">text[]</entry>
             <entry colname="col3"/>
-            <entry colname="col4">An array with runtime configuration variable settings that are
-              local to function execution.</entry>
+            <entry colname="col4">Function's local settings for run-time configuration variables.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -262,7 +287,7 @@
             <entry colname="col2">aclitem[]</entry>
             <entry colname="col3"/>
             <entry colname="col4">Access privileges for the function as given by
-                <codeph>GRANT</codeph>/<codeph>REVOKE</codeph>.</entry>
+                <codeph>GRANT</codeph>/<codeph>REVOKE</codeph></entry>
           </row>
           <row>
             <entry colname="col1"><codeph>prodataaccess</codeph></entry>
