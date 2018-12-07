@@ -724,7 +724,9 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
  *		that in addition to the regular tuple (not instead of, because
  *		callers may hold pointers to Datums within the regular tuple).
  *
- * As above, the result must be treated as read-only.
+ * This is Greenplum replacement for ExecFetchSlotMinimalTuple in PostgreSQL.
+ * The above comment from upstream applies.  In addtion, the result must be
+ * treated as read-only.
  *
  * Note: if the slot already contains a memtuple and it needs to be de-toasted
  * (inline_toast = true and de-toasted length is greater than current length)
@@ -770,9 +772,9 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast)
 	}
 
 	/*
-	 * A side effect of this is the tuple is to mark the slot as virtual - the
-	 * values array in the slot contains pointers to corresponding locations
-	 * of toasted attributes in the memtuple.
+	 * A side effect of this is to mark the slot as virtual - the tts_values
+	 * array in the slot contains pointers to corresponding locations of
+	 * toasted attributes in the memtuple.
 	 */
 	slot_getallattrs(slot);
 
