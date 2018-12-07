@@ -10,20 +10,19 @@ PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache H
 
 PXF bundles all of the JAR files on which it depends, including those for Hadoop services, and loads these JARs at runtime. Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to each Greenplum Database segment host. Before you configure PXF Hadoop, Hive, and HBase connectors, ensure that you can copy configuration files from HDFS, Hive, and HBase hosts in your Hadoop cluster to the Greenplum Database master host.
 
-In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on each Greenplum Database segment host. PXF creates this directory when you run `pxf init`.
+In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on each Greenplum Database segment host. PXF creates this directory when you run `pxf cluster init`.
 
 ## <a id="client-pxf-config-steps"></a>Procedure
 
 Perform the following procedure to configure the desired PXF Hadoop-related connectors on each segment host in your Greenplum Database cluster.
 
 
-You will use the `gpssh` and `gpscp` utilities where possible to run a command on multiple hosts.
+You will use the `gpscp` utility where possible to copy files to multiple hosts.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. PXF requires information from `core-site.xml` and other Hadoop configuration files. Copy relevant configuration from your Hadoop cluster to each Greenplum Database segment host.
@@ -84,5 +83,5 @@ You will use the `gpssh` and `gpscp` utilities where possible to run a command o
 
 ## <a id="client-cfg-update"></a>Updating Hadoop Configuration
 
-If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated `.xml` file(s) to each Greenplum Database segment host and restart PXF.
+If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated `.xml` file(s) to each Greenplum Database segment host and restart PXF on each host.
 

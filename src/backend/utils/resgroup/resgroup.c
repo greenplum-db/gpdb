@@ -2296,53 +2296,39 @@ groupReleaseSlot(ResGroupData *group, ResGroupSlotData *slot)
 void
 SerializeResGroupInfo(StringInfo str)
 {
-	int i;
-	int			itmp;
-	ResGroupCap	tmp;
-	ResGroupCaps	caps;
+	unsigned int cpuset_len;
+	int32		itmp;
+	ResGroupCaps empty_caps;
+	ResGroupCaps *caps;
 
 	if (selfIsAssigned())
-		caps = self->caps;
+		caps = &self->caps;
 	else
 	{
-		MemSet(&caps, 0, sizeof(caps));
+		ClearResGroupCaps(&empty_caps);
+		caps = &empty_caps;
 	}
 
-	tmp = htonl(self->groupId);
-	appendBinaryStringInfo(str, (char *) &tmp, sizeof(self->groupId));
+	itmp = htonl(self->groupId);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
 
-	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
-	{
-		if (i == RESGROUP_LIMIT_TYPE_CPUSET)
-		{
-			appendBinaryStringInfo(str, caps.cpuset, sizeof(caps.cpuset));
-		}
-		else
-		{
-			switch (i)
-			{
-				case RESGROUP_LIMIT_TYPE_CONCURRENCY:
-					tmp = htonl(caps.concurrency);
-					break;
-				case RESGROUP_LIMIT_TYPE_CPU:
-					tmp = htonl(caps.cpuRateLimit);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY:
-					tmp = htonl(caps.memLimit);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-					tmp = htonl(caps.memSharedQuota);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-					tmp = htonl(caps.memSpillRatio);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-					tmp = htonl(caps.memAuditor);
-					break;
-			}
-			appendBinaryStringInfo(str, (char *) &tmp, sizeof(ResGroupCap));
-		}
-	}
+	itmp = htonl(caps->concurrency);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	itmp = htonl(caps->cpuRateLimit);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	itmp = htonl(caps->memLimit);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	itmp = htonl(caps->memSharedQuota);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	itmp = htonl(caps->memSpillRatio);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	itmp = htonl(caps->memAuditor);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+
+	cpuset_len = strlen(caps->cpuset);
+	itmp = htonl(cpuset_len);
+	appendBinaryStringInfo(str, &itmp, sizeof(int32));
+	appendBinaryStringInfo(str, caps->cpuset, cpuset_len);
 
 	itmp = htonl(bypassedSlot.groupId);
 	appendBinaryStringInfo(str, (char *) &itmp, sizeof(itmp));
@@ -2357,55 +2343,39 @@ DeserializeResGroupInfo(struct ResGroupCaps *capsOut,
 						const char *buf,
 						int len)
 {
-	int			i;
-	int			itmp;
-	ResGroupCap	tmp;
+	int32		itmp;
+	unsigned int cpuset_len;
 	const char	*ptr = buf;
 
 	Assert(len > 0);
 
-	memcpy(&tmp, ptr, sizeof(*groupId));
-	*groupId = ntohl(tmp);
-	ptr += sizeof(*groupId);
+	ClearResGroupCaps(capsOut);
 
-	for (i = 0; i < RESGROUP_LIMIT_TYPE_COUNT; i++)
-	{
-		if (i == RESGROUP_LIMIT_TYPE_CPUSET)
-		{
-			memcpy(capsOut->cpuset, ptr, sizeof(capsOut->cpuset));
-			ptr += sizeof(capsOut->cpuset);
-		}
-		else
-		{
-			memcpy(&tmp, ptr, sizeof(ResGroupCap));
-			switch (i)
-			{
-				case RESGROUP_LIMIT_TYPE_CONCURRENCY:
-					capsOut->concurrency = ntohl(tmp);
-					break;
-				case RESGROUP_LIMIT_TYPE_CPU:
-					capsOut->cpuRateLimit = ntohl(tmp);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY:
-					capsOut->memLimit = ntohl(tmp);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SHARED_QUOTA:
-					capsOut->memSharedQuota = ntohl(tmp);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_SPILL_RATIO:
-					capsOut->memSpillRatio = ntohl(tmp);
-					break;
-				case RESGROUP_LIMIT_TYPE_MEMORY_AUDITOR:
-					capsOut->memAuditor = ntohl(tmp);
-					break;
-			}
-			ptr += sizeof(ResGroupCap);
-		}
-	}
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	*groupId = ntohl(itmp);
 
-	memcpy(&itmp, ptr, sizeof(itmp));
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->concurrency = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->cpuRateLimit = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->memLimit = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->memSharedQuota = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->memSpillRatio = ntohl(itmp);
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	capsOut->memAuditor = ntohl(itmp);
+
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
+	cpuset_len = ntohl(itmp);
+	if (cpuset_len >= sizeof(capsOut->cpuset))
+		elog(ERROR, "malformed serialized resource group info");
+	memcpy(capsOut->cpuset, ptr, len); ptr += cpuset_len;
+	capsOut->cpuset[cpuset_len] = '\0';
+
+	memcpy(&itmp, ptr, sizeof(int32)); ptr += sizeof(int32);
 	bypassedSlot.groupId = ntohl(itmp);
-	ptr += sizeof(itmp);
 
 	Assert(len == ptr - buf);
 }
@@ -2623,7 +2593,7 @@ void
 SwitchResGroupOnSegment(const char *buf, int len)
 {
 	Oid		newGroupId;
-	ResGroupCaps		caps = {0};
+	ResGroupCaps		caps;
 	ResGroupData		*group;
 	ResGroupSlotData	*slot;
 

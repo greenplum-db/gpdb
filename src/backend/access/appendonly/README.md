@@ -97,7 +97,7 @@ in `READ COMMITTED` mode, but AO tables don't store that information, so
 an update of a recently updated row in read committed mode behaves as if
 the row was deleted.
 
-The AO visiblity map works as an overlay, over the data. When a row
+The AO visibility map works as an overlay, over the data. When a row
 is `DELETEd` from an AO table, the original tuple is not modified. Instead,
 the tuple is marked as dead in the visibility map.
 

@@ -32,6 +32,7 @@ test: resgroup/resgroup_cancel_terminate_concurrency
 
 # regression tests
 test: resgroup/resgroup_recreate
+test: resgroup/resgroup_operator_memory
 
 # parallel tests
 #test: resgroup/restore_default_resgroup

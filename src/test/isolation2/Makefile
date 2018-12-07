@@ -20,7 +20,10 @@ endif
 override CPPFLAGS := -I$(srcdir) -I$(libpq_srcdir) -I$(srcdir)/../regress $(CPPFLAGS)
 override LDLIBS := $(libpq_pgport) $(LDLIBS)
 
-all: pg_isolation2_regress$(X) all-lib
+all: test_python pg_isolation2_regress$(X) all-lib
+
+test_python:
+	python helpers_test.py
 
 pg_regress.o:
 	$(MAKE) -C $(top_builddir)/src/test/regress pg_regress.o

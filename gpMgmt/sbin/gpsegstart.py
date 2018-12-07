@@ -3,7 +3,7 @@
 # Invalid name  - pylint: disable=C0103
 #
 # Copyright (c) EMC/Greenplum Inc 2011. All Rights Reserved.
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 """
 Internal Use Function.
@@ -29,7 +29,7 @@ Starts a set of one or more segment databases.
 """
 
 HELP = ["""
-Utility should only be used by other GP utilities.  
+Utility should only be used by other GP utilities.
 
 Return codes:
   0 - All segments started successfully
@@ -56,10 +56,10 @@ class StartResult:
         self.started    = started
         self.reason     = reason
         self.reasoncode = reasoncode
-    
+
     def __str__(self):
         return "".join([
-                "STATUS", 
+                "STATUS",
                 "--DIR:", str(self.datadir),
                 "--STARTED:", str(self.started),
                 "--REASONCODE:", str(self.reasoncode),
@@ -75,7 +75,7 @@ class OverallStatus:
     def __init__(self, dblist):
         """
         Build the datadir->segment mapping and remember the original size.
-        Since segments which fail to start will be removed from the mapping, 
+        Since segments which fail to start will be removed from the mapping,
         we later test the size of the map against the original size when
         returning the appropriate status code to the caller.
         """
@@ -132,7 +132,7 @@ class GpSegStart:
 
     def __init__(self, dblist, gpversion, mirroringMode, num_cids, era,
                  timeout, pickledTransitionData, specialMode, wrapper, wrapper_args,
-                 master_checksum_version, logfileDirectory=False):
+                 master_checksum_version, parallel, logfileDirectory=False):
 
         # validate/store arguments
         #
@@ -160,7 +160,7 @@ class GpSegStart:
 
         # initialize state
         #
-        self.pool                  = base.WorkerPool(numWorkers=len(dblist))
+        self.pool                  = base.WorkerPool(numWorkers=min(len(dblist), parallel))
         self.logger                = logger
         self.overall_status        = None
 
@@ -256,7 +256,7 @@ class GpSegStart:
                     self.overall_status.mark_failed(datadir, msg, reasoncode)
                     continue
 
-            cmd = gp.SegmentStart("Starting seg at dir %s" % datadir, 
+            cmd = gp.SegmentStart("Starting seg at dir %s" % datadir,
                                   seg,
                                   self.num_cids,
                                   self.era,
@@ -275,7 +275,7 @@ class GpSegStart:
             if res.rc != 0:
 
                 # we should also read in last entries in startup.log here
-                
+
                 datadir    = cmd.segment.getSegmentDataDirectory()
                 msg        = "PG_CTL failed.\nstdout:%s\nstderr:%s\n" % (res.stdout, res.stderr)
                 reasoncode = gp.SEGSTART_ERROR_PG_CTL_FAILED
@@ -375,10 +375,10 @@ class GpSegStart:
 
 
         # ensure segments in a bad state are stopped
-        # 
+        #
         for seg in toStop:
             datadir, port = (seg.getSegmentDataDirectory(), seg.getSegmentPort())
-            
+
             msg = "Stopping segment %s, %s because of failure sending transition" % (datadir, port)
             self.logger.info(msg)
 
@@ -399,8 +399,8 @@ class GpSegStart:
         Logic to start the segments.
         """
 
-        # we initialize an overall status object which maintains a mapping 
-        # from each segment's data directory to the segment object as well 
+        # we initialize an overall status object which maintains a mapping
+        # from each segment's data directory to the segment object as well
         # as a list of specific success/failure results.
         #
         self.overall_status = OverallStatus(self.dblist)
@@ -423,7 +423,7 @@ class GpSegStart:
         self.overall_status.log_results()
         return self.overall_status.exit_code()
 
-    
+
 
     def cleanup(self):
         """
@@ -431,7 +431,7 @@ class GpSegStart:
         """
         if self.pool:
             self.pool.haltWork()
-    
+
 
     @staticmethod
     def createParser():
@@ -465,8 +465,10 @@ class GpSegStart:
         parser.add_option('', '--wrapper', dest="wrapper", default=None, type='string')
         parser.add_option('', '--wrapper-args', dest="wrapper_args", default=None, type='string')
         parser.add_option('', '--master-checksum-version', dest="master_checksum_version", default=None, type='string', action="store")
-        
+        parser.add_option('-B', '--parallel', type="int", dest="parallel", default=gp.DEFAULT_GPSTART_NUM_WORKERS, help='maximum size of a threadpool to start segments')
+
         return parser
+
 
     @staticmethod
     def createProgram(options, args):
@@ -485,9 +487,10 @@ class GpSegStart:
                           options.wrapper,
                           options.wrapper_args,
                           options.master_checksum_version,
+                          options.parallel,
                           logfileDirectory=logfileDirectory)
 
-#------------------------------------------------------------------------- 
+#-------------------------------------------------------------------------
 if __name__ == '__main__':
     mainOptions = { 'setNonuserOnToolLogger':True}
     simple_main( GpSegStart.createParser, GpSegStart.createProgram, mainOptions )

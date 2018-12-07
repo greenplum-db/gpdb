@@ -52,6 +52,7 @@ groups:
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icg_planner_centos7_random_numsegments
   - icw_planner_centos7_online_expand
 {% endif %}
 {% if "sles" in os_types %}
@@ -192,6 +193,7 @@ groups:
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icg_planner_centos7_random_numsegments
   - icw_planner_centos7_online_expand
   - compile_gpdb_centos7
 {% endif %}
@@ -1215,6 +1217,122 @@ jobs:
     image: centos-gpdb-test-7
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+
+- name: icg_planner_centos7_random_numsegments
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: -k
+        -C src/test/regress installcheck-good
+        PGOPTIONS='-c optimizer=off'
+        EXCLUDE_TESTS="'
+          AOCO_Compression2
+          alter_distribution_policy
+          alter_table_ao
+          alter_table_aocs
+          alter_table_set
+          ao_checksum_corruption
+          ao_locks
+          aocs
+          appendonly
+          bfv_dd
+          bfv_dd_multicolumn
+          bfv_dd_types
+          bfv_partition
+          bfv_partition_plans
+          bfv_subquery
+          bitmap_index
+          bitmapscan
+          complex
+          constraints
+          db_size_functions
+          deadlock
+          direct_dispatch
+          dispatch
+          distributed_transactions
+          explain_format
+          freeze_aux_tables
+          gp_aggregates
+          gp_tablespace
+          gpcopy
+          gpdist
+          gporca
+          ic
+          incremental_analyze
+          instr_in_shmem
+          instr_in_shmem_verify
+          join
+          memconsumption
+          metadata_track
+          misc
+          oid_consistency
+          partindex_test
+          partition
+          partition1
+          partition_locking
+          partition_pruning
+          partition_storage
+          portals
+          portals_updatable
+          python_processed64bit
+          qp_dml_oids
+          qp_dropped_cols
+          qp_functions_in_from
+          qp_functions_in_subquery
+          qp_gist_indexes2
+          qp_misc_jiras
+          qp_targeted_dispatch
+          qp_with_functional_inlining
+          query_finish
+          query_finish_pending
+          rle_delta
+          rpt_returning
+          spi_processed64bit
+          subselect_gp
+          tidscan
+          uao_catalog_tables
+          uao_compaction/threshold
+          uao_ddl/alter_ao_part_exch
+          uao_ddl/alter_ao_part_exch_column
+          uao_ddl/alter_ao_part_exch_row
+          uao_ddl/alter_ao_table_setstorage_column
+          uao_ddl/alter_ao_table_setstorage_row
+          uao_dml/uao_dml_column
+          uao_dml/uao_dml_row
+          uaocs_catalog_tables
+          uaocs_compaction/threshold
+          updatable_views
+          update
+          vacuum_full_ao
+          vacuum_full_freeze_heap
+          vacuum_full_heap
+          vacuum_full_heap_bitmapindex
+          vacuum_stats
+          window
+          workfile/hashagg_spill
+          workfile/hashjoin_spill
+          workfile/materialize_spill
+          workfile/sisc_mat_sort
+          workfile/sisc_sort_spill
+          workfile/sort_spill
+          workfile/spilltodisk
+          writer_aborts_reader'"
+        EXTRA_REGRESS_OPTS='
+          --prehook=randomize_create_table_default_numsegments
+          --ignore-plans'
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -2331,6 +2449,7 @@ jobs:
       - icw_gporca_centos6
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icg_planner_centos7_random_numsegments
       - icw_planner_centos7_online_expand
       - icw_gporca_sles11
       - icw_gporca_sles12
@@ -2396,6 +2515,7 @@ jobs:
       - compile_gpdb_centos7
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icg_planner_centos7_random_numsegments
       - icw_planner_centos7_online_expand
       - resource_group_centos7
       - MADlib_Test_orca_centos7

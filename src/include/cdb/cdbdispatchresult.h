@@ -279,7 +279,7 @@ void
 cdbdisp_sumRejectedRows(CdbDispatchResults *results);
 
 HTAB *
-cdbdisp_sumAoPartTupCount(PartitionNode *parts, CdbDispatchResults *results);
+cdbdisp_sumAoPartTupCount(CdbDispatchResults *results);
 
 /*
  * max of the lastOid values returned from the QEs
@@ -322,7 +322,6 @@ void
 cdbdisp_clearCdbPgResults(CdbPgResults* cdb_pgresults);
 
 extern struct HTAB *
-PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
-					 void *aotupcounts, int naotupcounts);
+PQprocessAoTupCounts(struct HTAB *ht, void *aotupcounts, int naotupcounts);
 
 #endif   /* CDBDISPATCHRESULT_H */

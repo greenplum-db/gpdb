@@ -29,9 +29,10 @@ explain (costs off) select count(distinct d) from dqa_t1;
 ------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Table Scan on dqa_t1
- Optimizer: PQO version 2.70.0
-(4 rows)
+         ->  Aggregate
+               ->  Table Scan on dqa_t1
+ Optimizer: PQO version 3.11.0
+(5 rows)
 
 select count(distinct d) from dqa_t1 group by i;
  count 
@@ -246,13 +247,14 @@ explain (costs off) select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dq
 ------------------------------------------------
  Aggregate
    ->  Gather Motion 3:1  (slice1; segments: 3)
-         ->  Hash Join
-               Hash Cond: (dqa_t1.d = dqa_t2.d)
-               ->  Table Scan on dqa_t1
-               ->  Hash
-                     ->  Table Scan on dqa_t2
- Optimizer: PQO version 2.70.0
-(8 rows)
+         ->  Aggregate
+               ->  Hash Join
+                     Hash Cond: (dqa_t1.d = dqa_t2.d)
+                     ->  Table Scan on dqa_t1
+                     ->  Hash
+                           ->  Table Scan on dqa_t2
+ Optimizer: PQO version 3.11.0
+(9 rows)
 
 select count(distinct dqa_t1.d) from dqa_t1, dqa_t2 where dqa_t1.d = dqa_t2.d group by dqa_t2.dt;
  count 

@@ -109,7 +109,7 @@ ISCONFIG=$(GPPGDIR)/GNUmakefile
 ## On these platforms, we do the full build including the server. On other
 ## platforms, we do a client-only build.
 ##
-SERVER_PLATFORMS=rhel5_x86_32 rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
+SERVER_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 linux_x86_64 osx106_x86
 
 #---------------------------------------------------------------------
 # GPPKG
@@ -119,7 +119,7 @@ SERVER_PLATFORMS=rhel5_x86_32 rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_
 ## Support gppkg platforms
 ##
 
-GPPKG_PLATFORMS=rhel5_x86_64 rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 ubuntu1604_amd64
+GPPKG_PLATFORMS=rhel7_x86_64 rhel6_x86_64 suse10_x86_64 suse11_x86_64 sles11_x86_64 ubuntu1604_amd64
 
 #---------------------------------------------------------------------
 # Compiler options
@@ -161,20 +161,18 @@ APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
 
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca --disable-pxf $(APR_CONFIG)
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-pxf --disable-gpcloud --without-libbz2 $(APR_CONFIG)
-sol10_x86_64_CONFIGFLAGS=--enable-snmp --with-libxml $(APR_CONFIG)
-rhel5_x86_32_CONFIGFLAGS=--host=i686-pc-linux-gnu --enable-snmp --with-gssapi --with-libxml $(APR_CONFIG)
-rhel5_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel6_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel7_x86_64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-#suse10_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-#suse11_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-#sles11_x86_64_CONFIGFLAGS=--enable-snmp --enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+sol10_x86_64_CONFIGFLAGS= --with-libxml $(APR_CONFIG)
+rhel6_x86_64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel7_x86_64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+#suse10_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+#suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+#sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse10_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce $(APR_CONFIG) $(APU_CONFIG)
 sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml --enable-orafce $(APR_CONFIG) $(APU_CONFIG)
-linux_x86_64_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-osx106_x86_CONFIGFLAGS=--enable-snmp ${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
-ubuntu1604_amd64_CONFIGFLAGS=--enable-snmp --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+linux_x86_64_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
+osx106_x86_CONFIGFLAGS=${ORCA_CONFIG} --with-libxml $(APR_CONFIG)
+ubuntu1604_amd64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 
 BLD_CONFIGFLAGS=$($(BLD_ARCH)_CONFIGFLAGS)
 
@@ -314,13 +312,11 @@ autoconf : RECONFIG
 # standardized build rules
 #---------------------------------------------------------------------
 
-rhel5_x86_32_LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):/usr/lib
 BLD_LD_LIBRARY_PATH:=$($(BLD_ARCH)_LD_LIBRARY_PATH):$($(BLD_WHERE_THE_LIBRARY_THINGS_ARE))
 export $(BLD_WHERE_THE_LIBRARY_THINGS_ARE)=$(BLD_LD_LIBRARY_PATH)
 
 # how much of GPDB to build by platform (default is "full")
 hpux_ia64_GPDB_BUILDSET=partial
-rhel5_x86_32_GPDB_BUILDSET=partial
 aix5_ppc_64_GPDB_BUILDSET=partial
 aix5_ppc_32_GPDB_BUILDSET=partial
 aix7_ppc_64_GPDB_BUILDSET=aix_subset
@@ -636,7 +632,6 @@ sol10_x86_32_MPP_ARCH=SOL-i386
 sol10_sparc_MPP_ARCH=SOL10-sparc
 sol10_sparc_64_MPP_ARCH=SOL10-sparc_64
 sol10_sparc_32_MPP_ARCH=SOL10-sparc_32
-rhel5_x86_64_MPP_ARCH=RHEL5-x86_64
 rhel6_x86_64_MPP_ARCH=RHEL6-x86_64
 rhel7_x86_64_MPP_ARCH=RHEL7-x86_64
 osx106_x86_MPP_ARCH=OSX-i386

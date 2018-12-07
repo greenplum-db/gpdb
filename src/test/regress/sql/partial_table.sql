@@ -46,14 +46,53 @@ analyze r2;
 -- a temp table is created during reorganization, its numsegments should be
 -- the same with original table, otherwise some data will be lost after the
 -- reorganization.
+--
+-- in most cases the temp table is created with CTAS.
 begin;
 	insert into t1 select i, i from generate_series(1,10) i;
 	select gp_segment_id, * from t1;
+	select gp_debug_set_create_table_default_numsegments('full');
 	alter table t1 set with (reorganize=true) distributed by (c1);
 	select gp_segment_id, * from t1;
 abort;
+-- but there are also cases the temp table is created with CREATE + INSERT.
+-- case 1: with dropped columns
+begin;
+	insert into t1 select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t1;
+	alter table t1 drop column c4;
+	select gp_debug_set_create_table_default_numsegments('full');
+	alter table t1 set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t1;
+abort;
+-- case 2: AOCO
+begin;
+	select gp_debug_set_create_table_default_numsegments('minimal');
+	create table t (c1 int, c2 int)
+	  with (appendonly=true, orientation=column)
+	  distributed by (c1, c2);
+	insert into t select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t;
+	select gp_debug_set_create_table_default_numsegments('full');
+	alter table t set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t;
+abort;
+-- case 3: AO + index
+begin;
+	select gp_debug_set_create_table_default_numsegments('minimal');
+	create table t (c1 int, c2 int)
+	  with (appendonly=true, orientation=row)
+	  distributed by (c1, c2);
+	create index ti on t (c2);
+	insert into t select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t;
+	select gp_debug_set_create_table_default_numsegments('full');
+	alter table t set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t;
+abort;
 -- restore the analyze information
 analyze t1;
+select gp_debug_reset_create_table_default_numsegments();
 
 -- append SingleQE of different sizes
 select max(c1) as v, 1 as r from t2 union all select 1 as v, 2 as r;
@@ -70,6 +109,31 @@ begin;
 	:explain  select * from t1 a join t1 b using(c2)
 	union all select * from t2 c join t2 d using(c2) ;
 abort;
+
+-- partitioned table should have the same numsegments for parent and children
+-- even in RANDOM mode.
+select gp_debug_set_create_table_default_numsegments('random');
+begin;
+	create table t (c1 int, c2 int) distributed by (c1)
+	partition by range(c2) (start(0) end(20) every(1));
+
+	-- verify that parent and children have the same numsegments
+	select count(a.localoid)
+	  from gp_distribution_policy a
+	  join pg_class c
+	    on a.localoid = c.oid
+	   and c.relname like 't_1_prt_%'
+	  join gp_distribution_policy b
+	    on a.numsegments = b.numsegments
+	   and b.localoid = 't'::regclass
+	;
+abort;
+select gp_debug_reset_create_table_default_numsegments();
+
+-- verify numsegments in subplans
+:explain select * from t1, t2
+   where t1.c1 > any (select max(t2.c1) from t2 where t2.c2 = t1.c2)
+     and t2.c1 > any (select max(t1.c1) from t1 where t1.c2 = t2.c2);
 
 --
 -- create table: LIKE, INHERITS and DISTRIBUTED BY
@@ -389,7 +453,6 @@ select gp_debug_reset_create_table_default_numsegments();
 :explain select * from r2 a left join d2 b using (c1, c2);
 :explain select * from r2 a left join r2 b using (c1);
 :explain select * from r2 a left join r2 b using (c1, c2);
-:explain select * from t1, t2 where t1.c1 > any (select max(t2.c1) from t2 where t2.c2 = t1.c2) and t2.c1 > any(select max(c1) from t1 where t1.c2 = t2.c2);
 
 --
 -- insert

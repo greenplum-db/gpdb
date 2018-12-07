@@ -362,9 +362,6 @@
 /* Define to 1 if you have the `naucrates' library (-lnaucrates). */
 #undef HAVE_LIBNAUCRATES
 
-/* Define to 1 if you have the `netsnmp' library (-lnetsnmp). */
-#undef HAVE_LIBNETSNMP
-
 /* Define to 1 if you have the `numa' library (-lnuma). */
 #undef HAVE_LIBNUMA
 
@@ -443,9 +440,6 @@
 
 /* Define to 1 if you have the <net/if.h> header file. */
 #undef HAVE_NET_IF_H
-
-/* Define to 1 if you have the <net-snmp/net-snmp-config.h> header file. */
-#undef HAVE_NET_SNMP_NET_SNMP_CONFIG_H
 
 /* Define to 1 if you have the <numa.h> header file. */
 #undef HAVE_NUMA_H
@@ -943,9 +937,6 @@
 
 /* Define to 1 to use Intel SSE 4.2 CRC instructions with a runtime check. */
 #undef USE_SLICING_BY_8_CRC32C
-
-/* Define to 1 to build with snmp capabilities. (--enable-snmp) */
-#undef USE_SNMP
 
 /* Define to 1 use Intel SSE 4.2 CRC instructions. */
 #undef USE_SSE42_CRC32C

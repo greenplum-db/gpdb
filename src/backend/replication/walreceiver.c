@@ -862,8 +862,7 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 				if (len < hdrlen)
 					ereport(ERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
-							 errmsg_internal("invalid WAL message received from primary"),
-							 errSendAlert(true)));
+							 errmsg_internal("invalid WAL message received from primary")));
 				appendBinaryStringInfo(&incoming_message, buf, hdrlen);
 
 				/* read the fields */
@@ -885,8 +884,7 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 				if (len != hdrlen)
 					ereport(ERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
-							 errmsg_internal("invalid keepalive message received from primary"),
-							 errSendAlert(true)));
+							 errmsg_internal("invalid keepalive message received from primary")));
 				appendBinaryStringInfo(&incoming_message, buf, hdrlen);
 
 				/* read the fields */
@@ -906,7 +904,7 @@ XLogWalRcvProcessMsg(unsigned char type, char *buf, Size len)
 			ereport(ERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
 					 errmsg_internal("invalid replication message type %d",
-									 type),	errSendAlert(true)));
+									 type)));
 	}
 }
 

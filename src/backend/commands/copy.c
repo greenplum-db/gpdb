@@ -216,6 +216,8 @@ static void HandleCopyError(CopyState cstate);
 static void HandleQDErrorFrame(CopyState cstate);
 
 static void CopyInitDataParser(CopyState cstate);
+static void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
+static void CopyEolStrToType(CopyState cstate);
 
 static GpDistributionData *InitDistributionData(CopyState cstate, EState *estate);
 static void FreeDistributionData(GpDistributionData *distData);
@@ -2001,16 +2003,6 @@ BeginCopy(bool is_from,
 	  cstate->encoding_embeds_ascii = PG_ENCODING_IS_CLIENT_ONLY(cstate->file_encoding);
   }
 
-	/*
-	 * some greenplum db specific vars
-	 */
-	cstate->is_copy_in = (is_from ? true : false);
-	if (is_from)
-	{
-		cstate->error_on_executor = false;
-		initStringInfo(&(cstate->executor_err_context));
-	}
-
 	cstate->copy_dest = COPY_FILE;		/* default */
 
 	MemoryContextSwitchTo(oldcontext);
@@ -2639,9 +2631,6 @@ CopyToDispatch(CopyState cstate)
 	cstate->fe_msgbuf = makeStringInfo();
 
 	cdbCopy = makeCdbCopy(false);
-	cdbCopy->partitions = RelationBuildPartitionDesc(cstate->rel, false);
-	cdbCopy->skip_ext_partition = cstate->skip_ext_partition;
-	cdbCopy->hasReplicatedTable = GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy);
 
 	/* XXX: lock all partitions */
 
@@ -2660,7 +2649,9 @@ CopyToDispatch(CopyState cstate)
 	{
 		bool		done;
 
-		cdbCopyStart(cdbCopy, stmt, NULL);
+		cdbCopyStart(cdbCopy, stmt, NULL,
+					 RelationBuildPartitionDesc(cstate->rel, false),
+					 NIL);
 
 		if (cstate->binary)
 		{
@@ -3282,19 +3273,6 @@ CopyFromErrorCallback(void *arg)
 	CopyState	cstate = (CopyState) arg;
 	char		buffer[20];
 
-	/*
-	 * If we saved the error context from a QE in cdbcopy.c append it here.
-	 */
-	if (Gp_role == GP_ROLE_DISPATCH && cstate->executor_err_context.len > 0)
-	{
-		errcontext("%s", cstate->executor_err_context.data);
-		return;
-	}
-
-	/* don't need to print out context if error wasn't local */
-	if (cstate->error_on_executor)
-		return;
-
 	if (cstate->binary)
 	{
 		/* can't usefully display the data */
@@ -3722,10 +3700,6 @@ CopyFrom(CopyState cstate)
 
 		((volatile CopyState) cstate)->cdbCopy = cdbCopy;
 
-		cdbCopy->partitions = estate->es_result_partitions;
-		if (list_length(cstate->ao_segnos) > 0)
-			cdbCopy->ao_segnos = cstate->ao_segnos;
-
 		/*
 		 * Dispatch the COPY command.
 		 *
@@ -3743,7 +3717,8 @@ CopyFrom(CopyState cstate)
 		 */
 		elog(DEBUG5, "COPY command sent to segdbs");
 
-		cdbCopyStart(cdbCopy, glob_copystmt, cstate->rel->rd_cdbpolicy);
+		cdbCopyStart(cdbCopy, glob_copystmt, cstate->rel->rd_cdbpolicy,
+					 estate->es_result_partitions, cstate->ao_segnos);
 
 		/*
 		 * Skip header processing if dummy file get from master for COPY FROM ON
@@ -4876,7 +4851,6 @@ HandleCopyError(CopyState cstate)
 
 		cdbsreh->is_server_enc = cstate->line_buf_converted;
 		cdbsreh->linenumber = cstate->cur_lineno;
-		cdbsreh->consec_csv_err = cstate->num_consec_csv_err;
 		if (cstate->cur_attname)
 		{
 			errormsg =  psprintf("%s, column %s",
@@ -7089,13 +7063,6 @@ static void CopyInitDataParser(CopyState cstate)
 	cstate->cur_attname = NULL;
 	cstate->null_print_len = strlen(cstate->null_print);
 
-	if (cstate->csv_mode)
-	{
-		cstate->in_quote = false;
-		cstate->last_was_esc = false;
-		cstate->num_consec_csv_err = 0;
-	}
-
 	/* Set up data buffer to hold a chunk of data */
 	MemSet(cstate->raw_buf, ' ', RAW_BUF_SIZE * sizeof(char));
 	cstate->raw_buf[RAW_BUF_SIZE] = '\0';
@@ -7112,7 +7079,8 @@ static void CopyInitDataParser(CopyState cstate)
  *
  * The code here mimics a part of SetClientEncoding() in mbutils.c
  */
-void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
+static void
+setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
 {
 	Oid		conversion_proc;
 	
@@ -7138,7 +7106,7 @@ void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable)
 	}
 }
 
-void
+static void
 CopyEolStrToType(CopyState cstate)
 {
 	if (pg_strcasecmp(cstate->eol_str, "lf") == 0)

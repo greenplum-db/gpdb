@@ -61,6 +61,8 @@ analyze r2;
 -- a temp table is created during reorganization, its numsegments should be
 -- the same with original table, otherwise some data will be lost after the
 -- reorganization.
+--
+-- in most cases the temp table is created with CTAS.
 begin;
 	insert into t1 select i, i from generate_series(1,10) i;
 	select gp_segment_id, * from t1;
@@ -77,6 +79,12 @@ begin;
              0 |  9 |  9 |    |   
              0 | 10 | 10 |    |   
 (10 rows)
+
+	select gp_debug_set_create_table_default_numsegments('full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
 
 	alter table t1 set with (reorganize=true) distributed by (c1);
 	select gp_segment_id, * from t1;
@@ -95,8 +103,158 @@ begin;
 (10 rows)
 
 abort;
+-- but there are also cases the temp table is created with CREATE + INSERT.
+-- case 1: with dropped columns
+begin;
+	insert into t1 select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t1;
+ gp_segment_id | c1 | c2 | c3 | c4 
+---------------+----+----+----+----
+             0 |  1 |  1 |    |   
+             0 |  2 |  2 |    |   
+             0 |  3 |  3 |    |   
+             0 |  4 |  4 |    |   
+             0 |  5 |  5 |    |   
+             0 |  6 |  6 |    |   
+             0 |  7 |  7 |    |   
+             0 |  8 |  8 |    |   
+             0 |  9 |  9 |    |   
+             0 | 10 | 10 |    |   
+(10 rows)
+
+	alter table t1 drop column c4;
+	select gp_debug_set_create_table_default_numsegments('full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+	alter table t1 set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t1;
+ gp_segment_id | c1 | c2 | c3 
+---------------+----+----+----
+             0 |  1 |  1 |   
+             0 |  2 |  2 |   
+             0 |  3 |  3 |   
+             0 |  4 |  4 |   
+             0 |  5 |  5 |   
+             0 |  6 |  6 |   
+             0 |  7 |  7 |   
+             0 |  8 |  8 |   
+             0 |  9 |  9 |   
+             0 | 10 | 10 |   
+(10 rows)
+
+abort;
+-- case 2: AOCO
+begin;
+	select gp_debug_set_create_table_default_numsegments('minimal');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ MINIMAL
+(1 row)
+
+	create table t (c1 int, c2 int)
+	  with (appendonly=true, orientation=column)
+	  distributed by (c1, c2);
+	insert into t select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t;
+ gp_segment_id | c1 | c2 
+---------------+----+----
+             0 |  1 |  1
+             0 |  2 |  2
+             0 |  3 |  3
+             0 |  4 |  4
+             0 |  5 |  5
+             0 |  6 |  6
+             0 |  7 |  7
+             0 |  8 |  8
+             0 |  9 |  9
+             0 | 10 | 10
+(10 rows)
+
+	select gp_debug_set_create_table_default_numsegments('full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+	alter table t set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t;
+ gp_segment_id | c1 | c2 
+---------------+----+----
+             0 |  1 |  1
+             0 |  2 |  2
+             0 |  3 |  3
+             0 |  4 |  4
+             0 |  5 |  5
+             0 |  6 |  6
+             0 |  7 |  7
+             0 |  8 |  8
+             0 |  9 |  9
+             0 | 10 | 10
+(10 rows)
+
+abort;
+-- case 3: AO + index
+begin;
+	select gp_debug_set_create_table_default_numsegments('minimal');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ MINIMAL
+(1 row)
+
+	create table t (c1 int, c2 int)
+	  with (appendonly=true, orientation=row)
+	  distributed by (c1, c2);
+	create index ti on t (c2);
+	insert into t select i, i from generate_series(1,10) i;
+	select gp_segment_id, * from t;
+ gp_segment_id | c1 | c2 
+---------------+----+----
+             0 |  1 |  1
+             0 |  2 |  2
+             0 |  3 |  3
+             0 |  4 |  4
+             0 |  5 |  5
+             0 |  6 |  6
+             0 |  7 |  7
+             0 |  8 |  8
+             0 |  9 |  9
+             0 | 10 | 10
+(10 rows)
+
+	select gp_debug_set_create_table_default_numsegments('full');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ FULL
+(1 row)
+
+	alter table t set with (reorganize=true) distributed by (c1);
+	select gp_segment_id, * from t;
+ gp_segment_id | c1 | c2 
+---------------+----+----
+             0 |  1 |  1
+             0 |  2 |  2
+             0 |  3 |  3
+             0 |  4 |  4
+             0 |  5 |  5
+             0 |  6 |  6
+             0 |  7 |  7
+             0 |  8 |  8
+             0 |  9 |  9
+             0 | 10 | 10
+(10 rows)
+
+abort;
 -- restore the analyze information
 analyze t1;
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
 -- append SingleQE of different sizes
 select max(c1) as v, 1 as r from t2 union all select 1 as v, 2 as r;
  v | r 
@@ -175,6 +333,77 @@ begin;
 (26 rows)
 
 abort;
+-- partitioned table should have the same numsegments for parent and children
+-- even in RANDOM mode.
+select gp_debug_set_create_table_default_numsegments('random');
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ RANDOM
+(1 row)
+
+begin;
+	create table t (c1 int, c2 int) distributed by (c1)
+	partition by range(c2) (start(0) end(20) every(1));
+	-- verify that parent and children have the same numsegments
+	select count(a.localoid)
+	  from gp_distribution_policy a
+	  join pg_class c
+	    on a.localoid = c.oid
+	   and c.relname like 't_1_prt_%'
+	  join gp_distribution_policy b
+	    on a.numsegments = b.numsegments
+	   and b.localoid = 't'::regclass
+	;
+ count 
+-------
+    20
+(1 row)
+
+abort;
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+-- verify numsegments in subplans
+:explain select * from t1, t2
+   where t1.c1 > any (select max(t2.c1) from t2 where t2.c2 = t1.c2)
+     and t2.c1 > any (select max(t1.c1) from t1 where t1.c2 = t2.c2);
+                                                                         QUERY PLAN                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 1:1  (slice4; segments: 1)  (cost=10000000000.00..10182108256.73 rows=1263802500 width=32) (actual time=0.570..0.570 rows=0 loops=2)
+   ->  Nested Loop  (cost=10000000000.00..10182108256.73 rows=421267500 width=32) (actual time=0.000..0.053 rows=0 loops=1)
+         ->  Seq Scan on t1  (cost=0.00..70516404.55 rows=11850 width=16) (actual time=0.000..0.041 rows=0 loops=1)
+               Filter: (SubPlan 1)
+               SubPlan 1  (slice4; segments: 1)
+                 ->  Aggregate  (cost=991.77..991.78 rows=1 width=4) (never executed)
+                       ->  Result  (cost=0.00..989.11 rows=24 width=4) (never executed)
+                             Filter: (t2_1.c2 = t1.c2)
+                             ->  Materialize  (cost=0.00..989.11 rows=24 width=4) (never executed)
+                                   ->  Broadcast Motion 2:1  (slice1; segments: 2)  (cost=0.00..988.75 rows=24 width=4) (never executed)
+                                         ->  Seq Scan on t2 t2_1  (cost=0.00..988.75 rows=24 width=4) (actual time=0.000..0.037 rows=0 loops=1)
+         ->  Materialize  (cost=0.00..70518359.80 rows=35550 width=16) (never executed)
+               ->  Broadcast Motion 2:1  (slice3; segments: 2)  (cost=0.00..70517826.55 rows=35550 width=16) (never executed)
+                     ->  Seq Scan on t2  (cost=0.00..70516404.55 rows=11850 width=16) (actual time=0.000..0.087 rows=0 loops=1)
+                           Filter: (SubPlan 2)
+                           SubPlan 2  (slice3; segments: 2)
+                             ->  Aggregate  (cost=991.77..991.78 rows=1 width=4) (never executed)
+                                   ->  Result  (cost=0.00..989.11 rows=24 width=4) (never executed)
+                                         Filter: (t1_1.c2 = t2.c2)
+                                         ->  Materialize  (cost=0.00..989.11 rows=24 width=4) (never executed)
+                                               ->  Broadcast Motion 1:2  (slice2; segments: 1)  (cost=0.00..988.75 rows=24 width=4) (never executed)
+                                                     ->  Seq Scan on t1 t1_1  (cost=0.00..988.75 rows=24 width=4) (actual time=0.000..0.174 rows=0 loops=1)
+   (slice0)    Executor memory: 514K bytes.
+   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
+   (slice2)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
+   (slice3)    Executor memory: 98K bytes avg x 3 workers, 98K bytes max (seg0).
+   (slice4)    Executor memory: 129K bytes avg x 3 workers, 129K bytes max (seg0).
+ Memory used:  128000kB
+ Optimizer: legacy query optimizer
+ Total runtime: 14.189 ms
+(30 rows)
+
 --
 -- create table: LIKE, INHERITS and DISTRIBUTED BY
 --
@@ -3071,41 +3300,6 @@ select gp_debug_reset_create_table_default_numsegments();
  Optimizer: legacy query optimizer
  Total runtime: 4.955 ms
 (17 rows)
-
-:explain select * from t1, t2 where t1.c1 > any (select max(t2.c1) from t2 where t2.c2 = t1.c2) and t2.c1 > any(select max(c1) from t1 where t1.c2 = t2.c2);
-                                                                         QUERY PLAN                                                                         
-------------------------------------------------------------------------------------------------------------------------------------------------------------
- Gather Motion 1:1  (slice4; segments: 1)  (cost=10000000000.00..10182108256.73 rows=1263802500 width=32) (actual time=0.570..0.570 rows=0 loops=2)
-   ->  Nested Loop  (cost=10000000000.00..10182108256.73 rows=421267500 width=32) (actual time=0.000..0.053 rows=0 loops=1)
-         ->  Seq Scan on t1  (cost=0.00..70516404.55 rows=11850 width=16) (actual time=0.000..0.041 rows=0 loops=1)
-               Filter: (SubPlan 1)
-               SubPlan 1  (slice4; segments: 1)
-                 ->  Aggregate  (cost=991.77..991.78 rows=1 width=4) (never executed)
-                       ->  Result  (cost=0.00..989.11 rows=24 width=4) (never executed)
-                             Filter: (t2_1.c2 = t1.c2)
-                             ->  Materialize  (cost=0.00..989.11 rows=24 width=4) (never executed)
-                                   ->  Broadcast Motion 2:1  (slice1; segments: 2)  (cost=0.00..988.75 rows=24 width=4) (never executed)
-                                         ->  Seq Scan on t2 t2_1  (cost=0.00..988.75 rows=24 width=4) (actual time=0.000..0.037 rows=0 loops=1)
-         ->  Materialize  (cost=0.00..70518359.80 rows=35550 width=16) (never executed)
-               ->  Broadcast Motion 2:1  (slice3; segments: 2)  (cost=0.00..70517826.55 rows=35550 width=16) (never executed)
-                     ->  Seq Scan on t2  (cost=0.00..70516404.55 rows=11850 width=16) (actual time=0.000..0.087 rows=0 loops=1)
-                           Filter: (SubPlan 2)
-                           SubPlan 2  (slice3; segments: 2)
-                             ->  Aggregate  (cost=991.77..991.78 rows=1 width=4) (never executed)
-                                   ->  Result  (cost=0.00..989.11 rows=24 width=4) (never executed)
-                                         Filter: (t1_1.c2 = t2.c2)
-                                         ->  Materialize  (cost=0.00..989.11 rows=24 width=4) (never executed)
-                                               ->  Broadcast Motion 1:2  (slice2; segments: 1)  (cost=0.00..988.75 rows=24 width=4) (never executed)
-                                                     ->  Seq Scan on t1 t1_1  (cost=0.00..988.75 rows=24 width=4) (actual time=0.000..0.174 rows=0 loops=1)
-   (slice0)    Executor memory: 514K bytes.
-   (slice1)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice2)    Executor memory: 66K bytes avg x 3 workers, 66K bytes max (seg0).
-   (slice3)    Executor memory: 98K bytes avg x 3 workers, 98K bytes max (seg0).
-   (slice4)    Executor memory: 129K bytes avg x 3 workers, 129K bytes max (seg0).
- Memory used:  128000kB
- Optimizer: legacy query optimizer
- Total runtime: 14.189 ms
-(30 rows)
 
 --
 -- insert

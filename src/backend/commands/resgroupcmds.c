@@ -127,7 +127,7 @@ CreateResourceGroup(CreateResourceGroupStmt *stmt)
 				(errcode(ERRCODE_RESERVED_NAME),
 				 errmsg("resource group name \"none\" is reserved")));
 
-	MemSet(&caps, 0, sizeof(caps));
+	ClearResGroupCaps(&caps);
 	parseStmtOptions(stmt, &caps);
 
 	/*
@@ -545,7 +545,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	 */
 	int			mask = 0;
 
-	MemSet(resgroupCaps, 0, sizeof(ResGroupCaps));
+	ClearResGroupCaps(resgroupCaps);
 
 	/* Init cpuset with proper value */
 	strcpy(resgroupCaps->cpuset, DefaultCpuset);

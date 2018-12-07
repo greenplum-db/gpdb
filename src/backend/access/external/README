@@ -43,8 +43,8 @@ When a complete row is parsed together with its attributes it is converted to a
 heap tuple and propagated up to the next node.
 
 
-Proccess
---------
+Process
+-------
 
 This is roughly what the call stack looks like:
 

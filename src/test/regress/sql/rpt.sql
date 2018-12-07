@@ -271,4 +271,36 @@ select * from foo;
 insert into foo values (1, 1), (2, 1);
 select * from bar where exists (select * from foo);
 
+------
+-- Test Current Of is disabled for replicated table
+------
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+delete from foo where current of c1;
+abort;
+
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+update foo set y = 1 where current of c1;
+abort;
+
+-----
+-- Test updatable view works for replicated table
+----
+truncate foo;
+truncate bar;
+insert into foo values (1, 1);
+insert into foo values (2, 2);
+insert into bar values (1, 1);
+create view v_foo as select * from foo where y = 1;
+begin;
+update v_foo set y = 2; 
+select * from gp_dist_random('foo');
+abort;
+
+update v_foo set y = 3 from bar where bar.y = v_foo.y; 
+select * from gp_dist_random('foo');
+
 drop schema rpt cascade;

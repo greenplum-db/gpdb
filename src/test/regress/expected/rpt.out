@@ -544,7 +544,68 @@ select * from bar where exists (select * from foo);
  1 | 2
 (2 rows)
 
+------
+-- Test Current Of is disabled for replicated table
+------
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+delete from foo where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+update foo set y = 1 where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+-----
+-- Test updatable view works for replicated table
+----
+truncate foo;
+truncate bar;
+insert into foo values (1, 1);
+insert into foo values (2, 2);
+insert into bar values (1, 1);
+create view v_foo as select * from foo where y = 1;
+begin;
+update v_foo set y = 2; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+(6 rows)
+
+abort;
+update v_foo set y = 3 from bar where bar.y = v_foo.y; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+(6 rows)
+
 drop schema rpt cascade;
-NOTICE:  drop cascades to 2 other objects
+NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table foo
 drop cascades to table bar
+drop cascades to view v_foo

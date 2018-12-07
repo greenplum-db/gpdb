@@ -68,6 +68,11 @@ typedef struct ResGroupCaps
 	char			cpuset[MaxCpuSetLength];
 } ResGroupCaps;
 
+/* Set 'cpuset' to an empty string, and reset all other fields to zero */
+#define ClearResGroupCaps(caps) \
+	MemSet((caps), 0, offsetof(ResGroupCaps, cpuset) + 1)
+
+
 /*
  * GUC variables.
  */

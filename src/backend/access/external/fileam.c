@@ -348,7 +348,6 @@ external_rescan(FileScanDesc scan)
 	scan->fs_pstate->cur_attname = NULL;
 	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_pstate->raw_buf_len = 0;
-	scan->fs_pstate->bytesread = 0;
 }
 
 /* ----------------
@@ -835,7 +834,6 @@ else \
 	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
 	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
 	pstate->cdbsreh->processed++; \
-	pstate->cdbsreh->consec_csv_err = pstate->num_consec_csv_err; \
 \
 	/* set the error message. Use original msg and add column name if available */ \
 	if (pstate->cur_attname)\
@@ -865,43 +863,6 @@ externalgettup_defined(FileScanDesc scan)
 
 	MemoryContextReset(pstate->rowcontext);
 	oldcontext = MemoryContextSwitchTo(pstate->rowcontext);
-
-	/* on first time around just throw the header line away */
-	if (pstate->header_line && pstate->bytesread > 0)
-	{
-		PG_TRY();
-		{
-			/* Read the data file header line, and ignore it. */
-			(void) CopyReadLine(pstate);
-		}
-		PG_CATCH();
-		{
-			/*
-			 * got here? encoding conversion error occurred on the
-			 * header line (first row).
-			 */
-			if (pstate->errMode == ALL_OR_NOTHING)
-			{
-				PG_RE_THROW();
-			}
-			else
-			{
-				/* SREH - release error state */
-				if (!elog_dismiss(DEBUG5))
-					PG_RE_THROW();		/* hope to never get here! */
-
-				/*
-				 * note: we don't bother doing anything special here.
-				 * we are never interested in logging a header line
-				 * error. just continue the workflow.
-				 */
-			}
-		}
-		PG_END_TRY();
-
-		EXT_RESET_LINEBUF;
-		pstate->header_line = false;
-	}
 
 	/* Get a line */
 	if (!NextCopyFrom(pstate,
@@ -1009,7 +970,6 @@ externalgettup_custom(FileScanDesc scan)
 				 * FILEAM_HANDLE_ERROR.
 				 */
 				pstate->cur_lineno = formatter->fmt_badrow_num;
-				pstate->cur_byteno = formatter->fmt_bytesread;
 				resetStringInfo(&pstate->line_buf);
 
 				if (formatter->fmt_badrow_len > 0)
@@ -1246,8 +1206,6 @@ InitParseState(CopyState pstate, Relation relation,
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
-
-		pstate->num_consec_csv_err = 0;
 	}
 
 	/* Initialize 'out_functions', like CopyTo() would. */

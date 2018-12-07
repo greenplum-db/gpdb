@@ -548,8 +548,6 @@ errstart(int elevel, const char *filename, int lineno,
 		edata->sqlerrcode = ERRCODE_WARNING;
 	else
 		edata->sqlerrcode = ERRCODE_SUCCESSFUL_COMPLETION;
-	if (elevel > ERROR)
-		edata->send_alert = true;  /* Send alerts for PANIC and FATAL errors */
 	/* errno is saved here so that error parameter eval can't change it */
 	edata->saved_errno = errno;
 
@@ -1594,22 +1592,6 @@ getinternalerrposition(void)
 	CHECK_STACK_DEPTH();
 
 	return edata->internalpos;
-}
-
-/*
- * GPDB: errSendAlert -- set flag indicating the error should trigger an alert via e-mail or SNMP
- */
-int
-errSendAlert(bool sendAlert)
-{
-	ErrorData  *edata = &errordata[errordata_stack_depth];
-
-	/* we don't bother incrementing recursion_depth */
-	CHECK_STACK_DEPTH();
-
-	edata->send_alert = sendAlert;
-
-	return 0;					/* return value does not matter */
 }
 
 /*
@@ -4039,7 +4021,6 @@ write_message_to_server_log(int elevel,
 							int lineno,
 							int stacktracesize,
 							bool omit_location,
-							bool send_alert,
 							void* const *stacktracearray,
 							bool printstack)
 {
@@ -4068,7 +4049,6 @@ write_message_to_server_log(int elevel,
 
 	fix_fields.session_start_time =
 		(MyProcPort == NULL) ? 0 : (pg_time_t) timestamptz_to_time_t(MyProcPort->SessionStartTime);
-	fix_fields.send_alert = send_alert ? 't' : 'f';
 	fix_fields.omit_location = omit_location ? 't' : 'f';
 	fix_fields.gp_is_primary = 't';
 	fix_fields.gp_session_id = gp_session_id;
@@ -4203,7 +4183,6 @@ send_message_to_server_log(ErrorData *edata)
 												edata->lineno,
 												edata->stacktracesize,
 												edata->omit_location,
-												edata->send_alert,
 												edata->stacktracearray,
 												edata->printstack);
 				else
@@ -5142,7 +5121,6 @@ write_stderr(const char *fmt,...)
 										0,
 										0,
 										true,
-										false,
 										NULL,
 										false);
 		}
@@ -5313,7 +5291,6 @@ gp_elog(PG_FUNCTION_ARGS)
 	ErrorData	edata;
 	char	   *errormsg;
 	const char *save_debug_query;
-	bool		sendalert = false;
 
 	/* Validate input arguments */
 	if (PG_NARGS() != 1 && PG_NARGS() != 2)
@@ -5341,9 +5318,6 @@ gp_elog(PG_FUNCTION_ARGS)
 	errormsg = text_to_cstring(PG_GETARG_TEXT_PP(0));
 	/* text_to_cstring is guaranteed to not return a NULL, so we don't need to check */
 
-	if (PG_NARGS() > 1)
-		sendalert = PG_GETARG_BOOL(1);
-
 	memset(&edata, 0, sizeof(edata));
 	edata.elevel = LOG;
 	edata.output_to_server = true;
@@ -5352,7 +5326,6 @@ gp_elog(PG_FUNCTION_ARGS)
 	edata.omit_location = true;
 	edata.hide_stmt = true;
 	edata.internalquery = "";
-	edata.send_alert = sendalert;
 	edata.message = (char *)errormsg;						/* edata.message really should be const char * */
 	edata.sqlerrcode = MAKE_SQLSTATE('X','X', '1','0','0'); /* use a special SQLSTATE to make it easy to search the log */
 

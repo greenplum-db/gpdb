@@ -192,10 +192,10 @@ SEGMENT OUTPUT DATA
                             log file (may grow and shrink as compression is applied)
 
 * Estimated total data to synchronize - when in Resynchronization mode, the estimated 
-                                      size of data left to syncronize
+                                      size of data left to synchronize
 
 * Data synchronized - when in Resynchronization mode, the estimated size of data 
-                    that has already been syncronized
+                    that has already been synchronized
 
 * Estimated resync progress with mirror - when in Resynchronization mode, the 
                                         estimated percentage of completion

@@ -75,7 +75,7 @@ psql (9.4beta1)
 Type "help" for help.
 
 testdb=# <b>CREATE EXTENSION dblink</b>;
-CREATE EXENSION</codeblock></li>
+CREATE EXTENSION</codeblock></li>
         <li>Use the <codeph>dblink_connect()</codeph> function to create either an implicit or a
           named connection to another database. The connection string that you provide should be a
           libpq-style keyword/value string. This example creates a connection named

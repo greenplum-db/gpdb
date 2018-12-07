@@ -223,11 +223,10 @@ Perform the following steps to create a PostgreSQL table named `forpxf_table1` i
 
 You must download the PostgreSQL driver JAR file to your system, copy the JAR file to the PXF user configuration directory, and then restart PXF.
 
-1. Log in to the Greenplum Database master node and set up your environment:
+1. Log in to the Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. [Download](https://jdbc.postgresql.org/download.html) a PostgreSQL JDBC driver JAR file and note the location of the downloaded file.
@@ -238,11 +237,7 @@ You must download the PostgreSQL driver JAR file to your system, copy the JAR fi
     gpadmin@gpmaster$ gpscp -v -f seghostfile postgresql-42.2.5.jar =:/etc/pxf/usercfg/lib/postgresql-42.2.5.jar
     ``` 
 
-6. Restart PXF on *each* Greenplum Database segment host with the following command:
-
-    ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+6. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 #### <a id="ex_readjdbc"></a>Read from the PostgreSQL Table
 

@@ -1823,16 +1823,6 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	if (!CdbPathLocus_IsBottleneck(subpath->locus) &&
 		!cdbpathlocus_is_hashed_on_exprs(subpath->locus, uniq_exprs, false))
 	{
-		/*
-		 * We want to use numsegments from rel->cdbpolicy, however it might
-		 * be NULL.  Subpath is the cheapest path of rel, so it has the same
-		 * numsegments with rel.
-		 */
-		if (rel->cdbpolicy)
-		{
-			AssertEquivalent(rel->cdbpolicy->numsegments,
-							 subpath->locus.numsegments);
-		}
 		int			numsegments = CdbPathLocus_NumSegments(subpath->locus);
 
         locus = cdbpathlocus_from_exprs(root, uniq_exprs, numsegments);

@@ -91,10 +91,12 @@ reconstructTuple(MotionNodeEntry *pMNEntry, ChunkSorterEntry *pCSEntry, TupleRem
 	SerTupInfo *pSerInfo = &pMNEntry->ser_tup_info;
 
 	/*
-	 * Convert the list of chunks into a tuple, then stow it away. This frees
-	 * our TCList as a side-effect
+	 * Convert the list of chunks into a tuple, then stow it away.
 	 */
 	tup = CvtChunksToTup(&pCSEntry->chunk_list, pSerInfo, remapper);
+
+	/* We're done with the chunks now. */
+	clearTCList(NULL, &pCSEntry->chunk_list);
 
 	if (!tup)
 		return;
@@ -303,7 +305,7 @@ InitMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID)
  * This function is called from:  ExecInitMotion()
  */
 void
-UpdateMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool preserveOrder, TupleDesc tupDesc, uint64 operatorMemKB)
+UpdateMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool preserveOrder, TupleDesc tupDesc)
 {
 	MemoryContext oldCtxt;
 	MotionNodeEntry *pEntry;
@@ -342,14 +344,10 @@ UpdateMotionLayerNode(MotionLayerState *mlStates, int16 motNodeID, bool preserve
 	pEntry->tuple_desc = CreateTupleDescCopy(tupDesc);
 	InitSerTupInfo(pEntry->tuple_desc, &pEntry->ser_tup_info);
 
-	pEntry->memKB = operatorMemKB;
-
 	if (!preserveOrder)
 	{
-		Assert(pEntry->memKB > 0);
-
 		/* Create a tuple-store for the motion node's incoming tuples. */
-		pEntry->ready_tuples = htfifo_create(pEntry->memKB);
+		pEntry->ready_tuples = htfifo_create();
 	}
 	else
 		pEntry->ready_tuples = NULL;
@@ -1042,8 +1040,7 @@ getChunkSorterEntry(MotionLayerState *mlStates,
 	 */
 	if (motNodeEntry->preserve_order)
 	{
-		Assert(motNodeEntry->memKB > 0);
-		chunkSorterEntry->ready_tuples = htfifo_create(motNodeEntry->memKB);
+		chunkSorterEntry->ready_tuples = htfifo_create();
 
 #ifdef AMS_VERBOSE_LOGGING
 		elog(DEBUG5, "Motion node %d is order-preserving.  Creating tuple-store for entry [src=%d,mn=%d].",

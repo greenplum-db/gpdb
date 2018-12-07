@@ -34,7 +34,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           <li>When updating HLL statistics, <codeph>ANALYZE</codeph> operations are required only on
             leaf child partitions that have changed. For example, <codeph>ANALYZE</codeph> is
             required if the leaf child partition data has changed, or if the leaf child partition
-            has been exchanged with another table.</li>
+            has been exchanged with another table. For more information about updating partitioned
+            table statistics, see <xref href="#topic1/section5" format="dita">Notes</xref>.</li>
         </ul></p>
       <note type="important">If you intend to execute queries on partitioned tables with GPORCA
         enabled (the default), then you must collect statistics on the root partition of the
@@ -150,30 +151,33 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
       <p>For a partitioned table, specifying which portion of the table to analyze, the root
         partition or subpartitions (leaf child partition tables) can be useful if the partitioned
         table has a large number of partitions that have been analyzed and only a few leaf child
-        partitions have changed.</p>
+        partitions have changed.
+        <note>When you create a partitioned table with the <codeph>CREATE TABLE</codeph> command,
+          Greenplum Database creates the table that you specify (the root partition or parent
+          table), and also creates a hierarchy of tables based on the partition hierarchy that you
+          specified (the child tables). </note></p>
       <ul>
         <li id="bd138200">When you run <codeph>ANALYZE</codeph> on the root partitioned table,
           statistics are collected for all the leaf child partitions. Leaf child partitions are the
           lowest-level tables in the hierarchy of child tables created by Greenplum Database for use
           by the partitioned table. </li>
         <li id="bd138204">When you run <codeph>ANALYZE</codeph> on a leaf child partition,
-          statistics are collected only for that leaf child partition and the root partition. When
-          you run <codeph>ANALYZE</codeph> on a child table that is not a leaf child partition,
-          statistics are not collected. <p>For example, you can create a partitioned table with
-            partitions for the years 2006 to 2016 and subpartitions for each month in each year. If
-            you run <codeph>ANALYZE</codeph> on the child table for the year 2013 no statistics are
-            collected. If you run <codeph>ANALYZE</codeph> on the leaf child partition for March of
-            2013, statistics are collected only for that leaf child partition. </p>
-          <note>When you create a partitioned table with the <codeph>CREATE TABLE</codeph> command,
-            Greenplum Database creates the table that you specify (the root partition or parent
-            table), and also creates a hierarchy of tables based on the partition hierarchy that you
-            specified (the child tables). Partitioned tables, child tables and their inheritance
-            level relationships are tracked in the system view <i>pg_partitions</i>.</note></li>
-        <li>For a leaf child partition that has changed, (for example, you make significant updates
-          to the leaf child partition data or exchange the leaf child partition), you can run
-            <codeph>ANALYZE</codeph> on a leaf child partition to collect table statistics. By
-          default, if all other leaf child partitions have statistics, the command updates the root
-          partition statistics. </li>
+          statistics are collected only for that leaf child partition and the root partition. If
+          data in the leaf partition has changed (for example, you made significant updates to the
+          leaf child partition data or you exchanged the leaf child partition), then you can run
+          ANALYZE on the leaf child partition to collect table statistics. By default, if all other
+          leaf child partitions have statistics, the command updates the root partition statistics.
+            <p>For example, if you collected statistics on a partitioned table with a large number
+            partitions and then updated data in only a few leaf child partitions, you can run
+              <codeph>ANALYZE</codeph> only on those partitions to update statistics on the
+            partitions and the statistics on the root partition.</p></li>
+        <li>When you run <codeph>ANALYZE</codeph> on a child table that is not a leaf child
+          partition, statistics are not collected. <p>For example, you can create a partitioned
+            table with partitions for the years 2006 to 2016 and subpartitions for each month in
+            each year. If you run <codeph>ANALYZE</codeph> on the child table for the year 2013 no
+            statistics are collected. If you run <codeph>ANALYZE</codeph> on the leaf child
+            partition for March of 2013, statistics are collected only for that leaf child
+            partition. </p></li>
       </ul>
       <p>For a partitioned table that contains a leaf child partition that has been exchanged to use
         an external table, <codeph>ANALYZE</codeph> does not collect statistics for the external

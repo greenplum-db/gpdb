@@ -211,6 +211,28 @@ usage()
 	exit 0
 }
 
+# Ensures that each segment in the system has a unique DB system ID.
+check_distinct_system_ids()
+{
+	local datadirs[0]="${NEW_DATADIR}/qddir/demoDataDir-1/"
+
+	for i in 1 2 3; do
+		j=$(($i-1))
+		datadirs[$i]="${NEW_DATADIR}/dbfast$i/demoDataDir$j/"
+	done
+
+	local idfile="$temp_root/sysids"
+	for datadir in "${datadirs[@]}"; do
+		"${NEW_BINDIR}/pg_controldata" "$datadir" | grep 'Database system identifier'
+	done > "$idfile"
+
+	if [ "$(sort -u "$idfile" | wc -l)" -ne "4" ]; then
+		echo 'ERROR: segment identifiers are not all unique:'
+		cat "$idfile"
+		exit 1
+	fi
+}
+
 # Diffs the dump1.sql and dump2.sql files in the $temp_root, and exits
 # accordingly (exit code 1 if they differ, 0 otherwise).
 diff_and_exit() {
@@ -244,17 +266,22 @@ diff_and_exit() {
 	# is generated via backend functionality in the cluster being dumped, and not
 	# in pg_dump, so whitespace changes can trip up the diff.
 	# FIXME: Maybe we should not use '-w' in the future since it is too aggressive.
-	if diff -w "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
-		rm -f regression.diffs
-		echo "Passed"
-		exit 0
+	if ! diff -w "$temp_root/dump1.sql" "$temp_root/dump2.sql" >/dev/null; then
+		# To aid debugging in pipelines, print the diff to stdout. Ignore
+		# whitespace, as above, to avoid misdirecting the troubleshooter.
+		diff -wdu "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
+		echo "Error: before and after dumps differ"
+		exit 1
 	fi
 
-	# To aid debugging in pipelines, print the diff to stdout. Ignore
-	# whitespace, as above, to avoid misdirecting the troubleshooter.
-	diff -wdu "$temp_root/dump1.sql" "$temp_root/dump2.sql" | tee regression.diffs
-	echo "Error: before and after dumps differ"
-	exit 1
+	# Final sanity checks.
+	if (( ! $smoketest )); then
+		check_distinct_system_ids
+	fi
+
+	rm -f regression.diffs
+	echo "Passed"
+	exit 0
 }
 
 print_delta_seconds()

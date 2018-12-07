@@ -15,7 +15,7 @@ This will install all the required python packages to use Conan on your system. 
 
 ## Using Conan
 
-The simplest way to run Conan is to run the command `conan install --build=missing` from this directory.  It will read the conanfile.txt and copy the dependant files into the directory structure rooted here.
+The simplest way to run Conan is to run the command `conan install --build=missing` from this directory.  It will read the conanfile.txt and copy the dependent files into the directory structure rooted here.
 
 Some packages may have pre-built binaries for specific operating system (e.g ORCA 2.32.0 has binaries built for Linux).  If you are trying to install on a system and run into problems with `conan install` and see an error similar too:
 

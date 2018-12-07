@@ -848,12 +848,16 @@ DeserializeTuple(SerTupInfo *pSerInfo, StringInfo serialTup)
 	return htup;
 }
 
+/*
+ * Reassemble and deserialize a list of tuple chunks, into a tuple.
+ */
 GenericTuple
 CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remapper)
 {
 	StringInfoData serData;
+	bool		serDataMustFree;
 	TupleChunkListItem tcItem;
-	int			i;
+	TupleChunkListItem firstTcItem;
 	GenericTuple tup;
 	TupleChunkType tcType;
 
@@ -861,107 +865,126 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 	AssertArg(tcList->p_first != NULL);
 	AssertArg(pSerInfo != NULL);
 
-	tcItem = tcList->p_first;
-
-	if (tcList->num_chunks == 1)
-	{
-		GetChunkType(tcItem, &tcType);
-
-		if (tcType == TC_EMPTY)
-		{
-			/*
-			 * the sender is indicating that there was a row with no
-			 * attributes: return a NULL tuple
-			 */
-			clearTCList(NULL, tcList);
-
-			return (GenericTuple)
-				heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
-		}
-	}
-
 	/*
-	 * Dump all of the data in the tuple chunk list into a single StringInfo,
-	 * so that we can convert it into a HeapTuple.	Check chunk types based on
-	 * whether there is only one chunk, or multiple chunks.
-	 *
-	 * We know roughly how much space we'll need, allocate all in one go.
-	 *
+	 * Parse the first chunk, and reassemble the chunks if needed.
 	 */
-	initStringInfoOfSize(&serData, tcList->num_chunks * tcList->max_chunk_length);
+	firstTcItem = tcList->p_first;
 
-	i = 0;
-	do
+	GetChunkType(firstTcItem, &tcType);
+
+	if (tcType == TC_WHOLE)
 	{
-		/* Make sure that the type of this tuple chunk is correct! */
+		if (firstTcItem->p_next)
+			ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
+							errmsg("Single chunk's type must be TC_WHOLE.")));
 
-		GetChunkType(tcItem, &tcType);
-		if (i == 0)
+		/*
+		 * We cheat a little, and point the StringInfo's buffer directly to the
+		 * incoming data. This saves a palloc and memcpy.
+		 *
+		 * NB: We mustn't modify the string buffer!
+		 */
+		serData.data = (char *) GetChunkDataPtr(firstTcItem) + TUPLE_CHUNK_HEADER_SIZE;
+		serData.len = serData.maxlen = firstTcItem->chunk_length - TUPLE_CHUNK_HEADER_SIZE;
+		serData.cursor = 0;
+		serDataMustFree = false;
+	}
+	else if (tcType == TC_EMPTY)
+	{
+		/*
+		 * the sender is indicating that there was a row with no
+		 * attributes: return a NULL tuple
+		 */
+		return (GenericTuple)
+			heap_form_tuple(pSerInfo->tupdesc, pSerInfo->values, pSerInfo->nulls);
+	}
+	else if (tcType == TC_PARTIAL_START)
+	{
+		/*
+		 * Re-assemble the chunks into a contiguous buffer..
+		 */
+		int			total_len;
+		char	   *pos;
+
+		/* Sanity-check the chunk types, and compute total length. */
+		total_len = firstTcItem->chunk_length - TUPLE_CHUNK_HEADER_SIZE;
+
+		tcItem = firstTcItem->p_next;
+		while (tcItem != NULL)
 		{
-			if (tcItem->p_next == NULL)
-			{
-				if (tcType != TC_WHOLE)
-				{
-					ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-									errmsg("Single chunk's type must be TC_WHOLE.")));
-				}
-			}
-			else
-				/* tcItem->p_next != NULL */
-			{
-				if (tcType != TC_PARTIAL_START)
-				{
-					ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-									errmsg("First chunk of collection must have type"
-										   " TC_PARTIAL_START.")));
-				}
-			}
-		}
-		else
-			/* i > 0 */
-		{
+			int			this_len = tcItem->chunk_length - TUPLE_CHUNK_HEADER_SIZE;
+
+			GetChunkType(tcItem, &tcType);
+
 			if (tcItem->p_next == NULL)
 			{
 				if (tcType != TC_PARTIAL_END)
-				{
-					ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-									errmsg("Last chunk of collection must have type"
-										   " TC_PARTIAL_END.")));
-				}
+					ereport(ERROR,
+							(errcode(ERRCODE_PROTOCOL_VIOLATION),
+							 errmsg("last chunk of collection must have type TC_PARTIAL_END")));
 			}
 			else
-				/* tcItem->p_next != NULL */
 			{
 				if (tcType != TC_PARTIAL_MID)
-				{
-					ereport(ERROR, (errcode(ERRCODE_PROTOCOL_VIOLATION),
-									errmsg("Last chunk of collection must have type"
-										   " TC_PARTIAL_MID.")));
-				}
+					ereport(ERROR,
+							(errcode(ERRCODE_PROTOCOL_VIOLATION),
+							 errmsg("middle chunk of collection must have type TC_PARTIAL_MID")));
 			}
+			total_len += this_len;
+
+			/* make sure we don't overflow total_len */
+			if (this_len > MaxAllocSize || total_len > MaxAllocSize)
+				ereport(ERROR,
+						(errcode(ERRCODE_PROTOCOL_VIOLATION),
+						 errmsg("chunked tuple is too large")));
+
+			/* go to the next chunk. */
+			tcItem = tcItem->p_next;
 		}
 
-		/* Copy this chunk into the tuple data.  Don't include the header! */
-		appendBinaryStringInfo(&serData,
-							   (const char *) GetChunkDataPtr(tcItem) + TUPLE_CHUNK_HEADER_SIZE,
-							   tcItem->chunk_length - TUPLE_CHUNK_HEADER_SIZE);
+		serData.data = palloc(total_len);
+		serData.len = serData.maxlen = total_len;
+		serData.cursor = 0;
+		serDataMustFree = true;
 
-		/* Go to the next chunk. */
-		tcItem = tcItem->p_next;
-		i++;
+		/* Copy the data from each chunk into the buffer.  Don't include the headers! */
+		pos = serData.data;
+		tcItem = firstTcItem;
+		while (tcItem != NULL)
+		{
+			int			this_len = tcItem->chunk_length - TUPLE_CHUNK_HEADER_SIZE;
+
+			memcpy(pos,
+				   (const char *) GetChunkDataPtr(tcItem) + TUPLE_CHUNK_HEADER_SIZE,
+				   this_len);
+			pos += this_len;
+
+			tcItem = tcItem->p_next;
+		}
 	}
-	while (tcItem != NULL);
+	else
+	{
+		/*
+		 * The caller handles TC_END_OF_STREAM directly, so we should not see
+		 * them here.
+		 *
+		 * TC_PARTIAL_MID/END should not appear at the beginning of a chunk
+		 * list, without TC_PARTIAL_START.
+		 */
+		ereport(ERROR,
+				(errcode(ERRCODE_PROTOCOL_VIOLATION),
+				 errmsg("unexpected tuple chunk type %d at beginning of chunk list", tcType)));
+	}
 
-	/* we've finished with the TCList, free it now. */
-	clearTCList(NULL, tcList);
-
+	/* We now have the reassembled data in 'serData'. Deserialize it back to a tuple. */
 	{
 		TupSerHeader *tshp;
 		unsigned int datalen;
 		unsigned int nullslen;
 		unsigned int hoff;
 		HeapTupleHeader t_data;
-		char	   *pos = (char *) serData.data;
+
+		char	   *pos = serData.data;
 
 		tshp = (TupSerHeader *) pos;
 
@@ -978,7 +1001,8 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 			TRHandleTypeLists(remapper, typelist);
 
 			/* Free up memory we used. */
-			pfree(serData.data);
+			if (serDataMustFree)
+				pfree(serData.data);
 
 			return NULL;
 		}
@@ -1009,7 +1033,8 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 				tup = (GenericTuple) DeserializeTuple(pSerInfo, &serData);
 
 				/* Free up memory we used. */
-				pfree(serData.data);
+				if (serDataMustFree)
+					pfree(serData.data);
 				return tup;
 			}
 
@@ -1079,7 +1104,8 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 	}
 
 	/* Free up memory we used. */
-	pfree(serData.data);
+	if (serDataMustFree)
+		pfree(serData.data);
 
 	return tup;
 }

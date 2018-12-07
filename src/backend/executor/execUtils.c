@@ -1997,7 +1997,9 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 				cdbdisp_sumCmdTuples(pr, primaryWriterSliceIndex);
 			estate->es_lastoid =
 				cdbdisp_maxLastOid(pr, primaryWriterSliceIndex);
-			aopartcounts = cdbdisp_sumAoPartTupCount(estate->es_result_partitions, pr);
+
+			if (estate->es_result_partitions)
+				aopartcounts = cdbdisp_sumAoPartTupCount(pr);
 		}
 
 		/* sum up rejected rows if any (single row error handling only) */

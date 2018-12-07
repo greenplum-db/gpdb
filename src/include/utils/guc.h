@@ -536,22 +536,6 @@ extern bool	optimizer_partition_selection_log;
 #define JOIN_ORDER_GREEDY_SEARCH            1
 #define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
 
-extern char  *gp_email_smtp_server;
-extern char  *gp_email_smtp_userid;
-extern char  *gp_email_smtp_password;
-extern char  *gp_email_from;
-extern char  *gp_email_to;
-extern int   gp_email_connect_timeout;
-extern int   gp_email_connect_failures;
-extern int   gp_email_connect_avoid_duration;
-
-#if USE_SNMP
-extern char   *gp_snmp_community;
-extern char   *gp_snmp_monitor_address;
-extern char   *gp_snmp_use_inform_or_trap;
-extern char   *gp_snmp_debug_log;
-#endif
-
 /* Hadoop Integration GUCs */
 extern char  *gp_hadoop_connector_jardir;  /* relative dir on $GPHOME of the Hadoop connector jar is located */
 extern char  *gp_hadoop_connector_version; /* connector version (internal use only) */

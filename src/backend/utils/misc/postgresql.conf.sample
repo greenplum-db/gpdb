@@ -429,55 +429,6 @@ optimizer_analyze_root_partition = on # stats collection on root partitions
 
 										
 #------------------------------------------------------------------------------
-# EMAIL ALERTS
-#------------------------------------------------------------------------------
-
-# Configure the DNS name of the SMTP server you want to use,
-# the port it runs on (which will be either 25 or 587), and
-# the SASL authentication information used to connect to it.
-
-#gp_email_smtp_server = 'localhost:25'      # SMTP server hostname and port (don't forget the port!)
-#gp_email_smtp_userid = ''					# Userid used to authenticate with SMTP server, if needed
-#gp_email_smtp_password = ''				# Password/Passphrase used to authenticate with SMTP server, if needed
-
-# Here you need to specify e-mail addresses.  The email_from address doesn't actually need 
-# to be a valid e-mail address, but it is much better if it is, because delivery failure notifications
-# go to that address.  The email_to is a list of recipients who will get the alerts.
-#
-# The e-mail addresses need to be in the form of userid@domain.com, not just userid.
-# If email_to list is empty, it disables e-mail alerts.
-#
-# e-mail addresses can be just the actual e-mail address, userid@domain.com, or can be a
-# human readable name with attached e-mail address in the form 'Joe Smith <userid@domain.com>".
-# If using the latter format, the e-mail address must be between '<' and '>'.  The first part of
-# the string can be any text, and if used for the gp_email_from address, can help differentiate the e-mails
-# from different servers (for example:  'my test GPDB system <userid@domain.com>").
-
-#gp_email_from = ''						# Who do we say the e-mails are from?  and who is the return-path?
-#gp_email_to = ''						# Semicolon separated list of recipients that will get e-mail alerts.
-										# empty means disable e-mail alerts.
-
-#------------------------------------------------------------------------------
-# SNMP INFORM/TRAP ALERTS
-#------------------------------------------------------------------------------
-
-# Configure the gp_snmp_monitor_address to be the system your SNMP monitor runs on, or a proxy
-# that will relay the message to the SNMP monitor.  You can specify transport, DNS name, and port:
-# [<transport-specifier>:]<transport-address>[:port]
-#
-# where <transport-specifier> can be 'udp', 'tcp', 'udpv6', 'tcpv6', or 'unix' for unix domain sockets (optional).
-# For udp or tcp, the port is typically 162. 
-# For a SNMP monitor running locally, you might use 'localhost:162', but more typically
-# the SNMP monitor is running on some other machine.
-# You can send to multiple network monitors by using a comma separated list of addresses.
-#
-# if gp_snmp_peername is empty, snmp alerts are disabled.
-
-#gp_snmp_monitor_address = ''     		# name or IP address(es) (and optionally the port) of the SNMP monitor(s) that will receive the alerts.
-#gp_snmp_community = 'public'			# Change to whatever community string you use in your monitor
-#gp_snmp_use_inform_or_trap = 'trap'    # Set to 'inform' or 'trap', we will send SNMP v2c inform, or SNMP v2c trap.
-
-#------------------------------------------------------------------------------
 # RUNTIME STATISTICS
 #------------------------------------------------------------------------------
 

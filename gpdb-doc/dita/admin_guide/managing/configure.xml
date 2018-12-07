@@ -470,22 +470,19 @@
                   <codeph>gp_enable_fast_sri</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_groupext_distinct_ gather</codeph>
+                  <codeph>gp_enable_groupext_distinct_gather</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_groupext_distinct_ pruning</codeph>
+                  <codeph>gp_enable_groupext_distinct_pruning</codeph>
                 </p>
                 <p>
                   <codeph>gp_enable_multiphase_agg</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_predicate_ propagation</codeph>
+                  <codeph>gp_enable_predicate_propagation</codeph>
                 </p>
                 <p>
                   <codeph>gp_enable_preunique</codeph>
-                </p>
-                <p>
-                  <codeph>gp_enable_sequential_window_ plans</codeph>
                 </p>
                 <p>
                   <codeph>gp_enable_sort_distinct</codeph>
@@ -592,10 +589,10 @@
               </stentry>
               <stentry>
                 <p>
-                  <codeph>gp_enable_groupext_distinct_ gather</codeph>
+                  <codeph>gp_enable_groupext_distinct_gather</codeph>
                 </p>
                 <p>
-                  <codeph>gp_enable_groupext_distinct_ pruning</codeph>
+                  <codeph>gp_enable_groupext_distinct_pruning</codeph>
                 </p>
                 <p>
                   <codeph>gp_workfile_compress_algorithm</codeph>
@@ -784,59 +781,6 @@
     </topic>
     <topic id="topic33" xml:lang="en">
       <title id="kh171299">System Monitoring Parameters</title>
-      <topic id="topic34" xml:lang="en">
-        <title>SNMP Alerts</title>
-        <body>
-          <p>The following parameters send SNMP notifications when events occur.</p>
-          <simpletable id="kh178188">
-            <strow>
-              <stentry>
-                <p>
-                  <codeph>gp_snmp_community</codeph>
-                </p>
-                <p>
-                  <codeph>gp_snmp_monitor_address</codeph>
-                </p>
-              </stentry>
-              <stentry>
-                <p>
-                  <codeph>gp_snmp_use_inform_or_trap</codeph>
-                </p>
-              </stentry>
-            </strow>
-          </simpletable>
-        </body>
-      </topic>
-      <topic id="topic35" xml:lang="en">
-        <title>Email Alerts</title>
-        <body>
-          <p>The following parameters configure the system to send email alerts for fatal error
-            events, such as a segment going down or a server crash and reset.</p>
-          <simpletable id="kh171646">
-            <strow>
-              <stentry>
-                <p>
-                  <codeph>gp_email_from</codeph>
-                </p>
-                <p>
-                  <codeph>gp_email_smtp_password</codeph>
-                </p>
-                <p>
-                  <codeph>gp_email_smtp_server</codeph>
-                </p>
-              </stentry>
-              <stentry>
-                <p>
-                  <codeph>gp_email_smtp_userid</codeph>
-                </p>
-                <p>
-                  <codeph>gp_email_to</codeph>
-                </p>
-              </stentry>
-            </strow>
-          </simpletable>
-        </body>
-      </topic>
       <topic id="topic36" xml:lang="en">
         <title>Greenplum Performance Monitoring Data Collection Agents</title>
         <body>
@@ -1047,10 +991,10 @@
                 <codeph>gp_resqueue_priority</codeph>
               </p>
               <p>
-                <codeph>gp_resqueue_priority_cpucores_per_ segment</codeph>
+                <codeph>gp_resqueue_priority_cpucores_per_segment</codeph>
               </p>
               <p>
-                <codeph>gp_resqueue_priority_sweeper_ interval</codeph>
+                <codeph>gp_resqueue_priority_sweeper_interval</codeph>
               </p>
               <p>
                 <codeph>gp_vmem_idle_resource_timeout</codeph>
@@ -1059,7 +1003,7 @@
                 <codeph>gp_vmem_protect_limit</codeph>
               </p>
               <p>
-                <codeph>gp_vmem_protect_segworker_cache_ limit</codeph>
+                <codeph>gp_vmem_protect_segworker_cache_limit</codeph>
               </p>
             </stentry>
             <stentry>
@@ -1067,10 +1011,10 @@
                 <codeph>max_resource_queues</codeph>
               </p>
               <p>
-                <codeph>max_resource_portals_per_ transaction</codeph>
+                <codeph>max_resource_portals_per_transaction</codeph>
               </p>
               <p>
-                <codeph>resource_cleanup_gangs_on_ wait</codeph>
+                <codeph>resource_cleanup_gangs_on_wait</codeph>
               </p>
               <p>
                 <codeph>resource_select_only</codeph>
@@ -1197,7 +1141,7 @@
               </stentry>
               <stentry>
                 <p>
-                  <codeph>gp_interconnect_setup_ timeout</codeph>
+                  <codeph>gp_interconnect_setup_timeout</codeph>
                 </p>
                 <p>
                   <codeph>gp_interconnect_type</codeph>

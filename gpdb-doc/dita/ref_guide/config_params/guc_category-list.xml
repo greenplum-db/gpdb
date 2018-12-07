@@ -827,64 +827,6 @@
     <title id="kh171299">System Monitoring Parameters</title>
     <abstract>These configuration parameters control Greenplum Database data collection and
       notifications related to database monitoring.</abstract>
-    <topic id="topic34" xml:lang="en">
-      <title>SNMP Alerts</title>
-      <body>
-        <p>The following parameters send SNMP notifications when events occur.</p>
-        <simpletable id="kh178188" frame="none">
-          <strow>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gp_snmp_community" type="section">gp_snmp_community</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_snmp_monitor_address" type="section"
-                  >gp_snmp_monitor_address</xref>
-              </p>
-            </stentry>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gp_snmp_use_inform_or_trap" type="section"
-                  >gp_snmp_use_inform_or_trap</xref>
-              </p>
-            </stentry>
-          </strow>
-        </simpletable>
-      </body>
-    </topic>
-    <topic id="topic35" xml:lang="en">
-      <title>Email Alerts</title>
-      <body>
-        <p>The following parameters configure the system to send email alerts for fatal error
-          events, such as a segment going down or a server crash and reset.</p>
-        <simpletable id="kh171646" frame="none">
-          <strow>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gp_email_from" type="section">gp_email_from</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_email_smtp_password" type="section"
-                  >gp_email_smtp_password</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_email_smtp_server" type="section"
-                  >gp_email_smtp_server</xref>
-              </p>
-            </stentry>
-            <stentry>
-              <p>
-                <xref href="guc-list.xml#gp_email_smtp_userid" type="section"
-                  >gp_email_smtp_userid</xref>
-              </p>
-              <p>
-                <xref href="guc-list.xml#gp_email_to" type="section">gp_email_to</xref>
-              </p>
-            </stentry>
-          </strow>
-        </simpletable>
-      </body>
-    </topic>
     <topic id="topic36" xml:lang="en">
       <title>Greenplum Performance Database</title>
       <body>

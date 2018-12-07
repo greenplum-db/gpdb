@@ -76,6 +76,8 @@ main(int argc, char **argv)
 	static int	use_setsessauth = 0;
 	static int	no_security_labels = 0;
 
+	static int	binary_upgrade = 0;
+
 	struct option cmdopts[] = {
 		{"clean", 0, NULL, 'c'},
 		{"create", 0, NULL, 'C'},
@@ -118,6 +120,9 @@ main(int argc, char **argv)
 		{"section", required_argument, NULL, 3},
 		{"use-set-session-authorization", no_argument, &use_setsessauth, 1},
 		{"no-security-labels", no_argument, &no_security_labels, 1},
+
+		/* GPDB */
+		{"binary-upgrade", no_argument, &binary_upgrade, 1},
 
 		{NULL, 0, NULL, 0}
 	};
@@ -342,6 +347,8 @@ main(int argc, char **argv)
 	opts->noTablespace = outputNoTablespaces;
 	opts->use_setsessauth = use_setsessauth;
 	opts->no_security_labels = no_security_labels;
+
+	opts->binary_upgrade = binary_upgrade;
 
 	if (if_exists && !opts->dropSchema)
 	{

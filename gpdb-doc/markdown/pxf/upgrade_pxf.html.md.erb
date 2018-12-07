@@ -21,28 +21,15 @@ The PXF upgrade procedure has two parts. You perform one procedure before, and o
 
 Perform this procedure before you upgrade to a new version of Greenplum Database:
 
-1. Log in to the Greenplum Database master node and set up the environment. For example:
+1. Log in to the Greenplum Database master node. For example:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
-2. Create a text file that lists your Greenplum Database segment hosts, one host name per line. For example, a file named `seghostfile` may include:
+3. Stop PXF on each segment host as described in [Stopping PXF](cfginitstart_pxf.html#stop_pxf).
 
-    ``` pre
-    seghost1
-    seghost2
-    seghost3
-    ```
-
-3. Run the `pxf stop` command to stop PXF on each segment host. For example:
-
-    ``` shell
-    $ gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf stop"
-    ```
-
-4. **If you are upgrading from Greenplum Database version 5.13 or earlier**:
+4. **If you are upgrading from Greenplum Database version 5.14 or earlier**:
 
     1. Back up the *PXF.from* configuration files found in the `$GPHOME/pxf/conf/` directory. These files should be the same on all segment hosts, so you need only copy from one of the hosts. For example:
 
@@ -60,18 +47,17 @@ Perform this procedure before you upgrade to a new version of Greenplum Database
 
 After you upgrade to the new version of Greenplum Database, perform the following procedure to upgrade and configure the *PXF.to* software:
 
-1. Log in to the Greenplum Database master node and set up the environment. For example:
+1. Log in to the Greenplum Database master node. For example:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Initialize PXF on each segment host as described in [Initializing PXF](cfginitstart_pxf.html#init_pxf).
 
 3. PXF user impersonation is on by default in Greenplum Database version 5.5.0 and later. If you are upgrading from an older *PXF.from* version, you must configure user impersonation for the underlying Hadoop services. Refer to [Configuring User Impersonation and Proxying](pxfuserimpers.html) for instructions, including the configuration procedure to turn off PXF user impersonation.
 
-4. **If you are upgrading from Greenplum Database version 5.13 or earlier**:
+4. **If you are upgrading from Greenplum Database version 5.14 or earlier**:
 
     1. If you updated the `pxf-env.sh` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-env.sh`, and copy the updated `pxf-env.sh` to all segment hosts. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`:
 
@@ -86,8 +72,8 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     3. If you updated the `pxf-log4j.properties` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-log4j.properties` and copy the updated file to all segment hosts. Refer to Step 4a above for a similar `gpscp` command.
     4. If you updated the `pxf-public.classpath` configuration file in your *PXF.from* installation, copy every JAR referenced in the file to `$PXF_CONF/lib` on each segment host. Refer to Step 4a above for a similar `gpscp` command.
     5. If you added additional JAR files to your *PXF.from* installation, copy them to `$PXF_CONF/lib` on all segment hosts.
-    5. Starting in Greenplum Database version 5.14, PXF requires that the Hadoop configuration files reside in the `$PXF_CONF/servers/default` directory. If you configured PXF Hadoop connectors in your *PXF.from* installation, copy the Hadoop configuration files in `/etc/<hadoop_service>/conf` to `$PXF_CONF/servers/default` on the Greenplum Database master and on all segment hosts.
-    5. Starting in Greenplum Database version 5.14, the default Kerberos keytab file location for PXF is `$PXF_CONF/keytabs`. If you previously configured PXF for secure HDFS and the PXF keytab file is located in a *PXF.from* installation directory (for example, `$GPHOME/pxf/conf`), consider relocating the keytab file to `$PXF_CONF/keytabs`. Alternatively, update the `PXF_KEYTAB` property setting in the `$PXF_CONF/conf/pxf-env.sh` file to reference your keytab file. Be sure to propagate any updated files to each segment host.
+    5. Starting in Greenplum Database version 5.15, PXF requires that the Hadoop configuration files reside in the `$PXF_CONF/servers/default` directory. If you configured PXF Hadoop connectors in your *PXF.from* installation, copy the Hadoop configuration files in `/etc/<hadoop_service>/conf` to `$PXF_CONF/servers/default` on the Greenplum Database master and on all segment hosts.
+    5. Starting in Greenplum Database version 5.15, the default Kerberos keytab file location for PXF is `$PXF_CONF/keytabs`. If you previously configured PXF for secure HDFS and the PXF keytab file is located in a *PXF.from* installation directory (for example, `$GPHOME/pxf/conf`), consider relocating the keytab file to `$PXF_CONF/keytabs`. Alternatively, update the `PXF_KEYTAB` property setting in the `$PXF_CONF/conf/pxf-env.sh` file to reference your keytab file. Be sure to propagate any updated files to each segment host.
  
 6. Start PXF on each segment host as described in [Starting PXF](cfginitstart_pxf.html#start_pxf).
 

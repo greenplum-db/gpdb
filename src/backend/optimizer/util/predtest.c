@@ -1292,14 +1292,21 @@ simple_equality_predicate_refuted(Node *clause, Node *predicate)
 	{
 		Node *newClause, *reducedExpression;
 		ReplaceExpressionMutatorReplacement replacement;
-		bool result = false;
-		SwitchedMemoryContext memContext;
+		bool				result = false;
+		MemoryContext 		old_context;
+		MemoryContext		tmp_context;
 
 		replacement.replaceThis = varExprInPredicate;
 		replacement.withThis = constExprInPredicate;
         replacement.numReplacementsDone = 0;
 
-        memContext = AllocSetCreateDefaultContextInCurrentAndSwitchTo( "Predtest");
+		tmp_context = AllocSetContextCreate(CurrentMemoryContext,
+											"Predtest",
+											ALLOCSET_DEFAULT_MINSIZE,
+											ALLOCSET_DEFAULT_INITSIZE,
+											ALLOCSET_DEFAULT_MAXSIZE);
+
+		old_context = MemoryContextSwitchTo(tmp_context);
 
 		newClause = replace_expression_mutator(clause, &replacement);
 
@@ -1319,7 +1326,8 @@ simple_equality_predicate_refuted(Node *clause, Node *predicate)
             }
         }
 
-        DeleteAndRestoreSwitchedMemoryContext(memContext);
+		MemoryContextSwitchTo(old_context);
+		MemoryContextDelete(tmp_context);
         return result;
 	}
 }

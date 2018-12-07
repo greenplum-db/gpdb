@@ -354,10 +354,6 @@
           failure.</li>
         <li>Recover failed segments promptly, using the <codeph>gprecoverseg</codeph> utility, to
           restore redundancy and return the system to optimal balance.</li>
-        <li>Configure Greenplum Database to send SNMP notifications to your network monitor.</li>
-        <li>Set up email notification in the <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph>
-          configuration file so that the Greenplum system can email administrators when a critical
-          issue is detected.</li>
         <li>Consider a Dual Cluster configuration to provide an additional level of redundancy and
           additional query processing throughput. </li>
         <li>Backup Greenplum databases regularly unless the data is easily restored from

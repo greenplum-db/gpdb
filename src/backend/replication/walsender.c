@@ -1377,8 +1377,7 @@ ProcessRepliesIfAny(void)
 			/* unexpected error or EOF */
 			ereport(COMMERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
-					 errmsg("unexpected EOF on standby connection"),
-					 errSendAlert(true)));
+					 errmsg("unexpected EOF on standby connection")));
 			proc_exit(0);
 		}
 		if (r == 0)
@@ -1450,8 +1449,7 @@ ProcessRepliesIfAny(void)
 				ereport(FATAL,
 						(errcode(ERRCODE_PROTOCOL_VIOLATION),
 						 errmsg("invalid standby message type \"%c\"",
-								firstchar),
-						 errSendAlert(true)));
+								firstchar)));
 		}
 	}
 
@@ -1491,8 +1489,7 @@ ProcessStandbyMessage(void)
 		default:
 			ereport(COMMERROR,
 					(errcode(ERRCODE_PROTOCOL_VIOLATION),
-					 errmsg("unexpected message type \"%c\"", msgtype),
-					 errSendAlert(true)));
+					 errmsg("unexpected message type \"%c\"", msgtype)));
 			proc_exit(0);
 	}
 }
@@ -1786,8 +1783,7 @@ WalSndCheckTimeOut(TimestampTz now)
 		 * standby.
 		 */
 		ereport(COMMERROR,
-				(errmsg("terminating walsender process due to replication timeout"),
-				 errSendAlert(true)));
+				(errmsg("terminating walsender process due to replication timeout")));
 
 		WalSndShutdown();
 	}

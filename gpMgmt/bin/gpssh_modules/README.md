@@ -7,7 +7,7 @@ on a remote machine. The original, vendored pexpect tries to match 2 successive 
 from an interactive bash shell.  However, if the target host is slow, because of
 CPU loading or network loading, those prompts may returned to the ssh client with some delay.
 
-In the case of an SSH session with delay, the overriden method in this module retries several times, 
+In the case of an SSH session with delay, the overridden method in this module retries several times,
 extending the timeout from the default 0.1 second expectation between characters to up to 16x that.
 
 Experimentally, the retries and extended timeout are enough to tolerate a 1 second delay between characters, at least on a localhost connection using the "tc" tool to delay network on that loopback.

@@ -26,7 +26,7 @@ The gpdeletesystem script will perform the following actions:
 
 * Delete all data directories.
 
-Before runing this script, you should move any backup files 
+Before running this script, you should move any backup files
 (created by gp_dump) out of the master and segment data directories.
 
 This script will not uninstall the Greenplum Database software.

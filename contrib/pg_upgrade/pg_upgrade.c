@@ -49,6 +49,7 @@ static void create_new_objects(void);
 static void copy_clog_xlog_xid(void);
 static void set_frozenxids(bool minmxid_only);
 static void freeze_master_data(void);
+static void reset_system_identifier(void);
 static void setup(char *argv0, bool *live_check);
 static void cleanup(void);
 static void	get_restricted_token(const char *progname);
@@ -193,10 +194,14 @@ main(int argc, char **argv)
 	 */
 	prep_status("Setting next OID for new cluster");
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
-			  "\"%s/pg_resetxlog\" -y -o %u \"%s\"",
+			  "\"%s/pg_resetxlog\" --binary-upgrade -o %u \"%s\"",
 			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtoid,
 			  new_cluster.pgdata);
 	check_ok();
+
+	/* For non-master segments, uniquify the system identifier. */
+	if (user_opts.segment_mode != DISPATCHER)
+		reset_system_identifier();
 
 	prep_status("Sync data directory to disk");
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
@@ -570,7 +575,7 @@ create_new_objects(void)
 		parallel_exec_prog(log_file_name,
 						   NULL,
 		 "PGOPTIONS='-c gp_session_role=utility' "
-		 "\"%s/pg_restore\" %s --exit-on-error --verbose --dbname %s \"%s\"",
+		 "\"%s/pg_restore\" %s --exit-on-error --binary-upgrade --verbose --dbname %s \"%s\"",
 						   new_cluster.bindir,
 						   cluster_conn_opts(&new_cluster),
 						   escaped_connstr.data,
@@ -790,11 +795,11 @@ copy_clog_xlog_xid(void)
 	/* set the next transaction id and epoch of the new cluster */
 	prep_status("Setting next transaction ID and epoch for new cluster");
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
-			  "\"%s/pg_resetxlog\" -y -f -x %u \"%s\"",
+			  "\"%s/pg_resetxlog\" --binary-upgrade -f -x %u \"%s\"",
 			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtxid,
 			  new_cluster.pgdata);
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
-			  "\"%s/pg_resetxlog\" -y -f -e %u \"%s\"",
+			  "\"%s/pg_resetxlog\" --binary-upgrade -f -e %u \"%s\"",
 			  new_cluster.bindir, old_cluster.controldata.chkpnt_nxtepoch,
 			  new_cluster.pgdata);
 	check_ok();
@@ -818,7 +823,7 @@ copy_clog_xlog_xid(void)
 		 * counters here and the oldest multi present on system.
 		 */
 		exec_prog(UTILITY_LOG_FILE, NULL, true,
-				  "\"%s/pg_resetxlog\" -y -O %u -m %u,%u \"%s\"",
+				  "\"%s/pg_resetxlog\" --binary-upgrade -O %u -m %u,%u \"%s\"",
 				  new_cluster.bindir,
 				  old_cluster.controldata.chkpnt_nxtmxoff,
 				  old_cluster.controldata.chkpnt_nxtmulti,
@@ -846,7 +851,7 @@ copy_clog_xlog_xid(void)
 		 * next=MaxMultiXactId, but multixact.c can cope with that just fine.
 		 */
 		exec_prog(UTILITY_LOG_FILE, NULL, true,
-				  "\"%s/pg_resetxlog\" -y -m %u,%u \"%s\"",
+				  "\"%s/pg_resetxlog\" --binary-upgrade -m %u,%u \"%s\"",
 				  new_cluster.bindir,
 				  old_cluster.controldata.chkpnt_nxtmulti + 1,
 				  old_cluster.controldata.chkpnt_nxtmulti,
@@ -858,7 +863,7 @@ copy_clog_xlog_xid(void)
 	prep_status("Resetting WAL archives");
 	exec_prog(UTILITY_LOG_FILE, NULL, true,
 			  /* use timeline 1 to match controldata and no WAL history file */
-			  "\"%s/pg_resetxlog\" -y -l 00000001%s \"%s\"", new_cluster.bindir,
+			  "\"%s/pg_resetxlog\" --binary-upgrade -l 00000001%s \"%s\"", new_cluster.bindir,
 			  old_cluster.controldata.nextxlogfile + 8,
 			  new_cluster.pgdata);
 	check_ok();
@@ -1012,6 +1017,39 @@ set_frozenxids(bool minmxid_only)
 	check_ok();
 }
 
+/*
+ * Called for GPDB segments only -- since we have copied the master's
+ * pg_control file, we need to assign a new system identifier to each segment.
+ */
+static void
+reset_system_identifier(void)
+{
+	struct timeval	tv;
+	uint64			sysidentifier;
+
+	prep_status("Setting database system identifier for new cluster");
+
+	/*
+	 * Use the same initialization process as BootStrapXLOG():
+	 *
+	 * - 32 bits of [current timestamp] seconds
+	 * - 20 bits of [current timestamp] microseconds
+	 * - 12 bits of PID
+	 *
+	 * This doesn't guarantee uniqueness, but if it's good enough for
+	 * gpinitsystem it should be good enough for us.
+	 */
+	gettimeofday(&tv, NULL);
+	sysidentifier = ((uint64) tv.tv_sec) << 32;
+	sysidentifier |= ((uint64) tv.tv_usec) << 12;
+	sysidentifier |= getpid() & 0xFFF;
+
+	exec_prog(UTILITY_LOG_FILE, NULL, true,
+			  "\"%s/pg_resetxlog\" --binary-upgrade --system-identifier " UINT64_FORMAT " \"%s\"",
+			  new_cluster.bindir, sysidentifier, new_cluster.pgdata);
+
+	check_ok();
+}
 
 static void
 cleanup(void)

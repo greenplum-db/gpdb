@@ -417,17 +417,33 @@ transformCreateStmt(CreateStmt *stmt, const char *queryString, bool createPartit
 	 */
 	if (stmt->relKind == RELKIND_RELATION)
 	{
-		/* Parent is always created on DEFAULT numsegments */
-		AssertImply(stmt->distributedBy,
-					stmt->distributedBy->numsegments == -1 ||
-					stmt->distributedBy->numsegments == GP_POLICY_DEFAULT_NUMSEGMENTS);
+		int			numsegments = -1;
+
+		AssertImply(stmt->is_part_parent,
+					stmt->distributedBy == NULL);
+		AssertImply(stmt->is_part_child,
+					stmt->distributedBy != NULL);
+
+		/*
+		 * We want children have the same numsegments with parent.  As
+		 * transformDistributedBy() always set numsegments to DEFAULT, does
+		 * this meet our expectation?  No, because DEFAULT does not always
+		 * equal to DEFAULT itself.  When DEFAULT is set to RANDOM a different
+		 * value is returned each time.
+		 *
+		 * So we have to save the parent numsegments here.
+		 */
+		if (stmt->is_part_child)
+			numsegments = stmt->distributedBy->numsegments;
 
 		stmt->distributedBy = transformDistributedBy(&cxt, stmt->distributedBy,
 							   likeDistributedBy, bQuiet);
 
-		/* Partitions are always created on DEFAULT numsegments, too */
-		AssertImply(stmt->is_part_child,
-					stmt->distributedBy->numsegments == GP_POLICY_DEFAULT_NUMSEGMENTS);
+		/*
+		 * And forcely set it on children after transformDistributedBy().
+		 */
+		if (stmt->is_part_child)
+			stmt->distributedBy->numsegments = numsegments;
 	}
 
 	if (stmt->partitionBy != NULL &&
@@ -1736,6 +1752,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 	ListCell	*keys = NULL;
 	List		*distrkeys = NIL;
 	ListCell   *lc;
+	int			numsegments;
 
 	/*
 	 * utility mode creates can't have a policy.  Only the QD can have policies
@@ -1743,11 +1760,18 @@ transformDistributedBy(CreateStmtContext *cxt,
 	if (Gp_role != GP_ROLE_DISPATCH && !IsBinaryUpgrade)
 		return NULL;
 
+	if (distributedBy && distributedBy->numsegments > 0)
+		/* If numsegments is set in DISTRIBUTED BY use the specified value */
+		numsegments = distributedBy->numsegments;
+	else
+		/* Otherwise use DEFAULT as numsegments */
+		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+
 	/* Explictly specified distributed randomly, no futher check needed */
 	if (distributedBy &&
 		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keys == NIL))
 	{
-		distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+		distributedBy->numsegments = numsegments;
 		return distributedBy;
 	}
 
@@ -1759,7 +1783,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("INHERITS clause cannot be used with DISTRIBUTED REPLICATED clause")));
 
-		distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+		distributedBy->numsegments = numsegments;
 		return distributedBy;
 	}
 
@@ -1903,7 +1927,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 				distributedBy = make_distributedby_for_rel(parentrel);
 				heap_close(parentrel, AccessShareLock);
 
-				distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+				distributedBy->numsegments = numsegments;
 				return distributedBy;
 			}
 			heap_close(parentrel, AccessShareLock);
@@ -1921,14 +1945,14 @@ transformDistributedBy(CreateStmtContext *cxt,
 		{
 			distributedBy = makeNode(DistributedBy);
 			distributedBy->ptype = POLICYTYPE_PARTITIONED;
-			distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+			distributedBy->numsegments = numsegments;
 			return distributedBy;
 		}
 		else if (likeDistributedBy->ptype == POLICYTYPE_REPLICATED)
 		{
 			distributedBy = makeNode(DistributedBy);
 			distributedBy->ptype = POLICYTYPE_REPLICATED;
-			distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+			distributedBy->numsegments = numsegments;
 			return distributedBy;
 		}
 
@@ -1949,7 +1973,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 		distributedBy = makeNode(DistributedBy);
 		distributedBy->ptype = POLICYTYPE_PARTITIONED;
-		distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+		distributedBy->numsegments = numsegments;
 		return distributedBy;
 	}
 	else if (distrkeys == NIL)
@@ -2054,7 +2078,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 			distributedBy = makeNode(DistributedBy);
 			distributedBy->ptype = POLICYTYPE_PARTITIONED;
-			distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+			distributedBy->numsegments = numsegments;
 			return distributedBy;
 		}
 	}
@@ -2246,7 +2270,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 	distributedBy = makeNode(DistributedBy);
 	distributedBy->ptype = POLICYTYPE_PARTITIONED;
 	distributedBy->keys = distrkeys;
-	distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+	distributedBy->numsegments = numsegments;
 
 	return distributedBy;
 }

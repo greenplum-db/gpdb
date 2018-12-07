@@ -1523,7 +1523,6 @@ getInstallationPaths(const char *argv0)
 				(errcode_for_file_access(),
 				 errmsg("could not open directory \"%s\": %m",
 						pkglib_path),
-				 errSendAlert(true),
 				 errhint("This may indicate an incomplete PostgreSQL installation, or that the file \"%s\" has been moved away from its proper location.",
 						 my_exec_path)));
 	FreeDir(pdir);
@@ -2298,7 +2297,6 @@ retry1:
 
 						ereport(FATAL,
 								(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-								 errSendAlert(true),
 								 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 								 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 										   XLogLocationToString(recptr))));
@@ -2423,13 +2421,11 @@ retry1:
 				break;
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg(POSTMASTER_IN_STARTUP_MSG)));
 			break;
 		case CAC_SHUTDOWN:
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg("the database system is shutting down")));
 			break;
 		case CAC_RECOVERY:
@@ -2437,7 +2433,6 @@ retry1:
 
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(true),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 						   XLogLocationToString(recptr))));
@@ -2445,7 +2440,6 @@ retry1:
 		case CAC_TOOMANY:
 			ereport(FATAL,
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
-					 errSendAlert(true),
 					 errmsg("sorry, too many clients already")));
 			break;
 		case CAC_WAITBACKUP:
@@ -2462,7 +2456,6 @@ retry1:
 			recptr = last_xlog_replay_location();
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
-					 errSendAlert(true),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 						   XLogLocationToString(recptr))));
@@ -2480,7 +2473,6 @@ retry1:
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-				 errSendAlert(true),
 				 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 				 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " dummy location")));
 	}
@@ -2866,8 +2858,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = SmartShutdown;
 			ereport(LOG,
-					(errmsg("received smart shutdown request"),
-					 errSendAlert(true)));
+					(errmsg("received smart shutdown request")));
 
 			if (pmState == PM_STARTUP)
 			{
@@ -2937,8 +2928,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = FastShutdown;
 			ereport(LOG,
-					(errmsg("received fast shutdown request"),
-					 errSendAlert(true)));
+					(errmsg("received fast shutdown request")));
 
 			if (StartupPID != 0)
 				signal_child(StartupPID, SIGTERM);
@@ -3004,8 +2994,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = ImmediateShutdown;
 			ereport(LOG,
-					(errmsg("received immediate shutdown request"),
-				     errSendAlert(true)));
+					(errmsg("received immediate shutdown request")));
 
 			TerminateChildren(SIGQUIT);
 			pmState = PM_WAIT_BACKENDS;
@@ -3144,8 +3133,7 @@ reaper(SIGNAL_ARGS)
 
 				ereport(LOG,
 						(errmsg("database system is ready to accept connections"),
-						 errdetail("%s",version),
-						 errSendAlert(true)));
+						 errdetail("%s",version)));
 
 				PMAcceptingConnectionsStartTime = (pg_time_t) time(NULL);
 			}

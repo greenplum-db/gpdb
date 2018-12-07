@@ -1175,7 +1175,7 @@ try_relation_open(Oid relationId, LOCKMODE lockmode, bool noWait)
 /*
  * CdbTryOpenRelation -- Opens a relation with a specified lock mode.
  *
- * CDB: Like try_open_relation, except that it will upgrade the lock when needed
+ * CDB: Like try_relation_open, except that it will upgrade the lock when needed
  * for distributed tables.
  */
 Relation

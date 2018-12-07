@@ -106,14 +106,14 @@
                 <plentry>
                     <pt>CASCADE</pt>
                     <pd>
-                        <p>Automatically install dependant extensions are not already installed.
-                            Dependant extensions are checked recursively and those dependencies are
+                        <p>Automatically install dependent extensions are not already installed.
+                            Dependent extensions are checked recursively and those dependencies are
                             also installed automatically. If the <varname>SCHEMA</varname> clause is
-                            specified, the schema applies to the extension and all dependant
+                            specified, the schema applies to the extension and all dependent
                             extensions that are installed. Other options that are specified are not
-                            applied to the automatically-installed dependant extensions. In
+                            applied to the automatically-installed dependent extensions. In
                             particular, default versions are always selected when installing
-                            dependant extensions.</p>
+                            dependent extensions.</p>
                     </pd>
                 </plentry>
             </parml>

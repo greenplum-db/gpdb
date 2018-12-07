@@ -202,8 +202,9 @@ RecvTupleChunk(MotionConn *conn, ChunkTransportState *transportStates)
 		 * We store the data inplace, and handle any necessary copying later
 		 * on
 		 */
-		tcItem = (TupleChunkListItem) palloc0(sizeof(TupleChunkListItemData));
+		tcItem = (TupleChunkListItem) palloc(sizeof(TupleChunkListItemData));
 
+		tcItem->p_next = NULL;
 		tcItem->chunk_length = tcSize;
 		tcItem->inplace = (char *) (conn->msgPos + bytesProcessed);
 

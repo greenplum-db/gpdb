@@ -45,3 +45,14 @@ INSERT INTO no_cols_left VALUES (1, 2, 3), (4, 5, 6), (7, 8, 9);
 ALTER TABLE no_cols_left DROP COLUMN a;
 ALTER TABLE no_cols_left DROP COLUMN b;
 ALTER TABLE no_cols_left DROP COLUMN c;
+-- Test a database with a recreated "public" schema.
+-- If you are adding tests, you most likely want to add them BEFORE this, since
+-- we connect to a different database.
+DROP DATABASE IF EXISTS upgrade_recreated_public;
+NOTICE:  database "upgrade_recreated_public" does not exist, skipping
+CREATE DATABASE upgrade_recreated_public;
+\c upgrade_recreated_public
+DROP SCHEMA public;
+CREATE SCHEMA public;
+CREATE TABLE public.t();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.

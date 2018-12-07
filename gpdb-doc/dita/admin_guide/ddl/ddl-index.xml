@@ -10,12 +10,12 @@
       smaller portion of the overall data to get the result. With table partitioning, the total data
       to scan may be even smaller. Because business intelligence (BI) query workloads generally
       return very large data sets, using indexes is not efficient.</p>
-    <p>First try your query workload without adding indexes. Indexes are more
-      likely to improve performance for OLTP workloads, where the query is returning a single record
-      or a small subset of data. Indexes can also improve performance on compressed append-optimized
-      tables for queries that return a targeted set of rows, as the optimizer can use an index
-      access method rather than a full table scan when appropriate. For compressed data, an index
-      access method means only the necessary rows are uncompressed. </p>
+    <p>First try your query workload without adding indexes. Indexes are more likely to improve
+      performance for OLTP workloads, where the query is returning a single record or a small subset
+      of data. Indexes can also improve performance on compressed append-optimized tables for
+      queries that return a targeted set of rows, as the optimizer can use an index access method
+      rather than a full table scan when appropriate. For compressed data, an index access method
+      means only the necessary rows are uncompressed. </p>
     <p>Greenplum Database automatically creates <codeph>PRIMARY KEY</codeph> constraints for tables
       with primary keys. To create an index on a partitioned table, create an index on the
       partitioned table that you created. The index is propagated to all the child tables created by
@@ -175,6 +175,34 @@ VACUUM ANALYZE old_table;
 </codeblock>
       </p>
     </body>
+    <topic id="topic_tfz_3vz_4fb">
+      <title>Indexes on Expressions</title>
+      <body>
+        <p>An index column need not be just a column of the underlying table, but can be a function
+          or scalar expression computed from one or more columns of the table. This feature is
+          useful to obtain fast access to tables based on the results of computations.</p>
+        <p>Index expressions are relatively expensive to maintain, because the derived expressions
+          must be computed for each row upon insertion and whenever it is updated. However, the
+          index expressions are not recomputed during an indexed search, since they are already
+          stored in the index. In both of the following examples, the system sees the query as just
+            <codeph>WHERE indexedcolumn = 'constant'</codeph> and so the speed of the search is
+          equivalent to any other simple index query. Thus, indexes on expressions are useful when
+          retrieval speed is more important than insertion and update speed.</p>
+        <p>The first example is a common way to do case-insensitive comparisons with the
+            <codeph>lower</codeph> function:</p>
+        <codeblock>SELECT * FROM test1 WHERE lower(col1) = 'value';</codeblock>
+        <p>This query can use an index if one has been defined on the result of the
+            <codeph>lower(col1)</codeph> function:</p>
+        <codeblock>CREATE INDEX test1_lower_col1_idx ON test1 (lower(col1));</codeblock>
+        <p>This example assumes the following type of query is performed often.</p>
+        <codeblock>SELECT * FROM people WHERE (first_name || ' ' || last_name) = 'John Smith';</codeblock>
+        <p>The query might benefit from the following index.</p>
+        <codeblock>CREATE INDEX people_names ON people ((first_name || ' ' || last_name));</codeblock>
+        <p>The syntax of the <codeph>CREATE INDEX</codeph> command normally requires writing
+          parentheses around index expressions, as shown in the second example. The parentheses can
+          be omitted when the expression is just a function call, as in the first example.</p>
+      </body>
+    </topic>
   </topic>
   <topic id="topic97" xml:lang="en">
     <title>Examining Index Usage</title>
