@@ -1,3 +1,4 @@
+test: select_dropped_table
 # test update hash col under utility mode
 test: update_hash_col_utilitymode
 

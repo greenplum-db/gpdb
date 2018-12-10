@@ -978,7 +978,14 @@ parserOpenTable(ParseState *pstate, const RangeVar *relation,
 
 	/* Look up the appropriate relation using namespace search */
 	relid = RangeVarGetRelid(relation, NoLock, true);
-	if (relid == InvalidOid)
+	/*
+	 * CdbTryOpenRelation might return NULL (for example, if the table
+	 * is dropped by another transaction). Every time we invoke function
+	 * CdbTryOpenRelation, we should check if the return value is NULL.
+	 */
+	rel = CdbTryOpenRelation(relid, lockmode, nowait, lockUpgraded);
+
+	if (!RelationIsValid(rel))
 	{
 		if (relation->schemaname)
 			ereport(ERROR,
@@ -1008,7 +1015,6 @@ parserOpenTable(ParseState *pstate, const RangeVar *relation,
 								relation->relname)));
 		}
 	}
-	rel = CdbTryOpenRelation(relid, lockmode, nowait, lockUpgraded);
 
 	cancel_parser_errposition_callback(&pcbstate);
 	return rel;
