@@ -5014,7 +5014,6 @@ HandleCopyError(CopyState cstate)
 				else
 				{
 					HandleSingleRowError(cstate->cdbsreh);
-					//ErrorLogWrite(cstate->cdbsreh);
 				}
 			}
 		}
