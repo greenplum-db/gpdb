@@ -1,9 +1,7 @@
--- start_ignore
 -- Test instrument in shmem does not break EXPLAIN
 -- and EXPLAIN ANALYZE. Also instrumentation slots
 -- are correctly recycled.
 -- This test can not run in parallel with other tests.
--- end_ignore
 
 -- default value
 SHOW GP_ENABLE_QUERY_METRICS;
@@ -14,6 +12,7 @@ SELECT 1;
 
 -- start_ignore
 DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE; 
+-- end_ignore
 CREATE SCHEMA QUERY_METRICS;
 SET SEARCH_PATH=QUERY_METRICS;
 
@@ -98,6 +97,4 @@ EXPLAIN SELECT count(*) FROM a a1, a a2, a a3;
 -- If more than one row returned, means previous test has leaked slots.
 SELECT count(*) FROM (SELECT 1 FROM gp_instrument_shmem_detail GROUP BY ssid, ccnt) t;
 
--- start_ignore
-DROP SCHEMA IF EXISTS QUERY_METRICS CASCADE; 
--- end_ignore
+DROP SCHEMA QUERY_METRICS CASCADE;
