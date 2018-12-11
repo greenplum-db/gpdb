@@ -53,7 +53,6 @@ typedef struct PolicyAutoContext
 /**
  * Forward declarations.
  */
-static void autoIncOpMemForResGroup(uint64 *opMemKB, int numOps);
 static bool PolicyAutoPrelimWalker(Node *node, PolicyAutoContext *context);
 static bool	PolicyAutoAssignWalker(Node *node, PolicyAutoContext *context);
 static bool IsAggMemoryIntensive(Agg *agg);
@@ -109,64 +108,6 @@ typedef struct PolicyEagerFreeContext
 	uint64 queryMemKB; /* the query memory limit */
 	PlannedStmt *plannedStmt; /* pointer to the planned statement */
 } PolicyEagerFreeContext;
-
-/*
- * Automatically increase operator memory buffer in resource group mode.
- *
- * In resource group if the operator memory buffer is too small for the
- * operators we still allow the query to execute by temporarily increasing the
- * buffer size, each operator will be assigned 100KB memory no matter it is
- * memory intensive or not.  The query can execute as long as there is enough
- * resource group shared memory, the performance might not be best as 100KB is
- * rather small for memory intensive operators.  If there is no enought shared
- * memory it will run into OOM error on operators.
- *
- * @param opMemKB the original operator memory buffer size, will be in-place
- *        updated if not large enough
- * @param numOps the number of operators, both memory intensive and
- *        non-intensive
- */
-static void
-autoIncOpMemForResGroup(uint64 *opMemKB, int numOps)
-{
-	uint64		perOpMemKB;		/* per-operator buffer size */
-	uint64		minOpMemKB;		/* minimal buffer size for all the operators */
-
-	/* Only adjust operator memory buffer for resource group */
-	if (!IsResGroupEnabled())
-		return;
-
-	/*
-	 * The buffer reserved for a memory intensive operator is the same as
-	 * non-intensive ones, by default it is 100KB
-	 */
-	perOpMemKB = *gp_resmanager_memory_policy_auto_fixed_mem;
-	minOpMemKB = perOpMemKB * numOps;
-
-	/* No need to change operator memory buffer if already large enough */
-	if (*opMemKB >= minOpMemKB)
-		return;
-
-	/*
-	 * FIXME: a `SET hello<TAB>` auto completion will trigger this WARNING if
-	 * the group memory setting is low, which causes a messy command line
-	 * prompt.
-	 *
-	 * Is there any way to hide this WARNING for auto completion?
-	 */
-	ereport(WARNING,
-			(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-			 errmsg("No enough operator memory for current query."),
-			 errdetail("Current query contains %d operators, "
-					   "the minimal operator memory requirement is " INT64_FORMAT " KB, "
-					   "however there is only " INT64_FORMAT " KB reserved.  "
-					   "Temporarily increased the operator memory to execute the query.",
-					   numOps, minOpMemKB, *opMemKB),
-			 errhint("Consider increase memory_spill_ratio for better performance.")));
-
-	/* Adjust the buffer */
-	*opMemKB = minOpMemKB;
-}
 
 /**
  * Is an agg operator memory intensive? The following cases mean it is:
@@ -492,13 +433,6 @@ void PolicyAutoAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 
 	 Assert(!result);
 	 Assert(ctx.numMemIntensiveOperators + ctx.numNonMemIntensiveOperators > 0);
-
-	/*
-	 * Make sure there is enough operator memory in resource group mode.
-	 */
-	autoIncOpMemForResGroup(&ctx.queryMemKB,
-							ctx.numNonMemIntensiveOperators +
-							ctx.numMemIntensiveOperators);
 
 	 if (ctx.queryMemKB <= ctx.numNonMemIntensiveOperators * (*gp_resmanager_memory_policy_auto_fixed_mem))
 	 {
@@ -1077,13 +1011,6 @@ PolicyEagerFreeAssignOperatorMemoryKB(PlannedStmt *stmt, uint64 memAvailableByte
 	 */
 	ctx.groupNode = NULL;
 	ctx.nextGroupId = 0;
-
-	/*
-	 * Make sure there is enough operator memory in resource group mode.
-	 */
-	autoIncOpMemForResGroup(&ctx.groupTree->groupMemKB,
-							ctx.groupTree->numNonMemIntenseOps +
-							ctx.groupTree->numMemIntenseOps);
 
 	/*
 	 * Check if memory exceeds the limit in the root group
