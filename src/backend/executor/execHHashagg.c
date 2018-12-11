@@ -32,7 +32,6 @@
 #include "utils/elog.h"
 #include "cdb/memquota.h"
 #include "utils/workfile_mgr.h"
-#include "utils/resource_manager.h"
 
 #include "access/hash.h"
 
@@ -542,7 +541,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 					  HashAggTableSizes   *out_hats)
 {
 	double entrysize, nbuckets, nentries;
-	double orig_memquota = memquota;
 
 	/* Assume we don't need to spill */
 	bool expectSpill = false;
@@ -556,9 +554,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 	elog(HHA_MSG_LVL, "HashAgg: ngroups = %g, memquota = %g, entrysize = %g",
 		 ngroups, memquota, entrysize);
 
-	if (out_hats)
-		out_hats->memquota = memquota;
-
 	/*
 	 * When all groups can not fit in the memory, we compute
 	 * the number of batches to store spilled groups. Currently, we always
@@ -569,15 +564,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 		nbatches = gp_hashagg_default_nbatches;
 		batchfile_mem = BATCHFILE_METADATA * (1 + nbatches);
 		expectSpill = true;
-
-		/* In resource group the memory quota could be dynamically enlarged */
-		if (IsResGroupEnabled() && memquota < batchfile_mem)
-		{
-			if (out_hats)
-				out_hats->memquota += batchfile_mem - memquota;
-
-			memquota = batchfile_mem;
-		}
 
 		/*
 		 * If the memory quota is smaller than the overhead for batch files,
@@ -603,15 +589,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 	/* but at least a few hash entries as required */
 	nentries = Max(nentries, gp_hashagg_groups_per_bucket);
 	entries_mem = nentries * entrywidth;
-
-	/* In resource group the memory quota could be dynamically enlarged */
-	if (IsResGroupEnabled() && memquota < entries_mem)
-	{
-		if (out_hats)
-			out_hats->memquota += 1 + entries_mem - memquota;
-
-		memquota = 1 + entries_mem;
-	}
 
 	/*
 	 * If the memory quota is smaller than the minimum number of entries
@@ -652,15 +629,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 	nbuckets = Max(nbuckets, gp_hashagg_default_nbatches);
 	buckets_mem = nbuckets * OVERHEAD_PER_BUCKET;
 
-	/* In resource group the memory quota could be dynamically enlarged */
-	if (IsResGroupEnabled() && memquota < buckets_mem)
-	{
-		if (out_hats)
-			out_hats->memquota += buckets_mem - memquota;
-
-		memquota = buckets_mem;
-	}
-
 	/* Reserve memory for the entries + hash table */
 	memquota -= buckets_mem;
 
@@ -696,18 +664,6 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 		out_hats->spill = expectSpill;
 		out_hats->workmem_initial = (unsigned)(batchfile_mem);
 		out_hats->workmem_per_entry = (unsigned) entrysize;
-
-		if (IsResGroupEnabled() && out_hats->memquota > orig_memquota)
-		{
-			ereport(WARNING,
-					(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-					 errmsg("No enough memory quota reserved for AggHash operator."),
-					 errdetail("The operator needs a minimal of %.0f bytes memory, "
-							   "but only %.0f bytes are reserved.  "
-							   "Temporarily increased the memory quota to execute the operator.",
-							   out_hats->memquota, orig_memquota),
-					 errhint("Consider increase memory_spill_ratio for better performance.")));
-		}
 	}
 	
 	elog(HHA_MSG_LVL, "HashAgg: nbuckets = %d, nentries = %d, nbatches = %d",
@@ -835,7 +791,7 @@ create_agg_hash_table(AggState *aggstate)
 
 	MemoryContextSwitchTo(oldcxt);
 
-	hashtable->max_mem = hashtable->hats.memquota;
+	hashtable->max_mem = 1024.0 * operatorMemKB;
 	hashtable->mem_for_metadata = sizeof(HashAggTable) +
 			hashtable->nbuckets * OVERHEAD_PER_BUCKET +
 			sizeof(GroupKeysAndAggs);

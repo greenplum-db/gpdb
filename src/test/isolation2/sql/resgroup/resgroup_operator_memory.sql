@@ -18,26 +18,26 @@ DROP RESOURCE GROUP rg2_opmem_test;
 -- composing a long SELECT c1,c2,... list we use SELECT * here, but we should
 -- not output the groupid as it changes each time.
 CREATE OR REPLACE VIEW many_ops AS
-      SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
-UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
+       SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
+EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config
 ;
 
 CREATE RESOURCE GROUP rg1_opmem_test
@@ -51,9 +51,6 @@ GRANT ALL ON many_ops TO r1_opmem_test;
 -- memory reserved, however in resource group mode we assign at least 100KB to
 -- each operator, no matter it is memory intensive or not.  As long as there is
 -- enough shared memory the query should be executed successfully.
---
--- some operators like HashAgg require more memory to run, the memory quota is
--- also dynamically increased to meet their minimal requirements.
 --
 -- note: when there is no enough operator memory there should be a warning,
 -- however warnings are not displayed in isolation2 tests.

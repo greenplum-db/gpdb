@@ -18,7 +18,7 @@ DROP RESOURCE GROUP rg2_opmem_test;
 -- we have to keep the columns provided by them in the target list, instead of
 -- composing a long SELECT c1,c2,... list we use SELECT * here, but we should
 -- not output the groupid as it changes each time.
-CREATE OR REPLACE VIEW many_ops AS SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 ;
+CREATE OR REPLACE VIEW many_ops AS SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config EXCEPT SELECT * FROM gp_toolkit.gp_resgroup_config ;
 CREATE
 
 CREATE RESOURCE GROUP rg1_opmem_test WITH (cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0, concurrency=20, memory_spill_ratio=0);
@@ -34,9 +34,6 @@ GRANT
 -- each operator, no matter it is memory intensive or not.  As long as there is
 -- enough shared memory the query should be executed successfully.
 --
--- some operators like HashAgg require more memory to run, the memory quota is
--- also dynamically increased to meet their minimal requirements.
---
 -- note: when there is no enough operator memory there should be a warning,
 -- however warnings are not displayed in isolation2 tests.
 
@@ -49,10 +46,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
@@ -61,10 +57,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
@@ -111,10 +106,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
@@ -123,10 +117,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
@@ -150,10 +143,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
@@ -162,10 +154,9 @@ SET
 SET ROLE TO r1_opmem_test;
 SET
 SELECT * FROM many_ops;
-groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
--------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
-6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         
-(1 row)
+groupid|groupname|concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio
+-------+---------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------
+(0 rows)
 RESET role;
 RESET
 
