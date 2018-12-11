@@ -1,5 +1,5 @@
 -- helpers:
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 CREATE
 
 -- expect: create table succeeds

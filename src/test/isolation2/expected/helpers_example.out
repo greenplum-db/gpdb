@@ -1,4 +1,4 @@
-1I: helpers/example.sql;
+include: helpers/example.sql;
 CREATE
 
 select example();

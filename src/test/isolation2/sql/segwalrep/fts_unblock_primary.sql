@@ -17,7 +17,7 @@ begin /* in func */
 end; /* in func */
 $$ language plpgsql;
 
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 
 
 -- make sure we are in-sync for the primary we will be testing with

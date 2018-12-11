@@ -34,11 +34,19 @@ def is_digit(n):
     except ValueError:
         return  False
 
-def load_helper_file_from_sql_command(command):
-    file_to_include = command.strip().replace(";", "")
-    
-    with open(file_to_include) as file:
+def load_helper_file(helper_file):
+    with open(helper_file) as file:
         return "".join(file.readlines()).strip()
+
+
+def parse_include_statement(sql):
+    include_statement, command = sql.split(None, 1)
+    stripped_command = command.strip()
+
+    if stripped_command.endswith(";"):
+        return stripped_command.replace(";", "")
+    else:
+        raise SyntaxError("expected 'include: %s' to end with a semicolon." % stripped_command)
 
 
 class SQLIsolationExecutor(object):
@@ -334,16 +342,18 @@ class SQLIsolationExecutor(object):
                 if mode == '\\retcode':
                     print >> output_file, '-- end_ignore'
                     print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
+            elif sql.startswith('include:'):
+                helper_file = parse_include_statement(sql)
+
+                self.get_process(
+                    output_file,
+                    process_name,
+                    dbname=dbname
+                ).query(
+                    load_helper_file(helper_file)
+                )
             else:
                 self.get_process(output_file, process_name, dbname=dbname).query(sql.strip())
-        elif flag == "I":
-            self.get_process(
-                output_file, 
-                process_name, 
-                dbname=dbname
-            ).query(
-                load_helper_file_from_sql_command(sql)
-            )
         elif flag == "&":
             self.get_process(output_file, process_name, dbname=dbname).fork(sql.strip(), True)
         elif flag == ">":
@@ -536,8 +546,8 @@ class SQLIsolationTestCase:
         Including files:
 
         -- example contents for file.sql: create function some_test_function() returning void ...
-        1I: path/to/some/file.sql;
-        1: select some_helper_function();
+        include: path/to/some/file.sql;
+        select some_helper_function();
     """
 
     def run_sql_file(self, sql_file, out_file = None, out_dir = None, optimizer = None):

@@ -1,3 +1,3 @@
-1I: helpers/example.sql;
+include: helpers/example.sql;
 
 select example();

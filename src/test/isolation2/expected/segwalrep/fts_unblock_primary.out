@@ -4,7 +4,7 @@
 create or replace function wait_for_streaming(contentid smallint) returns void as $$ declare updated bool; /* in func */ begin /* in func */ for i in 1 .. 120 loop /* in func */ perform gp_request_fts_probe_scan(); /* in func */ select (mode = 's' and status = 'u') into updated /* in func */ from gp_segment_configuration /* in func */ where content = contentid and role = 'm'; /* in func */ exit when updated; /* in func */ perform pg_sleep(0.5); /* in func */ end loop; /* in func */ end; /* in func */ $$ language plpgsql;
 CREATE
 
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 CREATE
 
 

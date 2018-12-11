@@ -15,7 +15,7 @@ create extension if not exists gp_inject_fault;
 CREATE
 
 -- start_ignore
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 CREATE
 -- end_ignore
 

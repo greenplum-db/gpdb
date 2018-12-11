@@ -1,7 +1,7 @@
 -- This test assumes 3 primaries and 3 mirrors from a gpdemo segwalrep cluster
 
 -- start_ignore
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 -- end_ignore
 
 -- make sure we are in-sync for the primary we will be testing with

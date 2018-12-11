@@ -1,5 +1,5 @@
 -- helpers:
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 
 -- expect: create table succeeds
 create unlogged table unlogged_heap_table_managers (

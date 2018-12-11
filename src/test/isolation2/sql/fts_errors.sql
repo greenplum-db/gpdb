@@ -22,7 +22,7 @@ create extension if not exists gp_inject_fault;
 !\retcode gpstop -u;
 
 -- start_ignore
-1I: helpers/server_helpers.sql;
+include: helpers/server_helpers.sql;
 -- end_ignore
 
 -- no segment down.
