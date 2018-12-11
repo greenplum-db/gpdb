@@ -376,6 +376,9 @@
 /* Define to 1 if you have the `pam' library (-lpam). */
 #undef HAVE_LIBPAM
 
+/* Define to 1 if you have the `quicklz' library (-lquicklz). */
+#undef HAVE_LIBQUICKLZ
+
 /* Define if you have a function readline library */
 #undef HAVE_LIBREADLINE
 

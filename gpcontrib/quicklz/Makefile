@@ -1,0 +1,31 @@
+# Makefile for QuickLZ compressor
+
+MODULE_big = quicklz_compressor
+OBJS = quicklz.o
+CFLAGS_SL += -lquicklz
+LDFLAGS_SL += -lquicklz
+
+REGRESS = compression_quicklz
+
+ifdef USE_PGXS
+  PGXS := $(shell pg_config --pgxs)
+  include $(PGXS)
+else
+  top_builddir = ../..
+  include $(top_builddir)/src/Makefile.global
+  include $(top_srcdir)/contrib/contrib-global.mk
+endif
+
+# Install into cdb_init.d, so that the catalog changes performed by initdb,
+# and the compressor is available in all databases.
+.PHONY: install-data
+install-data:
+	$(INSTALL_DATA) quicklz_compressor.sql '$(DESTDIR)$(datadir)/cdb_init.d/quicklz_compressor.sql'
+
+install: install-data
+
+.PHONY: uninstall-data
+uninstall-data:
+	rm -f '$(DESTDIR)$(datadir)/cdb_init.d/quicklz_compressor.sql'
+
+uninstall: uninstall-data

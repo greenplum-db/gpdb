@@ -726,6 +726,7 @@ with_apu_config
 with_apr_config
 with_libcurl
 with_rt
+with_quicklz
 with_zstd
 with_libbz2
 with_zlib
@@ -888,6 +889,7 @@ with_system_tzdata
 with_zlib
 with_libbz2
 with_zstd
+with_quicklz
 with_rt
 with_libcurl
 with_apr_config
@@ -1594,6 +1596,8 @@ Optional Packages:
   --without-zlib          do not use Zlib
   --without-libbz2        do not use bzip2
   --without-zstd          do not build with Zstandard
+  --with-quicklz          build with QuickLZ support (requires quicklz
+                          library)
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
@@ -8141,6 +8145,35 @@ fi
 
 
 #
+# quicklz
+#
+
+
+
+# Check whether --with-quicklz was given.
+if test "${with_quicklz+set}" = set; then :
+  withval=$with_quicklz;
+  case $withval in
+    yes)
+      :
+      ;;
+    no)
+      :
+      ;;
+    *)
+      as_fn_error $? "no argument expected for --with-quicklz option" "$LINENO" 5
+      ;;
+  esac
+
+else
+  with_quicklz=no
+
+fi
+
+
+
+
+#
 # Realtime library
 #
 
@@ -10836,6 +10869,56 @@ fi
 
 fi
 
+if test "$with_quicklz" = yes; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for qlz_compress in -lquicklz" >&5
+$as_echo_n "checking for qlz_compress in -lquicklz... " >&6; }
+if ${ac_cv_lib_quicklz_qlz_compress+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lquicklz  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char qlz_compress ();
+int
+main ()
+{
+return qlz_compress ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_quicklz_qlz_compress=yes
+else
+  ac_cv_lib_quicklz_qlz_compress=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_quicklz_qlz_compress" >&5
+$as_echo "$ac_cv_lib_quicklz_qlz_compress" >&6; }
+if test "x$ac_cv_lib_quicklz_qlz_compress" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBQUICKLZ 1
+_ACEOF
+
+  LIBS="-lquicklz $LIBS"
+
+else
+  as_fn_error $? "quicklz library not found." "$LINENO" 5
+fi
+
+fi
+
 if test "$enable_spinlocks" = yes; then
 
 $as_echo "#define HAVE_SPINLOCKS 1" >>confdefs.h
@@ -13251,6 +13334,18 @@ if test "x$ac_cv_header_zstd_errors_h" = xyes; then :
 
 else
   as_fn_error $? "header file <zstd_errors.h> is required for zstd support" "$LINENO" 5
+fi
+
+
+fi
+
+# Check for quicklz.h
+if test "$with_quicklz" = yes; then
+  ac_fn_c_check_header_mongrel "$LINENO" "quicklz.h" "ac_cv_header_quicklz_h" "$ac_includes_default"
+if test "x$ac_cv_header_quicklz_h" = xyes; then :
+
+else
+  as_fn_error $? "header file <quicklz.h> is required for QuickLZ support" "$LINENO" 5
 fi
 
 

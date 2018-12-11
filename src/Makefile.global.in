@@ -243,6 +243,7 @@ PTHREAD_LIBS		= @PTHREAD_LIBS@
 
 have_yaml 		= @have_yaml@
 with_zstd 		= @with_zstd@
+with_quicklz		= @with_quicklz@
 
 
 ##########################################################################

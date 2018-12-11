@@ -24,6 +24,9 @@ recurse_targets = gp_sparse_vector \
 ifeq "$(with_zstd)" "yes"
 	recurse_targets += zstd
 endif
+ifeq "$(with_quicklz)" "yes"
+	recurse_targets += quicklz
+endif
 $(call recurse,all install clean distclean, $(recurse_targets))
 
 all: gpcloud pxf mapreduce gphdfs orafce
@@ -101,6 +104,11 @@ installcheck:
 ifeq "$(with_zstd)" "yes"
 	$(MAKE) -C zstd installcheck
 endif
+
+ifeq "$(with_quicklz)" "yes"
+	$(MAKE) -C quicklz installcheck
+endif
+
 	if [ -d "$(ext_dir)" ]; then \
 		PATH=$(INSTLOC)/bin:$(PATH) $(MAKE) -C gphdfs installcheck USE_PGXS=1 ; \
 	fi
