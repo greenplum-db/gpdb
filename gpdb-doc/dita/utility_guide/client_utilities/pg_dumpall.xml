@@ -53,6 +53,12 @@
                                 /></codeph>. </pd>
                     </plentry>
                     <plentry>
+                        <pt>--binary-upgrade</pt>
+                        <pd>This option is for use by in-place upgrade utilities. Its use for other
+                            purposes is not recommended or supported. The behavior of the option may
+                            change in future releases without notice.</pd>
+                    </plentry>
+                    <plentry>
                         <pt>-c | --clean</pt>
                         <pd>Output commands to clean (drop) database objects prior to (the commands
                             for) creating them. This option is only meaningful for the plain-text
@@ -61,7 +67,7 @@
                                     format="dita"/></codeph>. </pd>
                     </plentry>
                     <plentry>
-                        <pt>-d | --inserts</pt>
+                        <pt>--inserts</pt>
                         <pd>Dump data as <codeph>INSERT</codeph> commands (rather than
                                 <codeph>COPY</codeph>). This will make restoration very slow; it is
                             mainly useful for making dumps that can be loaded into
@@ -69,11 +75,11 @@
                             separate command for each row, an error in reloading a row causes only
                             that row to be lost rather than the entire table contents. Note that the
                             restore may fail altogether if you have rearranged column order. The
-                                <codeph>-D</codeph> option is safe against column order changes,
-                            though even slower. </pd>
+                                <codeph>--column-inserts</codeph> option is safe against column
+                            order changes, though even slower. </pd>
                     </plentry>
                     <plentry>
-                        <pt>-D | --column-inserts | --attribute-inserts</pt>
+                        <pt>--column-inserts | --attribute-inserts</pt>
                         <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
                                 <codeph>(INSERT INTO <varname>table</varname>
                                     (<varname>column</varname>, ...) VALUES ...)</codeph>. This will
@@ -242,8 +248,12 @@
                             system role name.</pd>
                     </plentry>
                     <plentry>
-                        <pt>-w</pt>
-                        <pd>Never prompt for a password.</pd>
+                        <pt>-w | --no-password</pt>
+                        <pd>Never issue a password prompt. If the server requires password
+                            authentication and a password is not available by other means such as a
+                                <codeph>.pgpass</codeph> file the connection attempt will fail. This
+                            option can be useful in batch jobs and scripts where no user is present
+                            to enter a password.</pd>
                     </plentry>
                     <plentry>
                         <pt>-W | --password</pt>

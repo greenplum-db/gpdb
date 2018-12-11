@@ -92,7 +92,7 @@ also granted through other roles. </p>
       have no effect.</p>
     <p>When revoking membership in a role, <codeph>GRANT OPTION</codeph>
 is instead called <codeph>ADMIN OPTION</codeph>, but the behavior is
-similar.</p></section><section id="section4"><title>Parameters</title><p>See <codeph><xref href="GRANT.xml#topic1" type="topic" format="dita"/></codeph>.</p></section>
+similar.</p></section><section id="section4a"><title>Parameters</title><p>See <codeph><xref href="GRANT.xml#topic1" type="topic" format="dita"/></codeph>.</p></section>
   <section id="section4">
     <title>Notes</title>
     <p>A user may revoke only those privileges directly granted by that user.

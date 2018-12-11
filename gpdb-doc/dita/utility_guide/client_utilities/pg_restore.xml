@@ -94,6 +94,31 @@
             <pd>Restore definition of named index only. </pd>
           </plentry>
           <plentry>
+            <pt>-j | --number-of-jobs |
+              --jobs=<varname>number-of-jobs</varname></pt>
+            <pd>Run the most time-consuming parts of <codeph>pg_restore</codeph>
+              — those which load data, create indexes, or create constraints —
+              using multiple concurrent jobs. This option can dramatically
+              reduce the time to restore a large database to a server running on
+              a multi-processor machine.</pd>
+            <pd>Each job is one process or one thread, depending on the
+              operating system, and uses a separate connection to the
+              server.</pd>
+            <pd>The optimal value for this option depends on the hardware setup
+              of the server, of the client, and of the network. Factors include
+              the number of CPU cores and the disk setup. A good place to start
+              is the number of CPU cores on the server, but values larger than
+              that can also lead to faster restore times in many cases. Of
+              course, values that are too high will lead to decreasing
+              performance because of thrashing. </pd>
+            <pd>Only the custom archive format is supported with this option.
+              The input file must be a regular file (not, for example, a pipe).
+              This option is ignored when emitting a script rather than
+              connecting directly to a database server. Also, multiple jobs
+              cannot be used together with the option
+                <codeph>--single-transaction</codeph>.</pd>
+          </plentry>
+          <plentry>
             <pt>-l | --list</pt>
             <pd>List the contents of the archive. The output of this operation can be used with the
                 <codeph>-L</codeph> option to restrict and reorder the items that are restored.</pd>
@@ -209,6 +234,14 @@
             <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
+          </plentry>
+          <plentry>
+            <pt>-w | --no-password</pt>
+            <pd>Never issue a password prompt. If the server requires password
+              authentication and a password is not available by other means such
+              as a <codeph>.pgpass</codeph> file the connection attempt will
+              fail. This option can be useful in batch jobs and scripts where no
+              user is present to enter a password.</pd>
           </plentry>
           <plentry>
             <pt>-W | --password</pt>

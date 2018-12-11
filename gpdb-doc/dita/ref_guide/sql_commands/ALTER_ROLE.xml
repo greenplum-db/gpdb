@@ -48,20 +48,26 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           non-superuser roles. The current session user cannot be renamed (connect as a different
           user to rename a role). Because MD5-encrypted passwords use the role name as cryptographic
           salt, renaming a role clears its password if the password is MD5-encrypted.</li>
-        <li id="av136604"><b>SET | RESET</b> — Changes a role's session default for a specified
-          configuration parameter, either for all databases or, when the
-          <codeph>IN DATABASE</codeph> clause is specified, only for sessions in the
-          named database. If <codeph>ALL</codeph> is specified instead of a role name,
-          this changes the setting for all roles. Using <codeph>ALL</codeph> with
-          <codeph>IN DATABASE</codeph> is effectively the same as using the command <codeph>ALTER DATABASE...SET...</codeph>.
-          <p>Whenever the role subsequently starts a new session, the
-          specified value becomes the session default, overriding whatever setting is present in
-          server configuration file (<codeph>postgresql.conf</codeph>). For a role without
-            <codeph>LOGIN</codeph> privilege, session defaults have no effect. Ordinary roles can
-          change their own session defaults. Superusers can change anyone's session defaults. Roles
-          having <codeph>CREATEROLE</codeph> privilege can change defaults for non-superuser roles.
-          See the <i>Greenplum Database Administrator Guide</i> for information about all
-          user-settable configuration parameters.</p></li>
+        <li id="av136604"><b>SET | RESET</b> — Changes a role's session default
+          for a specified configuration parameter, either for all databases or,
+          when the <codeph>IN DATABASE</codeph> clause is specified, only for
+          sessions in the named database. If <codeph>ALL</codeph> is specified
+          instead of a role name, this changes the setting for all roles. Using
+            <codeph>ALL</codeph> with <codeph>IN DATABASE</codeph> is
+          effectively the same as using the command <codeph>ALTER
+            DATABASE...SET...</codeph>. <p>Whenever the role subsequently starts
+            a new session, the specified value becomes the session default,
+            overriding whatever setting is present in the server configuration
+            file (<codeph>postgresql.conf</codeph>) or has been received from
+            the postgres command line. This only happens at login time. If you
+              <codeph>SET ROLE</codeph> to a role with configuration settings,
+            the settings are ignored. For a role without <codeph>LOGIN</codeph>
+            privilege, session defaults have no effect. Ordinary roles can
+            change their own session defaults. Superusers can change anyone's
+            session defaults. Roles having <codeph>CREATEROLE</codeph> privilege
+            can change defaults for non-superuser roles. See the <i>Greenplum
+              Database Administrator Guide</i> for information about all
+            user-settable configuration parameters.</p></li>
         <li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a resource
           queue. The role would then be subject to the limits assigned to the resource queue when
           issuing queries. Specify <codeph>NONE</codeph> to assign the role to the default resource
@@ -100,16 +106,21 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
         </plentry>
         <plentry>
           <pt><varname>config_parameter=value</varname></pt>
-          <pd>Set this role's session default for the specified configuration parameter to the given
-            value. If value is <codeph>DEFAULT</codeph> or if <codeph>RESET</codeph> is used, the
-            role-specific variable setting is removed, so the role will inherit the system-wide
-            default setting in new sessions. Use <codeph>RESET ALL</codeph> to clear all
-            role-specific settings. <codeph>SET FROM CURRENT</codeph> saves the session's
-            current value of the parameter as the role-specific value. If
-            <codeph>IN DATABASE</codeph> is specified, the configuration parameter is set
-            or removed for the given role and database only. See 
-              <xref href="../config_params/guc_config.xml"
-              type="topic" format="dita"/> for information about user-settable configuration
+          <pd>Set this role's session default for the specified configuration
+            parameter to the given value. If <varname>value</varname> is
+              <codeph>DEFAULT</codeph> or if <codeph>RESET</codeph> is used, the
+            role-specific variable setting is removed, so the role will inherit
+            the system-wide default setting in new sessions. Use <codeph>RESET
+              ALL</codeph> to clear all role-specific settings. <codeph>SET FROM
+              CURRENT</codeph> saves the session's current value of the
+            parameter as the role-specific value. If <codeph>IN
+              DATABASE</codeph> is specified, the configuration parameter is set
+            or removed for the given role and database only. </pd>
+          <pd>Role-specific variable settings take effect only at login;
+              <codeph>SET ROLE</codeph> does not process role-specific variable
+            settings. </pd>
+          <pd>See <xref href="../config_params/guc_config.xml" type="topic"
+              format="dita"/> for information about user-settable configuration
             parameters. </pd>
         </plentry>
         <plentry>

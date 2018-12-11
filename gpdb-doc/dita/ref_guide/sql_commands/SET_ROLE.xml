@@ -34,7 +34,9 @@ AUTHORIZATION</codeph>, but the privilege checks involved are quite different.
 Also, <codeph>SET SESSION AUTHORIZATION</codeph> determines which roles
 are allowable for later <codeph>SET ROLE</codeph> commands, whereas changing
 roles with <codeph>SET ROLE</codeph> does not change the set of roles
-allowed to a later <codeph>SET ROLE</codeph>.</p></section><section id="section6"><title>Examples</title><codeblock>SELECT SESSION_USER, CURRENT_USER;
+allowed to a later <codeph>SET ROLE</codeph>.</p>
+<p><codeph>SET ROLE</codeph> does not process session variables specified by the role's
+<codeph>ALTER ROLE</codeph> settings; the session variables are only processed during login.</p></section><section id="section6"><title>Examples</title><codeblock>SELECT SESSION_USER, CURRENT_USER;
  session_user | current_user 
 --------------+--------------
  peter        | peter

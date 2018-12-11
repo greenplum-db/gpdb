@@ -83,6 +83,12 @@
               only useful to add large objects to selective dumps. </pd>
           </plentry>
           <plentry>
+            <pt>--binary-upgrade</pt>
+            <pd>This option is for use by in-place upgrade utilities. Its use for other purposes is
+              not recommended or supported. The behavior of the option may change in future releases
+              without notice.</pd>
+          </plentry>
+          <plentry>
             <pt>-c | --clean</pt>
             <pd>Adds commands to the text output file to clean (drop) database objects prior to (the
               commands for) creating them. Note that objects are not dropped before the dump
@@ -103,17 +109,17 @@
               /></codeph>. </pd>
           </plentry>
           <plentry>
-            <pt>-d | --inserts</pt>
+            <pt>--inserts</pt>
             <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
               This will make restoration very slow; it is mainly useful for making dumps that can be
               loaded into non-PostgreSQL-based databases. Also, since this option generates a
               separate command for each row, an error in reloading a row causes only that row to be
               lost rather than the entire table contents. Note that the restore may fail altogether
-              if you have rearranged column order. The <codeph>-D</codeph> option is safe against
-              column order changes, though even slower. </pd>
+              if you have rearranged column order. The <codeph>--column-inserts</codeph> option is
+              safe against column order changes, though even slower. </pd>
           </plentry>
           <plentry>
-            <pt>-D | --column-inserts | --attribute-inserts</pt>
+            <pt>--column-inserts | --attribute-inserts</pt>
             <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
                 <codeph>(INSERT
                 INTO</codeph><varname>table</varname><codeph>(</codeph><varname>column</varname><codeph>,
@@ -332,25 +338,32 @@
         <b>Connection Options</b>
         <parml>
           <plentry>
-            <pt>-h <varname>host</varname>| --host <varname>host</varname></pt>
+            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
             <pd>The host name of the machine on which the Greenplum Database master database server
               is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd>
           </plentry>
           <plentry>
-            <pt>-p <varname>port</varname>| --port <varname>port</varname></pt>
+            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
             <pd>The TCP port on which the Greenplum Database master database server is listening for
               connections. If not specified, reads from the environment variable
                 <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
-            <pt>-U <varname>username</varname>| --username <varname>username</varname></pt>
+            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
           </plentry>
           <plentry>
             <pt>-W | --password</pt>
             <pd>Force a password prompt.</pd>
+          </plentry>
+          <plentry>
+            <pt>-w | --no-password</pt>
+            <pd>Never issue a password prompt. If the server requires password authentication and a
+              password is not available by other means such as a <codeph>.pgpass</codeph> file the
+              connection attempt will fail. This option can be useful in batch jobs and scripts
+              where no user is present to enter a password.</pd>
           </plentry>
           <plentry>
             <pt>--role=<varname>rolename</varname></pt>
@@ -379,6 +392,9 @@
       <p>The dump file produced by <codeph>pg_dump</codeph> does not contain the statistics used by
         the optimizer to make query planning decisions. Therefore, it is wise to run
           <codeph>ANALYZE</codeph> after restoring from a dump file to ensure good performance.</p>
+      <p>The database activity of <codeph>pg_dump</codeph> is normally collected by the statistics
+        collector. If this is undesirable, you can set parameter <codeph>track_counts</codeph> to
+        false via <codeph>PGOPTIONS</codeph> or the <codeph>ALTER USER</codeph> command.</p>
     </section>
     <section id="section8">
       <title>Examples</title>

@@ -41,6 +41,7 @@ ALTER TABLE <varname>name</varname>
   ENABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
   CLUSTER ON <varname>index_name</varname>
   SET WITHOUT CLUSTER
+  SET WITH OIDS
   SET WITHOUT OIDS
   SET (FILLFACTOR = <varname>value</varname>)
   RESET (FILLFACTOR)
@@ -186,10 +187,25 @@ ALTER TABLE <varname>name</varname>
                                         by the index column(s). <note><codeph>CLUSTER ON</codeph> is
                                                 not supported on append-optimized
                                         tables.</note></li>
+                                <li><b>SET WITH OIDS</b> — Adds an <codeph>oid</codeph> system
+                                        column to the table. It does nothing if the table already
+                                        has OIDs. This is not equivalent to <codeph>ADD COLUMN oid
+                                                oid</codeph>; that would add a normal column that
+                                        happened to be named <codeph>oid</codeph>, not a system
+                                        column.  Greenplum strongly recommends that you do not
+                                        enable OIDS when creating a table. On large tables, such as
+                                        those in a typical Greenplum Database system, using OIDs for
+                                        table rows can cause wrap-around of the 32-bit OID counter.
+                                        Once the counter wraps around, OIDs can no longer be assumed
+                                        to be unique, which not only makes them useless to user
+                                        applications, but can also cause problems in the Greenplum
+                                        Database system catalog tables. In addition, excluding OIDs
+                                        from a table reduces the space required to store the table
+                                        on disk by 4 bytes per row, slightly improving performance.
+                                        OIDS are not allowed on partitioned tables or
+                                        append-optimized column-oriented tables. </li>
                                 <li id="ay137152"><b>SET WITHOUT OIDS</b> — Removes the OID system
-                                        column from the table. Note that there is no variant of
-                                                <codeph>ALTER TABLE</codeph> that allows OIDs to be
-                                        restored to a table once they have been removed. </li>
+                                        column from the table.</li>
                                 <li id="ay137192"><b>SET ( FILLFACTOR = <varname>value</varname>) /
                                                 RESET (FILLFACTOR)</b> — Changes the fillfactor for
                                         the table. The fillfactor for a table is a percentage
@@ -716,7 +732,9 @@ ALTER TABLE <varname>name</varname>
                                 specified. Adding a column with a non-null default or changing the
                                 type of an existing column will require the entire table to be
                                 rewritten. This may take a significant amount of time for a large
-                                table; and it will temporarily require double the disk space.</p>
+                                table; and it will temporarily require double the disk space. Adding
+                                or removing a system <codeph>oid</codeph> column also requires
+                                rewriting the entire table.</p>
                         <p>You can specify multiple changes in a single <codeph>ALTER TABLE</codeph>
                                 command, which will be done in a single pass over the table. </p>
                         <p>The <codeph>DROP COLUMN</codeph> form does not physically remove the
@@ -725,7 +743,9 @@ ALTER TABLE <varname>name</varname>
                                 for the column. Thus, dropping a column is quick but it will not
                                 immediately reduce the on-disk size of your table, as the space
                                 occupied by the dropped column is not reclaimed. The space will be
-                                reclaimed over time as existing rows are updated.</p>
+                                reclaimed over time as existing rows are updated. If you drop the
+                                system <codeph>oid</codeph> column, however, the table is rewritten
+                                immediately.</p>
                         <p>The fact that <codeph>ALTER TYPE</codeph> requires rewriting the whole
                                 table is sometimes an advantage, because the rewriting process
                                 eliminates any dead space in the table. For example, to reclaim the

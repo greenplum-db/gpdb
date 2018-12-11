@@ -7,7 +7,7 @@
     <p id="client_util_desc">Garbage-collects and analyzes a database.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>vacuumdb</b> [<varname>connection-option</varname>...] [--full | -f] [<b>-F</b>] [<b>--verbose</b> | <b>-v</b>]
+      <codeblock id="client_util_synopsis"><b>vacuumdb</b> [<varname>connection-option</varname>...] [--full | -f] [<b>--freeze</b> | <b>-F</b>] [<b>--verbose</b> | <b>-v</b>]
     [<b>--analyze</b> | <b>-z</b>] [<b>--table</b> | <b>-t</b> <varname>table</varname> [( <varname>column</varname> [,...] )] ] [<varname>dbname</varname>]
 
 <b>vacuumdb</b> [<varname>connection-options</varname>...] [<b>--all</b> | <b>-a</b>] [--full | -f] [<b>-F</b>] 

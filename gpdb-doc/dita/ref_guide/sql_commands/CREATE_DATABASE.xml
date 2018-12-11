@@ -4,6 +4,8 @@
 <topic id="topic1"><title id="bp20941">CREATE DATABASE</title><body><p id="sql_command_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE DATABASE name [ [WITH] [OWNER [=] <varname>dbowner</varname>]
                      [TEMPLATE [=] <varname>template</varname>]
                      [ENCODING [=] <varname>encoding</varname>]
+                     [LC_COLLATE [=] <varname>lc_collate</varname>]
+                     [LC_CTYPE [=] <varname>lc_ctype</varname>]
                      [TABLESPACE [=] <varname>tablespace</varname>]
                      [CONNECTION LIMIT [=] connlimit ] ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE DATABASE</codeph> creates a new database. To create a
 database, you must be a superuser or have the special <codeph>CREATEDB</codeph>
@@ -22,16 +24,54 @@ to use the default owner (the user executing the command). </pd></plentry><plent
 </pd></plentry><plentry><pt><varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
               <codeph>'SQL_ASCII'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph>
             to use the default encoding. For more information, see <xref
-              href="../character_sets.xml" type="topic" format="dita"/>.</pd></plentry><plentry><pt><varname>tablespace</varname></pt><pd>The name of the tablespace that will be associated with the new database,
+              href="../character_sets.xml" type="topic" format="dita"/>.</pd></plentry>
+        <plentry>
+          <pt><varname>lc_collate</varname></pt>
+          <pd>The collation order (<codeph>LC_COLLATE</codeph>) to use in the new database. This
+            affects the sort order applied to strings, for example in queries with <codeph>ORDER
+              BY</codeph>, as well as the order used in indexes on text columns. The default is to
+            use the collation order of the template database. See the Notes  section for additional
+            restrictions.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>lc_ctype</varname></pt>
+          <pd>The character classification to use in the new template database's tablespace. This
+            tablespace will be the default tablespace used for objects created in this database. See
+                <codeph><xref href="CREATE_TABLESPACE.xml#topic1"/></codeph> for more
+            information.</pd>
+        </plentry><plentry><pt><varname>tablespace</varname></pt><pd>The name of the tablespace that will be associated with the new database,
 or <codeph>DEFAULT</codeph> to use the template database's tablespace.
 This tablespace will be the default tablespace used for objects created
 in this database.</pd></plentry><plentry><pt><varname>connlimit</varname></pt><pd>The maximum number of concurrent connections possible. The default
-of -1 means there is no limitation.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p><codeph>CREATE DATABASE</codeph> cannot be executed inside a transaction
-block.</p><p>When you copy a database by specifying its name as the template, no
-other sessions can be connected to the template database while it is
-being copied. New connections to the template database are locked out
-until <codeph>CREATE DATABASE</codeph> completes.</p><p>The <codeph>CONNECTION LIMIT</codeph> is not enforced against superusers.</p></section><section id="section6"><title>Examples</title><p>To create a new database: </p><codeblock>CREATE DATABASE gpdb;</codeblock><p>To create a database <codeph>sales</codeph> owned by user <codeph>salesapp</codeph> with a
-        default tablespace of <codeph>salesspace</codeph>: </p><codeblock>CREATE DATABASE sales OWNER salesapp TABLESPACE salesspace;</codeblock><p>To create a database <codeph>music</codeph> which supports the ISO-8859-1 character set: </p><codeblock>CREATE DATABASE music ENCODING 'LATIN1';</codeblock></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
+of -1 means there is no limitation.</pd></plentry></parml></section><section id="section5">
+      <title>Notes</title>
+      <p><codeph>CREATE DATABASE</codeph> cannot be executed inside a transaction block.</p>
+      <p>When you copy a database by specifying its name as the template, no other sessions can be
+        connected to the template database while it is being copied. New connections to the template
+        database are locked out until <codeph>CREATE DATABASE</codeph> completes.</p>
+      <p>The <codeph>CONNECTION LIMIT</codeph> is not enforced against superusers.</p>
+      <p>The character set encoding specified for the new database must be compatible with the
+        chosen locale settings (<codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph>). If the
+        locale is <codeph>C</codeph> (or equivalently <codeph>POSIX</codeph>), then all encodings
+        are allowed, but for other locale settings there is only one encoding that will work
+        properly. (On Windows, however, UTF-8 encoding can be used with any locale.) <codeph>CREATE
+          DATABASE</codeph> will allow superusers to specify <codeph>SQL_ASCII</codeph> encoding
+        regardless of the locale settings, but this choice is deprecated and may result in
+        misbehavior of character-string functions if data that is not encoding-compatible with the
+        locale is stored in the database. </p>
+      <p>The encoding and locale settings must match those of the template database, except when
+          <codeph>template0</codeph> is used as template. This is because other databases might
+        contain data that does not match the specified encoding, or might contain indexes whose sort
+        ordering is affected by <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph>. Copying
+        such data would result in a database that is corrupt according to the new settings.
+          <codeph>template0</codeph>, however, is known to not contain any data or indexes that
+        would be affected.</p>
+    </section><section id="section6"><title>Examples</title><p>To create a new database: </p><codeblock>CREATE DATABASE gpdb;</codeblock><p>To create a database <codeph>sales</codeph> owned by user <codeph>salesapp</codeph> with a
+        default tablespace of <codeph>salesspace</codeph>: </p><codeblock>CREATE DATABASE sales OWNER salesapp TABLESPACE salesspace;</codeblock><p>To create a database <codeph>music</codeph> which supports the ISO-8859-1 character set: </p><codeblock>CREATE DATABASE music ENCODING 'LATIN1' TEMPLATE template0;</codeblock>
+      <p>In this example, the <codeph>TEMPLATE template0</codeph> clause would only be required if
+          <codeph>template1</codeph>'s encoding is not ISO-8859-1. Note that changing encoding might
+        require selecting new <codeph>LC_COLLATE</codeph> and <codeph>LC_CTYPE</codeph> settings as
+        well.</p></section><section id="section7"><title>Compatibility</title><p>There is no <codeph>CREATE DATABASE</codeph> statement in the SQL standard.
 Databases are equivalent to catalogs, whose creation is implementation-defined.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"
         /></codeph></p></section></body></topic>

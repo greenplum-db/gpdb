@@ -364,17 +364,17 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         run <codeph>COPY FROM</codeph> in single row error isolation mode if the data is in binary
         format.</p><p>You must have <codeph>SELECT</codeph> privilege on the table whose values are
         read by <codeph>COPY TO</codeph>, and insert privilege on the table into which values are
-        inserted by <codeph>COPY FROM</codeph>. </p><p>Files named in a <codeph>COPY</codeph>
-        command are read or written directly by the database server, not by the client application.
-        Therefore, they must reside on or be accessible to the Greenplum Database master host
-        machine, not the client. They must be accessible to and readable or writable by the
-        Greenplum Database system user (the user ID the server runs as), not the client.
-          <codeph>COPY</codeph> naming a file is only allowed to database superusers, since it
-        allows reading or writing any file that the server has privileges to
-          access.</p><p><codeph>COPY FROM</codeph> will invoke any triggers and check constraints on
-        the destination table. However, it will not invoke rewrite rules. Note that in this release,
-        violations of constraints are not evaluated for single row error isolation
-          mode.</p><p><codeph>COPY</codeph> input and output is affected by
+        inserted by <codeph>COPY FROM</codeph>. It is sufficient to have column privileges on the
+        columns listed in the command.</p><p>Files named in a <codeph>COPY</codeph> command are read
+        or written directly by the database server, not by the client application. Therefore, they
+        must reside on or be accessible to the Greenplum Database master host machine, not the
+        client. They must be accessible to and readable or writable by the Greenplum Database system
+        user (the user ID the server runs as), not the client. <codeph>COPY</codeph> naming a file
+        is only allowed to database superusers, since it allows reading or writing any file that the
+        server has privileges to access.</p><p><codeph>COPY FROM</codeph> will invoke any triggers
+        and check constraints on the destination table. However, it will not invoke rewrite rules.
+        Note that in this release, violations of constraints are not evaluated for single row error
+        isolation mode.</p><p><codeph>COPY</codeph> input and output is affected by
           <codeph>DateStyle</codeph>. To ensure portability to other Greenplum Database
         installations that might use non-default <codeph>DateStyle</codeph> settings,
           <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY

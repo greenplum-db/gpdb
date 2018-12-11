@@ -161,15 +161,12 @@
                                 </plentry>
                                 <plentry>
                                         <pt><varname>storage_parameter</varname></pt>
-                                        <pd>
-                                                <p>The name of an index-method-specific storage
-                                                  parameter. Each index method has its own set of
-                                                  allowed storage parameters. B-tree and GiST index
-                                                  methods all accept a single parameter,
-                                                  <codeph>FILLFACTOR</codeph>. GIN indexes accept a
-                                                  different parameter,
-                                                  <codeph>FASTUPDATE</codeph>.</p>
-                                        </pd>
+                                        <pd>The name of an index-method-specific storage parameter.
+                                                Each index method has its own set of allowed storage
+                                                parameters. B-tree, bitmap, and GiST index methods all
+                                                accept a single parameter, <codeph>FILLFACTOR</codeph>.
+                                                GIN indexes accept a different parameter,
+                                                <codeph>FASTUPDATE</codeph>.</pd>
                                         <pd>The <codeph>FILLFACTOR</codeph> for an index is a
                                                 percentage that determines how full the index method
                                                 will try to pack index pages. For B-trees, leaf
@@ -305,6 +302,8 @@
                         <p>To create an index with non-default fill factor:</p>
                         <codeblock>CREATE UNIQUE INDEX title_idx ON films (title) WITH 
 (fillfactor = 70);</codeblock>
+                        <p>To create a GIN index with fast updates disabled:</p>
+                        <codeblock>CREATE INDEX gin_idx ON documents_table (locations) WITH (fastupdate = off);</codeblock>
                         <p>To create an index on the column <codeph>code</codeph> in the table
                                         <codeph>films</codeph> and have the index reside in the
                                 tablespace <codeph>indexspace</codeph>:</p>

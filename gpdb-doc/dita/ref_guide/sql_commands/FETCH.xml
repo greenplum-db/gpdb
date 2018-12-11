@@ -11,7 +11,10 @@
     FORWARD
     FORWARD <varname>count</varname>
     FORWARD ALL</codeblock></section><section id="section3"><title>Description</title><p><codeph>FETCH</codeph> retrieves rows using a previously-created cursor.
-</p><p>A cursor has an associated position, which is used by <codeph>FETCH</codeph>.
+</p>
+<note>This page describes usage of cursors at the SQL command level. If you are
+trying to use cursors inside a PL/pgSQL function, the rules are different. See
+<xref href="../extensions/pl_sql.xml#topic1"/>.</note><p>A cursor has an associated position, which is used by <codeph>FETCH</codeph>.
 The cursor position can be before the first row of the query result,
 on any particular row of the result, or after the last row of the result.
 When created, a cursor is positioned before the first row. After fetching

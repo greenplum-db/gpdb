@@ -166,7 +166,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
             <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
             otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
           for additional information.</p>
-      </sectiondiv><sectiondiv id="section5">
+      </sectiondiv>
+      <sectiondiv id="section5">
         <b>The SELECT List</b>
         <p>The <codeph>SELECT</codeph> list (between the key words <codeph>SELECT</codeph> and
             <codeph>FROM</codeph>) specifies expressions that form the output rows of the
@@ -198,12 +199,13 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
           write <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the columns
           coming from just that table. In these cases it is not possible to specify new names with
             <codeph>AS</codeph>; the output column names will be the same as the table columns'
-          names.</p></sectiondiv><sectiondiv id="section6"><b>The FROM
-          Clause</b><p>The <codeph>FROM</codeph> clause specifies one or more source tables for the
-            <codeph>SELECT</codeph>. If multiple sources are specified, the result is the Cartesian
-          product (cross join) of all the sources. But usually qualification conditions are added to
-          restrict the returned rows to a small subset of the Cartesian product. The
-            <codeph>FROM</codeph> clause can contain the following elements: </p><parml>
+          names.</p></sectiondiv>
+      <sectiondiv id="section6"><b>The FROM Clause</b><p>The <codeph>FROM</codeph> clause specifies
+          one or more source tables for the <codeph>SELECT</codeph>. If multiple sources are
+          specified, the result is the Cartesian product (cross join) of all the sources. But
+          usually qualification conditions are added to restrict the returned rows to a small subset
+          of the Cartesian product. The <codeph>FROM</codeph> clause can contain the following
+          elements: </p><parml>
           <plentry>
             <pt><varname>table_name</varname></pt>
             <pd>The name (optionally schema-qualified) of an existing table or view. If
@@ -319,9 +321,9 @@ SELECT * FROM foo LIMIT 5;</codeblock></p><p>See
             <pd><codeph>NATURAL</codeph> is shorthand for a <codeph>USING</codeph> list that
               mentions all columns in the two tables that have the same names.</pd>
           </plentry>
-        </parml></sectiondiv><sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional
-            <codeph>WHERE</codeph> clause has the general
-          form:</p><codeblock>WHERE <varname>condition</varname></codeblock><p>where
+        </parml></sectiondiv>
+      <sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional <codeph>WHERE</codeph> clause
+          has the general form:</p><codeblock>WHERE <varname>condition</varname></codeblock><p>where
             <varname>condition</varname> is any expression that evaluates to a result of type
             <codeph>boolean</codeph>. Any row that does not satisfy this condition will be
           eliminated from the output. A row satisfies the condition if it returns true when the
@@ -428,8 +430,9 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
                   group_id number. </li>
               </ul></pd>
           </plentry>
-        </parml></sectiondiv><sectiondiv id="section9"><b>The WINDOW Clause</b><p>The optional <codeph>WINDOW</codeph> clause
-          specifies the behavior of window functions appearing in the query's
+        </parml></sectiondiv>
+      <sectiondiv id="section9"><b>The WINDOW Clause</b><p>The optional <codeph>WINDOW</codeph>
+          clause specifies the behavior of window functions appearing in the query's
             <codeph>SELECT</codeph> list or <codeph>ORDER BY</codeph> clause. These functions can
           reference the <codeph>WINDOW</codeph> clause entries by name in their
             <codeph>OVER</codeph> clauses. A <codeph>WINDOW</codeph> clause entry does not have to
@@ -580,8 +583,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 PRECEDING</codeph>) and ends with last row in the partition (<codeph>UNBOUNDED
                 FOLLOWING</codeph>).</pd>
           </plentry>
-        </parml></sectiondiv><sectiondiv id="section10"><b>The HAVING Clause</b><p>The optional
-            <codeph>HAVING</codeph> clause has the general
+        </parml></sectiondiv>
+      <sectiondiv id="section10"><b>The HAVING Clause</b><p>The optional <codeph>HAVING</codeph>
+          clause has the general
           form:</p><codeblock>HAVING <varname>condition</varname></codeblock><p>where
             <varname>condition</varname> is the same as specified for the <codeph>WHERE</codeph>
           clause. <codeph>HAVING</codeph> eliminates group rows that do not satisfy the condition.
@@ -596,8 +600,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           rows are considered to form a single group, and the <codeph>SELECT</codeph> list and
             <codeph>HAVING</codeph> clause can only reference table columns from within aggregate
           functions. Such a query will emit a single row if the <codeph>HAVING</codeph> condition is
-          true, zero rows if it is not true. </p></sectiondiv><sectiondiv id="section11"><b>The
-          UNION Clause</b><p>The <codeph>UNION</codeph> clause has this general
+          true, zero rows if it is not true. </p></sectiondiv>
+      <sectiondiv id="section11"><b>The UNION Clause</b><p>The <codeph>UNION</codeph> clause has
+          this general
           form:</p><codeblock><varname>select_statement</varname> UNION [ALL] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
@@ -618,8 +623,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           statement are evaluated left to right, unless otherwise indicated by parentheses.
           </p><p>Currently, <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be
           specified either for a <codeph>UNION</codeph> result or for any input of a
-            <codeph>UNION</codeph>. </p></sectiondiv><sectiondiv id="section12"><b>The INTERSECT
-          Clause</b><p>The <codeph>INTERSECT</codeph> clause has this general
+            <codeph>UNION</codeph>. </p></sectiondiv>
+      <sectiondiv id="section12"><b>The INTERSECT Clause</b><p>The <codeph>INTERSECT</codeph> clause
+          has this general
           form:</p><codeblock><varname>select_statement</varname> INTERSECT [ALL] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any SELECT statement without an <codeph>ORDER
             BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or <codeph>FOR
@@ -637,8 +643,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>A UNION (B INTERSECT C)</codeph>. </p><p>Currently, <codeph>FOR UPDATE</codeph>
           and <codeph>FOR SHARE</codeph> may not be specified either for an
             <codeph>INTERSECT</codeph> result or for any input of an <codeph>INTERSECT</codeph>.
-        </p></sectiondiv><sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The
-            <codeph>EXCEPT</codeph> clause has this general
+        </p></sectiondiv>
+      <sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The <codeph>EXCEPT</codeph> clause has
+          this general
           form:</p><codeblock><varname>select_statement</varname> EXCEPT [ALL] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
             <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
@@ -654,9 +661,10 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           binds at the same level as <codeph>UNION</codeph>. </p><p>Currently, <codeph>FOR
             UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be specified either for an
             <codeph>EXCEPT</codeph> result or for any input of an <codeph>EXCEPT</codeph>.
-        </p></sectiondiv><sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
+        </p></sectiondiv>
+      <sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
           clause has this general
-          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS { FIRST | LAST}] [, ...]</codeblock><p>where
+          form:</p><codeblock>ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [,...]</codeblock><p>where
             <varname>expression</varname> can be the name or ordinal number of an output column
             (<codeph>SELECT</codeph> list item), or it can be an arbitrary expression formed from
           input-column values. </p><p>The <codeph>ORDER BY</codeph> clause causes the result rows to
@@ -697,15 +705,16 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           not mean the same thing as <codeph>ORDER BY x DESC, y
           DESC</codeph>.</p><p>Character-string data is sorted according to the locale-specific
           collation order that was established when the Greenplum Database system was
-          initialized.</p></sectiondiv><sectiondiv id="section15"><b>The DISTINCT Clause</b><p>If
-            <codeph>DISTINCT</codeph> is specified, all duplicate rows are removed from the result
-          set (one row is kept from each group of duplicates). <codeph>ALL</codeph> specifies the
-          opposite: all rows are kept. <codeph>ALL</codeph> is the default. </p><p><codeph>DISTINCT
-            ON ( <varname>expression</varname> [, ...] )</codeph> keeps only the first row of each
-          set of rows where the given expressions evaluate to equal. The <codeph>DISTINCT
-            ON</codeph> expressions are interpreted using the same rules as for <codeph>ORDER
-            BY</codeph>. Note that the 'first row' of each set is unpredictable unless <codeph>ORDER
-            BY</codeph> is used to ensure that the desired row appears first. For
+          initialized.</p></sectiondiv>
+      <sectiondiv id="section15"><b>The DISTINCT Clause</b><p>If <codeph>DISTINCT</codeph> is
+          specified, all duplicate rows are removed from the result set (one row is kept from each
+          group of duplicates). <codeph>ALL</codeph> specifies the opposite: all rows are kept.
+            <codeph>ALL</codeph> is the default. </p><p><codeph>DISTINCT ON (
+              <varname>expression</varname> [, ...] )</codeph> keeps only the first row of each set
+          of rows where the given expressions evaluate to equal. The <codeph>DISTINCT ON</codeph>
+          expressions are interpreted using the same rules as for <codeph>ORDER BY</codeph>. Note
+          that the 'first row' of each set is unpredictable unless <codeph>ORDER BY</codeph> is used
+          to ensure that the desired row appears first. For
           example:</p><codeblock>SELECT DISTINCT ON (location) location, time, report FROM 
 weather_reports ORDER BY location, time DESC;</codeblock><p>retrieves
           the most recent weather report for each location. But if we had not used <codeph>ORDER
@@ -720,28 +729,32 @@ weather_reports ORDER BY location, time DESC;</codeblock><p>retrieves
           gains. However, when the number of distinct values is close to the total number of rows,
           the transformation might result in the generation of a multi-level grouping plan. In this
           case, there is an expected performance degradation because of the overhead introduced by
-          the lower aggregation level.</p></sectiondiv><sectiondiv id="section16"><b>The LIMIT
-          Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two independent
+          the lower aggregation level.</p></sectiondiv>
+      <sectiondiv><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two
+          independent
           sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
 OFFSET <varname>start</varname></codeblock><p>where
             <varname>count</varname> specifies the maximum number of rows to return, while
             <varname>start</varname> specifies the number of rows to skip before starting to return
-          rows. When both are specified, start rows are skipped before starting to count the count
-          rows to be returned. </p><p>When using <codeph>LIMIT</codeph>, it is a good idea to use an
-            <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique order.
-          Otherwise you will get an unpredictable subset of the query's rows — you may be asking for
-          the tenth through twentieth rows, but tenth through twentieth in what ordering? You don't
-          know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The query
-          optimizer takes <codeph>LIMIT</codeph> into account when generating a query plan, so you
-          are very likely to get different plans (yielding different row orders) depending on what
-          you use for <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
+          rows. When both are specified, start rows are skipped before starting to count the
+            <codeph>count</codeph> rows to be returned. </p><p>If the <codeph>count</codeph>
+          expression evaluates to NULL, it is treated as <codeph>LIMIT ALL</codeph>, that is, no
+          limit. If <codeph>start</codeph> evaluates to NULL, it is treated the same as
+            <codeph>OFFSET 0</codeph>.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to
+          use an <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique
+          order. Otherwise you will get an unpredictable subset of the query's rows — you may be
+          asking for the tenth through twentieth rows, but tenth through twentieth in what ordering?
+          You don't know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The
+          query optimizer takes <codeph>LIMIT</codeph> into account when generating a query plan, so
+          you are very likely to get different plans (yielding different row orders) depending on
+          what you use for <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
             <codeph>LIMIT/OFFSET</codeph> values to select different subsets of a query result will
           give inconsistent results unless you enforce a predictable result ordering with
             <codeph>ORDER BY</codeph>. This is not a defect; it is an inherent consequence of the
           fact that SQL does not promise to deliver the results of a query in any particular order
-          unless <codeph>ORDER BY</codeph> is used to constrain the
-        order.</p></sectiondiv><sectiondiv id="section17"><b>The FOR UPDATE/FOR SHARE
-          Clause</b><p>The <codeph>FOR UPDATE</codeph> clause has this
+          unless <codeph>ORDER BY</codeph> is used to constrain the order.</p></sectiondiv>
+      <sectiondiv id="section17"><b>The FOR UPDATE/FOR SHARE Clause</b><p>The <codeph>FOR
+            UPDATE</codeph> clause has this
           form:</p><codeblock>FOR UPDATE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p>The
           closely related <codeph>FOR SHARE</codeph> clause has this
             form:</p><codeblock>FOR SHARE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p><codeph>FOR
@@ -780,7 +793,8 @@ OFFSET <varname>start</varname></codeblock><p>where
           is mentioned (or implicitly affected) by both <codeph>FOR UPDATE</codeph> and <codeph>FOR
             SHARE</codeph> clauses, then it is processed as <codeph>FOR UPDATE</codeph>. Similarly,
           a table is processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses
-          affecting it.</p></sectiondiv></section>
+          affecting it.</p></sectiondiv>
+    </section>
     <section id="section18">
       <title>Examples</title>
       <p>To join the table <codeph>films</codeph> with the table <codeph>distributors</codeph>: </p>
@@ -891,7 +905,12 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           conflict against future keyword additions. </p><p>In <codeph>FROM</codeph> items, both the
           standard and Greenplum Database allow <codeph>AS</codeph> to be omitted before an alias
           that is an unreserved keyword. But this is impractical for output column names, because of
-          syntactic ambiguities.</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
+          syntactic ambiguities.</p></sectiondiv>
+      <sectiondiv id="sectiondiv_ndj_ngd_cgb"><b>ONLY and Parentheses</b><p>The SQL standard
+          requires parentheses around the table name after <codeph>ONLY</codeph>, as in
+            <codeph>SELECT * FROM ONLY (tab1), ONLY (tab2) WHERE ...</codeph>. Greenplum Database
+          supports that syntax as well, but the parentheses are optional. (This applies equally to
+          all SQL commands supporting the <codeph>ONLY</codeph> option.)</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
           standard, an <codeph>ORDER BY</codeph> clause may only use output column names or numbers,
           while a <codeph>GROUP BY</codeph> clause may only use expressions based on input column
           names. Greenplum Database extends each of these clauses to allow the other choice as well
