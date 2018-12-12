@@ -14,7 +14,7 @@ CREATE EXTENSION file_fdw;
 
 -- file_fdw_superuser owns fdw-related objects
 SET ROLE file_fdw_superuser;
-CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw;
+CREATE SERVER file_server FOREIGN DATA WRAPPER file_fdw OPTIONS (mpp_execute 'any');
 
 -- create user mappings and grant privilege to test users
 SET ROLE file_fdw_superuser;
@@ -31,6 +31,11 @@ CREATE FOREIGN TABLE text_csv_all (
 ) SERVER file_server
 OPTIONS (format 'csv', filename '@abs_srcdir@/data/text<SEGID>.csv', mpp_execute 'all segments');
 SELECT * FROM text_csv_all ORDER BY word1;
+CREATE FOREIGN TABLE text_csv_any_from_server (
+    word1 text, word2 text
+) SERVER file_server
+OPTIONS (format 'csv', filename '@abs_srcdir@/data/text.csv');
+SELECT * FROM text_csv_any_from_server;
 
 -- cleanup
 RESET ROLE;
