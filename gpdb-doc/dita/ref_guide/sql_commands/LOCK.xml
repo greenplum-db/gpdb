@@ -71,9 +71,8 @@
                         mode is specified, then <codeph>ACCESS EXCLUSIVE</codeph>, the most
                         restrictive mode, is used. Lock modes are as follows:<ul id="ul_cnt_mll_m4">
                             <li id="dv157736">ACCESS SHARE — Conflicts with the <codeph>ACCESS
-                                    EXCLUSIVE</codeph> lock mode only. The commands
-                                    <codeph>SELECT</codeph> and <codeph>ANALYZE</codeph>
-                                automatically acquire a lock of this mode on referenced tables. In
+                                    EXCLUSIVE</codeph> lock mode only. The <codeph>SELECT</codeph>
+                                command acquires a lock of this mode on referenced tables. In
                                 general, any query that only reads a table and does not modify it
                                 will acquire this lock mode.</li>
                             <li id="dv157739">ROW SHARE — Conflicts with the
@@ -92,13 +91,13 @@
                                     <codeph>ACCESS SHARE</codeph> locks on any other referenced
                                 tables). </li>
                             <li id="dv157745">SHARE UPDATE EXCLUSIVE — Conflicts with the
-                                    <codeph>SHARE UPDATE</codeph><codeph>EXCLUSIVE</codeph>,
-                                    <codeph>SHARE</codeph>, <codeph>SHARE ROW EXCLUSIVE</codeph>,
-                                    <codeph>EXCLUSIVE</codeph>, and <codeph>ACCESS
-                                    EXCLUSIVE</codeph> lock modes. This mode protects a table
-                                against concurrent schema changes and <codeph>VACUUM</codeph> runs.
-                                Acquired automatically by <codeph>VACUUM</codeph> (without
-                                    <codeph>FULL</codeph>) on heap tables. </li>
+                                    <codeph>SHARE UPDATE EXCLUSIVE</codeph>, <codeph>SHARE</codeph>,
+                                    <codeph>SHARE ROW EXCLUSIVE</codeph>,
+                                <codeph>EXCLUSIVE</codeph>, and <codeph>ACCESS EXCLUSIVE</codeph>
+                                lock modes. This mode protects a table against concurrent schema
+                                changes and <codeph>VACUUM</codeph> runs. Acquired by
+                                    <codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) on heap
+                                tables and <codeph>ANALYZE</codeph>.</li>
                             <li id="dv157748">SHARE — Conflicts with the <codeph>ROW
                                     EXCLUSIVE</codeph>, <codeph>SHARE UPDATE EXCLUSIVE</codeph>,
                                     <codeph>SHARE ROW EXCLUSIVE, EXCLUSIVE</codeph>, and
