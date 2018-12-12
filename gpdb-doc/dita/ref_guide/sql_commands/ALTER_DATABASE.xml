@@ -7,6 +7,8 @@ ALTER DATABASE <varname>name</varname> RENAME TO <varname>newname</varname>
 
 ALTER DATABASE <varname>name</varname> OWNER TO <varname>new_owner</varname>
 
+ALTER DATABASE <varname>name</varname> SET TABLESPACE <varname>new_tablespace</varname>
+
 ALTER DATABASE <varname>name</varname> SET <varname>parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
 ALTER DATABASE <varname>name</varname> SET <varname>parameter</varname> FROM CURRENT
 ALTER DATABASE <varname>name</varname> RESET <varname>parameter</varname>
@@ -22,6 +24,12 @@ the current database. Connect to a different database first.</p>
 you must own the database and also be a direct or indirect member of
 the new owning role, and you must have the <codeph>CREATEDB</codeph>
 privilege. (Note that superusers have all these privileges automatically.)</p>
+  <p>The fourth form changes the default tablespace of the database.
+    Only the database owner or a superuser can do this; you must also have
+    create privilege for the new tablespace.
+    This command physically moves any tables or indexes in the database's old
+    default tablespace to the new tablespace.  Note that tables and indexes
+    in non-default tablespaces are not affected.</p>
 <p>The remaining forms change the session default for a configuration
 parameter for a Greenplum database. Whenever a new session is subsequently
 started in that database, the specified value becomes the session default
@@ -36,11 +44,16 @@ of -1 means there is no limitation.</pd></plentry><plentry><pt><varname>paramete
             used, the database-specific setting is removed, so the system-wide default setting will
             be inherited in new sessions. Use <codeph>RESET ALL</codeph> to clear all
             database-specific settings. See <xref href="../config_params/guc_config.xml" type="topic" format="dita"/> for information about all
-            user-settable configuration parameters.</pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the database. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the database.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>It is also possible to set a configuration parameter session default
+            user-settable configuration parameters.</pd></plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the database. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the database.</pd></plentry>
+        <plentry>
+          <pt><varname>new_tablespace</varname></pt>
+          <pd>The new default tablespace of the database.</pd>
+        </plentry></parml></section><section id="section5"><title>Notes</title><p>It is also possible to set a configuration parameter session default
 for a specific role (user) rather than to a database. Role-specific settings
 override database-specific ones if there is a conflict. See <codeph>ALTER
 ROLE</codeph>.</p></section><section id="section6"><title>Examples</title><p>To set the default schema search path for the <codeph>mydatabase</codeph> database:</p><codeblock>ALTER DATABASE mydatabase SET search_path TO myschema, 
 public, pg_catalog;</codeblock></section><section id="section7"><title>Compatibility</title><p>The <codeph>ALTER DATABASE</codeph> statement is a Greenplum Database
 extension. </p></section><section id="section8"><title>See Also</title><p><codeph><xref href="./CREATE_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
-            <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>
+            <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="CREATE_TABLESPACE.xml#topic1"/></codeph></p></section></body></topic>
