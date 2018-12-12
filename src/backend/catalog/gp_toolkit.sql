@@ -2173,6 +2173,640 @@ ORDER BY segid;
 GRANT SELECT ON gp_toolkit.gp_workfile_mgr_used_diskspace TO public;
 
 --------------------------------------------------------------------------------
+-- postgres system statistics gathered and displayed for the cluster
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_database_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_database results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_database_t
+AS
+(
+  gp_segment_id int,
+  datid oid,
+  datname name,
+  numbackends int,
+  xact_commit bigint,
+  xact_rollback bigint,
+  blks_read bigint,
+  blks_hit bigint,
+  tup_returned bigint,
+  tup_fetched bigint,
+  tup_inserted bigint,
+  tup_updated bigint,
+  tup_deleted bigint,
+  conflicts bigint,
+  temp_files bigint,
+  deadlocks bigint,
+  blk_read_time double precision,
+  blk_write_time double precision,
+  stats_reset timestamp with time zone
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_database_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_database for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_database_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_database_t
+AS
+$$
+    SELECT gp_execution_segment(), datid, datname, numbackends, xact_commit, xact_rollback, blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, conflicts, temp_files, deadlocks, blk_read_time, blk_write_time, stats_reset FROM pg_stat_database;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_database_on_master
+--
+-- @doc:
+--        returns set of pg_stat_database for master
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_database_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_database_t
+AS
+$$
+    SELECT gp_execution_segment(), datid, datname, numbackends, xact_commit, xact_rollback, blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, conflicts, temp_files, deadlocks, blk_read_time, blk_write_time, stats_reset FROM pg_stat_database;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_database
+--
+-- @doc:
+--        presented unified view of pg_stat_database for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_database
+AS
+SELECT gp_segment_id, datid, datname, numbackends, xact_commit, xact_rollback, blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, conflicts, temp_files, deadlocks, blk_read_time, blk_write_time, stats_reset from gp_toolkit.__gp_stat_database_on_segments()
+UNION ALL
+SELECT gp_segment_id, datid, datname, numbackends, xact_commit, xact_rollback, blks_read, blks_hit, tup_returned, tup_fetched, tup_inserted, tup_updated, tup_deleted, conflicts, temp_files, deadlocks, blk_read_time, blk_write_time, stats_reset from gp_toolkit.__gp_stat_database_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_all_tables_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_all_tables results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_all_tables_t
+AS
+(
+ gp_segment_id int,
+ relid oid,
+ schemaname name,
+ relname name,
+ seq_scan bigint,
+ seq_tup_read bigint,
+ idx_scan bigint,
+ idx_tup_fetch bigint,
+ n_tup_ins bigint,
+ n_tup_upd bigint,
+ n_tup_del bigint,
+ n_tup_hot_upd bigint,
+ n_live_tup bigint,
+ n_dead_tup bigint,
+ last_vacuum timestamp with time zone,
+ last_autovacuum timestamp with time zone,
+ last_analyze timestamp with time zone,
+ last_autoanalyze timestamp with time zone,
+ vacuum_count bigint,
+ autovacuum_count bigint,
+ analyze_count bigint,
+ autoanalyze_count bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_tables_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_all_tables for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_tables_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_all_tables_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, vacuum_count, autovacuum_count, analyze_count, autoanalyze_count FROM pg_stat_all_tables;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_tables_on_master
+--
+-- @doc:
+--        returns set of pg_stat_all_tables for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_tables_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_all_tables_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, vacuum_count, autovacuum_count, analyze_count, autoanalyze_count FROM pg_stat_all_tables;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_all_tables
+--
+-- @doc:
+--        presented unified view of pg_stat_all_tables for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_all_tables
+AS
+SELECT gp_segment_id, relid, schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, vacuum_count, autovacuum_count, analyze_count, autoanalyze_count from gp_toolkit.__gp_stat_all_tables_on_segments()
+UNION ALL
+SELECT gp_segment_id, relid, schemaname, relname, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch, n_tup_ins, n_tup_upd, n_tup_del, n_tup_hot_upd, n_live_tup, n_dead_tup, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze, vacuum_count, autovacuum_count, analyze_count, autoanalyze_count from gp_toolkit.__gp_stat_all_tables_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_statio_all_tables_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_statio_all_tables results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_statio_all_tables_t
+AS
+(
+ gp_segment_id int,
+ relid oid,
+ schemaname name,
+ relname name,
+ heap_blks_read bigint,
+ heap_blks_hit bigint,
+ idx_blks_read bigint,
+ idx_blks_hit bigint,
+ toast_blks_read bigint,
+ toast_blks_hit bigint,
+ tidx_blks_read bigint,
+ tidx_blks_hit bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_tables_on_segments
+--
+-- @doc:
+--        returns set of pg_statio_all_tables for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_tables_on_segments()
+RETURNS SETOF gp_toolkit.gp_statio_all_tables_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit FROM pg_statio_all_tables;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_tables_on_master
+--
+-- @doc:
+--        returns set of pg_statio_all_tables for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_tables_on_master()
+RETURNS SETOF gp_toolkit.gp_statio_all_tables_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit FROM pg_statio_all_tables;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_statio_all_tables
+--
+-- @doc:
+--        presented unified view of pg_statio_all_tables for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_statio_all_tables
+AS
+SELECT gp_segment_id, relid, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit from gp_toolkit.__gp_statio_all_tables_on_segments()
+UNION ALL
+SELECT gp_segment_id, relid, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit from gp_toolkit.__gp_statio_all_tables_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_replication_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_replication results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_replication_t
+AS
+(
+ gp_segment_id int,
+ pid integer,
+ usesysid oid,
+ usename name,
+ application_name text,
+ client_addr inet,
+ client_hostname text,
+ client_port integer,
+ backend_start timestamp with time zone,
+ state text,
+ sent_location text,
+ write_location text,
+ flush_location text,
+ replay_location text,
+ sync_priority integer,
+ sync_state text
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_replication_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_replication for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_replication_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_replication_t
+AS
+$$
+    SELECT gp_execution_segment(), pid, usesysid, usename, application_name, client_addr, client_hostname, client_port, backend_start, state, sent_location, write_location, flush_location, replay_location, sync_priority, sync_state FROM pg_stat_replication;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_replication_on_master
+--
+-- @doc:
+--        returns set of pg_stat_replcation for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_replication_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_replication_t
+AS
+$$
+    SELECT gp_execution_segment(), pid, usesysid, usename, application_name, client_addr, client_hostname, client_port, backend_start, state, sent_location, write_location, flush_location, replay_location, sync_priority, sync_state FROM pg_stat_replication;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_replication
+--
+-- @doc:
+--        presented unified view of pg_stat_replication for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_replication
+AS
+SELECT gp_segment_id, pid, usesysid, usename, application_name, client_addr, client_hostname, client_port, backend_start, state, sent_location, write_location, flush_location, replay_location, sync_priority, sync_state from gp_toolkit.__gp_stat_replication_on_segments()
+UNION ALL
+SELECT gp_segment_id, pid, usesysid, usename, application_name, client_addr, client_hostname, client_port, backend_start, state, sent_location, write_location, flush_location, replay_location, sync_priority, sync_state from gp_toolkit.__gp_stat_replication_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_bgwriter_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_bgwriter results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_bgwriter_t
+AS
+(
+ gp_segment_id int,
+ checkpoints_timed bigint,
+ checkpoints_req bigint,
+ checkpoint_write_time double precision,
+ checkpoint_sync_time double precision,
+ buffers_checkpoint bigint,
+ buffers_clean bigint,
+ maxwritten_clean bigint,
+ buffers_backend bigint,
+ buffers_alloc bigint,
+ stats_reset timestamp with time zone
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_bgwriter_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_bgwriter for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_bgwriter_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_bgwriter_t
+AS
+$$
+    SELECT gp_execution_segment(), checkpoints_timed, checkpoints_req, checkpoint_write_time, checkpoint_sync_time, buffers_checkpoint, buffers_clean, maxwritten_clean, buffers_backend, buffers_alloc, stats_reset FROM pg_stat_bgwriter;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_bgwriter_on_master
+--
+-- @doc:
+--        returns set of pg_stat_bgwriter for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_bgwriter_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_bgwriter_t
+AS
+$$
+    SELECT gp_execution_segment(), checkpoints_timed, checkpoints_req, checkpoint_write_time, checkpoint_sync_time, buffers_checkpoint, buffers_clean, maxwritten_clean, buffers_backend, buffers_alloc, stats_reset FROM pg_stat_bgwriter;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_bgwriter
+--
+-- @doc:
+--        presented unified view of pg_stat_bgwriter for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_bgwriter
+AS
+SELECT gp_segment_id, checkpoints_timed, checkpoints_req, checkpoint_write_time, checkpoint_sync_time, buffers_checkpoint, buffers_clean, maxwritten_clean, buffers_backend, buffers_alloc, stats_reset from gp_toolkit.__gp_stat_bgwriter_on_segments()
+UNION ALL
+SELECT gp_segment_id, checkpoints_timed, checkpoints_req, checkpoint_write_time, checkpoint_sync_time, buffers_checkpoint, buffers_clean, maxwritten_clean, buffers_backend, buffers_alloc, stats_reset from gp_toolkit.__gp_stat_bgwriter_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_stat_all_indexes_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_stat_all_indexes results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_stat_all_indexes_t
+AS
+(
+ gp_segment_id int,
+ relid oid,
+ indexrelid oid,
+ schemaname name,
+ relname name,
+ indexrelname name,
+ idx_scan bigint,
+ idx_tup_read bigint,
+ idx_tup_fetch bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_indexes_on_segments
+--
+-- @doc:
+--        returns set of pg_stat_all_indexes for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_indexes_on_segments()
+RETURNS SETOF gp_toolkit.gp_stat_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, indexrelid, schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch FROM pg_stat_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_stat_all_indexes_on_master
+--
+-- @doc:
+--        returns set of pg_stat_all_indexes for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_stat_all_indexes_on_master()
+RETURNS SETOF gp_toolkit.gp_stat_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, indexrelid, schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch FROM pg_stat_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_stat_all_indexes
+--
+-- @doc:
+--        presented unified view of pg_stat_all_indexes for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_stat_all_indexes
+AS
+SELECT gp_segment_id, relid, indexrelid, schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch from gp_toolkit.__gp_stat_all_indexes_on_segments()
+UNION ALL
+SELECT gp_segment_id, relid, indexrelid, schemaname, relname, indexrelname, idx_scan, idx_tup_read, idx_tup_fetch from gp_toolkit.__gp_stat_all_indexes_on_master();
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_statio_all_indexes_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_statio_all_indexes results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_statio_all_indexes_t
+AS
+(
+ gp_segment_id int,
+ relid oid,
+ indexrelid oid,
+ schemaname name,
+ relname name,
+ indexrelname name,
+ idx_blks_read bigint,
+ idx_blks_hit bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_indexes_on_segments
+--
+-- @doc:
+--        returns set of pg_statio_all_indexes for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_indexes_on_segments()
+RETURNS SETOF gp_toolkit.gp_statio_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, indexrelid, schemaname, relname, indexrelname, idx_blks_read, idx_blks_hit FROM pg_statio_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_indexes_on_master
+--
+-- @doc:
+--        returns set of pg_statio_all_indexes for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_indexes_on_master()
+RETURNS SETOF gp_toolkit.gp_statio_all_indexes_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, indexrelid, schemaname, relname, indexrelname, idx_blks_read, idx_blks_hit FROM pg_statio_all_indexes;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_statio_all_indexes
+--
+-- @doc:
+--        presented unified view of pg_statio_all_indexes for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_statio_all_indexes
+AS
+SELECT gp_segment_id, relid, indexrelid, schemaname, relname, indexrelname, idx_blks_read, idx_blks_hit from gp_toolkit.__gp_statio_all_indexes_on_segments()
+UNION ALL
+SELECT gp_segment_id, relid, indexrelid, schemaname, relname, indexrelname, idx_blks_read, idx_blks_hit from gp_toolkit.__gp_statio_all_indexes_on_master();
+
+
+--------------------------------------------------------------------------------
+-- @type:
+--        gp_toolkit.gp_statio_all_sequences_t
+--
+-- @doc:
+--        Record type to add segment id on to pg_statio_all_sequences results
+--
+--------------------------------------------------------------------------------
+
+CREATE TYPE gp_toolkit.gp_statio_all_sequences_t
+AS
+(
+ gp_segment_id int,
+ relid oid,
+ schemaname name,
+ relname name,
+ blks_read bigint,
+ blks_hit bigint
+);
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_sequences_on_segments
+--
+-- @doc:
+--        returns set of pg_statio_all_sequences for all segments
+--        prefixed with segment id
+--
+--------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_sequences_on_segments()
+RETURNS SETOF gp_toolkit.gp_statio_all_sequences_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, blks_read, blks_hit FROM pg_statio_all_sequences;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON ALL SEGMENTS CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @function:
+--        gp_toolkit.__gp_statio_all_sequences_on_master
+--
+-- @doc:
+--        returns set of pg_statio_all_sequences for master
+--        prefixed with segment id
+--
+-------------------------------------------------------------------------------
+
+CREATE FUNCTION gp_toolkit.__gp_statio_all_sequences_on_master()
+RETURNS SETOF gp_toolkit.gp_statio_all_sequences_t
+AS
+$$
+    SELECT gp_execution_segment(), relid, schemaname, relname, blks_read, blks_hit FROM pg_statio_all_sequences;
+$$
+LANGUAGE SQL VOLATILE EXECUTE ON MASTER CONTAINS SQL;
+
+--------------------------------------------------------------------------------
+-- @view:
+--        gp_toolkit.gp_statio_all_sequences
+--
+-- @doc:
+--        presented unified view of pg_statio_all_sequences for master and segments
+--        with segment id included
+--
+--------------------------------------------------------------------------------
+
+CREATE VIEW gp_toolkit.gp_statio_all_sequences
+AS
+SELECT gp_segment_id, relid, schemaname, relname, blks_read, blks_hit FROM gp_toolkit.__gp_statio_all_sequences_on_segments()
+UNION ALL
+SELECT gp_segment_id, relid, schemaname, relname, blks_read, blks_hit FROM gp_toolkit.__gp_statio_all_sequences_on_master();
 
 -- Finalize install
 COMMIT;
