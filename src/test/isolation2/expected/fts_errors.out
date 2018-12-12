@@ -34,10 +34,8 @@ CREATE
 -- end_ignore
 (exited with code 0)
 
--- start_ignore
 include: helpers/server_helpers.sql;
 CREATE
--- end_ignore
 
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';

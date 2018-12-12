@@ -13,9 +13,7 @@
 
 create extension if not exists gp_inject_fault;
 
--- start_ignore
 include: helpers/server_helpers.sql;
--- end_ignore
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 -- stop a primary in order to trigger a mirror promotion

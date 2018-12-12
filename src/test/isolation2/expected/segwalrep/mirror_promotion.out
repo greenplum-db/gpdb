@@ -14,10 +14,8 @@
 create extension if not exists gp_inject_fault;
 CREATE
 
--- start_ignore
 include: helpers/server_helpers.sql;
 CREATE
--- end_ignore
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 role|preferred_role|content|mode|status

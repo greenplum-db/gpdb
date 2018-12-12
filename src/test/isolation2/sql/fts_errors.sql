@@ -21,9 +21,7 @@ create extension if not exists gp_inject_fault;
 !\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
 !\retcode gpstop -u;
 
--- start_ignore
 include: helpers/server_helpers.sql;
--- end_ignore
 
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';
