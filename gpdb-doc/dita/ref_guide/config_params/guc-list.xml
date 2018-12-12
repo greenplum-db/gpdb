@@ -1635,11 +1635,11 @@
     <body>
       <p>Selects the text search configuration that is used by those variants of the text search
         functions that do not have an explicit argument specifying the configuration. See <xref
-          href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/> for further information. The
-        built-in default is <codeph>pg_catalog.simple</codeph>, but <codeph>initdb</codeph> will
-        initialize the configuration file with a setting that corresponds to the chosen
-          <codeph>lc_ctype</codeph> locale, if a configuration matching that locale can be
-        identified.</p>
+          href="../../admin_guide/textsearch/full-text-search.xml#full-text-search"/> for further
+        information. The built-in default is <codeph>pg_catalog.simple</codeph>, but
+          <codeph>initdb</codeph> will initialize the configuration file with a setting that
+        corresponds to the chosen <codeph>lc_ctype</codeph> locale, if a configuration matching that
+        locale can be identified.</p>
       <table id="table_enc_3mb_lfb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -3259,11 +3259,10 @@
     <title>gp_enable_segment_copy_checking</title>
     <body>
       <p>Controls whether the distribution policy for a table (from the table
-      <codeph>DISTRIBUTED</codeph> clause) is checked when data is copied into the table with
-      the <codeph>COPY FROM...ON SEGMENT</codeph> command. If true, an error is returned if
-      a row of data violates the distribution policy for a segment instance.
-      The default is <codeph>true</codeph>.
-      </p>
+          <codeph>DISTRIBUTED</codeph> clause) is checked when data is copied into the table with
+        the <codeph>COPY FROM...ON SEGMENT</codeph> command. If true, an error is returned if a row
+        of data violates the distribution policy for a segment instance. The default is
+          <codeph>true</codeph>. </p>
       <p>If the value is <codeph>false</codeph>, the distribution policy is not checked. The data
         added to the table might violate the table distribution policy for the segment instance.
         Manual redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph>
@@ -4561,9 +4560,10 @@
           mirrors on <codeph>seghost1</codeph> fail over to become primary segments, each of the
           original 4 primaries retain their memory allotment of <codeph>0.175</codeph>, and the two
           new primary segments are each allotted <codeph>(0.7 / 6 = 0.116%)</codeph> of system
-          memory. <codeph>seghost1</codeph>'s overall memory allocation in this scenario
-          is</p><p><codeblock>
-0.7 + (0.116 * 2) = 0.932%</codeblock></p>
+          memory. <codeph>seghost1</codeph>'s overall memory allocation in this scenario is</p><p>
+          <codeblock>
+0.7 + (0.116 * 2) = 0.932%</codeblock>
+        </p>
         <p>which is above the percentage configured in the
             <codeph>gp_resource_group_memory_limit</codeph> setting.</p></note>
     </body>
@@ -8832,7 +8832,8 @@
     <title>track_activity_query_size</title>
     <body>
       <p>Sets the maximum length limit for the query text stored in <codeph>current_query</codeph>
-        column of the system catalog view pg_stat_activity. The minimum length is 1024 characters. </p>
+        column of the system catalog view <i>pg_stat_activity</i>. The minimum length is 1024
+        characters. </p>
       <table id="track_activity_query_size_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -8849,35 +8850,6 @@
             <row>
               <entry colname="col1">integer</entry>
               <entry colname="col2">1024</entry>
-              <entry colname="col3">local<p>system</p><p>restart</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="track_counts">
-    <title>track_counts</title>
-    <body>
-      <p>Enables the collection of row and block level statistics on database activity. If enabled,
-        the data that is produced can be accessed via the <i>pg_stat</i> and <i>pg_statio</i> family
-        of system views.</p>
-      <table id="track_counts_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Boolean</entry>
-              <entry colname="col2">off</entry>
               <entry colname="col3">local<p>system</p><p>restart</p></entry>
             </row>
           </tbody>

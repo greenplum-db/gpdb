@@ -887,8 +887,8 @@
     <title id="kh171364">Runtime Statistics Collection Parameters</title>
     <body>
       <p>These parameters control the server statistics collection feature. When statistics
-        collection is enabled, you can access the statistics data using the <i>pg_stat</i> and
-          <i>pg_statio</i> family of system catalog views.</p>
+        collection is enabled, you can access the statistics data using the <i>pg_stat</i> family of
+        system catalog views.</p>
       <simpletable id="kh171301" frame="none">
         <strow>
           <stentry>
@@ -900,9 +900,6 @@
             </p>
           </stentry>
           <stentry>
-            <p>
-              <xref href="guc-list.xml#track_counts" type="section">track_counts</xref>
-            </p>
             <p>
               <xref href="guc-list.xml#update_process_title" type="section"
                 >update_process_title</xref>

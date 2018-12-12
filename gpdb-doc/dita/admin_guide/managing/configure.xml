@@ -85,7 +85,9 @@
                 <codeblock>$ gpstop -u</codeblock>
               </p></li>
             <li id="kh160789">For parameter changes that require a server restart, restart Greenplum
-              Database as follows:<p><codeblock>$ gpstop -r</codeblock></p></li>
+              Database as follows:<p>
+                <codeblock>$ gpstop -r</codeblock>
+              </p></li>
           </ol>
           <p>For details about the server configuration parameters, see the <cite>Greenplum Database
               Reference Guide</cite>.</p>
@@ -784,7 +786,8 @@
       <topic id="topic36" xml:lang="en">
         <title>Greenplum Performance Monitoring Data Collection Agents</title>
         <body>
-          <p>The following parameters configure the data collection agents for the (<codeph>gpperfmon</codeph>) database.</p>
+          <p>The following parameters configure the data collection agents for the
+              (<codeph>gpperfmon</codeph>) database.</p>
           <simpletable id="kh171891">
             <strow>
               <stentry>
@@ -812,8 +815,8 @@
       <title id="kh171364">Runtime Statistics Collection Parameters</title>
       <body>
         <p>These parameters control the server statistics collection feature. When statistics
-          collection is enabled, you can access the statistics data using the <i>pg_stat</i> and
-            <i>pg_statio</i> family of system catalog views.</p>
+          collection is enabled, you can access system catalog statistics data using the
+            <i>pg_stat</i> and <i>pg_statio</i> family of system catalog views.</p>
         <simpletable id="kh171301">
           <strow>
             <stentry>
@@ -825,9 +828,6 @@
               </p>
             </stentry>
             <stentry>
-              <p>
-                <codeph>track_counts</codeph>
-              </p>
               <p>
                 <codeph>update_process_title</codeph>
               </p>
