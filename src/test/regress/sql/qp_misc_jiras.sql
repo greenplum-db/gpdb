@@ -11,20 +11,14 @@ create external web table qp_misc_jiras.tbl3301_bar(like qp_misc_jiras.tbl3301_f
 insert into qp_misc_jiras.tbl3301_foo select * from qp_misc_jiras.tbl3301_bar;
 select * from qp_misc_jiras.tbl3301_foo;
 
--- Test that altering the datatype of an indexed column works (or rather,
--- that it throws an error, because it isn't supported on GPDB).
+-- Test that altering the datatype of an indexed column works
 create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 create index tbl1318_daa on qp_misc_jiras.tbl1318(dummy,aa);
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type integer using bit_length(aa);
 drop index qp_misc_jiras.tbl1318_daa;
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
-drop table qp_misc_jiras.tbl1318;
-
-create table qp_misc_jiras.tbl1318(dummy integer, aa text not null);
 create index tbl1318_daa on qp_misc_jiras.tbl1318 using bitmap(dummy,aa);
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa);
+alter table qp_misc_jiras.tbl1318 alter column aa type bigint using bit_length(aa::text);
 drop index qp_misc_jiras.tbl1318_daa;
-alter table qp_misc_jiras.tbl1318 alter column aa type integer using  bit_length(aa::text);
 drop table qp_misc_jiras.tbl1318;
 
 -- Test for the upstream bug with combocids:
