@@ -2818,7 +2818,10 @@ void gfile_printf_then_putc_newline(const char *format, ...)
 
 void *gfile_malloc(size_t size)
 {
-	return malloc(size);
+	void *p = malloc(size);
+	if (!p)
+		gfatal(NULL, "Out of memory");
+	return p;
 }
 
 void gfile_free(void *a)
@@ -3683,20 +3686,22 @@ void report_event(LPCTSTR _error_msg)
 int verify_buf_size(char** pBuf, const char* _in_val)
 {
 	int val_len, new_len;
+	char *p;
 
 	val_len = (int)strlen(_in_val);
 	if (val_len >= CMD_LINE_ARG_SIZE)
 	{
 		new_len = ((val_len+1) >= CMD_LINE_ARG_MAX_SIZE) ? CMD_LINE_ARG_MAX_SIZE : (val_len+1);
-		free(*pBuf);
-		*pBuf = (char*)malloc(new_len);
+		p = realloc(*pBuf, new_len);
+		if (p == NULL)
+			return 0;
+		*pBuf = p;
 		memset(*pBuf, 0, new_len);
 	}
 	else
 	{
 		new_len = val_len;
 	}
-
 
 	return new_len;
 }
@@ -3708,6 +3713,8 @@ void init_cmd_buffer(int argc, const char* const argv[])
 	for (i = 0; i < CMD_LINE_ARG_NUM; i++)
 	{
 		cmd_line_buffer[i] = (char*)malloc(CMD_LINE_ARG_SIZE);
+		if (cmd_line_buffer[i] == NULL)
+			gfatal(NULL, "Out of memory");
 		memset(cmd_line_buffer[i], 0, CMD_LINE_ARG_SIZE);
 	}
 
@@ -3729,6 +3736,8 @@ void init_cmd_buffer(int argc, const char* const argv[])
 	{
 		int len;
 		len = verify_buf_size(&cmd_line_buffer[i], argv[i]);
+		if (!len)
+			gfatal(NULL, "Out of memory");
 		memcpy(cmd_line_buffer[i], argv[i], len);
 	}
 }
@@ -3931,16 +3940,17 @@ static SSL_CTX *initialize_ctx(void)
 	if ( RAND_poll() == 0 )
 		gfatal(NULL,"Can't generate random seed for SSL");
 
-	/* The size of the string will consist of the path and the filename (the longest one) */
-	// +1 for the '/' character (/filename)
-	// +1 for the \0,
-	stringSize = find_max( strlen(CertificateFilename), find_max(strlen(PrivateKeyFilename),strlen(TrustedCaFilename)) ) + strlen(opt.ssl) + 2;
+	/*
+	 * The size of the string will consist of the path and the filename (the
+	 * longest one)
+	 * +1 for the '/' character (/filename)
+	 * +1 for the \0
+	 */
+	stringSize = find_max(strlen(CertificateFilename), find_max(strlen(PrivateKeyFilename), strlen(TrustedCaFilename))) + strlen(opt.ssl) + 2;
 	/* Allocate the memory for the file name */
-	fileName = (char *) calloc( (stringSize), sizeof(char) );
-	if ( fileName == NULL )
-	{
+	fileName = (char *) calloc((stringSize), sizeof(char));
+	if (fileName == NULL)
 		gfatal (NULL,"Unable to allocate memory for SSL initialization");
-	}
 
 #ifdef WIN32
 	slash = '\\';
