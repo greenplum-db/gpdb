@@ -93,6 +93,7 @@ Index "testschema.test_index2"
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
+ANALYZE testschema.test_default_tab;
 SELECT * FROM testschema.test_default_tab;
  id 
 ----
@@ -116,6 +117,7 @@ Index "testschema.test_index2"
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
+ANALYZE testschema.test_default_tab;
 SELECT * FROM testschema.test_default_tab;
  id 
 ----

@@ -51,11 +51,13 @@ SET default_tablespace TO testspace;
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
 \d testschema.test_index1
 \d testschema.test_index2
+ANALYZE testschema.test_default_tab;
 SELECT * FROM testschema.test_default_tab;
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
 \d testschema.test_index1
 \d testschema.test_index2
+ANALYZE testschema.test_default_tab;
 SELECT * FROM testschema.test_default_tab;
 -- now use the default tablespace for default_tablespace
 SET default_tablespace TO '';
