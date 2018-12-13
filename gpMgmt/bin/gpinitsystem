@@ -240,7 +240,7 @@ CHK_PARAMS () {
 		    LOG_MSG "[INFO]:-Completed $CLUSTER_CONFIG dump to logfile"
 		    # Source the cluster configuration file
 		    LOG_MSG "[INFO]:-Reading Greenplum configuration file $CLUSTER_CONFIG" 1
-		    . $CLUSTER_CONFIG
+		    . "$(readlink -e $CLUSTER_CONFIG)"
 		    
 		    if [ x"" != x"$QD_PRIMARY_ARRAY" ] ; then
 			    ERROR_EXIT "[FATAL]:-Cannot specify QD_PRIMARY_ARRAY in '-c <config file>'.  Only valid with '-I <input file>'" 2
@@ -611,7 +611,7 @@ END_PYTHON_CODE
 	do
 		M_HOST_ARRAY=(${M_HOST_ARRAY[@]} `$ECHO ${T_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${S_HOST}$"|$TR '\n' ' '`)
 	done
-	. $CLUSTER_CONFIG
+	. "$(readlink -e $CLUSTER_CONFIG)"
 	NUM_DATADIR=${#DATA_DIRECTORY[@]}
 	if [ `$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$AWK -F"~" '{print $2}'|$SORT -u|$WC -l` -ne $MCOUNT ];then
 		LOG_MSG "[INFO]:-Configuring build for multi-home array" 1
@@ -946,7 +946,7 @@ CREATE_QE_ARRAY () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Building primary segment instance array, please wait..." 1
 	#Set up initial variables
-	. $CLUSTER_CONFIG
+	. "$(readlink -e $CLUSTER_CONFIG)"
 	if [ x"" != x"$REQ_LOCALE_SETTING" ];then LOCALE_SETTING=$REQ_LOCALE_SETTING;fi
 	if [ `$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP -c "~${MASTER_HOSTNAME}\$"` -gt 0 ]; then
 		MASTER_LIST=(`$ECHO ${M_HOST_ARRAY[@]}|$TR ' ' '\n'|$GREP "~${MASTER_HOSTNAME}\$"`)
@@ -1038,7 +1038,7 @@ ARRAY_REORDER() {
 DISPLAY_CONFIG () {
 		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 		if [ x"" == x"$INPUT_CONFIG" ] ; then
-		    . $CLUSTER_CONFIG
+		    . "$(readlink -e $CLUSTER_CONFIG)"
 		    if [ x"" != x"$REQ_LOCALE_SETTING" ];then
 			LOCALE_SETTING=$REQ_LOCALE_SETTING;
 		    fi
@@ -1732,7 +1732,7 @@ READ_INPUT_CONFIG () {
     # Source the cluster configuration file
     LOG_MSG "[INFO]:-Reading Greenplum configuration file $INPUT_CONFIG"
 
-    . $INPUT_CONFIG
+    . "$(readlink -e $INPUT_CONFIG)"
     SET_VAR $QD_PRIMARY_ARRAY
     MASTER_HOSTNAME=$GP_HOSTADDRESS
     MASTER_DIRECTORY=`$DIRNAME $GP_DIR`
