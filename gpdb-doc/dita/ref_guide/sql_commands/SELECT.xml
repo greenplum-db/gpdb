@@ -907,8 +907,8 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           that is an unreserved keyword. But this is impractical for output column names, because of
           syntactic ambiguities.</p></sectiondiv>
       <sectiondiv id="sectiondiv_ndj_ngd_cgb"><b>ONLY and Parentheses</b><p>The SQL standard
-          requires parentheses around the table name after <codeph>ONLY</codeph>, as in
-            <codeph>SELECT * FROM ONLY (tab1), ONLY (tab2) WHERE ...</codeph>. Greenplum Database
+          requires parentheses around the table name after <codeph>ONLY</codeph>:
+          <codeblock>SELECT * FROM ONLY (tab1), ONLY (tab2) WHERE ...</codeblock>Greenplum Database
           supports that syntax as well, but the parentheses are optional. (This applies equally to
           all SQL commands supporting the <codeph>ONLY</codeph> option.)</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
           standard, an <codeph>ORDER BY</codeph> clause may only use output column names or numbers,
