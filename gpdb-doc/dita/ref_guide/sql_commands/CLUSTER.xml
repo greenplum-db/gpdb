@@ -4,9 +4,9 @@
 <topic id="topic1"><title id="bh20941">CLUSTER</title><body><p id="sql_command_desc">Physically reorders a heap storage table on disk according to an index.
 Not a recommended operation in Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CLUSTER <varname>indexname</varname> ON <varname>tablename</varname>
 
-CLUSTER <varname>tablename</varname>
+CLUSTER [VERBOSE] <varname>tablename</varname>
 
-CLUSTER</codeblock></section><section id="section3"><title>Description</title><p><codeph>CLUSTER</codeph> orders a heap storage table based on an index.
+CLUSTER [VERBOSE]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CLUSTER</codeph> orders a heap storage table based on an index.
 <codeph>CLUSTER</codeph> is not supported on append-optmized storage
 tables. Clustering an index means that the records are physically ordered
 on disk according to the index information. If the records you need are
@@ -27,7 +27,11 @@ or all tables if called by a superuser. This form of <codeph>CLUSTER</codeph>
 cannot be executed inside a transaction block.</p><p>When a table is being clustered, an <codeph>ACCESS EXCLUSIVE</codeph>
 lock is acquired on it. This prevents any other database operations (both
 reads and writes) from operating on the table until the <codeph>CLUSTER</codeph>
-is finished.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>indexname</varname></pt><pd>The name of an index. </pd></plentry><plentry><pt><varname>tablename</varname></pt><pd>The name (optionally schema-qualified) of a table. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>In cases where you are accessing single rows randomly within a table,
+is finished.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>indexname</varname></pt><pd>The name of an index. </pd></plentry>
+                                <plentry>
+                                        <pt><codeph>VERBOSE</codeph></pt>
+                                        <pd>Prints a progress report as each table is clustered.</pd>
+                                </plentry><plentry><pt><varname>tablename</varname></pt><pd>The name (optionally schema-qualified) of a table. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>In cases where you are accessing single rows randomly within a table,
 the actual order of the data in the table is unimportant. However, if
 you tend to access some data more than others, and there is an index
 that groups them together, you will benefit from using <codeph>CLUSTER</codeph>.
