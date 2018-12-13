@@ -116,13 +116,12 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 			if (strlen(commandString) == 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("Invalid EXECUTE clause. Found an empty command string")));
+						 errmsg("invalid EXECUTE clause, command string is empty")));
 			break;
 
 		default:
-			ereport(ERROR,
-					(errcode(ERRCODE_INTERNAL_ERROR),
-					 errmsg("Internal error: unknown external table type")));
+			elog(ERROR, "internal error: unknown external table type: %i",
+				 exttypeDesc->exttabletype);
 	}
 
 	/*----------
@@ -273,7 +272,7 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 					ereport(ERROR,
 							(errcode(ERRCODE_INTERNAL_ERROR),
 							 errmsg("internal error in DefineExternalRelation"),
-							 errdetail("Protocol is %d, writable is %d",
+							 errdetail("Protocol is %d, writable is %d.",
 									   uri->protocol, iswritable)));
 
 				ReleaseSysCache(tuple);
@@ -544,8 +543,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("GPHDFS can only have one location list"),
-				 errhint("Combine multiple HDFS files into a single file")));
-
+					 errhint("Combine multiple HDFS files into a single file.")));
 
 		/*
 		 * If a custom protocol is used, validate its existence. If it exists,
@@ -576,8 +574,8 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			   errmsg("URI protocols must be the same for all data sources"),
-					 errhint("Available protocols are 'http', 'file', 'gphdfs', 'gpfdist' and 'gpfdists'")));
+					 errmsg("URI protocols must be the same for all data sources"),
+					 errhint("Available protocols are 'http', 'file', 'gphdfs', 'gpfdist' and 'gpfdists'.")));
 
 		}
 
@@ -590,7 +588,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		if (uri->protocol == URI_HTTP && !isweb)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-			 errmsg("http URI\'s can only be used in an external web table"),
+					 errmsg("http URI\'s can only be used in an external web table"),
 					 errhint("Use CREATE EXTERNAL WEB TABLE instead.")));
 
 		if (iswritable && (uri->protocol == URI_HTTP || uri->protocol == URI_FILE))
@@ -603,15 +601,15 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		if (uri->protocol != URI_CUSTOM && iswritable && strchr(uri->path, '*'))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("Unsupported use of wildcard in a writable external web table definition: "
-							"\'%s\'", uri_str_final),
+					 errmsg("unsupported use of wildcard in a writable external web table definition: \'%s\'",
+							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
 		if ((uri->protocol == URI_GPFDIST || uri->protocol == URI_GPFDISTS) && iswritable && uri->path[strlen(uri->path) - 1] == '/')
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("Unsupported use of a directory name in a writable gpfdist(s) external table : "
-							"\'%s\'", uri_str_final),
+					 errmsg("unsupported use of a directory name in a writable gpfdist(s) external table : \'%s\'",
+							uri_str_final),
 					 errhint("Specify the explicit path and file name to write into.")));
 
 		astate = accumArrayResult(astate,
@@ -658,7 +656,7 @@ transformExecOnClause(List *on_clause)
 			if (exec_location_str)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("ON clause must not have more than one element.")));
+						 errmsg("ON clause must not have more than one element")));
 
 			if (strcmp(defel->defname, "all") == 0)
 			{
@@ -694,7 +692,7 @@ transformExecOnClause(List *on_clause)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_INTERNAL_ERROR),
-						 errmsg("Unknown location code for EXECUTE in tablecmds.")));
+						 errmsg("unknown location code for EXECUTE in tablecmds")));
 			}
 		}
 	}
@@ -732,8 +730,7 @@ transformFormatType(char *formatname)
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("unsupported format '%s'", formatname),
-			   errhint("Available formats for external tables are \"text\", "
-					   "\"csv\", \"avro\", \"parquet\" and \"custom\"")));
+				 errhint("Available formats for external tables are \"text\", \"csv\", \"avro\", \"parquet\" and \"custom\".")));
 
 	return result;
 }

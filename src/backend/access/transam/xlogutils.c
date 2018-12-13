@@ -19,10 +19,6 @@
  */
 #include "postgres.h"
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include "access/xlog.h"
 #include "access/xlogutils.h"
 #include "catalog/catalog.h"
@@ -30,6 +26,7 @@
 #include "utils/guc.h"
 #include "utils/hsearch.h"
 #include "utils/rel.h"
+
 
 /*
  * During XLOG replay, we may see XLOG records for incremental updates of

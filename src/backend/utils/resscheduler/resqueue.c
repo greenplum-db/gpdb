@@ -40,6 +40,7 @@
 #include "utils/portal.h"
 #include "utils/ps_status.h"
 #include "utils/resowner.h"
+#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "cdb/memquota.h"
 #include "commands/queue.h"

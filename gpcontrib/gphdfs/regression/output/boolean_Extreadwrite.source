@@ -10,7 +10,7 @@ ERROR:  table "boolean_readhdfs" does not exist
 -- end_ignore
 create readable external table boolean_heap(datatype_boolean varchar, x_boolean bigint, col1_boolean boolean, nullcol_boolean boolean) location ('gphdfs://10.152.10.234:8020/plaintext/boolean.txt')format 'TEXT';
 create writable external table boolean_writehdfs(like boolean_heap) location ('gphdfs://10.152.10.234:8020/extwrite/boolean')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table boolean_readhdfs(like boolean_heap) location ('gphdfs://10.152.10.234:8020/extwrite/boolean') format 'custom' (formatter='gphdfs_import');
 select count(*) from boolean_heap;
  count 

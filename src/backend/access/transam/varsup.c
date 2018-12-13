@@ -501,7 +501,7 @@ ForceTransactionIdLimitUpdate(void)
 static Oid
 GetNewObjectIdUnderLock(void)
 {
-	Oid result;
+	Oid			result;
 
 	/* safety check, we should never get this far in a HS slave */
 	if (RecoveryInProgress())

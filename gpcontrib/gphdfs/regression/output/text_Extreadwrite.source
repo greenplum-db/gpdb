@@ -10,7 +10,7 @@ ERROR:  table "text_readhdfs" does not exist
 -- end_ignore
 create readable external table text_heap(datatype_text text,x_text bigint, col1_text text,col2_text text, nullcol_text text) location ('gphdfs://10.152.10.234:8020/plaintext/text.txt')format 'TEXT';
 create writable external table text_writehdfs(like text_heap) location ('gphdfs://10.152.10.234:8020/extwrite/text')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table text_readhdfs(like text_heap) location ('gphdfs://10.152.10.234:8020/extwrite/text') format 'custom' (formatter='gphdfs_import');
 select count(*) from text_heap;
  count 

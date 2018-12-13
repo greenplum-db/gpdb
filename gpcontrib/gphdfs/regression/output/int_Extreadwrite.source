@@ -10,7 +10,7 @@ ERROR:  table "int_readhdfs" does not exist
 -- end_ignore
 create readable external table int_heap(datatype_int varchar,xcount_int bigint, max_int int, min_int int, x_int int, reverse_int int, increment_int int, nullcol_int int) location ('gphdfs://10.152.10.234:8020/plaintext/int.txt')format 'TEXT';
 create writable external table int_writehdfs(like int_heap) location ('gphdfs://10.152.10.234:8020/extwrite/int')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table int_readhdfs(like int_heap) location ('gphdfs://10.152.10.234:8020/extwrite/int') format 'custom' (formatter='gphdfs_import');
 select count(*) from int_heap;
  count 

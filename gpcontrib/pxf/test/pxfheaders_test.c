@@ -179,7 +179,7 @@ test_build_http_headers_no_user_error(void **state) {
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("User identity is unknown");
+		char	   *expected_message = pstrdup("user identity is unknown");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);
@@ -233,7 +233,7 @@ test_build_http_headers_empty_user_error(void **state) {
 		ErrorData  *edata = CopyErrorData();
 
 		assert_true(edata->elevel == ERROR);
-		char	   *expected_message = pstrdup("User identity is unknown");
+		char	   *expected_message = pstrdup("user identity is unknown");
 
 		assert_string_equal(edata->message, expected_message);
 		pfree(expected_message);
@@ -394,7 +394,7 @@ test_get_format_name(void **state)
 		MemoryContextSwitchTo(old_context);
 		edata = CopyErrorData();
 		FlushErrorState();
-		assert_string_equal(edata->message, "Unable to get format name for format code: x");
+		assert_string_equal(edata->message, "unable to get format name for format code: x");
 	}
 	PG_END_TRY();
 }

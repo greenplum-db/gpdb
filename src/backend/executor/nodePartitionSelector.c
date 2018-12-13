@@ -216,6 +216,7 @@ ExecPartitionSelector(PartitionSelectorState *node)
 		{
 			InsertPidIntoDynamicTableScanInfo(estate, ps->scanId, lfirst_oid(lc), ps->selectorId);
 		}
+		list_free(oids);
 	}
 	else
 	{

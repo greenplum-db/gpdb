@@ -2,24 +2,23 @@
 title: Installing Java for PXF
 ---
 
-PXF is a Java service. It requires a Java 1.7 or 1.8 installation on each Greenplum Database segment host.
+PXF is a Java service. It requires a Java 1.8 installation on each Greenplum Database segment host.
 
 *If an appropriate version of PXF is already installed on each Greenplum Database segment host, you need not perform the procedure in this topic.*
 
 
 ## <a id="prereq"></a>Prerequisites
 
-Ensure that you have access to, or superuser permissions to install, Java version 1.7 or 1.8 on each Greenplum Database host.
+Ensure that you have access to, or superuser permissions to install, Java version 1.8 on each Greenplum Database host.
 
 ## <a id="proc"></a>Procedure
 
 Perform the following procedure to install Java on the master and on each segment host in your Greenplum Database cluster. You will use the `gpssh` utility where possible to run a command on multiple hosts.
 
-1. Log in to your Greenplum Database master node and set up the environment:
+1. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Create a text file that lists your Greenplum Database segment hosts, one host name per line. For example, a file named `seghostfile` may include:

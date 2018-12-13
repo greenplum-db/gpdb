@@ -48,7 +48,8 @@ pg_atoi(char *s, int size, int c)
 	if (*s == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for integer: \"%s\"",s)));
+				 errmsg("invalid input syntax for integer: \"%s\"",
+						s)));
 
 	errno = 0;
 	l = strtol(s, &badp, 10);
@@ -57,7 +58,8 @@ pg_atoi(char *s, int size, int c)
 	if (s == badp)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for integer: \"%s\"",s)));
+				 errmsg("invalid input syntax for integer: \"%s\"",
+						s)));
 
 	switch (size)
 	{
@@ -98,7 +100,8 @@ pg_atoi(char *s, int size, int c)
 	if (*badp && *badp != c)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for integer: \"%s\"",s)));
+				 errmsg("invalid input syntax for integer: \"%s\"",
+						s)));
 
 	return (int32) l;
 }

@@ -387,7 +387,6 @@ compileSource() {
         echo ""
         echo `date` "Error during compilation"
         buildTestUpdate
-        mailMakeError
         echo "Exiting"
         exit 1
     else
@@ -455,16 +454,6 @@ compilePGTest() {
     popd > /dev/null 2>&1
     echo "${LIBREGRES} -> ${GPDB_INSTALL}/test/regress.so"
     echo "Finished compile of libregress at" `date`
-    echo ""
-}
-
-mailMakeError() {
-    mailTo="eng@build-prod.sanmateo.greenplum.com"
-    mailSubject="Build Failure: ${BRANCH} ${BUILD_TYPE} : `date +%Y%m%d%H%M`"
-    mailLine=50
-    `${TAIL_CMD} -n ${mailLine} ${WORKDIR}/build.out > errorBuild.txt`
-    mail -s "${mailSubject}" ${mailTo} < errorBuild.txt
-    echo `date` "Sending mail to ${mailTo}"
     echo ""
 }
 

@@ -85,7 +85,7 @@ class GpSegmentRebalanceOperation:
                 self.logger.info("=============================START ANOTHER RECOVER=========================================")
                 # import here because GpRecoverSegmentProgram and GpSegmentRebalanceOperation have a circular dependency
                 from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
-                sys.argv = ['gprecoverseg', '-aF']
+                sys.argv = ['gprecoverseg', '-a']
                 local_parser = GpRecoverSegmentProgram.createParser()
                 local_options, args = local_parser.parse_args()
                 cmd = GpRecoverSegmentProgram.createProgram(local_options, args)
@@ -95,7 +95,7 @@ class GpSegmentRebalanceOperation:
                 if e.code != 0:
                     self.logger.error("Failed to start the synchronization step of the segment rebalance.")
                     self.logger.error("Check the gprecoverseg log file, correct any problems, and re-run")
-                    self.logger.error("'gprecoverseg -aF'.")
+                    self.logger.error("'gprecoverseg -a'.")
                     raise Exception("Error synchronizing.\nError: %s" % str(e))
             finally:
                 if cmd:

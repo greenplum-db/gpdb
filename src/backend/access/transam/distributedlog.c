@@ -746,12 +746,8 @@ DistributedLog_Startup(TransactionId oldestActiveXid,
 	 *
 	 * TODO: Turn off distributed logging during binary upgrade to avoid the
 	 * issue mentioned above.
-	 *
-	 * TODO: Do this same thing during the first segment startup after cluster
-	 * expansion, which has the same problem. Make sure that this code never
-	 * runs during regular segment operation.
 	 */
-	if (IsBinaryUpgrade)
+	if (IsBinaryUpgrade || ConvertMasterDataDirToSegment)
 	{
 		int currentPage = startPage;
 

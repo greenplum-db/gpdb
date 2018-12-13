@@ -34,13 +34,20 @@ def is_digit(n):
     except ValueError:
         return  False
 
+def load_helper_file_from_sql_command(command):
+    file_to_include = command.strip().replace(";", "")
+    
+    with open(file_to_include) as file:
+        return "".join(file.readlines()).strip()
+
+
 class SQLIsolationExecutor(object):
     def __init__(self, dbname=''):
         self.processes = {}
         # The re.S flag makes the "." in the regex match newlines.
         # When matched against a command in process_command(), all
         # lines in the command are matched and sent as SQL query.
-        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>Uq]*?)\:(.*)", re.S)
+        self.command_pattern = re.compile(r"^(-?\d+|[*])([&\\<\\>UIq]*?)\:(.*)", re.S)
         if dbname:
             self.dbname = dbname
         else:
@@ -329,6 +336,14 @@ class SQLIsolationExecutor(object):
                     print >> output_file, '(exited with code {})'.format(cmd_output.returncode)
             else:
                 self.get_process(output_file, process_name, dbname=dbname).query(sql.strip())
+        elif flag == "I":
+            self.get_process(
+                output_file, 
+                process_name, 
+                dbname=dbname
+            ).query(
+                load_helper_file_from_sql_command(sql)
+            )
         elif flag == "&":
             self.get_process(output_file, process_name, dbname=dbname).fork(sql.strip(), True)
         elif flag == ">":
@@ -417,6 +432,7 @@ class SQLIsolationTestCase:
             U: connect in utility mode to primary contentid from gp_segment_configuration
             U&: expect blocking behavior in utility mode (does not currently support an asterisk target)
             U<: join an existing utility mode session (does not currently support an asterisk target)
+            I: include a file of sql statements (useful for loading reusable functions)
 
         An example is:
 
@@ -516,6 +532,12 @@ class SQLIsolationTestCase:
         failures; a better long-term solution is needed.)
 
         Block/join flags are not currently supported with *U.
+
+        Including files:
+
+        -- example contents for file.sql: create function some_test_function() returning void ...
+        1I: path/to/some/file.sql;
+        1: select some_helper_function();
     """
 
     def run_sql_file(self, sql_file, out_file = None, out_dir = None, optimizer = None):

@@ -161,6 +161,7 @@ typedef struct AnlIndexData
 	int			attr_cnt;
 } AnlIndexData;
 
+
 /* Default statistics target (GUC parameter) */
 int			default_statistics_target = 100;
 
@@ -2147,8 +2148,9 @@ acquire_hll_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats, int 
 	oldcxt = CurrentMemoryContext;
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("Unable to connect to execute internal query.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("unable to connect to execute internal query")));
 
 	elog(elevel, "Executing SQL: %s", str.data);
 
@@ -3578,6 +3580,7 @@ compute_scalar_stats(VacAttrStatsP stats,
 			HLLCounter hLLFull = (HLLCounter) DatumGetByteaP(stats->stahll_full);
 			HLLCounter hllFull_copy = hll_copy(hLLFull);
 			stats->stadistinct = round(hyperloglog_estimate(hllFull_copy));
+			pfree(hllFull_copy);
 			if ((fabs(totalrows - stats->stadistinct) / (float) totalrows) < 0.05)
 			{
 				stats->stadistinct = -1;
@@ -3983,7 +3986,12 @@ merge_leaf_stats(VacAttrStatsP stats,
 		if (hllSlot.nvalues > 0)
 		{
 			hllcounters_fullscan[i] = (HLLCounter) DatumGetByteaP(hllSlot.values[0]);
-			finalHLLFull = hyperloglog_merge_counters(finalHLLFull, hllcounters_fullscan[i]);
+			HLLCounter finalHLLFull_intermediate = finalHLLFull;
+			finalHLLFull = hyperloglog_merge_counters(finalHLLFull_intermediate, hllcounters_fullscan[i]);
+			if (NULL != finalHLLFull_intermediate)
+			{
+				pfree(finalHLLFull_intermediate);
+			}
 			free_attstatsslot(&hllSlot);
 			fullhll_count++;
 			totalhll_count++;
@@ -3999,7 +4007,12 @@ merge_leaf_stats(VacAttrStatsP stats,
 			nMultiples[i] = (float) hllcounters[i]->nmultiples;
 			sampleCount += hllcounters[i]->samplerows;
 			hllcounters_copy[i] = hll_copy(hllcounters[i]);
-			finalHLL = hyperloglog_merge_counters(finalHLL, hllcounters[i]);
+			HLLCounter finalHLL_intermediate = finalHLL;
+			finalHLL = hyperloglog_merge_counters(finalHLL_intermediate, hllcounters[i]);
+			if (NULL != finalHLL_intermediate)
+			{
+				pfree(finalHLL_intermediate);
+			}
 			free_attstatsslot(&hllSlot);
 			samplehll_count++;
 			totalhll_count++;
@@ -4025,6 +4038,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 		if (fullhll_count == totalhll_count)
 		{
 			ndistinct = hyperloglog_estimate(finalHLLFull);
+			pfree(finalHLLFull);
 			/*
 			 * For fullscan the ndistinct is calculated based on the entire table scan
 			 * so if it's within the marginal error, we consider everything as distinct,
@@ -4045,6 +4059,7 @@ merge_leaf_stats(VacAttrStatsP stats,
 		else if (finalHLL != NULL && samplehll_count == totalhll_count)
 		{
 			ndistinct = hyperloglog_estimate(finalHLL);
+			pfree(finalHLL);
 			/*
 			 * For sampled HLL counter, the ndistinct calculated is based on the
 			 * sampled data. We consider everything distinct if the ndistinct
@@ -4087,26 +4102,31 @@ merge_leaf_stats(VacAttrStatsP stats,
 					if (nDistincts[i] == 0)
 						continue;
 
-					HLLCounter finalHLL_temp = NULL;
+					HLLCounter finalHLL_NDV = NULL;
 					for (j = 0; j < numPartitions; j++)
 					{
 						// merge the HLL counters for each partition
 						// except the current partition (i)
 						if (i != j && hllcounters_copy[j] != NULL)
 						{
-							HLLCounter temp_hll_counter =
-								hll_copy(hllcounters_copy[j]);
-							finalHLL_temp =
-								hyperloglog_merge_counters(finalHLL_temp, temp_hll_counter);
+							HLLCounter hllcounter_temp = hll_copy(hllcounters_copy[j]);
+							HLLCounter finalHLL_NDV_temp = finalHLL_NDV;
+							finalHLL_NDV = hyperloglog_merge_counters(finalHLL_NDV_temp, hllcounter_temp);
+							if (NULL != finalHLL_NDV_temp)
+							{
+								pfree(finalHLL_NDV_temp);
+							}
+							pfree(hllcounter_temp);
 						}
 					}
-					if (finalHLL_temp != NULL)
+					if (finalHLL_NDV != NULL)
 					{
 						// Calculating uniques in each partition
 						nUniques[i] =
-							ndistinct - hyperloglog_estimate(finalHLL_temp);
+							ndistinct - hyperloglog_estimate(finalHLL_NDV);
 						nUnique += nUniques[i];
 						nmultiple += nMultiples[i] * (nUniques[i] / nDistincts[i]);
+						pfree(finalHLL_NDV);
 					}
 					else
 					{

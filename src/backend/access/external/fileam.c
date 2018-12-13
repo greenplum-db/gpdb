@@ -348,7 +348,6 @@ external_rescan(FileScanDesc scan)
 	scan->fs_pstate->cur_attname = NULL;
 	scan->raw_buf_done = true; /* true so we will read data in first run */
 	scan->fs_pstate->raw_buf_len = 0;
-	scan->fs_pstate->bytesread = 0;
 }
 
 /* ----------------
@@ -581,8 +580,7 @@ external_insert_init(Relation rel)
 		if (num_urls > num_segs)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				errmsg("External table has more URLs than available primary "
-					   "segments that can write into them")));
+					 errmsg("external table has more URLs than available primary segments that can write into them")));
 
 		/* get a url to use. we use seg number modulo total num of urls */
 		v = list_nth(extentry->urilocations, my_url);
@@ -835,7 +833,6 @@ else \
 	pstate->cdbsreh->is_server_enc = pstate->line_buf_converted; \
 	pstate->cdbsreh->linenumber = pstate->cur_lineno; \
 	pstate->cdbsreh->processed++; \
-	pstate->cdbsreh->consec_csv_err = pstate->num_consec_csv_err; \
 \
 	/* set the error message. Use original msg and add column name if available */ \
 	if (pstate->cur_attname)\
@@ -865,43 +862,6 @@ externalgettup_defined(FileScanDesc scan)
 
 	MemoryContextReset(pstate->rowcontext);
 	oldcontext = MemoryContextSwitchTo(pstate->rowcontext);
-
-	/* on first time around just throw the header line away */
-	if (pstate->header_line && pstate->bytesread > 0)
-	{
-		PG_TRY();
-		{
-			/* Read the data file header line, and ignore it. */
-			(void) CopyReadLine(pstate);
-		}
-		PG_CATCH();
-		{
-			/*
-			 * got here? encoding conversion error occurred on the
-			 * header line (first row).
-			 */
-			if (pstate->errMode == ALL_OR_NOTHING)
-			{
-				PG_RE_THROW();
-			}
-			else
-			{
-				/* SREH - release error state */
-				if (!elog_dismiss(DEBUG5))
-					PG_RE_THROW();		/* hope to never get here! */
-
-				/*
-				 * note: we don't bother doing anything special here.
-				 * we are never interested in logging a header line
-				 * error. just continue the workflow.
-				 */
-			}
-		}
-		PG_END_TRY();
-
-		EXT_RESET_LINEBUF;
-		pstate->header_line = false;
-	}
 
 	/* Get a line */
 	if (!NextCopyFrom(pstate,
@@ -1009,7 +969,6 @@ externalgettup_custom(FileScanDesc scan)
 				 * FILEAM_HANDLE_ERROR.
 				 */
 				pstate->cur_lineno = formatter->fmt_badrow_num;
-				pstate->cur_byteno = formatter->fmt_bytesread;
 				resetStringInfo(&pstate->line_buf);
 
 				if (formatter->fmt_badrow_len > 0)
@@ -1179,24 +1138,26 @@ lookupCustomFormatter(char *formatter_name, bool iswritable)
 	}
 
 	if (!OidIsValid(procOid))
-		ereport(ERROR, (errcode(ERRCODE_UNDEFINED_FUNCTION),
-					errmsg("formatter function %s of type %s was not found.",
-						   formatter_name,
-						   (iswritable ? "writable" : "readable")),
-						errhint("Create it with CREATE FUNCTION.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_FUNCTION),
+				 errmsg("formatter function \"%s\" of type %s was not found",
+						formatter_name,
+						(iswritable ? "writable" : "readable")),
+				 errhint("Create it with CREATE FUNCTION.")));
 
 	/* check return type matches */
 	if (get_func_rettype(procOid) != returnOid)
-		ereport(ERROR, (errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-						errmsg("formatter function %s of type %s has an incorrect return type",
-							   formatter_name,
-							   (iswritable ? "writable" : "readable"))));
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+				 errmsg("formatter function \"%s\" of type %s has an incorrect return type",
+						formatter_name,
+						(iswritable ? "writable" : "readable"))));
 
 	/* check allowed volatility */
 	if (func_volatile(procOid) != PROVOLATILE_STABLE)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_FUNCTION_DEFINITION),
-				 errmsg("formatter function %s is not declared STABLE.",
+				 errmsg("formatter function %s is not declared STABLE",
 						formatter_name)));
 
 	return procOid;
@@ -1246,8 +1207,6 @@ InitParseState(CopyState pstate, Relation relation,
 									  logerrors);
 
 		pstate->cdbsreh->relid = RelationGetRelid(relation);
-
-		pstate->num_consec_csv_err = 0;
 	}
 
 	/* Initialize 'out_functions', like CopyTo() would. */
@@ -1462,10 +1421,15 @@ external_senddata(URL_FILE *extfile, CopyState pstate)
 
 	if (url_ferror(extfile, nwrote, ebuf, ebuflen))
 	{
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 strlen(ebuf) > 0 ? errmsg("could not write to external resource:\n%s", ebuf) :
-				 errmsg("could not write to external resource: %m")));
+		if (*ebuf && strlen(ebuf) > 0)
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not write to external resource: %s",
+							ebuf)));
+		else
+			ereport(ERROR,
+					(errcode_for_file_access(),
+					 errmsg("could not write to external resource: %m")));
 	}
 }
 
@@ -2283,7 +2247,8 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	if (!getDistributedTransactionIdentifier(extvar->GP_XID))
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("cannot get distributed transaction identifier while %s", uri)));
+				 errmsg("cannot get distributed transaction identifier for \"%s\"",
+						uri)));
 
 	sprintf(extvar->GP_CID, "%x", QEDtxContextInfo.curcid);
 	sprintf(extvar->GP_SN, "%x", scancounter);

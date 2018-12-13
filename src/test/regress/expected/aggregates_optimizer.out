@@ -789,11 +789,11 @@ create table minmaxtest(f1 int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table minmaxtest1() inherits (minmaxtest);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 create table minmaxtest2() inherits (minmaxtest);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 create table minmaxtest3() inherits (minmaxtest);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 create index minmaxtesti on minmaxtest(f1);
 create index minmaxtest1i on minmaxtest1(f1);
 create index minmaxtest2i on minmaxtest2(f1 desc);

@@ -46,7 +46,7 @@ using gprecoverseg.
 Segment recovery using gprecoverseg requires that you have an active 
 mirror to recover from. For systems that do not have mirroring enabled, 
 or in the event of a double fault (a primary and mirror pair both down 
-at the same time) — do a system restart to bring the segments back 
+at the same time) - do a system restart to bring the segments back 
 online (gpstop -r).
 
 By default, a failed segment is recovered in place, meaning that 
@@ -115,7 +115,7 @@ Do not prompt the user for confirmation.
 -B parallel_processes
 
 The number of segments to recover in parallel. If not specified, 
-the utility will start up to four parallel processes depending 
+the utility will start up to 16 parallel processes depending 
 on how many segment instances it needs to recover.
 
 

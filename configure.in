@@ -788,15 +788,6 @@ AC_MSG_RESULT([checking whether to build with ORCA... $enable_orca])
 AC_SUBST(enable_orca)
 
 #
-# --enable-snmp enables snmp mib and trap/inform
-#
-PGAC_ARG_BOOL(enable, snmp, no, [enable snmp for MIB and alerts via TRAP/INFORM],
-              [AC_DEFINE([USE_SNMP], 1,
-                         [Define to 1 to build with snmp capabilities. (--enable-snmp)])])
-AC_MSG_RESULT([checking whether to build with snmp... $enable_snmp])
-AC_SUBST(enable_snmp)
-
-#
 # --enable-mapreduce enables GPMapreduce support
 #
 PGAC_ARG_BOOL(enable, mapreduce, no, [enable Greenplum Mapreduce support],
@@ -1393,11 +1384,6 @@ if test "$with_libbz2" = yes ; then
   AC_CHECK_LIB(bz2, BZ2_bzDecompress, [], [AC_MSG_ERROR([library 'bz2' is required for bzip2 support])])
 fi
 
-# Check for net-snmp
-if test "$enable_snmp" = yes ; then
-	AC_CHECK_LIB(netsnmp,  netsnmp_ds_set_string,  [], [AC_MSG_ERROR([library 'netsnmp' is required for snmp support])])
-fi
-
 if test "$with_libxslt" = yes ; then
   AC_CHECK_LIB(xslt, xsltCleanupGlobals, [], [AC_MSG_ERROR([library 'xslt' is required for XSLT support])])
 fi
@@ -1539,7 +1525,7 @@ if test "$with_libbz2" = yes ; then
   AC_CHECK_HEADER(bzlib.h, [], [AC_MSG_ERROR([header file <bzlib.h> is required for bzip2 support])], [])
 fi
 
-# Check for zstd.h
+# Check for zstd.h and zstd_errors.h
 if test "$with_zstd" = yes; then
   AC_CHECK_HEADER(zstd.h, [], [AC_MSG_ERROR([header file <zstd.h> is required for zstd support])])
   AC_CHECK_HEADER(zstd_errors.h, [], [AC_MSG_ERROR([header file <zstd_errors.h> is required for zstd support])])
@@ -1620,13 +1606,6 @@ case $template in
     AC_CHECK_HEADERS([numa.h])
     ;;
 esac
-
-# net-snmp
-if test "$enable_snmp" = yes; then
-	AC_CHECK_HEADERS([net-snmp/net-snmp-config.h], [],
-					[AC_MSG_ERROR([header file <net-snmp/net-snmp-config.h> is required for snmp support])])
-fi
-
 
 # realtime library header
 if test "$with_rt" = yes; then
@@ -1757,9 +1736,6 @@ PGAC_FUNC_GETTIMEOFDAY_1ARG
 # possible alias of libreadline) while checking for everything else.
 LIBS_including_readline="$LIBS"
 LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
-
-# net-snmp has the same problem..
-LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
 AC_CHECK_FUNCS([cbrt dlopen fdatasync getifaddrs getpeerucred getrlimit mbstowcs_l memmove poll pstat readlink setproctitle setsid shm_open sigprocmask symlink sync_file_range towlower utime utimes wcstombs wcstombs_l])
 

@@ -260,70 +260,23 @@ TupleMatchesHashFilter(ResultState *node, TupleTableSlot *resultSlot)
 	Assert(resultNode);
 	Assert(!TupIsNull(resultSlot));
 
-	if (resultNode->hashFilter)
+	if (node->hashFilter)
 	{
-		Assert(resultNode->hashFilter);
-		ListCell	*cell;
-		CdbHash		*hash;
-		int			numSegments;
 		int			i;
-		Oid		   *typeoids;
 
-		if (node->ps.state->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		cdbhashinit(node->hashFilter);
+		for (i = 0; i < resultNode->numHashFilterCols; i++)
 		{
-			Assert(resultNode->plan.flow);
-			Assert(resultNode->plan.flow->numsegments > 0);
-
-			/*
-			 * For planner generated plan the size of receiver slice can be
-			 * determined from flow.
-			 */
-			numSegments = resultNode->plan.flow->numsegments;
-		}
-		else
-		{
-			/*
-			 * For ORCA generated plan we could distribute to ALL as partially
-			 * distributed tables are not supported by ORCA yet.
-			 */
-			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
-		}
-
-		typeoids = (Oid *) palloc(list_length(resultNode->hashList) * sizeof(Oid));
-
-		/*
-		 * Note that the table may be randomly distributed. hashList will be
-		 * empty in that case.
-		 */
-		i = 0;
-		foreach(cell, resultNode->hashList)
-		{
-			int			attnum = lfirst_int(cell);
-
-			Assert(attnum > 0);
-			typeoids[i++] = resultSlot->tts_tupleDescriptor->attrs[attnum - 1]->atttypid;
-		}
-
-		hash = makeCdbHash(numSegments, list_length(resultNode->hashList), typeoids);
-
-		cdbhashinit(hash);
-		i = 0;
-		foreach(cell, resultNode->hashList)
-		{
-			int			attnum = lfirst_int(cell);
+			int			attnum = resultNode->hashFilterColIdx[i];
 			Datum		hAttr;
 			bool		isnull;
 
 			hAttr = slot_getattr(resultSlot, attnum, &isnull);
 
-			cdbhash(hash, i + 1, hAttr, isnull);
-			i++;
+			cdbhash(node->hashFilter, i + 1, hAttr, isnull);
 		}
 
-		int targetSeg = cdbhashreduce(hash);
-
-		pfree(typeoids);
-		pfree(hash);
+		int targetSeg = cdbhashreduce(node->hashFilter);
 
 		res = (targetSeg == GpIdentity.segindex);
 	}
@@ -431,6 +384,47 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 	 */
 	ExecAssignResultTypeFromTL(&resstate->ps);
 	ExecAssignProjectionInfo(&resstate->ps, NULL);
+
+	/*
+	 * initialize hash filter
+	 */
+	if (node->numHashFilterCols > 0)
+	{
+		TupleDesc	resultDesc = resstate->ps.ps_ResultTupleSlot->tts_tupleDescriptor;
+		int			numSegments;
+		Oid		   *typeoids;
+		int			i;
+
+		if (resstate->ps.state->es_plannedstmt->planGen == PLANGEN_PLANNER)
+		{
+			Assert(node->plan.flow->numsegments > 0);
+
+			/*
+			 * For planner generated plan the size of receiver slice can be
+			 * determined from flow.
+			 */
+			numSegments = node->plan.flow->numsegments;
+		}
+		else
+		{
+			/*
+			 * For ORCA generated plan we could distribute to ALL as partially
+			 * distributed tables are not supported by ORCA yet.
+			 */
+			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
+		}
+
+		typeoids = (Oid *) palloc(node->numHashFilterCols * sizeof(Oid));
+		for (i = 0; i < node->numHashFilterCols; i++)
+		{
+			int			attnum = node->hashFilterColIdx[i];
+
+			Assert(attnum > 0);
+			typeoids[i] = resultDesc->attrs[attnum - 1]->atttypid;
+		}
+
+		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, typeoids);
+	}
 
 	if (!IsResManagerMemoryPolicyNone()
 			&& IsResultMemoryIntensive(node))

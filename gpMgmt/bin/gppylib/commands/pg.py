@@ -173,7 +173,7 @@ class PgControlData(Command):
         return self.datadir
 
 class PgBaseBackup(Command):
-    def __init__(self, pgdata, host, port, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False):
+    def __init__(self, pgdata, host, port, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0):
         cmd_tokens = ['pg_basebackup',
                            '-x', '-R',
                            '-c', 'fast']
@@ -186,6 +186,10 @@ class PgBaseBackup(Command):
 
         if forceoverwrite:
             cmd_tokens.append('--force-overwrite')
+
+        # This is needed to handle Greenplum tablespaces
+        cmd_tokens.append('--target-gp-dbid')
+        cmd_tokens.append(str(target_gp_dbid))
 
         # We exclude certain unnecessary directories from being copied as they will greatly
         # slow down the speed of gpinitstandby if containing a lot of data

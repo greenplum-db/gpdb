@@ -697,7 +697,9 @@ def copy_master_datadir_to_standby(options, array, standby_datadir):
                        host=array.master.getSegmentHostName(),
                        port=str(array.master.getSegmentPort()),
                        ctxt=base.REMOTE,
-                       remoteHost=options.standby_host)
+                       remoteHost=options.standby_host,
+                       forceoverwrite=True,
+                       target_gp_dbid=array.standbyMaster.dbid)
     try:
         cmd.run(validateAfter=True)
     except Exception, ex:

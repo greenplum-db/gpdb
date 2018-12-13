@@ -583,6 +583,7 @@ typedef struct
 	pg_time_t	first_syslogger_file_time;
 	bool		redirection_done;
 	bool		IsBinaryUpgrade;
+	bool		ConvertMasterDataDirToSegment;
 	int			max_safe_fds;
 	int			MaxBackends;
 #ifdef WIN32
@@ -719,7 +720,7 @@ PostmasterMain(int argc, char *argv[])
 	 * tcop/postgres.c (the option sets should not conflict) and with the
 	 * common help() function in main/main.c.
 	 */
-	while ((opt = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lN:mM:nOo:Pp:r:S:sTt:UW:-:")) != -1)
+	while ((opt = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMmN:nOo:Pp:r:S:sTt:UW:-:")) != -1)
 	{
 		switch (opt)
 		{
@@ -798,6 +799,16 @@ PostmasterMain(int argc, char *argv[])
 
 			case 'l':
 				SetConfigOption("ssl", "true", PGC_POSTMASTER, PGC_S_ARGV);
+				break;
+
+			case 'M':
+				/* Undocumented flag used for mutating a directory that was a copy of a
+				 * master data directory and needs to now be a segment directory. Only
+				 * use on the first time the segment is started, and only use in
+				 * utility mode, as changes will be destructive, and will assume that
+				 * the segment has never participated in a distributed
+				 * transaction.*/
+				ConvertMasterDataDirToSegment = true;
 				break;
 
 			case 'm':
@@ -1512,7 +1523,6 @@ getInstallationPaths(const char *argv0)
 				(errcode_for_file_access(),
 				 errmsg("could not open directory \"%s\": %m",
 						pkglib_path),
-				 errSendAlert(true),
 				 errhint("This may indicate an incomplete PostgreSQL installation, or that the file \"%s\" has been moved away from its proper location.",
 						 my_exec_path)));
 	FreeDir(pdir);
@@ -2287,7 +2297,6 @@ retry1:
 
 						ereport(FATAL,
 								(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-								 errSendAlert(true),
 								 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 								 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 										   XLogLocationToString(recptr))));
@@ -2412,13 +2421,11 @@ retry1:
 				break;
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg(POSTMASTER_IN_STARTUP_MSG)));
 			break;
 		case CAC_SHUTDOWN:
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(false),
 					 errmsg("the database system is shutting down")));
 			break;
 		case CAC_RECOVERY:
@@ -2426,7 +2433,6 @@ retry1:
 
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-					 errSendAlert(true),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 						   XLogLocationToString(recptr))));
@@ -2434,7 +2440,6 @@ retry1:
 		case CAC_TOOMANY:
 			ereport(FATAL,
 					(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
-					 errSendAlert(true),
 					 errmsg("sorry, too many clients already")));
 			break;
 		case CAC_WAITBACKUP:
@@ -2451,7 +2456,6 @@ retry1:
 			recptr = last_xlog_replay_location();
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
-					 errSendAlert(true),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
 						   XLogLocationToString(recptr))));
@@ -2469,7 +2473,6 @@ retry1:
 	{
 		ereport(FATAL,
 				(errcode(ERRCODE_CANNOT_CONNECT_NOW),
-				 errSendAlert(true),
 				 errmsg(POSTMASTER_IN_RECOVERY_MSG),
 				 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " dummy location")));
 	}
@@ -2855,8 +2858,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = SmartShutdown;
 			ereport(LOG,
-					(errmsg("received smart shutdown request"),
-					 errSendAlert(true)));
+					(errmsg("received smart shutdown request")));
 
 			if (pmState == PM_STARTUP)
 			{
@@ -2926,8 +2928,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = FastShutdown;
 			ereport(LOG,
-					(errmsg("received fast shutdown request"),
-					 errSendAlert(true)));
+					(errmsg("received fast shutdown request")));
 
 			if (StartupPID != 0)
 				signal_child(StartupPID, SIGTERM);
@@ -2993,8 +2994,7 @@ pmdie(SIGNAL_ARGS)
 				break;
 			Shutdown = ImmediateShutdown;
 			ereport(LOG,
-					(errmsg("received immediate shutdown request"),
-				     errSendAlert(true)));
+					(errmsg("received immediate shutdown request")));
 
 			TerminateChildren(SIGQUIT);
 			pmState = PM_WAIT_BACKENDS;
@@ -3133,8 +3133,7 @@ reaper(SIGNAL_ARGS)
 
 				ereport(LOG,
 						(errmsg("database system is ready to accept connections"),
-						 errdetail("%s",version),
-						 errSendAlert(true)));
+						 errdetail("%s",version)));
 
 				PMAcceptingConnectionsStartTime = (pg_time_t) time(NULL);
 			}
@@ -5101,7 +5100,7 @@ internal_forkexec(int argc, char *argv[], Port *port)
 /* This should really be in a header file */
 NON_EXEC_STATIC void
 PerfmonMain(int argc, char *argv[]);
-#endif 
+#endif
 
 /*
  * SubPostmasterMain -- Get the fork/exec'd process into a state equivalent
@@ -6408,6 +6407,7 @@ save_backend_variables(BackendParameters *param, Port *port,
 
 	param->redirection_done = redirection_done;
 	param->IsBinaryUpgrade = IsBinaryUpgrade;
+	param->ConvertMasterDataDirToSegment = ConvertMasterDataDirToSegment;
 	param->max_safe_fds = max_safe_fds;
 
 	param->MaxBackends = MaxBackends;
@@ -6638,6 +6638,7 @@ restore_backend_variables(BackendParameters *param, Port *port)
 
 	redirection_done = param->redirection_done;
 	IsBinaryUpgrade = param->IsBinaryUpgrade;
+	ConvertMasterDataDirToSegment = param->ConvertMasterDataDirToSegment;
 	max_safe_fds = param->max_safe_fds;
 
 	MaxBackends = param->MaxBackends;

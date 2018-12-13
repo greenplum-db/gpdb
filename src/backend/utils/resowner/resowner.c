@@ -28,6 +28,7 @@
 #include "utils/guc.h"
 #include "utils/memutils.h"
 #include "utils/rel.h"
+#include "utils/resource_manager.h"
 #include "utils/resowner_private.h"
 #include "utils/snapmgr.h"
 

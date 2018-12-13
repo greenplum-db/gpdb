@@ -223,7 +223,7 @@ GetFileSegInfo(Relation parentrel, Snapshot appendOnlyMetaDataSnapshot, int segn
 	if (fsinfo->eof < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Invalid eof " INT64_FORMAT " for relation %s",
+				 errmsg("invalid eof " INT64_FORMAT " for relation %s",
 						fsinfo->eof, RelationGetRelationName(parentrel))));
 
 	/* get the tupcount */
@@ -1180,9 +1180,10 @@ gp_update_aorow_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Unable to obtain AO relation information from segment databases."),
-							errdetail("SPI_connect failed in gp_update_ao_master_stats")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unable to obtain AO relation information from segment databases"),
+					 errdetail("SPI_connect failed in gp_update_ao_master_stats")));
 		}
 		connected = true;
 
@@ -1603,9 +1604,10 @@ get_ao_distribution(PG_FUNCTION_ARGS)
 
 			if (SPI_OK_CONNECT != SPI_connect())
 			{
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-								errmsg("Unable to obtain AO relation information from segment databases."),
-								errdetail("SPI_connect failed in get_ao_distribution")));
+				ereport(ERROR,
+						(errcode(ERRCODE_INTERNAL_ERROR),
+						 errmsg("unable to obtain AO relation information from segment databases"),
+						 errdetail("SPI_connect failed in get_ao_distribution")));
 			}
 			connected = true;
 
@@ -1779,9 +1781,10 @@ aorow_compression_ratio_internal(Relation parentrel)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Unable to obtain AO relation information from segment databases."),
-							errdetail("SPI_connect failed in get_ao_compression_ratio")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unable to obtain AO relation information from segment databases"),
+					 errdetail("SPI_connect failed in get_ao_compression_ratio.")));
 		}
 		connected = true;
 

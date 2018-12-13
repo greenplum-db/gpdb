@@ -9,7 +9,7 @@ SET search_path TO upgrade_cornercases, public;
 -- dropping columns on tables with inheritance
 CREATE TABLE root1 (a int, b int, c int) DISTRIBUTED RANDOMLY;
 CREATE TABLE child1 (d int) INHERITS (root1);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO root1 VALUES (1, 2, 3), (4, 5, 6), (7, 8, 9);
 INSERT INTO child1
 VALUES (10, 100, 1000, 10000),
@@ -22,7 +22,7 @@ CREATE TABLE root2 (a int, b int, c int) DISTRIBUTED RANDOMLY;
 INSERT INTO root2 VALUES (1, 2, 3), (4, 5, 6), (7, 8, 9);
 ALTER TABLE root2 DROP COLUMN a;
 CREATE TABLE child2 (a int, d int) INHERITS (root2);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO child2
 VALUES (10, 100, 1000, 10000),
        (11, 111, 1111, 11111),
@@ -45,3 +45,14 @@ INSERT INTO no_cols_left VALUES (1, 2, 3), (4, 5, 6), (7, 8, 9);
 ALTER TABLE no_cols_left DROP COLUMN a;
 ALTER TABLE no_cols_left DROP COLUMN b;
 ALTER TABLE no_cols_left DROP COLUMN c;
+-- Test a database with a recreated "public" schema.
+-- If you are adding tests, you most likely want to add them BEFORE this, since
+-- we connect to a different database.
+DROP DATABASE IF EXISTS upgrade_recreated_public;
+NOTICE:  database "upgrade_recreated_public" does not exist, skipping
+CREATE DATABASE upgrade_recreated_public;
+\c upgrade_recreated_public
+DROP SCHEMA public;
+CREATE SCHEMA public;
+CREATE TABLE public.t();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.

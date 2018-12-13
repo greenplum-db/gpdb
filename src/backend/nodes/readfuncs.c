@@ -548,6 +548,9 @@ _readGroupId(void)
 	READ_DONE();
 }
 
+/*
+ * _readWindowClause
+ */
 static WindowClause *
 _readWindowClause(void)
 {
@@ -2080,7 +2083,6 @@ _readJoinExpr(void)
 	READ_BOOL_FIELD(isNatural);
 	READ_NODE_FIELD(larg);
 	READ_NODE_FIELD(rarg);
-    /* CDB: subqfromlist is used only within planner; don't need to read it */
 	READ_NODE_FIELD(usingClause);
 	READ_NODE_FIELD(quals);
 	READ_NODE_FIELD(alias);

@@ -155,11 +155,13 @@ class Segment:
         """
         Construct a printable string representation of a Segment
         """
-        return "%s:%s:content=%s:dbid=%s:mode=%s:status=%s" % (
+        return "%s:%s:content=%s:dbid=%s:role=%s:preferred_role=%s:mode=%s:status=%s" % (
             self.hostname,
             self.datadir,
             self.content,
             self.dbid,
+            self.role,
+            self.preferred_role,
             self.mode,
             self.status
             )

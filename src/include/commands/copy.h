@@ -121,12 +121,9 @@ typedef struct CopyStateData
 	bool		encoding_embeds_ascii;	/* ASCII can be non-first byte? */
 	FmgrInfo   *enc_conversion_proc; /* conv proc from exttbl encoding to 
 										server or the other way around */
-	size_t		bytesread;
 
 	/* parameters from the COPY command */
 	Relation	rel;			/* relation to copy to or from */
-	GpPolicy	cdb_policy;		/* in ON SEGMENT mode, we received this from QD. Otherwise
-								 * it's equal to rel->rd_cdbpolicy */
 	QueryDesc  *queryDesc;		/* executable query to copy from */
 	List	   *attnumlist;		/* integer list of attnums to copy */
 	List	   *attnamelist;	/* list of attributes by name */
@@ -162,7 +159,6 @@ typedef struct CopyStateData
 	/* these are just for error messages, see CopyFromErrorCallback */
 	const char *cur_relname;	/* table name for error messages */
 	int64		cur_lineno;		/* line number for error messages.  Negative means it isn't available. */
-	int64       cur_byteno;     /* number of bytes processed from input */
 	const char *cur_attname;	/* current att for error messages */
 	const char *cur_attval;		/* current att value for error messages */
 
@@ -199,7 +195,6 @@ typedef struct CopyStateData
 	CopyErrMode	errMode;
 	struct CdbSreh *cdbsreh; /* single row error handler */
 	int			lastsegid;
-	int			num_consec_csv_err; /* # of consecutive csv invalid format errs */
 
 	/*
 	 * These variables are used to reduce overhead in textual COPY FROM.
@@ -225,8 +220,6 @@ typedef struct CopyStateData
 	 */
 	StringInfoData line_buf;
 
-	int		   *attr_offsets;
-
 	bool		line_buf_converted;		/* converted to server encoding? */
 	bool		line_buf_valid; /* contains the row being processed? */
 
@@ -244,26 +237,7 @@ typedef struct CopyStateData
 	int			raw_buf_len;	/* total # of bytes stored */
 
 	/* Greenplum Database specific variables */
-	bool		is_copy_in;		/* copy in or out? */
 	bool		escape_off;		/* treat backslashes as non-special? */
-	bool		delimiter_off;  /* no delimiter. 1-column external tabs only */
-	bool		end_marker;
-	char	   *begloc;
-	char	   *endloc;
-	bool		error_on_executor;		/* true if errors arrived from the
-										 * executors COPY (QEs) */
-	StringInfoData executor_err_context;		/* error context text from QE */
-
-
-	/* for CSV format */
-	bool		in_quote;
-	bool		last_was_esc;
-
-	/* for TEXT format */
-	bool		esc_in_prevbuf; /* escape was last character of the data input
-								 * buffer */
-	bool		cr_in_prevbuf;	/* CR was last character of the data input
-								 * buffer */
 
 	PartitionNode *partitions; /* partitioning meta data from dispatcher */
 	List		  *ao_segnos;  /* AO table meta data from dispatcher */
@@ -335,8 +309,6 @@ extern void CopySendEndOfRow(CopyState cstate);
 extern char *limit_printout_length(const char *str);
 extern void truncateEol(StringInfo buf, EolType	eol_type);
 extern void truncateEolStr(char *str, EolType eol_type);
-extern void setEncodingConversionProc(CopyState cstate, int encoding, bool iswritable);
-extern void CopyEolStrToType(CopyState cstate);
 
 /*
  * This is used to hold information about the target's distribution policy,

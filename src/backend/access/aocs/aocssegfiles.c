@@ -1531,9 +1531,10 @@ gp_update_aocol_master_stats_internal(Relation parentrel, Snapshot appendOnlyMet
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Unable to obtain AO relation information from segment databases."),
-							errdetail("SPI_connect failed in gp_update_ao_master_stats")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unable to obtain AO relation information from segment databases"),
+					 errdetail("SPI_connect failed in gp_update_ao_master_stats")));
 		}
 		connected = true;
 
@@ -1736,9 +1737,10 @@ aocol_compression_ratio_internal(Relation parentrel)
 
 		if (SPI_OK_CONNECT != SPI_connect())
 		{
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-							errmsg("Unable to obtain AO relation information from segment databases."),
-							errdetail("SPI_connect failed in get_ao_compression_ratio")));
+			ereport(ERROR,
+					(errcode(ERRCODE_INTERNAL_ERROR),
+					 errmsg("unable to obtain AO relation information from segment databases"),
+					 errdetail("SPI_connect failed in get_ao_compression_ratio")));
 		}
 		connected = true;
 

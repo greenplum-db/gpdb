@@ -1369,14 +1369,6 @@ convert_ANY_sublink_to_join(PlannerInfo *root, SubLink *sublink,
 	cdbsubselect_drop_orderby(subselect);
 	cdbsubselect_drop_distinct(subselect);
 
-
-	/*
-	 * If subquery returns a set-returning function (SRF) in the targetlist, we
-	 * do not attempt to convert the IN to a join.
-	 */
-	if (expression_returns_set((Node *) subselect->targetList))
-		return NULL;
-
 	/*
 	 * If deeply correlated, then don't pull it up
 	 */

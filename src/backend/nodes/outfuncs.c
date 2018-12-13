@@ -421,18 +421,24 @@ _outPlan(StringInfo str, const Plan *node)
 	_outPlanInfo(str, (const Plan *) node);
 }
 
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outResult(StringInfo str, const Result *node)
 {
+	int			i;
+
 	WRITE_NODE_TYPE("RESULT");
 
 	_outPlanInfo(str, (const Plan *) node);
 
 	WRITE_NODE_FIELD(resconstantqual);
 
-	WRITE_BOOL_FIELD(hashFilter);
-	WRITE_NODE_FIELD(hashList);
+	WRITE_INT_FIELD(numHashFilterCols);
+	appendStringInfoString(str, " :hashFilterColIdx");
+	for (i = 0; i < node->numHashFilterCols; i++)
+		appendStringInfo(str, " %d", node->hashFilterColIdx[i]);
 }
+#endif
 
 static void
 _outRepeat(StringInfo str, const Repeat *node)
@@ -3347,7 +3353,6 @@ _outCopyStmt(StringInfo str, const CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
-	WRITE_NODE_FIELD(policy);
 }
 #endif/* COMPILING_BINARY_FUNCS */
 

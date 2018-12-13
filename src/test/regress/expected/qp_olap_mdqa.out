@@ -157,7 +157,7 @@ SELECT CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.pn <
 FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY ROLLUP((sale.cn,sale.prc,sale.prc),(newalias3,sale.vn),(sale.prc,newalias2),(newalias1,sale.pn,sale.cn,sale.qty,sale.cn),(sale.prc,newalias2,sale.cn,sale.cn,sale.qty),(sale.pn,sale.cn,sale.pn),(newalias2,newalias1,sale.qty,sale.prc,sale.qty),(sale.vn,sale.cn,sale.pn,sale.cn),(newalias4,sale.vn,newalias4,sale.dt)),GROUPING SETS(ROLLUP((sale.prc),(sale.vn,newalias3,newalias3,sale.vn),(newalias3,newalias3),(sale.qty),(sale.vn,newalias3),(newalias3,newalias1,sale.prc),(newalias2),(newalias4)),CUBE((sale.dt,sale.cn,newalias2),(newalias3,sale.cn,sale.cn,newalias2),(sale.vn,sale.vn,sale.cn,sale.pn,sale.vn),(sale.vn,sale.vn),(sale.prc,sale.cn,sale.pn,sale.qty),(newalias2,sale.qty,newalias2),(sale.vn,sale.prc,newalias1),(newalias2,sale.pn),(sale.cn,sale.prc,newalias1),(sale.vn,sale.prc,newalias1))),sale.vn,sale.pn,sale.cn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.pn*2 as newalias1,sale.cn*2 as newalias2,sale.qty*2 as newalias3,sale.qty + sale.pn as newalias4,GROUP_ID(), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999') 
 FROM sale,product,vendor,customer
@@ -184,7 +184,7 @@ SELECT sale.cn as newalias1,CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newalias
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY ROLLUP((sale.vn,newalias4),(sale.prc,sale.prc,sale.prc,sale.cn,newalias2),(sale.pn,sale.cn),(newalias2,newalias1,newalias3,sale.pn,sale.pn),(newalias4,newalias1,sale.pn,sale.qty)),CUBE((sale.qty,newalias4,sale.pn,newalias1,sale.dt),(sale.pn,newalias1,sale.vn,sale.vn,sale.vn)),sale.cn,sale.vn,sale.prc,sale.pn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving MAX() function ###### --
 SELECT CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.prc < 10 THEN 1 ELSE 2 END as newalias2,GROUPING(sale.pn), TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn+sale.pn)),0),'99999999.9999999') 
 FROM sale,customer,product
@@ -1208,14 +1208,14 @@ GROUP BY CUBE((sale.qty,newalias1,newalias1,newalias2),(sale.prc,newalias3,sale.
 SELECT CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias2,GROUPING(sale.cn,sale.pn),GROUP_ID(), TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.vn-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc*sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn-sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.qty+sale.cn)),0),'99999999.9999999') 
 FROM sale
 GROUP BY CUBE((sale.dt,newalias2,sale.prc),(sale.vn)),sale.cn,sale.pn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,
                CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias4,
                GROUPING(sale.qty,sale.cn,sale.qty)
 FROM sale 
 GROUP BY GROUPING SETS((sale.vn,newalias1,sale.qty),(sale.prc,newalias4,newalias1,newalias1),(sale.vn,sale.vn,sale.dt)),
                     sale.qty,sale.cn,sale.vn,sale.pn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving MAX() function ###### --
 SELECT sale.vn*2 as newalias1,sale.qty as newalias2,sale.vn + sale.vn as newalias3,GROUPING(sale.vn),GROUP_ID(), TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty/sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.cn*sale.cn)),0),'99999999.9999999') 
 FROM sale,product
@@ -1334,25 +1334,25 @@ GROUP BY CUBE((newalias2,sale.prc,sale.dt),(sale.qty,sale.qty,newalias2,newalias
 SELECT CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.prc < 10 THEN 1 ELSE 2 END as newalias3,GROUPING(sale.qty,sale.cn), TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.prc+sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.prc-sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn+sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.vn+sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.vn-sale.cn)),0),'99999999.9999999') 
 FROM sale
 GROUP BY CUBE((sale.cn,newalias2)),CUBE((newalias3)),sale.cn,sale.qty,sale.prc;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving SUM() function ###### --
 SELECT CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias1,GROUPING(sale.pn), TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.prc+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.qty/sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn+sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn-sale.vn)),0),'99999999.9999999') 
 FROM sale,product,vendor,customer
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn AND sale.cn=customer.cn
 GROUP BY CUBE((sale.prc,sale.prc),(newalias1),(sale.cn,sale.vn),(newalias1,sale.dt,sale.pn,newalias1),(sale.pn)),sale.pn HAVING COALESCE(COUNT(DISTINCT sale.pn),0) < 52.8275232558546;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving VARIANCE() function ###### --
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newalias3, TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.cn/sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999') 
 FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY ROLLUP((newalias1,sale.prc,newalias3,sale.cn),(sale.cn,sale.dt,newalias2,sale.pn),(sale.vn,sale.dt),(sale.cn,sale.cn,sale.cn,newalias1),(sale.qty,sale.prc,newalias2,sale.prc,newalias3),(sale.pn,newalias1),(newalias1,sale.dt,sale.vn,sale.qty),(newalias2,newalias2)),ROLLUP((sale.dt),(sale.dt,sale.prc,sale.dt,newalias1),(newalias1,newalias2,sale.prc),(sale.prc),(sale.qty),(sale.qty,sale.cn)),sale.qty,sale.cn,sale.vn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.qty + sale.qty as newalias1,sale.cn as newalias2,sale.qty*2 as newalias3,GROUPING(sale.cn),GROUP_ID(), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn-sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn-sale.prc)),0),'99999999.9999999') 
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY CUBE((newalias3,sale.cn,sale.dt),(sale.qty,sale.cn,sale.cn,sale.dt),(sale.pn,newalias3),(sale.pn,sale.pn,sale.vn),(sale.prc,newalias3,sale.qty,sale.cn)),sale.qty,sale.cn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving COUNT() function ###### --
 SELECT CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newalias1,sale.pn + sale.vn as newalias2,sale.cn + sale.vn as newalias3,CASE WHEN sale.prc < 10 THEN 1 ELSE 2 END as newalias4,CASE WHEN sale.prc < 10 THEN 1 ELSE 2 END as newalias5, TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty+sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty*sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn/sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn-sale.qty)),0),'99999999.9999999') 
 FROM sale,vendor
@@ -1960,7 +1960,7 @@ GROUP BY GROUPING SETS(CUBE((newalias2,sale.prc,newalias4,newalias4),
 (sale.qty,sale.pn,newalias2),(sale.pn),(sale.qty,sale.cn),(newalias2,newalias3),
 (newalias1,sale.vn,newalias3,sale.prc,newalias3),(newalias1,newalias1,sale.dt,newalias3,newalias4),
 (sale.vn,newalias4,newalias2,newalias2))),sale.pn,sale.qty HAVING GROUP_ID() <= 9;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving SUM() function ###### --
 SELECT sale.pn as newalias1,GROUPING(sale.pn), TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.qty/sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn*sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.vn/sale.pn)),0),'99999999.9999999') 
 FROM sale,customer,vendor
@@ -2052,7 +2052,7 @@ GROUP BY ROLLUP((sale.dt,sale.pn,sale.pn,newalias1),(sale.cn,sale.dt,sale.prc),(
 SELECT sale.pn*2 as newalias1, TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.qty+sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn-sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.vn*sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999') 
 FROM sale
 GROUP BY ROLLUP((sale.pn),(newalias1)),GROUPING SETS(ROLLUP((sale.qty,sale.prc,sale.pn),(sale.dt)),ROLLUP((sale.prc),(sale.qty,sale.vn),(sale.prc))),sale.pn HAVING COALESCE(COUNT(DISTINCT sale.pn),0) < 33.6499974602656;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.cn as newalias1,sale.dt as newalias2,sale.cn as newalias3,GROUP_ID(), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty)),0),'99999999.9999999') 
 FROM sale,product,vendor
@@ -2210,7 +2210,7 @@ SELECT sale.dt as newalias1,sale.pn*2 as newalias2,CASE WHEN sale.cn < 10 THEN 1
 FROM sale,product
 WHERE sale.pn=product.pn
 GROUP BY CUBE((sale.dt),(sale.pn,newalias3,newalias1,newalias1),(newalias3,sale.pn),(newalias2,newalias4,sale.vn,sale.qty,newalias4),(newalias4,newalias2,sale.dt,sale.cn),(newalias1,sale.vn),(newalias4,sale.prc,newalias1,sale.dt),(sale.cn)),ROLLUP((sale.vn,newalias4,newalias1)),sale.dt,sale.pn,sale.cn,sale.vn HAVING GROUP_ID() <> 9;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving STDDEV() function ###### --
 SELECT sale.qty*2 as newalias1,CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias3,sale.cn as newalias4,sale.pn + sale.pn as newalias5,sale.vn as newalias6,GROUPING(sale.cn,sale.qty,sale.cn),GROUP_ID(), TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.qty-sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.qty)),0),'99999999.9999999') 
 FROM sale
@@ -2455,7 +2455,7 @@ SELECT sale.dt as newalias1,sale.vn*2 as newalias2,CASE WHEN sale.cn < 10 THEN 1
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY ROLLUP((sale.cn,sale.prc,sale.dt,sale.vn),(newalias1),(sale.qty),(sale.prc),(sale.vn,newalias1,sale.cn),(newalias3,sale.qty),(newalias2),(sale.cn,newalias3),(sale.pn)),CUBE((sale.cn,newalias3,sale.cn,sale.pn),(sale.pn),(newalias2,newalias1,sale.cn,sale.cn),(newalias2,newalias3,sale.cn,sale.prc)),sale.dt,sale.vn,sale.cn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.qty*2 as newalias1,GROUP_ID(), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc/sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.cn-sale.vn)),0),'99999999.9999999') 
 FROM sale
@@ -4067,7 +4067,7 @@ GROUP BY (),CUBE((sale.prc,sale.cn,sale.cn,sale.cn),(sale.qty,sale.pn),(sale.dt,
 SELECT sale.pn as newalias1,CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias3,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias4,GROUP_ID(), TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.qty/sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn+sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.pn*sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn-sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.pn/sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.prc*sale.qty)),0),'99999999.9999999') 
 FROM sale
 GROUP BY (),GROUPING SETS(CUBE((sale.qty,newalias4,sale.qty,sale.qty,sale.dt),(sale.cn,sale.vn,newalias4),(newalias3,sale.prc,sale.prc),(newalias1,sale.qty,newalias1,newalias1),(newalias1,newalias4,sale.pn,newalias1,sale.dt),(newalias1))),sale.pn,sale.cn,sale.qty;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving SUM() function ###### --
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,GROUPING(sale.qty),GROUP_ID(), TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.pn+sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn+sale.qty)),0),'99999999.9999999') 
 FROM sale,product
@@ -4611,7 +4611,7 @@ GROUP BY GROUPING SETS(CUBE((sale.qty,sale.dt,sale.qty),(sale.prc,sale.qty),(sal
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,sale.cn + sale.qty as newalias2,sale.vn + sale.cn as newalias3,sale.cn as newalias4,GROUPING(sale.qty,sale.qty,sale.cn,sale.cn), TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.qty+sale.prc)),0),'99999999.9999999') 
 FROM sale
 GROUP BY CUBE((newalias1),(sale.prc),(sale.prc,newalias4),(newalias3,sale.vn,newalias3,sale.dt),(newalias1,newalias2),(sale.dt,sale.pn,sale.cn),(sale.vn,newalias2,sale.cn),(sale.prc,sale.dt,sale.pn,sale.cn),(newalias2,sale.pn),(sale.qty,newalias4,sale.prc,sale.prc)),sale.qty,sale.cn,sale.vn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.qty as newalias1,sale.cn as newalias2,CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias3,CASE WHEN sale.dt::text < 10::text THEN 1 ELSE 2 END as newalias4,GROUPING(sale.dt,sale.cn), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn)),0),'99999999.9999999') 
 FROM sale
@@ -4952,7 +4952,7 @@ SELECT CASE WHEN sale.dt::text < 10::text THEN 1 ELSE 2 END as newalias1,sale.cn
 FROM sale,vendor
 WHERE sale.vn=vendor.vn
 GROUP BY CUBE((newalias3),(newalias1,sale.prc),(sale.cn,newalias2),(sale.vn,newalias4),(sale.qty,newalias4,sale.cn,newalias3,newalias2),(newalias1)),sale.dt,sale.cn,sale.prc HAVING GROUPING(sale.dt,sale.dt,sale.prc) = 6;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving STDDEV() function ###### --
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,sale.pn as newalias2,GROUPING(sale.qty,sale.qty),GROUP_ID(), TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn*sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.pn+sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.qty*sale.prc)),0),'99999999.9999999') 
 FROM sale,product
@@ -4966,7 +4966,7 @@ GROUP BY CUBE((sale.cn),(sale.cn)),sale.qty,sale.pn HAVING COALESCE(COUNT(DISTIN
 SELECT sale.cn + sale.cn as newalias1,GROUP_ID(), TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.cn-sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.prc*sale.vn)),0),'99999999.9999999') 
 FROM sale
 GROUP BY GROUPING SETS(CUBE((sale.vn),(sale.dt),(newalias1,sale.pn,sale.qty),(sale.pn,newalias1,sale.vn),(sale.cn,sale.prc,sale.prc)),ROLLUP((sale.cn,sale.dt))),ROLLUP((sale.vn,sale.prc),(newalias1),(sale.prc,sale.pn,sale.cn)),sale.cn;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving VARIANCE() function ###### --
 SELECT CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias2,GROUPING(sale.pn),GROUP_ID(), TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn-sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.pn-sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty-sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999') 
 FROM sale,product,vendor,customer
@@ -4993,7 +4993,7 @@ SELECT sale.pn + sale.pn as newalias1,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END 
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY ROLLUP((sale.cn,newalias3,newalias1),(sale.dt,newalias1,newalias3),(newalias3,newalias2,sale.prc),(newalias3,sale.pn,newalias3,newalias1)),ROLLUP((newalias1,sale.dt,newalias2,newalias4),(newalias4,sale.dt,newalias1),(newalias3,newalias1,sale.vn),(newalias3,sale.prc,sale.vn,sale.vn)),sale.pn,sale.qty;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving COUNT() function ###### --
 SELECT CASE WHEN sale.dt::text < 10::text THEN 1 ELSE 2 END as newalias1,sale.pn*2 as newalias2,sale.prc + sale.prc as newalias3,GROUPING(sale.pn,sale.prc), TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.cn+sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.cn+sale.cn)),0),'99999999.9999999') 
 FROM sale,customer,product
@@ -5105,7 +5105,7 @@ SELECT sale.cn + sale.cn as newalias1,sale.cn*2 as newalias2,sale.qty*2 as newal
 FROM sale,product,vendor
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn
 GROUP BY GROUPING SETS((),CUBE((sale.cn,sale.pn,sale.qty,sale.pn,sale.pn),(newalias2),(newalias1,sale.qty,sale.dt,newalias3),(sale.cn,sale.qty),(sale.prc,sale.prc,sale.prc),(newalias2,sale.pn,sale.dt,sale.prc),(newalias2),(sale.prc))),sale.cn,sale.qty;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving STDDEV() function ###### --
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1, TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn*sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.pn/sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.qty-sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn-sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty*sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.cn)),0),'99999999.9999999') 
 FROM sale,vendor
@@ -5214,13 +5214,13 @@ SELECT sale.vn*2 as newalias1,sale.vn as newalias2,CASE WHEN sale.vn < 10 THEN 1
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY CUBE((newalias2,sale.pn,newalias2),(sale.prc),(newalias3),(sale.pn,newalias3,sale.cn,newalias1),(sale.pn,sale.cn,sale.pn),(sale.dt)),sale.vn HAVING COALESCE(AVG(DISTINCT sale.vn),0) <> 64.0393457794417;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving MAX() function ###### --
 SELECT sale.pn*2 as newalias1,CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.cn < 10 THEN 1 ELSE 2 END as newalias3,sale.vn as newalias4,CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias5, TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.prc/sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn+sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn)),0),'99999999.9999999') 
 FROM sale,customer,product
 WHERE sale.cn=customer.cn AND sale.pn=product.pn
 GROUP BY GROUPING SETS((),CUBE((sale.pn,newalias3),(sale.cn,newalias1,sale.qty),(sale.prc,sale.qty,sale.vn),(sale.qty),(sale.prc,newalias3,newalias2),(sale.prc,sale.pn,sale.qty,sale.cn),(newalias4,newalias2,sale.vn),(sale.cn,newalias1,sale.cn,sale.vn,sale.cn),(sale.prc,sale.cn,sale.qty,newalias1),(newalias4,newalias2,sale.dt))),ROLLUP((sale.prc,newalias3,newalias4,sale.qty),(sale.cn,sale.vn,sale.cn,newalias2),(sale.prc,newalias2,newalias3,sale.cn)),sale.pn,sale.cn,sale.vn,sale.qty;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving AVG() function ###### --
 SELECT sale.pn*2 as newalias1,CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias2,GROUPING(sale.pn),GROUP_ID(), TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.vn+sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.vn/sale.vn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.pn-sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MAX(DISTINCT floor(sale.qty+sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn/sale.cn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn+sale.pn)),0),'99999999.9999999') 
 FROM sale,customer,vendor
@@ -6899,7 +6899,7 @@ SELECT sale.cn*2 as newalias1,CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newali
 FROM sale,product,vendor,customer
 WHERE sale.pn=product.pn AND sale.vn=vendor.vn AND sale.cn=customer.cn
 GROUP BY GROUPING SETS((),CUBE((sale.dt,sale.dt,sale.cn,sale.qty),(sale.prc),(newalias1,sale.cn,sale.cn,sale.prc),(sale.pn,sale.dt,sale.prc))),(),sale.cn,sale.vn HAVING GROUP_ID() > 0;
-ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous.
+ERROR:  GROUPING SETS / ROLLUP / CUBE columns ambiguous
 -- ###### Queries involving SUM() function ###### --
 SELECT CASE WHEN sale.qty < 10 THEN 1 ELSE 2 END as newalias1,CASE WHEN sale.vn < 10 THEN 1 ELSE 2 END as newalias2,CASE WHEN sale.dt::text < 10::text THEN 1 ELSE 2 END as newalias3,sale.qty + sale.qty as newalias4,CASE WHEN sale.pn < 10 THEN 1 ELSE 2 END as newalias5,GROUP_ID(), TO_CHAR(COALESCE(SUM(DISTINCT floor(sale.cn-sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.vn+sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(VARIANCE(DISTINCT floor(sale.qty-sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.cn+sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(STDDEV(DISTINCT floor(sale.cn-sale.qty)),0),'99999999.9999999'),TO_CHAR(COALESCE(MIN(DISTINCT floor(sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(COUNT(DISTINCT floor(sale.pn+sale.prc)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn*sale.pn)),0),'99999999.9999999'),TO_CHAR(COALESCE(AVG(DISTINCT floor(sale.pn)),0),'99999999.9999999') 
 FROM sale,product,vendor

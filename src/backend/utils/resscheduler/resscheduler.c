@@ -43,6 +43,7 @@
 #include "utils/guc.h"
 #include "utils/fmgroids.h"
 #include "utils/memutils.h"
+#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"
 #include "utils/metrics_utils.h"

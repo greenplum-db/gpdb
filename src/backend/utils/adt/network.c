@@ -1468,7 +1468,7 @@ clean_ipv6_addr(int addr_family, char *addr)
 #ifdef HAVE_IPV6
 	if (addr_family == AF_INET6)
 	{
-		char *pct = strchr(addr, '%');
+		char	   *pct = strchr(addr, '%');
 
 		if (pct)
 			*pct = '\0';

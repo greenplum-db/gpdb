@@ -37,8 +37,6 @@
 #include "access/sysattr.h"
 #include "catalog/pg_inherits_fn.h"
 #include "catalog/pg_type.h"
-#include "cdb/cdbpartition.h"
-#include "commands/tablecmds.h"
 #include "miscadmin.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
@@ -55,8 +53,10 @@
 #include "utils/selfuncs.h"
 
 #include "cdb/cdbllize.h"                   /* pull_up_Flow() */
-#include "cdb/cdbvars.h"
+#include "cdb/cdbpartition.h"
 #include "cdb/cdbsetop.h"
+#include "cdb/cdbvars.h"
+#include "commands/tablecmds.h"
 
 
 typedef struct
@@ -119,7 +119,7 @@ static Node *adjust_appendrel_attrs_mutator(Node *node,
 							   adjust_appendrel_attrs_context *context);
 static Relids adjust_relid_set(Relids relids, Index oldrelid, Index newrelid);
 static List *adjust_inherited_tlist(List *tlist,
-					   AppendRelInfo *apprelinfo);
+					   AppendRelInfo *context);
 
 
 /*

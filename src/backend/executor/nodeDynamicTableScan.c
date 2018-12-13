@@ -25,7 +25,6 @@
 #include "executor/nodeDynamicTableScan.h"
 #include "utils/hsearch.h"
 #include "parser/parsetree.h"
-#include "utils/faultinjector.h"
 #include "commands/tablecmds.h"
 #include "nodes/pg_list.h"
 #include "utils/memutils.h"
@@ -225,8 +224,6 @@ ExecDynamicTableScan(DynamicTableScanState *node)
 		   initNextTableToScan(node))
 	{
 		slot = ExecTableScanRelation(scanState);
-
-		SIMPLE_FAULT_INJECTOR(FaultDuringExecDynamicTableScan);
 
 		if (TupIsNull(slot))
 			CleanupOnePartition(scanState);

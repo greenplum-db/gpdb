@@ -3917,10 +3917,10 @@ get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFu
  *      Retrieve comparison type  
  */
 CmpType
-get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight)
+get_comparison_type(Oid oidOp)
 {
-	OpBtreeInterpretation		   *opBti;
-	List						   *opBtis;
+	OpBtreeInterpretation *opBti;
+	List	   *opBtis;
 
 	opBtis = get_op_btree_interpretation(oidOp);
 

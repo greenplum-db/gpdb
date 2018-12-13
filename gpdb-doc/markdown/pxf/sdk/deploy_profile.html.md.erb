@@ -79,8 +79,9 @@ For example, if `seghostfile` contains a list, one-host-per-line, of the segment
 
 ``` shell
 gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
-gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
 ```
+
+Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
 
 ## <a id="verify_profile_reg"></a>Verifying Profile Registration
 
@@ -99,11 +100,10 @@ Before attempting this exercise, ensure that you have completed the [Example: De
 
 Perform the following procedure to define and register a read profile and a write profile for your *Demo* connector and verify that you deployed the profiles successfully:
 
-1. Log in to the Greenplum Database master node as an administrative user and set up your environment:
+1. Log in to the Greenplum Database master node as an administrative user:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ```
 
 2. Open the `pxf-profiles.xml` file in the editor of your choosing. For example:
@@ -149,11 +149,7 @@ Perform the following procedure to define and register a read profile and a writ
     gpadmin@gpmaster$ gpscp -v -f seghostfile $PXF_CONF/conf/pxf-profiles.xml =:/etc/pxf/usercfg/conf/pxf-profiles.xml
     ```
 
-7. Run the `pxf restart` command to restart PXF on each segment host. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+7. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
 
 8. Verify that you correctly deployed the *Demo* connector profiles by creating and accessing Greenplum Database external tables:
 

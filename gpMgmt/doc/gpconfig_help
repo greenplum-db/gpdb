@@ -51,7 +51,7 @@ to take effect. Whether you require a restart or a reload depends on
 the parameter. See the Server Configuration Parameters reference for 
 more information about the server configuration parameters.
 
-To show the currenly set values for a parameter across the system, 
+To show the currently set values for a parameter across the system,
 use the -s option.
 
 gpconfig uses the following environment variables to connect to 

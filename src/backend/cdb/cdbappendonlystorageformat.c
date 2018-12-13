@@ -230,7 +230,7 @@ AppendOnlyStorageFormat_AddBlockHeaderChecksums(
 
 			default:
 				ereport(ERROR,
-						(errmsg("Unexpected Append-Only header kind %d",
+						(errmsg("unexpected Append-Only header kind %d",
 								headerKind)));
 				break;
 		}
@@ -1170,59 +1170,61 @@ AppendOnlyStorageFormat_MakeBulkDenseContentHeader(
 																  &checkCompressedLen);
 		if (checkError != AOHeaderCheckOk)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Header check error %d, detail '%s'",
-							(int) checkError,
-							AppendOnlyStorageFormat_GetHeaderCheckErrorStr())));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Header check error %d, detail: '%s'",
+							   (int) checkError,
+							   AppendOnlyStorageFormat_GetHeaderCheckErrorStr())));
 
 		if (checkOverallBlockLen != checkBlockLimitLen)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found block length %d, expected %d",
-							checkOverallBlockLen,
-							checkBlockLimitLen)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found block length %d, expected %d",
+							   checkOverallBlockLen, checkBlockLimitLen)));
 		if (checkOffset != checkHeaderLen)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found data offset %d, expected %d",
-							checkOffset,
-							checkHeaderLen)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found data offset %d, expected %d",
+							   checkOffset, checkHeaderLen)));
 		if (checkUncompressedLen != dataLength)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found uncompressed length %d, expected %d",
-							checkUncompressedLen,
-							dataLength)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found uncompressed length %d, expected %d",
+							   checkUncompressedLen, dataLength)));
 		if (checkExecutorBlockKind != executorKind)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found executor kind %d, expected %d",
-							checkExecutorBlockKind,
-							executorKind)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found executor kind %d, expected %d",
+							   checkExecutorBlockKind, executorKind)));
 		if (checkHasFirstRowNum != hasFirstRowNum)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found has first row number flag %s, expected %s",
-							(checkHasFirstRowNum ? "true" : "false"),
-							(hasFirstRowNum ? "true" : "false"))));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found has first row number flag %s, expected %s",
+							   (checkHasFirstRowNum ? "true" : "false"),
+							   (hasFirstRowNum ? "true" : "false"))));
 		if (hasFirstRowNum)
 		{
 			if (checkFirstRowNum != firstRowNum)
 				ereport(ERROR,
-						(errmsg("Problem making append-only storage header of type bulk dense content. "
-								"Found first row number " INT64_FORMAT ", expected " INT64_FORMAT,
-								checkFirstRowNum,
-								firstRowNum)));
+						(errmsg("problem making append-only storage header of type bulk dense content"),
+						 errdetail("Found first row number " INT64_FORMAT ", expected " INT64_FORMAT,
+								   checkFirstRowNum, firstRowNum)));
 		}
 		if (checkRowCount != rowCount)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found row count %d, expected %d",
-							checkRowCount,
-							rowCount)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found row count %d, expected %d",
+							   checkRowCount, rowCount)));
 		if (checkIsCompressed != isCompressed)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found is compressed flag %s, expected %s",
-							(checkIsCompressed ? "true" : "false"),
-							(isCompressed ? "true" : "false"))));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found is compressed flag %s, expected %s",
+							   (checkIsCompressed ? "true" : "false"),
+							   (isCompressed ? "true" : "false"))));
 		if (checkCompressedLen != compressedLength)
 			ereport(ERROR,
-					(errmsg("Problem making append-only storage header of type bulk dense content. Found data length %d, expected %d",
-							checkCompressedLen,
-							dataLength)));
+					(errmsg("problem making append-only storage header of type bulk dense content"),
+					 errdetail("Found data length %d, expected %d",
+							   checkCompressedLen, dataLength)));
 	}
 #endif
 }

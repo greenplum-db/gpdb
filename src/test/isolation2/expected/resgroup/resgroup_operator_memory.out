@@ -1,0 +1,227 @@
+SET optimizer TO off;
+SET
+
+--
+-- setup
+--
+
+--start_ignore
+DROP VIEW IF EXISTS many_ops;
+DROP ROLE r1_opmem_test;
+DROP RESOURCE GROUP rg1_opmem_test;
+DROP RESOURCE GROUP rg2_opmem_test;
+--end_ignore
+
+-- this view contains many operators in the plan, which is used to trigger
+-- the issue.  gp_toolkit.gp_resgroup_config is a large JOIN view of many
+-- relations, to prevent the source relations being optimized out from the plan
+-- we have to keep the columns provided by them in the target list, instead of
+-- composing a long SELECT c1,c2,... list we use SELECT * here, but we should
+-- not output the groupid as it changes each time.
+CREATE OR REPLACE VIEW many_ops AS SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437 ;
+CREATE
+
+CREATE RESOURCE GROUP rg1_opmem_test WITH (cpu_rate_limit=10, memory_limit=20, memory_shared_quota=0, concurrency=20, memory_spill_ratio=0);
+CREATE
+
+CREATE ROLE r1_opmem_test RESOURCE GROUP rg1_opmem_test;
+CREATE
+GRANT ALL ON many_ops TO r1_opmem_test;
+GRANT
+
+-- rg1 has very low per-xact memory quota, there will be no enough operator
+-- memory reserved, however in resource group mode we assign at least 100KB to
+-- each operator, no matter it is memory intensive or not.  As long as there is
+-- enough shared memory the query should be executed successfully.
+--
+-- some operators like HashAgg require more memory to run, the memory quota is
+-- also dynamically increased to meet their minimal requirements.
+--
+-- note: when there is no enough operator memory there should be a warning,
+-- however warnings are not displayed in isolation2 tests.
+
+--
+-- positive: there is enough global shared memory
+--
+
+SET gp_resgroup_memory_policy TO none;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO eager_free;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO auto;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+--
+-- negative: there is not enough shared memory
+--
+
+-- rg1 has no group level shared memory, and most memory are granted to rg2,
+-- there is only very little global shared memory due to integer rounding.
+CREATE RESOURCE GROUP rg2_opmem_test WITH (cpu_rate_limit=10, memory_limit=40);
+CREATE
+
+-- this query can execute but will raise OOM error.
+
+SET gp_resgroup_memory_policy TO none;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO eager_free;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO auto;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+ERROR:  Out of memory
+DETAIL:  Resource group memory limit reached
+RESET role;
+RESET
+
+--
+-- positive: there is enough group shared memory
+--
+
+ALTER RESOURCE GROUP rg1_opmem_test SET memory_shared_quota 100;
+ALTER
+
+SET gp_resgroup_memory_policy TO none;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO eager_free;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO auto;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+--
+-- positive: increased group memory settings
+--
+
+DROP RESOURCE GROUP rg2_opmem_test;
+DROP
+ALTER RESOURCE GROUP rg1_opmem_test SET memory_limit 40;
+ALTER
+ALTER RESOURCE GROUP rg1_opmem_test SET memory_shared_quota 50;
+ALTER
+ALTER RESOURCE GROUP rg1_opmem_test SET memory_spill_ratio 30;
+ALTER
+ALTER RESOURCE GROUP rg1_opmem_test SET concurrency 1;
+ALTER
+
+SET gp_resgroup_memory_policy TO none;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO eager_free;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+SET gp_resgroup_memory_policy TO auto;
+SET
+SET ROLE TO r1_opmem_test;
+SET
+SELECT * FROM many_ops;
+groupid|groupname    |concurrency|proposed_concurrency|cpu_rate_limit|memory_limit|proposed_memory_limit|memory_shared_quota|proposed_memory_shared_quota|memory_spill_ratio|proposed_memory_spill_ratio|memory_auditor|cpuset
+-------+-------------+-----------+--------------------+--------------+------------+---------------------+-------------------+----------------------------+------------------+---------------------------+--------------+------
+6437   |default_group|20         |20                  |30            |30          |30                   |50                 |50                          |20                |20                         |vmtracker     |-1    
+(1 row)
+RESET role;
+RESET
+
+--
+-- cleanup
+--
+
+DROP VIEW many_ops;
+DROP
+DROP ROLE r1_opmem_test;
+DROP
+DROP RESOURCE GROUP rg1_opmem_test;
+DROP

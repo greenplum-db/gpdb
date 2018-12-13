@@ -1,0 +1,54 @@
+---
+title: pxf cluster
+---
+
+Manage the PXF service instance on all Greenplum Database segment hosts.
+
+## <a id="topic1__section2"></a>Synopsis
+
+``` pre
+pxf cluster <command>
+```
+
+where `<command>` is:
+
+``` pre
+help
+init
+start
+stop
+```
+
+## <a id="topic1__section3"></a>Description
+
+The `pxf cluster` utility manages the PXF service instance on all Greenplum Database segment hosts. You can initialize, start, and stop the PXF service instance on all segment hosts.
+
+The `pxf cluster` command requires a running Greenplum Database cluster.
+
+If you want to manage the PXF service instance on a specific segment host, use the `pxf` utility. See [`pxf`](pxf.html#topic1).
+
+## <a id="commands"></a>Commands
+
+<dt>help</dt>
+<dd>Display the `pxf cluster` help message and then exit.</dd>
+
+<dt>init</dt>
+<dd>Initialize the PXF service instance on the master and on all segment hosts. When you initialize PXF across your Greenplum Database cluster, you must identify the PXF user configuration directory via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF returns an error.</dd>
+
+<dt>start</dt>
+<dd>Start the PXF service instance on all segment hosts.</dd>
+
+<dt>stop  </dt>
+<dd>Stop the PXF service instance on all segment hosts.</dd>
+
+## <a id="topic1__section5"></a>Examples
+
+Stop the PXF service instance on all segment hosts:
+
+``` shell
+$ $GPHOME/pxf/bin/pxf cluster stop
+```
+
+## <a id="topic1__section6"></a>See Also
+
+[`pxf`](pxf.html#topic1)

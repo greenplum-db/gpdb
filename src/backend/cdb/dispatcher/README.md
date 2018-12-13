@@ -43,7 +43,7 @@ All dispatcher routines contains few standard steps:
 	* `cdbdisp_makeDispatcherState`: create a dispatcher state and register it in the resource owner release callback.
 	* `buildGpQueryString/buildGpDtxProtocolCommand`: serialize Plan/Utility/Command to raw text QEs can recognize, must allocate it within DispatcherContex.
 	* `AllocateWriterGang/AssignGangs`: allocate a gang or a bunch of gangs (for Plan) and prepare for execution, gangs are tracked by dispatcher state
-	* `cdbdisp_dispatchToGang`: send serialized raw query to QEs in unblocking mode which means the data in connection is not guaranteed being flushed, this is very usefull if a plan contains multiple slices, so dispatcher don't block when libpq connections is congested 
+	* `cdbdisp_dispatchToGang`: send serialized raw query to QEs in unblocking mode which means the data in connection is not guaranteed being flushed, this is very useful if a plan contains multiple slices, so dispatcher don't block when libpq connections is congested
 	* `cdbdisp_waitDispatchFinish`: as described above, this function will poll on libpq connections and flush the data in bunches 
 	* `cdbdisp_checkDispatchResult`: block until QEs report a command OK response or an error etc
 	* `cdbdisp_getDispatchResults`: fetch results from dispatcher state or error data if an error occurs

@@ -1410,9 +1410,8 @@ extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd)
 	if (IsA(clause, OpExpr))
 	{
 		OpExpr	   *opexpr = (OpExpr *) clause;
-		Expr	   *pexprLeft = list_nth(opexpr->args, 0);
 		Expr	   *pexprRight = list_nth(opexpr->args, 1);
-		CmpType		cmptype = get_comparison_type(opexpr->opno, exprType((Node *) pexprLeft), exprType((Node *) pexprRight));
+		CmpType		cmptype = get_comparison_type(opexpr->opno);
 
 		if (CmptEq == cmptype)
 		{
@@ -1462,8 +1461,8 @@ extractStartEndRange(Node *clause, Node **ppnodeStart, Node **ppnodeEnd)
 	OpExpr	   *opexprStart = (OpExpr *) nodeStart;
 	OpExpr	   *opexprEnd = (OpExpr *) nodeEnd;
 
-	CmpType		cmptLeft = get_comparison_type(opexprStart->opno, exprType(list_nth(opexprStart->args, 0)), exprType(list_nth(opexprStart->args, 1)));
-	CmpType		cmptRight = get_comparison_type(opexprEnd->opno, exprType(list_nth(opexprEnd->args, 0)), exprType(list_nth(opexprEnd->args, 1)));
+	CmpType		cmptLeft = get_comparison_type(opexprStart->opno);
+	CmpType		cmptRight = get_comparison_type(opexprEnd->opno);
 
 	if ((CmptGT != cmptLeft && CmptGEq != cmptLeft) || (CmptLT != cmptRight && CmptLEq != cmptRight))
 	{

@@ -40,6 +40,7 @@
 #include "utils/formatting.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/resource_manager.h"
 #include "executor/execdesc.h"
 #include "utils/resscheduler.h"
 #include "utils/syscache.h"

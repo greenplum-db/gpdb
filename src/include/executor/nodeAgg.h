@@ -208,11 +208,9 @@ typedef struct AggStatePerGroupData
 extern void 
 initialize_aggregates(AggState *aggstate,
 					  AggStatePerAgg peragg,
-					  AggStatePerGroup pergroup,
-					  MemoryManagerContainer *mem_manager);
+					  AggStatePerGroup pergroup);
 extern void 
-advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
-				   MemoryManagerContainer *mem_manager);
+advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup);
 
 extern Oid resolve_polymorphic_transtype(Oid aggtranstype, Oid aggfnoid,
 										 Oid *inputTypes);
@@ -226,8 +224,7 @@ extern Datum invoke_agg_trans_func(AggState *aggstate,
 								   bool *transValueIsNull, bool transtypeByVal,
 								   int16 transtypeLen,
 								   FunctionCallInfoData *fcinfo, void *funcctx,
-								   MemoryContext tuplecontext,
-								   MemoryManagerContainer *mem_manager);
+								   MemoryContext tuplecontext);
 
 extern Datum datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal, int typLen,
 									 MemoryManagerContainer *mem_manager);

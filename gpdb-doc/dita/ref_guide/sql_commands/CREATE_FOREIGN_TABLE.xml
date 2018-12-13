@@ -8,11 +8,16 @@
         <section id="section2">
             <title>Synopsis</title>
             <codeblock id="sql_command_synopsis">CREATE FOREIGN TABLE [ IF NOT EXISTS ] <varname>table_name</varname> ( [
-    { <varname>column_name</varname> <varname>data_type</varname> [ NULL | NOT NULL ] }
+    <varname>column_name</varname> <varname>data_type</varname> [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ] [ COLLATE <varname>collation</varname> ] [ <varname>column_constraint</varname> [ ... ] ]
       [, ... ]
 ] )
     SERVER <varname>server_name</varname>
-    [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+  [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+        <p>where <varname>column_constraint</varname> is:</p><codeblock>
+[ CONSTRAINT <varname>constraint_name</varname> ]
+{ NOT NULL |
+  NULL |
+  DEFAULT <varname>default_expr</varname> }</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -21,6 +26,7 @@
                  its owner.</p>
             <p>If you schema-qualify the table name (for example, <codeph>CREATE FOREIGN TABLE myschema.mytable ...</codeph>), Greenplum Database creates the table in the specified schema. Otherwise, the foreign table is created in the current schema. The name of the foreign table must be distinct from the name of any other foreign table, table, sequence, index, or view in the same schema.</p>
             <p>Because <codeph>CREATE FOREIGN TABLE</codeph> automatically creates a data type that represents the composite type corresponding to one row of the foreign table, foreign tables cannot have the same name as any existing data type in the same schema.</p>
+            <p>To create a foreign table, you must have <codeph>USAGE</codeph> privilege on the foreign server, as well as <codeph>USAGE</codeph> privilege on all column types used in the table.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>
@@ -56,22 +62,47 @@
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt> NULL</pt>
+                    <pt>NULL</pt>
                     <pd>
-                        <p>The column is allowed to contain null values. This is the default</p>
+                        <p>The column is allowed to contain null values. This is the default.</p>
                         <p>This clause is provided only for compatibility with non-standard SQL databases. Its use is discouraged in new applications.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>DEFAULT <varname>default_expr</varname></pt>
+                    <pd>
+                        <p>The <codeph>DEFAULT</codeph> clause assigns a default value for the
+                          column whose definition it appears within. The value is any
+                          variable-free expression; Greenplum Database does not allow subqueries
+                          and cross-references to other columns in the current table. The data
+                          type of the default expression must match the data type of the column.</p>
+                        <p>Greenplum Database uses the default expression in any insert operation
+                          that does not specify a value for the column. If there is no default
+                          for a column, then the default is null.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt><varname>server_name</varname></pt>
                     <pd>
-                        <p>The name of an existing server for the foreign table.</p>
+                        <p>The name of an existing server to use for the foreign table.
+                          For details on defining a server, see <codeph><xref href="CREATE_SERVER.xml#topic1">CREATE
+                    SERVER</xref></codeph>.</p>
                     </pd>
                 </plentry>
                 <plentry>
                     <pt>OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] )</pt>
                     <pd>
-                        <p>The options for the new foreign table. Option names must be unique. The option names and values are foreign-data wrapper-specific and are validated using the foreign-data wrapper's <varname>validator_function</varname>.</p>
+                        <p>The options for the new foreign table or one of its columns. While option names must be unique, a table option and a column option may have the same name. The option names and values are foreign-data wrapper-specific. Greenplum Database validates the options and values using the foreign-data wrapper's <varname>validator_function</varname>.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
+                    <pd>
+                      <p>Option that identifies the host from which the foreign data-wrapper requests data: the
+                        master host, any (master or single segment) host, or all segment hosts. The default option value
+                       is '<codeph>master</codeph>'.</p>
+                      <p>Use of the foreign table <codeph>mpp_execute</codeph> option, and the
+                       specific modes supported, is foreign data-wrapper-specific.</p>
                     </pd>
                 </plentry>
             </parml>
@@ -86,12 +117,14 @@
     kind        varchar(10),
     len         interval hour to minute
 )
-SERVER film_server;;</codeblock>
+SERVER film_server;</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>
-            <p><codeph>CREATE FOREIGN DATA WRAPPER</codeph> largely conforms to the SQL standard; however, much as with <codeph><xref href="CREATE_TABLE.xml#topic1">CREATE
-                    TABLE</xref></codeph>, <codeph>NULL</codeph> constraints and zero-column foreign tables are permitted.</p>
+            <p><codeph>CREATE FOREIGN TABLE</codeph> largely conforms to the SQL standard; however, much as with <codeph><xref href="CREATE_TABLE.xml#topic1">CREATE
+                    TABLE</xref></codeph>, Greenplum Database permits <codeph>NULL</codeph> constraints and zero-column foreign tables.
+               The ability to specify a default value is a Greenplum Database extension,
+               as is the <codeph>mpp_execute</codeph> option.</p>
         </section>
         <section id="section8">
             <title>See Also</title>

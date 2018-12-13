@@ -28,9 +28,8 @@ struct CdbPgResults;
  * produced; the caller must PQclear() them and free() the array.
  * A NULL entry follows the last used entry in the array.
  *
- * Any error messages - whether or not they are associated with
- * PGresult objects - are appended to a StringInfo buffer provided
- * by the caller.
+ * Any error message - whether or not it is associated with an
+ * PGresult object - is returned in *qeError.
  */
 struct pg_result **
 CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
@@ -42,7 +41,8 @@ CdbDispatchDtxProtocolCommand(DtxProtocolCommand dtxProtocolCommand,
 							  int *resultCount,
 							  bool* badGangs,
 							  List *twophaseSegments,
-							  char *argument, int argumentLength );
+							  char *serializedDtxContextInfo,
+							  int serializedDtxContextInfoLen);
 
 
 /*

@@ -18,3 +18,6 @@ SELECT * FROM generate_series(1, 3/0);
 -- Test query abort
 select pg_cancel_backend(pg_backend_pid());
 
+-- Test alter table set distributed by
+CREATE TABLE queryInfoHookTable1 (id int, name text) DISTRIBUTED BY(id);
+ALTER TABLE queryInfoHookTable1 SET DISTRIBUTED BY (name);

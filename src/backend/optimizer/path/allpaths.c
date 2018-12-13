@@ -2371,7 +2371,6 @@ qual_is_pushdown_safe_set_operation(Query *query, RangeTblEntry *rte, Index rti,
 }
 
 
-
 /*
  * qual_is_pushdown_safe - is a particular qual safe to push down?
  *
@@ -2536,8 +2535,6 @@ recurse_push_qual(Node *setOp, Query *topquery,
 			 (int) nodeTag(setOp));
 	}
 }
-
-
 
 /*****************************************************************************
  *			DEBUG SUPPORT

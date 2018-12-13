@@ -88,13 +88,13 @@ CGPOptimizer::GPOPTOptimizedPlan
 		{
 			errstart(ERROR, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
 			errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-					errmsg("No available memory to allocate string buffer."));
+					errmsg("no available memory to allocate string buffer"));
 		}
 		else if (GPOS_MATCH_EX(ex, gpdxl::ExmaDXL, gpdxl::ExmiInvalidComparisonTypeCode))
 		{
 			errstart(ERROR, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
 			errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-					errmsg("Invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."));
+					errmsg("invalid comparison type code. Valid values are Eq, NEq, LT, LEq, GT, GEq."));
 		}
 
 		// Failed to produce a plan, but it wasn't an error that should
@@ -142,7 +142,7 @@ CGPOptimizer::SerializeDXLPlan
 	{
 		errstart(ERROR, ex.Filename(), ex.Line(), NULL, TEXTDOMAIN);
 		errfinish(errcode(ERRCODE_INTERNAL_ERROR),
-				errmsg("Optimizer failed to produce plan"));
+				errmsg("optimizer failed to produce plan"));
 	}
 	GPOS_CATCH_END;
 	return NULL;

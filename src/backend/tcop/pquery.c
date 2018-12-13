@@ -35,6 +35,7 @@
 #include "executor/spi.h"
 #include "postmaster/autostats.h"
 #include "postmaster/backoff.h"
+#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "utils/metrics_utils.h"
 #include "utils/tqual.h"

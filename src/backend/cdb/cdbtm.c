@@ -427,7 +427,8 @@ doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType)
 
 	if (currentGxactWriterGangLost())
 	{
-		ereport(WARNING, (errmsg("Writer gang of current global transaction is lost")));
+		ereport(WARNING,
+				(errmsg("writer gang of current global transaction is lost")));
 		return false;
 	}
 
@@ -453,8 +454,7 @@ doDispatchSubtransactionInternalCmd(DtxProtocolCommand cmdType)
 	if (!succeeded)
 	{
 		ereport(ERROR,
-				(errmsg(
-						"dispatching subtransaction internal command failed for gid = \"%s\" due to error",
+				(errmsg("dispatching subtransaction internal command failed for gid = \"%s\" due to error",
 						currentGxact->gid)));
 	}
 
@@ -1730,7 +1730,7 @@ redoDistributedCommitRecord(TMGXACT_LOG *gxact_log)
 		if (*shmNumCommittedGxacts >= max_tm_gxacts)
 		{
 			ereport(FATAL,
-					(errmsg("the limit of %d distributed transactions has been reached.",
+					(errmsg("the limit of %d distributed transactions has been reached",
 							max_tm_gxacts),
 					 errdetail("The global user configuration (GUC) server parameter max_prepared_transactions controls this limit.")));
 		}
@@ -1897,7 +1897,8 @@ dispatchDtxCommand(const char *cmd)
 
 	if (currentGxactWriterGangLost())
 	{
-		ereport(WARNING, (errmsg("Writer gang of current global transaction is lost")));
+		ereport(WARNING,
+				(errmsg("writer gang of current global transaction is lost")));
 		return false;
 	}
 
@@ -2195,15 +2196,15 @@ recoverInDoubtTransactions(void)
 
 		dumpRMOnlyDtx(htab, &indoubtBuff);
 
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("DTM Log recovery failed.  There are still unresolved "
-							   "in-doubt transactions on some of the segment databaes "
-							   "that were not able to be resolved for an unknown reason. "),
-						errdetail("Here is a list of in-doubt transactions in the system: %s",
-								  indoubtBuff.data),
-						errhint("Try restarting the Greenplum Database array.  If the problem persists "
-								" an Administrator will need to resolve these transactions "
-								" manually.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("DTM Log recovery failed, There are still unresolved "
+						"in-doubt transactions on some of the segment databases "
+						"that were not able to be resolved for an unknown reason"),
+				 errdetail("Here is a list of in-doubt transactions in the system: %s",
+						   indoubtBuff.data),
+				 errhint("Try restarting the Greenplum Database array.  If the problem persists "
+						 "an Administrator will need to resolve these transactions  manually.")));
 
 	}
 
@@ -2264,8 +2265,9 @@ gatherRMInDoubtTransactions(void)
 
 				if (htab == NULL)
 				{
-					ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-									errmsg("DTM could not allocate hash table for InDoubtDtxList.")));
+					ereport(FATAL,
+							(errcode(ERRCODE_OUT_OF_MEMORY),
+							 errmsg("DTM could not allocate hash table for InDoubtDtxList")));
 				}
 			}
 
@@ -2869,8 +2871,9 @@ sendDtxExplicitBegin(void)
 	 */
 	if (!dispatchDtxCommand(cmdbuf))
 	{
-		ereport(ERROR, (errmsg("Global transaction BEGIN failed for gid = \"%s\" due to error",
-							   currentGxact->gid)));
+		ereport(ERROR,
+				(errmsg("global transaction BEGIN failed for gid = \"%s\" due to error",
+						currentGxact->gid)));
 	}
 }
 

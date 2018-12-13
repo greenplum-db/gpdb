@@ -87,43 +87,48 @@ static HLLCounter hll_decompress_dense_unpacked(HLLCounter hloglog);
 HLLCounter
 hll_unpack(HLLCounter hloglog){
 
-    char entry;
-    int i, m;
-    HLLCounter htemp;
-    
-    if (hloglog->format == UNPACKED || hloglog->format == UNPACKED_UNPACKED){
-	return hloglog;
-    }
+	char entry;
+	int i, m;
+	HLLCounter htemp;
 
-    /* use decompress to handle compressed unpacking */
-    if (hloglog->b < 0){
-	return hll_decompress_unpacked(hloglog);
-    }
-
-    /* set format to unpacked*/
-    if (hloglog->format == PACKED_UNPACKED){
-	hloglog->format = UNPACKED_UNPACKED;
-    } else if (hloglog->format == PACKED){
-	hloglog->format = UNPACKED;
-    }
-
-
-
-    /* allocate and zero an array large enough to hold all the decompressed
-    * bins */
-    m = POW2(hloglog->b);
-    htemp = palloc(sizeof(HLLData) + m);
-    memcpy(htemp, hloglog, sizeof(HLLData));
-
-	for(i=0; i < m; i++){
-	    HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
-	    htemp->data[i] = entry;
+	if (hloglog->format == UNPACKED || hloglog->format == UNPACKED_UNPACKED)
+	{
+		return hll_copy(hloglog);
 	}
 
-    hloglog = htemp;
+	/* use decompress to handle compressed unpacking */
+	if (hloglog->b < 0)
+	{
+		return hll_decompress_unpacked(hloglog);
+	}
 
-    /* set the varsize to the appropriate length  */
-    SET_VARSIZE(hloglog, sizeof(HLLData) + m);
+	/* set format to unpacked*/
+	if (hloglog->format == PACKED_UNPACKED)
+	{
+		hloglog->format = UNPACKED_UNPACKED;
+	}
+	else if (hloglog->format == PACKED)
+	{
+		hloglog->format = UNPACKED;
+	}
+
+	/*
+	 allocate and zero an array large enough to hold all the decompressed
+	 bins
+	*/
+	m = POW2(hloglog->b);
+	htemp = palloc(sizeof(HLLData) + m);
+	memcpy(htemp, hloglog, sizeof(HLLData));
+
+	for(i=0; i < m; i++){
+		HLL_DENSE_GET_REGISTER(entry,hloglog->data,i,hloglog->binbits);
+		htemp->data[i] = entry;
+	}
+
+	hloglog = htemp;
+
+	/* set the varsize to the appropriate length  */
+	SET_VARSIZE(hloglog, sizeof(HLLData) + m);
 
 	return hloglog;
 }
@@ -530,22 +535,22 @@ HLLCounter
 hll_compress(HLLCounter hloglog)
 {
 
-    /* make sure the data isn't compressed already */
-    if (hloglog->b < 0) {
-        return hloglog;
-    }
+	/* make sure the data isn't compressed already */
+	if (hloglog->b < 0) {
+		return hloglog;
+	}
 
-    if (hloglog->idx == -1 && hloglog->format == PACKED){
-        hloglog = hll_compress_dense(hloglog);
-    } else if (hloglog->idx == -1 && hloglog->format == UNPACKED){
-	hloglog = hll_compress_dense_unpacked(hloglog);
-    } else if (hloglog->format == UNPACKED_UNPACKED){
-	hloglog->format = UNPACKED;
-    } else if (hloglog->format == PACKED_UNPACKED){
-	hloglog = hll_unpack(hloglog);
-    }
-    
-    return hloglog;
+	if (hloglog->idx == -1 && hloglog->format == PACKED){
+		hloglog = hll_compress_dense(hloglog);
+	} else if (hloglog->idx == -1 && hloglog->format == UNPACKED){
+		hloglog = hll_compress_dense_unpacked(hloglog);
+	} else if (hloglog->format == UNPACKED_UNPACKED){
+		hloglog->format = UNPACKED;
+	} else if (hloglog->format == PACKED_UNPACKED){
+		hloglog = hll_unpack(hloglog);
+	}
+
+	return hloglog;
 }
 
 /* Compresses dense encoded counters using lz compression */
@@ -790,9 +795,12 @@ hyperloglog_estimate(HLLCounter hyperloglog)
 	double estimate;
 	
 	/* unpack if needed */
-	hyperloglog = hll_unpack(hyperloglog);
+	HLLCounter hyperloglog_unpacked = hll_unpack(hyperloglog);
 	
-	estimate = hll_estimate(hyperloglog);
+	estimate = hll_estimate(hyperloglog_unpacked);
+
+	/* free unpacked counter */
+	pfree(hyperloglog_unpacked);
 	
 	/* return the updated bytea */
 	return estimate;
@@ -810,25 +818,28 @@ hyperloglog_merge_counters(HLLCounter counter1, HLLCounter counter2)
 	{
 		/* if first counter is null just copy the second estimator into the
 		 * first one */
-		counter1 = hll_copy(counter2);
+		return hll_copy(counter2);
 	}
 	else if (counter2 == NULL) {
 		/* if second counter is null just return the the first estimator */
-		counter1 = hll_copy(counter1);
+		return hll_copy(counter1);
 	}
 	else
 	{
 		/* ok, we already have the estimator - merge the second one into it */
 		/* unpack if needed */
-		counter1 = hll_unpack(counter1);
-		counter2 = hll_unpack(counter2);
-		
+		HLLCounter counter1_new = hll_unpack(counter1);
+		HLLCounter counter2_new = hll_unpack(counter2);
+
 		/* perform the merge */
-		counter1 = hll_merge(counter1, counter2);
+		counter1_new = hll_merge(counter1_new, counter2_new);
+
+		/*  counter2_new is not required any more */
+		pfree(counter2_new);
+
+		/* return the updated HLLCounter */
+		return counter1_new;
 	}
-	
-	/* return the updated HLLCounter */
-	return counter1;
 }
 
 
@@ -1138,9 +1149,9 @@ hyperloglog_add_item_agg_default(PG_FUNCTION_ARGS)
 Datum
 hyperloglog_merge(PG_FUNCTION_ARGS)
 {
-
-	HLLCounter counter1;
-	HLLCounter counter2;
+	HLLCounter counter1 = NULL;
+	HLLCounter counter2 = NULL;
+	HLLCounter counter1_merged = NULL;
 
 	if (PG_ARGISNULL(0) && PG_ARGISNULL(1)){
 		/* if both counters are null return null */
@@ -1149,22 +1160,24 @@ hyperloglog_merge(PG_FUNCTION_ARGS)
 	} else if (PG_ARGISNULL(0)) {
 		/* if first counter is null just copy the second estimator into the
 		 * first one */
-		counter1 = PG_GETARG_HLL_P(1);
+		counter1_merged = PG_GETARG_HLL_P_COPY(1);
 
 	} else if (PG_ARGISNULL(1)) {
 		/* if second counter is null just return the the first estimator */
-		counter1 = PG_GETARG_HLL_P(0);
+		counter1_merged = PG_GETARG_HLL_P_COPY(0);
 
 	} else {
 		/* ok, we already have the estimator - merge the second one into it */
 		counter1 = PG_GETARG_HLL_P_COPY(0);
 		counter2 = PG_GETARG_HLL_P_COPY(1);
 
-		counter1 = hyperloglog_merge_counters(counter1, counter2);
+		counter1_merged = hyperloglog_merge_counters(counter1, counter2);
+		pfree(counter1);
+		pfree(counter2);
 	}
 
 	/* return the updated bytea */
-	PG_RETURN_BYTEA_P(counter1);
+	PG_RETURN_BYTEA_P(counter1_merged);
 
 }
 
@@ -1175,6 +1188,9 @@ hyperloglog_get_estimate(PG_FUNCTION_ARGS)
 	HLLCounter hyperloglog = PG_GETARG_HLL_P_COPY(0);
 
 	estimate = hyperloglog_estimate(hyperloglog);
+
+	/* free the hll counter copy */
+	pfree(hyperloglog);
 
 	/* return the updated bytea */
 	PG_RETURN_FLOAT8(estimate);

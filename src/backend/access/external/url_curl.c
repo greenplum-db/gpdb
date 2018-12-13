@@ -450,8 +450,8 @@ check_response(URL_CURL_FILE *file, int *rc, char **response_string)
 
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("connection with gpfdist failed for %s. "
-							"effective url: %s. %s\n%s", file->common.url, effective_url,
+					 errmsg("connection with gpfdist failed for \"%s\", effective url: \"%s\": %s; %s",
+							file->common.url, effective_url,
 							(oserrno != 0 ? connmsg : ""),
 							(curl_Error_Buffer[0] != '\0' ? curl_Error_Buffer : ""))));
 		}
@@ -892,7 +892,7 @@ make_url(const char *url, char *buf, bool is_ipv6)
 			if (len > 8)
 				ereport(ERROR,
 						(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-						 errmsg("<port> substring size must not exceed %d characters", 8)));
+						 errmsg("<port> substring size must not exceed 8 characters")));
 
 			memcpy(portstr, hostname_end + 1, len);
 			portstr[len] = '\0';
@@ -917,7 +917,7 @@ make_url(const char *url, char *buf, bool is_ipv6)
 			if (len > 8)
 				ereport(ERROR,
 						(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
-						 errmsg("<port> substring size must not exceed %d characters", 8)));
+						 errmsg("<port> substring size must not exceed 8 characters")));
 
 			memcpy(portstr, hostname_end + 1, len);
 			portstr[len] = '\0';
@@ -1489,7 +1489,7 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		if (n == 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("gpfdist error: server closed connection.")));
+					 errmsg("gpfdist error: server closed connection")));
 
 		if (n < 5)
 			ereport(ERROR,
@@ -1634,8 +1634,8 @@ gp_proto1_read(char *buf, int bufsz, URL_CURL_FILE *file, CopyState pstate, char
 		if (!file->still_running)
 			ereport(ERROR,
 					(errcode(ERRCODE_CONNECTION_FAILURE),
-					 errmsg("gpfdist server closed connection."),
-					 errhint("This is not a GPDB defect.  \nThe root cause is an overload of the ETL host or "
+					 errmsg("gpfdist server closed connection"),
+					 errhint("The root cause is likely to be an overload of the ETL host or "
 							 "a temporary network glitch between the database and the ETL host "
 							 "causing the connection between the gpfdist and database to disconnect.")));
 	}

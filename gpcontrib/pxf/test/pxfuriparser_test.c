@@ -208,7 +208,7 @@ test_GPHDUri_verify_no_duplicate_options(void **state)
 		StringInfoData expected_message;
 
 		initStringInfo(&expected_message);
-		appendStringInfo(&expected_message, "Invalid URI %s: Duplicate option(s): %s", uri->uri, "FRAGMENTER");
+		appendStringInfo(&expected_message, "invalid URI %s: Duplicate option(s): %s", uri->uri, "FRAGMENTER");
 
 		assert_string_equal(edata->message, expected_message.data);
 		pfree(expected_message.data);
@@ -263,7 +263,7 @@ test_GPHDUri_verify_core_options_exist(void **state)
 		StringInfoData expected_message;
 
 		initStringInfo(&expected_message);
-		appendStringInfo(&expected_message, "Invalid URI %s: %s option(s) missing", uri->uri, "RESOLVER");
+		appendStringInfo(&expected_message, "invalid URI %s: %s option(s) missing", uri->uri, "RESOLVER");
 
 		assert_string_equal(edata->message, expected_message.data);
 		pfree(expected_message.data);
@@ -303,7 +303,7 @@ test_parseGPHDUri_helper(const char *uri, const char *message)
 		StringInfoData expected_message;
 
 		initStringInfo(&expected_message);
-		appendStringInfo(&expected_message, "Invalid URI %s%s", uri, message);
+		appendStringInfo(&expected_message, "invalid URI %s%s", uri, message);
 
 		assert_string_equal(edata->message, expected_message.data);
 		pfree(expected_message.data);

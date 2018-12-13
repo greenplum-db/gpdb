@@ -196,21 +196,6 @@
               <xref href="#gp_dynamic_partition_pruning"/>
             </li>
             <li>
-              <xref href="#gp_email_from"/>
-            </li>
-            <li>
-              <xref href="#gp_email_smtp_password"/>
-            </li>
-            <li>
-              <xref href="#gp_email_smtp_server"/>
-            </li>
-            <li>
-              <xref href="#gp_email_smtp_userid"/>
-            </li>
-            <li>
-              <xref href="#gp_email_to"/>
-            </li>
-            <li>
               <xref href="#gp_enable_adaptive_nestloop"/>
             </li>
             <li>
@@ -413,15 +398,6 @@
             </li>
             <li>
               <xref href="#gp_set_read_only"/>
-            </li>
-            <li>
-              <xref href="#gp_snmp_community"/>
-            </li>
-            <li>
-              <xref href="#gp_snmp_monitor_address"/>
-            </li>
-            <li>
-              <xref href="#gp_snmp_use_inform_or_trap"/>
             </li>
             <li>
               <xref href="#gp_statistics_pullup_from_child_partition"/>
@@ -2840,158 +2816,6 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_email_from">
-    <title>gp_email_from</title>
-    <body>
-      <p>The email address used to send email alerts, in the format of:</p>
-      <p>
-        <codeph>'username@example.com'</codeph>
-      </p>
-      <p>or</p>
-      <p>
-        <codeph>'Name &lt;username@example.com&gt;'</codeph>
-      </p>
-      <table id="gp_email_from_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">string</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_email_smtp_password">
-    <title>gp_email_smtp_password</title>
-    <body>
-      <p>The password/passphrase used to authenticate with the SMTP server.</p>
-      <table id="gp_email_smtp_password_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">string</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_email_smtp_server">
-    <title>gp_email_smtp_server</title>
-    <body>
-      <p>The fully qualified domain name or IP address and port of the SMTP server to use to send
-        the email alerts. Must be in the format of: </p>
-      <p>
-        <ph>smtp_servername.domain.com:port</ph>
-      </p>
-      <table id="gp_email_smtp_server_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">string</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_email_smtp_userid">
-    <title>gp_email_smtp_userid</title>
-    <body>
-      <p>The user id used to authenticate with the SMTP server.</p>
-      <table id="gp_email_smtp_userid_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">string</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_email_to">
-    <title>gp_email_to</title>
-    <body>
-      <p>A semi-colon (<codeph>;</codeph>) separated list of email addresses to receive email alert
-        messages to in the format of: <codeph>'username@example.com'</codeph></p>
-      <p>or</p>
-      <p>
-        <codeph>'Name &lt;username@example.com&gt;'</codeph>
-      </p>
-      <p>If this parameter is not set, then email alerts are disabled.</p>
-      <table id="gp_email_to_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">string</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p><p>superuser</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="gp_enable_adaptive_nestloop">
     <title>gp_enable_adaptive_nestloop</title>
     <body>
@@ -3435,21 +3259,11 @@
     <title>gp_enable_segment_copy_checking</title>
     <body>
       <p>Controls whether the distribution policy for a table (from the table
-          <codeph>DISTRIBUTED</codeph> clause) is checked when data is copied into the table with
-        the <codeph>COPY FROM...ON SEGMENT</codeph> command. The default is <codeph>true</codeph>,
-        check the policy when copying data into the table. An error is returned in these
-          situations.<ul id="ul_nmf_sqm_z1b">
-          <li>For a table that is not a partitioned table, an error is returned if the row of data
-            violates the distribution policy for a segment instance.</li>
-          <li>For a partitioned table, an error is returned if either of the following is true.<ul
-              id="ul_yqz_dsm_z1b">
-              <li>If the distribution policy of the child leaf partitioned table is the same as the
-                root table and the row of data violates the distribution policy for a segment
-                instance.</li>
-              <li>If the distribution policy of the child leaf partitioned table is not the same as
-                the root table. </li>
-            </ul></li>
-        </ul></p>
+      <codeph>DISTRIBUTED</codeph> clause) is checked when data is copied into the table with
+      the <codeph>COPY FROM...ON SEGMENT</codeph> command. If true, an error is returned if
+      a row of data violates the distribution policy for a segment instance.
+      The default is <codeph>true</codeph>.
+      </p>
       <p>If the value is <codeph>false</codeph>, the distribution policy is not checked. The data
         added to the table might violate the table distribution policy for the segment instance.
         Manual redistribution of table data might be required. See the <codeph>ALTER TABLE</codeph>
@@ -5181,92 +4995,6 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_snmp_community">
-    <title>gp_snmp_community</title>
-    <body>
-      <p>Set to the community name you specified for your environment.</p>
-      <table id="gp_snmp_community_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">SNMP community name</entry>
-              <entry colname="col2">public</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_snmp_monitor_address">
-    <title>gp_snmp_monitor_address</title>
-    <body>
-      <p>The <ph>hostname:port</ph> of your network monitor application. Typically, the port number
-        is 162. If there are multiple monitor addresses, separate them with a comma.</p>
-      <table id="gp_snmp_monitor_address_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">hostname:port</entry>
-              <entry colname="col2"/>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
-  <topic id="gp_snmp_use_inform_or_trap">
-    <title>gp_snmp_use_inform_or_trap</title>
-    <body>
-      <p>Trap notifications are SNMP messages sent from one application to another (for example,
-        between Greenplum Database and a network monitoring application). These messages are
-        unacknowledged by the monitoring application, but generate less network overhead.</p>
-      <p>Inform notifications are the same as trap messages, except that the application sends an
-        acknowledgement to the application that generated the alert. </p>
-      <table id="gp_snmp_use_inform_or_trap_table">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">inform <p>trap</p></entry>
-              <entry colname="col2">trap</entry>
-              <entry colname="col3">master<p>system</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="gp_statistics_pullup_from_child_partition">
     <title>gp_statistics_pullup_from_child_partition</title>
     <body>
@@ -5814,7 +5542,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>
@@ -5868,7 +5596,7 @@
             <row>
               <entry colname="col1">service name</entry>
               <entry colname="col2">postgres</entry>
-              <entry colname="col3">master<p>system</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>reload</p></entry>
             </row>
           </tbody>
         </tgroup>

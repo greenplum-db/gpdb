@@ -361,7 +361,7 @@ heap_create(const char *relname,
 	if (OidIsValid(relfilenode))
 		create_storage = false;
 	else
-		relfilenode = relid;
+		relfilenode = InvalidOid;
 
 	/*
 	 * Never allow a pg_class entry to explicitly specify the database's

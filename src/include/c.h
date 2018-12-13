@@ -960,19 +960,6 @@ typedef NameData *Name;
  */
 #define UnusedArg(arg)    ((void)(arg))
 
-
-/*
- * UnusedInReleaseBuild
- *  Silence the compiler's warning about a parameter or variable which is
- *  used in debug builds but unused in release builds.
- */
-#ifdef USE_ASSERT_CHECKING
-#define UnusedInReleaseBuild(arg)   (UnusedArg(arg))
-#else
-#define UnusedInReleaseBuild(arg)
-#endif
-
-
 /*
  * Mark a point as unreachable in a portable fashion.  This should preferably
  * be something that the compiler understands, to aid code generation.
@@ -1117,9 +1104,6 @@ extern int	vsnprintf(char *str, size_t count, const char *fmt, va_list args);
 /* no special DLL markers on most ports */
 #ifndef PGDLLIMPORT
 #define PGDLLIMPORT
-#endif
-#ifndef PGDLLEXPORT
-#define PGDLLEXPORT
 #endif
 #ifndef PGDLLEXPORT
 #define PGDLLEXPORT

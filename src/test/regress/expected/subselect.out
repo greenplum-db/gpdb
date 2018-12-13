@@ -629,19 +629,20 @@ select '1'::text in (select '1'::name union all select '1'::name);
 set enable_hashjoin to 0;
 explain select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
-                                            QUERY PLAN                                             
----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice2; segments: 3)  (cost=1.02..2.03 rows=1 width=4)
-   ->  Seq Scan on int4_tbl o  (cost=1.02..2.03 rows=1 width=4)
-         Filter: (hashed SubPlan 1)
-         SubPlan 1
-           ->  Materialize  (cost=1.02..1.03 rows=1 width=4)
-                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..1.01 rows=1 width=4)
-                       ->  Result  (cost=0.00..1.01 rows=1 width=4)
-                             ->  Seq Scan on int4_tbl i  (cost=0.00..1.01 rows=1 width=4)
- Settings:  enable_hashjoin=off; optimizer=off
- Optimizer status: legacy query optimizer
-(10 rows)
+                                           QUERY PLAN                                           
+------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000019.54 rows=4 width=4)
+   ->  Nested Loop Semi Join  (cost=10000000000.00..10000000019.54 rows=2 width=4)
+         Join Filter: (o.f1 = "ANY_subquery".f1)
+         ->  Seq Scan on int4_tbl o  (cost=0.00..1.01 rows=1 width=4)
+         ->  Materialize  (cost=0.00..18.51 rows=1 width=8)
+               ->  Subquery Scan on "ANY_subquery"  (cost=0.00..18.51 rows=1 width=8)
+                     Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
+                     ->  Result  (cost=0.00..6.01 rows=334 width=4)
+                           ->  Seq Scan on int4_tbl i  (cost=0.00..6.01 rows=334 width=4)
+ Planning time: 1.535 ms
+ Optimizer: legacy query optimizer
+(11 rows)
 
 select * from int4_tbl o where (f1, f1) in
   (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);

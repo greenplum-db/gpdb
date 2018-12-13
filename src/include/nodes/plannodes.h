@@ -299,14 +299,20 @@ typedef struct Plan
  * If resconstantqual isn't NULL, it represents a one-time qualification
  * test (i.e., one that doesn't depend on any variables from the outer plan,
  * so needs to be evaluated only once).
+ *
+ * If numHashFilterCols is non-zero, we compute a cdbhash value based
+ * on the columns listed in hashFilterColIdx for each input row. If the
+ * target segment based on the hash doesn't match the current execution
+ * segment, the row is discarded.
  * ----------------
  */
 typedef struct Result
 {
 	Plan		plan;
 	Node	   *resconstantqual;
-	bool		hashFilter;
-	List	   *hashList;
+
+	int			numHashFilterCols;
+	AttrNumber *hashFilterColIdx;
 } Result;
 
 /* ----------------

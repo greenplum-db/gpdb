@@ -422,12 +422,12 @@ ALTER TABLE
 insert into part_hybrid_part ( P_PARTKEY ,P_SIZE, P_CONTAINER ,P_RETAILPRICE ,P_COMMENT ) select P_PARTKEY ,P_SIZE  , P_CONTAINER   , P_RETAILPRICE  , P_COMMENT  from part LIMIT 10000;
 INSERT 0 199
 ALTER TABLE PART_hybrid_part DROP COLUMN P_PARTKEY;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 insert into part_hybrid_part ( P_SIZE  , P_CONTAINER ,P_RETAILPRICE ,P_COMMENT) select P_SIZE, P_CONTAINER, P_RETAILPRICE  , P_COMMENT from part LIMIT 10000;
 INSERT 0 199
@@ -521,46 +521,46 @@ ALTER TABLE
 insert into customer_hybrid_part ( C_CUSTKEY ,C_NATIONKEY,C_PHONE ,C_ACCTBAL ,C_MKTSEGMENT ,C_COMMENT      ) select C_CUSTKEY  ,C_NATIONKEY ,C_PHONE ,C_ACCTBAL , C_MKTSEGMENT, C_COMMENT from customer LIMIT 10000;
 INSERT 0 149
 ALTER TABLE CUSTOMER_hybrid_part DROP COLUMN C_CUSTKEY;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 insert into customer_hybrid_part ( C_NATIONKEY  ,C_PHONE  ,C_ACCTBAL ,C_MKTSEGMENT,C_COMMENT     ) select C_NATIONKEY ,C_PHONE   ,  C_ACCTBAL , C_MKTSEGMENT  , C_COMMENT from customer LIMIT 10000;
 INSERT 0 149
@@ -587,39 +587,39 @@ Distributed randomly
 Partition by: (c_nationkey)
 
 ALTER TABLE ORDERS_hybrid_part DROP COLUMN O_ORDERKEY ;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 insert into orders_hybrid_part (  O_CUSTKEY ,O_ORDERSTATUS,O_TOTALPRICE ,O_ORDERDATE ,O_ORDERPRIORITY ,O_CLERK,O_SHIPPRIORITY,O_COMMENT) select O_CUSTKEY , O_ORDERSTATUS, O_TOTALPRICE,O_ORDERDATE ,O_ORDERPRIORITY,O_CLERK ,O_SHIPPRIORITY,O_COMMENT from orders LIMIT 10000;
 INSERT 0 1499
@@ -657,13 +657,13 @@ Distributed randomly
 Partition by: (o_shippriority)
 
 ALTER TABLE LINEITEM_hybrid_part DROP COLUMN L_ORDERKEY;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 insert into lineitem_hybrid_part ( L_PARTKEY , L_SUPPKEY  ,L_LINENUMBER ,L_QUANTITY     , L_EXTENDEDPRICE   ,L_DISCOUNT ,L_TAX  ,L_RETURNFLAG , L_LINESTATUS ,L_SHIPDATE , L_COMMITDATE  , L_RECEIPTDATE ,L_SHIPINSTRUCT  ,L_SHIPMODE ,L_COMMENT  ) select L_PARTKEY  ,L_SUPPKEY ,L_LINENUMBER ,L_QUANTITY,L_EXTENDEDPRICE , L_DISCOUNT  , L_TAX , L_RETURNFLAG , L_LINESTATUS ,L_SHIPDATE ,L_COMMITDATE,L_RECEIPTDATE ,L_SHIPINSTRUCT  ,L_SHIPMODE ,L_COMMENT from lineitem LIMIT 10000;
 INSERT 0 2999

@@ -97,13 +97,8 @@ makeCdbCopy(bool is_copy_in)
 
 	/* fresh start */
 	c->total_segs = 0;
-	c->mirror_map = NULL;
 	c->copy_in = is_copy_in;
-	c->skip_ext_partition = false;
 	c->outseglist = NIL;
-	c->partitions = NULL;
-	c->ao_segnos = NIL;
-	c->hasReplicatedTable = false;
 	c->dispatcherState = NULL;
 	initStringInfo(&(c->copy_out_buf));
 
@@ -130,28 +125,18 @@ makeCdbCopy(bool is_copy_in)
  * may pg_throw via elog/ereport.
  */
 void
-cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy)
+cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
+			 PartitionNode *partitions, List *ao_segnos)
 {
 	int			flags;
 
 	stmt = copyObject(stmt);
 
 	/* add in partitions for dispatch */
-	stmt->partitions = c->partitions;
+	stmt->partitions = partitions;
 
 	/* add in AO segno map for dispatch */
-	stmt->ao_segnos = c->ao_segnos;
-
-	stmt->skip_ext_partition = c->skip_ext_partition;
-
-	if (policy)
-	{
-		stmt->policy = GpPolicyCopy(policy);
-	}
-	else
-	{
-		stmt->policy = createRandomPartitionedPolicy(GP_POLICY_ALL_NUMSEGMENTS);
-	}
+	stmt->ao_segnos = ao_segnos;
 
 	flags = DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR;
 	if (c->copy_in)
@@ -581,7 +566,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 				segment_rows_completed = res->numCompleted;
 
 			/* Get AO tuple counts */
-			c->aotupcounts = PQprocessAoTupCounts(c->partitions, c->aotupcounts,
+			c->aotupcounts = PQprocessAoTupCounts(c->aotupcounts,
 												  res->aotupcounts, res->naotupcounts);
 			/* free the PGresult object */
 			PQclear(res);
@@ -630,8 +615,7 @@ cdbCopyEndInternal(CdbCopy *c, char *abort_msg,
 		ereport(ERROR,
 				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 				 (errmsg("MPP detected %d segment failures, system is reconnected",
-						 num_bad_connections),
-				  errSendAlert(true))));
+						 num_bad_connections))));
 	}
 
 	/*

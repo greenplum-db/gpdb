@@ -251,6 +251,7 @@ class GpMirrorListToBuild:
 
         # figure out what needs to be started or transitioned
         mirrorsToStart = []
+        rewindInfo = []
         primariesToConvert = []
         convertPrimaryUsingFullResync = []
         fullResyncMirrorDbIds = {}
@@ -260,6 +261,16 @@ class GpMirrorListToBuild:
                 seg = toRecover.getFailedSegment()  # we are recovering in place
             mirrorsToStart.append(seg)
             primarySeg = toRecover.getLiveSegment()
+
+            # Append to rewindInfo to execute pg_rewind later if we are not
+            # using full recovery. We will run pg_rewind on incremental recovery
+            # if the target mirror does not have recovery.conf file because
+            # segment failover happened. The check for recovery.conf file will
+            # happen in the same remote SegmentRewind Command call.
+            if not toRecover.isFullSynchronization() \
+               and seg.getSegmentRole() == gparray.ROLE_MIRROR:
+                rewindInfo.append((seg, primarySeg.getSegmentHostName(), primarySeg.getSegmentPort()))
+
             # The change in configuration to of the mirror to down requires
             # that the primary also be change to change tracking if required.
             if primarySeg.getSegmentMode() != gparray.MODE_CHANGELOGGING:
@@ -277,9 +288,17 @@ class GpMirrorListToBuild:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
             self.__logger.info("Updating mirrors")
-            self.__updateGpIdFile(gpEnv, gpArray, mirrorsToStart)
+
             if actionName ==  "add":
                 self.__registerMirrorsInCatalog(gpArray)
+
+            if len(rewindInfo) != 0:
+                self.__logger.info("Running pg_rewind on required mirrors")
+                rewindFailedSegments = self.run_pg_rewind(rewindInfo)
+
+                # Do not start mirrors that failed pg_rewind
+                for failedSegment in rewindFailedSegments:
+                    mirrorsToStart.remove(failedSegment)
 
             self.__logger.info("Starting mirrors")
             start_all_successful = self.__startAll(gpEnv, gpArray, mirrorsToStart)
@@ -288,6 +307,30 @@ class GpMirrorListToBuild:
             signal.signal(signal.SIGINT, signal.default_int_handler)
 
         return start_all_successful
+
+    def run_pg_rewind(self, rewindInfo):
+        """
+        Run pg_rewind for incremental recovery.
+        """
+
+        rewindFailedSegments = []
+        # Run pg_rewind on all the targets
+        for targetSegment, sourceHostName, sourcePort in rewindInfo:
+            cmd = gp.SegmentRewind('segment rewind',
+                                   targetSegment.getSegmentHostName(),
+                                   targetSegment.getSegmentDataDirectory(),
+                                   sourceHostName,
+                                   sourcePort,
+                                   verbose=gplog.logging_is_verbose())
+            try:
+                cmd.run(True)
+                self.__logger.debug('pg_rewind results: %s' % cmd.results)
+            except base.ExecutionError as e:
+                self.__logger.debug("pg_rewind failed for target directory %s." % targetSegment.getSegmentDataDirectory())
+                self.__logger.warning("Incremental recovery failed for dbid %s. You must use gprecoverseg -F to recover the segment." % targetSegment.getSegmentDbId())
+                rewindFailedSegments.append(targetSegment)
+
+        return rewindFailedSegments
 
     def checkForPortAndDirectoryConflicts(self, gpArray):
         """

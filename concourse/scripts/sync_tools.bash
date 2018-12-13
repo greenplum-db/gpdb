@@ -17,10 +17,6 @@ function _main() {
   case "${TARGET_OS}" in
     centos)
         case "${TARGET_OS_VERSION}" in
-         5)
-           BLD_ARCH=rhel5_x86_64
-           ;;
-
          6)
            BLD_ARCH=rhel6_x86_64
            ;;
@@ -45,10 +41,6 @@ function _main() {
   case "${TASK_OS}" in
     centos)
         case "${TASK_OS_VERSION}" in
-         5)
-           export JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.39.x86_64
-           ;;
-
          6)
            export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk.x86_64
            ;;

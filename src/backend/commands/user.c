@@ -54,7 +54,6 @@
 #include "utils/resource_manager.h"
 
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbsrlz.h"
 #include "cdb/cdbvars.h"
 
 

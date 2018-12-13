@@ -932,9 +932,7 @@ cdb_exchange_part_constraints(Relation table,
 
 				ereport(WARNING,
 						(errcode(ERRCODE_WARNING),
-						 errmsg("ignoring inconsistency: \"%s\" "
-								"has no constraint corresponding to \"%s\" "
-								"on \"%s\"",
+						 errmsg("ignoring inconsistency: \"%s\" has no constraint corresponding to \"%s\" on \"%s\"",
 								RelationGetRelationName(part),
 								NameStr(con->conname),
 								RelationGetRelationName(table))));
@@ -1089,7 +1087,7 @@ cdb_exchange_part_constraints(Relation table,
 				 errmsg("invalid constraint(s) found on \"%s\": %s",
 						RelationGetRelationName(cand),
 						constraint_names(excess_constraints)),
-				 errhint("drop the invalid constraints and retry")));
+				 errhint("Drop the invalid constraints and retry.")));
 	}
 
 	if (missing_part_constraints)
@@ -1952,8 +1950,8 @@ parruleord_open_gap(Oid partid, int16 level, Oid parent, int16 ruleord,
 	 */
 	if (ruleord < 1)
 		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-			errmsg("too many partitions, parruleord overflow")));
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("too many partitions, parruleord overflow")));
 
 	/*---
 	 * This is equivalent to:
@@ -3594,7 +3592,7 @@ magic_expr_to_datum(Relation rel, PartitionNode *partnode,
 			if (!IsA(n1, Const))
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("Not a constant expression")));
+						 errmsg("not a constant expression")));
 
 			c1 = (Const *) n1;
 
@@ -4569,7 +4567,7 @@ get_part_rule1(Relation rel,
 	if (!pid)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("No partition id specified for %s",
+				 errmsg("no partition id specified for \"%s\"",
 						relname)));
 
 	namBuf[0] = 0;
@@ -4601,9 +4599,6 @@ get_part_rule1(Relation rel,
 			{
 				snprintf(partIdStr, sizeof(partIdStr), " for specified rank");
 
-#ifdef WIN32
-#define round(x) (x+0.5)
-#endif
 				if (IsA(pid->partiddef, Integer))
 					idrank = intVal(pid->partiddef);
 				else if (IsA(pid->partiddef, Float))
@@ -4698,7 +4693,7 @@ get_part_rule1(Relation rel,
 			if (pNode->part->parkind == 'l')
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot find partition by RANK -- %s is LIST partitioned",
+						 errmsg("cannot find partition by RANK -- \"%s\" is LIST partitioned",
 								relname)));
 
 			partrelid = selectPartitionByRank(pNode, idrank);
@@ -4822,13 +4817,9 @@ get_part_rule1(Relation rel,
 		if (bMustExist)
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("FOR expression matches "
-							"DEFAULT partition%s of %s",
-							prule->isName ?
-							partIdStr : "",
-							relname),
-					 errhint("FOR expression may only specify "
-							 "a non-default partition in this context.")));
+					 errmsg("FOR expression matches DEFAULT partition%s of %s",
+							prule->isName ? partIdStr : "", relname),
+					 errhint("FOR expression may only specify a non-default partition in this context.")));
 
 	}
 
@@ -4847,8 +4838,7 @@ get_part_rule1(Relation rel,
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
 						 errmsg("partition%s of %s does not exist",
-								partIdStr,
-								relname)));
+								partIdStr, relname)));
 				break;
 			case AT_AP_IDDefault:	/* IDentify DEFAULT partition */
 				ereport(ERROR,
@@ -4876,16 +4866,13 @@ get_part_rule1(Relation rel,
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 						 errmsg("partition%s of %s already exists",
-								partIdStr,
-								relname)));
+								partIdStr, relname)));
 				break;
 			case AT_AP_IDDefault:	/* IDentify DEFAULT partition */
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 						 errmsg("DEFAULT partition%s of %s already exists",
-								prule->isName ?
-								partIdStr : "",
-								relname)));
+								prule->isName ? partIdStr : "", relname)));
 				break;
 			default:			/* XXX XXX */
 				Assert(false);
@@ -5450,15 +5437,13 @@ atpxPartAddList(Relation rel,
 			if (pbs->partEvery)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("cannot specify EVERY when adding "
-								"RANGE partition to %s",
+						 errmsg("cannot specify EVERY when adding RANGE partition to %s",
 								lrelname)));
 
 			if (!(pbs->partStart || pbs->partEnd))
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("Need START or END when adding "
-								"RANGE partition to %s",
+						 errmsg("need START or END when adding RANGE partition to %s",
 								lrelname)));
 
 			/* if no START, then START after last partition */
@@ -5500,7 +5485,7 @@ atpxPartAddList(Relation rel,
 						 */
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("invalid partition range specification.")));
+								 errmsg("invalid partition range specification")));
 					}
 
 					PartitionRangeItem *ri =
@@ -7154,561 +7139,6 @@ exchange_permissions(Oid oldrelid, Oid newrelid)
 	heap_close(rel, NoLock);
 }
 
-
-bool
-atpxModifyListOverlap(Relation rel,
-					  AlterPartitionId *pid,
-					  PgPartRule *prule,
-					  PartitionElem *pelem,
-					  bool bAdd)
-{
-	if (prule->pNode->default_part && bAdd)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("cannot MODIFY %s partition%s for "
-						"relation \"%s\" to ADD values -- would "
-						"overlap DEFAULT partition \"%s\"",
-						"LIST",
-						prule->partIdStr,
-						RelationGetRelationName(rel),
-						prule->pNode->default_part->parname),
-				 errhint("need to SPLIT partition \"%s\"",
-						 prule->pNode->default_part->parname)));
-
-	{
-		ListCell   *lc;
-		PartitionValuesSpec *pVSpec;
-		AlterPartitionId pid2;
-		PartitionNode *pNode = prule->pNode;
-
-		Assert(IsA(pelem->boundSpec, PartitionValuesSpec));
-
-		MemSet(&pid2, 0, sizeof(AlterPartitionId));
-
-		/* this function does transformExpr on the boundary specs */
-		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  rel,
-									  NULL, /* CreateStmt */
-									  pelem,
-									  pNode,
-									  (pid->idtype == AT_AP_IDName) ?
-									  strVal(pid->partiddef) : NULL,
-									  false,	/* isDefault */
-									  PARTTYP_LIST, /* part_type */
-									  prule->partIdStr);
-
-		pVSpec = (PartitionValuesSpec *) pelem->boundSpec;
-
-		foreach(lc, pVSpec->partValues)
-		{
-			List	   *vals = lfirst(lc);
-			PgPartRule *prule2 = NULL;
-
-			pid2.idtype = AT_AP_IDValue;
-			pid2.partiddef = (Node *) vals;
-			pid2.location = -1;
-
-			prule2 = get_part_rule(rel, &pid2, false, false,
-								   NULL, false);
-
-			if (bAdd)
-			{
-				/* if ADDing a value, should not match */
-
-				if (prule2)
-				{
-					if (prule2->topRuleRank != prule->topRuleRank)
-						ereport(ERROR,
-								(errcode(ERRCODE_UNDEFINED_OBJECT),
-								 errmsg("cannot MODIFY LIST partition%s for "
-										"relation \"%s\" -- "
-										"would overlap "
-										"existing partition%s",
-										prule->partIdStr,
-										RelationGetRelationName(rel),
-										prule2->isName ?
-										prule2->partIdStr : "")));
-					else
-						ereport(ERROR,
-								(errcode(ERRCODE_UNDEFINED_OBJECT),
-								 errmsg("cannot MODIFY LIST partition%s for "
-										"relation \"%s\" -- "
-										"ADD value has duplicate in "
-										"existing partition",
-										prule->partIdStr,
-										RelationGetRelationName(rel))));
-				}
-			}
-			else				/* DROP values */
-			{
-				/*
-				 * if DROPping a value, it should only be in the specified
-				 * partition
-				 */
-
-				if (!prule2)
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-							 errmsg("cannot MODIFY LIST partition%s for "
-									"relation \"%s\" -- DROP value not found",
-									prule->partIdStr,
-									RelationGetRelationName(rel))));
-				}
-
-				if (prule2 && (prule2->topRuleRank != prule->topRuleRank))
-				{
-					ereport(ERROR,
-							(errcode(ERRCODE_UNDEFINED_OBJECT),
-							 errmsg("cannot MODIFY LIST partition%s for "
-									"relation \"%s\" -- "
-									"found DROP value in%s partition%s",
-									prule->partIdStr,
-									RelationGetRelationName(rel),
-									prule2->isName ? "" : "other",
-									prule2->isName ? prule2->partIdStr : "")));
-				}
-			}
-
-		}						/* end foreach */
-	}
-
-	return false;
-}								/* end atpxModifyListOverlap */
-
-bool
-atpxModifyRangeOverlap(Relation rel,
-					   AlterPartitionId *pid,
-					   PgPartRule *prule,
-					   PartitionElem *pelem)
-{
-	PgPartRule *prule2 = NULL;
-	AlterPartitionId pid2;
-	PartitionNode *pNode = prule->pNode;
-	bool		bCheckStart = true;
-	PartitionBoundSpec *pbs = NULL;
-	ParseState *pstate;
-	bool		bOverlap = false;
-	bool	   *isnull;
-	TupleDesc	tupledesc = RelationGetDescr(rel);
-	Datum	   *d_start = NULL;
-	Datum	   *d_end = NULL;
-	Node	   *pRangeValList = NULL;
-	int			ii;
-
-	Assert(IsA(pelem->boundSpec, PartitionBoundSpec));
-
-	pbs = (PartitionBoundSpec *) pelem->boundSpec;
-
-	for (ii = 0; ii < 2; ii++)
-	{
-		PartitionRangeItem *ri;
-
-		if (bCheckStart)		/* check START first, then END */
-		{
-			if (!(pbs->partStart))
-			{
-				bCheckStart = false;
-
-				if (prule->topRule->parrangestart)
-				{
-					PartitionRangeItem *ri = makeNode(PartitionRangeItem);
-
-					ri->location = -1;
-
-					ri->partRangeVal =
-						copyObject(prule->topRule->parrangestart);
-
-					ri->partedge = prule->topRule->parrangestartincl ?
-						PART_EDGE_INCLUSIVE :
-						PART_EDGE_EXCLUSIVE;
-
-					/* no start, so use current start */
-					pbs->partStart = (Node *) ri;
-				}
-
-				continue;
-			}
-			ri = (PartitionRangeItem *) pbs->partStart;
-		}
-		else
-		{
-			/* no END, so we are done */
-			if (!(pbs->partEnd))
-			{
-
-				if (prule->topRule->parrangeend)
-				{
-					PartitionRangeItem *ri = makeNode(PartitionRangeItem);
-
-					ri->location = -1;
-
-					ri->partRangeVal = copyObject(prule->topRule->parrangeend);
-
-					ri->partedge = prule->topRule->parrangeendincl ?
-						PART_EDGE_INCLUSIVE :
-						PART_EDGE_EXCLUSIVE;
-
-					/* no end, so use current end */
-					pbs->partEnd = (Node *) ri;
-				}
-
-				break;
-			}
-			ri = (PartitionRangeItem *) pbs->partEnd;
-		}
-
-		MemSet(&pid2, 0, sizeof(AlterPartitionId));
-
-		pid2.idtype = AT_AP_IDValue;
-		pstate = make_parsestate(NULL);
-		pRangeValList = (Node *) copyObject(ri->partRangeVal);
-		pRangeValList = (Node *)
-			transformExpressionList(pstate, (List *) pRangeValList,
-									EXPR_KIND_PARTITION_EXPRESSION);
-		free_parsestate(pstate);
-		pid2.partiddef = pRangeValList;
-		pid2.location = -1;
-
-		prule2 = get_part_rule(rel, &pid2, false, false,
-							   NULL, false);
-
-		if (!prule2)
-		{
-			/*
-			 * no rules matched -- this is ok as long as no default partition
-			 */
-			if (prule->pNode->default_part)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("cannot MODIFY %s partition%s for "
-								"relation \"%s\" to extend range -- would "
-								"overlap DEFAULT partition \"%s\"",
-								"RANGE",
-								prule->partIdStr,
-								RelationGetRelationName(rel),
-								prule->pNode->default_part->parname),
-						 errhint("need to SPLIT partition \"%s\"",
-								 prule->pNode->default_part->parname)));
-
-			/* if only 1 partition no further check needed */
-			if (1 == list_length(pNode->rules))
-				continue;
-
-			if (bCheckStart)
-			{
-				bool		bstat;
-				PartitionRule *a_rule;
-
-				/* check for adjacent partition */
-				if (1 == prule->topRuleRank)
-					continue;	/* no previous, so changing start is ok */
-
-				MemSet(&pid2, 0, sizeof(AlterPartitionId));
-
-				pid2.idtype = AT_AP_IDRank;
-				pid2.partiddef = (Node *) makeInteger(prule->topRuleRank - 1);
-				pid2.location = -1;
-
-				prule2 = get_part_rule(rel, &pid2, false, false,
-									   NULL, false);
-
-				Assert(prule2);
-
-				a_rule = prule2->topRule;
-
-				/* just check against end of adjacent partition */
-				d_start =
-					magic_expr_to_datum(rel, pNode,
-										pRangeValList, &isnull);
-
-				bstat =
-					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   ">",
-										   (List *) a_rule->parrangeend,
-										   d_start, isnull, tupledesc);
-				if (bstat)
-				{
-					/* end > new start - overlap */
-					bOverlap = true;
-					break;
-				}
-
-				/*
-				 * could be the case that new start == end of previous.  This
-				 * is ok if they have opposite INCLUSIVE/EXCLUSIVE.
-				 */
-
-				bstat =
-					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   "=",
-										   (List *) a_rule->parrangeend,
-										   d_start, isnull, tupledesc);
-
-				if (bstat)
-				{
-					if (a_rule->parrangeendincl ==
-						(ri->partedge == PART_EDGE_INCLUSIVE))
-					{
-						/*
-						 * start and end must be of opposite types, else they
-						 * overlap
-						 */
-						bOverlap = true;
-						break;
-					}
-				}
-			}
-			else				/* check the end */
-			{
-				bool		bstat;
-				PartitionRule *a_rule;
-
-				/* check for adjacent partition */
-				if (list_length(pNode->rules) == prule->topRuleRank)
-					continue;	/* no next, so changing end is ok */
-
-				MemSet(&pid2, 0, sizeof(AlterPartitionId));
-
-				pid2.idtype = AT_AP_IDRank;
-				pid2.partiddef = (Node *) makeInteger(prule->topRuleRank + 1);
-				pid2.location = -1;
-
-				prule2 = get_part_rule(rel, &pid2, false, false,
-									   NULL, false);
-
-				Assert(prule2);
-
-				a_rule = prule2->topRule;
-
-				/* just check against start of adjacent partition */
-				d_end =
-					magic_expr_to_datum(rel, pNode,
-										pRangeValList, &isnull);
-
-				bstat =
-					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   "<",
-										   (List *) a_rule->parrangestart,
-										   d_end, isnull, tupledesc);
-				if (bstat)
-				{
-					/* start < new end - overlap */
-					bOverlap = true;
-					break;
-				}
-
-				/*
-				 * could be the case that new end == start of next.  This is
-				 * ok if they have opposite INCLUSIVE/EXCLUSIVE.
-				 */
-
-				bstat =
-					compare_partn_opfuncid(pNode,
-										   "pg_catalog",
-										   "=",
-										   (List *) a_rule->parrangestart,
-										   d_end, isnull, tupledesc);
-
-				if (bstat)
-				{
-					if (a_rule->parrangeendincl ==
-						(ri->partedge == PART_EDGE_INCLUSIVE))
-					{
-						/*
-						 * start and end must be of opposite types, else they
-						 * overlap
-						 */
-						bOverlap = true;
-						break;
-					}
-				}
-			}					/* end else check the end */
-
-		}
-		else
-		{
-			/*
-			 * matched a rule - definitely a problem if the range was
-			 * inclusive
-			 */
-			if (prule2->topRuleRank != prule->topRuleRank)
-			{
-				if (0 == prule2->topRuleRank)
-					ereport(ERROR,
-							(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-							 errmsg("cannot MODIFY %s partition%s for "
-									"relation \"%s\" to extend range -- would "
-									"overlap DEFAULT partition \"%s\"",
-									"RANGE",
-									prule->partIdStr,
-									RelationGetRelationName(rel),
-									prule->pNode->default_part->parname),
-							 errhint("need to SPLIT partition \"%s\"",
-									 prule->pNode->default_part->parname)));
-
-
-				if (ri->partedge == PART_EDGE_INCLUSIVE)
-				{
-					bOverlap = true;
-					break;
-				}
-
-				/* range was exclusive -- need to do some checking */
-				if (bCheckStart)
-				{
-					bool		bstat;
-					PartitionRule *a_rule = prule2->topRule;
-
-					/* check for adjacent partition */
-					if ((prule->topRuleRank - 1) != prule2->topRuleRank)
-					{
-						bOverlap = true;
-						break;
-					}
-
-					/* just check against end of adjacent partition */
-					d_start =
-						magic_expr_to_datum(rel, pNode,
-											pid2.partiddef, &isnull);
-
-					bstat =
-						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   ">",
-											   (List *) a_rule->parrangeend,
-											   d_start, isnull, tupledesc);
-					if (bstat)
-					{
-						/* end > new start - overlap */
-						bOverlap = true;
-						break;
-					}
-
-					/*
-					 * Must be the case that new start == end of a_rule
-					 * (because if the end < new start then how could we find
-					 * it in the interval for prule ?) This is ok if they have
-					 * opposite INCLUSIVE/EXCLUSIVE ->  New partition does not
-					 * overlap.
-					 */
-
-					Assert(compare_partn_opfuncid(pNode,
-												  "pg_catalog",
-												  "=",
-												  (List *) a_rule->parrangeend,
-												  d_start, isnull, tupledesc));
-
-					if (a_rule->parrangeendincl ==
-						(ri->partedge == PART_EDGE_INCLUSIVE))
-					{
-						/*
-						 * start and end must be of opposite types, else they
-						 * overlap
-						 */
-						bOverlap = true;
-						break;
-					}
-				}
-				else			/* check the end */
-				{
-					bool		bstat;
-					PartitionRule *a_rule = prule2->topRule;
-
-					/* check for adjacent partition */
-					if ((prule->topRuleRank + 1) != prule2->topRuleRank)
-					{
-						bOverlap = true;
-						break;
-					}
-
-					/* just check against start of adjacent partition */
-					d_end =
-						magic_expr_to_datum(rel, pNode,
-											pid2.partiddef, &isnull);
-
-					bstat =
-						compare_partn_opfuncid(pNode,
-											   "pg_catalog",
-											   "<",
-											   (List *) a_rule->parrangestart,
-											   d_end, isnull, tupledesc);
-					if (bstat)
-					{
-						/* start < new end - overlap */
-						bOverlap = true;
-						break;
-					}
-
-					/*
-					 * Must be the case that new end = start of a_rule
-					 * (because if the start > new end then how could we find
-					 * it in the interval for prule ?) This is ok if they have
-					 * opposite INCLUSIVE/EXCLUSIVE ->  New partition does not
-					 * overlap.
-					 */
-
-					Assert(compare_partn_opfuncid(pNode,
-												  "pg_catalog",
-												  "=",
-												  (List *) a_rule->parrangestart,
-												  d_end, isnull, tupledesc));
-
-					if (a_rule->parrangestartincl ==
-						(ri->partedge == PART_EDGE_INCLUSIVE))
-					{
-						/*
-						 * start and end must be of opposite types, else they
-						 * overlap
-						 */
-						bOverlap = true;
-						break;
-					}
-				}				/* end else check the end */
-			}					/* end if (prule2->topRuleRank !=
-								 * prule->topRuleRank) */
-		}
-
-		/* if checked START, then check END.  If checked END, then done */
-		if (!bCheckStart)
-			break;
-		if (bCheckStart)
-			bCheckStart = false;
-	}							/* end for */
-
-	if (bOverlap)
-		ereport(ERROR,
-				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("cannot MODIFY RANGE partition%s for "
-						"relation \"%s\" -- "
-						"would overlap "
-						"existing partition%s",
-						prule->partIdStr,
-						RelationGetRelationName(rel),
-						(prule2 && prule2->isName) ?
-						prule2->partIdStr : "")));
-
-	{
-		/* this function does transformExpr on the boundary specs */
-		(void) atpxPart_validate_spec(makeNode(PartitionBy),
-									  rel,
-									  NULL, /* CreateStmt */
-									  pelem,
-									  pNode,
-									  (pid->idtype == AT_AP_IDName) ?
-									  strVal(pid->partiddef) : NULL,
-									  false,	/* isDefault */
-									  PARTTYP_RANGE,	/* part_type */
-									  prule->partIdStr);
-	}
-
-
-	return false;
-}								/* end atpxModifyRangeOverlap */
-
 static void
 atpxSkipper(PartitionNode *pNode, int *skipped)
 {
@@ -7795,8 +7225,7 @@ build_rename_part_recurse(PartitionRule *rule, const char *old_parentname,
 			if (strlen(newRelNameBuf) > NAMEDATALEN)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("relation name \"%s\" for child partition "
-								"is too long",
+						 errmsg("relation name \"%s\" for child partition is too long",
 								newRelNameBuf)));
 
 			l1 = lappend(l1, list_make2(rv, pstrdup(newRelNameBuf)));
@@ -8074,8 +7503,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot exchange DEFAULT partition "
-								"with external table")));
+						 errmsg("cannot exchange DEFAULT partition with external table")));
 		}
 
 		ExtTableEntry *extEntry = GetExtTableEntry(newrel->rd_id);
@@ -8086,8 +7514,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot exchange relation "
-								"which is a WRITABLE external table")));
+						 errmsg("cannot exchange relation which is a WRITABLE external table")));
 		}
 	}
 
@@ -8123,8 +7550,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("owner of \"%s\" must be the same as that "
-							"of \"%s\"",
+					 errmsg("owner of \"%s\" must be the same as that of \"%s\"",
 							RelationGetRelationName(newrel),
 							RelationGetRelationName(rel))));
 	}
@@ -8148,8 +7574,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot EXCHANGE table \"%s\" as it has "
-							"child table(s)",
+					 errmsg("cannot EXCHANGE table \"%s\" as it has child table(s)",
 							RelationGetRelationName(newrel))));
 	}
 
@@ -8159,8 +7584,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot exchange table \"%s\" as it "
-							"inherits other table(s)",
+					 errmsg("cannot exchange table \"%s\" as it inherits other table(s)",
 							RelationGetRelationName(newrel))));
 	}
 
@@ -8171,8 +7595,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot exchange table which has rules "
-							"defined on it")));
+					 errmsg("cannot exchange table which has rules defined on it")));
 	}
 
 	/*
@@ -8240,8 +7663,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("distribution policy for \"%s\" "
-								"must be the same as that for \"%s\"",
+						 errmsg("distribution policy for \"%s\" must be the same as that for \"%s\"",
 								RelationGetRelationName(newrel),
 								RelationGetRelationName(rel))));
 		}
@@ -8453,9 +7875,8 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("%s constraint \"%s\" missing", what, who),
-							 errhint("Add %s constraint \"%s\" to the candidate table"
-									 " or drop it from the partitioned table."
-									 ,what, who)));
+							 errhint("Add %s constraint \"%s\" to the candidate table or drop it from the partitioned table.",
+									 what, who)));
 				}
 				else
 				{
@@ -8463,9 +7884,8 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("WITHOUT VALIDATION incompatible with missing %s constraint \"%s\"",
 									what, who),
-							 errhint("Add %s constraint %s to the candidate table"
-									 " or drop it from the partitioned table."
-									 ,what, who)));
+							 errhint("Add %s constraint %s to the candidate table or drop it from the partitioned table.",
+									 what, who)));
 
 				}
 				break;
@@ -8779,8 +8199,7 @@ checkUniqueConstraintVsPartitioning(Relation rel, AttrNumber *indattr, int nidxa
 
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("%s constraint must contain all columns in the "
-						"partition key of relation \"%s\".",
+				 errmsg("%s constraint must contain all columns in the partition key of relation \"%s\"",
 						what, RelationGetRelationName(rel)),
 				 errhint("Include the partition key or create a part-wise UNIQUE index instead.")));
 	}

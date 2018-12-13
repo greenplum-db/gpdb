@@ -40,7 +40,8 @@ oidin_subr(const char *s, char **endloc)
 	if (*s == '\0')
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type oid: \"%s\"",s)));
+				 errmsg("invalid input syntax for type oid: \"%s\"",
+						s)));
 
 	errno = 0;
 	cvt = strtoul(s, &endptr, 10);
@@ -53,12 +54,14 @@ oidin_subr(const char *s, char **endloc)
 	if (errno && errno != ERANGE && errno != EINVAL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type oid: \"%s\"",s)));
+				 errmsg("invalid input syntax for type oid: \"%s\"",
+						s)));
 
 	if (endptr == s && *s != '\0')
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-				 errmsg("invalid input syntax for type oid: \"%s\"",s)));
+				 errmsg("invalid input syntax for type oid: \"%s\"",
+						s)));
 
 	if (errno == ERANGE)
 		ereport(ERROR,
@@ -78,7 +81,8 @@ oidin_subr(const char *s, char **endloc)
 		if (*endptr)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-					 errmsg("invalid input syntax for type oid: \"%s\"",s)));
+					 errmsg("invalid input syntax for type oid: \"%s\"",
+							s)));
 	}
 
 	result = (Oid) cvt;

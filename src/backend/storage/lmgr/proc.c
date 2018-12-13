@@ -67,6 +67,7 @@
 #include "port/atomics.h"
 #include "postmaster/fts.h"
 #include "tcop/idle_resource_cleaner.h"
+#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 #include "utils/session_state.h"
 

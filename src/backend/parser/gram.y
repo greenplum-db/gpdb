@@ -1791,7 +1791,6 @@ AlterRoleSetStmt:
 		;
 
 
-
 /*****************************************************************************
  *
  * Alter a postgresql DBMS user
@@ -3205,10 +3204,8 @@ alter_table_partition_id_spec_with_opt_default:
 			| DEFAULT PARTITION alter_table_partition_id_spec
 				{
 					ereport(ERROR,
-                            (errcode(ERRCODE_SYNTAX_ERROR),
-                             errmsg("Cannot specify a name, rank, "
-                                    "or value for a DEFAULT partition "
-                                    "in this context")));
+							(errcode(ERRCODE_SYNTAX_ERROR),
+							 errmsg("cannot specify a name, rank, or value for a DEFAULT partition in this context")));
 				}
 			| DEFAULT PARTITION 
 				{
@@ -3267,7 +3264,7 @@ alter_table_partition_cmd:
                     if (pid->idtype != AT_AP_IDName)
 						ereport(ERROR,
 								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("Can only ADD a partition by name")));
+								 errmsg("can only ADD a partition by name")));
 
                     pc->partid = (Node *) pid;
 
@@ -3299,7 +3296,7 @@ alter_table_partition_cmd:
                     if (pid->idtype != AT_AP_IDName)
 						ereport(ERROR,
 								(errcode(ERRCODE_SYNTAX_ERROR),
-								 errmsg("Can only ADD a partition by name")));
+								 errmsg("can only ADD a partition by name")));
 
                     pc->partid = (Node *) pid;
 
@@ -5585,14 +5582,14 @@ OptLogErrorTable:
 			{
 			ereport(WARNING,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Error table is not supported, use gp_read_error_log() and gp_truncate_error_log()"
-					 " to view and manage the internal error log associated with your table.")));
+					 errmsg("error table is not supported"),
+					 errhint("Use gp_read_error_log() and gp_truncate_error_log() to view and manage the internal error log associated with your table.")));
 			}
 			else
 			{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Error table is not supported."),
+					 errmsg("error table is not supported"),
 					 errhint("Set gp_ignore_error_table to ignore the [INTO error-table] clause for backward compatibility."),
 					 parser_errposition(@3)));
 			}
@@ -13974,6 +13971,7 @@ func_application: func_name '(' ')'
 				}
 		;
 
+
 /*
  * func_expr and its cousin func_expr_windowless are split out from c_expr just
  * so that we have classifications for "everything that is a function call or
@@ -15489,6 +15487,7 @@ ColLabel:	IDENT									{ $$ = $1; }
 			| type_func_name_keyword				{ $$ = pstrdup($1); }
 			| reserved_keyword						{ $$ = pstrdup($1); }
 		;
+
 
 /*
  * Keyword category lists.  Generally, every keyword present in

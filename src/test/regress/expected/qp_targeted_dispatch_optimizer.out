@@ -803,7 +803,7 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 DROP INDEX id3;
-WARNING:  Only dropped the index "id3"
+WARNING:  only dropped the index "id3"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2

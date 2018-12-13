@@ -10,7 +10,7 @@ ERROR:  table "numeric_readhdfs" does not exist
 -- end_ignore
 create readable external table numeric_heap(datatype_numeric varchar, xcount_numeric bigint,max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric numeric, increment_numeric numeric, nullcol_numeric numeric) location ('gphdfs://10.152.10.234:8020/plaintext/numeric.txt')format 'TEXT';
 create writable external table numeric_writehdfs(like numeric_heap) location ('gphdfs://10.152.10.234:8020/extwrite/numeric')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 create readable external table numeric_readhdfs(like numeric_heap) location ('gphdfs://10.152.10.234:8020/extwrite/numeric') format 'custom' (formatter='gphdfs_import');
 select count(*) from numeric_heap;
  count 

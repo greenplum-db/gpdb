@@ -160,10 +160,25 @@ content|preferred_role|role|status|mode
 1       
 (1 row)
 
+-- create tablespace to test if it works with gprecoverseg -F (pg_basebackup)
+!\retcode mkdir /tmp/mirror_promotion_tablespace_loc;
+(exited with code 0)
+create tablespace mirror_promotion_tablespace location '/tmp/mirror_promotion_tablespace_loc';
+CREATE
+create table mirror_promotion_tblspc_heap_table (a int) tablespace mirror_promotion_tablespace;
+CREATE
+
 -- -- now, let's fully recover the mirror
 !\retcode gprecoverseg -aF;
 -- start_ignore
 -- end_ignore
+(exited with code 0)
+
+drop table mirror_promotion_tblspc_heap_table;
+DROP
+drop tablespace mirror_promotion_tablespace;
+DROP
+!\retcode rm -rf /tmp/mirror_promotion_tablespace_loc;
 (exited with code 0)
 
 -- loop while segments come in sync

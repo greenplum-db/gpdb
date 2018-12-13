@@ -4,7 +4,7 @@ I thought we'd use a method where we identify the size of the next word in
 the index by leveraging the top two bits of the word to describe how large
 the following word is.
 
-This idea works if the word is layed out with the "top bits" inside the
+This idea works if the word is laid out with the "top bits" inside the
 first byte.  However, big endian systems (Intel, AMD) store the topmost
 bits of their words as the *last* byte in the word, which means that we
 can't tell what size the word is without reading the word.  We can't

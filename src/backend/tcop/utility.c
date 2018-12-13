@@ -459,10 +459,8 @@ standard_ProcessUtility(Node *parsetree,
 					case TRANS_STMT_PREPARE:
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							ereport(ERROR, (
-											errcode(ERRCODE_GP_COMMAND_ERROR),
-									 errmsg("PREPARE TRANSACTION is not yet supported in Greenplum Database.")
-											));
+							ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+									errmsg("PREPARE TRANSACTION is not yet supported in Greenplum Database")));
 
 						}
 						PreventCommandDuringRecovery("PREPARE TRANSACTION");
@@ -477,11 +475,8 @@ standard_ProcessUtility(Node *parsetree,
 					case TRANS_STMT_COMMIT_PREPARED:
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							ereport(ERROR, (
-											errcode(ERRCODE_GP_COMMAND_ERROR),
-									 errmsg("COMMIT PREPARED is not yet supported in Greenplum Database.")
-											));
-
+							ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+									errmsg("COMMIT PREPARED is not yet supported in Greenplum Database")));
 						}
 						PreventTransactionChain(isTopLevel, "COMMIT PREPARED");
 						PreventCommandDuringRecovery("COMMIT PREPARED");
@@ -491,11 +486,8 @@ standard_ProcessUtility(Node *parsetree,
 					case TRANS_STMT_ROLLBACK_PREPARED:
 						if (Gp_role == GP_ROLE_DISPATCH)
 						{
-							ereport(ERROR, (
-											errcode(ERRCODE_GP_COMMAND_ERROR),
-									 errmsg("ROLLBACK PREPARED is not yet supported in Greenplum Database.")
-											));
-
+							ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+									errmsg("ROLLBACK PREPARED is not yet supported in Greenplum Database")));
 						}
 						PreventTransactionChain(isTopLevel, "ROLLBACK PREPARED");
 						PreventCommandDuringRecovery("ROLLBACK PREPARED");
@@ -723,10 +715,8 @@ standard_ProcessUtility(Node *parsetree,
 				NotifyStmt *stmt = (NotifyStmt *) parsetree;
 
 				if (Gp_role == GP_ROLE_EXECUTE)
-					ereport(ERROR, (
-								errcode(ERRCODE_GP_COMMAND_ERROR),
-						 errmsg("Notify command cannot run in a function running on a segDB.")
-								));
+					ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
+							errmsg("notify command cannot run in a function running on a segDB")));
 
 				PreventCommandDuringRecovery("NOTIFY");
 				Async_Notify(stmt->conditionname, stmt->payload);
@@ -739,7 +729,7 @@ standard_ProcessUtility(Node *parsetree,
 
 				if (Gp_role == GP_ROLE_EXECUTE)
 					ereport(ERROR,(errcode(ERRCODE_GP_COMMAND_ERROR),
-							errmsg("Listen command cannot run in a function running on a segDB.")));
+							errmsg("listen command cannot run in a function running on a segDB")));
 
 				PreventCommandDuringRecovery("LISTEN");
 				CheckRestrictedOperation("LISTEN");
@@ -753,7 +743,7 @@ standard_ProcessUtility(Node *parsetree,
 
 				if (Gp_role == GP_ROLE_EXECUTE)
 					ereport(ERROR, (errcode(ERRCODE_GP_COMMAND_ERROR),
-							errmsg("Unlisten command cannot run in a function running on a segDB.")));
+							errmsg("unlisten command cannot run in a function running on a segDB")));
 
 				PreventCommandDuringRecovery("UNLISTEN");
 				CheckRestrictedOperation("UNLISTEN");

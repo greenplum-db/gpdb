@@ -101,6 +101,11 @@ recurse_dir(const char *datadir, const char *parentpath,
 
 		if (S_ISREG(fst.st_mode))
 			callback(path, FILE_TYPE_REGULAR, fst.st_size, NULL);
+		else if (S_ISFIFO(fst.st_mode))
+		{
+			/* Greenplum uses FIFO for pgsql_tmp files. */
+			callback(path, FILE_TYPE_FIFO, fst.st_size, NULL);
+		}
 		else if (S_ISDIR(fst.st_mode))
 		{
 			callback(path, FILE_TYPE_DIRECTORY, 0, NULL);

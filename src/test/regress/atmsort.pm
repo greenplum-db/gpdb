@@ -353,11 +353,11 @@ sub init_matchignores
 
     $here_matchignores = << 'EOF_matchignores';
 
-m/^NOTICE:  Dropping a column that is part of the distribution policy/
+m/^NOTICE:  dropping a column that is part of the distribution policy/
 
-m/^NOTICE:  Table has parent\, setting distribution columns to match parent table/
+m/^NOTICE:  table has parent\, setting distribution columns to match parent table/
 
-m/^WARNING:  Referential integrity \(.*\) constraints are not supported in Greenplum Database/
+m/^WARNING:  referential integrity \(.*\) constraints are not supported in Greenplum Database/
 
         # ignore notices for DROP sqlobject IF EXISTS "objectname"
         # eg NOTICE:  table "foo" does not exist, skipping

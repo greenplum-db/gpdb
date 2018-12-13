@@ -185,17 +185,6 @@ exchange_part_rule(Oid oldrelid, Oid newrelid);
 extern void
 exchange_permissions(Oid oldrelid, Oid newrelid);
 
-extern bool
-atpxModifyListOverlap (Relation rel,
-					   AlterPartitionId *pid,
-					   PgPartRule   	*prule,
-					   PartitionElem 	*pelem,
-					   bool bAdd);
-extern bool
-atpxModifyRangeOverlap (Relation 		 		 rel,
-						AlterPartitionId 		*pid,
-						PgPartRule   			*prule,
-						PartitionElem 			*pelem);
 extern List *
 atpxRenameList(PartitionNode *pNode,
 			   char *old_parentname, const char *new_parentname, int *skipped);

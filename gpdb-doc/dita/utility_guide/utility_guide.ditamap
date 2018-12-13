@@ -49,6 +49,8 @@
             <topicref href="admin_utilities/pgbouncer.xml"/>
             <topicref href="admin_utilities/pgbouncer-ini.xml"/>
             <topicref href="admin_utilities/pgbouncer-admin.xml"/>
+            <topicref href="../pxf/ref/pxf.html" scope="peer" navtitle="pxf"/>
+            <topicref href="../pxf/ref/pxf-cluster.html" scope="peer" navtitle="pxf cluster"/>
         </topicref>
         <topicref href="cli_ref.xml">
             <topicref href="client_utilities/ClientUtilitySummary.xml" linking="targetonly">

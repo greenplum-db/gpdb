@@ -231,7 +231,7 @@ extern bool child_triggers(Oid relationId, int32 triggerType);
 extern bool get_cast_func(Oid oidSrc, Oid oidDest, bool *is_binary_coercible, Oid *oidCastFunc, CoercionPathType *pathtype);
 
 extern Oid get_comparison_operator(Oid oidLeft, Oid oidRight, CmpType cmpt);
-extern CmpType get_comparison_type(Oid oidOp, Oid oidLeft, Oid oidRight);
+extern CmpType get_comparison_type(Oid oidOp);
 
 extern List *get_operator_opfamilies(Oid opno);
 extern List *get_index_opfamilies(Oid oidIndex);

@@ -39,11 +39,6 @@
  *    unordered.  The set operation is performed on the QE as if it were 
  *    sequential.
  *
- * PSETOP_PARALLEL_REPLICATED
- *    The plans input to the Append node are replicated loci.  The result of 
- *    the Append is, therefore, replicated.  The set operation is performed 
- *    in parallel (and redundantly) on the QEs as if it were sequential.
- *
  * PSETOP_GENERAL
  *    The plans input to the Append node are all general loci.  The result
  *    of the Append is, therefore general as well.
@@ -54,7 +49,6 @@ typedef enum GpSetOpType
 	PSETOP_PARALLEL_PARTITIONED,
 	PSETOP_SEQUENTIAL_QD,
 	PSETOP_SEQUENTIAL_QE,
-	PSETOP_PARALLEL_REPLICATED,
 	PSETOP_GENERAL
 } GpSetOpType;
 

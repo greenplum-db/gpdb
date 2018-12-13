@@ -210,7 +210,6 @@ static bool EchoQuery = false;	/* -E switch */
 
 static bool DoingPqReading = false; /* in the middle of recv call of secure_read */
 
-extern pthread_t main_tid;
 #ifndef _WIN32
 pthread_t main_tid = (pthread_t)0;
 #else
@@ -237,11 +236,6 @@ static ProcSignalReason RecoveryConflictReason;
 
 static DtxContextInfo TempDtxContextInfo = DtxContextInfo_StaticInit;
 
-extern void CheckForQDMirroringWork(void);
-
-extern void CheckForResetSession(void);
-
-extern bool ResourceScheduler;
 
 /* ----------------------------------------------------------------
  *		decls for routines only used in this file
@@ -507,7 +501,7 @@ SocketBackend(StringInfo inBuf)
 			if( PG_PROTOCOL_MAJOR(FrontendProtocol) < 3 )
 					ereport(COMMERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
-							 errmsg("Greenplum Database dispatch unsupported for old FrontendProtocols.")));
+							 errmsg("dispatch unsupported for old FrontendProtocols")));
 
 
 			break;
@@ -520,12 +514,9 @@ SocketBackend(StringInfo inBuf)
 			if( PG_PROTOCOL_MAJOR(FrontendProtocol) < 3 )
 					ereport(COMMERROR,
 							(errcode(ERRCODE_PROTOCOL_VIOLATION),
-							 errmsg("Greenplum Database dispatch unsupported for old FrontendProtocols.")));
+							 errmsg("dispatch unsupported for old FrontendProtocols")));
 
 
-			break;
-		case 'G':				/* Greenplum Gang Management */
-			doing_extended_query_message = false;
 			break;
 
 		case 'F':				/* fastpath function call */
@@ -573,10 +564,6 @@ SocketBackend(StringInfo inBuf)
 				ereport(FATAL,
 						(errcode(ERRCODE_PROTOCOL_VIOLATION),
 						 errmsg("invalid frontend message type %d", qtype)));
-			break;
-
-		case 'W':   /* Greenplum Database command for transmitting listener port. */
-
 			break;
 
 		default:
@@ -3737,8 +3724,7 @@ ProcessInterrupts(const char* filename, int lineno)
 		if (IsAutoVacuumWorkerProcess())
 			ereport(FATAL,
 					(errcode(ERRCODE_ADMIN_SHUTDOWN),
-					 errmsg("terminating autovacuum process due to administrator command"),
-					 errSendAlert(false)));
+					 errmsg("terminating autovacuum process due to administrator command")));
 		else if (RecoveryConflictPending && RecoveryConflictRetryable)
 		{
 			pgstat_report_recovery_conflict(RecoveryConflictReason);
@@ -3925,41 +3911,6 @@ gp_set_thread_sigmasks(void)
 
 	return;
 }
-
-/*
- * IA64-specific code to fetch the AR.BSP register for stack depth checks.
- *
- * We currently support gcc, icc, and HP-UX inline assembly here.
- */
-#if defined(__ia64__) || defined(__ia64)
-
-#if defined(__hpux) && !defined(__GNUC__) && !defined __INTEL_COMPILER
-#include <ia64/sys/inline.h>
-#define ia64_get_bsp() ((char *) (_Asm_mov_from_ar(_AREG_BSP, _NO_FENCE)))
-#else
-
-#ifdef __INTEL_COMPILER
-#include <asm/ia64regs.h>
-#endif
-
-static __inline__ char *
-ia64_get_bsp(void)
-{
-	char	   *ret;
-
-#ifndef __INTEL_COMPILER
-	/* the ;; is a "stop", seems to be required before fetching BSP */
-	__asm__ __volatile__(
-		";;\n"
-		"	mov	%0=ar.bsp	\n"
-:		"=r"(ret));
-#else
-  ret = (char *) __getReg(_IA64_REG_AR_BSP);
-#endif
-  return ret;
-}
-#endif
-#endif /* IA64 */
 
 /*
  * IA64-specific code to fetch the AR.BSP register for stack depth checks.
@@ -4295,7 +4246,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	 * postmaster/postmaster.c (the option sets should not conflict) and with
 	 * the common help() function in main/main.c.
 	 */
-	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:m:lN:nOo:Pp:r:S:sTt:Uv:W:y:-:")) != -1)
+	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMm:N:nOo:Pp:r:S:sTt:Uv:W:y:-:")) != -1)
 	{
 		switch (flag)
 		{
@@ -4363,6 +4314,17 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 
 			case 'l':
 				SetConfigOption("ssl", "true", ctx, gucsource);
+				break;
+
+			case 'M':
+				/* Undocumented flag used for mutating a directory that was a copy of a
+				 * master data directory and needs to now be a segment directory. Only
+				 * use on the first time the segment is started, and only use in
+				 * utility mode, as changes will be destructive, and will assume that
+				 * the segment has never participated in a distributed
+				 * transaction.*/
+				if (secure)
+					ConvertMasterDataDirToSegment = true;
 				break;
 
 			case 'm':
@@ -5493,8 +5455,6 @@ PostgresMain(int argc, char *argv[],
 
 					forbidden_in_wal_sender(firstchar);
 
-					forbidden_in_wal_sender(firstchar);
-
 					/* Set statement_timestamp() */
 					SetCurrentStatementStartTimestamp();
 
@@ -5713,6 +5673,7 @@ forbidden_in_wal_sender(char firstchar)
 					 errmsg("extended query protocol not supported in a replication connection")));
 	}
 }
+
 
 /*
  * Obtain platform stack depth limit (in bytes)

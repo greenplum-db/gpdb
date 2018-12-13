@@ -1367,7 +1367,7 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
 	READ_NODE_FIELD(ao_segnos);
-	READ_NODE_FIELD(policy);
+
 	READ_DONE();
 
 }
@@ -1491,8 +1491,8 @@ _readResult(void)
 
 	READ_NODE_FIELD(resconstantqual);
 
-	READ_BOOL_FIELD(hashFilter);
-	READ_NODE_FIELD(hashList);
+	READ_INT_FIELD(numHashFilterCols);
+	READ_INT_ARRAY(hashFilterColIdx, local_node->numHashFilterCols, AttrNumber);
 
 	READ_DONE();
 }

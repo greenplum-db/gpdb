@@ -33,7 +33,7 @@
 #include "receivelog.h"
 #include "replication/basebackup.h"
 #include "streamutil.h"
-
+#include "catalog/catalog.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
@@ -71,6 +71,7 @@ static bool forceoverwrite = false;
 #define MAX_EXCLUDE 255
 static int	num_exclude = 0;
 static char *excludes[MAX_EXCLUDE];
+static int target_gp_dbid = 0;
 
 /* Progress counters */
 static uint64 totalsize;
@@ -247,6 +248,7 @@ usage(void)
 	printf(_("      --xlogdir=XLOGDIR  location for the transaction log directory\n"));
 	printf(_("  -z, --gzip             compress tar output\n"));
 	printf(_("  -Z, --compress=0-9     compress tar output with given compression level\n"));
+	printf(_("  --target-gp-dbid       create tablespace subdirectories with given dbid\n"));
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -c, --checkpoint=fast|spread\n"
 			 "                         set fast or spread checkpointing\n"));
@@ -1172,7 +1174,16 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 	if (basetablespace)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
+	{
 		strlcpy(current_path, get_tablespace_mapping(PQgetvalue(res, rownum, 1)), sizeof(current_path));
+
+		if (target_gp_dbid < 1)
+		{
+			fprintf(stderr, _("%s: cannot restore user-defined tablespaces without the --target-gp-dbid option"),
+					progname);
+			disconnect_and_exit(1);
+		}
+	}
 
 	/*
 	 * Get the COPY data
@@ -1253,8 +1264,30 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 			/*
 			 * First part of header is zero terminated filename
 			 */
-			snprintf(filename, sizeof(filename), "%s/%s", current_path,
-					 copybuf);
+			if (!basetablespace)
+			{
+				/*
+				 * Reconstruct the path replacing the source tablespace path's
+				 * dbid with the dbid provided from --target-gp-dbid option.
+				 *
+				 * For example, copybuf can be
+				 * "<GP_TABLESPACE_VERSION_DIRECTORY>_db<dbid>/16384/16385".
+				 * We create a pointer to the dbid and relfile "/16384/16385",
+				 * construct the new tablespace with provided dbid, and append
+				 * the dbid and relfile on top.
+				 */
+				char *copybuf_dbid_relfile = strstr(copybuf, "/");
+
+				snprintf(filename, sizeof(filename), "%s/%s_db%d", current_path,
+						 GP_TABLESPACE_VERSION_DIRECTORY, target_gp_dbid);
+				strcat(filename, copybuf_dbid_relfile);
+			}
+			else
+			{
+				snprintf(filename, sizeof(filename), "%s/%s", current_path,
+						 copybuf);
+			}
+
 			if (filename[strlen(filename) - 1] == '/')
 			{
 				/*
@@ -1828,8 +1861,11 @@ BaseBackup(void)
 		if (format == 'p' && !PQgetisnull(res, i, 1))
 		{
 			char	   *path = (char *) get_tablespace_mapping(PQgetvalue(res, i, 1));
+			char path_with_subdir[MAXPGPATH];
 
-			verify_dir_is_empty_or_create(path);
+			sprintf(path_with_subdir, "%s/%s_db%d", path, GP_TABLESPACE_VERSION_DIRECTORY, target_gp_dbid);
+
+			verify_dir_is_empty_or_create(path_with_subdir);
 		}
 	}
 
@@ -2054,6 +2090,7 @@ main(int argc, char **argv)
 		{"xlogdir", required_argument, NULL, 1},
 		{"exclude", required_argument, NULL, 'E'},
 		{"force-overwrite", no_argument, NULL, 128},
+		{"target-gp-dbid", required_argument, NULL, 129},
 		{NULL, 0, NULL, 0}
 	};
 	int			c;
@@ -2224,6 +2261,9 @@ main(int argc, char **argv)
 				break;
 			case 128:
 				forceoverwrite = true;
+				break;
+			case 129:
+				target_gp_dbid = atoi(optarg);
 				break;
 			default:
 

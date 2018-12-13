@@ -260,8 +260,9 @@ _copyResult(const Result *from)
 	 */
 	COPY_NODE_FIELD(resconstantqual);
 
-	COPY_SCALAR_FIELD(hashFilter);
-	COPY_NODE_FIELD(hashList);
+	COPY_SCALAR_FIELD(numHashFilterCols);
+	if (from->numHashFilterCols > 0)
+		COPY_POINTER_FIELD(hashFilterColIdx, from->numHashFilterCols * sizeof(AttrNumber));
 
 	return newnode;
 }
@@ -3521,7 +3522,6 @@ _copyCopyStmt(const CopyStmt *from)
 	COPY_STRING_FIELD(filename);
 	COPY_NODE_FIELD(options);
 	COPY_NODE_FIELD(sreh);
-	COPY_NODE_FIELD(policy);
 	return newnode;
 }
 

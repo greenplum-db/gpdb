@@ -2,9 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="as20941">ALTER OPERATOR FAMILY</title><body><p id="sql_command_desc">Changes the definition of an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
-  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) [ RECHECK ]
+  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> )
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
   } [, ... ]
+
 ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> DROP
   {  OPERATOR s<varname>trategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) 
@@ -60,12 +61,6 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
             specified.</pd>
         </plentry>
         <plentry>
-          <pt>RECHECK</pt>
-          <pd>If present, the index is "lossy" for this operator, and so the rows retrieved using
-            the index must be rechecked to verify that they actually satisfy the qualification
-            clause involving this operator.</pd>
-        </plentry>
-        <plentry>
           <pt>support_number</pt>
           <pd>The index method's support procedure number for a function associated with the
             operator family.</pd>
@@ -94,6 +89,11 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
       <p>The operators should not be defined by SQL functions. A SQL function is likely to be
         inlined into the calling query, which will prevent the optimizer from recognizing that the
         query matches an index.</p>
+      <p>Before Greenplum Database 6.0, the <codeph>OPERATOR</codeph> clause could include a
+        <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum
+        Database now determines whether an index operator is "lossy" on-the-fly at runtime. This
+        allows more efficient handling of cases where an operator might or might not be
+        lossy.</p>
     </section>
     <section id="section7">
       <title>Examples</title>

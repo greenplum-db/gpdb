@@ -142,7 +142,7 @@ CREATE TABLE parent (
 CREATE TABLE child (like parent) distributed replicated;
 CREATE TABLE child1 (like parent) DISTRIBUTED BY (name);
 CREATE TABLE child2 (like parent);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- should be replicated table
 \d child
        Table "rpt.child"
@@ -193,7 +193,7 @@ CREATE TABLE child (
         salary          int4,
         manager         name
 ) INHERITS (parent_rep) WITH OIDS;
-ERROR:  cannot inherit from replicated table "parent_rep" to create table "child".
+ERROR:  cannot inherit from replicated table "parent_rep" to create table "child"
 DETAIL:  An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.
 -- replicated table can not have parents, should fail
 CREATE TABLE child (
@@ -285,7 +285,7 @@ insert into bar values(1,1);
 alter table foo drop column x;
 -- fail
 alter table bar drop column x;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 drop table if exists foo;
 drop table if exists foo1;
 NOTICE:  table "foo1" does not exist, skipping
@@ -544,7 +544,68 @@ select * from bar where exists (select * from foo);
  1 | 2
 (2 rows)
 
+------
+-- Test Current Of is disabled for replicated table
+------
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+delete from foo where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+begin;
+declare c1 cursor for select * from foo;
+fetch 1 from c1;
+ x | y 
+---+---
+ 1 | 1
+(1 row)
+
+update foo set y = 1 where current of c1;
+ERROR:  "foo" is not simply updatable
+abort;
+-----
+-- Test updatable view works for replicated table
+----
+truncate foo;
+truncate bar;
+insert into foo values (1, 1);
+insert into foo values (2, 2);
+insert into bar values (1, 1);
+create view v_foo as select * from foo where y = 1;
+begin;
+update v_foo set y = 2; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+ 2 | 2
+ 1 | 2
+(6 rows)
+
+abort;
+update v_foo set y = 3 from bar where bar.y = v_foo.y; 
+select * from gp_dist_random('foo');
+ x | y 
+---+---
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+ 2 | 2
+ 1 | 3
+(6 rows)
+
 drop schema rpt cascade;
-NOTICE:  drop cascades to 2 other objects
+NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to table foo
 drop cascades to table bar
+drop cascades to view v_foo

@@ -107,10 +107,6 @@ where (unique1, unique2) < any (select ten, ten from tenk1 where hundred < 3)
 order by 1;
 
 -- Also check row comparison with an indexable condition
--- GPDB_93_MERGE_FIXME: In upstream, you naturally get an index only scan for
--- this query. In GPDB, you get a seq scan, unless you force it. Why is the
--- cost estimate so different on GPDB?
-set enable_sort=off;
 explain (costs off)
 select thousand, tenthous from tenk1
 where (thousand, tenthous) >= (997, 5000)

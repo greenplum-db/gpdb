@@ -884,8 +884,8 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (!result->appendonly && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option 'blocksize' for base relation. "
-							"Only valid for Append Only relations")));
+					 errmsg("invalid option \"blocksize\" for base relation"),
+					 errhint("\"blocksize\" is only valid for Append Only relations, create an AO relation to use \"blocksize\".")));
 
 		result->blocksize = blocksize_opt->values.int_val;
 
@@ -896,8 +896,8 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("block size must be between 8KB and 2MB and be"
-								" an 8KB multiple. Got %d", result->blocksize)));
+						 errmsg("block size must be between 8KB and 2MB and be a multiple of 8KB"),
+						 errdetail("Got block size %d.", result->blocksize)));
 
 			result->blocksize = DEFAULT_APPENDONLY_BLOCK_SIZE;
 		}
@@ -916,8 +916,8 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (!result->appendonly && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"compresstype\" for base relation."
-							" Only valid for Append Only relations")));
+					 errmsg("invalid option \"compresstype\" for base relation"),
+					 errhint("\"compresstype\" is only valid for Append Only relations, create an AO relation to use \"compresstype\"")));
 
 		if (!compresstype_is_valid(comptype_opt->values.string_val))
 			ereport(ERROR,
@@ -941,8 +941,8 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (!result->appendonly && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option 'compresslevel' for base "
-							"relation. Only valid for Append Only relations")));
+					 errmsg("invalid option \"compresslevel\" for base relation"),
+					 errhint("Compression only valid for Append Only relations, create an AO relation to use compression.")));
 
 		result->compresslevel = complevel_opt->values.int_val;
 
@@ -951,7 +951,8 @@ validate_and_adjust_options(StdRdOptions *result,
 			result->compresslevel == 0 && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresstype can\'t be used with compresslevel 0")));
+					 errmsg("compresstype \"%s\" can\'t be used with compresslevel 0",
+							result->compresstype)));
 		if (result->compresslevel < 0)
 		{
 			if (validate)
@@ -980,8 +981,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for zlib "
-								"(should be in the range 1 to 9)",
+						 errmsg("compresslevel=%d is out of range for zlib (should be in the range 1 to 9)",
 								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1001,8 +1001,7 @@ validate_and_adjust_options(StdRdOptions *result,
 				if (validate)
 					ereport(ERROR,
 							(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-							 errmsg("compresslevel=%d is out of range for zstd "
-									"(should be in the range 1 to 19)",
+							 errmsg("compresslevel=%d is out of range for zstd (should be in the range 1 to 19)",
 									result->compresslevel)));
 
 				result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1016,8 +1015,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for quicklz "
-								"(should be 1)",
+						 errmsg("compresslevel=%d is out of range for quicklz (should be 1)",
 								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1030,8 +1028,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for rle_type "
-								"(should be in the range 1 to 4)",
+						 errmsg("compresslevel=%d is out of range for rle_type (should be in the range 1 to 4)",
 								result->compresslevel)));
 
 			result->compresslevel = setDefaultCompressionLevel(result->compresstype);
@@ -1045,14 +1042,13 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (!KIND_IS_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"checksum\" in a non relation "
-							"object is not supported")));
+					 errmsg("usage of parameter \"checksum\" in a non relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"checksum\" for base relation. "
-							"Only valid for Append Only relations")));
+					 errmsg("invalid option \"checksum\" for base relation"),
+					 errhint("\"checksum\" option only valid for Append Only relations, data checksum for heap relations are turned on at cluster creation")));
 		result->checksum = checksum_opt->values.bool_val;
 	}
 	/* Disable checksum for heap relations. */
@@ -1066,14 +1062,13 @@ validate_and_adjust_options(StdRdOptions *result,
 		if (!KIND_IS_RELATION(kind) && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("usage of parameter \"orientation\" in a non "
-							"relation object is not supported")));
+					 errmsg("usage of parameter \"orientation\" in a non relation object is not supported")));
 
 		if (!result->appendonly && validate)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("invalid option \"orientation\" for base relation. "
-							"Only valid for Append Only relations")));
+					 errmsg("invalid option \"orientation\" for base relation"),
+					 errhint("Table orientation only valid for Append Only relations, create an AO relation to use table orientation.")));
 
 		if (!(pg_strcasecmp(orientation_opt->values.string_val, "column") == 0 ||
 			  pg_strcasecmp(orientation_opt->values.string_val, "row") == 0) &&
@@ -1081,8 +1076,8 @@ validate_and_adjust_options(StdRdOptions *result,
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("invalid parameter value for \"orientation\": "
-							"\"%s\"", orientation_opt->values.string_val)));
+					 errmsg("invalid parameter value for \"orientation\": \"%s\"",
+							orientation_opt->values.string_val)));
 		}
 
 		result->columnstore = (pg_strcasecmp(orientation_opt->values.string_val, "column") == 0 ?
@@ -1095,8 +1090,8 @@ validate_and_adjust_options(StdRdOptions *result,
 			if (validate)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("%s cannot be used with Append Only relations "
-								"row orientation", result->compresstype)));
+						 errmsg("%s cannot be used with Append Only relations row orientation",
+								result->compresstype)));
 		}
 	}
 
@@ -1172,17 +1167,17 @@ validateAppendOnlyRelOptions(bool ao,
 		if (ao)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("appendonly may only be specified for base relations")));
+					 errmsg("\"appendonly\" may only be specified for base relations")));
 
 		if (checksum)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("checksum may only be specified for base relations")));
+					 errmsg("\"checksum\" may only be specified for base relations")));
 
 		if (comptype)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("compresstype may only be specified for base relations")));
+					 errmsg("\"compresstype\" may only be specified for base relations")));
 	}
 
 	/*
@@ -1231,8 +1226,8 @@ validateAppendOnlyRelOptions(bool ao,
 			if (complevel < 0 || complevel > 19)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-						 errmsg("compresslevel=%d is out of range for zstd "
-								"(should be in the range 1 to 19)", complevel)));
+						 errmsg("compresslevel=%d is out of range for zstd (should be in the range 1 to 19)",
+								complevel)));
 		}
 
 		if (comptype && (pg_strcasecmp(comptype, "quicklz") == 0) &&
@@ -1240,16 +1235,16 @@ validateAppendOnlyRelOptions(bool ao,
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresslevel=%d is out of range for quicklz "
-							"(should be 1)", complevel)));
+					 errmsg("compresslevel=%d is out of range for quicklz (should be 1)",
+							complevel)));
 		}
 		if (comptype && (pg_strcasecmp(comptype, "rle_type") == 0) &&
 			(complevel < 0 || complevel > 4))
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("compresslevel=%d is out of range for rle_type "
-							"(should be in the range 1 to 4)", complevel)));
+					 errmsg("compresslevel=%d is out of range for rle_type (should be in the range 1 to 4)",
+							complevel)));
 		}
 	}
 
@@ -1258,22 +1253,19 @@ validateAppendOnlyRelOptions(bool ao,
 		blocksize % MIN_APPENDONLY_BLOCK_SIZE != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("block size must be between 8KB and 2MB and "
-						"be an 8KB multiple, Got %d", blocksize)));
+				 errmsg("block size must be between 8KB and 2MB and be an 8KB multiple, got %d", blocksize)));
 
 	if (safewrite > MAX_APPENDONLY_BLOCK_SIZE || safewrite % 8 != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("safefswrite size must be less than 8MB and "
-						"be a multiple of 8")));
+				 errmsg("safefswrite size must be less than 8MB and be a multiple of 8")));
 
 	if (gp_safefswritesize > blocksize)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("block size (%d) is smaller gp_safefswritesize (%d). "
-						"increase blocksize or decrease gp_safefswritesize if it "
-						"is safe to do so on this file system",
-						blocksize, gp_safefswritesize)));
+				 errmsg("block size (%d) is smaller gp_safefswritesize (%d)",
+						blocksize, gp_safefswritesize),
+				 errhint("Increase blocksize or decrease gp_safefswritesize if it is safe to do so on this file system")));
 }
 
 /*

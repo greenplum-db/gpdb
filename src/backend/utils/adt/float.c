@@ -68,6 +68,7 @@ static int	float8_cmp_internal(float8 a, float8 b);
 static double cbrt(double x);
 #endif   /* HAVE_CBRT */
 
+
 /*
  * Routines to provide reasonably platform-independent handling of
  * infinity and NaN.  We assume that isinf() and isnan() are available

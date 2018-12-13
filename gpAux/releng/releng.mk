@@ -87,25 +87,13 @@ opt_write_test:
 	    exit 1; \
 	fi
 
-/opt/releng/apache-ant: 
-	${MAKE} opt_write_test
-	echo "Sync Ivy project dependency management framework ..."
-	type curl; \
-	if [ $$? = 0 ]; then curl --silent http://releng.sanmateo.greenplum.com/tools/apache-ant.1.8.1.tar.gz -o /tmp/apache-ant.1.8.1.tar.gz; \
-	else wget -q http://releng.sanmateo.greenplum.com/tools/apache-ant.1.8.1.tar.gz -O /tmp/apache-ant.1.8.1.tar.gz; fi; \
-	( umask 002; [ ! -d /opt/releng ] && mkdir -p /opt/releng; \
-	   cd /opt/releng; \
-	   gunzip -qc /tmp/apache-ant.1.8.1.tar.gz | tar xf -; \
-	   rm -f /tmp/apache-ant.1.8.1.tar.gz; \
-	   chmod -R a+w /opt/releng/apache-ant )
-
 # ----------------------------------------------------------------------
 # Populate dependent internal and thirdparty dependencies.  This
 # will be retrieved and place in "ext" directory in root
 # directory.
 # ----------------------------------------------------------------------
 
-sync_tools: opt_write_test /opt/releng/apache-ant
+sync_tools: opt_write_test
 	@if [ -d /opt/releng/tools ]; then \
 	    LCK_FILES=$$( find /opt/releng/tools -name "*.lck" ); \
 	    if [ -n "$${LCK_FILES}" ]; then \
@@ -121,7 +109,7 @@ sync_tools: opt_write_test /opt/releng/apache-ant
 	-Divyrepo.user=$(IVYREPO_USER) -Divyrepo.passwd="$(IVYREPO_PASSWD)" -quiet resolve);
 
 ifeq "$(findstring aix,$(BLD_ARCH))" ""
-	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.11.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
+	LD_LIBRARY_PATH='' wget --no-check-certificate -q -O - https://github.com/greenplum-db/gporca/releases/download/v3.14.0/bin_orca_centos5_release.tar.gz | tar zxf - -C $(BLD_TOP)/ext/$(BLD_ARCH)
 endif
 
 clean_tools: opt_write_test

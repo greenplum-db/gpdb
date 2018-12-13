@@ -66,12 +66,6 @@ extern void cdbhashinit(CdbHash *h);
 extern void cdbhash(CdbHash *h, int attno, Datum datum, bool isnull);
 
 /*
- * Pick a random hash value, for a tuple in a relation with an empty
- * policy (i.e. DISTRIBUTED RANDOMLY).
- */
-extern void cdbhashnokey(CdbHash *h);
-
-/*
  * Reduce the hash to a segment number.
  */
 extern unsigned int cdbhashreduce(CdbHash *h);

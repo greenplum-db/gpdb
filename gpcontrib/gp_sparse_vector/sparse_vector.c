@@ -217,7 +217,7 @@ svec_in(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Invalid input string for svec")));
+				 errmsg("invalid input string for svec")));
 	} else {
 		*values = '\0';
 		values = values+1;
@@ -238,7 +238,7 @@ svec_in(PG_FUNCTION_ARGS)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Unique value count not equal to run length count")));
+				 errmsg("unique value count not equal to run length count")));
 	}
 
 	index = makeStringInfo();

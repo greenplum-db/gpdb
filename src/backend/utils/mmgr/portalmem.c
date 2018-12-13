@@ -26,6 +26,7 @@
 #include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/memutils.h"
+#include "utils/resource_manager.h"
 #include "utils/resscheduler.h"
 
 #include "cdb/ml_ipc.h"

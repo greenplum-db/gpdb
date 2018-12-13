@@ -505,6 +505,7 @@ shell_out(PG_FUNCTION_ARGS)
 	PG_RETURN_VOID();			/* keep compiler quiet */
 }
 
+
 /*
  * pg_node_tree_in		- input routine for type PG_NODE_TREE.
  *

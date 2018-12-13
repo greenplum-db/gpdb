@@ -1,0 +1,32 @@
+-- A regression test for cpuset.
+--
+-- When all the cpu cores are allocated the default cpuset group should
+-- fallback to core 0.  However this fallback logic was only added on
+-- CREATE / ALTER RESOURCE GROUP, but missing in startup logic, an empty cpu
+-- core list "" is set to cgroup and cause a runtime error:
+--
+--     can't write data to file '/sys/fs/cgroup/cpuset/gpdb/1/cpuset.cpus':
+--       No space left on device (resgroup-ops-linux.c:916)
+--
+-- To trigger the issue we create a resource group, allocate all the cpu cores
+-- to it, and restart the cluster.
+
+-- start_ignore
+DROP RESOURCE GROUP rg1_cpuset_test;
+-- end_ignore
+
+-- Create a resource group with all the cpu cores.
+-- The isolation2 test framework does not support \set so we have to plan with
+-- some tricks.
+! psql -d isolation2resgrouptest -Ac "CREATE RESOURCE GROUP rg1_cpuset_test WITH (memory_limit=10, cpuset='0-$(($(nproc)-1))')";
+
+-- Alter a resource group from / to all the cpu cores should also work.
+ALTER RESOURCE GROUP rg1_cpuset_test SET cpuset '0';
+! psql -d isolation2resgrouptest -Ac "ALTER RESOURCE GROUP rg1_cpuset_test SET cpuset '0-$(($(nproc)-1))'";
+
+-- start_ignore
+! gpstop -rai;
+-- end_ignore
+
+-- Cleanup in a new connection as the default one is disconnected by gpstop
+10: DROP RESOURCE GROUP rg1_cpuset_test;

@@ -742,7 +742,6 @@ INCLUDES
 HAVE_CXX11
 enable_gpcloud
 enable_mapreduce
-enable_snmp
 enable_orca
 autodepend
 TAS
@@ -861,7 +860,6 @@ enable_cassert
 enable_debugntuplestore
 enable_testutils
 enable_orca
-enable_snmp
 enable_mapreduce
 enable_gpcloud
 enable_thread_safety
@@ -1545,7 +1543,6 @@ Optional Features:
                           enable debug_ntuplestore (for debugging)
   --enable-testutils      enable testing utilities
   --disable-orca          disable ORCA optimizer
-  --enable-snmp           enable snmp for MIB and alerts via TRAP/INFORM
   --enable-mapreduce      enable Greenplum Mapreduce support
   --disable-gpcloud       disable gpcloud support
   --disable-thread-safety disable thread-safety in client libraries
@@ -6495,38 +6492,6 @@ fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with ORCA... $enable_orca" >&5
 $as_echo "checking whether to build with ORCA... $enable_orca" >&6; }
-
-
-#
-# --enable-snmp enables snmp mib and trap/inform
-#
-
-
-# Check whether --enable-snmp was given.
-if test "${enable_snmp+set}" = set; then :
-  enableval=$enable_snmp;
-  case $enableval in
-    yes)
-
-$as_echo "#define USE_SNMP 1" >>confdefs.h
-
-      ;;
-    no)
-      :
-      ;;
-    *)
-      as_fn_error $? "no argument expected for --enable-snmp option" "$LINENO" 5
-      ;;
-  esac
-
-else
-  enable_snmp=no
-
-fi
-
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking whether to build with snmp... $enable_snmp" >&5
-$as_echo "checking whether to build with snmp... $enable_snmp" >&6; }
 
 
 #
@@ -12076,57 +12041,6 @@ fi
 
 fi
 
-# Check for net-snmp
-if test "$enable_snmp" = yes ; then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for netsnmp_ds_set_string in -lnetsnmp" >&5
-$as_echo_n "checking for netsnmp_ds_set_string in -lnetsnmp... " >&6; }
-if ${ac_cv_lib_netsnmp_netsnmp_ds_set_string+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lnetsnmp  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char netsnmp_ds_set_string ();
-int
-main ()
-{
-return netsnmp_ds_set_string ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_netsnmp_netsnmp_ds_set_string=yes
-else
-  ac_cv_lib_netsnmp_netsnmp_ds_set_string=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_netsnmp_netsnmp_ds_set_string" >&5
-$as_echo "$ac_cv_lib_netsnmp_netsnmp_ds_set_string" >&6; }
-if test "x$ac_cv_lib_netsnmp_netsnmp_ds_set_string" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBNETSNMP 1
-_ACEOF
-
-  LIBS="-lnetsnmp $LIBS"
-
-else
-  as_fn_error $? "library 'netsnmp' is required for snmp support" "$LINENO" 5
-fi
-
-fi
-
 if test "$with_libxslt" = yes ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for xsltCleanupGlobals in -lxslt" >&5
 $as_echo_n "checking for xsltCleanupGlobals in -lxslt... " >&6; }
@@ -13527,25 +13441,6 @@ done
     ;;
 esac
 
-# net-snmp
-if test "$enable_snmp" = yes; then
-	for ac_header in net-snmp/net-snmp-config.h
-do :
-  ac_fn_c_check_header_mongrel "$LINENO" "net-snmp/net-snmp-config.h" "ac_cv_header_net_snmp_net_snmp_config_h" "$ac_includes_default"
-if test "x$ac_cv_header_net_snmp_net_snmp_config_h" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_NET_SNMP_NET_SNMP_CONFIG_H 1
-_ACEOF
-
-else
-  as_fn_error $? "header file <net-snmp/net-snmp-config.h> is required for snmp support" "$LINENO" 5
-fi
-
-done
-
-fi
-
-
 # realtime library header
 if test "$with_rt" = yes; then
 	for ac_header in time.h
@@ -13816,7 +13711,7 @@ int
 main ()
 {
 
-return strncmp("3.11.", GPORCA_VERSION_STRING, 5);
+return strncmp("3.14.", GPORCA_VERSION_STRING, 5);
 
   ;
   return 0;
@@ -13826,7 +13721,7 @@ if ac_fn_cxx_try_run "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
 $as_echo "ok" >&6; }
 else
-  as_fn_error $? "Your ORCA version is expected to be 3.11.XXX" "$LINENO" 5
+  as_fn_error $? "Your ORCA version is expected to be 3.14.XXX" "$LINENO" 5
 
 fi
 rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
@@ -15454,9 +15349,6 @@ fi
 # possible alias of libreadline) while checking for everything else.
 LIBS_including_readline="$LIBS"
 LIBS=`echo "$LIBS" | sed -e 's/-ledit//g' -e 's/-lreadline//g'`
-
-# net-snmp has the same problem..
-LIBS=`echo "$LIBS" | sed -e 's/-lnetsnmp//g'`
 
 for ac_func in cbrt dlopen fdatasync getifaddrs getpeerucred getrlimit mbstowcs_l memmove poll pstat readlink setproctitle setsid shm_open sigprocmask symlink sync_file_range towlower utime utimes wcstombs wcstombs_l
 do :

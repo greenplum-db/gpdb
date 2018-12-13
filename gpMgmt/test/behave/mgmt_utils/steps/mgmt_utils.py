@@ -2089,11 +2089,15 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
         if num_of_hosts != len(hosts):
             raise Exception("Incorrect amount of hosts. number of hosts:%s\nhostnames: %s" % (num_of_hosts, hosts))
 
-    temp_base_dir = context.temp_base_dir
-    primary_dir = os.path.join(temp_base_dir, 'data', 'primary')
+    base_dir = "/tmp"
+    if hasattr(context, "temp_base_dir"):
+        base_dir = context.temp_base_dir
+    elif hasattr(context, "working_directory"):
+        base_dir = context.working_directory
+    primary_dir = os.path.join(base_dir, 'data', 'primary')
     mirror_dir = ''
     if context.gpexpand_mirrors_enabled:
-        mirror_dir = os.path.join(temp_base_dir, 'data', 'mirror')
+        mirror_dir = os.path.join(base_dir, 'data', 'mirror')
 
     directory_pairs = []
     # we need to create the tuples for the interview to work.
@@ -2112,12 +2116,17 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
 def impl(context):
     map(os.remove, glob.glob("gpexpand_inputfile*"))
 
-@when('the user runs gpexpand with the latest gpexpand_inputfile')
-def impl(context):
+@when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
+def impl(context, additional_params=''):
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
-    ret_code, std_err, std_out = gpexpand.initialize_segments()
+    ret_code, std_err, std_out = gpexpand.initialize_segments(additional_params)
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
+
+@when('the user runs gpexpand with the latest gpexpand_inputfile without ret code check')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand.initialize_segments()
 
 @when('the user runs gpexpand against database "{dbname}" to redistribute with duration "{duration}"')
 def impl(context, dbname, duration):
@@ -2177,6 +2186,59 @@ def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
         context.start_data_segments = dbconn.execSQLForSingleton(conn, query)
+
+@given('the gp_segment_configuration have been saved')
+@when('the gp_segment_configuration have been saved')
+@then('the gp_segment_configuration have been saved')
+def impl(context):
+    dbname = 'gptest'
+    gp_segment_conf_backup = {}
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
+        segment_count = int(dbconn.execSQLForSingleton(conn, query))
+        query = """SELECT * from gp_segment_configuration where -1 < content order by dbid"""
+        cursor = dbconn.execSQL(conn, query)
+        for i in range(0, segment_count):
+            dbid, content, role, preferred_role, mode, status,\
+            port, hostname, address, datadir = cursor.fetchone();
+            gp_segment_conf_backup[dbid] = {}
+            gp_segment_conf_backup[dbid]['content'] = content
+            gp_segment_conf_backup[dbid]['role'] = role
+            gp_segment_conf_backup[dbid]['preferred_role'] = preferred_role
+            gp_segment_conf_backup[dbid]['mode'] = mode
+            gp_segment_conf_backup[dbid]['status'] = status
+            gp_segment_conf_backup[dbid]['port'] = port
+            gp_segment_conf_backup[dbid]['hostname'] = hostname
+            gp_segment_conf_backup[dbid]['address'] = address
+            gp_segment_conf_backup[dbid]['datadir'] = datadir
+    context.gp_segment_conf_backup = gp_segment_conf_backup
+
+@given('verify the gp_segment_configuration has been restored')
+@when('verify the gp_segment_configuration has been restored')
+@then('verify the gp_segment_configuration has been restored')
+def impl(context):
+    dbname = 'gptest'
+    gp_segment_conf_backup = {}
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """SELECT count(*) from gp_segment_configuration where -1 < content"""
+        segment_count = int(dbconn.execSQLForSingleton(conn, query))
+        query = """SELECT * from gp_segment_configuration where -1 < content order by dbid"""
+        cursor = dbconn.execSQL(conn, query)
+        for i in range(0, segment_count):
+            dbid, content, role, preferred_role, mode, status,\
+            port, hostname, address, datadir = cursor.fetchone();
+            gp_segment_conf_backup[dbid] = {}
+            gp_segment_conf_backup[dbid]['content'] = content
+            gp_segment_conf_backup[dbid]['role'] = role
+            gp_segment_conf_backup[dbid]['preferred_role'] = preferred_role
+            gp_segment_conf_backup[dbid]['mode'] = mode
+            gp_segment_conf_backup[dbid]['status'] = status
+            gp_segment_conf_backup[dbid]['port'] = port
+            gp_segment_conf_backup[dbid]['hostname'] = hostname
+            gp_segment_conf_backup[dbid]['address'] = address
+            gp_segment_conf_backup[dbid]['datadir'] = datadir
+    if context.gp_segment_conf_backup != gp_segment_conf_backup:
+        raise Exception("gp_segment_configuration has not been restored")
 
 @given('user has created {table_name} table')
 def impl(context, table_name):
@@ -2264,23 +2326,33 @@ def impl(context, num_of_segments):
 @given('the cluster is setup for an expansion on hosts "{hostnames}"')
 def impl(context, hostnames):
     hosts = hostnames.split(",")
-    temp_base_dir = context.temp_base_dir
+    base_dir = "/tmp"
+    if hasattr(context, "temp_base_dir"):
+        base_dir = context.temp_base_dir
+    elif hasattr(context, "working_directory"):
+        base_dir = context.working_directory
     for host in hosts:
         cmd = Command(name='create data directories for expansion',
-                      cmdStr="mkdir -p %s/data/primary; mkdir -p %s/data/mirror" % (temp_base_dir, temp_base_dir),
+                      cmdStr="mkdir -p %s/data/primary; mkdir -p %s/data/mirror" % (base_dir, base_dir),
                       ctxt=REMOTE,
                       remoteHost=host)
         cmd.run(validateAfter=True)
 
-@given('a temporary directory to expand into')
-def impl(context):
-    context.temp_base_dir = tempfile.mkdtemp(dir='/tmp')
+@given('a temporary directory under "{tmp_base_dir}" to expand into')
+def impl(context, tmp_base_dir):
+    if not tmp_base_dir:
+        raise Exception("tmp_base_dir cannot be empty")
+    if not os.path.exists(tmp_base_dir):
+        os.mkdir(tmp_base_dir)
+    context.temp_base_dir = tempfile.mkdtemp(dir=tmp_base_dir)
 
 @given('the new host "{hostnames}" is ready to go')
 def impl(context, hostnames):
     hosts = hostnames.split(',')
-    reset_hosts(hosts, context.working_directory)
-    reset_hosts(hosts, context.temp_base_dir)
+    if hasattr(context, "working_directory"):
+        reset_hosts(hosts, context.working_directory)
+    if hasattr(context, "temp_base_dir"):
+        reset_hosts(hosts, context.temp_base_dir)
 
 @then('the database is killed on hosts "{hostnames}"')
 @given('the database is killed on hosts "{hostnames}"')
@@ -2416,8 +2488,8 @@ def impl(context, config_file):
     run_gpcommand(context, 'gpinitsystem -a -c ../gpAux/gpdemo/clusterConfigFile -O %s' % config_file)
     check_return_code(context, 0)
 
-@when('check segment conf: postgresql.conf pg_hba.conf')
-@then('check segment conf: postgresql.conf pg_hba.conf')
+@when('check segment conf: postgresql.conf')
+@then('check segment conf: postgresql.conf')
 def step_impl(context):
     query = "select dbid, port, hostname, datadir from gp_segment_configuration where content >= 0"
     conn = dbconn.connect(dbconn.DbURL(dbname='postgres'))
@@ -2439,25 +2511,6 @@ def step_impl(context):
         if str(dic['port']) != port:
             raise Exception("port value in postgresql.conf of %s is incorrect. Expected:%s, given:%s" %
                             (hostname, port, dic['port']))
-
-        ## check pg_hba.conf
-        remote_hba_conf = "%s/%s" % (datadir, 'pg_hba.conf')
-        local_hba_copy = os.path.join(os.getenv("MASTER_DATA_DIRECTORY"), "%s.%s" % ('pg_hba.conf', hostname))
-        cmd = Command(name="Copy remote conf to local to diff",
-                    cmdStr='scp %s:%s %s' % (hostname, remote_hba_conf, local_hba_copy))
-        cmd.run(validateAfter=True)
-
-        f = open(local_hba_copy, 'r')
-        hba_content = f.read()
-        f.close()
-
-        addrinfo = socket.getaddrinfo(hostname, None)
-        ipaddrlist = list(set([(ai[0], ai[4][0]) for ai in addrinfo]))
-        key_word = '# %s\n' % hostname
-        for addr in ipaddrlist:
-            key_word += 'host\tall\tall\t%s/%s\ttrust\n' % (addr[1], '32' if addr[0] == socket.AF_INET else '128')
-        if key_word not in hba_content:
-            raise Exception("Expected line not in pg_hba.conf,%s" % key_word)
 
 @given('the transactions are started for dml')
 def impl(context):
@@ -2526,3 +2579,24 @@ def _get_row_count_per_segment(table, dbname):
         cursor = dbconn.execSQL(conn, query)
         rows = cursor.fetchall()
         return [row[1] for row in rows] # indices are the gp segment id's, so no need to store them explicitly
+
+@given('set fault inject "{fault}"')
+@then('set fault inject "{fault}"')
+@when('set fault inject "{fault}"')
+def impl(context, fault):
+    os.environ['GPMGMT_FAULT_POINT'] = fault
+
+@given('unset fault inject')
+@then('unset fault inject')
+@when('unset fault inject')
+def impl(context):
+    os.environ['GPMGMT_FAULT_POINT'] = ""
+
+@given('run rollback with database "{database}"')
+@then('run rollback with database "{database}"')
+@when('run rollback with database "{database}"')
+def impl(context, database):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database=database)
+    ret_code, std_err, std_out = gpexpand.rollback()
+    if ret_code != 0:
+        raise Exception("rollback exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))

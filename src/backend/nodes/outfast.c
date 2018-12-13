@@ -308,6 +308,19 @@ _outPlanInfo(StringInfo str, const Plan *node)
 }
 
 static void
+_outResult(StringInfo str, const Result *node)
+{
+	WRITE_NODE_TYPE("RESULT");
+
+	_outPlanInfo(str, (const Plan *) node);
+
+	WRITE_NODE_FIELD(resconstantqual);
+
+	WRITE_INT_FIELD(numHashFilterCols);
+	WRITE_INT_ARRAY(hashFilterColIdx, node->numHashFilterCols, AttrNumber);
+}
+
+static void
 _outRecursiveUnion(StringInfo str, RecursiveUnion *node)
 {
 	WRITE_NODE_TYPE("RECURSIVEUNION");
@@ -391,7 +404,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
-	WRITE_NODE_FIELD(policy);
 }
 
 static void

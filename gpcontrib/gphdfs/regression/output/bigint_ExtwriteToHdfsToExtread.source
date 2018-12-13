@@ -21,7 +21,7 @@ datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigi
 --datatype_bigint varchar,xcount_bigint bigint, max_bigint bigint, min_bigint bigint, x_bigint bigint, reverse_bigint bigint, increment_bigint bigint
 ) location ('gphdfs://10.152.10.234:8020/plaintext/bigint.txt')format 'TEXT';
 create writable external table bigint_writehdfs(like bigint_heap) location ('gphdfs://10.152.10.234:8020/extwrite/bigint')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into bigint_writehdfs select * from bigint_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/bigint /mapreduce/bigint_gpdb/ >/dev/null
 16/09/30 00:06:56 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

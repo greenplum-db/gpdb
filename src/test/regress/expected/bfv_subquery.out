@@ -254,7 +254,7 @@ NOTICE:  table "mpp_t3" does not exist, skipping
 create table mpp_t1(a int,b int) distributed by (a); 
 create table mpp_t2(a int,b int) distributed by (b);
 create table mpp_t3(like mpp_t1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- end_ignore
 select * from mpp_t1 where a=1 and a=2 and a > (select mpp_t2.b from mpp_t2);
  a | b 

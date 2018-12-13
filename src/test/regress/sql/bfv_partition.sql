@@ -191,11 +191,9 @@ select b, count(*) from pt group by b;
 select a, count(*) from pt where a<2 group by a;
 
 -- CLEANUP
--- start_ignore
 drop index pt_c;
 drop table if exists pt;
 drop table if exists t;
--- end_ignore
 
 
 --

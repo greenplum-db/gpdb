@@ -1182,7 +1182,7 @@ make_one_stage_agg_plan(PlannerInfo *root,
 			result_plan = plan_grouping_extension(root, path, ctx->tuple_fraction,
 												  ctx->use_hashed_grouping,
 												  &tlist, sub_tlist,
-												  true, false,
+												  false,
 												  (List *) parse->havingQual,
 												  &numGroupCols,
 												  &groupColIdx,
@@ -1445,7 +1445,7 @@ make_two_stage_agg_plan(PlannerInfo *root,
 		result_plan = plan_grouping_extension(root, path, ctx->tuple_fraction,
 											  ctx->use_hashed_grouping,
 											  &prelim_tlist, ctx->sub_tlist,
-											  true, true,
+											  true,
 											  NIL,	/* no havingQual */
 											  &numGroupCols,
 											  &groupColIdx,
@@ -1542,7 +1542,6 @@ make_two_stage_agg_plan(PlannerInfo *root,
 	}
 
 	result_plan = add_second_stage_agg(root,
-									   true,
 									   prelim_tlist,
 									   final_tlist,
 									   final_qual,
@@ -2245,7 +2244,6 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 		}
 
 		result_plan = add_second_stage_agg(root,
-										   true,
 										   prelim_tlist,
 										   inter_tlist,
 										   NULL,
@@ -2323,7 +2321,6 @@ make_plan_for_one_dqa(PlannerInfo *root, MppGroupContext *ctx, int dqa_index,
 	}
 
 	result_plan = add_second_stage_agg(root,
-									   true,
 									   need_inter_agg ? inter_tlist : prelim_tlist,
 									   final_tlist,
 									   final_qual,
@@ -4472,13 +4469,11 @@ UpdateScatterClause(Query *query, List *newtlist)
  * node.
  *
  * Params:
- *  is_agg -- indicate to add an Agg or a Group node.
  *  prelim_tlist -- the targetlist for the existing Agg/Group node.
  *  final_tlist -- the targetlist for the new Agg/Group node.
  */
 Plan *
 add_second_stage_agg(PlannerInfo *root,
-					 bool is_agg,
 					 List *lower_tlist,
 					 List *upper_tlist,
 					 List *upper_qual,

@@ -63,7 +63,6 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	List	   *range_table = parse->rtable;
 	CmdType		command_type = parse->commandType;
 	ListCell   *lc;
-	RangeTblEntry *rte = NULL;
 
 	/*
 	 * Sanity check: if there is a result relation, it'd better be a real
@@ -71,7 +70,7 @@ preprocess_targetlist(PlannerInfo *root, List *tlist)
 	 */
 	if (result_relation)
 	{
-		rte = rt_fetch(result_relation, range_table);
+		RangeTblEntry *rte = rt_fetch(result_relation, range_table);
 
 		if (rte->subquery != NULL || rte->relid == InvalidOid)
 			elog(ERROR, "subquery cannot be result relation");

@@ -64,8 +64,7 @@ typedef enum RejectLimitCode
 {
 	REJECT_NONE = 0,
 	REJECT_FIRST_BAD_LIMIT,
-	REJECT_LIMIT_REACHED,
-	REJECT_UNPARSABLE_CSV,
+	REJECT_LIMIT_REACHED
 } RejectLimitCode;
 
 int			gp_initial_bad_row_limit = 1000;
@@ -95,7 +94,6 @@ makeCdbSreh(int rejectlimit, bool is_limit_in_rows,
 	h->is_limit_in_rows = is_limit_in_rows;
 	h->rejectcount = 0;
 	h->is_server_enc = false;
-	h->consec_csv_err = 0;
 	h->log_to_file = log_to_file;
 
 	snprintf(h->filename, sizeof(h->filename),
@@ -275,8 +273,7 @@ ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected)
 	if (total_rejected > 0)
 	{
 		ereport(NOTICE,
-				(errmsg("Found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more "
-						"input rows). Rejected related input data.",
+				(errmsg("found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more input rows), rejected related input data",
 						total_rejected, total_rejected)));
 	}
 }
@@ -340,10 +337,6 @@ GetRejectLimitCode(CdbSreh *cdbsreh)
 	if (ExceedSegmentRejectHardLimit(cdbsreh))
 		return REJECT_FIRST_BAD_LIMIT;
 
-	/* special case: check for un-parsable csv format errors */
-	if (CSV_IS_UNPARSABLE(cdbsreh))
-		return REJECT_UNPARSABLE_CSV;
-
 	/* now check if actual reject limit is reached */
 	if (cdbsreh->is_limit_in_rows)
 	{
@@ -389,15 +382,6 @@ ErrorIfRejectLimitReached(CdbSreh *cdbsreh)
 							gp_initial_bad_row_limit),
 					 errdetail("Aborting operation regardless of REJECT LIMIT value, last error was: %s",
 							   cdbsreh->errmsg)));
-			break;
-		case REJECT_UNPARSABLE_CSV:
-			/* the special "csv un-parsable" case */
-			ereport(ERROR,
-					(errcode(ERRCODE_T_R_GP_REJECT_LIMIT_REACHED),
-					 errmsg("input includes invalid CSV data that corrupts the ability to parse data rows"),
-					 errdetail("Data is not parsable, last error was: %s",
-							   cdbsreh->errmsg),
-					 errhint("This usually means several unescaped embedded QUOTE characters.")));
 			break;
 		case REJECT_LIMIT_REACHED:
 			/* the normal case */
@@ -515,8 +499,8 @@ VerifyRejectLimit(char rejectlimittype, int rejectlimit)
 		if (rejectlimit < 2)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("Segment reject limit in ROWS "
-							"must be 2 or larger (got %d)", rejectlimit)));
+					 errmsg("segment reject limit in ROWS must be 2 or larger (got %d)",
+							rejectlimit)));
 	}
 	else
 	{
@@ -525,8 +509,8 @@ VerifyRejectLimit(char rejectlimittype, int rejectlimit)
 		if (rejectlimit < 1 || rejectlimit > 100)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("Segment reject limit in PERCENT "
-							"must be between 1 and 100 (got %d)", rejectlimit)));
+					 errmsg("segment reject limit in PERCENT must be between 1 and 100 (got %d)",
+							rejectlimit)));
 	}
 
 }
@@ -556,7 +540,9 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	fp = AllocateFile(filename, "a");
 
 	if (!fp && (errno == EMFILE || errno == ENFILE))
-		ereport(ERROR, (errmsg("could not open \"%s\", too many open files: %m", filename)));
+		ereport(ERROR,
+				(errmsg("could not open \"%s\", too many open files: %m",
+						filename)));
 
 	if (!fp && errno == ENOENT)
 	{
@@ -564,7 +550,9 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 		if (ret == 0)
 			fp = AllocateFile(filename, "a");
 		else
-			ereport(ERROR, (errmsg("could not create directory for errorlog \"%s\": %m", ErrorLogDir)));
+			ereport(ERROR,
+					(errmsg("could not create directory for errorlog \"%s\": %m",
+							ErrorLogDir)));
 	}
 	if (!fp)
 		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));

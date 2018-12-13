@@ -1,7 +1,7 @@
 CREATE READABLE EXTERNAL TABLE s3regress_1r_1w (date text, time text, open float, high float,
 	low float, volume int) LOCATION('s3://s3-us-west-2.amazonaws.com/@read_prefix@/1correct1wrong/ config=@config_file@') format 'csv' LOG ERRORS SEGMENT REJECT LIMIT 5;
 SELECT count(*) FROM s3regress_1r_1w;
-NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
  count 
 -------
      1

@@ -115,6 +115,7 @@ static void fix_append_rel_relids(List *append_rel_list, int varno,
 static Node *find_jointree_node_for_rel(Node *jtnode, int relid);
 static bool is_simple_union_all_recurse(Node *setOp, Query *setOpQuery, List *colTypes);
 
+
 /*
  * pull_up_sublinks
  *		Attempt to pull up ANY and EXISTS SubLinks to be treated as
@@ -1149,11 +1150,11 @@ pull_up_simple_subquery(PlannerInfo *root, Node *jtnode, RangeTblEntry *rte,
 	}
 
 	/*
-	 * Replace references in the translated_vars lists of appendrels.
-	 * When pulling up an appendrel member, we do not need PHVs in the list
-	 * of the parent appendrel --- there isn't any outer join between.
-	 * Elsewhere, use PHVs for safety.  (This analysis could be made tighter
-	 * but it seems unlikely to be worth much trouble.)
+	 * Replace references in the translated_vars lists of appendrels. When
+	 * pulling up an appendrel member, we do not need PHVs in the list of the
+	 * parent appendrel --- there isn't any outer join between. Elsewhere, use
+	 * PHVs for safety.  (This analysis could be made tighter but it seems
+	 * unlikely to be worth much trouble.)
 	 */
 	foreach(lc, root->append_rel_list)
 	{
@@ -1844,8 +1845,6 @@ replace_vars_in_jointree(Node *jtnode,
 						 pullup_replace_vars_context *context,
 						 JoinExpr *lowest_nulling_outer_join)
 {
-	ListCell   *l;
-
 	if (jtnode == NULL)
 		return;
 	if (IsA(jtnode, RangeTblRef))
@@ -1900,6 +1899,7 @@ replace_vars_in_jointree(Node *jtnode,
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
 		foreach(l, f->fromlist)
 			replace_vars_in_jointree(lfirst(l), context,
@@ -2319,7 +2319,6 @@ static reduce_outer_joins_state *
 reduce_outer_joins_pass1(Node *jtnode)
 {
 	reduce_outer_joins_state *result;
-	ListCell   *l;
 
 	result = (reduce_outer_joins_state *)
 		palloc(sizeof(reduce_outer_joins_state));
@@ -2338,6 +2337,7 @@ reduce_outer_joins_pass1(Node *jtnode)
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
 		foreach(l, f->fromlist)
 		{
@@ -2551,6 +2551,7 @@ reduce_outer_joins_pass2(Node *jtnode,
 		}
 		j->jointype = jointype;
 
+		/* Only recurse if there's more to do below here */
 		if (left_state->contains_outer || right_state->contains_outer)
 		{
 			Relids		local_nonnullable_rels;
@@ -2795,7 +2796,6 @@ Relids
 get_relids_in_jointree(Node *jtnode, bool include_joins)
 {
 	Relids		result = NULL;
-	ListCell   *l;
 
 	if (jtnode == NULL)
 		return result;
@@ -2808,6 +2808,7 @@ get_relids_in_jointree(Node *jtnode, bool include_joins)
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
 		foreach(l, f->fromlist)
 		{
@@ -2855,8 +2856,6 @@ get_relids_for_join(PlannerInfo *root, int joinrelid)
 static Node *
 find_jointree_node_for_rel(Node *jtnode, int relid)
 {
-	ListCell   *l;
-
 	if (jtnode == NULL)
 		return NULL;
 	if (IsA(jtnode, RangeTblRef))
@@ -2869,6 +2868,7 @@ find_jointree_node_for_rel(Node *jtnode, int relid)
 	else if (IsA(jtnode, FromExpr))
 	{
 		FromExpr   *f = (FromExpr *) jtnode;
+		ListCell   *l;
 
 		foreach(l, f->fromlist)
 		{

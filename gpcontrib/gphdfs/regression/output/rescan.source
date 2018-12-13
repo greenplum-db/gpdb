@@ -33,7 +33,7 @@ L_SHIPMODE     CHAR(10) ,
 L_COMMENT      VARCHAR(44) 
 ) location ('gphdfs://10.152.10.234:8020/plaintext/lineitem.txt')format 'text' (delimiter as '|');
 create writable external table rescan_lineitem_writeHDFS (like rescan_lineitem) location ('gphdfs://10.152.10.234:8020/extwrite/lineitem') format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into rescan_lineitem_writeHDFS select * from rescan_lineitem;
 create readable external table rescan_lineitem_readHDFS (like rescan_lineitem) location ('gphdfs://10.152.10.234:8020/extwrite/lineitem') format 'custom' (formatter='gphdfs_import');
 create readable external table rescan_orders(
@@ -48,7 +48,7 @@ O_SHIPPRIORITY   INTEGER ,
 O_COMMENT        VARCHAR(79) 
 ) location ('gphdfs://10.152.10.234:8020/plaintext/orders.txt')format 'text' (delimiter as '|');
 create writable external table rescan_orders_writeHDFS (like rescan_orders ) location ('gphdfs://10.152.10.234:8020/extwrite/orders') format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into rescan_orders_writeHDFS select * from rescan_orders;
 create readable external table rescan_orders_readHDFS (like rescan_orders ) location ('gphdfs://10.152.10.234:8020/extwrite/orders') format 'custom' (formatter='gphdfs_import');
 select * from rescan_lineitem order by l_partkey;

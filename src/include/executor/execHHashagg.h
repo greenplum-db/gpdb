@@ -127,6 +127,7 @@ typedef struct HashAggTableSizes
 	unsigned  workmem_initial;    /* Estimated work_mem bytes at #entries=0 */
 	unsigned  workmem_per_entry;  /* Additional work_mem bytes per entry */
 	bool      spill;      /* Do we expect to spill ? */
+	double    memquota;   /* Minimal required memquota */
 } HashAggTableSizes;
 
 /*

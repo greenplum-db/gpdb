@@ -606,7 +606,7 @@ drop table atsdb;
 create table atsdb (i int, j int, t text, n numeric) distributed by (i, j);
 insert into atsdb select i, i+1, i+2, i+3 from generate_series(1, 20) i;
 alter table atsdb drop column i;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 select * from atsdb;
  j  | t  | n  
 ----+----+----

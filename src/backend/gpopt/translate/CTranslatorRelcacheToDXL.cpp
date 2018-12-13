@@ -1737,7 +1737,7 @@ CTranslatorRelcacheToDXL::RetrieveScOp
 	}
 
 	// get comparison type
-	CmpType cmpt = (CmpType) gpdb::GetComparisonType(op_oid, left_oid, right_oid);
+	CmpType cmpt = (CmpType) gpdb::GetComparisonType(op_oid);
 	IMDType::ECmpType cmp_type = ParseCmpType(cmpt);
 	
 	// get func oid

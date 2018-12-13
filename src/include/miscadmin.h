@@ -91,22 +91,39 @@ extern PGDLLIMPORT volatile int32 CritSectionCount;
 
 /* in tcop/postgres.c */
 extern void ProcessInterrupts(const char* filename, int lineno);
-extern void BackoffBackendTick(void);
-extern bool gp_enable_resqueue_priority;
+
 extern void gp_set_thread_sigmasks(void);
 
 /* Hook get notified when QueryCancelPending or ProcDiePending is raised */
 typedef void (*cancel_pending_hook_type) (void);
 extern PGDLLIMPORT cancel_pending_hook_type cancel_pending_hook;
 
-/* in utils/resource_manager.h */
-extern bool IsResQueueEnabled(void);
-
 /*
  * We don't want to include the entire vmem_tracker.h, and so,
  * declare the only function we use from vmem_tracker.h.
  */
 extern void RedZoneHandler_DetectRunawaySession(void);
+
+/*
+ * These should be in backoff.h, but we need the in CHECK_FOR_INTERRUPTS(),
+ * and we don't want to include the entire backoff.h here.
+ */
+extern int backoffTickCounter;
+extern int gp_resqueue_priority_local_interval;
+
+extern void BackoffBackendTickExpired(void);
+
+static inline void
+BackoffBackendTick(void)
+{
+	backoffTickCounter++;
+
+	if (backoffTickCounter >= gp_resqueue_priority_local_interval)
+	{
+		/* Enough time has passed. Perform backoff. */
+		BackoffBackendTickExpired();
+	}
+}
 
 #ifndef WIN32
 
@@ -120,8 +137,7 @@ do { \
 \
 	if (InterruptPending) \
 		ProcessInterrupts(__FILE__, __LINE__); \
-	if (IsResQueueEnabled() && gp_enable_resqueue_priority)	\
-		BackoffBackendTick(); \
+	BackoffBackendTick(); \
 	ReportOOMConsumption(); \
 	RedZoneHandler_DetectRunawaySession();\
 } while(0)
@@ -130,8 +146,7 @@ do { \
 do { \
 	if (InterruptPending) \
 		ProcessInterrupts(__FILE__, __LINE__); \
-	if (IsResQueueEnabled() && gp_enable_resqueue_priority)	\
-		BackoffBackendTick(); \
+	BackoffBackendTick(); \
 	ReportOOMConsumption(); \
 	RedZoneHandler_DetectRunawaySession();\
 } while(0)
@@ -195,6 +210,7 @@ extern bool IsPostmasterEnvironment;
 extern PGDLLIMPORT bool IsUnderPostmaster;
 extern bool IsBackgroundWorker;
 extern bool IsBinaryUpgrade;
+extern bool ConvertMasterDataDirToSegment;
 
 extern bool ExitOnAnyError;
 

@@ -228,6 +228,9 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 					action = FILE_ACTION_NONE;
 			}
 			break;
+
+		case FILE_TYPE_FIFO:
+			break;
 	}
 
 	/* Create a new entry for this file */

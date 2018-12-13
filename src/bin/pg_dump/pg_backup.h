@@ -151,6 +151,8 @@ typedef struct _restoreOptions
 	bool		single_txn;
 
 	bool	   *idWanted;		/* array showing which dump IDs to emit */
+
+	int			binary_upgrade;	/* GPDB: restoring for a binary upgrade */
 } RestoreOptions;
 
 typedef void (*SetupWorkerPtr) (Archive *AH, RestoreOptions *ropt);

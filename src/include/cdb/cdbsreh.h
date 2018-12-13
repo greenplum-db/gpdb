@@ -43,17 +43,6 @@
 #define errtable_rawbytes 8
 
 /*
- * In cases of invalid csv input data we end up with not being able to parse the
- * data, resulting in very large data rows. In copy.c we throw an error ("line
- * too long") and continue to try and parse. In some cases this is enough to 
- * recover and continue parsing. However in other cases, especially in input 
- * data that includes a lot of valid embedded newlines, we may never be able to
- * recover from an error and will continue to parse huge lines and abort. In
- * here we try to detect this case and abort the operation.
- */
-#define CSV_IS_UNPARSABLE(sreh) (sreh->consec_csv_err == 3 ? (true) : (false))
-
-/*
  * All the Single Row Error Handling state is kept here.
  * When an error happens and we are in single row error handling
  * mode this struct is updated and handed to the single row
@@ -68,7 +57,6 @@ typedef struct CdbSreh
 	int64		linenumber;		/* line number of error in original file */
 	uint64  processed;      /* num logical input rows processed so far */
 	bool	is_server_enc;	/* was bad row converted to server encoding? */
-	int		consec_csv_err; /* # of consecutive invalid csv errors */
 
 	/* reject limit state */
 	int		rejectlimit;	/* SEGMENT REJECT LIMIT value */

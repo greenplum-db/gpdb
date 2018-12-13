@@ -358,7 +358,7 @@ execute 'cat $GP_SEG_DATADIR/hdfsfile.out'
  FORMAT 'CUSTOM' (formatter='gphdfs_import')
  log errors SEGMENT REJECT LIMIT 1000 rows;
 select * from example_in order by 1;
-NOTICE:  Found 3 data formatting errors (3 or more input rows). Rejected related input data.
+NOTICE:  found 3 data formatting errors (3 or more input rows), rejected related input data
  a 
 ---
  f

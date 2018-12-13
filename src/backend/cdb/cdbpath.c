@@ -101,7 +101,6 @@ cdbpath_create_motion_path(PlannerInfo *root,
 	CdbMotionPath *pathnode;
 	int numsegments;
 
-	UnusedArg(root);
 	Assert(cdbpathlocus_is_valid(locus) &&
 		   cdbpathlocus_is_valid(subpath->locus));
 

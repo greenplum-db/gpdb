@@ -477,4 +477,36 @@ DROP FUNCTION dup(anyelement);
 CREATE FUNCTION bad (f1 int, out f2 anyelement, out f3 anyarray)
 AS 'select $1, array[$1,$1]' LANGUAGE sql;
 
+--
+-- Test that a set-returning function is not called unnecessarily.
+--
+-- The planner could legitimately call an immutable function as many times it
+-- wishes, but there's no need to call it more than once. (ORCA used to create
+-- plans where the FunctionScan was executed on every segment, but a Result
+-- on top of it filtered all the rows, except on one segment.
+--
+CREATE FUNCTION notice_srf() RETURNS SETOF text AS $$
+begin
+   RAISE NOTICE 'notice_srf called in segment %', gp_execution_segment();
+
+   RETURN NEXT 'foo';
+   RETURN NEXT 'bar';
+end;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- gpdiff suppresses identical NOTICEs coming from multiple segments. But we
+-- specifically want to check that we get the NOTICE only from one segment.
+-- To defeat gpdiff's duplicate-elimination, the NOTICE includes the segment
+-- number in the message, so that the message is different on every segment.
+-- But we don't actually don't care which segment it executes on, so filter
+-- out the segment number for comparison.
+--
+-- start_matchsubs
+-- m/NOTICE:  notice_srf called in segment (\d+)/
+-- s/in segment (\d+)/in segment ###/
+-- end_matchsubs
+
+CREATE TEMPORARY TABLE srfdest (t text) DISTRIBUTED RANDOMLY;
+INSERT INTO srfdest select * FROM notice_srf();
+
 reset optimizer_segments;

@@ -139,7 +139,8 @@ DROP TABLE copy_regression_default3;
 CREATE TABLE copy_regression_oids(a text) WITH OIDS;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 COPY copy_regression_oids from stdin with oids delimiter '|';
 COPY copy_regression_oids from stdin with oids csv;
 SELECT * FROM copy_regression_oids ORDER BY oid;
@@ -554,7 +555,7 @@ ALTER table errcopy ALTER c DROP NOT null;
 ALTER table errcopy DROP COLUMN c;
 ALTER table errcopy ADD COLUMN c int;
 COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
-NOTICE:  Found 9 data formatting errors (9 or more input rows). Rejected related input data.
+NOTICE:  found 9 data formatting errors (9 or more input rows), rejected related input data
 SELECT * FROM errcopy;
  a | b | c 
 ---+---+---
@@ -585,7 +586,7 @@ SELECT gp_truncate_error_log('errcopy');
 
 COPY (select i::text || ',' || i::text || case when i = 4 then '' else ',' || i::text || case when i = 5 then ',5' else '' end end from generate_series(1, 10)i) to '/tmp/errcopy.csv';
 COPY errcopy from '/tmp/errcopy.csv' csv null '' log errors segment reject limit 10 rows;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 SELECT * FROM errcopy ORDER BY a;
  a  | b  | c  
 ----+----+----
@@ -609,7 +610,7 @@ SELECT relname, errmsg, rawdata FROM gp_read_error_log('errcopy');
 -- metacharacter
 TRUNCATE errcopy;
 COPY errcopy from stdin csv newline 'LF' log errors segment reject limit 3 rows;
-NOTICE:  Found 1 data formatting errors (1 or more input rows). Rejected related input data.
+NOTICE:  found 1 data formatting errors (1 or more input rows), rejected related input data
 SELECT * FROM errcopy;
  a | b | c 
 ---+---+---
@@ -693,7 +694,7 @@ SELECT relname, filename, bytenum, errmsg FROM gp_read_error_log('segment_reject
 
 -- not exceed reject limit on segment
 COPY segment_reject_limit_from from '/tmp/segment_reject_limit<SEGID>.csv' on segment log errors segment reject limit 3 rows;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 SELECT * FROM segment_reject_limit_from;
  a | b 
 ---+---
@@ -775,7 +776,7 @@ CONTEXT:  COPY test_first_segment_reject_limit, line 2, column a: "error1"
 -- should go through fine
 SET gp_initial_bad_row_limit = 6;
 COPY test_first_segment_reject_limit FROM STDIN WITH DELIMITER '|' segment reject limit 20;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
 SELECT COUNT(*) FROM test_first_segment_reject_limit;
  count 
 -------
@@ -851,7 +852,8 @@ INSERT INTO test_copy_on_segment VALUES (3, 'h', 'j');
 INSERT INTO test_copy_on_segment VALUES (4, 'i', 'l');
 INSERT INTO test_copy_on_segment VALUES (5, 'q', 'w');
 CREATE TABLE test_copy_on_segment_withoids (a int, b text, c text) WITH OIDS DISTRIBUTED BY (a,c);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 INSERT INTO test_copy_on_segment_withoids VALUES (1, 's', 'd');
 INSERT INTO test_copy_on_segment_withoids VALUES (2, 'f', 'g');
 INSERT INTO test_copy_on_segment_withoids VALUES (3, 'h', 'j');
@@ -900,7 +902,8 @@ SELECT * FROM test_copy_from_on_segment_csv ORDER BY a;
 (5 rows)
 
 CREATE TABLE test_copy_from_on_segment_withoids (LIKE test_copy_on_segment_withoids) WITH OIDS DISTRIBUTED BY (a,c);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 COPY test_copy_from_on_segment_withoids FROM '/tmp/withoids_valid_filename<SEGID>.csv' WITH ON SEGMENT OIDS CSV QUOTE '"' ESCAPE E'\\' NULL '\N' DELIMITER ',' IGNORE EXTERNAL PARTITIONS;
 SELECT * FROM test_copy_from_on_segment_withoids ORDER BY a;
  a | b | c 
@@ -991,7 +994,7 @@ SELECT count(*) FROM onek_copy_onsegment;
 
 COPY onek_copy_onsegment TO '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
 CREATE TABLE onek_copy_from_onsegment (LIKE onek_copy_onsegment);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 COPY onek_copy_from_onsegment FROM '/tmp/valid_filename_onek_copy_onsegment<SEGID>.txt' ON SEGMENT;
 SELECT * FROM onek_copy_onsegment EXCEPT SELECT * FROM onek_copy_from_onsegment;
  unique1 | unique2 | two | four | ten | twenty | hundred | thousand | twothousand | fivethous | tenthous | odd | even | stringu1 | stringu2 | string4 
@@ -1245,7 +1248,9 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
     20
 (1 row)
 
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
+-- This adds data to the segment 0's file, that doesn't belong to that
+-- segment. COPYing that back to the table should throw an error.
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED_1_prt_1 to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey_partioned, line 1: "0"
@@ -1255,17 +1260,22 @@ SELECT COUNT(*) FROM COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED;
     20
 (1 row)
 
-ALTER table copy_on_segment_check_distkey_partioned_1_prt_1 set DISTRIBUTED RANDOMLY ;
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table
-HINT:  "SET gp_enable_segment_copy_checking=off" can be used to disable distribution key checking.
+-- But if we turn off the checks for data distribution, the system will
+-- merrily load it in anyway.
 set gp_vmem_idle_resource_timeout=1;
 SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
-ALTER TABLE COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED SET WITH (REORGANIZE=TRUE) DISTRIBUTED RANDOMLY;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
+-- If the partition is made randomly distributed, it works even with the
+-- checking enabled.
+ALTER table copy_on_segment_check_distkey_partioned_1_prt_1 set DISTRIBUTED RANDOMLY ;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+-- But make sure we still perform the checks for the other partition that is
+-- hash distributed.
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED_1_prt_2 to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
+COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=31639)
 -- COPY FROM ON SEGMENT partitoned table distributed randomly
 CREATE TABLE COPY_ON_SEGMENT_PARTION_DIST_RANDOMLY (a int) DISTRIBUTED RANDOMLY PARTITION BY range(a) ( START (0) END (10) EVERY (5));
 NOTICE:  CREATE TABLE will create partition "copy_on_segment_partion_dist_randomly_1_prt_1" for table "copy_on_segment_partion_dist_randomly"
@@ -1333,8 +1343,7 @@ ERROR:  value of distribution key doesn't belong to segment with ID 0, it belong
 CONTEXT:  COPY copy_on_segment_check_distkey_subpartition, line 2: "0,0"
 ALTER table copy_on_segment_check_distkey_subpartition_1_prt_1_2_prt_1 set DISTRIBUTED RANDOMLY ;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  COPY FROM ON SEGMENT doesn't support checking distribution key restriction when the distribution policy of the partition table is different from the main table
-HINT:  "SET gp_enable_segment_copy_checking=off" can be used to disable distribution key checking.
+ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=31639)
 -- start_ignore
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;
@@ -1440,7 +1449,7 @@ NOTICE:  Success:
 COPY lineitem TO '/tmp/aborted.data';
 ERROR:  canceling statement due to user request
 CREATE TABLE lineitem_aborted (LIKE lineitem);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 COPY lineitem_aborted FROM '/tmp/aborted.data';
 SELECT count(*) < 57190 FROM lineitem_aborted;
  ?column? 

@@ -1520,23 +1520,6 @@ pnstrdup(const char *in, Size len)
 	return out;
 }
 
-/*
- * floor_log2_Size
- */
-int floor_log2_Size(Size sz)
-{
-    return floor_log2_Size_inline(sz);
-}
-
-/*
- * ceil_log2_Size
- */
-int ceil_log2_Size(Size sz)
-{
-    return ceil_log2_Size_inline(sz);
-}
-
-
 #if defined(WIN32) || defined(__CYGWIN__)
 /*
  *	Memory support routines for libpgport on Win32

@@ -126,7 +126,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         result = self.buildMirrorSegs._GpMirrorListToBuild__startAll(Mock(), [Mock(), Mock()], [])
         self.assertFalse(result)
         self.logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
-                                         'Segment: sdw1:/data/primary0:content=0:dbid=2:mode=s:status=u: REASON: reason')
+                                         'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
 
     @patch('gppylib.operations.buildMirrorSegments.dbconn.connect')
     @patch('gppylib.operations.buildMirrorSegments.dbconn.execSQL')

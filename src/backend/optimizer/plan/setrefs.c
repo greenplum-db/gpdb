@@ -931,9 +931,9 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 			Assert(!plan->lefttree && !plan->righttree && !plan->initPlan);
 			break;
 
-		case T_Sort:
 		case T_Hash:
 		case T_Material:
+		case T_Sort:
 		case T_Unique:
 		case T_SetOp:
 
@@ -1103,7 +1103,6 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 					splan->plan.qual =
 						fix_scan_list(root, splan->plan.qual, rtoffset);
 				}
-
 				/* resconstantqual can't contain any subplan variable refs */
 				splan->resconstantqual =
 					fix_scan_expr(root, splan->resconstantqual, rtoffset);

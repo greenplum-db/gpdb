@@ -158,6 +158,7 @@ SELECT round(4);
 SELECT round(4, 1+1);
 SELECT round(CAST (4 AS numeric), 4);
 SELECT round(4.0, 4);
+SELECT round(0.998, 2);
 SELECT substr('1234', 3);
 SELECT substr(varchar '1234', 3);
 SELECT substr(CAST (varchar '1234' AS text), 3);
@@ -493,3 +494,19 @@ drop aggregate agg_point_add1(point);
 drop table agg_point_tbl;
 drop aggregate agg_point_add2(point);
 drop table agg_numeric_tbl;
+
+
+--
+-- Test for an old bug, where numeric trunc() scribbled on its input.
+--
+do $$
+declare
+  n numeric;
+begin
+  n = repeat('9', 1) || '.12';
+
+  raise notice 'n: %', n;
+  raise notice 't: %', trunc(n,1);
+  raise notice 'n: %', n;
+end;
+$$;

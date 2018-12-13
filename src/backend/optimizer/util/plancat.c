@@ -806,7 +806,6 @@ estimate_rel_size(Relation rel, int32 *attr_widths,
 				*allvisfrac = 1;
 			else
 				*allvisfrac = (double) relallvisible / curpages;
-
 			break;
 		case RELKIND_SEQUENCE:
 			/* Sequences always have a known size */

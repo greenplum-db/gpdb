@@ -1155,7 +1155,8 @@ numeric_round(PG_FUNCTION_ARGS)
 	/*
 	 * Unpack the argument and round it at the proper digit position
 	 */
-	init_var_from_num(num, &arg);
+	init_var(&arg);
+	set_var_from_num(num, &arg);
 
 	round_var(&arg, scale);
 
@@ -1202,7 +1203,8 @@ numeric_trunc(PG_FUNCTION_ARGS)
 	/*
 	 * Unpack the argument and truncate it at the proper digit position
 	 */
-	init_var_from_num(num, &arg);
+	init_var(&arg);
+	set_var_from_num(num, &arg);
 
 	trunc_var(&arg, scale);
 
@@ -7977,6 +7979,14 @@ round_var(NumericVar *var, int rscale)
 	int			ndigits;
 	int			carry;
 
+	/*
+	 * sanity check that the 'digits' are dynamically allocated, and point
+	 * to somewhere in the 'buf'. (This only catches the case that the
+	 * 'digits' happens to be allocated at an address below 'buf', but it's
+	 * better than nothing.)
+	 */
+	Assert(var->digits >= var->buf);
+
 	var->dscale = rscale;
 
 	/* decimal digits wanted */
@@ -8080,6 +8090,14 @@ trunc_var(NumericVar *var, int rscale)
 {
 	int			di;
 	int			ndigits;
+
+	/*
+	 * sanity check that the 'digits' are dynamically allocated, and point
+	 * to somewhere in the 'buf'. (This only catches the case that the
+	 * 'digits' happens to be allocated at an address below 'buf', but it's
+	 * better than nothing.)
+	 */
+	Assert(var->digits >= var->buf);
 
 	var->dscale = rscale;
 

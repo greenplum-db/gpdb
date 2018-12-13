@@ -3188,6 +3188,7 @@ transformDeclareCursorStmt(ParseState *pstate, DeclareCursorStmt *stmt)
 	return result;
 }
 
+
 /*
  * transformExplainStmt -
  *	transform an EXPLAIN Statement

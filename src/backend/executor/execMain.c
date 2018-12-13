@@ -88,6 +88,7 @@
 #include "utils/typcache.h"
 #include "utils/workfile_mgr.h"
 #include "utils/faultinjector.h"
+#include "utils/resource_manager.h"
 
 #include "catalog/pg_statistic.h"
 #include "catalog/pg_class.h"
@@ -270,15 +271,13 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc->plannedstmt != NULL);
 	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
 
-	PlannedStmt *plannedStmt = queryDesc->plannedstmt;
-
 	queryDesc->memoryAccountId = MemoryAccounting_CreateExecutorMemoryAccount();
 
 	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
-	Assert(plannedStmt->intoPolicy == NULL ||
-		GpPolicyIsPartitioned(plannedStmt->intoPolicy) ||
-		GpPolicyIsReplicated(plannedStmt->intoPolicy));
+	Assert(queryDesc->plannedstmt->intoPolicy == NULL ||
+		GpPolicyIsPartitioned(queryDesc->plannedstmt->intoPolicy) ||
+		GpPolicyIsReplicated(queryDesc->plannedstmt->intoPolicy));
 
 	/**
 	 * Perfmon related stuff.
@@ -309,8 +308,14 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 		/**
 		 * There are some statements that do not go through the resource queue, so we cannot
 		 * put in a strong assert here. Someday, we should fix resource queues.
+		 *
+		 * In resource group mode we always assign some memory to operators
+		 * even if the amount is larger than the spill memory, the memory can
+		 * be actually allocated from the shared memory.  If there is not enough
+		 * shared memory OOM will be raised on executors.
 		 */
-		if (queryDesc->plannedstmt->query_mem > 0)
+		if (IsResGroupEnabled() ||
+			queryDesc->plannedstmt->query_mem > 0)
 		{
 			switch(*gp_resmanager_memory_policy)
 			{
@@ -1217,7 +1222,7 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 		/*
 		 * Remove our own query's motion layer.
 		 */
-		RemoveMotionLayer(estate->motionlayer_context, true);
+		RemoveMotionLayer(estate->motionlayer_context);
 
 		/*
 		 * Release EState and per-query memory context.
@@ -1240,7 +1245,7 @@ standard_ExecutorEnd(QueryDesc *queryDesc)
 	/*
 	 * Remove our own query's motion layer.
 	 */
-	RemoveMotionLayer(estate->motionlayer_context, true);
+	RemoveMotionLayer(estate->motionlayer_context);
 
 	/* do away with our snapshots */
 	UnregisterSnapshot(estate->es_snapshot);

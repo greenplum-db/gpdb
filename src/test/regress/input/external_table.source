@@ -24,6 +24,9 @@
 -- m/ERROR\:\s+external table .* command ended with .*cat\: cannot open.*/i
 -- s/cat\: cannot open (.*)$/cat\: $1\: NO SUCH FILE/
 --
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
 -- end_matchsubs
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 

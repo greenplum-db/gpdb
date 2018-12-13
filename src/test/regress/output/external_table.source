@@ -24,6 +24,9 @@
 -- m/ERROR\:\s+external table .* command ended with .*cat\: cannot open.*/i
 -- s/cat\: cannot open (.*)$/cat\: $1\: NO SUCH FILE/
 --
+-- m/DETAIL:  Found \d+ URLs and \d+ primary segments./
+-- s/Found.+//
+--
 -- end_matchsubs
 CREATE TABLE REG_REGION (R_REGIONKEY INT, R_NAME CHAR(25), R_COMMENT VARCHAR(152)) DISTRIBUTED BY (R_REGIONKEY);
 -- --------------------------------------
@@ -222,10 +225,11 @@ HINT:  Use ALTER EXTERNAL TABLE instead
 alter external table ext add column a int; -- pass
 alter external table ext drop column a; -- pass
 alter external table ext add column extnewcol int not null; -- should fail (constraints not allowed)
-ERROR:  Unsupported ALTER command for table type external. No constraints allowed.
+ERROR:  unsupported ALTER command for external table
+DETAIL:  No constraints allowed.
 alter external table ext add column extnewcol int; -- pass
 alter external table ext alter column extnewcol set default 1; -- should fail (unsupported alter type)
-ERROR:  Unsupported ALTER command for table type external
+ERROR:  unsupported ALTER command for external table
 alter external table ext alter column x type integer using 123; -- should fail (USING doesn't make sense on external table)
 ERROR:  cannot specify a USING expression when altering an external table
 alter external table ext alter column x type integer; -- pass
@@ -241,7 +245,7 @@ ERROR:  cannot update or delete from external relation "ext"
 insert into ext(x) values('a');
 ERROR:  cannot change a readable external table "ext"
 create index ext_index on ext(x); -- should fail
-ERROR:  cannot create indexes on external tables.
+ERROR:  cannot create indexes on external tables
 drop table ext; -- should fail (wrong object)
 ERROR:  "ext" is not a base table
 HINT:  Use DROP EXTERNAL TABLE to remove an external table.
@@ -448,7 +452,7 @@ DROP TABLE mpp17980;
 COPY (VALUES('1,2'),('1,2,3'),('1,'),('1')) TO '@abs_srcdir@/data/tableless.csv';
 CREATE TABLE tableless_heap(a int, b int);
 COPY tableless_heap FROM '@abs_srcdir@/data/tableless.csv' CSV LOG ERRORS SEGMENT REJECT LIMIT 10;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_heap');
     relname     | linenum |                errmsg                 
 ----------------+---------+---------------------------------------
@@ -479,7 +483,7 @@ location ('file://@hostname@@abs_srcdir@/data/tableless.csv')
 format 'csv'
 log errors segment reject limit 10;
 select * from tableless_ext;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  a | b 
 ---+---
  1 |  
@@ -512,7 +516,7 @@ SELECT relname, linenum, errmsg FROM gp_read_error_log('tableless_ext');
 (0 rows)
 
 select * from tableless_ext;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  a | b 
 ---+---
  1 |  
@@ -526,7 +530,7 @@ SELECT gp_truncate_error_log('*');
 (1 row)
 
 select * from tableless_ext;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  a | b 
 ---+---
  1 |  
@@ -565,7 +569,8 @@ create external table ret_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/ret.tbl19', 'gpfdist://foo.invalid:7070/ret.tbl20'
 ) format 'text';
 select * from ret_too_many_uris;
-ERROR:  There are more external files (URLs) than primary segments that can read them.
+ERROR:  there are more external files (URLs) than primary segments that can read them
+DETAIL:  Found 20 URLs and 3 primary segments.
 create writable external table wet_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/wet.out1',  'gpfdist://foo.invalid:7070/wet.out2',
   'gpfdist://foo.invalid:7070/wet.out3',  'gpfdist://foo.invalid:7070/wet.out4',
@@ -579,7 +584,7 @@ create writable external table wet_too_many_uris(a text, b text) location(
   'gpfdist://foo.invalid:7070/wet.out19', 'gpfdist://foo.invalid:7070/wet.out20'
 ) format 'text';
 insert into wet_too_many_uris values ('foo', 'bar');
-ERROR:  External table has more URLs than available primary segments that can write into them  (seg2 127.0.0.1:40002 pid=24162)
+ERROR:  external table has more URLs than available primary segments that can write into them  (seg2 127.0.0.1:40002 pid=24162)
 -- Test for error log functionality
 -- Scan with no errors
 CREATE EXTERNAL TABLE exttab_basic_1( i int, j text )
@@ -619,7 +624,7 @@ LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'T
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 -- should not error out as segment reject limit will not be reached
 SELECT * FROM exttab_basic_2 order by i;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  i  |     j     
 ----+-----------
   1 | 1_number
@@ -660,10 +665,10 @@ CREATE EXTERNAL TABLE exttab_basic_4( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 100;
 CREATE TABLE exttab_insert_1 (LIKE exttab_basic_4);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 -- Insert should go through fine
 INSERT INTO exttab_insert_1 SELECT * FROM exttab_basic_4;
-NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related input data.
+NOTICE:  found 6 data formatting errors (6 or more input rows), rejected related input data
 -- Error log should be populated
 select count(*) > 0 from gp_read_error_log('exttab_basic_4');
  ?column? 
@@ -713,7 +718,7 @@ LOG ERRORS SEGMENT REJECT LIMIT 100;
 CREATE TABLE exttab_ctas_1 as SELECT * FROM exttab_basic_6;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related input data.
+NOTICE:  found 6 data formatting errors (6 or more input rows), rejected related input data
 -- CTAS should go through fine
 SELECT * FROM exttab_ctas_1 order by i;
  i  |     j     
@@ -873,7 +878,7 @@ with cte1 as
 SELECT e1.i, e2.j FROM exttab_cte_1 e1, exttab_cte_1 e2 WHERE e1.i = e2.i AND e1.i > 5 ORDER BY e1.i
 )
 SELECT  cte1.i , cte1.j FROM cte1 ORDER BY cte1.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i  |     j     
 ----+-----------
   6 | 6_number
@@ -1021,7 +1026,7 @@ FETCH exttab_cur1;
 (0 rows)
 
 COMMIT;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
 -- Check permissions with gp_truncate_error_log and gp_read_error_log
 -- does not reach reject limit
 CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text )
@@ -1033,7 +1038,7 @@ LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_more_errors.data') FORMAT '
 LOG ERRORS SEGMENT REJECT LIMIT 2;
 -- generate some error logs
 SELECT COUNT(*) FROM exttab_permissions_1;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  count 
 -------
      8
@@ -1121,7 +1126,7 @@ CREATE EXTERNAL TABLE exttab_permissions_1( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 SELECT COUNT(*) FROM exttab_permissions_1 e1, exttab_permissions_1 e2;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  count 
 -------
     64
@@ -1175,7 +1180,7 @@ CREATE EXTERNAL TABLE exttab_permissions_3( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') FORMAT 'TEXT' (DELIMITER '|')
 LOG ERRORS SEGMENT REJECT LIMIT 10;
 SELECT COUNT(*) FROM exttab_permissions_3 e1, exttab_permissions_3 e2;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  count 
 -------
     64
@@ -1211,7 +1216,7 @@ SELECT * FROM gp_read_error_log('exttab_permissions_3');
 -- Grant TRUNCATE permission on table to a non table owner and make sure he is able to do gp_truncate_error_log
 GRANT TRUNCATE on exttab_permissions_3 to errlog_exttab_user4;
 SELECT COUNT(*) FROM exttab_permissions_3 e1, exttab_permissions_3 e2;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  count 
 -------
     64
@@ -1311,7 +1316,7 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subq_1 WHERE i < 10) e2
 group by e1.j order by 3,2,1;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  sum | sum |    j     
 -----+-----+----------
    1 |  37 | 1_number
@@ -1336,7 +1341,7 @@ SELECT sum(distinct e1.i), sum(distinct e2.i), e1.j FROM
 (SELECT i, j FROM exttab_subq_1 WHERE i < 10) e2
 group by e1.j
 HAVING sum(distinct e1.i) > (SELECT max(i) FROM exttab_subq_1);
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  sum | sum | j 
 -----+-----+---
 (0 rows)
@@ -1357,7 +1362,7 @@ SELECT e1.i , e1.j FROM
 exttab_subq_1 e1, exttab_subq_1 e2
 WHERE e1.j = e2.j and
 e1.i + 1 IN ( SELECT i from exttab_subq_1 WHERE i <= e1.i);
-NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related input data.
+NOTICE:  found 6 data formatting errors (6 or more input rows), rejected related input data
  i | j 
 ---+---
 (0 rows)
@@ -1454,7 +1459,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1491,7 +1496,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1516,7 +1521,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1529,7 +1534,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_subtxs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1589,7 +1594,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1625,7 +1630,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1655,7 +1660,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_1 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_1 WHERE i < 10) e2
 WHERE e1.i = e2.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1744,7 +1749,7 @@ SELECT e1.i, e2.j FROM
 (SELECT i, j FROM exttab_txs_4 WHERE i < 5 ) e1,
 (SELECT i, j FROM exttab_txs_4 WHERE i < 10) e2
 WHERE e1.i = e2.i order by e1.i;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -1882,7 +1887,7 @@ SELECT * FROM gp_read_error_log('exttab_udfs_2')
 DROP TABLE IF EXISTS exttab_udfs_insert_2;
 NOTICE:  table "exttab_udfs_insert_2" does not exist, skipping
 CREATE TABLE exttab_udfs_insert_2 (LIKE exttab_udfs_1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE OR REPLACE FUNCTION exttab_udfs_func2 ()
 RETURNS boolean
 AS $$
@@ -1938,7 +1943,7 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 
 -- All this should fail, error logs should be populated even if the UDF gets aborted as we persist error rows written within aborted txs.
 SELECT * FROM exttab_udfs_func2();
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
@@ -1972,7 +1977,7 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 (1 row)
 
 SELECT exttab_udfs_func2();
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
@@ -2006,7 +2011,7 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 (1 row)
 
 INSERT INTO exttab_udfs_insert_1 SELECT * FROM exttab_udfs_func2();
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
@@ -2042,7 +2047,7 @@ SELECT gp_truncate_error_log('exttab_udfs_2');
 CREATE TABLE exttab_udfs_ctas_2 AS SELECT * FROM exttab_udfs_func2();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'exttab_udfs_func2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
 CONTEXT:  SQL statement "INSERT INTO exttab_udfs_insert_2
   SELECT i, j from exttab_udfs_1"
 PL/pgSQL function exttab_udfs_func2() line 9 at SQL statement
@@ -2107,7 +2112,7 @@ SELECT * FROM gp_read_error_log('exttab_union_2')
 DROP TABLE IF EXISTS exttab_union_insert_1;
 NOTICE:  table "exttab_union_insert_1" does not exist, skipping
 CREATE TABLE exttab_union_insert_1 (LIKE exttab_union_1);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 SELECT gp_truncate_error_log('exttab_union_1');
  gp_truncate_error_log 
 -----------------------
@@ -2162,7 +2167,7 @@ insert into exttab_union_insert_1
 SELECT e1.i, e2.j from exttab_union_1 e1 INNER JOIN exttab_union_1 e2 ON e1.i = e2.i
 UNION
 SELECT e1.i, e2.j from exttab_union_1 e1 INNER JOIN exttab_union_1 e2 ON e1.i = e2.i;
-NOTICE:  Found 8 data formatting errors (8 or more input rows). Rejected related input data.
+NOTICE:  found 8 data formatting errors (8 or more input rows), rejected related input data
 -- should return the right result
 SELECT * from exttab_union_insert_1 order by i;
  i  |     j     
@@ -2387,7 +2392,7 @@ SELECT * FROM cte1 c1, cte2 c2
 WHERE c1.i = c2.i
 ORDER BY c1.i
 limit 5;
-NOTICE:  Found 8 data formatting errors (8 or more input rows). Rejected related input data.
+NOTICE:  found 8 data formatting errors (8 or more input rows), rejected related input data
  i | sum_i |         avg_j          | rnk_j | i | sum_i |         avg_j          | rnk_j 
 ---+-------+------------------------+-------+---+-------+------------------------+-------
  1 |     1 | 1.00000000000000000000 |     1 | 1 |     1 | 1.00000000000000000000 |     1
@@ -2515,7 +2520,7 @@ UNION
 (SELECT * FROM exttab_limit_2 LIMIT 3)
 ) FOO
 ORDER BY i LIMIT 5;
-NOTICE:  Found 6 data formatting errors (6 or more input rows). Rejected related input data.
+NOTICE:  found 6 data formatting errors (6 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -2590,7 +2595,7 @@ UNION
 (SELECT * FROM exttab_limit_2 LIMIT 5)
 ) FOO
 ORDER BY i LIMIT 5;
-NOTICE:  Found 8 data formatting errors (8 or more input rows). Rejected related input data.
+NOTICE:  found 8 data formatting errors (8 or more input rows), rejected related input data
  i |    j     
 ---+----------
  1 | 1_number
@@ -2675,7 +2680,7 @@ SELECT gp_truncate_error_log('exttab_first_reject_limit_1');
 (1 row)
 
 SELECT COUNT(*) FROM exttab_first_reject_limit_1;
-NOTICE:  Found 5000 data formatting errors (5000 or more input rows). Rejected related input data.
+NOTICE:  found 5000 data formatting errors (5000 or more input rows), rejected related input data
  count 
 -------
   5000
@@ -2756,7 +2761,7 @@ HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sur
 SET gp_autostats_mode = 'NONE';
 INSERT INTO test_ext_heap_join SELECT i, i || '_number' FROM generate_series(1, 10) i;
 SELECT COUNT(*) FROM test_ext_heap_join, exttab_heap_join_1;
-NOTICE:  Found 2 data formatting errors (2 or more input rows). Rejected related input data.
+NOTICE:  found 2 data formatting errors (2 or more input rows), rejected related input data
  count 
 -------
     80
@@ -2777,7 +2782,7 @@ NOTICE:  table "exttab_with_on_master" does not exist, skipping
 CREATE EXTERNAL TABLE exttab_with_on_master( i int, j text )
 LOCATION ('file://@hostname@@abs_srcdir@/data/exttab_few_errors.data') ON MASTER FORMAT 'TEXT' (DELIMITER '|');
 SELECT * FROM exttab_with_on_master;
-ERROR:  'ON MASTER' is not supported by this protocol yet.
+ERROR:  'ON MASTER' is not supported by this protocol yet
 DROP EXTERNAL TABLE IF EXISTS exttab_with_on_master;
 -- start_ignore
 DROP EXTERNAL TABLE IF EXISTS exttab_with_option_empty;
@@ -2919,7 +2924,7 @@ INSERT INTO table_execute VALUES (100, 'name_1');
 INSERT INTO table_execute VALUES (200, 'name_2');
 INSERT INTO table_execute VALUES (300, 'name_3');
 CREATE WRITABLE EXTERNAL WEB TABLE tbl_wet_execute (like table_execute) EXECUTE 'cat > @abs_srcdir@/data/wet_execute.tbl' FORMAT 'TEXT' (DELIMITER '|' );
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 INSERT INTO tbl_wet_execute SELECT * from table_execute ;
 DROP TABLE IF EXISTS table_execute;
 DROP EXTERNAL TABLE IF EXISTS tbl_wet_execute;

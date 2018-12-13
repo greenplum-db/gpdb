@@ -47,7 +47,6 @@ choose_setop_type(List *planlist)
 	Plan	   *subplan = NULL;
 	bool		ok_general = TRUE;
 	bool		ok_partitioned = TRUE;
-	bool		ok_replicated = TRUE;
 	bool		ok_single_qe = TRUE;
 	bool		has_partitioned = FALSE;
 
@@ -67,20 +66,20 @@ choose_setop_type(List *planlist)
 			case CdbLocusType_Hashed:
 			case CdbLocusType_HashedOJ:
 			case CdbLocusType_Strewn:
-				ok_general = ok_replicated = FALSE;
+				ok_general = FALSE;
 				has_partitioned = TRUE;
 				break;
 
 			case CdbLocusType_Entry:
-				ok_general = ok_partitioned = ok_replicated = ok_single_qe = FALSE;
+				ok_general = ok_partitioned = ok_single_qe = FALSE;
 				break;
 
 			case CdbLocusType_SingleQE:
-				ok_general = ok_replicated = FALSE;
+				ok_general = FALSE;
 				break;
 
 			case CdbLocusType_SegmentGeneral:
-				ok_general = ok_replicated = FALSE;
+				ok_general = FALSE;
 				break;
 
 			case CdbLocusType_General:
@@ -229,13 +228,6 @@ adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop_type
 										errmsg("unexpected argument locus to set operation")));
 						break;
 				}
-				break;
-
-			case PSETOP_PARALLEL_REPLICATED:
-				/* Only when all args are replicated. */
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-								errmsg("unexpected replicated intermediate result"),
-								errdetail("argument to set operation may not be replicated")));
 				break;
 
 			default:
@@ -476,9 +468,6 @@ mark_append_locus(Plan *plan, GpSetOpType optype)
 			break;
 		case PSETOP_PARALLEL_PARTITIONED:
 			mark_plan_strewn(plan, numsegments);
-			break;
-		case PSETOP_PARALLEL_REPLICATED:
-			mark_plan_replicated(plan, numsegments);
 			break;
 		case PSETOP_SEQUENTIAL_QD:
 			mark_plan_entry(plan);

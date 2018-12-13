@@ -1,10 +1,6 @@
 --
 -- insert with DEFAULT in the target_list
 --
--- start_matchsubs
--- m/^DETAIL:  Failing row contains \(.*\).$/
--- s/.//gs
--- end_matchsubs
 create table inserttest (col1 int4, col2 int4 NOT NULL, col3 text default 'testing');
 insert into inserttest (col1, col2, col3) values (DEFAULT, DEFAULT, DEFAULT);
 insert into inserttest (col2, col3) values (3, DEFAULT);

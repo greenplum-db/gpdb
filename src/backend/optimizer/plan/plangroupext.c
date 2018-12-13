@@ -114,7 +114,6 @@ typedef struct GroupExtContext
 	double *p_dNumGroups;
 	List *current_pathkeys;
 	
-	bool is_agg; /* indicate whether to create Agg/Group nodes. */
 	bool twostage; /* indicate if this appears in a two-stage aggregation. */
 	bool need_repeat_node; /* indicate if a Repeat node is needed in a two-stage aggregation. */
 	bool querynode_changed; /* indicate if root->parse is changed. */
@@ -368,8 +367,7 @@ static void checkGroupExtensionQuery(CanonicalGroupingSets *cgs, List *targetLis
 					if (subexpression_match(expr1, expr2) || subexpression_match(expr2, expr1))
 					{
 						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-								errmsg("GROUPING SETS / ROLLUP / CUBE columns ambiguous.")
-						));
+								errmsg("GROUPING SETS / ROLLUP / CUBE columns ambiguous")));
 					}
 				}
 			}
@@ -388,13 +386,11 @@ static void checkGroupExtensionQuery(CanonicalGroupingSets *cgs, List *targetLis
  * Create the plan for grouping extensions
  *
  * Most of the arguments are straightforward and similar to make_agg().
- * Exceptions are twostage, is_agg, p_tlist and sub_tlist.
+ * Exceptions are twostage, p_tlist and sub_tlist.
  *
  * 'twostage' is used to tell if this function is called within a
  * two-stage aggregation.  If this is the case, we want to make sure
  * all targets in the targetlists generated here are not junk.
- *
- * 'is_agg' indicates to construct an Agg or Group node.
  *
  * 'p_tlist' is a pointer to the final target list for this sequence of Agg nodes.
  * We need to pass the final target list out because the final stage of two-stage
@@ -408,7 +404,7 @@ plan_grouping_extension(PlannerInfo *root,
 						double tuple_fraction,
 						bool use_hashed_grouping,
 						List **p_tlist, List *sub_tlist,
-						bool is_agg, bool twostage,
+						bool twostage,
 						List *qual,
 						int *p_numGroupCols, AttrNumber **p_grpColIdx, Oid **p_grpOperators,
 						AggClauseCosts *agg_costs,
@@ -440,7 +436,6 @@ plan_grouping_extension(PlannerInfo *root,
 	context.agg_costs = agg_costs;
 	context.p_dNumGroups = p_dNumGroups;
 	context.current_pathkeys = *p_current_pathkeys;
-	context.is_agg = is_agg;
 	context.twostage = twostage;
 	context.need_repeat_node = false;
 	context.querynode_changed = false;
@@ -756,16 +751,6 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 												-1, false);
 					context->current_pathkeys = group_pathkeys;
 					mark_sort_locus(current_lefttree);
-
-					if (!context->is_agg)
-					{
-						/* CDB */ /* pass DISTINCT to sort */
-						if (IsA(current_lefttree, Sort) && gp_enable_sort_distinct)
-						{
-							Sort* pSort = (Sort*)current_lefttree;
-							pSort->noduplicates = true;
-						}
-					}
 				}
 				aggstrategy = AGG_SORTED;
 
@@ -896,7 +881,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		new_grpColIdx[context->numGroupCols - group_no - 1] = last_grpidCol;
 		new_grpOperators[context->numGroupCols - group_no - 1] = last_grpidOperator;
 		
-		agg_node = add_second_stage_agg(root, context->is_agg, context->tlist, current_tlist,
+		agg_node = add_second_stage_agg(root, context->tlist, current_tlist,
 										current_qual, context->aggstrategy,
 										context->numGroupCols, new_grpColIdx, new_grpOperators,
 										group_no, input_grouping, grouping,
@@ -1004,7 +989,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 		lNumGroups = (long) Min(*context->p_dNumGroups, (double) LONG_MAX);
 
 		/* Add a Agg/Group node */
-		agg_node = add_second_stage_agg(root, context->is_agg, context->tlist, tlist3,
+		agg_node = add_second_stage_agg(root, context->tlist, tlist3,
 										qual3, context->aggstrategy,
 										context->numGroupCols,
 										prelimGroupColIdx, prelimGroupOperators,
@@ -1319,15 +1304,6 @@ generate_dqa_plan(PlannerInfo *root,
 										-1, false);
 			pathkeys_copy = root->group_pathkeys;
 			mark_sort_locus(subplan);
-			
-			/* If this is a Group node, pass DISTINCT to sort */
-			if (!context->is_agg &&
-				IsA(subplan, Sort) &&
-				gp_enable_sort_distinct)
-			{
-				Sort* pSort = (Sort*)subplan;
-				pSort->noduplicates = true;
-			}
 		}
 		
 		context->aggstrategy = AGG_SORTED;
@@ -1472,15 +1448,6 @@ plan_append_aggs_with_gather(PlannerInfo *root,
 									-1, false);
 		context->current_pathkeys = group_pathkeys;
 		mark_sort_locus(lefttree);
-
-		/* If this is a Group node, pass DISTINCT to sort */
-		if (!context->is_agg &&
-			IsA(lefttree, Sort) &&
-			gp_enable_sort_distinct)
-		{
-			Sort* pSort = (Sort*)lefttree;
-			pSort->noduplicates = true;
-		}
 	}
 
 	/* Precondition the input by adjusting its locus prior to adding
@@ -1554,15 +1521,6 @@ plan_append_aggs_with_gather(PlannerInfo *root,
 					make_sort_from_pathkeys(root, subplan, group_pathkeys,
 											-1, false);
 				mark_sort_locus(subplan);
-
-				/* If this is a Group node, pass DISTINCT to sort */
-				if (!context->is_agg &&
-					IsA(subplan, Sort) &&
-					gp_enable_sort_distinct)
-				{
-					Sort* pSort = (Sort*)subplan;
-					pSort->noduplicates = true;
-				}
 			}
 
 			/* Add an Agg node */

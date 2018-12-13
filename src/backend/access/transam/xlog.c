@@ -799,7 +799,6 @@ static bool WaitForWALToBecomeAvailable(XLogRecPtr RecPtr, bool randAccess,
 							bool fetching_ckpt, XLogRecPtr tliRecPtr);
 static int	emode_for_corrupt_record(int emode, XLogRecPtr RecPtr);
 static void XLogFileClose(void);
-
 static void PreallocXlogFiles(XLogRecPtr endptr);
 static void RemoveOldXlogFiles(XLogSegNo segno, XLogRecPtr endptr);
 static void UpdateLastRemovedPtr(char *filename);
@@ -3533,6 +3532,7 @@ XLogFileRead(XLogSegNo segno, int emode, TimeLineID tli,
 			if (!restoredFromArchive)
 				return -1;
 			break;
+
 		case XLOG_FROM_PG_XLOG:
 		case XLOG_FROM_STREAM:
 			XLogFilePath(path, tli, segno);
@@ -4858,7 +4858,8 @@ XLOGShmemSize(void)
 void
 XLOGShmemInit(void)
 {
-	bool		foundCFile, foundXLog;
+	bool		foundCFile,
+				foundXLog;
 	char	   *allocptr;
 	int			i;
 
@@ -6228,22 +6229,19 @@ StartupXLOG(void)
 		   (errmsg("database system was interrupted while in recovery at %s",
 				   str_time(ControlFile->time)),
 			errhint("This probably means that some data is corrupted and"
-					" you will have to use the last backup for recovery."),
-			errSendAlert(true)));
+					" you will have to use the last backup for recovery.")));
 	else if (ControlFile->state == DB_IN_STANDBY_MODE)
 		ereport(LOG,
 				(errmsg("database system was interrupted while in standby mode at  %s",
 						str_time(ControlFile->checkPointCopy.time)),
 						errhint("This probably means something unexpected happened either"
-								" during replay at standby or receipt of XLog from primary."),
-				 errSendAlert(true)));
+								" during replay at standby or receipt of XLog from primary.")));
 	else if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
 		ereport(LOG,
 				(errmsg("database system was interrupted after standby was promoted at %s",
 						str_time(ControlFile->checkPointCopy.time)),
 				 errhint("If this has occurred more than once something unexpected is happening"
-				" after standby has been promoted"),
-				 errSendAlert(true)));
+				" after standby has been promoted")));
 	else if (ControlFile->state == DB_IN_PRODUCTION)
 		ereport(LOG,
 				(errmsg("database system was interrupted; last known up at %s",
@@ -8212,7 +8210,7 @@ ShutdownXLOG(int code __attribute__((unused)) , Datum arg __attribute__((unused)
 
 	/* Don't be chatty in standalone mode */
 	ereport(IsPostmasterEnvironment ? LOG : NOTICE,
-			(errmsg("database system is shut down"), errSendAlert(true)));
+			(errmsg("database system is shut down")));
 }
 
 /*

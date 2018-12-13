@@ -1087,15 +1087,13 @@ gpdb::GetCastFunc
 unsigned int
 gpdb::GetComparisonType
 	(
-	Oid op_oid,
-	Oid left_oid,
-	Oid right_oid
+	Oid op_oid
 	)
 {
 	GP_WRAP_START;
 	{
 		/* catalog tables: pg_amop */
-		return get_comparison_type(op_oid, left_oid, right_oid);
+		return get_comparison_type(op_oid);
 	}
 	GP_WRAP_END;
 	return CmptOther;
@@ -1820,6 +1818,16 @@ gpdb::MakeNULLConst
 	}
 	GP_WRAP_END;
 	return NULL;
+}
+
+Node *
+gpdb::MakeSegmentFilterExpr(int segid)
+{
+	GP_WRAP_START;
+	{
+	  return (Node *) makeSegmentFilterExpr(segid);
+	}
+	GP_WRAP_END;
 }
 
 TargetEntry *
@@ -2753,6 +2761,20 @@ gpdb::CdbHashConstList
 	GP_WRAP_START;
 	{
 		return cdbhash_const_list(constants, num_segments);
+	}
+	GP_WRAP_END;
+	return 0;
+}
+
+unsigned int
+gpdb::CdbHashRandomSeg
+	(
+	int num_segments
+	)
+{
+	GP_WRAP_START;
+	{
+		return cdbhashrandomseg(num_segments);
 	}
 	GP_WRAP_END;
 	return 0;

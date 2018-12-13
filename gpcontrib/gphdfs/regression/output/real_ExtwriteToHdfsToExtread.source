@@ -20,7 +20,7 @@ create readable external table real_heap(
 datatype_real varchar,x_real bigint, max_real real, min_real real, pi_real real, piX_real real, nullcol_real real
 ) location ('gphdfs://10.152.10.234:8020/plaintext/real.txt')format 'TEXT';
 create writable external table real_writehdfs(like real_heap) location ('gphdfs://10.152.10.234:8020/extwrite/real')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into real_writehdfs select * from real_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/real /mapreduce/real_gpdb/ 
 16/09/30 00:53:19 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

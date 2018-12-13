@@ -405,5 +405,36 @@ select gp_inject_fault('fts_probe', 'reset', 1);
 -- resume GDD scan 
 select gp_inject_fault('gdd_probe', 'reset', 1);
 
+--
+-- Test portal cleanup
+-- prepare a query contains init plan, main plan create a unnamed portal
+-- and will need multiple slices , init plan also need to allocated multiple
+-- slices in a named portal (eg: a cursor). The executing order is:
+-- 1. gangs of main plan is pre-assigned 2. init plan is executed 3. main plan
+-- is executed. This test it meant to test that cleanup of the named portal in
+-- the end of step2 will not affect the pre-allocated gangs of the main plan.
+--
+create table dispatch_foo (c1 int, c2 int);
+create table dispatch_bar (c1 int, c2 int);
+create or replace function dispatch_foo_func()
+returns int
+as
+$BODY$
+declare
+t_record record;
+BEGIN
+	drop table if exists tmp1;
+	create temp table tmp1 as select dispatch_foo.c1, dispatch_bar.c2 from dispatch_foo, dispatch_bar;
+	for t_record in (select count(*) from dispatch_foo, dispatch_bar)
+	loop
+		NULL;
+	end loop;
+	return 1;
+END;
+$BODY$
+language plpgsql volatile;
+set gp_cached_segworkers_threshold to 1;
+select count(*) from dispatch_foo, dispatch_bar where exists (select dispatch_foo_func());
+reset gp_cached_segworkers_threshold;
 \c regression
 DROP DATABASE dispatch_test_db;

@@ -38,7 +38,7 @@ synchronization.
 
 * Each base relation type is in 5.0 defined as an array type, something which
   is not supported in 4.3. The arraytypes for base relations will be created
-  during upgrade and thier Oids recorded. To be able to distribute the Oids to
+  during upgrade and their Oids recorded. To be able to distribute the Oids to
   the QEs, the upgrade will leave a dump file in the working directory named
   pg_upgrade_dump_arraytypes.sql. If this file is placed in the working
   directory of upgrading a QE, pg_upgrade will use it to ensure that the Oids

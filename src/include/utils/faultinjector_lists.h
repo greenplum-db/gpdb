@@ -156,8 +156,6 @@ FI_IDENT(AppendOnlySkipCompression, "appendonly_skip_compression")
 FI_IDENT(ReindexDB, "reindex_db")
 /* inject fault while reindex relation is in progress */
 FI_IDENT(ReindexRelation, "reindex_relation")
-/* inject fault during scanning of a partition */
-FI_IDENT(FaultDuringExecDynamicTableScan, "fault_during_exec_dynamic_table_scan")
 /* inject fault at the beginning of rxThreadFunc */
 FI_IDENT(FaultInBackgroundWriterMain, "fault_in_background_writer_main")
 /* inject fault in cdbCopyStart after dispatch */

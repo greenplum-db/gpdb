@@ -532,8 +532,8 @@ INSERT INTO t2c VALUES ('vw'), ('cd'), ('mn'), ('ef');
 CREATE INDEX t1c_ab_idx on t1c ((a || b));
 set enable_seqscan = on;
 set enable_indexonlyscan = off;
---- GPDB_94_MERGE_FIXME: GPDB would choose seqscan rather than indexscan for t1.
---- This is a side-effect of disabling pull-up for simple union all in GPDB.
+-- NOTE: GPDB planner chooses a seqscan rather than indexscan for t1.
+-- This is a side-effect of disabling pull-up for simple union all in GPDB.
 explain (costs off)
   SELECT * FROM
   (SELECT a || b AS ab FROM t1

@@ -1,6 +1,6 @@
 # Concourse Pipeline Generation
 
-To facilitate pipeline maintanance, a Python utility 'gen_pipeline.py`
+To facilitate pipeline maintenance, a Python utility 'gen_pipeline.py`
 is used to generate the production pipeline. It can also be used to build
 custom pipelines for developer use.
 

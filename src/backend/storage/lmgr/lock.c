@@ -48,6 +48,7 @@
 #include "utils/memutils.h"
 #include "utils/ps_status.h"
 #include "utils/resscheduler.h"
+#include "utils/resource_manager.h"
 #include "utils/resowner_private.h"
 
 

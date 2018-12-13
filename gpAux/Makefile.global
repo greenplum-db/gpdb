@@ -87,8 +87,6 @@ aix5_ppc_64_PYTHONHOME=/opt/pware64
 aix7_ppc_64_PYTHONHOME=/opt/freeware
 hpux_ia64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.5.6
 osx106_x86_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-rhel5_x86_32_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
-rhel5_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 rhel6_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 rhel7_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
 sol10_x86_64_PYTHONHOME=$(BLD_THIRDPARTY_DIR)/python-2.7.12
@@ -148,10 +146,8 @@ export NO_M64=1
 # 32-bit/64-bit compiler/linker flag settings
 hpux_ia64_BLD_CFLAGS=-mlp64 -D_XOPEN_SOURCE_EXTENDED
 osx106_x86_BLD_CFLAGS=-m32 -march=i686
-rhel6_x86_64_BLD_CFLAGS=-m64
+rhel6_x86_64_BLD_CFLAGS=-m64 -gdwarf-2 -gstrict-dwarf
 rhel7_x86_64_BLD_CFLAGS=-m64
-rhel5_x86_64_BLD_CFLAGS=-m64
-rhel5_x86_32_BLD_CFLAGS=-m32
 sol10_sparc_64_BLD_CFLAGS=-m64 -mcpu=v9
 sol10_sparc_32_BLD_CFLAGS=-m32
 sol10_sparc_BLD_CFLAGS=-m64 -mcpu=v9
@@ -169,7 +165,6 @@ BLD_CFLAGS=$($(BLD_ARCH)_BLD_CFLAGS)
 
 aix5_ppc_64_BLD_LDFLAGS=-maix64 -Wl,-bbigtoc
 aix7_ppc_64_BLD_LDFLAGS=-maix64 -Wl,-bbigtoc
-rhel5_x86_32_BLD_LDFLAGS=-m32
 BLD_LDFLAGS=$($(BLD_ARCH)_BLD_LDFLAGS)
 
 # See http://www.postgresql.org/docs/faqs.FAQ_AIX.html for an explanation of this

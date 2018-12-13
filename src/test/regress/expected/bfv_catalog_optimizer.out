@@ -594,3 +594,30 @@ select prosrc from pg_proc where proname = 'function_with_long_body';
  
 (1 row)
 
+--
+-- Check for assertion failure that happened in VACUUM FULL of
+-- pg_stat_last_operation. The VACUUM FULL of reindexing its indexes
+-- inserted an entry to pg_stat_last_operation, but there's an assertion
+-- that you don't try to insert into an index that's currently being
+-- reindexed, or pending reindexing. This no longer happens, because
+-- pg_stat_last_operation now only has one index, so that there is no
+-- pending indexes left for it after indexing the first one.
+--
+-- first, delete all existing entries on pg_stat_last_operation, for the
+-- table and its indexes. Otherwise, the update might be a HOT update,
+-- and not touch the indexes.
+set allow_system_table_mods=on;
+delete from pg_stat_last_operation
+  where classid='pg_class'::regclass and objid::regclass::text like 'pg_stat%last%';
+set allow_system_table_mods=off;
+-- VACUUM FULL should insert an entry, for building the index after rebuilding
+-- the heap.
+vacuum full pg_stat_last_operation;
+select classid::regclass, objid::regclass, staactionname, stasubtype from pg_stat_last_operation
+  where classid='pg_class'::regclass and objid::regclass::text like 'pg_stat%last%';
+ classid  |                      objid                      | staactionname | stasubtype 
+----------+-------------------------------------------------+---------------+------------
+ pg_class | pg_stat_last_operation                          | VACUUM        | FULL
+ pg_class | pg_statlastop_classid_objid_staactionname_index | VACUUM        | REINDEX
+(2 rows)
+

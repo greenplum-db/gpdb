@@ -4,7 +4,7 @@ SET gp_create_table_random_default_distribution=on;
 DROP TABLE IF EXISTS distpol;
 NOTICE:  table "distpol" does not exist, skipping
 create table distpol as select random(), 1 as a, 2 as b;
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 select attrnums from gp_distribution_policy where localoid = 'distpol'::regclass;
  attrnums 
@@ -17,10 +17,10 @@ CREATE TABLE distpol_hobbies_r (
   name text,
   person text
 );
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 CREATE TABLE distpol_bar AS SELECT * FROM distpol_hobbies_r;
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 select attrnums from gp_distribution_policy where localoid='distpol_bar'::regclass;
  attrnums 
@@ -31,7 +31,7 @@ select attrnums from gp_distribution_policy where localoid='distpol_bar'::regcla
 -- Test RANDOM distribution with ON COMMIT option
 begin;
 create temp table r3_1 on commit preserve rows as select 10 as a1, 20 as b1, 30 as c1, 40 as d1;
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 select attrnums from gp_distribution_policy where localoid='r3_1'::regclass;
  attrnums 
@@ -40,7 +40,7 @@ select attrnums from gp_distribution_policy where localoid='r3_1'::regclass;
 (1 row)
 
 create temp table r3_2 on commit delete rows as select 10 as a2, 20 as b2, 30 as c2, 40 as d2;
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 select attrnums from gp_distribution_policy where localoid='r3_2'::regclass;
  attrnums 
@@ -49,7 +49,7 @@ select attrnums from gp_distribution_policy where localoid='r3_2'::regclass;
 (1 row)
 
 create temp table r3_3 on commit drop as select 10 as a3, 20 as b3, 30 as c3, 40 as d3;
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 select attrnums from gp_distribution_policy where localoid='r3_3'::regclass;
  attrnums 
@@ -70,8 +70,9 @@ CREATE TABLE distpol_staff_member (
   salary    int4,
   manager   name
 ) INHERITS (distpol_person) WITH OIDS;
-NOTICE:  Table has parent, setting distribution columns to match parent table
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  table has parent, setting distribution columns to match parent table
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select attrnums from gp_distribution_policy where localoid = 'distpol_staff_member'::regclass;
  attrnums 
 ----------
@@ -81,7 +82,7 @@ select attrnums from gp_distribution_policy where localoid = 'distpol_staff_memb
 CREATE TABLE distpol_student (
   gpa      float8
 ) INHERITS (distpol_person);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 select attrnums from gp_distribution_policy where localoid = 'distpol_student'::regclass;
  attrnums 
 ----------
@@ -91,11 +92,12 @@ select attrnums from gp_distribution_policy where localoid = 'distpol_student'::
 CREATE TABLE distpol_stud_emp (
   percent  int4
 ) INHERITS (distpol_staff_member, distpol_student);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging multiple inherited definitions of column "name"
 NOTICE:  merging multiple inherited definitions of column "age"
 NOTICE:  merging multiple inherited definitions of column "location"
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 select attrnums from gp_distribution_policy where localoid = 'distpol_stud_emp'::regclass;
  attrnums 
 ----------
@@ -120,7 +122,7 @@ select attrnums from gp_distribution_policy where localoid = 'distpol_person'::r
 (1 row)
 
 CREATE TABLE distpol_person_copy (LIKE distpol_person);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 select attrnums from gp_distribution_policy where localoid = 'distpol_person_copy'::regclass;
  attrnums 
 ----------

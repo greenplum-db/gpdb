@@ -11,7 +11,7 @@ FORMAT 'CUSTOM' (formatter='fixedwidth_in', s1='10',
     n3='10', n4='10', n5='10', n6='10', n7='15')
 SEGMENT REJECT LIMIT 5 ROWS;
 SELECT * FROM tbl_ext_fixedwidth ORDER BY s1;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
      s1     |  s2  |   s3   |         dt          | n1 | n2  |   n3   |  n4   |   n5    |   n6    |     n7     
 ------------+------+--------+---------------------+----+-----+--------+-------+---------+---------+------------
  aaa        | twoa | shpits | 2011-06-01 12:30:30 | 23 | 732 | 834567 | 45.67 | 789.123 | 7.12345 | 123.456789

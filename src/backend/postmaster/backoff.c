@@ -59,8 +59,10 @@
 #include "catalog/pg_resqueue.h"
 #include "catalog/pg_tablespace.h"
 #include "catalog/catalog.h"
+#include "storage/proc.h"
 #include "storage/sinval.h"
 #include "utils/builtins.h"
+#include "utils/resource_manager.h"
 #include "utils/syscache.h"
 #include "funcapi.h"
 #include "catalog/pg_type.h"
@@ -108,8 +110,6 @@ typedef struct BackoffBackendLocalEntry
 								 * performed local backoff action */
 	double		lastSleepTime;	/* Last sleep time when local backing-off
 								 * action was performed */
-	int			counter;		/* Local counter is used as an approx measure
-								 * of time */
 	bool		inTick;			/* Is backend currently performing tick? - to
 								 * prevent nested calls */
 	bool		groupingTimeExpired;	/* Should backend try to find better
@@ -157,6 +157,8 @@ typedef struct BackoffBackendSharedEntry
  * Local entry for backoff.
  */
 static BackoffBackendLocalEntry myLocalEntry;
+
+int backoffTickCounter = 0;
 
 /**
  * This is the global state of the backoff mechanism. It is a singleton structure - one
@@ -472,7 +474,6 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 		elog(ERROR, "Unable to execute getrusage(). Please disable query prioritization.");
 	}
 	memcpy(&myLocalEntry->startUsage, &myLocalEntry->lastUsage, sizeof(myLocalEntry->lastUsage));
-	myLocalEntry->counter = 1;
 	myLocalEntry->inTick = false;
 
 	/* Try to find a better leader for my group */
@@ -614,22 +615,24 @@ BackoffBackend()
 	}
 }
 
-/**
- * The backend performs a 'tick' on its local counter as a record of the number of times
- * it called CHECK_FOR_INTERRUPTS, which we use as a loose measure of progress.
- * If the counter is sufficiently large, it performs a backoff action (see BackoffBackend()).
+/*
+ * CHECK_FOR_INTERRUPTS() increments a counter, 'backoffTickCounter', on
+ * every call, which we use as a loose measure of progress. Whenever the
+ * counter reaches 'gp_resqueue_priority_local_interval', CHECK_FOR_INTERRUPTS()
+ * calls this function, to perform a backoff action (see BackoffBackend()).
  */
 void
-BackoffBackendTick()
+BackoffBackendTickExpired(void)
 {
-	BackoffBackendLocalEntry *le = NULL;
-	BackoffBackendSharedEntry *se = NULL;
+	BackoffBackendLocalEntry *le;
+	BackoffBackendSharedEntry *se;
 	StatementId currentStatementId = {gp_session_id, gp_command_count};
 
-	Assert(gp_enable_resqueue_priority);
+	backoffTickCounter = 0;
 
-	if (!(Gp_role == GP_ROLE_DISPATCH
-		  || Gp_role == GP_ROLE_EXECUTE)
+	if (!(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE)
+		|| !IsResQueueEnabled()
+		|| !gp_enable_resqueue_priority
 		|| !IsUnderPostmaster
 		|| (MyBackendId == InvalidBackendId)
 		|| proc_exit_inprogress
@@ -668,24 +671,13 @@ BackoffBackendTick()
 		return;
 	}
 
-	Assert(le->inTick == false);
-	Assert(le->counter < gp_resqueue_priority_local_interval);
-
 	le->inTick = true;
 
-	le->counter++;
-	if (le->counter == gp_resqueue_priority_local_interval)
-	{
-		le->counter = 0;
-		/* Enough time has passed. Perform backoff. */
-		BackoffBackend();
-		se->earlyBackoffExit = false;
-	}
+	/* Perform backoff. */
+	BackoffBackend();
+	se->earlyBackoffExit = false;
 
 	le->inTick = false;
-
-	Assert(le->counter < gp_resqueue_priority_local_interval);
-	Assert(le->inTick == false);
 }
 
 /**
@@ -1083,7 +1075,7 @@ gp_adjust_priority_int(PG_FUNCTION_ARGS)
 	if (!superuser())
 		ereport(ERROR,
 				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-				 (errmsg("Only superuser can re-prioritize a query after it has begun execution."))));
+				 (errmsg("only superuser can re-prioritize a query after it has begun execution"))));
 
 	if (Gp_role == GP_ROLE_UTILITY)
 		elog(ERROR, "Query prioritization does not work in utility mode.");

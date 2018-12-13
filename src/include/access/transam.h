@@ -163,5 +163,3 @@ extern Oid	GetNewSegRelfilenode(void);
 extern bool OidFollowsNextOid(Oid id);
 
 #endif   /* TRAMSAM_H */
-
-

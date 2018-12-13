@@ -689,13 +689,10 @@ cdbdisp_sumRejectedRows(CdbDispatchResults *results)
  * sum tuple counts that were added into a partitioned AO table
  */
 HTAB *
-cdbdisp_sumAoPartTupCount(PartitionNode *parts, CdbDispatchResults *results)
+cdbdisp_sumAoPartTupCount(CdbDispatchResults *results)
 {
 	int			i;
 	HTAB	   *ht = NULL;
-
-	if (!parts)
-		return NULL;
 
 	for (i = 0; i < results->resultCount; ++i)
 	{
@@ -707,7 +704,7 @@ cdbdisp_sumAoPartTupCount(PartitionNode *parts, CdbDispatchResults *results)
 		{
 			PGresult   *pgresult = cdbdisp_getPGresult(dispatchResult, ires);
 
-			ht = PQprocessAoTupCounts(parts, ht, (void *) pgresult->aotupcounts,
+			ht = PQprocessAoTupCounts(ht, (void *) pgresult->aotupcounts,
 									  pgresult->naotupcounts);
 		}
 	}
@@ -949,8 +946,7 @@ cdbdisp_snatchPGresults(CdbDispatchResult *dispatchResult,
 }
 
 struct HTAB *
-PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
-					 void *aotupcounts, int naotupcounts)
+PQprocessAoTupCounts(struct HTAB *ht, void *aotupcounts, int naotupcounts)
 {
 	PQaoRelTupCount *ao = (PQaoRelTupCount *) aotupcounts;
 
@@ -969,15 +965,9 @@ PQprocessAoTupCounts(struct PartitionNode *parts, struct HTAB *ht,
 				{
 					HASHCTL	ctl;
 
-					/*
-					 * reasonable assumption?
-					 */
-					long num_buckets = list_length(all_partition_relids(parts));
-					num_buckets /= num_partition_levels(parts);
-
 					ctl.keysize = sizeof(Oid);
 					ctl.entrysize = sizeof(*entry);
-					ht = hash_create("AO hash map", num_buckets, &ctl, HASH_ELEM);
+					ht = hash_create("AO hash map", 10, &ctl, HASH_ELEM);
 				}
 
 				entry = hash_search(ht, &(ao->aorelid), HASH_ENTER, &found);

@@ -331,9 +331,7 @@ TwoPhaseShmemInit(void)
 		}
 	}
 	else
-	{
 		Assert(found);
-	}
 }
 
 /*
@@ -403,6 +401,7 @@ PostPrepare_Twophase()
 
 	MyLockedGxact = NULL;
 }
+
 
 /*
  * MarkAsPreparing
@@ -1100,8 +1099,6 @@ StartPrepare(GlobalTransaction gxact)
 						hdr.ninvalmsgs * sizeof(SharedInvalidationMessage));
 		pfree(invalmsgs);
 	}
-
-
 }
 
 /*
@@ -1457,8 +1454,7 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_CORRUPTED),
 				 errmsg("xlog record is invalid"),
-				 errdetail("%s", errormsg),
-				 errSendAlert(true)));
+				 errdetail("%s", errormsg)));
 	}
 
 	buf = XLogRecGetData(tfRecord);
@@ -1731,11 +1727,15 @@ PrescanPreparedTransactions(TransactionId **xids_p, int *nxids_p)
 				ereport(WARNING,
 						(errmsg("could not load prepare WAL record for distributed transaction")));
 
-			ereport(ERROR,
-					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("xlog record is invalid"),
-					 errormsg ? (errdetail("%s", errormsg)) : 0,
-					 errSendAlert(true)));
+			if (errormsg)
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg("xlog record is invalid"),
+						 errdetail("%s", errormsg)));
+			else
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg("xlog record is invalid")));
 		}
 
 		if (TransactionIdDidCommit(xid) == false && TransactionIdDidAbort(xid) == false)
@@ -1909,8 +1909,7 @@ RecoverPreparedTransactions(void)
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
 					 errmsg("xlog record is invalid"),
-					 errdetail("%s", errormsg),
-					 errSendAlert(true)));
+					 errdetail("%s", errormsg)));
 		}
 
 		buf = XLogRecGetData(tfRecord);
@@ -2119,7 +2118,7 @@ RecordTransactionCommitPrepared(TransactionId xid,
 }
 
 /*
- *      RecordTransactionAbortPrepared
+ *	RecordTransactionAbortPrepared
  *
  * This is basically the same as RecordTransactionAbort.
  *
@@ -2134,7 +2133,7 @@ RecordTransactionAbortPrepared(TransactionId xid,
 							   RelFileNodeWithStorageType *rels)
 {
 	XLogRecData rdata[3];
-	int                     lastrdata = 0;
+	int			lastrdata = 0;
 	xl_xact_abort_prepared xlrec;
 	XLogRecPtr      recptr;
 

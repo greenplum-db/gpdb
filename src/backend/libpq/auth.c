@@ -535,15 +535,13 @@ ClientAuthentication(Port *port)
 						errmsg("pg_hba.conf rejects connection for host \"%s\", user \"%s\", database \"%s\", %s",
 							   hostinfo, port->user_name,
 							   port->database_name,
-							   port->ssl ? _("SSL on") : _("SSL off")),
-						errSendAlert(false)));
+							   port->ssl ? _("SSL on") : _("SSL off"))));
 #else
 					ereport(FATAL,
 					   (errcode(ERRCODE_INVALID_AUTHORIZATION_SPECIFICATION),
 						errmsg("pg_hba.conf rejects connection for host \"%s\", user \"%s\", database \"%s\"",
 							   hostinfo, port->user_name,
-							   port->database_name),
-						errSendAlert(false)));
+							   port->database_name)));
 #endif
 				}
 				break;

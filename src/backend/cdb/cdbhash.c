@@ -648,7 +648,7 @@ cdbhash(CdbHash *h, int attno, Datum datum, bool isnull)
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-					 errmsg("Type %u is not hashable.", type)));
+					 errmsg("type %u is not hashable", type)));
 
 	}							/* switch(type) */
 
@@ -656,16 +656,6 @@ cdbhash(CdbHash *h, int attno, Datum datum, bool isnull)
 	h->hash = fnv1_32_buf(buf, len, h->hash);
 	if (tofree)
 		pfree(tofree);
-}
-
-/*
- * Pick a random hash value, for a tuple in a relation with an empty
- * policy (i.e. DISTRIBUTED RANDOMLY).
- */
-void
-cdbhashnokey(CdbHash *h)
-{
-	h->hash = (uint32) random();
 }
 
 /*
@@ -683,6 +673,7 @@ cdbhashreduce(CdbHash *h)
 	Assert(h->reducealg == REDUCE_BITMASK ||
 		   h->reducealg == REDUCE_LAZYMOD ||
 		   h->reducealg == REDUCE_JUMP_HASH);
+	Assert(h->natts > 0);
 
 	/*
 	 * Reduce our 32-bit hash value to a segment number
@@ -707,16 +698,13 @@ cdbhashreduce(CdbHash *h)
 
 /*
  * Return a random segment number, for randomly distributed policy.
- *
- * This is functionally equivalent to calling makeCdbHash() + cdbhashnokey()
- * + cdbhashreduce().
  */
 unsigned int
 cdbhashrandomseg(int numsegs)
 {
 	/*
 	 * Note: Using modulo like this has a bias towards low values. But that's
-	 * accceptable for our use case.
+	 * acceptable for our use case.
 	 *
 	 * For example, if MAX_RANDOM_VALUE was 5, and you did "random() % 4",
 	 * value 0 would occur twice as often as others, because you would get 0
@@ -725,8 +713,7 @@ cdbhashrandomseg(int numsegs)
 	 * 2^31, and the effect is not significant when the upper bound is much
 	 * smaller than MAX_RANDOM_VALUE. This function is intended for choosing a
 	 * segment in random, and the number of segments is much smaller than
-	 * 2^31, so we're good. (The cdbhashnokey() + cdbhashreduce() method is
-	 * not susceptible to modulo bias, when jump consistent hash is used.)
+	 * 2^31, so we're good.
 	 */
 	return random() % numsegs;
 }

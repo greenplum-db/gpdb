@@ -9,7 +9,7 @@ CREATE TABLE clstr_tst (a SERIAL PRIMARY KEY,
 	d TEXT,
 	CONSTRAINT clstr_tst_con FOREIGN KEY (b) REFERENCES clstr_tst_s)
 	DISTRIBUTED BY (a);
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 CREATE INDEX clstr_tst_b ON clstr_tst (b);
 CREATE INDEX clstr_tst_c ON clstr_tst (c);
 CREATE INDEX clstr_tst_c_b ON clstr_tst (c,b);
@@ -21,7 +21,7 @@ INSERT INTO clstr_tst_s (b) SELECT b FROM clstr_tst_s;
 INSERT INTO clstr_tst_s (b) SELECT b FROM clstr_tst_s;
 INSERT INTO clstr_tst_s (b) SELECT b FROM clstr_tst_s;
 CREATE TABLE clstr_tst_inh () INHERITS (clstr_tst);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 INSERT INTO clstr_tst (b, c) VALUES (11, 'once');
 INSERT INTO clstr_tst (b, c) VALUES (10, 'diez');
 INSERT INTO clstr_tst (b, c) VALUES (31, 'treinta y uno');

@@ -849,7 +849,7 @@ server 10.6.220.20</codeblock></li>
               about the <varname>hostfile_gpinitsystem</varname> file and the
                 <codeph>gpinitsystem</codeph> command. </p></li>
           <li id="ji163212" otherprops="dca">For the administration network on a Greenplum DCA,
-            allow communication using <codeph>ssh</codeph>, <codeph>snmp</codeph>,
+            allow communication using <codeph>ssh</codeph>, 
               <codeph>ntp</codeph>, and <codeph>icmp</codeph> protocols. (<codeph>eth0</codeph>
             interface in the example).</li>
         </ul>
@@ -891,9 +891,6 @@ server 10.6.220.20</codeblock></li>
 -A INPUT -i eth5 -p udp -s 198.51.100.0/22 -j ACCEPT
 -A INPUT -i eth4 -p tcp -s 192.0.2.0/22 -j ACCEPT --syn -m state --state NEW
 -A INPUT -i eth5 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW<ph otherprops="dca">
-# Allow snmp connections on the admin network on Greenplum DCA.
--A INPUT -i eth0 -p udp --dport snmp -s 203.0.113.0/21 -j ACCEPT
--A INPUT -i eth0 -p tcp --dport snmp -s 203.0.113.0/21 -j ACCEPT --syn -m state --state NEW
 # Allow udp/tcp ntp connections on the admin network on Greenplum DCA.
 -A INPUT -i eth0 -p udp --dport ntp -s 203.0.113.0/21 -j ACCEPT
 -A INPUT -i eth0 -p tcp --dport ntp -s 203.0.113.0/21 -j ACCEPT --syn -m state --state NEW</ph>
@@ -931,8 +928,6 @@ COMMIT</codeblock>
 -A INPUT -i eth3 -p udp -s 198.51.100.0/22 -j ACCEPT
 -A INPUT -i eth2 -p tcp -s 192.0.2.0/22 -j ACCEPT --syn -m state --state NEW
 -A INPUT -i eth3 -p tcp -s 198.51.100.0/22 -j ACCEPT --syn -m state --state NEW
--A INPUT -i eth0 -p udp --dport snmp -s 203.0.113.0/21 -j ACCEPT
--A INPUT -i eth0 -p tcp --dport snmp -j ACCEPT --syn -m state --state NEW
 -A INPUT -p tcp --dport ssh -j ACCEPT --syn -m state --state NEW
 -A INPUT -i eth2 -p icmp -s 192.0.2.0/22 -j ACCEPT
 -A INPUT -i eth3 -p icmp -s 198.51.100.0/22 -j ACCEPT

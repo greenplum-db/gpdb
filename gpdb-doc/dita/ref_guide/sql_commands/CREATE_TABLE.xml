@@ -264,7 +264,7 @@
             column. Otherwise, any parents that specify default values for the column must all
             specify the same default, or an error will be reported. </pd>
           <pd><codeph>CHECK</codeph> constraints are merged in essentially the same way as columns:
-            if multiple parent tables or the new table defintion contain identically-named
+            if multiple parent tables or the new table definition contain identically-named
               <codeph>constraints</codeph>, these constraints must all have the same check
             expression, or an error will be reported. Constraints having the same name and
             expression will be merged into one copy. Notice that an unnamed <codeph>CHECK</codeph>

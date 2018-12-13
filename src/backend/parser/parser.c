@@ -24,8 +24,6 @@
 #include "parser/gramparse.h"
 #include "parser/parser.h"
 
-#include "cdb/cdbvars.h"
-
 
 /*
  * raw_parser

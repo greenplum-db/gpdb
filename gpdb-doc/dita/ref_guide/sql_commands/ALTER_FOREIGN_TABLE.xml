@@ -7,22 +7,27 @@
         <p id="sql_command_desc">Changes the definition of a foreign table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE <varname>name</varname>
+            <codeblock id="sql_command_synopsis">ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
     <varname>action</varname> [, ... ]
-ALTER FOREIGN TABLE <varname>name</varname>
-    RENAME [ COLUMN ] <varname>column</varname> TO <varname>new_column</varname>
-ALTER FOREIGN TABLE <varname>name</varname>
+ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
+    RENAME [ COLUMN ] <varname>column_name</varname> TO <varname>new_column_name</varname>
+ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
     RENAME TO <varname>new_name</varname>
-ALTER FOREIGN TABLE <varname>name</varname>
+ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
     SET SCHEMA <varname>new_schema</varname>
 </codeblock>
 
 <p>where <varname>action</varname> is one of:</p><codeblock>
-
-    ADD [ COLUMN ] <varname>column_type</varname> [ NULL | NOT NULL ]
-    DROP [ COLUMN ] [ IF EXISTS ] <varname>column</varname> [ RESTRICT | CASCADE ]
-    ALTER [ COLUMN ] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname>
-    ALTER [ COLUMN ] <varname>column</varname> { SET | DROP } NOT NULL
+    ADD [ COLUMN ] <varname>column_name</varname> <varname>column_type</varname> [ COLLATE <varname>collation</varname> ] [ <varname>column_constraint</varname> [ ... ] ]
+    DROP [ COLUMN ] [ IF EXISTS ] <varname>column_name</varname> [ RESTRICT | CASCADE ]
+    ALTER [ COLUMN ] <varname>column_name</varname> [ SET DATA ] TYPE <varname>data_type</varname>
+    ALTER [ COLUMN ] <varname>column_name</varname> SET DEFAULT <varname>expression</varname>
+    ALTER [ COLUMN ] <varname>column_name</varname> DROP DEFAULT
+    ALTER [ COLUMN ] <varname>column_name</varname> { SET | DROP } NOT NULL
+    ALTER [ COLUMN ] <varname>column_name</varname> SET STATISTICS <varname>integer</varname>
+    ALTER [ COLUMN ] <varname>column_name</varname> SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
+    ALTER [ COLUMN ] <varname>column_name</varname> RESET ( <varname>attribute_option</varname> [, ... ] )
+    ALTER [ COLUMN ] <varname>column_name</varname> OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ])
     OWNER TO <varname>new_owner</varname>
     OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</codeblock>
         </section>
@@ -33,7 +38,8 @@ ALTER FOREIGN TABLE <varname>name</varname>
                 <plentry>
                     <pt>ADD COLUMN</pt>
                     <pd>
-                        <p>This form adds a new column to the foreign table, using the same syntax as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>.</p>
+                        <p>This form adds a new column to the foreign table, using the same syntax as <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>.
+                          Unlike the case when you add a column to a regular table, nothing happens to the underlying storage: this action simply declares that some new column is now accessible through the foreign table.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -43,15 +49,46 @@ ALTER FOREIGN TABLE <varname>name</varname>
                     </pd>
                 </plentry>
                 <plentry>
+                    <pt>IF EXISTS</pt>
+                    <pd>
+                        <p>If you specify <codeph>IF EXISTS</codeph> and the foriegn table does not exist, no error is thrown. Greenplum Database issues a notice instead.</p>
+                    </pd>
+                </plentry>
+                <plentry>
                     <pt>SET DATA TYPE</pt>
                     <pd>
                         <p>This form changes the type of a column of a foreign table.</p>
                     </pd>
                 </plentry>
                 <plentry>
+                    <pt>SET/DROP DEFAULT</pt>
+                    <pd>
+                        <p>These forms set or remove the default value for a column. Default
+                          values apply only in subsequent <codeph>INSERT</codeph> or
+                          <codeph>UPDATE</codeph> commands; they do not cause rows already in
+                          the table to change.</p>
+                    </pd>
+                </plentry>
+                <plentry>
                     <pt>SET/DROP NOT NULL</pt>
                     <pd>
                         <p>Mark a column as allowing, or not allowing, null values.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>SET STATISTICS</pt>
+                    <pd>
+                        <p>This form sets the per-column statistics-gathering target for
+                          subsequent <codeph>ANALYZE</codeph> operations.  See the similar
+                          form of <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph> for more details.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ...] ] )</pt>
+                    <pt>RESET ( <varname>attribute_option</varname> [, ... ] )</pt>
+                    <pd>
+                        <p>This form sets or resets per-attribute options. See the similar 
+                          form of <codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph> for more details.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -63,7 +100,7 @@ ALTER FOREIGN TABLE <varname>name</varname>
                 <plentry>
                     <pt>RENAME</pt>
                     <pd>
-                        <p>The <codeph>RENAME</codeph> forms changes the name of a foreign table or the name of an individual column in a foreign table.</p>
+                        <p>The <codeph>RENAME</codeph> forms change the name of a foreign table or the name of an individual column in a foreign table.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -80,7 +117,7 @@ ALTER FOREIGN TABLE <varname>name</varname>
                 </plentry>
             </parml>
             <p>You can combine all of the actions except <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph> into a list of multiple alterations for Greenplum Database to apply in parallel. For example, it is possible to add several columns and/or alter the type of several columns in a single command.</p>
-            <p>You must own the table to use <codeph>ALTER FOREIGN TABLE</codeph>. To change the schema of a foreign table, you must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have <codeph>CREATE</codeph> privilege on the table's schema. (These restrictions enforce that altering the owner doesn't do anything you couldn't do by dropping and recreating the table. However, a superuser can alter ownership of any table anyway.)</p>
+            <p>You must own the table to use <codeph>ALTER FOREIGN TABLE</codeph>. To change the schema of a foreign table, you must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you must also be a direct or indirect member of the new owning role, and that role must have <codeph>CREATE</codeph> privilege on the table's schema. (These restrictions enforce that altering the owner doesn't do anything you couldn't do by dropping and recreating the table. However, a superuser can alter ownership of any table anyway.) To add a column or to alter a column type, you must also have <codeph>USAGE</codeph> privilege on the data type.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>
@@ -92,13 +129,13 @@ ALTER FOREIGN TABLE <varname>name</varname>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt><varname>column</varname></pt>
+                    <pt><varname>column_name</varname></pt>
                     <pd>
                         <p>The name of a new or existing column.</p>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt><varname>new_column</varname></pt>
+                    <pt><varname>new_column_name</varname></pt>
                     <pd>
                         <p>The new name for an existing column.</p>
                     </pd>
@@ -110,7 +147,7 @@ ALTER FOREIGN TABLE <varname>name</varname>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt><varname>type</varname></pt>
+                    <pt><varname>data_type</varname></pt>
                     <pd>
                         <p>The data type of the new column, or new data type for an existing column.</p>
                     </pd>
@@ -160,7 +197,8 @@ ALTER FOREIGN TABLE <varname>name</varname>
         </section>
         <section id="section8">
             <title>See Also</title>
-            <p><codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>,
+            <p><codeph><xref href="ALTER_TABLE.xml#topic1">ALTER TABLE</xref></codeph>,
+                <codeph><xref href="CREATE_FOREIGN_TABLE.xml#topic1">CREATE FOREIGN TABLE</xref></codeph>,
                         <codeph><xref href="DROP_FOREIGN_TABLE.xml#topic1">DROP
                     FOREIGN TABLE</xref></codeph></p>
         </section>

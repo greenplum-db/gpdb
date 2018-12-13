@@ -2067,14 +2067,14 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 		);
 
 	// translate hash expr list
-	result->hashFilter = true;
-
 	if (EdxlopPhysicalMotionRedistribute == motion_dxlop->GetDXLOperator())
 	{
 		CDXLNode *hash_expr_list_dxlnode = (*motion_dxlnode)[EdxlrmIndexHashExprList];
 		const ULONG length = hash_expr_list_dxlnode->Arity();
 		GPOS_ASSERT(0 < length);
-		
+
+		result->numHashFilterCols = length;
+		result->hashFilterColIdx = (AttrNumber *) gpdb::GPDBAlloc(length * sizeof(AttrNumber));
 		for (ULONG ul = 0; ul < length; ul++)
 		{
 			CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
@@ -2118,11 +2118,21 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 				resno = target_entry->resno;
 			}
 			GPOS_ASSERT(gpos::int_max != resno);
-			
-			result->hashList = gpdb::LAppendInt(result->hashList, resno);
+
+			result->hashFilterColIdx[ul] = resno;
 		}
 	}
-	
+	else
+	{
+		// A Redistribute Motion without any expressions to hash, means that
+		// the subtree should run on one segment only, and we don't care which
+		// segment it is. That is represented by a One-Off Filter, where we
+		// check that the segment number matches an arbitrarily chosen one.
+		int segment = gpdb::CdbHashRandomSeg(gpdb::GetGPSegmentCount());
+
+		result->resconstantqual = (Node *) ListMake1(gpdb::MakeSegmentFilterExpr(segment));
+	}
+
 	// cleanup
 	child_contexts->Release();
 

@@ -696,7 +696,7 @@ NOTICE:  Success:
 select * from disp_temp_test1 where c1 / 0 = 9;
 ERROR:  division by zero  (seg2 slice1 127.0.0.1:25434 pid=27218)
 rollback to savepoint s1;
-WARNING:  Writer gang of current global transaction is lost
+WARNING:  writer gang of current global transaction is lost
 WARNING:  Any temporary tables for this session have been dropped because the gang was disconnected (session id = 104)
 ERROR:  Could not rollback to savepoint (ROLLBACK TO SAVEPOINT s1)
 rollback;
@@ -733,5 +733,45 @@ NOTICE:  Success:
  t
 (1 row)
 
+--
+-- Test portal cleanup
+-- prepare a query contains init plan, main plan create a unnamed portal
+-- and will need multiple slices , init plan also need to allocated multiple
+-- slices in a named portal (eg: a cursor). The executing order is:
+-- 1. gangs of main plan is pre-assigned 2. init plan is executed 3. main plan
+-- is executed. This test it meant to test that cleanup of the named portal in
+-- the end of step2 will not affect the pre-allocated gangs of the main plan.
+--
+create table dispatch_foo (c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create table dispatch_bar (c1 int, c2 int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'c1' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+create or replace function dispatch_foo_func()
+returns int
+as
+$BODY$
+declare
+t_record record;
+BEGIN
+	drop table if exists tmp1;
+	create temp table tmp1 as select dispatch_foo.c1, dispatch_bar.c2 from dispatch_foo, dispatch_bar;
+	for t_record in (select count(*) from dispatch_foo, dispatch_bar)
+	loop
+		NULL;
+	end loop;
+	return 1;
+END;
+$BODY$
+language plpgsql volatile;
+set gp_cached_segworkers_threshold to 1;
+select count(*) from dispatch_foo, dispatch_bar where exists (select dispatch_foo_func());
+ count 
+-------
+     0
+(1 row)
+
+reset gp_cached_segworkers_threshold;
 \c regression
 DROP DATABASE dispatch_test_db;

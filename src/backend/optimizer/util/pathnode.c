@@ -18,11 +18,6 @@
 
 #include <math.h>
 
-#include "catalog/pg_operator.h"
-#include "catalog/pg_proc.h"
-#include "executor/executor.h"
-#include "executor/nodeHash.h"
-#include "foreign/fdwapi.h"
 #include "miscadmin.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
@@ -32,13 +27,13 @@
 #include "optimizer/restrictinfo.h"
 #include "optimizer/tlist.h"
 #include "parser/parsetree.h"
-#include "utils/memutils.h"
-#include "utils/selfuncs.h"
 #include "utils/lsyscache.h"
 #include "utils/selfuncs.h"
 
+#include "catalog/pg_proc.h"
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 #include "cdb/cdbutil.h"		/* getgpsegmentCount() */
+#include "executor/nodeHash.h"
 
 typedef enum
 {
@@ -1239,8 +1234,8 @@ create_tidscan_path(PlannerInfo *root, RelOptInfo *rel, List *tidquals,
 AppendPath *
 create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths, Relids required_outer)
 {
-	ListCell *l;
 	AppendPath *pathnode = makeNode(AppendPath);
+	ListCell   *l;
 
 	pathnode->path.pathtype = T_Append;
 	pathnode->path.parent = rel;
@@ -1269,11 +1264,11 @@ create_append_path(PlannerInfo *root, RelOptInfo *rel, List *subpaths, Relids re
 
 	foreach(l, subpaths)
 	{
-		Path       *subpath = (Path *) lfirst(l);
+		Path	   *subpath = (Path *) lfirst(l);
 
 		pathnode->path.rows += subpath->rows;
 
-		if (l == list_head(subpaths))   /* first node? */
+		if (l == list_head(subpaths))	/* first node? */
 			pathnode->path.startup_cost = subpath->startup_cost;
 		pathnode->path.total_cost += subpath->total_cost;
 
@@ -1828,16 +1823,6 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	if (!CdbPathLocus_IsBottleneck(subpath->locus) &&
 		!cdbpathlocus_is_hashed_on_exprs(subpath->locus, uniq_exprs, false))
 	{
-		/*
-		 * We want to use numsegments from rel->cdbpolicy, however it might
-		 * be NULL.  Subpath is the cheapest path of rel, so it has the same
-		 * numsegments with rel.
-		 */
-		if (rel->cdbpolicy)
-		{
-			AssertEquivalent(rel->cdbpolicy->numsegments,
-							 subpath->locus.numsegments);
-		}
 		int			numsegments = CdbPathLocus_NumSegments(subpath->locus);
 
         locus = cdbpathlocus_from_exprs(root, uniq_exprs, numsegments);

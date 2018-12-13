@@ -31,6 +31,7 @@
 #include "cdb/cdbdisp.h"
 #include "lib/stringinfo.h"
 #include "libpq/libpq-be.h"
+#include "postmaster/backoff.h"
 #include "utils/resource_manager.h"
 #include "utils/resgroup-ops.h"
 #include "storage/proc.h"

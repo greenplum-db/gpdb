@@ -56,7 +56,7 @@ select * from alter_drop_allcoll order by a;
 (5 rows)
 
 ALTER TABLE alter_drop_allcoll DROP COLUMN a;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 select count(*) as a from pg_attribute pa, pg_class pc where pa.attrelid = pc.oid and pc.relname='alter_drop_allcoll' and attname='a';
  a 
 ---

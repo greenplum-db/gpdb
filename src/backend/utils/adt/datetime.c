@@ -2247,8 +2247,6 @@ DecodeDate(char *str, int fmask, int *tmask, bool *is2digits,
 
 	*tmask = 0;
 
-	*tmask = 0;
-
 	/* parse this string... */
 	while (*str != '\0' && nf < MAXDATEFIELDS)
 	{

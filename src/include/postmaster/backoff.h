@@ -8,7 +8,7 @@
 #ifndef BACKOFF_H_
 #define BACKOFF_H_
 
-#include "storage/proc.h"
+#include "fmgr.h"
 
 /* GUCs */
 extern bool gp_enable_resqueue_priority;
@@ -21,7 +21,6 @@ extern char* gp_resqueue_priority_default_value;
 
 extern void BackoffBackendEntryInit(int sessionid, int commandcount, int weight);
 extern void BackoffBackendEntryExit(void);
-extern void BackoffBackendTick(void);
 extern void BackoffStateInit(void);
 extern Datum gp_adjust_priority_int(PG_FUNCTION_ARGS);
 extern Datum gp_adjust_priority_value(PG_FUNCTION_ARGS);

@@ -288,8 +288,8 @@ pow_svec_by_scalar_internal(SvecType *svec1, SvecType *svec2)
 		case 0: 		//neither arg is scalar
 		case 1:			//left arg is scalar
 			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Svec exponentiation is undefined when the right argument is a vector")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("svec exponentiation is undefined when the right argument is a vector")));
 			break;
 		case 2:			//right arg is scalar
 			if (right_vals[0] == 2.) //recognize the squared case as special
@@ -427,8 +427,8 @@ svec_count(PG_FUNCTION_ARGS)
 		case 3:			//both args are scalar
 		default:
 			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("Svec count is undefined when both arguments are scalar")));
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("svec count is undefined when both arguments are scalar")));
 			PG_RETURN_SVECTYPE_P(svec1);
 			break;
 	}

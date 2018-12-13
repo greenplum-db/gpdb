@@ -134,6 +134,7 @@ remove_target(file_entry_t *entry)
 			break;
 
 		case FILE_TYPE_REGULAR:
+		case FILE_TYPE_FIFO:
 			remove_target_file(entry->path, false);
 			break;
 
@@ -161,6 +162,11 @@ create_target(file_entry_t *entry)
 		case FILE_TYPE_REGULAR:
 			/* can't happen. Regular files are created with open_target_file. */
 			pg_fatal("invalid action (CREATE) for regular file\n");
+			break;
+
+		case FILE_TYPE_FIFO:
+			/* Only pgsql_tmp files are FIFO and they are ignored from source target. */
+			pg_fatal("invalid action (CREATE) for fifo file\n");
 			break;
 	}
 }

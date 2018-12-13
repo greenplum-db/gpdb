@@ -18,7 +18,6 @@
 #include "access/htup_details.h"
 #include "catalog/indexing.h"
 #include "catalog/pg_enum.h"
-#include "catalog/pg_type.h"
 #include "libpq/pqformat.h"
 #include "utils/array.h"
 #include "utils/builtins.h"

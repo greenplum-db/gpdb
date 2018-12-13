@@ -348,11 +348,10 @@ public class PxfExample_CustomWritable implements Writable {
     $ scp pxfex-customwritable.jar gpadmin@gpmaster:/home/gpadmin
     ```
 
-4. Log in to your Greenplum Database master node and set up the environment:
+4. Log in to your Greenplum Database master node:
 
     ``` shell
     $ ssh gpadmin@<gpmaster>
-    gpadmin@gpmaster$ . /usr/local/greenplum-db/greenplum_path.sh
     ````
 
 5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory on each Greenplum Database segment host, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
@@ -361,11 +360,7 @@ public class PxfExample_CustomWritable implements Writable {
     gpadmin@gpmaster$ gpscp -v -f seghostfile /home/gpadmin/pxfex-customwritable.jar =:/etc/pxf/usercfg/lib/pxfex-customwritable.jar
     ```
 
-6. Restart PXF on each Greenplum Database segment host. For example:
-
-    ``` shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf restart"
-    ```
+3. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).
 
 5. Use the PXF `SequenceWritable` profile to create a Greenplum Database writable external table. Identify the serialization/deserialization Java class you created above in the `DATA-SCHEMA` \<custom-option\>. Use `BLOCK` mode compression with `BZip2` when you create the writable table.
 

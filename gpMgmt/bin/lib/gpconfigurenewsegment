@@ -129,7 +129,8 @@ class ConfExpSegCmd(Command):
                         cmd = PgBaseBackup(pgdata=self.datadir,
                                            host=self.syncWithSegmentHostname,
                                            port=str(self.syncWithSegmentPort),
-                                           forceoverwrite=self.forceoverwrite)
+                                           forceoverwrite=self.forceoverwrite,
+                                           target_gp_dbid=self.dbid)
                         try:
                             cmd.run(validateAfter=True)
                             self.set_results(CommandResult(0, '', '', True, False))

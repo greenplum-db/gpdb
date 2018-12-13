@@ -110,3 +110,17 @@ select col1, col2, col3, col4, col5 from gpsort_alltypes order by col1, col2, co
 select col1, col2, col3, col4, col5 from gpsort_alltypes order by col3 desc, col2 asc, col1, col4, col5;
 select col1, col2, col3, col4, col5 from gpsort_alltypes order by col5 desc, col3 asc, col2 desc, col4 asc, col1 desc;
 
+
+--
+-- Test Motion node preserving sort order. With collations and NULLS FIRST/LAST
+--
+create table colltest (t text);
+insert into colltest VALUES ('a'), ('A'), ('b'), ('B'), ('c'), ('C'), ('d'), ('D'), (NULL);
+
+set gp_enable_motion_mk_sort=on;
+select * from colltest order by t COLLATE "C";
+select * from colltest order by t COLLATE "C" NULLS FIRST;
+
+set gp_enable_motion_mk_sort=off;
+select * from colltest order by t COLLATE "C";
+select * from colltest order by t COLLATE "C" NULLS FIRST;

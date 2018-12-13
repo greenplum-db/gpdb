@@ -80,7 +80,6 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 	foreach(lc, root->placeholder_list)
 	{
 		phinfo = (PlaceHolderInfo *) lfirst(lc);
-
 		if (phinfo->phid == phv->phid)
 			return phinfo;
 	}
@@ -90,6 +89,7 @@ find_placeholder_info(PlannerInfo *root, PlaceHolderVar *phv,
 		elog(ERROR, "too late to create a new PlaceHolderInfo");
 
 	phinfo = makeNode(PlaceHolderInfo);
+
 	phinfo->phid = phv->phid;
 	phinfo->ph_var = copyObject(phv);
 

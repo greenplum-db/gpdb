@@ -259,27 +259,17 @@
         configuration parameter. If <codeph>ftsprobe</codeph> cannot connect to a segment, it marks
         the segment “down” in the Greenplum Database system catalog. The segment remains down until
         an administrator runs the <codeph>gprecoverseg</codeph> recovery utility. </p>
-      <p>You can configure a Greenplum Database system to trigger SNMP (Simple Network Management
-        Protocol) alerts or send email notifications to system administrators if certain database
-        events occur. See "Using SNMP with a Greenplum Database System" in the <cite>Pivotal
-          Greenplum Database Administrator Guide</cite> for instructions to set up SNMP.</p>
       <section>
         <title>Best Practices</title>
         <ul id="ul_b4h_rxl_v4">
           <li>Run the <codeph>gpstate</codeph> utility to see the overall state of the Greenplum
             system.</li>
-          <li>Configure Greenplum Database to send SNMP notifications to your network monitor. </li>
-          <li>Set up email notification in the
-              <codeph>$MASTER_DATA_DIRECTORY/postgresql.conf</codeph> configuration file so that the
-            Greenplum system can email administrators when a critical issue is detected.</li>
         </ul>
       </section>
       <section><title>Additional Information</title><i>Greenplum Database Administrator Guide</i>:
           <ul id="ul_wff_k1m_v4">
           <li>Monitoring a Greenplum System</li>
           <li>Recovering a Failed Segment</li>
-          <li>Using SNMP with a Greenplum System</li>
-          <li>Enabling Email Notifications</li>
         </ul><p><i>Greenplum Database Utility Guide</i>:<ul id="ul_fk2_hyl_v4">
             <li><codeph>gpstate</codeph>&#8212;view state of the Greenplum system</li>
             <li><codeph>gprecoverseg</codeph>&#8212;recover a failed segment</li>

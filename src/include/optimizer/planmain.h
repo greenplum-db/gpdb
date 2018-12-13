@@ -105,7 +105,7 @@ extern Plan *plan_grouping_extension(PlannerInfo *root,
 									 double tuple_fraction,
 									 bool use_hashed_grouping,
 									 List **p_tlist, List *sub_tlist,
-									 bool is_agg, bool twostage,
+									 bool twostage,
 									 List *qual,
 									 int *p_numGroupCols,
 									 AttrNumber **p_grpColIdx,
@@ -261,11 +261,6 @@ extern RestrictInfo *build_implied_join_equality(Oid opno,
 extern void check_mergejoinable(RestrictInfo *restrictinfo);
 extern void check_hashjoinable(RestrictInfo *restrictinfo);
 extern bool has_redistributable_clause(RestrictInfo *restrictinfo);
-
-/*
- * prototypes for plan/analyzejoins.c
- */
-extern List *remove_useless_joins(PlannerInfo *root, List *joinlist);
 
 /*
  * prototypes for plan/analyzejoins.c

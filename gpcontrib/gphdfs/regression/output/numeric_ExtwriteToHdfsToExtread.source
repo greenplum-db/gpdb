@@ -20,7 +20,7 @@ create readable external table numeric_heap(
 datatype_numeric varchar,xcount_numeric bigint, max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric numeric, increment_numeric numeric, nullcol_numeric numeric
 ) location ('gphdfs://10.152.10.234:8020/plaintext/numeric.txt')format 'TEXT';
 create writable external table numeric_writehdfs(like numeric_heap) location ('gphdfs://10.152.10.234:8020/extwrite/numeric')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into numeric_writehdfs select * from numeric_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/numeric /mapreduce/numeric_gpdb/ 
 16/09/30 00:46:25 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

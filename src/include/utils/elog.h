@@ -325,8 +325,6 @@ extern int	getinternalerrposition(void);
 
 extern int errFatalReturn(bool fatalReturn); /* GPDB: true => return on FATAL error */
 
-extern int errSendAlert(bool sendAlert);		/* GPDB: Send alert via e-mail or SNMP */
-
 /*----------
  * Old-style error reporting API: to be used in this way:
  *		elog(ERROR, "portal \"%s\" not found", stmt->portalname);
@@ -488,7 +486,6 @@ typedef struct ErrorData
 	bool		show_funcname;	/* true to force funcname inclusion */
     bool        omit_location;  /* GPDB: don't add filename:line# and stack trace */
     bool        fatal_return;   /* GPDB: true => return instead of proc_exit() */
-	bool		send_alert;		/* GPDB: send e-mail alert and/or SNMP trap/inform */
 	bool		hide_stmt;		/* true to prevent STATEMENT: inclusion */
 	const char *filename;		/* __FILE__ of ereport() call */
 	int			lineno;			/* __LINE__ of ereport() call */
@@ -640,7 +637,6 @@ extern void write_message_to_server_log(int elevel,
 										int lineno,
 										int stacktracesize,
 										bool omit_location,
-										bool send_alert,
 										void* const *stacktracearray,
 										bool printstack);
 

@@ -42,6 +42,7 @@
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
 #include "catalog/gp_policy.h"
+#include "catalog/pg_operator.h"
 #include "catalog/pg_type.h"
 
 #include "catalog/pg_proc.h"
@@ -410,7 +411,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS);
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-							 errmsg("Using default RANDOM distribution since no distribution was specified."),
+							 errmsg("using default RANDOM distribution since no distribution was specified"),
 							 errhint("Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.")));
 				}
 				else
@@ -510,9 +511,9 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					}
 
 					if (!broadcastPlan(plan, false, false, numsegments))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that SELECT INTO yet")));
-
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 				else
 				{
@@ -531,8 +532,9 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 														 true);
 
 					if (!repartitionPlan(plan, false, false, hashExpr, numsegments))
-						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-										errmsg("Cannot parallelize that SELECT INTO yet")));
+						ereport(ERROR,
+								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+								 errmsg("cannot parallelize that SELECT INTO yet")));
 				}
 
 				Assert(query->intoPolicy->ptype != POLICYTYPE_ENTRY);
@@ -1718,16 +1720,10 @@ cdbmutate_warn_ctid_without_segid(struct PlannerInfo *root, struct RelOptInfo *r
 				elevel = NOTICE;
 		}
 
-		ereport(elevel, (errmsg("%s uses system-defined column \"%s.ctid\" "
-								"without the necessary companion column "
-								"\"%s.gp_segment_id\"",
-								cmd,
-								rte->eref->aliasname,
-								rte->eref->aliasname),
-						 errhint("To uniquely identify a row within a "
-								 "distributed table, use the \"gp_segment_id\" "
-								 "column together with the \"ctid\" column.")
-						 ));
+		ereport(elevel,
+				(errmsg("%s uses system-defined column \"%s.ctid\" without the necessary companion column \"%s.gp_segment_id\"",
+						cmd, rte->eref->aliasname, rte->eref->aliasname),
+				 errhint("To uniquely identify a row within a distributed table, use the \"gp_segment_id\" column together with the \"ctid\" column.")));
 	}
 	bms_free(relids_to_ignore);
 }								/* cdbmutate_warn_ctid_without_segid */
@@ -2768,6 +2764,35 @@ cdbhash_const_list(List *plConsts, int iSegments)
 	return cdbhashreduce(pcdbhash);
 }
 
+/*
+ * Construct an expression that checks whether the current segment is
+ * 'segid'.
+ */
+Node *
+makeSegmentFilterExpr(int segid)
+{
+	/* Build an expression: gp_execution_segment() = <segid> */
+	return (Node *)
+		make_opclause(Int4EqualOperator,
+					  BOOLOID,
+					  false,	/* opretset */
+					  (Expr *) makeFuncExpr(F_MPP_EXECUTION_SEGMENT,
+											INT4OID,
+											NIL,	/* args */
+											InvalidOid,
+											InvalidOid,
+											COERCE_EXPLICIT_CALL),
+					  (Expr *) makeConst(INT4OID,
+										 -1,		/* consttypmod */
+										 InvalidOid, /* constcollid */
+										 sizeof(int32),
+										 Int32GetDatum(segid),
+										 false,		/* constisnull */
+										 true),		/* constbyval */
+					  InvalidOid,	/* opcollid */
+					  InvalidOid	/* inputcollid */
+			);
+}
 
 typedef struct ParamWalkerContext
 {
@@ -3598,7 +3623,6 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 	if (typesOK && allConstantValuesClause(plan))
 	{
 		Result	   *rNode = (Result *) plan;
-		List	   *hList = NIL;
 		int			i;
 
 		/*
@@ -3607,14 +3631,6 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 		 *
 		 * See partition check above.
 		 */
-
-		/* build our list */
-		for (i = 0; i < (*targetPolicy)->nattrs; i++)
-		{
-			Assert((*targetPolicy)->attrs[i] > 0);
-
-			hList = lappend_int(hList, (*targetPolicy)->attrs[i]);
-		}
 
 		if (root->config->gp_enable_direct_dispatch)
 		{
@@ -3626,8 +3642,15 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 			 */
 		}
 
-		rNode->hashFilter = true;
-		rNode->hashList = hList;
+		/* Set a hash filter in the Result plan node */
+		rNode->numHashFilterCols = (*targetPolicy)->nattrs;
+		rNode->hashFilterColIdx = palloc((*targetPolicy)->nattrs * sizeof(AttrNumber));
+		for (i = 0; i < (*targetPolicy)->nattrs; i++)
+		{
+			Assert((*targetPolicy)->attrs[i] > 0);
+
+			rNode->hashFilterColIdx[i] = (*targetPolicy)->attrs[i];
+		}
 
 		/* Build a partitioned flow */
 		plan->flow->flotype = FLOW_PARTITIONED;

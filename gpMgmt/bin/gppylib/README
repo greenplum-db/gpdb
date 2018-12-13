@@ -100,7 +100,7 @@ Commenting
      This is good:
 
        def foo():
-           "Function desciption"
+           "Function description"
 
      or
 

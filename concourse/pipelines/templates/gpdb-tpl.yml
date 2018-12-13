@@ -7,8 +7,6 @@
 {% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
                       'gpinitsystem'] %}
-{% set CLI_gpexpand_suites = ['gpexpand_1',
-                             'gpexpand_2'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|
@@ -54,6 +52,7 @@ groups:
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icg_planner_centos7_random_numsegments
   - icw_planner_centos7_online_expand
 {% endif %}
 {% if "sles" in os_types %}
@@ -94,9 +93,7 @@ groups:
 {% if "CLI" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_cli_start
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites +
-                    CLI_gpexpand_suites %}
+{% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
   - gpaddmirrors
@@ -196,6 +193,7 @@ groups:
 {% if "centos7" in os_types %}
   - icw_gporca_centos7
   - icw_planner_centos7
+  - icg_planner_centos7_random_numsegments
   - icw_planner_centos7_online_expand
   - compile_gpdb_centos7
 {% endif %}
@@ -275,9 +273,7 @@ groups:
 - name: CLI
   jobs:
   - gate_cli_start
-{% for test_name in CLI_1_suites +
-                    CLI_2_suites +
-                    CLI_gpexpand_suites %}
+{% for test_name in CLI_1_suites + CLI_2_suites %}
   - [[ test_name ]]
 {% endfor %}
   - gpaddmirrors
@@ -407,15 +403,6 @@ resources:
       region_name: {{aws-region}}
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
-
-- name: snowflake-simple-database-dump # remove this resource in favor of icw_gporca_centos6_dump once gpexpand works with a dump of ICW
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{test-data-bucket-name}}
-    secret_access_key: {{bucket-secret-access-key}}
-    region_name: {{aws-region}}
-    versioned_file: snowflake-simple-database/dump.sql.xz
 {% endif %}
 {% if "aix7" in os_types %}
 - name: aix_environments
@@ -1234,6 +1221,122 @@ jobs:
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
+- name: icg_planner_centos7_random_numsegments
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: -k
+        -C src/test/regress installcheck-good
+        PGOPTIONS='-c optimizer=off'
+        EXCLUDE_TESTS="'
+          AOCO_Compression2
+          alter_distribution_policy
+          alter_table_ao
+          alter_table_aocs
+          alter_table_set
+          ao_checksum_corruption
+          ao_locks
+          aocs
+          appendonly
+          bfv_dd
+          bfv_dd_multicolumn
+          bfv_dd_types
+          bfv_partition
+          bfv_partition_plans
+          bfv_subquery
+          bitmap_index
+          bitmapscan
+          complex
+          constraints
+          db_size_functions
+          deadlock
+          direct_dispatch
+          dispatch
+          distributed_transactions
+          explain_format
+          freeze_aux_tables
+          gp_aggregates
+          gp_tablespace
+          gpcopy
+          gpdist
+          gporca
+          ic
+          incremental_analyze
+          instr_in_shmem
+          instr_in_shmem_verify
+          join
+          memconsumption
+          metadata_track
+          misc
+          oid_consistency
+          partindex_test
+          partition
+          partition1
+          partition_locking
+          partition_pruning
+          partition_storage
+          portals
+          portals_updatable
+          python_processed64bit
+          qp_dml_oids
+          qp_dropped_cols
+          qp_functions_in_from
+          qp_functions_in_subquery
+          qp_gist_indexes2
+          qp_misc_jiras
+          qp_targeted_dispatch
+          qp_with_functional_inlining
+          query_finish
+          query_finish_pending
+          rle_delta
+          rpt_returning
+          spi_processed64bit
+          subselect_gp
+          tidscan
+          uao_catalog_tables
+          uao_compaction/threshold
+          uao_ddl/alter_ao_part_exch
+          uao_ddl/alter_ao_part_exch_column
+          uao_ddl/alter_ao_part_exch_row
+          uao_ddl/alter_ao_table_setstorage_column
+          uao_ddl/alter_ao_table_setstorage_row
+          uao_dml/uao_dml_column
+          uao_dml/uao_dml_row
+          uaocs_catalog_tables
+          uaocs_compaction/threshold
+          updatable_views
+          update
+          vacuum_full_ao
+          vacuum_full_freeze_heap
+          vacuum_full_heap
+          vacuum_full_heap_bitmapindex
+          vacuum_stats
+          window
+          workfile/hashagg_spill
+          workfile/hashjoin_spill
+          workfile/materialize_spill
+          workfile/sisc_mat_sort
+          workfile/sisc_sort_spill
+          workfile/sort_spill
+          workfile/spilltodisk
+          writer_aborts_reader'"
+        EXTRA_REGRESS_OPTS='
+          --prehook=randomize_create_table_default_numsegments
+          --ignore-plans'
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+
 - name: icw_planner_centos7_online_expand
   plan:
   - aggregate:
@@ -1924,7 +2027,6 @@ jobs:
     - get: centos-gpdb-dev-6
     - get: icw_gporca_centos6_dump
       passed: [gate_icw_end]
-    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1938,7 +2040,7 @@ jobs:
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
     image: centos-gpdb-dev-6
-    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
+    input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
@@ -1948,50 +2050,6 @@ jobs:
       <<: *ccp_destroy
   ensure:
     <<: *set_failed
-
-{% for test_name in CLI_gpexpand_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: centos-gpdb-dev-6
-    - get: snowflake-simple-database-dump # remove once icw_gporca_centos6_dump works with gpexpand
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 5
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: pre_run_test_setup
-    image: centos-gpdb-dev-6
-    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    input_mapping: {sqldump: snowflake-simple-database-dump} # use icw_gporca_centos6_dump when it works with gpexpand
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-dev-6
-    params:
-      TINC_TARGET: [[ test_name ]]
-      CUSTOM_ENV: HOST1=mdw HOST2=sdw1 HOST3=sdw2 HOST4=sdw3 HOST5=sdw4
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-{% endfor %}
 
 - name: gptransfer
   plan:
@@ -2391,6 +2449,7 @@ jobs:
       - icw_gporca_centos6
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icg_planner_centos7_random_numsegments
       - icw_planner_centos7_online_expand
       - icw_gporca_sles11
       - icw_gporca_sles12
@@ -2412,7 +2471,6 @@ jobs:
                     CLI_2_suites %}
       - [[ test_name ]]
 {% endfor %}
-      - gpexpand_2
       - madlib_build_gppkg
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
@@ -2443,7 +2501,6 @@ jobs:
                     CLI_2_suites %}
       - [[ test_name ]]
 {% endfor %}
-      - gpexpand_2
       - MADlib_Test_orca_centos6
       - MADlib_Test_planner_centos6
       - gpexpand
@@ -2458,6 +2515,7 @@ jobs:
       - compile_gpdb_centos7
       - icw_gporca_centos7
       - icw_planner_centos7
+      - icg_planner_centos7_random_numsegments
       - icw_planner_centos7_online_expand
       - resource_group_centos7
       - MADlib_Test_orca_centos7

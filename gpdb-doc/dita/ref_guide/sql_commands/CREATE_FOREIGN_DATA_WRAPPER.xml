@@ -38,7 +38,7 @@
                 <plentry>
                     <pt>VALIDATOR <varname>validator_function</varname></pt>
                     <pd>
-                        <p>The name of a previously registered function that Greenplum Database calls to check the options provided to the foreign-data wrapper. This function also checks the options for foreign servers and user mappings that use the foreign-data wrapper. If no validator function or <codeph>NO VALIDATOR</codeph> is specified, Greenplum Database does not check options at creation time. (Depending upon the implementation, foreign-data wrappers may ignore or reject invalid options at runtime.)</p><p><varname>validator_function</varname> must take two arguments: one of type <codeph>text[]</codeph>, which contains the array of options as stored in the system catalogs, and one of type <codeph>oid</codeph>, which identifies the OID of the system catalog containing the options.</p><p>The return type is ignored; <varname>validator_function</varname> should report invalid options using the <codeph>ereport(ERROR)</codeph> function.</p>
+                        <p>The name of a previously registered function that Greenplum Database calls to check the options provided to the foreign-data wrapper. This function also checks the options for foreign servers, user mappings, and foreign tables that use the foreign-data wrapper. If no validator function or <codeph>NO VALIDATOR</codeph> is specified, Greenplum Database does not check options at creation time. (Depending upon the implementation, foreign-data wrappers may ignore or reject invalid options at runtime.)</p><p><varname>validator_function</varname> must take two arguments: one of type <codeph>text[]</codeph>, which contains the array of options as stored in the system catalogs, and one of type <codeph>oid</codeph>, which identifies the OID of the system catalog containing the options.</p><p>The return type is ignored; <varname>validator_function</varname> should report invalid options using the <codeph>ereport(ERROR)</codeph> function.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -51,15 +51,13 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p>At the moment, the foreign-data wrapper functionality is rudimentary. There is no support for updating a foreign table, and optimization of queries is primitive (and mostly left to the wrapper, too).</p>
-            <p>Greenplum Database provides one built-in foreign-data wrapper validator function named <codeph>postgresql_fdw_validator()</codeph>. This function accepts options corresponding to <codeph>libpq</codeph> connection parameters.</p>
+            <p>The foreign-data wrapper functionality is still under development. Optimization of queries is primitive (and mostly left to the wrapper).</p>
         </section>
         <section id="section6">
             <title>Examples</title>
             <p>Create a useless foreign-data wrapper named <codeph>dummy</codeph>:</p><codeblock>CREATE FOREIGN DATA WRAPPER dummy;</codeblock>
             <p>Create a foreign-data wrapper named <codeph>file</codeph> with a handler function named <codeph>file_fdw_handler</codeph>:</p><codeblock>CREATE FOREIGN DATA WRAPPER file HANDLER file_fdw_handler;</codeblock>
-            <p>Create a foreign-data wrapper named <codeph>mywrapper</codeph> that includes an option:</p><codeblock>CREATE FOREIGN DATA WRAPPER mywrapper
-    OPTIONS (debug 'true');</codeblock>
+            <p>Create a foreign-data wrapper named <codeph>mywrapper</codeph> that includes an option:</p><codeblock>CREATE FOREIGN DATA WRAPPER mywrapper OPTIONS (debug 'true');</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>

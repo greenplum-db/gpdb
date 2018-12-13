@@ -48,7 +48,6 @@
 #include "utils/timestamp.h"
 
 #include "cdb/cdbvars.h"
-#include "postmaster/sendalert.h"
 
 #define READ_BUF_SIZE (2 * PIPE_CHUNK_SIZE)
 
@@ -1338,7 +1337,6 @@ fillinErrorDataFromSegvChunk(GpErrorData *errorData, PipeProtoChunk *chunk)
 	GpSegvErrorData *segvData = (GpSegvErrorData *)chunk->data;
 	
 	errorData->fix_fields.session_start_time = segvData->session_start_time;
-	errorData->fix_fields.send_alert = 't';
 	errorData->fix_fields.omit_location = 'f';
 
 	/* This field is always true now. We should remove this eventually. */
@@ -1543,24 +1541,6 @@ syslogger_write_errordata(PipeProtoHeader *chunkHeader, GpErrorData *errorData, 
 	
 	/* EOL */
 	write_syslogger_file_binary(LOG_EOL, strlen(LOG_EOL), LOG_DESTINATION_STDERR);
-	
-	/*
-	 * Send alerts when needed. The alerts are sent only by the master.
-	 * If the alert is failed for whatever reason, log a message and continue.
-	 */
-	if (errorData->fix_fields.send_alert == 't' &&
-		Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH)
-	{
-		PG_TRY();
-		{
-			send_alert(errorData);
-		}
-		PG_CATCH();
-		{
-			elog(LOG,"Failed to send alert.");
-		}
-		PG_END_TRY();
-	}
 }
 
 static void set_write_to_alert_log(const char *severity)
@@ -1606,6 +1586,137 @@ syslogger_log_segv_chunk(PipeProtoChunk *chunk)
 	/* mark chunk as unused */
 	chunk->hdr.pid = 0;
     unset_write_to_alert_log();
+}
+
+static size_t
+pg_strnlen(const char *str, size_t maxlen)
+{
+	const char *p = str;
+
+	while (maxlen-- > 0 && *p)
+		p++;
+	return p - str;
+}
+
+static void move_to_next_chunk(CSVChunkStr * chunkstr,
+		const PipeProtoChunk * saved_chunks)
+{
+	Assert(chunkstr != NULL);
+	Assert(saved_chunks != NULL);
+
+	if (chunkstr->chunk != NULL)
+		if (chunkstr->p - chunkstr->chunk->data >= chunkstr->chunk->hdr.len)
+		{
+			/* switch to next chunk */
+			if (chunkstr->chunk->hdr.next >= 0)
+			{
+				chunkstr->chunk = &saved_chunks[chunkstr->chunk->hdr.next];
+				chunkstr->p = chunkstr->chunk->data;
+			}
+			else
+			{
+				/* no more chunks */
+				chunkstr->chunk = NULL;
+				chunkstr->p = NULL;
+			}
+		}
+}
+
+static char *
+get_str_from_chunk(CSVChunkStr *chunkstr, const PipeProtoChunk *saved_chunks)
+{
+	int wlen = 0;
+	int len = 0;
+	char * out = NULL;
+
+	Assert(chunkstr != NULL);
+	Assert(saved_chunks != NULL);
+
+	move_to_next_chunk(chunkstr, saved_chunks);
+
+	if (chunkstr->p == NULL)
+	{
+		return strdup("");
+	}
+
+	len = chunkstr->chunk->hdr.len - (chunkstr->p - chunkstr->chunk->data);
+
+	/* Check if the string is an empty string */
+	if (len > 0 && chunkstr->p[0] == '\0')
+	{
+		chunkstr->p++;
+		move_to_next_chunk(chunkstr, saved_chunks);
+
+		return strdup("");
+	}
+
+	if (len == 0 && chunkstr->chunk->hdr.next >= 0)
+	{
+		const PipeProtoChunk *next_chunk =
+				&saved_chunks[chunkstr->chunk->hdr.next];
+		if (next_chunk->hdr.len > 0 && next_chunk->data[0] == '\0')
+		{
+			chunkstr->p++;
+			move_to_next_chunk(chunkstr, saved_chunks);
+			return strdup("");
+		}
+	}
+
+	wlen = pg_strnlen(chunkstr->p, len);
+
+	if (wlen < len)
+	{
+		// String all contained in this chunk
+		out = malloc(wlen + 1);
+		if (!out)
+			return NULL;
+		memcpy(out, chunkstr->p, wlen + 1); // include the null byte
+		chunkstr->p += wlen + 1; // skip to start of next string.
+		return out;
+	}
+
+	out = malloc(wlen + 1);
+	if (!out)
+		return NULL;
+	memcpy(out, chunkstr->p, wlen);
+	out[wlen] = '\0';
+	chunkstr->p += wlen;
+
+	while (chunkstr->p)
+	{
+		move_to_next_chunk(chunkstr, saved_chunks);
+		if (chunkstr->p == NULL)
+			break;
+		len = chunkstr->chunk->hdr.len - (chunkstr->p - chunkstr->chunk->data);
+
+		wlen = pg_strnlen(chunkstr->p, len);
+
+		/* Write OK, don't forget to account for the trailing 0 */
+		if (wlen < len)
+		{
+			// Remainder of String all contained in this chunk
+			out = realloc(out, strlen(out) + wlen + 1);
+			if (!out)
+				return NULL;
+			strncat(out, chunkstr->p, wlen + 1); // include the null byte
+
+			chunkstr->p += wlen + 1; // skip to start of next string.
+			return out;
+		}
+		else
+		{
+			int newlen = strlen(out) + wlen;
+			out = realloc(out, newlen + 1);
+			if (!out)
+				return NULL;
+			strncat(out, chunkstr->p, wlen);
+			out[newlen] = '\0';
+
+			chunkstr->p += wlen;
+		}
+	}
+
+	return out;
 }
 
 void syslogger_log_chunk_list(PipeProtoChunk *chunk)
@@ -1727,10 +1838,6 @@ void syslogger_log_chunk_list(PipeProtoChunk *chunk)
         free(errorData.username ); errorData.username = NULL;
 
         unset_write_to_alert_log();
-
-        if (pfixed->send_alert == 't')
-        	if (Gp_entry_postmaster && Gp_role == GP_ROLE_DISPATCH) /* Only the master sends alerts */
-        		send_alert_from_chunks(chunk, &saved_chunks[0]);
     }
 
     /* Free the chunks */
