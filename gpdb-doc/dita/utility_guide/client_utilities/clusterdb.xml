@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>-v</b>] [<b>-t</b> <varname>table</varname>] [[<b>-d</b>] <varname>dbname</varname>]
+<topic id="topic1"><title id="oy139586">clusterdb</title><body><p id="client_util_desc">Reclusters tables that were previously clustered with <codeph>CLUSTER</codeph>.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>--verbose | -v</b>] [<b>--table | -t</b> <varname>table</varname>] [[<b>--dbname | -d</b>] <varname>dbname</varname>]
 
-<b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>-a</b>] [<b>-v</b>]
+<b>clusterdb</b> [<varname>connection-option</varname> ...] [<b>--all | -a</b>] [<b>--verbose | -v</b>]
 
 <b>clusterdb</b> <b>--help</b>
 
@@ -19,7 +19,7 @@ it is not recommended because the <codeph>CLUSTER</codeph> operation
 itself is extremely slow. </p><p>If you do need to order a table in this way to improve your query performance, Greenplum
         recommends using a <codeph>CREATE TABLE AS</codeph> statement to reorder the table on disk
         rather than using <codeph>CLUSTER</codeph>. If you do 'cluster' a table in this way, then
-          <codeph>clusterdb</codeph> would not be relevant.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Cluster all databases. </pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be clustered. If this is not
+          <codeph>clusterdb</codeph> would not be relevant.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Cluster all databases. </pd></plentry><plentry><pt>[-d | --dbname] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be clustered. If this is not
 specified, the database name is read from the environment variable <codeph>PGDATABASE</codeph>.
 If that is not set, the user name specified for the connection is used.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>clusterdb</codeph> generates and sends
 to the server.</pd></plentry><plentry><pt>-q | --quiet</pt><pd>Do not display a response.</pd></plentry><plentry><pt>-t <varname>table</varname> | --table <varname>table</varname></pt><pd>Cluster the named table only.</pd></plentry><plentry><pt>-v | --verbose</pt><pd>Print detailed information during processing.</pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
