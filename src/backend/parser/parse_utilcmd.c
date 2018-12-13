@@ -1709,13 +1709,13 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 			if (stmt->distributedBy->ptype == POLICYTYPE_REPLICATED)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("External tables can't have DISTRIBUTED REPLICATED clause.")));
+						 errmsg("external tables can't have DISTRIBUTED REPLICATED clause")));
 		}
 	}
 	else if (stmt->distributedBy != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("Readable external tables can\'t specify a DISTRIBUTED BY clause.")));
+				 errmsg("readable external tables can\'t specify a DISTRIBUTED BY clause")));
 
 	Assert(cxt.ckconstraints == NIL);
 	Assert(cxt.fkconstraints == NIL);
@@ -1894,24 +1894,22 @@ transformDistributedBy(CreateStmtContext *cxt,
 					parentPolicy->ptype == POLICYTYPE_ENTRY) &&
 					!IsBinaryUpgrade)
 			{
-				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("cannot inherit from catalog table \"%s\" to create table \"%s\"",
-							   parent->relname, cxt->relation->relname),
-						errdetail("An inheritance hierarchy cannot contain a "
-								  "mixture of distributed and "
-								  "non-distributed tables.")));
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot inherit from catalog table \"%s\" to create table \"%s\"",
+								parent->relname, cxt->relation->relname),
+						 errdetail("An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.")));
 			}
 
 			if ((parentPolicy == NULL ||
 					GpPolicyIsReplicated(parentPolicy)) &&
 					!IsBinaryUpgrade)
 			{
-				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-						errmsg("cannot inherit from replicated table \"%s\" to create table \"%s\".",
-							   parent->relname, cxt->relation->relname),
-						errdetail("An inheritance hierarchy cannot contain a "
-								  "mixture of distributed and "
-								  "non-distributed tables.")));
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("cannot inherit from replicated table \"%s\" to create table \"%s\"",
+								parent->relname, cxt->relation->relname),
+						 errdetail("An inheritance hierarchy cannot contain a mixture of distributed and non-distributed tables.")));
 			}
 
 			/*
@@ -1922,7 +1920,9 @@ transformDistributedBy(CreateStmtContext *cxt,
 			if (distrkeys == NIL && parentPolicy->nattrs >= 0)
 			{
 				if (!bQuiet)
-					elog(NOTICE, "Table has parent, setting distribution columns to match parent table");
+					ereport(NOTICE,
+							(errcode(ERRCODE_UNDEFINED_OBJECT),
+							 errmsg("table has parent, setting distribution columns to match parent table")));
 
 				distributedBy = make_distributedby_for_rel(parentrel);
 				heap_close(parentrel, AccessShareLock);
@@ -1937,8 +1937,8 @@ transformDistributedBy(CreateStmtContext *cxt,
 	if (distrkeys == NIL && likeDistributedBy != NULL)
 	{
 		if (!bQuiet)
-			elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause, "
-				 "defaulting to distribution columns from LIKE table");
+			ereport(NOTICE,
+					(errmsg("table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table")));
 
 		if (likeDistributedBy->ptype == POLICYTYPE_PARTITIONED &&
 			likeDistributedBy->keys == NIL)
@@ -1967,7 +1967,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 		{
 			ereport(NOTICE,
 				(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
-				 errmsg("Using default RANDOM distribution since no distribution was specified."),
+				 errmsg("using default RANDOM distribution since no distribution was specified"),
 				 errhint("Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.")));
 		}
 
@@ -2004,8 +2004,8 @@ transformDistributedBy(CreateStmtContext *cxt,
 				if (rel->rd_rel->relkind != RELKIND_RELATION)
 					ereport(ERROR,
 							(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					   errmsg("inherited relation \"%s\" is not a table",
-							  inh->relname)));
+							 errmsg("inherited relation \"%s\" is not a table",
+									inh->relname)));
 				for (count = 0; count < rel->rd_att->natts; count++)
 				{
 					Form_pg_attribute inhattr = rel->rd_att->attrs[count];
@@ -2074,7 +2074,9 @@ transformDistributedBy(CreateStmtContext *cxt,
 			 * tuples coming into the system will be randomly assigned a bucket.
 			 */
 			if (!bQuiet)
-				elog(NOTICE, "Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.");
+				ereport(NOTICE,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.")));
 
 			distributedBy = makeNode(DistributedBy);
 			distributedBy->ptype = POLICYTYPE_PARTITIONED;
@@ -2111,7 +2113,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 						ereport(ERROR,
 								(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 								 errmsg("inherited relation \"%s\" is not a table",
-									 inh->relname)));
+										inh->relname)));
 					for (count = 0; count < rel->rd_att->natts; count++)
 					{
 						Form_pg_attribute inhattr = rel->rd_att->attrs[count];
@@ -2160,7 +2162,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 							ereport(ERROR,
 									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 									 errmsg("type \"%s\" cannot be a part of a distribution key",
-										 format_type_be(typeOid))));
+											format_type_be(typeOid))));
 						}
 
 						found = true;
@@ -2179,7 +2181,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_COLUMN),
 						 errmsg("column \"%s\" named in 'DISTRIBUTED BY' clause does not exist",
-							 key)));
+								key)));
 		}
 	}
 
@@ -3150,8 +3152,9 @@ transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
 
 			if (RelationIsExternal(crel))
 			{
-				elog(NOTICE, "skip building index for external partition \"%s\"",
-					 RelationGetRelationName(crel));
+				ereport(NOTICE,
+						(errmsg("skip building index for external partition \"%s\"",
+								RelationGetRelationName(crel))));
 				heap_close(crel, NoLock);
 				continue;
 			}
@@ -3168,8 +3171,9 @@ transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
 							 pstrdup(RelationGetRelationName(crel)), -1);
 			chidx->relationOid = relid;
 
-			elog(NOTICE, "building index for child partition \"%s\"",
-				 RelationGetRelationName(crel));
+			ereport(NOTICE,
+					(errmsg("building index for child partition \"%s\"",
+							RelationGetRelationName(crel))));
 
 			/*
 			 * We want the index name to resemble our partition table name
@@ -4230,11 +4234,12 @@ transformStorageEncodingClause(List *options)
 	foreach(lc, options)
 	{
 		dl = (DefElem *) lfirst(lc);
-		if (pg_strncasecmp(dl->defname, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM))
-			== 0)
+		if (pg_strncasecmp(dl->defname, SOPT_CHECKSUM, strlen(SOPT_CHECKSUM)) == 0)
 		{
-			elog(ERROR, "\"%s\" is not a column specific option.",
-				 SOPT_CHECKSUM);
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("\"%s\" is not a column specific option",
+							SOPT_CHECKSUM)));
 		}
 	}
 	List *extra = list_make2(makeDefElem("appendonly",
@@ -4363,14 +4368,17 @@ validateColumnStorageEncodingClauses(List *stenc, CreateStmt *stmt)
 			ce = hash_search(ht, colname, HASH_FIND, &found);
 
 			if (!found)
-				elog(ERROR, "column \"%s\" does not exist", colname);
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("column \"%s\" does not exist", colname)));
 
 			ce->count++;
 
 			if (ce->count > 1)
-				elog(ERROR, "column \"%s\" referenced in more than one "
-					 "COLUMN ENCODING clause", colname);
-
+				ereport(ERROR,
+						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+						 errmsg("column \"%s\" referenced in more than one COLUMN ENCODING clause",
+								colname)));
 		}
 	}
 
@@ -4526,8 +4534,7 @@ transformAttributeEncoding(List *stenc, CreateStmt *stmt, CreateStmtContext *cxt
 			if (encodings_overlap(stmt->options, deflt->encoding, false))
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("DEFAULT COLUMN ENCODING clause cannot "
-								"override values set in WITH clause")));
+						 errmsg("DEFAULT COLUMN ENCODING clause cannot override values set in WITH clause")));
 		}
 	}
 
@@ -4695,7 +4702,9 @@ is_aocs(List *opts)
 		{
 			found_ao = true;
 			if (!parse_bool(arg, &aovalue))
-				elog(ERROR, "invalid value for option \"appendonly\"");
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+						 errmsg("invalid value for option \"appendonly\"")));
 		}
 		else if (pg_strcasecmp("orientation", el->defname) == 0)
 		{
@@ -4796,7 +4805,7 @@ transformAlterTable_all_PartitionStmt(
 		if (!pNode)
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
-					 errmsg("%s is not partitioned",
+					 errmsg("\"%s\" is not partitioned",
 							lrelname)));
 
 		/* Processes nested ALTER (if it exists) */

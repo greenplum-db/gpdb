@@ -1761,7 +1761,6 @@ typedef struct CopyStmt
 	/* Convenient location for dispatch of misc meta data */
 	PartitionNode *partitions;
 	List		*ao_segnos;		/* AO segno map */
-	GpPolicy	*policy;
 } CopyStmt;
 
 /* ----------------------

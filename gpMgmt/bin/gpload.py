@@ -703,7 +703,7 @@ def notice_processor(self):
        return
 
     theNotices = self.db.notices()
-    r = re.compile("^NOTICE:  Found (\d+) data formatting errors.*")
+    r = re.compile("^NOTICE:  found (\d+) data formatting errors.*")
     messageNumber = 0
     m = None
     while messageNumber < len(theNotices) and m is None:

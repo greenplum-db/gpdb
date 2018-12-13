@@ -759,7 +759,8 @@ ERROR:  "ft1" is not a table
 ALTER FOREIGN TABLE ft1 DROP CONSTRAINT ft1_c1_check;
 ERROR:  "ft1" is not a table
 ALTER FOREIGN TABLE ft1 SET WITH OIDS;                          -- ERROR
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 ERROR:  "ft1" is not a table
 ALTER FOREIGN TABLE ft1 OWNER TO regress_test_role;
 ALTER FOREIGN TABLE ft1 OPTIONS (DROP delimiter, SET quote '~', ADD escape '@');

@@ -97,7 +97,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_ac" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_ac (like sto_altmsp1) with(appendonly=true, compresstype=zlib);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_ac values(1, '2008-02-02', 'newtwo');
 INSERT 0 1
@@ -111,7 +111,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_cc" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_cc (like sto_altmsp1) with(appendonly=true, compresstype=zlib);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_cc values(1, '2008-02-02', 'newfive');
 INSERT 0 1
@@ -125,7 +125,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_cc1" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_cc1 (like sto_altmsp1) with(appendonly=true, orientation=column, compresstype=quicklz);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_cc1 values(1, '2008-02-02', 'newone');
 INSERT 0 1
@@ -139,7 +139,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_ac1" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_ac1 (like sto_altmsp1) with(appendonly=true, orientation=column, compresstype=quicklz);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_ac1 values(1, '2008-02-02', 'newfour');
 INSERT 0 1
@@ -153,7 +153,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_cc2" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_cc2 (like sto_altmsp1) with(appendonly=true,orientation= column, compresstype=zlib);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_cc2 values(1, '2008-02-02', 'newthree');
 INSERT 0 1
@@ -167,7 +167,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_ac2" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_ac2 (like sto_altmsp1) with(appendonly=true,orientation= column, compresstype=zlib);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_ac2 values(1, '2008-02-02', 'newsix');
 INSERT 0 1
@@ -181,7 +181,7 @@ psql:/path/sql_file:1: NOTICE:  table "exh_def" does not exist, skipping
 DROP TABLE
 --end_ignore
 create table exh_def (like sto_altmsp1) with(appendonly=true);
-psql:/path/sql_file:1: NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+psql:/path/sql_file:1: NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 CREATE TABLE
 insert into exh_def values(1, '2008-02-01', 'ten');
 INSERT 0 1

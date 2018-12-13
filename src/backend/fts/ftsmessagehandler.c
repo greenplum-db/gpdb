@@ -159,7 +159,7 @@ checkIODataDirectory(void)
 
 	if (failure)
 		ereport(ERROR,
-				(errmsg("disk IO check during FTS probe failed.")));
+				(errmsg("disk IO check during FTS probe failed")));
 
 	pfree(data);
 	return failure;

@@ -404,7 +404,6 @@ _outCopyStmt(StringInfo str, CopyStmt *node)
 	WRITE_NODE_FIELD(sreh);
 	WRITE_NODE_FIELD(partitions);
 	WRITE_NODE_FIELD(ao_segnos);
-	WRITE_NODE_FIELD(policy);
 }
 
 static void

@@ -230,7 +230,7 @@ static inline Oid getTypeOidFromJavaEnumOrdinal(int8 enumType)
 	case 7: return TEXTOID;
 	default: ereport(ERROR,
 					 (errcode(ERRCODE_DATA_EXCEPTION),
-					  errmsg("Ill-formatted record: unknown Java Enum Ordinal (%d)", enumType)));
+					  errmsg("ill-formatted record: unknown Java Enum Ordinal (%d)", enumType)));
 
 	}
 	return 0;
@@ -713,7 +713,7 @@ gphdfsformatter_import(PG_FUNCTION_ARGS)
 	if(data_cur + tuplelen != bufidx)
 		ereport(ERROR,
 				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-				 errmsg("Tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur)));
+				 errmsg("tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur)));
 
 	data_cur += tuplelen;
 

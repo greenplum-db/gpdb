@@ -413,8 +413,9 @@ AORelGetHashEntry(Oid relid)
 	AORelHashEntryData *aoentry = AORelLookupHashEntry(relid);
 
 	if (!aoentry)
-		ereport(ERROR, (errmsg("expected an AO hash entry for relid %d but "
-							   "found none", relid)));
+		ereport(ERROR,
+				(errmsg("expected an AO hash entry for relid %d but found none",
+						relid)));
 
 	ereportif(Debug_appendonly_print_segfile_choice, LOG,
 			  (errmsg("AORelGetHashEntry: Retrieved hash entry for append-only relation "
@@ -452,12 +453,10 @@ AORelGetOrCreateHashEntry(Oid relid)
 	if (!AORelCreateHashEntry(relid))
 	{
 		release_lightweight_lock();
-		ereport(ERROR, (errmsg("can't have more than %d different append-only "
-							   "tables open for writing data at the same time. "
-							   "if tables are heavily partitioned or if your "
-							   "workload requires, increase the value of "
-							   "max_appendonly_tables and retry",
-							   MaxAppendOnlyTables)));
+		ereport(ERROR,
+				(errmsg("can't have more than %d different append-only tables open for writing data at the same time",
+						MaxAppendOnlyTables),
+				 errhint("If tables are heavily partitioned or if your workload requires, increase the value of max_appendonly_tables and retry.")));
 	}
 
 	/* get the hash entry for this relation (must exist) */
@@ -1068,9 +1067,9 @@ SetSegnoForCompactionInsert(Relation rel,
 	if (!segno_chosen)
 	{
 		release_lightweight_lock();
-		ereport(ERROR, (errmsg("could not find segment file to use for "
-							   "inserting into relation %s (%d).",
-							   RelationGetRelationName(rel), RelationGetRelid(rel))));
+		ereport(ERROR,
+				(errmsg("could not find segment file to use for inserting into relation %s (%d)",
+						RelationGetRelationName(rel), RelationGetRelid(rel))));
 	}
 
 
@@ -1227,9 +1226,9 @@ SetSegnoForWrite(Relation rel, int existingsegno)
 			if (!segno_chosen)
 			{
 				release_lightweight_lock();
-				ereport(ERROR, (errmsg("could not find segment file to use for "
-									   "inserting into relation %s (%d).",
-									   RelationGetRelationName(rel), RelationGetRelid(rel))));
+				ereport(ERROR,
+						(errmsg("could not find segment file to use for inserting into relation %s (%d)",
+								RelationGetRelationName(rel), RelationGetRelid(rel))));
 			}
 
 			/* mark this segno as in use */

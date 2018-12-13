@@ -275,8 +275,10 @@ getTypeOidFromJavaEnumOrdinal(int8 enumType)
 		case 7:
 			return TEXTOID;
 		default:
-			ereport(ERROR, (errcode(ERRCODE_DATA_EXCEPTION),
-							errmsg("Ill-formatted record: unknown Java Enum Ordinal (%d)", enumType)));
+			ereport(ERROR,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("ill-formatted record: unknown Java Enum Ordinal (%d)",
+							enumType)));
 	}
 	return 0;
 }
@@ -382,8 +384,10 @@ verifyExternalTableDefinition(int16 ncolumns_remote, AttrNumber ncolumns, TupleD
 	{
 		/* omit trailing ', ' */
 		truncateStringInfo(&errMsg, errMsg.len - strlen(", "));
-		ereport(ERROR, (errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						errmsg("External table definition did not match input data: %s", errMsg.data)));
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("external table definition did not match input data: %s",
+						errMsg.data)));
 	}
 }
 
@@ -826,8 +830,9 @@ gpdbwritableformatter_import(PG_FUNCTION_ARGS)
 	bufidx = DOUBLEALIGN(bufidx);
 
 	if (data_cur + tuplelen != bufidx)
-		ereport(ERROR, (errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-						errmsg("Tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur)));
+		ereport(ERROR,
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				 errmsg("tuplelen != bufidx: %d:%d:%d", tuplelen, bufidx, data_cur)));
 
 	data_cur += tuplelen;
 

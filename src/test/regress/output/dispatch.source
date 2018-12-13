@@ -696,7 +696,7 @@ NOTICE:  Success:
 select * from disp_temp_test1 where c1 / 0 = 9;
 ERROR:  division by zero  (seg2 slice1 127.0.0.1:25434 pid=27218)
 rollback to savepoint s1;
-WARNING:  Writer gang of current global transaction is lost
+WARNING:  writer gang of current global transaction is lost
 WARNING:  Any temporary tables for this session have been dropped because the gang was disconnected (session id = 104)
 ERROR:  Could not rollback to savepoint (ROLLBACK TO SAVEPOINT s1)
 rollback;

@@ -68,7 +68,7 @@ SessionState_Acquire(int sessionId)
 		LWLockRelease(SessionStateLock);
 		ereport(FATAL,
 				(errcode(ERRCODE_TOO_MANY_CONNECTIONS),
-						errmsg("Too many sessions."),
+						errmsg("too many sessions"),
 						errdetail("Could not acquire resources for additional sessions."),
 						errhint("Disconnect some sessions and try again.")));
 	}

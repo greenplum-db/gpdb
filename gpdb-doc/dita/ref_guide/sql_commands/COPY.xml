@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>table</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+      <codeblock id="sql_command_synopsis">COPY <varname>tablename</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
      [ [WITH]  
        [ON SEGMENT]
        [BINARY]
@@ -23,7 +23,7 @@
        [[LOG ERRORS]  
        SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
 
-COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>file</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
       [ [WITH] 
         [ON SEGMENT]
         [BINARY]
@@ -53,7 +53,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         the name must be specified from the viewpoint of the master host. </p>
       <p>When <codeph>COPY</codeph> is used with the <codeph>ON SEGMENT</codeph> clause, the
           <codeph>COPY TO</codeph> causes segments to create individual segment-oriented files,
-        which remain on the segment hosts. The <varname>file</varname> argument for <codeph>ON
+        which remain on the segment hosts. The <varname>filename</varname> argument for <codeph>ON
           SEGMENT</codeph> takes the string literal <codeph>&lt;SEGID></codeph> (required) and uses
         either the absolute path or the <codeph>&lt;SEG_DATA_DIR></codeph> string literal. When the
           <codeph>COPY</codeph> operation is run, the segment IDs and the paths of the segment data
@@ -102,7 +102,7 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
       <parml>
         <plentry>
           <pt>
-            <varname>table</varname>
+            <varname>tablename</varname>
           </pt>
           <pd>The name (optionally schema-qualified) of an existing table. </pd>
         </plentry>
@@ -377,13 +377,17 @@ COPY {table [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
         isolation mode.</p><p><codeph>COPY</codeph> input and output is affected by
           <codeph>DateStyle</codeph>. To ensure portability to other Greenplum Database
         installations that might use non-default <codeph>DateStyle</codeph> settings,
-          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY
-        TO</codeph>.</p><p>When copying XML data from a file in text mode, the server configuration
-        parameter <codeph><xref href="../config_params/guc-list.xml#xmloption"
-          >xmloption</xref></codeph> affects the validation of the XML data that is copied. If the
-        value is <codeph>content</codeph> (the default), XML data is validated as an XML content
-        fragment. If the parameter value is <codeph>document</codeph>, XML data is validated as an
-        XML document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p><p>By
+          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>.
+            It is also a good idea to avoid dumping
+            data with <varname>IntervalStyle</varname> set to
+            <codeph>sql_standard</codeph>, because negative interval values might be
+              misinterpreted by a server that has a different setting for
+              <varname>IntervalStyle</varname>.        </p><p>When copying XML data from a file in text mode, the server configuration parameter
+            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
+        affects the validation of the XML data that is copied. If the value is
+          <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
+        If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
+        document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p><p>By
         default, <codeph>COPY</codeph> stops operation at the first error. This should not lead to
         problems in the event of a <codeph>COPY TO</codeph>, but the target table will already have
         received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible or

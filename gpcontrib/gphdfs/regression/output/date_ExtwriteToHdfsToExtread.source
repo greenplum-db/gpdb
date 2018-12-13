@@ -20,7 +20,7 @@ create readable external table date_heap(
 datatype_date varchar,x_date bigint, col1_date date,col2_date date, col3_date date, col4_date date, col5_date date, col6_date date, col7_date date, nullcol_date date
 ) location ('gphdfs://10.152.10.234:8020/plaintext/date.txt')format 'TEXT';
 create writable external table date_writehdfs(like date_heap) location ('gphdfs://10.152.10.234:8020/extwrite/date')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into date_writehdfs select * from date_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDB_INOUT /extwrite/date /mapreduce/date_gpdb/ 
 16/09/30 00:25:51 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

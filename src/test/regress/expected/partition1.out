@@ -916,7 +916,7 @@ ERROR:  syntax error at or near ";"
 LINE 1: alter table jjj add default partition;
                                              ^
 alter table jjj add default partition for (rank(1));
-ERROR:  Can only ADD a partition by name
+ERROR:  can only ADD a partition by name
 -- cannot have boundary spec
 alter table jjj add default partition j3 end (date '2010-01-01');
 ERROR:  invalid use of boundary specification for DEFAULT partition "j3" of relation "jjj"
@@ -2391,7 +2391,7 @@ alter table dcl_messaging_test add partition start (timestamp '2011-09-15') incl
 NOTICE:  CREATE TABLE will create partition "dcl_messaging_test_1_prt_r1571743545" for table "dcl_messaging_test"
 -- EXCHANGE case
 create table dcl_candidate(like dcl_messaging_test) with (appendonly=true);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into dcl_candidate(message_create_date) values (timestamp '2011-09-06');
 alter table dcl_messaging_test exchange partition for ('2011-09-06') with table dcl_candidate;
 -- SPLIT case
@@ -2665,7 +2665,7 @@ select count(*) from pg_index where indrelid='pt_indx_tab_1_prt_a_1'::regclass;
 (1 row)
 
 drop index pt_indx_drop;
-WARNING:  Only dropped the index "pt_indx_drop"
+WARNING:  only dropped the index "pt_indx_drop"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 select count(*) from pg_index where indrelid='pt_indx_tab'::regclass;
  count 
@@ -2788,7 +2788,7 @@ select * from pg_indexes where tablename like 'mpp7635%';
 
 -- Drop it. This only drops it from the root table, not the partitions.
 DROP INDEX mpp7635_ix3;
-WARNING:  Only dropped the index "mpp7635_ix3"
+WARNING:  only dropped the index "mpp7635_ix3"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 select * from pg_indexes where tablename like 'mpp7635%';
  schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     

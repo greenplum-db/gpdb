@@ -154,14 +154,17 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires <codeph>SELECT</codeph>
-                privileges on the target table. All other forms of <codeph>LOCK</codeph> require
-                    <codeph>UPDATE</codeph> and/or <codeph>DELETE</codeph> privileges.</p>
-            <p><codeph>LOCK TABLE</codeph> is useful only inside a transaction block
-                    (<codeph>BEGIN/COMMIT</codeph> pair), since the lock is dropped as soon as the
-                transaction ends. A <codeph>LOCK TABLE</codeph> command appearing outside any
-                transaction block forms a self-contained transaction, so the lock will be dropped as
-                soon as it is obtained.</p>
+            <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires
+                    <codeph>SELECT</codeph> privileges on the target table. All
+                other forms of <codeph>LOCK</codeph> require
+                    <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or
+                    <codeph>TRUNCATE</codeph>privileges.</p>
+            <p><codeph>LOCK TABLE</codeph> is useless outside of a transaction
+                block: the lock would be held only to the completion of the
+                    <codeph>LOCK</codeph> statement. Therefore, Greenplum
+                Database reports an error if <codeph>LOCK</codeph> is used
+                outside of a transaction block. Use <codeph>BEGIN</codeph> and
+                    <codeph>END</codeph> to define a transaction block. </p>
             <p><codeph>LOCK TABLE</codeph> only deals with table-level locks, and so the mode names
                 involving <codeph>ROW</codeph> are all misnomers. These mode names should generally
                 be read as indicating the intention of the user to acquire row-level locks within

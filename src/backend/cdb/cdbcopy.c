@@ -125,7 +125,7 @@ makeCdbCopy(bool is_copy_in)
  * may pg_throw via elog/ereport.
  */
 void
-cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy,
+cdbCopyStart(CdbCopy *c, CopyStmt *stmt,
 			 PartitionNode *partitions, List *ao_segnos)
 {
 	int			flags;
@@ -137,15 +137,6 @@ cdbCopyStart(CdbCopy *c, CopyStmt *stmt, struct GpPolicy *policy,
 
 	/* add in AO segno map for dispatch */
 	stmt->ao_segnos = ao_segnos;
-
-	if (policy)
-	{
-		stmt->policy = GpPolicyCopy(policy);
-	}
-	else
-	{
-		stmt->policy = createRandomPartitionedPolicy(GP_POLICY_ALL_NUMSEGMENTS);
-	}
 
 	flags = DF_WITH_SNAPSHOT | DF_CANCEL_ON_ERROR;
 	if (c->copy_in)

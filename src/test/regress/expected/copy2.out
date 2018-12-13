@@ -5,7 +5,8 @@ CREATE TEMP TABLE x (
 	d text,
 	e text
 ) WITH OIDS;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 CREATE FUNCTION fn_x_before () RETURNS TRIGGER AS '
   BEGIN
 		NEW.e := ''before trigger fired''::text;

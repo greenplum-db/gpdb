@@ -81,7 +81,7 @@ gp_aovisimap(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Function not supported on relation")));
+					 errmsg("function not supported on relation")));
 		}
 
 		AppendOnlyVisimapScan_Init(&context->visiMapScan,
@@ -189,7 +189,7 @@ gp_aovisimap_hidden_info(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Function not supported on relation")));
+					 errmsg("function not supported on relation")));
 		}
 
 		snapshot = GetLatestSnapshot();
@@ -364,7 +364,7 @@ gp_aovisimap_entry(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("Function not supported on relation")));
+					 errmsg("function not supported on relation")));
 		}
 
 		AppendOnlyVisimap_Init(&context->visiMap,

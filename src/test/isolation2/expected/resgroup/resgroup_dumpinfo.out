@@ -63,7 +63,7 @@ CREATE
 SET ROLE role_permission;
 SET
 select value from pg_resgroup_get_status_kv('dump');
-ERROR:  Only superusers can call this function.
+ERROR:  only superusers can call this function
 
 SET ROLE gpadmin;
 SET

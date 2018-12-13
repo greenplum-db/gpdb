@@ -135,13 +135,11 @@ select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp218
 select find_operator('analyze select * from mpp21834_t2,mpp21834_t1 where mpp21834_t2.i < mpp21834_t1.i;','Nested Loop');
 
 -- CLEANUP
--- start_ignore
 drop index index_2;
 drop index index_1;
 drop table if exists mpp21834_t2;
 drop table if exists mpp21834_t1;
 reset optimizer_enable_hashjoin;
--- end_ignore
 
 
 --
@@ -218,13 +216,11 @@ select count_operator('select * from mpp24151_t, mpp24151_pt where tid = ptid an
 select * from mpp24151_t, mpp24151_pt where tid = ptid and pt1 = 'hello0';
 
 -- CLEANUP
--- start_ignore
 drop index ptid_idx;
 drop index pt1_idx;
 drop table if exists mpp24151_t;
 drop table if exists mpp24151_pt;
 reset optimizer_enable_dynamictablescan;
--- end_ignore
 
 
 --
@@ -344,14 +340,12 @@ select find_operator('select * from dbs where c2= 15 and c3 = 5;', 'Bitmap Table
 select * from dbs where c2= 15 and c3 = 5;
 
 -- CLEANUP
--- start_ignore
 drop index dbs_index;
 drop table if exists dbs;
 drop index dis_index;
 drop table if exists dis;
 drop table if exists dts;
 reset optimizer_enable_dynamictablescan;
--- end_ignore
 
 --
 -- Partition elimination for heterogenous DynamicIndexScans

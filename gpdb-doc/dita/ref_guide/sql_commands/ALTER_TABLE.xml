@@ -30,7 +30,7 @@ ALTER TABLE <varname>name</varname>
       [<varname>column_constraint</varname> [ ... ]]
       [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
   DROP [COLUMN] <varname>column</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column</varname> TYPE <varname>type</varname> [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname> [USING <varname>expression</varname>]
   ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
   ALTER [COLUMN] <varname>column</varname> DROP DEFAULT
   ALTER [COLUMN] <varname>column</varname> { SET | DROP } NOT NULL
@@ -127,9 +127,9 @@ ALTER TABLE <varname>name</varname>
                                         involving the column will be automatically dropped as well.
                                         You will need to say <codeph>CASCADE</codeph> if anything
                                         outside the table depends on the column (such as views). </li>
-                                <li id="ay136879"><b>ALTER COLUMN TYPE</b> — Changes the data type
-                                        of a column of a table. Note that you cannot alter column
-                                        data types that are being used as distribution or
+                                <li id="ay136879"><b>SET DATA TYPE</b> — This form changes the data
+                                        type of a column of a table. Note that you cannot alter
+                                        column data types that are being used as distribution or
                                         partitioning keys. Indexes and simple table constraints
                                         involving the column will be automatically converted to use
                                         the new column type by reparsing the originally supplied
@@ -855,8 +855,9 @@ INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
                 </section>
                 <section id="section7">
                         <title>Compatibility</title>
-                        <p>The <codeph>ADD</codeph>, <codeph>DROP</codeph>, and <codeph>SET
-                                        DEFAULT</codeph> forms conform with the SQL standard. The
+                        <p>The forms <codeph>ADD</codeph>, <codeph>DROP</codeph>, <codeph>SET
+                                        DEFAULT</codeph>, and <codeph>SET DATA TYPE</codeph>
+                                (without <codeph>USING</codeph>) conform with the SQL standard. The
                                 other forms are Greenplum Database extensions of the SQL standard.
                                 Also, the ability to specify more than one manipulation in a single
                                         <codeph>ALTER TABLE</codeph> command is an extension.</p>

@@ -18,7 +18,8 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
     [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
     [LIMIT {<varname>count</varname> | ALL}]
-    [OFFSET <varname>start</varname>]
+    [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
+    [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY ]
     [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] 
     [...]]</codeblock>
         </section>

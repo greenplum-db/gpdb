@@ -16,7 +16,7 @@ create writable external table int_writehdfs_parquet
 (
   like int_heap
 ) location ('gphdfs://localhost:9000/extwrite/int_parquet') format 'PARQUET';
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 --end_ignore
 insert into int_writehdfs_parquet
 select * from int_heap;

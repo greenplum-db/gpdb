@@ -655,10 +655,10 @@ FaultInjector_NewHashEntry(
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
-				(errmsg("could not insert fault injection, no slots available"
-						"fault name:'%s' fault type:'%s' ",
-						entry->faultName,
-						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
+				(errmsg("cannot insert fault injection, no slots available"),
+				 errdetail("Fault name:'%s' fault type:'%s'",
+						   entry->faultName,
+						   FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, max slots:'%d' reached",
 				 FAULTINJECTOR_MAX_SLOTS);
@@ -672,10 +672,10 @@ FaultInjector_NewHashEntry(
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
-				(errmsg("could not insert fault injection entry into table, no memory, "
-						"fault name:'%s' fault type:'%s' ",
-						entry->faultName,
-						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
+				(errmsg("cannot insert fault injection entry into table, no memory"),
+				 errdetail("Fault name:'%s' fault type:'%s'",
+						   entry->faultName,
+						   FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, no memory");
 		
@@ -686,11 +686,10 @@ FaultInjector_NewHashEntry(
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
-				(errmsg("could not insert fault injection entry into table, "
-						"entry already exists, "
-						"fault name:'%s' fault type:'%s' ",
-						entry->faultName,
-						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
+				(errmsg("cannot insert fault injection entry into table, entry already exists"),
+				 errdetail("Fault name:'%s' fault type:'%s' ",
+						   entry->faultName,
+						   FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		snprintf(entry->bufOutput, sizeof(entry->bufOutput), 
 				 "could not insert fault injection, entry already exists");
 		
@@ -747,11 +746,10 @@ FaultInjector_MarkEntryAsResume(
 		FiLockRelease();
 		status = STATUS_ERROR;
 		ereport(WARNING,
-				(errmsg("could not update fault injection hash entry with fault injection status, "
-						"no entry found, "
-						"fault name:'%s' fault type:'%s' ",
-						entry->faultName,
-						FaultInjectorTypeEnumToString[entry->faultInjectorType])));
+				(errmsg("cannot update fault injection hash entry with fault injection status, no entry found"),
+				 errdetail("Fault name:'%s' fault type:'%s'",
+						   entry->faultName,
+						   FaultInjectorTypeEnumToString[entry->faultInjectorType])));
 		goto exit;
 	}
 
@@ -765,8 +763,7 @@ FaultInjector_MarkEntryAsResume(
 	FiLockRelease();
 	
 	ereport(DEBUG1,
-			(errmsg("LOG(fault injector): update fault injection hash entry "
-					"identifier:'%s' state:'%s'",
+			(errmsg("LOG(fault injector): update fault injection hash entry identifier:'%s' state:'%s'",
 					entry->faultName,
 					FaultInjectorStateEnumToString[entryLocal->faultInjectorState])));
 	
@@ -816,12 +813,10 @@ FaultInjector_SetFaultInjection(
 				FiLockRelease();
 			}
 				
-			if (isRemoved == FALSE) {
+			if (isRemoved == FALSE)
 				ereport(DEBUG1,
-						(errmsg("LOG(fault injector): could not remove fault injection from hash"
-								"identifier:'%s' ",
+						(errmsg("LOG(fault injector): could not remove fault injection from hash identifier:'%s'",
 								entry->faultName)));
-			}			
 			
 			break;
 		}
@@ -844,7 +839,7 @@ FaultInjector_SetFaultInjection(
 							 errmsg("fault not triggered, fault name:'%s' fault type:'%s' ",
 									entryLocal->faultName,
 									FaultInjectorTypeEnumToString[entry->faultInjectorType]),
-								errdetail("Timed-out as 10 minutes max wait happens until triggered.")));
+							 errdetail("Timed-out as 10 minutes max wait happens until triggered.")));
 				}
 			}
 

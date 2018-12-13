@@ -444,15 +444,13 @@ class GpExpandStatus():
                                'BUILD_SEGMENT_TEMPLATE_DONE': 4,
                                'BUILD_SEGMENTS_STARTED': 5,
                                'BUILD_SEGMENTS_DONE': 6,
-                               'UPDATE_OLD_SEGMENTS_STARTED': 7,
-                               'UPDATE_OLD_SEGMENTS_DONE': 8,
-                               'UPDATE_CATALOG_STARTED': 9,
-                               'UPDATE_CATALOG_DONE': 10,
-                               'SETUP_EXPANSION_SCHEMA_STARTED': 11,
-                               'SETUP_EXPANSION_SCHEMA_DONE': 12,
-                               'PREPARE_EXPANSION_SCHEMA_STARTED': 13,
-                               'PREPARE_EXPANSION_SCHEMA_DONE': 14,
-                               'EXPANSION_PREPARE_DONE': 15
+                               'UPDATE_CATALOG_STARTED': 7,
+                               'UPDATE_CATALOG_DONE': 8,
+                               'SETUP_EXPANSION_SCHEMA_STARTED': 9,
+                               'SETUP_EXPANSION_SCHEMA_DONE': 10,
+                               'PREPARE_EXPANSION_SCHEMA_STARTED': 11,
+                               'PREPARE_EXPANSION_SCHEMA_DONE': 12,
+                               'EXPANSION_PREPARE_DONE': 13
                                }
         self._status = []
         self._status_info = []
@@ -464,7 +462,6 @@ class GpExpandStatus():
         self._fp_standby = None
         self._temp_dir = None
         self._input_filename = None
-        self._original_primary_count = None
         self._gp_segment_configuration_backup = None
 
         if os.path.exists(self._status_filename):
@@ -487,8 +484,6 @@ class GpExpandStatus():
                     self._number_new_segments = status_info
                 elif status == 'EXPANSION_PREPARE_STARTED':
                     self._input_filename = status_info
-                elif status == 'UPDATE_OLD_SEGMENTS_STARTED':
-                    self._original_primary_count = int(status_info)
                 elif status == 'UPDATE_CATALOG_STARTED':
                     self._gp_segment_configuration_backup = status_info
 
@@ -601,10 +596,6 @@ class GpExpandStatus():
         """ Gets the number of new segments added """
         return self._number_new_segments
 
-    def get_original_primary_count(self):
-        """Returns the original number of primary segments"""
-        return self._original_primary_count
-
     def get_gp_segment_configuration_backup(self):
         """Gets the filename of the gp_segment_configuration backup file
         created during expansion setup"""
@@ -617,6 +608,12 @@ class GpExpandStatus():
     def is_standby(self):
         """Returns True if running on standby"""
         return os.path.exists(self._master_data_directory + self._status_standby_filename)
+
+    def can_rollback(self, status):
+        """Return if it can rollback under current status"""
+        if int(self._status_values[status]) > int(self._status_values['UPDATE_CATALOG_DONE']):
+            return False
+        return True
 
 
 # -------------------------------------------------------------------------
@@ -873,30 +870,6 @@ class SegmentTemplate:
         rmCmd = RemoveGlob('gpexpand remove gpexpand files from template',
                             self.tempDir + '/gpexpand.*')
         rmCmd.run(validateAfter=True)
-
-        self.logger.info('Adding new segments into template pg_hba.conf')
-        try:
-            fp = open(self.tempDir + '/pg_hba.conf', 'a')
-            try:
-                new_host_set = set()
-                for newSeg in self.gparray.getExpansionSegDbList() + self.gparray.getDbList():
-                    host = newSeg.getSegmentHostName()
-                    new_host_set.add(host)
-
-                for new_host in new_host_set:
-                    addrinfo = socket.getaddrinfo(new_host, None)
-                    ipaddrlist = list(set([(ai[0], ai[4][0]) for ai in addrinfo]))
-                    fp.write('# %s\n' % new_host)
-                    for addr in ipaddrlist:
-                        fp.write(
-                            'host\tall\tall\t%s/%s\ttrust\n' % (addr[1], '32' if addr[0] == socket.AF_INET else '128'))
-
-            finally:
-                fp.close()
-        except IOError:
-            raise SegmentTemplateError('Failed to open %s/pg_hba.conf' % self.tempDir)
-        except Exception:
-            raise SegmentTemplateError('Failed to add new segments to template pg_hba.conf')
 
     def _tar_template(self):
         """Tars up the template files"""
@@ -1177,7 +1150,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
     def rollback(self, dburl):
         """Rolls back and expansion setup that didn't successfully complete"""
-        cleanSchema = False
         status_history = self.statusLogger.get_status_history()
         if not status_history:
             raise ExpansionError('No status history to rollback.')
@@ -1186,7 +1158,10 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             raise ExpansionError('Expansion preparation complete.  Nothing to rollback')
 
         for status in reversed(status_history):
-            if status[0] == 'BUILD_SEGMENT_TEMPLATE_STARTED':
+            if not self.statusLogger.can_rollback(status[0]):
+                raise ExpansionError('Catalog has been changed, the cluster can not rollback.')
+
+            elif status[0] == 'BUILD_SEGMENT_TEMPLATE_STARTED':
                 if self.statusLogger.is_standby():
                     self.logger.info('Running on standby master, skipping segment template rollback')
                     continue
@@ -1201,31 +1176,15 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
                                                            self.statusLogger.get_seg_tarfile(),
                                                            self.gparray, removeDataDirs=True)
 
-            elif status[0] == 'UPDATE_OLD_SEGMENTS_STARTED':
-                self.logger.info('Rolling back update of original segments')
-                self.restore_original_segments()
-
             elif status[0] == 'UPDATE_CATALOG_STARTED':
                 self.logger.info('Rolling back master update')
                 self.restore_master()
                 self.gparray = GpArray.initFromCatalog(dburl, utility=True)
 
-            elif status[0] == 'SETUP_EXPANSION_SCHEMA_STARTED':
-                cleanSchema = True
             else:
                 self.logger.debug('Skipping %s' % status[0])
 
         self.conn.close()
-
-        if cleanSchema:
-            self.logger.info('Dropping expansion expansion schema')
-            schema_conn = dbconn.connect(self.dburl, encoding='UTF8', allowSystemTableMods=True)
-            try:
-                dbconn.execSQL(schema_conn, drop_schema_sql)
-                schema_conn.commit()
-                schema_conn.close()
-            except:
-                pass  # schema wasn't created yet.
 
         self.statusLogger.remove_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()
@@ -1363,56 +1322,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             raise ExpansionError(msg)
 
     def update_original_segments(self):
-        """Updates the pg_hba.conf file and updates the gp_id catalog table
-        of existing hosts"""
-        self.statusLogger.set_status('UPDATE_OLD_SEGMENTS_STARTED', self.gparray.get_primary_count())
-
-        self.logger.info('Backing up pg_hba.conf file on original segments')
-
-        # backup pg_hba.conf file on original segments
-        for seg in self.old_segments:
-            if seg.isSegmentQD() or seg.getSegmentStatus() != 'u':
-                continue
-
-            hostname = seg.getSegmentHostName()
-            datadir = seg.getSegmentDataDirectory()
-
-            srcFile = datadir + '/pg_hba.conf'
-            dstFile = datadir + '/pg_hba.gpexpand.bak'
-            cpCmd = Scp(name='gpexpand back up pg_hba.conf file on original segments',
-                        srcFile=srcFile, dstFile=dstFile, dstHost=hostname, ctxt=REMOTE,
-                        remoteHost=hostname)
-
-            self.pool.addCommand(cpCmd)
-
-        self.pool.join()
-
-        try:
-            self.pool.check_results()
-        except ExecutionError, msg:
-            raise ExpansionError('Failed to configure original segments: %s' % msg)
-
-        # Copy the new pg_hba.conf file to original segments
-        self.logger.info('Copying new pg_hba.conf file to original segments')
-        for seg in self.old_segments:
-            if seg.isSegmentQD() or seg.getSegmentStatus() != 'u':
-                continue
-
-            hostname = seg.getSegmentHostName()
-            datadir = seg.getSegmentDataDirectory()
-
-            cpCmd = Scp(name='gpexpand copy new pg_hba.conf file to original segments',
-                        srcFile=self.tempDir + '/pg_hba.conf', dstFile=datadir,
-                        dstHost=hostname)
-
-            self.pool.addCommand(cpCmd)
-
-        self.pool.join()
-
-        try:
-            self.pool.check_results()
-        except ExecutionError, msg:
-            raise ExpansionError('Failed to configure original segments: %s' % msg)
+        """Updates the gp_id catalog table of existing hosts"""
 
         # Update the gp_id of original segments
         self.newPrimaryCount = 0;
@@ -1422,65 +1332,10 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
 
         self.newPrimaryCount += self.gparray.get_primary_count()
 
-        self.logger.info('Configuring original segments')
-
         if self.segTemplate:
             self.segTemplate.cleanup()
 
         # FIXME: update postmaster.opts
-
-        self.statusLogger.set_status('UPDATE_OLD_SEGMENTS_DONE')
-
-    def restore_original_segments(self):
-        """ Restores the original segments back to their state prior the expansion
-        setup.  This is only possible if the expansion setup has not completed
-        successfully."""
-        self.logger.info('Restoring original segments')
-        gp_segment_configuration_backup_file = self.statusLogger.get_gp_segment_configuration_backup();
-        if gp_segment_configuration_backup_file:
-            originalArray = GpArray.initFromFile(self.statusLogger.get_gp_segment_configuration_backup())
-        else:
-            originalArray = self.gparray
-
-        # Restore pg_hba.conf file from backup
-        self.logger.info('Restoring pg_hba.conf file on original segments')
-        for seg in originalArray.getSegDbList():
-            datadir = seg.getSegmentDataDirectory()
-            hostname = seg.getSegmentHostName()
-
-            srcFile = datadir + '/pg_hba.gpexpand.bak'
-            dstFile = datadir + '/pg_hba.conf'
-            cpCmd = Scp(name='gpexpand restore of pg_hba.conf file on original segments',
-                        srcFile=srcFile, dstFile=dstFile, dstHost=hostname, ctxt=REMOTE,
-                        remoteHost=hostname)
-
-            self.pool.addCommand(cpCmd)
-
-        self.pool.join()
-
-        try:
-            self.pool.check_results()
-        except:
-            # Setup didn't get this far so no backup to restore.
-            self.pool.empty_completed_items()
-
-        # note: this code may not be needed -- it will NOT change gp_id
-        #       However, the call to gpconfigurenewsegment may still be doing some needed work (stopping the segment)
-        #       which could be unnecessary or could be moved here)
-        self.logger.info('Restoring original segments catalog tables')
-        orig_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(originalArray.getSegDbList())
-        for host in iter(orig_segment_info):
-            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=orig_segment_info[host],
-                                            verbose=gplog.logging_is_verbose(), batchSize=self.options.batch_size,
-                                            ctxt=REMOTE, remoteHost=host)
-            self.pool.addCommand(segCfgCmd)
-
-        self.pool.join()
-
-        try:
-            self.pool.check_results()
-        except ExecutionError:
-            raise ExpansionError('Failed to restore original segments')
 
     def update_catalog(self):
         """
@@ -1528,7 +1383,10 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         dbconn.execSQL(self.conn, "select gp_expand_bump_version()")
         self.conn.close()
 
+        inject_fault('gpexpand rollback test fault injection')
+
         self.statusLogger.set_status('UPDATE_CATALOG_DONE')
+        self.pastThePointOfNoReturn = True;
 
     # --------------------------------------------------------------------------
     def cleanup_new_segments(self):
@@ -1692,7 +1550,6 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         """Removes the gpexpand status file and segment configuration backup file"""
         self.statusLogger.remove_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()
-        self.pastThePointOfNoReturn = True;
 
     def setup_schema(self):
         """Used to setup the gpexpand schema"""

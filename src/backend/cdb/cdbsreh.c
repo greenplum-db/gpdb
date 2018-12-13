@@ -273,8 +273,7 @@ ReportSrehResults(CdbSreh *cdbsreh, uint64 total_rejected)
 	if (total_rejected > 0)
 	{
 		ereport(NOTICE,
-				(errmsg("Found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more "
-						"input rows). Rejected related input data.",
+				(errmsg("found " INT64_FORMAT " data formatting errors (" INT64_FORMAT " or more input rows), rejected related input data",
 						total_rejected, total_rejected)));
 	}
 }
@@ -500,8 +499,8 @@ VerifyRejectLimit(char rejectlimittype, int rejectlimit)
 		if (rejectlimit < 2)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("Segment reject limit in ROWS "
-							"must be 2 or larger (got %d)", rejectlimit)));
+					 errmsg("segment reject limit in ROWS must be 2 or larger (got %d)",
+							rejectlimit)));
 	}
 	else
 	{
@@ -510,8 +509,8 @@ VerifyRejectLimit(char rejectlimittype, int rejectlimit)
 		if (rejectlimit < 1 || rejectlimit > 100)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-					 errmsg("Segment reject limit in PERCENT "
-							"must be between 1 and 100 (got %d)", rejectlimit)));
+					 errmsg("segment reject limit in PERCENT must be between 1 and 100 (got %d)",
+							rejectlimit)));
 	}
 
 }
@@ -541,7 +540,9 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 	fp = AllocateFile(filename, "a");
 
 	if (!fp && (errno == EMFILE || errno == ENFILE))
-		ereport(ERROR, (errmsg("could not open \"%s\", too many open files: %m", filename)));
+		ereport(ERROR,
+				(errmsg("could not open \"%s\", too many open files: %m",
+						filename)));
 
 	if (!fp && errno == ENOENT)
 	{
@@ -549,7 +550,9 @@ ErrorLogWrite(CdbSreh *cdbsreh)
 		if (ret == 0)
 			fp = AllocateFile(filename, "a");
 		else
-			ereport(ERROR, (errmsg("could not create directory for errorlog \"%s\": %m", ErrorLogDir)));
+			ereport(ERROR,
+					(errmsg("could not create directory for errorlog \"%s\": %m",
+							ErrorLogDir)));
 	}
 	if (!fp)
 		ereport(ERROR, (errmsg("could not open \"%s\": %m", filename)));

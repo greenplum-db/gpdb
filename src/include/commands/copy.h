@@ -124,8 +124,6 @@ typedef struct CopyStateData
 
 	/* parameters from the COPY command */
 	Relation	rel;			/* relation to copy to or from */
-	GpPolicy	cdb_policy;		/* in ON SEGMENT mode, we received this from QD. Otherwise
-								 * it's equal to rel->rd_cdbpolicy */
 	QueryDesc  *queryDesc;		/* executable query to copy from */
 	List	   *attnumlist;		/* integer list of attnums to copy */
 	List	   *attnamelist;	/* list of attributes by name */

@@ -398,7 +398,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table ccddl_co(LIKE ccddl)
   with (appendonly = true, orientation=column);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
  relname  | attnum |                     attoptions                      
 ----------+--------+-----------------------------------------------------
@@ -408,7 +408,7 @@ execute ccddlcheck;
 drop table ccddl_co;
 create table ccddl_co(LIKE ccddl)
   with (appendonly = true, orientation=column, compresstype=zlib);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
  relname  | attnum |                     attoptions                      
 ----------+--------+-----------------------------------------------------
@@ -431,13 +431,13 @@ create table ccddl (i int);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table ccddl add column j int encoding (compresstype=zlib);
-ERROR:  ENCODING clause supplied for table that is not column oriented
+ERROR:  ENCODING clause not supported on non column orientated table
 drop table ccddl;
 create table ccddl (i int) with (appendonly=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 alter table ccddl add column j int encoding (compresstype=zlib);
-ERROR:  ENCODING clause supplied for table that is not column oriented
+ERROR:  ENCODING clause not supported on non column orientated table
 drop table ccddl;
 -- check that we validate the encoding clause for add column
 create table ccddl (i int) with (appendonly=true, orientation=column);
@@ -515,7 +515,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table ccddl_co (like ccddl, column i encoding(compresstype=RLE_TYPE))
 with (appendonly=true, orientation=column, compresstype=zlib);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 execute ccddlcheck;
  relname  | attnum |                       attoptions                        
 ----------+--------+---------------------------------------------------------
@@ -1901,12 +1901,12 @@ INSERT INTO ccddl values ( generate_series(1,25000), 23, 'JUMBO CASE', 1001.00, 
 INSERT INTO ccddl values ( generate_series(1,25000), 29, 'JUMBO CASE', 1001.00, 'ronic dependencies d' );
 INSERT INTO ccddl values ( generate_series(1,25000), 37, 'JUMBO CASE', 1001.00, 'ronic dependencies d' );
 ALTER TABLE ccddl DROP COLUMN P_PARTKEY;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE ccddl ADD COLUMN   P_PARTKEY  INTEGER  DEFAULT 100;
 -----------------------------------------------------------------------
 -- MPP-14477 cdbfast regression: Bitmap Index scan on AO tables with compression fails with SIGSEGV

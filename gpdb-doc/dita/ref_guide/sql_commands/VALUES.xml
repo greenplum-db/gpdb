@@ -2,17 +2,22 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="es20941">VALUES</title><body><p id="sql_command_desc">Computes a set of rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">VALUES ( <varname>expression</varname> [, ...] ) [, ...]
-   [ORDER BY <varname>sort_expression</varname> [ASC | DESC | USING <varname>operator</varname>] [, ...]]
-   [LIMIT {<varname>count</varname> | ALL}] [OFFSET <varname>start</varname>]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
+   [ORDER BY <varname>sort_expression</varname> [ ASC | DESC | USING <varname>operator</varname> ] [, ...] ]
+   [LIMIT { <varname>count</varname> | ALL } ] 
+   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
+   [FETCH { FIRST | NEXT } [<varname>count</varname> ] { ROW | ROWS } ONLY ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>VALUES</codeph> computes a row value or set of row values specified by value expressions.
                 It is most commonly used to generate a "constant table" within a larger command, but
                 it can be used on its own.</p><p>When more than one row is specified, all the rows must have the same
 number of elements. The data types of the resulting table's columns
 are determined by combining the explicit or inferred types of the expressions
 appearing in that column, using the same rules as for <codeph>UNION</codeph>.
 </p><p>Within larger commands, <codeph>VALUES</codeph> is syntactically allowed
-anywhere that <codeph>SELECT</codeph> is. Because it is treated like
-a <codeph>SELECT</codeph> by the grammar, it is possible to use the <codeph>ORDER</codeph><codeph>BY</codeph>, <codeph>LIMIT</codeph>, and <codeph>OFFSET</codeph>
-clauses with a <codeph>VALUES</codeph> command.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>expression</varname></pt><pd>A constant or expression to compute and insert at the indicated place
+                anywhere that <codeph>SELECT</codeph> is. Because it is treated
+                like a <codeph>SELECT</codeph> by the grammar, it is possible to
+                use the <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph> (or
+                equivalent <codeph>FETCH FIRST</codeph>), and
+                    <codeph>OFFSET</codeph> clauses with a
+                    <codeph>VALUES</codeph> command.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>expression</varname></pt><pd>A constant or expression to compute and insert at the indicated place
 in the resulting table (set of rows). In a <codeph>VALUES</codeph> list
 appearing at the top level of an <codeph>INSERT</codeph>, an expression
 can be replaced by <codeph>DEFAULT</codeph> to indicate that the destination
@@ -63,6 +68,8 @@ type for all: </p><codeblock>SELECT * FROM machines WHERE ip_address IN
 ('192.0.2.43'));</codeblock><note type="note">For simple <codeph>IN</codeph> tests, it is better to rely on the list-of-scalars
                 form of <codeph>IN</codeph> than to write a <codeph>VALUES</codeph> query as shown
                 above. The list of scalars method requires less writing and is often more
-                efficient.</note></section><section id="section7"><title>Compatibility</title><p><codeph>VALUES</codeph> conforms to the SQL standard, except that <codeph>LIMIT</codeph>
-and <codeph>OFFSET</codeph> are Greenplum Database extensions.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
+                efficient.</note></section><section id="section7"><title>Compatibility</title><p><codeph>VALUES</codeph> conforms to the SQL standard. <codeph>LIMIT</codeph>
+                and <codeph>OFFSET</codeph> are Greenplum Database extensions;
+                see also under <xref href="SELECT.xml#topic1" type="topic"
+                    format="dita"/>.</p></section><section id="section8"><title>See Also</title><p><codeph><xref href="INSERT.xml#topic1" type="topic" format="dita"/></codeph>, <codeph><xref
                         href="SELECT.xml#topic1" type="topic" format="dita"/></codeph></p></section></body></topic>

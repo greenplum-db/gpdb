@@ -648,7 +648,7 @@ cdbhash(CdbHash *h, int attno, Datum datum, bool isnull)
 		default:
 			ereport(ERROR,
 					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
-					 errmsg("Type %u is not hashable.", type)));
+					 errmsg("type %u is not hashable", type)));
 
 	}							/* switch(type) */
 

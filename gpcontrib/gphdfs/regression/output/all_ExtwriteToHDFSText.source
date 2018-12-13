@@ -30,7 +30,7 @@ max_numeric numeric, min_numeric numeric, x_numeric numeric, reverse_numeric num
 col1_text text,col2_text text, nullcol_text text
 ) location ('gphdfs://10.152.10.234:8020/plaintext/all.txt')format 'TEXT';
 create writable external table all_writehdfs(like all_heap) location ('gphdfs://10.152.10.234:8020/extwrite/all')format 'custom' (formatter='gphdfs_export');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 insert into all_writehdfs select * from all_heap;
 \!/home/gpadmin/gpdb/gpAux/extensions/gphdfs/regression/runcmd -DcompressionType=none javaclasses/TestHadoopIntegration mapreduce Mapreduce_mapper_GPDBIn /extwrite/all /mapreduce/all_text/ 
 16/09/29 23:46:44 INFO Configuration.deprecation: fs.default.name is deprecated. Instead, use fs.defaultFS

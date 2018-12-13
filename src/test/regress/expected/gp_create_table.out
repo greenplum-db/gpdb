@@ -90,7 +90,7 @@ drop table distpol;
 -- or UNIQUE index. Even with gp_create_table_random_default_distribution=on
 SET gp_create_table_random_default_distribution=on;
 create table distpol_no_pk (i int, j int, k int);
-NOTICE:  Using default RANDOM distribution since no distribution was specified.
+NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 create table distpol_with_pk (i int, j int, k int, PRIMARY KEY (i));
 create table distpol_with_unique (i int, j int, k int, CONSTRAINT uconn UNIQUE (i, j));

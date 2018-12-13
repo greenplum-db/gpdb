@@ -4026,9 +4026,9 @@ select cn,sum(qty) from sale group by grouping sets(cn);
 
 --end_equiv
 select cn,sum(qty),grouping((cn,vn),vn) from sale group by rollup(cn,vn);
-ERROR:  row type can not be used inside a grouping function.
+ERROR:  row type can not be used inside a grouping function
 select sum(qty),grouping(cn+pn) from sale group by cn+vn,vn;
-ERROR:  expression in a grouping fuction does not appear in GROUP BY.
+ERROR:  expression in a grouping function does not appear in GROUP BY
 select sum(qty),grouping(cn+vn) from sale group by rollup(cn+vn,vn);
  sum  | grouping 
 ------+----------

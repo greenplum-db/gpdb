@@ -271,15 +271,13 @@ standard_ExecutorStart(QueryDesc *queryDesc, int eflags)
 	Assert(queryDesc->plannedstmt != NULL);
 	Assert(queryDesc->memoryAccountId == MEMORY_OWNER_TYPE_Undefined);
 
-	PlannedStmt *plannedStmt = queryDesc->plannedstmt;
-
 	queryDesc->memoryAccountId = MemoryAccounting_CreateExecutorMemoryAccount();
 
 	START_MEMORY_ACCOUNT(queryDesc->memoryAccountId);
 
-	Assert(plannedStmt->intoPolicy == NULL ||
-		GpPolicyIsPartitioned(plannedStmt->intoPolicy) ||
-		GpPolicyIsReplicated(plannedStmt->intoPolicy));
+	Assert(queryDesc->plannedstmt->intoPolicy == NULL ||
+		GpPolicyIsPartitioned(queryDesc->plannedstmt->intoPolicy) ||
+		GpPolicyIsReplicated(queryDesc->plannedstmt->intoPolicy));
 
 	/**
 	 * Perfmon related stuff.

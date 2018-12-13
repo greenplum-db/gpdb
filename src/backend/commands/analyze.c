@@ -2148,8 +2148,9 @@ acquire_hll_by_query(Relation onerel, int nattrs, VacAttrStats **attrstats, int 
 	oldcxt = CurrentMemoryContext;
 
 	if (SPI_OK_CONNECT != SPI_connect())
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("Unable to connect to execute internal query.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg("unable to connect to execute internal query")));
 
 	elog(elevel, "Executing SQL: %s", str.data);
 

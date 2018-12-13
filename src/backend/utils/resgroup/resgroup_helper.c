@@ -349,7 +349,7 @@ pg_resgroup_get_status_kv(PG_FUNCTION_ARGS)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-					 errmsg("Only superusers can call this function.")));
+					 errmsg("only superusers can call this function")));
 		}
 		
 		initStringInfo(&str);

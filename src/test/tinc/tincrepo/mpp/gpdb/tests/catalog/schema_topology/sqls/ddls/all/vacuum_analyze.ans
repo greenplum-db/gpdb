@@ -64,7 +64,7 @@ ALTER TABLE
 ALTER TABLE test_drop_constraint_default DROP CONSTRAINT test_unique;
 ALTER TABLE
 ALTER TABLE test_drop_constraint_default DROP COLUMN col_with_constraint;
-psql:/path/sql_file:1: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/path/sql_file:1: NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 VACUUM;
 psql:/path/sql_file:1: WARNING:  skipping "__gp_localid" --- cannot vacuum indexes, views, external tables, or special system tables
@@ -131,7 +131,7 @@ ALTER TABLE
 ALTER TABLE test_drop_constraint_default DROP CONSTRAINT test_unique;
 ALTER TABLE
 ALTER TABLE test_drop_constraint_default DROP COLUMN col_with_constraint;
-psql:/path/sql_file:1: NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+psql:/path/sql_file:1: NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 ALTER TABLE
 VACUUM ANALYZE;
 psql:/path/sql_file:1: WARNING:  skipping "__gp_localid" --- cannot vacuum indexes, views, external tables, or special system tables

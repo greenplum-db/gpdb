@@ -133,8 +133,8 @@
         be used within the current transaction. Thus, <codeph>DECLARE</codeph> without <codeph>WITH
           HOLD</codeph> is useless outside a transaction block: the cursor would survive only to the
         completion of the statement. Therefore Greenplum Database reports an error if this command
-        is used outside a transaction block. Use <codeph>BEGIN</codeph>, <codeph>COMMIT</codeph> and
-          <codeph>ROLLBACK</codeph> to define a transaction block.</p>
+        is used outside a transaction block. Use <codeph>BEGIN</codeph> and <codeph>COMMIT</codeph>
+        (or <codeph>ROLLBACK</codeph>) to define a transaction block.</p>
       <p>If <codeph>WITH HOLD</codeph> is specified and the transaction that created the cursor
         successfully commits, the cursor can continue to be accessed by subsequent transactions in
         the same session. (But if the creating transaction is aborted, the cursor is removed.) A

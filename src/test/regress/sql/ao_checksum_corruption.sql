@@ -5,8 +5,8 @@
 -- result. All we care about is that they don't match.
 --
 -- start_matchsubs
--- m/^ERROR:  (Block|Header) checksum does not match./
--- s/Expected 0x(........) and found 0x(........)/Expected 0xXXXXXXXX and found 0xXXXXXXXX/
+-- m/^ERROR:  (block|header) checksum does not match./
+-- s/expected 0x(........) and found 0x(........)/expected 0xXXXXXXXX and found 0xXXXXXXXX/
 -- end_matchsubs
 
 -- Ignore the status messages from the helper function. They're useful for

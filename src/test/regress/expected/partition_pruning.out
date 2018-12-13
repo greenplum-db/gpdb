@@ -404,7 +404,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
 (22 rows)
 
 DROP INDEX idx1;
-WARNING:  Only dropped the index "idx1"
+WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
 DROP INDEX idx1_1_prt_part1;
@@ -648,7 +648,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
 (26 rows)
 
 DROP INDEX idx1;
-WARNING:  Only dropped the index "idx1"
+WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- @description multiple column b-tree index
 CREATE INDEX idx1 on pt_lt_tab(col1,col2);
@@ -900,7 +900,7 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
 (26 rows)
 
 DROP INDEX idx1;
-WARNING:  Only dropped the index "idx1"
+WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
 DROP INDEX idx1_1_prt_part1;
@@ -1924,12 +1924,12 @@ NOTICE:  building index for child partition "pt_lt_tab_1_prt_part3"
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part4"
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part5"
 ALTER TABLE pt_lt_tab DROP column col1;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
 SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
  col2 | col3 | col4 
 ------+------+------

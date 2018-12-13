@@ -131,10 +131,6 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 		{
 			int			i;
 
-			/*
-			 * GPDB_84_MERGE_FIXME: Should we rewrite this in a different way now that we have
-			 * ON SEGMENT/ ON MASTER attributes on functions?
-			 */
 			CdbDispatchCommand("SELECT * FROM pg_catalog.pg_dist_wait_status()",
 							   DF_WITH_SNAPSHOT, &ctx->cdb_pgresults);
 

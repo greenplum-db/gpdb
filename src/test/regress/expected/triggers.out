@@ -515,7 +515,7 @@ create table trigtest (i serial primary key);
 create table trigtest2 (i int references trigtest(i) on delete cascade);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 create function trigtest() returns trigger as $$
 begin
 	raise notice '% % % %', TG_RELNAME, TG_OP, TG_WHEN, TG_LEVEL;
@@ -763,7 +763,8 @@ CREATE TABLE min_updates_test_oids (
 	f3 int) WITH OIDS;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'f1' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 INSERT INTO min_updates_test VALUES ('a',1,2),('b','2',null);
 INSERT INTO min_updates_test_oids VALUES ('a',1,2),('b','2',null);
 CREATE TRIGGER z_min_update
@@ -1051,7 +1052,7 @@ CREATE TABLE city_table (
     population    bigint,
     country_id    int references country_table
 );
-WARNING:  Referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced.
+WARNING:  referential integrity (FOREIGN KEY) constraints are not supported in Greenplum Database, will not be enforced
 CREATE VIEW city_view AS
     SELECT city_id, city_name, population, country_name, continent
     FROM city_table ci

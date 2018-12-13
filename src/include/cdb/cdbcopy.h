@@ -43,8 +43,8 @@ typedef struct CdbCopy
 
 /* global function declarations */
 extern CdbCopy *makeCdbCopy(bool copy_in);
-extern void cdbCopyStart(CdbCopy *cdbCopy, CopyStmt *stmt, struct GpPolicy *policy,
-						 PartitionNode *partitions, List *ao_segnos);
+extern void cdbCopyStart(CdbCopy *cdbCopy, CopyStmt *stmt,
+			 PartitionNode *partitions, List *ao_segnos);
 extern void cdbCopySendDataToAll(CdbCopy *c, const char *buffer, int nbytes);
 extern void cdbCopySendData(CdbCopy *c, int target_seg, const char *buffer, int nbytes);
 extern bool cdbCopyGetData(CdbCopy *c, bool cancel, uint64 *rows_processed);

@@ -228,7 +228,7 @@ NOTICE:  table "exttabtest_w_5url" does not exist, skipping
     DISTRIBUTED BY (id);
     -- write to WET
     INSERT INTO exttabtest_w_5url (SELECT * FROM exttabtest);
-ERROR:  External table has more URLs than available primary segments that can write into them  (seg0 rh55-qavm55:7532 pid=1235)
+ERROR:  external table has more URLs than available primary segments that can write into them  (seg0 rh55-qavm55:7532 pid=1235)
 -- @skip Skipping this test because of a duplicate key violation error.
 -- Test 9: Negative - duplicte protocol name (check pg_extprotocol)
     SELECT count(*) FROM pg_extprotocol WHERE ptcname='demoprot';
@@ -740,10 +740,10 @@ NOTICE:  table "exttabtest_w_invalid" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE exttabtest_w_invalid(like exttabtest)
         LOCATION('demoprot://exttabtest_invalid.txt') 
     FORMAT 'text';
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     -- Drop a column (id) from WET
     ALTER EXTERNAL TABLE exttabtest_w_invalid DROP COLUMN id;
-NOTICE:  Dropping a column that is part of the distribution policy forces a NULL distribution policy
+NOTICE:  dropping a column that is part of the distribution policy forces a NULL distribution policy
     -- Write to WET 
     INSERT INTO exttabtest_w_invalid (SELECT * from exttabtest);
 ERROR:  INSERT has more expressions than target columns
@@ -821,7 +821,7 @@ DROP FUNCTION formatter_import_todrop();
 -- Note: Only STABLE is supported for formatter, this is enforced
 -- When it is not STABLE (VOLATILE, or IMMUTABLE),
 -- the expected error like:
--- ERROR: formatter function formatter_export_i is not declared STABLE. (seg1 rh55-qavm55:7533 pid=14816)
+-- ERROR: formatter function formatter_export_i is not declared STABLE (seg1 rh55-qavm55:7533 pid=14816)
     -- Create RET and WET using IMMUTABLE functions will succeed
     -- However query such RET or WET should fail
     DROP EXTERNAL TABLE IF EXISTS format_w;
@@ -829,21 +829,21 @@ NOTICE:  table "format_w" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE format_w(like formatsource) 
     LOCATION ('demoprot://exttabtest_test63') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_i');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r;
 NOTICE:  table "format_r" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE format_r(like formatsource) 
     LOCATION ('demoprot://exttabtest_test63') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_import_i');
     INSERT INTO format_w (SELECT * FROM formatsource);
-ERROR:  formatter function formatter_export_i is not declared STABLE.  (seg1 rh55-qavm55:7533 pid=30568)
-    -- ERROR:  formatter function formatter_export_i is not declared STABLE.  (seg1 rh55-qavm55:7533 pid=14816)
+ERROR:  formatter function formatter_export_i is not declared STABLE  (seg1 rh55-qavm55:7533 pid=30568)
+    -- ERROR:  formatter function formatter_export_i is not declared STABLE  (seg1 rh55-qavm55:7533 pid=14816)
     -- Create RET and WET using STABLE functions 
     DROP EXTERNAL TABLE IF EXISTS format_w;
     CREATE WRITABLE EXTERNAL TABLE format_w(like formatsource) 
     LOCATION ('demoprot://exttabtest_test63') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r;
     CREATE READABLE EXTERNAL TABLE format_r(like formatsource) 
     LOCATION ('demoprot://exttabtest_test63') 
@@ -968,10 +968,10 @@ select max(cnt) - min(cnt)  > 20 from t;
 (0 rows)
 
     INSERT INTO format_w (SELECT * FROM formatsource);
-ERROR:  formatter function formatter_export_s of type writable was not found.  (seg0 rh55-qavm55:7532 pid=30616)
+ERROR:  formatter function "formatter_export_s" of type writable was not found  (seg0 rh55-qavm55:7532 pid=30616)
     -- Read from RET, should fail
     SELECT count(*) FROM format_r;
-ERROR:  formatter function formatter_import_s of type readable was not found.
+ERROR:  formatter function "formatter_import_s" of type readable was not found
 HINT:  Create it with CREATE FUNCTION.
 -- Test 65: Restore (recreate) functions with same name, external table should work again
     -- Recreate UDFs with same function names
@@ -1022,7 +1022,7 @@ NOTICE:  table "format_w_s1" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE format_w_s1(like formatsource) 
         LOCATION ('demoprot://exttabtest_test67_s1') 
         FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r_s1;
 NOTICE:  table "format_r_s1" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE format_r_s1(like formatsource) 
@@ -1035,7 +1035,7 @@ NOTICE:  table "format_w_s2" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE format_w_s2(like formatsource) 
         LOCATION ('demoprot://exttabtest_test67_s2') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r_s2;
 NOTICE:  table "format_r_s2" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE format_r_s2(like formatsource) 
@@ -1112,7 +1112,7 @@ NOTICE:  table "format_long_w" does not exist, skipping
     CREATE WRITABLE EXTERNAL TABLE format_long_w(like format_long) 
     LOCATION ('demoprot://exttabtest_test71.txt') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_long_r;
 NOTICE:  table "format_long_r" does not exist, skipping
     CREATE READABLE EXTERNAL TABLE format_long_r(like format_long) 
@@ -1184,7 +1184,7 @@ ERROR:  formatter_export: buffer too small (gpformatter.c:182)  (seg0 rh55-qavm5
     CREATE WRITABLE EXTERNAL TABLE format_long_w(like format_long) 
     LOCATION ('demoprot://exttabtest_test72.txt') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_long_r;
     CREATE READABLE EXTERNAL TABLE format_long_r(like format_long) 
     LOCATION ('demoprot://exttabtest_test72.txt') 
@@ -1235,7 +1235,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
     CREATE WRITABLE EXTERNAL TABLE format_long_w(like format_long) 
     LOCATION ('demoprot://exttabtest_test73.txt') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_long_r;
     CREATE READABLE EXTERNAL TABLE format_long_r(like format_long) 
     LOCATION ('demoprot://exttabtest_test73.txt') 
@@ -1285,7 +1285,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
     CREATE WRITABLE EXTERNAL TABLE format_long_w(like format_long) 
     LOCATION ('demoprot://format_long_test14') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_long_r;
     CREATE READABLE EXTERNAL TABLE format_long_r(like format_long) 
         -- using source data file format_long_test13 created by previous test
@@ -1323,7 +1323,7 @@ CONTEXT:  External table format_long_r
     CREATE WRITABLE EXTERNAL TABLE format_w(like formatsource) 
     LOCATION ('demoprot://format_test15') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r;
     CREATE READABLE EXTERNAL TABLE format_r(like formatsource) 
         -- using source data file format_long_test13 created by previous test
@@ -1364,7 +1364,7 @@ CONTEXT:  External table format_r
     CREATE WRITABLE EXTERNAL TABLE format_w(like formatsource) 
     LOCATION ('demoprot://exttabtest_test76.txt') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r;
     CREATE READABLE EXTERNAL TABLE format_r(like formatsource) 
     LOCATION ('demoprot://exttabtest_test76.txt') 
@@ -1417,7 +1417,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution 
     CREATE WRITABLE EXTERNAL TABLE format_w(like formatsource) 
     LOCATION ('demoprot://exttabtest_test77.txt') 
     FORMAT 'CUSTOM' (FORMATTER='formatter_export_s');
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
     DROP EXTERNAL TABLE IF EXISTS format_r;
     CREATE READABLE EXTERNAL TABLE format_r(like formatsource) 
     LOCATION ('demoprot://exttabtest_test77.txt') 

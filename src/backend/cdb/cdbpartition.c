@@ -932,9 +932,7 @@ cdb_exchange_part_constraints(Relation table,
 
 				ereport(WARNING,
 						(errcode(ERRCODE_WARNING),
-						 errmsg("ignoring inconsistency: \"%s\" "
-								"has no constraint corresponding to \"%s\" "
-								"on \"%s\"",
+						 errmsg("ignoring inconsistency: \"%s\" has no constraint corresponding to \"%s\" on \"%s\"",
 								RelationGetRelationName(part),
 								NameStr(con->conname),
 								RelationGetRelationName(table))));
@@ -1089,7 +1087,7 @@ cdb_exchange_part_constraints(Relation table,
 				 errmsg("invalid constraint(s) found on \"%s\": %s",
 						RelationGetRelationName(cand),
 						constraint_names(excess_constraints)),
-				 errhint("drop the invalid constraints and retry")));
+				 errhint("Drop the invalid constraints and retry.")));
 	}
 
 	if (missing_part_constraints)
@@ -1952,8 +1950,8 @@ parruleord_open_gap(Oid partid, int16 level, Oid parent, int16 ruleord,
 	 */
 	if (ruleord < 1)
 		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-			errmsg("too many partitions, parruleord overflow")));
+				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+				 errmsg("too many partitions, parruleord overflow")));
 
 	/*---
 	 * This is equivalent to:
@@ -3594,7 +3592,7 @@ magic_expr_to_datum(Relation rel, PartitionNode *partnode,
 			if (!IsA(n1, Const))
 				ereport(ERROR,
 						(errcode(ERRCODE_DATATYPE_MISMATCH),
-						 errmsg("Not a constant expression")));
+						 errmsg("not a constant expression")));
 
 			c1 = (Const *) n1;
 
@@ -4569,7 +4567,7 @@ get_part_rule1(Relation rel,
 	if (!pid)
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("No partition id specified for %s",
+				 errmsg("no partition id specified for \"%s\"",
 						relname)));
 
 	namBuf[0] = 0;
@@ -4695,7 +4693,7 @@ get_part_rule1(Relation rel,
 			if (pNode->part->parkind == 'l')
 				ereport(ERROR,
 						(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-						 errmsg("cannot find partition by RANK -- %s is LIST partitioned",
+						 errmsg("cannot find partition by RANK -- \"%s\" is LIST partitioned",
 								relname)));
 
 			partrelid = selectPartitionByRank(pNode, idrank);
@@ -4819,13 +4817,9 @@ get_part_rule1(Relation rel,
 		if (bMustExist)
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-					 errmsg("FOR expression matches "
-							"DEFAULT partition%s of %s",
-							prule->isName ?
-							partIdStr : "",
-							relname),
-					 errhint("FOR expression may only specify "
-							 "a non-default partition in this context.")));
+					 errmsg("FOR expression matches DEFAULT partition%s of %s",
+							prule->isName ? partIdStr : "", relname),
+					 errhint("FOR expression may only specify a non-default partition in this context.")));
 
 	}
 
@@ -4844,8 +4838,7 @@ get_part_rule1(Relation rel,
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
 						 errmsg("partition%s of %s does not exist",
-								partIdStr,
-								relname)));
+								partIdStr, relname)));
 				break;
 			case AT_AP_IDDefault:	/* IDentify DEFAULT partition */
 				ereport(ERROR,
@@ -4873,16 +4866,13 @@ get_part_rule1(Relation rel,
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 						 errmsg("partition%s of %s already exists",
-								partIdStr,
-								relname)));
+								partIdStr, relname)));
 				break;
 			case AT_AP_IDDefault:	/* IDentify DEFAULT partition */
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 						 errmsg("DEFAULT partition%s of %s already exists",
-								prule->isName ?
-								partIdStr : "",
-								relname)));
+								prule->isName ? partIdStr : "", relname)));
 				break;
 			default:			/* XXX XXX */
 				Assert(false);
@@ -5447,15 +5437,13 @@ atpxPartAddList(Relation rel,
 			if (pbs->partEvery)
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("cannot specify EVERY when adding "
-								"RANGE partition to %s",
+						 errmsg("cannot specify EVERY when adding RANGE partition to %s",
 								lrelname)));
 
 			if (!(pbs->partStart || pbs->partEnd))
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_OBJECT),
-						 errmsg("Need START or END when adding "
-								"RANGE partition to %s",
+						 errmsg("need START or END when adding RANGE partition to %s",
 								lrelname)));
 
 			/* if no START, then START after last partition */
@@ -5497,7 +5485,7 @@ atpxPartAddList(Relation rel,
 						 */
 						ereport(ERROR,
 								(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-								 errmsg("invalid partition range specification.")));
+								 errmsg("invalid partition range specification")));
 					}
 
 					PartitionRangeItem *ri =
@@ -7237,8 +7225,7 @@ build_rename_part_recurse(PartitionRule *rule, const char *old_parentname,
 			if (strlen(newRelNameBuf) > NAMEDATALEN)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("relation name \"%s\" for child partition "
-								"is too long",
+						 errmsg("relation name \"%s\" for child partition is too long",
 								newRelNameBuf)));
 
 			l1 = lappend(l1, list_make2(rv, pstrdup(newRelNameBuf)));
@@ -7516,8 +7503,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot exchange DEFAULT partition "
-								"with external table")));
+						 errmsg("cannot exchange DEFAULT partition with external table")));
 		}
 
 		ExtTableEntry *extEntry = GetExtTableEntry(newrel->rd_id);
@@ -7528,8 +7514,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot exchange relation "
-								"which is a WRITABLE external table")));
+						 errmsg("cannot exchange relation which is a WRITABLE external table")));
 		}
 	}
 
@@ -7565,8 +7550,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("owner of \"%s\" must be the same as that "
-							"of \"%s\"",
+					 errmsg("owner of \"%s\" must be the same as that of \"%s\"",
 							RelationGetRelationName(newrel),
 							RelationGetRelationName(rel))));
 	}
@@ -7590,8 +7574,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot EXCHANGE table \"%s\" as it has "
-							"child table(s)",
+					 errmsg("cannot EXCHANGE table \"%s\" as it has child table(s)",
 							RelationGetRelationName(newrel))));
 	}
 
@@ -7601,8 +7584,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot exchange table \"%s\" as it "
-							"inherits other table(s)",
+					 errmsg("cannot exchange table \"%s\" as it inherits other table(s)",
 							RelationGetRelationName(newrel))));
 	}
 
@@ -7613,8 +7595,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 		if (throw)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("cannot exchange table which has rules "
-							"defined on it")));
+					 errmsg("cannot exchange table which has rules defined on it")));
 	}
 
 	/*
@@ -7682,8 +7663,7 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 			if (throw)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("distribution policy for \"%s\" "
-								"must be the same as that for \"%s\"",
+						 errmsg("distribution policy for \"%s\" must be the same as that for \"%s\"",
 								RelationGetRelationName(newrel),
 								RelationGetRelationName(rel))));
 		}
@@ -7895,9 +7875,8 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 					ereport(ERROR,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("%s constraint \"%s\" missing", what, who),
-							 errhint("Add %s constraint \"%s\" to the candidate table"
-									 " or drop it from the partitioned table."
-									 ,what, who)));
+							 errhint("Add %s constraint \"%s\" to the candidate table or drop it from the partitioned table.",
+									 what, who)));
 				}
 				else
 				{
@@ -7905,9 +7884,8 @@ constraint_apply_mapped(HeapTuple tuple, AttrMap *map, Relation cand,
 							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 							 errmsg("WITHOUT VALIDATION incompatible with missing %s constraint \"%s\"",
 									what, who),
-							 errhint("Add %s constraint %s to the candidate table"
-									 " or drop it from the partitioned table."
-									 ,what, who)));
+							 errhint("Add %s constraint %s to the candidate table or drop it from the partitioned table.",
+									 what, who)));
 
 				}
 				break;
@@ -8221,8 +8199,7 @@ checkUniqueConstraintVsPartitioning(Relation rel, AttrNumber *indattr, int nidxa
 
 		ereport(ERROR,
 				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-				 errmsg("%s constraint must contain all columns in the "
-						"partition key of relation \"%s\".",
+				 errmsg("%s constraint must contain all columns in the partition key of relation \"%s\"",
 						what, RelationGetRelationName(rel)),
 				 errhint("Include the partition key or create a part-wise UNIQUE index instead.")));
 	}

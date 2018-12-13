@@ -1065,14 +1065,6 @@ DoCopy(const CopyStmt *stmt, const char *queryString, uint64 *processed)
 			cstate->errMode = ALL_OR_NOTHING; /* default */
 		}
 
-		if (cstate->on_segment && Gp_role == GP_ROLE_EXECUTE)
-		{
-			/* data needs to get inserted locally */
-			MemoryContext oldcontext = MemoryContextSwitchTo(CacheMemoryContext);
-			rel->rd_cdbpolicy = GpPolicyCopy(stmt->policy);
-			MemoryContextSwitchTo(oldcontext);
-		}
-
 		/* We must be a QE if we received the partitioning config */
 		if (stmt->partitions)
 		{
@@ -1407,8 +1399,7 @@ ProcessCopyOptions(CopyState cstate,
 		else
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("option \"%s\" not recognized",
-							defel->defname)));
+					 errmsg("option \"%s\" not recognized", defel->defname)));
 	}
 
 	bool	delim_off = false;
@@ -1455,14 +1446,14 @@ ProcessCopyOptions(CopyState cstate,
 	if (strlen(cstate->delim) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			  errmsg("COPY delimiter must be a single one-byte character")));
+				 errmsg("COPY delimiter must be a single one-byte character")));
 
 	/* Disallow end-of-line characters */
 	if (strchr(cstate->delim, '\r') != NULL ||
 		strchr(cstate->delim, '\n') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errmsg("COPY delimiter cannot be newline or carriage return")));
+				 errmsg("COPY delimiter cannot be newline or carriage return")));
 
 	if (strchr(cstate->null_print, '\r') != NULL ||
 		strchr(cstate->null_print, '\n') != NULL)
@@ -1485,7 +1476,7 @@ ProcessCopyOptions(CopyState cstate,
 			   cstate->delim[0]) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be \"%s\"", cstate->delim)));
+				 errmsg("delimiter cannot be \"%s\"", cstate->delim)));
 
 	/* Check header */
 	/*
@@ -1501,7 +1492,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (!cstate->csv_mode && cstate->quote != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("quote available only in CSV mode")));
+				 errmsg("quote available only in CSV mode")));
 
 	if (cstate->csv_mode && strlen(cstate->quote) != 1)
 		ereport(ERROR,
@@ -1517,42 +1508,42 @@ ProcessCopyOptions(CopyState cstate,
 	if (cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-			errmsg("escape in CSV format must be a single character")));
+				 errmsg("escape in CSV format must be a single character")));
 
 	if (!cstate->csv_mode && cstate->escape != NULL &&
 		(strchr(cstate->escape, '\r') != NULL ||
 		strchr(cstate->escape, '\n') != NULL))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("escape representation in text format cannot use newline or carriage return")));
+				 errmsg("escape representation in text format cannot use newline or carriage return")));
 
 	if (!cstate->csv_mode && cstate->escape != NULL && strlen(cstate->escape) != 1)
 	{
 		if (pg_strcasecmp(cstate->escape, "off") != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("escape must be a single character, or [OFF/off] to disable escapes")));
+					 errmsg("escape must be a single character, or [OFF/off] to disable escapes")));
 	}
 
 	/* Check force_quote */
 	if (!cstate->csv_mode && (cstate->force_quote || cstate->force_quote_all))
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force quote available only in CSV mode")));
+				 errmsg("force quote available only in CSV mode")));
 	if ((cstate->force_quote != NIL || cstate->force_quote_all) && is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force quote only available for data unloading, not loading")));
+				 errmsg("force quote only available for data unloading, not loading")));
 
 	/* Check force_notnull */
 	if (!cstate->csv_mode && cstate->force_notnull != NIL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force not null available only in CSV mode")));
+				 errmsg("force not null available only in CSV mode")));
 	if (cstate->force_notnull != NIL && !is_from)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				errmsg("force not null only available for data loading, not unloading")));
+				 errmsg("force not null only available for data loading, not unloading")));
 
 	/* Check force_null */
 	if (!cstate->csv_mode && cstate->force_null != NIL)
@@ -1569,7 +1560,7 @@ ProcessCopyOptions(CopyState cstate,
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("COPY delimiter must not appear in the NULL specification")));
+				 errmsg("COPY delimiter must not appear in the NULL specification")));
 
 	/* Don't allow the CSV quote char to appear in the null string. */
 	if (cstate->csv_mode &&
@@ -1592,7 +1583,7 @@ ProcessCopyOptions(CopyState cstate,
 		if (strlen(cstate->delim) != 1 && !delim_off)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single one-byte character, or \'off\'")));
+					 errmsg("delimiter must be a single one-byte character, or \'off\'")));
 	}
 	else
 	{
@@ -1600,7 +1591,7 @@ ProcessCopyOptions(CopyState cstate,
 		if ((strlen(cstate->delim) != 1 || IS_HIGHBIT_SET(cstate->delim[0])) && !delim_off )
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("delimiter must be a single one-byte character, or \'off\'")));
+					 errmsg("delimiter must be a single one-byte character, or \'off\'")));
 	}
 
 	/* Disallow end-of-line characters */
@@ -1608,23 +1599,23 @@ ProcessCopyOptions(CopyState cstate,
 		strchr(cstate->delim, '\n') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be newline or carriage return")));
+				 errmsg("delimiter cannot be newline or carriage return")));
 
 	if (strchr(cstate->null_print, '\r') != NULL ||
 		strchr(cstate->null_print, '\n') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("null representation cannot use newline or carriage return")));
+				 errmsg("null representation cannot use newline or carriage return")));
 
 	if (!cstate->csv_mode && strchr(cstate->delim, '\\') != NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg("delimiter cannot be backslash")));
+				 errmsg("delimiter cannot be backslash")));
 
 	if (strchr(cstate->null_print, cstate->delim[0]) != NULL && !delim_off)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		errmsg("delimiter must not appear in the NULL specification")));
+				 errmsg("delimiter must not appear in the NULL specification")));
 
 	if (delim_off)
 	{
@@ -1639,12 +1630,12 @@ ProcessCopyOptions(CopyState cstate,
 		if (is_copy)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Using no delimiter is only supported for external tables")));
+					 errmsg("using no delimiter is only supported for external tables")));
 
 		if (num_columns != 1)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					errmsg("Using no delimiter is only possible for a single column table")));
+					 errmsg("using no delimiter is only possible for a single column table")));
 
 	}
 
@@ -1659,7 +1650,7 @@ ProcessCopyOptions(CopyState cstate,
 			{
 				/* RET */
 				ereport(NOTICE,
-						(errmsg("HEADER means that each one of the data files has a header row.")));
+						(errmsg("HEADER means that each one of the data files has a header row")));
 			}
 			else
 			{
@@ -2043,15 +2034,6 @@ CopyDispatchOnSegment(CopyState cstate, const CopyStmt *stmt)
 	}
 
 	dispatchStmt->skip_ext_partition = cstate->skip_ext_partition;
-
-	if (cstate->rel->rd_cdbpolicy)
-	{
-		dispatchStmt->policy = GpPolicyCopy(cstate->rel->rd_cdbpolicy);
-	}
-	else
-	{
-		dispatchStmt->policy = createRandomPartitionedPolicy(GP_POLICY_ALL_NUMSEGMENTS);
-	}
 
 	CdbDispatchUtilityStatement((Node *) dispatchStmt,
 								DF_NEED_TWO_PHASE |
@@ -2649,7 +2631,7 @@ CopyToDispatch(CopyState cstate)
 	{
 		bool		done;
 
-		cdbCopyStart(cdbCopy, stmt, NULL,
+		cdbCopyStart(cdbCopy, stmt,
 					 RelationBuildPartitionDesc(cstate->rel, false),
 					 NIL);
 
@@ -3685,7 +3667,12 @@ CopyFrom(CopyState cstate)
 		 * instead, we determine the correct target segment for row,
 		 * and forward each to the correct segment.
 		 */
+
+		/*
+		 * pre-allocate buffer for constructing a message.
+		 */
 		cstate->dispatch_msgbuf = makeStringInfo();
+		enlargeStringInfo(cstate->dispatch_msgbuf, sizeof(copy_from_dispatch_row));
 
 		/*
 		 * prepare to COPY data into segDBs:
@@ -3717,7 +3704,7 @@ CopyFrom(CopyState cstate)
 		 */
 		elog(DEBUG5, "COPY command sent to segdbs");
 
-		cdbCopyStart(cdbCopy, glob_copystmt, cstate->rel->rd_cdbpolicy,
+		cdbCopyStart(cdbCopy, glob_copystmt,
 					 estate->es_result_partitions, cstate->ao_segnos);
 
 		/*
@@ -5447,6 +5434,33 @@ HandleQDErrorFrame(CopyState cstate)
 }
 
 /*
+ * Inlined versions of appendBinaryStringInfo and enlargeStringInfo, for
+ * speed.
+ *
+ * NOTE: These versions don't NULL-terminate the string. We don't need
+ * it here.
+ */
+#define APPEND_MSGBUF_NOCHECK(buf, ptr, datalen) \
+	do { \
+		memcpy((buf)->data + (buf)->len, ptr, (datalen)); \
+		(buf)->len += (datalen); \
+	} while(0)
+
+#define APPEND_MSGBUF(buf, ptr, datalen) \
+	do { \
+		if ((buf)->len + (datalen) >= (buf)->maxlen) \
+			enlargeStringInfo((buf), (datalen)); \
+		memcpy((buf)->data + (buf)->len, ptr, (datalen)); \
+		(buf)->len += (datalen); \
+	} while(0)
+
+#define ENLARGE_MSGBUF(buf, needed) \
+	do { \
+		if ((buf)->len + (needed) >= (buf)->maxlen) \
+			enlargeStringInfo((buf), (needed)); \
+	} while(0)
+
+/*
  * This is the sending counterpart of NextCopyFromExecute. Used in the QD,
  * to send a row to a QE.
  */
@@ -5467,7 +5481,7 @@ SendCopyFromForwardedTuple(CopyState cstate,
 	Form_pg_attribute *attr;
 	copy_from_dispatch_row *frame;
 	StringInfo	msgbuf;
-	int			num_sent_fields = 0;
+	int			num_sent_fields;
 	AttrNumber	num_phys_attrs;
 	int			i;
 
@@ -5478,77 +5492,101 @@ SendCopyFromForwardedTuple(CopyState cstate,
 	attr = tupDesc->attrs;
 	num_phys_attrs = tupDesc->natts;
 
+	/*
+	 * Reset the message buffer, and reserve space for the frame header.
+	 */
 	msgbuf = cstate->dispatch_msgbuf;
-	resetStringInfo(msgbuf);
-	enlargeStringInfo(msgbuf, sizeof(copy_from_dispatch_row));
+	Assert(msgbuf->maxlen >= sizeof(copy_from_dispatch_row));
 	msgbuf->len = sizeof(copy_from_dispatch_row);
 
+	/*
+	 * Append attributes to the buffer.
+	 */
+	num_sent_fields = 0;
 	for (i = 0; i < num_phys_attrs; i++)
 	{
 		int16		attnum = i + 1;
 
-		if (!nulls[i])
-		{
-			appendBinaryStringInfo(msgbuf, &attnum, sizeof(int16));
+		/* NULLs are simply left out of the message. */
+		if (nulls[i])
+			continue;
 
-			if (attr[i]->attbyval)
-				appendBinaryStringInfo(msgbuf, &values[i], sizeof(Datum));
+		/*
+		 * Make sure we have room for the attribute number. While we're at it,
+		 * also reserve room for the Datum, if it's a by-value datatype, or for
+		 * the length field, if it's a varlena. Allocating both in one call
+		 * saves one size-check.
+		 */
+		ENLARGE_MSGBUF(msgbuf, sizeof(int16) + sizeof(Datum));
+
+		/* attribute number comes first */
+		APPEND_MSGBUF_NOCHECK(msgbuf, &attnum, sizeof(int16));
+
+		if (attr[i]->attbyval)
+		{
+			/* we already reserved space for this above, so we can just memcpy */
+			APPEND_MSGBUF_NOCHECK(msgbuf, &values[i], sizeof(Datum));
+		}
+		else
+		{
+			if (attr[i]->attlen > 0)
+			{
+				APPEND_MSGBUF(msgbuf, DatumGetPointer(values[i]), attr[i]->attlen);
+			}
+			else if (attr[attnum - 1]->attlen == -1)
+			{
+				int32		len;
+				char	   *ptr;
+
+				/* For simplicity, varlen's are always transmitted in "long" format */
+				Assert(!VARATT_IS_SHORT(values[i]));
+				len = VARSIZE(values[i]);
+				ptr = VARDATA(values[i]);
+
+				/* we already reserved space for this int */
+				APPEND_MSGBUF_NOCHECK(msgbuf, &len, sizeof(int32));
+				APPEND_MSGBUF(msgbuf, ptr, len - VARHDRSZ);
+			}
+			else if (attr[attnum - 1]->attlen == -2)
+			{
+				/*
+				 * These attrs are NULL-terminated in memory, but we send
+				 * them length-prefixed (like the varlen case above) so that
+				 * the receiver can preallocate a data buffer.
+				 */
+				int32		len;
+				size_t		slen;
+				char	   *ptr;
+
+				ptr = DatumGetPointer(values[i]);
+				slen = strlen(ptr);
+
+				if (slen > PG_INT32_MAX)
+				{
+					elog(ERROR, "attribute %d is too long (%lld bytes)",
+						 attnum, (long long) slen);
+				}
+
+				len = (int32) slen;
+
+				APPEND_MSGBUF_NOCHECK(msgbuf, &len, sizeof(int32));
+				APPEND_MSGBUF(msgbuf, ptr, len);
+			}
 			else
 			{
-				if (attr[i]->attlen > 0)
-				{
-					appendBinaryStringInfo(msgbuf, DatumGetPointer(values[i]), attr[i]->attlen);
-				}
-				else if (attr[attnum - 1]->attlen == -1)
-				{
-					int32		len;
-					char	   *ptr;
-
-					/* For simplicity, varlen's are always transmitted in "long" format */
-					len = VARSIZE(values[i]);
-					ptr = VARDATA_ANY(values[i]);
-
-					appendBinaryStringInfo(msgbuf, &len, sizeof(int32));
-					appendBinaryStringInfo(msgbuf, ptr, len - VARHDRSZ);
-				}
-				else if (attr[attnum - 1]->attlen == -2)
-				{
-					/*
-					 * These attrs are NULL-terminated in memory, but we send
-					 * them length-prefixed (like the varlen case above) so that
-					 * the receiver can preallocate a data buffer.
-					 */
-					int32		len;
-					size_t		slen;
-					char	   *ptr;
-
-					ptr = DatumGetPointer(values[i]);
-					slen = strlen(ptr);
-
-					if (slen > PG_INT32_MAX)
-					{
-						elog(ERROR, "attribute %d is too long (%lld bytes)",
-							 attnum, (long long) slen);
-					}
-
-					len = (int32) slen;
-
-					appendBinaryStringInfo(msgbuf, &len, sizeof(len));
-					appendBinaryStringInfo(msgbuf, ptr, len);
-				}
-				else
-				{
-					elog(ERROR, "attribute %d has invalid length %d",
-						 attnum, attr[attnum - 1]->attlen);
-				}
+				elog(ERROR, "attribute %d has invalid length %d",
+					 attnum, attr[attnum - 1]->attlen);
 			}
-
-			num_sent_fields++;
 		}
+
+		num_sent_fields++;
 	}
 
+	/*
+	 * Fill in the header. We reserved room for this at the beginning of the
+	 * buffer.
+	 */
 	frame = (copy_from_dispatch_row *) msgbuf->data;
-
 	frame->relid = RelationGetRelid(rel);
 	frame->loaded_oid = tuple_oid;
 	frame->lineno = lineno;

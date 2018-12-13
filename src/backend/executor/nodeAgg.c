@@ -173,8 +173,7 @@ typedef struct AggHashEntryData
 
 static void advance_transition_function(AggState *aggstate,
 							AggStatePerAgg peraggstate,
-							AggStatePerGroup pergroupstate,
-							MemoryManagerContainer *mem_manager);
+							AggStatePerGroup pergroupstate);
 static void process_ordered_aggregate_single(AggState *aggstate,
 								 AggStatePerAgg peraggstate,
 								 AggStatePerGroup pergroupstate);
@@ -256,15 +255,13 @@ datumCopyWithMemManager(Datum oldvalue, Datum value, bool typByVal, int typLen,
  * Initialize all aggregates for a new group of input values.
  *
  * When called, CurrentMemoryContext should be the per-query context.
- *
- * Note that the memory allocation is done through provided memory manager.
  */
 void
 initialize_aggregates(AggState *aggstate,
 					  AggStatePerAgg peragg,
-					  AggStatePerGroup pergroup,
-					  MemoryManagerContainer *mem_manager)
+					  AggStatePerGroup pergroup)
 {
+	MemoryManagerContainer *mem_manager = &aggstate->mem_manager;
 	int			aggno;
 
 	for (aggno = 0; aggno < aggstate->numaggs; aggno++)
@@ -394,8 +391,7 @@ initialize_aggregates(AggState *aggstate,
 static void
 advance_transition_function(AggState *aggstate,
 							AggStatePerAgg peraggstate,
-							AggStatePerGroup pergroupstate,
-							MemoryManagerContainer *mem_manager)
+							AggStatePerGroup pergroupstate)
 {
 	pergroupstate->transValue = 
 		invoke_agg_trans_func(aggstate,
@@ -409,8 +405,7 @@ advance_transition_function(AggState *aggstate,
 							  peraggstate->transtypeLen,
 							  &peraggstate->transfn_fcinfo,
 							  (void *)aggstate,
-							  aggstate->tmpcontext->ecxt_per_tuple_memory,
-							  mem_manager);
+							  aggstate->tmpcontext->ecxt_per_tuple_memory);
 }
 
 Datum
@@ -420,9 +415,9 @@ invoke_agg_trans_func(AggState *aggstate,
 					  bool *noTransvalue, bool *transValueIsNull,
 					  bool transtypeByVal, int16 transtypeLen, 
 					  FunctionCallInfoData *fcinfo, void *funcctx,
-					  MemoryContext tuplecontext,
-					  MemoryManagerContainer *mem_manager)
+					  MemoryContext tuplecontext)
 {
+	MemoryManagerContainer *mem_manager = &aggstate->mem_manager;
 	MemoryContext oldContext;
 	Datum		newVal;
 
@@ -528,8 +523,7 @@ invoke_agg_trans_func(AggState *aggstate,
  * When called, CurrentMemoryContext should be the per-query context.
  */
 void
-advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
-				   MemoryManagerContainer *mem_manager)
+advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup)
 {
 	int			aggno;
 
@@ -662,8 +656,7 @@ advance_aggregates(AggState *aggstate, AggStatePerGroup pergroup,
 				}
 			}
 
-			advance_transition_function(aggstate, peraggstate, pergroupstate,
-										mem_manager);
+			advance_transition_function(aggstate, peraggstate, pergroupstate);
 		}
 	}
 }
@@ -744,8 +737,7 @@ process_ordered_aggregate_single(AggState *aggstate,
 		}
 		else
 		{
-			advance_transition_function(aggstate, peraggstate, pergroupstate,
-										&(aggstate->mem_manager));
+			advance_transition_function(aggstate, peraggstate, pergroupstate);
 			/* forget the old value, if any */
 			if (!oldIsNull && !peraggstate->inputtypeByVal)
 				pfree(DatumGetPointer(oldVal));
@@ -820,8 +812,7 @@ process_ordered_aggregate_multi(AggState *aggstate,
 				fcinfo->argnull[i + 1] = slot_get_isnull(slot1)[i];
 			}
 
-			advance_transition_function(aggstate, peraggstate, pergroupstate,
-										&(aggstate->mem_manager));
+			advance_transition_function(aggstate, peraggstate, pergroupstate);
 
 			if (numDistinctCols > 0)
 			{
@@ -1383,7 +1374,7 @@ agg_retrieve_direct(AggState *aggstate)
 			/*
 			 * Initialize working state for a new input tuple group
 			 */
-			initialize_aggregates(aggstate, peragg, pergroup, &(aggstate->mem_manager));
+			initialize_aggregates(aggstate, peragg, pergroup);
 		}
 
 		/* Process the remaining tuples in the new group. */
@@ -1446,7 +1437,7 @@ agg_retrieve_direct(AggState *aggstate)
 					if (!aggstate->has_partial_agg)
 					{
 						has_partial_agg = true;
-						advance_aggregates(aggstate, pergroup, &(aggstate->mem_manager));
+						advance_aggregates(aggstate, pergroup);
 					}
 
 					/* Reset per-input-tuple context after each tuple */
@@ -1520,7 +1511,7 @@ agg_retrieve_direct(AggState *aggstate)
 							{
 								has_partial_agg = true;
 								tmpcontext->ecxt_outertuple = outerslot;
-								advance_aggregates(aggstate, pergroup, &(aggstate->mem_manager));
+								advance_aggregates(aggstate, pergroup);
 							}
 
 							passthru_ready = true;
@@ -1558,13 +1549,13 @@ agg_retrieve_direct(AggState *aggstate)
 			 * and prepare the aggregate value.
 			 */
 			ResetExprContext(econtext);
-			initialize_aggregates(aggstate, peragg, perpassthru, &(aggstate->mem_manager));
+			initialize_aggregates(aggstate, peragg, perpassthru);
 
 			/* finalize the pass-through tuple */
 			ResetExprContext(tmpcontext);
 			tmpcontext->ecxt_outertuple = outerslot;
 
-			advance_aggregates(aggstate, perpassthru, &(aggstate->mem_manager));
+			advance_aggregates(aggstate, perpassthru);
 		}
 
 		/*
@@ -2479,7 +2470,6 @@ ExecInitAgg(Agg *node, EState *estate, int eflags)
 	}
 
 	aggstate->num_attrs = 0;
-
 
 	/* Set the default memory manager */
 	aggstate->mem_manager.alloc = cxt_alloc;

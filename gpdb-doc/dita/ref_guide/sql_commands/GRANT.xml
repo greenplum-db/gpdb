@@ -189,7 +189,8 @@ columns. The privilege may be granted for all columns of a table, or just specif
             also met). Essentially this allows the grantee to look up objects
             within the schema.</pd>
           <pd>For sequences, this privilege allows the use of the
-              <codeph>nextval()</codeph> function.</pd>
+              <codeph>currval()</codeph> and <codeph>nextval()</codeph>
+            function.</pd>
           <pd>For foreign-data wrappers, this privilege enables the grantee to
             create new servers using that foreign-data wrapper.</pd>
           <pd>For servers, this privilege enables the grantee to create, alter,

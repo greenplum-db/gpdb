@@ -341,7 +341,7 @@ FORMAT 'csv'
         HEADER
 )
 ;
-NOTICE:  HEADER means that each one of the data files has a header row.
+NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM ext_lineitem;
  count 
 -------
@@ -512,7 +512,7 @@ FORMAT 'text'
 LOG ERRORS SEGMENT REJECT LIMIT 200
 ;
 SELECT count(*) FROM ext_lineitem;
-NOTICE:  Found 4 data formatting errors (4 or more input rows). Rejected related input data.
+NOTICE:  found 4 data formatting errors (4 or more input rows), rejected related input data
  count 
 -------
     28
@@ -580,7 +580,7 @@ FORMAT 'text'
 )
 ;
 CREATE INDEX index ON ext_lineitem (L_ORDERKEY);
-ERROR:  cannot create indexes on external tables.
+ERROR:  cannot create indexes on external tables
 TRUNCATE ext_lineitem;
 ERROR:  "ext_lineitem" is an external relation and can't be truncated
 DELETE FROM ext_lineitem where L_ORDERKEY > 10;
@@ -714,7 +714,7 @@ FORMAT 'csv'
         HEADER
 )
 ;
-NOTICE:  HEADER means that each one of the data files has a header row.
+NOTICE:  HEADER means that each one of the data files has a header row
 SELECT count(*) FROM ext_lineitem;
    255
 

@@ -91,10 +91,9 @@ SparseData makeSparseDataFromDouble(double constant,int64 dimension)
 	sdata->index->data = bytestore;
 	sdata->index->len = int8compstoragesize(bytestore);
 	sdata->total_value_count=dimension;
-	if (sdata->index->maxlen < int8compstoragesize(bytestore)) {
-		ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			errmsg("Internal error")));
-	}
+	if (sdata->index->maxlen < int8compstoragesize(bytestore))
+		elog(ERROR, "internal error: double value exceeds sparse data max length");
+
 	return(sdata);
 }
 
@@ -224,7 +223,7 @@ double *sdata_to_float8arr(SparseData sdata) {
 	if (sdata->type_of_data != FLOAT8OID)
 	{
 		ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			errmsg("Data type of SparseData is not FLOAT64\n")));
+			errmsg("data type of SparseData is not FLOAT64")));
 	}
 
 	if ((array = (double *)palloc(sizeof(double)*(sdata->total_value_count)))
@@ -245,9 +244,10 @@ double *sdata_to_float8arr(SparseData sdata) {
 
 	if ((aptr) != sdata->total_value_count) 
 	{
-		ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		 errmsg("Array size is incorrect, is: %d and should be %d\n",
-				aptr,sdata->total_value_count)));
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("array size is incorrect, is: %d and should be %d",
+						aptr,sdata->total_value_count)));
 	}
 
 	return array;

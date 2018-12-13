@@ -63,7 +63,7 @@ build_http_headers(PxfInputData *input)
 	if (!ev.GP_USER || !ev.GP_USER[0])
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg("User identity is unknown")));
+				 errmsg("user identity is unknown")));
 	churl_headers_append(headers, "X-GP-USER", ev.GP_USER);
 
 	churl_headers_append(headers, "X-GP-SEGMENT-ID", ev.GP_SEGMENT_ID);
@@ -275,7 +275,8 @@ get_format_name(char fmtcode)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Unable to get format name for format code: %c", fmtcode)));
+				 errmsg("unable to get format name for format code: %c",
+						fmtcode)));
 	}
 
 	return formatName;

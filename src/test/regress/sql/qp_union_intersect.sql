@@ -628,7 +628,7 @@ UPDATE dml_union_s SET b = (SELECT NULL UNION SELECT NULL)::numeric;
 --
 -- like with the Postgres planner, or you get:
 --
---   ERROR:  One or more assertions failed
+--   ERROR:  one or more assertions failed
 --   DETAIL:  Expected no more than one row to be returned by expression
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.

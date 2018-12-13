@@ -91,7 +91,7 @@
                     </pt>
                     <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph>
                         condition. The row to be deleted is the one most recently fetched from this
-                        cursor. The cursor must be a simple (non-join, non-aggregate) query on the
+                        cursor. The cursor must be a simple non-grouping query on the
                             <codeph>DELETE</codeph> target table. </pd>
                     <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
                         Boolean condition.</pd>

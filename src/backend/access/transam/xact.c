@@ -1372,10 +1372,12 @@ RecordTransactionCommit(void)
 		 * variable to determine if it contains subxacts, relations or
 		 * invalidation messages, that's more extensible and degrades more
 		 * gracefully. Till then, it's just 20 bytes of overhead.
+		 *
+		 * GPDB: We also always use "non compact" commit record when in a
+		 * distributed transaction. (That means, in most cases. But a
+		 * distributed commit is so expensive anyway, that this optimization
+		 * hardly matters.)
 		 */
-		// GPDB_92_MERGE_FIXME: always use "non
-		// compact" WAL records when in distributed transactions. Can
-		// we use the compact one for non-DDL transactions?
 		if (nrels > 0 || nmsgs > 0 || RelcacheInitFileInval || forceSyncCommit ||
 			XLogLogicalInfoActive() || isDtxPrepared)
 		{
@@ -1483,10 +1485,6 @@ RecordTransactionCommit(void)
 			}
 			rdata[lastrdata].next = NULL;
 
-			/*
-			 * GPDB_92_MERGE_FIXME: Can we
-			 * handle distributed transactions in this way too?
-			 */
 			recptr = XLogInsert(RM_XACT_ID, XLOG_XACT_COMMIT_COMPACT, rdata);
 		}
 	}

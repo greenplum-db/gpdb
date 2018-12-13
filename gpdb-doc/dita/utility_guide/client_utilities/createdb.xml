@@ -14,12 +14,31 @@ DATABASE</codeph>.</p></section><section id="section4"><title>Options</title><pa
               Greenplum system. If not specified, reads from the
             environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
             defaults to the current system user.</pd></plentry><plentry><pt>description</pt><pd>A comment to be associated with the newly created database. Descriptions
-containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace <varname>tablespace</varname></pt><pd>The default tablespace for the database. </pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry><plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
+containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace <varname>tablespace</varname></pt><pd>The default tablespace for the database. </pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry>
+        <plentry>
+          <pt>-l <varname>locale</varname> | --locale <varname>locale</varname></pt>
+          <pd>Specifies the locale to be used in this database. This is equivalent to specifying
+            both <codeph>--lc-collate</codeph> and <codeph>lc-ctype</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>--lc-collate <varname>locale</varname></pt>
+          <pd>Specifies the <codeph>LC_COLLATE</codeph>  setting to be used in this database.</pd>
+        </plentry>
+        <plentry>
+          <pt>--lc-ctype <varname>locale</varname></pt>
+          <pd>Specifies the LC_CTYPE setting to be used in this database.</pd>
+        </plentry><plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
               <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
             use the default encoding. <ph>See the Greenplum Database Reference
               Guide for information about supported character sets.</ph></pd></plentry><plentry><pt>-O <varname>owner</varname> | --owner <varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
 to the user executing this command. </pd></plentry><plentry><pt>-T <varname>template</varname> | --template <varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
-              <codeph>template1</codeph>. </pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
+              <codeph>template1</codeph>. </pd></plentry></parml>
+      <p>The options <codeph>-D</codeph>, <codeph>-E</codeph>, <codeph>-l</codeph>,
+          <codeph>-O</codeph>, and <codeph>-T</codeph> correspond to options of the the underlying
+        SQL command <codeph>CREATE DATABASE</codeph>; see <ph><xref
+            href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1" otherprops="op-help"
+          /></ph><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum
+            Database Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
               server is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port <varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is
               listening for connections. If not specified, reads from the environment variable

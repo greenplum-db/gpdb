@@ -1,4 +1,3 @@
-
 /*-------------------------------------------------------------------------
  *
  * cdbdisp.c
@@ -90,11 +89,9 @@ cdbdisp_dispatchToGang(struct CdbDispatcherState *ds,
 					   struct Gang *gp,
 					   int sliceIndex)
 {
-	struct CdbDispatchResults *dispatchResults = ds->primaryResults;
-
 	Assert(Gp_role == GP_ROLE_DISPATCH);
 	Assert(gp && gp->size > 0);
-	Assert(dispatchResults && dispatchResults->resultArray);
+	Assert(ds->primaryResults && ds->primaryResults->resultArray);
 
 	(pDispatchFuncs->dispatchToGang) (ds, gp, sliceIndex);
 }

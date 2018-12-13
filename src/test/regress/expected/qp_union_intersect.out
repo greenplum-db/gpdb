@@ -1694,7 +1694,7 @@ DETAIL:  Failing row contains (5, null, s, 5).
 --
 -- like with the Postgres planner, or you get:
 --
---   ERROR:  One or more assertions failed
+--   ERROR:  one or more assertions failed
 --   DETAIL:  Expected no more than one row to be returned by expression
 --
 -- To make the output stable, arbitrarily fix optimizer_segments to 2, to get the latter.

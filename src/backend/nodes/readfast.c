@@ -1367,7 +1367,7 @@ _readCopyStmt(void)
 	READ_NODE_FIELD(sreh);
 	READ_NODE_FIELD(partitions);
 	READ_NODE_FIELD(ao_segnos);
-	READ_NODE_FIELD(policy);
+
 	READ_DONE();
 
 }

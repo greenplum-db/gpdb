@@ -18,9 +18,13 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
   [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
   [LIMIT {<varname>count</varname> | ALL}]
-  [OFFSET <varname>start</varname>]
-  [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]</codeblock>
-      <p>where <varname>with_query</varname> is:</p>
+  [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
+  [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY]
+  [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
+
+TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
+</codeblock>
+      <p>where <varname>with_query:</varname> is:</p>
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
@@ -94,9 +98,9 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
         <li id="eg138864">If the <codeph>ORDER BY</codeph> clause is specified, the returned rows
           are sorted in the specified order. If <codeph>ORDER BY</codeph> is not given, the rows are
           returned in whatever order the system finds fastest to produce.</li>
-        <li id="eg138878">If the <codeph>LIMIT</codeph> or <codeph>OFFSET</codeph> clause is
-          specified, the <codeph>SELECT</codeph> statement only returns a subset of the result
-          rows.</li>
+        <li id="eg138878">If the <codeph>LIMIT</codeph> (or <codeph>FETCH FIRST</codeph>) or
+            <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> statement only
+          returns a subset of the result rows.</li>
         <li id="eg138885">If <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> is specified,
           the <codeph>SELECT</codeph> statement locks the entire table against concurrent
           updates.</li>
@@ -704,8 +708,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           only to the expression they follow; for example <codeph>ORDER BY x, y DESC</codeph> does
           not mean the same thing as <codeph>ORDER BY x DESC, y
           DESC</codeph>.</p><p>Character-string data is sorted according to the locale-specific
-          collation order that was established when the Greenplum Database system was
-          initialized.</p></sectiondiv>
+          collation order that was established when the database was created.</p></sectiondiv>
       <sectiondiv id="section15"><b>The DISTINCT Clause</b><p>If <codeph>DISTINCT</codeph> is
           specified, all duplicate rows are removed from the result set (one row is kept from each
           group of duplicates). <codeph>ALL</codeph> specifies the opposite: all rows are kept.
@@ -740,7 +743,16 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>count</codeph> rows to be returned. </p><p>If the <codeph>count</codeph>
           expression evaluates to NULL, it is treated as <codeph>LIMIT ALL</codeph>, that is, no
           limit. If <codeph>start</codeph> evaluates to NULL, it is treated the same as
-            <codeph>OFFSET 0</codeph>.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to
+            <codeph>OFFSET 0</codeph>.</p><p>SQL:2008 introduced a different syntax to achieve the same
+          result, which Greenplum Database also supports. It is:
+          <codeblock>OFFSET <varname>start</varname> [ ROW | ROWS ]
+FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>Both
+          clauses are optional, but if present the <codeph>OFFSET</codeph> clause must come before
+          the <codeph>FETCH</codeph> clause. <codeph>ROW</codeph> and <codeph>ROWS</codeph>, as well
+          as <codeph>FIRST</codeph> and <codeph>NEXT</codeph>, are noise words that do not influence
+          the effects of these clauses. When using expressions other than constants for the offset
+          or fetch count, parentheses will be necessary in most cases. If the fetch count is
+          omitted, it defaults to 1.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to
           use an <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique
           order. Otherwise you will get an unpredictable subset of the query's rows — you may be
           asking for the tenth through twentieth rows, but tenth through twentieth in what ordering?
@@ -794,6 +806,15 @@ OFFSET <varname>start</varname></codeblock><p>where
             SHARE</codeph> clauses, then it is processed as <codeph>FOR UPDATE</codeph>. Similarly,
           a table is processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses
           affecting it.</p></sectiondiv>
+    </section>
+    <section>
+      <title>The TABLE Command</title>
+      <p>The command</p>
+      <codeblock>TABLE <varname>name</varname></codeblock>
+      <p>is completely equivalent to</p>
+      <codeblock>SELECT * FROM <varname>name</varname></codeblock>
+      <p>It can be used as a top-level command or as a space-saving syntax variant in parts of
+        complex queries.</p>
     </section>
     <section id="section18">
       <title>Examples</title>
@@ -920,8 +941,14 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           </p><p>SQL:1999 and later use a slightly different definition which is not entirely upward
           compatible with SQL-92. In most cases, however, Greenplum Database interprets an
             <codeph>ORDER BY</codeph> or <codeph>GROUP BY</codeph> expression the same way SQL:1999
-          does. </p></sectiondiv><sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clauses
-            <codeph>DISTINCT ON</codeph>, <codeph>LIMIT</codeph>, and <codeph>OFFSET</codeph> are
+          does. </p></sectiondiv>
+      <sectiondiv><b>LIMIT and OFFSET</b><p>The clauses <codeph>LIMIT</codeph> and
+            <codeph>OFFSET</codeph> are Greenplum Database-specific syntax, also used by MySQL. The
+          SQL:2008 standard has introduced the clauses <codeph>OFFSET .. FETCH {FIRST|NEXT}
+            ...</codeph> for the same functionality, as shown above, and this syntax is also used by
+          IBM DB2. (Applications for Oracle frequently use a workaround involving the automatically
+          generated <codeph>rownum</codeph> column, not available in Greenplum Database, to
+          implement the effects of these clauses.)</p></sectiondiv><sectiondiv id="section23"><b>Nonstandard Clauses</b><p>The clause <codeph>DISTINCT ON</codeph> is
           not defined in the SQL standard.</p></sectiondiv><sectiondiv id="section24"><b>Limited Use
           of STABLE and VOLATILE Functions</b><p>To prevent data from becoming out-of-sync across
           the segments in Greenplum Database, any function classified as <codeph>STABLE</codeph> or

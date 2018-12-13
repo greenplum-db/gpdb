@@ -84,7 +84,7 @@ CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd
 ERROR:  value -1 out of bounds for option "compresslevel"
 DETAIL:  Valid values are between "0" and "19".
 CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=0);
-ERROR:  compresstype can't be used with compresslevel 0
+ERROR:  compresstype "zstd" can't be used with compresslevel 0
 CREATE TABLE zstdtest_invalid (id int4) WITH (appendonly=true, compresstype=zstd, compresslevel=20);
 ERROR:  value 20 out of bounds for option "compresslevel"
 DETAIL:  Valid values are between "0" and "19".

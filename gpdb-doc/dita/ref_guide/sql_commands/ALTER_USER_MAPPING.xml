@@ -7,26 +7,26 @@
         <p id="sql_command_desc">Changes the definition of a user mapping for a foreign server.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">ALTER USER MAPPING FOR { <varname>user_name</varname> | USER | CURRENT_USER | PUBLIC }
-    SERVER <varname>server_name</varname>
+            <codeblock id="sql_command_synopsis">ALTER USER MAPPING FOR { <varname>username</varname> | USER | CURRENT_USER | PUBLIC }
+    SERVER <varname>servername</varname>
     OPTIONS ( [ ADD | SET | DROP ] <varname>option</varname> ['<varname>value</varname>'] [, ... ] )</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
-            <p><codeph>ALTER USER MAPPING</codeph> changes the definition of a user mapping for a foreign server.</p>
-            <p>The owner of a foreign server can alter user mappings for that server for any user. Also, a user granted <codeph>USAGE</codeph> privilege on the server can alter a user mapping for their own user name.</p>
+            <p><codeph>ALTER USER MAPPING</codeph> changes the definition of a user mapping for a
+                foreign server. Only the owner of the server can change the user mappings of that server.</p>
         </section>
         <section id="section4">
             <title>Parameters</title>
             <parml>
                 <plentry>
-                    <pt><varname>user_name</varname></pt>
+                    <pt><varname>username</varname></pt>
                     <pd>
                         <p>User name of the mapping. <codeph>CURRENT_USER</codeph> and <codeph>USER</codeph> match the name of the current user. <codeph>PUBLIC</codeph> is used to match all present and future user names in the system.</p>
                     </pd>
                 </plentry>
                 <plentry>
-                    <pt><varname>server_name</varname></pt>
+                    <pt><varname>servername</varname></pt>
                     <pd>
                         <p>Server name of the user mapping.</p>
                     </pd>

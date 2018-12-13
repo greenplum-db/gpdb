@@ -383,7 +383,8 @@ CdbDispatchUtilityStatement(struct Node *stmt,
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchUtilityStatement", debug_query_string,
+	dtmPreCommand("CdbDispatchUtilityStatement",
+				  debug_query_string ? debug_query_string : "(none)",
 				  NULL, needTwoPhase, withSnapshot,
 				  false /* inCursor */ );
 
@@ -1209,8 +1210,9 @@ cdbdisp_dispatchX(QueryDesc* queryDesc,
 		/*
 		 * Strange! Not an interrupt either.
 		 */
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-						errmsg_internal("Unable to dispatch plan.")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INTERNAL_ERROR),
+				 errmsg_internal("unable to dispatch plan")));
 	}
 
 	if (DEBUG1 >= log_min_messages)
@@ -1425,7 +1427,8 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	bool needTwoPhase = flags & DF_NEED_TWO_PHASE;
 	bool withSnapshot = flags & DF_WITH_SNAPSHOT;
 
-	dtmPreCommand("CdbDispatchCopyStart", debug_query_string,
+	dtmPreCommand("CdbDispatchCopyStart",
+				  debug_query_string ? debug_query_string : "(none)",
 				  NULL, needTwoPhase, withSnapshot,
 				  false /* inCursor */ );
 
@@ -1468,7 +1471,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	}
 
 	/*
-	 * Notice: Do not call cdbdisp_finishCommand to destory dispatcher state,
+	 * Notice: Do not call cdbdisp_finishCommand to destroy dispatcher state,
 	 * following PQputCopyData/PQgetCopyData will be called on those connections
 	 */
 	cdbCopy->dispatcherState = ds;

@@ -477,7 +477,7 @@ AppendOnlyBlockDirectory_GetEntry(
 
 		ereport(ERROR,
 				(errcode(ERRCODE_INTERNAL_ERROR),
-				 errmsg("Block directory for append-only relation '%s' does not exist",
+				 errmsg("block directory for append-only relation '%s' does not exist",
 						RelationGetRelationName(blockDirectory->aoRel))));
 		return false;
 	}

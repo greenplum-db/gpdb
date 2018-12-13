@@ -329,9 +329,6 @@ DECLARE_UNIQUE_INDEX(gp_fastsequence_objid_objmod_index, 6067, on gp_fastsequenc
 #define FastSequenceObjidObjmodIndexId 6067
 
 /* MPP-6929: metadata tracking */
-DECLARE_INDEX(pg_statlastop_classid_objid_index, 6053, on pg_stat_last_operation using btree(classid oid_ops, objid oid_ops));
-#define StatLastOpClassidObjidIndexId  6053
-
 DECLARE_UNIQUE_INDEX(pg_statlastop_classid_objid_staactionname_index, 6054, on pg_stat_last_operation using btree(classid oid_ops, objid oid_ops, staactionname name_ops));
 #define StatLastOpClassidObjidStaactionnameIndexId  6054
 

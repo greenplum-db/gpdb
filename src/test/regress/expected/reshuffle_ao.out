@@ -65,7 +65,8 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 Create table t1(a int, b int, c int) with (OIDS=:has_oids) distributed by (a,b);
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into t1 select i,i,0 from generate_series(1,100) I;
 Update t1 set c = gp_segment_id;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
@@ -291,7 +292,8 @@ select gp_debug_set_create_table_default_numsegments(2);
 (1 row)
 
 Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed randomly;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Update r1 set c = gp_segment_id;
 Select count(*) from r1;
@@ -479,7 +481,8 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed replicated;
-NOTICE:  OIDS=TRUE is not recommended for user-created tables. Use OIDS=FALSE to prevent wrap-around of the OID counter
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Select gp_segment_id, count(*) from gp_dist_random('r1') group by gp_segment_id;
  gp_segment_id | count 

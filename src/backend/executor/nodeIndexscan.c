@@ -405,7 +405,10 @@ ExecEndIndexScan(IndexScanState *node)
 #if 1
 	ExecFreeExprContext(&node->ss.ps);
 	if (node->iss_RuntimeContext)
+	{
 		FreeExprContext(node->iss_RuntimeContext, true);
+		node->iss_RuntimeContext = NULL;
+	}
 #endif
 
 	/*
@@ -596,12 +599,7 @@ ExecInitIndexScanForPartition(IndexScan *node, EState *estate, int eflags,
 	 * for every tuple.  So, build another context just like the other one...
 	 * -tgl 7/11/00
 	 */
-	/*
-	 * GPDB_84_MERGE_FIXME: For some reason, in GPDB we need the runtime key
-	 * context even when there are no runtime keys. I tried removing this,
-	 * but got a crash from the 'dpe' regression test.
-	 */
-	if (indexstate->iss_NumRuntimeKeys != 0 || TRUE)
+	if (indexstate->iss_NumRuntimeKeys != 0)
 	{
 		ExprContext *stdecontext = indexstate->ss.ps.ps_ExprContext;
 

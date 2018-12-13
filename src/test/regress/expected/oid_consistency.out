@@ -18,7 +18,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 -- Inherits
 create table t_inherits(a int, b int) inherits(t_with_default);
-NOTICE:  Table has parent, setting distribution columns to match parent table
+NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  merging column "a" with inherited definition
 NOTICE:  merging column "b" with inherited definition
 select verify('t_inherits');
@@ -28,7 +28,7 @@ select verify('t_inherits');
 (1 row)
 
 create table t_like (like t_with_default including defaults);
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
+NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
 select verify('t_like');
  verify 
 --------

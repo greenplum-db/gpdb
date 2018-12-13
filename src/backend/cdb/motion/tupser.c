@@ -273,8 +273,12 @@ addByteStringToChunkList(TupleChunkList tcList, char *data, int datalen, TupleCh
 		tcItem = getChunkFromCache(chunkCache);
 		if (tcItem == NULL)
 		{
-			ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-							errmsg("Could not allocate space for new chunk. %d of %d bytes in %d chunks", tcList->serialized_data_length, datalen, tcList->num_chunks)));
+			ereport(FATAL,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("could not allocate space for new chunk"),
+					 errdetail("%d of %d bytes in %d chunks",
+							   tcList->serialized_data_length, datalen,
+							   tcList->num_chunks)));
 		}
 		tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
 		SetChunkType(tcItem->chunk_data, TC_PARTIAL_MID);
@@ -322,8 +326,9 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	tcItem = getChunkFromCache(&pSerInfo->chunkCache);
 	if (tcItem == NULL)
 	{
-		ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg("Could not allocate space for first chunk item in new chunk list.")));
+		ereport(FATAL,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("could not allocate space for first chunk item in new chunk list")));
 	}
 
 	/* assume that we'll take a single chunk */
@@ -423,8 +428,9 @@ SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkLi
 		tcItem = getChunkFromCache(&pSerInfo->chunkCache);
 		if (tcItem == NULL)
 		{
-			ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-							errmsg("Could not allocate space for first chunk item in new chunk list.")));
+			ereport(FATAL,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("could not allocate space for first chunk item in new chunk list")));
 		}
 
 		/* TC_EMTPY is just one chunk */
@@ -438,8 +444,9 @@ SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkLi
 	tcItem = getChunkFromCache(&pSerInfo->chunkCache);
 	if (tcItem == NULL)
 	{
-		ereport(FATAL, (errcode(ERRCODE_OUT_OF_MEMORY),
-						errmsg("Could not allocate space for first chunk item in new chunk list.")));
+		ereport(FATAL,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("could not allocate space for first chunk item in new chunk list")));
 	}
 
 	/* assume that we'll take a single chunk */
@@ -1045,10 +1052,11 @@ CvtChunksToTup(TupleChunkList tcList, SerTupInfo *pSerInfo, TupleRemapper *remap
 				nullslen = 0;
 
 			if (tshp->tuplen < sizeof(TupSerHeader) + nullslen)
-				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
-								errmsg("Interconnect error: cannot convert chunks to a  heap tuple."),
-								errdetail("tuple len %d < nullslen %d + headersize (%d)",
-										  tshp->tuplen, nullslen, (int) sizeof(TupSerHeader))));
+				ereport(ERROR,
+						(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+						 errmsg("interconnect error: cannot convert chunks to a heap tuple"),
+						 errdetail("Tuple len %d < nullslen %d + headersize (%d)",
+								   tshp->tuplen, nullslen, (int) sizeof(TupSerHeader))));
 
 			datalen = tshp->tuplen - sizeof(TupSerHeader) - TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen);
 

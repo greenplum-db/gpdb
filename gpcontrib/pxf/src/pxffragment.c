@@ -527,7 +527,7 @@ process_request(ClientContext *client_context, char *uri)
 	if (client_context->handle == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_CONNECTION_FAILURE),
-				 errmsg("Unsuccessful connection to uri: \"%s\"", uri)));
+				 errmsg("unsuccessful connection to uri: \"%s\"", uri)));
 	memset(buffer, 0, RAW_BUF_SIZE);
 	resetStringInfo(&(client_context->the_rest_buf));
 

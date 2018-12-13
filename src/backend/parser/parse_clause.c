@@ -399,8 +399,8 @@ setTargetTable(ParseState *pstate, RangeVar *relation,
     {
     	ereport(ERROR,
     			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-    			 errmsg("Directly modifying intermediate part of a partitioned table is disallowed"),
-    			 errhint("Modify either the root or a leaf partition instead")));
+				 errmsg("directly modifying intermediate part of a partitioned table is disallowed"),
+				 errhint("Modify either the root or a leaf partition instead.")));
     }
 
 	/*
@@ -2222,12 +2222,12 @@ grouping_rewrite_walker(Node *node, void *context)
 				if (IsA(node, RowExpr))
 					ereport(ERROR,
 							(errcode(ERRCODE_GROUPING_ERROR),
-							 errmsg("row type can not be used inside a grouping function.")));
+							 errmsg("row type can not be used inside a grouping function")));
 
 				if (!IsA(node, Var))
 					ereport(ERROR,
 							(errcode(ERRCODE_GROUPING_ERROR),
-							 errmsg("expression in a grouping fuction does not appear in GROUP BY.")));
+							 errmsg("expression in a grouping function does not appear in GROUP BY")));
 
 				Assert(IsA(node, Var));
 				Assert(var->varno > 0);

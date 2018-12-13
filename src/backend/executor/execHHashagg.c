@@ -976,12 +976,11 @@ agg_hash_initial_pass(AggState *aggstate)
 			int tup_len = memtuple_get_size((MemTuple)entry->tuple_and_aggs);
 			MemSet((char *)entry->tuple_and_aggs + MAXALIGN(tup_len), 0,
 				   aggstate->numaggs * sizeof(AggStatePerGroupData));
-			initialize_aggregates(aggstate, aggstate->peragg, hashtable->groupaggs->aggs,
-								  &(aggstate->mem_manager));
+			initialize_aggregates(aggstate, aggstate->peragg, hashtable->groupaggs->aggs);
 		}
 			
 		/* Advance the aggregates */
-		advance_aggregates(aggstate, hashtable->groupaggs->aggs, &(aggstate->mem_manager));
+		advance_aggregates(aggstate, hashtable->groupaggs->aggs);
 		
 		hashtable->num_tuples++;
 
@@ -1855,8 +1854,7 @@ agg_hash_reload(AggState *aggstate)
 										  peraggstate->transtypeByVal,
 										  peraggstate->transtypeLen,
 										  &fcinfo, (void *)aggstate,
-										  aggstate->tmpcontext->ecxt_per_tuple_memory,
-										  &(aggstate->mem_manager));
+										  aggstate->tmpcontext->ecxt_per_tuple_memory);
 				Assert(peraggstate->transtypeByVal ||
 				       (pergroupstate->transValueIsNull ||
 					PointerIsValid(DatumGetPointer(pergroupstate->transValue))));
