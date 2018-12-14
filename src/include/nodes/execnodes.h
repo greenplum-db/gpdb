@@ -340,7 +340,6 @@ typedef void *RelationDeleteDesc;
  *		projectReturning		for computing a RETURNING list
  *		onConflictSetProj		for computing ON CONFLICT DO UPDATE SET
  *		onConflictSetWhere		list of ON CONFLICT DO UPDATE exprs (qual)
- *		tupdesc_match			???
  *		mt_bind					???
  *		aoInsertDesc			context for appendonly relation buffered INSERT.
  *		aoDeleteDesc			context for appendonly relation buffered DELETE.
@@ -375,7 +374,6 @@ typedef struct ResultRelInfo
 	ProjectionInfo *ri_projectReturning;
 	ProjectionInfo *ri_onConflictSetProj;
 	List	   *ri_onConflictSetWhere;
-	int			tupdesc_match;
 	struct MemTupleBinding *mt_bind;
 
 	struct AppendOnlyInsertDescData *ri_aoInsertDesc;

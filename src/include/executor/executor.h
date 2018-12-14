@@ -288,8 +288,6 @@ extern AttrNumber attrMap(AttrMap *map, AttrNumber anum);
 extern Node *attrMapExpr(AttrMap *map, Node *expr);
 extern bool map_part_attrs(Relation base, Relation part, AttrMap **map_ptr, bool throwerror);
 extern PartitionState *createPartitionState(PartitionNode *partsAndRules, int resultPartSize);
-extern TupleTableSlot *reconstructMatchingTupleSlot(TupleTableSlot *slot,
-													ResultRelInfo *resultRelInfo);
 extern List *InitializePartsMetadata(Oid rootOid);
 
 /*

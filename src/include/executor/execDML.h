@@ -16,13 +16,8 @@
 #ifndef EXECDML_H
 #define EXECDML_H
 
-extern void
-reconstructTupleValues(AttrMap *map,
-					Datum *oldValues, bool *oldIsnull, int oldNumAttrs,
-					Datum *newValues, bool *newIsnull, int newNumAttrs);
-
 extern TupleTableSlot *
-reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo);
+reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo, AttrMap *map);
 
 /*
  * In PostgreSQL, ExecInsert, ExecDelete and ExecUpdate are static in nodeModifyTable.c.

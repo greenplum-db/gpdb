@@ -30,7 +30,7 @@
  * reconstructTupleValues
  *   Re-construct tuple values based on the pre-defined mapping.
  */
-void
+static void
 reconstructTupleValues(AttrMap *map,
 					Datum *oldValues, bool *oldIsnull, int oldNumAttrs,
 					Datum *newValues, bool *newIsnull, int newNumAttrs)
@@ -61,38 +61,17 @@ reconstructTupleValues(AttrMap *map,
  * restructured tuple.
  */
 TupleTableSlot *
-reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo)
+reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo, AttrMap *map)
 {
 	int natts;
 	Datum *values;
 	bool *isnull;
-	AttrMap *map;
 	TupleTableSlot *partslot;
 	Datum *partvalues;
 	bool *partisnull;
 
-	map = resultRelInfo->ri_partInsertMap;
-
-	TupleDesc inputTupDesc = slot->tts_tupleDescriptor;
-	TupleDesc resultTupDesc = resultRelInfo->ri_RelationDesc->rd_att;
-	bool tupleDescMatch = (resultRelInfo->tupdesc_match == 1);
-	if (resultRelInfo->tupdesc_match == 0)
-	{
-		tupleDescMatch = equalTupleDescs(inputTupDesc, resultTupDesc, false);
-
-		if (tupleDescMatch)
-		{
-			resultRelInfo->tupdesc_match = 1;
-		}
-		else
-		{
-			resultRelInfo->tupdesc_match = -1;
-		}
-	}
-
-	/* No map and matching tuple descriptor means no restructuring needed. */
-	if (map == NULL && tupleDescMatch)
-		return slot;
+	if (!map)
+		return slot;		/* no mapping needed */
 
 	/* Put the given tuple into attribute arrays. */
 	natts = slot->tts_tupleDescriptor->natts;
@@ -105,7 +84,8 @@ reconstructMatchingTupleSlot(TupleTableSlot *slot, ResultRelInfo *resultRelInfo)
 	 */
 	if (resultRelInfo->ri_resultSlot == NULL)
 	{
-		resultRelInfo->ri_resultSlot = MakeSingleTupleTableSlot(resultTupDesc);
+		resultRelInfo->ri_resultSlot =
+			MakeSingleTupleTableSlot(resultRelInfo->ri_RelationDesc->rd_att);
 	}
 	partslot = resultRelInfo->ri_resultSlot;
 

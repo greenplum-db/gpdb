@@ -383,7 +383,8 @@ ExecInsert(ModifyTableState *mtstate,
 		}
 	}
 
-	slot = reconstructMatchingTupleSlot(parentslot, resultRelInfo);
+	slot = reconstructMatchingTupleSlot(parentslot, resultRelInfo,
+										resultRelInfo->ri_partInsertMap);
 
 	if (RelationIsExternal(resultRelationDesc) &&
 		estate->es_result_partitions &&
@@ -1168,14 +1169,10 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 
 	if (resultRelInfo->ri_PartCheckMap != NULL)
 	{
-		Datum	   *parent_values;
-		bool	   *parent_nulls;
 		Relation	parentRel = resultRelInfo->ri_PartitionParent;
-		TupleDesc	parentTupdesc;
-		AttrMap	   *map;
+		TupleTableSlot *parentslot;
 
 		Assert(parentRel != NULL);
-		parentTupdesc = RelationGetDescr(parentRel);
 
 		/*
 		 * We need to map the attribute numbers to parent's one, to
@@ -1183,19 +1180,12 @@ checkPartitionUpdate(EState *estate, TupleTableSlot *partslot,
 		 * rules are based on the parent relation's tuple descriptor.
 		 * max_partition_attr can be bogus as well, so don't use it.
 		 */
-		slot_getallattrs(partslot);
-		values = slot_get_values(partslot);
-		nulls = slot_get_isnull(partslot);
-		parent_values = palloc(parentTupdesc->natts * sizeof(Datum));
-		parent_nulls = palloc0(parentTupdesc->natts * sizeof(bool));
-
-		map = resultRelInfo->ri_PartCheckMap;
-		reconstructTupleValues(map, values, nulls, partslot->tts_tupleDescriptor->natts,
-							   parent_values, parent_nulls, parentTupdesc->natts);
+		parentslot = reconstructMatchingTupleSlot(partslot, resultRelInfo,
+												  resultRelInfo->ri_PartCheckMap);
 
 		/* Now we have values/nulls in parent's view. */
-		values = parent_values;
-		nulls = parent_nulls;
+		values = slot_get_values(parentslot);
+		nulls = slot_get_isnull(parentslot);
 		tupdesc = RelationGetDescr(parentRel);
 	}
 	else
@@ -1313,7 +1303,7 @@ ExecUpdate(ItemPointer tupleid,
 		 * columns, and MemTuple cannot deal with cases without converting
 		 * the target list back into the original relation's tuple desc.
 		 */
-		slot = reconstructMatchingTupleSlot(slot, resultRelInfo);
+		slot = reconstructMatchingTupleSlot(slot, resultRelInfo, resultRelInfo->ri_partInsertMap);
 	}
 
 	/* see if this update would move the tuple to a different partition */
