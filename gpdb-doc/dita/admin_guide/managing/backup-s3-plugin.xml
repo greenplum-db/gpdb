@@ -78,8 +78,8 @@
               </plentry>
               <plentry id="s3-key">
                 <pt>aws_secret_access_key</pt>
-                <pd>The S3 passcode for the S3 ID to access the S3 bucket location. Required only if
-                  you specify <codeph>aws_access_key_id</codeph>.</pd>
+                <pd>Required only if you specify <codeph>aws_access_key_id</codeph>. The S3 passcode
+                  for the S3 ID to access the S3 bucket location.</pd>
               </plentry>
               <plentry id="s3-bucket">
                 <pt>bucket</pt>
