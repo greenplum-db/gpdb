@@ -78,9 +78,8 @@
               </plentry>
               <plentry id="s3-key">
                 <pt>aws_secret_access_key</pt>
-                <pd>The S3 passcode for the S3 ID to access the S3 bucket location. Must be
-                  specified only when <codeph>aws_access_key_id</codeph> is also specified in the
-                  configuration file.</pd>
+                <pd>The S3 passcode for the S3 ID to access the S3 bucket location. Required only if
+                  you specify <codeph>aws_access_key_id</codeph>.</pd>
               </plentry>
               <plentry id="s3-bucket">
                 <pt>bucket</pt>
@@ -147,14 +146,15 @@ options:
       <p>If <codeph>aws_access_key_id</codeph> and <codeph>aws_secret_access_key</codeph> are not
         specified in the configuration file, the S3 plugin uses S3 authentication information from
         the system environment of the session running the backup operation. The S3 plugin searches
-        for the information in this order.<ol id="ul_mkl_y1l_cgb">
-          <li>The environment variables <codeph>AWS_ACCESS_KEY_ID</codeph> and
-              <codeph>AWS_SECRET_ACCESS_KEY</codeph>.</li>
-          <li>The authentication information set with the AWS CLI command <codeph>aws
-              configure</codeph>.</li>
-          <li>The credentials of the Amazon EC2 IAM role if the backup is run from an EC2
-            instance.</li>
-        </ol></p>
+        for the information in these sources, using the first available source.</p>
+      <ol id="ul_mkl_y1l_cgb">
+        <li>The environment variables <codeph>AWS_ACCESS_KEY_ID</codeph> and
+            <codeph>AWS_SECRET_ACCESS_KEY</codeph>.</li>
+        <li>The authentication information set with the AWS CLI command <codeph>aws
+            configure</codeph>.</li>
+        <li>The credentials of the Amazon EC2 IAM role if the backup is run from an EC2
+          instance.</li>
+      </ol>
       <p>For information about Amazon S3, see <xref href="https://aws.amazon.com/s3/" format="html"
           scope="external">Amazon S3</xref>.<ul id="ul_g2h_2qn_ndb">
           <li>For information about Amazon S3 regions and endpoints, see <xref
