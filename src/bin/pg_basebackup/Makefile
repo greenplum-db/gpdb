@@ -18,9 +18,11 @@ include $(top_builddir)/src/Makefile.global
 
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
 
-OBJS=receivelog.o streamutil.o $(WIN32RES)
+OBJS=receivelog.o streamutil.o replicationslot.o $(WIN32RES)
 
 all: pg_basebackup pg_receivexlog pg_recvlogical
+
+replication_slot: replicationslot.o
 
 pg_basebackup: pg_basebackup.o $(OBJS) | submake-libpq submake-libpgport
 	$(CC) $(CFLAGS) pg_basebackup.o $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)

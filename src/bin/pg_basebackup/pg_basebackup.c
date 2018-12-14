@@ -34,6 +34,7 @@
 #include "replication/basebackup.h"
 #include "streamutil.h"
 #include "catalog/catalog.h"
+#include "replicationslot.h"
 
 #define atooid(x)  ((Oid) strtoul((x), NULL, 10))
 
@@ -1692,6 +1693,19 @@ build_exclude_list(char **exclude_list, int num)
 	return buf.data;
 }
 
+static void libpq_create_physical_replication_slot(const char *slot_name) {
+	PQExpBuffer query;
+	PGresult   *res;
+
+	query = createPQExpBuffer();
+	appendPQExpBuffer(query,
+		"CREATE_REPLICATION_SLOT \"%s\" PHYSICAL",
+		slot_name);
+	res = PQexec(conn, query->data);
+	destroyPQExpBuffer(query);
+	PQclear(res);
+}
+
 static void
 BaseBackup(void)
 {
@@ -1743,6 +1757,10 @@ BaseBackup(void)
 		/* Error message already written in CheckServerVersionForStreaming() */
 		disconnect_and_exit(1);
 	}
+
+	if (replication_slot)
+		CreateReplicationSlot(replication_slot,
+		                      libpq_create_physical_replication_slot);
 
 	/*
 	 * Build contents of recovery.conf if requested

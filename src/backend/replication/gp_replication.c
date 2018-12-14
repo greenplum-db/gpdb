@@ -34,12 +34,6 @@ GetMirrorStatus(FtsResponse *response)
 	response->IsInSync = false;
 	response->RequestRetry = false;
 
-	/*
-	 * Greenplum currently supports only ONE mirror per primary.
-	 * If there are more mirrors, this logic in this function need to be revised.
-	 */
-	Assert(max_wal_senders == 1);
-
 	LWLockAcquire(SyncRepLock, LW_SHARED);
 
 	for (int i = 0; i < max_wal_senders; i++)
