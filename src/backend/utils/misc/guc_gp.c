@@ -580,6 +580,16 @@ static const struct config_enum_entry gp_gpperfmon_log_alert_level[] = {
 	{NULL, 0}
 };
 
+static const struct config_enum_entry test_time_slice_report_level_options[] = {
+	{"notice", NOTICE},
+	{"warning", WARNING},
+	{"error", ERROR},
+	{"log", LOG},
+	{"fatal", FATAL},
+	{"panic", PANIC},
+	{NULL, 0}
+};
+
 static const struct config_enum_entry password_hash_algorithm_options[] = {
 	/* {"none", PASSWORD_HASH_NONE}, * this option is not exposed */
 	{"MD5", PASSWORD_HASH_MD5},
@@ -4680,7 +4690,7 @@ struct config_enum ConfigureNamesEnum_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_test_time_slice_report_level,
-		ERROR, server_message_level_options,
+		ERROR, test_time_slice_report_level_options,
 		NULL, NULL, NULL
 	},
 

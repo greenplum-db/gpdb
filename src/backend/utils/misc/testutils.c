@@ -65,9 +65,6 @@ TimeSliceReset()
 void
 TimeSliceCheck(const char *file, int line)
 {
-	Assert(gp_test_time_slice);
-	Assert(IsValidReportLevel(gp_test_time_slice_report_level));
-
 	struct rusage ru;
 	int32 elapsedMs = 0;
 
@@ -85,8 +82,6 @@ TimeSliceCheck(const char *file, int line)
 
 	elapsedMs = timeElapsedMs(&ru.ru_utime, &userTimeLastCFI);
 
-	Assert(0 <= elapsedMs);
-
 	/* check elapsed time since last CFI  */
 	if (gp_test_time_slice_interval < elapsedMs)
 	{
@@ -98,15 +93,22 @@ TimeSliceCheck(const char *file, int line)
 
 		/* report time slice violation error */
 		ereport(gp_test_time_slice_report_level,
-				(errmsg("Time slice of %d ms exceeded at (%s:%d), last CFI before %d ms.\n"
-						"Stack trace of last CFI:\n%s\n"
-						"Current stack trace:\n%s\n",
+				(errmsg("Time slice of %d ms exceeded at (%s:%d), last CFI before %d ms)",
 						gp_test_time_slice_interval,
 						file,
 						line,
-						elapsedMs,
-						stackTraceLastCFI,
-						stackTraceCurrent)));
+						elapsedMs),
+				 errdetail("Stack trace of last CFI:\n%s\nCurrent stack trace:\n%s\n",
+						   stackTraceLastCFI,
+						   stackTraceCurrent)));
+
+		/*
+		 * If gp_test_time_slice_report_level is set to a lower elevel than
+		 * ERROR we need to free the stacktrace to avoid leaking here, else
+		 * the error handling will take care of it for us.
+		 */
+		pfree(stackTraceLastCFI);
+		pfree(stackTraceCurrent);
 	}
 
 	/* reset time slice */

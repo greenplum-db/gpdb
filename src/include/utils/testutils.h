@@ -18,7 +18,6 @@
 
 #ifdef USE_TEST_UTILS
 
-#define CHECK_TIME_SLICE()      TimeSliceCheck(__FILE__, __LINE__)
 
 /* external variables */
 extern PGDLLIMPORT volatile int32 InterruptHoldoffCount;
@@ -27,6 +26,8 @@ extern PGDLLIMPORT volatile int32 CritSectionCount;
 /* time slicing */
 extern void TimeSliceReset(void);
 extern void TimeSliceCheck(const char *file, int line);
+
+#define CHECK_TIME_SLICE()      TimeSliceCheck(__FILE__, __LINE__)
 
 #if defined(__i386) || defined(__x86_64__)
 
