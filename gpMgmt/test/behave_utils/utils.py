@@ -27,10 +27,13 @@ if master_data_dir is None:
 
 
 def execute_sql(dbname, sql):
+    result = None
+
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        dbconn.execSQL(conn, sql)
+        result = dbconn.execSQL(conn, sql)
         conn.commit()
 
+    return result
 
 def execute_sql_singleton(dbname, sql):
     result = None

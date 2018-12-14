@@ -2175,7 +2175,14 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&max_wal_senders,
-		1, 0, 1, /* GPDB doesn't support 1:n replication yet */
+		/*
+		 * GPDB doesn't support 1:n replication yet.  In normal operation,
+		 * when primary and mirror are streaming WAL, only 1 WalSnd should be
+		 * active.  We need 2 during base backup, 1 WalSnd to serve backup
+		 * request and 1 WalSnd to serve the log streamer process started by
+		 * pg_basebackup.
+		 */
+		10, 2, MAX_BACKENDS,
 		NULL, NULL, NULL
 	},
 
@@ -2186,7 +2193,7 @@ static struct config_int ConfigureNamesInt[] =
 			NULL
 		},
 		&max_replication_slots,
-		0, 0, MAX_BACKENDS /* XXX? */ ,
+		10, 1, MAX_BACKENDS /* XXX? */ ,
 		NULL, NULL, NULL
 	},
 
