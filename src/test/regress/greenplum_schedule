@@ -37,7 +37,7 @@ test: gp_tablespace
 test: temp_tablespaces
 test: default_tablespace
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp matview_ao
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy_encoding gp_create_table gp_create_view window_views create_table_like_gp matview_ao gpcopy_dispatch
 # below test(s) inject faults so each of them need to be in a separate group
 test: gpcopy
 

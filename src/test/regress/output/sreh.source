@@ -37,8 +37,8 @@ SELECT * FROM sreh_copy ORDER BY a,b,c;
 --
 COPY sreh_copy FROM '@abs_srcdir@/data/bad_data1.data' DELIMITER '|' SEGMENT REJECT LIMIT 2;
 ERROR:  segment reject limit reached, aborting operation
-DETAIL:  Last error was: invalid input syntax for integer: "", column b
-CONTEXT:  COPY sreh_copy, line 8, column a
+DETAIL:  Last error was: invalid input syntax for integer: "eleven", column a
+CONTEXT:  COPY sreh_copy, line 11, column a: "eleven"
 SELECT * FROM sreh_copy ORDER BY a,b,c;
  a  | b  | c  
 ----+----+----
