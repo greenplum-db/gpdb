@@ -165,7 +165,7 @@ class GpSegStart:
 
         # initialize state
         #
-        self.pool                  = base.WorkerPool(numWorkers=len(dblist))
+        self.pool                  = base.WorkerPool(numWorkers=min(len(dblist), gp.SEGMENT_START_MAX_WORKERS))
         self.logger                = logger
         self.overall_status        = None
 

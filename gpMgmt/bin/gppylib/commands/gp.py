@@ -29,6 +29,9 @@ GPHOME=os.environ.get('GPHOME')
 SEGMENT_TIMEOUT_DEFAULT=600
 SEGMENT_STOP_TIMEOUT_DEFAULT=120
 
+#Maximum allowed number of workers for segstart
+SEGMENT_START_MAX_WORKERS=64
+
 #"Command not found" return code in bash
 COMMAND_NOT_FOUND=127
 
