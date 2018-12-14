@@ -44,9 +44,10 @@ GetMirrorStatus(FtsResponse *response)
 
 	for (int i = 0; i < max_wal_senders; i++)
 	{
-		/* use volatile pointer to prevent code rearrangement */
-		volatile WalSnd *walsnd = &WalSndCtl->walsnds[i];
+		WalSnd   *walsnd = &WalSndCtl->walsnds[i];
+		pg_time_t walsnd_replica_disconnected_at;
 
+		SpinLockAcquire(&walsnd->mutex);
 		if (walsnd->pid != 0)
 		{
 			/*
@@ -62,9 +63,12 @@ GetMirrorStatus(FtsResponse *response)
 				response->IsInSync = (walsnd->state == WALSNDSTATE_STREAMING);
 			}
 		}
+		walsnd_replica_disconnected_at = walsnd->replica_disconnected_at;
+		SpinLockRelease(&walsnd->mutex);
+
 		if (!response->IsMirrorUp)
 		{
-			Assert(walsnd->replica_disconnected_at);
+			Assert(walsnd_replica_disconnected_at);
 			/*
 			 * PMAcceptingConnectionStartTime is process-local variable, set in
 			 * postmaster process and inherited by the FTS handler child
@@ -73,7 +77,7 @@ GetMirrorStatus(FtsResponse *response)
 			 * processes can be spawned.
 			 */
 			Assert(PMAcceptingConnectionsStartTime);
-			pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsnd->replica_disconnected_at, PMAcceptingConnectionsStartTime);
+			pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsnd_replica_disconnected_at, PMAcceptingConnectionsStartTime);
 			/*
 			 * Report mirror as down, only if it didn't connect for below
 			 * grace period to primary. This helps to avoid marking mirror
@@ -90,7 +94,7 @@ GetMirrorStatus(FtsResponse *response)
 				ereport(LOG,
 						(errmsg("requesting fts retry as mirror didn't connect yet but in grace period: " INT64_FORMAT, delta),
 						 errdetail("pid zero at time: " INT64_FORMAT " accept connections start time: " INT64_FORMAT,
-									  walsnd->replica_disconnected_at, PMAcceptingConnectionsStartTime)));
+									  walsnd_replica_disconnected_at, PMAcceptingConnectionsStartTime)));
 				response->RequestRetry = true;
 			}
 		}

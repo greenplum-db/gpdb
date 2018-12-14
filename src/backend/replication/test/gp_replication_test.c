@@ -74,6 +74,7 @@ test_GetMirrorStatus_Pid_Zero(void **state)
 	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
@@ -103,6 +104,7 @@ test_GetMirrorStatus_RequestRetry(void **state)
 	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * Make the pid zero time within the grace period.
 	 */
@@ -133,6 +135,7 @@ test_GetMirrorStatus_Delayed_AcceptingConnectionsStartTime(void **state)
 	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * wal sender pid zero time over the grace period
 	 * Mirror will be marked down, and no retry.
@@ -163,6 +166,7 @@ test_GetMirrorStatus_Overflow(void **state)
 	max_wal_senders = 1;
 	WalSndCtl = &data;
 	data.walsnds[0].pid = 0;
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
@@ -185,6 +189,7 @@ test_GetMirrorStatus_WALSNDSTATE_STARTUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_STARTUP);
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * This would make sure Mirror is not reported as DOWN, as still in grace
 	 * period.
@@ -207,6 +212,7 @@ test_GetMirrorStatus_WALSNDSTATE_BACKUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_BACKUP);
+	SpinLockInit(&data.walsnds[0].mutex);
 	/*
 	 * This would make sure Mirror is reported as DOWN, as grace period
 	 * duration is taken into account.
@@ -233,6 +239,7 @@ test_GetMirrorStatus_WALSNDSTATE_CATCHUP(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_CATCHUP);
+	SpinLockInit(&data.walsnds[0].mutex);
 	GetMirrorStatus(&response);
 
 	assert_true(response.IsMirrorUp);
@@ -246,6 +253,7 @@ test_GetMirrorStatus_WALSNDSTATE_STREAMING(void **state)
 	WalSndCtlData data;
 
 	test_setup(&data, WALSNDSTATE_STREAMING);
+	SpinLockInit(&data.walsnds[0].mutex);
 	GetMirrorStatus(&response);
 
 	assert_true(response.IsMirrorUp);

@@ -2055,12 +2055,11 @@ WalSndKill(int code, Datum arg)
 
 	DisownLatch(&walsnd->latch);
 
-	/*
-	 * Mark WalSnd struct no longer in use. Assume that no lock is required
-	 * for this.
-	 */
+	SpinLockAcquire(&walsnd->mutex);
+	/* Mark WalSnd struct as no longer being in use. */
 	walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
 	walsnd->pid = 0;
+	SpinLockRelease(&walsnd->mutex);
 }
 
 /*
@@ -2802,10 +2801,11 @@ WalSndSetState(WalSndState state)
 
 	SpinLockAcquire(&walsnd->mutex);
 	walsnd->state = state;
-	SpinLockRelease(&walsnd->mutex);
-
-	if(state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
+	if (state == WALSNDSTATE_CATCHUP || state == WALSNDSTATE_STREAMING)
 		walsnd->replica_disconnected_at = 0;
+	else if (walsnd->replica_disconnected_at == 0)
+		walsnd->replica_disconnected_at = (pg_time_t) time(NULL);
+	SpinLockRelease(&walsnd->mutex);
 }
 
 /*
