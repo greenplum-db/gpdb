@@ -79,6 +79,7 @@ class GpStart(GpTestCase):
         self.mock_gp.get_masterdatadir.return_value = 'masterdatadir'
         self.mock_gp.GpCatVersion.local.return_value = 1
         self.mock_gp.GpCatVersionDirectory.local.return_value = 1
+        self.mock_gp.DEFAULT_GPSTART_NUM_WORKERS = gp.DEFAULT_GPSTART_NUM_WORKERS
         sys.argv = ["gpstart"]  # reset to relatively empty args list
 
     def tearDown(self):

@@ -58,7 +58,7 @@ class StartSegmentsResult:
 
     def addFailure(self, segment, reason, reasonCode):
         self.__failedSegments.append(FailedSegmentResult(segment, reason, reasonCode))
-        
+
     def clearSuccessfulSegments(self):
         self.__successfulSegments = []
 
@@ -67,13 +67,13 @@ class StartSegmentsOperation:
        This operation, to be run from the master, will start the segments up
             and, if necessary, convert them to the proper mode
 
-       Note that this can be used to start only a subset of the segments 
+       Note that this can be used to start only a subset of the segments
 
     """
 
     def __init__(self, workerPool, quiet, localeData, gpVersion,
                  gpHome, masterDataDirectory, master_checksum_value=None, timeout=SEGMENT_TIMEOUT_DEFAULT,
-                 specialMode=None, wrapper=None, wrapper_args=None,
+                 specialMode=None, wrapper=None, wrapper_args=None, parallel=gp.DEFAULT_GPSTART_NUM_WORKERS,
                  logfileDirectory=False):
         checkNotNone("workerPool", workerPool)
         self.__workerPool = workerPool
@@ -87,6 +87,7 @@ class StartSegmentsOperation:
         self.__specialMode = specialMode
         self.__wrapper = wrapper
         self.__wrapper_args = wrapper_args
+        self.__parallel = parallel
         self.master_checksum_value = master_checksum_value
         self.logfileDirectory = logfileDirectory
 
@@ -215,6 +216,7 @@ class StartSegmentsOperation:
                                    specialMode=self.__specialMode,
                                    wrapper=self.__wrapper,
                                    wrapper_args=self.__wrapper_args,
+                                   parallel=self.__parallel,
                                    logfileDirectory=self.logfileDirectory)
             self.__workerPool.addCommand(cmd)
             dispatchCount+=1
