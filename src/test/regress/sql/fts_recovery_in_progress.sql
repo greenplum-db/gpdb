@@ -5,7 +5,7 @@
 -- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- end_ignore
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 select gp_inject_fault_infinite('fts_conn_startup_packet', 'skip', dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
 -- to make test deterministic and fast
@@ -28,7 +28,7 @@ show gp_fts_probe_retries;
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_conn_startup_packet', 3, dbid)
 from gp_segment_configuration where content = 0 and role = 'p';
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 
 -- test other scenario where recovery on primary is hung and hence FTS marks
 -- primary down and promotes mirror. When 'fts_recovery_in_progress' is set to
@@ -41,11 +41,10 @@ from gp_segment_configuration where content = 0 and role = 'p';
 -- see the effect due to the fault.
 select gp_request_fts_probe_scan();
 select gp_request_fts_probe_scan();
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
-
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 -- The remaining steps are to bring back the cluster to original state.
 -- start_ignore
-\! gprecoverseg -a
+\! gprecoverseg -av
 -- end_ignore
 
 -- loop while segments come in sync
@@ -59,10 +58,10 @@ begin
   end loop;
 end;
 $$;
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 
 -- start_ignore
-\! gprecoverseg -ar
+\! gprecoverseg -arv
 -- end_ignore
 
 -- loop while segments come in sync
@@ -76,7 +75,7 @@ begin
   end loop;
 end;
 $$;
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
 
 -- start_ignore
 \!gpconfig -r gp_fts_probe_retries --masteronly

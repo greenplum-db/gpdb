@@ -5,11 +5,11 @@
 -- start_ignore
 CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 -- end_ignore
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
- role | preferred_role | mode 
-------+----------------+------
- p    | p              | s
- m    | m              | s
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+ role | preferred_role | mode | status 
+------+----------------+------+--------
+ p    | p              | s    | u
+ m    | m              | s    | u
 (2 rows)
 
 select gp_inject_fault_infinite('fts_conn_startup_packet', 'skip', dbid)
@@ -60,11 +60,11 @@ NOTICE:  Success:  (seg0 127.0.0.1:25432 pid=26540)
  t
 (1 row)
 
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
- role | preferred_role | mode 
-------+----------------+------
- p    | p              | s
- m    | m              | s
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+ role | preferred_role | mode | status 
+------+----------------+------+--------
+ p    | p              | s    | u
+ m    | m              | s    | u
 (2 rows)
 
 -- test other scenario where recovery on primary is hung and hence FTS marks
@@ -94,16 +94,16 @@ select gp_request_fts_probe_scan();
  t
 (1 row)
 
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
- role | preferred_role | mode 
-------+----------------+------
- m    | p              | n
- p    | m              | n
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+ role | preferred_role | mode | status 
+------+----------------+------+--------
+ m    | p              | n    | d
+ p    | m              | n    | u
 (2 rows)
 
 -- The remaining steps are to bring back the cluster to original state.
 -- start_ignore
-\! gprecoverseg -a
+\! gprecoverseg -av
 -- end_ignore
 -- loop while segments come in sync
 do $$
@@ -116,15 +116,15 @@ begin
   end loop;
 end;
 $$;
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
- role | preferred_role | mode 
-------+----------------+------
- p    | m              | s
- m    | p              | s
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+ role | preferred_role | mode | status 
+------+----------------+------+--------
+ p    | m              | s    | u
+ m    | p              | s    | u
 (2 rows)
 
 -- start_ignore
-\! gprecoverseg -ar
+\! gprecoverseg -arv
 -- end_ignore
 -- loop while segments come in sync
 do $$
@@ -137,11 +137,11 @@ begin
   end loop;
 end;
 $$;
-select role, preferred_role, mode from gp_segment_configuration where content = 0;
- role | preferred_role | mode 
-------+----------------+------
- p    | p              | s
- m    | m              | s
+select role, preferred_role, mode, status from gp_segment_configuration where content = 0;
+ role | preferred_role | mode | status 
+------+----------------+------+--------
+ p    | p              | s    | u
+ m    | m              | s    | u
 (2 rows)
 
 -- start_ignore
