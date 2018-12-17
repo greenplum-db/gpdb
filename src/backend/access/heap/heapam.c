@@ -8019,23 +8019,8 @@ heap_xlog_delete(XLogRecPtr lsn, XLogRecord *record)
 		return;
 	page = (Page) BufferGetPage(buffer);
 
-	if (Debug_print_qd_mirroring)
-	{
-		XLogRecPtr pagelsn = PageGetLSN(page);
-		elog(LOG, "heap_xlog_delete: page lsn = (%X,%X)",
-			 (uint32) (pagelsn >> 32), (uint32) pagelsn);
-	}
-
 	if (lsn <= PageGetLSN(page))	/* changes are applied */
 	{
-		if (Debug_print_qd_mirroring)
-		{
-			XLogRecPtr pagelsn = PageGetLSN(page);
-			elog(LOG, "delete already appplied: lsn (%X,%X), page (%X,%X)",
-				 (uint32) (lsn >> 32), (uint32) lsn,
-				 (uint32) (pagelsn >> 32), (uint32) pagelsn);
-		}
-
 		UnlockReleaseBuffer(buffer);
 		return;
 	}
@@ -8130,13 +8115,6 @@ heap_xlog_insert(XLogRecPtr lsn, XLogRecord *record)
 
 		if (lsn <= PageGetLSN(page))	/* changes are applied */
 		{
-			if (Debug_print_qd_mirroring)
-			{
-				XLogRecPtr pagelsn = PageGetLSN(page);
-				elog(LOG, "insert already appplied: lsn (%X,%X), page (%X,%X)",
-					 (uint32) (lsn >> 32), (uint32) lsn,
-					 (uint32) (pagelsn >> 32), (uint32) pagelsn);
-			}
 			UnlockReleaseBuffer(buffer);
 			return;
 		}

@@ -249,12 +249,13 @@ checkIfFailedDueToRecoveryInProgress(fts_segment_info *ftsInfo)
 			ftsInfo->recovery_making_progress = true;
 			ftsInfo->xlogrecptr = tmpptr;
 			elogif(gp_log_fts >= GPVARS_VERBOSITY_VERBOSE, LOG,
-				 "FTS: detected segment is in recovery mode replayed (%s) (content=%d) "
-				 "primary dbid=%d, mirror dbid=%d",
-				 XLogLocationToString(tmpptr),
-				 ftsInfo->primary_cdbinfo->segindex,
-				 ftsInfo->mirror_cdbinfo->dbid,
-				 ftsInfo->mirror_cdbinfo->dbid);
+				   "FTS: detected segment is in recovery mode replayed (%X/%X) (content=%d) "
+				   "primary dbid=%d, mirror dbid=%d",
+				   (uint32) (tmpptr >> 32),
+				   (uint32) tmpptr,
+				   ftsInfo->primary_cdbinfo->segindex,
+				   ftsInfo->mirror_cdbinfo->dbid,
+				   ftsInfo->mirror_cdbinfo->dbid);
 		}
 	}
 }

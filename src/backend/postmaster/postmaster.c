@@ -2298,8 +2298,8 @@ retry1:
 						ereport(FATAL,
 								(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 								 errmsg(POSTMASTER_IN_RECOVERY_MSG),
-								 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
-										   XLogLocationToString(recptr))));
+								 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
+										   (uint32) (recptr >> 32), (uint32) recptr)));
 					}
 #endif
 				}
@@ -2434,8 +2434,8 @@ retry1:
 			ereport(FATAL,
 					(errcode(ERRCODE_CANNOT_CONNECT_NOW),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
-					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
-						   XLogLocationToString(recptr))));
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
+						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
 		case CAC_TOOMANY:
 			ereport(FATAL,
@@ -2457,8 +2457,8 @@ retry1:
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
-					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %s",
-						   XLogLocationToString(recptr))));
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
+						   (uint32) (recptr >> 32), (uint32) recptr)));
 			break;
 		case CAC_OK:
 			break;

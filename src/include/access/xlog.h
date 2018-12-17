@@ -371,16 +371,6 @@ extern XLogRecPtr GetFlushRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
 
 extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);
-extern char *XLogLocationToString(XLogRecPtr loc);
-extern char *XLogLocationToString2(XLogRecPtr loc);
-extern char *XLogLocationToString3(XLogRecPtr loc);
-extern char *XLogLocationToString4(XLogRecPtr loc);
-extern char *XLogLocationToString5(XLogRecPtr loc);
-extern char *XLogLocationToString_Long(XLogRecPtr loc);
-extern char *XLogLocationToString2_Long(XLogRecPtr loc);
-extern char *XLogLocationToString3_Long(XLogRecPtr loc);
-extern char *XLogLocationToString4_Long(XLogRecPtr loc);
-extern char *XLogLocationToString5_Long(XLogRecPtr loc);
 
 extern void HandleStartupProcInterrupts(void);
 extern void StartupProcessMain(void);
