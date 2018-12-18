@@ -784,7 +784,7 @@ class NewGpStop(Command):
 
 #-----------------------------------------------
 class GpStop(Command):
-    def __init__(self, name, masterOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None, ctxt=LOCAL, remoteHost=None, logfileDirectory=False, reload=False):
+    def __init__(self, name, masterOnly=False, verbose=False, quiet=False, restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False, ctxt=LOCAL, remoteHost=None, logfileDirectory=False):
         self.cmdStr="$GPHOME/bin/gpstop -a"
         if masterOnly:
             self.cmdStr += " -m"
@@ -800,6 +800,8 @@ class GpStop(Command):
             self.cmdStr += " -v"
         if quiet:
             self.cmdStr += " -q"
+        if parallel:
+            self.cmdStr += " -B %s" % parallel
         if logfileDirectory:
             self.cmdStr += " -l '" + logfileDirectory + "'"
         if reload:
@@ -807,8 +809,8 @@ class GpStop(Command):
         Command.__init__(self,name,self.cmdStr,ctxt,remoteHost)
 
     @staticmethod
-    def local(name,masterOnly=False, verbose=False, quiet=False,restart=False, fast=False, force=False, datadir=None, reload=False):
-        cmd=GpStop(name,masterOnly,verbose,quiet,restart,fast,force,datadir,reload=reload)
+    def local(name,masterOnly=False, verbose=False, quiet=False,restart=False, fast=False, force=False, datadir=None, parallel=None, reload=False):
+        cmd=GpStop(name,masterOnly,verbose,quiet,restart,fast,force,datadir,parallel,reload)
         cmd.run(validateAfter=True)
         return cmd
 
