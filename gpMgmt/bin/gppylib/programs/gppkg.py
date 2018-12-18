@@ -21,6 +21,7 @@ try:
     from gppylib.operations.unix import ListFilesByPattern
 
     import yaml
+    import platform
 except ImportError, ex:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(ex))
 
@@ -45,6 +46,7 @@ class GpPkgProgram:
         self.clean = options.clean
         self.migrate = options.migrate
         self.interactive = options.interactive
+        self.filename = options.filename
 
         # only one of the following may be provided: --install, --remove, --update, --query, --build, --clean, --migrate
         count = sum([1 for opt in ['install', 'remove', 'update', 'query', 'build', 'clean', 'migrate'] if getattr(self, opt)])
@@ -99,6 +101,7 @@ class GpPkgProgram:
         add_to.add_option('-b', '--build', help='build a gppkg', metavar='<directory>')
         add_to.add_option('-c', '--clean', help='clean the cluster of the given gppkg', action='store_true')
         add_to.add_option('--migrate', help='migrate gppkgs from a separate $GPHOME', metavar='<from_gphome> <to_gphome>', action='store_true', default=False)
+        add_to.add_option('-f', '--filename', help='set specific package name', metavar='<name>')
 
         add_to = OptionGroup(parser, 'Query Options')
         parser.add_option_group(add_to)
@@ -169,7 +172,10 @@ class GpPkgProgram:
 
     def run(self):
         if self.build:
-            BuildGppkg(self.build).run()
+            if self.filename:
+                BuildGppkg(self.build, self.filename).run()
+            else:
+                BuildGppkg(self.build, None).run()
             return
 
         #Check for RPM and Solaris OS
@@ -177,13 +183,17 @@ class GpPkgProgram:
             raise ExceptionNoStackTraceNeeded('gppkg is not supported on Solaris')
 
         try:
-            cmd = Command(name = 'Check for rpm', cmdStr = 'rpm --version')
-            cmd.run(validateAfter = True)
-            results = cmd.get_results().stdout.strip()
-            rpm_version_string = results.split(' ')[-1]
+            if platform.linux_distribution()[0] == 'Ubuntu':
+                cmd = Command(name='Check for dpkg', cmdStr='dpkg --version')
+                cmd.run(validateAfter=True)
+            else:
+                cmd = Command(name = 'Check for rpm', cmdStr = 'rpm --version')
+                cmd.run(validateAfter = True)
+                results = cmd.get_results().stdout.strip()
+                rpm_version_string = results.split(' ')[-1]
 
-            if not rpm_version_string.startswith('4.'):
-                raise ExceptionNoStackTraceNeeded('gppkg requires rpm version 4.x')
+                if not rpm_version_string.startswith('4.'):
+                    raise ExceptionNoStackTraceNeeded('gppkg requires rpm version 4.x')
 
         except ExecutionError, ex:
             results = ex.cmd.get_results().stderr.strip()

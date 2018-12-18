@@ -23,3 +23,13 @@ cp sample.spec ${DIR}
 Your sample package will be at:
 
 `ls /tmp/sample-gppkg/sample.gppkg`
+
+# Using Makefile to create a Greenplum Package
+
+To integrate build gppkg into a Makefile, it needs to include the following .mk file
+```
+# Ubuntu
+include gppkg_deb.mk
+# CcentOS/Redhat
+include gppkg_rpm.mk
+```

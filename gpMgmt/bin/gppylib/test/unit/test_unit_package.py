@@ -6,6 +6,7 @@ from gppylib.mainUtils import ExceptionNoStackTraceNeeded
 
 import os
 import pickle
+import platform
 
 
 class IsVersionCompatibleTestCase(GpTestCase):
@@ -94,11 +95,15 @@ class MigratePackagesTestCase(GpTestCase):
             patch('os.makedirs'),
             patch('os.listdir'),
             patch('gppylib.operations.package.InstallPackageLocally'),
+            patch('gppylib.operations.package.InstallDebPackageLocally'),
             patch('gppylib.operations.package.CleanGppkg'),
             patch('gppylib.operations.package.logger', return_value=Mock(spec=['log', 'info', 'debug', 'error'])),
         ])
 
-        self.mock_install_package_locally = self.get_mock_from_apply_patch('InstallPackageLocally')
+        if platform.linux_distribution()[0] == 'Ubuntu':
+            self.mock_install_package_locally = self.get_mock_from_apply_patch('InstallDebPackageLocally')
+        else:
+            self.mock_install_package_locally = self.get_mock_from_apply_patch('InstallPackageLocally')
         self.mock_listdir = self.get_mock_from_apply_patch('listdir')
         self.mock_logger = self.get_mock_from_apply_patch('logger')
         self.os_path_samefile = self.get_mock_from_apply_patch('samefile')
@@ -140,7 +145,7 @@ class MigratePackagesTestCase(GpTestCase):
         subject.execute()
 
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
-        self.assertIn('The following packages will be migrated: %s' % ", ".join(self.mock_listdir.return_value), log_messages)
+        self.assertIn('The following packages will be migrated: %s' % ", ".join(['sample.gppkg', 'sample2.gppkg', 'another-long-one.gppkg']), log_messages)
         self.assertIn('The package migration has completed.', log_messages)
 
     def test__execute_catches_AlreadyInstalledError(self):
@@ -151,7 +156,7 @@ class MigratePackagesTestCase(GpTestCase):
         subject = MigratePackages(**self.args)
         subject.execute()
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
-        self.assertIn('The following packages will be migrated: %s' % ", ".join(self.mock_listdir.return_value), log_messages)
+        self.assertIn('The following packages will be migrated: %s' % ", ".join(['sample.gppkg', 'sample2.gppkg', 'another-long-one.gppkg']), log_messages)
         self.assertIn('sample.gppkg is already installed.', log_messages)
         self.assertIn('The package migration has completed.', log_messages)
 
@@ -165,9 +170,9 @@ class MigratePackagesTestCase(GpTestCase):
         subject = MigratePackages(**self.args)
         subject.execute()
         log_messages = [args[1][0] for args in self.mock_logger.method_calls]
-        self.assertIn('The following packages will be migrated: %s' % ", ".join(self.mock_listdir.return_value), log_messages)
+        self.assertIn('The following packages will be migrated: %s' % ", ".join(['sample.gppkg', 'sample2.gppkg', 'another-long-one.gppkg']), log_messages)
         self.assertIn('Failed to migrate %s from %s' % (os.path.join(self.args['from_gphome'], ARCHIVE_PATH),
-                                                        self.mock_listdir.return_value[1]), log_messages)
+                                                        'sample2.gppkg'), log_messages)
         self.assertIn('The package migration has completed.', log_messages)
 
 

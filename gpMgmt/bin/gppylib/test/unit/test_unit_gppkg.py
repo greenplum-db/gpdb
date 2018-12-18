@@ -51,7 +51,7 @@ class GpPkgProgramTestCase(GpTestCase):
         self.subject = GpPkgProgram(options, args)
         self.subject.run()
 
-        self.mock_listdir.assert_called_once()
+        self.mock_listdir.assert_called()
         self.mock_uninstall_package.run.assert_called_once()
 
     def test__input_matches_multiple_packages(self):
@@ -91,5 +91,5 @@ class GpPkgProgramTestCase(GpTestCase):
 
         self.subject.run()
 
-        self.mock_listdir.assert_called_once()
+        self.mock_listdir.assert_called()
         self.mock_uninstall_package.run.assert_called_once()
