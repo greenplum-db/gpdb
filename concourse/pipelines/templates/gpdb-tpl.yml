@@ -1322,6 +1322,7 @@ jobs:
           uaocs_compaction/threshold
           updatable_views
           update
+          update_gp
           vacuum_full_ao
           vacuum_full_freeze_heap
           vacuum_full_heap

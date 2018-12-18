@@ -1522,8 +1522,15 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 	splitupdate->plan.total_cost += (splitupdate->plan.plan_rows * cpu_tuple_cost);
 	splitupdate->plan.plan_width = subplan->plan_width;
 
-	/* We need a motion node above the SplitUpdate, so mark it as strewn */
-	mark_plan_strewn((Plan *) splitupdate, subplan->flow->numsegments);
+	/*
+	 * A redistributed-motion has to be added above	the split node in
+	 * the plan and this can be achieved by marking the split node strew.
+	 * However, if the subplan is an entry, we should not mark it strew.
+	 */
+	if (subplan->flow->locustype != CdbLocusType_Entry)
+		mark_plan_strewn((Plan *) splitupdate, subplan->flow->numsegments);
+	else
+		mark_plan_entry((Plan *) splitupdate);
 
 	mt->action_col_idxes = lappend_int(mt->action_col_idxes, actionColIdx);
 	mt->ctid_col_idxes = lappend_int(mt->ctid_col_idxes, ctidColIdx);
