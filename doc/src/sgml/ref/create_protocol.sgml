@@ -41,6 +41,10 @@ CREATE [TRUSTED] PROTOCOL name (
  <refsect1>
   <title>Notes</title>
 
+  <para>
+   Only superusers can create protocols.
+  </para>
+
  </refsect1>
 
  <refsect1>

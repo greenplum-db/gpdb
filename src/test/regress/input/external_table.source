@@ -259,6 +259,14 @@ CREATE PROTOCOL demoprot_droptest1 (readfunc = 'read_from_file', writefunc = 'wr
 CREATE PROTOCOL demoprot_droptest2 (readfunc = 'read_from_file', writefunc = 'write_to_file');
 DROP PROTOCOL demoprot_droptest1, demoprot_droptest2;
 
+-- Test non-superuser CREATE PROTOCOL, should fail
+DROP ROLE IF EXISTS extprot_non_superuser;
+CREATE ROLE extprot_non_superuser WITH NOSUPERUSER LOGIN CREATEDB;
+SET ROLE extprot_non_superuser;
+CREATE PROTOCOL demoprot_non_superuser (readfunc = 'read_from_file', writefunc = 'write_to_file');
+CREATE TRUSTED PROTOCOL demoprot_non_superuser (readfunc = 'read_from_file', writefunc = 'write_to_file');
+RESET ROLE;
+
 --
 -- WET tests
 --

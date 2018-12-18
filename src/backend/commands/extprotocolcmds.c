@@ -52,6 +52,11 @@ DefineExtProtocol(List *name, List *parameters, bool trusted)
 	ListCell   *pl;
 	Oid			protOid;
 
+	if (!superuser())
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("must be superuser to create an external protocol")));
+
 	protName = strVal(linitial(name));
 
 	foreach(pl, parameters)
