@@ -506,13 +506,14 @@ SendReturnCode
 SendTuple(MotionLayerState *mlStates,
 		  ChunkTransportState *transportStates,
 		  int16 motNodeID,
-		  GenericTuple tuple,
+		  TupleTableSlot *slot,
 		  int16 targetRoute)
 {
 	MotionNodeEntry *pMNEntry;
 	TupleChunkListData tcList;
 	MemoryContext oldCtxt;
 	SendReturnCode rc;
+	GenericTuple tuple = ExecFetchSlotGenericTuple(slot);
 
 	AssertArg(tuple != NULL);
 
@@ -543,7 +544,7 @@ SendTuple(MotionLayerState *mlStates,
 		{
 			int			sent = 0;
 
-			sent = SerializeTupleDirect(tuple, &pMNEntry->ser_tup_info, &b);
+			sent = SerializeTupleDirect(slot, &pMNEntry->ser_tup_info, &b);
 			if (sent > 0)
 			{
 				putTransportDirectBuffer(transportStates, motNodeID, targetRoute, sent);
@@ -564,7 +565,7 @@ SendTuple(MotionLayerState *mlStates,
 	/* Create and store the serialized form, and some stats about it. */
 	oldCtxt = MemoryContextSwitchTo(mlStates->motion_layer_mctx);
 
-	SerializeTupleIntoChunks(tuple, &pMNEntry->ser_tup_info, &tcList);
+	SerializeTupleIntoChunks(slot, &pMNEntry->ser_tup_info, &tcList);
 
 	MemoryContextSwitchTo(oldCtxt);
 

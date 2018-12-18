@@ -339,7 +339,7 @@ ExecHashJoin(HashJoinState *node)
 					 * Save it in the corresponding outer-batch file.
 					 */
 					Assert(batchno > hashtable->curbatch);
-					ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
+					ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot),
 										  hashvalue,
 										  hashtable,
 										  &hashtable->outerBatchFile[batchno],

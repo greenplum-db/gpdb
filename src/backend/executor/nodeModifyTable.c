@@ -333,7 +333,7 @@ ExecInsert(TupleTableSlot *parentslot,
 		{
 			GenericTuple gtuple;
 
-			gtuple = ExecFetchSlotGenericTuple(parentslot, false);
+			gtuple = ExecFetchSlotGenericTuple(parentslot);
 
 			if (!is_memtuple(gtuple))
 				tuple_oid = HeapTupleGetOid((HeapTuple) gtuple);
@@ -446,7 +446,7 @@ ExecInsert(TupleTableSlot *parentslot,
 										   false);
 			}
 
-			mtuple = ExecFetchSlotMemTuple(slot, false);
+			mtuple = ExecFetchSlotMemTuple(slot);
 			newId = appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, tuple_oid, (AOTupleId *) &lastTid);
 			(resultRelInfo->ri_aoprocessed)++;
 		}
@@ -1321,7 +1321,7 @@ lreplace:;
 					appendonly_update_init(resultRelationDesc, GetActiveSnapshot(), resultRelInfo->ri_aosegno);
 			}
 
-			mtuple = ExecFetchSlotMemTuple(slot, false);
+			mtuple = ExecFetchSlotMemTuple(slot);
 
 			result = appendonly_update(resultRelInfo->ri_updateDesc,
 									   mtuple, (AOTupleId *) tupleid, (AOTupleId *) &lastTid);

@@ -4048,7 +4048,7 @@ CopyFrom(CopyState cstate)
 				{
 					MemTuple	mtuple;
 
-					mtuple = ExecFetchSlotMemTuple(slot, false);
+					mtuple = ExecFetchSlotMemTuple(slot);
 
 					/* inserting into an append only relation */
 					appendonly_insert(resultRelInfo->ri_aoInsertDesc, mtuple, loaded_oid,

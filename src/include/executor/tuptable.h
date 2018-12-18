@@ -394,17 +394,17 @@ extern MemTuple ExecCopySlotMemTuple(TupleTableSlot *slot);
 extern MemTuple ExecCopySlotMemTupleTo(TupleTableSlot *slot, MemoryContext pctxt, char *dest, unsigned int *len);
 
 extern HeapTuple ExecFetchSlotHeapTuple(TupleTableSlot *slot);
-extern MemTuple ExecFetchSlotMemTuple(TupleTableSlot *slot, bool inline_toast);
+extern MemTuple ExecFetchSlotMemTuple(TupleTableSlot *slot);
 extern Datum ExecFetchSlotTupleDatum(TupleTableSlot *slot);
 
 static inline GenericTuple
-ExecFetchSlotGenericTuple(TupleTableSlot *slot, bool mtup_inline_toast)
+ExecFetchSlotGenericTuple(TupleTableSlot *slot)
 {
 	Assert(!TupIsNull(slot));
 	if (slot->PRIVATE_tts_memtuple == NULL && slot->PRIVATE_tts_heaptuple != NULL)
 		return (GenericTuple) slot->PRIVATE_tts_heaptuple;
 
-	return (GenericTuple) ExecFetchSlotMemTuple(slot, mtup_inline_toast);
+	return (GenericTuple) ExecFetchSlotMemTuple(slot);
 }
 
 static inline TupleTableSlot *

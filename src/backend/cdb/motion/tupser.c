@@ -401,13 +401,14 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
  * This code is based on the printtup_internal_20() function in printtup.c.
  */
 void
-SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkList tcList)
+SerializeTupleIntoChunks(TupleTableSlot *slot, SerTupInfo *pSerInfo, TupleChunkList tcList)
 {
 	TupleChunkListItem tcItem = NULL;
 	MemoryContext oldCtxt;
 	TupleDesc	tupdesc;
 	int			i,
 				natts;
+	GenericTuple gtuple = ExecFetchSlotGenericTuple(slot);
 
 	AssertArg(tcList != NULL);
 	AssertArg(gtuple != NULL);
@@ -459,8 +460,25 @@ SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkLi
 	if (is_memtuple(gtuple))
 	{
 		MemTuple mtuple = (MemTuple) gtuple;
+		bool need_toast = memtuple_get_hasext(mtuple);
+
+		if (need_toast)
+		{
+			MemoryContext oldContext;
+
+			/* Need to detoast */
+			oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
+			slot_getallattrs(slot);
+			mtuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+									  NULL, NULL, true);
+			MemoryContextSwitchTo(oldContext);
+		}
+
 		addByteStringToChunkList(tcList, (char *) mtuple, memtuple_get_size(mtuple), &pSerInfo->chunkCache);
 		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(mtuple));
+
+		if (need_toast)
+			MemoryContextReset(s_tupSerMemCtxt);
 	}
 	else
 	{
@@ -629,11 +647,12 @@ SerializeTupleIntoChunks(GenericTuple gtuple, SerTupInfo *pSerInfo, TupleChunkLi
  * We're called with at least enough space for a tuple-chunk-header.
  */
 int
-SerializeTupleDirect(GenericTuple gtuple, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
+SerializeTupleDirect(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
 {
 	int			natts;
 	int			dataSize = TUPLE_CHUNK_HEADER_SIZE;
 	TupleDesc	tupdesc;
+	GenericTuple gtuple = ExecFetchSlotGenericTuple(slot);
 
 	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
@@ -659,15 +678,34 @@ SerializeTupleDirect(GenericTuple gtuple, SerTupInfo *pSerInfo, struct directTra
 			MemTuple	tuple = (MemTuple) gtuple;
 			int			tupleSize;
 			int			paddedSize;
+			bool need_toast = memtuple_get_hasext(tuple);
+
+			if (need_toast)
+			{
+				MemoryContext oldContext;
+				/* Need to detoast */
+				oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
+				slot_getallattrs(slot);
+				tuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+										  NULL, NULL, true);
+				MemoryContextSwitchTo(oldContext);
+			}
 
 			tupleSize = memtuple_get_size(tuple);
+
 			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
 
 			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE > b->prilen)
+			{
+				if (need_toast)
+					pfree(tuple);
 				return 0;
+			}
 
 			/* will fit. */
 			memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
+			if (need_toast)
+				pfree(tuple);
 			memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
 
 			dataSize += paddedSize;

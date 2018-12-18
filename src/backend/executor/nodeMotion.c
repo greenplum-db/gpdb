@@ -1533,7 +1533,7 @@ doSendTuple(Motion *motion, MotionState *node, TupleTableSlot *outerTupleSlot)
 		Assert(!is_null);
 	}
 
-	tuple = ExecFetchSlotGenericTuple(outerTupleSlot, true);
+	tuple = ExecFetchSlotGenericTuple(outerTupleSlot);
 
 	CheckAndSendRecordCache(node->ps.state->motionlayer_context,
 							node->ps.state->interconnect_context,
@@ -1544,7 +1544,7 @@ doSendTuple(Motion *motion, MotionState *node, TupleTableSlot *outerTupleSlot)
 	sendRC = SendTuple(node->ps.state->motionlayer_context,
 					   node->ps.state->interconnect_context,
 					   motion->motionID,
-					   tuple,
+					   outerTupleSlot,
 					   targetRoute);
 
 	Assert(sendRC == SEND_COMPLETE || sendRC == STOP_SENDING);
