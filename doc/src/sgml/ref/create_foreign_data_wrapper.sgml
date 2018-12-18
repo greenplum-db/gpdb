@@ -24,7 +24,7 @@ PostgreSQL documentation
 CREATE FOREIGN DATA WRAPPER <replaceable class="parameter">name</replaceable>
     [ HANDLER <replaceable class="parameter">handler_function</replaceable> | NO HANDLER ]
     [ VALIDATOR <replaceable class="parameter">validator_function</replaceable> | NO VALIDATOR ]
-    [ OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
+    [ OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] ) ]
 </synopsis>
  </refsynopsisdiv>
 
@@ -100,7 +100,7 @@ CREATE FOREIGN DATA WRAPPER <replaceable class="parameter">name</replaceable>
    </varlistentry>
 
    <varlistentry>
-    <term><literal>OPTIONS ( <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] )</literal></term>
+    <term><literal>OPTIONS ( [ mpp_execute 'any | master | all segments' ], <replaceable class="PARAMETER">option</replaceable> '<replaceable class="PARAMETER">value</replaceable>' [, ... ] )</literal></term>
     <listitem>
      <para>
       This clause specifies options for the new foreign-data wrapper.
@@ -110,6 +110,25 @@ CREATE FOREIGN DATA WRAPPER <replaceable class="parameter">name</replaceable>
      </para>
     </listitem>
    </varlistentry>
+
+   <varlistentry>
+    <term><replaceable class="PARAMETER">mpp_execute</replaceable></term>
+    <listitem>
+     <para>
+     MASTER is the default, FDW requests for data from master.
+
+     ANY, FDW requests for data from master or one any segment, depends on
+     which path costs less.
+
+     ALL SEGMENTS, FDW requests for data from all segments, wrappers need to
+     have a policy matching the segments to data.
+
+     A mpp_execute option setting specified by this FDW's foreign server
+     takes precedence.
+     </para>
+    </listitem>
+   </varlistentry>
+
   </variablelist>
  </refsect1>
 

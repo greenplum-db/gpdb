@@ -187,13 +187,16 @@ CREATE FOREIGN TABLE [ IF NOT EXISTS ] <replaceable class="PARAMETER">table_name
     <term><replaceable class="PARAMETER">mpp_execute</replaceable></term>
     <listitem>
      <para>
-     MASTER is the default, FDW requests for data from master.
+     MASTER, FDW requests for data from master.
 
      ANY, FDW requests for data from master or one any segment, depends on
      which path costs less.
 
      ALL SEGMENTS, FDW requests for data from all segments, wrappers need to
      have a policy matching the segments to data.
+
+     If this option is not set, a mpp_execute option setting at the foreign
+     server or FDW level is used, in that precedence order.
 
      For instance, file_fdw probes the mpp_execute value, then load different
      files based on the segment number. But something like gpfdist on the
