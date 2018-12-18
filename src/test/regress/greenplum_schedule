@@ -23,7 +23,7 @@ test: gp_tablespace gp_aggregates gp_metadata variadic_parameters default_parame
 test: spi_processed64bit
 test: python_processed64bit
 
-test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views namespace_gp
+test: leastsquares opr_sanity_gp decode_expr bitmapscan bitmapscan_ao case_gp limit_gp notin percentile join_gp union_gp gpcopy gp_create_table gp_create_view window_views namespace_gp gp_backend_info
 
 # GPDB_94_MERGE_FIXME: explain_format test was dropped for below group. It's
 # failing without asserts but passing with asserts. Need investigation for the

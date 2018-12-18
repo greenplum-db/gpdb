@@ -62,6 +62,7 @@ struct CdbComponentDatabaseInfo
 	int16		hostSegs;		/* number of primary segments on the same hosts */
 	List		*freelist;		/* list of idle segment dbs */
 	int			numIdleQEs;
+	List		*activelist;	/* list of active segment dbs */
 	int			numActiveQEs;
 
 	CdbComponentDatabases	*cdbs; /* point to owners */

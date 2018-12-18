@@ -1,0 +1,192 @@
+-- Tests for the gp_backend_info() function.
+-- At first there should be no segment backends; we haven't performed any
+-- queries yet.
+SELECT COUNT(*) = 0 FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+--
+-- Spin up the writer gang.
+--
+CREATE TEMPORARY TABLE temp();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+--start_ignore
+-- Help debugging by printing the results. Since most contents will be different
+-- on every machine, we do the actual verification below.
+SELECT * from gp_backend_info();
+ id | type | content |   host    | port  |  pid  
+----+------+---------+-----------+-------+-------
+  0 | w    |       0 | pchampion | 25432 | 51158
+  1 | w    |       1 | pchampion | 25433 | 51159
+  2 | w    |       2 | pchampion | 25434 | 51160
+(3 rows)
+
+--end_ignore
+-- Now we should have as many backends as primaries, and they should all be
+-- marked as writers.
+SELECT COUNT(*) AS num_primaries FROM gp_segment_configuration
+    WHERE content >= 0 AND role = 'p'
+\gset
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info() WHERE type = 'w';
+ ?column? 
+----------
+ t
+(1 row)
+
+-- All IDs and PIDs should be distinct.
+SELECT COUNT(DISTINCT id) = :num_primaries FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(DISTINCT content) = :num_primaries FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(DISTINCT pid) = :num_primaries FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+--
+-- Spin up a parallel reader gang.
+--
+CREATE TEMPORARY TABLE temp2();
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+SELECT * FROM temp JOIN (SELECT * FROM temp2) temp2 ON (temp = temp2);
+--
+(0 rows)
+
+--start_ignore
+-- Debugging helper (see above).
+SELECT * from gp_backend_info();
+ id | type | content |   host    | port  |  pid  
+----+------+---------+-----------+-------+-------
+  0 | w    |       0 | pchampion | 25432 | 51158
+  1 | w    |       1 | pchampion | 25433 | 51159
+  2 | w    |       2 | pchampion | 25434 | 51160
+  3 | r    |       0 | pchampion | 25432 | 51161
+  4 | r    |       1 | pchampion | 25433 | 51162
+  5 | r    |       2 | pchampion | 25434 | 51163
+(6 rows)
+
+--end_ignore
+-- Now we should have double the number of backends; the new ones should be
+-- readers.
+SELECT COUNT(*) = (:num_primaries * 2) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info() WHERE type = 'w';
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info() WHERE type = 'r';
+ ?column? 
+----------
+ t
+(1 row)
+
+-- IDs and PIDs should still be distinct.
+SELECT COUNT(DISTINCT id) = (:num_primaries * 2) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(DISTINCT pid) = (:num_primaries * 2) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+-- Content IDs should be there twice (a reader and a writer for each segment).
+SELECT COUNT(DISTINCT content) = :num_primaries FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT DISTINCT COUNT(content) FROM gp_backend_info() GROUP BY content;
+ count 
+-------
+     2
+(1 row)
+
+--
+-- Start up a singleton reader.
+--
+SELECT * FROM temp JOIN (SELECT oid FROM pg_class) temp2 on (temp = temp2);
+ oid 
+-----
+(0 rows)
+
+--start_ignore
+-- Debugging helper (see above).
+SELECT * from gp_backend_info();
+ id | type | content |   host    | port  |  pid  
+----+------+---------+-----------+-------+-------
+  0 | w    |       0 | pchampion | 25432 | 51158
+  1 | w    |       1 | pchampion | 25433 | 51159
+  2 | w    |       2 | pchampion | 25434 | 51160
+  3 | r    |       0 | pchampion | 25432 | 51161
+  4 | r    |       1 | pchampion | 25433 | 51162
+  5 | r    |       2 | pchampion | 25434 | 51163
+  6 | R    |      -1 | pchampion | 15432 | 51164
+(7 rows)
+
+--end_ignore
+-- We should have added only one backend -- the singleton reader on the master.
+SELECT COUNT(*) = (:num_primaries * 2 + 1) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info() WHERE type = 'w';
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = :num_primaries FROM gp_backend_info() WHERE type = 'r';
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(*) = 1 FROM gp_backend_info() WHERE type = 'R' and content = -1;
+ ?column? 
+----------
+ t
+(1 row)
+
+-- IDs and PIDs should still be distinct.
+SELECT COUNT(DISTINCT id) = (:num_primaries * 2 + 1) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+
+SELECT COUNT(DISTINCT pid) = (:num_primaries * 2 + 1) FROM gp_backend_info();
+ ?column? 
+----------
+ t
+(1 row)
+

@@ -52,6 +52,9 @@
 
 #include "utils/guc_tables.h"
 
+#include "funcapi.h"
+#include "utils/builtins.h"
+
 /*
  * All QEs are managed by cdb_component_dbs in QD, QD assigned
  * a unique identifier for each QE, when a QE is created, this
@@ -850,4 +853,203 @@ RecycleGang(Gang *gp, bool forceDestroy)
 
 		cdbcomponent_recycleIdleQE(segdbDesc, forceDestroy);
 	}
+}
+
+/*
+ * Used by gp_backend_info() to find a single character that represents a
+ * backend type.
+ */
+static char
+backend_type(SegmentDatabaseDescriptor *segdb)
+{
+	if (segdb->segindex == -1)
+	{
+		/* Entry singleton reader. */
+		return 'R';
+	}
+
+	return (segdb->isWriter ? 'w' : 'r');
+}
+
+/*
+ * qsort comparator for SegmentDatabaseDescriptors. Sorts by descriptor ID.
+ */
+static int
+compare_segdb_id(const void *v1, const void *v2)
+{
+	const SegmentDatabaseDescriptor * const *d1 = v1;
+	const SegmentDatabaseDescriptor * const *d2 = v2;
+
+	return (*d1)->identifier - (*d2)->identifier;
+}
+
+/*
+ * Given a List of pointers to SegmentDatabaseDescriptor, sorts them by
+ * descriptor ID. The passed List will be modified directly.
+ */
+static void
+sort_segdbs(List *segdbs)
+{
+	ListCell   *item;
+	int			i;
+	SegmentDatabaseDescriptor **sorted;
+
+	/*
+	 * We copy to and from a linear array of pointers so that we can perform the
+	 * qsort() directly.
+	 */
+	sorted = palloc(sizeof(*sorted) * list_length(segdbs));
+
+	i = 0;
+	foreach(item, segdbs)
+	{
+		sorted[i++] = lfirst(item);
+	}
+
+	qsort(sorted, list_length(segdbs), sizeof(*sorted), compare_segdb_id);
+
+	i = 0;
+	foreach(item, segdbs)
+	{
+		lfirst(item) = sorted[i++];
+	}
+
+	pfree(sorted);
+}
+
+/*
+ * Returns a list of rows, each corresponding to a connected segment backend and
+ * containing information on the role and definition of that backend (e.g. host,
+ * port, PID).
+ *
+ * SELECT * from gp_backend_info();
+ */
+Datum
+gp_backend_info(PG_FUNCTION_ARGS)
+{
+	/* Our struct for funcctx->user_fctx. */
+	struct func_ctx
+	{
+		List	   *segdbs;		/* the SegmentDatabaseDescriptor entries we will output */
+		ListCell   *curpos;		/* pointer to our current position in .segdbs */
+	};
+
+	FuncCallContext	   *funcctx;
+	struct func_ctx	   *user_fctx;
+
+	/* Number of attributes we'll return per row. Must match the catalog. */
+#define BACKENDINFO_NATTR	6
+
+	if (SRF_IS_FIRSTCALL())
+	{
+		/* Standard first-call setup. */
+		MemoryContext	oldcontext;
+		TupleDesc		tupdesc;
+		CdbComponentDatabases *cdbs;
+		int				i;
+
+		funcctx = SRF_FIRSTCALL_INIT();
+		oldcontext = MemoryContextSwitchTo(funcctx->multi_call_memory_ctx);
+		funcctx->user_fctx = user_fctx = palloc0(sizeof(*user_fctx));
+
+		/* Construct the list of all known segment DB descriptors. */
+		cdbs = cdbcomponent_getCdbComponents(true);
+
+		for (i = 0; i < cdbs->total_entry_dbs; ++i)
+		{
+			CdbComponentDatabaseInfo *cdbinfo = &cdbs->entry_db_info[i];
+
+			user_fctx->segdbs = list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->activelist);
+			user_fctx->segdbs = list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->freelist);
+		}
+
+		for (i = 0; i < cdbs->total_segment_dbs; ++i)
+		{
+			CdbComponentDatabaseInfo *cdbinfo = &cdbs->segment_db_info[i];
+
+			user_fctx->segdbs = list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->activelist);
+			user_fctx->segdbs = list_concat_unique_ptr(user_fctx->segdbs, cdbinfo->freelist);
+		}
+
+		/*
+		 * For a slightly better default user experience, sort by descriptor ID.
+		 * Users may of course specify their own ORDER BY if they don't like it.
+		 */
+		sort_segdbs(user_fctx->segdbs);
+
+		user_fctx->curpos = list_head(user_fctx->segdbs);
+
+		/* Create a descriptor for the records we'll be returning. */
+		tupdesc = CreateTemplateTupleDesc(BACKENDINFO_NATTR, false);
+		TupleDescInitEntry(tupdesc, 1, "id",      INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 2, "type",    CHAROID, -1, 0);
+		TupleDescInitEntry(tupdesc, 3, "content", INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 4, "host",    TEXTOID, -1, 0);
+		TupleDescInitEntry(tupdesc, 5, "port",    INT4OID, -1, 0);
+		TupleDescInitEntry(tupdesc, 6, "pid",     INT4OID, -1, 0);
+
+		funcctx->tuple_desc = BlessTupleDesc(tupdesc);
+
+		/* Tell the caller how many rows we'll return. */
+		funcctx->max_calls = list_length(user_fctx->segdbs);
+
+		MemoryContextSwitchTo(oldcontext);
+	}
+
+	funcctx = SRF_PERCALL_SETUP();
+
+	/* Construct and return a row for every entry. */
+	if (funcctx->call_cntr < funcctx->max_calls)
+	{
+		Datum		values[BACKENDINFO_NATTR] = {0};
+		bool		nulls[BACKENDINFO_NATTR] = {0};
+		HeapTuple	tuple;
+		SegmentDatabaseDescriptor *dbdesc;
+		CdbComponentDatabaseInfo *dbinfo;
+
+		user_fctx = funcctx->user_fctx;
+
+		/* Get the next descriptor. */
+		dbdesc = lfirst(user_fctx->curpos);
+		user_fctx->curpos = lnext(user_fctx->curpos);
+
+		/* Fill in the row attributes. */
+		dbinfo = dbdesc->segment_database_info;
+
+		values[0] = Int32GetDatum(dbdesc->identifier);			/* id */
+		values[1] = CharGetDatum(backend_type(dbdesc));			/* type */
+		values[2] = Int32GetDatum(dbdesc->segindex);			/* content */
+
+		if (dbinfo->hostname)									/* host */
+		{
+			values[3] = CStringGetTextDatum(dbinfo->hostname);
+		}
+		else
+		{
+			nulls[3] = true;
+		}
+
+		values[4] = Int32GetDatum(dbinfo->port);				/* port */
+		values[5] = Int32GetDatum(dbdesc->backendPid);			/* pid */
+
+		/* Form the new tuple using our attributes and return it. */
+		tuple = heap_form_tuple(funcctx->tuple_desc, values, nulls);
+
+		SRF_RETURN_NEXT(funcctx, HeapTupleGetDatum(tuple));
+	}
+	else
+	{
+		/* Clean up. */
+		user_fctx = funcctx->user_fctx;
+		if (user_fctx)
+		{
+			list_free(user_fctx->segdbs);
+			pfree(user_fctx);
+
+			funcctx->user_fctx = NULL;
+		}
+
+		SRF_RETURN_DONE(funcctx);
+	}
+#undef BACKENDINFO_NATTR
 }

@@ -26,6 +26,8 @@
 
  CREATE FUNCTION numeric_dec("numeric") RETURNS "numeric" LANGUAGE internal IMMUTABLE STRICT AS 'numeric_dec' WITH (OID=6997, DESCRIPTION="increment by one");
 
+ CREATE FUNCTION gp_backend_info(OUT id int4, OUT type "char", OUT content int4, OUT host text, OUT port int4, OUT pid int4) RETURNS SETOF record LANGUAGE internal VOLATILE AS 'gp_backend_info' WITH (OID=6998, DESCRIPTION="debugging information for segment backends");
+
 
 -- Sequences and time series
  CREATE FUNCTION interval_bound(numeric, numeric) RETURNS numeric LANGUAGE internal IMMUTABLE STRICT AS 'numeric_interval_bound' WITH (OID=7082, DESCRIPTION="boundary of the interval containing the given value");

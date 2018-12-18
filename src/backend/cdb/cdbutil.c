@@ -266,6 +266,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 
 		pRow->cdbs = component_databases;
 		pRow->freelist = NIL;
+		pRow->activelist = NIL;
 		pRow->dbid = dbid;
 		pRow->segindex = content;
 		pRow->role = role;
@@ -699,6 +700,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 
 	cdbconn_setQEIdentifier(segdbDesc, -1);
 
+	cdbinfo->activelist = lcons(segdbDesc, cdbinfo->activelist);
 	INCR_COUNT(cdbinfo, numActiveQEs);
 
 	MemoryContextSwitchTo(oldContext);
@@ -759,6 +761,8 @@ cdbcomponent_recycleIdleQE(SegmentDatabaseDescriptor *segdbDesc, bool forceDestr
 	cdbinfo = segdbDesc->segment_database_info;
 
 	/* update num of active QEs */
+	Assert(list_member_ptr(cdbinfo->activelist, segdbDesc));
+	cdbinfo->activelist = list_delete_ptr(cdbinfo->activelist, segdbDesc);
 	DECR_COUNT(cdbinfo, numActiveQEs);
 
 	oldContext = MemoryContextSwitchTo(CdbComponentsContext);

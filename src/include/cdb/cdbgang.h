@@ -84,8 +84,6 @@ extern void DisconnectAndDestroyUnusedQEs(void);
 
 extern void CheckForResetSession(void);
 
-extern List *getAllIdleReaderGangs(struct CdbDispatcherState *ds);
-
 extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang *gp, int seg);
 
 Gang *buildGangDefinition(List *segments, SegmentType segmentType);
@@ -136,4 +134,7 @@ typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);
 
 extern void cdbgang_resetPrimaryWriterGang(void);
 extern void cdbgang_decreaseNumReaderGang(void);
+
+Datum gp_backend_info(PG_FUNCTION_ARGS);
+
 #endif   /* _CDBGANG_H_ */
