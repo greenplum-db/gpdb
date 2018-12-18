@@ -1125,15 +1125,6 @@ static struct config_bool ConfigureNamesBool[] =
 	},
 
 	{
-		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
-			gettext_noop("Collects resource queue-level statistics on database activity."),
-			NULL
-		},
-		&pgstat_collect_queuelevel,
-		false, NULL, NULL
-	},
-
-	{
 		{"update_process_title", PGC_SUSET, STATS_COLLECTOR,
 			gettext_noop("Updates the process title to show the active SQL command."),
 			gettext_noop("Enables updating of the process title every time a new SQL command is received by the server.")

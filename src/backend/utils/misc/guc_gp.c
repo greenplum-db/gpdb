@@ -3004,6 +3004,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		check_gp_resource_group_bypass, NULL, NULL
 	},
 
+	{
+		{"stats_queue_level", PGC_SUSET, STATS_COLLECTOR,
+			gettext_noop("Collects resource queue-level statistics on database activity."),
+			NULL
+		},
+		&pgstat_collect_queuelevel,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
