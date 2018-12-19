@@ -3,11 +3,15 @@
 set -eox pipefail
 
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-: ${GREENPLUM_INSTALL_DIR:=/usr/local/gpdb}
+GREENPLUM_INSTALL_DIR=/opt/gpdb
 
-function load_transfered_bits_into_install_dir() {
-  mkdir -p $GREENPLUM_INSTALL_DIR
-  tar xzf $TRANSFER_DIR/$COMPILED_BITS_FILENAME -C $GREENPLUM_INSTALL_DIR
+function install_debian() {
+    apt-get install -y ./${DEBIAN_PACKAGE:-deb_package_ubuntu16/greenplum-db.deb}
+    locale-gen en_US.UTF-8
+}
+
+function setup_gpadmin_user() {
+    ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 }
 
 function configure() {
@@ -16,17 +20,12 @@ function configure() {
   popd
 }
 
-function setup_gpadmin_user() {
-    ./gpdb_src/concourse/scripts/setup_gpadmin_user.bash ubuntu
-}
-
 function make_cluster() {
   export BLDWRAP_POSTGRES_CONF_ADDONS="fsync=off"
   source "${GREENPLUM_INSTALL_DIR}/greenplum_path.sh"
   export DEFAULT_QD_MAX_CONNECT=150
-  pushd gpdb_src/gpAux/gpdemo
-    su gpadmin -c "source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh && make create-demo-cluster"
-  popd
+  su gpadmin -c "source ${GREENPLUM_INSTALL_DIR}/greenplum_path.sh && \
+                make -C gpdb_src/gpAux/gpdemo create-demo-cluster"
 }
 
 function gen_icw_test_script(){
@@ -91,9 +90,9 @@ function _main() {
         exit 1
     fi
 
-    time load_transfered_bits_into_install_dir
-    time configure
+    time install_debian
     time setup_gpadmin_user
+    time configure
     time make_cluster
     time gen_unit_test_script
     time gen_icw_test_script

@@ -461,6 +461,12 @@ resources:
     repository: pivotaldata/ubuntu-gpdb-dev
     tag: '16.04'
 
+- name: ubuntu16.04-test
+  type: docker-image
+  source:
+    repository: pivotaldata/ubuntu16.04-test
+    tag: gpdb5-latest
+
 - name: ubuntu-gpdb-debian-dev-16
   type: docker-image
   source:
@@ -1494,6 +1500,9 @@ jobs:
       - get: deb_package_open_source_ubuntu16
         passed:
         - gate_compile_end
+      - get: deb_package_ubuntu16
+        passed:
+        - gate_compile_end
       - get: bin_gpdb_ubuntu16
         passed:
         - gate_compile_end
@@ -1656,35 +1665,37 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed: [gate_icw_start]
-    - get: bin_gpdb_ubuntu16
+    - get: deb_package_ubuntu16
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
+    - get: ubuntu16.04-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
     input_mapping:
-      compiled_bits_ubuntu16: bin_gpdb_ubuntu16
-    image: ubuntu-gpdb-dev-16
+      deb_package: deb_package_ubuntu16
+    image: ubuntu16.04-test
     params:
-      GREENPLUM_INSTALL_DIR: "/usr/local/greenplum-db-devel"
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      DEBIAN_PACKAGE: deb_package/greenplum-db_*.deb
       CONFIGURE_FLAGS: {{configure_flags}}
-      COMPILED_BITS_FILENAME: bin_gpdb.tar.gz
 
 - name: icw_planner_ubuntu16_oss
   plan:
   - aggregate:
     - get: gpdb_src
       passed: [gate_icw_start]
-    - get: compiled_bits_ubuntu16
+    - get: deb_package_open_source_ubuntu16
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
+    - get: ubuntu16.04-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
-    image: ubuntu-gpdb-dev-16
+    input_mapping:
+      deb_package: deb_package_open_source_ubuntu16
+    image: ubuntu16.04-test
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
+      DEBIAN_PACKAGE: deb_package/greenplum-db.deb
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_ubuntu16
@@ -1692,35 +1703,37 @@ jobs:
   - aggregate:
     - get: gpdb_src
       passed: [gate_icw_start]
-    - get: bin_gpdb_ubuntu16
+    - get: deb_package_ubuntu16
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
+    - get: ubuntu16.04-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
     input_mapping:
-      compiled_bits_ubuntu16: bin_gpdb_ubuntu16
-    image: ubuntu-gpdb-dev-16
+      deb_package: deb_package_ubuntu16
+    image: ubuntu16.04-test
     params:
-      GREENPLUM_INSTALL_DIR: "/usr/local/greenplum-db-devel"
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      DEBIAN_PACKAGE: deb_package/greenplum-db_*.deb
       CONFIGURE_FLAGS: {{configure_flags}}
-      COMPILED_BITS_FILENAME: bin_gpdb.tar.gz
 
 - name: icw_gporca_ubuntu16_oss
   plan:
   - aggregate:
     - get: gpdb_src
       passed: [gate_icw_start]
-    - get: compiled_bits_ubuntu16
+    - get: deb_package_open_source_ubuntu16
       passed: [gate_icw_start]
       trigger: [[ test_trigger ]]
-    - get: ubuntu-gpdb-dev-16
+    - get: ubuntu16.04-test
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
-    image: ubuntu-gpdb-dev-16
+    input_mapping:
+      deb_package: deb_package_open_source_ubuntu16
+    image: ubuntu16.04-test
     params:
       MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
+      DEBIAN_PACKAGE: deb_package/greenplum-db.deb
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_extensions_gpcloud
