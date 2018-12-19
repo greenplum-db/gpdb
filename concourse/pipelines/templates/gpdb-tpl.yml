@@ -1127,7 +1127,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_centos6
@@ -1224,7 +1223,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icg_planner_centos7_random_numsegments
@@ -1340,7 +1338,6 @@ jobs:
           --prehook=randomize_create_table_default_numsegments
           --ignore-plans'
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_planner_centos7_online_expand
@@ -1359,7 +1356,6 @@ jobs:
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
-      TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
       EXCLUDE_TESTS: instr_in_shmem_setup,instr_in_shmem_terminate,segspace_setup,segspace,segspace_cleanup,cursor,instr_in_shmem,instr_in_shmem_verify
       ONLINE_EXPAND: true

@@ -14,7 +14,6 @@ params:
   MAKE_TEST_COMMAND: ""
   BLDWRAP_POSTGRES_CONF_ADDONS: ""
   TEST_OS: ""
-  TEST_BINARY_SWAP: false
   CONFIGURE_FLAGS: ""
 
 run:
