@@ -281,13 +281,15 @@
                     over various intervals, reset aggregations and ranks as selected column values
                     change, and express complex ratios in simple terms.</p>
                 <p>A window expression represents the application of a <i>window function</i>
-                    applied to a <i>window frame</i>, which is defined in a special
-                        <codeph>OVER()</codeph> clause. A window partition is a set of rows that are
-                    grouped together to apply a window function. Unlike aggregate functions, which
-                    return a result value for each group of rows, window functions return a result
-                    value for every row, but that value is calculated with respect to the rows in a
-                    particular window partition. If no partition is specified, the window function
-                    is computed over the complete intermediate result set.</p>
+                    to a <i>window frame</i>, which is defined with an <codeph>OVER()</codeph>
+                    clause. This is comparable to the type of calculation that can be done with an
+                    aggregate function and a <codeph>GROUP BY</codeph> clause. Unlike aggregate
+                    functions, which return a single result value for each group of rows, window
+                    functions return a result value for every row, but that value is calculated
+                    with respect to the set of rows in the the window frame to which the row belongs.
+                    The <codeph>OVER()</codeph> clause allows dividing the rows into _partitions_ and
+                    then further restricting the window frame by specifying which rows preceding or
+                    following the current row within its partition to include in the calculation.</p>
                 <p>Greenplum Database does not support specifying a window function as an argument
                     to another window function.</p>
                 <p>The syntax of a window expression is:</p>
@@ -295,10 +297,10 @@
                     <codeblock><i>window_function</i> ( [<i>expression</i> [, ...]] ) OVER ( <i>window_specification</i> )</codeblock>
                 </p>
                 <p>Where <i><codeph>window_function</codeph></i> is one of the functions listed in
-                        <xref href="../topics/functions-operators.xml#topic30/in164369"/>,
-                            <i><codeph>expression</codeph></i> is any value expression that does not
-                    contain a window expression, and <i><codeph>window_specification</codeph></i>
-                    is:</p>
+                        <xref href="../topics/functions-operators.xml#topic30/in164369"/> or a
+                    user-defined window function, <i><codeph>expression</codeph></i> is any value
+                    expression that does not contain a window expression, and
+                            <i><codeph>window_specification</codeph></i> is:</p>
                 <p><codeblock>[<i>window_name</i>]
 [PARTITION BY <i>expression </i>[, ...]]
 [[ORDER BY <i>expression</i> [ASC | DESC | USING <i>operator</i>] [NULLS {FIRST | LAST}] [, ...]
@@ -345,7 +347,7 @@
                     subtraction do not have the expected effects. For example, the following is not
                     generally true: <codeph>x::time &lt; x::time + '2
                     hour'::interval</codeph></note>
-                <ul>
+                <ul id="ul_im5_14q_2gb">
                     <li id="in167503">The <codeph>ROWS/RANGE</codeph> clause defines a window frame
                         for aggregate (non-ranking) window functions. A window frame defines a set
                         of rows within a window partition. When a window frame is defined, the
@@ -354,7 +356,138 @@
                         row-based (<codeph>ROWS</codeph>) or value-based
                         (<codeph>RANGE</codeph>).</li>
                 </ul>
+                <p>A window function call always contains an <codeph>OVER</codeph> clause
+                    immediately after the window function name and its arguments. This syntactically
+                    distinguishes the function from a regular or aggregate function. The
+                        <codeph>OVER</codeph> clause specifies the window frame—the rows to be
+                    processed by the window function. </p>
             </body>
+            <topic id="topic_qck_12r_2gb">
+                <title>Window Examples</title>
+                <body>
+                    <p>The following examples demonstrate using window functions with partitions and window frames.</p>
+                    <section>
+                        <title>Example 1 – Aggregate Window Function Over a Partition</title>
+                        <p>The <codeph>PARTITION BY</codeph> list in the <codeph>OVER</codeph>
+                            clause divides the rows into groups, or partitions, that have the same
+                            values as the specified expressions</p>
+                        <p>This example compares employees' salaries with the average salaries for
+                            their departments:<codeblock>SELECT depname, empno, salary, avg(salary) OVER(PARTITION BY depname)
+FROM empsalary;
+  depname  | empno | salary |       avg
+-----------+-------+--------+------------------
+ develop   |    10 |   5200 |             5020
+ develop   |     9 |   4500 |             5020
+ develop   |     7 |   4200 |             5020
+ develop   |    11 |   5200 |             5020
+ develop   |     8 |   6000 |             5020
+ personnel |     2 |   3900 |             3700
+ personnel |     5 |   3500 |             3700
+ sales     |     4 |   4800 | 4866.66666666667
+ sales     |     3 |   4800 | 4866.66666666667
+ sales     |     1 |   5000 | 4866.66666666667
+(10 rows)</codeblock></p>
+                        <p>The first three output columns come from the table
+                                <codeph>empsalary</codeph>, and there is one output row for each row
+                            in the table. The fourth column is the average calculated on all rows
+                            that have the same <codeph>depname</codeph> value as the current row.
+                            Rows that share the same <codeph>depname</codeph> value constitute a
+                            partition, and there are three partitions in this example. The
+                                <codeph>avg</codeph> function is the same as the regular
+                                <codeph>avg</codeph> aggregate function, but the
+                                <codeph>OVER</codeph> clause causes it to be applied as a window
+                            function.</p>
+                        <p>You can also put the window specification in a <codeph>WINDOW</codeph>
+                            clause and reference it in the select list. This example is equivalent
+                            to the previous
+                            query:<codeblock>SELECT depname, empno, salary, avg(salary) OVER(mywindow)
+FROM empsalary
+WINDOW mywindow AS (PARTITION BY depname);</codeblock></p>
+                        <p>Defining a named window is useful when the select list has multiple
+                            window functions using the same window specification.</p>
+                    </section>
+                    <section>
+                        <title>Example 2 – Ranking Window Function With an ORDER BY Clause</title>
+                        <p>An <codeph>ORDER BY</codeph> clause within the <codeph>OVER</codeph>
+                            clause controls the order in which rows are processed by window
+                            functions. The <codeph>ORDER BY</codeph> list for the window function
+                            does not have to match the output order of the query. This example uses
+                            the <codeph>rank()</codeph> window function to rank employees' salaries
+                            within their departments:</p>
+                        <codeblock>SELECT depname, empno, salary,
+    rank() OVER (PARTITION BY depname ORDER BY salary DESC)
+FROM empsalary;
+  depname  | empno | salary | rank
+-----------+-------+--------+------
+ personnel |     2 |   3900 |    1
+ personnel |     5 |   3500 |    2
+ sales     |     1 |   5000 |    1
+ sales     |     3 |   4800 |    2
+ sales     |     4 |   4800 |    2
+ develop   |     8 |   6000 |    1
+ develop   |    11 |   5200 |    2
+ develop   |    10 |   5200 |    2
+ develop   |     9 |   4500 |    4
+ develop   |     7 |   4200 |    5
+(10 rows)</codeblock>
+                    </section>
+                    <section>
+                        <title>Example 3 – Aggregate Function over a Row Window Frame</title>
+                        <p>A <codeph>RANGE</codeph> or <codeph>ROWS</codeph> clause defines the
+                            window frame—a set of rows within a partition—that the window function
+                            includes in the calculation. <codeph>ROWS</codeph> specifies a physical
+                            set of rows to process, for example all rows from the beginning of the
+                            partition to the current row.</p>
+                        <p>This example calculates a running total of employee's salaries by department 
+                            using the <codeph>sum()</codeph> function to total rows from the start of 
+                            the partition to the current row:</p>
+                        <codeblock>SELECT depname, empno, salary,
+    sum(salary) OVER (PARTITION BY depname ORDER BY salary
+        ROWS between UNBOUNDED PRECEDING AND CURRENT ROW)
+FROM empsalary;
+  depname  | empno | salary |  sum
+-----------+-------+--------+-------
+ develop   |     7 |   4200 |  4200
+ develop   |     9 |   4500 |  8700
+ develop   |    10 |   5200 | 13900
+ develop   |    11 |   5200 | 19100
+ develop   |     8 |   6000 | 25100
+ personnel |     5 |   3500 |  3500
+ personnel |     2 |   3900 |  7400
+ sales     |     3 |   4800 |  4800
+ sales     |     4 |   4800 |  9600
+ sales     |     1 |   5000 | 14600
+(10 rows)</codeblock>
+                    </section>
+                    <section>
+                        <title>Example 4 – Aggregate Function for a Range Window Frame</title>
+                        <p><codeph>RANGE</codeph> specifies logical values based on values of the
+                                <codeph>ORDER BY</codeph> expression in the <codeph>OVER</codeph>
+                            clause. This example demonstrates the difference between
+                                <codeph>ROWS</codeph> and <codeph>RANGE</codeph>. The frame contains
+                            all rows with salary values less than or equal to the current row. Unlike
+                            the previous example, the same sum is calculated for employees who have 
+                            the same salary.</p>
+                        <codeblock>SELECT depname, empno, salary,
+    sum(salary) OVER (PARTITION BY depname ORDER BY salary
+        RANGE between UNBOUNDED PRECEDING AND CURRENT ROW)
+FROM empsalary;
+  depname  | empno | salary |  sum
+-----------+-------+--------+-------
+ personnel |     5 |   3500 |  3500
+ personnel |     2 |   3900 |  7400
+ sales     |     4 |   4800 |  9600
+ sales     |     3 |   4800 |  9600
+ sales     |     1 |   5000 | 14600
+ develop   |     7 |   4200 |  4200
+ develop   |     9 |   4500 |  8700
+ develop   |    11 |   5200 | 19100
+ develop   |    10 |   5200 | 19100
+ develop   |     8 |   6000 | 25100
+(10 rows)</codeblock>
+                    </section>
+                </body>
+            </topic>
         </topic>
         <topic id="topic14" xml:lang="en">
             <title>Type Casts</title>

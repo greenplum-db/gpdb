@@ -1236,10 +1236,9 @@ SELECT foo();
   <topic id="topic30" xml:lang="en">
     <title id="in179666">Window Functions</title>
     <body>
-      <p>The following built-in window functions are Greenplum extensions to the PostgreSQL
-        database. All window functions are <i>immutable</i>. For more information about window
-        functions, see "Window Expressions" in the <cite>Greenplum Database Administrator
-          Guide</cite>.</p>
+      <p>The following are Greenplum Database built-in window functions. All window functions are 
+        <i>immutable</i>. For more information about window functions, see "Window Expressions" in 
+        the <cite>Greenplum Database Administrator Guide</cite>.</p>
       <table id="in164369">
         <title>Window functions</title>
         <tgroup cols="4">
