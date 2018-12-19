@@ -20,7 +20,6 @@ groups:
   jobs:
 {% if "centos6" in os_types %}
   - compile_gpdb_centos6
-  - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
 {% endif %}
 {% if "centos7" in os_types %}
@@ -150,7 +149,6 @@ groups:
   jobs:
 {% if "centos6" in os_types %}
   - compile_gpdb_centos6
-  - compile_gpdb_binary_swap_centos6
   - compile_gpdb_open_source_centos6
 {% endif %}
 {% if "centos7" in os_types %}
@@ -423,24 +421,6 @@ resources:
     - gpdb-doc/*
     - README*
 
-{% if "centos6" in os_types %}
-- name: gpdb_src_binary_swap
-  type: git
-  source:
-    branch: {{gpdb-binary-swap-git-tag}}
-    uri: {{gpdb-binary-swap-git-remote}}
-    ignore_paths:
-    - gpdb-doc/*
-    - README*
-
-- name: gpaddon_src_binary_swap
-  type: git
-  source:
-    branch: {{gpaddon-binary-swap-git-branch}}
-    private_key: {{gpaddon-git-key}}
-    uri: {{gpaddon-binary-swap-git-remote}}
-
-{% endif %}
 - name: gpaddon_src
   type: git
   source:
@@ -556,17 +536,6 @@ resources:
     region_name: {{aws-region}}
     secret_access_key: {{bucket-secret-access-key}}
     versioned_file: {{compiled_bits_ubuntu16_versioned_file}}
-
-{% endif %}
-{% if "centos6" in os_types %}
-- name: binary_swap_gpdb_centos6
-  type: s3
-  source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
 
 {% endif %}
 {% if "centos7" in os_types %}
@@ -987,36 +956,6 @@ jobs:
         CONFIGURE_FLAGS: {{configure_flags}}
 
 {% endif %}
-{% if "centos6" in os_types %}
-- name: compile_gpdb_binary_swap_centos6
-  plan:
-  # This acts like a cache as this job will only be run once to get a
-  # binary to use for our binary swap compatibility tests. Setting a new
-  # tag or branch for the gpdb_src_binary_swap resource via set-pipeline
-  # will replace the cached binary.
-  - aggregate:
-    - get: gpdb_src
-      resource: gpdb_src_binary_swap
-      trigger: true
-    - get: gpaddon_src
-      resource: gpaddon_src_binary_swap
-    - get: centos-gpdb-build-6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-build-6
-    params:
-      IVYREPO_HOST: {{ivyrepo_host}}
-      IVYREPO_REALM: {{ivyrepo_realm}}
-      IVYREPO_USER: {{ivyrepo_user}}
-      IVYREPO_PASSWD: {{ivyrepo_passwd}}
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-  - aggregate:
-    - put: binary_swap_gpdb_centos6
-      params:
-        file: gpdb_artifacts/bin_gpdb.tar.gz
-
-{% endif %}
 {% if "aix7" in os_types %}
 - name: compile_gpdb_aix7_remote
   serial: true
@@ -1115,10 +1054,6 @@ jobs:
     - get: bin_gpdb
       passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
-      trigger: [[ test_trigger ]]
-    - get: binary_swap_gpdb
-      passed: [compile_gpdb_binary_swap_centos6]
-      resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
     - get: centos-gpdb-test-6
   - task: ic_gpdb
@@ -1708,12 +1643,6 @@ jobs:
       passed:
       - compile_gpdb_sles11
 {% endif %}
-{% if "centos6" in os_types or "centos7" in os_types %}
-    - get: binary_swap_gpdb
-      passed: [compile_gpdb_binary_swap_centos6]
-      resource: binary_swap_gpdb_centos6
-      trigger: [[ test_trigger ]]
-{% endif %}
 
 - name: resource_group_centos6
   plan:
@@ -1726,10 +1655,6 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-test-6
-    - get: binary_swap_gpdb
-      passed: [gate_resource_groups_start]
-      resource: binary_swap_gpdb_centos6
-      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1764,10 +1689,6 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: ccp_src
     - get: centos-gpdb-test-6
-    - get: binary_swap_gpdb
-      passed: [gate_resource_groups_start]
-      resource: binary_swap_gpdb_centos6
-      trigger: [[ test_trigger ]]
   - put: terraform
     params:
       <<: *ccp_default_params

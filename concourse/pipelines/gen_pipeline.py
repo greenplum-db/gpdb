@@ -57,7 +57,6 @@ JOBS_THAT_ARE_GATES = ['gate_icw_start',
                        'gate_release_candidate_start']
 
 JOBS_THAT_SHOULD_NOT_BLOCK_RELEASE = [
-    'compile_gpdb_binary_swap_centos6',
     'icw_gporca_centos6_gpos_memory',
     'walrep_2'
 ] + RELEASE_VALIDATOR_JOB + JOBS_THAT_ARE_GATES
