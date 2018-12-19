@@ -427,8 +427,8 @@ resources:
 - name: gpdb_src_binary_swap
   type: git
   source:
-    branch: {{gpdb-binary-swap-git-tag}}
-    uri: {{gpdb-binary-swap-git-remote}}
+    branch: master
+    uri: https://github.com/greenplum-db/gpdb.git
     ignore_paths:
     - gpdb-doc/*
     - README*
@@ -436,9 +436,9 @@ resources:
 - name: gpaddon_src_binary_swap
   type: git
   source:
-    branch: {{gpaddon-binary-swap-git-branch}}
+    branch: master
     private_key: {{gpaddon-git-key}}
-    uri: {{gpaddon-binary-swap-git-remote}}
+    uri: git@github.com:greenplum-db/gpaddon.git
 
 {% endif %}
 - name: gpaddon_src
@@ -1001,8 +1001,8 @@ jobs:
     - get: gpaddon_src
       resource: gpaddon_src_binary_swap
     - get: centos-gpdb-build-6
-  - task: compile_gpdb
-    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+  - task: sync_tools
+    file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos-gpdb-build-6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
@@ -1011,6 +1011,16 @@ jobs:
       IVYREPO_PASSWD: {{ivyrepo_passwd}}
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
+      TASK_OS: centos
+      TASK_OS_VERSION: 6
+  - task: compile_gpdb
+    file: gpdb_src/concourse/tasks/compile_gpdb.yml
+    image: centos-gpdb-build-6
+    params:
+      CONFIGURE_FLAGS: {{configure_flags}}
+      TARGET_OS: centos
+      TARGET_OS_VERSION: 6
+      BLD_TARGETS: "clients loaders"
   - aggregate:
     - put: binary_swap_gpdb_centos6
       params:
