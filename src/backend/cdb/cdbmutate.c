@@ -1524,8 +1524,8 @@ make_splitupdate(PlannerInfo *root, ModifyTable *mt, Plan *subplan, RangeTblEntr
 
 	/*
 	 * A redistributed-motion has to be added above	the split node in
-	 * the plan and this can be achieved by marking the split node strew.
-	 * However, if the subplan is an entry, we should not mark it strew.
+	 * the plan and this can be achieved by marking the split node strewn.
+	 * However, if the subplan is an entry, we should not mark it strewn.
 	 */
 	if (subplan->flow->locustype != CdbLocusType_Entry)
 		mark_plan_strewn((Plan *) splitupdate, subplan->flow->numsegments);
