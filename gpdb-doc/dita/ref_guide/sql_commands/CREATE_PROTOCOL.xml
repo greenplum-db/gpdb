@@ -16,7 +16,7 @@
             <title>Description</title>
             <p><codeph>CREATE PROTOCOL</codeph> associates a data access protocol name with call
                 handlers that are responsible for reading from and writing data to an external data
-                source. </p>
+                source. You must be a superuser to create a protocol.</p>
             <p>The <codeph>CREATE PROTOCOL</codeph> command must specify either a read call handler
                 or a write call handler. The call handlers specified in the <codeph>CREATE
                     PROTOCOL</codeph> command must be defined in the database.</p>

@@ -12,7 +12,8 @@
       <p>You can create a custom protocol whenever the available built-in protocols do not suffice
          for a particular need. For example, you could connect Greenplum Database in parallel to another
          system directly, and stream data from one to the other without the need to materialize the
-         data on disk or use an intermediate process such as <cmdname>gpfdist</cmdname>. </p>
+         data on disk or use an intermediate process such as <cmdname>gpfdist</cmdname>. You must be
+         a superuser to create and register a custom protocol.</p>
       <ol>
          <li id="du226058">Author the send, receive, and (optionally) validator functions in C, with
             a predefined API. These functions are compiled and registered with the Greenplum

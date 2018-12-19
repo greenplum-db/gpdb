@@ -14,6 +14,7 @@
       <p><codeph>DROP PROTOCOL</codeph> removes the specified protocol from a database. A protocol
         name can be specified in the <codeph>CREATE EXTERNAL TABLE</codeph> command to read data
         from or write data to an external data source.</p>
+      <p>You must be a superuser or the protocol owner to drop a protocol.</p>
       <note type="warning">If you drop a data access prococol, external tables that have been
         defined with the protocol will no longer be able to access the external data source.</note>
     </section>
