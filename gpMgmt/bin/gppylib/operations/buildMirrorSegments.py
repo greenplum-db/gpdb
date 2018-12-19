@@ -316,6 +316,16 @@ class GpMirrorListToBuild:
         rewindFailedSegments = []
         # Run pg_rewind on all the targets
         for targetSegment, sourceHostName, sourcePort in rewindInfo:
+            # Do CHECKPOINT on source to force TimeLineID to be updated in pg_control.
+            # pg_rewind wants that to make incremental recovery successful finally.
+            self.__logger.debug('Do CHECKPOINT on %s (port: %d) before running pg_rewind.' % (sourceHostName, sourcePort))
+            dburl = dbconn.DbURL(hostname=sourceHostName,
+                                 port=sourcePort,
+                                 dbname='template1')
+            conn = dbconn.connect(dburl, utility=True)
+            dbconn.execSQL(conn, "CHECKPOINT")
+
+            # Run pg_rewind to do incremental recovery.
             cmd = gp.SegmentRewind('segment rewind',
                                    targetSegment.getSegmentHostName(),
                                    targetSegment.getSegmentDataDirectory(),
