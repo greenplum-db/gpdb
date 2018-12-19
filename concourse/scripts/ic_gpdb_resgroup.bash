@@ -90,29 +90,8 @@ EOF1
 EOF
 }
 
-keep_minimal_cgroup_dirs() {
-    local gpdb_master_alias=$1
-    local basedir=$CGROUP_BASEDIR
-
-    ssh -t $gpdb_master_alias sudo bash -ex <<EOF
-        rmdir $basedir/memory/gpdb/*/ || :
-        rmdir $basedir/memory/gpdb
-        rmdir $basedir/cpuset/gpdb/*/ || :
-        rmdir $basedir/cpuset/gpdb
-EOF
-}
-
 mount_cgroups ccp-${CLUSTER_NAME}-0
 mount_cgroups ccp-${CLUSTER_NAME}-1
 make_cgroups_dir ccp-${CLUSTER_NAME}-0
 make_cgroups_dir ccp-${CLUSTER_NAME}-1
 run_resgroup_test mdw
-
-#
-# below is for binary swap test
-#
-
-# remove cgroup dirs for new features such as the memory auditor
-# the purpose is to ensure the backward compatibilities
-keep_minimal_cgroup_dirs ccp-${CLUSTER_NAME}-0
-keep_minimal_cgroup_dirs ccp-${CLUSTER_NAME}-1
