@@ -223,7 +223,6 @@ extern Node *get_check_constraint_expr_tree(Oid oidCheckconstraint);
 Oid get_check_constraint_relid(Oid oidCheckconstraint);
 
 extern bool has_subclass_slow(Oid relationId);
-extern bool has_parquet_children(Oid relationId);
 extern GpPolicy *relation_policy(Relation rel);
 extern bool child_distribution_mismatch(Relation rel);
 extern bool child_triggers(Oid relationId, int32 triggerType);

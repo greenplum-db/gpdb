@@ -491,9 +491,6 @@ namespace gpdb {
 	// check whether a relation is inherited
 	bool HasSubclassSlow(Oid rel_oid);
 
-    // check whether a relation has parquet children
-    bool HasParquetChildren(Oid rel_oid);
-    
     // return the distribution policy of a relation; if the table is partitioned
     // and the parts are distributed differently, return Random distribution
     GpPolicy *GetDistributionPolicy(Relation rel);

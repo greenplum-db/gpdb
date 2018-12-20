@@ -632,15 +632,6 @@ CTranslatorRelcacheToDXL::RetrieveRel
 		}
 		is_partitioned = (NULL != part_keys && 0 < part_keys->Size());
 
-		if (is_partitioned && IMDRelation::ErelstorageAppendOnlyParquet != rel_storage_type && IMDRelation::ErelstorageExternal != rel_storage_type)
-		{
-			// mark relation as Parquet if one of its children is parquet
-			if (gpdb::HasParquetChildren(oid))
-			{
-				rel_storage_type = IMDRelation::ErelstorageAppendOnlyParquet;
-			}
-		}
-
 		// get number of leaf partitions
 		if (gpdb::RelPartIsRoot(oid))
 		{

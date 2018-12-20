@@ -2277,21 +2277,6 @@ gpdb::HasSubclassSlow
 }
 
 
-bool
-gpdb::HasParquetChildren
-	(
-	Oid rel_oid
-	)
-{
-	GP_WRAP_START;
-	{
-		/* catalog tables: pg_inherits, pg_class */
-		return has_parquet_children(rel_oid);
-	}
-	GP_WRAP_END;
-	return false;
-}
-
 GpPolicy *
 gpdb::GetDistributionPolicy
 	(
