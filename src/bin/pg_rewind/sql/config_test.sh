@@ -38,7 +38,7 @@ PATH=$bindir:$PATH
 export PATH
 
 # Adjust these paths for your environment
-TESTROOT=$PWD/tmp_check
+TESTROOT=$PWD/tmp_check_$TEST_SUITE
 TEST_MASTER=$TESTROOT/data_master
 TEST_STANDBY=$TESTROOT/data_standby
 
