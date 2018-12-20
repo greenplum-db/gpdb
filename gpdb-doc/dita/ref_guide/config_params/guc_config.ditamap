@@ -112,6 +112,7 @@
             <topicref href="guc-list.xml#gp_fts_probe_retries"/>
             <topicref href="guc-list.xml#gp_fts_probe_threadcount"/>
             <topicref href="guc-list.xml#gp_fts_probe_timeout"/>
+            <topicref href="guc-list.xml#gp_global_deadlock_detector_period"/>
             <topicref href="guc-list.xml#gp_gpperfmon_send_interval"/>
             <topicref href="guc-list.xml#gpperfmon_log_alert_level"/>
             <topicref href="guc-list.xml#gp_hadoop_home"/>

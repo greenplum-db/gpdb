@@ -1075,6 +1075,11 @@
               <xref href="guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref>
             </p>
             <p>
+              <xref href="guc-list.xml#gp_global_deadlock_detector_period" type="section">gp_global_deadlock_detector_period</xref>
+            </p>
+          </stentry>
+          <stentry>
+            <p>
               <xref href="guc-list.xml#max_locks_per_transaction" type="section"
                 >max_locks_per_transaction</xref>
             </p>

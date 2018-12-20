@@ -12,6 +12,7 @@
         <li><xref href="#topic4" format="dita"/></li>
         <li><xref href="#topic5" format="dita"/></li>
         <li><xref href="#topic7" format="dita"/></li>
+        <li><xref href="#topic_gdd" format="dita"/></li>
         <li><xref href="#topic9" format="dita"/></li>
       </ul></p>
   </body>
@@ -319,6 +320,47 @@
             TRANSACTION</codeph> command after the transaction starts.</p>
       </body>
     </topic>
+  </topic>
+  <topic id="topic_gdd" xml:lang="en">
+    <title>Global Deadlock Detector</title>
+    <body>
+      <p>Detecting deadlock in a distributed system is a complex matter. Previous versions of Greenplum
+        Database prevented global deadlock by holding exclusive table locks for <codeph>UPDATE</codeph>
+        and <codeph>DELETE</codeph> operations. While this strategy does prevent deadlocks, it comes at
+        the cost of poor performance on concurrent updates.</p>
+      <p>Greenplum Database 6.0 includes a global deadlock detector. The Global Deadlock Detector backend
+        process collects lock information on all segments and uses a directed algorithm to detect the
+        existence of global deadlocks. If the Global Deadlock Detector determines that deadlock exists,
+        it breaks the deadlock by cancelling one or more backend processes associated with the youngest 
+        transaction(s) involved.</p>
+      <note>The Greenplum Database 6.0 Global Deadlock Detector removes the concurrent update restriction
+        on heap tables. The Global Deadlock Detector does not remove the concurrent
+        <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph>
+        restriction on AO/CO tables; Greenplum Database base still employs table-level locking on these
+        operations.</note>
+      <p>The Global Deadlock Detector backend process is automatically started on the master host when
+        you start Greenplum Database. You configure the interval at which the Global Deadlock Detector
+        collects and analyzes lock waiting data via the
+         <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period" type="section">gp_global_deadlock_detector_period</xref></codeph>
+         server configuration parameter.</p>
+      <p>To view lock waiting information for all segments, run the <codeph>pg_dist_wait_status()</codeph>
+        user-defined function. You can use the output of this function to determine which transactions
+        are waiting on locks, which transactions are holding locks, and the segments on which the
+        transactions are executing.  Sample output of the <codeph>pg_dist_wait_status()</codeph> function
+        follows:</p>
+<codeblock>SELECT * FROM pg_dist_wait_status();
+ segid | waiter_dxid | holder_dxid | holdTillEndXact 
+-------+-------------+-------------+-----------------
+    -1 |          29 |          28 | t
+     0 |          28 |          26 | t
+     0 |          27 |          29 | t
+     1 |          26 |          27 | t
+(4 rows)
+</codeblock>
+      <p>When it cancels a transaction to break a global deadlock, the Global Deadlock Detector reports
+         the following error message:</p>
+<codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
+    </body>
   </topic>
   <topic id="topic9" xml:lang="en">
     <title id="ix141487">Vacuuming the Database</title>
