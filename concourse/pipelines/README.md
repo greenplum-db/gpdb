@@ -88,15 +88,15 @@ fly -t gpdb-prod \
     set-pipeline \
     -p gpdb_master \
     -c gpdb_master-generated.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.yml
 
 fly -t gpdb-prod \
     set-pipeline \
     -p gpdb_master_without_asserts \
     -c gpdb_master-generated.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master_without_asserts-ci-secrets.yml
 ```
 
 The generated pipeline file `gpdb_master-generated.yml` will be set,
@@ -134,9 +134,9 @@ fly -t gpdb-dev \
     set-pipeline \
     -p gpdb-dpm-curry \
     -c gpdb-dpm-curry.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```
@@ -162,9 +162,9 @@ fly -t gpdb-dev \
     set-pipeline \
     -p gpdb-cs-durant \
     -c gpdb-cs-durant.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
-    -l ~/workspace/continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.dev.yml \
+    -l ~/workspace/gp-continuous-integration/secrets/ccp_ci_secrets_gpdb-dev.yml \
     -v gpdb-git-remote=<https://github.com/<github-user>/gpdb> \
     -v gpdb-git-branch=<branch-name>
 ```
