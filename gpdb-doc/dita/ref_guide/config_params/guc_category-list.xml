@@ -895,9 +895,6 @@
             <p>
               <xref href="guc-list.xml#stats_queue_level" type="section">stats_queue_level</xref>
             </p>
-            <p>
-              <xref href="guc-list.xml#track_activities" type="section">track_activities</xref>
-            </p>
           </stentry>
           <stentry>
             <p>
