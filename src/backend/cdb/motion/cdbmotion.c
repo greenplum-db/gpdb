@@ -513,9 +513,8 @@ SendTuple(MotionLayerState *mlStates,
 	TupleChunkListData tcList;
 	MemoryContext oldCtxt;
 	SendReturnCode rc;
-	GenericTuple tuple = ExecFetchSlotGenericTuple(slot);
 
-	AssertArg(tuple != NULL);
+	AssertArg(!TupIsNull(slot));
 
 	/*
 	 * Analyze tools.  Do not send any thing if this slice is in the bit mask
