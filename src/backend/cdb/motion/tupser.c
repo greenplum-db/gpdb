@@ -394,38 +394,101 @@ SerializeRecordCacheIntoChunks(SerTupInfo *pSerInfo,
 	return;
 }
 
+static bool
+CandidateForSerializeDirect(int16 targetRoute, struct directTransportBuffer *b)
+{
+	return targetRoute != BROADCAST_SEGIDX && b->pri != NULL && b->prilen > TUPLE_CHUNK_HEADER_SIZE;
+}
+
 /*
+ *
+ * First try to serialize a tuple directly into a buffer.
+ *
+ * We're called with at least enough space for a tuple-chunk-header.
+ *
  * Convert a HeapTuple into a byte-sequence, and store it directly
  * into a chunklist for transmission.
  *
  * This code is based on the printtup_internal_20() function in printtup.c.
  */
-void
-SerializeTupleIntoChunks(TupleTableSlot *slot, SerTupInfo *pSerInfo, TupleChunkList tcList)
+int
+SerializeTuple(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTransportBuffer *b, TupleChunkList tcList, int16 targetRoute)
 {
-	TupleChunkListItem tcItem = NULL;
+	int			i;
+	int			natts;
+	int			dataSize = TUPLE_CHUNK_HEADER_SIZE;
 	MemoryContext oldCtxt;
 	TupleDesc	tupdesc;
-	int			i,
-				natts;
+	TupleChunkListItem tcItem = NULL;
 	GenericTuple gtuple = ExecFetchSlotGenericTuple(slot);
 
-	AssertArg(tcList != NULL);
 	AssertArg(gtuple != NULL);
 	AssertArg(pSerInfo != NULL);
+	AssertArg(b != NULL);
 
 	tupdesc = pSerInfo->tupdesc;
 	natts = tupdesc->natts;
 
-	/* get ready to go */
+	if (natts == 0 && CandidateForSerializeDirect(targetRoute, b))
+	{
+		/* TC_EMTPY is just one chunk */
+		SetChunkType(b->pri, TC_EMPTY);
+		SetChunkDataSize(b->pri, 0);
+
+		return TUPLE_CHUNK_HEADER_SIZE;
+	}
+
 	tcList->p_first = NULL;
 	tcList->p_last = NULL;
 	tcList->num_chunks = 0;
 	tcList->serialized_data_length = 0;
 	tcList->max_chunk_length = Gp_max_tuple_chunk_size;
 
-	if (natts == 0)
+	if (is_memtuple(gtuple)) /* memtuple case */
 	{
+		MemTuple	tuple = (MemTuple) gtuple;
+		int			tupleSize;
+		int			paddedSize;
+		bool need_toast = memtuple_get_hasext(tuple);
+
+		if (need_toast)
+		{
+			MemoryContext oldContext;
+			oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
+			slot_getallattrs(slot);
+			tuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+									  NULL, NULL, true);
+			MemoryContextSwitchTo(oldContext);
+		}
+
+		if (CandidateForSerializeDirect(targetRoute, b))
+		{
+			/*
+			 * Here we first try to in-line serialize the tuple directly into
+			 * buffer.
+			 */
+			tupleSize = memtuple_get_size(tuple);
+
+			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
+
+			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE <= b->prilen)
+			{
+				/* will fit. */
+				memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
+				memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
+
+				dataSize += paddedSize;
+
+				SetChunkType(b->pri, TC_WHOLE);
+				SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
+				return dataSize;
+			}
+		}
+
+		/*
+		 * If direct in-line serialization failed then we fallback to chunked
+		 * out-of-line serialization.
+		 */
 		tcItem = getChunkFromCache(&pSerInfo->chunkCache);
 		if (tcItem == NULL)
 		{
@@ -433,61 +496,92 @@ SerializeTupleIntoChunks(TupleTableSlot *slot, SerTupInfo *pSerInfo, TupleChunkL
 					(errcode(ERRCODE_OUT_OF_MEMORY),
 					 errmsg("could not allocate space for first chunk item in new chunk list")));
 		}
-
-		/* TC_EMTPY is just one chunk */
-		SetChunkType(tcItem->chunk_data, TC_EMPTY);
+		SetChunkType(tcItem->chunk_data, TC_WHOLE);
 		tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
 		appendChunkToTCList(tcList, tcItem);
 
-		return;
+		AssertState(s_tupSerMemCtxt != NULL);
+
+		addByteStringToChunkList(tcList, (char *) tuple, memtuple_get_size(tuple), &pSerInfo->chunkCache);
+		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(tuple));
+
+		MemoryContextReset(s_tupSerMemCtxt);
 	}
-
-	tcItem = getChunkFromCache(&pSerInfo->chunkCache);
-	if (tcItem == NULL)
+	else /* heaptuple case */
 	{
-		ereport(FATAL,
-				(errcode(ERRCODE_OUT_OF_MEMORY),
-				 errmsg("could not allocate space for first chunk item in new chunk list")));
-	}
-
-	/* assume that we'll take a single chunk */
-	SetChunkType(tcItem->chunk_data, TC_WHOLE);
-	tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
-	appendChunkToTCList(tcList, tcItem);
-
-	AssertState(s_tupSerMemCtxt != NULL);
-
-	if (is_memtuple(gtuple))
-	{
-		MemTuple mtuple = (MemTuple) gtuple;
-		bool need_toast = memtuple_get_hasext(mtuple);
-
-		if (need_toast)
-		{
-			MemoryContext oldContext;
-
-			/* Need to detoast */
-			oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
-			slot_getallattrs(slot);
-			mtuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
-									  NULL, NULL, true);
-			MemoryContextSwitchTo(oldContext);
-		}
-
-		addByteStringToChunkList(tcList, (char *) mtuple, memtuple_get_size(mtuple), &pSerInfo->chunkCache);
-		addPadding(tcList, &pSerInfo->chunkCache, memtuple_get_size(mtuple));
-
-		if (need_toast)
-			MemoryContextReset(s_tupSerMemCtxt);
-	}
-	else
-	{
-		HeapTuple tuple = (HeapTuple) gtuple;
-		HeapTupleHeader t_data = tuple->t_data;
+		HeapTuple	tuple = (HeapTuple) gtuple;
 		TupSerHeader tsh;
 
 		unsigned int datalen;
 		unsigned int nullslen;
+
+		HeapTupleHeader t_data = tuple->t_data;
+
+		unsigned char *pos;
+
+		if (CandidateForSerializeDirect(targetRoute, b))
+		{
+			/*
+			 * Here we first try to in-line serialize the tuple directly into
+			 * buffer.
+			 */
+			datalen = tuple->t_len - t_data->t_hoff;
+			if (HeapTupleHasNulls(tuple))
+				nullslen = BITMAPLEN(HeapTupleHeaderGetNatts(t_data));
+			else
+				nullslen = 0;
+
+			tsh.tuplen = sizeof(TupSerHeader) + TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) + TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen);
+			tsh.natts = HeapTupleHeaderGetNatts(t_data);
+			tsh.infomask = t_data->t_infomask;
+
+
+			if (dataSize + tsh.tuplen <= b->prilen &&
+				(tsh.infomask & HEAP_HASEXTERNAL) == 0)
+			{
+				pos = b->pri + TUPLE_CHUNK_HEADER_SIZE;
+
+				memcpy(pos, (char *) &tsh, sizeof(TupSerHeader));
+				pos += sizeof(TupSerHeader);
+
+				if (nullslen)
+				{
+					memcpy(pos, (char *) t_data->t_bits, nullslen);
+					pos += nullslen;
+					memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen);
+					pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen;
+				}
+
+				memcpy(pos, (char *) t_data + t_data->t_hoff, datalen);
+				pos += datalen;
+				memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen);
+				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen;
+
+				dataSize += tsh.tuplen;
+
+				SetChunkType(b->pri, TC_WHOLE);
+				SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
+
+				return dataSize;
+			}
+		}
+
+		/*
+		 * If direct in-line serialization failed then we fallback to chunked
+		 * out-of-line serialization.
+		 */
+		tcItem = getChunkFromCache(&pSerInfo->chunkCache);
+		if (tcItem == NULL)
+		{
+			ereport(FATAL,
+					(errcode(ERRCODE_OUT_OF_MEMORY),
+					 errmsg("could not allocate space for first chunk item in new chunk list")));
+		}
+		SetChunkType(tcItem->chunk_data, TC_WHOLE);
+		tcItem->chunk_length = TUPLE_CHUNK_HEADER_SIZE;
+		appendChunkToTCList(tcList, tcItem);
+
+		AssertState(s_tupSerMemCtxt != NULL);
 
 		datalen = tuple->t_len - t_data->t_hoff;
 		if (HeapTupleHasNulls(tuple))
@@ -638,143 +732,10 @@ SerializeTupleIntoChunks(TupleTableSlot *slot, SerTupInfo *pSerInfo, TupleChunkL
 		 */
 	}
 
-	return;
-}
-
-/*
- * Serialize a tuple directly into a buffer.
- *
- * We're called with at least enough space for a tuple-chunk-header.
- */
-int
-SerializeTupleDirect(TupleTableSlot *slot, SerTupInfo *pSerInfo, struct directTransportBuffer *b)
-{
-	int			natts;
-	int			dataSize = TUPLE_CHUNK_HEADER_SIZE;
-	TupleDesc	tupdesc;
-	GenericTuple gtuple = ExecFetchSlotGenericTuple(slot);
-
-	AssertArg(gtuple != NULL);
-	AssertArg(pSerInfo != NULL);
-	AssertArg(b != NULL);
-
-	tupdesc = pSerInfo->tupdesc;
-	natts = tupdesc->natts;
-
-	do
-	{
-		if (natts == 0)
-		{
-			/* TC_EMTPY is just one chunk */
-			SetChunkType(b->pri, TC_EMPTY);
-			SetChunkDataSize(b->pri, 0);
-
-			break;
-		}
-
-		/* easy case */
-		if (is_memtuple(gtuple))
-		{
-			MemTuple	tuple = (MemTuple) gtuple;
-			int			tupleSize;
-			int			paddedSize;
-			bool need_toast = memtuple_get_hasext(tuple);
-
-			if (need_toast)
-			{
-				MemoryContext oldContext;
-				/* Need to detoast */
-				oldContext = MemoryContextSwitchTo(s_tupSerMemCtxt);
-				slot_getallattrs(slot);
-				tuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
-										  NULL, NULL, true);
-				MemoryContextSwitchTo(oldContext);
-			}
-
-			tupleSize = memtuple_get_size(tuple);
-
-			paddedSize = TYPEALIGN(TUPLE_CHUNK_ALIGN, tupleSize);
-
-			if (paddedSize + TUPLE_CHUNK_HEADER_SIZE > b->prilen)
-			{
-				if (need_toast)
-					pfree(tuple);
-				return 0;
-			}
-
-			/* will fit. */
-			memcpy(b->pri + TUPLE_CHUNK_HEADER_SIZE, tuple, tupleSize);
-			if (need_toast)
-				pfree(tuple);
-			memset(b->pri + TUPLE_CHUNK_HEADER_SIZE + tupleSize, 0, paddedSize - tupleSize);
-
-			dataSize += paddedSize;
-
-			SetChunkType(b->pri, TC_WHOLE);
-			SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
-			break;
-		}
-		else
-		{
-			HeapTuple	tuple = (HeapTuple) gtuple;
-			TupSerHeader tsh;
-
-			unsigned int datalen;
-			unsigned int nullslen;
-
-			HeapTupleHeader t_data = tuple->t_data;
-
-			unsigned char *pos;
-
-			datalen = tuple->t_len - t_data->t_hoff;
-			if (HeapTupleHasNulls(tuple))
-				nullslen = BITMAPLEN(HeapTupleHeaderGetNatts(t_data));
-			else
-				nullslen = 0;
-
-			tsh.tuplen = sizeof(TupSerHeader) + TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) + TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen);
-			tsh.natts = HeapTupleHeaderGetNatts(t_data);
-			tsh.infomask = t_data->t_infomask;
-
-			if (dataSize + tsh.tuplen > b->prilen ||
-				(tsh.infomask & HEAP_HASEXTERNAL) != 0)
-				return 0;
-
-			pos = b->pri + TUPLE_CHUNK_HEADER_SIZE;
-
-			memcpy(pos, (char *) &tsh, sizeof(TupSerHeader));
-			pos += sizeof(TupSerHeader);
-
-			if (nullslen)
-			{
-				memcpy(pos, (char *) t_data->t_bits, nullslen);
-				pos += nullslen;
-				memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen);
-				pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, nullslen) - nullslen;
-			}
-
-			memcpy(pos, (char *) t_data + t_data->t_hoff, datalen);
-			pos += datalen;
-			memset(pos, 0, TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen);
-			pos += TYPEALIGN(TUPLE_CHUNK_ALIGN, datalen) - datalen;
-
-			dataSize += tsh.tuplen;
-
-			SetChunkType(b->pri, TC_WHOLE);
-			SetChunkDataSize(b->pri, dataSize - TUPLE_CHUNK_HEADER_SIZE);
-
-			break;
-		}
-
-		/*
-		 * tuple that we can't handle here (big ?) -- do the older
-		 * "out-of-line" serialization
-		 */
-		return 0;
-	}
-	while (0);
-
-	return dataSize;
+	/*
+	 * performed "out-of-line" serialization
+	 */
+	return 0;
 }
 
 /*
