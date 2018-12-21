@@ -18,6 +18,20 @@ select count(*) from bm_test where i in(1, 3);
     20
 (1 row)
 
+ -- this sql should confirm that the tuple with i=1
+ -- and the tuple with i=5 are on different segments
+select count(distinct gp_segment_id) from bm_test where i in (1, 5);
+ count 
+-------
+     2
+(1 row)
+
+select count(*) from bm_test where i in(1, 5);
+ count 
+-------
+    20
+(1 row)
+
 select * from bm_test where i > 10;
  i | t 
 ---+---
@@ -70,6 +84,39 @@ select * from bm_test where i=5 or t='6';
  6 | 6
  6 | 6
  6 | 6
+(20 rows)
+
+ -- this sql should confirm that the tuple with i=5
+ -- and the tuple with t='1' are on different segments
+ select count(distinct gp_segment_id) from bm_test where i=5 or t='1';
+ count 
+-------
+     2
+(1 row)
+
+select * from bm_test where i=5 or t='1';
+ i | t 
+---+---
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 1 | 1
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
+ 5 | 5
 (20 rows)
 
 select * from bm_test where i between 1 and 10 and i::text = t;

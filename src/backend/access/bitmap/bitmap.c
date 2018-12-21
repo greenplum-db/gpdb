@@ -175,13 +175,19 @@ stream_begin_iterate(StreamNode *self, StreamBMIterator *iterator)
 	iterator->pull = pull_stream;
 	iterator->end_iterate = stream_end_iterate;
 
-	/* create a memory context for the stream */
-	so = palloc(sizeof(BMStreamOpaque));
-	so->scan = copy_scan_desc(scan);
-	so->entry = NULL;
-	so->is_done = false;
+	if (scan == NULL)
+	{
+		iterator->opaque = NULL;
+	}
+	else
+	{
+		so = palloc(sizeof(BMStreamOpaque));
+		so->scan = copy_scan_desc(scan);
+		so->entry = NULL;
+		so->is_done = false;
 
-	iterator->opaque = so;
+		iterator->opaque = so;
+	}
 }
 
 /*
@@ -202,41 +208,20 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 	scanPos = ((BMScanOpaque)scan->opaque)->bm_currPos;
 	scanPos->bm_result.nextTid = 1;
 
+	/* perhaps this should be in a special context? */
+	is = (IndexStream *)palloc0(sizeof(IndexStream));
+	is->type = BMS_INDEX;
+	is->begin_iterate = stream_begin_iterate;
+	is->free = indexstream_free;
+	is->set_instrument = NULL;
+	is->upd_instrument = NULL;
+	is->opaque = NULL;
+
 	if (res)
 	{
 		int vec;
 
-		/* perhaps this should be in a special context? */
-		is = (IndexStream *)palloc0(sizeof(IndexStream));
-		is->type = BMS_INDEX;
-		is->begin_iterate = stream_begin_iterate;
-		is->free = indexstream_free;
-		is->set_instrument = NULL;
-		is->upd_instrument = NULL;
 		is->opaque = copy_scan_desc(scan);
-
-		if(!bm)
-		{
-			/* 
-			 * We must create the StreamBitmap outside of our temporary
-			 * memory context. The reason is, because we glue all the 
-			 * related streams together, bitmap_stream_free() will
-			 * descend the stream tree and free up all the nodes by
-			 * killing their memory context. If we lose the StreamBitmap
-			 * memory, we'll be reading invalid memory.
-			 */
-			StreamBitmap *sb = makeNode(StreamBitmap);
-			sb->streamNode = is;
-			bm = (Node *)sb;
-		}
-		else if(IsA(bm, StreamBitmap))
-		{
-			stream_add_node((StreamBitmap *)bm, is, BMS_OR);
-		}
-		else
-		{
-			elog(ERROR, "non stream bitmap"); 
-		}
 
 		/*
 		 * Since we have made a copy for this scan, we reset the lov buffers
@@ -249,10 +234,20 @@ bmgetbitmap(PG_FUNCTION_ARGS)
 			bmvec->bm_lovBuffer = InvalidBuffer;
 		}
 	}
+
+	if (!bm)
+	{
+		StreamBitmap *sb = makeNode(StreamBitmap);
+		sb->streamNode = is;
+		bm = (Node *)sb;
+	}
+	else if (IsA(bm, StreamBitmap))
+	{
+		stream_add_node((StreamBitmap *)bm, is, BMS_OR);
+	}
 	else
 	{
-		/* Return an empty bitmap */
-		bm = (Node *) tbm_create(10 * 1024L);
+		elog(ERROR, "non stream bitmap");
 	}
 
 	PG_RETURN_POINTER(bm);
@@ -619,7 +614,8 @@ stream_free(BMStreamOpaque *so)
 static void
 indexstream_free(StreamNode *self) {
 	IndexScanDesc scan = self->opaque;
-	free_scan_desc(scan, true /* we can release the scanned Buffers now */);
+	if (scan)
+		free_scan_desc(scan, true /* we can release the scanned Buffers now */);
 	pfree(self);
 }
 

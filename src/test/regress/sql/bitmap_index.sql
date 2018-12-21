@@ -7,6 +7,12 @@ insert into bm_test select i % 10, (i % 10)::text  from generate_series(1, 100) 
 create index bm_test_idx on bm_test using bitmap (i);
 select count(*) from bm_test where i=1;
 select count(*) from bm_test where i in(1, 3);
+
+ -- this sql should confirm that the tuple with i=1
+ -- and the tuple with i=5 are on different segments
+select count(distinct gp_segment_id) from bm_test where i in (1, 5);
+select count(*) from bm_test where i in(1, 5);
+
 select * from bm_test where i > 10;
 reindex index bm_test_idx;
 select count(*) from bm_test where i in(1, 3);
@@ -14,6 +20,12 @@ drop index bm_test_idx;
 create index bm_test_multi_idx on bm_test using bitmap(i, t);
 select * from bm_test where i=5 and t='5';
 select * from bm_test where i=5 or t='6';
+
+ -- this sql should confirm that the tuple with i=5
+ -- and the tuple with t='1' are on different segments
+ select count(distinct gp_segment_id) from bm_test where i=5 or t='1';
+select * from bm_test where i=5 or t='1';
+
 select * from bm_test where i between 1 and 10 and i::text = t;
 drop table bm_test;
 
