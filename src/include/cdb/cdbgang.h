@@ -78,13 +78,10 @@ extern List *getCdbProcessesForQD(int isPrimary);
 
 extern Gang *AllocateGang(struct CdbDispatcherState *ds, enum GangType type, List *segments);
 extern void RecycleGang(Gang *gp, bool forceDestroy);
-extern void DisconnectAndDestroyGang(Gang *gp);
 extern void DisconnectAndDestroyAllGangs(bool resetSession);
 extern void DisconnectAndDestroyUnusedQEs(void);
 
 extern void CheckForResetSession(void);
-
-extern List *getAllIdleReaderGangs(struct CdbDispatcherState *ds);
 
 extern struct SegmentDatabaseDescriptor *getSegmentDescriptorFromGang(const Gang *gp, int seg);
 
@@ -134,6 +131,4 @@ typedef struct CdbProcess
 
 typedef Gang *(*CreateGangFunc)(List *segments, SegmentType segmentType);
 
-extern void cdbgang_resetPrimaryWriterGang(void);
-extern void cdbgang_decreaseNumReaderGang(void);
 #endif   /* _CDBGANG_H_ */
