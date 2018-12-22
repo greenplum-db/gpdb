@@ -328,7 +328,7 @@
         Database prevented global deadlock by holding exclusive table locks for <codeph>UPDATE</codeph>
         and <codeph>DELETE</codeph> operations. While this strategy does prevent deadlocks, it comes at
         the cost of poor performance on concurrent updates.</p>
-      <p>Greenplum Database 6.0 includes a global deadlock detector. The Global Deadlock Detector backend
+      <p>The Greenplum Database Global Deadlock Detector backend
         process collects lock information on all segments and uses a directed algorithm to detect the
         existence of global deadlocks. If the Global Deadlock Detector determines that deadlock exists,
         it breaks the deadlock by cancelling one or more backend processes associated with the youngest 
@@ -336,7 +336,7 @@
       <note>The Greenplum Database 6.0 Global Deadlock Detector removes the concurrent update restriction
         on heap tables. The Global Deadlock Detector does not remove the concurrent
         <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph>
-        restriction on AO/CO tables; Greenplum Database base still employs table-level locking on these
+        restriction on AO/CO tables; Greenplum Database still employs table-level locking on these
         operations.</note>
       <p>The Global Deadlock Detector backend process is automatically started on the master host when
         you start Greenplum Database. You configure the interval at which the Global Deadlock Detector
@@ -345,8 +345,8 @@
          server configuration parameter.</p>
       <p>To view lock waiting information for all segments, run the <codeph>pg_dist_wait_status()</codeph>
         user-defined function. You can use the output of this function to determine which transactions
-        are waiting on locks, which transactions are holding locks, and the segments on which the
-        transactions are executing.  Sample output of the <codeph>pg_dist_wait_status()</codeph> function
+        are waiting on locks, which transactions are holding locks, and which segments are executing
+        the transactions.  Sample output of the <codeph>pg_dist_wait_status()</codeph> function
         follows:</p>
 <codeblock>SELECT * FROM pg_dist_wait_status();
  segid | waiter_dxid | holder_dxid | holdTillEndXact 
