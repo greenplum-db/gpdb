@@ -324,16 +324,12 @@
   <topic id="topic_gdd" xml:lang="en">
     <title>Global Deadlock Detector</title>
     <body>
-      <p>Detecting deadlock in a distributed system is a complex matter. Previous versions of Greenplum
-        Database prevented global deadlock by holding exclusive table locks for <codeph>UPDATE</codeph>
-        and <codeph>DELETE</codeph> operations. While this strategy does prevent deadlocks, it comes at
-        the cost of poor performance on concurrent updates.</p>
       <p>The Greenplum Database Global Deadlock Detector backend
         process collects lock information on all segments and uses a directed algorithm to detect the
         existence of global deadlocks. If the Global Deadlock Detector determines that deadlock exists,
         it breaks the deadlock by cancelling one or more backend processes associated with the youngest 
         transaction(s) involved.</p>
-      <note>The Greenplum Database 6.0 Global Deadlock Detector removes the concurrent update restriction
+      <note>The Greenplum Database Global Deadlock Detector removes the concurrent update restriction
         on heap tables. The Global Deadlock Detector does not remove the concurrent
         <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph>
         restriction on AO/CO tables; Greenplum Database still employs table-level locking on these
