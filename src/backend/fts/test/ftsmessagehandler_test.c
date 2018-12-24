@@ -136,6 +136,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	am_mirror = true;
 
 	will_return(GetCurrentDBState, DB_IN_STANDBY_MODE);
+	will_be_called(UnsetSyncStandbysDefined);
 	will_be_called(SignalPromote);
 
 	FtsResponse mockresponse;

@@ -339,7 +339,18 @@ HandleFtsWalRepPromote(void)
 	 */
 	DBState state = GetCurrentDBState();
 	if (state == DB_IN_STANDBY_MODE)
+	{
+		/*
+		 * Reset sync_standby_names on promotion. This is to avoid commits
+		 * hanging/waiting for replication till next FTS probe. Next FTS probe
+		 * will detect this node to be not in sync and reset the same which
+		 * can take a min. Since we know on mirror promotion its marked as not
+		 * in sync in gp_segment_configuration, best to right away clean the
+		 * sync_standby_names.
+		 */
+		UnsetSyncStandbysDefined();
 		SignalPromote();
+	}
 	else
 	{
 		elog(LOG, "ignoring promote request, walreceiver not running,"
