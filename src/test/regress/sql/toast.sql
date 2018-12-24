@@ -65,3 +65,14 @@ SELECT * FROM toast_chunk_test WHERE a <> repeat('abcdefghijklmnopqrstuvwxyz', 1
 
 -- Random access into the toast table should work equally well.
 SELECT encode(substring(a from 521*26+1 for 26), 'escape') FROM toast_chunk_test;
+
+CREATE TABLE test_reuse_detoasted_tuple(a int, b text) DISTRIBUTED BY (a);
+INSERT INTO test_reuse_detoasted_tuple SELECT i, repeat('a' || i, 355448) FROM generate_series(1,2)i;
+SET optimizer=off;
+
+EXPLAIN SELECT DISTINCT ON (a,b) * FROM test_reuse_detoasted_tuple;
+
+-- The Unique node in following query uses the previous tuple de-toasted by the
+-- Gather Motion sender to compare with the new tuple obtained from the Sort
+-- node for eliminating duplicates.
+SELECT DISTINCT ON (a,b) a FROM test_reuse_detoasted_tuple;
