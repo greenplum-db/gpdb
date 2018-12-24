@@ -939,7 +939,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
 					TupleTableSlot *slot,
 					uint32 hashvalue)
 {
-	MemTuple tuple = ExecFetchSlotMemTuple(slot, false);
+	MemTuple tuple = ExecFetchSlotMemTuple(slot);
 	HashJoinBatchData  *batch;
 	int			bucketno;
 	int			batchno;

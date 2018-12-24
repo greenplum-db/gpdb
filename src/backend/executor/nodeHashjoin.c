@@ -329,7 +329,7 @@ ExecHashJoin(HashJoinState *node)
 				 */
 				Assert(batchno != 0);
 				Assert(batchno > hashtable->curbatch);
-				ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot, false),
+				ExecHashJoinSaveTuple(&node->js.ps, ExecFetchSlotMemTuple(outerTupleSlot),
 									  hashvalue,
 									  hashtable,
 									  &hashtable->batches[batchno]->outerside,

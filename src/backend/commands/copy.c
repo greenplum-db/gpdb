@@ -4982,7 +4982,7 @@ PROCESS_SEGMENT_DATA:
 						Oid			tupleOid;
 						MemTuple	mtuple;
 
-						mtuple = ExecFetchSlotMemTuple(slot, false);
+						mtuple = ExecFetchSlotMemTuple(slot);
 
 						if (cstate->oids && file_has_oids)
 							MemTupleSetOid(mtuple, resultRelInfo->ri_aoInsertDesc->mt_bind, loaded_oid);

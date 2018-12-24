@@ -14263,7 +14263,7 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 				MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 			}
 
-			mtuple = ExecFetchSlotMemTuple(targetSlot, false);
+			mtuple = ExecFetchSlotMemTuple(targetSlot);
 			appendonly_insert(*targetAODescPtr, mtuple, &tupleOid, &aoTupleId);
 
 			/* cache TID for later updating of indexes */

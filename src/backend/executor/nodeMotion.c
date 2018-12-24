@@ -1434,7 +1434,6 @@ void
 doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 {
 	int16		    targetRoute;
-	GenericTuple tuple;
 	SendReturnCode  sendRC;
 	ExprContext    *econtext = node->ps.ps_ExprContext;
 	
@@ -1500,8 +1499,6 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 		Assert(!is_null);
 	}
 
-	tuple = ExecFetchSlotGenericTuple(outerTupleSlot, true);
-
 	CheckAndSendRecordCache(node->ps.state->motionlayer_context,
 							node->ps.state->interconnect_context,
 							motion->motionID,
@@ -1511,7 +1508,7 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 	sendRC = SendTuple(node->ps.state->motionlayer_context,
 			node->ps.state->interconnect_context,
 			motion->motionID,
-			tuple,
+			outerTupleSlot,
 			targetRoute);
 
 	Assert(sendRC == SEND_COMPLETE || sendRC == STOP_SENDING);
@@ -1532,7 +1529,8 @@ doSendTuple(Motion * motion, MotionState * node, TupleTableSlot *outerTupleSlot)
 				motion->motionID,
 				targetRoute,
 				node->numTuplesToAMS);
-		formatTuple(&buf, tuple, ExecGetResultType(&node->ps),
+		formatTuple(&buf, ExecFetchSlotGenericTuple(outerTupleSlot),
+				ExecGetResultType(&node->ps),
 				node->outputFunArray);
 		elog(DEBUG3, buf.data);
 		pfree(buf.data);

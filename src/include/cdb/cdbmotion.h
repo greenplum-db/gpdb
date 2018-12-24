@@ -105,7 +105,7 @@ extern void CheckAndSendRecordCache(MotionLayerState *mlStates,
 extern SendReturnCode SendTuple(MotionLayerState *mlStates,
 								ChunkTransportState *transportStates,
 								int16 motNodeID,
-								GenericTuple tuple,
+		  						TupleTableSlot *slot,
 								int16 targetRoute);
 
 

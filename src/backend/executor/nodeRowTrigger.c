@@ -412,12 +412,12 @@ AssignTuplesForTriggers(void **newTuple, void **oldTuple,  RowTrigger *plannode,
 	{
 		if (plannode->newValuesColIdx != NIL)
 		{
-			*newTuple = ExecFetchSlotMemTuple(node->newTuple, !rel_is_aorows);
+			*newTuple = ExecFetchSlotMemTuple(node->newTuple);
 		}
 
 		if (plannode->oldValuesColIdx != NIL)
 		{
-			*oldTuple = ExecFetchSlotMemTuple(node->oldTuple, !rel_is_aorows);
+			*oldTuple = ExecFetchSlotMemTuple(node->oldTuple);
 		}
 	}
 
