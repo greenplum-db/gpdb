@@ -332,4 +332,9 @@ extern bool XLogArchiveIsReady(const char *xlog);
 extern bool XLogArchiveIsReadyOrDone(const char *xlog);
 extern void XLogArchiveCleanup(const char *xlog);
 
+#define IsTLHistoryFileName(fname)	\
+	(strlen(fname) == 8 + strlen(".history") &&		\
+	 strspn(fname, "0123456789ABCDEF") == 8 &&		\
+	 strcmp((fname) + 8, ".history") == 0)
+
 #endif   /* XLOG_INTERNAL_H */
