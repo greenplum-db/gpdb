@@ -19,6 +19,7 @@ extern void GpExpandVersionShmemInit(void);
 extern int GetGpExpandVersion(void);
 
 extern Datum gp_expand_lock_catalog(PG_FUNCTION_ARGS);
+extern Datum gp_expand_get_status(PG_FUNCTION_ARGS);
 
 extern void gp_expand_protect_catalog_changes(Relation relation);
 

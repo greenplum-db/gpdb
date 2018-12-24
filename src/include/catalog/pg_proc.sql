@@ -233,6 +233,8 @@
 
  CREATE FUNCTION gp_expand_bump_version() RETURNS void LANGUAGE internal VOLATILE AS 'gp_expand_bump_version' WITH (OID=5081, DESCRIPTION="bump gpexpand version");
 
+ CREATE FUNCTION gp_expand_get_status(OUT code int4, OUT status text, OUT detail text) RETURNS SETOF pg_catalog.record LANGUAGE internal VOLATILE AS 'gp_expand_get_status' WITH (OID=5082, DESCRIPTION="Get gpexpand status");
+
  CREATE FUNCTION gp_remove_segment(int2) RETURNS bool LANGUAGE internal VOLATILE AS 'gp_remove_segment' WITH (OID=5051, DESCRIPTION="Remove a primary segment from the system catalog");
 
  CREATE FUNCTION gp_request_fts_probe_scan() RETURNS bool LANGUAGE internal VOLATILE AS 'gp_request_fts_probe_scan' EXECUTE ON MASTER WITH (OID=5035, DESCRIPTION="Request a FTS probe scan and wait for response");
