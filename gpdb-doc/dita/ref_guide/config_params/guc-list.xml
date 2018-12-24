@@ -598,15 +598,15 @@
               <xref href="#optimizer_cte_inlining_bound" type="section"
                 >optimizer_cte_inlining_bound</xref>
             </li>
-            <li><xref href="#optimizer_enable_agg_skew_avoidance" type="section"
-                >optimizer_enable_agg_skew_avoidance</xref>
-            </li>
             <li><xref href="#optimizer_enable_associativity" type="section"
                 >optimizer_enable_associativity</xref>
             </li>
             <li>
               <xref href="#optimizer_enable_master_only_queries" type="section"
                 >optimizer_enable_master_only_queries</xref>
+            </li>
+            <li><xref href="#optimizer_force_agg_skew_avoidance" type="section"
+                >optimizer_force_agg_skew_avoidance</xref>
             </li>
             <li>
               <xref href="#optimizer_force_multistage_agg" type="section"
@@ -7077,44 +7077,6 @@
       </table>
     </body>
   </topic>
-  <topic id="optimizer_enable_agg_skew_avoidance">
-    <title>optimizer_enable_agg_skew_avoidance</title>
-    <body>
-      <p dir="ltr">When GPORCA is enabled (the default), this parameter affects the query plan
-        alternatives that GPORCA considers when 3 stage aggregate plans are generated. When the
-        value is <codeph>true</codeph>, the default, GPORCA considers only 3 stage aggregate plans
-        where the intermediate aggregation uses the <codeph>GROUP BY</codeph> and
-          <codeph>DISTINCT</codeph> columns for distribution to reduce the effects of processing
-        skew. </p>
-      <p>If the value is <codeph>false</codeph>, GPORCA can also consider a plan that uses
-          <codeph>GROUP BY</codeph> columns for distribution. These plans might perform poorly when
-        processing skew is present.</p>
-      <p>For information about GPORCA, see <xref
-          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
-          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
-      <table id="table_ebp_rcr_cgb">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">Boolean</entry>
-              <entry colname="col2">true</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="optimizer_enable_associativity">
     <title>optimizer_enable_associativity</title>
     <body>
@@ -7183,6 +7145,44 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="optimizer_force_agg_skew_avoidance">
+    <title>optimizer_force_agg_skew_avoidance</title>
+    <body>
+      <p dir="ltr">When GPORCA is enabled (the default), this parameter affects the query plan
+        alternatives that GPORCA considers when 3 stage aggregate plans are generated. When the
+        value is <codeph>true</codeph>, the default, GPORCA considers only 3 stage aggregate plans
+        where the intermediate aggregation uses the <codeph>GROUP BY</codeph> and
+          <codeph>DISTINCT</codeph> columns for distribution to reduce the effects of processing
+        skew. </p>
+      <p>If the value is <codeph>false</codeph>, GPORCA can also consider a plan that uses
+          <codeph>GROUP BY</codeph> columns for distribution. These plans might perform poorly when
+        processing skew is present.</p>
+      <p>For information about GPORCA, see <xref
+          href="../../admin_guide/query/topics/query-piv-optimizer.xml">About GPORCA</xref><ph
+          otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>. </p>
+      <table id="table_ebp_rcr_cgb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">true</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
