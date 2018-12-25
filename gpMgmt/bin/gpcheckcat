@@ -22,6 +22,8 @@ import re
 import sys
 import time
 from datetime import datetime
+from os import listdir
+from os.path import isfile, join
 
 try:
     from gppylib.db import dbconn
@@ -1906,6 +1908,97 @@ def checkPGNamespace():
 
 
 #############
+def connect3run(qry):
+    logger.debug('%s' % qry)
+
+    batch = []
+    threads = []
+    i = 1
+
+    # parallelise queries
+    for dbid in GV.cfg:
+        c = GV.cfg[dbid]
+        db = connect2(c)
+
+        thread = execThread(c, db, qry)
+        thread.start()
+        logger.debug('launching query thread %s for dbid %i' %
+                     (thread.getName(), dbid))
+        threads.append(thread)
+
+        # we don't want too much going on at once
+        if (i % GV.opt['-B']) == 0:
+            # process this batch of threads
+            batch.extend(processThread(threads))
+            threads = []
+
+        i += 1
+
+    # process the rest of threads
+    batch.extend(processThread(threads))
+
+    err = []
+
+    for [cfg, curs] in batch:
+        relfilenodeInCatalogList = []
+        relfilenodeInSystemList = []
+        dbid = 1
+        db2 = connect2(cfg)
+        datidnames = db2.query('select oid, datname from pg_database').dictresult()
+        for row in datidnames:
+            if row['datname'] == GV.dbname:
+                dbid = row['oid']
+        for row in curs.dictresult():
+            # skip relfilenode that definitely will not have a pysical file in system.
+            if row['relkind'] == 'u' or \
+               row['relkind'] == 'v' or \
+               row['relkind'] == 'c' or \
+               (row['relstorage'] != 'h' and (not (row['relstorage'] == 'a' or row['relstorage'] == 'c'))) :
+                continue;
+            filenode = row['relfilenode']
+            # If it is relmapped relation, need to fetch the mapping from relmap file
+            if filenode == 0:
+                filenode = db2.query('select pg_relation_filenode(%d)' % row['oid']).dictresult()[0]['pg_relation_filenode']
+            filepath = db2.query('select pg_relation_filepath(%d)' % row['oid']).dictresult()[0]['pg_relation_filepath']
+            if filepath is None or not filepath.lower().startswith('base/%s' % dbid):
+                continue;
+            relfilenodeInCatalogList.append(filenode)
+
+        filepath = cfg['datadir'] + '/base/%s' % dbid
+        onlyfiles = [f for f in listdir(filepath) if isfile(join(filepath, f))]
+        for f in onlyfiles:
+            fl = f.lower()
+            if fl.startswith('pg') or fl.startswith('t_') or fl.endswith('_fsm') or fl.endswith('_vm') or not fl.isdigit():
+                continue
+            relfilenodeInSystemList.append(int(float(fl)))
+        relfilenodeOnlyInCatalog = set(relfilenodeInCatalogList) - set(relfilenodeInSystemList)
+        if len(relfilenodeOnlyInCatalog) > 0:
+            err.append([cfg, {"missing file in filesystem": list(relfilenodeOnlyInCatalog)}])
+    return err;
+
+
+#############
+def checkRelfilenodeFilesystemConsistency():
+    logger.info('-----------------------------------')
+    logger.info('Checking relfilenode filesystem consistency ...')
+    qry = '''
+    SELECT relfilenode, relkind, relstorage, relam, oid
+    FROM pg_class
+    '''
+    err = connect3run(qry)
+    if not err:
+        logger.info('[OK] relfilenode filesystem consistency')
+    else:
+        GV.checkStatus = False
+        setError(ERROR_NOREPAIR)
+        logger.info('[FAIL] relfilenode filesystem inconsistency')
+        logger.error('found %d relfilenode filesystem inconsistency' % len(err))
+        logger.error(qry)
+        for e in err:
+            logger.error(e)
+
+
+#############
 '''
 Produce repair scripts to remove dangling entries of gp_fastsequence:
 	- one file per segment dbid
@@ -3028,6 +3121,14 @@ all_checks = {
             "version": 'main',
             "order": 13,
             "online": True
+        },
+    "relfilenode_filesystem_consistency":
+        {
+            "description": "Check consistency between relfilenode and filesystem",
+            "fn": lambda: checkRelfilenodeFilesystemConsistency(),
+            "version": 'main',
+            "order": 14,
+            "online": False
         },
 }
 
