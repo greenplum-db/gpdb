@@ -37,13 +37,14 @@ endif
 aomd_filehandler.c: % : $(top_srcdir)/src/backend/access/appendonly/%
 	rm -f $@ && $(LN_S) $< .
 
-# If ONLINE_EXPAND is set, the job should not contain any test cases with
+# If TEST_EXPAND is set, the job should not contain any test cases with
 # restarting cluster operation, so this check should be disabled.
-ifndef ONLINE_EXPAND
+ifndef TEST_EXPAND
 check: test_gpdb.sh all
 	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 else
 check:
+	+@echo "pg_upgrade tests are skipped to prevent restarting the cluster"
 endif
 
 installcheck: test_gpdb.sh all

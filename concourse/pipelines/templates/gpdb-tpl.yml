@@ -53,7 +53,8 @@ groups:
   - icw_gporca_centos7
   - icw_planner_centos7
   - icg_planner_centos7_random_numsegments
-  - icw_planner_centos7_online_expand
+  - icw_planner_centos7_expand_rebuild
+  - icw_planner_centos7_expand_move
 {% endif %}
 {% if "sles" in os_types %}
   - icw_gporca_sles11
@@ -194,7 +195,8 @@ groups:
   - icw_gporca_centos7
   - icw_planner_centos7
   - icg_planner_centos7_random_numsegments
-  - icw_planner_centos7_online_expand
+  - icw_planner_centos7_expand_rebuild
+  - icw_planner_centos7_expand_move
   - compile_gpdb_centos7
 {% endif %}
 {% if "sles" in os_types %}
@@ -1357,7 +1359,7 @@ jobs:
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
 
-- name: icw_planner_centos7_online_expand
+- name: icw_planner_centos7_expand_rebuild
   plan:
   - aggregate:
     - get: gpdb_src
@@ -1371,12 +1373,33 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: centos-gpdb-test-7
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c gp_expand_method=rebuild' installcheck-world
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
       EXCLUDE_TESTS: instr_in_shmem_setup,instr_in_shmem_terminate,segspace_setup,segspace,segspace_cleanup,cursor,instr_in_shmem,instr_in_shmem_verify
-      ONLINE_EXPAND: true
+      TEST_EXPAND: true
+
+- name: icw_planner_centos7_expand_move
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      passed: [compile_gpdb_centos7]
+    - get: bin_gpdb
+      passed: [compile_gpdb_centos7]
+      resource: bin_gpdb_centos7
+      trigger: [[ test_trigger ]]
+    - get: centos-gpdb-test-7
+  - task: ic_gpdb
+    file: gpdb_src/concourse/tasks/ic_gpdb.yml
+    image: centos-gpdb-test-7
+    params:
+      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off -c gp_expand_method=move' installcheck-world
+      TEST_OS: centos
+      TEST_BINARY_SWAP: false
+      CONFIGURE_FLAGS: {{configure_flags}}
+      EXCLUDE_TESTS: instr_in_shmem_setup,instr_in_shmem_terminate,segspace_setup,segspace,segspace_cleanup,cursor,instr_in_shmem,instr_in_shmem_verify
+      TEST_EXPAND: true
 
 {% endif %}
 {% if "sles" in os_types %}
@@ -2470,7 +2493,8 @@ jobs:
       - icw_gporca_centos7
       - icw_planner_centos7
       - icg_planner_centos7_random_numsegments
-      - icw_planner_centos7_online_expand
+      - icw_planner_centos7_expand_rebuild
+      - icw_planner_centos7_expand_move
       - icw_gporca_sles11
       - icw_gporca_sles12
       - icw_planner_sles12
@@ -2536,7 +2560,8 @@ jobs:
       - icw_gporca_centos7
       - icw_planner_centos7
       - icg_planner_centos7_random_numsegments
-      - icw_planner_centos7_online_expand
+      - icw_planner_centos7_expand_rebuild
+      - icw_planner_centos7_expand_move
       - resource_group_centos7
       - MADlib_Test_orca_centos7
       - MADlib_Test_planner_centos7

@@ -79,23 +79,32 @@ function _main() {
     time configure
     time install_gpdb
     time setup_gpadmin_user
-    time make_cluster
+    # If $TEST_EXPAND is set, the job is to run ICW after expansion to see
+    # whether all the cases have been passed without restarting cluster.
+    # So it will create a cluster with two segments and execute gpexpand to
+    # expand the cluster to three segments
+    if [ "$TEST_EXPAND" = "true" ]; then
+        time make_cluster NUM_PRIMARY_MIRROR_PAIRS=2
+        time expand_cluster 2 3
+    else
+        time make_cluster
+    fi
     time gen_env
     time run_test
-    # If $ONLINE_EXPAND is set, the job is to run ICW after expansion to see
+    # If $TEST_EXPAND is set, the job is to run ICW after expansion to see
     # whether all the cases have been passed without restarting cluster.
     # Here is to check whether the cluster has been restarted by master pid.
     # We wanna to be sure all the test cases have been passed after expansion
     # without restarting the cluster. So any restarting is not expected.
-    if [ ! -z "$ONLINE_EXPAND" ]
-    then
-      OLD_MASTER_PID=`cat gpdb_src/gpAux/gpdemo/master.pid.bk`
+    if [ "$TEST_EXPAND" = "true" ]; then
+      OLD_MASTER_PID=`cat /tmp/postmaster.pid.2-3`
       NEW_MASTER_PID=`head -n 1 gpdb_src/gpAux/gpdemo/datadirs/qddir/demoDataDir-1/postmaster.pid`
-      if [ "$OLD_MASTER_PID" != "$NEW_MASTER_PID" ]
-      then
-          echo "Master pid has changed, so the cluster has been restarted."
-          exit 1
+      if [ "$OLD_MASTER_PID" != "$NEW_MASTER_PID" ]; then
+        echo "Error: Master pid has changed, so the cluster has been restarted."
+        exit 1
       fi
+      # Trigger gpexpand again after ICW.
+      time expand_cluster 3 4
     fi
 
     if [ "${TEST_BINARY_SWAP}" == "true" ]; then
