@@ -194,7 +194,13 @@ create_gang_retry:
 	destroyConnectParms(doConnectParmsAr, threadCount);
 	doConnectParmsAr = NULL;
 
-	SIMPLE_FAULT_INJECTOR(GangCreated);
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR(GangCreated) == FaultInjectorTypeSkip)
+	{
+		MemoryContextSwitchTo(GangContext);
+		goto exit;
+	}
+#endif
 
 	/* find out the successful connections and the failed ones */
 	checkConnectionStatus(newGangDefinition, &in_recovery_mode_count,
@@ -253,7 +259,11 @@ create_gang_retry:
 	
 exit:
 	if(newGangDefinition != NULL)
+	{
 		DisconnectAndDestroyGang(newGangDefinition);
+		newGangDefinition = NULL;
+		CurrentGangCreating = NULL;
+	}
 
 	if (type == GANGTYPE_PRIMARY_WRITER)
 	{

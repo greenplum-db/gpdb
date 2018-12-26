@@ -271,7 +271,7 @@ create_gang_retry:
 				type != GANGTYPE_PRIMARY_WRITER)
 				ereport(ERROR, (errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
 								errmsg("failed to acquire resources on one or more segments"),
-								errdetail("segments is in recovery mode")));
+								errdetail("segment(s) are in recovery mode")));
 
 			ELOG_DISPATCHER_DEBUG("createGang: gang creation failed, but retryable.");
 
@@ -315,7 +315,14 @@ create_gang_retry:
 	}
 	PG_END_TRY();
 
-	SIMPLE_FAULT_INJECTOR(GangCreated);
+#ifdef FAULT_INJECTOR
+	if (SIMPLE_FAULT_INJECTOR(GangCreated) == FaultInjectorTypeSkip)
+	{
+		ereport(ERROR,
+				(errcode(ERRCODE_GP_INTERCONNECTION_ERROR),
+				 errmsg("failed to acquire resources on one or more segments")));
+	}
+#endif
 
 	if (retry)
 	{

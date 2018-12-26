@@ -1068,6 +1068,7 @@ FaultInjector_NewHashEntry(
 			case AutoVacWorkerBeforeDoAutovacuum:
 			case CreateResourceGroupFail:
 			case CreateGangInProgress:
+			case GangCreated:
 
 			case DecreaseToastMaxChunkSize:
 			case ProcessStartupPacketFault:

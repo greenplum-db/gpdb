@@ -313,6 +313,16 @@ select 1 from gp_dist_random('gp_id') limit 1;
 select gp_inject_fault('gang_created', 'reset', 1);
 
 --
+-- Test when error happens in createGang, it can correctly clean up
+--
+select cleanupAllGangs();
+select gp_inject_fault('gang_created', 'reset', 1);
+select gp_inject_fault('gang_created', 'skip', 1);
+select 1 from gp_dist_random('gp_id') limit 1;
+select gp_inject_fault('gang_created', 'reset', 1);
+select 1 from gp_dist_random('gp_id') limit 1;
+
+--
 -- Test that an error happens after a big command is dispatched.
 --
 select gp_inject_fault('after_one_slice_dispatched', 'error', 1);
