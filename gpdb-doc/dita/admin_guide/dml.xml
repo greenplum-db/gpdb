@@ -326,19 +326,22 @@
     <body>
       <p>The Greenplum Database Global Deadlock Detector backend
         process collects lock information on all segments and uses a directed algorithm to detect the
-        existence of global deadlocks. If the Global Deadlock Detector determines that deadlock exists,
+        existence of local and global deadlocks. This algorithm allows Greenplum Dabase to relax
+        concurrent update restrictions on heap tables. (Greenplum Database still employs table-level
+       locking on AO/CO tables, restricting concurrent <codeph>UPDATE</codeph>,
+       <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph> operations.)</p>
+      <p>If the Global Deadlock Detector determines that deadlock exists,
         it breaks the deadlock by cancelling one or more backend processes associated with the youngest 
         transaction(s) involved.</p>
-      <note>The Greenplum Database Global Deadlock Detector removes the concurrent update restriction
-        on heap tables. The Global Deadlock Detector does not remove the concurrent
-        <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph>
-        restriction on AO/CO tables; Greenplum Database still employs table-level locking on these
-        operations.</note>
       <p>The Global Deadlock Detector backend process is automatically started on the master host when
         you start Greenplum Database. You configure the interval at which the Global Deadlock Detector
         collects and analyzes lock waiting data via the
          <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period" type="section">gp_global_deadlock_detector_period</xref></codeph>
          server configuration parameter.</p>
+      <note>Greenplum Database uses the interval specified in the <codeph><xref href="../ref_guide/config_params/guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref></codeph>
+        server configuration parameter for local deadlock detection. Because the local and
+        global deadlock detection algorithms differ, the cancelled process(es) may differ
+        depending upon which detector (local or global) Greenplum Database triggers first.</note>
       <p>To view lock waiting information for all segments, run the <codeph>pg_dist_wait_status()</codeph>
         user-defined function. You can use the output of this function to determine which transactions
         are waiting on locks, which transactions are holding locks, and which segments are executing
@@ -353,7 +356,7 @@
      1 |          26 |          27 | t
 (4 rows)
 </codeblock>
-      <p>When it cancels a transaction to break a global deadlock, the Global Deadlock Detector reports
+      <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports
          the following error message:</p>
 <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
     </body>
