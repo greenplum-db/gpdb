@@ -44,6 +44,7 @@ transfer_ownership() {
     [ -f gpdb_src/contrib/citext/citext.sql ] && chown gpadmin:gpadmin gpdb_src/contrib/citext/citext.sql 
     [ -d /usr/local/gpdb ] && chown -R gpadmin:gpadmin /usr/local/gpdb
     [ -d /usr/local/greenplum-db-devel ] && chown -R gpadmin:gpadmin /usr/local/greenplum-db-devel
+    [ -d /opt/gpdb ] && chown -R gpadmin:gpadmin /opt/gpdb
     chown -R gpadmin:gpadmin /home/gpadmin
 }
 
