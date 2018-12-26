@@ -3,7 +3,7 @@
 
 ----------------------------------------------------------------------
 
-![Greenplum](/gpAux/releng/images/logo-greenplum.png)
+![Greenplum](logo-greenplum.png)
 
 The Greenplum Database (GPDB) is an advanced, fully featured, open
 source data warehouse. It provides powerful and rapid analytics on
