@@ -54,7 +54,8 @@ static void UpdateFileSegInfo_internal(Relation parentrel,
 
 static void PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo,
 												int totalsegs,
-												bool *segmentFileNumMap);
+												bool *segmentFileNumMap,
+												Snapshot snapshot);
 
 static void CheckAOConsistencyWithGpRelationNode(Snapshot snapshot,
 												Relation rel,
@@ -2130,46 +2131,61 @@ FreeAllSegFileInfo(FileSegInfo **allSegInfo, int totalSegFiles)
 }
 
 
-void
-PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bool *segmentFileNumMap)
+static void
+PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bool *segmentFileNumMap, Snapshot snapshot)
 {
-	char segnumArray[1000];
-	char delimiter[5] = " ";
-	char tmp[10] = {0};
-	memset(segnumArray, 0, sizeof(segnumArray));
+	StringInfoData msgData;
+	StringInfo msg = &msgData;
+	int i;
 
-	char		*head = segnumArray;
-	const char	*tail = segnumArray + sizeof(segnumArray);
-
-	for (int i = 0 ; i < totalsegs && allseginfo; i++)
+	initStringInfo(msg);
+	appendStringInfoString(msg, "pg_aoseg segno:eof entries: ");
+	for (i = 0 ; i < totalsegs && allseginfo; i++)
 	{
-		snprintf(tmp, sizeof(tmp), "%d:%jd", allseginfo[i]->segno, allseginfo[i]->eof);
-
-        if (strlen(tmp) + strlen(delimiter) >= (tail - head))
-            break;
-
-        head += strlcpy(head, tmp, tail - head);
-        head += strlcpy(head, delimiter, tail - head);
+		appendStringInfo(msg, "%d:" INT64_FORMAT " ",
+						 allseginfo[i]->segno, allseginfo[i]->eof);
 	}
-	elog(LOG, "pg_aoseg segno:eof entries: %s", segnumArray);
-
-	memset(segnumArray, 0, sizeof(segnumArray));
-	head = segnumArray;
-
-	for (int i = 0; i < AOTupleId_MaxSegmentFileNum; i++)
+	appendStringInfoString(msg, "\ngp_relation_node segno entries: ");
+	for (i = 0; i < AOTupleId_MaxSegmentFileNum; i++)
 	{
 		if (segmentFileNumMap[i] == true)
 		{
-			snprintf(tmp, sizeof(tmp), "%d", i);
-
-			if (strlen(tmp) + strlen(delimiter) >= (tail - head))
-				break;
-
-			head += strlcpy(head, tmp, tail - head);
-			head += strlcpy(head, delimiter, tail - head);
+			appendStringInfo(msg, "%d ", i);
 		}
 	}
-	elog(LOG, "gp_relation_node segno entries: %s", segnumArray);
+
+	if (snapshot != InvalidSnapshot && IsMVCCSnapshot(snapshot))
+	{
+		appendStringInfo(msg, "\nrole %s snapshot (xmin %d, xmax %d, xcnt %d,"
+						 " curcid %d, haveDistributed %d\n in progress array [",
+						 Gp_is_writer ? "writer":"reader", snapshot->xmin,
+						 snapshot->xmax, snapshot->xcnt, snapshot->curcid,
+						 snapshot->haveDistribSnapshot);
+
+		for (i = 0; i < snapshot->xcnt; i++)
+			appendStringInfo(msg, "%d ", snapshot->xip[i]);
+
+		appendStringInfoString(msg, "])");
+
+		if (snapshot->haveDistribSnapshot)
+		{
+			DistributedSnapshotWithLocalMapping *dslm =
+				&snapshot->distribSnapshotWithLocalMapping;
+			appendStringInfo(msg, "\ndistributed snapshot (xmin %d, xmax %d, "
+							 "count %d, xminAllDistributedSnapshots %d, "
+							 "distribSnapshotId %d, in progress array [",
+							 dslm->ds.xmin, dslm->ds.xmax, dslm->ds.count,
+							 dslm->ds.xminAllDistributedSnapshots,
+							 dslm->ds.distribSnapshotId);
+
+			for (i = 0; i < dslm->ds.count; i++)
+				appendStringInfo(msg, "%d ", dslm->ds.inProgressXidArray[i]);
+
+			appendStringInfoString(msg, "])");
+		}
+	}
+	elog(LOG, "%s", msg->data);
+	pfree(msg->data);
 }
 
 
@@ -2219,7 +2235,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 
 		if (segmentCount > totalsegs + 1)
 		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap, snapshot);
 			elog(ERROR, "gp_relation_node (%d) has more entries than pg_aoseg (%d) for relation %s",
 				segmentCount,
 				totalsegs,
@@ -2247,7 +2263,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 
 				if (allseginfo[i]->eof != 0 && segmentFileNumMap[allseginfo[i]->segno] == false)
 				{
-					PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+					PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap, snapshot);
 					elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
 							allseginfo[i]->segno, RelationGetRelationName(rel));
 				}
@@ -2262,7 +2278,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 
 			if (i == totalsegs)
 			{
-				PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+				PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap, snapshot);
 				elog(ERROR, "Missing gp_relation_node entry %d in pg_aoseg for %s",
 							j, RelationGetRelationName(rel));
 			}
@@ -2277,7 +2293,7 @@ CheckAOConsistencyWithGpRelationNode( Snapshot snapshot, Relation rel, int total
 		Assert(segmentFileNumMap[allseginfo[i]->segno] == false);
 		if (allseginfo[i]->eof != 0)
 		{
-			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap);
+			PrintPgaosegAndGprelationNodeEntries(allseginfo, totalsegs, segmentFileNumMap, snapshot);
 			elog(ERROR, "Missing pg_aoseg entry %d in gp_relation_node for %s",
 					allseginfo[i]->segno, RelationGetRelationName(rel));
 		}
