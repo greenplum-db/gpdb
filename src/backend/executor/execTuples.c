@@ -758,7 +758,8 @@ ExecFetchSlotHeapTuple(TupleTableSlot *slot)
 MemTuple
 ExecFetchSlotMemTuple(TupleTableSlot *slot)
 {
-	MemoryContext oldContext;
+	MemTuple newTuple;
+	uint32 tuplen;
 
 	Assert(!TupIsNull(slot));
 	Assert(slot->tts_mt_bind);
@@ -766,11 +767,28 @@ ExecFetchSlotMemTuple(TupleTableSlot *slot)
 	if(slot->PRIVATE_tts_memtuple)
 		return slot->PRIVATE_tts_memtuple;
 
-	oldContext = MemoryContextSwitchTo(slot->tts_mcxt);
-	slot->PRIVATE_tts_memtuple = ExecCopySlotMemTuple(slot);
-	MemoryContextSwitchTo(oldContext);
+	slot_getallattrs(slot);
 
-	return slot->PRIVATE_tts_memtuple;
+	tuplen = slot->PRIVATE_tts_mtup_buf_len;
+	newTuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+				(MemTuple) slot->PRIVATE_tts_mtup_buf, &tuplen, false);
+
+	if(!newTuple)
+	{
+		if(slot->PRIVATE_tts_mtup_buf)
+			pfree(slot->PRIVATE_tts_mtup_buf);
+
+		slot->PRIVATE_tts_mtup_buf = MemoryContextAlloc(slot->tts_mcxt, tuplen);
+		slot->PRIVATE_tts_mtup_buf_len = tuplen;
+
+		newTuple = memtuple_form_to(slot->tts_mt_bind, slot_get_values(slot), slot_get_isnull(slot),
+			(MemTuple) slot->PRIVATE_tts_mtup_buf, &tuplen, false);
+	}
+
+	Assert(newTuple);
+	slot->PRIVATE_tts_memtuple = newTuple;
+
+	return newTuple;
 }
 
 /* --------------------------------
