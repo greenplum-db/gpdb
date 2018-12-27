@@ -185,13 +185,12 @@ LANGUAGE 'plr';</codeblock>
           <codeblock>--Create TYPE to store model results
 DROP TYPE IF EXISTS wj_model_results CASCADE;
 CREATE TYPE wj_model_results AS (
-  cs text, coefext float, ci_95_lower float, ci_95_upper float,
-  ci_90_lower float, ci_90_upper float, ci_80_lower
+  cs text, coefext float, ci_95_lower float, ci_95_upper float, 
+  ci_90_lower, float, ci_90_upper float, ci_80_lower, 
   float, ci_80_upper float);
 
 --Create PL/R function to run model in R
-DROP FUNCTION IF EXISTS wj_plr_RE(float [ ], text [ ]);
-CREATE FUNCTION wj_plr_RE(response float [ ], cs text [ ])
+DROP FUNCTION wj.plr.RE(response float [ ], cs text [ ])
 RETURNS SETOF wj_model_results AS
 $$
   library(arm)
@@ -203,7 +202,7 @@ $$
   n_cs_unique&lt;- length(cs_unique)
   temp_m0&lt;- data.frame(matrix0,n_cs_unique, 7))
   for (i in 1:n_cs_unique){temp_m0[i,]&lt;-
-    c(exp(coef(m0)$cs[i,1] + c(0,-1.96,1.96,-1.65,1.65,
+    c(exp(coef(m0)$cs[i,1] + c(0,-1.96,1.96,-1.65,1.65
       -1.28,1.28)*se.ranef(m0)$cs[i]))}
   names(temp_m0)&lt;- c("Coefest", "CI_95_Lower",
     "CI_95_Upper", "CI_90_Lower", "CI_90_Upper",
@@ -217,8 +216,8 @@ LANGUAGE 'plr';
 --table
 DROP TABLE IF EXISTS wj_model_results_roi;
 CREATE TABLE wj_model_results_roi AS SELECT * 
-  FROM wj_plr_RE((SELECT wj_droi2_array), 
-  (SELECT cs FROM wj_droi2_array));</codeblock>
+  FROM wj.plr_RE((SELECT wj.droi2_array), 
+  (SELECT cs FROM wj.droi2_array));</codeblock>
         </body>
       </topic>
     </topic>
@@ -302,13 +301,7 @@ LANGUAGE 'plr';</codeblock><p>This
         <p>To see what packages are installed, use the R command
             <codeph>installed.packages()</codeph>. This will return a matrix with a row for each
           package that has been installed. Below, we look at the first 5 rows of this matrix.</p>
-        <codeblock>&gt; installed.packages()
-           Package      LibPath
-base       "base"       "/usr/local/gp/greenplum-db-5.15.1/ext/R-3.3.3/library"
-boot       "boot"       "/usr/local/gp/greenplum-db-5.15.1/ext/R-3.3.3/library"
-class      "class"      "/usr/local/gp/greenplum-db-5.15.1/ext/R-3.3.3/library"
-cluster    "cluster"    "/usr/local/gp/greenplum-db-5.15.1/ext/R-3.3.3/library"
-codetools  "codetools"  "/usr/local/gp/greenplum-db-5.15.1/ext/R-3.3.3/library"</codeblock>
+        <codeblock>&gt; installed.packages()</codeblock>
         <p>Any package that does not appear in the installed packages matrix must be installed and
           loaded before its functions can be used. </p>
         <p>An R package can be installed with <codeph>install.packages()</codeph>:</p>
