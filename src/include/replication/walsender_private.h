@@ -91,6 +91,12 @@ typedef struct WalSnd
 	int			sync_standby_priority;
 
 	bool		synchronous;
+
+	/*
+	 * Indicates whether the WalSnd represents a connection with a Greenplum
+	 * mirror in streaming mode
+	 */
+	bool 		is_for_gp_walreceiver;
 } WalSnd;
 
 extern WalSnd *MyWalSnd;
@@ -169,5 +175,7 @@ extern void replication_scanner_init(const char *query_string);
 extern void replication_scanner_finish(void);
 
 extern Node *replication_parse_result;
+
+#define GP_WALRECEIVER_APPNAME "gp_walreceiver"
 
 #endif   /* _WALSENDER_PRIVATE_H */

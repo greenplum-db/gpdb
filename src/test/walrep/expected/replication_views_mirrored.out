@@ -16,9 +16,9 @@ SELECT count(*) FROM gp_segment_configuration where preferred_role='m' and mode=
 SELECT gp_segment_id, application_name, state, sync_state FROM gp_stat_replication;
  gp_segment_id | application_name |   state   | sync_state 
 ---------------+------------------+-----------+------------
-             0 | walreceiver      | streaming | sync
-             1 | walreceiver      | streaming | sync
-             2 | walreceiver      | streaming | sync
-            -1 | walreceiver      | streaming | sync
+             0 | gp_walreceiver   | streaming | sync
+             1 | gp_walreceiver   | streaming | sync
+             2 | gp_walreceiver   | streaming | sync
+            -1 | gp_walreceiver   | streaming | sync
 (4 rows)
 
