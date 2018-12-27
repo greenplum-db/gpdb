@@ -17,11 +17,12 @@
  * We do not consider that it is ever safe to send COLLATE expressions to
  * the remote server: it might not have the same collation names we do.
  * (Later we might consider it safe to send COLLATE "C", but even that would
- * fail on old remote servers.)  An expression is considered safe to send only
- * if all collations used in it are traceable to Var(s) of the foreign table.
- * That implies that if the remote server gets a different answer than we do,
- * the foreign table's columns are not marked with collations that match the
- * remote table's columns, which we can consider to be user error.
+ * fail on old remote servers.)  An expression is considered safe to send
+ * only if all operator/function input collations used in it are traceable to
+ * Var(s) of the foreign table.  That implies that if the remote server gets
+ * a different answer than we do, the foreign table's columns are not marked
+ * with collations that match the remote table's columns, which we can
+ * consider to be user error.
  *
  * Portions Copyright (c) 2012-2014, PostgreSQL Global Development Group
  *
@@ -68,9 +69,12 @@ typedef struct foreign_glob_cxt
  */
 typedef enum
 {
-	FDW_COLLATE_NONE,			/* expression is of a noncollatable type */
+	FDW_COLLATE_NONE,			/* expression is of a noncollatable type, or
+								 * it has default collation that is not
+								 * traceable to a foreign Var */
 	FDW_COLLATE_SAFE,			/* collation derives from a foreign Var */
-	FDW_COLLATE_UNSAFE			/* collation derives from something else */
+	FDW_COLLATE_UNSAFE			/* collation is non-default and derives from
+								 * something other than a foreign Var */
 } FDWCollateState;
 
 typedef struct foreign_loc_cxt
@@ -106,6 +110,7 @@ static void deparseTargetList(StringInfo buf,
 				  PlannerInfo *root,
 				  Index rtindex,
 				  Relation rel,
+				  bool is_returning,
 				  Bitmapset *attrs_used,
 				  List **retrieved_attrs);
 static void deparseReturningList(StringInfo buf, PlannerInfo *root,
@@ -254,19 +259,42 @@ foreign_expr_walker(Node *node,
 					var->varlevelsup == 0)
 				{
 					/* Var belongs to foreign table */
+
+					/*
+					 * System columns other than ctid should not be sent to
+					 * the remote, since we don't make any effort to ensure
+					 * that local and remote values match (tableoid, in
+					 * particular, almost certainly doesn't match).
+					 */
+					if (var->varattno < 0 &&
+						var->varattno != SelfItemPointerAttributeNumber)
+						return false;
+
+					/* Else check the collation */
 					collation = var->varcollid;
 					state = OidIsValid(collation) ? FDW_COLLATE_SAFE : FDW_COLLATE_NONE;
 				}
 				else
 				{
 					/* Var belongs to some other table */
-					if (var->varcollid != InvalidOid &&
-						var->varcollid != DEFAULT_COLLATION_OID)
-						return false;
-
-					/* We can consider that it doesn't set collation */
-					collation = InvalidOid;
-					state = FDW_COLLATE_NONE;
+					collation = var->varcollid;
+					if (collation == InvalidOid ||
+						collation == DEFAULT_COLLATION_OID)
+					{
+						/*
+						 * It's noncollatable, or it's safe to combine with a
+						 * collatable foreign Var, so set state to NONE.
+						 */
+						state = FDW_COLLATE_NONE;
+					}
+					else
+					{
+						/*
+						 * Do not fail right away, since the Var might appear
+						 * in a collation-insensitive context.
+						 */
+						state = FDW_COLLATE_UNSAFE;
+					}
 				}
 			}
 			break;
@@ -276,16 +304,16 @@ foreign_expr_walker(Node *node,
 
 				/*
 				 * If the constant has nondefault collation, either it's of a
-				 * non-builtin type, or it reflects folding of a CollateExpr;
-				 * either way, it's unsafe to send to the remote.
+				 * non-builtin type, or it reflects folding of a CollateExpr.
+				 * It's unsafe to send to the remote unless it's used in a
+				 * non-collation-sensitive context.
 				 */
-				if (c->constcollid != InvalidOid &&
-					c->constcollid != DEFAULT_COLLATION_OID)
-					return false;
-
-				/* Otherwise, we can consider that it doesn't set collation */
-				collation = InvalidOid;
-				state = FDW_COLLATE_NONE;
+				collation = c->constcollid;
+				if (collation == InvalidOid ||
+					collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
+				else
+					state = FDW_COLLATE_UNSAFE;
 			}
 			break;
 		case T_Param:
@@ -293,19 +321,19 @@ foreign_expr_walker(Node *node,
 				Param	   *p = (Param *) node;
 
 				/*
-				 * Collation handling is same as for Consts.
+				 * Collation rule is same as for Consts and non-foreign Vars.
 				 */
-				if (p->paramcollid != InvalidOid &&
-					p->paramcollid != DEFAULT_COLLATION_OID)
-					return false;
-
-				collation = InvalidOid;
-				state = FDW_COLLATE_NONE;
+				collation = p->paramcollid;
+				if (collation == InvalidOid ||
+					collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
+				else
+					state = FDW_COLLATE_UNSAFE;
 			}
 			break;
 		case T_ArrayRef:
 			{
-				ArrayRef   *ar = (ArrayRef *) node;;
+				ArrayRef   *ar = (ArrayRef *) node;
 
 				/* Assignment should not be in restrictions. */
 				if (ar->refassgnexpr != NULL)
@@ -336,6 +364,8 @@ foreign_expr_walker(Node *node,
 				else if (inner_cxt.state == FDW_COLLATE_SAFE &&
 						 collation == inner_cxt.collation)
 					state = FDW_COLLATE_SAFE;
+				else if (collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
 				else
 					state = FDW_COLLATE_UNSAFE;
 			}
@@ -381,6 +411,8 @@ foreign_expr_walker(Node *node,
 				else if (inner_cxt.state == FDW_COLLATE_SAFE &&
 						 collation == inner_cxt.collation)
 					state = FDW_COLLATE_SAFE;
+				else if (collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
 				else
 					state = FDW_COLLATE_UNSAFE;
 			}
@@ -422,6 +454,8 @@ foreign_expr_walker(Node *node,
 				else if (inner_cxt.state == FDW_COLLATE_SAFE &&
 						 collation == inner_cxt.collation)
 					state = FDW_COLLATE_SAFE;
+				else if (collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
 				else
 					state = FDW_COLLATE_UNSAFE;
 			}
@@ -471,7 +505,7 @@ foreign_expr_walker(Node *node,
 
 				/*
 				 * RelabelType must not introduce a collation not derived from
-				 * an input foreign Var.
+				 * an input foreign Var (same logic as for a real function).
 				 */
 				collation = r->resultcollid;
 				if (collation == InvalidOid)
@@ -479,6 +513,8 @@ foreign_expr_walker(Node *node,
 				else if (inner_cxt.state == FDW_COLLATE_SAFE &&
 						 collation == inner_cxt.collation)
 					state = FDW_COLLATE_SAFE;
+				else if (collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
 				else
 					state = FDW_COLLATE_UNSAFE;
 			}
@@ -528,7 +564,7 @@ foreign_expr_walker(Node *node,
 
 				/*
 				 * ArrayExpr must not introduce a collation not derived from
-				 * an input foreign Var.
+				 * an input foreign Var (same logic as for a function).
 				 */
 				collation = a->array_collid;
 				if (collation == InvalidOid)
@@ -536,6 +572,8 @@ foreign_expr_walker(Node *node,
 				else if (inner_cxt.state == FDW_COLLATE_SAFE &&
 						 collation == inner_cxt.collation)
 					state = FDW_COLLATE_SAFE;
+				else if (collation == DEFAULT_COLLATION_OID)
+					state = FDW_COLLATE_NONE;
 				else
 					state = FDW_COLLATE_UNSAFE;
 			}
@@ -684,7 +722,7 @@ deparseSelectSql(StringInfo buf,
 	 * Construct SELECT list
 	 */
 	appendStringInfoString(buf, "SELECT ");
-	deparseTargetList(buf, root, baserel->relid, rel, attrs_used,
+	deparseTargetList(buf, root, baserel->relid, rel, false, attrs_used,
 					  retrieved_attrs);
 
 	/*
@@ -698,7 +736,8 @@ deparseSelectSql(StringInfo buf,
 
 /*
  * Emit a target list that retrieves the columns specified in attrs_used.
- * This is used for both SELECT and RETURNING targetlists.
+ * This is used for both SELECT and RETURNING targetlists; the is_returning
+ * parameter is true only for a RETURNING targetlist.
  *
  * The tlist text is appended to buf, and we also create an integer List
  * of the columns being retrieved, which is returned to *retrieved_attrs.
@@ -708,6 +747,7 @@ deparseTargetList(StringInfo buf,
 				  PlannerInfo *root,
 				  Index rtindex,
 				  Relation rel,
+				  bool is_returning,
 				  Bitmapset *attrs_used,
 				  List **retrieved_attrs)
 {
@@ -737,6 +777,8 @@ deparseTargetList(StringInfo buf,
 		{
 			if (!first)
 				appendStringInfoString(buf, ", ");
+			else if (is_returning)
+				appendStringInfoString(buf, " RETURNING ");
 			first = false;
 
 			deparseColumnRef(buf, rtindex, i, root);
@@ -754,6 +796,8 @@ deparseTargetList(StringInfo buf,
 	{
 		if (!first)
 			appendStringInfoString(buf, ", ");
+		else if (is_returning)
+			appendStringInfoString(buf, " RETURNING ");
 		first = false;
 
 		appendStringInfoString(buf, "ctid");
@@ -763,7 +807,7 @@ deparseTargetList(StringInfo buf,
 	}
 
 	/* Don't generate bad syntax if no undropped columns */
-	if (first)
+	if (first && !is_returning)
 		appendStringInfoString(buf, "NULL");
 }
 
@@ -979,11 +1023,8 @@ deparseReturningList(StringInfo buf, PlannerInfo *root,
 	}
 
 	if (attrs_used != NULL)
-	{
-		appendStringInfoString(buf, " RETURNING ");
-		deparseTargetList(buf, root, rtindex, rel, attrs_used,
+		deparseTargetList(buf, root, rtindex, rel, true, attrs_used,
 						  retrieved_attrs);
-	}
 	else
 		*retrieved_attrs = NIL;
 }
@@ -1765,10 +1806,27 @@ deparseNullTest(NullTest *node, deparse_expr_cxt *context)
 
 	appendStringInfoChar(buf, '(');
 	deparseExpr(node->arg, context);
-	if (node->nulltesttype == IS_NULL)
-		appendStringInfoString(buf, " IS NULL)");
+
+	/*
+	 * For scalar inputs, we prefer to print as IS [NOT] NULL, which is
+	 * shorter and traditional.  If it's a rowtype input but we're applying a
+	 * scalar test, must print IS [NOT] DISTINCT FROM NULL to be semantically
+	 * correct.
+	 */
+	if (node->argisrow || !type_is_rowtype(exprType((Node *) node->arg)))
+	{
+		if (node->nulltesttype == IS_NULL)
+			appendStringInfoString(buf, " IS NULL)");
+		else
+			appendStringInfoString(buf, " IS NOT NULL)");
+	}
 	else
-		appendStringInfoString(buf, " IS NOT NULL)");
+	{
+		if (node->nulltesttype == IS_NULL)
+			appendStringInfoString(buf, " IS NOT DISTINCT FROM NULL)");
+		else
+			appendStringInfoString(buf, " IS DISTINCT FROM NULL)");
+	}
 }
 
 /*

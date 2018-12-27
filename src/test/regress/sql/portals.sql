@@ -424,6 +424,42 @@ BEGIN;
 DECLARE c1 CURSOR FOR SELECT * FROM LOWER('TEST');
 FETCH ALL FROM c1;
 COMMIT;
+-- Check WHERE CURRENT OF with an index-only scan
+BEGIN;
+EXPLAIN (costs off)
+DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
+DECLARE c1 CURSOR FOR SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
+FETCH FROM c1;
+DELETE FROM onek WHERE CURRENT OF c1;
+SELECT stringu1 FROM onek WHERE stringu1 = 'DZAAAA';
+ROLLBACK;
+
+-- start_ignore
+-- ignore the block, because cursor can only scan forward
+-- Check behavior with rewinding to a previous child scan node,
+-- as per bug #15395
+BEGIN;
+CREATE TABLE current_check (currentid int, payload text);
+CREATE TABLE current_check_1 () INHERITS (current_check);
+CREATE TABLE current_check_2 () INHERITS (current_check);
+INSERT INTO current_check_1 SELECT i, 'p' || i FROM generate_series(1,9) i;
+INSERT INTO current_check_2 SELECT i, 'P' || i FROM generate_series(10,19) i;
+
+DECLARE c1 SCROLL CURSOR FOR SELECT * FROM current_check;
+
+-- This tests the fetch-backwards code path
+FETCH ABSOLUTE 12 FROM c1;
+FETCH ABSOLUTE 8 FROM c1;
+DELETE FROM current_check WHERE CURRENT OF c1 RETURNING *;
+
+-- This tests the ExecutorRewind code path
+FETCH ABSOLUTE 13 FROM c1;
+FETCH ABSOLUTE 1 FROM c1;
+DELETE FROM current_check WHERE CURRENT OF c1 RETURNING *;
+
+SELECT * FROM current_check;
+ROLLBACK;
+-- end_ignore
 
 -- Make sure snapshot management works okay, per bug report in
 -- 235395b90909301035v7228ce63q392931f15aa74b31@mail.gmail.com

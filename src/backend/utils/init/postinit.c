@@ -282,9 +282,13 @@ PerformAuthentication(Port *port)
 		if (am_walsender)
 		{
 #ifdef USE_SSL
+			/*
+			 * GPDB_94_MERGE_FIXME: Some versions of gcc do not support the same
+			 * syntax for such macros and function names. Temporary wolk around.
+			 */
 			if (port->ssl)
 				ereport(LOG,
-						(errmsg("replication connection authorized: user=%s SSL enabled (protocol=%s, cipher=%s)",
+					(errmsg("replication connection authorized: user=%s SSL enabled (protocol=%s, cipher=%s)",
 								port->user_name, SSL_get_version(port->ssl), SSL_get_cipher(port->ssl))));
 			else
 #endif
@@ -297,7 +301,7 @@ PerformAuthentication(Port *port)
 #ifdef USE_SSL
 			if (port->ssl)
 				ereport(LOG,
-						(errmsg("connection authorized: user=%s database=%s SSL enabled (protocol=%s, cipher=%s)",
+					(errmsg("connection authorized: user=%s database=%s SSL enabled (protocol=%s, cipher=%s)",
 								port->user_name, port->database_name, SSL_get_version(port->ssl), SSL_get_cipher(port->ssl))));
 			else
 #endif
@@ -527,7 +531,7 @@ InitializeMaxBackends(void)
 
 	/* the extra unit accounts for the autovacuum launcher */
 	MaxBackends = MaxConnections + autovacuum_max_workers + 1 +
-		+max_worker_processes;
+		max_worker_processes;
 
 	/* internal error because the values were all checked previously */
 	if (MaxBackends > MAX_BACKENDS)
@@ -939,7 +943,7 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		/* take database name from the caller, just for paranoia */
 		strlcpy(dbname, in_dbname, sizeof(dbname));
 	}
-	else
+	else if (OidIsValid(dboid))
 	{
 		/* caller specified database by OID */
 		HeapTuple	tuple;
@@ -959,10 +963,18 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 		if (out_dbname)
 			strcpy(out_dbname, dbname);
 	}
-
-	/* Now we can mark our PGPROC entry with the database ID */
-	/* (We assume this is an atomic store so no lock is needed) */
-	MyProc->databaseId = MyDatabaseId;
+	else
+	{
+		/*
+		 * If this is a background worker not bound to any particular
+		 * database, we're done now.  Everything that follows only makes
+		 * sense if we are bound to a specific database.  We do need to
+		 * close the transaction we started before returning.
+		 */
+		if (!bootstrap)
+			CommitTransactionCommand();
+		return;
+	}
 
 	/*
 	 * Now, take a writer's lock on the database we are trying to connect to.
@@ -971,9 +983,13 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	 * pg_database).
 	 *
 	 * Note that the lock is not held long, only until the end of this startup
-	 * transaction.  This is OK since we are already advertising our use of
-	 * the database in the PGPROC array; anyone trying a DROP DATABASE after
-	 * this point will see us there.
+	 * transaction.  This is OK since we will advertise our use of the
+	 * database in the ProcArray before dropping the lock (in fact, that's the
+	 * next thing to do).  Anyone trying a DROP DATABASE after this point will
+	 * see us in the array once they have the lock.  Ordering is important for
+	 * this because we don't want to advertise ourselves as being in this
+	 * database until we have the lock; otherwise we create what amounts to a
+	 * deadlock with CountOtherDBBackends().
 	 *
 	 * Note: use of RowExclusiveLock here is reasonable because we envision
 	 * our session as being a concurrent writer of the database.  If we had a
@@ -984,6 +1000,28 @@ InitPostgres(const char *in_dbname, Oid dboid, const char *username,
 	if (!bootstrap)
 		LockSharedObject(DatabaseRelationId, MyDatabaseId, 0,
 						 RowExclusiveLock);
+
+	/*
+	 * Now we can mark our PGPROC entry with the database ID.
+	 *
+	 * We assume this is an atomic store so no lock is needed; though actually
+	 * things would work fine even if it weren't atomic.  Anyone searching the
+	 * ProcArray for this database's ID should hold the database lock, so they
+	 * would not be executing concurrently with this store.  A process looking
+	 * for another database's ID could in theory see a chance match if it read
+	 * a partially-updated databaseId value; but as long as all such searches
+	 * wait and retry, as in CountOtherDBBackends(), they will certainly see
+	 * the correct value on their next try.
+	 */
+	MyProc->databaseId = MyDatabaseId;
+
+	/*
+	 * We established a catalog snapshot while reading pg_authid and/or
+	 * pg_database; but until we have set up MyDatabaseId, we won't react to
+	 * incoming sinval messages for unshared catalogs, so we won't realize it
+	 * if the snapshot has been invalidated.  Assume it's no good anymore.
+	 */
+	InvalidateCatalogSnapshot();
 
 	/*
 	 * Recheck pg_database to make sure the target database hasn't gone away.
@@ -1245,7 +1283,7 @@ process_settings(Oid databaseid, Oid roleid)
 
 	relsetting = heap_open(DbRoleSettingRelationId, AccessShareLock);
 
-	/* read all the settings under the same snapsot for efficiency */
+	/* read all the settings under the same snapshot for efficiency */
 	snapshot = RegisterSnapshot(GetCatalogSnapshot(DbRoleSettingRelationId));
 
 	/* Later settings are ignored if set earlier. */

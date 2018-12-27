@@ -2885,10 +2885,9 @@ validateDomainConstraint(Oid domainoid, char *ccbin)
  * risk by using the weakest suitable lock (ShareLock for most callers).
  *
  * XXX the API for this is not sufficient to support checking domain values
- * that are inside composite types or arrays.  Currently we just error out
- * if a composite type containing the target domain is stored anywhere.
- * There are not currently arrays of domains; if there were, we could take
- * the same approach, but it'd be nicer to fix it properly.
+ * that are inside container types, such as composite types, arrays, or
+ * ranges.  Currently we just error out if a container type containing the
+ * target domain is stored anywhere.
  *
  * Generally used for retrieving a list of tests when adding
  * new constraints to a domain.
@@ -2897,12 +2896,16 @@ static List *
 get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
 {
 	List	   *result = NIL;
+	char	   *domainTypeName = format_type_be(domainOid);
 	Relation	depRel;
 	ScanKeyData key[2];
 	SysScanDesc depScan;
 	HeapTuple	depTup;
 
 	Assert(lockmode != NoLock);
+
+	/* since this function recurses, it could be driven to stack overflow */
+	check_stack_depth();
 
 	/*
 	 * We scan pg_depend to find those things that depend on the domain. (We
@@ -2930,20 +2933,32 @@ get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
 		Form_pg_attribute pg_att;
 		int			ptr;
 
-		/* Check for directly dependent types --- must be domains */
+		/* Check for directly dependent types */
 		if (pg_depend->classid == TypeRelationId)
 		{
-			Assert(get_typtype(pg_depend->objid) == TYPTYPE_DOMAIN);
-
-			/*
-			 * Recursively add dependent columns to the output list.  This is
-			 * a bit inefficient since we may fail to combine RelToCheck
-			 * entries when attributes of the same rel have different derived
-			 * domain types, but it's probably not worth improving.
-			 */
-			result = list_concat(result,
-								 get_rels_with_domain(pg_depend->objid,
-													  lockmode));
+			if (get_typtype(pg_depend->objid) == TYPTYPE_DOMAIN)
+			{
+				/*
+				 * This is a sub-domain, so recursively add dependent columns
+				 * to the output list.  This is a bit inefficient since we may
+				 * fail to combine RelToCheck entries when attributes of the
+				 * same rel have different derived domain types, but it's
+				 * probably not worth improving.
+				 */
+				result = list_concat(result,
+									 get_rels_with_domain(pg_depend->objid,
+														  lockmode));
+			}
+			else
+			{
+				/*
+				 * Otherwise, it is some container type using the domain, so
+				 * fail if there are any columns of this type.
+				 */
+				find_composite_type_dependencies(pg_depend->objid,
+												 NULL,
+												 domainTypeName);
+			}
 			continue;
 		}
 
@@ -2980,7 +2995,7 @@ get_rels_with_domain(Oid domainOid, LOCKMODE lockmode)
 			if (OidIsValid(rel->rd_rel->reltype))
 				find_composite_type_dependencies(rel->rd_rel->reltype,
 												 NULL,
-												 format_type_be(domainOid));
+												 domainTypeName);
 
 			/*
 			 * Otherwise, we can ignore relations except those with both
@@ -3476,35 +3491,7 @@ AlterTypeOwner(List *names, Oid newOwnerId, ObjectType objecttype)
 							   get_namespace_name(typTup->typnamespace));
 		}
 
-		/*
-		 * If it's a composite type, invoke ATExecChangeOwner so that we fix
-		 * up the pg_class entry properly.  That will call back to
-		 * AlterTypeOwnerInternal to take care of the pg_type entry(s).
-		 */
-		if (typTup->typtype == TYPTYPE_COMPOSITE)
-			ATExecChangeOwner(typTup->typrelid, newOwnerId, true, AccessExclusiveLock);
-		else
-		{
-			/*
-			 * We can just apply the modification directly.
-			 *
-			 * okay to scribble on typTup because it's a copy
-			 */
-			typTup->typowner = newOwnerId;
-
-			simple_heap_update(rel, &tup->t_self, tup);
-
-			CatalogUpdateIndexes(rel, tup);
-
-			/* Update owner dependency reference */
-			changeDependencyOnOwner(TypeRelationId, typeOid, newOwnerId);
-
-			InvokeObjectPostAlterHook(TypeRelationId, typeOid, 0);
-
-			/* If it has an array type, update that too */
-			if (OidIsValid(typTup->typarray))
-				AlterTypeOwnerInternal(typTup->typarray, newOwnerId, false);
-		}
+		AlterTypeOwner_oid(typeOid, newOwnerId, true);
 	}
 
 	/* Clean up */
@@ -3514,25 +3501,68 @@ AlterTypeOwner(List *names, Oid newOwnerId, ObjectType objecttype)
 }
 
 /*
- * AlterTypeOwnerInternal - change type owner unconditionally
+ * AlterTypeOwner_oid - change type owner unconditionally
  *
- * This is currently only used to propagate ALTER TABLE/TYPE OWNER to a
- * table's rowtype or an array type, and to implement REASSIGN OWNED BY.
- * It assumes the caller has done all needed checks.  The function will
- * automatically recurse to an array type if the type has one.
+ * This function recurses to handle a pg_class entry, if necessary.  It
+ * invokes any necessary access object hooks.  If hasDependEntry is TRUE, this
+ * function modifies the pg_shdepend entry appropriately (this should be
+ * passed as FALSE only for table rowtypes and array types).
  *
- * hasDependEntry should be TRUE if type is expected to have a pg_shdepend
- * entry (ie, it's not a table rowtype nor an array type).
- * is_primary_ops should be TRUE if this function is invoked with user's
- * direct operation (e.g, shdepReassignOwned). Elsewhere,
+ * This is used by ALTER TABLE/TYPE OWNER commands, as well as by REASSIGN
+ * OWNED BY.  It assumes the caller has done all needed check.
  */
 void
-AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
-					   bool hasDependEntry)
+AlterTypeOwner_oid(Oid typeOid, Oid newOwnerId, bool hasDependEntry)
 {
 	Relation	rel;
 	HeapTuple	tup;
 	Form_pg_type typTup;
+
+	rel = heap_open(TypeRelationId, RowExclusiveLock);
+
+	tup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typeOid));
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for type %u", typeOid);
+	typTup = (Form_pg_type) GETSTRUCT(tup);
+
+	/*
+	 * If it's a composite type, invoke ATExecChangeOwner so that we fix up the
+	 * pg_class entry properly.  That will call back to AlterTypeOwnerInternal
+	 * to take care of the pg_type entry(s).
+	 */
+	if (typTup->typtype == TYPTYPE_COMPOSITE)
+		ATExecChangeOwner(typTup->typrelid, newOwnerId, true, AccessExclusiveLock);
+	else
+		AlterTypeOwnerInternal(typeOid, newOwnerId);
+
+	/* Update owner dependency reference */
+	if (hasDependEntry)
+		changeDependencyOnOwner(TypeRelationId, typeOid, newOwnerId);
+
+	InvokeObjectPostAlterHook(TypeRelationId, typeOid, 0);
+
+	ReleaseSysCache(tup);
+	heap_close(rel, RowExclusiveLock);
+}
+
+/*
+ * AlterTypeOwnerInternal - bare-bones type owner change.
+ *
+ * This routine simply modifies the owner of a pg_type entry, and recurses
+ * to handle a possible array type.
+ */
+void
+AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId)
+{
+	Relation	rel;
+	HeapTuple	tup;
+	Form_pg_type typTup;
+	Datum		repl_val[Natts_pg_type];
+	bool		repl_null[Natts_pg_type];
+	bool		repl_repl[Natts_pg_type];
+	Acl		   *newAcl;
+	Datum		aclDatum;
+	bool		isNull;
 
 	rel = heap_open(TypeRelationId, RowExclusiveLock);
 
@@ -3541,24 +3571,35 @@ AlterTypeOwnerInternal(Oid typeOid, Oid newOwnerId,
 		elog(ERROR, "cache lookup failed for type %u", typeOid);
 	typTup = (Form_pg_type) GETSTRUCT(tup);
 
-	/*
-	 * Modify the owner --- okay to scribble on typTup because it's a copy
-	 */
-	typTup->typowner = newOwnerId;
+	memset(repl_null, false, sizeof(repl_null));
+	memset(repl_repl, false, sizeof(repl_repl));
+
+	repl_repl[Anum_pg_type_typowner - 1] = true;
+	repl_val[Anum_pg_type_typowner - 1] = ObjectIdGetDatum(newOwnerId);
+
+	aclDatum = heap_getattr(tup,
+							Anum_pg_type_typacl,
+							RelationGetDescr(rel),
+							&isNull);
+	/* Null ACLs do not require changes */
+	if (!isNull)
+	{
+		newAcl = aclnewowner(DatumGetAclP(aclDatum),
+							 typTup->typowner, newOwnerId);
+		repl_repl[Anum_pg_type_typacl - 1] = true;
+		repl_val[Anum_pg_type_typacl - 1] = PointerGetDatum(newAcl);
+	}
+
+	tup = heap_modify_tuple(tup, RelationGetDescr(rel), repl_val, repl_null,
+							repl_repl);
 
 	simple_heap_update(rel, &tup->t_self, tup);
 
 	CatalogUpdateIndexes(rel, tup);
 
-	/* Update owner dependency reference, if it has one */
-	if (hasDependEntry)
-		changeDependencyOnOwner(TypeRelationId, typeOid, newOwnerId);
-
 	/* If it has an array type, update that too */
 	if (OidIsValid(typTup->typarray))
-		AlterTypeOwnerInternal(typTup->typarray, newOwnerId, false);
-
-	InvokeObjectPostAlterHook(TypeRelationId, typeOid, 0);
+		AlterTypeOwnerInternal(typTup->typarray, newOwnerId);
 
 	/* Clean up */
 	heap_close(rel, RowExclusiveLock);

@@ -398,8 +398,8 @@ do_copy(const char *args)
 
 		/* make sure the specified file is not a directory */
 		if ((result = fstat(fileno(copystream), &st)) < 0)
-			psql_error("could not stat file: %s\n",
-					   strerror(errno));
+			psql_error("could not stat file \"%s\": %s\n",
+					   options->file, strerror(errno));
 
 		if (result == 0 && S_ISDIR(st.st_mode))
 			psql_error("%s: cannot copy from/to a directory\n",
@@ -597,7 +597,7 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 	{
 		if (!pset.quiet)
 			puts(_("Enter data to be copied followed by a newline.\n"
-				   "End with a backslash and a period on a line by itself."));
+				   "End with a backslash and a period on a line by itself, or an EOF signal."));
 		prompt = get_prompt(PROMPT_COPY);
 	}
 	else
@@ -723,6 +723,16 @@ handleCopyIn(PGconn *conn, FILE *copystream, bool isbinary, PGresult **res)
 		OK = false;
 
 copyin_cleanup:
+
+	/*
+	 * Clear the EOF flag on the stream, in case copying ended due to an EOF
+	 * signal.  This allows an interactive TTY session to perform another COPY
+	 * FROM STDIN later.  (In non-STDIN cases, we're about to close the file
+	 * anyway, so it doesn't matter.)  Although we don't ever test the flag
+	 * with feof(), some fread() implementations won't read more data if it's
+	 * set.  This also clears the error flag, but we already checked that.
+	 */
+	clearerr(copystream);
 
 	/*
 	 * Check command status and return to normal libpq state.

@@ -28,8 +28,8 @@
 #include "executor/nodeFunctionscan.h"
 #include "funcapi.h"
 #include "nodes/nodeFuncs.h"
-#include "parser/parsetree.h"
 #include "utils/builtins.h"
+#include "utils/memutils.h"
 
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
@@ -102,6 +102,7 @@ FunctionNext(FunctionScanState *node)
 			node->funcstates[0].tstore = tstore =
 				ExecMakeTableFunctionResult(node->funcstates[0].funcexpr,
 											node->ss.ps.ps_ExprContext,
+											node->argcontext,
 											node->funcstates[0].tupdesc,
 											node->eflags & EXEC_FLAG_BACKWARD,
 											PlanStateOperatorMemKB( (PlanState *) node));
@@ -177,6 +178,7 @@ FunctionNext(FunctionScanState *node)
 			fs->tstore =
 				ExecMakeTableFunctionResult(fs->funcexpr,
 											node->ss.ps.ps_ExprContext,
+											node->argcontext,
 											fs->tupdesc,
 											node->eflags & EXEC_FLAG_BACKWARD,
 											PlanStateOperatorMemKB( (PlanState *) node));
@@ -331,8 +333,6 @@ FunctionScanState *
 ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 {
 	FunctionScanState *scanstate;
-	RangeTblEntry *rte = rt_fetch(node->scan.scanrelid,
-								  estate->es_range_table);
 	int			nfuncs = list_length(node->functions);
 	TupleDesc	scan_tupdesc;
 	int			i,
@@ -550,22 +550,6 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 		Assert(attno == natts);
 	}
 
-	/*
-	 * Make sure the scan result tupdesc has the column names the query
-	 * expects.  This affects the output of constructs like row_to_json which
-	 * read the column names from the passed-in tupdesc.
-	 */
-	i = 0;
-	foreach(lc, rte->eref->colnames)
-	{
-		char	   *attname = strVal(lfirst(lc));
-
-		if (i >= scan_tupdesc->natts)
-			break;				/* shouldn't happen, but just in case */
-		namestrcpy(&(scan_tupdesc->attrs[i]->attname), attname);
-		i++;
-	}
-
 	ExecAssignScanType(&scanstate->ss, scan_tupdesc);
 
 	/*
@@ -600,6 +584,19 @@ ExecInitFunctionScan(FunctionScan *node, EState *estate, int eflags)
 	 */
 	if (nfuncs > 0)
 		scanstate->ss.ps.delayEagerFree = true;
+
+	/*
+	 * Create a memory context that ExecMakeTableFunctionResult can use to
+	 * evaluate function arguments in.  We can't use the per-tuple context for
+	 * this because it gets reset too often; but we don't want to leak
+	 * evaluation results into the query-lifespan context either.  We just
+	 * need one context, because we evaluate each function separately.
+	 */
+	scanstate->argcontext = AllocSetContextCreate(CurrentMemoryContext,
+												  "Table function arguments",
+												  ALLOCSET_DEFAULT_MINSIZE,
+												  ALLOCSET_DEFAULT_INITSIZE,
+												  ALLOCSET_DEFAULT_MAXSIZE);
 
 	return scanstate;
 }

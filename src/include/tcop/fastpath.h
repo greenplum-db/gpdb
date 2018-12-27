@@ -15,6 +15,7 @@
 
 #include "lib/stringinfo.h"
 
-extern int	HandleFunctionRequest(StringInfo msgBuf);
+extern int GetOldFunctionMessage(StringInfo buf);
+extern void HandleFunctionRequest(StringInfo msgBuf);
 
 #endif   /* FASTPATH_H */

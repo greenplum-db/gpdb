@@ -22,6 +22,7 @@ LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lcrypto -lz, $(LIBS))
 
 override CPPFLAGS := -I$(libpq_srcdir) $(CPPFLAGS)
+LDFLAGS_INTERNAL += $(libpq_pgport)
 
 ifeq ($(PORTNAME),openbsd)
 override CFLAGS += -pthread
@@ -32,7 +33,7 @@ OBJS=	pg_ctl.o $(WIN32RES)
 all: pg_ctl
 
 pg_ctl: $(OBJS) | submake-libpq submake-libpgport
-	$(CC) $(CFLAGS) $(OBJS) $(libpq_pgport) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(OBJS) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
 
 install: all installdirs
 	$(INSTALL_PROGRAM) pg_ctl$(X) '$(DESTDIR)$(bindir)/pg_ctl$(X)'

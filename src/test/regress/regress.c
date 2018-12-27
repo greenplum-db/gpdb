@@ -6,6 +6,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <signal.h>
 
 #include "access/htup_details.h"
 #include "access/transam.h"
@@ -236,34 +237,33 @@ WIDGET *
 widget_in(char *str)
 {
 	char	   *p,
-			   *coord[NARGS],
-				buf2[1000];
+			   *coord[NARGS];
 	int			i;
 	WIDGET	   *result;
 
-	if (str == NULL)
-		return NULL;
 	for (i = 0, p = str; *p && i < NARGS && *p != RDELIM; p++)
-		if (*p == ',' || (*p == LDELIM && !i))
+	{
+		if (*p == DELIM || (*p == LDELIM && i == 0))
 			coord[i++] = p + 1;
-	if (i < NARGS - 1)
-		return NULL;
+	}
+
+	if (i < NARGS)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+				 errmsg("invalid input syntax for type widget: \"%s\"",
+						str)));
+
 	result = (WIDGET *) palloc(sizeof(WIDGET));
 	result->center.x = atof(coord[0]);
 	result->center.y = atof(coord[1]);
 	result->radius = atof(coord[2]);
 
-	snprintf(buf2, sizeof(buf2), "widget_in: read (%f, %f, %f)\n",
-			 result->center.x, result->center.y, result->radius);
 	return result;
 }
 
 char *
 widget_out(WIDGET *widget)
 {
-	if (widget == NULL)
-		return NULL;
-
 	return psprintf("(%g,%g,%g)",
 					widget->center.x, widget->center.y, widget->radius);
 }
@@ -440,6 +440,22 @@ funny_dup17(PG_FUNCTION_ARGS)
 
 	if (*level == 0)
 		*xid = InvalidTransactionId;
+
+	return PointerGetDatum(tuple);
+}
+
+PG_FUNCTION_INFO_V1(trigger_return_old);
+
+Datum
+trigger_return_old(PG_FUNCTION_ARGS)
+{
+	TriggerData *trigdata = (TriggerData *) fcinfo->context;
+	HeapTuple	tuple;
+
+	if (!CALLED_AS_TRIGGER(fcinfo))
+		elog(ERROR, "trigger_return_old: not fired by trigger manager");
+
+	tuple = trigdata->tg_trigtuple;
 
 	return PointerGetDatum(tuple);
 }
@@ -1069,4 +1085,45 @@ test_atomic_ops(PG_FUNCTION_ARGS)
 #endif
 
 	PG_RETURN_BOOL(true);
+}
+
+PG_FUNCTION_INFO_V1(regress_putenv);
+
+Datum
+regress_putenv(PG_FUNCTION_ARGS)
+{
+	MemoryContext oldcontext;
+	char	   *envbuf;
+
+	if (!superuser())
+		elog(ERROR, "must be superuser to change environment variables");
+
+	oldcontext = MemoryContextSwitchTo(TopMemoryContext);
+	envbuf = text_to_cstring((text *) PG_GETARG_POINTER(0));
+	MemoryContextSwitchTo(oldcontext);
+
+	if (putenv(envbuf) != 0)
+		elog(ERROR, "could not set environment variable: %m");
+
+	PG_RETURN_VOID();
+}
+
+/* Sleep until no process has a given PID. */
+PG_FUNCTION_INFO_V1(wait_pid);
+
+Datum
+wait_pid(PG_FUNCTION_ARGS)
+{
+	int			pid = PG_GETARG_INT32(0);
+
+	if (!superuser())
+		elog(ERROR, "must be superuser to check PID liveness");
+
+	while (kill(pid, 0) == 0)
+		pg_usleep(50000);
+
+	if (errno != ESRCH)
+		elog(ERROR, "could not check PID %d liveness: %m", pid);
+
+	PG_RETURN_VOID();
 }

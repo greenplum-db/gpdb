@@ -235,9 +235,10 @@ slashUsage(unsigned short int pager)
 	fprintf(output, _("  \\f [STRING]            show or set field separator for unaligned query output\n"));
 	fprintf(output, _("  \\H                     toggle HTML output mode (currently %s)\n"),
 			ON(pset.popt.topt.format == PRINT_HTML));
-	fprintf(output, _("  \\pset [NAME [VALUE]]     set table output option\n"
-					  "                         (NAME := {format|border|expanded|fieldsep|fieldsep_zero|footer|null|\n"
-					  "                         numericlocale|recordsep|recordsep_zero|tuples_only|title|tableattr|pager})\n"));
+	fprintf(output, _("  \\pset [NAME [VALUE]]   set table output option\n"
+					  "                         (NAME := {border|columns|expanded|fieldsep|fieldsep_zero|\n"
+					  "                         footer|format|linestyle|null|numericlocale|pager|\n"
+					  "                         recordsep|recordsep_zero|tableattr|title|tuples_only})\n"));
 	fprintf(output, _("  \\t [on|off]            show only rows (currently %s)\n"),
 			ON(pset.popt.topt.tuples_only));
 	fprintf(output, _("  \\T [STRING]            set HTML <table> tag attributes, or unset if none\n"));
@@ -247,11 +248,11 @@ slashUsage(unsigned short int pager)
 
 	fprintf(output, _("Connection\n"));
 	if (currdb)
-		fprintf(output, _("  \\c[onnect] [DBNAME|- USER|- HOST|- PORT|-]\n"
+		fprintf(output, _("  \\c[onnect] {[DBNAME|- USER|- HOST|- PORT|-] | conninfo}\n"
 						  "                         connect to new database (currently \"%s\")\n"),
 				currdb);
 	else
-		fprintf(output, _("  \\c[onnect] [DBNAME|- USER|- HOST|- PORT|-]\n"
+		fprintf(output, _("  \\c[onnect] {[DBNAME|- USER|- HOST|- PORT|-] | conninfo}\n"
 						  "                         connect to new database (currently no connection)\n"));
 	fprintf(output, _("  \\encoding [ENCODING]   show or set client encoding\n"));
 	fprintf(output, _("  \\password [USERNAME]   securely change the password for a user\n"));

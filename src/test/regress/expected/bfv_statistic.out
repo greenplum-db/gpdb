@@ -10,7 +10,7 @@ analyze bfv_statistics_foo;
 select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='bfv_statistics_foo'::regclass and staattnum=1;
  stanullfrac | stadistinct | stanumbers1 
 -------------+-------------+-------------
-        0.25 |          -1 | 
+        0.25 |       -0.75 | 
 (1 row)
 
 -- exercise GPORCA translator
@@ -119,7 +119,7 @@ analyze bfv_statistics_foo4;
 select stanullfrac, stadistinct, stanumbers1 from pg_statistic where starelid='bfv_statistics_foo4'::regclass and staattnum=1;
  stanullfrac | stadistinct | stanumbers1 
 -------------+-------------+-------------
-        0.01 |          -1 | 
+        0.01 |       -0.99 | 
 (1 row)
 
 explain select a from bfv_statistics_foo4 where a > 888;

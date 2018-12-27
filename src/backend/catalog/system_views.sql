@@ -1221,11 +1221,13 @@ CREATE VIEW pg_user_mappings AS
         ELSE
             A.rolname
         END AS usename,
-        CASE WHEN pg_has_role(S.srvowner, 'USAGE') OR has_server_privilege(S.oid, 'USAGE') THEN
-            U.umoptions
-        ELSE
-            NULL
-        END AS umoptions
+        CASE WHEN (U.umuser <> 0 AND A.rolname = current_user
+                     AND (pg_has_role(S.srvowner, 'USAGE')
+                          OR has_server_privilege(S.oid, 'USAGE')))
+                    OR (U.umuser = 0 AND pg_has_role(S.srvowner, 'USAGE'))
+                    OR (SELECT rolsuper FROM pg_authid WHERE rolname = current_user)
+                    THEN U.umoptions
+                 ELSE NULL END AS umoptions
     FROM pg_user_mapping U
          LEFT JOIN pg_authid A ON (A.oid = U.umuser) JOIN
         pg_foreign_server S ON (U.umserver = S.oid);
@@ -1313,37 +1315,15 @@ CREATE OR REPLACE FUNCTION
   pg_start_backup(label text, fast boolean DEFAULT false)
   RETURNS pg_lsn STRICT VOLATILE LANGUAGE internal AS 'pg_start_backup';
 
+-- legacy definition for compatibility with 9.3
 CREATE OR REPLACE FUNCTION
   json_populate_record(base anyelement, from_json json, use_json_as_text boolean DEFAULT false)
   RETURNS anyelement LANGUAGE internal STABLE AS 'json_populate_record';
 
+-- legacy definition for compatibility with 9.3
 CREATE OR REPLACE FUNCTION
   json_populate_recordset(base anyelement, from_json json, use_json_as_text boolean DEFAULT false)
   RETURNS SETOF anyelement LANGUAGE internal STABLE ROWS 100  AS 'json_populate_recordset';
-
-CREATE OR REPLACE FUNCTION
-  jsonb_populate_record(base anyelement, from_json jsonb, use_json_as_text boolean DEFAULT false)
-  RETURNS anyelement LANGUAGE internal STABLE AS 'jsonb_populate_record';
-
-CREATE OR REPLACE FUNCTION
-  jsonb_populate_recordset(base anyelement, from_json jsonb, use_json_as_text boolean DEFAULT false)
-  RETURNS SETOF anyelement LANGUAGE internal STABLE ROWS 100  AS 'jsonb_populate_recordset';
-
-CREATE OR REPLACE FUNCTION
-  json_to_record(from_json json, nested_as_text boolean DEFAULT false)
-  RETURNS record LANGUAGE internal STABLE AS 'json_to_record';
-
-CREATE OR REPLACE FUNCTION
-  json_to_recordset(from_json json, nested_as_text boolean DEFAULT false)
-  RETURNS SETOF record LANGUAGE internal STABLE ROWS 100  AS 'json_to_recordset';
-
-CREATE OR REPLACE FUNCTION
-  jsonb_to_record(from_json jsonb, nested_as_text boolean DEFAULT false)
-  RETURNS record LANGUAGE internal STABLE AS 'jsonb_to_record';
-
-CREATE OR REPLACE FUNCTION
-  jsonb_to_recordset(from_json jsonb, nested_as_text boolean DEFAULT false)
-  RETURNS SETOF record LANGUAGE internal STABLE ROWS 100  AS 'jsonb_to_recordset';
 
 CREATE OR REPLACE FUNCTION pg_logical_slot_get_changes(
     IN slot_name name, IN upto_lsn pg_lsn, IN upto_nchanges int, VARIADIC options text[] DEFAULT '{}',

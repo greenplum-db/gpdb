@@ -707,6 +707,25 @@ INSERT INTO rw_view3 VALUES (3); -- ok
 
 DROP TABLE base_tbl CASCADE;
 
+-- WITH CHECK OPTION with scalar array ops
+
+CREATE TABLE base_tbl (a int, b int[]);
+CREATE VIEW rw_view1 AS SELECT * FROM base_tbl WHERE a = ANY (b)
+  WITH CHECK OPTION;
+
+INSERT INTO rw_view1 VALUES (1, ARRAY[1,2,3]); -- ok
+INSERT INTO rw_view1 VALUES (10, ARRAY[4,5]); -- should fail
+
+UPDATE rw_view1 SET b[2] = -b[2] WHERE a = 1; -- ok
+UPDATE rw_view1 SET b[1] = -b[1] WHERE a = 1; -- should fail
+
+PREPARE ins(int, int[]) AS INSERT INTO rw_view1 VALUES($1, $2);
+EXECUTE ins(2, ARRAY[1,2,3]); -- ok
+EXECUTE ins(10, ARRAY[4,5]); -- should fail
+DEALLOCATE PREPARE ins;
+
+DROP TABLE base_tbl CASCADE;
+
 -- WITH CHECK OPTION with subquery
 
 CREATE TABLE base_tbl (a int);
@@ -719,10 +738,14 @@ CREATE VIEW rw_view1 AS
   WITH CHECK OPTION;
 
 INSERT INTO rw_view1 VALUES (5); -- ok
+--start_ignore
 INSERT INTO rw_view1 VALUES (15); -- should fail
+--end_ignore
 
 UPDATE rw_view1 SET a = a + 5; -- ok
+--start_ignore
 UPDATE rw_view1 SET a = a + 5; -- should fail
+--end_ignore
 
 EXPLAIN (costs off) INSERT INTO rw_view1 VALUES (5);
 EXPLAIN (costs off) UPDATE rw_view1 SET a = a + 5;
@@ -1020,3 +1043,97 @@ TABLE t1; -- verify all a<=5 are intact
 DROP TABLE t1, t11, t12, t111 CASCADE;
 DROP FUNCTION snoop(anyelement);
 DROP FUNCTION leakproof(anyelement);
+
+CREATE TABLE tx1 (a integer);
+CREATE TABLE tx2 (b integer);
+CREATE TABLE tx3 (c integer);
+CREATE VIEW vx1 AS SELECT a FROM tx1 WHERE EXISTS(SELECT 1 FROM tx2 JOIN tx3 ON b=c);
+INSERT INTO vx1 values (1);
+SELECT * FROM tx1;
+SELECT * FROM vx1;
+
+DROP VIEW vx1;
+DROP TABLE tx1;
+DROP TABLE tx2;
+DROP TABLE tx3;
+
+CREATE TABLE tx1 (a integer);
+CREATE TABLE tx2 (b integer);
+CREATE TABLE tx3 (c integer);
+CREATE VIEW vx1 AS SELECT a FROM tx1 WHERE EXISTS(SELECT 1 FROM tx2 JOIN tx3 ON b=c);
+INSERT INTO vx1 VALUES (1);
+INSERT INTO vx1 VALUES (1);
+SELECT * FROM tx1;
+SELECT * FROM vx1;
+
+DROP VIEW vx1;
+DROP TABLE tx1;
+DROP TABLE tx2;
+DROP TABLE tx3;
+
+CREATE TABLE tx1 (a integer, b integer);
+CREATE TABLE tx2 (b integer, c integer);
+CREATE TABLE tx3 (c integer, d integer);
+ALTER TABLE tx1 DROP COLUMN b;
+ALTER TABLE tx2 DROP COLUMN c;
+ALTER TABLE tx3 DROP COLUMN d;
+CREATE VIEW vx1 AS SELECT a FROM tx1 WHERE EXISTS(SELECT 1 FROM tx2 JOIN tx3 ON b=c);
+INSERT INTO vx1 VALUES (1);
+INSERT INTO vx1 VALUES (1);
+SELECT * FROM tx1;
+SELECT * FROM vx1;
+
+DROP VIEW vx1;
+DROP TABLE tx1;
+DROP TABLE tx2;
+DROP TABLE tx3;
+
+--
+-- Test handling of vars from correlated subqueries in quals from outer
+-- security barrier views, per bug #13988
+--
+CREATE TABLE t1 (a int, b text, c int);
+INSERT INTO t1 VALUES (1, 'one', 10);
+
+CREATE TABLE t2 (cc int);
+INSERT INTO t2 VALUES (10), (20);
+
+CREATE VIEW v1 WITH (security_barrier = true) AS
+  SELECT * FROM t1 WHERE (a > 0)
+  WITH CHECK OPTION;
+
+CREATE VIEW v2 WITH (security_barrier = true) AS
+  SELECT * FROM v1 WHERE EXISTS (SELECT 1 FROM t2 WHERE t2.cc = v1.c)
+  WITH CHECK OPTION;
+
+--start_ignore
+INSERT INTO v2 VALUES (2, 'two', 20); -- ok
+INSERT INTO v2 VALUES (-2, 'minus two', 20); -- not allowed
+INSERT INTO v2 VALUES (3, 'three', 30); -- not allowed
+
+UPDATE v2 SET b = 'ONE' WHERE a = 1; -- ok
+UPDATE v2 SET a = -1 WHERE a = 1; -- not allowed
+UPDATE v2 SET c = 30 WHERE a = 1; -- not allowed
+
+DELETE FROM v2 WHERE a = 2; -- ok
+SELECT * FROM v2;
+--end_ignore
+
+DROP VIEW v2;
+DROP VIEW v1;
+DROP TABLE t2;
+DROP TABLE t1;
+
+--
+-- Test CREATE OR REPLACE VIEW turning a non-updatable view into an
+-- auto-updatable view and adding check options in a single step
+--
+CREATE TABLE t1 (a int, b text);
+CREATE VIEW v1 AS SELECT null::int AS a;
+CREATE OR REPLACE VIEW v1 AS SELECT * FROM t1 WHERE a > 0 WITH CHECK OPTION;
+
+INSERT INTO v1 VALUES (1, 'ok'); -- ok
+INSERT INTO v1 VALUES (-1, 'invalid'); -- should fail
+
+DROP VIEW v1;
+DROP TABLE t1;

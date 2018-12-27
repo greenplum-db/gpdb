@@ -473,6 +473,9 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
 
 		LockBuffer(mapBuffer, BUFFER_LOCK_EXCLUSIVE);
 
+		/* NO EREPORT(ERROR) from here till changes are logged */
+		START_CRIT_SECTION();
+
 		/* Clear out the unwanted bytes. */
 		MemSet(&map[truncByte + 1], 0, MAPSIZE - (truncByte + 1));
 
@@ -488,7 +491,20 @@ visibilitymap_truncate(Relation rel, BlockNumber nheapblocks)
 		 */
 		map[truncByte] &= (1 << truncBit) - 1;
 
+		/*
+		 * Truncation of a relation is WAL-logged at a higher-level, and we
+		 * will be called at WAL replay. But if checksums are enabled, we need
+		 * to still write a WAL record to protect against a torn page, if the
+		 * page is flushed to disk before the truncation WAL record. We cannot
+		 * use MarkBufferDirtyHint here, because that will not dirty the page
+		 * during recovery.
+		 */
 		MarkBufferDirty(mapBuffer);
+		if (!InRecovery && RelationNeedsWAL(rel) && XLogHintBitIsNeeded())
+			log_newpage_buffer(mapBuffer, false);
+
+		END_CRIT_SECTION();
+
 		UnlockReleaseBuffer(mapBuffer);
 	}
 	else
@@ -594,10 +610,9 @@ static void
 vm_extend(Relation rel, BlockNumber vm_nblocks)
 {
 	BlockNumber vm_nblocks_now;
-	Page		pg;
+	PGAlignedBlock pg;
 
-	pg = (Page) palloc(BLCKSZ);
-	PageInit(pg, BLCKSZ, 0);
+	PageInit((Page) pg.data, BLCKSZ, 0);
 
 	/*
 	 * We use the relation extension lock to lock out other backends trying to
@@ -628,10 +643,10 @@ vm_extend(Relation rel, BlockNumber vm_nblocks)
 	/* Now extend the file */
 	while (vm_nblocks_now < vm_nblocks)
 	{
-		PageSetChecksumInplace(pg, vm_nblocks_now);
+		PageSetChecksumInplace((Page) pg.data, vm_nblocks_now);
 
 		smgrextend(rel->rd_smgr, VISIBILITYMAP_FORKNUM, vm_nblocks_now,
-				   (char *) pg, false);
+				   pg.data, false);
 		vm_nblocks_now++;
 	}
 
@@ -648,6 +663,4 @@ vm_extend(Relation rel, BlockNumber vm_nblocks)
 	rel->rd_smgr->smgr_vm_nblocks = vm_nblocks_now;
 
 	UnlockRelationForExtension(rel, ExclusiveLock);
-
-	pfree(pg);
 }

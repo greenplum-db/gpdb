@@ -482,16 +482,22 @@ _bt_check_unique(Relation rel, IndexTuple itup, Relation heapRel,
 						{
 							Datum	values[INDEX_MAX_KEYS];
 							bool	isnull[INDEX_MAX_KEYS];
+							char	   *key_desc;
 	
 							index_deform_tuple(itup, RelationGetDescr(rel),
 											   values, isnull);
+
+							key_desc = BuildIndexValueDescription(rel, values,
+																  isnull);
+
 							ereport(ERROR,
 									(errcode(ERRCODE_UNIQUE_VIOLATION),
 									 errmsg("duplicate key value violates unique constraint \"%s\"",
 											RelationGetRelationName(rel)),
-									 errdetail("Key %s already exists.",
-											   BuildIndexValueDescription(rel,
-																values, isnull))));						
+									 key_desc ? errdetail("Key %s already exists.",
+											key_desc) : 0,
+									 errtableconstraint(heapRel,
+											RelationGetRelationName(rel))));
 						}
 					}
 					else if (all_dead)
@@ -1840,8 +1846,7 @@ _bt_insert_parent(Relation rel,
 		{
 			BTPageOpaque lpageop;
 
-			if (!InRecovery)
-				elog(DEBUG2, "concurrent ROOT page split");
+			elog(DEBUG2, "concurrent ROOT page split");
 			lpageop = (BTPageOpaque) PageGetSpecialPointer(page);
 			/* Find the leftmost page at the next level up */
 			pbuf = _bt_get_endpoint(rel, lpageop->btpo.level + 1, false);
@@ -2215,6 +2220,7 @@ _bt_newroot(Relation rel, Buffer lbuf, Buffer rbuf)
 		rdata[2].data = NULL;
 		rdata[2].len = 0;
 		rdata[2].buffer = lbuf;
+		rdata[2].buffer_std = true;
 		rdata[2].next = NULL;
 
 		recptr = XLogInsert(RM_BTREE_ID, XLOG_BTREE_NEWROOT, rdata);

@@ -116,10 +116,12 @@
  *			than its own active transaction must acquire an exclusive
  *			lock.
  *
- *	FirstPredicateLockMgrLock based partition locks
+ *	PredicateLockHashPartitionLock(hashcode)
  *		- The same lock protects a target, all locks on that target, and
- *			the linked list of locks on the target..
- *		- When more than one is needed, acquire in ascending order.
+ *			the linked list of locks on the target.
+ *		- When more than one is needed, acquire in ascending address order.
+ *		- When all are needed (rare), acquire in ascending index order with
+ *			PredicateLockHashPartitionLockByIndex(index).
  *
  *	SerializableXactHashLock
  *		- Protects both PredXact and SerializableXidHash.
@@ -804,6 +806,7 @@ OldSerXidInit(void)
 	oldSerXidControl = (OldSerXidControl)
 		ShmemInitStruct("OldSerXidControlData", sizeof(OldSerXidControlData), &found);
 
+	Assert(found == IsUnderPostmaster);
 	if (!found)
 	{
 		/*
@@ -1099,6 +1102,10 @@ InitPredicateLocks(void)
 	Size		requestSize;
 	bool		found;
 
+#ifndef EXEC_BACKEND
+	Assert(!IsUnderPostmaster);
+#endif
+
 	/*
 	 * Compute size of predicate lock target hashtable. Note these
 	 * calculations must agree with PredicateLockShmemSize!
@@ -1122,16 +1129,22 @@ InitPredicateLocks(void)
 											&info,
 											hash_flags);
 
-	/* Assume an average of 2 xacts per target */
-	max_table_size *= 2;
-
 	/*
 	 * Reserve a dummy entry in the hash table; we use it to make sure there's
 	 * always one entry available when we need to split or combine a page,
 	 * because running out of space there could mean aborting a
 	 * non-serializable transaction.
 	 */
-	hash_search(PredicateLockTargetHash, &ScratchTargetTag, HASH_ENTER, NULL);
+	if (!IsUnderPostmaster)
+	{
+		(void) hash_search(PredicateLockTargetHash, &ScratchTargetTag,
+						   HASH_ENTER, &found);
+		Assert(!found);
+	}
+
+	/* Pre-calculate the hash and partition lock of the scratch entry */
+	ScratchTargetTagHash = PredicateLockTargetTagHashCode(&ScratchTargetTag);
+	ScratchPartitionLock = PredicateLockHashPartitionLock(ScratchTargetTagHash);
 
 	/*
 	 * Allocate hash table for PREDICATELOCK structs.  This stores per
@@ -1143,6 +1156,9 @@ InitPredicateLocks(void)
 	info.hash = predicatelock_hash;
 	info.num_partitions = NUM_PREDICATELOCK_PARTITIONS;
 	hash_flags = (HASH_ELEM | HASH_FUNCTION | HASH_PARTITION | HASH_FIXED_SIZE);
+
+	/* Assume an average of 2 xacts per target */
+	max_table_size *= 2;
 
 	PredicateLockHash = ShmemInitHash("PREDICATELOCK hash",
 									  max_table_size,
@@ -1169,6 +1185,7 @@ InitPredicateLocks(void)
 	PredXact = ShmemInitStruct("PredXactList",
 							   PredXactListDataSize,
 							   &found);
+	Assert(found == IsUnderPostmaster);
 	if (!found)
 	{
 		int			i;
@@ -1248,6 +1265,7 @@ InitPredicateLocks(void)
 	RWConflictPool = ShmemInitStruct("RWConflictPool",
 									 RWConflictPoolHeaderDataSize,
 									 &found);
+	Assert(found == IsUnderPostmaster);
 	if (!found)
 	{
 		int			i;
@@ -1279,6 +1297,7 @@ InitPredicateLocks(void)
 		ShmemInitStruct("FinishedSerializableTransactions",
 						sizeof(SHM_QUEUE),
 						&found);
+	Assert(found == IsUnderPostmaster);
 	if (!found)
 		SHMQueueInit(FinishedSerializableTransactions);
 
@@ -1287,10 +1306,6 @@ InitPredicateLocks(void)
 	 * transactions.
 	 */
 	OldSerXidInit();
-
-	/* Pre-calculate the hash and partition lock of the scratch entry */
-	ScratchTargetTagHash = PredicateLockTargetTagHashCode(&ScratchTargetTag);
-	ScratchPartitionLock = PredicateLockHashPartitionLock(ScratchTargetTagHash);
 }
 
 /*
@@ -3198,7 +3213,7 @@ ReleasePredicateLocks(bool isCommit)
 	/*
 	 * We can't trust XactReadOnly here, because a transaction which started
 	 * as READ WRITE can show as READ ONLY later, e.g., within
-	 * substransactions.  We want to flag a transaction as READ ONLY if it
+	 * subtransactions.  We want to flag a transaction as READ ONLY if it
 	 * commits without writing so that de facto READ ONLY transactions get the
 	 * benefit of some RO optimizations, so we will use this local variable to
 	 * get some cleanup logic right which is based on whether the transaction
@@ -3212,21 +3227,20 @@ ReleasePredicateLocks(bool isCommit)
 		return;
 	}
 
+	LWLockAcquire(SerializableXactHashLock, LW_EXCLUSIVE);
+
 	Assert(!isCommit || SxactIsPrepared(MySerializableXact));
 	Assert(!isCommit || !SxactIsDoomed(MySerializableXact));
 	Assert(!SxactIsCommitted(MySerializableXact));
 	Assert(!SxactIsRolledBack(MySerializableXact));
 
 	/* may not be serializable during COMMIT/ROLLBACK PREPARED */
-	if (MySerializableXact->pid != 0)
-		Assert(IsolationIsSerializable());
+	Assert(MySerializableXact->pid == 0 || IsolationIsSerializable());
 
 	/* We'd better not already be on the cleanup list. */
 	Assert(!SxactIsOnFinishedList(MySerializableXact));
 
 	topLevelIsDeclaredReadOnly = SxactIsReadOnly(MySerializableXact);
-
-	LWLockAcquire(SerializableXactHashLock, LW_EXCLUSIVE);
 
 	/*
 	 * We don't hold XidGenLock lock here, assuming that TransactionId is
@@ -4364,7 +4378,7 @@ CheckTableForSerializableConflictIn(Relation relation)
 	LWLockAcquire(SerializablePredicateLockListLock, LW_EXCLUSIVE);
 	for (i = 0; i < NUM_PREDICATELOCK_PARTITIONS; i++)
 		LWLockAcquire(PredicateLockHashPartitionLockByIndex(i), LW_SHARED);
-	LWLockAcquire(SerializableXactHashLock, LW_SHARED);
+	LWLockAcquire(SerializableXactHashLock, LW_EXCLUSIVE);
 
 	/* Scan through target list */
 	hash_seq_init(&seqstat, PredicateLockTargetHash);

@@ -55,7 +55,7 @@ typedef struct prepared_transaction_agg_state
 typedef struct GlobalTransactionData *GlobalTransaction;
 
 /* GUC variable */
-extern int	max_prepared_xacts;
+extern PGDLLIMPORT int max_prepared_xacts;
 
 extern Size TwoPhaseShmemSize(void);
 extern void TwoPhaseShmemInit(void);

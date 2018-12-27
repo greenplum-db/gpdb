@@ -48,7 +48,7 @@ static List *generate_join_implied_equalities_broken(PlannerInfo *root,
 										Relids nominal_join_relids,
 										Relids outer_relids,
 										Relids nominal_inner_relids,
-										AppendRelInfo *inner_appinfo);
+										RelOptInfo *inner_rel);
 static Oid select_equality_operator(EquivalenceClass *ec,
 						 Oid lefttype, Oid righttype);
 static RestrictInfo *create_join_clause(PlannerInfo *root,
@@ -424,8 +424,9 @@ canonicalize_ec_expression(Expr *expr, Oid req_type, Oid req_collation)
 
 	/*
 	 * For a polymorphic-input-type opclass, just keep the same exposed type.
+	 * RECORD opclasses work like polymorphic-type ones for this purpose.
 	 */
-	if (IsPolymorphicType(req_type))
+	if (IsPolymorphicType(req_type) || req_type == RECORDOID)
 		req_type = expr_type;
 
 	/*
@@ -988,7 +989,7 @@ generate_base_implied_equalities_broken(PlannerInfo *root,
  *
  * join_relids should always equal bms_union(outer_relids, inner_rel->relids).
  * We could simplify this function's API by computing it internally, but in
- * all current uses, the caller has the value at hand anyway.
+ * most current uses, the caller has the value at hand anyway.
  */
 List *
 generate_join_implied_equalities(PlannerInfo *root,
@@ -996,31 +997,45 @@ generate_join_implied_equalities(PlannerInfo *root,
 								 Relids outer_relids,
 								 RelOptInfo *inner_rel)
 {
+	return generate_join_implied_equalities_for_ecs(root,
+													root->eq_classes,
+													join_relids,
+													outer_relids,
+													inner_rel);
+}
+
+/*
+ * generate_join_implied_equalities_for_ecs
+ *	  As above, but consider only the listed ECs.
+ */
+List *
+generate_join_implied_equalities_for_ecs(PlannerInfo *root,
+										 List *eclasses,
+										 Relids join_relids,
+										 Relids outer_relids,
+										 RelOptInfo *inner_rel)
+{
 	List	   *result = NIL;
 	Relids		inner_relids = inner_rel->relids;
 	Relids		nominal_inner_relids;
 	Relids		nominal_join_relids;
-	AppendRelInfo *inner_appinfo;
 	ListCell   *lc;
 
 	/* If inner rel is a child, extra setup work is needed */
 	if (inner_rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
 	{
-		/* Lookup parent->child translation data */
-		inner_appinfo = find_childrel_appendrelinfo(root, inner_rel);
-		/* Construct relids for the parent rel */
-		nominal_inner_relids = bms_make_singleton(inner_appinfo->parent_relid);
+		/* Fetch relid set for the topmost parent rel */
+		nominal_inner_relids = find_childrel_top_parent(root, inner_rel)->relids;
 		/* ECs will be marked with the parent's relid, not the child's */
 		nominal_join_relids = bms_union(outer_relids, nominal_inner_relids);
 	}
 	else
 	{
-		inner_appinfo = NULL;
 		nominal_inner_relids = inner_relids;
 		nominal_join_relids = join_relids;
 	}
 
-	foreach(lc, root->eq_classes)
+	foreach(lc, eclasses)
 	{
 		EquivalenceClass *ec = (EquivalenceClass *) lfirst(lc);
 		List	   *sublist = NIL;
@@ -1051,7 +1066,7 @@ generate_join_implied_equalities(PlannerInfo *root,
 														 nominal_join_relids,
 															  outer_relids,
 														nominal_inner_relids,
-															  inner_appinfo);
+															  inner_rel);
 
 		result = list_concat(result, sublist);
 	}
@@ -1244,7 +1259,7 @@ generate_join_implied_equalities_broken(PlannerInfo *root,
 										Relids nominal_join_relids,
 										Relids outer_relids,
 										Relids nominal_inner_relids,
-										AppendRelInfo *inner_appinfo)
+										RelOptInfo *inner_rel)
 {
 	List	   *result = NIL;
 	ListCell   *lc;
@@ -1266,10 +1281,16 @@ generate_join_implied_equalities_broken(PlannerInfo *root,
 	 * RestrictInfos that are not listed in ec_derives, but there shouldn't be
 	 * any duplication, and it's a sufficiently narrow corner case that we
 	 * shouldn't sweat too much over it anyway.
+	 *
+	 * Since inner_rel might be an indirect descendant of the baserel
+	 * mentioned in the ec_sources clauses, we have to be prepared to apply
+	 * multiple levels of Var translation.
 	 */
-	if (inner_appinfo)
-		result = (List *) adjust_appendrel_attrs(root, (Node *) result,
-												 inner_appinfo);
+	if (inner_rel->reloptkind == RELOPT_OTHER_MEMBER_REL &&
+		result != NIL)
+		result = (List *) adjust_appendrel_attrs_multilevel(root,
+															(Node *) result,
+															inner_rel);
 
 	return result;
 }
@@ -2070,14 +2091,14 @@ generate_implied_equalities_for_column(PlannerInfo *root,
 {
 	List	   *result = NIL;
 	bool		is_child_rel = (rel->reloptkind == RELOPT_OTHER_MEMBER_REL);
-	Index		parent_relid;
+	Relids		parent_relids;
 	ListCell   *lc1;
 
-	/* If it's a child rel, we'll need to know what its parent is */
+	/* If it's a child rel, we'll need to know what its parent(s) are */
 	if (is_child_rel)
-		parent_relid = find_childrel_appendrelinfo(root, rel)->parent_relid;
+		parent_relids = find_childrel_parents(root, rel);
 	else
-		parent_relid = 0;		/* not used, but keep compiler quiet */
+		parent_relids = NULL;	/* not used, but keep compiler quiet */
 
 	foreach(lc1, root->eq_classes)
 	{
@@ -2147,10 +2168,10 @@ generate_implied_equalities_for_column(PlannerInfo *root,
 
 			/*
 			 * Also, if this is a child rel, avoid generating a useless join
-			 * to its parent rel.
+			 * to its parent rel(s).
 			 */
 			if (is_child_rel &&
-				bms_is_member(parent_relid, other_em->em_relids))
+				bms_overlap(parent_relids, other_em->em_relids))
 				continue;
 
 			eq_op = select_equality_operator(cur_ec,
@@ -2283,9 +2304,11 @@ has_relevant_eclass_joinclause(PlannerInfo *root, RelOptInfo *rel1)
  * from actually being generated.
  */
 bool
-eclass_useful_for_merging(EquivalenceClass *eclass,
+eclass_useful_for_merging(PlannerInfo *root,
+						  EquivalenceClass *eclass,
 						  RelOptInfo *rel)
 {
+	Relids		relids;
 	ListCell   *lc;
 
 	Assert(!eclass->ec_merged);
@@ -2303,8 +2326,14 @@ eclass_useful_for_merging(EquivalenceClass *eclass,
 	 * possibly-overoptimistic heuristic.
 	 */
 
+	/* If specified rel is a child, we must consider the topmost parent rel */
+	if (rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
+		relids = find_childrel_top_parent(root, rel)->relids;
+	else
+		relids = rel->relids;
+
 	/* If rel already includes all members of eclass, no point in searching */
-	if (bms_is_subset(eclass->ec_relids, rel->relids))
+	if (bms_is_subset(eclass->ec_relids, relids))
 		return false;
 
 	/* To join, we need a member not in the given rel */
@@ -2315,7 +2344,7 @@ eclass_useful_for_merging(EquivalenceClass *eclass,
 		if (cur_em->em_is_child)
 			continue;			/* ignore children here */
 
-		if (!bms_overlap(cur_em->em_relids, rel->relids))
+		if (!bms_overlap(cur_em->em_relids, relids))
 			return true;
 	}
 

@@ -256,6 +256,7 @@ libpqrcv_endstreaming(TimeLineID *next_tli)
 		ereport(ERROR,
 				(errmsg("error reading result of streaming command: %s",
 						PQerrorMessage(streamConn))));
+	PQclear(res);
 
 	/* Verify that there are no more results */
 	res = PQgetResult(streamConn);
@@ -419,14 +420,20 @@ libpqrcv_PQexec(const char *query)
 			 */
 			if (!libpq_select(-1))
 				continue;		/* interrupted */
+
+			/* Consume whatever data is available from the socket */
 			if (PQconsumeInput(streamConn) == 0)
-				return NULL;	/* trouble */
+			{
+				/* trouble; drop whatever we had and return NULL */
+				PQclear(lastResult);
+				return NULL;
+			}
 		}
 
 		/*
-		 * Emulate the PQexec()'s behavior of returning the last result when
-		 * there are many. Since walsender will never generate multiple
-		 * results, we skip the concatenation of error messages.
+		 * Emulate PQexec()'s behavior of returning the last result when there
+		 * are many.  Since walsender will never generate multiple results, we
+		 * skip the concatenation of error messages.
 		 */
 		result = PQgetResult(streamConn);
 		if (result == NULL)

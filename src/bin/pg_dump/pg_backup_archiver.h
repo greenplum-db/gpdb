@@ -66,7 +66,7 @@ typedef z_stream *z_streamp;
 
 /* Current archive version number (the format we can output) */
 #define K_VERS_MAJOR 1
-#define K_VERS_MINOR 12
+#define K_VERS_MINOR 13
 #define K_VERS_REV 0
 
 /* Data block types */
@@ -92,9 +92,11 @@ typedef z_stream *z_streamp;
 																 * indicator */
 #define K_VERS_1_12 (( (1 * 256 + 12) * 256 + 0) * 256 + 0)		/* add separate BLOB
 																 * entries */
+#define K_VERS_1_13 (( (1 * 256 + 13) * 256 + 0) * 256 + 0)		/* change search_path
+																 * behavior */
 
 /* Newest format we can read */
-#define K_VERS_MAX (( (1 * 256 + 12) * 256 + 255) * 256 + 0)
+#define K_VERS_MAX (( (1 * 256 + 13) * 256 + 255) * 256 + 0)
 
 
 /* Flags to indicate disposition of offsets stored in files */
@@ -205,6 +207,30 @@ typedef enum
 	OUTPUT_OTHERDATA			/* writing data as INSERT commands */
 } ArchiverOutput;
 
+/*
+ * For historical reasons, ACL items are interspersed with everything else in
+ * a dump file's TOC; typically they're right after the object they're for.
+ * However, we need to restore data before ACLs, as otherwise a read-only
+ * table (ie one where the owner has revoked her own INSERT privilege) causes
+ * data restore failures.  On the other hand, matview REFRESH commands should
+ * come out after ACLs, as otherwise non-superuser-owned matviews might not
+ * be able to execute.  (If the permissions at the time of dumping would not
+ * allow a REFRESH, too bad; we won't fix that for you.)  These considerations
+ * force us to make three passes over the TOC, restoring the appropriate
+ * subset of items in each pass.  We assume that the dependency sort resulted
+ * in an appropriate ordering of items within each subset.
+ * XXX This mechanism should be superseded by tracking dependencies on ACLs
+ * properly; but we'll still need it for old dump files even after that.
+ */
+typedef enum
+{
+	RESTORE_PASS_MAIN = 0,		/* Main pass (most TOC item types) */
+	RESTORE_PASS_ACL,			/* ACL item types */
+	RESTORE_PASS_REFRESH		/* Matview REFRESH items */
+
+#define RESTORE_PASS_LAST RESTORE_PASS_REFRESH
+} RestorePass;
+
 typedef enum
 {
 	REQ_SCHEMA = 0x01,			/* want schema */
@@ -290,6 +316,9 @@ typedef struct _archiveHandle
 	char	   *savedPassword;	/* password for ropt->username, if known */
 	char	   *use_role;
 	PGconn	   *connection;
+	/* If connCancel isn't NULL, SIGINT handler will send a cancel */
+	PGcancel   *volatile connCancel;
+
 	int			connectToDB;	/* Flag to indicate if direct DB connection is
 								 * required */
 	ArchiverOutput outputKind;	/* Flag for what we're currently writing */
@@ -337,6 +366,7 @@ typedef struct _archiveHandle
 	int			noTocComments;
 	ArchiverStage stage;
 	ArchiverStage lastErrorStage;
+	RestorePass restorePass;	/* used only during parallel restore */
 	struct _tocEntry *currentTE;
 	struct _tocEntry *lastErrorTE;
 

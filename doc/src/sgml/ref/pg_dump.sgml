@@ -75,7 +75,7 @@ PostgreSQL documentation
    can be used to examine the archive and/or select which parts of the
    database are to be restored. The most flexible output file formats are
    the <quote>custom</quote> format (<option>-Fc</option>) and the
-   <quote>directory</quote> format(<option>-Fd</option>). They allow
+   <quote>directory</quote> format (<option>-Fd</option>). They allow
    for selection and reordering of all archived items, support parallel
    restoration, and are compressed by default. The <quote>directory</quote>
    format is the only format that supports parallel dumps.
@@ -132,8 +132,11 @@ PostgreSQL documentation
        <para>
         Include large objects in the dump.  This is the default behavior
         except when <option>--schema</>, <option>--table</>, or
-        <option>--schema-only</> is specified, so the <option>-b</>
-        switch is only useful to add large objects to selective dumps.
+        <option>--schema-only</> is specified.  The <option>-b</>
+        switch is therefore only useful to add large objects to dumps
+        where a specific schema or table has been requested.  Note that
+        blobs are considered data and therefore will be included when
+        --data-only is used, but not when --schema-only is.
        </para>
       </listitem>
      </varlistentry>
@@ -266,12 +269,12 @@ PostgreSQL documentation
          <listitem>
           <para>
            Output a <command>tar</command>-format archive suitable for input
-           into <application>pg_restore</application>. The tar-format is
-           compatible with the directory-format; extracting a tar-format
+           into <application>pg_restore</application>. The tar format is
+           compatible with the directory format: extracting a tar-format
            archive produces a valid directory-format archive.
-           However, the tar-format does not support compression and has a
-           limit of 8 GB on the size of individual tables. Also, the relative
-           order of table data items cannot be changed during restore.
+           However, the tar format does not support compression. Also, when
+           using tar format the relative order of table data items cannot be
+           changed during restore.
           </para>
          </listitem>
         </varlistentry>
@@ -652,17 +655,6 @@ PostgreSQL documentation
      </varlistentry>
 
      <varlistentry>
-      <term><option>--if-exists</option></term>
-      <listitem>
-       <para>
-        Use conditional commands (i.e. add an <literal>IF EXISTS</literal>
-        clause) when cleaning database objects.  This option is not valid
-        unless <option>--clean</> is also specified.
-       </para>
-      </listitem>
-     </varlistentry>
-
-     <varlistentry>
       <term><option>--disable-dollar-quoting</></term>
       <listitem>
        <para>
@@ -713,6 +705,17 @@ PostgreSQL documentation
        </para>
        <para>
         To exclude data for all tables in the database, see <option>--schema-only</>.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term><option>--if-exists</option></term>
+      <listitem>
+       <para>
+        Use conditional commands (i.e. add an <literal>IF EXISTS</literal>
+        clause) when cleaning database objects.  This option is not valid
+        unless <option>--clean</> is also specified.
        </para>
       </listitem>
      </varlistentry>
@@ -805,9 +808,16 @@ PostgreSQL documentation
       <term><option>--quote-all-identifiers</></term>
       <listitem>
        <para>
-        Force quoting of all identifiers.  This may be useful when dumping a
-        database for migration to a future version that may have introduced
-        additional keywords.
+        Force quoting of all identifiers.  This option is recommended when
+        dumping a database from a server whose <productname>PostgreSQL</>
+        major version is different from <application>pg_dump</>'s, or when
+        the output is intended to be loaded into a server of a different
+        major version.  By default, <application>pg_dump</> quotes only
+        identifiers that are reserved words in its own major version.
+        This sometimes results in compatibility issues when dealing with
+        servers of other versions that may have slightly different sets
+        of reserved words.  Using <option>--quote-all-identifiers</> prevents
+        such issues, at the price of a harder-to-read dump script.
        </para>
       </listitem>
      </varlistentry>
@@ -1089,15 +1099,6 @@ CREATE DATABASE foo WITH TEMPLATE template0;
   </para>
 
   <para>
-   Members of tar archives are limited to a size less than 8 GB.
-   (This is an inherent limitation of the tar file format.)  Therefore
-   this format cannot be used if the textual representation of any one table
-   exceeds that size.  The total size of a tar archive and any of the
-   other output formats is not limited, except possibly by the
-   operating system.
-  </para>
-
-  <para>
    The dump file produced by <application>pg_dump</application>
    does not contain the statistics used by the optimizer to make
    query planning decisions.  Therefore, it is wise to run
@@ -1126,6 +1127,9 @@ CREATE DATABASE foo WITH TEMPLATE template0;
    dump was taken from a server of that version.  Loading a dump file
    into an older server may require manual editing of the dump file
    to remove syntax not understood by the older server.
+   Use of the <option>--quote-all-identifiers</option> option is recommended
+   in cross-version cases, as it can prevent problems arising from varying
+   reserved-word lists in different <productname>PostgreSQL</> versions.
   </para>
 
   <para>

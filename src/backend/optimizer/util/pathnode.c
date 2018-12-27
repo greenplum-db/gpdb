@@ -315,19 +315,17 @@ compare_fractional_path_costs(Path *path1, Path *path2,
  * total cost, we just say that their costs are "different", since neither
  * dominates the other across the whole performance spectrum.
  *
- * If consider_startup is false, then we don't care about keeping paths with
- * good startup cost, so we'll never return COSTS_DIFFERENT.
- *
- * This function also includes special hacks to support a policy enforced
- * by its sole caller, add_path(): paths that have any parameterization
- * cannot win comparisons on the grounds of having cheaper startup cost,
- * since we deem only total cost to be of interest for a parameterized path.
- * (Unparameterized paths are more common, so we check for this case last.)
+ * This function also enforces a policy rule that paths for which the relevant
+ * one of parent->consider_startup and parent->consider_param_startup is false
+ * cannot win comparisons on the grounds of good startup cost, so we never
+ * return COSTS_DIFFERENT when that is true for the total-cost loser.
  */
 static PathCostComparison
-compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
-						   bool consider_startup)
+compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor)
 {
+#define CONSIDER_PATH_STARTUP_COST(p)  \
+	((p)->param_info == NULL ? (p)->parent->consider_startup : (p)->parent->consider_param_startup)
+
 	/*
 	 * Check total cost first since it's more likely to be different; many
 	 * paths have zero startup cost.
@@ -335,9 +333,8 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
 	if (path1->total_cost > path2->total_cost * fuzz_factor)
 	{
 		/* path1 fuzzily worse on total cost */
-		if (consider_startup &&
-			path2->startup_cost > path1->startup_cost * fuzz_factor &&
-			path1->param_info == NULL)
+		if (CONSIDER_PATH_STARTUP_COST(path1) &&
+			path2->startup_cost > path1->startup_cost * fuzz_factor)
 		{
 			/* ... but path2 fuzzily worse on startup, so DIFFERENT */
 			return COSTS_DIFFERENT;
@@ -348,9 +345,8 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
 	if (path2->total_cost > path1->total_cost * fuzz_factor)
 	{
 		/* path2 fuzzily worse on total cost */
-		if (consider_startup &&
-			path1->startup_cost > path2->startup_cost * fuzz_factor &&
-			path2->param_info == NULL)
+		if (CONSIDER_PATH_STARTUP_COST(path2) &&
+			path1->startup_cost > path2->startup_cost * fuzz_factor)
 		{
 			/* ... but path1 fuzzily worse on startup, so DIFFERENT */
 			return COSTS_DIFFERENT;
@@ -358,8 +354,13 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
 		/* else path1 dominates */
 		return COSTS_BETTER1;
 	}
-	/* fuzzily the same on total cost */
-	/* (so we may as well compare startup cost, even if !consider_startup) */
+
+	/*
+	 * Fuzzily the same on total cost (so we might as well compare startup
+	 * cost, even when that would otherwise be uninteresting; but
+	 * parameterized paths aren't allowed to win this way, we'd rather move on
+	 * to other comparison heuristics)
+	 */
 	if (path1->startup_cost > path2->startup_cost * fuzz_factor &&
 		path2->param_info == NULL)
 	{
@@ -374,6 +375,8 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
 	}
 	/* fuzzily the same on both costs */
 	return COSTS_EQUAL;
+
+#undef CONSIDER_PATH_STARTUP_COST
 }
 
 /*
@@ -389,11 +392,11 @@ compare_path_costs_fuzzily(Path *path1, Path *path2, double fuzz_factor,
  *
  * The cheapest_parameterized_paths list collects all parameterized paths
  * that have survived the add_path() tournament for this relation.  (Since
- * add_path ignores pathkeys and startup cost for a parameterized path,
- * these will be paths that have best total cost or best row count for their
- * parameterization.)  cheapest_parameterized_paths always includes the
- * cheapest-total unparameterized path, too, if there is one; the users of
- * that list find it more convenient if that's included.
+ * add_path ignores pathkeys for a parameterized path, these will be paths
+ * that have best cost or best row count for their parameterization.)
+ * cheapest_parameterized_paths always includes the cheapest-total
+ * unparameterized path, too, if there is one; the users of that list find
+ * it more convenient if that's included.
  *
  * This is normally called only after we've finished constructing the path
  * list for the rel node.
@@ -538,14 +541,15 @@ set_cheapest(RelOptInfo *parent_rel)
  *	  cases do arise, so we make the full set of checks anyway.
  *
  *	  There are two policy decisions embedded in this function, along with
- *	  its sibling add_path_precheck: we treat all parameterized paths as
- *	  having NIL pathkeys, and we ignore their startup costs, so that they
- *	  compete only on parameterization, total cost and rowcount.  This is to
- *	  reduce the number of parameterized paths that are kept.  See discussion
- *	  in src/backend/optimizer/README.
+ *	  its sibling add_path_precheck.  First, we treat all parameterized paths
+ *	  as having NIL pathkeys, so that they cannot win comparisons on the
+ *	  basis of sort order.  This is to reduce the number of parameterized
+ *	  paths that are kept; see discussion in src/backend/optimizer/README.
  *
- *	  Another policy that is enforced here is that we only consider cheap
- *	  startup cost to be interesting if parent_rel->consider_startup is true.
+ *	  Second, we only consider cheap startup cost to be interesting if
+ *	  parent_rel->consider_startup is true for an unparameterized path, or
+ *	  parent_rel->consider_param_startup is true for a parameterized one.
+ *	  Again, this allows discarding useless paths sooner.
  *
  *	  The pathlist is kept sorted by total_cost, with cheaper paths
  *	  at the front.  Within this routine, that's simply a speed hack:
@@ -621,8 +625,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
 		 * Do a fuzzy cost comparison with 1% fuzziness limit.  (XXX does this
 		 * percentage need to be user-configurable?)
 		 */
-		costcmp = compare_path_costs_fuzzily(new_path, old_path, 1.01,
-											 parent_rel->consider_startup);
+		costcmp = compare_path_costs_fuzzily(new_path, old_path, 1.01);
 
 		/*
 		 * If the two paths compare differently for startup and total cost,
@@ -689,8 +692,7 @@ add_path(RelOptInfo *parent_rel, Path *new_path)
 									accept_new = false; /* old dominates new */
 								else if (compare_path_costs_fuzzily(new_path,
 																	old_path,
-																1.0000000001,
-																	parent_rel->consider_startup) == COSTS_BETTER1)
+											  1.0000000001) == COSTS_BETTER1)
 									remove_old = true;	/* new dominates old */
 								else
 									accept_new = false; /* old equals or
@@ -2448,6 +2450,62 @@ distinct_col_search(int colno, List *colnos, List *opids)
 	return InvalidOid;
 }
 
+static bool
+subquery_motionHazard_walker(Plan *node, void *context)
+{
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Motion))
+		return true;
+	else if (IsA(node, Append))
+	{
+		ListCell   *l;
+
+		foreach(l, ((Append *) node)->appendplans)
+		{
+			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
+				return true;
+		}
+	}
+	else if (IsA(node, MergeAppend))
+	{
+		ListCell   *l;
+
+		foreach(l, ((MergeAppend *) node)->mergeplans)
+		{
+			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
+				return true;
+		}
+	}
+	else if (IsA(node, BitmapAnd))
+	{
+		ListCell   *l;
+
+		foreach(l, ((BitmapAnd *) node)->bitmapplans)
+		{
+			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
+				return true;
+		}
+	}
+	else if (IsA(node, BitmapOr))
+	{
+		ListCell   *l;
+
+		foreach(l, ((BitmapOr *) node)->bitmapplans)
+		{
+			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
+				return true;
+		}
+	}
+
+	if (subquery_motionHazard_walker(node->lefttree, NULL) ||
+		subquery_motionHazard_walker(node->righttree, NULL))
+		return true;
+
+	return false;
+}
+
 /*
  * create_subqueryscan_path
  *	  Creates a path corresponding to a sequential scan of a subquery,
@@ -2466,7 +2524,7 @@ create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->pathkeys = pathkeys;
 
 	pathnode->locus = cdbpathlocus_from_subquery(root, rel->subplan, rel->relid);
-	pathnode->motionHazard = true;          /* better safe than sorry */
+	pathnode->motionHazard = subquery_motionHazard_walker(rel->subplan, NULL);
 	pathnode->rescannable = false;
 	pathnode->sameslice_relids = NULL;
 
@@ -3412,6 +3470,28 @@ reparameterize_path(PlannerInfo *root, Path *path,
 		case T_SubqueryScan:
 			return create_subqueryscan_path(root, rel, path->pathkeys,
 											required_outer);
+		case T_Append:
+			{
+				AppendPath *apath = (AppendPath *) path;
+				List	   *childpaths = NIL;
+				ListCell   *lc;
+
+				/* Reparameterize the children */
+				foreach(lc, apath->subpaths)
+				{
+					Path	   *spath = (Path *) lfirst(lc);
+
+					spath = reparameterize_path(root, spath,
+												required_outer,
+												loop_count);
+					if (spath == NULL)
+						return NULL;
+					childpaths = lappend(childpaths, spath);
+				}
+				return (Path *)
+					create_append_path(root, rel, childpaths,
+									   required_outer);
+			}
 		default:
 			break;
 	}

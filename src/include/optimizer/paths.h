@@ -83,6 +83,8 @@ extern RelOptInfo *make_join_rel(PlannerInfo *root,
 			  RelOptInfo *rel1, RelOptInfo *rel2);
 extern bool have_join_order_restriction(PlannerInfo *root,
 							RelOptInfo *rel1, RelOptInfo *rel2);
+extern bool have_dangerous_phv(PlannerInfo *root,
+				   Relids outer_relids, Relids inner_params);
 
 /*
  * equivclass.c
@@ -113,6 +115,11 @@ extern List *generate_join_implied_equalities(PlannerInfo *root,
 								 Relids join_relids,
 								 Relids outer_relids,
 								 RelOptInfo *inner_rel);
+extern List *generate_join_implied_equalities_for_ecs(PlannerInfo *root,
+										 List *eclasses,
+										 Relids join_relids,
+										 Relids outer_relids,
+										 RelOptInfo *inner_rel);
 extern bool exprs_known_equal(PlannerInfo *root, Node *item1, Node *item2);
 extern void add_child_rel_equivalences(PlannerInfo *root,
 						   AppendRelInfo *appinfo,
@@ -131,7 +138,8 @@ extern bool have_relevant_eclass_joinclause(PlannerInfo *root,
 								RelOptInfo *rel1, RelOptInfo *rel2);
 extern bool has_relevant_eclass_joinclause(PlannerInfo *root,
 							   RelOptInfo *rel1);
-extern bool eclass_useful_for_merging(EquivalenceClass *eclass,
+extern bool eclass_useful_for_merging(PlannerInfo *root,
+						  EquivalenceClass *eclass,
 						  RelOptInfo *rel);
 extern bool is_redundant_derived_clause(RestrictInfo *rinfo, List *clauselist);
 
@@ -214,16 +222,18 @@ extern void initialize_mergeclause_eclasses(PlannerInfo *root,
 								RestrictInfo *restrictinfo);
 extern void update_mergeclause_eclasses(PlannerInfo *root,
 							RestrictInfo *restrictinfo);
-extern List *find_mergeclauses_for_pathkeys(PlannerInfo *root,
-							   List *pathkeys,
-							   bool outer_keys,
-							   List *restrictinfos);
+extern List *find_mergeclauses_for_outer_pathkeys(PlannerInfo *root,
+									 List *pathkeys,
+									 List *restrictinfos);
 extern List *select_outer_pathkeys_for_merge(PlannerInfo *root,
 								List *mergeclauses,
 								RelOptInfo *joinrel);
 extern List *make_inner_pathkeys_for_merge(PlannerInfo *root,
 							  List *mergeclauses,
 							  List *outer_pathkeys);
+extern List *trim_mergeclauses_for_inner_pathkeys(PlannerInfo *root,
+									 List *mergeclauses,
+									 List *pathkeys);
 extern List *truncate_useless_pathkeys(PlannerInfo *root,
 						  RelOptInfo *rel,
 						  List *pathkeys);

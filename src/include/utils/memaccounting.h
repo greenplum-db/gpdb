@@ -16,7 +16,6 @@
 #ifndef MEMACCOUNTING_H
 #define MEMACCOUNTING_H
 
-#include "nodes/nodes.h"
 #include "lib/stringinfo.h"             /* StringInfo */
 
 struct MemoryContextData;

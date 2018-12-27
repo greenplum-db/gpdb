@@ -120,6 +120,44 @@ ALTER FOREIGN TABLE ft2 ALTER COLUMN c1 OPTIONS (column_name 'C 1');
  public | ft2   | loopback | (schema_name 'S 1', table_name 'T 1') | 
 (2 rows)
 
+-- Test that alteration of server options causes reconnection
+-- Remote's errors might be non-English, so hide them to ensure stable results
+\set VERBOSITY terse
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work
+  c3   |              c4              
+-------+------------------------------
+ 00001 | Fri Jan 02 00:00:00 1970 PST
+(1 row)
+
+ALTER SERVER loopback OPTIONS (SET dbname 'no such database');
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should fail
+ERROR:  could not connect to server "loopback"
+DO $d$
+    BEGIN
+        EXECUTE $$ALTER SERVER loopback
+            OPTIONS (SET dbname '$$||current_database()||$$')$$;
+    END;
+$d$;
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work again
+  c3   |              c4              
+-------+------------------------------
+ 00001 | Fri Jan 02 00:00:00 1970 PST
+(1 row)
+
+-- Test that alteration of user mapping options causes reconnection
+ALTER USER MAPPING FOR CURRENT_USER SERVER loopback
+  OPTIONS (ADD user 'no such user');
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should fail
+ERROR:  could not connect to server "loopback"
+ALTER USER MAPPING FOR CURRENT_USER SERVER loopback
+  OPTIONS (DROP user);
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work again
+  c3   |              c4              
+-------+------------------------------
+ 00001 | Fri Jan 02 00:00:00 1970 PST
+(1 row)
+
+\set VERBOSITY default
 -- Now we should be able to run ANALYZE.
 -- To exercise multiple code paths, we use local stats on ft1
 -- and remote-estimate mode on ft2.
@@ -229,6 +267,39 @@ SELECT * FROM ft1 t1 WHERE t1.c1 = 101 AND t1.c6 = '1' AND t1.c7 >= '1';
  c1  | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
 -----+----+-------+------------------------------+--------------------------+----+------------+-----
  101 |  1 | 00101 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
+-- with FOR UPDATE/SHARE
+EXPLAIN (VERBOSE, COSTS false) SELECT * FROM ft1 t1 WHERE c1 = 101 FOR UPDATE;
+                                                   QUERY PLAN                                                   
+----------------------------------------------------------------------------------------------------------------
+ LockRows
+   Output: c1, c2, c3, c4, c5, c6, c7, c8, t1.*
+   ->  Foreign Scan on public.ft1 t1
+         Output: c1, c2, c3, c4, c5, c6, c7, c8, t1.*
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 101)) FOR UPDATE
+(5 rows)
+
+SELECT * FROM ft1 t1 WHERE c1 = 101 FOR UPDATE;
+ c1  | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+-----+----+-------+------------------------------+--------------------------+----+------------+-----
+ 101 |  1 | 00101 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS false) SELECT * FROM ft1 t1 WHERE c1 = 102 FOR SHARE;
+                                                  QUERY PLAN                                                   
+---------------------------------------------------------------------------------------------------------------
+ LockRows
+   Output: c1, c2, c3, c4, c5, c6, c7, c8, t1.*
+   ->  Foreign Scan on public.ft1 t1
+         Output: c1, c2, c3, c4, c5, c6, c7, c8, t1.*
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = 102)) FOR SHARE
+(5 rows)
+
+SELECT * FROM ft1 t1 WHERE c1 = 102 FOR SHARE;
+ c1  | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+-----+----+-------+------------------------------+--------------------------+----+------------+-----
+ 102 |  2 | 00102 | Sat Jan 03 00:00:00 1970 PST | Sat Jan 03 00:00:00 1970 | 2  | 2          | foo
 (1 row)
 
 -- aggregate
@@ -820,12 +891,137 @@ EXECUTE st5('foo', 1);
   1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
 (1 row)
 
+-- altering FDW options requires replanning
+PREPARE st6 AS SELECT * FROM ft1 t1 WHERE t1.c1 = t1.c2;
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st6;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Foreign Scan on public.ft1 t1
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE (("C 1" = c2))
+(3 rows)
+
+PREPARE st7 AS INSERT INTO ft1 (c1,c2,c3) VALUES (1001,101,'foo');
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st7;
+                                                                                           QUERY PLAN                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Insert on public.ft1
+   Remote SQL: INSERT INTO "S 1"."T 1"("C 1", c2, c3, c4, c5, c6, c7, c8) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+   ->  Result
+         Output: NULL::integer, 1001, 101, 'foo'::text, NULL::timestamp with time zone, NULL::timestamp without time zone, NULL::character varying, 'ft1       '::character(10), NULL::user_enum
+(4 rows)
+
+ALTER TABLE "S 1"."T 1" RENAME TO "T 0";
+ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 0');
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st6;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Foreign Scan on public.ft1 t1
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 0" WHERE (("C 1" = c2))
+(3 rows)
+
+EXECUTE st6;
+ c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+----+----+-------+------------------------------+--------------------------+----+------------+-----
+  1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+  2 |  2 | 00002 | Sat Jan 03 00:00:00 1970 PST | Sat Jan 03 00:00:00 1970 | 2  | 2          | foo
+  3 |  3 | 00003 | Sun Jan 04 00:00:00 1970 PST | Sun Jan 04 00:00:00 1970 | 3  | 3          | foo
+  4 |  4 | 00004 | Mon Jan 05 00:00:00 1970 PST | Mon Jan 05 00:00:00 1970 | 4  | 4          | foo
+  5 |  5 | 00005 | Tue Jan 06 00:00:00 1970 PST | Tue Jan 06 00:00:00 1970 | 5  | 5          | foo
+  6 |  6 | 00006 | Wed Jan 07 00:00:00 1970 PST | Wed Jan 07 00:00:00 1970 | 6  | 6          | foo
+  7 |  7 | 00007 | Thu Jan 08 00:00:00 1970 PST | Thu Jan 08 00:00:00 1970 | 7  | 7          | foo
+  8 |  8 | 00008 | Fri Jan 09 00:00:00 1970 PST | Fri Jan 09 00:00:00 1970 | 8  | 8          | foo
+  9 |  9 | 00009 | Sat Jan 10 00:00:00 1970 PST | Sat Jan 10 00:00:00 1970 | 9  | 9          | foo
+(9 rows)
+
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st7;
+                                                                                           QUERY PLAN                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Insert on public.ft1
+   Remote SQL: INSERT INTO "S 1"."T 0"("C 1", c2, c3, c4, c5, c6, c7, c8) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+   ->  Result
+         Output: NULL::integer, 1001, 101, 'foo'::text, NULL::timestamp with time zone, NULL::timestamp without time zone, NULL::character varying, 'ft1       '::character(10), NULL::user_enum
+(4 rows)
+
+ALTER TABLE "S 1"."T 0" RENAME TO "T 1";
+ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 1');
 -- cleanup
 DEALLOCATE st1;
 DEALLOCATE st2;
 DEALLOCATE st3;
 DEALLOCATE st4;
 DEALLOCATE st5;
+DEALLOCATE st6;
+DEALLOCATE st7;
+-- System columns, except ctid, should not be sent to remote
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'pg_class'::regclass LIMIT 1;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Limit
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   ->  Foreign Scan on public.ft1 t1
+         Output: c1, c2, c3, c4, c5, c6, c7, c8
+         Filter: (t1.tableoid = 1259::oid)
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
+(6 rows)
+
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'ft1'::regclass LIMIT 1;
+ c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+----+----+-------+------------------------------+--------------------------+----+------------+-----
+  1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS false)
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Limit
+   Output: ((tableoid)::regclass), c1, c2, c3, c4, c5, c6, c7, c8
+   ->  Foreign Scan on public.ft1 t1
+         Output: (tableoid)::regclass, c1, c2, c3, c4, c5, c6, c7, c8
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1"
+(5 rows)
+
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+ tableoid | c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+----------+----+----+-------+------------------------------+--------------------------+----+------------+-----
+ ft1      |  1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+                                              QUERY PLAN                                               
+-------------------------------------------------------------------------------------------------------
+ Foreign Scan on public.ft1 t1
+   Output: c1, c2, c3, c4, c5, c6, c7, c8
+   Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8 FROM "S 1"."T 1" WHERE ((ctid = '(0,2)'::tid))
+(3 rows)
+
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+ c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+----+----+-------+------------------------------+--------------------------+----+------------+-----
+  2 |  2 | 00002 | Sat Jan 03 00:00:00 1970 PST | Sat Jan 03 00:00:00 1970 | 2  | 2          | foo
+(1 row)
+
+EXPLAIN (VERBOSE, COSTS false)
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
+                                     QUERY PLAN                                      
+-------------------------------------------------------------------------------------
+ Limit
+   Output: ctid, c1, c2, c3, c4, c5, c6, c7, c8
+   ->  Foreign Scan on public.ft1 t1
+         Output: ctid, c1, c2, c3, c4, c5, c6, c7, c8
+         Remote SQL: SELECT "C 1", c2, c3, c4, c5, c6, c7, c8, ctid FROM "S 1"."T 1"
+(5 rows)
+
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
+ ctid  | c1 | c2 |  c3   |              c4              |            c5            | c6 |     c7     | c8  
+-------+----+----+-------+------------------------------+--------------------------+----+------------+-----
+ (0,1) |  1 |  1 | 00001 | Fri Jan 02 00:00:00 1970 PST | Fri Jan 02 00:00:00 1970 | 1  | 1          | foo
+(1 row)
+
 -- ===================================================================
 -- used in pl/pgsql function
 -- ===================================================================
@@ -898,70 +1094,109 @@ COMMIT;
 -- ===================================================================
 -- test handling of collations
 -- ===================================================================
-create table loct3 (f1 text collate "C", f2 text);
-create foreign table ft3 (f1 text collate "C", f2 text)
-  server loopback options (table_name 'loct3');
+create table loct3 (f1 text collate "C" unique, f2 text, f3 varchar(10) unique);
+create foreign table ft3 (f1 text collate "C", f2 text, f3 varchar(10))
+  server loopback options (table_name 'loct3', use_remote_estimate 'true');
 -- can be sent to remote
 explain (verbose, costs off) select * from ft3 where f1 = 'foo';
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
-   Remote SQL: SELECT f1, f2 FROM public.loct3 WHERE ((f1 = 'foo'::text))
+   Output: f1, f2, f3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3 WHERE ((f1 = 'foo'::text))
 (3 rows)
 
 explain (verbose, costs off) select * from ft3 where f1 COLLATE "C" = 'foo';
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
-   Remote SQL: SELECT f1, f2 FROM public.loct3 WHERE ((f1 = 'foo'::text))
+   Output: f1, f2, f3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3 WHERE ((f1 = 'foo'::text))
 (3 rows)
 
 explain (verbose, costs off) select * from ft3 where f2 = 'foo';
-                                QUERY PLAN                                
---------------------------------------------------------------------------
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
-   Remote SQL: SELECT f1, f2 FROM public.loct3 WHERE ((f2 = 'foo'::text))
+   Output: f1, f2, f3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3 WHERE ((f2 = 'foo'::text))
 (3 rows)
+
+explain (verbose, costs off) select * from ft3 where f3 = 'foo';
+                                  QUERY PLAN                                  
+------------------------------------------------------------------------------
+ Foreign Scan on public.ft3
+   Output: f1, f2, f3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3 WHERE ((f3 = 'foo'::text))
+(3 rows)
+
+explain (verbose, costs off) select * from ft3 f, loct3 l
+  where f.f3 = l.f3 and l.f1 = 'foo';
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Nested Loop
+   Output: f.f1, f.f2, f.f3, l.f1, l.f2, l.f3
+   ->  Index Scan using loct3_f1_key on public.loct3 l
+         Output: l.f1, l.f2, l.f3
+         Index Cond: (l.f1 = 'foo'::text)
+   ->  Foreign Scan on public.ft3 f
+         Output: f.f1, f.f2, f.f3
+         Remote SQL: SELECT f1, f2, f3 FROM public.loct3 WHERE (($1::character varying(10) = f3))
+(8 rows)
 
 -- can't be sent to remote
 explain (verbose, costs off) select * from ft3 where f1 COLLATE "POSIX" = 'foo';
-                  QUERY PLAN                   
------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
+   Output: f1, f2, f3
    Filter: ((ft3.f1)::text = 'foo'::text)
-   Remote SQL: SELECT f1, f2 FROM public.loct3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3
 (4 rows)
 
 explain (verbose, costs off) select * from ft3 where f1 = 'foo' COLLATE "C";
-                  QUERY PLAN                   
------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
+   Output: f1, f2, f3
    Filter: (ft3.f1 = 'foo'::text COLLATE "C")
-   Remote SQL: SELECT f1, f2 FROM public.loct3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3
 (4 rows)
 
 explain (verbose, costs off) select * from ft3 where f2 COLLATE "C" = 'foo';
-                  QUERY PLAN                   
------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
+   Output: f1, f2, f3
    Filter: ((ft3.f2)::text = 'foo'::text)
-   Remote SQL: SELECT f1, f2 FROM public.loct3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3
 (4 rows)
 
 explain (verbose, costs off) select * from ft3 where f2 = 'foo' COLLATE "C";
-                  QUERY PLAN                   
------------------------------------------------
+                    QUERY PLAN                     
+---------------------------------------------------
  Foreign Scan on public.ft3
-   Output: f1, f2
+   Output: f1, f2, f3
    Filter: (ft3.f2 = 'foo'::text COLLATE "C")
-   Remote SQL: SELECT f1, f2 FROM public.loct3
+   Remote SQL: SELECT f1, f2, f3 FROM public.loct3
 (4 rows)
+
+explain (verbose, costs off) select * from ft3 f, loct3 l
+  where f.f3 = l.f3 COLLATE "POSIX" and l.f1 = 'foo';
+                         QUERY PLAN                          
+-------------------------------------------------------------
+ Hash Join
+   Output: f.f1, f.f2, f.f3, l.f1, l.f2, l.f3
+   Hash Cond: ((f.f3)::text = (l.f3)::text)
+   ->  Foreign Scan on public.ft3 f
+         Output: f.f1, f.f2, f.f3
+         Remote SQL: SELECT f1, f2, f3 FROM public.loct3
+   ->  Hash
+         Output: l.f1, l.f2, l.f3
+         ->  Index Scan using loct3_f1_key on public.loct3 l
+               Output: l.f1, l.f2, l.f3
+               Index Cond: (l.f1 = 'foo'::text)
+(11 rows)
 
 -- ===================================================================
 -- test writable foreign table stuff
@@ -2085,6 +2320,59 @@ SELECT c1,c2,c3,c4 FROM ft2 ORDER BY c1;
  1103 | 503 | ccc_update3        | 
  1104 | 204 | ddd                | 
 (819 rows)
+
+EXPLAIN (verbose, costs off)
+INSERT INTO ft2 (c1,c2,c3) VALUES (9999,999,'foo') RETURNING tableoid::regclass;
+                                                                                           QUERY PLAN                                                                                            
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Insert on public.ft2
+   Output: (tableoid)::regclass
+   Remote SQL: INSERT INTO "S 1"."T 1"("C 1", c2, c3, c4, c5, c6, c7, c8) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+   ->  Result
+         Output: 9999, 999, NULL::integer, 'foo'::text, NULL::timestamp with time zone, NULL::timestamp without time zone, NULL::character varying, 'ft2       '::character(10), NULL::user_enum
+(5 rows)
+
+INSERT INTO ft2 (c1,c2,c3) VALUES (9999,999,'foo') RETURNING tableoid::regclass;
+ tableoid 
+----------
+ ft2
+(1 row)
+
+EXPLAIN (verbose, costs off)
+UPDATE ft2 SET c3 = 'bar' WHERE c1 = 9999 RETURNING tableoid::regclass;
+                                                    QUERY PLAN                                                     
+-------------------------------------------------------------------------------------------------------------------
+ Update on public.ft2
+   Output: (tableoid)::regclass
+   Remote SQL: UPDATE "S 1"."T 1" SET c3 = $2 WHERE ctid = $1
+   ->  Foreign Scan on public.ft2
+         Output: c1, c2, NULL::integer, 'bar'::text, c4, c5, c6, c7, c8, ctid
+         Remote SQL: SELECT "C 1", c2, c4, c5, c6, c7, c8, ctid FROM "S 1"."T 1" WHERE (("C 1" = 9999)) FOR UPDATE
+(6 rows)
+
+UPDATE ft2 SET c3 = 'bar' WHERE c1 = 9999 RETURNING tableoid::regclass;
+ tableoid 
+----------
+ ft2
+(1 row)
+
+EXPLAIN (verbose, costs off)
+DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
+                                     QUERY PLAN                                     
+------------------------------------------------------------------------------------
+ Delete on public.ft2
+   Output: (tableoid)::regclass
+   Remote SQL: DELETE FROM "S 1"."T 1" WHERE ctid = $1
+   ->  Foreign Scan on public.ft2
+         Output: ctid
+         Remote SQL: SELECT ctid FROM "S 1"."T 1" WHERE (("C 1" = 9999)) FOR UPDATE
+(6 rows)
+
+DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
+ tableoid 
+----------
+ ft2
+(1 row)
 
 -- Test that trigger on remote table works as expected
 CREATE OR REPLACE FUNCTION "S 1".F_BRTRIG() RETURNS trigger AS $$

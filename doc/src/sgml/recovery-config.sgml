@@ -152,16 +152,18 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
   <sect1 id="recovery-target-settings">
 
     <title>Recovery Target Settings</title>
+
      <para>
       By default, recovery will recover to the end of the WAL log. The
       following parameters can be used to specify an earlier stopping point.
       At most one of <varname>recovery_target</>,
       <varname>recovery_target_name</>, <varname>recovery_target_time</>, or
-      <varname>recovery_target_xid</> can be specified. 
+      <varname>recovery_target_xid</> can be used; if more than one of these
+      is specified in the configuration file, the last entry will be used.
      </para>
-     <variablelist>
 
-     <varlistentry id="recovery-target" xreflabel="recovery_target_name">
+     <variablelist>
+     <varlistentry id="recovery-target" xreflabel="recovery_target">
       <term><varname>recovery_target</varname><literal> = 'immediate'</literal>
       <indexterm>
         <primary><varname>recovery_target</> recovery parameter</primary>
@@ -189,8 +191,8 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
       </term>
       <listitem>
        <para>
-        This parameter specifies the named restore point, created with
-        <function>pg_create_restore_point()</> to which recovery will proceed.
+        This parameter specifies the named restore point (created with
+        <function>pg_create_restore_point()</>) to which recovery will proceed.
        </para>
       </listitem>
      </varlistentry>
@@ -231,13 +233,13 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
       </listitem>
      </varlistentry>
      </variablelist>
+
      <para>
        The following options further specify the recovery target, and affect
        what happens when the target is reached:
      </para>
 
      <variablelist>
-
      <varlistentry id="recovery-target-inclusive"
                    xreflabel="recovery_target_inclusive">
       <term><varname>recovery_target_inclusive</varname> (<type>boolean</type>)
@@ -247,12 +249,12 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
       </term>
       <listitem>
        <para>
-        Specifies whether we stop just after the specified recovery target
+        Specifies whether to stop just after the specified recovery target
         (<literal>true</literal>), or just before the recovery target
         (<literal>false</literal>).
-        Applies to both <xref linkend="recovery-target-time">
-        and <xref linkend="recovery-target-xid">, whichever one is
-        specified for this recovery.  This indicates whether transactions
+        Applies when either <xref linkend="recovery-target-time">
+        or <xref linkend="recovery-target-xid"> is specified.
+        This setting controls whether transactions
         having exactly the target commit time or ID, respectively, will
         be included in the recovery.  Default is <literal>true</>.
        </para>
@@ -294,10 +296,10 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
         This is intended to allow queries to be executed against the
         database to check if this recovery target is the most desirable
         point for recovery. The paused state can be resumed by using
-        <function>pg_xlog_replay_resume()</> (See
+        <function>pg_xlog_replay_resume()</> (see
         <xref linkend="functions-recovery-control-table">), which then
         causes recovery to end. If this recovery target is not the
-        desired stopping point, then shutdown the server, change the
+        desired stopping point, then shut down the server, change the
         recovery target settings to a later target and restart to
         continue recovery.
        </para>
@@ -413,9 +415,9 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
        <para>
         By default, a standby server restores WAL records from the
         primary as soon as possible. It may be useful to have a time-delayed
-        copy of the data, offering various options to correct data loss errors.
+        copy of the data, offering opportunities to correct data loss errors.
         This parameter allows you to delay recovery by a fixed period of time,
-        specified in milliseconds if no unit is specified.  For example, if
+        measured in milliseconds if no unit is specified.  For example, if
         you set this parameter to <literal>5min</literal>, the standby will
         replay each transaction commit only when the system time on the standby
         is at least five minutes past the commit time reported by the master.
@@ -424,28 +426,28 @@ restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows
         It is possible that the replication delay between servers exceeds the
         value of this parameter, in which case no delay is added.
         Note that the delay is calculated between the WAL timestamp as written
-        on master and the time on the current standby. Delays
-        in transfer because of networks or cascading replication configurations
+        on master and the current time on the standby. Delays in transfer
+        because of network lag or cascading replication configurations
         may reduce the actual wait time significantly. If the system
-        clocks on master and standby are not synchronised, this may lead to
+        clocks on master and standby are not synchronized, this may lead to
         recovery applying records earlier than expected; but that is not a
-        major issue because useful settings of the parameter are much larger
-        than typical time deviations between servers. Be careful to allow for
-        different timezone settings on master and standby.
+        major issue because useful settings of this parameter are much larger
+        than typical time deviations between servers.
        </para>
        <para>
-        The delay occurs only on WAL records for COMMIT and Restore Points.
-        Other records may be replayed earlier than the specified delay, which
-        is not an issue for MVCC though it may potentially increase the number
-        of recovery conflicts generated.
+        The delay occurs only on WAL records for transaction commits.
+        Other records are replayed as quickly as possible, which
+        is not a problem because MVCC visibility rules ensure their effects
+        are not visible until the corresponding commit record is applied.
        </para>
        <para>
-        The delay occurs until the standby is promoted or triggered. After that
-        the standby will end recovery without further waiting.
+        The delay occurs once the database in recovery has reached a consistent
+        state, until the standby is promoted or triggered. After that the standby
+        will end recovery without further waiting.
        </para>
        <para>
-        This parameter is intended for use with streaming replication deployments,
-        however, if the parameter is specified it will be honoured in all cases.
+        This parameter is intended for use with streaming replication deployments;
+        however, if the parameter is specified it will be honored in all cases.
         Synchronous replication is not affected by this setting because there is
         not yet any setting to request synchronous apply of transaction commits.
         <varname>hot_standby_feedback</> will be delayed by use of this feature

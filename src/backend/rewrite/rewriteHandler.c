@@ -897,6 +897,7 @@ process_matched_tle(TargetEntry *src_tle,
 					const char *attrName)
 {
 	TargetEntry *result;
+	CoerceToDomain *coerce_expr = NULL;
 	Node	   *src_expr;
 	Node	   *prior_expr;
 	Node	   *src_input;
@@ -933,10 +934,30 @@ process_matched_tle(TargetEntry *src_tle,
 	 * For FieldStore, instead of nesting we can generate a single
 	 * FieldStore with multiple target fields.  We must nest when
 	 * ArrayRefs are involved though.
+	 *
+	 * As a further complication, the destination column might be a domain,
+	 * resulting in each assignment containing a CoerceToDomain node over a
+	 * FieldStore or ArrayRef.  These should have matching target domains,
+	 * so we strip them and reconstitute a single CoerceToDomain over the
+	 * combined FieldStore/ArrayRef nodes.  (Notice that this has the result
+	 * that the domain's checks are applied only after we do all the field or
+	 * element updates, not after each one.  This is arguably desirable.)
 	 *----------
 	 */
 	src_expr = (Node *) src_tle->expr;
 	prior_expr = (Node *) prior_tle->expr;
+
+	if (src_expr && IsA(src_expr, CoerceToDomain) &&
+		prior_expr && IsA(prior_expr, CoerceToDomain) &&
+		((CoerceToDomain *) src_expr)->resulttype ==
+		((CoerceToDomain *) prior_expr)->resulttype)
+	{
+		/* we assume without checking that resulttypmod/resultcollid match */
+		coerce_expr = (CoerceToDomain *) src_expr;
+		src_expr = (Node *) ((CoerceToDomain *) src_expr)->arg;
+		prior_expr = (Node *) ((CoerceToDomain *) prior_expr)->arg;
+	}
+
 	src_input = get_assignment_input(src_expr);
 	prior_input = get_assignment_input(prior_expr);
 	if (src_input == NULL ||
@@ -1003,6 +1024,16 @@ process_matched_tle(TargetEntry *src_tle,
 	{
 		elog(ERROR, "cannot happen");
 		newexpr = NULL;
+	}
+
+	if (coerce_expr)
+	{
+		/* put back the CoerceToDomain */
+		CoerceToDomain *newcoerce = makeNode(CoerceToDomain);
+
+		memcpy(newcoerce, coerce_expr, sizeof(CoerceToDomain));
+		newcoerce->arg = (Expr *) newexpr;
+		newexpr = (Node *) newcoerce;
 	}
 
 	result = flatCopyTargetEntry(src_tle);
@@ -1974,6 +2005,9 @@ fireRules(Query *parsetree,
  *
  * Caller should have verified that the relation is a view, and therefore
  * we should find an ON SELECT action.
+ *
+ * Note that the pointer returned is into the relcache and therefore must
+ * be treated as read-only to the caller and not modified or scribbled on.
  */
 Query *
 get_view_query(Relation view)
@@ -2040,6 +2074,9 @@ view_has_instead_trigger(Relation view, CmdType event)
  * is auto-updatable. Returns NULL (if the column can be updated) or a message
  * string giving the reason that it cannot be.
  *
+ * The returned string has not been translated; if it is shown as an error
+ * message, the caller should apply _() to translate it.
+ *
  * Note that the checks performed here are local to this view. We do not check
  * whether the referenced column of the underlying base relation is updatable.
  */
@@ -2079,6 +2116,9 @@ view_col_is_auto_updatable(RangeTblRef *rtr, TargetEntry *tle)
  * view_query_is_auto_updatable - test whether the specified view definition
  * represents an auto-updatable view. Returns NULL (if the view can be updated)
  * or a message string giving the reason that it cannot be.
+
+ * The returned string has not been translated; if it is shown as an error
+ * message, the caller should apply _() to translate it.
  *
  * If check_cols is true, the view is required to have at least one updatable
  * column (necessary for INSERT/UPDATE). Otherwise the view's columns are not
@@ -2154,10 +2194,10 @@ view_query_is_auto_updatable(Query *viewquery, bool check_cols)
 	 * unique row in the underlying base relation.
 	 */
 	if (viewquery->hasAggs)
-		return gettext_noop("Views that return aggregate functions are not automatically updatable");
+		return gettext_noop("Views that return aggregate functions are not automatically updatable.");
 
 	if (viewquery->hasWindowFuncs)
-		return gettext_noop("Views that return window functions are not automatically updatable");
+		return gettext_noop("Views that return window functions are not automatically updatable.");
 
 	if (expression_returns_set((Node *) viewquery->targetList))
 		return gettext_noop("Views that return set-returning functions are not automatically updatable.");
@@ -2214,6 +2254,9 @@ view_query_is_auto_updatable(Query *viewquery, bool check_cols)
  * an auto-updatable view are actually updatable. Returns NULL (if all the
  * required columns can be updated) or a message string giving the reason that
  * they cannot be.
+ *
+ * The returned string has not been translated; if it is shown as an error
+ * message, the caller should apply _() to translate it.
  *
  * This should be used for INSERT/UPDATE to ensure that we don't attempt to
  * assign to any non-updatable columns.
@@ -2577,9 +2620,16 @@ rewriteTargetView(Query *parsetree, Relation view)
 	List	   *view_targetlist;
 	ListCell   *lc;
 
-	/* The view must be updatable, else fail */
-	viewquery = get_view_query(view);
+	/*
+	 * Get the Query from the view's ON SELECT rule.  We're going to munge the
+	 * Query to change the view's base relation into the target relation,
+	 * along with various other changes along the way, so we need to make a
+	 * copy of it (get_view_query() returns a pointer into the relcache, so we
+	 * have to treat it as read-only).
+	 */
+	viewquery = copyObject(get_view_query(view));
 
+	/* The view must be updatable, else fail */
 	auto_update_detail =
 		view_query_is_auto_updatable(viewquery,
 									 parsetree->commandType != CMD_DELETE);
@@ -2710,13 +2760,28 @@ rewriteTargetView(Query *parsetree, Relation view)
 	heap_close(base_rel, NoLock);
 
 	/*
+	 * If the view query contains any sublink subqueries then we need to also
+	 * acquire locks on any relations they refer to.  We know that there won't
+	 * be any subqueries in the range table or CTEs, so we can skip those, as
+	 * in AcquireRewriteLocks.
+	 */
+	if (viewquery->hasSubLinks)
+	{
+		acquireLocksOnSubLinks_context context;
+
+		context.for_execute = true;
+		query_tree_walker(viewquery, acquireLocksOnSubLinks, &context,
+						  QTW_IGNORE_RC_SUBQUERIES);
+	}
+
+	/*
 	 * Create a new target RTE describing the base relation, and add it to the
 	 * outer query's rangetable.  (What's happening in the next few steps is
 	 * very much like what the planner would do to "pull up" the view into the
 	 * outer query.  Perhaps someday we should refactor things enough so that
 	 * we can share code with the planner.)
 	 */
-	new_rte = (RangeTblEntry *) copyObject(base_rte);
+	new_rte = (RangeTblEntry *) base_rte;
 	parsetree->rtable = lappend(parsetree->rtable, new_rte);
 	new_rt_index = list_length(parsetree->rtable);
 
@@ -2728,14 +2793,14 @@ rewriteTargetView(Query *parsetree, Relation view)
 		new_rte->inh = false;
 
 	/*
-	 * Make a copy of the view's targetlist, adjusting its Vars to reference
-	 * the new target RTE, ie make their varnos be new_rt_index instead of
-	 * base_rt_index.  There can be no Vars for other rels in the tlist, so
-	 * this is sufficient to pull up the tlist expressions for use in the
-	 * outer query.  The tlist will provide the replacement expressions used
-	 * by ReplaceVarsFromTargetList below.
+	 * Adjust the view's targetlist Vars to reference the new target RTE, ie
+	 * make their varnos be new_rt_index instead of base_rt_index.  There can
+	 * be no Vars for other rels in the tlist, so this is sufficient to pull
+	 * up the tlist expressions for use in the outer query.  The tlist will
+	 * provide the replacement expressions used by ReplaceVarsFromTargetList
+	 * below.
 	 */
-	view_targetlist = copyObject(viewquery->targetList);
+	view_targetlist = viewquery->targetList;
 
 	ChangeVarNodes((Node *) view_targetlist,
 				   base_rt_index,
@@ -2881,7 +2946,14 @@ rewriteTargetView(Query *parsetree, Relation view)
 	if (parsetree->commandType != CMD_INSERT &&
 		viewquery->jointree->quals != NULL)
 	{
-		Node	   *viewqual = (Node *) copyObject(viewquery->jointree->quals);
+		Node	   *viewqual = (Node *) viewquery->jointree->quals;
+
+		/*
+		 * Even though we copied viewquery already at the top of this
+		 * function, we must duplicate the viewqual again here, because we may
+		 * need to use the quals again below for a WithCheckOption clause.
+		 */
+		viewqual = copyObject(viewqual);
 
 		ChangeVarNodes(viewqual, base_rt_index, new_rt_index, 0);
 
@@ -2958,7 +3030,7 @@ rewriteTargetView(Query *parsetree, Relation view)
 
 			if (viewquery->jointree->quals != NULL)
 			{
-				wco->qual = (Node *) copyObject(viewquery->jointree->quals);
+				wco->qual = (Node *) viewquery->jointree->quals;
 				ChangeVarNodes(wco->qual, base_rt_index, new_rt_index, 0);
 
 				/*

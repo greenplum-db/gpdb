@@ -30,6 +30,7 @@
 typedef struct
 {
 	SpGistState spgstate;		/* SPGiST's working state */
+	int64		indtuples;		/* total number of tuples indexed */
 	MemoryContext tmpCtx;		/* per-tuple temporary context */
 } SpGistBuildState;
 
@@ -56,6 +57,9 @@ spgistBuildCallback(Relation index, ItemPointer tupleId, Datum *values,
 	{
 		MemoryContextReset(buildstate->tmpCtx);
 	}
+
+	/* Update total tuple count */
+	buildstate->indtuples += 1;
 
 	MemoryContextSwitchTo(oldCtx);
 	MemoryContextReset(buildstate->tmpCtx);
@@ -130,6 +134,7 @@ spgbuild(PG_FUNCTION_ARGS)
 	 */
 	initSpGistState(&buildstate.spgstate, index);
 	buildstate.spgstate.isBuild = true;
+	buildstate.indtuples = 0;
 
 	buildstate.tmpCtx = AllocSetContextCreate(CurrentMemoryContext,
 										   "SP-GiST build temporary context",
@@ -145,7 +150,8 @@ spgbuild(PG_FUNCTION_ARGS)
 	SpGistUpdateMetaPage(index);
 
 	result = (IndexBuildResult *) palloc0(sizeof(IndexBuildResult));
-	result->heap_tuples = result->index_tuples = reltuples;
+	result->heap_tuples = reltuples;
+	result->index_tuples = buildstate.indtuples;
 
 	PG_RETURN_POINTER(result);
 }
@@ -163,13 +169,18 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	page = (Page) palloc(BLCKSZ);
 	SpGistInitMetapage(page);
 
-	/* Write the page.  If archiving/streaming, XLOG it. */
+	/*
+	 * Write the page and log it unconditionally.  This is important
+	 * particularly for indexes created on tablespaces and databases
+	 * whose creation happened after the last redo pointer as recovery
+	 * removes any of their existing content when the corresponding
+	 * create records are replayed.
+	 */
 	PageSetChecksumInplace(page, SPGIST_METAPAGE_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_METAPAGE_BLKNO,
 			  (char *) page, true);
-	if (XLogIsNeeded())
-		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_METAPAGE_BLKNO, page, false);
+	log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
+				SPGIST_METAPAGE_BLKNO, page, false);
 
 	/* Likewise for the root page. */
 	SpGistInitPage(page, SPGIST_LEAF);
@@ -177,9 +188,8 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	PageSetChecksumInplace(page, SPGIST_ROOT_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_ROOT_BLKNO,
 			  (char *) page, true);
-	if (XLogIsNeeded())
-		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_ROOT_BLKNO, page, true);
+	log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
+				SPGIST_ROOT_BLKNO, page, true);
 
 	/* Likewise for the null-tuples root page. */
 	SpGistInitPage(page, SPGIST_LEAF | SPGIST_NULLS);
@@ -187,9 +197,8 @@ spgbuildempty(PG_FUNCTION_ARGS)
 	PageSetChecksumInplace(page, SPGIST_NULL_BLKNO);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, SPGIST_NULL_BLKNO,
 			  (char *) page, true);
-	if (XLogIsNeeded())
-		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					SPGIST_NULL_BLKNO, page, true);
+	log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
+				SPGIST_NULL_BLKNO, page, true);
 
 	/*
 	 * An immediate sync is required even if we xlog'd the pages, because the

@@ -608,6 +608,7 @@ DefineQueryRewrite(char *rulename,
 		classForm->relhaspkey = false;
 		classForm->relfrozenxid = InvalidTransactionId;
 		classForm->relminmxid = InvalidMultiXactId;
+		classForm->relreplident = REPLICA_IDENTITY_NOTHING;
 
 		simple_heap_update(relationRelation, &classTup->t_self, classTup);
 		CatalogUpdateIndexes(relationRelation, classTup);
@@ -645,6 +646,7 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect,
 	foreach(tllist, targetList)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(tllist);
+		Oid			tletypid;
 		int32		tletypmod;
 		Form_pg_attribute attr;
 		char	   *attname;
@@ -664,31 +666,56 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect,
 		attname = NameStr(attr->attname);
 
 		/*
-		 * Disallow dropped columns in the relation.  This won't happen in the
-		 * cases we actually care about (namely creating a view via CREATE
-		 * TABLE then CREATE RULE, or adding a RETURNING rule to a view).
-		 * Trying to cope with it is much more trouble than it's worth,
-		 * because we'd have to modify the rule to insert dummy NULLs at the
-		 * right positions.
+		 * Disallow dropped columns in the relation.  This is not really
+		 * expected to happen when creating an ON SELECT rule.  It'd be
+		 * possible if someone tried to convert a relation with dropped
+		 * columns to a view, but the only case we care about supporting
+		 * table-to-view conversion for is pg_dump, and pg_dump won't do that.
+		 *
+		 * Unfortunately, the situation is also possible when adding a rule
+		 * with RETURNING to a regular table, and rejecting that case is
+		 * altogether more annoying.  In principle we could support it by
+		 * modifying the targetlist to include dummy NULL columns
+		 * corresponding to the dropped columns in the tupdesc.  However,
+		 * places like ruleutils.c would have to be fixed to not process such
+		 * entries, and that would take an uncertain and possibly rather large
+		 * amount of work.  (Note we could not dodge that by marking the dummy
+		 * columns resjunk, since it's precisely the non-resjunk tlist columns
+		 * that are expected to correspond to table columns.)
 		 */
 		if (attr->attisdropped)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("cannot convert relation containing dropped columns to view")));
+					 isSelect ?
+					 errmsg("cannot convert relation containing dropped columns to view") :
+					 errmsg("cannot create a RETURNING list for a relation containing dropped columns")));
 
+		/* Check name match if required; no need for two error texts here */
 		if (requireColumnNameMatch && strcmp(tle->resname, attname) != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
-					 errmsg("SELECT rule's target entry %d has different column name from \"%s\"", i, attname)));
+					 errmsg("SELECT rule's target entry %d has different column name from column \"%s\"",
+							i, attname),
+					 errdetail("SELECT target entry is named \"%s\".",
+							   tle->resname)));
 
-		if (attr->atttypid != exprType((Node *) tle->expr))
+		/* Check type match. */
+		tletypid = exprType((Node *) tle->expr);
+		if (attr->atttypid != tletypid)
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 					 isSelect ?
 					 errmsg("SELECT rule's target entry %d has different type from column \"%s\"",
 							i, attname) :
 					 errmsg("RETURNING list's entry %d has different type from column \"%s\"",
-							i, attname)));
+							i, attname),
+					 isSelect ?
+					 errdetail("SELECT target entry has type %s, but column has type %s.",
+							   format_type_be(tletypid),
+							   format_type_be(attr->atttypid)) :
+					 errdetail("RETURNING list entry has type %s, but column has type %s.",
+							   format_type_be(tletypid),
+							   format_type_be(attr->atttypid))));
 
 		/*
 		 * Allow typmods to be different only if one of them is -1, ie,
@@ -705,7 +732,16 @@ checkRuleResultList(List *targetList, TupleDesc resultDesc, bool isSelect,
 					 errmsg("SELECT rule's target entry %d has different size from column \"%s\"",
 							i, attname) :
 					 errmsg("RETURNING list's entry %d has different size from column \"%s\"",
-							i, attname)));
+							i, attname),
+					 isSelect ?
+					 errdetail("SELECT target entry has type %s, but column has type %s.",
+							   format_type_with_typemod(tletypid, tletypmod),
+							   format_type_with_typemod(attr->atttypid,
+														attr->atttypmod)) :
+					 errdetail("RETURNING list entry has type %s, but column has type %s.",
+							   format_type_with_typemod(tletypid, tletypmod),
+							   format_type_with_typemod(attr->atttypid,
+														attr->atttypmod))));
 	}
 
 	if (i != resultDesc->natts)

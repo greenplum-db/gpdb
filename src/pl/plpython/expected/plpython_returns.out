@@ -2666,14 +2666,14 @@ SELECT * FROM test_return_out_record('True');
 ERROR:  attribute "first" does not exist in Python object
 -- [ERROR] From Python empty string
 SELECT test_return_out_record('""');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: ""
 SELECT * FROM test_return_out_record('""');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: ""
 -- [ERROR] From Python string
 SELECT test_return_out_record('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 SELECT * FROM test_return_out_record('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_out_record('[False]');
 ERROR:  length of returned sequence did not match number of columns in row
@@ -2697,9 +2697,9 @@ ERROR:  key "first" not found in mapping
 -- Questionable Success conditions
 --  From Python String (one character per column)
 SELECT test_return_out_record('"a4"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 SELECT * FROM test_return_out_record('"a4"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 -- From Python Dictionary, with extra fields
 SELECT test_return_out_record('{"first": "value", "second": 4, "third": "ignored"}');
  test_return_out_record 
@@ -2922,14 +2922,14 @@ SELECT * FROM test_return_out_setof_record('True');
 ERROR:  returned object cannot be iterated
 -- [ERROR] From Python string
 SELECT test_return_out_setof_record('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "v"
 SELECT * FROM test_return_out_setof_record('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "v"
 -- [ERROR] From Python List
 SELECT test_return_out_setof_record('("value", 4)');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 SELECT * FROM test_return_out_setof_record('("value", 4)');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_out_setof_record('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
@@ -2988,9 +2988,9 @@ SELECT * FROM test_return_out_setof_record('[{"first": "value", "second": 4}, "t
 ERROR:  SyntaxError: invalid syntax (<string>, line 1) (plpy_elog.c:106)
 -- From Python List of String (one character per column)
 SELECT test_return_out_setof_record('["a4"]');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 SELECT * FROM test_return_out_setof_record('["a4"]');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 --
 -- Case 5: RETURNS TABLE
 --
@@ -3074,14 +3074,14 @@ SELECT * FROM test_return_table('True');
 ERROR:  returned object cannot be iterated
 -- [ERROR] From Python string
 SELECT test_return_table('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "v"
 SELECT * FROM test_return_table('"value"');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "v"
 -- [ERROR] From Python List
 SELECT test_return_table('("value", 4)');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 SELECT * FROM test_return_table('("value", 4)');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "value"
 -- [ERROR] From Python non-empty list, wrong number of columns
 SELECT test_return_table('[ [False] ]');
 ERROR:  length of returned sequence did not match number of columns in row
@@ -3109,9 +3109,9 @@ SELECT * FROM test_return_table('[ {None: None} ]');
 ERROR:  key "first" not found in mapping
 -- [ERROR] From Python List of String (one character per column)
 SELECT test_return_table('["a4"]');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 SELECT * FROM test_return_table('["a4"]');
-ERROR:  input of anonymous composite types is not implemented
+ERROR:  malformed record literal: "a4"
 -- Questionable Success conditions
 -- From Python empty string
 SELECT test_return_table('""');

@@ -3481,6 +3481,9 @@ get_attstatsslot(AttStatsSlot *sslot, HeapTuple statstuple,
 /*
  * free_attstatsslot
  *		Free data allocated by get_attstatsslot
+ *
+ * atttype is the type of the individual values in values[].
+ * It need be valid only if values != NULL.
  */
 void
 free_attstatsslot(AttStatsSlot *sslot)

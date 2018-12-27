@@ -62,7 +62,7 @@ extern bool get_home_path(char *ret_path);
 extern void get_parent_directory(char *path);
 extern char *gp_mkdtemp(char *template_path);
 
-/* port/dirmod.c */
+/* common/pgfnames.c */
 extern char **pgfnames(const char *path);
 extern void pgfnames_cleanup(char **filenames);
 
@@ -227,12 +227,12 @@ extern int	pgkill(int pid, int sig);
 extern int	pclose_check(FILE *stream);
 
 /* Global variable holding time zone information. */
-#ifndef __CYGWIN__
-#define TIMEZONE_GLOBAL timezone
-#define TZNAME_GLOBAL tzname
-#else
+#if defined(WIN32) || defined(__CYGWIN__)
 #define TIMEZONE_GLOBAL _timezone
 #define TZNAME_GLOBAL _tzname
+#else
+#define TIMEZONE_GLOBAL timezone
+#define TZNAME_GLOBAL tzname
 #endif
 
 #if defined(WIN32) || defined(__CYGWIN__)
@@ -392,6 +392,10 @@ extern int	getpeereid(int sock, uid_t *uid, gid_t *gid);
 extern int	isinf(double x);
 #endif
 
+#ifndef HAVE_MKDTEMP
+extern char *mkdtemp(char *path);
+#endif
+
 #ifndef HAVE_RINT
 extern double rint(double x);
 #endif
@@ -420,6 +424,16 @@ extern void unsetenv(const char *name);
 
 #ifndef HAVE_SRANDOM
 extern void srandom(unsigned int seed);
+#endif
+
+/*
+ * GPDB_94_MERGE_FIXME: Some versions of gcc do not support the same
+ * syntax for such macros and function names. Temporary wolk around.
+ */
+#if 0
+#ifndef HAVE_SSL_GET_CURRENT_COMPRESSION
+#define SSL_get_current_compression(x) 0
+#endif
 #endif
 
 /* thread.h */

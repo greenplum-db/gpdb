@@ -200,27 +200,11 @@ tstz_dist(PG_FUNCTION_ARGS)
  **************************************************/
 
 
-static Timestamp
+static inline Timestamp
 tstz_to_ts_gmt(TimestampTz ts)
 {
-	Timestamp	gmt;
-	int			val,
-				tz;
-
-	gmt = ts;
-	DecodeSpecial(0, "gmt", &val);
-
-	if (ts < DT_NOEND && ts > DT_NOBEGIN)
-	{
-		tz = val * 60;
-
-#ifdef HAVE_INT64_TIMESTAMP
-		gmt -= (tz * INT64CONST(1000000));
-#else
-		gmt -= tz;
-#endif
-	}
-	return gmt;
+	/* No timezone correction is needed, since GMT is offset 0 by definition */
+	return (Timestamp) ts;
 }
 
 
@@ -378,7 +362,7 @@ gbt_ts_penalty(PG_FUNCTION_ARGS)
 				newdbl[2];
 
 	/*
-	 * We are allways using "double" timestamps here. Precision should be good
+	 * We are always using "double" timestamps here. Precision should be good
 	 * enough.
 	 */
 	orgdbl[0] = ((double) origentry->lower);

@@ -120,8 +120,8 @@ def identify_system(conn):
     if libpq.PQresultStatus(res) != PGRES_TUPLES_OK:
         raise StandardError(libpq.PQerrorMessage(conn))
 
-    if libpq.PQnfields(res) != 3 or libpq.PQntuples(res) != 1:
-        raise StandardError("3 fields / 1 tuple is expected, "
+    if libpq.PQnfields(res) < 3 or libpq.PQntuples(res) != 1:
+        raise StandardError("3 or more fields / 1 tuple is expected, "
                             "got {nfield} fields / {ntuple} tuples".format(
                                 nfield=libpq.PQnfields(res),
                                 ntuple=libpq.PQntuples(res)))

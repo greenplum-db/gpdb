@@ -61,11 +61,11 @@ extern "C" {
  */
 
 /*
- * struct varatt_external is a "TOAST pointer", that is, the information needed
- * to fetch a Datum stored in an out-of-line on-disk Datum. The data is
- * compressed if and only if va_extsize < va_rawsize - VARHDRSZ.  This struct
- * must not contain any padding, because we sometimes compare pointers using
- * memcmp.
+ * struct varatt_external is a traditional "TOAST pointer", that is, the
+ * information needed to fetch a Datum stored out-of-line in a TOAST table.
+ * The data is compressed if and only if va_extsize < va_rawsize - VARHDRSZ.
+ * This struct must not contain any padding, because we sometimes compare
+ * these pointers using memcmp.
  *
  * Note that this information is stored unaligned within actual tuples, so
  * you need to memcpy from the tuple into a local struct variable before
@@ -81,22 +81,23 @@ typedef struct varatt_external
 }	varatt_external;
 
 /*
- * Out-of-line Datum thats stored in memory in contrast to varatt_external
- * pointers which points to data in an external toast relation.
+ * struct varatt_indirect is a "TOAST pointer" representing an out-of-line
+ * Datum that's stored in memory, not in an external toast relation.
+ * The creator of such a Datum is entirely responsible that the referenced
+ * storage survives for as long as referencing pointer Datums can exist.
  *
- * Note that just as varatt_external's this is stored unaligned within the
- * tuple.
+ * Note that just as for struct varatt_external, this struct is stored
+ * unaligned within any containing tuple.
  */
 typedef struct varatt_indirect
 {
 	struct varlena *pointer;	/* Pointer to in-memory varlena */
 }	varatt_indirect;
 
-
 /*
- * Type of external toast datum stored. The peculiar value for VARTAG_ONDISK
- * comes from the requirement for on-disk compatibility with the older
- * definitions of varattrib_1b_e where v_tag was named va_len_1be...
+ * Type tag for the various sorts of "TOAST pointer" datums.  The peculiar
+ * value for VARTAG_ONDISK comes from a requirement for on-disk compatibility
+ * with a previous notion that the tag field was the pointer datum's length.
  */
 typedef enum vartag_external
 {
@@ -105,9 +106,9 @@ typedef enum vartag_external
 } vartag_external;
 
 #define VARTAG_SIZE(tag) \
-	((tag) == VARTAG_INDIRECT ? sizeof(varatt_indirect) :		\
+	((tag) == VARTAG_INDIRECT ? sizeof(varatt_indirect) : \
 	 (tag) == VARTAG_ONDISK ? sizeof(varatt_external) : \
-	 TrapMacro(true, "unknown vartag"))
+	 TrapMacro(true, "unrecognized TOAST vartag"))
 
 /*
  * These structs describe the header of a varlena object that may have been
@@ -175,8 +176,8 @@ typedef struct
  * this lets us disambiguate alignment padding bytes from the start of an
  * unaligned datum.  (We now *require* pad bytes to be filled with zero!)
  *
- * In TOAST datums the tag field in varattrib_1b_e is used to discern whether
- * its an indirection pointer or more commonly an on-disk tuple.
+ * In TOAST pointers the va_tag field (see varattrib_1b_e) is used to discern
+ * the specific type and length of the pointer datum.
  */
 
 /*
@@ -368,8 +369,9 @@ typedef Datum *DatumPtr;
 static inline bool DatumGetBool(Datum d) { return ((bool)d) != 0; }
 static inline Datum BoolGetDatum(bool b) { return (b ? 1 : 0); } 
 
-static inline char DatumGetChar(Datum d) { return (char) d; } 
+static inline char DatumGetChar(Datum d) { return (char) d; }
 static inline Datum CharGetDatum(char c) { return (Datum) c; } 
+#define DatumGetBool(X) ((bool) (GET_1_BYTE(X) != 0))
 
 static inline int8 DatumGetInt8(Datum d) { return (int8) d; } 
 static inline Datum Int8GetDatum(int8 i8) { return (Datum) i8; }

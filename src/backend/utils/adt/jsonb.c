@@ -196,12 +196,12 @@ jsonb_from_cstring(char *json, int len)
 static size_t
 checkStringLen(size_t len)
 {
-	if (len > JENTRY_POSMASK)
+	if (len > JENTRY_OFFLENMASK)
 		ereport(ERROR,
 				(errcode(ERRCODE_PROGRAM_LIMIT_EXCEEDED),
 				 errmsg("string too long to represent as jsonb string"),
 				 errdetail("Due to an implementation restriction, jsonb strings cannot exceed %d bytes.",
-						   JENTRY_POSMASK)));
+						   JENTRY_OFFLENMASK)));
 
 	return len;
 }
@@ -372,8 +372,8 @@ JsonbToCString(StringInfo out, JsonbContainer *in, int estimated_len)
 {
 	bool		first = true;
 	JsonbIterator *it;
-	int			type = 0;
 	JsonbValue	v;
+	JsonbIteratorToken type = WJB_DONE;
 	int			level = 0;
 	bool		redo_switch = false;
 
@@ -454,7 +454,7 @@ JsonbToCString(StringInfo out, JsonbContainer *in, int estimated_len)
 				first = false;
 				break;
 			default:
-				elog(ERROR, "unknown flag of jsonb iterator");
+				elog(ERROR, "unknown jsonb iterator token type");
 		}
 	}
 

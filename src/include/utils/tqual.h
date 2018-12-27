@@ -89,13 +89,16 @@ extern HTSV_Result HeapTupleSatisfiesVacuum(Relation relation, HeapTuple htup,
 						 TransactionId OldestXmin, Buffer buffer);
 extern bool HeapTupleIsSurelyDead(HeapTuple htup,
 					  TransactionId OldestXmin);
+extern bool XidInMVCCSnapshot(TransactionId xid, Snapshot snapshot,
+							  bool distributedSnapshotIgnore, bool *setDistributedSnapshotIgnore);
+extern bool XidInMVCCSnapshot_Local(TransactionId xid, Snapshot snapshot);
 
 extern void HeapTupleSetHintBits(HeapTupleHeader tuple, Buffer buffer, Relation rel,
 					 uint16 infomask, TransactionId xid);
 extern bool HeapTupleHeaderIsOnlyLocked(HeapTupleHeader tuple);
 
 /*
- * To avoid leaking to much knowledge about reorderbuffer implementation
+ * To avoid leaking too much knowledge about reorderbuffer implementation
  * details this is implemented in reorderbuffer.c not tqual.c.
  */
 struct HTAB;

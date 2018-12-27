@@ -140,6 +140,7 @@ static void StoreConstraints(Relation rel, List *cooked_constraints,
 				 bool is_internal);
 static bool MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 							bool allow_merge, bool is_local,
+							bool is_initially_valid,
 							bool is_no_inherit);
 static Node *cookConstraint(ParseState *pstate,
 			   Node *raw_constraint,
@@ -1351,7 +1352,10 @@ AddNewRelationType(const char *typeName,
  *	use_user_acl: TRUE if should look for user-defined default permissions;
  *		if FALSE, relacl is always set NULL
  *	allow_system_table_mods: TRUE to allow creation in system namespaces
+ *	is_internal: is this a system-generated catalog?
+ *  valid_opts: Validate the reloptions or not?
  *  is_part_child: TRUE if relation is a child partition
+ *  is_part_parent: TRUE if relation is a parent partition
  *
  * Returns the OID of the new relation
  * --------------------------------
@@ -1879,18 +1883,19 @@ heap_create_with_catalog(const char *relname,
 
 /*
  * Set up an init fork for an unlogged table so that it can be correctly
- * reinitialized on restart.  Since we're going to do an immediate sync, we
- * only need to xlog this if archiving or streaming is enabled.  And the
- * immediate sync is required, because otherwise there's no guarantee that
- * this will hit the disk before the next checkpoint moves the redo pointer.
+ * reinitialized on restart.  An immediate sync is required even if the
+ * page has been logged, because the write did not go through
+ * shared_buffers and therefore a concurrent checkpoint may have moved
+ * the redo pointer past our xlog record.  Recovery may as well remove it
+ * while replaying, for example, XLOG_DBASE_CREATE or XLOG_TBLSPC_CREATE
+ * record. Therefore, logging is necessary even if wal_level=minimal.
  */
 void
 heap_create_init_fork(Relation rel)
 {
 	RelationOpenSmgr(rel);
 	smgrcreate(rel->rd_smgr, INIT_FORKNUM, false);
-	if (XLogIsNeeded())
-		log_smgrcreate(&rel->rd_smgr->smgr_rnode.node, INIT_FORKNUM);
+	log_smgrcreate(&rel->rd_smgr->smgr_rnode.node, INIT_FORKNUM);
 	smgrimmedsync(rel->rd_smgr, INIT_FORKNUM);
 }
 
@@ -2915,6 +2920,7 @@ AddRelationNewConstraints(Relation rel,
 			 */
 			if (MergeWithExistingConstraint(rel, ccname, expr,
 											allow_merge, is_local,
+											cdef->initially_valid,
 											cdef->is_no_inherit))
 				continue;
 		}
@@ -3006,6 +3012,7 @@ AddRelationNewConstraints(Relation rel,
 static bool
 MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 							bool allow_merge, bool is_local,
+							bool is_initially_valid,
 							bool is_no_inherit)
 {
 	bool		found;
@@ -3053,21 +3060,57 @@ MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 				if (equal(expr, stringToNode(TextDatumGetCString(val))))
 					found = true;
 			}
+
+			/*
+			 * If the existing constraint is purely inherited (no local
+			 * definition) then interpret addition of a local constraint as a
+			 * legal merge.  This allows ALTER ADD CONSTRAINT on parent and
+			 * child tables to be given in either order with same end state.
+			 */
+			if (is_local && !con->conislocal)
+				allow_merge = true;
+
 			if (!found || !allow_merge)
 				ereport(ERROR,
 						(errcode(ERRCODE_DUPLICATE_OBJECT),
 				errmsg("constraint \"%s\" for relation \"%s\" already exists",
 					   ccname, RelationGetRelationName(rel))));
 
-			tup = heap_copytuple(tup);
-			con = (Form_pg_constraint) GETSTRUCT(tup);
-
-			/* If the constraint is "no inherit" then cannot merge */
+			/* If the child constraint is "no inherit" then cannot merge */
 			if (con->connoinherit)
 				ereport(ERROR,
 						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
 						 errmsg("constraint \"%s\" conflicts with non-inherited constraint on relation \"%s\"",
 								ccname, RelationGetRelationName(rel))));
+
+			/*
+			 * Must not change an existing inherited constraint to "no
+			 * inherit" status.  That's because inherited constraints should
+			 * be able to propagate to lower-level children.
+			 */
+			if (con->coninhcount > 0 && is_no_inherit)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("constraint \"%s\" conflicts with inherited constraint on relation \"%s\"",
+								ccname, RelationGetRelationName(rel))));
+
+			/*
+			 * If the child constraint is "not valid" then cannot merge with a
+			 * valid parent constraint
+			 */
+			if (is_initially_valid && !con->convalidated)
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_OBJECT_DEFINITION),
+						 errmsg("constraint \"%s\" conflicts with NOT VALID constraint on relation \"%s\"",
+								ccname, RelationGetRelationName(rel))));
+
+			/* OK to update the tuple */
+			ereport(NOTICE,
+			   (errmsg("merging constraint \"%s\" with inherited definition",
+					   ccname)));
+
+			tup = heap_copytuple(tup);
+			con = (Form_pg_constraint) GETSTRUCT(tup);
 
 			if (is_local)
 				con->conislocal = true;
@@ -3078,10 +3121,6 @@ MergeWithExistingConstraint(Relation rel, char *ccname, Node *expr,
 				Assert(is_local);
 				con->connoinherit = true;
 			}
-			/* OK to update the tuple */
-			ereport(NOTICE,
-			   (errmsg("merging constraint \"%s\" with inherited definition",
-					   ccname)));
 			simple_heap_update(conDesc, &tup->t_self, tup);
 			CatalogUpdateIndexes(conDesc, tup);
 			break;

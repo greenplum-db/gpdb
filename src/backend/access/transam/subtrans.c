@@ -43,9 +43,10 @@
  * Note: because TransactionIds are 32 bits and wrap around at 0xFFFFFFFF,
  * SubTrans page numbering also wraps around at
  * 0xFFFFFFFF/SUBTRANS_XACTS_PER_PAGE, and segment numbering at
- * 0xFFFFFFFF/SUBTRANS_XACTS_PER_PAGE/SLRU_SEGMENTS_PER_PAGE.  We need take no
+ * 0xFFFFFFFF/SUBTRANS_XACTS_PER_PAGE/SLRU_PAGES_PER_SEGMENT.  We need take no
  * explicit notice of that fact in this module, except when comparing segment
- * and page numbers in TruncateSUBTRANS (see SubTransPagePrecedes).
+ * and page numbers in TruncateSUBTRANS (see SubTransPagePrecedes) and zeroing
+ * them in StartupSUBTRANS.
  */
 
 /* We need eight bytes per xact */
@@ -273,6 +274,9 @@ StartupSUBTRANS(TransactionId oldestActiveXID)
 	{
 		(void) ZeroSUBTRANSPage(startPage);
 		startPage++;
+		/* must account for wraparound */
+		if (startPage > TransactionIdToPage(MaxTransactionId))
+			startPage=0;
 	}
 	(void) ZeroSUBTRANSPage(startPage);
 
@@ -360,8 +364,13 @@ TruncateSUBTRANS(TransactionId oldestXact)
 
 	/*
 	 * The cutoff point is the start of the segment containing oldestXact. We
-	 * pass the *page* containing oldestXact to SimpleLruTruncate.
+	 * pass the *page* containing oldestXact to SimpleLruTruncate.  We step
+	 * back one transaction to avoid passing a cutoff page that hasn't been
+	 * created yet in the rare case that oldestXact would be the first item on
+	 * a page and oldestXact == next XID.  In that case, if we didn't subtract
+	 * one, we'd trigger SimpleLruTruncate's wraparound detection.
 	 */
+	TransactionIdRetreat(oldestXact);
 	cutoffPage = TransactionIdToPage(oldestXact);
 	SimpleLruTruncate(SubTransCtl, cutoffPage);
 }

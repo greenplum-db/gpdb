@@ -241,7 +241,9 @@ pg_SSPI_error(PGconn *conn, const char *mprefix, SECURITY_STATUS r)
 {
 	char		sysmsg[256];
 
-	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, r, 0,
+	if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS |
+					  FORMAT_MESSAGE_FROM_SYSTEM,
+					  NULL, r, 0,
 					  sysmsg, sizeof(sysmsg), NULL) == 0)
 		printfPQExpBuffer(&conn->errorMessage, "%s: SSPI error %x",
 						  mprefix, (unsigned int) r);
@@ -377,7 +379,12 @@ pg_SSPI_startup(PGconn *conn, int use_negotiate)
 	SECURITY_STATUS r;
 	TimeStamp	expire;
 
-	conn->sspictx = NULL;
+	if (conn->sspictx)
+	{
+		printfPQExpBuffer(&conn->errorMessage,
+					libpq_gettext("duplicate SSPI authentication request\n"));
+		return STATUS_ERROR;
+	}
 
 	/*
 	 * Retreive credentials handle
@@ -708,6 +715,19 @@ pg_fe_sendauth(AuthRequest areq, PGconn *conn)
 				return STATUS_ERROR;
 			break;
 
+			/*
+			 * SASL authentication was introduced in version 10. Older
+			 * versions recognize the request only to give a nicer error
+			 * message. We call it "SCRAM authentication" in the error, rather
+			 * than SASL, because SCRAM is more familiar to users, and it's
+			 * the only SASL authentication mechanism that has been
+			 * implemented as of this writing, anyway.
+			 */
+		case AUTH_REQ_SASL:
+			printfPQExpBuffer(&conn->errorMessage,
+							  libpq_gettext("SCRAM authentication requires libpq version 10 or above\n"));
+			return STATUS_ERROR;
+
 		default:
 			printfPQExpBuffer(&conn->errorMessage,
 			libpq_gettext("authentication method %u not supported\n"), areq);
@@ -721,22 +741,26 @@ pg_fe_sendauth(AuthRequest areq, PGconn *conn)
 /*
  * pg_fe_getauthname
  *
- * Returns a pointer to dynamic space containing whatever name the user
- * has authenticated to the system.  If there is an error, return NULL.
+ * Returns a pointer to malloc'd space containing whatever name the user
+ * has authenticated to the system.  If there is an error, return NULL,
+ * and put a suitable error message in *errorMessage if that's not NULL.
  */
 char *
-pg_fe_getauthname(void)
+pg_fe_getauthname(PQExpBuffer errorMessage)
 {
+	char	   *result = NULL;
 	const char *name = NULL;
-	char	   *authn;
 
 #ifdef WIN32
-	char		username[128];
-	DWORD		namesize = sizeof(username) - 1;
+	/* Microsoft recommends buffer size of UNLEN+1, where UNLEN = 256 */
+	char		username[256 + 1];
+	DWORD		namesize = sizeof(username);
 #else
+	uid_t		user_id = geteuid();
 	char		pwdbuf[BUFSIZ];
 	struct passwd pwdstr;
 	struct passwd *pw = NULL;
+	int			pwerr;
 #endif
 
 	/*
@@ -748,24 +772,42 @@ pg_fe_getauthname(void)
 	 */
 	pglock_thread();
 
-	/*
-	 * We document PQconndefaults() to return NULL for a memory allocation
-	 * failure.  We don't have an API to return a user name lookup failure, so
-	 * we just assume it always succeeds.
-	 */
 #ifdef WIN32
 	if (GetUserName(username, &namesize))
 		name = username;
+	else if (errorMessage)
+		printfPQExpBuffer(errorMessage,
+				 libpq_gettext("user name lookup failure: error code %lu\n"),
+						  GetLastError());
 #else
-	if (pqGetpwuid(geteuid(), &pwdstr, pwdbuf, sizeof(pwdbuf), &pw) == 0)
+	pwerr = pqGetpwuid(user_id, &pwdstr, pwdbuf, sizeof(pwdbuf), &pw);
+	if (pw != NULL)
 		name = pw->pw_name;
+	else if (errorMessage)
+	{
+		if (pwerr != 0)
+			printfPQExpBuffer(errorMessage,
+				   libpq_gettext("could not look up local user ID %d: %s\n"),
+							  (int) user_id,
+							  pqStrerror(pwerr, pwdbuf, sizeof(pwdbuf)));
+		else
+			printfPQExpBuffer(errorMessage,
+					 libpq_gettext("local user with ID %d does not exist\n"),
+							  (int) user_id);
+	}
 #endif
 
-	authn = name ? strdup(name) : NULL;
+	if (name)
+	{
+		result = strdup(name);
+		if (result == NULL && errorMessage)
+			printfPQExpBuffer(errorMessage,
+							  libpq_gettext("out of memory\n"));
+	}
 
 	pgunlock_thread();
 
-	return authn;
+	return result;
 }
 
 
@@ -777,7 +819,7 @@ pg_fe_getauthname(void)
  * be sent in cleartext if it is encrypted on the client side.  This is
  * good because it ensures the cleartext password won't end up in logs,
  * pg_stat displays, etc.  We export the function so that clients won't
- * be dependent on low-level details like whether the enceyption is MD5
+ * be dependent on low-level details like whether the encryption is MD5
  * or something else.
  *
  * Arguments are the cleartext password, and the SQL name of the user it

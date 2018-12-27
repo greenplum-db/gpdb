@@ -1306,10 +1306,9 @@ RecordTransactionCommit(void)
 
 		/*
 		 * If we didn't create XLOG entries, we're done here; otherwise we
-		 * should flush those entries the same as a commit record.  (An
-		 * example of a possible record that wouldn't cause an XID to be
-		 * assigned is a sequence advance record due to nextval() --- we want
-		 * to flush that to disk before reporting commit.)
+		 * should trigger flushing those entries the same as a commit record
+		 * would.  This will primarily happen for HOT pruning and the like; we
+		 * want these to be flushed to disk in due time.
 		 */
 		if (!isDtxPrepared && !wrote_xlog)
 			goto cleanup;
@@ -1500,7 +1499,8 @@ RecordTransactionCommit(void)
 	 * because we use two-phase commit across the nodes. In order to make GPDB support
 	 * async-commit, we also need to implement the temp table detection.
 	 */
-	if ((wrote_xlog && synchronous_commit > SYNCHRONOUS_COMMIT_OFF) ||
+	if ((wrote_xlog && markXidCommitted &&
+		 synchronous_commit > SYNCHRONOUS_COMMIT_OFF) ||
 		forceSyncCommit || nrels > 0)
 #endif
 	{
@@ -1585,7 +1585,10 @@ RecordTransactionCommit(void)
 	}
 
 	/*
-	 * Wait for synchronous replication, if required.
+	 * Wait for synchronous replication, if required. Similar to the decision
+	 * above about using committing asynchronously we only want to wait if
+	 * this backend assigned a xid and wrote WAL.  No need to wait if a xid
+	 * was assigned due to temporary/unlogged tables or due to HOT pruning.
 	 *
 	 * Note that at this stage we have marked clog, but still show as running
 	 * in the procarray and continue to hold locks.
@@ -2759,9 +2762,6 @@ CommitTransaction(void)
 	 */
 	smgrDoPendingDeletes(true);
 
-	/* Check we've released all catcache entries */
-	AtEOXact_CatCache(true);
-
 	AtEOXact_AppendOnly();
 	AtCommit_Notify();
 	AtEOXact_GUC(true, 1);
@@ -3077,9 +3077,6 @@ PrepareTransaction(void)
 	 */
 	PostPrepare_Twophase();
 
-	/* Check we've released all catcache entries */
-	AtEOXact_CatCache(true);
-
 	/* PREPARE acts the same as COMMIT as far as GUC is concerned */
 	AtEOXact_GUC(true, 1);
 	AtEOXact_SPI(true);
@@ -3269,7 +3266,6 @@ AbortTransaction(void)
 							 RESOURCE_RELEASE_AFTER_LOCKS,
 							 false, true);
 		smgrDoPendingDeletes(false);
-		AtEOXact_CatCache(false);
 
 		AtEOXact_AppendOnly();
 		AtEOXact_GUC(false, 1);
@@ -5069,6 +5065,9 @@ AbortOutOfAnyTransaction(void)
 {
 	TransactionState s = CurrentTransactionState;
 
+	/* Ensure we're not running in a doomed memory context */
+	AtAbort_Memory();
+
 	/*
 	 * Get out of any transaction or nested transaction
 	 */
@@ -5111,7 +5110,14 @@ AbortOutOfAnyTransaction(void)
 				break;
 			case TBLOCK_ABORT:
 			case TBLOCK_ABORT_END:
-				/* AbortTransaction already done, still need Cleanup */
+
+				/*
+				 * AbortTransaction is already done, still need Cleanup.
+				 * However, if we failed partway through running ROLLBACK,
+				 * there will be an active portal running that command, which
+				 * we need to shut down before doing CleanupTransaction.
+				 */
+				AtAbort_Portals();
 				CleanupTransaction();
 				s->blockState = TBLOCK_DEFAULT;
 
@@ -5136,6 +5142,14 @@ AbortOutOfAnyTransaction(void)
 			case TBLOCK_SUBABORT_END:
 			case TBLOCK_SUBABORT_RESTART:
 				/* As above, but AbortSubTransaction already done */
+				if (s->curTransactionOwner)
+				{
+					/* As in TBLOCK_ABORT, might have a live portal to zap */
+					AtSubAbort_Portals(s->subTransactionId,
+									   s->parent->subTransactionId,
+									   s->curTransactionOwner,
+									   s->parent->curTransactionOwner);
+				}
 				CleanupSubTransaction();
 				s = CurrentTransactionState;	/* changed by pop */
 				break;
@@ -5144,6 +5158,9 @@ AbortOutOfAnyTransaction(void)
 
 	/* Should be out of all subxacts now */
 	Assert(s->parent == NULL);
+
+	/* If we didn't actually have anything to do, revert to TopMemoryContext */
+	AtCleanup_Memory();
 }
 
 /*
@@ -5483,6 +5500,7 @@ AbortSubTransaction(void)
 		AfterTriggerEndSubXact(false);
 		AtSubAbort_Portals(s->subTransactionId,
 						   s->parent->subTransactionId,
+						   s->curTransactionOwner,
 						   s->parent->curTransactionOwner);
 		AtSubAbort_DispatcherState();
 		AtEOXact_DispatchOids(false);
@@ -5899,7 +5917,6 @@ xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 						  DistributedTransactionTimeStamp distribTimeStamp)
 {
 	TransactionId max_xid;
-	int			i;
 
 	max_xid = TransactionIdLatest(xid, nsubxacts, sub_xids);
 
@@ -6002,16 +6019,8 @@ xact_redo_commit_internal(TransactionId xid, XLogRecPtr lsn,
 		 */
 		XLogFlush(lsn);
 
-		for (i = 0; i < nrels; i++)
-		{
-			SMgrRelation srel = smgropen(xnodes[i].node, InvalidBackendId);
-			ForkNumber	fork;
-
-			for (fork = 0; fork <= MAX_FORKNUM; fork++)
-				XLogDropRelation(xnodes[i].node, fork);
-			smgrdounlink(srel, true, xnodes[i].relstorage);
-			smgrclose(srel);
-		}
+		/* Make sure files supposed to be dropped are dropped */
+		DropRelationFiles(xnodes, nrels, true);
 	}
 
 	/*
@@ -6186,7 +6195,6 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 {
 	TransactionId *sub_xids;
 	TransactionId max_xid;
-	int			i;
 
 	sub_xids = (TransactionId *) &(xlrec->xnodes[xlrec->nrels]);
 	max_xid = TransactionIdLatest(xid, xlrec->nsubxacts, sub_xids);
@@ -6245,16 +6253,7 @@ xact_redo_abort(xl_xact_abort *xlrec, TransactionId xid)
 	}
 
 	/* Make sure files supposed to be dropped are dropped */
-	for (i = 0; i < xlrec->nrels; i++)
-	{
-		SMgrRelation srel = smgropen(xlrec->xnodes[i].node, InvalidBackendId);
-		ForkNumber	fork;
-
-		for (fork = 0; fork <= MAX_FORKNUM; fork++)
-			XLogDropRelation(xlrec->xnodes[i].node, fork);
-		smgrdounlink(srel, true, xlrec->xnodes[i].relstorage);
-		smgrclose(srel);
-	}
+	DropRelationFiles(xlrec->xnodes, xlrec->nrels, true);
 }
 
 static void

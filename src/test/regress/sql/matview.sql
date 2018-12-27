@@ -92,7 +92,7 @@ SELECT * FROM tvvm;
 -- test diemv when the mv does not exist
 DROP MATERIALIZED VIEW IF EXISTS no_such_mv;
 
--- make sure invalid comination of options is prohibited
+-- make sure invalid combination of options is prohibited
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm WITH NO DATA;
 
 -- no tuple locks on materialized views
@@ -121,18 +121,6 @@ CREATE MATERIALIZED VIEW mv_test3 AS SELECT * FROM mv_test2 WHERE moo = 12345;
 SELECT relispopulated FROM pg_class WHERE oid = 'mv_test3'::regclass;
 
 DROP VIEW v_test1 CASCADE;
-
--- test that vacuum does not make empty matview look unpopulated
-CREATE TABLE hoge (i int);
-INSERT INTO hoge VALUES (generate_series(1,100000));
-CREATE MATERIALIZED VIEW hogeview AS SELECT * FROM hoge WHERE i % 2 = 0;
-CREATE INDEX hogeviewidx ON hogeview (i);
-DELETE FROM hoge;
-REFRESH MATERIALIZED VIEW hogeview;
-SELECT * FROM hogeview WHERE i < 10;
-VACUUM ANALYZE hogeview;
-SELECT * FROM hogeview WHERE i < 10;
-DROP TABLE hoge CASCADE;
 
 -- test that duplicate values on unique index prevent refresh
 CREATE TABLE foo(a, b) AS VALUES(1, 10);
@@ -175,17 +163,34 @@ SELECT * FROM boxmv ORDER BY id;
 DROP TABLE boxes CASCADE;
 
 -- make sure that column names are handled correctly
-CREATE TABLE v (i int, j int);
-CREATE MATERIALIZED VIEW mv_v (ii) AS SELECT i, j AS jj FROM v;
-ALTER TABLE v RENAME COLUMN i TO x;
-INSERT INTO v values (1, 2);
-CREATE UNIQUE INDEX mv_v_ii ON mv_v (ii);
-REFRESH MATERIALIZED VIEW mv_v;
-UPDATE v SET j = 3 WHERE x = 1;
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_v;
-SELECT * FROM v;
-SELECT * FROM mv_v;
-DROP TABLE v CASCADE;
+CREATE TABLE mvtest_v (i int, j int);
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj, kk) AS SELECT i, j FROM mvtest_v; -- error
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_2 (ii) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj, kk) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- error
+CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_4 (ii) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- ok
+ALTER TABLE mvtest_v RENAME COLUMN i TO x;
+INSERT INTO mvtest_v values (1, 2);
+CREATE UNIQUE INDEX mvtest_mv_v_ii ON mvtest_mv_v (ii);
+REFRESH MATERIALIZED VIEW mvtest_mv_v;
+UPDATE mvtest_v SET j = 3 WHERE x = 1;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_v;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_2;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_3;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_4;
+SELECT * FROM mvtest_v;
+SELECT * FROM mvtest_mv_v;
+SELECT * FROM mvtest_mv_v_2;
+SELECT * FROM mvtest_mv_v_3;
+SELECT * FROM mvtest_mv_v_4;
+DROP TABLE mvtest_v CASCADE;
+
+-- make sure that create WITH NO DATA does not plan the query (bug #13907)
+create materialized view mvtest_error as select 1/0 as x;  -- fail
+create materialized view mvtest_error as select 1/0 as x with no data;
+refresh materialized view mvtest_error;  -- fail here
+drop materialized view mvtest_error;
 
 -- make sure that matview rows can be referenced as source rows (bug #9398)
 CREATE TABLE v AS SELECT generate_series(1,10) AS a;
@@ -194,3 +199,30 @@ DELETE FROM v WHERE EXISTS ( SELECT * FROM mv_v WHERE mv_v.a = v.a );
 SELECT * FROM v;
 SELECT * FROM mv_v;
 DROP TABLE v CASCADE;
+
+-- make sure running as superuser works when MV owned by another role (bug #11208)
+CREATE ROLE user_dw;
+SET ROLE user_dw;
+CREATE TABLE foo_data AS SELECT i, md5(random()::text)
+  FROM generate_series(1, 10) i;
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
+CREATE UNIQUE INDEX ON mv_foo (i);
+RESET ROLE;
+REFRESH MATERIALIZED VIEW mv_foo;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_foo;
+DROP OWNED BY user_dw CASCADE;
+DROP ROLE user_dw;
+
+-- make sure that create WITH NO DATA works via SPI
+BEGIN;
+CREATE FUNCTION mvtest_func()
+  RETURNS void AS $$
+BEGIN
+  CREATE MATERIALIZED VIEW mvtest1 AS SELECT 1 AS x;
+  CREATE MATERIALIZED VIEW mvtest2 AS SELECT 1 AS x WITH NO DATA;
+END;
+$$ LANGUAGE plpgsql;
+SELECT mvtest_func();
+SELECT * FROM mvtest1;
+SELECT * FROM mvtest2;
+ROLLBACK;

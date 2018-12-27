@@ -16,7 +16,6 @@ SELECT relname, relhasindex
    ORDER BY relname;
 a|f
 a_star|f
-abstime_tbl|f
 aggtest|f
 array_index_op_test|t
 array_op_test|f
@@ -65,6 +64,8 @@ int2_tbl|f
 int4_tbl|f
 int8_tbl|f
 interval_tbl|f
+invalid_check_con|f
+invalid_check_con_child|f
 iportaltest|f
 kd_point_tbl|t
 line_tbl|f
@@ -147,7 +148,6 @@ quad_point_tbl|t
 radix_text_tbl|t
 ramp|f
 real_city|f
-reltime_tbl|f
 road|t
 shighway|t
 slow_emp4000|f
@@ -172,7 +172,6 @@ time_tbl|f
 timestamp_tbl|f
 timestamptz_tbl|f
 timetz_tbl|f
-tinterval_tbl|f
 varchar_tbl|f
 -- restore normal output mode
 \a\t

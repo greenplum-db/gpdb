@@ -537,6 +537,8 @@ errstart(int elevel, const char *filename, int lineno,
 	edata->funcname = funcname;
 	/* the default text domain is the backend's */
 	edata->domain = domain ? domain : PG_TEXTDOMAIN("postgres");
+	/* initialize context_domain the same way (see set_errcontext_domain()) */
+	edata->context_domain = edata->domain;
 	edata->omit_location = true;
 	/* Select default errcode based on elevel */
 	if (elevel >= ERROR)
@@ -642,6 +644,7 @@ errfinish(int dummy __attribute__((unused)),...)
 		 * while doing error cleanup.
 		 */
 		InterruptHoldoffCount = 0;
+		QueryCancelHoldoffCount = 0;
 
 		CritSectionCount = 0;	/* should be unnecessary, but... */
 
@@ -1014,7 +1017,7 @@ sqlstate_to_errcode(const char *sqlstate)
 		char		   *fmtbuf; \
 		StringInfoData	buf; \
 		/* Internationalize the error format string */ \
-		if (translateit && !in_error_recursion_trouble()) \
+		if ((translateit) && !in_error_recursion_trouble()) \
 			fmt = dgettext((domain), fmt);				  \
 		/* Expand %m in format string */ \
 		fmtbuf = expand_fmt_string(fmt, edata); \
@@ -1362,6 +1365,16 @@ errcontext_msg(const char *fmt,...)
  * translate it.  Instead, each errcontext_msg() call should be preceded by
  * a set_errcontext_domain() call to specify the domain.  This is usually
  * done transparently by the errcontext() macro.
+ *
+ * Although errcontext is primarily meant for use at call sites distant from
+ * the original ereport call, there are a few places that invoke errcontext
+ * within ereport.  The expansion of errcontext as a comma expression calling
+ * set_errcontext_domain then errcontext_msg is problematic in this case,
+ * because the intended comma expression becomes two arguments to errfinish,
+ * which the compiler is at liberty to evaluate in either order.  But in
+ * such a case, the set_errcontext_domain calls must be selecting the same
+ * TEXTDOMAIN value that the errstart call did, so order does not matter
+ * so long as errstart initializes context_domain along with domain.
  */
 int
 set_errcontext_domain(const char *domain)
@@ -1371,7 +1384,8 @@ set_errcontext_domain(const char *domain)
 	/* we don't bother incrementing recursion_depth */
 	CHECK_STACK_DEPTH();
 
-	edata->context_domain = domain;
+	/* the default text domain is the backend's */
+	edata->context_domain = domain ? domain : PG_TEXTDOMAIN("postgres");
 
 	return 0;					/* return value does not matter */
 }
@@ -2556,10 +2570,15 @@ write_eventlog(int level, const char *line, int len)
 	 * try to convert the message to UTF16 and write it with ReportEventW().
 	 * Fall back on ReportEventA() if conversion failed.
 	 *
+	 * Since we palloc the structure required for conversion, also fall
+	 * through to writing unconverted if we have not yet set up
+	 * CurrentMemoryContext.
+	 *
 	 * Also verify that we are not on our way into error recursion trouble due
 	 * to error messages thrown deep inside pgwin32_message_to_UTF16().
 	 */
 	if (!in_error_recursion_trouble() &&
+		CurrentMemoryContext != NULL &&
 		GetMessageEncoding() != GetACPEncoding())
 	{
 		utf16 = pgwin32_message_to_UTF16(line, len, NULL);
@@ -2798,7 +2817,7 @@ setup_formatted_log_time(void)
 {
 	struct timeval tv;
 	pg_time_t	stamp_time;
-	char		msbuf[8];
+	char		msbuf[13];
 
 	gettimeofday(&tv, NULL);
 	stamp_time = (pg_time_t) tv.tv_sec;

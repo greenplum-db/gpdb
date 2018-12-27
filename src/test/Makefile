@@ -12,7 +12,7 @@ subdir = src/test
 top_builddir = ../..
 include $(top_builddir)/src/Makefile.global
 
-SUBDIRS = regress isolation
+SUBDIRS = perl regress isolation
 
 SUBDIRS += fsync walrep heap_checksum isolation2 kerberos modules
 

@@ -232,7 +232,7 @@ start_logical_replication:
 				{
 					StartReplicationCmd *cmd;
 					cmd = makeNode(StartReplicationCmd);
-					cmd->kind = REPLICATION_KIND_LOGICAL;;
+					cmd->kind = REPLICATION_KIND_LOGICAL;
 					cmd->slotname = $3;
 					cmd->startpoint = $5;
 					cmd->options = $6;

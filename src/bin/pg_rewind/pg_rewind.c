@@ -242,7 +242,8 @@ main(int argc, char **argv)
 	 */
 	if (ControlFile_target.checkPointCopy.ThisTimeLineID == ControlFile_source.checkPointCopy.ThisTimeLineID)
 	{
-		printf(_("source and target cluster are on the same timeline\n"));
+		printf(_("source and target cluster are on the same timeline: %u\n"),
+			   ControlFile_source.checkPointCopy.ThisTimeLineID);
 		rewind_needed = false;
 	}
 	else

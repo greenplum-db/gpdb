@@ -783,8 +783,8 @@ select count(*) from temp_tenk_aocs5;
  10000
 (1 row)
 
-select tablename, indexname, indexdef from pg_indexes where tablename = 'temp_tenk_aocs5';
-    tablename    |    indexname    |                              indexdef                              
+select i.tablename, i.indexname, pg_get_indexdef(c.oid, 0, TRUE) from pg_indexes i join pg_class c on i.indexname=c.relname and i.tablename='temp_tenk_aocs5';
+    tablename    |    indexname    |                          pg_get_indexdef                           
 -----------------+-----------------+--------------------------------------------------------------------
  temp_tenk_aocs5 | temp_even_index | CREATE INDEX temp_even_index ON temp_tenk_aocs5 USING btree (even)
 (1 row)

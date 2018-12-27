@@ -68,13 +68,13 @@ CREATE AGGREGATE <replaceable class="PARAMETER">name</replaceable> (
     [ , SERIALFUNC = <replaceable class="PARAMETER">serialfunc</replaceable> ]
     [ , DESERIALFUNC = <replaceable class="PARAMETER">deserialfunc</replaceable> ]
     [ , INITCOND = <replaceable class="PARAMETER">initial_condition</replaceable> ]
-    [ , MSFUNC = <replaceable class="PARAMETER">sfunc</replaceable> ]
-    [ , MINVFUNC = <replaceable class="PARAMETER">invfunc</replaceable> ]
-    [ , MSTYPE = <replaceable class="PARAMETER">state_data_type</replaceable> ]
-    [ , MSSPACE = <replaceable class="PARAMETER">state_data_size</replaceable> ]
-    [ , MFINALFUNC = <replaceable class="PARAMETER">ffunc</replaceable> ]
+    [ , MSFUNC = <replaceable class="PARAMETER">msfunc</replaceable> ]
+    [ , MINVFUNC = <replaceable class="PARAMETER">minvfunc</replaceable> ]
+    [ , MSTYPE = <replaceable class="PARAMETER">mstate_data_type</replaceable> ]
+    [ , MSSPACE = <replaceable class="PARAMETER">mstate_data_size</replaceable> ]
+    [ , MFINALFUNC = <replaceable class="PARAMETER">mffunc</replaceable> ]
     [ , MFINALFUNC_EXTRA ]
-    [ , MINITCOND = <replaceable class="PARAMETER">initial_condition</replaceable> ]
+    [ , MINITCOND = <replaceable class="PARAMETER">minitial_condition</replaceable> ]
     [ , SORTOP = <replaceable class="PARAMETER">sort_operator</replaceable> ]
 )
 </synopsis>
@@ -225,7 +225,7 @@ CREATE AGGREGATE <replaceable class="PARAMETER">name</replaceable> (
    arguments that are evaluated only once per aggregation rather than once
    per input row.  Hypothetical-set aggregates are a subclass of ordered-set
    aggregates in which some of the direct arguments are required to match,
-   in number and datatypes, the aggregated argument columns.  This allows
+   in number and data types, the aggregated argument columns.  This allows
    the values of those direct arguments to be added to the collection of
    aggregate-input rows as an additional <quote>hypothetical</> row.
   </para>
@@ -496,7 +496,7 @@ SELECT col FROM tab ORDER BY col USING sortop LIMIT 1;
     <listitem>
      <para>
       The approximate average size (in bytes) of the aggregate's state
-      value, when using moving-aggregate mode.  This works the same as 
+      value, when using moving-aggregate mode.  This works the same as
       <replaceable>state_data_size</>.
      </para>
     </listitem>

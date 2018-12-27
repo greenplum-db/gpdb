@@ -45,17 +45,24 @@ ltree_compare(const ltree *a, const ltree *b)
 	ltree_level *bl = LTREE_FIRST(b);
 	int			an = a->numlevel;
 	int			bn = b->numlevel;
-	int			res = 0;
 
 	while (an > 0 && bn > 0)
 	{
+		int			res;
+
 		if ((res = memcmp(al->name, bl->name, Min(al->len, bl->len))) == 0)
 		{
 			if (al->len != bl->len)
 				return (al->len - bl->len) * 10 * (an + 1);
 		}
 		else
+		{
+			if (res < 0)
+				res = -1;
+			else
+				res = 1;
 			return res * 10 * (an + 1);
+		}
 
 		an--;
 		bn--;
@@ -146,7 +153,7 @@ inner_isparent(const ltree *c, const ltree *p)
 	{
 		if (cl->len != pl->len)
 			return false;
-		if (memcmp(cl->name, pl->name, cl->len))
+		if (memcmp(cl->name, pl->name, cl->len) != 0)
 			return false;
 
 		pn--;
@@ -211,7 +218,7 @@ inner_subltree(ltree *t, int32 startpos, int32 endpos)
 		ptr = LEVEL_NEXT(ptr);
 	}
 
-	res = (ltree *) palloc(LTREE_HDRSIZE + (end - start));
+	res = (ltree *) palloc0(LTREE_HDRSIZE + (end - start));
 	SET_VARSIZE(res, LTREE_HDRSIZE + (end - start));
 	res->numlevel = endpos - startpos;
 
@@ -268,7 +275,7 @@ ltree_concat(ltree *a, ltree *b)
 {
 	ltree	   *r;
 
-	r = (ltree *) palloc(VARSIZE(a) + VARSIZE(b) - LTREE_HDRSIZE);
+	r = (ltree *) palloc0(VARSIZE(a) + VARSIZE(b) - LTREE_HDRSIZE);
 	SET_VARSIZE(r, VARSIZE(a) + VARSIZE(b) - LTREE_HDRSIZE);
 	r->numlevel = a->numlevel + b->numlevel;
 
@@ -402,22 +409,34 @@ ltree_textadd(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(r);
 }
 
+/*
+ * Common code for variants of lca(), find longest common ancestor of inputs
+ *
+ * Returns NULL if there is no common ancestor, ie, the longest common
+ * prefix is empty.
+ */
 ltree *
 lca_inner(ltree **a, int len)
 {
 	int			tmp,
-				num = ((*a)->numlevel) ? (*a)->numlevel - 1 : 0;
-	ltree	  **ptr = a + 1;
-	int			i,
-				reslen = LTREE_HDRSIZE;
+				num,
+				i,
+				reslen;
+	ltree	  **ptr;
 	ltree_level *l1,
 			   *l2;
 	ltree	   *res;
 
-
+	if (len <= 0)
+		return NULL;			/* no inputs? */
 	if ((*a)->numlevel == 0)
-		return NULL;
+		return NULL;			/* any empty input means NULL result */
 
+	/* num is the length of the longest common ancestor so far */
+	num = (*a)->numlevel - 1;
+
+	/* Compare each additional input to *a */
+	ptr = a + 1;
 	while (ptr - a < len)
 	{
 		if ((*ptr)->numlevel == 0)
@@ -428,11 +447,12 @@ lca_inner(ltree **a, int len)
 		{
 			l1 = LTREE_FIRST(*a);
 			l2 = LTREE_FIRST(*ptr);
-			tmp = num;
+			tmp = Min(num, (*ptr)->numlevel - 1);
 			num = 0;
-			for (i = 0; i < Min(tmp, (*ptr)->numlevel - 1); i++)
+			for (i = 0; i < tmp; i++)
 			{
-				if (l1->len == l2->len && memcmp(l1->name, l2->name, l1->len) == 0)
+				if (l1->len == l2->len &&
+					memcmp(l1->name, l2->name, l1->len) == 0)
 					num = i + 1;
 				else
 					break;
@@ -443,6 +463,8 @@ lca_inner(ltree **a, int len)
 		ptr++;
 	}
 
+	/* Now compute size of result ... */
+	reslen = LTREE_HDRSIZE;
 	l1 = LTREE_FIRST(*a);
 	for (i = 0; i < num; i++)
 	{
@@ -450,7 +472,8 @@ lca_inner(ltree **a, int len)
 		l1 = LEVEL_NEXT(l1);
 	}
 
-	res = (ltree *) palloc(reslen);
+	/* ... and construct it by copying from *a */
+	res = (ltree *) palloc0(reslen);
 	SET_VARSIZE(res, reslen);
 	res->numlevel = num;
 

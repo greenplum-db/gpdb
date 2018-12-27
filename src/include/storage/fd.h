@@ -54,7 +54,7 @@ typedef int File;
 
 
 /* GUC parameter */
-extern int	max_files_per_process;
+extern PGDLLIMPORT int max_files_per_process;
 
 /*
  * This is private to fd.c, but exported for save/restore_backend_variables()
@@ -96,6 +96,8 @@ extern int	ClosePipeStream(FILE *file);
 /* Operations to allow use of the <dirent.h> library routines */
 extern DIR *AllocateDir(const char *dirname);
 extern struct dirent *ReadDir(DIR *dir, const char *dirname);
+extern struct dirent *ReadDirExtended(DIR *dir, const char *dirname,
+				int elevel);
 extern int	FreeDir(DIR *dir);
 
 /* Operations to allow use of a plain kernel FD, with automatic cleanup */
@@ -122,7 +124,10 @@ extern int	pg_fsync_no_writethrough(int fd);
 extern int	pg_fsync_writethrough(int fd);
 extern int	pg_fdatasync(int fd);
 extern int	pg_flush_data(int fd, off_t offset, off_t amount);
-extern void fsync_fname(char *fname, bool isdir);
+extern void fsync_fname(const char *fname, bool isdir);
+extern int	durable_rename(const char *oldfile, const char *newfile, int loglevel);
+extern int	durable_link_or_rename(const char *oldfile, const char *newfile, int loglevel);
+extern void SyncDataDirectory(void);
 
 extern int gp_retry_close(int fd);
 

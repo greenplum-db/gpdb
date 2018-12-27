@@ -103,6 +103,8 @@ static bool contain_mutable_functions_walker(Node *node, void *context);
 static bool contain_volatile_functions_walker(Node *node, void *context);
 static bool contain_volatile_functions_not_nextval_walker(Node *node, void *context);
 static bool contain_nonstrict_functions_walker(Node *node, void *context);
+static bool contain_context_dependent_node(Node *clause);
+static bool contain_context_dependent_node_walker(Node *node, int *flags);
 static bool contain_leaky_functions_walker(Node *node, void *context);
 static Relids find_nonnullable_rels_walker(Node *node, bool top_level);
 static List *find_nonnullable_vars_walker(Node *node, bool top_level);
@@ -1438,6 +1440,76 @@ contain_nonstrict_functions_walker(Node *node, void *context)
 		return true;
 	return expression_tree_walker(node, contain_nonstrict_functions_walker,
 								  context);
+}
+
+/*****************************************************************************
+ *		Check clauses for context-dependent nodes
+ *****************************************************************************/
+
+/*
+ * contain_context_dependent_node
+ *	  Recursively search for context-dependent nodes within a clause.
+ *
+ * CaseTestExpr nodes must appear directly within the corresponding CaseExpr,
+ * not nested within another one, or they'll see the wrong test value.  If one
+ * appears "bare" in the arguments of a SQL function, then we can't inline the
+ * SQL function for fear of creating such a situation.
+ *
+ * CoerceToDomainValue would have the same issue if domain CHECK expressions
+ * could get inlined into larger expressions, but presently that's impossible.
+ * Still, it might be allowed in future, or other node types with similar
+ * issues might get invented.  So give this function a generic name, and set
+ * up the recursion state to allow multiple flag bits.
+ */
+static bool
+contain_context_dependent_node(Node *clause)
+{
+	int			flags = 0;
+
+	return contain_context_dependent_node_walker(clause, &flags);
+}
+
+#define CCDN_IN_CASEEXPR	0x0001		/* CaseTestExpr okay here? */
+
+static bool
+contain_context_dependent_node_walker(Node *node, int *flags)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, CaseTestExpr))
+		return !(*flags & CCDN_IN_CASEEXPR);
+	if (IsA(node, CaseExpr))
+	{
+		CaseExpr   *caseexpr = (CaseExpr *) node;
+
+		/*
+		 * If this CASE doesn't have a test expression, then it doesn't create
+		 * a context in which CaseTestExprs should appear, so just fall
+		 * through and treat it as a generic expression node.
+		 */
+		if (caseexpr->arg)
+		{
+			int			save_flags = *flags;
+			bool		res;
+
+			/*
+			 * Note: in principle, we could distinguish the various sub-parts
+			 * of a CASE construct and set the flag bit only for some of them,
+			 * since we are only expecting CaseTestExprs to appear in the
+			 * "expr" subtree of the CaseWhen nodes.  But it doesn't really
+			 * seem worth any extra code.  If there are any bare CaseTestExprs
+			 * elsewhere in the CASE, something's wrong already.
+			 */
+			*flags |= CCDN_IN_CASEEXPR;
+			res = expression_tree_walker(node,
+									   contain_context_dependent_node_walker,
+										 (void *) flags);
+			*flags = save_flags;
+			return res;
+		}
+	}
+	return expression_tree_walker(node, contain_context_dependent_node_walker,
+								  (void *) flags);
 }
 
 /*****************************************************************************
@@ -3514,10 +3586,19 @@ eval_const_expressions_mutator(Node *node,
 				 * But it can arise while simplifying functions.)  Also, we
 				 * can optimize field selection from a RowExpr construct.
 				 *
-				 * We must however check that the declared type of the field
-				 * is still the same as when the FieldSelect was created ---
-				 * this can change if someone did ALTER COLUMN TYPE on the
-				 * rowtype.
+				 * However, replacing a whole-row Var in this way has a
+				 * pitfall: if we've already built the reltargetlist for the
+				 * source relation, then the whole-row Var is scheduled to be
+				 * produced by the relation scan, but the simple Var probably
+				 * isn't, which will lead to a failure in setrefs.c.  This is
+				 * not a problem when handling simple single-level queries, in
+				 * which expression simplification always happens first.  It
+				 * is a risk for lateral references from subqueries, though.
+				 * To avoid such failures, don't optimize uplevel references.
+				 *
+				 * We must also check that the declared type of the field is
+				 * still the same as when the FieldSelect was created --- this
+				 * can change if someone did ALTER COLUMN TYPE on the rowtype.
 				 */
 				FieldSelect *fselect = (FieldSelect *) node;
 				FieldSelect *newfselect;
@@ -3526,7 +3607,8 @@ eval_const_expressions_mutator(Node *node,
 				arg = eval_const_expressions_mutator((Node *) fselect->arg,
 													 context);
 				if (arg && IsA(arg, Var) &&
-					((Var *) arg)->varattno == InvalidAttrNumber)
+					((Var *) arg)->varattno == InvalidAttrNumber &&
+					((Var *) arg)->varlevelsup == 0)
 				{
 					if (rowtype_field_matches(((Var *) arg)->vartype,
 											  fselect->fieldnum,
@@ -3577,7 +3659,7 @@ eval_const_expressions_mutator(Node *node,
 
 				arg = eval_const_expressions_mutator((Node *) ntest->arg,
 													 context);
-				if (arg && IsA(arg, RowExpr))
+				if (ntest->argisrow && arg && IsA(arg, RowExpr))
 				{
 					/*
 					 * We break ROW(...) IS [NOT] NULL into separate tests on
@@ -3588,8 +3670,6 @@ eval_const_expressions_mutator(Node *node,
 					RowExpr    *rarg = (RowExpr *) arg;
 					List	   *newargs = NIL;
 					ListCell   *l;
-
-					Assert(ntest->argisrow);
 
 					foreach(l, rarg->args)
 					{
@@ -3609,10 +3689,17 @@ eval_const_expressions_mutator(Node *node,
 								return makeBoolConst(false, false);
 							continue;
 						}
+
+						/*
+						 * Else, make a scalar (argisrow == false) NullTest
+						 * for this field.  Scalar semantics are required
+						 * because IS [NOT] NULL doesn't recurse; see comments
+						 * in ExecEvalNullTest().
+						 */
 						newntest = makeNode(NullTest);
 						newntest->arg = (Expr *) relem;
 						newntest->nulltesttype = ntest->nulltesttype;
-						newntest->argisrow = type_is_rowtype(exprType(relem));
+						newntest->argisrow = false;
 						newargs = lappend(newargs, newntest);
 					}
 					/* If all the inputs were constants, result is TRUE */
@@ -4541,6 +4628,8 @@ evaluate_function(Oid funcid, Oid result_type, int32 result_typmod,
  * doesn't work in the general case because it discards information such
  * as OUT-parameter declarations.
  *
+ * Also, context-dependent expression nodes in the argument list are trouble.
+ *
  * Returns a simplified expression if successful, or NULL if cannot
  * simplify the function.
  */
@@ -4732,6 +4821,13 @@ inline_function(Oid funcid, Oid result_type, Oid result_collid,
 
 	if (funcform->proisstrict &&
 		contain_nonstrict_functions(newexpr))
+		goto fail;
+
+	/*
+	 * If any parameter expression contains a context-dependent node, we can't
+	 * inline, for fear of putting such a node into the wrong context.
+	 */
+	if (contain_context_dependent_node((Node *) args))
 		goto fail;
 
 	/*

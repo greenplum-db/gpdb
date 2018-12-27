@@ -23,7 +23,9 @@
  */
 #include "postgres.h"
 
+#include "access/heapam_xlog.h"
 #include "access/htup_details.h"
+#include "access/xlog.h"
 #include "access/xlogutils.h"
 #include "miscadmin.h"
 #include "storage/freespace.h"
@@ -285,8 +287,26 @@ FreeSpaceMapTruncateRel(Relation rel, BlockNumber nblocks)
 		if (!BufferIsValid(buf))
 			return;				/* nothing to do; the FSM was already smaller */
 		LockBuffer(buf, BUFFER_LOCK_EXCLUSIVE);
+
+		/* NO EREPORT(ERROR) from here till changes are logged */
+		START_CRIT_SECTION();
+
 		fsm_truncate_avail(BufferGetPage(buf), first_removed_slot);
-		MarkBufferDirtyHint(buf, false);
+
+		/*
+		 * Truncation of a relation is WAL-logged at a higher-level, and we
+		 * will be called at WAL replay. But if checksums are enabled, we need
+		 * to still write a WAL record to protect against a torn page, if the
+		 * page is flushed to disk before the truncation WAL record. We cannot
+		 * use MarkBufferDirtyHint here, because that will not dirty the page
+		 * during recovery.
+		 */
+		MarkBufferDirty(buf);
+		if (!InRecovery && RelationNeedsWAL(rel) && XLogHintBitIsNeeded())
+			log_newpage_buffer(buf, false);
+
+		END_CRIT_SECTION();
+
 		UnlockReleaseBuffer(buf);
 
 		new_nfsmblocks = fsm_logical_to_physical(first_removed_address) + 1;
@@ -568,10 +588,9 @@ static void
 fsm_extend(Relation rel, BlockNumber fsm_nblocks)
 {
 	BlockNumber fsm_nblocks_now;
-	Page		pg;
+	PGAlignedBlock pg;
 
-	pg = (Page) palloc(BLCKSZ);
-	PageInit(pg, BLCKSZ, 0);
+	PageInit((Page) pg.data, BLCKSZ, 0);
 
 	/*
 	 * We use the relation extension lock to lock out other backends trying to
@@ -601,10 +620,10 @@ fsm_extend(Relation rel, BlockNumber fsm_nblocks)
 
 	while (fsm_nblocks_now < fsm_nblocks)
 	{
-		PageSetChecksumInplace(pg, fsm_nblocks_now);
+		PageSetChecksumInplace((Page) pg.data, fsm_nblocks_now);
 
 		smgrextend(rel->rd_smgr, FSM_FORKNUM, fsm_nblocks_now,
-				   (char *) pg, false);
+				   pg.data, false);
 		fsm_nblocks_now++;
 	}
 
@@ -612,8 +631,6 @@ fsm_extend(Relation rel, BlockNumber fsm_nblocks)
 	rel->rd_smgr->smgr_fsm_nblocks = fsm_nblocks_now;
 
 	UnlockRelationForExtension(rel, ExclusiveLock);
-
-	pfree(pg);
 }
 
 /*

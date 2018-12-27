@@ -28,6 +28,7 @@ my $libpgport;
 my $libpgcommon;
 my $postgres;
 my $libpq;
+my @unlink_on_exit;
 
 my $contrib_defines = { 'refint' => 'REFINT_VERBOSE' };
 my @contrib_uselibpq =
@@ -69,14 +70,14 @@ sub mkvcbuild
 	  srandom.c getaddrinfo.c gettimeofday.c inet_net_ntop.c kill.c open.c
 	  erand48.c snprintf.c strlcat.c strlcpy.c dirmod.c noblock.c path.c
 	  pgcheckdir.c pg_crc.c pgmkdirp.c pgsleep.c pgstrcasecmp.c pqsignal.c
-	  qsort.c qsort_arg.c quotes.c system.c
+	  mkdtemp.c qsort.c qsort_arg.c quotes.c system.c
 	  sprompt.c tar.c thread.c getopt.c getopt_long.c dirent.c
 	  win32env.c win32error.c win32setlocale.c);
 
 	push(@pgportfiles, 'rint.c') if ($vsVersion < '12.00');
 
 	our @pgcommonallfiles = qw(
-	  exec.c pgfnames.c psprintf.c relpath.c rmtree.c username.c wait_error.c);
+	  exec.c pgfnames.c psprintf.c relpath.c rmtree.c string.c username.c wait_error.c);
 
 	our @pgcommonfrontendfiles = (@pgcommonallfiles, qw(fe_memutils.c));
 
@@ -140,7 +141,159 @@ sub mkvcbuild
 		my $plperl =
 		  $solution->AddProject('plperl', 'dll', 'PLs', 'src\pl\plperl');
 		$plperl->AddIncludeDir($solution->{options}->{perl} . '/lib/CORE');
-		$plperl->AddDefine('PLPERL_HAVE_UID_GID');
+		$plperl->AddReference($postgres);
+
+		my $perl_path = $solution->{options}->{perl} . '\lib\CORE\*perl*';
+
+		# ActivePerl 5.16 provided perl516.lib; 5.18 provided libperl518.a
+		my @perl_libs =
+		  grep { /perl\d+\.lib$|libperl\d+\.a$/ } glob($perl_path);
+		if (@perl_libs == 1)
+		{
+			$plperl->AddLibrary($perl_libs[0]);
+		}
+		else
+		{
+			die
+"could not identify perl library version matching pattern $perl_path\n";
+		}
+
+		# Add defines from Perl's ccflags; see PGAC_CHECK_PERL_EMBED_CCFLAGS
+		my @perl_embed_ccflags;
+		foreach my $f (split(" ",$Config{ccflags}))
+		{
+			if ($f =~ /^-D[^_]/)
+			{
+				$f =~ s/\-D//;
+				push(@perl_embed_ccflags, $f);
+			}
+		}
+
+		# hack to prevent duplicate definitions of uid_t/gid_t
+		push(@perl_embed_ccflags, 'PLPERL_HAVE_UID_GID');
+
+		# Windows offers several 32-bit ABIs.  Perl is sensitive to
+		# sizeof(time_t), one of the ABI dimensions.  To get 32-bit time_t,
+		# use "cl -D_USE_32BIT_TIME_T" or plain "gcc".  For 64-bit time_t, use
+		# "gcc -D__MINGW_USE_VC2005_COMPAT" or plain "cl".  Before MSVC 2005,
+		# plain "cl" chose 32-bit time_t.  PostgreSQL doesn't support building
+		# with pre-MSVC-2005 compilers, but it does support linking to Perl
+		# built with such a compiler.  MSVC-built Perl 5.13.4 and later report
+		# -D_USE_32BIT_TIME_T in $Config{ccflags} if applicable, but
+		# MinGW-built Perl never reports -D_USE_32BIT_TIME_T despite typically
+		# needing it.  Ignore the $Config{ccflags} opinion about
+		# -D_USE_32BIT_TIME_T, and use a runtime test to deduce the ABI Perl
+		# expects.  Specifically, test use of PL_modglobal, which maps to a
+		# PerlInterpreter field whose position depends on sizeof(time_t).
+		if ($solution->{platform} eq 'Win32')
+		{
+			my $source_file = 'conftest.c';
+			my $obj         = 'conftest.obj';
+			my $exe         = 'conftest.exe';
+			my @conftest    = ($source_file, $obj, $exe);
+			push @unlink_on_exit, @conftest;
+			unlink $source_file;
+			open my $o, '>', $source_file
+			  || croak "Could not write to $source_file";
+			print $o '
+	/* compare to plperl.h */
+	#define __inline__ __inline
+	#define PERL_NO_GET_CONTEXT
+	#include <EXTERN.h>
+	#include <perl.h>
+
+	int
+	main(int argc, char **argv)
+	{
+		int			dummy_argc = 1;
+		char	   *dummy_argv[1] = {""};
+		char	   *dummy_env[1] = {NULL};
+		static PerlInterpreter *interp;
+
+		PERL_SYS_INIT3(&dummy_argc, (char ***) &dummy_argv,
+					   (char ***) &dummy_env);
+		interp = perl_alloc();
+		perl_construct(interp);
+		{
+			dTHX;
+			const char	key[] = "dummy";
+
+			PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
+			hv_store(PL_modglobal, key, sizeof(key) - 1, newSViv(1), 0);
+			return hv_fetch(PL_modglobal, key, sizeof(key) - 1, 0) == NULL;
+		}
+	}
+';
+			close $o;
+
+			# Build $source_file with a given #define, and return a true value
+			# if a run of the resulting binary exits successfully.
+			my $try_define = sub {
+				my $define = shift;
+
+				unlink $obj, $exe;
+				my @cmd = (
+					'cl',
+					'-I' . $solution->{options}->{perl} . '/lib/CORE',
+					(map { "-D$_" } @perl_embed_ccflags, $define || ()),
+					$source_file,
+					'/link',
+					$perl_libs[0]);
+				my $compile_output = `@cmd 2>&1`;
+				-f $exe || die "Failed to build Perl test:\n$compile_output";
+
+				{
+
+					# Some builds exhibit runtime failure through Perl warning
+					# 'Can't spawn "conftest.exe"'; supress that.
+					no warnings;
+
+					# Disable error dialog boxes like we do in the postmaster.
+					# Here, we run code that triggers relevant errors.
+					use Win32API::File qw(SetErrorMode :SEM_);
+					my $oldmode = SetErrorMode(
+						SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+					system(".\\$exe");
+					SetErrorMode($oldmode);
+				}
+
+				return !($? >> 8);
+			};
+
+			my $define_32bit_time = '_USE_32BIT_TIME_T';
+			my $ok_now            = $try_define->(undef);
+			my $ok_32bit          = $try_define->($define_32bit_time);
+			unlink @conftest;
+			if (!$ok_now && !$ok_32bit)
+			{
+
+				# Unsupported configuration.  Since we used %Config from the
+				# Perl running the build scripts, this is expected if
+				# attempting to link with some other Perl.
+				die "Perl test fails with or without -D$define_32bit_time";
+			}
+			elsif ($ok_now && $ok_32bit)
+			{
+
+				# Resulting build may work, but it's especially important to
+				# verify with "vcregress plcheck".  A refined test may avoid
+				# this outcome.
+				warn "Perl test passes with or without -D$define_32bit_time";
+			}
+			elsif ($ok_32bit)
+			{
+				push(@perl_embed_ccflags, $define_32bit_time);
+			}    # else $ok_now, hence no flag required
+		}
+
+		print "CFLAGS recommended by Perl: $Config{ccflags}\n";
+		print "CFLAGS to compile embedded Perl: ",
+		  (join ' ', map { "-D$_" } @perl_embed_ccflags), "\n";
+		foreach my $f (@perl_embed_ccflags)
+		{
+			$plperl->AddDefine($f);
+		}
+
 		foreach my $xs ('SPI.xs', 'Util.xs')
 		{
 			(my $xsc = $xs) =~ s/\.xs/.c/;
@@ -205,18 +358,6 @@ sub mkvcbuild
 				die 'Failed to create plperl_opmask.h' . "\n";
 			}
 		}
-		$plperl->AddReference($postgres);
-		my @perl_libs =
-		  grep { /perl\d+.lib$/ }
-		  glob($solution->{options}->{perl} . '\lib\CORE\perl*.lib');
-		if (@perl_libs == 1)
-		{
-			$plperl->AddLibrary($perl_libs[0]);
-		}
-		else
-		{
-			die "could not identify perl library version";
-		}
 	}
 
 	if ($solution->{options}->{python})
@@ -249,20 +390,24 @@ sub mkvcbuild
 
 	if ($solution->{options}->{tcl})
 	{
+		my $found = 0;
 		my $pltcl =
 		  $solution->AddProject('pltcl', 'dll', 'PLs', 'src\pl\tcl');
 		$pltcl->AddIncludeDir($solution->{options}->{tcl} . '\include');
 		$pltcl->AddReference($postgres);
-		if (-e $solution->{options}->{tcl} . '\lib\tcl85.lib')
+
+		for my $tclver (qw(86t 86 85 84))
 		{
-			$pltcl->AddLibrary(
-				$solution->{options}->{tcl} . '\lib\tcl85.lib');
+			my $tcllib = $solution->{options}->{tcl} . "\\lib\\tcl$tclver.lib";
+			if (-e $tcllib)
+			{
+				$pltcl->AddLibrary($tcllib);
+				$found = 1;
+				last;
+			}
 		}
-		else
-		{
-			$pltcl->AddLibrary(
-				$solution->{options}->{tcl} . '\lib\tcl84.lib');
-		}
+		die "Unable to find $solution->{options}->{tcl}\\lib\\tcl<version>.lib"
+			unless $found;
 	}
 
 	$libpq = $solution->AddProject('libpq', 'dll', 'interfaces',
@@ -306,6 +451,7 @@ sub mkvcbuild
 	my $libecpgcompat = $solution->AddProject(
 		'libecpg_compat', 'dll',
 		'interfaces',     'src\interfaces\ecpg\compatlib');
+	$libecpgcompat->AddDefine('FRONTEND');
 	$libecpgcompat->AddIncludeDir('src\interfaces\ecpg\include');
 	$libecpgcompat->AddIncludeDir('src\interfaces\libpq');
 	$libecpgcompat->UseDef('src\interfaces\ecpg\compatlib\compatlib.def');
@@ -331,6 +477,7 @@ sub mkvcbuild
 	$pgregress_ecpg->AddIncludeDir('src\test\regress');
 	$pgregress_ecpg->AddDefine('HOST_TUPLE="i686-pc-win32vc"');
 	$pgregress_ecpg->AddDefine('FRONTEND');
+	$pgregress_ecpg->AddLibrary('ws2_32.lib');
 	$pgregress_ecpg->AddReference($libpgcommon, $libpgport);
 
 	my $isolation_tester =
@@ -356,6 +503,7 @@ sub mkvcbuild
 	$pgregress_isolation->AddIncludeDir('src\test\regress');
 	$pgregress_isolation->AddDefine('HOST_TUPLE="i686-pc-win32vc"');
 	$pgregress_isolation->AddDefine('FRONTEND');
+	$pgregress_isolation->AddLibrary('ws2_32.lib');
 	$pgregress_isolation->AddReference($libpgcommon, $libpgport);
 
 	# src/bin
@@ -437,8 +585,7 @@ sub mkvcbuild
 	$pgrestore->AddLibrary('ws2_32.lib');
 
 	my $zic = $solution->AddProject('zic', 'exe', 'utils');
-	$zic->AddFiles('src\timezone', 'zic.c', 'ialloc.c', 'scheck.c',
-		'localtime.c');
+	$zic->AddFiles('src\timezone', 'zic.c');
 	$zic->AddReference($libpgcommon, $libpgport);
 
 	if ($solution->{options}->{xml})
@@ -594,6 +741,8 @@ sub mkvcbuild
 	$pgregress->AddFile('src\test\regress\pg_regress_main.c');
 	$pgregress->AddIncludeDir('src\port');
 	$pgregress->AddDefine('HOST_TUPLE="i686-pc-win32vc"');
+	$pgregress->AddDefine('FRONTEND');
+	$pgregress->AddLibrary('ws2_32.lib');
 	$pgregress->AddReference($libpgcommon, $libpgport);
 
 	# fix up pg_xlogdump once it's been set up
@@ -801,6 +950,11 @@ sub AdjustContribProj
 	{
 		$proj->AddFiles('contrib\\' . $n, @{ $contrib_extrasource->{$n} });
 	}
+}
+
+END
+{
+	unlink @unlink_on_exit;
 }
 
 1;

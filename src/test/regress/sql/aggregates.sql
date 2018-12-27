@@ -102,6 +102,28 @@ select
   (select max((select i.unique2 from tenk1 i where i.unique1 = o.unique1)))
 from tenk1 o;
 
+-- Test handling of Params within aggregate arguments in hashed aggregation.
+-- Per bug report from Jeevan Chalke.
+explain (verbose, costs off)
+select s1, s2, sm
+from generate_series(1, 3) s1,
+     lateral (select s2, sum(s1 + s2) sm
+              from generate_series(1, 3) s2 group by s2) ss
+order by 1, 2;
+select s1, s2, sm
+from generate_series(1, 3) s1,
+     lateral (select s2, sum(s1 + s2) sm
+              from generate_series(1, 3) s2 group by s2) ss
+order by 1, 2;
+
+explain (verbose, costs off)
+select array(select sum(x+y) s
+            from generate_series(1,3) y group by y order by s)
+  from generate_series(1,3) x;
+select array(select sum(x+y) s
+            from generate_series(1,3) y group by y order by s)
+  from generate_series(1,3) x;
+
 --
 -- test for bitwise integer aggregates
 --
@@ -701,7 +723,7 @@ select percentile_cont(array[0,0.25,0.5,0.75,1]) within group (order by thousand
 from tenk1;
 select percentile_disc(array[[null,1,0.5],[0.75,0.25,null]]) within group (order by thousand)
 from tenk1;
-select percentile_cont(array[0,1,0.25,0.75,0.5,1]) within group (order by x)
+select percentile_cont(array[0,1,0.25,0.75,0.5,1,0.3,0.32,0.35,0.38,0.4]) within group (order by x)
 from generate_series(1,6) x;
 
 select ten, mode() within group (order by string4) from tenk1 group by ten;

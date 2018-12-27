@@ -19,7 +19,7 @@ try:
         if what_error == "SPI":
             plpy.execute("INSERT INTO subtransaction_tbl VALUES ('oops')")
         elif what_error == "Python":
-            plpy.attribute_error
+            raise Exception("Python exception")
     except:
         exc = False
         subxact.__exit__(*sys.exc_info())
@@ -58,10 +58,10 @@ SELECT * FROM subtransaction_tbl;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_test('Python');
-ERROR:  AttributeError: 'module' object has no attribute 'attribute_error'
+ERROR:  Exception: Python exception
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_test", line 13, in <module>
-    plpy.attribute_error
+    raise Exception("Python exception")
 PL/Python function "subtransaction_test"
 SELECT * FROM subtransaction_tbl;
  i 
@@ -78,7 +78,7 @@ with plpy.subtransaction():
     if what_error == "SPI":
         plpy.execute("INSERT INTO subtransaction_tbl VALUES ('oops')")
     elif what_error == "Python":
-        plpy.attribute_error
+        raise Exception("Python exception")
 $$ LANGUAGE plpythonu;
 SELECT subtransaction_ctx_test();
  subtransaction_ctx_test 
@@ -110,10 +110,10 @@ SELECT * FROM subtransaction_tbl;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_ctx_test('Python');
-ERROR:  AttributeError: 'module' object has no attribute 'attribute_error'
+ERROR:  Exception: Python exception
 CONTEXT:  Traceback (most recent call last):
   PL/Python function "subtransaction_ctx_test", line 8, in <module>
-    plpy.attribute_error
+    raise Exception("Python exception")
 PL/Python function "subtransaction_ctx_test"
 SELECT * FROM subtransaction_tbl;
  i 
@@ -134,7 +134,7 @@ with plpy.subtransaction():
     except plpy.SPIError, e:
         if not swallow:
             raise
-        plpy.notice("Swallowed %r" % e)
+        plpy.notice("Swallowed %s(%r)" % (e.__class__.__name__, e.args[0]))
 return "ok"
 $$ LANGUAGE plpythonu;
 SELECT subtransaction_nested_test();
@@ -153,7 +153,7 @@ SELECT * FROM subtransaction_tbl;
 
 TRUNCATE subtransaction_tbl;
 SELECT subtransaction_nested_test('t');
-NOTICE:  Swallowed SyntaxError('syntax error at or near "error"',)
+NOTICE:  Swallowed SyntaxError('syntax error at or near "error"')
 CONTEXT:  PL/Python function "subtransaction_nested_test"
  subtransaction_nested_test 
 ----------------------------
@@ -179,10 +179,10 @@ with plpy.subtransaction():
 return "ok"
 $$ LANGUAGE plpythonu;
 SELECT subtransaction_deeply_nested_test();
-NOTICE:  Swallowed SyntaxError('syntax error at or near "error"',)
+NOTICE:  Swallowed SyntaxError('syntax error at or near "error"')
 CONTEXT:  PL/Python function "subtransaction_nested_test"
 SQL statement "SELECT subtransaction_nested_test('t')"
-PL/Python function "subtransaction_nested_test"
+PL/Python function "subtransaction_deeply_nested_test"
  subtransaction_deeply_nested_test 
 -----------------------------------
  ok

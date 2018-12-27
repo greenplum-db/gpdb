@@ -160,7 +160,7 @@ dehyphenate(char *bufO, char *bufI)
  *				  into bufO using the given hyphenation range TABLE.
  *				  Assumes the input string to be used is of only digits.
  *
- * Returns the number of characters acctually hyphenated.
+ * Returns the number of characters actually hyphenated.
  */
 static unsigned
 hyphenate(char *bufO, char *bufI, const char *(*TABLE)[2], const unsigned TABLE_index[10][2])
@@ -443,16 +443,23 @@ ean2ISBN(char *isn)
 	char	   *aux;
 	unsigned	check;
 
-	/* the number should come in this format: 978-0-000-00000-0 */
-	/* Strip the first part and calculate the new check digit */
-	hyphenate(isn, isn + 4, NULL, NULL);
-	check = weight_checkdig(isn, 10);
-	aux = strchr(isn, '\0');
-	while (!isdigit((unsigned char) *--aux));
-	if (check == 10)
-		*aux = 'X';
-	else
-		*aux = check + '0';
+	/*
+	 * The number should come in this format: 978-0-000-00000-0
+	 * or may be an ISBN-13 number, 979-..., which does not have a short
+	 * representation. Do the short output version if possible.
+	 */
+	if (strncmp("978-", isn, 4) == 0)
+	{
+		/* Strip the first part and calculate the new check digit */
+		hyphenate(isn, isn + 4, NULL, NULL);
+		check = weight_checkdig(isn, 10);
+		aux = strchr(isn, '\0');
+		while (!isdigit((unsigned char) *--aux));
+		if (check == 10)
+			*aux = 'X';
+		else
+			*aux = check + '0';
+	}
 }
 
 static inline void
@@ -741,7 +748,7 @@ string2ean(const char *str, bool errorOK, ean13 *result,
 		}
 		else if (*aux2 == '!' && *(aux2 + 1) == '\0')
 		{
-			/* the invalid check digit sufix was found, set it */
+			/* the invalid check digit suffix was found, set it */
 			if (!magic)
 				valid = false;
 			magic = true;

@@ -6,14 +6,28 @@
 
 /*
  * Make sure _WIN32_WINNT has the minimum required value.
- * Leave a higher value in place.
-*/
-#if defined(_WIN32_WINNT) && _WIN32_WINNT < 0x0501
+ * Leave a higher value in place. When building with at least Visual
+ * Studio 2015 the minimum requirement is Windows Vista (0x0600) to
+ * get support for GetLocaleInfoEx() with locales. For everything else
+ * the minumum version is Windows XP (0x0501).
+ * Also  for VS2015, add a define that stops compiler complaints about
+ * using the old Winsock API.
+ */
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#define  _WINSOCK_DEPRECATED_NO_WARNINGS
+#define MIN_WINNT 0x0600
+#else
+#define MIN_WINNT 0x0501
+#endif
+
+#if defined(_WIN32_WINNT) && _WIN32_WINNT < MIN_WINNT
 #undef _WIN32_WINNT
 #endif
+
 #ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
+#define _WIN32_WINNT MIN_WINNT
 #endif
+
 /*
  * Always build with SSPI support. Keep it as a #define in case
  * we want a switch to disable it sometime in the future.
@@ -270,8 +284,16 @@ typedef int pid_t;
 
 /*
  * Supplement to <errno.h>.
+ *
+ * We redefine network-related Berkeley error symbols as the corresponding WSA
+ * constants.  This allows elog.c to recognize them as being in the Winsock
+ * error code range and pass them off to pgwin32_socket_strerror(), since
+ * Windows' version of plain strerror() won't cope.  Note that this will break
+ * if these names are used for anything else besides Windows Sockets errors.
+ * See TranslateSocketError() when changing this list.
  */
 #undef EAGAIN
+#define EAGAIN WSAEWOULDBLOCK
 #undef EINTR
 #define EINTR WSAEINTR
 #undef EAGAIN
@@ -282,40 +304,32 @@ typedef int pid_t;
 #define EAFNOSUPPORT WSAEAFNOSUPPORT
 #undef EWOULDBLOCK
 #define EWOULDBLOCK WSAEWOULDBLOCK
+#undef ECONNABORTED
+#define ECONNABORTED WSAECONNABORTED
 #undef ECONNRESET
 #define ECONNRESET WSAECONNRESET
 #undef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
+#undef EISCONN
+#define EISCONN WSAEISCONN
 #undef ENOBUFS
 #define ENOBUFS WSAENOBUFS
 #undef EPROTONOSUPPORT
 #define EPROTONOSUPPORT WSAEPROTONOSUPPORT
 #undef ECONNREFUSED
 #define ECONNREFUSED WSAECONNREFUSED
-#undef EBADFD
-#define EBADFD WSAENOTSOCK
+#undef ENOTSOCK
+#define ENOTSOCK WSAENOTSOCK
 #undef EOPNOTSUPP
 #define EOPNOTSUPP WSAEOPNOTSUPP
-
-/*
- * For Microsoft Visual Studio 2010 and above we intentionally redefine
- * the regular Berkeley error constants and set them to the WSA constants.
- * Note that this will break if those constants are used for anything else
- * than Windows Sockets errors.
- */
-#if _MSC_VER >= 1600
-#pragma warning(disable:4005)
-#define EMSGSIZE WSAEMSGSIZE
-#define EAFNOSUPPORT WSAEAFNOSUPPORT
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#define EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#define ECONNRESET WSAECONNRESET
-#define EINPROGRESS WSAEINPROGRESS
-#define ENOBUFS WSAENOBUFS
-#define ECONNREFUSED WSAECONNREFUSED
-#define EOPNOTSUPP WSAEOPNOTSUPP
-#pragma warning(default:4005)
-#endif
+#undef EADDRINUSE
+#define EADDRINUSE WSAEADDRINUSE
+#undef EADDRNOTAVAIL
+#define EADDRNOTAVAIL WSAEADDRNOTAVAIL
+#undef EHOSTUNREACH
+#define EHOSTUNREACH WSAEHOSTUNREACH
+#undef ENOTCONN
+#define ENOTCONN WSAENOTCONN
 
 /*
  * Extended locale functions with gratuitous underscore prefixes.
@@ -367,6 +381,8 @@ void		pg_queue_signal(int signum);
 /* In backend/port/win32/socket.c */
 #ifndef FRONTEND
 #define socket(af, type, protocol) pgwin32_socket(af, type, protocol)
+#define bind(s, addr, addrlen) pgwin32_bind(s, addr, addrlen)
+#define listen(s, backlog) pgwin32_listen(s, backlog)
 #define accept(s, addr, addrlen) pgwin32_accept(s, addr, addrlen)
 #define connect(s, name, namelen) pgwin32_connect(s, name, namelen)
 #define select(n, r, w, e, timeout) pgwin32_select(n, r, w, e, timeout)
@@ -374,6 +390,8 @@ void		pg_queue_signal(int signum);
 #define send(s, buf, len, flags) pgwin32_send(s, buf, len, flags)
 
 SOCKET		pgwin32_socket(int af, int type, int protocol);
+int			pgwin32_bind(SOCKET s, struct sockaddr * addr, int addrlen);
+int			pgwin32_listen(SOCKET s, int backlog);
 SOCKET		pgwin32_accept(SOCKET s, struct sockaddr * addr, int *addrlen);
 int			pgwin32_connect(SOCKET s, const struct sockaddr * name, int namelen);
 int			pgwin32_select(int nfds, fd_set *readfs, fd_set *writefds, fd_set *exceptfds, const struct timeval * timeout);

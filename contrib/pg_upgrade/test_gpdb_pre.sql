@@ -57,6 +57,12 @@ DROP FUNCTION drop_heaps_without_array_types();
 -- Note: Table newpart is 'not' a partition table, and the index's referenced above are created by a check constraint.
 DROP TABLE IF EXISTS public.newpart CASCADE;
 
+-- GPDB_94_STABLE_MERGE_FIXME: The patent table has NO INHERIT
+-- constraint for this table. This is not handled for pg_upgrade and
+-- check if needs to be fixed or not. This table was newly added to
+-- alter_table.sql as part of 9.4 STABLE merge.
+DROP TABLE IF EXISTS public.test_inh_check_child CASCADE;
+
 -- This view definition changes after upgrade.
 DROP VIEW IF EXISTS v_xpect_triangle_de CASCADE;
 

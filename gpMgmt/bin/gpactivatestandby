@@ -19,6 +19,7 @@ import signal
 import glob
 import time
 import shutil
+import tempfile
 from datetime import datetime, timedelta
 
 # import GPDB modules
@@ -209,12 +210,12 @@ def check_original_master_status(options):
     original_master_hostname = ""
     original_master_port = 0
 
-    recocver_conf_file_location = os.path.join(options.master_data_dir, GP_RECOVERY_CONF_FILE) 
-    if not os.path.exists(recocver_conf_file_location):
+    recovery_conf_file_location = os.path.join(options.master_data_dir, GP_RECOVERY_CONF_FILE) 
+    if not os.path.exists(recovery_conf_file_location):
         logger.warn('Please make sure the command gpactivatestandby is executed on current Standby host')
-        raise GpActivateStandbyException('Critical required file on standby \"%s\" is not present.' % recocver_conf_file_location)
+        raise GpActivateStandbyException('Critical required file on standby \"%s\" is not present.' % recovery_conf_file_location)
 
-    with open(recocver_conf_file_location) as read_file:
+    with open(recovery_conf_file_location) as read_file:
         for line in read_file:
             tokens = line.split()
             if tokens[0] == "primary_conninfo":
@@ -288,9 +289,19 @@ def check_or_start_standby(options):
         # it anyway.  We'll restart with the full options after
         # promoting the standby.  This is nothing but a bailout and
         # this could lose some of the latest changes from the primary.
-        promote_file = os.path.join(options.master_data_dir, "promote")
-        with open(promote_file, 'w') as f:
-            f.write('')
+        recovery_conf_file_location = os.path.join(options.master_data_dir, GP_RECOVERY_CONF_FILE)
+        fd, trigger_file = tempfile.mkstemp(dir=options.master_data_dir)
+        trigger_entry = "trigger_file = '" + trigger_file + "'"
+
+        with open(recovery_conf_file_location, 'w') as f:
+            f.write("standby_mode = 'on'\n")
+            f.write("primary_conninfo = 'dummy'\n")
+            f.write(trigger_entry)
+        f.close()
+
+        with open(trigger_file, 'w') as f:
+            f.write('');
+        f.close();
 
         start_master(options)
 

@@ -241,12 +241,23 @@ non-FULL joins can be freely associated into the lefthand side of an
 OJ, but in some cases they can't be associated into the righthand side.
 So the restriction enforced by join_is_legal is that a proposed join
 can't join a rel within or partly within an RHS boundary to one outside
-the boundary, unless the join validly implements some outer join.
-(To support use of identity 3, we have to allow cases where an apparent
-violation of a lower OJ's RHS is committed while forming an upper OJ.
-If this wouldn't in fact be legal, the upper OJ's minimum LHS or RHS
-set must be expanded to include the whole of the lower OJ, thereby
-preventing it from being formed before the lower OJ is.)
+the boundary, unless the proposed join is a LEFT join that can associate
+into the SpecialJoinInfo's RHS using identity 3.
+
+The use of minimum Relid sets has some pitfalls; consider a query like
+	A leftjoin (B leftjoin (C innerjoin D) on (Pbcd)) on Pa
+where Pa doesn't mention B/C/D at all.  In this case a naive computation
+would give the upper leftjoin's min LHS as {A} and min RHS as {C,D} (since
+we know that the innerjoin can't associate out of the leftjoin's RHS, and
+enforce that by including its relids in the leftjoin's min RHS).  And the
+lower leftjoin has min LHS of {B} and min RHS of {C,D}.  Given such
+information, join_is_legal would think it's okay to associate the upper
+join into the lower join's RHS, transforming the query to
+	B leftjoin (A leftjoin (C innerjoin D) on Pa) on (Pbcd)
+which yields totally wrong answers.  We prevent that by forcing the min RHS
+for the upper join to include B.  This is perhaps overly restrictive, but
+such cases don't arise often so it's not clear that it's worth developing a
+more complicated system.
 
 
 Pulling Up Subqueries
@@ -702,17 +713,37 @@ intermediate layers of joins, for example:
 			-> Index Scan using C_Z_IDX on C
 				Index Condition: C.Z = A.X
 
-If all joins are plain inner joins then this is unnecessary, because
-it's always possible to reorder the joins so that a parameter is used
+If all joins are plain inner joins then this is usually unnecessary,
+because it's possible to reorder the joins so that a parameter is used
 immediately below the nestloop node that provides it.  But in the
-presence of outer joins, join reordering may not be possible, and then
-this option can be critical.  Before version 9.2, Postgres used ad-hoc
-methods for planning and executing such queries, and those methods could
-not handle passing parameters down through multiple join levels.
+presence of outer joins, such join reordering may not be possible.
+
+Also, the bottom-level scan might require parameters from more than one
+other relation.  In principle we could join the other relations first
+so that all the parameters are supplied from a single nestloop level.
+But if those other relations have no join clause in common (which is
+common in star-schema queries for instance), the planner won't consider
+joining them directly to each other.  In such a case we need to be able
+to create a plan like
+
+    NestLoop
+        -> Seq Scan on SmallTable1 A
+        NestLoop
+            -> Seq Scan on SmallTable2 B
+            NestLoop
+                -> Index Scan using XYIndex on LargeTable C
+                      Index Condition: C.X = A.AID and C.Y = B.BID
+
+so we should be willing to pass down A.AID through a join even though
+there is no join order constraint forcing the plan to look like this.
+
+Before version 9.2, Postgres used ad-hoc methods for planning and
+executing nestloop queries of this kind, and those methods could not
+handle passing parameters down through multiple join levels.
 
 To plan such queries, we now use a notion of a "parameterized path",
 which is a path that makes use of a join clause to a relation that's not
-scanned by the path.  In the example just above, we would construct a
+scanned by the path.  In the example two above, we would construct a
 path representing the possibility of doing this:
 
 	-> Index Scan using C_Z_IDX on C
@@ -775,7 +806,7 @@ a nestloop that provides parameters to the lower join's inputs).  While we
 do not ignore merge joins entirely, joinpath.c does not fully explore the
 space of potential merge joins with parameterized inputs.  Also, add_path
 treats parameterized paths as having no pathkeys, so that they compete
-only on total cost and rowcount; they don't get preference for producing a
+only on cost and rowcount; they don't get preference for producing a
 special sort order.  This creates additional bias against merge joins,
 since we might discard a path that could have been useful for performing
 a merge without an explicit sort step.  Since a parameterized path must
@@ -783,6 +814,13 @@ ultimately be used on the inside of a nestloop, where its sort order is
 uninteresting, these choices do not affect any requirement for the final
 output order of a query --- they only make it harder to use a merge join
 at a lower level.  The savings in planning work justifies that.
+
+Similarly, parameterized paths do not normally get preference in add_path
+for having cheap startup cost; that's seldom of much value when on the
+inside of a nestloop, so it seems not worth keeping extra paths solely for
+that.  An exception occurs for parameterized paths for the RHS relation of
+a SEMI or ANTI join: in those cases, we can stop the inner scan after the
+first match, so it's primarily startup not total cost that we care about.
 
 
 LATERAL subqueries

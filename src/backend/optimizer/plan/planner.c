@@ -998,7 +998,7 @@ preprocess_expression(PlannerInfo *root, Node *expr, int kind)
 	 */
 	if (kind == EXPRKIND_QUAL)
 	{
-		expr = (Node *) canonicalize_qual((Expr *) expr);
+		expr = (Node *) canonicalize_qual_ext((Expr *) expr, false);
 
 #ifdef OPTIMIZER_DEBUG
 		printf("After canonicalize_qual()\n");
@@ -1106,6 +1106,8 @@ inheritance_planner(PlannerInfo *root)
 {
 	Query	   *parse = root->parse;
 	int			parentRTindex = parse->resultRelation;
+	Bitmapset  *subqueryRTindexes;
+	Bitmapset  *modifiableARIindexes;
 	List	   *final_rtable = NIL;
 	int			save_rel_array_size = 0;
 	RelOptInfo **save_rel_array = NULL;
@@ -1116,6 +1118,8 @@ inheritance_planner(PlannerInfo *root)
 	List	   *returningLists = NIL;
 	List	   *rowMarks;
 	ListCell   *lc;
+	Index		rti;
+
 	GpPolicy   *parentPolicy = NULL;
 	Oid			parentOid = InvalidOid;
 
@@ -1138,13 +1142,57 @@ inheritance_planner(PlannerInfo *root)
 	 * (1) would result in a rangetable of length O(N^2) for N targets, with
 	 * at least O(N^3) work expended here; and (2) would greatly complicate
 	 * management of the rowMarks list.
+	 *
+	 * To begin with, generate a bitmapset of the relids of the subquery RTEs.
+	 */
+	subqueryRTindexes = NULL;
+	rti = 1;
+	foreach(lc, parse->rtable)
+	{
+		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
+
+		/*
+		 * GPDB_94_STABLE_MERGE_FIXME: Is CTE handled right here?
+		 */
+		if (rte->rtekind == RTE_SUBQUERY || rte->rtekind == RTE_CTE)
+			subqueryRTindexes = bms_add_member(subqueryRTindexes, rti);
+		rti++;
+	}
+
+	/*
+	 * Next, we want to identify which AppendRelInfo items contain references
+	 * to any of the aforesaid subquery RTEs.  These items will need to be
+	 * copied and modified to adjust their subquery references; whereas the
+	 * other ones need not be touched.  It's worth being tense over this
+	 * because we can usually avoid processing most of the AppendRelInfo
+	 * items, thereby saving O(N^2) space and time when the target is a large
+	 * inheritance tree.  We can identify AppendRelInfo items by their
+	 * child_relid, since that should be unique within the list.
+	 */
+	modifiableARIindexes = NULL;
+	if (subqueryRTindexes != NULL)
+	{
+		foreach(lc, root->append_rel_list)
+		{
+			AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(lc);
+
+			if (bms_is_member(appinfo->parent_relid, subqueryRTindexes) ||
+				bms_is_member(appinfo->child_relid, subqueryRTindexes) ||
+				bms_overlap(pull_varnos((Node *) appinfo->translated_vars),
+							subqueryRTindexes))
+				modifiableARIindexes = bms_add_member(modifiableARIindexes,
+													  appinfo->child_relid);
+		}
+	}
+
+	/*
+	 * And now we can get on with generating a plan for each child table.
 	 */
 	foreach(lc, root->append_rel_list)
 	{
 		AppendRelInfo *appinfo = (AppendRelInfo *) lfirst(lc);
 		PlannerInfo subroot;
 		Plan	   *subplan;
-		Index		rti;
 
 		/* append_rel_list contains all append rels; ignore others */
 		if (appinfo->parent_relid != parentRTindex)
@@ -1188,9 +1236,29 @@ inheritance_planner(PlannerInfo *root)
 		/*
 		 * The append_rel_list likewise might contain references to subquery
 		 * RTEs (if any subqueries were flattenable UNION ALLs).  So prepare
-		 * to apply ChangeVarNodes to that, too.
+		 * to apply ChangeVarNodes to that, too.  As explained above, we only
+		 * want to copy items that actually contain such references; the rest
+		 * can just get linked into the subroot's append_rel_list.
+		 *
+		 * If we know there are no such references, we can just use the outer
+		 * append_rel_list unmodified.
 		 */
-		subroot.append_rel_list = (List *) copyObject(root->append_rel_list);
+		if (modifiableARIindexes != NULL)
+		{
+			ListCell   *lc2;
+
+			subroot.append_rel_list = NIL;
+			foreach(lc2, root->append_rel_list)
+			{
+				AppendRelInfo *appinfo2 = (AppendRelInfo *) lfirst(lc2);
+
+				if (bms_is_member(appinfo2->child_relid, modifiableARIindexes))
+					appinfo2 = (AppendRelInfo *) copyObject(appinfo2);
+
+				subroot.append_rel_list = lappend(subroot.append_rel_list,
+												  appinfo2);
+			}
+		}
 
 		/*
 		 * Add placeholders to the child Query's rangetable list to fill the
@@ -1210,7 +1278,7 @@ inheritance_planner(PlannerInfo *root)
 		 * since subquery RTEs couldn't contain any references to the target
 		 * rel.
 		 */
-		if (final_rtable != NIL)
+		if (final_rtable != NIL && subqueryRTindexes != NULL)
 		{
 			ListCell   *lr;
 
@@ -1233,7 +1301,7 @@ inheritance_planner(PlannerInfo *root)
 				 * shared scan here? Is there a way to treat it similarly with
 				 * gp_cte_sharing turned on?
 				 */
-				if (rte->rtekind == RTE_SUBQUERY || rte->rtekind == RTE_CTE)
+				if (bms_is_member(rti, subqueryRTindexes))
 				{
 					Index		newrti;
 
@@ -1246,7 +1314,20 @@ inheritance_planner(PlannerInfo *root)
 					newrti = list_length(subroot.parse->rtable) + 1;
 					ChangeVarNodes((Node *) subroot.parse, rti, newrti, 0);
 					ChangeVarNodes((Node *) subroot.rowMarks, rti, newrti, 0);
-					ChangeVarNodes((Node *) subroot.append_rel_list, rti, newrti, 0);
+					/* Skip processing unchanging parts of append_rel_list */
+					if (modifiableARIindexes != NULL)
+					{
+						ListCell   *lc2;
+
+						foreach(lc2, subroot.append_rel_list)
+						{
+							AppendRelInfo *appinfo2 = (AppendRelInfo *) lfirst(lc2);
+
+							if (bms_is_member(appinfo2->child_relid,
+											  modifiableARIindexes))
+								ChangeVarNodes((Node *) appinfo2, rti, newrti, 0);
+						}
+					}
 					rte = copyObject(rte);
 					subroot.parse->rtable = lappend(subroot.parse->rtable,
 													rte);
@@ -1822,9 +1903,11 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 								  standard_qp_callback, &qp_extra);
 
 		/*
-		 * Extract rowcount and width estimates for use below.
+		 * Extract rowcount and width estimates for use below.  If final_rel
+		 * has been proven dummy, its rows estimate will be zero; clamp it to
+		 * one to avoid zero-divide in subsequent calculations.
 		 */
-		path_rows = final_rel->rows;
+		path_rows = clamp_row_est(final_rel->rows);
 		path_width = final_rel->width;
 
 		/*
@@ -3208,6 +3291,22 @@ is_dummy_plan_walker(Node *node, bool *context)
 
 	switch (nodeTag(node))
 	{
+		case T_LockRows:
+
+			/*
+			 * GPDB_94_MERGE_FIXME
+			 * If the LockRow node is a dummy plan, then we should think of it
+			 * as a dummy plan. Is this assumption correct?
+			 */
+			{
+				if (is_dummy_plan(outerPlan(node)))
+				{
+					*context = true;
+					return true;
+				}
+			}
+			return false;
+
 		case T_Result:
 
 			/*
@@ -3588,7 +3687,7 @@ preprocess_limit(PlannerInfo *root, double tuple_fraction,
 					*offset_est = DatumGetInt64(((Const *) est)->constvalue);
 
 				if (*offset_est < 0)
-					*offset_est = 0;	/* less than 0 is same as 0 */
+					*offset_est = 0;	/* treat as not present */
 			}
 		}
 		else
@@ -3749,9 +3848,8 @@ limit_needed(Query *parse)
 			{
 				int64		offset = DatumGetInt64(((Const *) node)->constvalue);
 
-				/* Executor would treat less-than-zero same as zero */
-				if (offset > 0)
-					return true;	/* OFFSET with a positive value */
+				if (offset != 0)
+					return true;	/* OFFSET with a nonzero value */
 			}
 		}
 		else

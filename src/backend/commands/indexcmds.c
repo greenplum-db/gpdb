@@ -197,7 +197,7 @@ cdb_sync_indcheckxmin_with_segments(Oid indexRelationId)
  * Errors arising from the attribute list still apply.
  *
  * Most column type changes that can skip a table rewrite do not invalidate
- * indexes.  We ackowledge this when all operator classes, collations and
+ * indexes.  We acknowledge this when all operator classes, collations and
  * exclusion operators match.  Though we could further permit intra-opfamily
  * changes for btree and hash indexes, that adds subtle complexity with no
  * concrete benefit for core types.
@@ -387,8 +387,8 @@ CheckIndexCompatible(Oid oldId,
  * 'indexRelationId': normally InvalidOid, but during bootstrap can be
  *		nonzero to specify a preselected OID for the index.
  * 'is_alter_table': this is due to an ALTER rather than a CREATE operation.
- * 'check_rights': check for CREATE rights in the namespace.  (This should
- *		be true except when ALTER is deleting/recreating an index.)
+ * 'check_rights': check for CREATE rights in namespace and tablespace.  (This
+ *		should be true except when ALTER is deleting/recreating an index.)
  * 'skip_build': make the catalog entries but leave the index file empty;
  *		it will be filled later.
  * 'quiet': suppress the NOTICE chatter ordinarily provided for constraints.
@@ -552,8 +552,9 @@ DefineIndex(Oid relationId,
 			stmt->tableSpace = get_tablespace_name(tablespaceId);
 	}
 
-	/* Check permissions except when using database's default */
-	if (OidIsValid(tablespaceId) && tablespaceId != MyDatabaseTableSpace)
+	/* Check tablespace permissions */
+	if (check_rights &&
+		OidIsValid(tablespaceId) && tablespaceId != MyDatabaseTableSpace)
 	{
 		AclResult	aclresult;
 
@@ -987,6 +988,20 @@ DefineIndex(Oid relationId,
 	UnregisterSnapshot(snapshot);
 
 	/*
+	 * The snapshot subsystem could still contain registered snapshots that
+	 * are holding back our process's advertised xmin; in particular, if
+	 * default_transaction_isolation = serializable, there is a transaction
+	 * snapshot that is still active.  The CatalogSnapshot is likewise a
+	 * hazard.  To ensure no deadlocks, we must commit and start yet another
+	 * transaction, and do our wait before any snapshot has been taken in it.
+	 */
+	CommitTransactionCommand();
+	StartTransactionCommand();
+
+	/* We should now definitely not be advertising any xmin. */
+	Assert(MyPgXact->xmin == InvalidTransactionId);
+
+	/*
 	 * The index is now valid in the sense that it contains all currently
 	 * interesting tuples.  But since it might not contain tuples deleted just
 	 * before the reference snap was taken, we have to wait out any
@@ -1118,7 +1133,7 @@ CheckMutability(Expr *expr)
  * indxpath.c could do something with.  However, that seems overly
  * restrictive.  One useful application of partial indexes is to apply
  * a UNIQUE constraint across a subset of a table, and in that scenario
- * any evaluatable predicate will work.  So accept any predicate here
+ * any evaluable predicate will work.  So accept any predicate here
  * (except ones requiring a plan), and let indxpath.c fend for itself.
  */
 static void

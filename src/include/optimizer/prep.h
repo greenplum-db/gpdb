@@ -38,6 +38,7 @@ extern List *init_list_cteplaninfo(int numCtes);
  */
 extern Node *negate_clause(Node *node);
 extern Expr *canonicalize_qual(Expr *qual);
+extern Expr *canonicalize_qual_ext(Expr *qual, bool is_check);
 
 /*
  * prototypes for prepsecurity.c
@@ -61,5 +62,8 @@ extern void expand_inherited_tables(PlannerInfo *root);
 
 extern Node *adjust_appendrel_attrs(PlannerInfo *root, Node *node,
 					   AppendRelInfo *appinfo);
+
+extern Node *adjust_appendrel_attrs_multilevel(PlannerInfo *root, Node *node,
+								  RelOptInfo *child_rel);
 
 #endif   /* PREP_H */

@@ -2779,11 +2779,11 @@ CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING BITMAP (id);
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
- schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
-------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2         | mpp7635_ix3         |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+ schemaname |         tablename          |      indexname      | tablespace |                                        indexdef                                         
+------------+----------------------------+---------------------+------------+-----------------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2         | mpp7635_ix3         |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
 (3 rows)
 
 -- Drop it. This only drops it from the root table, not the partitions.
@@ -2791,10 +2791,10 @@ DROP INDEX mpp7635_ix3;
 WARNING:  only dropped the index "mpp7635_ix3"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 select * from pg_indexes where tablename like 'mpp7635%';
- schemaname |         tablename          |      indexname      | tablespace |                                     indexdef                                     
-------------+----------------------------+---------------------+------------+----------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+ schemaname |         tablename          |      indexname      | tablespace |                                        indexdef                                         
+------------+----------------------------+---------------------+------------+-----------------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1 |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2 |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
 (2 rows)
 
 -- Create it again. This creates the index on the partitions, too, so you
@@ -2805,13 +2805,13 @@ CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 (id);
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_1"
 NOTICE:  building index for child partition "mpp7635_aoi_table2_1_prt_2"
 select * from pg_indexes where tablename like 'mpp7635%';
- schemaname |         tablename          |      indexname       | tablespace |                                     indexdef                                     
-------------+----------------------------+----------------------+------------+----------------------------------------------------------------------------------
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1  |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2  |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
- public     | mpp7635_aoi_table2         | mpp7635_ix3          |            | CREATE INDEX mpp7635_ix3 ON mpp7635_aoi_table2 USING btree (id)
- public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_11 |            | CREATE INDEX mpp7635_ix3_1_prt_11 ON mpp7635_aoi_table2_1_prt_1 USING btree (id)
- public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_21 |            | CREATE INDEX mpp7635_ix3_1_prt_21 ON mpp7635_aoi_table2_1_prt_2 USING btree (id)
+ schemaname |         tablename          |      indexname       | tablespace |                                        indexdef                                         
+------------+----------------------------+----------------------+------------+-----------------------------------------------------------------------------------------
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_1  |            | CREATE INDEX mpp7635_ix3_1_prt_1 ON public.mpp7635_aoi_table2_1_prt_1 USING bitmap (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_2  |            | CREATE INDEX mpp7635_ix3_1_prt_2 ON public.mpp7635_aoi_table2_1_prt_2 USING bitmap (id)
+ public     | mpp7635_aoi_table2         | mpp7635_ix3          |            | CREATE INDEX mpp7635_ix3 ON public.mpp7635_aoi_table2 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_1 | mpp7635_ix3_1_prt_11 |            | CREATE INDEX mpp7635_ix3_1_prt_11 ON public.mpp7635_aoi_table2_1_prt_1 USING btree (id)
+ public     | mpp7635_aoi_table2_1_prt_2 | mpp7635_ix3_1_prt_21 |            | CREATE INDEX mpp7635_ix3_1_prt_21 ON public.mpp7635_aoi_table2_1_prt_2 USING btree (id)
 (5 rows)
 
 --

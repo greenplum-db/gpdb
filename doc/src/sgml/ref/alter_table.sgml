@@ -656,6 +656,17 @@ Where column_reference_storage_directive is:
       moves the data file(s) associated with the table to the new tablespace.
       Indexes on the table, if any, are not moved; but they can be moved
       separately with additional <literal>SET TABLESPACE</literal> commands.
+      All tables in the current database in a tablespace can be moved by using
+      the <literal>ALL IN TABLESPACE</literal> form, which will lock all tables
+      to be moved first and then move each one.  This form also supports
+      <literal>OWNED BY</literal>, which will only move tables owned by the
+      roles specified.  If the <literal>NOWAIT</literal> option is specified
+      then the command will fail if it is unable to acquire all of the locks
+      required immediately.  Note that system catalogs are not moved by this
+      command, use <command>ALTER DATABASE</command> or explicit
+      <command>ALTER TABLE</command> invocations instead if desired.  The
+      <literal>information_schema</literal> relations are not considered part
+      of the system catalogs and will be moved.
       See also
       <xref linkend="SQL-CREATETABLESPACE">.
      </para>
@@ -669,7 +680,7 @@ Where column_reference_storage_directive is:
       This form changes the information which is written to the write-ahead log
       to identify rows which are updated or deleted.  This option has no effect
       except when logical replication is in use.  <literal>DEFAULT</>
-      (the default for non-system tables) records the 
+      (the default for non-system tables) records the
       old values of the columns of the primary key, if any.  <literal>USING INDEX</>
       records the old values of the columns covered by the named index, which
       must be unique, not partial, not deferrable, and include only columns marked
@@ -708,9 +719,10 @@ Where column_reference_storage_directive is:
   </para>
 
   <para>
-   All the actions except <literal>RENAME</literal> and <literal>SET SCHEMA</>
-   can be combined into
-   a list of multiple alterations to apply in parallel.  For example, it
+   All the forms of ALTER TABLE that act on a single table, except
+   <literal>RENAME</literal>, and <literal>SET SCHEMA</literal>
+   can be combined into a list of multiple alterations to applied together.
+   For example, it
    is possible to add several columns and/or alter the type of several
    columns in a single command.  This is particularly useful with large
    tables, since only one pass over the table need be made.
@@ -726,8 +738,8 @@ Where column_reference_storage_directive is:
 
   <para>
    You must own the table to use <command>ALTER TABLE</>.
-   To change the schema of a table, you must also have
-   <literal>CREATE</literal> privilege on the new schema.
+   To change the schema or tablespace of a table, you must also have
+   <literal>CREATE</literal> privilege on the new schema or tablespace.
    To add the table as a new child of a parent table, you must own the
    parent table as well.
    To alter the owner, you must also be a direct or indirect member of the new
@@ -968,7 +980,8 @@ Where column_reference_storage_directive is:
 
    <para>
     Adding a <literal>CHECK</> or <literal>NOT NULL</> constraint requires
-    scanning the table to verify that existing rows meet the constraint.
+    scanning the table to verify that existing rows meet the constraint,
+    but does not require a table rewrite.
    </para>
 
    <para>
@@ -990,11 +1003,17 @@ Where column_reference_storage_directive is:
    </para>
 
    <para>
-    To force an immediate rewrite of the table, you can use
-    <link linkend="SQL-VACUUM">VACUUM FULL</>, <xref linkend="SQL-CLUSTER">
-    or one of the forms of ALTER TABLE that forces a rewrite.  This results in
-    no semantically-visible change in the table, but gets rid of
-    no-longer-useful data.
+    To force immediate reclamation of space occupied by a dropped column,
+    you can execute one of the forms of <command>ALTER TABLE</> that
+    performs a rewrite of the whole table.  This results in reconstructing
+    each row with the dropped column replaced by a null value.
+   </para>
+
+   <para>
+    The rewriting forms of <command>ALTER TABLE</> are not MVCC-safe.
+    After a table rewrite, the table will appear empty to concurrent
+    transactions, if they are using a snapshot taken before the rewrite
+    occurred.  See <xref linkend="mvcc-caveats"> for more details.
    </para>
 
    <para>

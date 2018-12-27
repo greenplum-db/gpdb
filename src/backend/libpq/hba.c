@@ -87,7 +87,7 @@ static MemoryContext parsed_hba_context = NULL;
  *
  * NOTE: the IdentLine structs can contain pre-compiled regular expressions
  * that live outside the memory context. Before destroying or resetting the
- * memory context, they need to be expliticly free'd.
+ * memory context, they need to be explicitly free'd.
  */
 static List *parsed_ident_lines = NIL;
 static MemoryContext parsed_ident_context = NULL;
@@ -140,42 +140,32 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote,
 {
 	int			c;
 	char	   *start_buf = buf;
-	char	   *end_buf = buf + (bufsz - 2);
+	char	   *end_buf = buf + (bufsz - 1);
 	bool		in_quote = false;
 	bool		was_quote = false;
 	bool		saw_quote = false;
 
-	/* end_buf reserves two bytes to ensure we can append \n and \0 */
 	Assert(end_buf > start_buf);
 
 	*initial_quote = false;
 	*terminating_comma = false;
 
-	/* Move over initial whitespace and commas */
+	/* Move over any whitespace and commas preceding the next token */
 	while ((c = (*(*lineptr)++)) != '\0' && (pg_isblank(c) || c == ','))
 		;
 
-	if (c == '\0' || c == '\n')
-	{
-		*buf = '\0';
-		return false;
-	}
-
 	/*
-	 * Build a token in buf of next characters up to EOF, EOL, unquoted comma,
-	 * or unquoted whitespace.
+	 * Build a token in buf of next characters up to EOL, unquoted comma, or
+	 * unquoted whitespace.
 	 */
-	while (c != '\0' && c != '\n' &&
+	while (c != '\0' &&
 		   (!pg_isblank(c) || in_quote))
 	{
 		/* skip comments to EOL */
 		if (c == '#' && !in_quote)
 		{
-			while ((c = (*(*lineptr)++)) != '\0' && c != '\n')
+			while ((c = (*(*lineptr)++)) != '\0')
 				;
-			/* If only comment, consume EOL too; return EOL */
-			if (c != '\0' && buf == start_buf)
-				(*lineptr)++;
 			break;
 		}
 
@@ -187,12 +177,12 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote,
 			   errmsg("authentication file token too long, skipping: \"%s\"",
 					  start_buf)));
 			/* Discard remainder of line */
-			while ((c = (*(*lineptr)++)) != '\0' && c != '\n')
+			while ((c = (*(*lineptr)++)) != '\0')
 				;
 			break;
 		}
 
-		/* we do not pass back the comma in the token */
+		/* we do not pass back a terminating comma in the token */
 		if (c == ',' && !in_quote)
 		{
 			*terminating_comma = true;
@@ -220,8 +210,8 @@ next_token(char **lineptr, char *buf, int bufsz, bool *initial_quote,
 	}
 
 	/*
-	 * Put back the char right after the token (critical in case it is EOL,
-	 * since we need to detect end-of-line at next call).
+	 * Un-eat the char right after the token (critical in case it is '\0',
+	 * else next call will read past end of string).
 	 */
 	(*lineptr)--;
 
@@ -678,42 +668,12 @@ check_hostname(hbaPort *port, const char *hostname)
 static bool
 check_ip(SockAddr *raddr, struct sockaddr * addr, struct sockaddr * mask)
 {
-	if (raddr->addr.ss_family == addr->sa_family)
-	{
-		/* Same address family */
-		if (!pg_range_sockaddr(&raddr->addr,
-							   (struct sockaddr_storage *) addr,
-							   (struct sockaddr_storage *) mask))
-			return false;
-	}
-#ifdef HAVE_IPV6
-	else if (addr->sa_family == AF_INET &&
-			 raddr->addr.ss_family == AF_INET6)
-	{
-		/*
-		 * If we're connected on IPv6 but the file specifies an IPv4 address
-		 * to match against, promote the latter to an IPv6 address before
-		 * trying to match the client's address.
-		 */
-		struct sockaddr_storage addrcopy,
-					maskcopy;
-
-		memcpy(&addrcopy, &addr, sizeof(addrcopy));
-		memcpy(&maskcopy, &mask, sizeof(maskcopy));
-		pg_promote_v4_to_v6_addr(&addrcopy);
-		pg_promote_v4_to_v6_mask(&maskcopy);
-
-		if (!pg_range_sockaddr(&raddr->addr, &addrcopy, &maskcopy))
-			return false;
-	}
-#endif   /* HAVE_IPV6 */
-	else
-	{
-		/* Wrong address family, no IPV6 */
-		return false;
-	}
-
-	return true;
+	if (raddr->addr.ss_family == addr->sa_family &&
+		pg_range_sockaddr(&raddr->addr,
+						  (struct sockaddr_storage *) addr,
+						  (struct sockaddr_storage *) mask))
+		return true;
+	return false;
 }
 
 /*
@@ -1508,9 +1468,11 @@ parse_hba_auth_opt(char *name, char *val, HbaLine *hbaline, int line_num)
 			return false;
 		}
 
-		hbaline->ldapserver = pstrdup(urldata->lud_host);
+		if (urldata->lud_host)
+			hbaline->ldapserver = pstrdup(urldata->lud_host);
 		hbaline->ldapport = urldata->lud_port;
-		hbaline->ldapbasedn = pstrdup(urldata->lud_dn);
+		if (urldata->lud_dn)
+			hbaline->ldapbasedn = pstrdup(urldata->lud_dn);
 
 		if (urldata->lud_attrs)
 			hbaline->ldapsearchattribute = pstrdup(urldata->lud_attrs[0]);		/* only use first one */

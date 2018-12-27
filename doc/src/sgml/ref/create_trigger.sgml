@@ -24,7 +24,7 @@ PostgreSQL documentation
 CREATE [ CONSTRAINT ] TRIGGER <replaceable class="PARAMETER">name</replaceable> { BEFORE | AFTER | INSTEAD OF } { <replaceable class="PARAMETER">event</replaceable> [ OR ... ] }
     ON <replaceable class="PARAMETER">table_name</replaceable>
     [ FROM <replaceable class="parameter">referenced_table_name</replaceable> ]
-    { NOT DEFERRABLE | [ DEFERRABLE ] { INITIALLY IMMEDIATE | INITIALLY DEFERRED } }
+    [ NOT DEFERRABLE | [ DEFERRABLE ] { INITIALLY IMMEDIATE | INITIALLY DEFERRED } ]
     [ FOR [ EACH ] { ROW | STATEMENT } ]
     [ WHEN ( <replaceable class="parameter">condition</replaceable> ) ]
     EXECUTE PROCEDURE <replaceable class="PARAMETER">function_name</replaceable> ( <replaceable class="PARAMETER">arguments</replaceable> )
@@ -404,6 +404,19 @@ UPDATE OF <replaceable>column_name1</replaceable> [, <replaceable>column_name2</
    of statement.  This can result in significant speedups in statements that
    modify many rows, if the trigger only needs to be fired for a few of the
    rows.
+  </para>
+
+  <para>
+   Statement-level triggers on a view are fired only if the action on the
+   view is handled by a row-level <literal>INSTEAD OF</literal> trigger.
+   If the action is handled by an <literal>INSTEAD</literal> rule, then
+   whatever statements are emitted by the rule are executed in place of the
+   original statement naming the view, so that the triggers that will be
+   fired are those on tables named in the replacement statements.
+   Similarly, if the view is automatically updatable, then the action is
+   handled by automatically rewriting the statement into an action on the
+   view's base table, so that the base table's statement-level triggers are
+   the ones that are fired.
   </para>
 
   <para>

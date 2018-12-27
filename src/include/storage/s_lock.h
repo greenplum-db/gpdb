@@ -393,6 +393,12 @@ tas(volatile slock_t *lock)
 
 
 #if defined(__sparc__)		/* Sparc */
+/*
+ * Solaris has always run sparc processors in TSO (total store) mode, but
+ * linux didn't use to and the *BSDs still don't. So, be careful about
+ * acquire/release semantics. The CPU will treat superflous membars as NOPs,
+ * so it's just code space.
+ */
 #define HAS_TEST_AND_SET
 
 typedef unsigned char slock_t;
@@ -414,8 +420,50 @@ tas(volatile slock_t *lock)
 :		"=r"(_res), "+m"(*lock)
 :		"r"(lock)
 :		"memory");
+#if defined(__sparcv7) || defined(__sparc_v7__)
+	/*
+	 * No stbar or membar available, luckily no actually produced hardware
+	 * requires a barrier.
+	 */
+#elif defined(__sparcv8) || defined(__sparc_v8__)
+	/* stbar is available (and required for both PSO, RMO), membar isn't */
+	__asm__ __volatile__ ("stbar	 \n":::"memory");
+#else
+	/*
+	 * #LoadStore (RMO) | #LoadLoad (RMO) together are the appropriate acquire
+	 * barrier for sparcv8+ upwards.
+	 */
+	__asm__ __volatile__ ("membar #LoadStore | #LoadLoad \n":::"memory");
+#endif
 	return (int) _res;
 }
+
+#if defined(__sparcv7) || defined(__sparc_v7__)
+/*
+ * No stbar or membar available, luckily no actually produced hardware
+ * requires a barrier.
+ */
+#define S_UNLOCK(lock)		(*((volatile slock_t *) (lock)) = 0)
+#elif defined(__sparcv8) || defined(__sparc_v8__)
+/* stbar is available (and required for both PSO, RMO), membar isn't */
+#define S_UNLOCK(lock)	\
+do \
+{ \
+	__asm__ __volatile__ ("stbar	 \n":::"memory"); \
+	*((volatile slock_t *) (lock)) = 0; \
+} while (0)
+#else
+/*
+ * #LoadStore (RMO) | #StoreStore (RMO, PSO) together are the appropriate
+ * release barrier for sparcv8+ upwards.
+ */
+#define S_UNLOCK(lock)	\
+do \
+{ \
+	__asm__ __volatile__ ("membar #LoadStore | #StoreStore \n":::"memory"); \
+	*((volatile slock_t *) (lock)) = 0; \
+} while (0)
+#endif
 
 #endif	 /* __sparc__ */
 
@@ -435,6 +483,12 @@ typedef unsigned int slock_t;
  * NOTE: per the Enhanced PowerPC Architecture manual, v1.0 dated 7-May-2002,
  * an isync is a sufficient synchronization barrier after a lwarx/stwcx loop.
  * On newer machines, we can use lwsync instead for better performance.
+ *
+ * Ordinarily, we'd code the branches here using GNU-style local symbols, that
+ * is "1f" referencing "1:" and so on.  But some people run gcc on AIX with
+ * IBM's assembler as backend, and IBM's assembler doesn't do local symbols.
+ * So hand-code the branch offsets; fortunately, all PPC instructions are
+ * exactly 4 bytes each, so it's not too hard to count.
  */
 static __inline__ int
 tas(volatile slock_t *lock)
@@ -449,20 +503,18 @@ tas(volatile slock_t *lock)
 "	lwarx   %0,0,%3		\n"
 #endif
 "	cmpwi   %0,0		\n"
-"	bne     1f			\n"
+"	bne     $+16		\n"		/* branch to li %1,1 */
 "	addi    %0,%0,1		\n"
 "	stwcx.  %0,0,%3		\n"
-"	beq     2f         	\n"
-"1:	li      %1,1		\n"
-"	b		3f			\n"
-"2:						\n"
+"	beq     $+12		\n"		/* branch to lwsync/isync */
+"	li      %1,1		\n"
+"	b       $+12		\n"		/* branch to end of asm sequence */
 #ifdef USE_PPC_LWSYNC
 "	lwsync				\n"
 #else
 "	isync				\n"
 #endif
 "	li      %1,0		\n"
-"3:						\n"
 
 :	"=&r"(_t), "=r"(_res), "+m"(*lock)
 :	"r"(lock)
@@ -517,6 +569,30 @@ tas(volatile slock_t *lock)
 }
 
 #endif	 /* (__mc68000__ || __m68k__) && __linux__ */
+
+
+/* Motorola 88k */
+#if defined(__m88k__)
+#define HAS_TEST_AND_SET
+
+typedef unsigned int slock_t;
+
+#define TAS(lock) tas(lock)
+
+static __inline__ int
+tas(volatile slock_t *lock)
+{
+	register slock_t _res = 1;
+
+	__asm__ __volatile__(
+		"	xmem	%0, %2, %%r0	\n"
+:		"+r"(_res), "+m"(*lock)
+:		"r"(lock)
+:		"memory");
+	return (int) _res;
+}
+
+#endif	 /* __m88k__ */
 
 
 /*
@@ -848,7 +924,7 @@ typedef int slock_t;
 #endif	 /* _AIX */
 
 
-/* These are in s_lock.c */
+/* These are in sunstudio_(sparc|x86).s */
 
 #if defined(__SUNPRO_C) && (defined(__i386) || defined(__x86_64__) || defined(__sparc__) || defined(__sparc))
 #define HAS_TEST_AND_SET
@@ -875,7 +951,7 @@ typedef LONG slock_t;
 #define SPIN_DELAY() spin_delay()
 
 /* If using Visual C++ on Win64, inline assembly is unavailable.
- * Use a _mm_pause instrinsic instead of rep nop.
+ * Use a _mm_pause intrinsic instead of rep nop.
  */
 #if defined(_WIN64)
 static __forceinline void

@@ -42,7 +42,9 @@
 #   EXTRA_CLEAN -- extra files to remove in 'make clean'
 #   PG_CPPFLAGS -- will be added to CPPFLAGS
 #   PG_LIBS -- will be added to PROGRAM link line
+#   PG_LIBS_INTERNAL -- same, for references to libraries within build tree
 #   SHLIB_LINK -- will be added to MODULE_big link line
+#   SHLIB_LINK_INTERNAL -- same, for references to libraries within build tree
 #   PG_CONFIG -- path to pg_config program for the PostgreSQL installation
 #     to build against (typically just "pg_config" to use the first one in
 #     your PATH)
@@ -60,22 +62,6 @@ ifdef PGXS
 # We assume that we are in src/makefiles/, so top is ...
 top_builddir := $(dir $(PGXS))../..
 include $(top_builddir)/src/Makefile.global
-
-top_srcdir = $(top_builddir)
-# If USE_VPATH is set or Makefile is not in current directory we are building
-# the extension with VPATH so we set the variable here
-ifdef USE_VPATH
-srcdir = $(USE_VPATH)
-VPATH = $(USE_VPATH)
-else
-ifeq ($(CURDIR),$(dir $(firstword $(MAKEFILE_LIST))))
-srcdir = .
-VPATH =
-else
-srcdir = $(dir $(firstword $(MAKEFILE_LIST)))
-VPATH = $(srcdir)
-endif
-endif
 
 # These might be set in Makefile.global, but if they were not found
 # during the build of PostgreSQL, supply default values so that users
@@ -329,5 +315,5 @@ endif
 
 ifdef PROGRAM
 $(PROGRAM): $(OBJS)
-	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS) $(LDFLAGS) $(LDFLAGS_EX) $(LIBS) -o $@$(X)
+	$(CC) $(CFLAGS) $(OBJS) $(PG_LIBS_INTERNAL) $(LDFLAGS) $(LDFLAGS_EX) $(PG_LIBS) $(LIBS) -o $@$(X)
 endif

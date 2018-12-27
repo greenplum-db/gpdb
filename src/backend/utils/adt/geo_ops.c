@@ -20,6 +20,7 @@
 #include <ctype.h>
 
 #include "libpq/pqformat.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/geo_decls.h"
 
@@ -127,19 +128,19 @@ single_decode(char *str, float8 *x, char **s)
 	if (!PointerIsValid(str))
 		return FALSE;
 
-	while (isspace((unsigned char) *str))
-		str++;
 	*x = strtod(str, &cp);
+
 #ifdef GEODEBUG
-	printf("single_decode- (%x) try decoding %s to %g\n", (cp - str), str, *x);
+	printf("single_decode- decoded first %d chars of \"%s\" to %g\n",
+		   (int) (cp - str), str, *x);
 #endif
-	if (cp <= str)
-		return FALSE;
-	while (isspace((unsigned char) *cp))
-		cp++;
 
 	if (s != NULL)
+	{
+		while (isspace((unsigned char) *cp))
+			cp++;
 		*s = cp;
+	}
 
 	return TRUE;
 }	/* single_decode() */
@@ -2859,8 +2860,8 @@ close_ps(PG_FUNCTION_ARGS)
 		result = point_copy(&lseg->p[!yh]);		/* below the lseg, take lower
 												 * end pt */
 #ifdef GEODEBUG
-		printf("close_ps below: tmp A %f  B %f   C %f    m %f\n",
-			   tmp->A, tmp->B, tmp->C, tmp->m);
+		printf("close_ps below: tmp A %f  B %f   C %f\n",
+			   tmp->A, tmp->B, tmp->C);
 #endif
 		PG_RETURN_POINT_P(result);
 	}
@@ -2871,23 +2872,31 @@ close_ps(PG_FUNCTION_ARGS)
 		result = point_copy(&lseg->p[yh]);		/* above the lseg, take higher
 												 * end pt */
 #ifdef GEODEBUG
-		printf("close_ps above: tmp A %f  B %f   C %f    m %f\n",
-			   tmp->A, tmp->B, tmp->C, tmp->m);
+		printf("close_ps above: tmp A %f  B %f   C %f\n",
+			   tmp->A, tmp->B, tmp->C);
 #endif
 		PG_RETURN_POINT_P(result);
 	}
 
 	/*
-	 * at this point the "normal" from point will hit lseg. The closet point
+	 * at this point the "normal" from point will hit lseg. The closest point
 	 * will be somewhere on the lseg
 	 */
 	tmp = line_construct_pm(pt, invm);
 #ifdef GEODEBUG
-	printf("close_ps- tmp A %f  B %f   C %f    m %f\n",
-		   tmp->A, tmp->B, tmp->C, tmp->m);
+	printf("close_ps- tmp A %f  B %f   C %f\n",
+		   tmp->A, tmp->B, tmp->C);
 #endif
 	result = interpt_sl(lseg, tmp);
-	Assert(result != NULL);
+
+	/*
+	 * ordinarily we should always find an intersection point, but that could
+	 * fail in the presence of NaN coordinates, and perhaps even from simple
+	 * roundoff issues.  Return a SQL NULL if so.
+	 */
+	if (result == NULL)
+		PG_RETURN_NULL();
+
 #ifdef GEODEBUG
 	printf("close_ps- result.x %f  result.y %f\n", result->x, result->y);
 #endif
@@ -3895,6 +3904,8 @@ lseg_inside_poly(Point *a, Point *b, POLYGON *poly, int start)
 	for (i = start; i < poly->npts && res; i++)
 	{
 		Point	   *interpt;
+
+		CHECK_FOR_INTERRUPTS();
 
 		s.p[1] = poly->p[i];
 

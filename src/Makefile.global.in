@@ -46,7 +46,24 @@ PG_MAJORVERSION = @PG_MAJORVERSION@
 GP_VERSION = @GP_VERSION_SHORT@
 GP_MAJORVERSION = @GP_MAJORVERSION@
 
-# Support for VPATH builds
+# Set top_srcdir, srcdir, and VPATH.
+ifdef PGXS
+top_srcdir = $(top_builddir)
+
+# If VPATH is set or Makefile is not in current directory we are building
+# the extension with VPATH so we set the variable here.
+ifdef VPATH
+srcdir = $(VPATH)
+else
+ifeq ($(CURDIR),$(dir $(firstword $(MAKEFILE_LIST))))
+srcdir = .
+VPATH =
+else
+srcdir = $(dir $(firstword $(MAKEFILE_LIST)))
+VPATH = $(srcdir)
+endif
+endif
+else # not PGXS
 vpath_build = @vpath_build@
 abs_top_srcdir = @abs_top_srcdir@
 
@@ -58,6 +75,7 @@ top_srcdir = $(abs_top_srcdir)
 srcdir = $(top_srcdir)/$(subdir)
 VPATH = $(srcdir)
 endif
+endif # not PGXS
 
 vpathsearch = `for f in $(addsuffix /$(1),$(subst :, ,. $(VPATH))); do test -r $$f && echo $$f && break; done`
 
@@ -188,6 +206,7 @@ enable_rpath	= @enable_rpath@
 enable_debug	= @enable_debug@
 enable_dtrace	= @enable_dtrace@
 enable_coverage	= @enable_coverage@
+enable_tap_tests	= @enable_tap_tests@
 enable_thread_safety	= @enable_thread_safety@
 enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
@@ -234,6 +253,7 @@ with_zstd 		= @with_zstd@
 
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+PG_SYSROOT = @PG_SYSROOT@
 
 ifdef PGXS
 override CPPFLAGS := -I$(includedir_server) -I$(includedir_internal) $(CPPFLAGS)
@@ -278,17 +298,26 @@ LD = @LD@
 with_gnu_ld = @with_gnu_ld@
 ld_R_works = @ld_R_works@
 
-# We want -L for libpgport.a and libpgcommon.a to be first in LDFLAGS.  We
-# also need LDFLAGS to be a "recursively expanded" variable, else adjustments
-# to rpathdir don't work right.  So we must NOT do LDFLAGS := something,
-# meaning this has to be done first and elsewhere we must only do LDFLAGS +=
-# something.
+# It's critical that within LDFLAGS, all -L switches pointing to build-tree
+# directories come before any -L switches pointing to external directories.
+# Otherwise it's possible for, e.g., a platform-provided copy of libpq.so
+# to get linked in place of the one we've built.  Therefore we adopt the
+# convention that the first component of LDFLAGS is an extra variable
+# LDFLAGS_INTERNAL, and -L and -l switches for PG's own libraries must be
+# put into LDFLAGS_INTERNAL, so they will appear ahead of those for external
+# libraries.
+#
+# We need LDFLAGS and LDFLAGS_INTERNAL to be "recursively expanded" variables,
+# else adjustments to, e.g., rpathdir don't work right.  So we must NOT do
+# "LDFLAGS := something" anywhere, ditto for LDFLAGS_INTERNAL.
+# These initial assignments must be "=" type, and elsewhere we must only do
+# "LDFLAGS += something" or "LDFLAGS_INTERNAL += something".
 ifdef PGXS
-  LDFLAGS = -L$(libdir)
+  LDFLAGS_INTERNAL = -L$(libdir)
 else
-  LDFLAGS = -L$(top_builddir)/src/port -L$(top_builddir)/src/common
+  LDFLAGS_INTERNAL = -L$(top_builddir)/src/port -L$(top_builddir)/src/common
 endif
-LDFLAGS += @LDFLAGS@
+LDFLAGS = $(LDFLAGS_INTERNAL) @LDFLAGS@
 
 LDFLAGS_EX = @LDFLAGS_EX@
 # LDFLAGS_SL might have already been assigned by calling makefile
@@ -309,7 +338,9 @@ else
 endif
 perl_archlibexp		= @perl_archlibexp@
 perl_privlibexp		= @perl_privlibexp@
+perl_includespec	= @perl_includespec@
 perl_useshrplib		= @perl_useshrplib@
+perl_embed_ccflags	= @perl_embed_ccflags@
 perl_embed_ldflags	= @perl_embed_ldflags@
 
 # apr-1-config
@@ -352,6 +383,16 @@ PROVE = @PROVE@
 PG_PROVE_FLAGS = -I $(top_srcdir)/src/test/perl/ -I $(srcdir)
 # User-supplied prove flags such as --verbose can be provided in PROVE_FLAGS.
 PROVE_FLAGS =
+
+# prepend to path if already set, else just set it
+define add_to_path
+$(1)="$(if $($(1)),$(2):$$$(1),$(2))"
+endef
+
+# platform-specific environment variable to set shared library path
+define ld_library_path_var
+$(if $(filter $(PORTNAME),darwin),DYLD_LIBRARY_PATH,$(if $(filter $(PORTNAME),aix),LIBPATH,LD_LIBRARY_PATH))
+endef
 
 ifeq ($(enable_tap_tests),yes)
 define prove_installcheck
@@ -500,23 +541,13 @@ ifeq ($(PORTNAME),cygwin)
 libpq_pgport += $(LDAP_LIBS_FE)
 endif
 
-# If PGXS is not defined, build libpq and libpgport dependencies as required.
-# If the build is with PGXS, then these are supposed to be already built and
-# installed, and we just ensure that the expected files exist.
-ifndef PGXS
+
 submake-libpq:
 	$(MAKE) -C $(libpq_builddir) all
-else
-submake-libpq: $(libdir)/libpq.so ;
-endif
 
-ifndef PGXS
 submake-libpgport:
 	$(MAKE) -C $(top_builddir)/src/port all
 	$(MAKE) -C $(top_builddir)/src/common all
-else
-submake-libpgport: $(libdir)/libpgport.a $(libdir)/libpgcommon.a ;
-endif
 
 .PHONY: submake-libpq submake-libpgport
 
@@ -579,6 +610,11 @@ ifneq ($(CUSTOM_COPT),)
   COPT= $(CUSTOM_COPT)
 endif
 
+#
+# These variables are meant to be set in the environment of "make"
+# to add flags to whatever configure picked.  Unlike the ones above,
+# they are documented.
+#
 ifdef COPT
    CFLAGS += $(COPT)
    LDFLAGS += $(COPT)
@@ -602,8 +638,7 @@ PG_CRC32C_OBJS = @PG_CRC32C_OBJS@
 
 LIBS := -lpgcommon -lpgport $(LIBS)
 
-# to make ws2_32.lib the last library, and always link with shfolder,
-# so SHGetFolderName isn't picked up from shell32.dll
+# to make ws2_32.lib the last library
 ifeq ($(PORTNAME),win32)
 LIBS += -lws2_32 -lshfolder
 override LDFLAGS := -L$(top_builddir)/gpAux/ext/win32/kfw-3-2-2/lib $(LDFLAGS)

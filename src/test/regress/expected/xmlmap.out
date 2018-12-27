@@ -696,7 +696,37 @@ SELECT cursor_to_xml('xc'::refcursor, 5, false, true, '');
  
 (1 row)
 
-MOVE FIRST IN xc;
+SELECT cursor_to_xmlschema('xc'::refcursor, false, true, '');
+                                     cursor_to_xmlschema                                      
+----------------------------------------------------------------------------------------------
+ <xsd:schema                                                                                 +
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema">                                           +
+                                                                                             +
+ <xsd:simpleType name="INTEGER">                                                             +
+   <xsd:restriction base="xsd:int">                                                          +
+     <xsd:maxInclusive value="2147483647"/>                                                  +
+     <xsd:minInclusive value="-2147483648"/>                                                 +
+   </xsd:restriction>                                                                        +
+ </xsd:simpleType>                                                                           +
+                                                                                             +
+ <xsd:simpleType name="UDT.regression.pg_catalog.text">                                      +
+   <xsd:restriction base="xsd:string">                                                       +
+   </xsd:restriction>                                                                        +
+ </xsd:simpleType>                                                                           +
+                                                                                             +
+ <xsd:complexType name="RowType">                                                            +
+   <xsd:sequence>                                                                            +
+     <xsd:element name="a" type="INTEGER" minOccurs="0"></xsd:element>                       +
+     <xsd:element name="b" type="UDT.regression.pg_catalog.text" minOccurs="0"></xsd:element>+
+   </xsd:sequence>                                                                           +
+ </xsd:complexType>                                                                          +
+                                                                                             +
+ <xsd:element name="row" type="RowType"/>                                                    +
+                                                                                             +
+ </xsd:schema>
+(1 row)
+
+MOVE BACKWARD ALL IN xc;
 ERROR:  backward scan is not supported in this version of Greenplum Database
 SELECT cursor_to_xml('xc'::refcursor, 5, true, false, '');
 ERROR:  portal "xc" cannot be run

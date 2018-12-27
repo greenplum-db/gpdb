@@ -30,7 +30,7 @@ CATALOG_JSON:= $(addprefix $(top_srcdir)/gpMgmt/bin/gppylib/data/, $(addsuffix .
 
 include $(top_srcdir)/src/backend/common.mk
 
-all: $(BKIFILES) schemapg.h $(CATALOG_JSON)
+all: $(BKIFILES) schemapg.h $(CATALOG_JSON) postgres.description postgres.shdescription
 
 # Note: there are some undocumented dependencies on the ordering in which
 # the catalog header files are assembled into postgres.bki.  In particular,
@@ -76,12 +76,15 @@ catalogdir = $(top_srcdir)/src/backend/catalog
 # locations of headers that genbki.pl needs to read
 pg_includes = -I$(top_srcdir)/src/include/catalog -I$(top_builddir)/src/include/catalog
 
-# see explanation in ../parser/Makefile
-postgres.description: postgres.bki ;
+# see notes in src/backend/parser/Makefile about multiple output files
+postgres.description: postgres.bki
+	touch $@
 
-postgres.shdescription: postgres.bki ;
+postgres.shdescription: postgres.bki
+	touch $@
 
-schemapg.h: postgres.bki ;
+schemapg.h: postgres.bki
+	touch $@
 
 # In Greenplum, contents of the pg_proc catalog is in two files, pg_proc.h
 # and pg_proc_gp.h. Combine them into a single file, so that genbki.pl can

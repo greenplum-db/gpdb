@@ -21,8 +21,9 @@ all: errcodes.h fmgroids.h probes.h
 
 $(SUBDIRS:%=%-recursive): fmgroids.h
 
-# see explanation in ../parser/Makefile
-fmgroids.h: fmgrtab.c ;
+# see notes in src/backend/parser/Makefile
+fmgroids.h: fmgrtab.c
+	touch $@
 
 pg_proc_combined.h: $(catalogdir)/Catalog.pm $(top_srcdir)/src/include/catalog/pg_proc.h $(top_srcdir)/src/include/catalog/pg_proc_gp.h
 	cat $^ > $@

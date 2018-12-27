@@ -1350,7 +1350,7 @@ select * from WSlot order by slotname;
 
 --
 -- Install the central phone system and create the phone numbers.
--- They are weired on insert to the patchfields. Again the
+-- They are wired on insert to the patchfields. Again the
 -- triggers automatically tell the PSlots to update their
 -- backlink field.
 --
@@ -1750,7 +1750,7 @@ select trap_matching_test(1);
 
 create temp table foo (f1 int);
 
-create function blockme() returns int as $$
+create function subxact_rollback_semantics() returns int as $$
 declare x int;
 begin
   x := 1;
@@ -1758,29 +1758,40 @@ begin
   begin
     x := x + 1;
     insert into foo values(x);
-    -- we assume this will take longer than 2 seconds:
-    select count(*) into x from tenk1 a, tenk1 b, tenk1 c;
+    raise exception 'inner';
   exception
     when others then
-      raise notice 'caught others?';
-      return -1;
-    when query_canceled then
-      raise notice 'nyeah nyeah, can''t stop me';
       x := x * 10;
   end;
   insert into foo values(x);
   return x;
 end$$ language plpgsql;
 
-set statement_timeout to 2000;
-
-select blockme();
-
-reset statement_timeout;
-
+select subxact_rollback_semantics();
 select * from foo;
-
 drop table foo;
+
+create function trap_timeout() returns void as $$
+begin
+  declare x int;
+  begin
+    -- we assume this will take longer than 2 seconds:
+    select count(*) into x from tenk1 a, tenk1 b, tenk1 c;
+  exception
+    when others then
+      raise notice 'caught others?';
+    when query_canceled then
+      raise notice 'nyeah nyeah, can''t stop me';
+  end;
+  -- Abort transaction to abandon the statement_timeout setting.  Otherwise,
+  -- the next top-level statement would be vulnerable to the timeout.
+  raise exception 'end of function';
+end$$ language plpgsql;
+
+begin;
+set statement_timeout to 2000;
+select trap_timeout();
+rollback;
 
 -- Test for pass-by-ref values being stored in proper context
 create function test_variable_storage() returns text as $$
@@ -2246,11 +2257,19 @@ begin
 	    raise notice '% %', sqlstate, sqlerrm;
     end;
 end; $$ language plpgsql;
-
 select excpt_test3();
+
+create function excpt_test4() returns text as $$
+begin
+	begin perform 1/0;
+	exception when others then return sqlerrm; end;
+end; $$ language plpgsql;
+select excpt_test4();
+
 drop function excpt_test1();
 drop function excpt_test2();
 drop function excpt_test3();
+drop function excpt_test4();
 
 -- parameters of raise stmt can be expressions
 create function raise_exprs() returns void as $$

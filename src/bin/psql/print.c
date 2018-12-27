@@ -226,6 +226,12 @@ format_numeric_locale(const char *my_str)
 	/* copy the rest (fractional digits and/or exponent, and \0 terminator) */
 	strcpy(&new_str[new_str_pos], &my_str[i]);
 
+	/* assert we didn't underestimate new_len (an overestimate is OK) */
+	Assert(strlen(new_str) <= new_len);
+
+	/* copy the rest (fractional digits and/or exponent, and \0 terminator) */
+	strcpy(&new_str[new_str_pos], &my_str[i]);
+
 	return new_str;
 }
 
@@ -2205,12 +2211,22 @@ PageOutput(int lines, unsigned short int pager)
 			pagerprog = getenv("PAGER");
 			if (!pagerprog)
 				pagerprog = DEFAULT_PAGER;
+			else
+			{
+				/* if PAGER is empty or all-white-space, don't use pager */
+				if (strspn(pagerprog, " \t\r\n") == strlen(pagerprog))
+					return stdout;
+			}
 #ifndef WIN32
 			pqsignal(SIGPIPE, SIG_IGN);
 #endif
 			pagerpipe = popen(pagerprog, "w");
 			if (pagerpipe)
 				return pagerpipe;
+			/* if popen fails, silently proceed without pager */
+#ifndef WIN32
+			pqsignal(SIGPIPE, SIG_DFL);
+#endif
 #ifdef TIOCGWINSZ
 		}
 #endif

@@ -133,6 +133,14 @@
    don't. */
 #define HAVE_DECL_SNPRINTF 1
 
+/* Define to 1 if you have the declaration of `strtoll', and to 0 if you
+   don't. */
+#define HAVE_DECL_STRTOLL 1
+
+/* Define to 1 if you have the declaration of `strtoull', and to 0 if you
+   don't. */
+#define HAVE_DECL_STRTOULL 1
+
 /* Define to 1 if you have the declaration of `vsnprintf', and to 0 if you
    don't. */
 #define HAVE_DECL_VSNPRINTF 1
@@ -257,21 +265,20 @@
 /* Define to 1 if you have the `z' library (-lz). */
 /* #undef HAVE_LIBZ */
 
-/* Define to 1 if constants of type 'long long int' should have the suffix LL.
-   */
-#if (_MSC_VER > 1200)
-#define HAVE_LL_CONSTANTS 1
-#endif
-
 /* Define to 1 if the system has the type `locale_t'. */
 #define HAVE_LOCALE_T 1
 
 /* Define to 1 if `long int' works and is 64 bits. */
 /* #undef HAVE_LONG_INT_64 */
 
+/* Define to 1 if the system has the type `long long int'. */
+#if (_MSC_VER > 1200)
+#define HAVE_LONG_LONG_INT 1
+#endif
+
 /* Define to 1 if `long long int' works and is 64 bits. */
 #if (_MSC_VER > 1200)
-#define HAVE_LONG_LONG_INT_64
+#define HAVE_LONG_LONG_INT_64 1
 #endif
 
 /* Define to 1 if you have the `mbstowcs_l' function. */
@@ -285,6 +292,9 @@
 
 /* Define to 1 if the system has the type `MINIDUMP_TYPE'. */
 #define HAVE_MINIDUMP_TYPE 1
+
+/* Define to 1 if you have the `mkdtemp' function. */
+/* #undef HAVE_MKDTEMP */
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #define HAVE_NETINET_IN_H 1
@@ -300,6 +310,9 @@
 
 /* Define to 1 if you have the <poll.h> header file. */
 /* #undef HAVE_POLL_H */
+
+/* Define to 1 if you have the `posix_fallocate' function. */
+/* #undef HAVE_POSIX_FALLOCATE */
 
 /* Define to 1 if you have the POSIX signal interface. */
 /* #undef HAVE_POSIX_SIGNALS */
@@ -377,6 +390,9 @@
 /* Define to 1 if you have the `srandom' function. */
 /* #undef HAVE_SRANDOM */
 
+/* Define to 1 if you have the `SSL_get_current_compression' function. */
+#define HAVE_SSL_GET_CURRENT_COMPRESSION 1
+
 /* Define to 1 if you have the <stdint.h> header file. */
 /* #undef HAVE_STDINT_H */
 
@@ -398,16 +414,22 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if you have the `strtoll' function. */
-//#define HAVE_STRTOLL 1
-
-/* Define to 1 if you have the `strtoq' function. */
-/* #undef HAVE_STRTOQ */
+#ifdef HAVE_LONG_LONG_INT_64
+#define HAVE_STRTOLL 1
+/* Before VS2013, use Microsoft's nonstandard equivalent function */
+#if (_MSC_VER < 1800)
+#define strtoll _strtoi64
+#endif
+#endif
 
 /* Define to 1 if you have the `strtoull' function. */
-//#define HAVE_STRTOULL 1
-
-/* Define to 1 if you have the `strtouq' function. */
-/* #undef HAVE_STRTOUQ */
+#ifdef HAVE_LONG_LONG_INT_64
+#define HAVE_STRTOULL 1
+/* Before VS2013, use Microsoft's nonstandard equivalent function */
+#if (_MSC_VER < 1800)
+#define strtoull _strtoui64
+#endif
+#endif
 
 /* Define to 1 if the system has the type `struct addrinfo'. */
 #if (_MSC_VER > 1200)
@@ -600,7 +622,7 @@
 #define PACKAGE_STRING "Greenplum Database 6.0.0-alpha"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "9.4beta1"
+#define PACKAGE_VERSION "9.4.19"
 
 /* Define to the name of a signed 64-bit integer type. */
 #define PG_INT64_TYPE long long int
@@ -609,10 +631,10 @@
 #undef PG_INT128_TYPE
 
 /* PostgreSQL version as a string */
-#define PG_VERSION "9.4beta1"
+#define PG_VERSION "9.4.19"
 
 /* PostgreSQL version as a number */
-#define PG_VERSION_NUM 90400
+#define PG_VERSION_NUM 90419
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "greenplum"
@@ -648,7 +670,7 @@
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
-/* Define to 1 if strerror_r() returns a int. */
+/* Define to 1 if strerror_r() returns int. */
 /* #undef STRERROR_R_INT */
 
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
@@ -711,6 +733,9 @@
 
 /* Define to select Win32-style semaphores. */
 #define USE_WIN32_SEMAPHORES 1
+
+/* Define to 1 if `wcstombs_l' requires <xlocale.h>. */
+/* #undef WCSTOMBS_L_IN_XLOCALE */
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */

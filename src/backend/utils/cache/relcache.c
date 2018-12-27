@@ -143,14 +143,6 @@ bool		criticalSharedRelcachesBuilt = false;
 static long relcacheInvalsReceived = 0L;
 
 /*
- * This list remembers the OIDs of the non-shared relations cached in the
- * database's local relcache init file.  Note that there is no corresponding
- * list for the shared relcache init file, for reasons explained in the
- * comments for RelationCacheInitFileRemove.
- */
-static List *initFileRelationIds = NIL;
-
-/*
  * eoxact_list[] stores the OIDs of relations that (might) need AtEOXact
  * cleanup work.  This list intentionally has limited size; if it overflows,
  * we fall back to scanning the whole hashtable.  There is no value in a very
@@ -256,6 +248,7 @@ static void RelationDestroyRelation(Relation relation, bool remember_tupdesc);
 static void RelationClearRelation(Relation relation, bool rebuild);
 
 static void RelationReloadIndexInfo(Relation relation);
+static void RelationReloadNailed(Relation relation);
 static void RelationFlushRelation(Relation relation);
 static void RememberToFreeTupleDescAtEOX(TupleDesc td);
 static void AtEOXact_cleanup(Relation relation, bool isCommit);
@@ -291,7 +284,7 @@ static void IndexSupportInitialize(oidvector *indclass,
 static OpClassCacheEnt *LookupOpclassInfo(Oid operatorClassOid,
 				  StrategyNumber numSupport);
 static void RelationCacheInitFileRemoveInDir(const char *tblspcpath);
-static void unlink_initfile(const char *initfilename);
+static void unlink_initfile(const char *initfilename, int elevel);
 
 
 /*
@@ -1081,7 +1074,7 @@ RelationInitPhysicalAddr(Relation relation)
 		 * points to the current file since the older file will be gone (or
 		 * truncated). The new file will still contain older rows so lookups
 		 * in them will work correctly. This wouldn't work correctly if
-		 * rewrites were allowed to change the schema in a noncompatible way,
+		 * rewrites were allowed to change the schema in an incompatible way,
 		 * but those are prevented both on catalog tables and on user tables
 		 * declared as additional catalog tables.
 		 */
@@ -1772,7 +1765,16 @@ RelationIdGetRelation(Oid relationId)
 				RelationReloadIndexInfo(rd);
 			else
 				RelationClearRelation(rd, true);
-			Assert(rd->rd_isvalid);
+
+			/*
+			 * Normally entries need to be valid here, but before the relcache
+			 * has been initialized, not enough infrastructure exists to
+			 * perform pg_class lookups. The structure of such entries doesn't
+			 * change, but we still want to update the rd_rel entry. So
+			 * rd_isvalid = false is left in place for a later lookup.
+			 */
+			Assert(rd->rd_isvalid ||
+				   (rd->rd_isnailed && !criticalRelcachesBuilt));
 		}
 		return rd;
 	}
@@ -1994,6 +1996,81 @@ RelationReloadIndexInfo(Relation relation)
 }
 
 /*
+ * RelationReloadNailed - reload minimal information for nailed relations.
+ *
+ * The structure of a nailed relation can never change (which is good, because
+ * we rely on knowing their structure to be able to read catalog content). But
+ * some parts, e.g. pg_class.relfrozenxid, are still important to have
+ * accurate content for. Therefore those need to be reloaded after the arrival
+ * of invalidations.
+ */
+static void
+RelationReloadNailed(Relation relation)
+{
+	Assert(relation->rd_isnailed);
+
+	/*
+	 * Redo RelationInitPhysicalAddr in case it is a mapped relation whose
+	 * mapping changed.
+	 */
+	RelationInitPhysicalAddr(relation);
+
+	/* flag as needing to be revalidated */
+	relation->rd_isvalid = false;
+
+	/*
+	 * Can only reread catalog contents if in a transaction.  If the relation
+	 * is currently open (not counting the nailed refcount), do so
+	 * immediately. Otherwise we've already marked the entry as possibly
+	 * invalid, and it'll be fixed when next opened.
+	 */
+	if (!IsTransactionState() || relation->rd_refcnt <= 1)
+		return;
+
+	if (relation->rd_rel->relkind == RELKIND_INDEX)
+	{
+		/*
+		 * If it's a nailed-but-not-mapped index, then we need to re-read the
+		 * pg_class row to see if its relfilenode changed.
+		 */
+		RelationReloadIndexInfo(relation);
+	}
+	else
+	{
+		/*
+		 * Reload a non-index entry.  We can't easily do so if relcaches
+		 * aren't yet built, but that's fine because at that stage the
+		 * attributes that need to be current (like relfrozenxid) aren't yet
+		 * accessed.  To ensure the entry will later be revalidated, we leave
+		 * it in invalid state, but allow use (cf. RelationIdGetRelation()).
+		 */
+		if (criticalRelcachesBuilt)
+		{
+			HeapTuple	pg_class_tuple;
+			Form_pg_class relp;
+
+			/*
+			 * NB: Mark the entry as valid before starting to scan, to avoid
+			 * self-recursion when re-building pg_class.
+			 */
+			relation->rd_isvalid = true;
+
+			pg_class_tuple = ScanPgRelation(RelationGetRelid(relation),
+											true, false);
+			relp = (Form_pg_class) GETSTRUCT(pg_class_tuple);
+			memcpy(relation->rd_rel, relp, CLASS_TUPLE_SIZE);
+			heap_freetuple(pg_class_tuple);
+
+			/*
+			 * Again mark as valid, to protect against concurrently arriving
+			 * invalidations.
+			 */
+			relation->rd_isvalid = true;
+		}
+	}
+}
+
+/*
  * RelationDestroyRelation
  *
  *	Physically delete a relation cache entry and all subsidiary data.
@@ -2083,7 +2160,9 @@ RelationClearRelation(Relation relation, bool rebuild)
 {
 	/*
 	 * As per notes above, a rel to be rebuilt MUST have refcnt > 0; while of
-	 * course it would be a bad idea to blow away one with nonzero refcnt.
+	 * course it would be an equally bad idea to blow away one with nonzero
+	 * refcnt, since that would leave someone somewhere with a dangling
+	 * pointer.  All callers are expected to have verified that this holds.
 	 */
 	Assert(rebuild ?
 		   !RelationHasReferenceCountZero(relation) :
@@ -2099,26 +2178,12 @@ RelationClearRelation(Relation relation, bool rebuild)
 	RelationCloseSmgr(relation);
 
 	/*
-	 * Never, never ever blow away a nailed-in system relation, because we'd
-	 * be unable to recover.  However, we must redo RelationInitPhysicalAddr
-	 * in case it is a mapped relation whose mapping changed.
-	 *
-	 * If it's a nailed-but-not-mapped index, then we need to re-read the
-	 * pg_class row to see if its relfilenode changed. We do that immediately
-	 * if we're inside a valid transaction and the relation is open (not
-	 * counting the nailed refcount).  Otherwise just mark the entry as
-	 * possibly invalid, and it'll be fixed when next opened.
+	 * Treat nailed-in system relations separately, they always need to be
+	 * accessible, so we can't blow them away.
 	 */
 	if (relation->rd_isnailed)
 	{
-		RelationInitPhysicalAddr(relation);
-
-		if (relation->rd_rel->relkind == RELKIND_INDEX)
-		{
-			relation->rd_isvalid = false;		/* needs to be revalidated */
-			if (relation->rd_refcnt > 1 && IsTransactionState())
-				RelationReloadIndexInfo(relation);
-		}
+		RelationReloadNailed(relation);
 		return;
 	}
 
@@ -2227,9 +2292,25 @@ RelationClearRelation(Relation relation, bool rebuild)
 		newrel = RelationBuildDesc(save_relid, false);
 		if (newrel == NULL)
 		{
-			/* Should only get here if relation was deleted */
-			RelationCacheDelete(relation);
-			RelationDestroyRelation(relation, false);
+			/*
+			 * We can validly get here, if we're using a historic snapshot in
+			 * which a relation, accessed from outside logical decoding, is
+			 * still invisible. In that case it's fine to just mark the
+			 * relation as invalid and return - it'll fully get reloaded by
+			 * the cache reset at the end of logical decoding (or at the next
+			 * access).  During normal processing we don't want to ignore this
+			 * case as it shouldn't happen there, as explained below.
+			 */
+			if (HistoricSnapshotActive())
+				return;
+
+			/*
+			 * This shouldn't happen as dropping a relation is intended to be
+			 * impossible if still referenced (c.f. CheckTableNotInUse()). But
+			 * if we get here anyway, we can't just delete the relcache entry,
+			 * as it possibly could get accessed later (as e.g. the error
+			 * might get trapped and handled via a subtransaction rollback).
+			 */
 			elog(ERROR, "relation %u deleted while still in use", save_relid);
 		}
 
@@ -2691,10 +2772,24 @@ AtEOXact_cleanup(Relation relation, bool isCommit)
 	{
 		if (isCommit)
 			relation->rd_createSubid = InvalidSubTransactionId;
-		else
+		else if (RelationHasReferenceCountZero(relation))
 		{
 			RelationClearRelation(relation, false);
 			return;
+		}
+		else
+		{
+			/*
+			 * Hmm, somewhere there's a (leaked?) reference to the relation.
+			 * We daren't remove the entry for fear of dereferencing a
+			 * dangling pointer later.  Bleat, and mark it as not belonging to
+			 * the current transaction.  Hopefully it'll get cleaned up
+			 * eventually.  This must be just a WARNING to avoid
+			 * error-during-error-recovery loops.
+			 */
+			relation->rd_createSubid = InvalidSubTransactionId;
+			elog(WARNING, "cannot remove relcache entry for \"%s\" because it has nonzero refcount",
+				 RelationGetRelationName(relation));
 		}
 	}
 
@@ -2792,10 +2887,23 @@ AtEOSubXact_cleanup(Relation relation, bool isCommit,
 	{
 		if (isCommit)
 			relation->rd_createSubid = parentSubid;
-		else
+		else if (RelationHasReferenceCountZero(relation))
 		{
 			RelationClearRelation(relation, false);
 			return;
+		}
+		else
+		{
+			/*
+			 * Hmm, somewhere there's a (leaked?) reference to the relation.
+			 * We daren't remove the entry for fear of dereferencing a
+			 * dangling pointer later.  Bleat, and transfer it to the parent
+			 * subtransaction so we can try again later.  This must be just a
+			 * WARNING to avoid error-during-error-recovery loops.
+			 */
+			relation->rd_createSubid = parentSubid;
+			elog(WARNING, "cannot remove relcache entry for \"%s\" because it has nonzero refcount",
+				 RelationGetRelationName(relation));
 		}
 	}
 
@@ -3560,9 +3668,6 @@ RelationCacheInitializePhase3(void)
 		 */
 		InitCatalogCachePhase2();
 
-		/* reset initFileRelationIds list; we'll fill it during write */
-		initFileRelationIds = NIL;
-
 		/* now write the files */
 		write_relcache_init_file(true);
 		write_relcache_init_file(false);
@@ -4138,7 +4243,8 @@ RelationGetIndexExpressions(Relation relation)
 	 * Run the expressions through eval_const_expressions. This is not just an
 	 * optimization, but is necessary, because the planner will be comparing
 	 * them to similarly-processed qual clauses, and may fail to detect valid
-	 * matches without this.  We don't bother with canonicalize_qual, however.
+	 * matches without this.  We must not use canonicalize_qual, however,
+	 * since these aren't qual expressions.
 	 */
 	result = (List *) eval_const_expressions(NULL, (Node *) result);
 
@@ -4206,7 +4312,7 @@ RelationGetIndexPredicate(Relation relation)
 	 */
 	result = (List *) eval_const_expressions(NULL, (Node *) result);
 
-	result = (List *) canonicalize_qual((Expr *) result);
+	result = (List *) canonicalize_qual_ext((Expr *) result, false);
 
 	/* Also convert to implicit-AND format */
 	result = make_ands_implicit((Expr *) result);
@@ -4238,8 +4344,10 @@ RelationGetIndexPredicate(Relation relation)
  * we can include system attributes (e.g., OID) in the bitmap representation.
  *
  * Caller had better hold at least RowExclusiveLock on the target relation
- * to ensure that it has a stable set of indexes.  This also makes it safe
- * (deadlock-free) for us to take locks on the relation's indexes.
+ * to ensure it is safe (deadlock-free) for us to take locks on the relation's
+ * indexes.  Note that since the introduction of CREATE INDEX CONCURRENTLY,
+ * that lock level doesn't guarantee a stable set of indexes, so we have to
+ * be prepared to retry here in case of a change in the set of indexes.
  *
  * The returned result is palloc'd in the caller's memory context and should
  * be bms_free'd when not needed anymore.
@@ -4251,6 +4359,7 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
 	Bitmapset  *uindexattrs;	/* columns in unique indexes */
 	Bitmapset  *idindexattrs;	/* columns in the replica identity */
 	List	   *indexoidlist;
+	List	   *newindexoidlist;
 	Oid			relreplindex;
 	ListCell   *l;
 	MemoryContext oldcxt;
@@ -4276,8 +4385,9 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
 		return NULL;
 
 	/*
-	 * Get cached list of index OIDs
+	 * Get cached list of index OIDs. If we have to start over, we do so here.
 	 */
+restart:
 	indexoidlist = RelationGetIndexList(relation);
 
 	/* Fall out if no indexes (but relhasindex was set) */
@@ -4288,8 +4398,7 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
 	 * Copy the rd_replidindex value computed by RelationGetIndexList before
 	 * proceeding.  This is needed because a relcache flush could occur inside
 	 * index_open below, resetting the fields managed by RelationGetIndexList.
-	 * (The values we're computing will still be valid, assuming that caller
-	 * has a sufficient lock on the relation.)
+	 * We need to do the work with a stable value for relreplindex.
 	 */
 	relreplindex = relation->rd_replidindex;
 
@@ -4357,7 +4466,31 @@ RelationGetIndexAttrBitmap(Relation relation, IndexAttrBitmapKind attrKind)
 		index_close(indexDesc, AccessShareLock);
 	}
 
-	list_free(indexoidlist);
+	/*
+	 * During one of the index_opens in the above loop, we might have received
+	 * a relcache flush event on this relcache entry, which might have been
+	 * signaling a change in the rel's index list.  If so, we'd better start
+	 * over to ensure we deliver up-to-date attribute bitmaps.
+	 */
+	newindexoidlist = RelationGetIndexList(relation);
+	if (equal(indexoidlist, newindexoidlist) &&
+		relreplindex == relation->rd_replidindex)
+	{
+		/* Still the same index set, so proceed */
+		list_free(newindexoidlist);
+		list_free(indexoidlist);
+	}
+	else
+	{
+		/* Gotta do it over ... might as well not leak memory */
+		list_free(newindexoidlist);
+		list_free(indexoidlist);
+		bms_free(uindexattrs);
+		bms_free(idindexattrs);
+		bms_free(indexattrs);
+
+		goto restart;
+	}
 
 	/*
 	 * Now save copies of the bitmaps in the relcache entry.  We intentionally
@@ -4946,21 +5079,32 @@ load_relcache_init_file(bool shared)
 	}
 
 	/*
-	 * We reached the end of the init file without apparent problem. Did we
-	 * get the right number of nailed items?  (This is a useful crosscheck in
-	 * case the set of critical rels or indexes changes.)
+	 * We reached the end of the init file without apparent problem.  Did we
+	 * get the right number of nailed items?  This is a useful crosscheck in
+	 * case the set of critical rels or indexes changes.  However, that should
+	 * not happen in a normally-running system, so let's bleat if it does.
 	 */
 	if (shared)
 	{
 		if (nailed_rels != NUM_CRITICAL_SHARED_RELS ||
 			nailed_indexes != NUM_CRITICAL_SHARED_INDEXES)
+		{
+			elog(WARNING, "found %d nailed shared rels and %d nailed shared indexes in init file, but expected %d and %d respectively",
+				 nailed_rels, nailed_indexes,
+				 NUM_CRITICAL_SHARED_RELS, NUM_CRITICAL_SHARED_INDEXES);
 			goto read_failed;
+		}
 	}
 	else
 	{
 		if (nailed_rels != NUM_CRITICAL_LOCAL_RELS ||
 			nailed_indexes != NUM_CRITICAL_LOCAL_INDEXES)
+		{
+			elog(WARNING, "found %d nailed rels and %d nailed indexes in init file, but expected %d and %d respectively",
+				 nailed_rels, nailed_indexes,
+				 NUM_CRITICAL_LOCAL_RELS, NUM_CRITICAL_LOCAL_INDEXES);
 			goto read_failed;
+		}
 	}
 
 	/*
@@ -4971,10 +5115,6 @@ load_relcache_init_file(bool shared)
 	for (relno = 0; relno < num_rels; relno++)
 	{
 		RelationCacheInsert(rels[relno], false);
-		/* also make a list of their OIDs, for RelationIdIsInInitFile */
-		if (!shared)
-			initFileRelationIds = lcons_oid(RelationGetRelid(rels[relno]),
-											initFileRelationIds);
 	}
 
 	pfree(rels);
@@ -5011,8 +5151,14 @@ write_relcache_init_file(bool shared)
 	int			magic;
 	HASH_SEQ_STATUS status;
 	RelIdCacheEnt *idhentry;
-	MemoryContext oldcxt;
 	int			i;
+
+	/*
+	 * If we have already received any relcache inval events, there's no
+	 * chance of succeeding so we may as well skip the whole thing.
+	 */
+	if (relcacheInvalsReceived != 0L)
+		return;
 
 	/*
 	 * We must write a temporary file and rename it into place. Otherwise,
@@ -5073,6 +5219,23 @@ write_relcache_init_file(bool shared)
 		if (relform->relisshared != shared)
 			continue;
 
+		/*
+		 * Ignore if not supposed to be in init file.  We can allow any shared
+		 * relation that's been loaded so far to be in the shared init file,
+		 * but unshared relations must be ones that should be in the local
+		 * file per RelationIdIsInInitFile.  (Note: if you want to change the
+		 * criterion for rels to be kept in the init file, see also inval.c.
+		 * The reason for filtering here is to be sure that we don't put
+		 * anything into the local init file for which a relcache inval would
+		 * not cause invalidation of that init file.)
+		 */
+		if (!shared && !RelationIdIsInInitFile(RelationGetRelid(rel)))
+		{
+			/* Nailed rels had better get stored. */
+			Assert(!rel->rd_isnailed);
+			continue;
+		}
+
 		/* first write the relcache entry proper */
 		write_item(rel, sizeof(RelationData), fp);
 
@@ -5128,15 +5291,6 @@ write_relcache_init_file(bool shared)
 			write_item(rel->rd_indoption,
 					   relform->relnatts * sizeof(int16),
 					   fp);
-		}
-
-		/* also make a list of their OIDs, for RelationIdIsInInitFile */
-		if (!shared)
-		{
-			oldcxt = MemoryContextSwitchTo(CacheMemoryContext);
-			initFileRelationIds = lcons_oid(RelationGetRelid(rel),
-											initFileRelationIds);
-			MemoryContextSwitchTo(oldcxt);
 		}
 	}
 
@@ -5197,18 +5351,29 @@ write_item(const void *data, Size len, FILE *fp)
 }
 
 /*
- * Detect whether a given relation (identified by OID) is one of the ones
- * we store in the local relcache init file.
+ * Determine whether a given relation (identified by OID) is one of the ones
+ * we should store in a relcache init file.
  *
- * Note that we effectively assume that all backends running in a database
- * would choose to store the same set of relations in the init file;
- * otherwise there are cases where we'd fail to detect the need for an init
- * file invalidation.  This does not seem likely to be a problem in practice.
+ * We must cache all nailed rels, and for efficiency we should cache every rel
+ * that supports a syscache.  The former set is almost but not quite a subset
+ * of the latter. The special cases are relations where
+ * RelationCacheInitializePhase2/3 chooses to nail for efficiency reasons, but
+ * which do not support any syscache.
  */
 bool
 RelationIdIsInInitFile(Oid relationId)
 {
-	return list_member_oid(initFileRelationIds, relationId);
+	if (relationId == TriggerRelidNameIndexId ||
+		relationId == DatabaseNameIndexId)
+	{
+		/*
+		 * If this Assert fails, we don't need the applicable special case
+		 * anymore.
+		 */
+		Assert(!RelationSupportsSysCache(relationId));
+		return true;
+	}
+	return RelationSupportsSysCache(relationId);
 }
 
 /*
@@ -5232,38 +5397,30 @@ RelationIdIsInInitFile(Oid relationId)
  * We take the lock and do the unlink in RelationCacheInitFilePreInvalidate,
  * then release the lock in RelationCacheInitFilePostInvalidate.  Caller must
  * send any pending SI messages between those calls.
- *
- * Notice this deals only with the local init file, not the shared init file.
- * The reason is that there can never be a "significant" change to the
- * relcache entry of a shared relation; the most that could happen is
- * updates of noncritical fields such as relpages/reltuples.  So, while
- * it's worth updating the shared init file from time to time, it can never
- * be invalid enough to make it necessary to remove it.
  */
 void
 RelationCacheInitFilePreInvalidate(void)
 {
-	char		initfilename[MAXPGPATH];
+	char		localinitfname[MAXPGPATH];
+	char		sharedinitfname[MAXPGPATH];
 
-	snprintf(initfilename, sizeof(initfilename), "%s/%s",
-			 DatabasePath, RELCACHE_INIT_FILENAME);
+	if (DatabasePath)
+		snprintf(localinitfname, sizeof(localinitfname), "%s/%s",
+				 DatabasePath, RELCACHE_INIT_FILENAME);
+	snprintf(sharedinitfname, sizeof(sharedinitfname), "global/%s",
+			 RELCACHE_INIT_FILENAME);
 
 	LWLockAcquire(RelCacheInitLock, LW_EXCLUSIVE);
 
-	if (unlink(initfilename) < 0)
-	{
-		/*
-		 * The file might not be there if no backend has been started since
-		 * the last removal.  But complain about failures other than ENOENT.
-		 * Fortunately, it's not too late to abort the transaction if we can't
-		 * get rid of the would-be-obsolete init file.
-		 */
-		if (errno != ENOENT)
-			ereport(ERROR,
-					(errcode_for_file_access(),
-					 errmsg("could not remove cache file \"%s\": %m",
-							initfilename)));
-	}
+	/*
+	 * The files might not be there if no backend has been started since the
+	 * last removal.  But complain about failures other than ENOENT with
+	 * ERROR.  Fortunately, it's not too late to abort the transaction if we
+	 * can't get rid of the would-be-obsolete init file.
+	 */
+	if (DatabasePath)
+		unlink_initfile(localinitfname, ERROR);
+	unlink_initfile(sharedinitfname, ERROR);
 }
 
 void
@@ -5287,15 +5444,11 @@ RelationCacheInitFileRemove(void)
 	const char *tblspcdir = "pg_tblspc";
 	DIR		   *dir;
 	struct dirent *de;
-	char		path[MAXPGPATH];
+	char		path[MAXPGPATH + 10 + strlen(tablespace_version_directory()) + 1];
 
-	/*
-	 * We zap the shared cache file too.  In theory it can't get out of sync
-	 * enough to be a problem, but in data-corruption cases, who knows ...
-	 */
 	snprintf(path, sizeof(path), "global/%s",
 			 RELCACHE_INIT_FILENAME);
-	unlink_initfile(path);
+	unlink_initfile(path, LOG);
 
 	/* Scan everything in the default tablespace */
 	RelationCacheInitFileRemoveInDir("base");
@@ -5329,7 +5482,7 @@ RelationCacheInitFileRemoveInDir(const char *tblspcpath)
 {
 	DIR		   *dir;
 	struct dirent *de;
-	char		initfilename[MAXPGPATH];
+	char		initfilename[MAXPGPATH * 2];
 
 	/* Scan the tablespace directory to find per-database directories */
 	dir = AllocateDir(tblspcpath);
@@ -5347,7 +5500,7 @@ RelationCacheInitFileRemoveInDir(const char *tblspcpath)
 			/* Try to remove the init file in each database */
 			snprintf(initfilename, sizeof(initfilename), "%s/%s/%s",
 					 tblspcpath, de->d_name, RELCACHE_INIT_FILENAME);
-			unlink_initfile(initfilename);
+			unlink_initfile(initfilename, LOG);
 		}
 	}
 
@@ -5355,12 +5508,15 @@ RelationCacheInitFileRemoveInDir(const char *tblspcpath)
 }
 
 static void
-unlink_initfile(const char *initfilename)
+unlink_initfile(const char *initfilename, int elevel)
 {
 	if (unlink(initfilename) < 0)
 	{
 		/* It might not be there, but log any error other than ENOENT */
 		if (errno != ENOENT)
-			elog(LOG, "could not remove cache file \"%s\": %m", initfilename);
+			ereport(elevel,
+					(errcode_for_file_access(),
+					 errmsg("could not remove cache file \"%s\": %m",
+							initfilename)));
 	}
 }

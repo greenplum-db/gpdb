@@ -7,11 +7,7 @@ SELECT '"abc
 def"'::json;					-- ERROR, unescaped newline in string constant
 SELECT '"\n\"\\"'::json;		-- OK, legal escapes
 SELECT '"\v"'::json;			-- ERROR, not a valid JSON escape
-SELECT '"\u"'::json;			-- ERROR, incomplete escape
-SELECT '"\u00"'::json;			-- ERROR, incomplete escape
-SELECT '"\u000g"'::json;		-- ERROR, g is not a hex digit
-SELECT '"\u0000"'::json;		-- OK, legal escape
-SELECT '"\uaBcD"'::json;		-- OK, uppercase and lower case both OK
+-- see json_encoding test for input with unicode escapes
 
 -- Numbers.
 SELECT '1'::json;				-- OK
@@ -44,6 +40,12 @@ SELECT '{"abc"::1}'::json;		-- ERROR, another wrong separator
 SELECT '{"abc":1,"def":2,"ghi":[3,4],"hij":{"klm":5,"nop":[6]}}'::json; -- OK
 SELECT '{"abc":1:2}'::json;		-- ERROR, colon in wrong spot
 SELECT '{"abc":1,3}'::json;		-- ERROR, no value
+
+-- Recursion.
+SET max_stack_depth = '100kB';
+SELECT repeat('[', 10000)::json;
+SELECT repeat('{"a":', 10000)::json;
+RESET max_stack_depth;
 
 -- Miscellaneous stuff.
 SELECT 'true'::json;			-- OK
@@ -111,13 +113,14 @@ SET LOCAL TIME ZONE -8;
 select to_json(timestamptz '2014-05-28 12:22:35.614298-04');
 COMMIT;
 
--- unicode escape - backslash is not escaped
+select to_json(date '2014-05-28');
 
-select to_json(text '\uabcd');
-
--- any other backslash is escaped
-
-select to_json(text '\abcd');
+select to_json(date 'Infinity');
+select to_json(date '-Infinity');
+select to_json(timestamp 'Infinity');
+select to_json(timestamp '-Infinity');
+select to_json(timestamptz 'Infinity');
+select to_json(timestamptz '-Infinity');
 
 --json_agg
 
@@ -238,6 +241,31 @@ select (test_json->>3) is null as expect_true
 from test_json
 where json_type = 'array';
 
+-- corner cases
+
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json -> null::text;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json -> null::int;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json -> 1;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json -> 'z';
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json -> '';
+select '[{"b": "c"}, {"b": "cc"}]'::json -> 1;
+select '[{"b": "c"}, {"b": "cc"}]'::json -> 3;
+select '[{"b": "c"}, {"b": "cc"}]'::json -> 'z';
+select '{"a": "c", "b": null}'::json -> 'b';
+select '"foo"'::json -> 1;
+select '"foo"'::json -> 'z';
+
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json ->> null::text;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json ->> null::int;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json ->> 1;
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json ->> 'z';
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json ->> '';
+select '[{"b": "c"}, {"b": "cc"}]'::json ->> 1;
+select '[{"b": "c"}, {"b": "cc"}]'::json ->> 3;
+select '[{"b": "c"}, {"b": "cc"}]'::json ->> 'z';
+select '{"a": "c", "b": null}'::json ->> 'b';
+select '"foo"'::json ->> 1;
+select '"foo"'::json ->> 'z';
 
 -- array length
 
@@ -281,20 +309,54 @@ select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>array['f4','f6'];
 select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>array['f2'];
 select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>array['f2','0'];
 select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>array['f2','1'];
+
 select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>>array['f4','f6'];
 select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>>array['f2'];
 select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>>array['f2','0'];
 select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>>array['f2','1'];
 
--- same using array literals
-select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>'{f4,f6}';
-select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>'{f2}';
-select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>'{f2,0}';
-select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>'{f2,1}';
-select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>>'{f4,f6}';
-select '{"f2":{"f3":1},"f4":{"f5":99,"f6":"stringy"}}'::json#>>'{f2}';
-select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>>'{f2,0}';
-select '{"f2":["f3",1],"f4":{"f5":99,"f6":"stringy"}}'::json#>>'{f2,1}';
+-- corner cases for same
+select '{"a": {"b":{"c": "foo"}}}'::json #> '{}';
+select '[1,2,3]'::json #> '{}';
+select '"foo"'::json #> '{}';
+select '42'::json #> '{}';
+select 'null'::json #> '{}';
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a'];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a', null];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a', ''];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a','b'];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a','b','c'];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a','b','c','d'];
+select '{"a": {"b":{"c": "foo"}}}'::json #> array['a','z','c'];
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json #> array['a','1','b'];
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json #> array['a','z','b'];
+select '[{"b": "c"}, {"b": "cc"}]'::json #> array['1','b'];
+select '[{"b": "c"}, {"b": "cc"}]'::json #> array['z','b'];
+select '[{"b": "c"}, {"b": null}]'::json #> array['1','b'];
+select '"foo"'::json #> array['z'];
+select '42'::json #> array['f2'];
+select '42'::json #> array['0'];
+
+select '{"a": {"b":{"c": "foo"}}}'::json #>> '{}';
+select '[1,2,3]'::json #>> '{}';
+select '"foo"'::json #>> '{}';
+select '42'::json #>> '{}';
+select 'null'::json #>> '{}';
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a'];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a', null];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a', ''];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a','b'];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a','b','c'];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a','b','c','d'];
+select '{"a": {"b":{"c": "foo"}}}'::json #>> array['a','z','c'];
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json #>> array['a','1','b'];
+select '{"a": [{"b": "c"}, {"b": "cc"}]}'::json #>> array['a','z','b'];
+select '[{"b": "c"}, {"b": "cc"}]'::json #>> array['1','b'];
+select '[{"b": "c"}, {"b": "cc"}]'::json #>> array['z','b'];
+select '[{"b": "c"}, {"b": null}]'::json #>> array['1','b'];
+select '"foo"'::json #>> array['z'];
+select '42'::json #>> array['f2'];
+select '42'::json #>> array['0'];
 
 -- array_elements
 
@@ -309,42 +371,34 @@ create type jpop as (a text, b int, c timestamp);
 select * from json_populate_record(null::jpop,'{"a":"blurfl","x":43.2}') q;
 select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"a":"blurfl","x":43.2}') q;
 
-select * from json_populate_record(null::jpop,'{"a":"blurfl","x":43.2}', true) q;
-select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"a":"blurfl","x":43.2}', true) q;
+select * from json_populate_record(null::jpop,'{"a":"blurfl","x":43.2}') q;
+select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"a":"blurfl","x":43.2}') q;
 
-select * from json_populate_record(null::jpop,'{"a":[100,200,false],"x":43.2}', true) q;
-select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"a":[100,200,false],"x":43.2}', true) q;
-select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"c":[100,200,false],"x":43.2}', true) q;
+select * from json_populate_record(null::jpop,'{"a":[100,200,false],"x":43.2}') q;
+select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"a":[100,200,false],"x":43.2}') q;
+select * from json_populate_record(row('x',3,'2012-12-31 15:30:56')::jpop,'{"c":[100,200,false],"x":43.2}') q;
 
 -- populate_recordset
 
-select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]',false) q;
-select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]',false) q;
-select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]',true) q;
-select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]',true) q;
-select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]',true) q;
-select * from json_populate_recordset(row('def',99,null)::jpop,'[{"c":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]',true) q;
-
--- using the default use_json_as_text argument
-
+select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
+select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
 select * from json_populate_recordset(row('def',99,null)::jpop,'[{"c":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
 
--- handling of unicode surrogate pairs
+create type jpop2 as (a int, b json, c int, d int);
+select * from json_populate_recordset(null::jpop2, '[{"a":2,"c":3,"b":{"z":4},"d":6}]') q;
 
-select json '{ "a":  "\ud83d\ude04\ud83d\udc36" }' -> 'a' as correct_in_utf8;
-select json '{ "a":  "\ud83d\ud83d" }' -> 'a'; -- 2 high surrogates in a row
-select json '{ "a":  "\ude04\ud83d" }' -> 'a'; -- surrogates in wrong order
-select json '{ "a":  "\ud83dX" }' -> 'a'; -- orphan high surrogate
-select json '{ "a":  "\ude04X" }' -> 'a'; -- orphan low surrogate
+select * from json_populate_recordset(null::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
+select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":"blurfl","x":43.2},{"b":3,"c":"2012-01-20 10:42:53"}]') q;
+select * from json_populate_recordset(row('def',99,null)::jpop,'[{"a":[100,200,300],"x":43.2},{"a":{"z":true},"b":3,"c":"2012-01-20 10:42:53"}]') q;
 
---handling of simple unicode escapes
-
-select json '{ "a":  "the Copyright \u00a9 sign" }' ->> 'a' as correct_in_utf8;
-select json '{ "a":  "dollar \u0024 character" }' ->> 'a' as correct_everywhere;
-select json '{ "a":  "null \u0000 escape" }' ->> 'a' as not_unescaped;
+-- negative cases where the wrong record type is supplied
+select * from json_populate_recordset(row(0::int),'[{"a":"1","b":"2"},{"a":"3"}]') q (a text, b text);
+select * from json_populate_recordset(row(0::int,0::int),'[{"a":"1","b":"2"},{"a":"3"}]') q (a text, b text);
+select * from json_populate_recordset(row(0::int,0::int,0::int),'[{"a":"1","b":"2"},{"a":"3"}]') q (a text, b text);
+select * from json_populate_recordset(row(1000000000::int,50::int),'[{"b":"2"},{"a":"3"}]') q (a text, b text);
 
 --json_typeof() function
 select value, json_typeof(value)
@@ -364,6 +418,14 @@ select value, json_typeof(value)
 -- json_build_array, json_build_object, json_object_agg
 
 SELECT json_build_array('a',1,'b',1.2,'c',true,'d',null,'e',json '{"x": 3, "y": [1,2,3]}');
+SELECT json_build_array('a', NULL); -- ok
+SELECT json_build_array(VARIADIC NULL::text[]); -- ok
+SELECT json_build_array(VARIADIC '{}'::text[]); -- ok
+SELECT json_build_array(VARIADIC '{a,b,c}'::text[]); -- ok
+SELECT json_build_array(VARIADIC ARRAY['a', NULL]::text[]); -- ok
+SELECT json_build_array(VARIADIC '{1,2,3,4}'::text[]); -- ok
+SELECT json_build_array(VARIADIC '{1,2,3,4}'::int[]); -- ok
+SELECT json_build_array(VARIADIC '{{1,4},{2,5},{3,6}}'::int[][]); -- ok
 
 SELECT json_build_object('a',1,'b',1.2,'c',true,'d',null,'e',json '{"x": 3, "y": [1,2,3]}');
 
@@ -371,6 +433,19 @@ SELECT json_build_object(
        'a', json_build_object('b',false,'c',99),
        'd', json_build_object('e',array[9,8,7]::int[],
            'f', (select row_to_json(r) from ( select relkind, oid::regclass as name from pg_class where relname = 'pg_class') r)));
+SELECT json_build_object('{a,b,c}'::text[]); -- error
+SELECT json_build_object('{a,b,c}'::text[], '{d,e,f}'::text[]); -- error, key cannot be array
+SELECT json_build_object('a', 'b', 'c'); -- error
+SELECT json_build_object(NULL, 'a'); -- error, key cannot be NULL
+SELECT json_build_object('a', NULL); -- ok
+SELECT json_build_object(VARIADIC NULL::text[]); -- ok
+SELECT json_build_object(VARIADIC '{}'::text[]); -- ok
+SELECT json_build_object(VARIADIC '{a,b,c}'::text[]); -- error
+SELECT json_build_object(VARIADIC ARRAY['a', NULL]::text[]); -- ok
+SELECT json_build_object(VARIADIC ARRAY[NULL, 'a']::text[]); -- error, key cannot be NULL
+SELECT json_build_object(VARIADIC '{1,2,3,4}'::text[]); -- ok
+SELECT json_build_object(VARIADIC '{1,2,3,4}'::int[]); -- ok
+SELECT json_build_object(VARIADIC '{{1,4},{2,5},{3,6}}'::int[][]); -- ok
 
 
 -- empty objects/arrays
@@ -435,17 +510,16 @@ select json_object('{a,b,c,"d e f"}','{1,2,3,"a b c",g}');
 
 select json_object('{a,b,NULL,"d e f"}','{1,2,3,"a b c"}');
 
--- empty key error
+-- empty key is allowed
 
 select json_object('{a,b,"","d e f"}','{1,2,3,"a b c"}');
 
-
 -- json_to_record and json_to_recordset
 
-select * from json_to_record('{"a":1,"b":"foo","c":"bar"}',true)
+select * from json_to_record('{"a":1,"b":"foo","c":"bar"}')
     as x(a int, b text, d text);
 
-select * from json_to_recordset('[{"a":1,"b":"foo","d":false},{"a":2,"b":"bar","c":true}]',false)
+select * from json_to_recordset('[{"a":1,"b":"foo","d":false},{"a":2,"b":"bar","c":true}]')
     as x(a int, b text, c boolean);
 
 -- checking proisstrict settings
@@ -453,3 +527,14 @@ select * from json_to_recordset('[{"a":1,"b":"foo","d":false},{"a":2,"b":"bar","
 select '[{"a":1}]'::json->0->'b';
 select '[{"a":1}]'::json->1;
 select '[{"a":1}]'::json->1->'a';
+
+select * from json_to_recordset('[{"a":1,"b":{"d":"foo"},"c":true},{"a":2,"c":false,"b":{"d":"bar"}}]')
+    as x(a int, b json, c boolean);
+
+select *, c is null as c_is_null
+from json_to_record('{"a":1, "b":{"c":16, "d":2}, "x":8}'::json)
+    as t(a int, b json, c text, x int);
+
+select *, c is null as c_is_null
+from json_to_recordset('[{"a":1, "b":{"c":16, "d":2}, "x":8}]'::json)
+    as t(a int, b json, c text, x int);

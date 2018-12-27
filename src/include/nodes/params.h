@@ -14,6 +14,7 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+#include "nodes/nodes.h"
 /* To avoid including a pile of parser headers, reference ParseState thus: */
 struct ParseState;
 

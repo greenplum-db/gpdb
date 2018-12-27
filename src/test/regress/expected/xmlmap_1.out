@@ -78,8 +78,16 @@ SELECT cursor_to_xml('xc'::refcursor, 5, false, true, '');
 ERROR:  unsupported XML feature
 DETAIL:  This functionality requires the server to be built with libxml support.
 HINT:  You need to rebuild PostgreSQL using --with-libxml.
+<<<<<<< HEAD
 MOVE FIRST IN xc;
 ERROR:  backward scan is not supported in this version of Greenplum Database
+=======
+SELECT cursor_to_xmlschema('xc'::refcursor, false, true, '');
+ERROR:  unsupported XML feature
+DETAIL:  This functionality requires the server to be built with libxml support.
+HINT:  You need to rebuild PostgreSQL using --with-libxml.
+MOVE BACKWARD ALL IN xc;
+>>>>>>> 8bc709b37411ba7ad0fd0f1f79c354714424af3d
 SELECT cursor_to_xml('xc'::refcursor, 5, true, false, '');
 ERROR:  portal "xc" cannot be run
 SELECT cursor_to_xmlschema('xc'::refcursor, true, false, '');

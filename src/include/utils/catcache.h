@@ -162,7 +162,6 @@ typedef struct catcacheheader
 extern PGDLLIMPORT MemoryContext CacheMemoryContext;
 
 extern void CreateCacheMemoryContext(void);
-extern void AtEOXact_CatCache(bool isCommit);
 
 extern CatCache *InitCatCache(int id, Oid reloid, Oid indexoid,
 			 int nkeys, const int *key,
@@ -185,7 +184,7 @@ extern void ReleaseCatCacheList(CatCList *list);
 
 extern void ResetCatalogCaches(void);
 extern void CatalogCacheFlushCatalog(Oid catId);
-extern void CatalogCacheIdInvalidate(int cacheId, uint32 hashValue);
+extern void CatCacheInvalidate(CatCache *cache, uint32 hashValue);
 extern void PrepareToInvalidateCacheTuple(Relation relation,
 							  HeapTuple tuple,
 							  HeapTuple newtuple,

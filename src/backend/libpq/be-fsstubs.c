@@ -543,12 +543,30 @@ lo_import_internal(text *filename, Oid lobjOid)
 	return oid;
 }
 
+Datum
+lo_export(PG_FUNCTION_ARGS)
+{
+	ereport(ERROR,
+		(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+		 errmsg("large objects are not supported")));
+
+	PG_RETURN_INT32(1);
+}
+
+/*
+ * This is the upstream version of lo_export, intentionally kept intact (except
+ * for the name), and intentionally unused (we register the dummy version above
+ * in the catalog to disallow the use of large objects). Why not just throw an
+ * error at the entry of the function, you ask? The mix of ereport(ERROR) and
+ * PG_TRY seems to trigger an unwarranted warning-turned-error from GCC
+ * -Werror=maybe-uninitialized
+ */
 /*
  * lo_export -
  *	  exports an (inversion) large object.
  */
-Datum
-lo_export(PG_FUNCTION_ARGS)
+static pg_attribute_unused() Datum
+lo_export_pg(PG_FUNCTION_ARGS)
 {
 	Oid			lobjId = PG_GETARG_OID(0);
 	text	   *filename = PG_GETARG_TEXT_PP(1);
@@ -559,10 +577,6 @@ lo_export(PG_FUNCTION_ARGS)
 	char		fnamebuf[MAXPGPATH];
 	LargeObjectDesc *lobj;
 	mode_t		oumask;
-
-	ereport(ERROR,
-		(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-		 errmsg("large objects are not supported")));
 
 #ifndef ALLOW_DANGEROUS_LO_FUNCTIONS
 	if (!superuser())
@@ -588,8 +602,17 @@ lo_export(PG_FUNCTION_ARGS)
 	 */
 	text_to_cstring_buffer(filename, fnamebuf, sizeof(fnamebuf));
 	oumask = umask(S_IWGRP | S_IWOTH);
-	fd = OpenTransientFile(fnamebuf, O_CREAT | O_WRONLY | O_TRUNC | PG_BINARY,
-						   S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	PG_TRY();
+	{
+		fd = OpenTransientFile(fnamebuf, O_CREAT | O_WRONLY | O_TRUNC | PG_BINARY,
+							   S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	}
+	PG_CATCH();
+	{
+		umask(oumask);
+		PG_RE_THROW();
+	}
+	PG_END_TRY();
 	umask(oumask);
 	if (fd < 0)
 		ereport(ERROR,
@@ -914,10 +937,10 @@ lo_get_fragment(PG_FUNCTION_ARGS)
 }
 
 /*
- * Create LO with initial contents
+ * Create LO with initial contents given by a bytea argument
  */
 Datum
-lo_create_bytea(PG_FUNCTION_ARGS)
+lo_from_bytea(PG_FUNCTION_ARGS)
 {
 	Oid			loOid = PG_GETARG_OID(0);
 	bytea	   *str = PG_GETARG_BYTEA_PP(1);
@@ -950,6 +973,18 @@ lo_put(PG_FUNCTION_ARGS)
 	CreateFSContext();
 
 	loDesc = inv_open(loOid, INV_WRITE, fscxt);
+
+	/* Permission check */
+	if (!lo_compat_privileges &&
+		pg_largeobject_aclcheck_snapshot(loDesc->id,
+										 GetUserId(),
+										 ACL_UPDATE,
+										 loDesc->snapshot) != ACLCHECK_OK)
+		ereport(ERROR,
+				(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
+				 errmsg("permission denied for large object %u",
+						loDesc->id)));
+
 	inv_seek(loDesc, offset, SEEK_SET);
 	written = inv_write(loDesc, VARDATA_ANY(str), VARSIZE_ANY_EXHDR(str));
 	Assert(written == VARSIZE_ANY_EXHDR(str));

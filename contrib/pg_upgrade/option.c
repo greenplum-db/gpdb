@@ -290,7 +290,7 @@ usage(void)
   pg_upgrade [OPTION]...\n\
 \n\
 Options:\n\
-  -b, --old-bindir=BINDIR      old cluster executable directory\n\
+  -b, --old-bindir=BINDIR       old cluster executable directory\n\
   -B, --new-bindir=BINDIR       new cluster executable directory\n\
   -c, --check                   check clusters only, don't change any data\n\
   -d, --old-datadir=DATADIR     old cluster data directory\n\
@@ -442,7 +442,7 @@ adjust_data_dir(ClusterInfo *cluster)
 	if ((output = popen(cmd, "r")) == NULL ||
 		fgets(cmd_output, sizeof(cmd_output), output) == NULL)
 		pg_fatal("Could not get data directory using %s: %s\n",
-				 cmd, getErrorText(errno));
+				 cmd, getErrorText());
 
 	pclose(output);
 

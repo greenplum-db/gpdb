@@ -98,7 +98,7 @@ my %replace_line = (
 	'VariableShowStmtSHOWSESSIONAUTHORIZATION' =>
 	  'SHOW SESSION AUTHORIZATION ecpg_into',
 	'returning_clauseRETURNINGtarget_list' =>
-	  'RETURNING target_list ecpg_into',
+	  'RETURNING target_list opt_ecpg_into',
 	'ExecuteStmtEXECUTEnameexecute_param_clause' =>
 	  'EXECUTE prepared_name execute_param_clause execute_rest',
 'ExecuteStmtCREATEOptTempTABLEcreate_as_targetASEXECUTEnameexecute_param_clause'
@@ -550,7 +550,7 @@ sub dump_fields
 			if ($len == 1)
 			{
 
-				# Straight assignement
+				# Straight assignment
 				$str = ' $$ = ' . $flds_new[0] . ';';
 				add_to_buffer('rules', $str);
 			}

@@ -152,6 +152,21 @@ makeCdbHash(int numsegs, int natts, Oid *typeoids)
 	}
 	h->natts = natts;
 
+	for (i = 0; i < natts; i++)
+	{
+		Oid			type = typeoids[i];
+
+		type = get_cdbhash_base_type(type);
+		if (!OidIsValid(type))
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_GP_FEATURE_NOT_YET),
+					 errmsg("Type %u is not hashable.", type)));
+		}
+		h->typeoids[i] = type;
+	}
+	h->natts = natts;
+
 	ereport(DEBUG4,
 			(errmsg("CDBHASH hashing into %d segment databases", h->numsegs)));
 

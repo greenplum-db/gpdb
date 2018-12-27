@@ -347,6 +347,8 @@ extern float get_float4_infinity(void);
 extern double get_float8_nan(void);
 extern float get_float4_nan(void);
 extern int	is_infinite(double val);
+extern int	float4_cmp_internal(float4 a, float4 b);
+extern int	float8_cmp_internal(float8 a, float8 b);
 
 extern Datum float4in(PG_FUNCTION_ARGS);
 extern Datum float4out(PG_FUNCTION_ARGS);
@@ -729,13 +731,18 @@ extern Datum pg_get_function_arg_default(PG_FUNCTION_ARGS);
 extern char *deparse_expression(Node *expr, List *dpcontext,
 				   bool forceprefix, bool showimplicit);
 extern List *deparse_context_for(const char *aliasname, Oid relid);
-extern List *deparse_context_for_planstate(Node *planstate, List *ancestors,
-							  List *rtable, List *rtable_names);
+extern List *deparse_context_for_plan_rtable(List *rtable, List *rtable_names);
+extern List *set_deparse_context_planstate(List *dpcontext,
+							  Node *planstate, List *ancestors);
 extern List *select_rtable_names_for_explain(List *rtable,
 								Bitmapset *rels_used);
 extern const char *quote_identifier(const char *ident);
 extern char *quote_qualified_identifier(const char *qualifier,
 						   const char *ident);
+extern void generate_operator_clause(fmStringInfo buf,
+						 const char *leftop, Oid leftoptype,
+						 Oid opoid,
+						 const char *rightop, Oid rightoptype);
 extern char *generate_collation_name(Oid collid);
 
 extern Datum pg_get_partition_def(PG_FUNCTION_ARGS);
@@ -845,6 +852,8 @@ extern bool SplitIdentifierString(char *rawstring, char separator,
 					  List **namelist);
 extern bool SplitDirectoriesString(char *rawstring, char separator,
 					   List **namelist);
+extern bool SplitGUCList(char *rawstring, char separator,
+			 List **namelist);
 extern Datum replace_text(PG_FUNCTION_ARGS);
 extern text *replace_text_regexp(text *src_text, void *regexp,
 					text *replace_text, bool glob);
@@ -973,7 +982,7 @@ extern Datum network_host(PG_FUNCTION_ARGS);
 extern Datum network_show(PG_FUNCTION_ARGS);
 extern Datum inet_abbrev(PG_FUNCTION_ARGS);
 extern Datum cidr_abbrev(PG_FUNCTION_ARGS);
-extern double convert_network_to_scalar(Datum value, Oid typid);
+extern double convert_network_to_scalar(Datum value, Oid typid, bool *failure);
 extern Datum inet_to_cidr(PG_FUNCTION_ARGS);
 extern Datum inet_set_masklen(PG_FUNCTION_ARGS);
 extern Datum cidr_set_masklen(PG_FUNCTION_ARGS);

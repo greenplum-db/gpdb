@@ -6,6 +6,7 @@
  **********************************************************************/
 
 #include "postgres.h"
+
 /* Defined by Perl */
 #undef _
 
@@ -280,6 +281,7 @@ static void plperl_init_shared_libs(pTHX);
 static void plperl_trusted_init(void);
 static void plperl_untrusted_init(void);
 static HV  *plperl_spi_execute_fetch_result(SPITupleTable *, int, int);
+static void plperl_return_next_internal(SV *sv);
 static char *hek2cstr(HE *he);
 static SV **hv_store_string(HV *hv, const char *key, SV *val);
 static SV **hv_fetch_string(HV *hv, const char *key);
@@ -298,11 +300,26 @@ static char *setlocale_perl(int category, char *locale);
 #endif
 
 /*
+ * Decrement the refcount of the given SV within the active Perl interpreter
+ *
+ * This is handy because it reloads the active-interpreter pointer, saving
+ * some notation in callers that switch the active interpreter.
+ */
+static inline void
+SvREFCNT_dec_current(SV *sv)
+{
+	dTHX;
+
+	SvREFCNT_dec(sv);
+}
+
+/*
  * convert a HE (hash entry) key to a cstr in the current database encoding
  */
 static char *
 hek2cstr(HE *he)
 {
+	dTHX;
 	char	   *ret;
 	SV		   *sv;
 
@@ -654,14 +671,18 @@ select_perl_context(bool trusted)
 	 * to the database AFTER on_*_init code has run. See
 	 * http://archives.postgresql.org/pgsql-hackers/2010-01/msg02669.php
 	 */
-	newXS("PostgreSQL::InServer::SPI::bootstrap",
-		  boot_PostgreSQL__InServer__SPI, __FILE__);
+	{
+		dTHX;
 
-	eval_pv("PostgreSQL::InServer::SPI::bootstrap()", FALSE);
-	if (SvTRUE(ERRSV))
-		ereport(ERROR,
-				(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
-		errcontext("while executing PostgreSQL::InServer::SPI::bootstrap")));
+		newXS("PostgreSQL::InServer::SPI::bootstrap",
+			  boot_PostgreSQL__InServer__SPI, __FILE__);
+
+		eval_pv("PostgreSQL::InServer::SPI::bootstrap()", FALSE);
+		if (SvTRUE(ERRSV))
+			ereport(ERROR,
+					(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
+					 errcontext("while executing PostgreSQL::InServer::SPI::bootstrap")));
+	}
 
 	/* Fully initialized, so mark the hashtable entry valid */
 	interp_desc->interp = interp;
@@ -804,51 +825,60 @@ plperl_init_interp(void)
 	PERL_SET_CONTEXT(plperl);
 	perl_construct(plperl);
 
-	/* run END blocks in perl_destruct instead of perl_run */
-	PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
-
 	/*
-	 * Record the original function for the 'require' and 'dofile' opcodes.
-	 * (They share the same implementation.) Ensure it's used for new
-	 * interpreters.
+	 * Run END blocks in perl_destruct instead of perl_run.  Note that dTHX
+	 * loads up a pointer to the current interpreter, so we have to postpone
+	 * it to here rather than put it at the function head.
 	 */
-	if (!pp_require_orig)
-		pp_require_orig = PL_ppaddr[OP_REQUIRE];
-	else
 	{
-		PL_ppaddr[OP_REQUIRE] = pp_require_orig;
-		PL_ppaddr[OP_DOFILE] = pp_require_orig;
-	}
+		dTHX;
+
+		PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
+
+		/*
+		 * Record the original function for the 'require' and 'dofile'
+		 * opcodes.  (They share the same implementation.)  Ensure it's used
+		 * for new interpreters.
+		 */
+		if (!pp_require_orig)
+			pp_require_orig = PL_ppaddr[OP_REQUIRE];
+		else
+		{
+			PL_ppaddr[OP_REQUIRE] = pp_require_orig;
+			PL_ppaddr[OP_DOFILE] = pp_require_orig;
+		}
 
 #ifdef PLPERL_ENABLE_OPMASK_EARLY
 
-	/*
-	 * For regression testing to prove that the PLC_PERLBOOT and PLC_TRUSTED
-	 * code doesn't even compile any unsafe ops. In future there may be a
-	 * valid need for them to do so, in which case this could be softened
-	 * (perhaps moved to plperl_trusted_init()) or removed.
-	 */
-	PL_op_mask = plperl_opmask;
+		/*
+		 * For regression testing to prove that the PLC_PERLBOOT and
+		 * PLC_TRUSTED code doesn't even compile any unsafe ops.  In future
+		 * there may be a valid need for them to do so, in which case this
+		 * could be softened (perhaps moved to plperl_trusted_init()) or
+		 * removed.
+		 */
+		PL_op_mask = plperl_opmask;
 #endif
 
-	if (perl_parse(plperl, plperl_init_shared_libs,
-				   nargs, embedding, NULL) != 0)
-		ereport(ERROR,
-				(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
-				 errcontext("while parsing Perl initialization")));
+		if (perl_parse(plperl, plperl_init_shared_libs,
+					   nargs, embedding, NULL) != 0)
+			ereport(ERROR,
+					(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
+					 errcontext("while parsing Perl initialization")));
 
-	if (perl_run(plperl) != 0)
-		ereport(ERROR,
-				(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
-				 errcontext("while running Perl initialization")));
+		if (perl_run(plperl) != 0)
+			ereport(ERROR,
+					(errmsg("%s", strip_trailing_ws(sv2cstr(ERRSV))),
+					 errcontext("while running Perl initialization")));
 
 #ifdef PLPERL_RESTORE_LOCALE
-	PLPERL_RESTORE_LOCALE(LC_COLLATE, save_collate);
-	PLPERL_RESTORE_LOCALE(LC_CTYPE, save_ctype);
-	PLPERL_RESTORE_LOCALE(LC_MONETARY, save_monetary);
-	PLPERL_RESTORE_LOCALE(LC_NUMERIC, save_numeric);
-	PLPERL_RESTORE_LOCALE(LC_TIME, save_time);
+		PLPERL_RESTORE_LOCALE(LC_COLLATE, save_collate);
+		PLPERL_RESTORE_LOCALE(LC_CTYPE, save_ctype);
+		PLPERL_RESTORE_LOCALE(LC_MONETARY, save_monetary);
+		PLPERL_RESTORE_LOCALE(LC_NUMERIC, save_numeric);
+		PLPERL_RESTORE_LOCALE(LC_TIME, save_time);
 #endif
+	}
 
 	return plperl;
 }
@@ -914,6 +944,7 @@ plperl_destroy_interp(PerlInterpreter **interp)
 		 * public API so isn't portably available.) Meanwhile END blocks can
 		 * be used to perform manual cleanup.
 		 */
+		dTHX;
 
 		/* Run END blocks - based on perl's perl_destruct() */
 		if (PL_exit_flags & PERL_EXIT_DESTRUCT_END)
@@ -940,6 +971,7 @@ plperl_destroy_interp(PerlInterpreter **interp)
 static void
 plperl_trusted_init(void)
 {
+	dTHX;
 	HV		   *stash;
 	SV		   *sv;
 	char	   *key;
@@ -1017,6 +1049,8 @@ plperl_trusted_init(void)
 static void
 plperl_untrusted_init(void)
 {
+	dTHX;
+
 	/*
 	 * Nothing to do except execute plperl.on_plperlu_init
 	 */
@@ -1051,6 +1085,7 @@ strip_trailing_ws(const char *msg)
 static HeapTuple
 plperl_build_tuple_result(HV *perlhash, TupleDesc td)
 {
+	dTHX;
 	Datum	   *values;
 	bool	   *nulls;
 	HE		   *he;
@@ -1107,6 +1142,8 @@ plperl_hash_to_datum(SV *src, TupleDesc td)
 static SV  *
 get_perl_array_ref(SV *sv)
 {
+	dTHX;
+
 	if (SvOK(sv) && SvROK(sv))
 	{
 		if (SvTYPE(SvRV(sv)) == SVt_PVAV)
@@ -1135,6 +1172,7 @@ array_to_datum_internal(AV *av, ArrayBuildState *astate,
 						Oid arraytypid, Oid elemtypid, int32 typmod,
 						FmgrInfo *finfo, Oid typioparam)
 {
+	dTHX;
 	int			i;
 	int			len = av_len(av) + 1;
 
@@ -1208,6 +1246,7 @@ array_to_datum_internal(AV *av, ArrayBuildState *astate,
 static Datum
 plperl_array_to_datum(SV *src, Oid typid, int32 typmod)
 {
+	dTHX;
 	ArrayBuildState *astate;
 	Oid			elemtypid;
 	FmgrInfo	finfo;
@@ -1402,6 +1441,7 @@ plperl_sv_to_literal(SV *sv, char *fqtypename)
 static SV  *
 plperl_ref_from_pg_array(Datum arg, Oid typid)
 {
+	dTHX;
 	ArrayType  *ar = DatumGetArrayTypeP(arg);
 	Oid			elementtype = ARR_ELEMTYPE(ar);
 	int16		typlen;
@@ -1466,6 +1506,7 @@ plperl_ref_from_pg_array(Datum arg, Oid typid)
 static SV  *
 split_array(plperl_array_info *info, int first, int last, int nest)
 {
+	dTHX;
 	int			i;
 	AV		   *result;
 
@@ -1499,6 +1540,7 @@ split_array(plperl_array_info *info, int first, int last, int nest)
 static SV  *
 make_array_ref(plperl_array_info *info, int first, int last)
 {
+	dTHX;
 	int			i;
 	AV		   *result = newAV();
 
@@ -1534,6 +1576,7 @@ make_array_ref(plperl_array_info *info, int first, int last)
 static SV  *
 plperl_trigger_build_args(FunctionCallInfo fcinfo)
 {
+	dTHX;
 	TriggerData *tdata;
 	TupleDesc	tupdesc;
 	int			i;
@@ -1640,6 +1683,7 @@ plperl_trigger_build_args(FunctionCallInfo fcinfo)
 static SV  *
 plperl_event_trigger_build_args(FunctionCallInfo fcinfo)
 {
+	dTHX;
 	EventTriggerData *tdata;
 	HV		   *hv;
 
@@ -1658,6 +1702,7 @@ plperl_event_trigger_build_args(FunctionCallInfo fcinfo)
 static HeapTuple
 plperl_modify_tuple(HV *hvTD, TriggerData *tdata, HeapTuple otup)
 {
+	dTHX;
 	SV		  **svp;
 	HV		   *hvNew;
 	HE		   *he;
@@ -1857,7 +1902,7 @@ plperl_inline_handler(PG_FUNCTION_ARGS)
 
 		perlret = plperl_call_perl_func(&desc, &fake_fcinfo);
 
-		SvREFCNT_dec(perlret);
+		SvREFCNT_dec_current(perlret);
 
 		if (SPI_finish() != SPI_OK_FINISH)
 			elog(ERROR, "SPI_finish() failed");
@@ -1865,7 +1910,7 @@ plperl_inline_handler(PG_FUNCTION_ARGS)
 	PG_CATCH();
 	{
 		if (desc.reference)
-			SvREFCNT_dec(desc.reference);
+			SvREFCNT_dec_current(desc.reference);
 		current_call_data = save_call_data;
 		activate_interpreter(oldinterp);
 		PG_RE_THROW();
@@ -1873,7 +1918,7 @@ plperl_inline_handler(PG_FUNCTION_ARGS)
 	PG_END_TRY();
 
 	if (desc.reference)
-		SvREFCNT_dec(desc.reference);
+		SvREFCNT_dec_current(desc.reference);
 
 	current_call_data = save_call_data;
 	activate_interpreter(oldinterp);
@@ -2001,6 +2046,7 @@ plperlu_validator(PG_FUNCTION_ARGS)
 static void
 plperl_create_sub(plperl_proc_desc *prodesc, char *s, Oid fn_oid)
 {
+	dTHX;
 	dSP;
 	char		subname[NAMEDATALEN + 40];
 	HV		   *pragma_hv = newHV();
@@ -2086,6 +2132,7 @@ plperl_init_shared_libs(pTHX)
 static SV  *
 plperl_call_perl_func(plperl_proc_desc *desc, FunctionCallInfo fcinfo)
 {
+	dTHX;
 	dSP;
 	SV		   *retval;
 	int			i;
@@ -2166,6 +2213,7 @@ static SV  *
 plperl_call_perl_trigger_func(plperl_proc_desc *desc, FunctionCallInfo fcinfo,
 							  SV *td)
 {
+	dTHX;
 	dSP;
 	SV		   *retval,
 			   *TDsv;
@@ -2229,6 +2277,7 @@ plperl_call_perl_event_trigger_func(plperl_proc_desc *desc,
 									FunctionCallInfo fcinfo,
 									SV *td)
 {
+	dTHX;
 	dSP;
 	SV		   *retval,
 			   *TDsv;
@@ -2343,13 +2392,14 @@ plperl_func_handler(PG_FUNCTION_ARGS)
 		sav = get_perl_array_ref(perlret);
 		if (sav)
 		{
+			dTHX;
 			int			i = 0;
 			SV		  **svp = 0;
 			AV		   *rav = (AV *) SvRV(sav);
 
 			while ((svp = av_fetch(rav, i, FALSE)) != NULL)
 			{
-				plperl_return_next(*svp);
+				plperl_return_next_internal(*svp);
 				i++;
 			}
 		}
@@ -2386,7 +2436,7 @@ plperl_func_handler(PG_FUNCTION_ARGS)
 	/* Restore the previous error callback */
 	error_context_stack = pl_error_context.previous;
 
-	SvREFCNT_dec(perlret);
+	SvREFCNT_dec_current(perlret);
 
 	return retval;
 }
@@ -2490,9 +2540,9 @@ plperl_trigger_handler(PG_FUNCTION_ARGS)
 	/* Restore the previous error callback */
 	error_context_stack = pl_error_context.previous;
 
-	SvREFCNT_dec(svTD);
+	SvREFCNT_dec_current(svTD);
 	if (perlret)
-		SvREFCNT_dec(perlret);
+		SvREFCNT_dec_current(perlret);
 
 	return retval;
 }
@@ -2531,9 +2581,7 @@ plperl_event_trigger_handler(PG_FUNCTION_ARGS)
 	/* Restore the previous error callback */
 	error_context_stack = pl_error_context.previous;
 
-	SvREFCNT_dec(svTD);
-
-	return;
+	SvREFCNT_dec_current(svTD);
 }
 
 
@@ -2576,7 +2624,7 @@ free_plperl_function(plperl_proc_desc *prodesc)
 		plperl_interp_desc *oldinterp = plperl_active_interp;
 
 		activate_interpreter(prodesc->interp);
-		SvREFCNT_dec(prodesc->reference);
+		SvREFCNT_dec_current(prodesc->reference);
 		activate_interpreter(oldinterp);
 	}
 	/* Get rid of what we conveniently can of our own structs */
@@ -2877,6 +2925,7 @@ plperl_hash_from_datum(Datum attr)
 static SV  *
 plperl_hash_from_tuple(HeapTuple tuple, TupleDesc tupdesc)
 {
+	dTHX;
 	HV		   *hv;
 	int			i;
 
@@ -3032,6 +3081,7 @@ static HV  *
 plperl_spi_execute_fetch_result(SPITupleTable *tuptable, int processed,
 								int status)
 {
+	dTHX;
 	HV		   *result;
 
 	check_spi_usage_allowed();
@@ -3067,15 +3117,40 @@ plperl_spi_execute_fetch_result(SPITupleTable *tuptable, int processed,
 
 
 /*
- * Note: plperl_return_next is called both in Postgres and Perl contexts.
- * We report any errors in Postgres fashion (via ereport).  If called in
- * Perl context, it is SPI.xs's responsibility to catch the error and
- * convert to a Perl error.  We assume (perhaps without adequate justification)
- * that we need not abort the current transaction if the Perl code traps the
- * error.
+ * plperl_return_next catches any error and converts it to a Perl error.
+ * We assume (perhaps without adequate justification) that we need not abort
+ * the current transaction if the Perl code traps the error.
  */
 void
 plperl_return_next(SV *sv)
+{
+	MemoryContext oldcontext = CurrentMemoryContext;
+
+	PG_TRY();
+	{
+		plperl_return_next_internal(sv);
+	}
+	PG_CATCH();
+	{
+		ErrorData  *edata;
+
+		/* Must reset elog.c's state */
+		MemoryContextSwitchTo(oldcontext);
+		edata = CopyErrorData();
+		FlushErrorState();
+
+		/* Punt the error to Perl */
+		croak_cstr(edata->message);
+	}
+	PG_END_TRY();
+}
+
+/*
+ * plperl_return_next_internal reports any errors in Postgres fashion
+ * (via ereport).
+ */
+static void
+plperl_return_next_internal(SV *sv)
 {
 	plperl_proc_desc *prodesc;
 	FunctionCallInfo fcinfo;
@@ -3102,12 +3177,18 @@ plperl_return_next(SV *sv)
 
 		/*
 		 * This is the first call to return_next in the current PL/Perl
-		 * function call, so memoize some lookups
+		 * function call, so identify the output tuple descriptor and create a
+		 * tuplestore to hold the result rows.
 		 */
 		if (prodesc->fn_retistuple)
 			(void) get_call_result_type(fcinfo, NULL, &tupdesc);
 		else
+		{
 			tupdesc = rsi->expectedDesc;
+			/* Protect assumption below that we return exactly one column */
+			if (tupdesc == NULL || tupdesc->natts != 1)
+				elog(ERROR, "expected single-column result descriptor for non-composite SETOF result");
+		}
 
 		/*
 		 * Make sure the tuple_store and ret_tdesc are sufficiently
@@ -3157,20 +3238,20 @@ plperl_return_next(SV *sv)
 	}
 	else
 	{
-		Datum		ret;
-		bool		isNull;
+		Datum		ret[1];
+		bool		isNull[1];
 
-		ret = plperl_sv_to_datum(sv,
-								 prodesc->result_oid,
-								 -1,
-								 fcinfo,
-								 &prodesc->result_in_func,
-								 prodesc->result_typioparam,
-								 &isNull);
+		ret[0] = plperl_sv_to_datum(sv,
+									prodesc->result_oid,
+									-1,
+									fcinfo,
+									&prodesc->result_in_func,
+									prodesc->result_typioparam,
+									&isNull[0]);
 
 		tuplestore_putvalues(current_call_data->tuple_store,
 							 current_call_data->ret_tdesc,
-							 &ret, &isNull);
+							 ret, isNull);
 	}
 
 	MemoryContextSwitchTo(old_cxt);
@@ -3281,6 +3362,7 @@ plperl_spi_fetchrow(char *cursor)
 
 	PG_TRY();
 	{
+		dTHX;
 		Portal		p = SPI_cursor_find(cursor);
 
 		if (!p)
@@ -3552,6 +3634,8 @@ plperl_spi_exec_prepared(char *query, HV *attr, int argc, SV **argv)
 
 	PG_TRY();
 	{
+		dTHX;
+
 		/************************************************************
 		 * Fetch the saved plan descriptor, see if it's o.k.
 		 ************************************************************/
@@ -3823,12 +3907,54 @@ plperl_spi_freeplan(char *query)
 }
 
 /*
+ * Implementation of plperl's elog() function
+ *
+ * If the error level is less than ERROR, we'll just emit the message and
+ * return.  When it is ERROR, elog() will longjmp, which we catch and
+ * turn into a Perl croak().  Note we are assuming that elog() can't have
+ * any internal failures that are so bad as to require a transaction abort.
+ *
+ * The main reason this is out-of-line is to avoid conflicts between XSUB.h
+ * and the PG_TRY macros.
+ */
+void
+plperl_util_elog(int level, SV *msg)
+{
+	MemoryContext oldcontext = CurrentMemoryContext;
+	char	   *volatile cmsg = NULL;
+
+	PG_TRY();
+	{
+		cmsg = sv2cstr(msg);
+		elog(level, "%s", cmsg);
+		pfree(cmsg);
+	}
+	PG_CATCH();
+	{
+		ErrorData  *edata;
+
+		/* Must reset elog.c's state */
+		MemoryContextSwitchTo(oldcontext);
+		edata = CopyErrorData();
+		FlushErrorState();
+
+		if (cmsg)
+			pfree(cmsg);
+
+		/* Punt the error to Perl */
+		croak_cstr(edata->message);
+	}
+	PG_END_TRY();
+}
+
+/*
  * Store an SV into a hash table under a key that is a string assumed to be
  * in the current database's encoding.
  */
 static SV **
 hv_store_string(HV *hv, const char *key, SV *val)
 {
+	dTHX;
 	int32		hlen;
 	char	   *hkey;
 	SV		  **ret;
@@ -3857,6 +3983,7 @@ hv_store_string(HV *hv, const char *key, SV *val)
 static SV **
 hv_fetch_string(HV *hv, const char *key)
 {
+	dTHX;
 	int32		hlen;
 	char	   *hkey;
 	SV		  **ret;
@@ -3915,6 +4042,7 @@ plperl_inline_callback(void *arg)
 static char *
 setlocale_perl(int category, char *locale)
 {
+	dTHX;
 	char	   *RETVAL = setlocale(category, locale);
 
 	if (RETVAL)
@@ -3979,4 +4107,4 @@ setlocale_perl(int category, char *locale)
 	return RETVAL;
 }
 
-#endif
+#endif							/* WIN32 */

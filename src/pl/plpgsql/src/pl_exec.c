@@ -39,6 +39,9 @@
 #include "utils/snapmgr.h"
 #include "utils/typcache.h"
 
+#define PG_INT32_MIN	(-0x7FFFFFFF-1)
+#define PG_INT32_MAX	(0x7FFFFFFF)
+
 
 static const char *const raise_skip_msg = "RAISE";
 
@@ -1244,8 +1247,9 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 				{
 					/*
 					 * Initialize the magic SQLSTATE and SQLERRM variables for
-					 * the exception block. We needn't do this until we have
-					 * found a matching exception.
+					 * the exception block; this also frees values from any
+					 * prior use of the same exception. We needn't do this
+					 * until we have found a matching exception.
 					 */
 					PLpgSQL_var *state_var;
 					PLpgSQL_var *errm_var;
@@ -1268,13 +1272,6 @@ exec_stmt_block(PLpgSQL_execstate *estate, PLpgSQL_stmt_block *block)
 					estate->err_text = NULL;
 
 					rc = exec_stmts(estate, exception->action);
-
-					free_var(state_var);
-					state_var->value = (Datum) 0;
-					state_var->isnull = true;
-					free_var(errm_var);
-					errm_var->value = (Datum) 0;
-					errm_var->isnull = true;
 
 					break;
 				}
@@ -2037,13 +2034,13 @@ exec_stmt_fori(PLpgSQL_execstate *estate, PLpgSQL_stmt_fori *stmt)
 		 */
 		if (stmt->reverse)
 		{
-			if ((int32) (loop_value - step_value) > loop_value)
+			if (loop_value < (PG_INT32_MIN + step_value))
 				break;
 			loop_value -= step_value;
 		}
 		else
 		{
-			if ((int32) (loop_value + step_value) < loop_value)
+			if (loop_value > (PG_INT32_MAX - step_value))
 				break;
 			loop_value += step_value;
 		}
@@ -3284,20 +3281,20 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 		foreach(l, SPI_plan_get_plan_sources(expr->plan))
 		{
 			CachedPlanSource *plansource = (CachedPlanSource *) lfirst(l);
-			ListCell   *l2;
 
-			foreach(l2, plansource->query_list)
+			/*
+			 * We could look at the raw_parse_tree, but it seems simpler to
+			 * check the command tag.  Note we should *not* look at the Query
+			 * tree(s), since those are the result of rewriting and could have
+			 * been transmogrified into something else entirely.
+			 */
+			if (plansource->commandTag &&
+				(strcmp(plansource->commandTag, "INSERT") == 0 ||
+				 strcmp(plansource->commandTag, "UPDATE") == 0 ||
+				 strcmp(plansource->commandTag, "DELETE") == 0))
 			{
-				Query	   *q = (Query *) lfirst(l2);
-
-				Assert(IsA(q, Query));
-				if (q->canSetTag)
-				{
-					if (q->commandType == CMD_INSERT ||
-						q->commandType == CMD_UPDATE ||
-						q->commandType == CMD_DELETE)
-						stmt->mod_stmt = true;
-				}
+				stmt->mod_stmt = true;
+				break;
 			}
 		}
 	}
@@ -3366,12 +3363,12 @@ exec_stmt_execsql(PLpgSQL_execstate *estate,
 			break;
 
 		case SPI_OK_REWRITTEN:
-			Assert(!stmt->mod_stmt);
 
 			/*
 			 * The command was rewritten into another kind of command. It's
 			 * not clear what FOUND would mean in that case (and SPI doesn't
-			 * return the row count either), so just set it to false.
+			 * return the row count either), so just set it to false.  Note
+			 * that we can't assert anything about mod_stmt here.
 			 */
 			exec_set_found(estate, false);
 			break;

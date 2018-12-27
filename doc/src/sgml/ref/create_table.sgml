@@ -413,26 +413,33 @@ Where column_reference_storage_directive is:
       table.
      </para>
      <para>
-      Default expressions for the copied column definitions will only be
-      copied if <literal>INCLUDING DEFAULTS</literal> is specified. 
-      Defaults that call database-modification functions, like
-      <function>nextval</>, create a linkage between the original and
-      new tables.  The
+      Default expressions for the copied column definitions will be copied
+      only if <literal>INCLUDING DEFAULTS</literal> is specified.  The
       default behavior is to exclude default expressions, resulting in the
       copied columns in the new table having null defaults.
+      Note that copying defaults that call database-modification functions,
+      such as <function>nextval</>, may create a functional linkage between
+      the original and new tables.
      </para>
      <para>
       Not-null constraints are always copied to the new table.
       <literal>CHECK</literal> constraints will be copied only if
       <literal>INCLUDING CONSTRAINTS</literal> is specified.
-      Indexes, <literal>PRIMARY KEY</>, and <literal>UNIQUE</> constraints
-      on the original table will be created on the new table only if the
-      <literal>INCLUDING INDEXES</literal> clause is specified.
       No distinction is made between column constraints and table
       constraints.
      </para>
-     <para><literal>STORAGE</> settings for the copied column definitions will only
-      be copied if <literal>INCLUDING STORAGE</literal> is specified.  The
+     <para>
+      Indexes, <literal>PRIMARY KEY</>, <literal>UNIQUE</>,
+      and <literal>EXCLUDE</> constraints on the original table will be
+      created on the new table only if <literal>INCLUDING INDEXES</literal>
+      is specified.  Names for the new indexes and constraints are
+      chosen according to the default rules, regardless of how the originals
+      were named.  (This behavior avoids possible duplicate-name failures for
+      the new indexes.)
+     </para>
+     <para>
+      <literal>STORAGE</> settings for the copied column definitions will be
+      copied only if <literal>INCLUDING STORAGE</literal> is specified.  The
       default behavior is to exclude <literal>STORAGE</> settings, resulting
       in the copied columns in the new table having type-specific default
       settings.  For more on <literal>STORAGE</> settings, see
@@ -440,24 +447,26 @@ Where column_reference_storage_directive is:
      </para>
      <para>
       Comments for the copied columns, constraints, and indexes
-      will only be copied if <literal>INCLUDING COMMENTS</literal>
+      will be copied only if <literal>INCLUDING COMMENTS</literal>
       is specified. The default behavior is to exclude comments, resulting in
       the copied columns and constraints in the new table having no comments.
      </para>
-     <para><literal>INCLUDING ALL</literal> is an abbreviated form of
+     <para>
+      <literal>INCLUDING ALL</literal> is an abbreviated form of
       <literal>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS</literal>.
      </para>
      <para>
-      Note also that unlike <literal>INHERITS</literal>, columns and
+      Note that unlike <literal>INHERITS</literal>, columns and
       constraints copied by <literal>LIKE</> are not merged with similarly
       named columns and constraints.
       If the same name is specified explicitly or in another
       <literal>LIKE</literal> clause, an error is signaled.
      </para>
      <para>
-      The <literal>LIKE</literal> clause can also be used to copy columns from
-      views, foreign tables, or composite types.  Inapplicable options (e.g., <literal>INCLUDING
-      INDEXES</literal> from a view) are ignored.
+      The <literal>LIKE</literal> clause can also be used to copy column
+      definitions from views, foreign tables, or composite types.
+      Inapplicable options (e.g., <literal>INCLUDING INDEXES</literal> from
+      a view) are ignored.
      </para>
     </listitem>
    </varlistentry>
@@ -591,25 +600,25 @@ Where column_reference_storage_directive is:
     <term><literal>PRIMARY KEY ( <replaceable class="PARAMETER">column_name</replaceable> [, ... ] )</> (table constraint)</term>
     <listitem>
      <para>
-      The primary key constraint specifies that a column or columns of a table
-      can contain only unique (non-duplicate), nonnull values.
-      Technically, <literal>PRIMARY KEY</literal> is merely a
-      combination of <literal>UNIQUE</> and <literal>NOT NULL</>, but
-      identifying a set of columns as primary key also provides
-      metadata about the design of the schema, as a primary key
-      implies that other tables
-      can rely on this set of columns as a unique identifier for rows.
-     </para>
-
-     <para>
-      Only one primary key can be specified for a table, whether as a
+      The <literal>PRIMARY KEY</> constraint specifies that a column or
+      columns of a table can contain only unique (non-duplicate), nonnull
+      values. Only one primary key can be specified for a table, whether as a
       column constraint or a table constraint.
      </para>
 
      <para>
       The primary key constraint should name a set of columns that is
-      different from other sets of columns named by any unique
-      constraint defined for the same table.
+      different from the set of columns named by any unique
+      constraint defined for the same table.  (Otherwise, the unique
+      constraint is redundant and will be discarded.)
+     </para>
+
+     <para>
+      <literal>PRIMARY KEY</literal> enforces the same data constraints as
+      a combination of <literal>UNIQUE</> and <literal>NOT NULL</>, but
+      identifying a set of columns as the primary key also provides metadata
+      about the design of the schema, since a primary key implies that other
+      tables can rely on this set of columns as a unique identifier for rows.
      </para>
     </listitem>
    </varlistentry>
@@ -1092,9 +1101,7 @@ Where column_reference_storage_directive is:
      Custom <xref linkend="guc-autovacuum-freeze-max-age"> parameter. Note that
      autovacuum will ignore attempts to set a per-table
      <literal>autovacuum_freeze_max_age</> larger than the system-wide setting
-     (it can only be set smaller). Note that while you can set
-     <literal>autovacuum_freeze_max_age</> very small, or even zero, this is
-     usually unwise since it will force frequent vacuuming.
+     (it can only be set smaller).
      </para>
     </listitem>
    </varlistentry>
@@ -1128,10 +1135,7 @@ Where column_reference_storage_directive is:
       Custom <xref linkend="guc-autovacuum-multixact-freeze-max-age"> parameter. Note
       that autovacuum will ignore attempts to set a per-table
       <literal>autovacuum_multixact_freeze_max_age</> larger than the
-      system-wide setting (it can only be set smaller).  Note that while you
-      can set <literal>autovacuum_multixact_freeze_max_age</> very small,
-      or even zero, this is usually unwise since it will force frequent
-      vacuuming.
+      system-wide setting (it can only be set smaller).
      </para>
     </listitem>
    </varlistentry>
@@ -1277,7 +1281,7 @@ CREATE TABLE distributors (
 <programlisting>
 CREATE TABLE distributors (
     did     integer,
-    name    varchar(40)
+    name    varchar(40),
     CONSTRAINT con1 CHECK (did &gt; 100 AND name &lt;&gt; '')
 );
 </programlisting>
@@ -1555,6 +1559,17 @@ CREATE TABLE employees OF employee_type (
     tables.  Zero-column tables are not in themselves very useful, but
     disallowing them creates odd special cases for <command>ALTER TABLE
     DROP COLUMN</>, so it seems cleaner to ignore this spec restriction.
+   </para>
+  </refsect2>
+
+  <refsect2>
+   <title><literal>LIKE</> Clause</title>
+
+   <para>
+    While a <literal>LIKE</> clause exists in the SQL standard, many of the
+    options that <productname>PostgreSQL</productname> accepts for it are not
+    in the standard, and some of the standard's options are not implemented
+    by <productname>PostgreSQL</productname>.
    </para>
   </refsect2>
 

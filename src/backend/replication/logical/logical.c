@@ -28,9 +28,6 @@
 
 #include "postgres.h"
 
-#include <unistd.h>
-#include <sys/stat.h>
-
 #include "miscadmin.h"
 
 #include "access/xact.h"
@@ -75,6 +72,11 @@ CheckLogicalDecodingRequirements(void)
 {
 	CheckSlotRequirements();
 
+	/*
+	 * NB: Adding a new requirement likely means that RestoreSlotFromDisk()
+	 * needs the same check.
+	 */
+
 	if (wal_level < WAL_LEVEL_LOGICAL)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -112,6 +114,7 @@ static LogicalDecodingContext *
 StartupDecodingContext(List *output_plugin_options,
 					   XLogRecPtr start_lsn,
 					   TransactionId xmin_horizon,
+					   bool need_full_snapshot,
 					   XLogPageReadCB read_page,
 					   LogicalOutputPluginWriterPrepareWrite prepare_write,
 					   LogicalOutputPluginWriterWrite do_write)
@@ -125,7 +128,7 @@ StartupDecodingContext(List *output_plugin_options,
 	slot = MyReplicationSlot;
 
 	context = AllocSetContextCreate(CurrentMemoryContext,
-									"Changeset Extraction Context",
+									"Logical Decoding Context",
 									ALLOCSET_DEFAULT_MINSIZE,
 									ALLOCSET_DEFAULT_INITSIZE,
 									ALLOCSET_DEFAULT_MAXSIZE);
@@ -145,19 +148,34 @@ StartupDecodingContext(List *output_plugin_options,
 	 * logical decoding backend which doesn't need to be checked individually
 	 * when computing the xmin horizon because the xmin is enforced via
 	 * replication slots.
+	 *
+	 * We can only do so if we're outside of a transaction (i.e. the case when
+	 * streaming changes via walsender), otherwise a already setup
+	 * snapshot/xid would end up being ignored. That's not a particularly
+	 * bothersome restriction since the SQL interface can't be used for
+	 * streaming anyway.
 	 */
-	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
-	MyPgXact->vacuumFlags |= PROC_IN_LOGICAL_DECODING;
-	LWLockRelease(ProcArrayLock);
+	if (!IsTransactionOrTransactionBlock())
+	{
+		LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
+		MyPgXact->vacuumFlags |= PROC_IN_LOGICAL_DECODING;
+		LWLockRelease(ProcArrayLock);
+	}
 
 	ctx->slot = slot;
 
 	ctx->reader = XLogReaderAllocate(read_page, ctx);
+	if (!ctx->reader)
+		ereport(ERROR,
+				(errcode(ERRCODE_OUT_OF_MEMORY),
+				 errmsg("out of memory")));
+
 	ctx->reader->private_data = ctx;
 
 	ctx->reorder = ReorderBufferAllocate();
 	ctx->snapshot_builder =
-		AllocateSnapshotBuilder(ctx->reorder, xmin_horizon, start_lsn);
+		AllocateSnapshotBuilder(ctx->reorder, xmin_horizon, start_lsn,
+								need_full_snapshot);
 
 	ctx->reorder->private_data = ctx;
 
@@ -195,6 +213,7 @@ StartupDecodingContext(List *output_plugin_options,
 LogicalDecodingContext *
 CreateInitDecodingContext(char *plugin,
 						  List *output_plugin_options,
+						  bool need_full_snapshot,
 						  XLogPageReadCB read_page,
 						  LogicalOutputPluginWriterPrepareWrite prepare_write,
 						  LogicalOutputPluginWriterWrite do_write)
@@ -218,7 +237,7 @@ CreateInitDecodingContext(char *plugin,
 	if (slot->data.database == InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("cannot use physical replication slot created for logical decoding")));
+				 errmsg("cannot use physical replication slot for logical decoding")));
 
 	if (slot->data.database != MyDatabaseId)
 		ereport(ERROR,
@@ -299,28 +318,37 @@ CreateInitDecodingContext(char *plugin,
 	 * the slot machinery about the new limit. Once that's done the
 	 * ProcArrayLock can be released as the slot machinery now is
 	 * protecting against vacuum.
+	 *
+	 * Note that, temporarily, the data, not just the catalog, xmin has to be
+	 * reserved if a data snapshot is to be exported.  Otherwise the initial
+	 * data snapshot created here is not guaranteed to be valid. After that
+	 * the data xmin doesn't need to be managed anymore and the global xmin
+	 * should be recomputed. As we are fine with losing the pegged data xmin
+	 * after crash - no chance a snapshot would get exported anymore - we can
+	 * get away with just setting the slot's
+	 * effective_xmin. ReplicationSlotRelease will reset it again.
+	 *
 	 * ----
 	 */
 	LWLockAcquire(ProcArrayLock, LW_EXCLUSIVE);
 
-	slot->effective_catalog_xmin = GetOldestSafeDecodingTransactionId();
-	slot->data.catalog_xmin = slot->effective_catalog_xmin;
+	xmin_horizon = GetOldestSafeDecodingTransactionId(!need_full_snapshot);
+
+	slot->effective_catalog_xmin = xmin_horizon;
+	slot->data.catalog_xmin = xmin_horizon;
+	if (need_full_snapshot)
+		slot->effective_xmin = xmin_horizon;
 
 	ReplicationSlotsComputeRequiredXmin(true);
 
 	LWLockRelease(ProcArrayLock);
 
-	/*
-	 * tell the snapshot builder to only assemble snapshot once reaching the a
-	 * running_xact's record with the respective xmin.
-	 */
-	xmin_horizon = slot->data.catalog_xmin;
-
 	ReplicationSlotMarkDirty();
 	ReplicationSlotSave();
 
 	ctx = StartupDecodingContext(NIL, InvalidXLogRecPtr, xmin_horizon,
-								 read_page, prepare_write, do_write);
+								 need_full_snapshot, read_page, prepare_write,
+								 do_write);
 
 	/* call output plugin initialization callback */
 	old_context = MemoryContextSwitchTo(ctx->context);
@@ -400,7 +428,7 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 	}
 
 	ctx = StartupDecodingContext(output_plugin_options,
-								 start_lsn, InvalidTransactionId,
+								 start_lsn, InvalidTransactionId, false,
 								 read_page, prepare_write, do_write);
 
 	/* call output plugin initialization callback */
@@ -410,7 +438,7 @@ CreateDecodingContext(XLogRecPtr start_lsn,
 	MemoryContextSwitchTo(old_context);
 
 	ereport(LOG,
-			(errmsg("starting logical decoding for slot %s",
+			(errmsg("starting logical decoding for slot \"%s\"",
 					NameStr(slot->data.name)),
 			 errdetail("streaming transactions committing after %X/%X, reading WAL from %X/%X",
 					   (uint32) (slot->data.confirmed_flush >> 32),
@@ -451,11 +479,6 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 		XLogRecord *record;
 		char	   *err = NULL;
 
-		/*
-		 * If the caller requires that interrupts be checked, the read_page
-		 * callback should do so, as those will often wait.
-		 */
-
 		/* the read_page callback waits for new WAL */
 		record = XLogReadRecord(ctx->reader, startptr, &err);
 		if (err)
@@ -470,6 +493,8 @@ DecodingContextFindStartpoint(LogicalDecodingContext *ctx)
 		/* only continue till we found a consistent spot */
 		if (DecodingContextReady(ctx))
 			break;
+
+		CHECK_FOR_INTERRUPTS();
 	}
 
 	ctx->slot->data.confirmed_flush = ctx->reader->EndRecPtr;

@@ -469,11 +469,7 @@ KeepFileRestoredFromArchive(char *path, char *xlogfname)
 		reload = true;
 	}
 
-	if (rename(path, xlogfpath) < 0)
-		ereport(ERROR,
-				(errcode_for_file_access(),
-				 errmsg("could not rename file \"%s\" to \"%s\": %m",
-						path, xlogfpath)));
+	durable_rename(path, xlogfpath, ERROR);
 
 	/*
 	 * Create .done file forcibly to prevent the restored segment from being
@@ -576,12 +572,7 @@ XLogArchiveForceDone(const char *xlog)
 	StatusFilePath(archiveReady, xlog, ".ready");
 	if (stat(archiveReady, &stat_buf) == 0)
 	{
-		if (rename(archiveReady, archiveDone) < 0)
-			ereport(WARNING,
-					(errcode_for_file_access(),
-					 errmsg("could not rename file \"%s\" to \"%s\": %m",
-							archiveReady, archiveDone)));
-
+		(void) durable_rename(archiveReady, archiveDone, WARNING);
 		return;
 	}
 
@@ -691,6 +682,25 @@ XLogArchiveIsBusy(const char *xlog)
 		return false;
 
 	return true;
+}
+
+/*
+ * XLogArchiveIsReady
+ *
+ * Check to see if an XLOG segment file has an archive notification (.ready)
+ * file.
+ */
+bool
+XLogArchiveIsReady(const char *xlog)
+{
+	char		archiveStatusPath[MAXPGPATH];
+	struct stat stat_buf;
+
+	StatusFilePath(archiveStatusPath, xlog, ".ready");
+	if (stat(archiveStatusPath, &stat_buf) == 0)
+		return true;
+
+	return false;
 }
 
 /*

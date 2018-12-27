@@ -174,7 +174,7 @@ typedef struct _typeInfo
 	char		typtype;		/* 'b', 'c', etc */
 	bool		isArray;		/* true if auto-generated array type */
 	bool		isDefined;		/* true if typisdefined */
-	/* If it's a dumpable base type, we create a "shell type" entry for it */
+	/* If needed, we'll create a "shell type" entry for it; link that here: */
 	struct _shellTypeInfo *shellType;	/* shell-type entry, or NULL */
 	/* If it's a domain, we store links to its constraints here: */
 	int			nDomChecks;
@@ -223,7 +223,6 @@ typedef struct _funcInfo
 	Oid		   *argtypes;
 	Oid			prorettype;
 	char	   *proacl;
-	char	   *proiargs;
 } FuncInfo;
 
 /* AggInfo is a superset of FuncInfo */
@@ -290,18 +289,20 @@ typedef struct _tableInfo
 	char		relstorage;
 	char		relpersistence; /* relation persistence */
 	bool		relispopulated; /* relation is populated */
-	bool		relreplident;	/* replica identifier */
+	char		relreplident;	/* replica identifier */
 	char	   *reltablespace;	/* relation tablespace */
 	char	   *reloptions;		/* options specified by WITH (...) */
-	char	   *checkoption;	/* WITH CHECK OPTION */
+	char	   *checkoption;	/* WITH CHECK OPTION, if any */
 	char	   *toast_reloptions;		/* WITH options for the TOAST table */
 	bool		hasindex;		/* does it have any indexes? */
 	bool		hasrules;		/* does it have any rules? */
 	bool		hastriggers;	/* does it have any triggers? */
 	bool		hasoids;		/* does it have OIDs? */
-	uint32		frozenxid;		/* for restore frozen xid */
-	Oid			toast_oid;		/* for restore toast frozen xid */
-	uint32		toast_frozenxid;	/* for restore toast frozen xid */
+	uint32		frozenxid;		/* table's relfrozenxid */
+	uint32		minmxid;		/* table's relminmxid */
+	Oid			toast_oid;		/* toast table's OID, or 0 if none */
+	uint32		toast_frozenxid;	/* toast table's relfrozenxid, if any */
+	uint32		toast_minmxid;	/* toast table's relminmxid */
 	int			ncheck;			/* # of CHECK expressions */
 	char	   *reloftype;		/* underlying type for typed table */
 	/* these two are set only if table is a sequence owned by a column: */
@@ -344,6 +345,8 @@ typedef struct _tableInfo
 	struct _tableDataInfo *dataObj;		/* TableDataInfo, if dumping its data */
 	Oid			parrelid;			/* external partition's parent oid */
 	bool		parparent;		/* true if the table is partition parent */
+	int			numTriggers;	/* number of triggers for table */
+	struct _triggerInfo *triggers;		/* array of TriggerInfo structs */
 } TableInfo;
 
 typedef struct _attrDefInfo
@@ -369,7 +372,7 @@ typedef struct _indxInfo
 	TableInfo  *indextable;		/* link to table the index is for */
 	char	   *indexdef;
 	char	   *tablespace;		/* tablespace in which index is stored */
-	char	   *options;		/* options specified by WITH (...) */
+	char	   *indreloptions;	/* options specified by WITH (...) */
 	int			indnkeys;
 	Oid		   *indkeys;
 	bool		indisclustered;

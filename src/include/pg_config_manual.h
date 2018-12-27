@@ -62,7 +62,7 @@
  * may improve performance, but supplying a real spinlock implementation is
  * probably far better.
  */
-#define NUM_SPINLOCK_SEMAPHORES		1024
+#define NUM_SPINLOCK_SEMAPHORES		128
 
 /*
  * When we have neither spinlocks nor atomic operations support we're
@@ -208,7 +208,7 @@
  * bytes of wasted memory. The default is 128, which should be large enough
  * for all supported platforms.
  */
-#define CACHE_LINE_SIZE		128
+#define PG_CACHE_LINE_SIZE		128
 
 /*
  *------------------------------------------------------------------------
@@ -298,10 +298,3 @@
 /* #define HEAPDEBUGALL */
 /* #define ACLDEBUG */
 /* #define RTDEBUG */
-
-/*
- * Automatic configuration file name for ALTER SYSTEM.
- * This file will be used to store values of configuration parameters
- * set by ALTER SYSTEM command.
- */
-#define PG_AUTOCONF_FILENAME		"postgresql.auto.conf"

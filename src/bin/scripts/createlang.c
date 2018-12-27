@@ -141,7 +141,7 @@ main(int argc, char *argv[])
 		static const bool translate_columns[] = {false, true};
 
 		conn = connectDatabase(dbname, host, port, username, prompt_password,
-							   progname, false);
+							   progname, echo, false);
 
 		printfPQExpBuffer(&sql, "SELECT lanname as \"%s\", "
 				"(CASE WHEN lanpltrusted THEN '%s' ELSE '%s' END) as \"%s\" "
@@ -181,7 +181,7 @@ main(int argc, char *argv[])
 			*p += ('a' - 'A');
 
 	conn = connectDatabase(dbname, host, port, username, prompt_password,
-						   progname, false);
+						   progname, echo, false);
 
 	/*
 	 * Make sure the language isn't already installed
@@ -192,10 +192,10 @@ main(int argc, char *argv[])
 	result = executeQuery(conn, sql.data, progname, echo);
 	if (PQntuples(result) > 0)
 	{
-		PQfinish(conn);
 		fprintf(stderr,
 		  _("%s: language \"%s\" is already installed in database \"%s\"\n"),
-				progname, langname, dbname);
+				progname, langname, PQdb(conn));
+		PQfinish(conn);
 		/* separate exit status for "already installed" */
 		exit(2);
 	}

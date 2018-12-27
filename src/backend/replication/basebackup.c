@@ -71,6 +71,8 @@ static bool sendFile(char *readfilename, char *tarfilename,
 static void sendFileWithContent(const char *filename, const char *content);
 static void _tarWriteHeader(const char *filename, const char *linktarget,
 				struct stat * statbuf);
+static int64 _tarWriteDir(const char *pathbuf, int basepathlen, struct stat * statbuf,
+			 bool sizeonly);
 static void send_int8_string(StringInfoData *buf, int64 intval);
 static void SendBackupHeader(List *tablespaces);
 static void base_backup_cleanup(int code, Datum arg);
@@ -195,7 +197,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 		/* Collect information about all tablespaces */
 		while ((de = ReadDir(tblspcdir, "pg_tblspc")) != NULL)
 		{
-			char		fullpath[MAXPGPATH];
+			char		fullpath[MAXPGPATH + 10];
 			char		linkpath[MAXPGPATH];
 			char	   *relpath = NULL;
 			int			rllen;
@@ -476,6 +478,8 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 			fp = AllocateFile(pathbuf, "rb");
 			if (fp == NULL)
 			{
+				int			save_errno = errno;
+
 				/*
 				 * Most likely reason for this is that the file was already
 				 * removed by a checkpoint, so check for that to get a better
@@ -483,6 +487,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 				 */
 				CheckXLogRemoved(segno, tli);
 
+				errno = save_errno;
 				ereport(ERROR,
 						(errcode_for_file_access(),
 						 errmsg("could not open file \"%s\": %m", pathbuf)));
@@ -501,6 +506,7 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 					errmsg("unexpected WAL file size \"%s\"", walFiles[i])));
 			}
 
+			/* send the WAL file itself */
 			_tarWriteHeader(pathbuf, NULL, &statbuf);
 
 			while ((cnt = fread(buf, 1, Min(sizeof(buf), XLogSegSize - len), fp)) > 0)
@@ -530,7 +536,17 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 				   "basebackup perform -- Sent xlog file %s", walFiles[i]);
 
 			/* XLogSegSize is a multiple of 512, so no need for padding */
+
 			FreeFile(fp);
+
+			/*
+			 * Mark file as archived, otherwise files can get archived again
+			 * after promotion of a new node. This is in line with
+			 * walreceiver.c always doing a XLogArchiveForceDone() after a
+			 * complete segment.
+			 */
+			StatusFilePath(pathbuf, walFiles[i], ".done");
+			sendFileWithContent(pathbuf, "");
 		}
 
 		/*
@@ -554,6 +570,10 @@ perform_base_backup(basebackup_options *opt, DIR *tblspcdir)
 						 errmsg("could not stat file \"%s\": %m", pathbuf)));
 
 			sendFile(pathbuf, pathbuf, &statbuf, false);
+
+			/* unconditionally mark file as archived */
+			StatusFilePath(pathbuf, fname, ".done");
+			sendFileWithContent(pathbuf, "");
 		}
 
 		/* Send CopyDone message for the last tar file */
@@ -785,10 +805,15 @@ SendBackupHeader(List *tablespaces)
 		}
 		else
 		{
-			pq_sendint(&buf, strlen(ti->oid), 4);		/* length */
-			pq_sendbytes(&buf, ti->oid, strlen(ti->oid));
-			pq_sendint(&buf, strlen(ti->path), 4);		/* length */
-			pq_sendbytes(&buf, ti->path, strlen(ti->path));
+			Size		len;
+
+			len = strlen(ti->oid);
+			pq_sendint(&buf, len, 4);
+			pq_sendbytes(&buf, ti->oid, len);
+
+			len = strlen(ti->path);
+			pq_sendint(&buf, len, 4);
+			pq_sendbytes(&buf, ti->path, len);
 		}
 		if (ti->size >= 0)
 			send_int8_string(&buf, ti->size / 1024);
@@ -813,6 +838,7 @@ SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
 {
 	StringInfoData buf;
 	char		str[MAXFNAMELEN];
+	Size		len;
 
 	pq_beginmessage(&buf, 'T'); /* RowDescription */
 	pq_sendint(&buf, 2, 2);		/* 2 fields */
@@ -831,7 +857,7 @@ SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
 	pq_sendint(&buf, 0, 2);		/* attnum */
 
 	/*
-	 * int8 may seem like a surprising data type for this, but in thory int4
+	 * int8 may seem like a surprising data type for this, but in theory int4
 	 * would not be wide enough for this, as TimeLineID is unsigned.
 	 */
 	pq_sendint(&buf, INT8OID, 4);		/* type oid */
@@ -844,13 +870,15 @@ SendXlogRecPtrResult(XLogRecPtr ptr, TimeLineID tli)
 	pq_beginmessage(&buf, 'D');
 	pq_sendint(&buf, 2, 2);		/* number of columns */
 
-	snprintf(str, sizeof(str), "%X/%X", (uint32) (ptr >> 32), (uint32) ptr);
-	pq_sendint(&buf, strlen(str), 4);	/* length */
-	pq_sendbytes(&buf, str, strlen(str));
+	len = snprintf(str, sizeof(str),
+				   "%X/%X", (uint32) (ptr >> 32), (uint32) ptr);
+	pq_sendint(&buf, len, 4);
+	pq_sendbytes(&buf, str, len);
 
-	snprintf(str, sizeof(str), "%u", tli);
-	pq_sendint(&buf, strlen(str), 4);	/* length */
-	pq_sendbytes(&buf, str, strlen(str));
+	len = snprintf(str, sizeof(str), "%u", tli);
+	pq_sendint(&buf, len, 4);
+	pq_sendbytes(&buf, str, len);
+
 	pq_endmessage(&buf);
 
 	/* Send a CommandComplete message */
@@ -987,7 +1015,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 {
 	DIR		   *dir;
 	struct dirent *de;
-	char		pathbuf[MAXPGPATH];
+	char		pathbuf[MAXPGPATH * 2];
 	struct stat statbuf;
 	int64		size = 0;
 
@@ -1035,7 +1063,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 						 "and should not be used. "
 						 "Try taking another online backup.")));
 
-		snprintf(pathbuf, MAXPGPATH, "%s/%s", path, de->d_name);
+		snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path, de->d_name);
 
 		/* Skip postmaster.pid and postmaster.opts in the data directory */
 		if (strcmp(pathbuf, "./postmaster.pid") == 0 ||
@@ -1066,9 +1094,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		if ((statrelpath != NULL && strcmp(pathbuf, statrelpath) == 0) ||
 		  strncmp(de->d_name, PG_STAT_TMP_DIR, strlen(PG_STAT_TMP_DIR)) == 0)
 		{
-			if (!sizeonly)
-				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
-			size += 512;
+			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
 			continue;
 		}
 
@@ -1078,9 +1104,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		 */
 		if (strcmp(de->d_name, "pg_replslot") == 0)
 		{
-			if (!sizeonly)
-				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
-			size += 512;		/* Size of the header just added */
+			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
 			continue;
 		}
 
@@ -1091,18 +1115,17 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		 */
 		if (strcmp(pathbuf, "./pg_xlog") == 0)
 		{
+			/* If pg_xlog is a symlink, write it as a directory anyway */
+			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
+
+			/*
+			 * Also send archive_status directory (by hackishly reusing
+			 * statbuf from above ...).
+			 */
 			if (!sizeonly)
-			{
-				/* If pg_xlog is a symlink, write it as a directory anyway */
-#ifndef WIN32
-				if (S_ISLNK(statbuf.st_mode))
-#else
-				if (pgwin32_is_junction(pathbuf))
-#endif
-					statbuf.st_mode = S_IFDIR | S_IRWXU;
-				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
-			}
+				_tarWriteHeader("./pg_xlog/archive_status", NULL, &statbuf);
 			size += 512;		/* Size of the header just added */
+
 			continue;			/* don't recurse into pg_xlog */
 		}
 
@@ -1236,13 +1259,6 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 
 
 /*
- * Maximum file size for a tar member: The limit inherent in the
- * format is 2^33-1 bytes (nearly 8 GB).  But we don't want to exceed
- * what we can represent in pgoff_t.
- */
-#define MAX_TAR_MEMBER_FILELEN (((int64) 1 << Min(33, sizeof(pgoff_t)*8 - 1)) - 1)
-
-/*
  * Given the member, write the TAR header & send the file.
  *
  * If 'missing_ok' is true, will not throw an error if the file is not found.
@@ -1269,15 +1285,6 @@ sendFile(char *readfilename, char *tarfilename, struct stat * statbuf,
 				(errcode_for_file_access(),
 				 errmsg("could not open file \"%s\": %m", readfilename)));
 	}
-
-	/*
-	 * Some compilers will throw a warning knowing this test can never be true
-	 * because pgoff_t can't exceed the compared maximum on their platform.
-	 */
-	if (statbuf->st_size > MAX_TAR_MEMBER_FILELEN)
-		ereport(ERROR,
-				(errmsg("archive member \"%s\" too large for tar format",
-						tarfilename)));
 
 	_tarWriteHeader(tarfilename, NULL, statbuf);
 
@@ -1346,6 +1353,30 @@ _tarWriteHeader(const char *filename, const char *linktarget,
 }
 
 /*
+ * Write tar header for a directory.  If the entry in statbuf is a link then
+ * write it as a directory anyway.
+ */
+static int64
+_tarWriteDir(const char *pathbuf, int basepathlen, struct stat * statbuf,
+			 bool sizeonly)
+{
+	if (sizeonly)
+		/* Directory headers are always 512 bytes */
+		return 512;
+
+	/* If symlink, write it as a directory anyway */
+#ifndef WIN32
+	if (S_ISLNK(statbuf->st_mode))
+#else
+	if (pgwin32_is_junction(pathbuf))
+#endif
+		statbuf->st_mode = S_IFDIR | S_IRWXU;
+
+	_tarWriteHeader(pathbuf + basepathlen + 1, NULL, statbuf);
+	return 512;
+}
+
+/*
  * Increment the network transfer counter by the given number of bytes,
  * and sleep if necessary to comply with the requested network transfer
  * rate.
@@ -1356,7 +1387,6 @@ throttle(size_t increment)
 	int64		elapsed,
 				elapsed_min,
 				sleep;
-	int			wait_result;
 
 	if (throttling_counter < 0)
 		return;
@@ -1379,30 +1409,20 @@ throttle(size_t increment)
 		 * (TAR_SEND_SIZE / throttling_sample * elapsed_min_unit) should be
 		 * the maximum time to sleep. Thus the cast to long is safe.
 		 */
-		wait_result = WaitLatch(&MyWalSnd->latch,
-							 WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
-								(long) (sleep / 1000));
-	}
-	else
-	{
-		/*
-		 * The actual transfer rate is below the limit.  A negative value
-		 * would distort the adjustment of throttled_last.
-		 */
-		wait_result = 0;
-		sleep = 0;
+		WaitLatch(&MyWalSnd->latch,
+				  WL_LATCH_SET | WL_TIMEOUT | WL_POSTMASTER_DEATH,
+				  (long) (sleep / 1000));
 	}
 
 	/*
-	 * Only a whole multiple of throttling_sample was processed. The rest will
-	 * be done during the next call of this function.
+	 * As we work with integers, only whole multiple of throttling_sample was
+	 * processed. The rest will be done during the next call of this function.
 	 */
 	throttling_counter %= throttling_sample;
 
-	/* Once the (possible) sleep has ended, new period starts. */
-	if (wait_result & WL_TIMEOUT)
-		throttled_last += elapsed + sleep;
-	else if (sleep > 0)
-		/* Sleep was necessary but might have been interrupted. */
-		throttled_last = GetCurrentIntegerTimestamp();
+	/*
+	 * Time interval for the remaining amount and possible next increments
+	 * starts now.
+	 */
+	throttled_last = GetCurrentIntegerTimestamp();
 }

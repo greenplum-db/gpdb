@@ -164,7 +164,7 @@ static void CopyFromInsertBatch(CopyState cstate, EState *estate,
 					ResultRelInfo *resultRelInfo, TupleTableSlot *myslot,
 					BulkInsertState bistate,
 					int nBufferedTuples, HeapTuple *bufferedTuples,
-					int firstBufferedLineNo);
+					uint64 firstBufferedLineNo);
 static bool CopyReadLineText(CopyState cstate);
 static int	CopyReadAttributesText(CopyState cstate);
 static int	CopyReadAttributesCSV(CopyState cstate);
@@ -439,6 +439,8 @@ ReceiveCopyBegin(CopyState cstate)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			errmsg("COPY BINARY is not supported to stdout or from stdin")));
 		pq_putemptymessage('G');
+		/* any error in old protocol will make us lose sync */
+		pq_startmsgread();
 		cstate->copy_dest = COPY_OLD_FE;
 	}
 	else
@@ -449,6 +451,8 @@ ReceiveCopyBegin(CopyState cstate)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 			errmsg("COPY BINARY is not supported to stdout or from stdin")));
 		pq_putemptymessage('D');
+		/* any error in old protocol will make us lose sync */
+		pq_startmsgread();
 		cstate->copy_dest = COPY_OLD_FE;
 	}
 	/* We *must* flush here to ensure FE knows it can send. */
@@ -734,6 +738,8 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 					int			mtype;
 
 			readmessage:
+					HOLD_CANCEL_INTERRUPTS();
+					pq_startmsgread();
 					mtype = pq_getbyte();
 					if (mtype == EOF)
 						ereport(ERROR,
@@ -743,6 +749,7 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 						ereport(ERROR,
 								(errcode(ERRCODE_CONNECTION_FAILURE),
 								 errmsg("unexpected EOF on client connection with an open transaction")));
+					RESUME_CANCEL_INTERRUPTS();
 					switch (mtype)
 					{
 						case 'd':		/* CopyData */
@@ -2434,7 +2441,16 @@ BeginCopyTo(Relation rel,
 								errmsg("relative path not allowed for COPY to file")));
 
 			oumask = umask(S_IWGRP | S_IWOTH);
-			cstate->copy_file = AllocateFile(filename, PG_BINARY_W);
+			PG_TRY();
+			{
+				cstate->copy_file = AllocateFile(cstate->filename, PG_BINARY_W);
+			}
+			PG_CATCH();
+			{
+				umask(oumask);
+				PG_RE_THROW();
+			}
+			PG_END_TRY();
 			umask(oumask);
 			if (cstate->copy_file == NULL)
 				ereport(ERROR,
@@ -3534,13 +3550,25 @@ CopyFrom(CopyState cstate)
 	/*
 	 * Optimize if new relfilenode was created in this subxact or one of its
 	 * committed children and we won't see those rows later as part of an
-	 * earlier scan or command. This ensures that if this subtransaction
-	 * aborts then the frozen rows won't be visible after xact cleanup. Note
+	 * earlier scan or command. The subxact test ensures that if this subxact
+	 * aborts then the frozen rows won't be visible after xact cleanup.  Note
 	 * that the stronger test of exactly which subtransaction created it is
-	 * crucial for correctness of this optimisation.
+	 * crucial for correctness of this optimisation. The test for an earlier
+	 * scan or command tolerates false negatives. FREEZE causes other sessions
+	 * to see rows they would not see under MVCC, and a false negative merely
+	 * spreads that anomaly to the current session.
 	 */
 	if (cstate->freeze)
 	{
+		/*
+		 * Tolerate one registration for the benefit of FirstXactSnapshot.
+		 * Scan-bearing queries generally create at least two registrations,
+		 * though relying on that is fragile, as is ignoring ActiveSnapshot.
+		 * Clear CatalogSnapshot to avoid counting its registration.  We'll
+		 * still detect ongoing catalog scans, each of which separately
+		 * registers the snapshot it uses.
+		 */
+		InvalidateCatalogSnapshot();
 		if (!ThereAreNoPriorRegisteredSnapshots() || !ThereAreNoReadyPortals())
 			ereport(ERROR,
 					(errcode(ERRCODE_INVALID_TRANSACTION_STATE),
@@ -3576,6 +3604,7 @@ CopyFrom(CopyState cstate)
 	estate->es_result_relations = resultRelInfo;
 	estate->es_num_result_relations = 1;
 	estate->es_result_relation_info = resultRelInfo;
+	estate->es_range_table = cstate->range_table;
 
 	/*
 	 * Look up partition hierarchy of the target table.
@@ -4172,6 +4201,13 @@ CopyFrom(CopyState cstate)
 		}
 	}
 
+	/*
+	 * In the old protocol, tell pqcomm that we can process normal protocol
+	 * messages again.
+	 */
+	if (cstate->copy_dest == COPY_OLD_FE)
+		pq_endmsgread();
+
 	/* Execute AFTER STATEMENT insertion triggers */
 	ExecASInsertTriggers(estate, resultRelInfo);
 
@@ -4286,11 +4322,11 @@ CopyFromInsertBatch(CopyState cstate, EState *estate, CommandId mycid,
 					int hi_options, ResultRelInfo *resultRelInfo,
 					TupleTableSlot *myslot, BulkInsertState bistate,
 					int nBufferedTuples, HeapTuple *bufferedTuples,
-					int firstBufferedLineNo)
+					uint64 firstBufferedLineNo)
 {
 	MemoryContext oldcontext;
 	int			i;
-	int			save_cur_lineno;
+	uint64		save_cur_lineno;
 
 	/*
 	 * Print error context information correctly, if one of the operations

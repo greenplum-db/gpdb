@@ -132,8 +132,8 @@ SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Sh
 -- Casablanca time has changed in new timezone db lets verify it
 set timezone = 'Africa/Casablanca';
 SELECT TIMESTAMP WITH TIME ZONE 'epoch' + 1407545520 * INTERVAL '1 second' as Casablanca;
-          casablanca           
--------------------------------
- Sat Aug 09 01:52:00 2014 WEST
+          casablanca          
+------------------------------
+ Sat Aug 09 01:52:00 2014 +01
 (1 row)
 

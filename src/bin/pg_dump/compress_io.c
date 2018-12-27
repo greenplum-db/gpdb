@@ -183,9 +183,6 @@ void
 WriteDataToArchive(ArchiveHandle *AH, CompressorState *cs,
 				   const void *data, size_t dLen)
 {
-	/* Are we aborting? */
-	checkAborting(AH);
-
 	switch (cs->comprAlg)
 	{
 		case COMPR_ALG_LIBZ:
@@ -350,9 +347,6 @@ ReadDataFromArchiveZlib(ArchiveHandle *AH, ReadFunc readF)
 	/* no minimal chunk size for zlib */
 	while ((cnt = readF(AH, &buf, &buflen)))
 	{
-		/* Are we aborting? */
-		checkAborting(AH);
-
 		zp->next_in = (void *) buf;
 		zp->avail_in = cnt;
 
@@ -413,9 +407,6 @@ ReadDataFromArchiveNone(ArchiveHandle *AH, ReadFunc readF)
 
 	while ((cnt = readF(AH, &buf, &buflen)))
 	{
-		/* Are we aborting? */
-		checkAborting(AH);
-
 		ahwrite(buf, 1, cnt, AH);
 	}
 
@@ -452,6 +443,16 @@ struct cfp
 static int	hasSuffix(const char *filename, const char *suffix);
 #endif
 
+/* free() without changing errno; useful in several places below */
+static void
+free_keep_errno(void *p)
+{
+	int			save_errno = errno;
+
+	free(p);
+	errno = save_errno;
+}
+
 /*
  * Open a file for reading. 'path' is the file to open, and 'mode' should
  * be either "r" or "rb".
@@ -459,6 +460,8 @@ static int	hasSuffix(const char *filename, const char *suffix);
  * If the file at 'path' does not exist, we append the ".gz" suffix (if 'path'
  * doesn't already have it) and try again. So if you pass "foo" as 'path',
  * this will open either "foo" or "foo.gz".
+ *
+ * On failure, return NULL with an error code in errno.
  */
 cfp *
 cfopen_read(const char *path, const char *mode)
@@ -479,7 +482,7 @@ cfopen_read(const char *path, const char *mode)
 
 			fname = psprintf("%s.gz", path);
 			fp = cfopen(fname, mode, 1);
-			free(fname);
+			free_keep_errno(fname);
 		}
 #endif
 	}
@@ -492,8 +495,10 @@ cfopen_read(const char *path, const char *mode)
  * ("w", "wb", "a", or "ab").
  *
  * If 'compression' is non-zero, a gzip compressed stream is opened, and
- * and 'compression' indicates the compression level used. The ".gz" suffix
+ * 'compression' indicates the compression level used. The ".gz" suffix
  * is automatically added to 'path' in that case.
+ *
+ * On failure, return NULL with an error code in errno.
  */
 cfp *
 cfopen_write(const char *path, const char *mode, int compression)
@@ -508,8 +513,8 @@ cfopen_write(const char *path, const char *mode, int compression)
 		char	   *fname;
 
 		fname = psprintf("%s.gz", path);
-		fp = cfopen(fname, mode, 1);
-		free(fname);
+		fp = cfopen(fname, mode, compression);
+		free_keep_errno(fname);
 #else
 		exit_horribly(modulename, "not built with zlib support\n");
 		fp = NULL;				/* keep compiler quiet */
@@ -520,7 +525,9 @@ cfopen_write(const char *path, const char *mode, int compression)
 
 /*
  * Opens file 'path' in 'mode'. If 'compression' is non-zero, the file
- * is opened with libz gzopen(), otherwise with plain fopen()
+ * is opened with libz gzopen(), otherwise with plain fopen().
+ *
+ * On failure, return NULL with an error code in errno.
  */
 cfp *
 cfopen(const char *path, const char *mode, int compression)
@@ -530,11 +537,25 @@ cfopen(const char *path, const char *mode, int compression)
 	if (compression != 0)
 	{
 #ifdef HAVE_LIBZ
-		fp->compressedfp = gzopen(path, mode);
+		if (compression != Z_DEFAULT_COMPRESSION)
+		{
+			/* user has specified a compression level, so tell zlib to use it */
+			char		mode_compression[32];
+
+			snprintf(mode_compression, sizeof(mode_compression), "%s%d",
+					 mode, compression);
+			fp->compressedfp = gzopen(path, mode_compression);
+		}
+		else
+		{
+			/* don't specify a level, just use the zlib default */
+			fp->compressedfp = gzopen(path, mode);
+		}
+
 		fp->uncompressedfp = NULL;
 		if (fp->compressedfp == NULL)
 		{
-			free(fp);
+			free_keep_errno(fp);
 			fp = NULL;
 		}
 #else
@@ -549,7 +570,7 @@ cfopen(const char *path, const char *mode, int compression)
 		fp->uncompressedfp = fopen(path, mode);
 		if (fp->uncompressedfp == NULL)
 		{
-			free(fp);
+			free_keep_errno(fp);
 			fp = NULL;
 		}
 	}
@@ -571,8 +592,14 @@ cfread(void *ptr, int size, cfp *fp)
 	{
 		ret = gzread(fp->compressedfp, ptr, size);
 		if (ret != size && !gzeof(fp->compressedfp))
+		{
+			int		errnum;
+			const char *errmsg = gzerror(fp->compressedfp, &errnum);
+
 			exit_horribly(modulename,
-					"could not read from input file: %s\n", strerror(errno));
+						  "could not read from input file: %s\n",
+						  errnum == Z_ERRNO ? strerror(errno) : errmsg);
+		}
 	}
 	else
 #endif
@@ -658,7 +685,7 @@ cfclose(cfp *fp)
 		result = fclose(fp->uncompressedfp);
 		fp->uncompressedfp = NULL;
 	}
-	free(fp);
+	free_keep_errno(fp);
 
 	return result;
 }
@@ -672,6 +699,22 @@ cfeof(cfp *fp)
 	else
 #endif
 		return feof(fp->uncompressedfp);
+}
+
+const char *
+get_cfp_error(cfp *fp)
+{
+#ifdef HAVE_LIBZ
+	if (fp->compressedfp)
+	{
+		int			errnum;
+		const char *errmsg = gzerror(fp->compressedfp, &errnum);
+
+		if (errnum != Z_ERRNO)
+			return errmsg;
+	}
+#endif
+	return strerror(errno);
 }
 
 #ifdef HAVE_LIBZ

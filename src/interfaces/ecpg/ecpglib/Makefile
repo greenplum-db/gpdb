@@ -45,17 +45,11 @@ else
 PTHREAD_LIBS=-lpthread
 endif
 
-SHLIB_LINK = -L../pgtypeslib -lpgtypes $(libpq) $(filter -lintl -lm, $(LIBS)) $(PTHREAD_LIBS)
+SHLIB_LINK_INTERNAL = -L../pgtypeslib -lpgtypes $(libpq)
+SHLIB_LINK = $(filter -lintl -lm, $(LIBS)) $(PTHREAD_LIBS)
 SHLIB_PREREQS = submake-libpq submake-pgtypeslib
 
 SHLIB_EXPORTS = exports.txt
-
-SHLIB_EXPORTS = exports.txt
-
-ifeq ($(PORTNAME), win32)
-# Link to shfolder.dll instead of shell32.dll
-SHLIB_LINK += -lshfolder
-endif
 
 PKG_CONFIG_REQUIRES_PRIVATE = libpq libpgtypes
 

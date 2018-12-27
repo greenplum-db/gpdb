@@ -31,26 +31,29 @@ where (select count(*) from echotable as i where i.c2 = o.c2) >= 2;
 (2 rows)
 
 -- Planner test to make sure the initplan is not removed for function scan
+-- VACUUM FULL: To generate a deterministic plan for the query below.
+VACUUM FULL pg_database;
+VACUUM FULL pg_authid;
 explain (costs off)
 select sess_id from pg_stat_activity
 where query = (select current_query())
 and usename='xxx' and datname='xxx';
-                     QUERY PLAN                      
------------------------------------------------------
+                        QUERY PLAN                         
+-----------------------------------------------------------
  Hash Join
-   Hash Cond: (s.usesysid = u.oid)
+   Hash Cond: (s.datid = d.oid)
    InitPlan 1 (returns $0)
      ->  Result
    ->  Hash Join
-         Hash Cond: (s.datid = d.oid)
-         ->  Function Scan on pg_stat_get_activity s
-               Filter: (query = $0)
-         ->  Hash
-               ->  Seq Scan on pg_database d
-                     Filter: (datname = 'xxx'::name)
-   ->  Hash
+         Hash Cond: (u.oid = s.usesysid)
          ->  Seq Scan on pg_authid u
                Filter: (rolname = 'xxx'::name)
+         ->  Hash
+               ->  Function Scan on pg_stat_get_activity s
+                     Filter: (query = $0)
+   ->  Hash
+         ->  Seq Scan on pg_database d
+               Filter: (datname = 'xxx'::name)
  Optimizer: legacy query optimizer
 (15 rows)
 

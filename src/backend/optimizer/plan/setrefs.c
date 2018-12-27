@@ -553,10 +553,10 @@ flatten_rtes_walker(Node *node, PlannerGlobal *glob)
  *
  * In the flat rangetable, we zero out substructure pointers that are not
  * needed by the executor; this reduces the storage space and copying cost
- * for cached plans.  We keep only the alias and eref Alias fields, which
- * are needed by EXPLAIN, and the selectedCols and modifiedCols bitmaps,
- * which are needed for executor-startup permissions checking and for
- * trigger event checking.
+ * for cached plans.  We keep only the ctename, alias and eref Alias fields,
+ * which are needed by EXPLAIN, and the selectedCols and modifiedCols bitmaps,
+ * which are needed for executor-startup permissions checking and for trigger
+ * event checking.
  */
 static void
 add_rte_to_flat_rtable(PlannerGlobal *glob, RangeTblEntry *rte)
@@ -576,6 +576,7 @@ add_rte_to_flat_rtable(PlannerGlobal *glob, RangeTblEntry *rte)
 	newrte->ctecoltypes = NIL;
 	newrte->ctecoltypmods = NIL;
 	newrte->ctecolcollations = NIL;
+	newrte->securityQuals = NIL;
 
 	glob->finalrtable = lappend(glob->finalrtable, newrte);
 
@@ -1065,6 +1066,9 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 				Assert(splan->plan.targetlist == NIL);
 				Assert(splan->plan.qual == NIL);
 
+				splan->withCheckOptionLists =
+					fix_scan_list(root, splan->withCheckOptionLists, rtoffset);
+
 				if (splan->returningLists)
 				{
 					List	   *newRL = NIL;
@@ -1474,7 +1478,7 @@ copyVar(Var *var)
  * This is code that is common to all variants of expression-fixing.
  * We must look up operator opcode info for OpExpr and related nodes,
  * add OIDs from regclass Const nodes into root->glob->relationOids, and
- * add catalog TIDs for user-defined functions into root->glob->invalItems.
+ * add PlanInvalItems for user-defined functions into root->glob->invalItems.
  *
  * We assume it's okay to update opcode info in-place.  So this could possibly
  * scribble on the planner's input data structures, but it's OK.
@@ -1686,19 +1690,13 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
 	outer_itlist = build_tlist_index(outer_plan->targetlist);
 	inner_itlist = build_tlist_index(inner_plan->targetlist);
 
-	/* All join plans have tlist, qual, and joinqual */
-	join->plan.targetlist = fix_join_expr(root,
-										  join->plan.targetlist,
-										  outer_itlist,
-										  inner_itlist,
-										  (Index) 0,
-										  rtoffset);
-	join->plan.qual = fix_join_expr(root,
-									join->plan.qual,
-									outer_itlist,
-									inner_itlist,
-									(Index) 0,
-									rtoffset);
+	/*
+	 * First process the joinquals (including merge or hash clauses).  These
+	 * are logically below the join so they can always use all values
+	 * available from the input tlists.  It's okay to also handle
+	 * NestLoopParams now, because those couldn't refer to nullable
+	 * subexpressions.
+	 */
 	join->joinqual = fix_join_expr(root,
 								   join->joinqual,
 								   outer_itlist,
@@ -1756,6 +1754,49 @@ set_join_references(PlannerInfo *root, Join *join, int rtoffset)
 											(Index) 0,
 											rtoffset);
 	}
+
+	/*
+	 * Now we need to fix up the targetlist and qpqual, which are logically
+	 * above the join.  This means they should not re-use any input expression
+	 * that was computed in the nullable side of an outer join.  Vars and
+	 * PlaceHolderVars are fine, so we can implement this restriction just by
+	 * clearing has_non_vars in the indexed_tlist structs.
+	 *
+	 * XXX This is a grotty workaround for the fact that we don't clearly
+	 * distinguish between a Var appearing below an outer join and the "same"
+	 * Var appearing above it.  If we did, we'd not need to hack the matching
+	 * rules this way.
+	 */
+	switch (join->jointype)
+	{
+		case JOIN_LEFT:
+		case JOIN_SEMI:
+		case JOIN_ANTI:
+			inner_itlist->has_non_vars = false;
+			break;
+		case JOIN_RIGHT:
+			outer_itlist->has_non_vars = false;
+			break;
+		case JOIN_FULL:
+			outer_itlist->has_non_vars = false;
+			inner_itlist->has_non_vars = false;
+			break;
+		default:
+			break;
+	}
+
+	join->plan.targetlist = fix_join_expr(root,
+										  join->plan.targetlist,
+										  outer_itlist,
+										  inner_itlist,
+										  (Index) 0,
+										  rtoffset);
+	join->plan.qual = fix_join_expr(root,
+									join->plan.qual,
+									outer_itlist,
+									inner_itlist,
+									(Index) 0,
+									rtoffset);
 
 	pfree(outer_itlist);
 	pfree(inner_itlist);
@@ -2062,7 +2103,9 @@ search_indexed_tlist_for_var(Var *var, indexed_tlist *itlist,
  * If no match, return NULL.
  *
  * NOTE: it is a waste of time to call this unless itlist->has_ph_vars or
- * itlist->has_non_vars
+ * itlist->has_non_vars.  Furthermore, set_join_references() relies on being
+ * able to prevent matching of non-Vars by clearing itlist->has_non_vars,
+ * so there's a correctness reason not to call it unless that's set.
  */
 static Var *
 search_indexed_tlist_for_non_var(Node *node,

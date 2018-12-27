@@ -62,6 +62,9 @@ usage(void)
 	printf(_("\nOptions:\n"));
 	printf(_("  -D, --directory=DIR    receive transaction log files into this directory\n"));
 	printf(_("  -n, --no-loop          do not loop on connection lost\n"));
+	printf(_("  -s, --status-interval=SECS\n"
+			 "                         time between status packets sent to server (default: %d)\n"), (standby_message_timeout / 1000));
+	printf(_("  -S, --slot=SLOTNAME    replication slot to use\n"));
 	printf(_("  -v, --verbose          output verbose messages\n"));
 	printf(_("  -V, --version          output version information, then exit\n"));
 	printf(_("  -?, --help             show this help, then exit\n"));
@@ -69,12 +72,9 @@ usage(void)
 	printf(_("  -d, --dbname=CONNSTR   connection string\n"));
 	printf(_("  -h, --host=HOSTNAME    database server host or socket directory\n"));
 	printf(_("  -p, --port=PORT        database server port number\n"));
-	printf(_("  -s, --status-interval=INTERVAL\n"
-			 "                         time between status packets sent to server (in seconds)\n"));
 	printf(_("  -U, --username=NAME    connect as specified database user\n"));
 	printf(_("  -w, --no-password      never prompt for password\n"));
 	printf(_("  -W, --password         force password prompt (should happen automatically)\n"));
-	printf(_("      --slot=SLOTNAME    replication slot to use\n"));
 	printf(_("\nReport bugs to <bugs@greenplum.org>.\n"));
 }
 
@@ -330,7 +330,8 @@ StreamLog(void)
 				starttli);
 
 	ReceiveXlogStream(conn, startpos, starttli, NULL, basedir,
-					  stop_streaming, standby_message_timeout, ".partial");
+					  stop_streaming, standby_message_timeout, ".partial",
+					  false);
 
 	PQfinish(conn);
 }
@@ -372,7 +373,7 @@ main(int argc, char **argv)
 	int			option_index;
 
 	progname = get_progname(argv[0]);
-	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_receivexlog"));
+	set_pglocale_pgservice(argv[0], PG_TEXTDOMAIN("pg_basebackup"));
 
 	if (argc > 1)
 	{
@@ -389,7 +390,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((c = getopt_long(argc, argv, "D:d:h:p:U:s:nwWv",
+	while ((c = getopt_long(argc, argv, "D:d:h:p:U:s:S:nwWv",
 							long_options, &option_index)) != -1)
 	{
 		switch (c)

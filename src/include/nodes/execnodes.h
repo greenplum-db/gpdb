@@ -851,6 +851,7 @@ typedef struct WholeRowVarExprState
 {
 	ExprState	xprstate;
 	struct PlanState *parent;	/* parent PlanState, or NULL if none */
+	TupleDesc	wrv_tupdesc;	/* descriptor for resulting tuples */
 	JunkFilter *wrv_junkFilter; /* JunkFilter to remove resjunk cols */
 } WholeRowVarExprState;
 
@@ -2045,6 +2046,7 @@ typedef struct SubqueryScanState
  *		cdb_want_ctid		true => ctid is referenced in targetlist
  *		cdb_fake_ctid
  *		cdb_mark_ctid
+ *		argcontext			memory context to evaluate function arguments in
  * ----------------
  */
 struct FunctionScanPerFuncState;
@@ -2062,6 +2064,7 @@ typedef struct FunctionScanState
 	bool		cdb_want_ctid;
 	ItemPointerData cdb_fake_ctid;
 	ItemPointerData cdb_mark_ctid;
+	MemoryContext argcontext;
 } FunctionScanState;
 
 

@@ -24,6 +24,7 @@
 #include "access/hash.h"
 #include "access/xact.h"
 #include "catalog/pg_type.h"
+#include "common/int128.h"
 #include "funcapi.h"
 #include "libpq/pqformat.h"
 #include "miscadmin.h"
@@ -831,6 +832,9 @@ timestamptz_in(PG_FUNCTION_ARGS)
 /*
  * Try to parse a timezone specification, and return its timezone offset value
  * if it's acceptable.  Otherwise, an error is thrown.
+ *
+ * Note: some code paths update tm->tm_isdst, and some don't; current callers
+ * don't care, so we don't bother being consistent.
  */
 static int
 parse_sane_timezone(struct pg_tm * tm, text *zone)
@@ -844,12 +848,12 @@ parse_sane_timezone(struct pg_tm * tm, text *zone)
 	/*
 	 * Look up the requested timezone.  First we try to interpret it as a
 	 * numeric timezone specification; if DecodeTimezone decides it doesn't
-	 * like the format, we look in the date token table (to handle cases like
-	 * "EST"), and if that also fails, we look in the timezone database (to
-	 * handle cases like "America/New_York").  (This matches the order in
-	 * which timestamp input checks the cases; it's important because the
-	 * timezone database unwisely uses a few zone names that are identical to
-	 * offset abbreviations.)
+	 * like the format, we look in the timezone abbreviation table (to handle
+	 * cases like "EST"), and if that also fails, we look in the timezone
+	 * database (to handle cases like "America/New_York").  (This matches the
+	 * order in which timestamp input checks the cases; it's important because
+	 * the timezone database unwisely uses a few zone names that are identical
+	 * to offset abbreviations.)
 	 *
 	 * Note pg_tzset happily parses numeric input that DecodeTimezone would
 	 * reject.  To avoid having it accept input that would otherwise be seen
@@ -869,6 +873,7 @@ parse_sane_timezone(struct pg_tm * tm, text *zone)
 		char	   *lowzone;
 		int			type,
 					val;
+		pg_tz	   *tzp;
 
 		if (rt == DTERR_TZDISP_OVERFLOW)
 			ereport(ERROR,
@@ -879,19 +884,26 @@ parse_sane_timezone(struct pg_tm * tm, text *zone)
 					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 					 errmsg("time zone \"%s\" not recognized", tzname)));
 
+		/* DecodeTimezoneAbbrev requires lowercase input */
 		lowzone = downcase_truncate_identifier(tzname,
 											   strlen(tzname),
 											   false);
-		type = DecodeSpecial(0, lowzone, &val);
+		type = DecodeTimezoneAbbrev(0, lowzone, &val, &tzp);
 
 		if (type == TZ || type == DTZ)
-			tz = val * MINS_PER_HOUR;
+		{
+			/* fixed-offset abbreviation */
+			tz = -val;
+		}
+		else if (type == DYNTZ)
+		{
+			/* dynamic-offset abbreviation, resolve using specified time */
+			tz = DetermineTimeZoneAbbrevOffset(tm, tzname, tzp);
+		}
 		else
 		{
-			pg_tz	   *tzp;
-
+			/* try it as a full zone name */
 			tzp = pg_tzset(tzname);
-
 			if (tzp)
 				tz = DetermineTimeZoneOffset(tm, tzp);
 			else
@@ -1507,6 +1519,59 @@ intervaltypmodout(PG_FUNCTION_ARGS)
 	PG_RETURN_CSTRING(res);
 }
 
+/*
+ * Given an interval typmod value, return a code for the least-significant
+ * field that the typmod allows to be nonzero, for instance given
+ * INTERVAL DAY TO HOUR we want to identify "hour".
+ *
+ * The results should be ordered by field significance, which means
+ * we can't use the dt.h macros YEAR etc, because for some odd reason
+ * they aren't ordered that way.  Instead, arbitrarily represent
+ * SECOND = 0, MINUTE = 1, HOUR = 2, DAY = 3, MONTH = 4, YEAR = 5.
+ */
+static int
+intervaltypmodleastfield(int32 typmod)
+{
+	if (typmod < 0)
+		return 0;				/* SECOND */
+
+	switch (INTERVAL_RANGE(typmod))
+	{
+		case INTERVAL_MASK(YEAR):
+			return 5;			/* YEAR */
+		case INTERVAL_MASK(MONTH):
+			return 4;			/* MONTH */
+		case INTERVAL_MASK(DAY):
+			return 3;			/* DAY */
+		case INTERVAL_MASK(HOUR):
+			return 2;			/* HOUR */
+		case INTERVAL_MASK(MINUTE):
+			return 1;			/* MINUTE */
+		case INTERVAL_MASK(SECOND):
+			return 0;			/* SECOND */
+		case INTERVAL_MASK(YEAR) | INTERVAL_MASK(MONTH):
+			return 4;			/* MONTH */
+		case INTERVAL_MASK(DAY) | INTERVAL_MASK(HOUR):
+			return 2;			/* HOUR */
+		case INTERVAL_MASK(DAY) | INTERVAL_MASK(HOUR) | INTERVAL_MASK(MINUTE):
+			return 1;			/* MINUTE */
+		case INTERVAL_MASK(DAY) | INTERVAL_MASK(HOUR) | INTERVAL_MASK(MINUTE) | INTERVAL_MASK(SECOND):
+			return 0;			/* SECOND */
+		case INTERVAL_MASK(HOUR) | INTERVAL_MASK(MINUTE):
+			return 1;			/* MINUTE */
+		case INTERVAL_MASK(HOUR) | INTERVAL_MASK(MINUTE) | INTERVAL_MASK(SECOND):
+			return 0;			/* SECOND */
+		case INTERVAL_MASK(MINUTE) | INTERVAL_MASK(SECOND):
+			return 0;			/* SECOND */
+		case INTERVAL_FULL_RANGE:
+			return 0;			/* SECOND */
+		default:
+			elog(ERROR, "invalid INTERVAL typmod: 0x%x", typmod);
+			break;
+	}
+	return 0;					/* can't get here, but keep compiler quiet */
+}
+
 
 /* interval_transform()
  * Flatten superfluous calls to interval_scale().  The interval typmod is
@@ -1528,39 +1593,39 @@ interval_transform(PG_FUNCTION_ARGS)
 	if (IsA(typmod, Const) &&!((Const *) typmod)->constisnull)
 	{
 		Node	   *source = (Node *) linitial(expr->args);
-		int32		old_typmod = exprTypmod(source);
 		int32		new_typmod = DatumGetInt32(((Const *) typmod)->constvalue);
-		int			old_range;
-		int			old_precis;
-		int			new_range = INTERVAL_RANGE(new_typmod);
-		int			new_precis = INTERVAL_PRECISION(new_typmod);
-		int			new_range_fls;
-		int			old_range_fls;
+		bool		noop;
 
-		if (old_typmod < 0)
-		{
-			old_range = INTERVAL_FULL_RANGE;
-			old_precis = INTERVAL_FULL_PRECISION;
-		}
+		if (new_typmod < 0)
+			noop = true;
 		else
 		{
-			old_range = INTERVAL_RANGE(old_typmod);
-			old_precis = INTERVAL_PRECISION(old_typmod);
-		}
+			int32		old_typmod = exprTypmod(source);
+			int			old_least_field;
+			int			new_least_field;
+			int			old_precis;
+			int			new_precis;
 
-		/*
-		 * Temporally-smaller fields occupy higher positions in the range
-		 * bitmap.  Since only the temporally-smallest bit matters for length
-		 * coercion purposes, we compare the last-set bits in the ranges.
-		 * Precision, which is to say, sub-second precision, only affects
-		 * ranges that include SECOND.
-		 */
-		new_range_fls = fls(new_range);
-		old_range_fls = fls(old_range);
-		if (new_typmod < 0 ||
-			((new_range_fls >= SECOND || new_range_fls >= old_range_fls) &&
-		   (old_range_fls < SECOND || new_precis >= MAX_INTERVAL_PRECISION ||
-			new_precis >= old_precis)))
+			old_least_field = intervaltypmodleastfield(old_typmod);
+			new_least_field = intervaltypmodleastfield(new_typmod);
+			if (old_typmod < 0)
+				old_precis = INTERVAL_FULL_PRECISION;
+			else
+				old_precis = INTERVAL_PRECISION(old_typmod);
+			new_precis = INTERVAL_PRECISION(new_typmod);
+
+			/*
+			 * Cast is a no-op if least field stays the same or decreases
+			 * while precision stays the same or increases.  But precision,
+			 * which is to say, sub-second precision, only affects ranges that
+			 * include SECOND.
+			 */
+			noop = (new_least_field <= old_least_field) &&
+				(old_least_field > 0 /* SECOND */ ||
+				 new_precis >= MAX_INTERVAL_PRECISION ||
+				 new_precis >= old_precis);
+		}
+		if (noop)
 			ret = relabel_to_typmod(source, new_typmod);
 	}
 
@@ -1827,12 +1892,15 @@ make_interval(PG_FUNCTION_ARGS)
 	result->month = years * MONTHS_PER_YEAR + months;
 	result->day = weeks * 7 + days;
 
-	secs += hours * (double) SECS_PER_HOUR + mins * (double) SECS_PER_MINUTE;
-
 #ifdef HAVE_INT64_TIMESTAMP
-	result->time = (int64) (secs * USECS_PER_SEC);
+	secs = rint(secs * USECS_PER_SEC);
+	result->time = hours * ((int64) SECS_PER_HOUR * USECS_PER_SEC) +
+		mins * ((int64) SECS_PER_MINUTE * USECS_PER_SEC) +
+		(int64) secs;
 #else
-	result->time = secs;
+	result->time = hours * (double) SECS_PER_HOUR +
+		mins * (double) SECS_PER_MINUTE +
+		secs;
 #endif
 
 	PG_RETURN_INTERVAL_P(result);
@@ -1911,7 +1979,7 @@ GetCurrentTimestamp(void)
 /*
  * GetCurrentIntegerTimestamp -- get the current operating system time as int64
  *
- * Result is the number of milliseconds since the Postgres epoch. If compiled
+ * Result is the number of microseconds since the Postgres epoch. If compiled
  * with --enable-integer-datetimes, this is identical to GetCurrentTimestamp(),
  * and is implemented as a macro.
  */
@@ -2428,6 +2496,9 @@ GetEpochTime(struct pg_tm * tm)
 
 	t0 = pg_gmtime(&epoch);
 
+	if (t0 == NULL)
+		elog(ERROR, "could not convert epoch to timestamp: %m");
+
 	tm->tm_year = t0->tm_year;
 	tm->tm_mon = t0->tm_mon;
 	tm->tm_mday = t0->tm_mday;
@@ -2768,19 +2839,47 @@ timestamptz_cmp_timestamp(PG_FUNCTION_ARGS)
 /*
  *		interval_relop	- is interval1 relop interval2
  *
- *		collate invalid interval at the end
+ * Interval comparison is based on converting interval values to a linear
+ * representation expressed in the units of the time field (microseconds,
+ * in the case of integer timestamps) with days assumed to be always 24 hours
+ * and months assumed to be always 30 days.  To avoid overflow, we need a
+ * wider-than-int64 datatype for the linear representation, so use INT128
+ * with integer timestamps.
+ *
+ * In the float8 case, our problems are not with overflow but with precision;
+ * but it's been like that since day one, so live with it.
  */
-static inline TimeOffset
+#ifdef HAVE_INT64_TIMESTAMP
+typedef INT128 IntervalOffset;
+#else
+typedef TimeOffset IntervalOffset;
+#endif
+
+static inline IntervalOffset
 interval_cmp_value(const Interval *interval)
 {
-	TimeOffset	span;
-
-	span = interval->time;
+	IntervalOffset span;
 
 #ifdef HAVE_INT64_TIMESTAMP
-	span += interval->month * INT64CONST(30) * USECS_PER_DAY;
-	span += interval->day * INT64CONST(24) * USECS_PER_HOUR;
+	int64		dayfraction;
+	int64		days;
+
+	/*
+	 * Separate time field into days and dayfraction, then add the month and
+	 * day fields to the days part.  We cannot overflow int64 days here.
+	 */
+	dayfraction = interval->time % USECS_PER_DAY;
+	days = interval->time / USECS_PER_DAY;
+	days += interval->month * INT64CONST(30);
+	days += interval->day;
+
+	/* Widen dayfraction to 128 bits */
+	span = int64_to_int128(dayfraction);
+
+	/* Scale up days to microseconds, forming a 128-bit product */
+	int128_add_int64_mul_int64(&span, days, USECS_PER_DAY);
 #else
+	span = interval->time;
 	span += interval->month * ((double) DAYS_PER_MONTH * SECS_PER_DAY);
 	span += interval->day * ((double) HOURS_PER_DAY * SECS_PER_HOUR);
 #endif
@@ -2791,10 +2890,14 @@ interval_cmp_value(const Interval *interval)
 int
 interval_cmp_internal(const Interval *interval1, const Interval *interval2)
 {
-	TimeOffset	span1 = interval_cmp_value(interval1);
-	TimeOffset	span2 = interval_cmp_value(interval2);
+	IntervalOffset span1 = interval_cmp_value(interval1);
+	IntervalOffset span2 = interval_cmp_value(interval2);
 
+#ifdef HAVE_INT64_TIMESTAMP
+	return int128_compare(span1, span2);
+#else
 	return ((span1 < span2) ? -1 : (span1 > span2) ? 1 : 0);
+#endif
 }
 
 /*
@@ -3106,10 +3209,20 @@ Datum
 interval_hash(PG_FUNCTION_ARGS)
 {
 	Interval   *interval = PG_GETARG_INTERVAL_P(0);
-	TimeOffset	span = interval_cmp_value(interval);
+	IntervalOffset span = interval_cmp_value(interval);
 
 #ifdef HAVE_INT64_TIMESTAMP
-	return DirectFunctionCall1(hashint8, Int64GetDatumFast(span));
+	int64		span64;
+
+	/*
+	 * Use only the least significant 64 bits for hashing.  The upper 64 bits
+	 * seldom add any useful information, and besides we must do it like this
+	 * for compatibility with hashes calculated before use of INT128 was
+	 * introduced.
+	 */
+	span64 = int128_to_int64(span);
+
+	return DirectFunctionCall1(hashint8, Int64GetDatumFast(span64));
 #else
 	return DirectFunctionCall1(hashfloat8, Float8GetDatumFast(span));
 #endif
@@ -5150,6 +5263,26 @@ timestamp_part(PG_FUNCTION_ARGS)
 				result = date2isoyear(tm->tm_year, tm->tm_mon, tm->tm_mday);
 				break;
 
+			case DTK_DOW:
+			case DTK_ISODOW:
+				if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+							 errmsg("timestamp out of range")));
+				result = j2day(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday));
+				if (val == DTK_ISODOW && result == 0)
+					result = 7;
+				break;
+
+			case DTK_DOY:
+				if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+							 errmsg("timestamp out of range")));
+				result = (date2j(tm->tm_year, tm->tm_mon, tm->tm_mday)
+						  - date2j(tm->tm_year, 1, 1) + 1);
+				break;
+
 			case DTK_TZ:
 			case DTK_TZ_MINUTE:
 			case DTK_TZ_HOUR:
@@ -5171,26 +5304,6 @@ timestamp_part(PG_FUNCTION_ARGS)
 #else
 				result = timestamp - SetEpochTimestamp();
 #endif
-				break;
-
-			case DTK_DOW:
-			case DTK_ISODOW:
-				if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-							 errmsg("timestamp out of range")));
-				result = j2day(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday));
-				if (val == DTK_ISODOW && result == 0)
-					result = 7;
-				break;
-
-			case DTK_DOY:
-				if (timestamp2tm(timestamp, NULL, tm, &fsec, NULL, NULL) != 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-							 errmsg("timestamp out of range")));
-				result = (date2j(tm->tm_year, tm->tm_mon, tm->tm_mday)
-						  - date2j(tm->tm_year, 1, 1) + 1);
 				break;
 
 			default:
@@ -5364,6 +5477,26 @@ timestamptz_part(PG_FUNCTION_ARGS)
 				result = date2isoyear(tm->tm_year, tm->tm_mon, tm->tm_mday);
 				break;
 
+			case DTK_DOW:
+			case DTK_ISODOW:
+				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+							 errmsg("timestamp out of range")));
+				result = j2day(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday));
+				if (val == DTK_ISODOW && result == 0)
+					result = 7;
+				break;
+
+			case DTK_DOY:
+				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+							 errmsg("timestamp out of range")));
+				result = (date2j(tm->tm_year, tm->tm_mon, tm->tm_mday)
+						  - date2j(tm->tm_year, 1, 1) + 1);
+				break;
+
 			default:
 				ereport(ERROR,
 						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
@@ -5383,26 +5516,6 @@ timestamptz_part(PG_FUNCTION_ARGS)
 #else
 				result = timestamp - SetEpochTimestamp();
 #endif
-				break;
-
-			case DTK_DOW:
-			case DTK_ISODOW:
-				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-							 errmsg("timestamp out of range")));
-				result = j2day(date2j(tm->tm_year, tm->tm_mon, tm->tm_mday));
-				if (val == DTK_ISODOW && result == 0)
-					result = 7;
-				break;
-
-			case DTK_DOY:
-				if (timestamp2tm(timestamp, &tz, tm, &fsec, NULL, NULL) != 0)
-					ereport(ERROR,
-							(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
-							 errmsg("timestamp out of range")));
-				result = (date2j(tm->tm_year, tm->tm_mon, tm->tm_mday)
-						  - date2j(tm->tm_year, 1, 1) + 1);
 				break;
 
 			default:
@@ -5579,39 +5692,52 @@ timestamp_zone(PG_FUNCTION_ARGS)
 	int			type,
 				val;
 	pg_tz	   *tzp;
+	struct pg_tm tm;
+	fsec_t		fsec;
 
 	if (TIMESTAMP_NOT_FINITE(timestamp))
 		PG_RETURN_TIMESTAMPTZ(timestamp);
 
 	/*
-	 * Look up the requested timezone.  First we look in the date token table
-	 * (to handle cases like "EST"), and if that fails, we look in the
-	 * timezone database (to handle cases like "America/New_York").  (This
-	 * matches the order in which timestamp input checks the cases; it's
-	 * important because the timezone database unwisely uses a few zone names
-	 * that are identical to offset abbreviations.)
+	 * Look up the requested timezone.  First we look in the timezone
+	 * abbreviation table (to handle cases like "EST"), and if that fails, we
+	 * look in the timezone database (to handle cases like
+	 * "America/New_York").  (This matches the order in which timestamp input
+	 * checks the cases; it's important because the timezone database unwisely
+	 * uses a few zone names that are identical to offset abbreviations.)
 	 */
 	text_to_cstring_buffer(zone, tzname, sizeof(tzname));
+
+	/* DecodeTimezoneAbbrev requires lowercase input */
 	lowzone = downcase_truncate_identifier(tzname,
 										   strlen(tzname),
 										   false);
 
-	type = DecodeSpecial(0, lowzone, &val);
+	type = DecodeTimezoneAbbrev(0, lowzone, &val, &tzp);
 
 	if (type == TZ || type == DTZ)
 	{
-		tz = -(val * MINS_PER_HOUR);
+		/* fixed-offset abbreviation */
+		tz = val;
+		result = dt2local(timestamp, tz);
+	}
+	else if (type == DYNTZ)
+	{
+		/* dynamic-offset abbreviation, resolve using specified time */
+		if (timestamp2tm(timestamp, NULL, &tm, &fsec, NULL, tzp) != 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
+					 errmsg("timestamp out of range")));
+		tz = -DetermineTimeZoneAbbrevOffset(&tm, tzname, tzp);
 		result = dt2local(timestamp, tz);
 	}
 	else
 	{
+		/* try it as a full zone name */
 		tzp = pg_tzset(tzname);
 		if (tzp)
 		{
 			/* Apply the timezone change */
-			struct pg_tm tm;
- 			fsec_t		fsec = 0;
-
 			if (timestamp2tm(timestamp, NULL, &tm, &fsec, NULL, tzp) != 0)
 				ereport(ERROR,
 						(errcode(ERRCODE_DATETIME_VALUE_OUT_OF_RANGE),
@@ -5757,27 +5883,39 @@ timestamptz_zone(PG_FUNCTION_ARGS)
 		PG_RETURN_TIMESTAMP(timestamp);
 
 	/*
-	 * Look up the requested timezone.  First we look in the date token table
-	 * (to handle cases like "EST"), and if that fails, we look in the
-	 * timezone database (to handle cases like "America/New_York").  (This
-	 * matches the order in which timestamp input checks the cases; it's
-	 * important because the timezone database unwisely uses a few zone names
-	 * that are identical to offset abbreviations.)
+	 * Look up the requested timezone.  First we look in the timezone
+	 * abbreviation table (to handle cases like "EST"), and if that fails, we
+	 * look in the timezone database (to handle cases like
+	 * "America/New_York").  (This matches the order in which timestamp input
+	 * checks the cases; it's important because the timezone database unwisely
+	 * uses a few zone names that are identical to offset abbreviations.)
 	 */
 	text_to_cstring_buffer(zone, tzname, sizeof(tzname));
+
+	/* DecodeTimezoneAbbrev requires lowercase input */
 	lowzone = downcase_truncate_identifier(tzname,
 										   strlen(tzname),
 										   false);
 
-	type = DecodeSpecial(0, lowzone, &val);
+	type = DecodeTimezoneAbbrev(0, lowzone, &val, &tzp);
 
 	if (type == TZ || type == DTZ)
 	{
-		tz = val * MINS_PER_HOUR;
+		/* fixed-offset abbreviation */
+		tz = -val;
+		result = dt2local(timestamp, tz);
+	}
+	else if (type == DYNTZ)
+	{
+		/* dynamic-offset abbreviation, resolve using specified time */
+		int			isdst;
+
+		tz = DetermineTimeZoneAbbrevOffsetTS(timestamp, tzname, tzp, &isdst);
 		result = dt2local(timestamp, tz);
 	}
 	else
 	{
+		/* try it as a full zone name */
 		tzp = pg_tzset(tzname);
 		if (tzp)
 		{

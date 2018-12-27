@@ -439,7 +439,7 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <node>	fetch_args limit_clause select_limit_value
 				offset_clause select_offset_value
-				select_offset_value2 opt_select_fetch_first_value
+				select_fetch_first_value I_or_F_const
 %type <ival>	row_or_rows first_or_next
 
 %type <list>	OptSeqOptList SeqOptList
@@ -447,7 +447,8 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 
 %type <istmt>	insert_rest
 
-%type <vsetstmt> generic_set set_rest set_rest_more SetResetClause FunctionSetResetClause
+%type <vsetstmt> generic_set set_rest set_rest_more generic_reset reset_rest
+				 SetResetClause FunctionSetResetClause
 
 %type <node>	TableElement TypedTableElement ConstraintElem TableFuncElement
 %type <node>	columnDef columnOptions
@@ -1810,12 +1811,20 @@ AlterUserStmt:
 
 
 AlterUserSetStmt:
-			ALTER USER RoleId SetResetClause
+			ALTER USER RoleId opt_in_database SetResetClause
 				{
 					AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);
 					n->role = $3;
-					n->database = NULL;
-					n->setstmt = $4;
+					n->database = $4;
+					n->setstmt = $5;
+					$$ = (Node *)n;
+				}
+			| ALTER USER ALL opt_in_database SetResetClause
+				{
+					AlterRoleSetStmt *n = makeNode(AlterRoleSetStmt);
+					n->role = NULL;
+					n->database = $4;
+					n->setstmt = $5;
 					$$ = (Node *)n;
 				}
 			;
@@ -2312,39 +2321,47 @@ NonReservedWord_or_Sconst:
 		;
 
 VariableResetStmt:
-			RESET var_name
-				{
-					VariableSetStmt *n = makeNode(VariableSetStmt);
-					n->kind = VAR_RESET;
-					n->name = $2;
-					$$ = (Node *) n;
-				}
-			| RESET TIME ZONE
+			RESET reset_rest						{ $$ = (Node *) $2; }
+		;
+
+reset_rest:
+			generic_reset							{ $$ = $1; }
+			| TIME ZONE
 				{
 					VariableSetStmt *n = makeNode(VariableSetStmt);
 					n->kind = VAR_RESET;
 					n->name = "timezone";
-					$$ = (Node *) n;
+					$$ = n;
 				}
-			| RESET TRANSACTION ISOLATION LEVEL
+			| TRANSACTION ISOLATION LEVEL
 				{
 					VariableSetStmt *n = makeNode(VariableSetStmt);
 					n->kind = VAR_RESET;
 					n->name = "transaction_isolation";
-					$$ = (Node *) n;
+					$$ = n;
 				}
-			| RESET SESSION AUTHORIZATION
+			| SESSION AUTHORIZATION
 				{
 					VariableSetStmt *n = makeNode(VariableSetStmt);
 					n->kind = VAR_RESET;
 					n->name = "session_authorization";
-					$$ = (Node *) n;
+					$$ = n;
 				}
-			| RESET ALL
+		;
+
+generic_reset:
+			var_name
+				{
+					VariableSetStmt *n = makeNode(VariableSetStmt);
+					n->kind = VAR_RESET;
+					n->name = $1;
+					$$ = n;
+				}
+			| ALL
 				{
 					VariableSetStmt *n = makeNode(VariableSetStmt);
 					n->kind = VAR_RESET_ALL;
-					$$ = (Node *) n;
+					$$ = n;
 				}
 		;
 
@@ -2504,6 +2521,28 @@ AlterTableStmt:
 					n->relkind = OBJECT_EXTTABLE;
 					$$ = (Node *)n;
 				}
+		|	ALTER TABLE ALL IN_P TABLESPACE name SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $6;
+					n->objtype = OBJECT_TABLE;
+					n->roles = NIL;
+					n->new_tablespacename = $9;
+					n->nowait = $10;
+					$$ = (Node *)n;
+				}
+		|	ALTER TABLE ALL IN_P TABLESPACE name OWNED BY role_list SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $6;
+					n->objtype = OBJECT_TABLE;
+					n->roles = $9;
+					n->new_tablespacename = $12;
+					n->nowait = $13;
+					$$ = (Node *)n;
+				}
 		|	ALTER INDEX qualified_name alter_table_cmds
 				{
 					AlterTableStmt *n = makeNode(AlterTableStmt);
@@ -2520,6 +2559,28 @@ AlterTableStmt:
 					n->cmds = $6;
 					n->relkind = OBJECT_INDEX;
 					n->missing_ok = true;
+					$$ = (Node *)n;
+				}
+		|	ALTER INDEX ALL IN_P TABLESPACE name SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $6;
+					n->objtype = OBJECT_INDEX;
+					n->roles = NIL;
+					n->new_tablespacename = $9;
+					n->nowait = $10;
+					$$ = (Node *)n;
+				}
+		|	ALTER INDEX ALL IN_P TABLESPACE name OWNED BY role_list SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $6;
+					n->objtype = OBJECT_INDEX;
+					n->roles = $9;
+					n->new_tablespacename = $12;
+					n->nowait = $13;
 					$$ = (Node *)n;
 				}
 		|	ALTER SEQUENCE qualified_name alter_table_cmds
@@ -2574,6 +2635,28 @@ AlterTableStmt:
 					n->cmds = $7;
 					n->relkind = OBJECT_MATVIEW;
 					n->missing_ok = true;
+					$$ = (Node *)n;
+				}
+		|	ALTER MATERIALIZED VIEW ALL IN_P TABLESPACE name SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $7;
+					n->objtype = OBJECT_MATVIEW;
+					n->roles = NIL;
+					n->new_tablespacename = $10;
+					n->nowait = $11;
+					$$ = (Node *)n;
+				}
+		|	ALTER MATERIALIZED VIEW ALL IN_P TABLESPACE name OWNED BY role_list SET TABLESPACE name opt_nowait
+				{
+					AlterTableMoveAllStmt *n =
+						makeNode(AlterTableMoveAllStmt);
+					n->orig_tablespacename = $7;
+					n->objtype = OBJECT_MATVIEW;
+					n->roles = $10;
+					n->new_tablespacename = $13;
+					n->nowait = $14;
 					$$ = (Node *)n;
 				}
 		;
@@ -5788,6 +5871,7 @@ opt_by:		BY				{}
 
 NumericOnly:
 			FCONST								{ $$ = makeFloat($1); }
+			| '+' FCONST						{ $$ = makeFloat($2); }
 			| '-' FCONST
 				{
 					$$ = makeFloat($2);
@@ -9348,103 +9432,8 @@ AlterTypeStmt: ALTER TYPE_P any_name SET DEFAULT ENCODING definition
  *
  *****************************************************************************/
 
-AlterTblSpcStmt: ALTER TABLESPACE name MOVE ALL TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = -1;
-					n->move_all = true;
-					n->roles = NIL;
-					n->new_tablespacename = $7;
-					n->nowait = $8;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE TABLES TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_TABLE;
-					n->move_all = false;
-					n->roles = NIL;
-					n->new_tablespacename = $7;
-					n->nowait = $8;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE INDEXES TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_INDEX;
-					n->move_all = false;
-					n->roles = NIL;
-					n->new_tablespacename = $7;
-					n->nowait = $8;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE MATERIALIZED VIEWS TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_MATVIEW;
-					n->move_all = false;
-					n->roles = NIL;
-					n->new_tablespacename = $8;
-					n->nowait = $9;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE ALL OWNED BY role_list TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = -1;
-					n->move_all = true;
-					n->roles = $8;
-					n->new_tablespacename = $10;
-					n->nowait = $11;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE TABLES OWNED BY role_list TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_TABLE;
-					n->move_all = false;
-					n->roles = $8;
-					n->new_tablespacename = $10;
-					n->nowait = $11;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE INDEXES OWNED BY role_list TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_INDEX;
-					n->move_all = false;
-					n->roles = $8;
-					n->new_tablespacename = $10;
-					n->nowait = $11;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name MOVE MATERIALIZED VIEWS OWNED BY role_list TO name opt_nowait
-				{
-					AlterTableSpaceMoveStmt *n =
-						makeNode(AlterTableSpaceMoveStmt);
-					n->orig_tablespacename = $3;
-					n->objtype = OBJECT_MATVIEW;
-					n->move_all = false;
-					n->roles = $9;
-					n->new_tablespacename = $11;
-					n->nowait = $12;
-					$$ = (Node *)n;
-				}
-			| ALTER TABLESPACE name SET reloptions
+AlterTblSpcStmt:
+			ALTER TABLESPACE name SET reloptions
 				{
 					AlterTableSpaceOptionsStmt *n =
 						makeNode(AlterTableSpaceOptionsStmt);
@@ -10894,13 +10883,19 @@ DropdbStmt: DROP DATABASE database_name
 
 /*****************************************************************************
  *
- *		ALTER SYSTEM SET
+ *		ALTER SYSTEM
  *
  * This is used to change configuration parameters persistently.
  *****************************************************************************/
 
 AlterSystemStmt:
 			ALTER SYSTEM_P SET generic_set
+				{
+					AlterSystemStmt *n = makeNode(AlterSystemStmt);
+					n->setstmt = $4;
+					$$ = (Node *)n;
+				}
+			| ALTER SYSTEM_P RESET generic_reset
 				{
 					AlterSystemStmt *n = makeNode(AlterSystemStmt);
 					n->setstmt = $4;
@@ -12208,15 +12203,23 @@ limit_clause:
 							 parser_errposition(@1)));
 				}
 			/* SQL:2008 syntax */
-			| FETCH first_or_next opt_select_fetch_first_value row_or_rows ONLY
+			/* to avoid shift/reduce conflicts, handle the optional value with
+			 * a separate production rather than an opt_ expression.  The fact
+			 * that ONLY is fully reserved means that this way, we defer any
+			 * decision about what rule reduces ROW or ROWS to the point where
+			 * we can see the ONLY token in the lookahead slot.
+			 */
+			| FETCH first_or_next select_fetch_first_value row_or_rows ONLY
 				{ $$ = $3; }
+			| FETCH first_or_next row_or_rows ONLY
+				{ $$ = makeIntConst(1, -1); }
 		;
 
 offset_clause:
 			OFFSET select_offset_value
 				{ $$ = $2; }
 			/* SQL:2008 syntax */
-			| OFFSET select_offset_value2 row_or_rows
+			| OFFSET select_fetch_first_value row_or_rows
 				{ $$ = $2; }
 		;
 
@@ -12235,22 +12238,31 @@ select_offset_value:
 
 /*
  * Allowing full expressions without parentheses causes various parsing
- * problems with the trailing ROW/ROWS key words.  SQL only calls for
- * constants, so we allow the rest only with parentheses.  If omitted,
- * default to 1.
+ * problems with the trailing ROW/ROWS key words.  SQL spec only calls for
+ * <simple value specification>, which is either a literal or a parameter (but
+ * an <SQL parameter reference> could be an identifier, bringing up conflicts
+ * with ROW/ROWS). We solve this by leveraging the presence of ONLY (see above)
+ * to determine whether the expression is missing rather than trying to make it
+ * optional in this rule.
+ *
+ * c_expr covers almost all the spec-required cases (and more), but it doesn't
+ * cover signed numeric literals, which are allowed by the spec. So we include
+ * those here explicitly. We need FCONST as well as ICONST because values that
+ * don't fit in the platform's "long", but do fit in bigint, should still be
+ * accepted here. (This is possible in 64-bit Windows as well as all 32-bit
+ * builds.)
  */
-opt_select_fetch_first_value:
-			SignedIconst						{ $$ = makeIntConst($1, @1); }
-			| '(' a_expr ')'					{ $$ = $2; }
-			| /*EMPTY*/							{ $$ = makeIntConst(1, -1); }
+select_fetch_first_value:
+			c_expr									{ $$ = $1; }
+			| '+' I_or_F_const
+				{ $$ = (Node *) makeSimpleA_Expr(AEXPR_OP, "+", NULL, $2, @1); }
+			| '-' I_or_F_const
+				{ $$ = doNegate($2, @1); }
 		;
 
-/*
- * Again, the trailing ROW/ROWS in this case prevent the full expression
- * syntax.  c_expr is the best we can do.
- */
-select_offset_value2:
-			c_expr									{ $$ = $1; }
+I_or_F_const:
+			Iconst									{ $$ = makeIntConst($1,@1); }
+			| FCONST								{ $$ = makeFloatConst($1,@1); }
 		;
 
 /* noise words */
@@ -12442,7 +12454,7 @@ table_ref:	relation_expr opt_alias_clause
 					n->lateral = true;
 					n->subquery = $2;
 					n->alias = $3;
-					/* same coment as above */
+					/* same comment as above */
 					if ($3 == NULL)
 					{
 						if (IsA($2, SelectStmt) &&
@@ -16914,7 +16926,7 @@ makeRangeVarFromAnyName(List *names, int position, core_yyscan_t yyscanner)
 			r->relname = strVal(lsecond(names));
 			break;
 		case 3:
-			r->catalogname = strVal(linitial(names));;
+			r->catalogname = strVal(linitial(names));
 			r->schemaname = strVal(lsecond(names));
 			r->relname = strVal(lthird(names));
 			break;

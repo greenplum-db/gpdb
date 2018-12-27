@@ -624,53 +624,6 @@ select '1'::text in (select '1'::name union all select '1'::name);
 (1 row)
 
 --
--- Check for incorrect optimization when IN subquery contains a SRF
---
-set enable_hashjoin to 0;
-explain select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
-                                           QUERY PLAN                                           
-------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=10000000000.00..10000000019.54 rows=4 width=4)
-   ->  Nested Loop Semi Join  (cost=10000000000.00..10000000019.54 rows=2 width=4)
-         Join Filter: (o.f1 = "ANY_subquery".f1)
-         ->  Seq Scan on int4_tbl o  (cost=0.00..1.01 rows=1 width=4)
-         ->  Materialize  (cost=0.00..18.51 rows=1 width=8)
-               ->  Subquery Scan on "ANY_subquery"  (cost=0.00..18.51 rows=1 width=8)
-                     Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
-                     ->  Result  (cost=0.00..6.01 rows=334 width=4)
-                           ->  Seq Scan on int4_tbl i  (cost=0.00..6.01 rows=334 width=4)
- Planning time: 1.535 ms
- Optimizer: legacy query optimizer
-(11 rows)
-
-select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
- f1 
-----
-  0
-(1 row)
-
-reset enable_hashjoin;
---
--- check for over-optimization of whole-row Var referencing an Append plan
---
-select (select q from
-         (select 1,2,3 where f1 > 0
-          union all
-          select 4,5,6.0 where f1 <= 0
-         ) q )
-from int4_tbl;
-     q     
------------
- (4,5,6.0)
- (1,2,3)
- (4,5,6.0)
- (1,2,3)
- (4,5,6.0)
-(5 rows)
-
---
 -- Test case for planner bug with nested EXISTS handling
 --
 select a.thousand from tenk1 a, tenk1 b
@@ -763,6 +716,36 @@ select exists(select * from nocolumns);
 (1 row)
 
 --
+-- Check behavior with a SubPlan in VALUES (bug #14924)
+--
+select val.x
+  from generate_series(1,10) as s(i),
+  lateral (
+    values ((select s.i + 1)), (s.i + 101)
+  ) as val(x)
+where s.i < 10 and (select val.x) < 110;
+  x  
+-----
+   2
+ 102
+   3
+ 103
+   4
+ 104
+   5
+ 105
+   6
+ 106
+   7
+ 107
+   8
+ 108
+   9
+ 109
+  10
+(17 rows)
+
+--
 -- Check sane behavior with nested IN SubLinks
 -- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
 --
@@ -810,3 +793,103 @@ select * from int4_tbl where
   0
 (1 row)
 
+--
+-- Check for incorrect optimization when IN subquery contains a SRF
+--
+explain (verbose, costs off)
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+                              QUERY PLAN                              
+----------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Output: o.f1
+   ->  Hash Semi Join
+         Output: o.f1
+         Hash Cond: (o.f1 = "ANY_subquery".f1)
+         ->  Seq Scan on public.int4_tbl o
+               Output: o.f1
+         ->  Hash
+               Output: "ANY_subquery".f1, "ANY_subquery".g
+               ->  Subquery Scan on "ANY_subquery"
+                     Output: "ANY_subquery".f1, "ANY_subquery".g
+                     Filter: ("ANY_subquery".f1 = "ANY_subquery".g)
+                     ->  Result
+                           Output: i.f1, (generate_series(1, 2) / 10)
+                           ->  Seq Scan on public.int4_tbl i
+                                 Output: i.f1
+ Optimizer: legacy query optimizer
+(17 rows)
+
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+ f1 
+----
+  0
+(1 row)
+
+--
+-- check for over-optimization of whole-row Var referencing an Append plan
+--
+select (select q from
+         (select 1,2,3 where f1 > 0
+          union all
+          select 4,5,6.0 where f1 <= 0
+         ) q )
+from int4_tbl;
+     q     
+-----------
+ (4,5,6.0)
+ (1,2,3)
+ (4,5,6.0)
+ (1,2,3)
+ (4,5,6.0)
+(5 rows)
+
+--
+-- Check that volatile quals aren't pushed down past a DISTINCT:
+-- nextval() should not be called more than the nominal number of times
+--
+create temp sequence ts1;
+select * from
+  (select distinct ten from tenk1) ss
+  where ten < 10 + nextval('ts1')
+  order by 1;
+ ten 
+-----
+   0
+   1
+   2
+   3
+   4
+   5
+   6
+   7
+   8
+   9
+(10 rows)
+
+select nextval('ts1');
+ nextval 
+---------
+      11
+(1 row)
+
+--
+-- Ensure that backward scan direction isn't propagated into
+-- expression subqueries (bug #15336)
+--
+--start_ignore
+begin;
+declare c1 scroll cursor for
+ select * from generate_series(1,4) i
+  where i <> all (values (2),(3));
+move forward all in c1;
+fetch backward all in c1;
+ i 
+---
+ 4
+ 1
+(2 rows)
+
+commit;
+--end_ignore

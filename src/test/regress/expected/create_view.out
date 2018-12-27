@@ -293,6 +293,43 @@ SELECT relname, relkind, reloptions FROM pg_class
  mysecview4 | v       | {security_barrier=false}
 (4 rows)
 
+-- This test checks that proper typmods are assigned in a multi-row VALUES
+CREATE VIEW tt1 AS
+  SELECT * FROM (
+    VALUES
+       ('abc'::varchar(3), '0123456789', 42, 'abcd'::varchar(4)),
+       ('0123456789', 'abc'::varchar(3), 42.12, 'abc'::varchar(4))
+  ) vv(a,b,c,d);
+\d+ tt1
+                      View "testviewschm2.tt1"
+ Column |         Type         | Modifiers | Storage  | Description 
+--------+----------------------+-----------+----------+-------------
+ a      | character varying    |           | extended | 
+ b      | character varying    |           | extended | 
+ c      | numeric              |           | main     | 
+ d      | character varying(4) |           | extended | 
+View definition:
+ SELECT vv.a,
+    vv.b,
+    vv.c,
+    vv.d
+   FROM ( VALUES ('abc'::character varying(3),'0123456789'::character varying,42,'abcd'::character varying(4)), ('0123456789'::character varying,'abc'::character varying(3),42.12,'abc'::character varying(4))) vv(a, b, c, d);
+
+SELECT * FROM tt1;
+     a      |     b      |   c   |  d   
+------------+------------+-------+------
+ abc        | 0123456789 |    42 | abcd
+ 0123456789 | abc        | 42.12 | abc
+(2 rows)
+
+SELECT a::varchar(3) FROM tt1;
+  a  
+-----
+ abc
+ 012
+(2 rows)
+
+DROP VIEW tt1;
 -- Test view decompilation in the face of relation renaming conflicts
 CREATE TABLE tt1 (f1 int, f2 int, f3 text);
 CREATE TABLE tx1 (x1 int, x2 int, x3 text);
@@ -1335,6 +1372,287 @@ select pg_get_viewdef('vv6', true);
     FROM tt11 tt11(x, y, z_1)+
       JOIN tt12 USING (x)    +
       JOIN tt13 USING (z);
+(1 row)
+
+--
+-- Check some cases involving dropped columns in a function's rowtype result
+--
+create table tt14t (f1 text, f2 text, f3 text, f4 text);
+insert into tt14t values('foo', 'bar', 'baz', 'quux');
+alter table tt14t drop column f2;
+create function tt14f() returns setof tt14t as
+$$
+declare
+    rec1 record;
+begin
+    for rec1 in select * from tt14t
+    loop
+        return next rec1;
+    end loop;
+end;
+$$
+language plpgsql;
+create view tt14v as select t.* from tt14f() t;
+select pg_get_viewdef('tt14v', true);
+         pg_get_viewdef         
+--------------------------------
+  SELECT t.f1,                 +
+     t.f3,                     +
+     t.f4                      +
+    FROM tt14f() t(f1, f3, f4);
+(1 row)
+
+select * from tt14v;
+ f1  | f3  |  f4  
+-----+-----+------
+ foo | baz | quux
+(1 row)
+
+-- this perhaps should be rejected, but it isn't:
+alter table tt14t drop column f3;
+-- f3 is still in the view but will read as nulls
+select pg_get_viewdef('tt14v', true);
+         pg_get_viewdef         
+--------------------------------
+  SELECT t.f1,                 +
+     t.f3,                     +
+     t.f4                      +
+    FROM tt14f() t(f1, f3, f4);
+(1 row)
+
+select * from tt14v;
+ f1  | f3 |  f4  
+-----+----+------
+ foo |    | quux
+(1 row)
+
+-- check display of whole-row variables in some corner cases
+create type nestedcomposite as (x int8_tbl);
+create view tt15v as select row(i)::nestedcomposite from int8_tbl i;
+select * from tt15v;
+                   row                    
+------------------------------------------
+ ("(123,456)")
+ ("(123,4567890123456789)")
+ ("(4567890123456789,123)")
+ ("(4567890123456789,4567890123456789)")
+ ("(4567890123456789,-4567890123456789)")
+(5 rows)
+
+select pg_get_viewdef('tt15v', true);
+                    pg_get_viewdef                    
+------------------------------------------------------
+  SELECT ROW(i.*::int8_tbl)::nestedcomposite AS "row"+
+    FROM int8_tbl i;
+(1 row)
+
+select row(i.*::int8_tbl)::nestedcomposite from int8_tbl i;
+                   row                    
+------------------------------------------
+ ("(123,456)")
+ ("(123,4567890123456789)")
+ ("(4567890123456789,123)")
+ ("(4567890123456789,4567890123456789)")
+ ("(4567890123456789,-4567890123456789)")
+(5 rows)
+
+create view tt16v as select * from int8_tbl i, lateral(values(i)) ss;
+select * from tt16v;
+        q1        |        q2         |               column1                
+------------------+-------------------+--------------------------------------
+              123 |               456 | (123,456)
+              123 |  4567890123456789 | (123,4567890123456789)
+ 4567890123456789 |               123 | (4567890123456789,123)
+ 4567890123456789 |  4567890123456789 | (4567890123456789,4567890123456789)
+ 4567890123456789 | -4567890123456789 | (4567890123456789,-4567890123456789)
+(5 rows)
+
+select pg_get_viewdef('tt16v', true);
+              pg_get_viewdef               
+-------------------------------------------
+  SELECT i.q1,                            +
+     i.q2,                                +
+     ss.column1                           +
+    FROM int8_tbl i,                      +
+     LATERAL ( VALUES (i.*::int8_tbl)) ss;
+(1 row)
+
+select * from int8_tbl i, lateral(values(i.*::int8_tbl)) ss;
+        q1        |        q2         |               column1                
+------------------+-------------------+--------------------------------------
+              123 |               456 | (123,456)
+              123 |  4567890123456789 | (123,4567890123456789)
+ 4567890123456789 |               123 | (4567890123456789,123)
+ 4567890123456789 |  4567890123456789 | (4567890123456789,4567890123456789)
+ 4567890123456789 | -4567890123456789 | (4567890123456789,-4567890123456789)
+(5 rows)
+
+create view tt17v as select * from int8_tbl i where i in (values(i));
+select * from tt17v;
+        q1        |        q2         
+------------------+-------------------
+              123 |               456
+              123 |  4567890123456789
+ 4567890123456789 |               123
+ 4567890123456789 |  4567890123456789
+ 4567890123456789 | -4567890123456789
+(5 rows)
+
+select pg_get_viewdef('tt17v', true);
+               pg_get_viewdef                
+---------------------------------------------
+  SELECT i.q1,                              +
+     i.q2                                   +
+    FROM int8_tbl i                         +
+   WHERE (i.* IN ( VALUES (i.*::int8_tbl)));
+(1 row)
+
+select * from int8_tbl i where i.* in (values(i.*::int8_tbl));
+        q1        |        q2         
+------------------+-------------------
+              123 |               456
+              123 |  4567890123456789
+ 4567890123456789 |               123
+ 4567890123456789 |  4567890123456789
+ 4567890123456789 | -4567890123456789
+(5 rows)
+
+-- check unique-ification of overlength names
+create view tt18v as
+  select * from int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy
+  union all
+  select * from int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxz;
+NOTICE:  identifier "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy" will be truncated to "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+NOTICE:  identifier "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxz" will be truncated to "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+select pg_get_viewdef('tt18v', true);
+                                  pg_get_viewdef                                   
+-----------------------------------------------------------------------------------
+  SELECT xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.q1,      +
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.q2           +
+    FROM int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx +
+ UNION ALL                                                                        +
+  SELECT xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.q1,      +
+     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.q2           +
+    FROM int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx;
+(1 row)
+
+explain (costs off) select * from tt18v;
+                                            QUERY PLAN                                            
+--------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Append
+         ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+         ->  Seq Scan on int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx_1
+ Optimizer: legacy query optimizer
+(5 rows)
+
+-- check display of ScalarArrayOp with a sub-select
+select 'foo'::text = any(array['abc','def','foo']::text[]);
+ ?column? 
+----------
+ t
+(1 row)
+
+select 'foo'::text = any((select array['abc','def','foo']::text[]));  -- fail
+ERROR:  operator does not exist: text = text[]
+LINE 1: select 'foo'::text = any((select array['abc','def','foo']::t...
+                           ^
+HINT:  No operator matches the given name and argument type(s). You might need to add explicit type casts.
+select 'foo'::text = any((select array['abc','def','foo']::text[])::text[]);
+ ?column? 
+----------
+ t
+(1 row)
+
+create view tt19v as
+select 'foo'::text = any(array['abc','def','foo']::text[]) c1,
+       'foo'::text = any((select array['abc','def','foo']::text[])::text[]) c2;
+select pg_get_viewdef('tt19v', true);
+                                               pg_get_viewdef                                               
+------------------------------------------------------------------------------------------------------------
+  SELECT 'foo'::text = ANY (ARRAY['abc'::text, 'def'::text, 'foo'::text]) AS c1,                           +
+     'foo'::text = ANY ((( SELECT ARRAY['abc'::text, 'def'::text, 'foo'::text] AS "array"))::text[]) AS c2;
+(1 row)
+
+-- check display of assorted RTE_FUNCTION expressions
+create view tt20v as
+select * from
+  coalesce(1,2) as c,
+  collation for ('x'::text) col,
+  current_date as d,
+  cast(1+2 as int4) as i4,
+  cast(1+2 as int8) as i8;
+select pg_get_viewdef('tt20v', true);
+               pg_get_viewdef                
+---------------------------------------------
+  SELECT c.c,                               +
+     col.col,                               +
+     d.d,                                   +
+     i4.i4,                                 +
+     i8.i8                                  +
+    FROM COALESCE(1, 2) c(c),               +
+     pg_collation_for('x'::text) col(col),  +
+     CAST('now'::text::date AS date) d(d),  +
+     CAST(1 + 2 AS integer) i4(i4),         +
+     CAST((1 + 2)::bigint AS bigint) i8(i8);
+(1 row)
+
+-- corner cases with empty join conditions
+create view tt21v as
+select * from tt5 natural inner join tt6;
+select pg_get_viewdef('tt21v', true);
+    pg_get_viewdef    
+----------------------
+  SELECT tt5.a,      +
+     tt5.b,          +
+     tt5.cc,         +
+     tt6.c,          +
+     tt6.d           +
+    FROM tt5         +
+      CROSS JOIN tt6;
+(1 row)
+
+create view tt22v as
+select * from tt5 natural left join tt6;
+select pg_get_viewdef('tt22v', true);
+       pg_get_viewdef        
+-----------------------------
+  SELECT tt5.a,             +
+     tt5.b,                 +
+     tt5.cc,                +
+     tt6.c,                 +
+     tt6.d                  +
+    FROM tt5                +
+      LEFT JOIN tt6 ON TRUE;
+(1 row)
+
+-- check handling of views with immediately-renamed columns
+create view tt23v (col_a, col_b) as
+select q1 as other_name1, q2 as other_name2 from int8_tbl
+union
+select 42, 43;
+select pg_get_viewdef('tt23v', true);
+        pg_get_viewdef         
+-------------------------------
+  SELECT int8_tbl.q1 AS col_a,+
+     int8_tbl.q2 AS col_b     +
+    FROM int8_tbl             +
+ UNION                        +
+  SELECT 42 AS col_a,         +
+     43 AS col_b;
+(1 row)
+
+select pg_get_ruledef(oid, true) from pg_rewrite
+  where ev_class = 'tt23v'::regclass and ev_type = '1';
+                         pg_get_ruledef                          
+-----------------------------------------------------------------
+ CREATE RULE "_RETURN" AS                                       +
+     ON SELECT TO tt23v DO INSTEAD  SELECT int8_tbl.q1 AS col_a,+
+     int8_tbl.q2 AS col_b                                       +
+    FROM int8_tbl                                               +
+ UNION                                                          +
+  SELECT 42 AS col_a,                                           +
+     43 AS col_b;
 (1 row)
 
 -- clean up all the random objects we made above

@@ -48,14 +48,6 @@
 #define IndexCollMatchesExprColl(idxcollation, exprcollation) \
 	((idxcollation) == InvalidOid || (idxcollation) == (exprcollation))
 
-/* Whether to use ScalarArrayOpExpr to build index qualifications */
-typedef enum
-{
-	SAOP_PER_AM,				/* Use ScalarArrayOpExpr if amsearcharray */
-	SAOP_ALLOW,					/* Use ScalarArrayOpExpr for all indexes */
-	SAOP_REQUIRE				/* Require ScalarArrayOpExpr to be used */
-} SaOpControl;
-
 /* Whether we are looking for plain indexscan, bitmap scan, or either */
 typedef enum
 {
@@ -121,7 +113,9 @@ static void get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 static List *build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 				  IndexOptInfo *index, IndexClauseSet *clauses,
 				  bool useful_predicate,
-				  SaOpControl saop_control, ScanTypeControl scantype);
+				  ScanTypeControl scantype,
+				  bool *skip_nonnative_saop,
+				  bool *skip_lower_saop);
 static List *build_paths_for_OR(PlannerInfo *root, RelOptInfo *rel,
 				   List *clauses, List *other_clauses);
 static List *generate_bitmap_or_paths(PlannerInfo *root, RelOptInfo *rel,
@@ -729,6 +723,8 @@ bms_equal_any(Relids relids, List *relids_list)
  * index AM supports them natively, we should just include them in simple
  * index paths.  If not, we should exclude them while building simple index
  * paths, and then make a separate attempt to include them in bitmap paths.
+ * Furthermore, we should consider excluding lower-order ScalarArrayOpExpr
+ * quals so as to create ordered paths.
  */
 static void
 get_index_paths(PlannerInfo *root, RelOptInfo *rel,
@@ -736,16 +732,38 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 				List **bitindexpaths)
 {
 	List	   *indexpaths;
+	bool		skip_nonnative_saop = false;
+	bool		skip_lower_saop = false;
 	ListCell   *lc;
 
 	/*
 	 * Build simple index paths using the clauses.  Allow ScalarArrayOpExpr
-	 * clauses only if the index AM supports them natively.
+	 * clauses only if the index AM supports them natively, and skip any such
+	 * clauses for index columns after the first (so that we produce ordered
+	 * paths if possible).
 	 */
 	indexpaths = build_index_paths(root, rel,
 								   index, clauses,
 								   index->predOK,
-								   SAOP_PER_AM, ST_ANYSCAN);
+								   ST_ANYSCAN,
+								   &skip_nonnative_saop,
+								   &skip_lower_saop);
+
+	/*
+	 * If we skipped any lower-order ScalarArrayOpExprs on an index with an AM
+	 * that supports them, then try again including those clauses.  This will
+	 * produce paths with more selectivity but no ordering.
+	 */
+	if (skip_lower_saop)
+	{
+		indexpaths = list_concat(indexpaths,
+								 build_index_paths(root, rel,
+												   index, clauses,
+												   index->predOK,
+												   ST_ANYSCAN,
+												   &skip_nonnative_saop,
+												   NULL));
+	}
 
 	/*
 	 * Submit all the ones that can form plain IndexScan plans to add_path. (A
@@ -793,16 +811,18 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	}
 
 	/*
-	 * If the index doesn't handle ScalarArrayOpExpr clauses natively, check
-	 * to see if there are any such clauses, and if so generate bitmap scan
-	 * paths relying on executor-managed ScalarArrayOpExpr.
+	 * If there were ScalarArrayOpExpr clauses that the index can't handle
+	 * natively, generate bitmap scan paths relying on executor-managed
+	 * ScalarArrayOpExpr.
 	 */
-	if (!index->amsearcharray)
+	if (skip_nonnative_saop)
 	{
 		indexpaths = build_index_paths(root, rel,
 									   index, clauses,
 									   false,
-									   SAOP_REQUIRE, ST_BITMAPSCAN);
+									   ST_BITMAPSCAN,
+									   NULL,
+									   NULL);
 		*bitindexpaths = list_concat(*bitindexpaths, indexpaths);
 	}
 }
@@ -825,26 +845,36 @@ get_index_paths(PlannerInfo *root, RelOptInfo *rel,
  * Note that this routine should never be called at all if the index has an
  * unprovable predicate.
  *
- * saop_control indicates whether ScalarArrayOpExpr clauses can be used.
- * When it's SAOP_REQUIRE, index paths are created only if we found at least
- * one ScalarArrayOpExpr clause.
- *
  * scantype indicates whether we want to create plain indexscans, bitmap
  * indexscans, or both.  When it's ST_BITMAPSCAN, we will not consider
  * index ordering while deciding if a Path is worth generating.
+ *
+ * If skip_nonnative_saop is non-NULL, we ignore ScalarArrayOpExpr clauses
+ * unless the index AM supports them directly, and we set *skip_nonnative_saop
+ * to TRUE if we found any such clauses (caller must initialize the variable
+ * to FALSE).  If it's NULL, we do not ignore ScalarArrayOpExpr clauses.
+ *
+ * If skip_lower_saop is non-NULL, we ignore ScalarArrayOpExpr clauses for
+ * non-first index columns, and we set *skip_lower_saop to TRUE if we found
+ * any such clauses (caller must initialize the variable to FALSE).  If it's
+ * NULL, we do not ignore non-first ScalarArrayOpExpr clauses, but they will
+ * result in considering the scan's output to be unordered.
  *
  * 'rel' is the index's heap relation
  * 'index' is the index for which we want to generate paths
  * 'clauses' is the collection of indexable clauses (RestrictInfo nodes)
  * 'useful_predicate' indicates whether the index has a useful predicate
- * 'saop_control' indicates whether ScalarArrayOpExpr clauses can be used
  * 'scantype' indicates whether we need plain or bitmap scan support
+ * 'skip_nonnative_saop' indicates whether to accept SAOP if index AM doesn't
+ * 'skip_lower_saop' indicates whether to accept non-first-column SAOP
  */
 static List *
 build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 				  IndexOptInfo *index, IndexClauseSet *clauses,
 				  bool useful_predicate,
-				  SaOpControl saop_control, ScanTypeControl scantype)
+				  ScanTypeControl scantype,
+				  bool *skip_nonnative_saop,
+				  bool *skip_lower_saop)
 {
 	List	   *result = NIL;
 	IndexPath  *ipath;
@@ -856,7 +886,6 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	List	   *orderbyclausecols;
 	List	   *index_pathkeys;
 	List	   *useful_pathkeys;
-	bool		found_clause;
 	bool		found_lower_saop_clause;
 	bool		pathkeys_possibly_useful;
 	bool		index_is_ordered;
@@ -891,11 +920,7 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	 * (This order is depended on by btree and possibly other places.)	The
 	 * lists can be empty, if the index AM allows that.
 	 *
-	 * found_clause is set true only if there's at least one index clause; and
-	 * if saop_control is SAOP_REQUIRE, it has to be a ScalarArrayOpExpr
-	 * clause.
-	 *
-	 * found_lower_saop_clause is set true if there's a ScalarArrayOpExpr
+	 * found_lower_saop_clause is set true if we accept a ScalarArrayOpExpr
 	 * index clause for a non-first index column.  This prevents us from
 	 * assuming that the scan result is ordered.  (Actually, the result is
 	 * still ordered if there are equality constraints for all earlier
@@ -908,7 +933,6 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	 */
 	index_clauses = NIL;
 	clause_columns = NIL;
-	found_clause = false;
 	found_lower_saop_clause = false;
 	outer_relids = bms_copy(rel->lateral_relids);
 	for (indexcol = 0; indexcol < index->ncolumns; indexcol++)
@@ -921,17 +945,27 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 
 			if (IsA(rinfo->clause, ScalarArrayOpExpr))
 			{
-				/* Ignore if not supported by index */
-				if (saop_control == SAOP_PER_AM && !index->amsearcharray)
-					continue;
-				found_clause = true;
+				if (!index->amsearcharray)
+				{
+					if (skip_nonnative_saop)
+					{
+						/* Ignore because not supported by index */
+						*skip_nonnative_saop = true;
+						continue;
+					}
+					/* Caller had better intend this only for bitmap scan */
+					Assert(scantype == ST_BITMAPSCAN);
+				}
 				if (indexcol > 0)
+				{
+					if (skip_lower_saop)
+					{
+						/* Caller doesn't want to lose index ordering */
+						*skip_lower_saop = true;
+						continue;
+					}
 					found_lower_saop_clause = true;
-			}
-			else
-			{
-				if (saop_control != SAOP_REQUIRE)
-					found_clause = true;
+				}
 			}
 			index_clauses = lappend(index_clauses, rinfo);
 			clause_columns = lappend_int(clause_columns, indexcol);
@@ -1012,7 +1046,7 @@ build_index_paths(PlannerInfo *root, RelOptInfo *rel,
 	 * later merging or final output ordering, OR the index has a useful
 	 * predicate, OR an index-only scan is possible.
 	 */
-	if (found_clause || useful_pathkeys != NIL || useful_predicate ||
+	if (index_clauses != NIL || useful_pathkeys != NIL || useful_predicate ||
 		index_only_scan)
 	{
 		ipath = create_index_path(root, index,
@@ -1161,7 +1195,9 @@ build_paths_for_OR(PlannerInfo *root, RelOptInfo *rel,
 		indexpaths = build_index_paths(root, rel,
 									   index, &clauseset,
 									   useful_predicate,
-									   SAOP_ALLOW, ST_BITMAPSCAN);
+									   ST_BITMAPSCAN,
+									   NULL,
+									   NULL);
 		result = list_concat(result, indexpaths);
 	}
 
@@ -2610,16 +2646,11 @@ check_partial_indexes(PlannerInfo *root, RelOptInfo *rel)
 	 * Add on any equivalence-derivable join clauses.  Computing the correct
 	 * relid sets for generate_join_implied_equalities is slightly tricky
 	 * because the rel could be a child rel rather than a true baserel, and in
-	 * that case we must remove its parent's relid from all_baserels.
+	 * that case we must remove its parents' relid(s) from all_baserels.
 	 */
 	if (rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
-	{
-		/* Lookup parent->child translation data */
-		AppendRelInfo *appinfo = find_childrel_appendrelinfo(root, rel);
-
 		otherrels = bms_difference(root->all_baserels,
-								   bms_make_singleton(appinfo->parent_relid));
-	}
+								   find_childrel_parents(root, rel));
 	else
 		otherrels = bms_difference(root->all_baserels, rel->relids);
 

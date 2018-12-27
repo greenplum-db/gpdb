@@ -34,7 +34,7 @@
 
 #include "regex/regguts.h"
 
-#include "miscadmin.h"			/* needed by rcancelrequested() */
+#include "miscadmin.h"			/* needed by rcancelrequested/rstacktoodeep */
 
 /*
  * forward declarations, up here so forward datatypes etc. are defined early
@@ -70,6 +70,7 @@ static int	newlacon(struct vars *, struct state *, struct state *, int);
 static void freelacons(struct subre *, int);
 static void rfree(regex_t *);
 static int	rcancelrequested(void);
+static int	rstacktoodeep(void);
 
 #ifdef REG_DEBUG
 static void dump(regex_t *, FILE *);
@@ -123,17 +124,22 @@ static void dropstate(struct nfa *, struct state *);
 static void freestate(struct nfa *, struct state *);
 static void destroystate(struct nfa *, struct state *);
 static void newarc(struct nfa *, int, pcolor, struct state *, struct state *);
+static void createarc(struct nfa *, int, pcolor, struct state *, struct state *);
 static struct arc *allocarc(struct nfa *, struct state *);
 static void freearc(struct nfa *, struct arc *);
+static void changearctarget(struct arc *, struct state *);
 static int	hasnonemptyout(struct state *);
-static int	nonemptyouts(struct state *);
-static int	nonemptyins(struct state *);
 static struct arc *findarc(struct state *, int, pcolor);
 static void cparc(struct nfa *, struct arc *, struct state *, struct state *);
+static void sortins(struct nfa *, struct state *);
+static int	sortins_cmp(const void *, const void *);
+static void sortouts(struct nfa *, struct state *);
+static int	sortouts_cmp(const void *, const void *);
 static void moveins(struct nfa *, struct state *, struct state *);
-static void copyins(struct nfa *, struct state *, struct state *, int);
+static void copyins(struct nfa *, struct state *, struct state *);
+static void mergeins(struct nfa *, struct state *, struct arc **, int);
 static void moveouts(struct nfa *, struct state *, struct state *);
-static void copyouts(struct nfa *, struct state *, struct state *, int);
+static void copyouts(struct nfa *, struct state *, struct state *);
 static void cloneouts(struct nfa *, struct state *, struct state *, struct state *, int);
 static void delsub(struct nfa *, struct state *, struct state *);
 static void deltraverse(struct nfa *, struct state *, struct state *);
@@ -143,30 +149,38 @@ static void cleartraverse(struct nfa *, struct state *);
 static void specialcolors(struct nfa *);
 static long optimize(struct nfa *, FILE *);
 static void pullback(struct nfa *, FILE *);
-static int	pull(struct nfa *, struct arc *);
+static int	pull(struct nfa *, struct arc *, struct state **);
 static void pushfwd(struct nfa *, FILE *);
-static int	push(struct nfa *, struct arc *);
+static int	push(struct nfa *, struct arc *, struct state **);
 
 #define INCOMPATIBLE	1		/* destroys arc */
 #define SATISFIED	2			/* constraint satisfied */
 #define COMPATIBLE	3			/* compatible but not satisfied yet */
 static int	combine(struct arc *, struct arc *);
 static void fixempties(struct nfa *, FILE *);
-static struct state *emptyreachable(struct state *, struct state *);
-static void replaceempty(struct nfa *, struct state *, struct state *);
+static struct state *emptyreachable(struct nfa *, struct state *,
+			   struct state *, struct arc **);
+static int	isconstraintarc(struct arc *);
+static int	hasconstraintout(struct state *);
+static void fixconstraintloops(struct nfa *, FILE *);
+static int	findconstraintloop(struct nfa *, struct state *);
+static void breakconstraintloop(struct nfa *, struct state *);
+static void clonesuccessorstates(struct nfa *, struct state *, struct state *,
+					 struct state *, struct arc *,
+					 char *, char *, int);
 static void cleanup(struct nfa *);
 static void markreachable(struct nfa *, struct state *, struct state *, struct state *);
 static void markcanreach(struct nfa *, struct state *, struct state *, struct state *);
 static long analyze(struct nfa *);
 static void compact(struct nfa *, struct cnfa *);
-static void carcsort(struct carc *, struct carc *);
+static void carcsort(struct carc *, size_t);
+static int	carc_cmp(const void *, const void *);
 static void freecnfa(struct cnfa *);
 static void dumpnfa(struct nfa *, FILE *);
 
 #ifdef REG_DEBUG
 static void dumpstate(struct state *, FILE *);
 static void dumparcs(struct state *, FILE *);
-static int	dumprarcs(struct arc *, struct state *, FILE *, int);
 static void dumparc(struct arc *, struct state *, FILE *);
 static void dumpcnfa(struct cnfa *, FILE *);
 static void dumpcstate(int, struct cnfa *, FILE *);
@@ -228,11 +242,12 @@ struct vars
 	struct subre *tree;			/* subexpression tree */
 	struct subre *treechain;	/* all tree nodes allocated */
 	struct subre *treefree;		/* any free tree nodes */
-	int			ntree;			/* number of tree nodes */
+	int			ntree;			/* number of tree nodes, plus one */
 	struct cvec *cv;			/* interface cvec */
 	struct cvec *cv2;			/* utility cvec */
 	struct subre *lacons;		/* lookahead-constraint vector */
 	int			nlacons;		/* size of lacons */
+	size_t		spaceused;		/* approx. space used for compilation */
 };
 
 /* parsing macros; most know that `v' is the struct vars pointer */
@@ -279,7 +294,8 @@ struct vars
 /* static function list */
 static const struct fns functions = {
 	rfree,						/* regfree insides */
-	rcancelrequested			/* check for cancel request */
+	rcancelrequested,			/* check for cancel request */
+	rstacktoodeep				/* check for stack getting dangerously deep */
 };
 
 
@@ -347,6 +363,7 @@ pg_regcomp(regex_t *re,
 	v->cv2 = NULL;
 	v->lacons = NULL;
 	v->nlacons = 0;
+	v->spaceused = 0;
 	re->re_magic = REMAGIC;
 	re->re_info = 0;			/* bits get set during parse */
 	re->re_csize = sizeof(chr);
@@ -568,21 +585,26 @@ makesearch(struct vars * v,
 	 * splitting each such state into progress and no-progress states.
 	 */
 
-	/* first, make a list of the states */
+	/* first, make a list of the states reachable from pre and elsewhere */
 	slist = NULL;
 	for (a = pre->outs; a != NULL; a = a->outchain)
 	{
 		s = a->to;
 		for (b = s->ins; b != NULL; b = b->inchain)
+		{
 			if (b->from != pre)
 				break;
+		}
+
+		/*
+		 * We want to mark states as being in the list already by having non
+		 * NULL tmp fields, but we can't just store the old slist value in tmp
+		 * because that doesn't work for the first such state.  Instead, the
+		 * first list entry gets its own address in tmp.
+		 */
 		if (b != NULL && s->tmp == NULL)
 		{
-			/*
-			 * Must be split if not already in the list (fixes bugs 505048,
-			 * 230589, 840258, 504785).
-			 */
-			s->tmp = slist;
+			s->tmp = (slist != NULL) ? slist : s;
 			slist = s;
 		}
 	}
@@ -591,7 +613,9 @@ makesearch(struct vars * v,
 	for (s = slist; s != NULL; s = s2)
 	{
 		s2 = newstate(nfa);
-		copyouts(nfa, s, s2, 1);
+		NOERR();
+		copyouts(nfa, s, s2);
+		NOERR();
 		for (a = s->ins; a != NULL; a = b)
 		{
 			b = a->inchain;
@@ -601,7 +625,7 @@ makesearch(struct vars * v,
 				freearc(nfa, a);
 			}
 		}
-		s2 = s->tmp;
+		s2 = (s->tmp != s) ? s->tmp : NULL;
 		s->tmp = NULL;			/* clean up while we're at it */
 	}
 }
@@ -920,7 +944,7 @@ parseqatom(struct vars * v,
 			EMPTYARC(lp, s);
 			EMPTYARC(s2, rp);
 			NOERR();
-			atom = parse(v, ')', PLAIN, s, s2);
+			atom = parse(v, ')', type, s, s2);
 			assert(SEE(')') || ISERR());
 			NEXT();
 			NOERR();
@@ -942,6 +966,7 @@ parseqatom(struct vars * v,
 			NOERR();
 			assert(v->nextvalue > 0);
 			atom = subre(v, 'b', BACKR, lp, rp);
+			NOERR();
 			subno = v->nextvalue;
 			atom->subno = subno;
 			EMPTYARC(lp, rp);	/* temporarily, so there's something */
@@ -1076,6 +1101,7 @@ parseqatom(struct vars * v,
 
 	/* break remaining subRE into x{...} and what follows */
 	t = subre(v, '.', COMBINE(qprefer, atom->flags), lp, rp);
+	NOERR();
 	t->left = atom;
 	atomp = &t->left;
 
@@ -1084,6 +1110,7 @@ parseqatom(struct vars * v,
 	/* split top into prefix and remaining */
 	assert(top->op == '=' && top->left == NULL && top->right == NULL);
 	top->left = subre(v, '=', top->flags, top->begin, lp);
+	NOERR();
 	top->op = '.';
 	top->right = t;
 
@@ -1559,6 +1586,7 @@ dovec(struct vars * v,
 	{
 		ch = *p;
 		newarc(v->nfa, PLAIN, subcolor(v->cm, ch), lp, rp);
+		NOERR();
 	}
 
 	/* and the ranges */
@@ -1568,6 +1596,7 @@ dovec(struct vars * v,
 		to = *(p + 1);
 		if (from <= to)
 			subrange(v, from, to, lp, rp);
+		NOERR();
 	}
 }
 
@@ -1617,6 +1646,16 @@ subre(struct vars * v,
 	  struct state * end)
 {
 	struct subre *ret = v->treefree;
+
+	/*
+	 * Checking for stack overflow here is sufficient to protect parse() and
+	 * its recursive subroutines.
+	 */
+	if (STACK_TOO_DEEP(v->re))
+	{
+		ERR(REG_ETOOBIG);
+		return NULL;
+	}
 
 	if (ret != NULL)
 		v->treefree = ret->left;
@@ -1680,8 +1719,9 @@ freesrnode(struct vars * v,		/* might be NULL */
 		freecnfa(&sr->cnfa);
 	sr->flags = 0;
 
-	if (v != NULL)
+	if (v != NULL && v->treechain != NULL)
 	{
+		/* we're still parsing, maybe we can reuse the subre */
 		sr->left = v->treefree;
 		v->treefree = sr;
 	}
@@ -1727,6 +1767,20 @@ numst(struct subre * t,
 
 /*
  * markst - mark tree nodes as INUSE
+ *
+ * Note: this is a great deal more subtle than it looks.  During initial
+ * parsing of a regex, all subres are linked into the treechain list;
+ * discarded ones are also linked into the treefree list for possible reuse.
+ * After we are done creating all subres required for a regex, we run markst()
+ * then cleanst(), which results in discarding all subres not reachable from
+ * v->tree.  We then clear v->treechain, indicating that subres must be found
+ * by descending from v->tree.  This changes the behavior of freesubre(): it
+ * will henceforth FREE() unwanted subres rather than sticking them into the
+ * treefree list.  (Doing that any earlier would result in dangling links in
+ * the treechain list.)  This all means that freev() will clean up correctly
+ * if invoked before or after markst()+cleanst(); but it would not work if
+ * called partway through this state conversion, so we mustn't error out
+ * in or between these two functions.
  */
 static void
 markst(struct subre * t)
@@ -1824,25 +1878,27 @@ newlacon(struct vars * v,
 		 int pos)
 {
 	int			n;
+	struct subre *newlacons;
 	struct subre *sub;
 
 	if (v->nlacons == 0)
 	{
-		v->lacons = (struct subre *) MALLOC(2 * sizeof(struct subre));
 		n = 1;					/* skip 0th */
-		v->nlacons = 2;
+		newlacons = (struct subre *) MALLOC(2 * sizeof(struct subre));
 	}
 	else
 	{
-		v->lacons = (struct subre *) REALLOC(v->lacons,
-									(v->nlacons + 1) * sizeof(struct subre));
-		n = v->nlacons++;
+		n = v->nlacons;
+		newlacons = (struct subre *) REALLOC(v->lacons,
+											 (n + 1) * sizeof(struct subre));
 	}
-	if (v->lacons == NULL)
+	if (newlacons == NULL)
 	{
 		ERR(REG_ESPACE);
 		return 0;
 	}
+	v->lacons = newlacons;
+	v->nlacons = n + 1;
 	sub = &v->lacons[n];
 	sub->begin = begin;
 	sub->end = end;
@@ -1913,6 +1969,22 @@ rcancelrequested(void)
 	return InterruptPending && (QueryCancelPending || ProcDiePending);
 }
 
+/*
+ * rstacktoodeep - check for stack getting dangerously deep
+ *
+ * Return nonzero to fail the operation with error code REG_ETOOBIG,
+ * zero to keep going
+ *
+ * The current implementation is Postgres-specific.  If we ever get around
+ * to splitting the regex code out as a standalone library, there will need
+ * to be some API to let applications define a callback function for this.
+ */
+static int
+rstacktoodeep(void)
+{
+	return stack_is_too_deep();
+}
+
 #ifdef REG_DEBUG
 
 /*
@@ -1945,7 +2017,7 @@ dump(regex_t *re,
 	dumpcolors(&g->cmap, f);
 	if (!NULLCNFA(g->search))
 	{
-		printf("\nsearch:\n");
+		fprintf(f, "\nsearch:\n");
 		dumpcnfa(&g->search, f);
 	}
 	for (i = 1; i < g->nlacons; i++)

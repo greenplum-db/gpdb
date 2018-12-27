@@ -355,11 +355,10 @@ _WriteData(ArchiveHandle *AH, const void *data, size_t dLen)
 {
 	lclContext *ctx = (lclContext *) AH->formatData;
 
-	/* Are we aborting? */
-	checkAborting(AH);
-
 	if (dLen > 0 && cfwrite(data, dLen, ctx->dataFH) != dLen)
-		WRITE_ERROR_EXIT;
+		exit_horribly(modulename, "could not write to output file: %s\n",
+					  get_cfp_error(ctx->dataFH));
+
 
 	return;
 }
@@ -405,7 +404,9 @@ _PrintFileData(ArchiveHandle *AH, char *filename, RestoreOptions *ropt)
 	buflen = ZLIB_OUT_SIZE;
 
 	while ((cnt = cfread(buf, buflen, cfp)))
+	{
 		ahwrite(buf, 1, cnt, AH);
+	}
 
 	free(buf);
 	if (cfclose(cfp) !=0)
@@ -495,7 +496,8 @@ _WriteByte(ArchiveHandle *AH, const int i)
 	lclContext *ctx = (lclContext *) AH->formatData;
 
 	if (cfwrite(&c, 1, ctx->dataFH) != 1)
-		WRITE_ERROR_EXIT;
+		exit_horribly(modulename, "could not write to output file: %s\n",
+					  get_cfp_error(ctx->dataFH));
 
 	return 1;
 }
@@ -523,11 +525,9 @@ _WriteBuf(ArchiveHandle *AH, const void *buf, size_t len)
 {
 	lclContext *ctx = (lclContext *) AH->formatData;
 
-	/* Are we aborting? */
-	checkAborting(AH);
-
 	if (cfwrite(buf, len, ctx->dataFH) != len)
-		WRITE_ERROR_EXIT;
+		exit_horribly(modulename, "could not write to output file: %s\n",
+					  get_cfp_error(ctx->dataFH));
 
 	return;
 }

@@ -18,6 +18,7 @@
 #include "catalog/pg_cast.h"
 #include "catalog/pg_type.h"
 #include "executor/spi.h"
+#include "funcapi.h"
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
 #include "mb/pg_wchar.h"
@@ -57,8 +58,8 @@ typedef enum					/* type categories for datum_to_json */
 	JSONTYPE_BOOL,				/* boolean (built-in types only) */
 	JSONTYPE_NUMERIC,			/* numeric (ditto) */
 	JSONTYPE_DATE,				/* we use special formatting for datetimes */
-	JSONTYPE_TIMESTAMP,         /* we use special formatting for timestamp */
-	JSONTYPE_TIMESTAMPTZ,       /* ... and timestamptz */
+	JSONTYPE_TIMESTAMP,
+	JSONTYPE_TIMESTAMPTZ,
 	JSONTYPE_JSON,				/* JSON itself (and JSONB) */
 	JSONTYPE_ARRAY,				/* array */
 	JSONTYPE_COMPOSITE,			/* composite */
@@ -315,7 +316,7 @@ makeJsonLexContextCstringLen(char *json, int len, bool need_escapes)
  * Publicly visible entry point for the JSON parser.
  *
  * lex is a lexing context, set up for the json to be processed by calling
- * makeJsonLexContext(). sem is a strucure of function pointers to semantic
+ * makeJsonLexContext(). sem is a structure of function pointers to semantic
  * action routines to be called at appropriate spots during parsing, and a
  * pointer to a state object to be passed to those routines.
  */
@@ -395,8 +396,9 @@ static void
 parse_object_field(JsonLexContext *lex, JsonSemAction *sem)
 {
 	/*
-	 * an object field is "fieldname" : value where value can be a scalar,
-	 * object or array
+	 * An object field is "fieldname" : value where value can be a scalar,
+	 * object or array.  Note: in user-facing docs and error messages, we
+	 * generally call a field name a "key".
 	 */
 
 	char	   *fname = NULL;	/* keep compiler quiet */
@@ -441,7 +443,7 @@ parse_object(JsonLexContext *lex, JsonSemAction *sem)
 {
 	/*
 	 * an object is a possibly empty sequence of object fields, separated by
-	 * commas and surrounde by curly braces.
+	 * commas and surrounded by curly braces.
 	 */
 	json_struct_action ostart = sem->object_start;
 	json_struct_action oend = sem->object_end;
@@ -818,14 +820,17 @@ json_lex_string(JsonLexContext *lex)
 					 * For UTF8, replace the escape sequence by the actual
 					 * utf8 character in lex->strval. Do this also for other
 					 * encodings if the escape designates an ASCII character,
-					 * otherwise raise an error. We don't ever unescape a
-					 * \u0000, since that would result in an impermissible nul
-					 * byte.
+					 * otherwise raise an error.
 					 */
 
 					if (ch == 0)
 					{
-						appendStringInfoString(lex->strval, "\\u0000");
+						/* We can't allow this, since our TEXT type doesn't */
+						ereport(ERROR,
+								(errcode(ERRCODE_UNTRANSLATABLE_CHARACTER),
+							   errmsg("unsupported Unicode escape sequence"),
+						   errdetail("\\u0000 cannot be converted to text."),
+								 report_json_context(lex)));
 					}
 					else if (GetDatabaseEncoding() == PG_UTF8)
 					{
@@ -845,8 +850,8 @@ json_lex_string(JsonLexContext *lex)
 					else
 					{
 						ereport(ERROR,
-								(errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-								 errmsg("invalid input syntax for type json"),
+								(errcode(ERRCODE_UNTRANSLATABLE_CHARACTER),
+							   errmsg("unsupported Unicode escape sequence"),
 								 errdetail("Unicode escape values cannot be used for code point values above 007F when the server encoding is not UTF8."),
 								 report_json_context(lex)));
 					}
@@ -1405,7 +1410,7 @@ datum_to_json(Datum val, bool is_null, StringInfo result,
 		 tcategory == JSONTYPE_CAST))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-		  errmsg("key value must be scalar, not array, composite or json")));
+		 errmsg("key value must be scalar, not array, composite, or json")));
 
 	switch (tcategory)
 	{
@@ -1903,7 +1908,7 @@ json_agg_finalfn(PG_FUNCTION_ARGS)
 /*
  * json_object_agg transition function.
  *
- * aggregate two input columns as a single json value.
+ * aggregate two input columns as a single json object value.
  */
 Datum
 json_object_agg_transfn(PG_FUNCTION_ARGS)
@@ -1917,16 +1922,16 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 	if (!AggCheckCallContext(fcinfo, &aggcontext))
 	{
 		/* cannot be called directly because of internal-type argument */
-		elog(ERROR, "json_agg_transfn called in non-aggregate context");
+		elog(ERROR, "json_object_agg_transfn called in non-aggregate context");
 	}
 
 	if (PG_ARGISNULL(0))
 	{
 		/*
-		 * Make this StringInfo in a context where it will persist for the
-		 * duration off the aggregate call. It's only needed for this initial
-		 * piece, as the StringInfo routines make sure they use the right
-		 * context to enlarge the object if necessary.
+		 * Make the StringInfo in a context where it will persist for the
+		 * duration of the aggregate call. Switching context is only needed
+		 * for this initial step, as the StringInfo routines make sure they
+		 * use the right context to enlarge the object if necessary.
 		 */
 		oldcontext = MemoryContextSwitchTo(aggcontext);
 		state = makeStringInfo();
@@ -1940,56 +1945,42 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 		appendStringInfoString(state, ", ");
 	}
 
+	/*
+	 * Note: since json_object_agg() is declared as taking type "any", the
+	 * parser will not do any type conversion on unknown-type literals (that
+	 * is, undecorated strings or NULLs).  Such values will arrive here as
+	 * type UNKNOWN, which fortunately does not matter to us, since
+	 * unknownout() works fine.
+	 */
+	val_type = get_fn_expr_argtype(fcinfo->flinfo, 1);
+
+	if (val_type == InvalidOid)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("could not determine data type for argument %d", 1)));
+
 	if (PG_ARGISNULL(1))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("field name must not be null")));
 
-
-	val_type = get_fn_expr_argtype(fcinfo->flinfo, 1);
-
-	/*
-	 * turn a constant (more or less literal) value that's of unknown type
-	 * into text. Unknowns come in as a cstring pointer.
-	 */
-	if (val_type == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, 1))
-	{
-		val_type = TEXTOID;
-		arg = CStringGetTextDatum(PG_GETARG_POINTER(1));
-	}
-	else
-	{
-		arg = PG_GETARG_DATUM(1);
-	}
-
-	if (val_type == InvalidOid || val_type == UNKNOWNOID)
-		ereport(ERROR,
-				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("arg 1: could not determine data type")));
+	arg = PG_GETARG_DATUM(1);
 
 	add_json(arg, false, state, val_type, true);
 
 	appendStringInfoString(state, " : ");
 
 	val_type = get_fn_expr_argtype(fcinfo->flinfo, 2);
-	/* see comments above */
-	if (val_type == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, 2))
-	{
-		val_type = TEXTOID;
-		if (PG_ARGISNULL(2))
-			arg = (Datum) 0;
-		else
-			arg = CStringGetTextDatum(PG_GETARG_POINTER(2));
-	}
-	else
-	{
-		arg = PG_GETARG_DATUM(2);
-	}
 
-	if (val_type == InvalidOid || val_type == UNKNOWNOID)
+	if (val_type == InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("arg 2: could not determine data type")));
+				 errmsg("could not determine data type for argument %d", 2)));
+
+	if (PG_ARGISNULL(2))
+		arg = (Datum) 0;
+	else
+		arg = PG_GETARG_DATUM(2);
 
 	add_json(arg, PG_ARGISNULL(2), state, val_type, false);
 
@@ -1998,7 +1989,6 @@ json_object_agg_transfn(PG_FUNCTION_ARGS)
 
 /*
  * json_object_agg final function.
- *
  */
 Datum
 json_object_agg_finalfn(PG_FUNCTION_ARGS)
@@ -2010,12 +2000,12 @@ json_object_agg_finalfn(PG_FUNCTION_ARGS)
 
 	state = PG_ARGISNULL(0) ? NULL : (StringInfo) PG_GETARG_POINTER(0);
 
+	/* NULL result for no rows in, as is standard with aggregates */
 	if (state == NULL)
-		PG_RETURN_TEXT_P(cstring_to_text("{}"));
+		PG_RETURN_NULL();
 
-	appendStringInfoString(state, " }");
-
-	PG_RETURN_TEXT_P(cstring_to_text_with_len(state->data, state->len));
+	/* Else return state with appropriate object terminator added */
+	PG_RETURN_TEXT_P(catenate_stringinfo_string(state, " }"));
 }
 
 /*
@@ -2046,16 +2036,23 @@ json_build_object(PG_FUNCTION_ARGS)
 {
 	int			nargs = PG_NARGS();
 	int			i;
-	Datum		arg;
-	char	   *sep = "";
+	const char *sep = "";
 	StringInfo	result;
-	Oid			val_type;
+	Datum	   *args;
+	bool	   *nulls;
+	Oid		   *types;
 
+	/* fetch argument values to build the object */
+	nargs = extract_variadic_args(fcinfo, 0, false, &args, &types, &nulls);
+
+	if (nargs < 0)
+		PG_RETURN_NULL();
 
 	if (nargs % 2 != 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("invalid number or arguments: object must be matched key value pairs")));
+				 errmsg("argument list must have even number of elements"),
+				 errhint("The arguments of json_build_object() must consist of alternating keys and values.")));
 
 	result = makeStringInfo();
 
@@ -2063,68 +2060,27 @@ json_build_object(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < nargs; i += 2)
 	{
-
-		/* process key */
-
-		if (PG_ARGISNULL(i))
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("arg %d: key cannot be null", i + 1)));
-		val_type = get_fn_expr_argtype(fcinfo->flinfo, i);
-
-		/*
-		 * turn a constant (more or less literal) value that's of unknown type
-		 * into text. Unknowns come in as a cstring pointer.
-		 */
-		if (val_type == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, i))
-		{
-			val_type = TEXTOID;
-			if (PG_ARGISNULL(i))
-				arg = (Datum) 0;
-			else
-				arg = CStringGetTextDatum(PG_GETARG_POINTER(i));
-		}
-		else
-		{
-			arg = PG_GETARG_DATUM(i);
-		}
-		if (val_type == InvalidOid || val_type == UNKNOWNOID)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("arg %d: could not determine data type", i + 1)));
 		appendStringInfoString(result, sep);
 		sep = ", ";
-		add_json(arg, false, result, val_type, true);
+
+		/* process key */
+		if (nulls[i])
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("argument %d cannot be null", i + 1),
+					 errhint("Object keys should be text.")));
+
+		add_json(args[i], false, result, types[i], true);
 
 		appendStringInfoString(result, " : ");
 
 		/* process value */
-
-		val_type = get_fn_expr_argtype(fcinfo->flinfo, i + 1);
-		/* see comments above */
-		if (val_type == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, i + 1))
-		{
-			val_type = TEXTOID;
-			if (PG_ARGISNULL(i + 1))
-				arg = (Datum) 0;
-			else
-				arg = CStringGetTextDatum(PG_GETARG_POINTER(i + 1));
-		}
-		else
-		{
-			arg = PG_GETARG_DATUM(i + 1);
-		}
-		if (val_type == InvalidOid || val_type == UNKNOWNOID)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("arg %d: could not determine data type", i + 2)));
-		add_json(arg, PG_ARGISNULL(i + 1), result, val_type, false);
-
+		add_json(args[i + 1], nulls[i + 1], result, types[i + 1], false);
 	}
+
 	appendStringInfoChar(result, '}');
 
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result->data, result->len));
-
 }
 
 /*
@@ -2142,13 +2098,19 @@ json_build_object_noargs(PG_FUNCTION_ARGS)
 Datum
 json_build_array(PG_FUNCTION_ARGS)
 {
-	int			nargs = PG_NARGS();
+	int			nargs;
 	int			i;
-	Datum		arg;
-	char	   *sep = "";
+	const char *sep = "";
 	StringInfo	result;
-	Oid			val_type;
+	Datum	   *args;
+	bool	   *nulls;
+	Oid		   *types;
 
+	/* fetch argument values to build the array */
+	nargs = extract_variadic_args(fcinfo, 0, false, &args, &types, &nulls);
+
+	if (nargs < 0)
+		PG_RETURN_NULL();
 
 	result = makeStringInfo();
 
@@ -2156,33 +2118,14 @@ json_build_array(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < nargs; i++)
 	{
-		val_type = get_fn_expr_argtype(fcinfo->flinfo, i);
-		arg = PG_GETARG_DATUM(i + 1);
-		/* see comments in json_build_object above */
-		if (val_type == UNKNOWNOID && get_fn_expr_arg_stable(fcinfo->flinfo, i))
-		{
-			val_type = TEXTOID;
-			if (PG_ARGISNULL(i))
-				arg = (Datum) 0;
-			else
-				arg = CStringGetTextDatum(PG_GETARG_POINTER(i));
-		}
-		else
-		{
-			arg = PG_GETARG_DATUM(i);
-		}
-		if (val_type == InvalidOid || val_type == UNKNOWNOID)
-			ereport(ERROR,
-					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-					 errmsg("arg %d: could not determine data type", i + 1)));
 		appendStringInfoString(result, sep);
 		sep = ", ";
-		add_json(arg, PG_ARGISNULL(i), result, val_type, false);
+		add_json(args[i], nulls[i], result, types[i], false);
 	}
+
 	appendStringInfoChar(result, ']');
 
 	PG_RETURN_TEXT_P(cstring_to_text_with_len(result->data, result->len));
-
 }
 
 /*
@@ -2197,9 +2140,8 @@ json_build_array_noargs(PG_FUNCTION_ARGS)
 /*
  * SQL function json_object(text[])
  *
- * take a one or two dimensional array of text as name vale pairs
+ * take a one or two dimensional array of text as key/value pairs
  * for a json object.
- *
  */
 Datum
 json_object(PG_FUNCTION_ARGS)
@@ -2259,10 +2201,6 @@ json_object(PG_FUNCTION_ARGS)
 					 errmsg("null value not allowed for object key")));
 
 		v = TextDatumGetCString(in_datums[i * 2]);
-		if (v[0] == '\0')
-			ereport(ERROR,
-					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("empty value not allowed for object key")));
 		if (i > 0)
 			appendStringInfoString(&result, ", ");
 		escape_json(&result, v);
@@ -2293,7 +2231,7 @@ json_object(PG_FUNCTION_ARGS)
 /*
  * SQL function json_object(text[], text[])
  *
- * take separate name and value arrays of text to construct a json object
+ * take separate key and value arrays of text to construct a json object
  * pairwise.
  */
 Datum
@@ -2347,10 +2285,6 @@ json_object_two_arg(PG_FUNCTION_ARGS)
 					 errmsg("null value not allowed for object key")));
 
 		v = TextDatumGetCString(key_datums[i]);
-		if (v[0] == '\0')
-			ereport(ERROR,
-					(errcode(ERRCODE_NULL_VALUE_NOT_ALLOWED),
-					 errmsg("empty value not allowed for object key")));
 		if (i > 0)
 			appendStringInfoString(&result, ", ");
 		escape_json(&result, v);
@@ -2377,7 +2311,6 @@ json_object_two_arg(PG_FUNCTION_ARGS)
 	pfree(result.data);
 
 	PG_RETURN_TEXT_P(rval);
-
 }
 
 
@@ -2413,26 +2346,7 @@ escape_json(StringInfo buf, const char *str)
 				appendStringInfoString(buf, "\\\"");
 				break;
 			case '\\':
-				/*
-				 * Unicode escapes are passed through as is. There is no
-				 * requirement that they denote a valid character in the
-				 * server encoding - indeed that is a big part of their
-				 * usefulness.
-				 *
-				 * All we require is that they consist of \uXXXX where
-				 * the Xs are hexadecimal digits. It is the responsibility
-				 * of the caller of, say, to_json() to make sure that the
-				 * unicode escape is valid.
-				 *
-				 * In the case of a jsonb string value being escaped, the
-				 * only unicode escape that should be present is \u0000,
-				 * all the other unicode escapes will have been resolved.
-				 */
-				if (p[1] == 'u' && isxdigit(p[2]) && isxdigit(p[3])
-					&& isxdigit(p[4]) && isxdigit(p[5]))
-					appendStringInfoCharMacro(buf, *p);
-				else
-					appendStringInfoString(buf, "\\\\");
+				appendStringInfoString(buf, "\\\\");
 				break;
 			default:
 				if ((unsigned char) *p < ' ')

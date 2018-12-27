@@ -1142,7 +1142,6 @@ MemoryContextAlloc(MemoryContext context, Size size)
 #endif
 
 	AssertArg(MemoryContextIsValid(context));
-	AssertNotInCriticalSection(context);
 
 #ifdef CDB_PALLOC_CALLER_ID
 	context->callerFile = sfile;
@@ -1185,7 +1184,6 @@ MemoryContextAllocZero(MemoryContext context, Size size)
 	StandardChunkHeader *header;
 #endif
 	AssertArg(MemoryContextIsValid(context));
-	AssertNotInCriticalSection(context);
 
 #ifdef CDB_PALLOC_CALLER_ID
 	context->callerFile = sfile;
@@ -1231,7 +1229,6 @@ MemoryContextAllocZeroAligned(MemoryContext context, Size size)
 #endif
 
 	AssertArg(MemoryContextIsValid(context));
-	AssertNotInCriticalSection(context);
 
 #ifdef CDB_PALLOC_CALLER_ID
 	context->callerFile = sfile;
@@ -1267,7 +1264,6 @@ palloc(Size size)
 	void	   *ret;
 
 	AssertArg(MemoryContextIsValid(CurrentMemoryContext));
-	AssertNotInCriticalSection(CurrentMemoryContext);
 
 	if (!AllocSizeIsValid(size))
 		elog(ERROR, "invalid memory alloc request size %zu", size);
@@ -1287,7 +1283,6 @@ palloc0(Size size)
 	void	   *ret;
 
 	AssertArg(MemoryContextIsValid(CurrentMemoryContext));
-	AssertNotInCriticalSection(CurrentMemoryContext);
 
 	if (!AllocSizeIsValid(size))
 		elog(ERROR, "invalid memory alloc request size %zu", size);
@@ -1381,7 +1376,6 @@ repalloc(void *pointer, Size size)
 		MemoryContextError(ERRCODE_INTERNAL_ERROR,
 				context, CDB_MCXT_WHERE(context),
 				"invalid memory alloc request size %zu", size);
-
 	/* isReset must be false already */
 	Assert(!context->isReset);
 
@@ -1427,7 +1421,6 @@ MemoryContextAllocHuge(MemoryContext context, Size size)
 	void	   *ret;
 
 	AssertArg(MemoryContextIsValid(context));
-	AssertNotInCriticalSection(context);
 
 	if (!AllocHugeSizeIsValid(size))
 		elog(ERROR, "invalid memory alloc request size %zu", size);
@@ -1471,7 +1464,6 @@ repalloc_huge(void *pointer, Size size)
 	context = header->sharedHeader->context;
 
 	AssertArg(MemoryContextIsValid(context));
-	AssertNotInCriticalSection(context);
 
 	/* isReset must be false already */
 	Assert(!context->isReset);

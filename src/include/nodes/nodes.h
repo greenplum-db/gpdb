@@ -460,7 +460,7 @@ typedef enum NodeTag
 	T_AlterUserMappingStmt,
 	T_DropUserMappingStmt,
 	T_AlterTableSpaceOptionsStmt,
-	T_AlterTableSpaceMoveStmt,
+	T_AlterTableMoveAllStmt,
 	T_SecLabelStmt,
 	T_CreateForeignTableStmt,
 	T_CreateExtensionStmt,
@@ -632,6 +632,28 @@ extern PGDLLIMPORT Node *newNodeMacroHolder;
 #define NodeSetTag(nodeptr,t)	(((Node*)(nodeptr))->type = (t))
 
 #define IsA(nodeptr,_type_)		(nodeTag(nodeptr) == T_##_type_)
+
+/*
+ * castNode(type, ptr) casts ptr to "type *", and if assertions are enabled,
+ * verifies that the node has the appropriate type (using its nodeTag()).
+ *
+ * Use an inline function when assertions are enabled, to avoid multiple
+ * evaluations of the ptr argument (which could e.g. be a function call).
+ * If inline functions are not available - only a small number of platforms -
+ * don't Assert, but use the non-checking version.
+ */
+#if defined(USE_ASSERT_CHECKING) && defined(PG_USE_INLINE)
+static inline Node *
+castNodeImpl(NodeTag type, void *ptr)
+{
+	Assert(ptr == NULL || nodeTag(ptr) == type);
+	return (Node *) ptr;
+}
+#define castNode(_type_, nodeptr) ((_type_ *) castNodeImpl(T_##_type_, nodeptr))
+#else
+#define castNode(_type_, nodeptr) ((_type_ *) (nodeptr))
+#endif   /* USE_ASSERT_CHECKING && PG_USE_INLINE */
+
 
 /* ----------------------------------------------------------------
  *					  extern declarations follow

@@ -1,6 +1,11 @@
 --
 -- Test access privileges
 --
+-- start_matchsubs
+-- m/DETAIL:  Failing row contains \(.*\) = \(.*\)/
+-- s/DETAIL:  Failing row contains \(.*\) = \(.*\)/DETAIL:  Failing row contains (#####)/
+-- end_matchsubs
+
 set optimizer=off;
 -- Clean up in case a prior regression run failed
 
@@ -18,7 +23,7 @@ DROP ROLE IF EXISTS regressuser5;
 DROP ROLE IF EXISTS regressuser6;
 
 -- start_ignore
-SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
+SELECT lo_unlink(oid) FROM pg_largeobject_metadata WHERE oid >= 1000 AND oid < 3000 ORDER BY oid;
 -- end_ignore
 
 RESET client_min_messages;
@@ -127,6 +132,71 @@ COPY atest2 FROM stdin; -- ok
 bar	true
 \.
 SELECT * FROM atest1; -- ok
+
+
+-- test leaky-function protections in selfuncs
+
+-- regressuser1 will own a table and provide a view for it.
+SET SESSION AUTHORIZATION regressuser1;
+
+CREATE TABLE atest12 as
+  SELECT x AS a, 10001 - x AS b FROM generate_series(1,10000) x;
+CREATE INDEX ON atest12 (a);
+CREATE INDEX ON atest12 (abs(a));
+VACUUM ANALYZE atest12;
+
+CREATE FUNCTION leak(integer,integer) RETURNS boolean
+  AS $$begin return $1 < $2; end$$
+  LANGUAGE plpgsql immutable;
+CREATE OPERATOR <<< (procedure = leak, leftarg = integer, rightarg = integer,
+                     restrict = scalarltsel);
+
+-- view with leaky operator
+CREATE VIEW atest12v AS
+  SELECT * FROM atest12 WHERE b <<< 5;
+GRANT SELECT ON atest12v TO PUBLIC;
+
+-- This plan should use nestloop, knowing that few rows will be selected.
+set enable_nestloop = 1;
+EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
+
+-- And this one.
+EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
+  WHERE x.a = y.b and abs(y.a) <<< 5;
+reset enable_nestloop;
+
+-- Check if regressuser2 can break security.
+SET SESSION AUTHORIZATION regressuser2;
+
+CREATE FUNCTION leak2(integer,integer) RETURNS boolean
+  AS $$begin raise notice 'leak % %', $1, $2; return $1 > $2; end$$
+  LANGUAGE plpgsql immutable;
+CREATE OPERATOR >>> (procedure = leak2, leftarg = integer, rightarg = integer,
+                     restrict = scalargtsel);
+
+-- This should not show any "leak" notices before failing.
+EXPLAIN (COSTS OFF) SELECT * FROM atest12 WHERE a >>> 0;
+
+-- This plan should use hashjoin, as it will expect many rows to be selected.
+EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
+
+-- Now regressuser1 grants sufficient access to regressuser2.
+SET SESSION AUTHORIZATION regressuser1;
+GRANT SELECT (a, b) ON atest12 TO PUBLIC;
+SET SESSION AUTHORIZATION regressuser2;
+
+-- Now regressuser2 will also get a good row estimate.
+set enable_nestloop = 1;
+EXPLAIN (COSTS OFF) SELECT * FROM atest12v x, atest12v y WHERE x.a = y.b;
+reset enable_nestloop;
+
+-- But not for this, due to lack of table-wide permissions needed
+-- to make use of the expression index's statistics.
+EXPLAIN (COSTS OFF) SELECT * FROM atest12 x, atest12 y
+  WHERE x.a = y.b and abs(y.a) <<< 5;
+
+-- clean up (regressuser1's objects are all dropped later)
+DROP FUNCTION leak2(integer, integer) CASCADE;
 
 
 -- groups
@@ -257,6 +327,31 @@ SELECT one FROM atest5; -- fail
 UPDATE atest5 SET one = 1; -- fail
 SELECT atest6 FROM atest6; -- ok
 COPY atest6 TO stdout; -- ok
+
+-- check error reporting with column privs
+SET SESSION AUTHORIZATION regressuser1;
+CREATE TABLE t1 (c1 int, c2 int, c3 int check (c3 < 5), primary key (c1, c2));
+GRANT SELECT (c1) ON t1 TO regressuser2;
+GRANT INSERT (c1, c2, c3) ON t1 TO regressuser2;
+GRANT UPDATE (c1, c2, c3) ON t1 TO regressuser2;
+
+-- seed data
+INSERT INTO t1 VALUES (1, 1, 1);
+INSERT INTO t1 VALUES (1, 2, 1);
+INSERT INTO t1 VALUES (2, 1, 2);
+INSERT INTO t1 VALUES (2, 2, 2);
+INSERT INTO t1 VALUES (3, 1, 3);
+
+SET SESSION AUTHORIZATION regressuser2;
+INSERT INTO t1 (c1, c2) VALUES (1, 1); -- fail, but row not shown
+UPDATE t1 SET c2 = 1; -- fail, but row not shown
+INSERT INTO t1 (c1, c2) VALUES (null, null); -- fail, but see columns being inserted
+INSERT INTO t1 (c3) VALUES (null); -- fail, but see columns being inserted or have SELECT
+INSERT INTO t1 (c1) VALUES (5); -- fail, but see columns being inserted or have SELECT
+UPDATE t1 SET c3 = 10; -- fail, but see columns with SELECT rights, or being modified
+
+SET SESSION AUTHORIZATION regressuser1;
+DROP TABLE t1;
 
 -- test column-level privileges when involved with DELETE
 SET SESSION AUTHORIZATION regressuser1;
@@ -573,6 +668,24 @@ from (select oid from pg_class where relname = 'atest1') as t1;
 select has_table_privilege(t1.oid,'trigger')
 from (select oid from pg_class where relname = 'atest1') as t1;
 
+-- has_column_privilege function
+
+-- bad-input checks (as non-super-user)
+select has_column_privilege('pg_authid',NULL,'select');
+select has_column_privilege('pg_authid','nosuchcol','select');
+select has_column_privilege(9999,'nosuchcol','select');
+select has_column_privilege(9999,99::int2,'select');
+select has_column_privilege('pg_authid',99::int2,'select');
+select has_column_privilege(9999,99::int2,'select');
+
+create temp table mytable(f1 int, f2 int, f3 int);
+alter table mytable drop column f2;
+select has_column_privilege('mytable','f2','select');
+select has_column_privilege('mytable','........pg.dropped.2........','select');
+select has_column_privilege('mytable',2::int2,'select');
+revoke select on table mytable from regressuser3;
+select has_column_privilege('mytable',2::int2,'select');
+drop table mytable;
 
 -- Grant options
 
@@ -672,6 +785,9 @@ SET SESSION AUTHORIZATION regressuser2;
 SELECT lo_create(2001);
 SELECT lo_create(2002);
 
+SELECT loread(lo_open(1001, x'20000'::int), 32);	-- allowed, for now
+SELECT lowrite(lo_open(1001, x'40000'::int), 'abcd');	-- fail, wrong mode
+
 SELECT loread(lo_open(1001, x'40000'::int), 32);
 SELECT loread(lo_open(1002, x'40000'::int), 32);	-- to be denied
 SELECT loread(lo_open(1003, x'40000'::int), 32);
@@ -694,7 +810,7 @@ SELECT lo_unlink(2002);
 \c -
 -- start_ignore
 -- confirm ACL setting
-SELECT oid, pg_get_userbyid(lomowner) ownername, lomacl FROM pg_largeobject_metadata;
+SELECT oid, pg_get_userbyid(lomowner) ownername, lomacl FROM pg_largeobject_metadata WHERE oid >= 1000 AND oid < 3000 ORDER BY oid;
 -- end_ignore
 
 SET SESSION AUTHORIZATION regressuser3;
@@ -717,6 +833,7 @@ SET SESSION AUTHORIZATION regressuser4;
 SELECT loread(lo_open(1002, x'40000'::int), 32);	-- to be denied
 SELECT lowrite(lo_open(1002, x'20000'::int), 'abcd');	-- to be denied
 SELECT lo_truncate(lo_open(1002, x'20000'::int), 10);	-- to be denied
+SELECT lo_put(1002, 1, 'abcd');				-- to be denied
 SELECT lo_unlink(1002);					-- to be denied
 SELECT lo_export(1001, '/dev/null');			-- to be denied
 -- end_ignore
@@ -933,7 +1050,7 @@ DROP TABLE atestp1;
 DROP TABLE atestp2;
 
 -- start_ignore
-SELECT lo_unlink(oid) FROM pg_largeobject_metadata;
+SELECT lo_unlink(oid) FROM pg_largeobject_metadata WHERE oid >= 1000 AND oid < 3000 ORDER BY oid;
 -- end_ignore
 
 DROP GROUP regressgroup1;

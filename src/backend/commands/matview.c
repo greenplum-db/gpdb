@@ -20,6 +20,8 @@
 #include "catalog/catalog.h"
 #include "catalog/indexing.h"
 #include "catalog/namespace.h"
+#include "catalog/pg_am.h"
+#include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
 #include "commands/cluster.h"
 #include "commands/matview.h"
@@ -38,7 +40,6 @@
 #include "utils/rel.h"
 #include "utils/snapmgr.h"
 #include "utils/syscache.h"
-#include "utils/typcache.h"
 
 
 typedef struct
@@ -59,14 +60,12 @@ static void transientrel_receive(TupleTableSlot *slot, DestReceiver *self);
 static void transientrel_shutdown(DestReceiver *self);
 static void transientrel_destroy(DestReceiver *self);
 static void refresh_matview_datafill(DestReceiver *dest, Query *query,
-						 const char *queryString, Oid relowner);
-
+						 const char *queryString);
 static char *make_temptable_name_n(char *tempname, int n);
-static void mv_GenerateOper(StringInfo buf, Oid opoid);
-
-static void refresh_by_match_merge(Oid matviewOid, Oid tempOid);
+static void refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
+						 int save_sec_context);
 static void refresh_by_heap_swap(Oid matviewOid, Oid OIDNewHeap);
-
+static bool is_usable_unique_index(Relation indexRel);
 static void OpenMatViewIncrementalMaintenance(void);
 static void CloseMatViewIncrementalMaintenance(void);
 
@@ -142,11 +141,14 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	List	   *actions;
 	Query	   *dataQuery;
 	Oid			tableSpace;
-	Oid			owner;
+	Oid			relowner;
 	Oid			OIDNewHeap;
 	DestReceiver *dest;
 	bool		concurrent;
 	LOCKMODE	lockmode;
+	Oid			save_userid;
+	int			save_sec_context;
+	int			save_nestlevel;
 
 	/* Determine strength of lock needed. */
 	concurrent = stmt->concurrent;
@@ -231,13 +233,24 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	 */
 	SetMatViewPopulatedState(matviewRel, !stmt->skipData);
 
+	relowner = matviewRel->rd_rel->relowner;
+
+	/*
+	 * Switch to the owner's userid, so that any functions are run as that
+	 * user.  Also arrange to make GUC variable changes local to this command.
+	 * Don't lock it down too tight to create a temporary table just yet.  We
+	 * will switch modes when we are about to execute user code.
+	 */
+	GetUserIdAndSecContext(&save_userid, &save_sec_context);
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
+	save_nestlevel = NewGUCNestLevel();
+
 	/* Concurrent refresh builds new data in temp tablespace, and does diff. */
 	if (concurrent)
 		tableSpace = GetDefaultTablespace(RELPERSISTENCE_TEMP);
 	else
 		tableSpace = matviewRel->rd_rel->reltablespace;
-
-	owner = matviewRel->rd_rel->relowner;
 
 	/*
 	 * Create the transient table that will receive the regenerated data. Lock
@@ -249,9 +262,15 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	LockRelationOid(OIDNewHeap, AccessExclusiveLock);
 	dest = CreateTransientRelDestReceiver(OIDNewHeap);
 
+	/*
+	 * Now lock down security-restricted operations.
+	 */
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+
 	/* Generate the data, if wanted. */
 	if (!stmt->skipData)
-		refresh_matview_datafill(dest, dataQuery, queryString, owner);
+		refresh_matview_datafill(dest, dataQuery, queryString);
 
 	heap_close(matviewRel, NoLock);
 
@@ -262,7 +281,8 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 
 		PG_TRY();
 		{
-			refresh_by_match_merge(matviewOid, OIDNewHeap);
+			refresh_by_match_merge(matviewOid, OIDNewHeap, relowner,
+								   save_sec_context);
 		}
 		PG_CATCH();
 		{
@@ -274,6 +294,12 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	}
 	else
 		refresh_by_heap_swap(matviewOid, OIDNewHeap);
+
+	/* Roll back any GUC changes */
+	AtEOXact_GUC(false, save_nestlevel);
+
+	/* Restore userid and security context */
+	SetUserIdAndSecContext(save_userid, save_sec_context);
 }
 
 /*
@@ -281,25 +307,12 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
  */
 static void
 refresh_matview_datafill(DestReceiver *dest, Query *query,
-						 const char *queryString, Oid relowner)
+						 const char *queryString)
 {
 	List	   *rewritten;
 	PlannedStmt *plan;
 	QueryDesc  *queryDesc;
-	Oid			save_userid;
-	int			save_sec_context;
-	int			save_nestlevel;
 	Query	   *copied_query;
-
-	/*
-	 * Switch to the owner's userid, so that any functions are run as that
-	 * user.  Also lock down security-restricted operations and arrange to
-	 * make GUC variable changes local to this command.
-	 */
-	GetUserIdAndSecContext(&save_userid, &save_sec_context);
-	SetUserIdAndSecContext(relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-	save_nestlevel = NewGUCNestLevel();
 
 	/* Lock and rewrite, using a copy to preserve the original query. */
 	copied_query = copyObject(query);
@@ -344,12 +357,6 @@ refresh_matview_datafill(DestReceiver *dest, Query *query,
 	FreeQueryDesc(queryDesc);
 
 	PopActiveSnapshot();
-
-	/* Roll back any GUC changes */
-	AtEOXact_GUC(false, save_nestlevel);
-
-	/* Restore userid and security context */
-	SetUserIdAndSecContext(save_userid, save_sec_context);
 }
 
 DestReceiver *
@@ -469,25 +476,6 @@ make_temptable_name_n(char *tempname, int n)
 	return namebuf.data;
 }
 
-static void
-mv_GenerateOper(StringInfo buf, Oid opoid)
-{
-	HeapTuple	opertup;
-	Form_pg_operator operform;
-
-	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opoid));
-	if (!HeapTupleIsValid(opertup))
-		elog(ERROR, "cache lookup failed for operator %u", opoid);
-	operform = (Form_pg_operator) GETSTRUCT(opertup);
-	Assert(operform->oprkind == 'b');
-
-	appendStringInfo(buf, "OPERATOR(%s.%s)",
-				quote_identifier(get_namespace_name(operform->oprnamespace)),
-					 NameStr(operform->oprname));
-
-	ReleaseSysCache(opertup);
-}
-
 /*
  * refresh_by_match_merge
  *
@@ -521,7 +509,8 @@ mv_GenerateOper(StringInfo buf, Oid opoid)
  * this command.
  */
 static void
-refresh_by_match_merge(Oid matviewOid, Oid tempOid)
+refresh_by_match_merge(Oid matviewOid, Oid tempOid, Oid relowner,
+					   int save_sec_context)
 {
 	StringInfoData querybuf;
 	Relation	matviewRel;
@@ -534,10 +523,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 	List	   *indexoidlist;
 	ListCell   *indexoidscan;
 	int16		relnatts;
-	bool	   *usedForQual;
-	Oid			save_userid;
-	int			save_sec_context;
-	int			save_nestlevel;
+	Oid		   *opUsedForQual;
 
 	initStringInfo(&querybuf);
 	matviewRel = heap_open(matviewOid, NoLock);
@@ -549,7 +535,6 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 	diffname = make_temptable_name_n(tempname, 2);
 
 	relnatts = matviewRel->rd_rel->relnatts;
-	usedForQual = (bool *) palloc0(sizeof(bool) * relnatts);
 
 	/* Open SPI context. */
 	if (SPI_connect() != SPI_OK_CONNECT)
@@ -571,22 +556,32 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 	appendStringInfo(&querybuf,
 					 "SELECT newdata FROM %s newdata "
 					 "WHERE newdata IS NOT NULL AND EXISTS "
-					 "(SELECT * FROM %s newdata2 WHERE newdata2 IS NOT NULL "
+					 "(SELECT 1 FROM %s newdata2 WHERE newdata2 IS NOT NULL "
 					 "AND newdata2 OPERATOR(pg_catalog.*=) newdata "
 					 "AND newdata2.ctid OPERATOR(pg_catalog.<>) "
-					 "newdata.ctid) LIMIT 1",
+					 "newdata.ctid)",
 					 tempname, tempname);
 	if (SPI_execute(querybuf.data, false, 1) != SPI_OK_SELECT)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 	if (SPI_processed > 0)
 	{
+		/*
+		 * Note that this ereport() is returning data to the user.  Generally,
+		 * we would want to make sure that the user has been granted access to
+		 * this data.  However, REFRESH MAT VIEW is only able to be run by the
+		 * owner of the mat view (or a superuser) and therefore there is no
+		 * need to check for access to data in the mat view.
+		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_CARDINALITY_VIOLATION),
-				 errmsg("new data for \"%s\" contains duplicate rows without any NULL columns",
+				 errmsg("new data for \"%s\" contains duplicate rows without any null columns",
 						RelationGetRelationName(matviewRel)),
 				 errdetail("Row: %s",
 			SPI_getvalue(SPI_tuptable->vals[0], SPI_tuptable->tupdesc, 1))));
 	}
+
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_LOCAL_USERID_CHANGE);
 
 	/* Start building the query for creating the diff table. */
 	resetStringInfo(&querybuf);
@@ -603,45 +598,82 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 	 * include all rows.
 	 */
 	tupdesc = matviewRel->rd_att;
+	opUsedForQual = (Oid *) palloc0(sizeof(Oid) * relnatts);
 	foundUniqueIndex = false;
+
 	indexoidlist = RelationGetIndexList(matviewRel);
 
 	foreach(indexoidscan, indexoidlist)
 	{
 		Oid			indexoid = lfirst_oid(indexoidscan);
 		Relation	indexRel;
-		Form_pg_index indexStruct;
 
 		indexRel = index_open(indexoid, RowExclusiveLock);
-		indexStruct = indexRel->rd_index;
-
-		/*
-		 * We're only interested if it is unique, valid, contains no
-		 * expressions, and is not partial.
-		 */
-		if (indexStruct->indisunique &&
-			IndexIsValid(indexStruct) &&
-			RelationGetIndexExpressions(indexRel) == NIL &&
-			RelationGetIndexPredicate(indexRel) == NIL)
+		if (is_usable_unique_index(indexRel))
 		{
+			Form_pg_index indexStruct = indexRel->rd_index;
 			int			numatts = indexStruct->indnatts;
+			oidvector  *indclass;
+			Datum		indclassDatum;
+			bool		isnull;
 			int			i;
+
+			/* Must get indclass the hard way. */
+			indclassDatum = SysCacheGetAttr(INDEXRELID,
+											indexRel->rd_indextuple,
+											Anum_pg_index_indclass,
+											&isnull);
+			Assert(!isnull);
+			indclass = (oidvector *) DatumGetPointer(indclassDatum);
 
 			/* Add quals for all columns from this index. */
 			for (i = 0; i < numatts; i++)
 			{
 				int			attnum = indexStruct->indkey.values[i];
-				Oid			type;
+				Oid			opclass = indclass->values[i];
+				Form_pg_attribute attr = TupleDescAttr(tupdesc, attnum - 1);
+				Oid			attrtype = attr->atttypid;
+				HeapTuple	cla_ht;
+				Form_pg_opclass cla_tup;
+				Oid			opfamily;
+				Oid			opcintype;
 				Oid			op;
-				const char *colname;
+				const char *leftop;
+				const char *rightop;
 
 				/*
-				 * Only include the column once regardless of how many times
-				 * it shows up in how many indexes.
+				 * Identify the equality operator associated with this index
+				 * column.  First we need to look up the column's opclass.
 				 */
-				if (usedForQual[attnum - 1])
+				cla_ht = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclass));
+				if (!HeapTupleIsValid(cla_ht))
+					elog(ERROR, "cache lookup failed for opclass %u", opclass);
+				cla_tup = (Form_pg_opclass) GETSTRUCT(cla_ht);
+				Assert(cla_tup->opcmethod == BTREE_AM_OID);
+				opfamily = cla_tup->opcfamily;
+				opcintype = cla_tup->opcintype;
+				ReleaseSysCache(cla_ht);
+
+				op = get_opfamily_member(opfamily, opcintype, opcintype,
+										 BTEqualStrategyNumber);
+				if (!OidIsValid(op))
+					elog(ERROR, "missing operator %d(%u,%u) in opfamily %u",
+						 BTEqualStrategyNumber, opcintype, opcintype, opfamily);
+
+				/*
+				 * If we find the same column with the same equality semantics
+				 * in more than one index, we only need to emit the equality
+				 * clause once.
+				 *
+				 * Since we only remember the last equality operator, this
+				 * code could be fooled into emitting duplicate clauses given
+				 * multiple indexes with several different opclasses ... but
+				 * that's so unlikely it doesn't seem worth spending extra
+				 * code to avoid.
+				 */
+				if (opUsedForQual[attnum - 1] == op)
 					continue;
-				usedForQual[attnum - 1] = true;
+				opUsedForQual[attnum - 1] = op;
 
 				/*
 				 * Actually add the qual, ANDed with any others.
@@ -649,12 +681,15 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 				if (foundUniqueIndex)
 					appendStringInfoString(&querybuf, " AND ");
 
-				colname = quote_identifier(NameStr((tupdesc->attrs[attnum - 1])->attname));
-				appendStringInfo(&querybuf, "newdata.%s ", colname);
-				type = attnumTypeId(matviewRel, attnum);
-				op = lookup_type_cache(type, TYPECACHE_EQ_OPR)->eq_opr;
-				mv_GenerateOper(&querybuf, op);
-				appendStringInfo(&querybuf, " mv.%s", colname);
+				leftop = quote_qualified_identifier("newdata",
+													NameStr(attr->attname));
+				rightop = quote_qualified_identifier("mv",
+													 NameStr(attr->attname));
+
+				generate_operator_clause(&querybuf,
+										 leftop, attrtype,
+										 op,
+										 rightop, attrtype);
 
 				foundUniqueIndex = true;
 			}
@@ -671,7 +706,7 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 			   errmsg("cannot refresh materialized view \"%s\" concurrently",
 					  matviewname),
-				 errhint("Create a UNIQUE index with no WHERE clause on one or more columns of the materialized view.")));
+				 errhint("Create a unique index with no WHERE clause on one or more columns of the materialized view.")));
 
 	appendStringInfoString(&querybuf,
 						   " AND newdata OPERATOR(pg_catalog.*=) mv) "
@@ -682,9 +717,12 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_UTILITY)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 
+	SetUserIdAndSecContext(relowner,
+						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
+
 	/*
 	 * We have no further use for data from the "full-data" temp table, but we
-	 * must keep it around because its type is reference from the diff table.
+	 * must keep it around because its type is referenced from the diff table.
 	 */
 
 	/* Analyze the diff table. */
@@ -694,16 +732,6 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
 
 	OpenMatViewIncrementalMaintenance();
-
-	/*
-	 * Switch to the owner's userid, so that any functions are run as that
-	 * user.  Also lock down security-restricted operations and arrange to
-	 * make GUC variable changes local to this command.
-	 */
-	GetUserIdAndSecContext(&save_userid, &save_sec_context);
-	SetUserIdAndSecContext(matviewRel->rd_rel->relowner,
-						   save_sec_context | SECURITY_RESTRICTED_OPERATION);
-	save_nestlevel = NewGUCNestLevel();
 
 	/* Deletes must come before inserts; do them first. */
 	resetStringInfo(&querybuf);
@@ -724,12 +752,6 @@ refresh_by_match_merge(Oid matviewOid, Oid tempOid)
 					 matviewname, diffname);
 	if (SPI_exec(querybuf.data, 0) != SPI_OK_INSERT)
 		elog(ERROR, "SPI_exec failed: %s", querybuf.data);
-
-	/* Roll back any GUC changes */
-	AtEOXact_GUC(false, save_nestlevel);
-
-	/* Restore userid and security context */
-	SetUserIdAndSecContext(save_userid, save_sec_context);
 
 	/* We're done maintaining the materialized view. */
 	CloseMatViewIncrementalMaintenance();
@@ -762,6 +784,51 @@ refresh_by_heap_swap(Oid matviewOid, Oid OIDNewHeap)
 					 true, /* check_constraints */
 					 true, /* is_internal */
 					 RecentXmin, ReadNextMultiXactId());
+}
+
+/*
+ * Check whether specified index is usable for match merge.
+ */
+static bool
+is_usable_unique_index(Relation indexRel)
+{
+	Form_pg_index indexStruct = indexRel->rd_index;
+
+	/*
+	 * Must be unique, valid, immediate, non-partial, and be defined over
+	 * plain user columns (not expressions).  We also require it to be a
+	 * btree.  Even if we had any other unique index kinds, we'd not know how
+	 * to identify the corresponding equality operator, nor could we be sure
+	 * that the planner could implement the required FULL JOIN with non-btree
+	 * operators.
+	 */
+	if (indexStruct->indisunique &&
+		indexStruct->indimmediate &&
+		indexRel->rd_rel->relam == BTREE_AM_OID &&
+		IndexIsValid(indexStruct) &&
+		RelationGetIndexPredicate(indexRel) == NIL &&
+		indexStruct->indnatts > 0)
+	{
+		/*
+		 * The point of groveling through the index columns individually is to
+		 * reject both index expressions and system columns.  Currently,
+		 * matviews couldn't have OID columns so there's no way to create an
+		 * index on a system column; but maybe someday that wouldn't be true,
+		 * so let's be safe.
+		 */
+		int			numatts = indexStruct->indnatts;
+		int			i;
+
+		for (i = 0; i < numatts; i++)
+		{
+			int			attnum = indexStruct->indkey.values[i];
+
+			if (attnum <= 0)
+				return false;
+		}
+		return true;
+	}
+	return false;
 }
 
 

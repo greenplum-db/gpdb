@@ -30,6 +30,7 @@
 #include "access/aomd.h"
 #include "catalog/catalog.h"
 #include "miscadmin.h"
+#include "access/xlogutils.h"
 #include "access/xlog.h"
 #include "catalog/catalog.h"
 #include "portability/instr_time.h"
@@ -960,6 +961,7 @@ mdtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 			v = v->mdfd_chain;
 			Assert(ov != reln->md_fd[forknum]); /* we never drop the 1st
 												 * segment */
+			FileClose(ov->mdfd_vfd);
 			pfree(ov);
 		}
 		else if (priorblocks + ((BlockNumber) RELSEG_SIZE) > nblocks)
@@ -1694,6 +1696,47 @@ ForgetDatabaseFsyncRequests(Oid dbid)
 									FORGET_DATABASE_FSYNC))
 			pg_usleep(10000L);	/* 10 msec seems a good number */
 	}
+}
+
+/*
+ * DropRelationFiles -- drop files of all given relations
+ */
+void
+DropRelationFiles(RelFileNodeWithStorageType *delrels, int ndelrels, bool isRedo)
+{
+	SMgrRelation *srels;
+	char         *srelstorages;
+	int			i;
+
+	srels = palloc(sizeof(SMgrRelation) * ndelrels);
+	srelstorages = palloc(sizeof(char) * ndelrels);
+	for (i = 0; i < ndelrels; i++)
+	{
+		SMgrRelation srel = smgropen(delrels[i].node, InvalidBackendId);
+
+		if (isRedo)
+		{
+			ForkNumber	fork;
+
+			for (fork = 0; fork <= MAX_FORKNUM; fork++)
+				XLogDropRelation(delrels[i].node, fork);
+		}
+		srels[i] = srel;
+		srelstorages[i] = delrels[i].relstorage;
+	}
+
+	smgrdounlinkall(srels, ndelrels, isRedo, srelstorages);
+
+	/*
+	 * Call smgrclose() in reverse order as when smgropen() is called.
+	 * This trick enables remove_from_unowned_list() in smgrclose()
+	 * to search the SMgrRelation from the unowned list,
+	 * with O(1) performance.
+	 */
+	for (i = ndelrels - 1; i >= 0; i--)
+		smgrclose(srels[i]);
+	pfree(srelstorages);
+	pfree(srels);
 }
 
 

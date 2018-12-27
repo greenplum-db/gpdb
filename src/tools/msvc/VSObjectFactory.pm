@@ -49,8 +49,18 @@ sub CreateSolution
 	{
 		return new VS2013Solution(@_);
 	}
+	elsif ($visualStudioVersion eq '14.00')
+	{
+		return new VS2015Solution(@_);
+	}
+	# visual 2017 hasn't changed the nmake version to 15, so adjust the check to support it.
+	elsif (($visualStudioVersion ge '14.10') or ($visualStudioVersion eq '15.00'))
+	{
+		return new VS2017Solution(@_);
+	}
 	else
 	{
+		croak $visualStudioVersion;
 		croak "The requested Visual Studio version is not supported.";
 	}
 }
@@ -84,8 +94,18 @@ sub CreateProject
 	{
 		return new VC2013Project(@_);
 	}
+	elsif ($visualStudioVersion eq '14.00')
+	{
+		return new VC2015Project(@_);
+	}
+	# visual 2017 hasn't changed the nmake version to 15, so adjust the check to support it.
+	elsif (($visualStudioVersion ge '14.10') or ($visualStudioVersion eq '15.00'))
+	{
+		return new VC2017Project(@_);
+	}
 	else
 	{
+		croak $visualStudioVersion;
 		croak "The requested Visual Studio version is not supported.";
 	}
 }
@@ -123,11 +143,12 @@ sub DetermineVisualStudioVersion
 sub _GetVisualStudioVersion
 {
 	my ($major, $minor) = @_;
-	if ($major > 12)
+	# visual 2017 hasn't changed the nmake version to 15, so still using the older version for comparison.
+	if ($major > 14)
 	{
 		carp
 "The determined version of Visual Studio is newer than the latest supported version. Returning the latest supported version instead.";
-		return '12.00';
+		return '14.00';
 	}
 	elsif ($major < 6)
 	{

@@ -34,6 +34,11 @@
 #include <sys/param.h>
 #endif
 
+#if defined(_M_AMD64) && _MSC_VER == 1800
+#include <math.h>
+#include <versionhelpers.h>
+#endif
+
 #include "bootstrap/bootstrap.h"
 #include "common/username.h"
 #include "postmaster/postmaster.h"
@@ -51,6 +56,7 @@ const char *progname;
 
 
 static void startup_hacks(const char *progname);
+static void init_locale(const char *categoryname, int category, const char *locale);
 static void help(const char *progname);
 static void check_root(const char *progname);
 
@@ -62,6 +68,14 @@ int
 main(int argc, char *argv[])
 {
 	bool		do_check_root = true;
+
+	/*
+	 * If supported on the current platform, set up a handler to be called if
+	 * the backend/postmaster crashes with a fatal signal or exception.
+	 */
+#if defined(WIN32) && defined(HAVE_MINIDUMP_TYPE)
+	pgwin32_install_crashdump_handler();
+#endif
 
 	progname = get_progname(argv[0]);
 
@@ -82,14 +96,6 @@ main(int argc, char *argv[])
 	 * result pointer.
 	 */
 	argv = save_ps_display_args(argc, argv);
-
-	/*
-	 * If supported on the current platform, set up a handler to be called if
-	 * the backend/postmaster crashes with a fatal signal or exception.
-	 */
-#if defined(WIN32) && defined(HAVE_MINIDUMP_TYPE)
-	pgwin32_install_crashdump_handler();
-#endif
 
 	/*
 	 * Fire up essential subsystems: error and memory management
@@ -123,31 +129,31 @@ main(int argc, char *argv[])
 		char	   *env_locale;
 
 		if ((env_locale = getenv("LC_COLLATE")) != NULL)
-			pg_perm_setlocale(LC_COLLATE, env_locale);
+			init_locale("LC_COLLATE", LC_COLLATE, env_locale);
 		else
-			pg_perm_setlocale(LC_COLLATE, "");
+			init_locale("LC_COLLATE", LC_COLLATE, "");
 
 		if ((env_locale = getenv("LC_CTYPE")) != NULL)
-			pg_perm_setlocale(LC_CTYPE, env_locale);
+			init_locale("LC_CTYPE", LC_CTYPE, env_locale);
 		else
-			pg_perm_setlocale(LC_CTYPE, "");
+			init_locale("LC_CTYPE", LC_CTYPE, "");
 	}
 #else
-	pg_perm_setlocale(LC_COLLATE, "");
-	pg_perm_setlocale(LC_CTYPE, "");
+	init_locale("LC_COLLATE", LC_COLLATE, "");
+	init_locale("LC_CTYPE", LC_CTYPE, "");
 #endif
 
 #ifdef LC_MESSAGES
-	pg_perm_setlocale(LC_MESSAGES, "");
+	init_locale("LC_MESSAGES", LC_MESSAGES, "");
 #endif
 
 	/*
 	 * We keep these set to "C" always, except transiently in pg_locale.c; see
 	 * that file for explanations.
 	 */
-	pg_perm_setlocale(LC_MONETARY, "C");
-	pg_perm_setlocale(LC_NUMERIC, "C");
-	pg_perm_setlocale(LC_TIME, "C");
+	init_locale("LC_MONETARY", LC_MONETARY, "C");
+	init_locale("LC_NUMERIC", LC_NUMERIC, "C");
+	init_locale("LC_TIME", LC_TIME, "C");
 
 	/*
 	 * Now that we have absorbed as much as we wish to from the locale
@@ -300,6 +306,22 @@ startup_hacks(const char *progname)
 
 		/* In case of general protection fault, don't show GUI popup box */
 		SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+
+#if defined(_M_AMD64) && _MSC_VER == 1800
+		/*
+		 * Avoid crashing in certain floating-point operations if
+		 * we were compiled for x64 with MS Visual Studio 2013 and
+		 * are running on Windows prior to 7/2008R2 SP1 on an
+		 * AVX2-capable CPU.
+		 *
+		 * Ref: https://connect.microsoft.com/VisualStudio/feedback/details/811093/visual-studio-2013-rtm-c-x64-code-generation-bug-for-avx2-instructions
+		 */
+		if (!IsWindows7SP1OrGreater())
+		{
+			_set_FMA3_enable(0);
+		}
+#endif /* defined(_M_AMD64) && _MSC_VER == 1800 */
+
 	}
 #endif   /* WIN32 */
 
@@ -309,6 +331,24 @@ startup_hacks(const char *progname)
 	 */
 	SpinLockInit(&dummy_spinlock);
 }
+
+
+/*
+ * Make the initial permanent setting for a locale category.  If that fails,
+ * perhaps due to LC_foo=invalid in the environment, use locale C.  If even
+ * that fails, perhaps due to out-of-memory, the entire startup fails with it.
+ * When this returns, we are guaranteed to have a setting for the given
+ * category's environment variable.
+ */
+static void
+init_locale(const char *categoryname, int category, const char *locale)
+{
+	if (pg_perm_setlocale(category, locale) == NULL &&
+		pg_perm_setlocale(category, "C") == NULL)
+		elog(FATAL, "could not adopt \"%s\" locale nor C locale for %s",
+			 locale, categoryname);
+}
+
 
 
 /*

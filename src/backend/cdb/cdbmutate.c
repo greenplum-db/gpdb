@@ -2755,6 +2755,8 @@ cdbhash_const_list(List *plConsts, int iSegments)
 
 	cdbhashinit(pcdbhash);
 
+	Assert(0 < list_length(plConsts));
+
 	i = 0;
 	foreach(lc, plConsts)
 	{

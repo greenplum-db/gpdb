@@ -22,15 +22,14 @@ LIBS := $(filter-out -lresolv -lbz2, $(LIBS))
 # This program isn't interactive, so doesn't need these
 LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl -lcrypto -lz, $(LIBS))
 
-override CPPFLAGS := -DFRONTEND \
-	-I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
-	-I$(top_srcdir)/src/include/utils -I$(libpq_srcdir) $(CPPFLAGS)
+override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
+	-I$(top_srcdir)/src/include/utils -I$(libpq_srcdir) -DFRONTEND $(CPPFLAGS)
 override CFLAGS += $(PTHREAD_CFLAGS)
 
 # Need to recompile any libpgport object files
 LIBS := $(filter-out -lpgport, $(LIBS))
 
-SHLIB_LINK += -lm
+SHLIB_LINK += $(filter -lm, $(LIBS))
 
 SHLIB_EXPORTS = exports.txt
 

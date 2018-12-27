@@ -69,12 +69,14 @@
   regardless of the database encoding, and are checked only for syntactic
   correctness (that is, that four hex digits follow <literal>\u</>).
   However, the input function for <type>jsonb</> is stricter: it disallows
-  Unicode escapes for non-ASCII characters (those
-  above <literal>U+007F</>) unless the database encoding is UTF8.  It also
-  insists that any use of Unicode surrogate pairs to designate characters
-  outside the Unicode Basic Multilingual Plane be correct.  Valid Unicode
-  escapes, except for <literal>\u0000</>, are then converted to the
-  equivalent ASCII or UTF8 character for storage.
+  Unicode escapes for non-ASCII characters (those above <literal>U+007F</>)
+  unless the database encoding is UTF8.  The <type>jsonb</> type also
+  rejects <literal>\u0000</> (because that cannot be represented in
+  <productname>PostgreSQL</productname>'s <type>text</> type), and it insists
+  that any use of Unicode surrogate pairs to designate characters outside
+  the Unicode Basic Multilingual Plane be correct.  Valid Unicode escapes
+  are converted to the equivalent ASCII or UTF8 character for storage;
+  this includes folding surrogate pairs into a single character.
  </para>
 
  <note>
@@ -101,7 +103,7 @@
   constitutes valid <type>jsonb</type> data that do not apply to
   the <type>json</type> type, nor to JSON in the abstract, corresponding
   to limits on what can be represented by the underlying data type.
-  Specifically, <type>jsonb</> will reject numbers that are outside the
+  Notably, <type>jsonb</> will reject numbers that are outside the
   range of the <productname>PostgreSQL</productname> <type>numeric</> data
   type, while <type>json</> will not.  Such implementation-defined
   restrictions are permitted by <acronym>RFC</> 7159.  However, in
@@ -134,7 +136,8 @@
        <row>
         <entry><type>string</></entry>
         <entry><type>text</></entry>
-        <entry>See notes above concerning encoding restrictions</entry>
+        <entry><literal>\u0000</> is disallowed, as are non-ASCII Unicode
+         escapes if database encoding is not UTF8</entry>
        </row>
        <row>
         <entry><type>number</></entry>
@@ -163,7 +166,7 @@
   </para>
   <para>
    The following are all valid <type>json</> (or <type>jsonb</>) expressions:
-  <programlisting>
+<programlisting>
 -- Simple scalar/primitive value
 -- Primitive values can be numbers, quoted strings, true, false, or null
 SELECT '5'::json;
@@ -177,7 +180,7 @@ SELECT '{"bar": "baz", "balance": 7.77, "active": false}'::json;
 
 -- Arrays and objects can be nested arbitrarily
 SELECT '{"foo": [true, "bar"], "tags": {"a": 1, "b": null}}'::json;
-  </programlisting>
+</programlisting>
   </para>
 
   <para>
@@ -262,12 +265,18 @@ SELECT '{"reading": 1.230e-5}'::json, '{"reading": 1.230e-5}'::jsonb;
     one <type>jsonb</> document has contained within it another one.
     These examples return true except as noted:
   </para>
-  <programlisting>
+<programlisting>
 -- Simple scalar/primitive values contain only the identical value:
 SELECT '"foo"'::jsonb @> '"foo"'::jsonb;
 
 -- The array on the right side is contained within the one on the left:
 SELECT '[1, 2, 3]'::jsonb @> '[1, 3]'::jsonb;
+
+-- Order of array elements is not significant, so this is also true:
+SELECT '[1, 2, 3]'::jsonb @> '[3, 1]'::jsonb;
+
+-- Duplicate array elements don't matter either:
+SELECT '[1, 2, 3]'::jsonb @> '[1, 2, 2]'::jsonb;
 
 -- The object with a single pair on the right side is contained
 -- within the object on the left side:
@@ -282,27 +291,29 @@ SELECT '[1, 2, [1, 3]]'::jsonb @> '[[1, 3]]'::jsonb;
 
 -- Similarly, containment is not reported here:
 SELECT '{"foo": {"bar": "baz"}}'::jsonb @> '{"bar": "baz"}'::jsonb;  -- yields false
-  </programlisting>
+</programlisting>
 
   <para>
    The general principle is that the contained object must match the
    containing object as to structure and data contents, possibly after
    discarding some non-matching array elements or object key/value pairs
-   from the containing object.  However, the order of array elements is
-   not significant when doing a containment match.
+   from the containing object.
+   But remember that the order of array elements is not significant when
+   doing a containment match, and duplicate array elements are effectively
+   considered only once.
   </para>
 
   <para>
    As a special exception to the general principle that the structures
    must match, an array may contain a primitive value:
   </para>
-  <programlisting>
+<programlisting>
 -- This array contains the primitive string value:
 SELECT '["foo", "bar"]'::jsonb @> '"bar"'::jsonb;
 
 -- This exception is not reciprocal -- non-containment is reported here:
 SELECT '"bar"'::jsonb @> '["bar"]'::jsonb;  -- yields false
-  </programlisting>
+</programlisting>
 
   <para>
     <type>jsonb</> also has an <firstterm>existence</> operator, which is
@@ -335,6 +346,34 @@ SELECT '"foo"'::jsonb ? 'foo';
     need to be searched linearly.
   </para>
 
+  <tip>
+   <para>
+    Because JSON containment is nested, an appropriate query can skip
+    explicit selection of sub-objects.  As an example, suppose that we have
+    a <structfield>doc</> column containing objects at the top level, with
+    most objects containing <literal>tags</> fields that contain arrays of
+    sub-objects.  This query finds entries in which sub-objects containing
+    both <literal>"term":"paris"</> and <literal>"term":"food"</> appear,
+    while ignoring any such keys outside the <literal>tags</> array:
+<programlisting>
+SELECT doc-&gt;'site_name' FROM websites
+  WHERE doc @&gt; '{"tags":[{"term":"paris"}, {"term":"food"}]}';
+</programlisting>
+    One could accomplish the same thing with, say,
+<programlisting>
+SELECT doc-&gt;'site_name' FROM websites
+  WHERE doc-&gt;'tags' @&gt; '[{"term":"paris"}, {"term":"food"}]';
+</programlisting>
+    but that approach is less flexible, and often less efficient as well.
+   </para>
+
+   <para>
+    On the other hand, the JSON existence operator is not nested: it will
+    only look for the specified key or array element at top level of the
+    JSON value.
+   </para>
+  </tip>
+
   <para>
     The various containment and existence operators, along with all other
     JSON operators and functions are documented
@@ -354,7 +393,7 @@ SELECT '"foo"'::jsonb ? 'foo';
     keys or key/value pairs occurring within a large number of
     <type>jsonb</> documents (datums).
     Two GIN <quote>operator classes</> are provided, offering different
-    performance and flexibility tradeoffs.
+    performance and flexibility trade-offs.
   </para>
   <para>
     The default GIN operator class for <type>jsonb</> supports queries with
@@ -363,22 +402,22 @@ SELECT '"foo"'::jsonb ? 'foo';
     (For details of the semantics that these operators
     implement, see <xref linkend="functions-jsonb-op-table">.)
     An example of creating an index with this operator class is:
-  <programlisting>
+<programlisting>
 CREATE INDEX idxgin ON api USING gin (jdoc);
-  </programlisting>
+</programlisting>
     The non-default GIN operator class <literal>jsonb_path_ops</>
     supports indexing the <literal>@&gt;</> operator only.
     An example of creating an index with this operator class is:
-  <programlisting>
+<programlisting>
 CREATE INDEX idxginp ON api USING gin (jdoc jsonb_path_ops);
-  </programlisting>
+</programlisting>
   </para>
 
   <para>
     Consider the example of a table that stores JSON documents
     retrieved from a third-party web service, with a documented schema
     definition.  A typical document is:
-    <programlisting>
+<programlisting>
 {
     "guid": "9c36adc1-7fb5-4d5b-83b4-90356a46061a",
     "name": "Angela Barton",
@@ -394,32 +433,29 @@ CREATE INDEX idxginp ON api USING gin (jdoc jsonb_path_ops);
         "qui"
     ]
 }
-    </programlisting>
+</programlisting>
     We store these documents in a table named <structname>api</>,
     in a <type>jsonb</> column named <structfield>jdoc</>.
     If a GIN index is created on this column,
     queries like the following can make use of the index:
-    <programlisting>
+<programlisting>
 -- Find documents in which the key "company" has value "Magnafone"
 SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"company": "Magnafone"}';
-    </programlisting>
+</programlisting>
     However, the index could not be used for queries like the
     following, because though the operator <literal>?</> is indexable,
     it is not applied directly to the indexed column <structfield>jdoc</>:
-    <programlisting>
+<programlisting>
 -- Find documents in which the key "tags" contains key or array element "qui"
 SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc -&gt; 'tags' ? 'qui';
-    </programlisting>
+</programlisting>
     Still, with appropriate use of expression indexes, the above
     query can use an index.  If querying for particular items within
     the <literal>"tags"</> key is common, defining an index like this
     may be worthwhile:
-  <programlisting>
--- Note that the "jsonb -&gt; text" operator can only be called on a JSON
--- object, so as a consequence of creating this index the root of each
--- "jdoc" value must be an object.  This is enforced during insertion.
+<programlisting>
 CREATE INDEX idxgintags ON api USING gin ((jdoc -&gt; 'tags'));
-  </programlisting>
+</programlisting>
     Now, the <literal>WHERE</> clause <literal>jdoc -&gt; 'tags' ? 'qui'</>
     will be recognized as an application of the indexable
     operator <literal>?</> to the indexed
@@ -429,10 +465,10 @@ CREATE INDEX idxgintags ON api USING gin ((jdoc -&gt; 'tags'));
   </para>
   <para>
     Another approach to querying is to exploit containment, for example:
-  <programlisting>
+<programlisting>
 -- Find documents in which the key "tags" contains array element "qui"
 SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"tags": ["qui"]}';
-  </programlisting>
+</programlisting>
     A simple GIN index on the <structfield>jdoc</> column can support this
     query.  But note that such an index will store copies of every key and
     value in the <structfield>jdoc</> column, whereas the expression index
@@ -460,11 +496,16 @@ SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"tags": ["qu
     and a <literal>jsonb_path_ops</literal> GIN index is that the former
     creates independent index items for each key and value in the data,
     while the latter creates index items only for each value in the
-    data.<footnote><para>For this purpose, the term <quote>value</>
-    includes array elements, though JSON terminology sometimes considers
-    array elements distinct from values within objects.</para></footnote>
-    But in <literal>jsonb_path_ops</literal>, each index item is a hash
-    of both the value and the key(s) leading to it; for example to index
+    data.
+    <footnote>
+     <para>
+      For this purpose, the term <quote>value</> includes array elements,
+      though JSON terminology sometimes considers array elements distinct
+      from values within objects.
+     </para>
+    </footnote>
+    Basically, each <literal>jsonb_path_ops</literal> index item is
+    a hash of the value and the key(s) leading to it; for example to index
     <literal>{"foo": {"bar": "baz"}}</literal>, a single index item would
     be created incorporating all three of <literal>foo</>, <literal>bar</>,
     and <literal>baz</> into the hash value.  Thus a containment query
@@ -496,17 +537,17 @@ SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"tags": ["qu
     equality of complete JSON documents.
     The <literal>btree</> ordering for <type>jsonb</> datums is seldom
     of great interest, but for completeness it is:
-    <synopsis>
-      <replaceable>Object</replaceable> > <replaceable>Array</replaceable> > <replaceable>Boolean</replaceable> > <replaceable>Number</replaceable> > <replaceable>String</replaceable> > <replaceable>Null</replaceable>
+<synopsis>
+<replaceable>Object</replaceable> > <replaceable>Array</replaceable> > <replaceable>Boolean</replaceable> > <replaceable>Number</replaceable> > <replaceable>String</replaceable> > <replaceable>Null</replaceable>
 
-      <replaceable>Object with n pairs</replaceable> > <replaceable>object with n - 1 pairs</replaceable>
+<replaceable>Object with n pairs</replaceable> > <replaceable>object with n - 1 pairs</replaceable>
 
-      <replaceable>Array with n elements</replaceable> > <replaceable>array with n - 1 elements</replaceable>
-    </synopsis>
+<replaceable>Array with n elements</replaceable> > <replaceable>array with n - 1 elements</replaceable>
+</synopsis>
       Objects with equal numbers of pairs are compared in the order:
-    <synopsis>
-      <replaceable>key-1</replaceable>, <replaceable>value-1</replaceable>, <replaceable>key-2</replaceable> ...
-    </synopsis>
+<synopsis>
+<replaceable>key-1</replaceable>, <replaceable>value-1</replaceable>, <replaceable>key-2</replaceable> ...
+</synopsis>
       Note that object keys are compared in their storage order;
       in particular, since shorter keys are stored before longer keys, this
       can lead to results that might be unintuitive, such as:
@@ -515,9 +556,9 @@ SELECT jdoc-&gt;'guid', jdoc-&gt;'name' FROM api WHERE jdoc @&gt; '{"tags": ["qu
 </programlisting>
       Similarly, arrays with equal numbers of elements are compared in the
       order:
-    <synopsis>
-      <replaceable>element-1</replaceable>, <replaceable>element-2</replaceable> ...
-    </synopsis>
+<synopsis>
+<replaceable>element-1</replaceable>, <replaceable>element-2</replaceable> ...
+</synopsis>
       Primitive JSON values are compared using the same
       comparison rules as for the underlying
       <productname>PostgreSQL</productname> data type.  Strings are

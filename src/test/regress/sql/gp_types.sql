@@ -56,6 +56,7 @@ SELECT * FROM dml_numeric ORDER BY 1;
 INSERT INTO dml_numeric VALUES (1e-1000);
 SELECT * FROM dml_numeric ORDER BY 1;
 
+-- GPDB_94_MERGE_FIXME: after 94_stable, these are not out of range
 -- out of range values
 INSERT INTO dml_numeric VALUES (1e+10000);
 SELECT * FROM dml_numeric ORDER BY 1;

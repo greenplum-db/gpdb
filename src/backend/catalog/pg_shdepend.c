@@ -40,7 +40,10 @@
 #include "catalog/pg_proc.h"
 #include "catalog/pg_shdepend.h"
 #include "catalog/pg_tablespace.h"
+#include "catalog/pg_ts_config.h"
+#include "catalog/pg_ts_dict.h"
 #include "catalog/pg_type.h"
+#include "catalog/pg_user_mapping.h"
 #include "commands/alter.h"
 #include "commands/dbcommands.h"
 #include "commands/collationcmds.h"
@@ -65,7 +68,7 @@ typedef enum
 	LOCAL_OBJECT,
 	SHARED_OBJECT,
 	REMOTE_OBJECT
-} objectType;
+} SharedDependencyObjectType;
 
 static void getOidListDiff(Oid *list1, int *nlist1, Oid *list2, int *nlist2);
 static Oid	classIdGetDbId(Oid classId);
@@ -82,7 +85,8 @@ static void shdepDropDependency(Relation sdepRel,
 					bool drop_subobjects,
 					Oid refclassId, Oid refobjId,
 					SharedDependencyType deptype);
-static void storeObjectDescription(StringInfo descs, objectType type,
+static void storeObjectDescription(StringInfo descs,
+					   SharedDependencyObjectType type,
 					   ObjectAddress *object,
 					   SharedDependencyType deptype,
 					   int count);
@@ -1060,7 +1064,8 @@ shdepLockAndCheckObject(Oid classId, Oid objectId)
  * and count to be nonzero; deptype is not used in this case.
  */
 static void
-storeObjectDescription(StringInfo descs, objectType type,
+storeObjectDescription(StringInfo descs,
+					   SharedDependencyObjectType type,
 					   ObjectAddress *object,
 					   SharedDependencyType deptype,
 					   int count)
@@ -1345,7 +1350,7 @@ shdepReassignOwned(List *roleids, Oid newrole)
 			switch (sdepForm->classid)
 			{
 				case TypeRelationId:
-					AlterTypeOwnerInternal(sdepForm->objid, newrole, true);
+					AlterTypeOwner_oid(sdepForm->objid, newrole, true);
 					break;
 
 				case NamespaceRelationId:
@@ -1368,6 +1373,10 @@ shdepReassignOwned(List *roleids, Oid newrole)
 					 * Ignore default ACLs; they should be handled by DROP
 					 * OWNED, not REASSIGN OWNED.
 					 */
+					break;
+
+				case UserMappingRelationId:
+					/* ditto */
 					break;
 
 				case ForeignServerRelationId:
@@ -1394,6 +1403,8 @@ shdepReassignOwned(List *roleids, Oid newrole)
 				case ExtensionRelationId:
 				case TableSpaceRelationId:
 				case DatabaseRelationId:
+				case TSConfigRelationId:
+				case TSDictionaryRelationId:
 					{
 						Oid			classId = sdepForm->classid;
 						Relation	catalog;

@@ -2511,14 +2511,13 @@ _readCreateTableSpaceStmt(void)
 	READ_DONE();
 }
 
-static AlterTableSpaceMoveStmt *
-_readAlterTableSpaceMoveStmt(void)
+static AlterTableMoveAllStmt *
+_readAlterTableMoveAllStmt(void)
 {
-	READ_LOCALS(AlterTableSpaceMoveStmt);
+	READ_LOCALS(AlterTableMoveAllStmt);
 
 	READ_STRING_FIELD(orig_tablespacename);
 	READ_ENUM_FIELD(objtype, ObjectType);
-	READ_BOOL_FIELD(move_all);
 	READ_NODE_FIELD(roles);
 	READ_STRING_FIELD(new_tablespacename);
 	READ_BOOL_FIELD(nowait);
@@ -3880,8 +3879,8 @@ readNodeBinary(void)
 			case T_DistributedBy:
 				return_value = _readDistributedBy();
 				break;
-			case T_AlterTableSpaceMoveStmt:
-				return_value = _readAlterTableSpaceMoveStmt();
+			case T_AlterTableMoveAllStmt:
+				return_value = _readAlterTableMoveAllStmt();
 				break;
 			case T_ReshuffleExpr:
 				return_value = _readReshuffleExprfFast();

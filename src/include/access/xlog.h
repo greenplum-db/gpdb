@@ -213,7 +213,6 @@ extern char *wal_consistency_checking_string;
 extern bool fullPageWrites;
 extern bool wal_log_hints;
 extern bool log_checkpoints;
-extern int	num_xloginsert_locks;
 
 /* WAL levels */
 typedef enum WalLevel
@@ -273,6 +272,8 @@ extern bool XLOG_DEBUG;
 /* These indicate the cause of a checkpoint request */
 #define CHECKPOINT_CAUSE_XLOG	0x0020	/* XLOG consumption */
 #define CHECKPOINT_CAUSE_TIME	0x0040	/* Elapsed time */
+#define CHECKPOINT_FLUSH_ALL	0x0080	/* Flush all pages, including those
+										 * belonging to unlogged tables */
 
 /* Checkpoint statistics */
 typedef struct CheckpointStatsData
@@ -369,6 +370,7 @@ extern XLogRecPtr GetRedoRecPtr(void);
 extern XLogRecPtr GetInsertRecPtr(void);
 extern XLogRecPtr GetFlushRecPtr(void);
 extern void GetNextXidAndEpoch(TransactionId *xid, uint32 *epoch);
+extern void RemovePromoteSignalFiles(void);
 
 extern void XLogGetRecoveryStart(char *callerStr, char *reasonStr, XLogRecPtr *redoCheckPointLoc, CheckPoint *redoCheckPoint);
 

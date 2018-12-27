@@ -308,6 +308,27 @@ BEGIN;
 COPY forcetest (d, e) FROM STDIN WITH (FORMAT csv, FORCE_NULL(b));
 ROLLBACK;
 \pset null ''
+
+-- test case with whole-row Var in a check constraint
+create table check_con_tbl (f1 int);
+create function check_con_function(check_con_tbl) returns bool as $$
+begin
+  raise notice 'input = %', row_to_json($1);
+  return $1.f1 > 0;
+end $$ language plpgsql immutable;
+alter table check_con_tbl add check (check_con_function(check_con_tbl.*));
+\d+ check_con_tbl
+-- GPDB: Change from 1 (value in PG) to 2 for copy to make test deterministic.
+-- 2 and null are on seg1 in a 3-seg test environment.
+copy check_con_tbl from stdin;
+2
+\N
+\.
+copy check_con_tbl from stdin;
+0
+\.
+select * from check_con_tbl;
+
 DROP TABLE forcetest;
 DROP TABLE vistest;
 DROP FUNCTION truncate_in_subxact();

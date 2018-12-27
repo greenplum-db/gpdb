@@ -288,6 +288,7 @@ tuplestore_begin_common(int eflags, bool interXact, int maxKBytes)
 
 	state->memtupdeleted = 0;
 	state->memtupcount = 0;
+
 	/*
 	 * Initial size of array must be more than ALLOCSET_SEPARATE_THRESHOLD;
 	 * see comments in grow_memtuples().
@@ -559,7 +560,9 @@ tuplestore_select_read_pointer(Tuplestorestate *state, int ptr)
 								state->writepos_file,
 								state->writepos_offset,
 								SEEK_SET) != 0)
-					elog(ERROR, "tuplestore seek failed");
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not seek in tuplestore temporary file: %m")));
 			}
 			else
 			{
@@ -567,7 +570,9 @@ tuplestore_select_read_pointer(Tuplestorestate *state, int ptr)
 								readptr->file,
 								readptr->offset,
 								SEEK_SET) != 0)
-					elog(ERROR, "tuplestore seek failed");
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not seek in tuplestore temporary file: %m")));
 			}
 			break;
 		default:
@@ -693,10 +698,10 @@ grow_memtuples(Tuplestorestate *state)
 	 * never generate a dangerous request, but to be safe, check explicitly
 	 * that the array growth fits within availMem.  (We could still cause
 	 * LACKMEM if the memory chunk overhead associated with the memtuples
-	 * array were to increase.  That shouldn't happen with any sane value of
-	 * allowedMem, because at any array size large enough to risk LACKMEM,
-	 * palloc would be treating both old and new arrays as separate chunks.
-	 * But we'll check LACKMEM explicitly below just in case.)
+	 * array were to increase.  That shouldn't happen because we chose the
+	 * initial array size large enough to ensure that palloc will be treating
+	 * both old and new arrays as separate chunks.  But we'll check LACKMEM
+	 * explicitly below just in case.)
 	 */
 	if (state->availMem < (int64) ((newmemtupsize - memtupsize) * sizeof(void *)))
 		goto noalloc;
@@ -709,7 +714,7 @@ grow_memtuples(Tuplestorestate *state)
 					  state->memtupsize * sizeof(void *));
 	USEMEM(state, GetMemoryChunkSpace(state->memtuples));
 	if (LACKMEM(state))
-		elog(ERROR, "unexpected out-of-memory situation during sort");
+		elog(ERROR, "unexpected out-of-memory situation in tuplestore");
 	return true;
 
 noalloc:
@@ -900,7 +905,9 @@ tuplestore_puttuple_common(Tuplestorestate *state, void *tuple)
 			if (BufFileSeek(state->myfile,
 							state->writepos_file, state->writepos_offset,
 							SEEK_SET) != 0)
-				elog(ERROR, "tuplestore seek to EOF failed");
+				ereport(ERROR,
+						(errcode_for_file_access(),
+				 errmsg("could not seek in tuplestore temporary file: %m")));
 			state->status = TSS_WRITEFILE;
 
 			/*
@@ -1002,7 +1009,9 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 				if (BufFileSeek(state->myfile,
 								readptr->file, readptr->offset,
 								SEEK_SET) != 0)
-					elog(ERROR, "tuplestore seek failed");
+					ereport(ERROR,
+							(errcode_for_file_access(),
+							 errmsg("could not seek in tuplestore temporary file: %m")));
 			state->status = TSS_READFILE;
 			/* FALL THRU into READFILE case */
 
@@ -1079,7 +1088,9 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 					if (BufFileSeek(state->myfile, readptr->file,
 									-(long) (tuplen + sizeof(unsigned int)),
 									SEEK_CUR) != 0)
-						elog(ERROR, "bogus tuple length in backward scan");
+						ereport(ERROR,
+								(errcode_for_file_access(),
+								 errmsg("could not seek in tuplestore temporary file: %m")));
 					Assert(!state->truncated);
 					return NULL;
 				}
@@ -1094,7 +1105,9 @@ tuplestore_gettuple(Tuplestorestate *state, bool forward,
 			if (BufFileSeek(state->myfile, readptr->file,
 							-(long) tuplen,
 							SEEK_CUR) != 0)
-				elog(ERROR, "bogus tuple length in backward scan");
+				ereport(ERROR,
+						(errcode_for_file_access(),
+				 errmsg("could not seek in tuplestore temporary file: %m")));
 			tup = READTUP(state, tuplen);
 			return tup;
 #endif
@@ -1297,7 +1310,9 @@ tuplestore_rescan(Tuplestorestate *state)
 		case TSS_READFILE:
 			readptr->eof_reached = false;
 			if (BufFileSeek(state->myfile, 0, 0L, SEEK_SET) != 0)
-				elog(ERROR, "tuplestore seek to start failed");
+				ereport(ERROR,
+						(errcode_for_file_access(),
+				 errmsg("could not seek in tuplestore temporary file: %m")));
 			break;
 		default:
 			elog(ERROR, "invalid tuplestore state");
@@ -1360,14 +1375,18 @@ tuplestore_copy_read_pointer(Tuplestorestate *state,
 									state->writepos_file,
 									state->writepos_offset,
 									SEEK_SET) != 0)
-						elog(ERROR, "tuplestore seek failed");
+						ereport(ERROR,
+								(errcode_for_file_access(),
+								 errmsg("could not seek in tuplestore temporary file: %m")));
 				}
 				else
 				{
 					if (BufFileSeek(state->myfile,
 									dptr->file, dptr->offset,
 									SEEK_SET) != 0)
-						elog(ERROR, "tuplestore seek failed");
+						ereport(ERROR,
+								(errcode_for_file_access(),
+								 errmsg("could not seek in tuplestore temporary file: %m")));
 				}
 			}
 			else if (srcptr == state->activeptr)
@@ -1511,10 +1530,10 @@ getlen(Tuplestorestate *state, bool eofOK)
 	nbytes = BufFileRead(state->myfile, (void *) &len, sizeof(len));
 	if (nbytes == sizeof(len))
 		return len;
-	if (nbytes != 0)
-		elog(ERROR, "unexpected end of tape");
-	if (!eofOK)
-		elog(ERROR, "unexpected end of data");
+	if (nbytes != 0 || !eofOK)
+		ereport(ERROR,
+				(errcode_for_file_access(),
+			   errmsg("could not read from tuplestore temporary file: %m")));
 	return 0;
 }
 
@@ -1557,7 +1576,9 @@ writetup_heap(Tuplestorestate *state, void *tup)
 	if (state->backward)		/* need trailing length word? */
 		if (BufFileWrite(state->myfile, (void *) &tuplen,
 						 sizeof(tuplen)) != sizeof(tuplen))
-			elog(ERROR, "write failed");
+			ereport(ERROR,
+					(errcode_for_file_access(),
+				errmsg("could not write to tuplestore temporary file: %m")));
 
 	memsize = GetMemoryChunkSpace(tup);
 

@@ -123,6 +123,29 @@ ALTER FOREIGN TABLE ft1 ALTER COLUMN c1 OPTIONS (column_name 'C 1');
 ALTER FOREIGN TABLE ft2 ALTER COLUMN c1 OPTIONS (column_name 'C 1');
 \det+
 
+-- Test that alteration of server options causes reconnection
+-- Remote's errors might be non-English, so hide them to ensure stable results
+\set VERBOSITY terse
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work
+ALTER SERVER loopback OPTIONS (SET dbname 'no such database');
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should fail
+DO $d$
+    BEGIN
+        EXECUTE $$ALTER SERVER loopback
+            OPTIONS (SET dbname '$$||current_database()||$$')$$;
+    END;
+$d$;
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work again
+
+-- Test that alteration of user mapping options causes reconnection
+ALTER USER MAPPING FOR CURRENT_USER SERVER loopback
+  OPTIONS (ADD user 'no such user');
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should fail
+ALTER USER MAPPING FOR CURRENT_USER SERVER loopback
+  OPTIONS (DROP user);
+SELECT c3, c4 FROM ft1 ORDER BY c3, c1 LIMIT 1;  -- should work again
+\set VERBOSITY default
+
 -- Now we should be able to run ANALYZE.
 -- To exercise multiple code paths, we use local stats on ft1
 -- and remote-estimate mode on ft2.
@@ -145,6 +168,11 @@ SELECT * FROM ft1 WHERE false;
 -- with WHERE clause
 EXPLAIN (VERBOSE, COSTS false) SELECT * FROM ft1 t1 WHERE t1.c1 = 101 AND t1.c6 = '1' AND t1.c7 >= '1';
 SELECT * FROM ft1 t1 WHERE t1.c1 = 101 AND t1.c6 = '1' AND t1.c7 >= '1';
+-- with FOR UPDATE/SHARE
+EXPLAIN (VERBOSE, COSTS false) SELECT * FROM ft1 t1 WHERE c1 = 101 FOR UPDATE;
+SELECT * FROM ft1 t1 WHERE c1 = 101 FOR UPDATE;
+EXPLAIN (VERBOSE, COSTS false) SELECT * FROM ft1 t1 WHERE c1 = 102 FOR SHARE;
+SELECT * FROM ft1 t1 WHERE c1 = 102 FOR SHARE;
 -- aggregate
 SELECT COUNT(*) FROM ft1 t1;
 -- join two tables
@@ -241,12 +269,41 @@ EXPLAIN (VERBOSE, COSTS false) EXECUTE st5('foo', 1);
 EXPLAIN (VERBOSE, COSTS false) EXECUTE st5('foo', 1);
 EXECUTE st5('foo', 1);
 
+-- altering FDW options requires replanning
+PREPARE st6 AS SELECT * FROM ft1 t1 WHERE t1.c1 = t1.c2;
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st6;
+PREPARE st7 AS INSERT INTO ft1 (c1,c2,c3) VALUES (1001,101,'foo');
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st7;
+ALTER TABLE "S 1"."T 1" RENAME TO "T 0";
+ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 0');
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st6;
+EXECUTE st6;
+EXPLAIN (VERBOSE, COSTS OFF) EXECUTE st7;
+ALTER TABLE "S 1"."T 0" RENAME TO "T 1";
+ALTER FOREIGN TABLE ft1 OPTIONS (SET table_name 'T 1');
+
 -- cleanup
 DEALLOCATE st1;
 DEALLOCATE st2;
 DEALLOCATE st3;
 DEALLOCATE st4;
 DEALLOCATE st5;
+DEALLOCATE st6;
+DEALLOCATE st7;
+
+-- System columns, except ctid, should not be sent to remote
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'pg_class'::regclass LIMIT 1;
+SELECT * FROM ft1 t1 WHERE t1.tableoid = 'ft1'::regclass LIMIT 1;
+EXPLAIN (VERBOSE, COSTS false)
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+SELECT tableoid::regclass, * FROM ft1 t1 LIMIT 1;
+EXPLAIN (VERBOSE, COSTS false)
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+SELECT * FROM ft1 t1 WHERE t1.ctid = '(0,2)';
+EXPLAIN (VERBOSE, COSTS false)
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
+SELECT ctid, * FROM ft1 t1 LIMIT 1;
 
 -- ===================================================================
 -- used in pl/pgsql function
@@ -291,19 +348,24 @@ COMMIT;
 -- ===================================================================
 -- test handling of collations
 -- ===================================================================
-create table loct3 (f1 text collate "C", f2 text);
-create foreign table ft3 (f1 text collate "C", f2 text)
-  server loopback options (table_name 'loct3');
+create table loct3 (f1 text collate "C" unique, f2 text, f3 varchar(10) unique);
+create foreign table ft3 (f1 text collate "C", f2 text, f3 varchar(10))
+  server loopback options (table_name 'loct3', use_remote_estimate 'true');
 
 -- can be sent to remote
 explain (verbose, costs off) select * from ft3 where f1 = 'foo';
 explain (verbose, costs off) select * from ft3 where f1 COLLATE "C" = 'foo';
 explain (verbose, costs off) select * from ft3 where f2 = 'foo';
+explain (verbose, costs off) select * from ft3 where f3 = 'foo';
+explain (verbose, costs off) select * from ft3 f, loct3 l
+  where f.f3 = l.f3 and l.f1 = 'foo';
 -- can't be sent to remote
 explain (verbose, costs off) select * from ft3 where f1 COLLATE "POSIX" = 'foo';
 explain (verbose, costs off) select * from ft3 where f1 = 'foo' COLLATE "C";
 explain (verbose, costs off) select * from ft3 where f2 COLLATE "C" = 'foo';
 explain (verbose, costs off) select * from ft3 where f2 = 'foo' COLLATE "C";
+explain (verbose, costs off) select * from ft3 f, loct3 l
+  where f.f3 = l.f3 COLLATE "POSIX" and l.f1 = 'foo';
 
 -- ===================================================================
 -- test writable foreign table stuff
@@ -328,6 +390,15 @@ EXPLAIN (verbose, costs off)
 DELETE FROM ft2 USING ft1 WHERE ft1.c1 = ft2.c2 AND ft1.c1 % 10 = 2;
 DELETE FROM ft2 USING ft1 WHERE ft1.c1 = ft2.c2 AND ft1.c1 % 10 = 2;
 SELECT c1,c2,c3,c4 FROM ft2 ORDER BY c1;
+EXPLAIN (verbose, costs off)
+INSERT INTO ft2 (c1,c2,c3) VALUES (9999,999,'foo') RETURNING tableoid::regclass;
+INSERT INTO ft2 (c1,c2,c3) VALUES (9999,999,'foo') RETURNING tableoid::regclass;
+EXPLAIN (verbose, costs off)
+UPDATE ft2 SET c3 = 'bar' WHERE c1 = 9999 RETURNING tableoid::regclass;
+UPDATE ft2 SET c3 = 'bar' WHERE c1 = 9999 RETURNING tableoid::regclass;
+EXPLAIN (verbose, costs off)
+DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
+DELETE FROM ft2 WHERE c1 = 9999 RETURNING tableoid::regclass;
 
 -- Test that trigger on remote table works as expected
 CREATE OR REPLACE FUNCTION "S 1".F_BRTRIG() RETURNS trigger AS $$

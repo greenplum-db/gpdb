@@ -1255,13 +1255,12 @@ _outGpPolicy(StringInfo str, GpPolicy *node)
 }
 
 static void
-_outAlterTableSpaceMoveStmt(StringInfo str, AlterTableSpaceMoveStmt *node)
+_outAlterTableMoveAllStmt(StringInfo str, AlterTableMoveAllStmt *node)
 {
 	WRITE_NODE_TYPE("ALTERTABLESPACEMOVESTMT");
 
 	WRITE_STRING_FIELD(orig_tablespacename);
 	WRITE_ENUM_FIELD(objtype, ObjectType);
-	WRITE_BOOL_FIELD(move_all);
 	WRITE_NODE_FIELD(roles);
 	WRITE_STRING_FIELD(new_tablespacename);
 	WRITE_BOOL_FIELD(nowait);
@@ -2233,8 +2232,8 @@ _outNode(StringInfo str, void *obj)
 			case T_DistributedBy:
 				_outDistributedBy(str, obj);
 				break;
-			case T_AlterTableSpaceMoveStmt:
-				_outAlterTableSpaceMoveStmt(str, obj);
+			case T_AlterTableMoveAllStmt:
+				_outAlterTableMoveAllStmt(str, obj);
 				break;
 			case T_AlterTableSpaceOptionsStmt:
 				_outAlterTableSpaceOptionsStmt(str, obj);

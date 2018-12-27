@@ -152,7 +152,7 @@ fuzzy_open_file(const char *directory, const char *fname)
 		fd = open(fname, O_RDONLY | PG_BINARY, 0);
 		if (fd < 0 && errno != ENOENT)
 			return -1;
-		else if (fd > 0)
+		else if (fd >= 0)
 			return fd;
 
 		/* XLOGDIR / fname */
@@ -161,7 +161,7 @@ fuzzy_open_file(const char *directory, const char *fname)
 		fd = open(fpath, O_RDONLY | PG_BINARY, 0);
 		if (fd < 0 && errno != ENOENT)
 			return -1;
-		else if (fd > 0)
+		else if (fd >= 0)
 			return fd;
 
 		datadir = getenv("PGDATA");
@@ -173,7 +173,7 @@ fuzzy_open_file(const char *directory, const char *fname)
 			fd = open(fpath, O_RDONLY | PG_BINARY, 0);
 			if (fd < 0 && errno != ENOENT)
 				return -1;
-			else if (fd > 0)
+			else if (fd >= 0)
 				return fd;
 		}
 	}
@@ -185,7 +185,7 @@ fuzzy_open_file(const char *directory, const char *fname)
 		fd = open(fpath, O_RDONLY | PG_BINARY, 0);
 		if (fd < 0 && errno != ENOENT)
 			return -1;
-		else if (fd > 0)
+		else if (fd >= 0)
 			return fd;
 
 		/* directory / XLOGDIR / fname */
@@ -194,7 +194,7 @@ fuzzy_open_file(const char *directory, const char *fname)
 		fd = open(fpath, O_RDONLY | PG_BINARY, 0);
 		if (fd < 0 && errno != ENOENT)
 			return -1;
-		else if (fd > 0)
+		else if (fd >= 0)
 			return fd;
 	}
 	return -1;
@@ -232,6 +232,7 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id,
 		if (sendFile < 0 || !XLByteInSeg(recptr, sendSegNo))
 		{
 			char		fname[MAXFNAMELEN];
+			int			tries;
 
 			/* Switch to another logfile segment */
 			if (sendFile >= 0)
@@ -241,7 +242,30 @@ XLogDumpXLogRead(const char *directory, TimeLineID timeline_id,
 
 			XLogFileName(fname, timeline_id, sendSegNo);
 
-			sendFile = fuzzy_open_file(directory, fname);
+			/*
+			 * In follow mode there is a short period of time after the
+			 * server has written the end of the previous file before the
+			 * new file is available. So we loop for 5 seconds looking
+			 * for the file to appear before giving up.
+			 */
+			for (tries = 0; tries < 10; tries++)
+			{
+				sendFile = fuzzy_open_file(directory, fname);
+				if (sendFile >= 0)
+					break;
+				if (errno == ENOENT)
+				{
+					int			save_errno = errno;
+
+					/* File not there yet, try again */
+					pg_usleep(500 * 1000);
+
+					errno = save_errno;
+					continue;
+				}
+				/* Any other error, fall through and fail */
+				break;
+			}
 
 			if (sendFile < 0)
 				fatal_error("could not find file \"%s\": %s",
@@ -570,7 +594,7 @@ main(int argc, char **argv)
 		if (!verify_directory(private.inpath))
 		{
 			fprintf(stderr,
-					"%s: path \"%s\" cannot be opened: %s",
+					"%s: path \"%s\" cannot be opened: %s\n",
 					progname, private.inpath, strerror(errno));
 			goto bad_argument;
 		}
@@ -720,7 +744,7 @@ main(int argc, char **argv)
 	}
 
 	if (errormsg)
-		fatal_error("error in WAL record at %X/%X: %s\n",
+		fatal_error("error in WAL record at %X/%X: %s",
 					(uint32) (xlogreader_state->ReadRecPtr >> 32),
 					(uint32) xlogreader_state->ReadRecPtr,
 					errormsg);

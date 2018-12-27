@@ -77,6 +77,14 @@ static void DecodeXLogTuple(char *data, Size len, ReorderBufferTupleBuf *tup);
  * Take every XLogReadRecord()ed record and perform the actions required to
  * decode it using the output plugin already setup in the logical decoding
  * context.
+ *
+ * NB: Note that every record's xid needs to be processed by reorderbuffer
+ * (xids contained in the content of records are not relevant for this rule).
+ * That means that for records which'd otherwise not go through the
+ * reorderbuffer ReorderBufferProcessXid() has to be called. We don't want to
+ * call ReorderBufferProcessXid for each record type by default, because
+ * e.g. empty xacts can be handled more efficiently if there's no previous
+ * state for them.
  */
 void
 LogicalDecodingProcessRecord(LogicalDecodingContext *ctx, XLogRecord *record)
@@ -134,6 +142,9 @@ LogicalDecodingProcessRecord(LogicalDecodingContext *ctx, XLogRecord *record)
 		case RM_SPGIST_ID:
 		case RM_BITMAP_ID:
 		case RM_DISTRIBUTEDLOG_ID:
+			/* just deal with xid, and done */
+			ReorderBufferProcessXid(ctx->reorder, record->xl_xid,
+									buf.origptr);
 			break;
 
 		case RM_APPEND_ONLY_ID:
@@ -156,6 +167,9 @@ DecodeXLogOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 {
 	SnapBuild  *builder = ctx->snapshot_builder;
 	uint8		info = buf->record.xl_info & ~XLR_INFO_MASK;
+
+	ReorderBufferProcessXid(ctx->reorder, buf->record.xl_xid,
+							buf->origptr);
 
 	switch (info)
 	{
@@ -197,7 +211,12 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	XLogRecord *r = &buf->record;
 	uint8		info = r->xl_info & ~XLR_INFO_MASK;
 
-	/* no point in doing anything yet, data could not be decoded anyway */
+	/*
+	 * No point in doing anything yet, data could not be decoded anyway. It's
+	 * ok not to call ReorderBufferProcessXid() in that case, except in the
+	 * assignment case there'll not be any later records with the same xid;
+	 * and in the assignment case we'll not decode those xacts.
+	 */
 	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT)
 		return;
 
@@ -312,6 +331,7 @@ DecodeXactOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 			 * transactions in the changestream allowing for a kind of
 			 * distributed 2PC.
 			 */
+			ReorderBufferProcessXid(reorder, r->xl_xid, buf->origptr);
 			break;
 		default:
 			elog(ERROR, "unexpected RM_XACT_ID record type: %u", info);
@@ -327,6 +347,8 @@ DecodeStandbyOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	SnapBuild  *builder = ctx->snapshot_builder;
 	XLogRecord *r = &buf->record;
 	uint8		info = r->xl_info & ~XLR_INFO_MASK;
+
+	ReorderBufferProcessXid(ctx->reorder, r->xl_xid, buf->origptr);
 
 	switch (info)
 	{
@@ -364,6 +386,8 @@ DecodeHeap2Op(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	uint8		info = buf->record.xl_info & XLOG_HEAP_OPMASK;
 	TransactionId xid = buf->record.xl_xid;
 	SnapBuild  *builder = ctx->snapshot_builder;
+
+	ReorderBufferProcessXid(ctx->reorder, xid, buf->origptr);
 
 	/* no point in doing anything yet */
 	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT)
@@ -417,6 +441,8 @@ DecodeHeapOp(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	uint8		info = buf->record.xl_info & XLOG_HEAP_OPMASK;
 	TransactionId xid = buf->record.xl_xid;
 	SnapBuild  *builder = ctx->snapshot_builder;
+
+	ReorderBufferProcessXid(ctx->reorder, xid, buf->origptr);
 
 	/* no point in doing anything yet */
 	if (SnapBuildCurrentState(builder) < SNAPBUILD_FULL_SNAPSHOT)
@@ -574,8 +600,6 @@ DecodeAbort(LogicalDecodingContext *ctx, XLogRecPtr lsn, TransactionId xid,
 {
 	int			i;
 
-	SnapBuildAbortTxn(ctx->snapshot_builder, lsn, xid, nsubxacts, sub_xids);
-
 	for (i = 0; i < nsubxacts; i++)
 	{
 		ReorderBufferAbort(ctx->reorder, *sub_xids, lsn);
@@ -609,14 +633,19 @@ DecodeInsert(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 
 	if (xlrec->flags & XLOG_HEAP_CONTAINS_NEW_TUPLE)
 	{
+		Size		datalen = r->xl_len - SizeOfHeapInsert;
+		Size		tuplelen = datalen - SizeOfHeapHeader;
+
 		Assert(r->xl_len > (SizeOfHeapInsert + SizeOfHeapHeader));
 
-		change->data.tp.newtuple = ReorderBufferGetTupleBuf(ctx->reorder);
+		change->data.tp.newtuple =
+			ReorderBufferGetTupleBuf(ctx->reorder, tuplelen);
 
 		DecodeXLogTuple((char *) xlrec + SizeOfHeapInsert,
-						r->xl_len - SizeOfHeapInsert,
-						change->data.tp.newtuple);
+						datalen, change->data.tp.newtuple);
 	}
+
+	change->data.tp.clear_toast_afterwards = true;
 
 	ReorderBufferQueueChange(ctx->reorder, r->xl_xid, buf->origptr, change);
 }
@@ -632,9 +661,9 @@ DecodeUpdate(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 {
 	XLogRecord *r = &buf->record;
 	xl_heap_update *xlrec;
-	xl_heap_header_len xlhdr;
 	ReorderBufferChange *change;
 	char	   *data;
+	size_t		remlen = r->xl_len;
 
 	xlrec = (xl_heap_update *) buf->record_data;
 
@@ -648,40 +677,66 @@ DecodeUpdate(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 
 	/* caution, remaining data in record is not aligned */
 	data = buf->record_data + SizeOfHeapUpdate;
+	remlen -= SizeOfHeapUpdate;
 
 	if (xlrec->flags & XLOG_HEAP_CONTAINS_NEW_TUPLE)
 	{
+		Size		datalen;
+		Size		tuplelen;
+		xl_heap_header_len xlhdr;
+
 		Assert(r->xl_len > (SizeOfHeapUpdate + SizeOfHeapHeaderLen));
 
 		memcpy(&xlhdr, data, sizeof(xlhdr));
 		data += offsetof(xl_heap_header_len, header);
+		remlen -= offsetof(xl_heap_header_len, header);
 
-		change->data.tp.newtuple = ReorderBufferGetTupleBuf(ctx->reorder);
+		datalen = xlhdr.t_len + SizeOfHeapHeader;
+		tuplelen = xlhdr.t_len;
 
-		DecodeXLogTuple(data,
-						xlhdr.t_len + SizeOfHeapHeader,
-						change->data.tp.newtuple);
+		change->data.tp.newtuple =
+			ReorderBufferGetTupleBuf(ctx->reorder, tuplelen);
+
+		DecodeXLogTuple(data, datalen, change->data.tp.newtuple);
 		/* skip over the rest of the tuple header */
 		data += SizeOfHeapHeader;
+		remlen -= SizeOfHeapHeader;
 		/* skip over the tuple data */
 		data += xlhdr.t_len;
+		remlen -= xlhdr.t_len;
 	}
 
 	if (xlrec->flags & XLOG_HEAP_CONTAINS_OLD)
 	{
+		Size		datalen;
+		Size		tuplelen;
+		xl_heap_header_len xlhdr;
+
 		memcpy(&xlhdr, data, sizeof(xlhdr));
 		data += offsetof(xl_heap_header_len, header);
+		remlen -= offsetof(xl_heap_header_len, header);
 
-		change->data.tp.oldtuple = ReorderBufferGetTupleBuf(ctx->reorder);
+		/*
+		 * NB: Even though xl_heap_header_len contains the tuple's length,
+		 * it's length field is not wide enough. Use the whole record length
+		 * minus the new tuple's length instead. We can't remove the record
+		 * length from the WAL record format in 9.4 due to compatibility
+		 * concerns - later versions don't have it anyway.
+		 */
+		datalen = remlen;
+		tuplelen = datalen - SizeOfHeapHeader;
 
-		DecodeXLogTuple(data,
-						xlhdr.t_len + SizeOfHeapHeader,
-						change->data.tp.oldtuple);
+		change->data.tp.oldtuple =
+			ReorderBufferGetTupleBuf(ctx->reorder, tuplelen);
+
+		DecodeXLogTuple(data, datalen, change->data.tp.oldtuple);
 #ifdef NOT_USED
-		data += SizeOfHeapHeader;
-		data += xlhdr.t_len;
+		data += datalen;
+		remlen -= datalen;
 #endif
 	}
+
+	change->data.tp.clear_toast_afterwards = true;
 
 	ReorderBufferQueueChange(ctx->reorder, r->xl_xid, buf->origptr, change);
 }
@@ -712,14 +767,20 @@ DecodeDelete(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 	/* old primary key stored */
 	if (xlrec->flags & XLOG_HEAP_CONTAINS_OLD)
 	{
+		Size		datalen = r->xl_len - SizeOfHeapDelete;
+		Size		tuplelen = datalen - SizeOfHeapHeader;
+
 		Assert(r->xl_len > (SizeOfHeapDelete + SizeOfHeapHeader));
 
-		change->data.tp.oldtuple = ReorderBufferGetTupleBuf(ctx->reorder);
+		change->data.tp.oldtuple =
+			ReorderBufferGetTupleBuf(ctx->reorder, tuplelen);
 
 		DecodeXLogTuple((char *) xlrec + SizeOfHeapDelete,
-						r->xl_len - SizeOfHeapDelete,
-						change->data.tp.oldtuple);
+						datalen, change->data.tp.oldtuple);
 	}
+
+	change->data.tp.clear_toast_afterwards = true;
+
 	ReorderBufferQueueChange(ctx->reorder, r->xl_xid, buf->origptr, change);
 }
 
@@ -772,16 +833,20 @@ DecodeMultiInsert(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 		 */
 		if (xlrec->flags & XLOG_HEAP_CONTAINS_NEW_TUPLE)
 		{
-			change->data.tp.newtuple = ReorderBufferGetTupleBuf(ctx->reorder);
-
-			tuple = change->data.tp.newtuple;
-
-			/* not a disk based tuple */
-			ItemPointerSetInvalid(&tuple->tuple.t_self);
+			HeapTupleHeader header;
 
 			xlhdr = (xl_multi_insert_tuple *) SHORTALIGN(data);
 			data = ((char *) xlhdr) + SizeOfMultiInsertTuple;
 			datalen = xlhdr->datalen;
+
+			change->data.tp.newtuple =
+				ReorderBufferGetTupleBuf(ctx->reorder, datalen);
+
+			tuple = change->data.tp.newtuple;
+			header = tuple->tuple.t_data;
+
+			/* not a disk based tuple */
+			ItemPointerSetInvalid(&tuple->tuple.t_self);
 
 			/*
 			 * We can only figure this out after reassembling the
@@ -790,22 +855,32 @@ DecodeMultiInsert(LogicalDecodingContext *ctx, XLogRecordBuffer *buf)
 #if 0
 			tuple->tuple.t_tableOid = InvalidOid;
 #endif
-			tuple->tuple.t_data = &tuple->header;
+
 			tuple->tuple.t_len = datalen
 				+ offsetof(HeapTupleHeaderData, t_bits);
 
-			memset(&tuple->header, 0, sizeof(HeapTupleHeaderData));
+			memset(header, 0, offsetof(HeapTupleHeaderData, t_bits));
 
-			memcpy((char *) &tuple->header
-				   + offsetof(HeapTupleHeaderData, t_bits),
+			memcpy((char *) tuple->tuple.t_data + offsetof(HeapTupleHeaderData, t_bits),
 				   (char *) data,
 				   datalen);
 			data += datalen;
 
-			tuple->header.t_infomask = xlhdr->t_infomask;
-			tuple->header.t_infomask2 = xlhdr->t_infomask2;
-			tuple->header.t_hoff = xlhdr->t_hoff;
+			header->t_infomask = xlhdr->t_infomask;
+			header->t_infomask2 = xlhdr->t_infomask2;
+			header->t_hoff = xlhdr->t_hoff;
 		}
+
+		/*
+		 * Reset toast reassembly state only after the last row in the last
+		 * xl_multi_insert_tuple record emitted by one heap_multi_insert()
+		 * call.
+		 */
+		if (xlrec->flags & XLOG_HEAP_LAST_MULTI_INSERT &&
+			(i + 1) == xlrec->ntuples)
+			change->data.tp.clear_toast_afterwards = true;
+		else
+			change->data.tp.clear_toast_afterwards = false;
 
 		ReorderBufferQueueChange(ctx->reorder, r->xl_xid,
 								 buf->origptr, change);
@@ -824,11 +899,12 @@ DecodeXLogTuple(char *data, Size len, ReorderBufferTupleBuf *tuple)
 {
 	xl_heap_header xlhdr;
 	int			datalen = len - SizeOfHeapHeader;
+	HeapTupleHeader header;
 
 	Assert(datalen >= 0);
-	Assert(datalen <= MaxHeapTupleSize);
 
 	tuple->tuple.t_len = datalen + offsetof(HeapTupleHeaderData, t_bits);
+	header = tuple->tuple.t_data;
 
 	/* not a disk based tuple */
 	ItemPointerSetInvalid(&tuple->tuple.t_self);
@@ -837,20 +913,19 @@ DecodeXLogTuple(char *data, Size len, ReorderBufferTupleBuf *tuple)
 #if 0
 	tuple->tuple.t_tableOid = InvalidOid;
 #endif
-	tuple->tuple.t_data = &tuple->header;
 
 	/* data is not stored aligned, copy to aligned storage */
 	memcpy((char *) &xlhdr,
 		   data,
 		   SizeOfHeapHeader);
 
-	memset(&tuple->header, 0, sizeof(HeapTupleHeaderData));
+	memset(header, 0, offsetof(HeapTupleHeaderData, t_bits));
 
-	memcpy((char *) &tuple->header + offsetof(HeapTupleHeaderData, t_bits),
+	memcpy(((char *) tuple->tuple.t_data) + offsetof(HeapTupleHeaderData, t_bits),
 		   data + SizeOfHeapHeader,
 		   datalen);
 
-	tuple->header.t_infomask = xlhdr.t_infomask;
-	tuple->header.t_infomask2 = xlhdr.t_infomask2;
-	tuple->header.t_hoff = xlhdr.t_hoff;
+	header->t_infomask = xlhdr.t_infomask;
+	header->t_infomask2 = xlhdr.t_infomask2;
+	header->t_hoff = xlhdr.t_hoff;
 }

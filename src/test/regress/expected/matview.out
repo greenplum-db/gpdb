@@ -284,7 +284,7 @@ SELECT * FROM tvvm;
 REFRESH MATERIALIZED VIEW tmm;
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm;
 ERROR:  cannot refresh materialized view "public.tvmm" concurrently
-HINT:  Create a UNIQUE index with no WHERE clause on one or more columns of the materialized view.
+HINT:  Create a unique index with no WHERE clause on one or more columns of the materialized view.
 REFRESH MATERIALIZED VIEW tvmm;
 REFRESH MATERIALIZED VIEW tvvm;
 EXPLAIN (costs off)
@@ -334,7 +334,7 @@ SELECT * FROM tvvm;
 -- test diemv when the mv does not exist
 DROP MATERIALIZED VIEW IF EXISTS no_such_mv;
 NOTICE:  materialized view "no_such_mv" does not exist, skipping
--- make sure invalid comination of options is prohibited
+-- make sure invalid combination of options is prohibited
 REFRESH MATERIALIZED VIEW CONCURRENTLY tvmm WITH NO DATA;
 ERROR:  CONCURRENTLY and WITH NO DATA options cannot be used together
 -- no tuple locks on materialized views
@@ -425,26 +425,6 @@ NOTICE:  drop cascades to 3 other objects
 DETAIL:  drop cascades to view v_test2
 drop cascades to materialized view mv_test2
 drop cascades to materialized view mv_test3
--- test that vacuum does not make empty matview look unpopulated
-CREATE TABLE hoge (i int);
-INSERT INTO hoge VALUES (generate_series(1,100000));
-CREATE MATERIALIZED VIEW hogeview AS SELECT * FROM hoge WHERE i % 2 = 0;
-CREATE INDEX hogeviewidx ON hogeview (i);
-DELETE FROM hoge;
-REFRESH MATERIALIZED VIEW hogeview;
-SELECT * FROM hogeview WHERE i < 10;
- i 
----
-(0 rows)
-
-VACUUM ANALYZE hogeview;
-SELECT * FROM hogeview WHERE i < 10;
- i 
----
-(0 rows)
-
-DROP TABLE hoge CASCADE;
-NOTICE:  drop cascades to materialized view hogeview
 -- test that duplicate values on unique index prevent refresh
 CREATE TABLE foo(a, b) AS VALUES(1, 10);
 CREATE MATERIALIZED VIEW mv AS SELECT * FROM foo;
@@ -454,7 +434,7 @@ REFRESH MATERIALIZED VIEW mv;
 ERROR:  could not create unique index "mv_a_idx"
 DETAIL:  Key (a)=(1) is duplicated.
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv;
-ERROR:  new data for "mv" contains duplicate rows without any NULL columns
+ERROR:  new data for "mv" contains duplicate rows without any null columns
 DETAIL:  Row: (1,10)
 DROP TABLE foo CASCADE;
 NOTICE:  drop cascades to materialized view mv
@@ -497,28 +477,67 @@ SELECT * FROM boxmv ORDER BY id;
 DROP TABLE boxes CASCADE;
 NOTICE:  drop cascades to materialized view boxmv
 -- make sure that column names are handled correctly
-CREATE TABLE v (i int, j int);
-CREATE MATERIALIZED VIEW mv_v (ii) AS SELECT i, j AS jj FROM v;
-ALTER TABLE v RENAME COLUMN i TO x;
-INSERT INTO v values (1, 2);
-CREATE UNIQUE INDEX mv_v_ii ON mv_v (ii);
-REFRESH MATERIALIZED VIEW mv_v;
-UPDATE v SET j = 3 WHERE x = 1;
-REFRESH MATERIALIZED VIEW CONCURRENTLY mv_v;
-SELECT * FROM v;
+CREATE TABLE mvtest_v (i int, j int);
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj, kk) AS SELECT i, j FROM mvtest_v; -- error
+ERROR:  too many column names were specified
+CREATE MATERIALIZED VIEW mvtest_mv_v (ii, jj) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_2 (ii) AS SELECT i, j FROM mvtest_v; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj, kk) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- error
+ERROR:  too many column names were specified
+CREATE MATERIALIZED VIEW mvtest_mv_v_3 (ii, jj) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- ok
+CREATE MATERIALIZED VIEW mvtest_mv_v_4 (ii) AS SELECT i, j FROM mvtest_v WITH NO DATA; -- ok
+ALTER TABLE mvtest_v RENAME COLUMN i TO x;
+INSERT INTO mvtest_v values (1, 2);
+CREATE UNIQUE INDEX mvtest_mv_v_ii ON mvtest_mv_v (ii);
+REFRESH MATERIALIZED VIEW mvtest_mv_v;
+UPDATE mvtest_v SET j = 3 WHERE x = 1;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mvtest_mv_v;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_2;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_3;
+REFRESH MATERIALIZED VIEW mvtest_mv_v_4;
+SELECT * FROM mvtest_v;
  x | j 
 ---+---
  1 | 3
 (1 row)
 
-SELECT * FROM mv_v;
+SELECT * FROM mvtest_mv_v;
  ii | jj 
 ----+----
   1 |  3
 (1 row)
 
-DROP TABLE v CASCADE;
-NOTICE:  drop cascades to materialized view mv_v
+SELECT * FROM mvtest_mv_v_2;
+ ii | j 
+----+---
+  1 | 3
+(1 row)
+
+SELECT * FROM mvtest_mv_v_3;
+ ii | jj 
+----+----
+  1 |  3
+(1 row)
+
+SELECT * FROM mvtest_mv_v_4;
+ ii | j 
+----+---
+  1 | 3
+(1 row)
+
+DROP TABLE mvtest_v CASCADE;
+NOTICE:  drop cascades to 4 other objects
+DETAIL:  drop cascades to materialized view mvtest_mv_v
+drop cascades to materialized view mvtest_mv_v_2
+drop cascades to materialized view mvtest_mv_v_3
+drop cascades to materialized view mvtest_mv_v_4
+-- make sure that create WITH NO DATA does not plan the query (bug #13907)
+create materialized view mvtest_error as select 1/0 as x;  -- fail
+ERROR:  division by zero
+create materialized view mvtest_error as select 1/0 as x with no data;
+refresh materialized view mvtest_error;  -- fail here
+ERROR:  division by zero
+drop materialized view mvtest_error;
 -- make sure that matview rows can be referenced as source rows (bug #9398)
 CREATE TABLE v AS SELECT generate_series(1,10) AS a;
 CREATE MATERIALIZED VIEW mv_v AS SELECT a FROM v WHERE a <= 5;
@@ -545,3 +564,40 @@ SELECT * FROM mv_v;
 
 DROP TABLE v CASCADE;
 NOTICE:  drop cascades to materialized view mv_v
+-- make sure running as superuser works when MV owned by another role (bug #11208)
+CREATE ROLE user_dw;
+SET ROLE user_dw;
+CREATE TABLE foo_data AS SELECT i, md5(random()::text)
+  FROM generate_series(1, 10) i;
+CREATE MATERIALIZED VIEW mv_foo AS SELECT * FROM foo_data;
+CREATE UNIQUE INDEX ON mv_foo (i);
+RESET ROLE;
+REFRESH MATERIALIZED VIEW mv_foo;
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_foo;
+DROP OWNED BY user_dw CASCADE;
+DROP ROLE user_dw;
+-- make sure that create WITH NO DATA works via SPI
+BEGIN;
+CREATE FUNCTION mvtest_func()
+  RETURNS void AS $$
+BEGIN
+  CREATE MATERIALIZED VIEW mvtest1 AS SELECT 1 AS x;
+  CREATE MATERIALIZED VIEW mvtest2 AS SELECT 1 AS x WITH NO DATA;
+END;
+$$ LANGUAGE plpgsql;
+SELECT mvtest_func();
+ mvtest_func 
+-------------
+ 
+(1 row)
+
+SELECT * FROM mvtest1;
+ x 
+---
+ 1
+(1 row)
+
+SELECT * FROM mvtest2;
+ERROR:  materialized view "mvtest2" has not been populated
+HINT:  Use the REFRESH MATERIALIZED VIEW command.
+ROLLBACK;

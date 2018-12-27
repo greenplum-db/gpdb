@@ -41,7 +41,7 @@ aomd_filehandler.c: % : $(top_srcdir)/src/backend/access/appendonly/%
 # restarting cluster operation, so this check should be disabled.
 ifndef ONLINE_EXPAND
 check: test_gpdb.sh all
-	bash $< -C -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
+	bash $< -C -r -s -o $(top_builddir)/gpAux/gpdemo/datadirs/ -b $(DESTDIR)$(bindir)
 else
 check:
 endif

@@ -52,18 +52,15 @@ writeListPage(Relation index, Buffer buffer,
 				size = 0;
 	OffsetNumber l,
 				off;
-	char	   *workspace;
+	PGAlignedBlock workspace;
 	char	   *ptr;
-
-	/* workspace could be a local array; we use palloc for alignment */
-	workspace = palloc(BLCKSZ);
 
 	START_CRIT_SECTION();
 
 	GinInitBuffer(buffer, GIN_LIST);
 
 	off = FirstOffsetNumber;
-	ptr = workspace;
+	ptr = workspace.data;
 
 	for (i = 0; i < ntuples; i++)
 	{
@@ -120,7 +117,7 @@ writeListPage(Relation index, Buffer buffer,
 		rdata[0].next = rdata + 1;
 
 		rdata[1].buffer = InvalidBuffer;
-		rdata[1].data = workspace;
+		rdata[1].data = workspace.data;
 		rdata[1].len = size;
 		rdata[1].next = NULL;
 
@@ -134,8 +131,6 @@ writeListPage(Relation index, Buffer buffer,
 	UnlockReleaseBuffer(buffer);
 
 	END_CRIT_SECTION();
-
-	pfree(workspace);
 
 	return freesize;
 }
@@ -794,8 +789,7 @@ ginInsertCleanup(GinState *ginstate,
 		 */
 		processPendingPage(&accum, &datums, page, FirstOffsetNumber);
 
-		if (vac_delay)
-			vacuum_delay_point();
+		vacuum_delay_point();
 
 		/*
 		 * Is it time to flush memory to disk?	Flush if we are at the end of
@@ -835,8 +829,7 @@ ginInsertCleanup(GinState *ginstate,
 			{
 				ginEntryInsert(ginstate, attnum, key, category,
 							   list, nlist, NULL);
-				if (vac_delay)
-					vacuum_delay_point();
+				vacuum_delay_point();
 			}
 
 			/*
@@ -881,8 +874,8 @@ ginInsertCleanup(GinState *ginstate,
 												 * locking */
 
 			/*
-			 * remove readed pages from pending list, at this point all
-			 * content of readed pages is in regular structure
+			 * remove read pages from pending list, at this point all
+			 * content of read pages is in regular structure
 			 */
 			if (shiftList(index, metabuffer, blkno, stats))
 			{
@@ -916,7 +909,7 @@ ginInsertCleanup(GinState *ginstate,
 		/*
 		 * Read next page in pending list
 		 */
-		CHECK_FOR_INTERRUPTS();
+		vacuum_delay_point();
 		buffer = ReadBuffer(index, blkno);
 		LockBuffer(buffer, GIN_SHARE);
 		page = BufferGetPage(buffer);

@@ -2534,6 +2534,9 @@ ExecEndAgg(AggState *node)
 	EndPlanStateGpmonPkt(&node->ss.ps);
 }
 
+/*
+ * GPDB_94_STABLE_MERGE_FIXME: So different with upstream.
+ */
 void
 ExecReScanAgg(AggState *node)
 {

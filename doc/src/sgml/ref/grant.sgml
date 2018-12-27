@@ -151,16 +151,27 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
   </para>
 
   <para>
-   Depending on the type of object, the initial default privileges might
-   include granting some privileges to <literal>PUBLIC</literal>.
-   The default is no public access for tables, columns, schemas, and
-   tablespaces;
-   <literal>CONNECT</literal> privilege and <literal>TEMP</literal> table creation privilege
-   for databases;
+   PostgreSQL grants default privileges on some types of objects to
+   <literal>PUBLIC</literal>.  No privileges are granted to
+   <literal>PUBLIC</literal> by default on
+   tables,
+   table columns,
+   sequences,
+   foreign data wrappers,
+   foreign servers,
+   large objects,
+   schemas,
+   or tablespaces.
+   For other types of objects, the default privileges
+   granted to <literal>PUBLIC</literal> are as follows:
+   <literal>CONNECT</literal> and <literal>TEMPORARY</literal> (create
+   temporary tables) privileges for databases;
    <literal>EXECUTE</literal> privilege for functions; and
-   <literal>USAGE</literal> privilege for languages.
-   The object owner may of course revoke these privileges.  (For maximum
-   security, issue the <command>REVOKE</command> in the same transaction that
+   <literal>USAGE</literal> privilege for languages and data types
+   (including domains).
+   The object owner can, of course, <command>REVOKE</command>
+   both default and  expressly granted privileges. (For maximum
+   security, issue the <command>REVOKE</> in the same transaction that
    creates the object; then there is no window in which another user
    can use the object.)
    Also, these initial default privilege settings can be changed using the

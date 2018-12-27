@@ -40,9 +40,8 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 		if (xlrec->bm_is_new_lov_blkno)
 		{
 			lovBuffer = XLogReadBufferExtended(xlrec->bm_node, xlrec->bm_fork,
-					xlrec->bm_lov_blkno, RBM_ZERO);
+					xlrec->bm_lov_blkno, RBM_ZERO_AND_LOCK);
 			Assert(BufferIsValid(lovBuffer));
-			LockBuffer(lovBuffer, BUFFER_LOCK_EXCLUSIVE);
 		}
 		else
 		{
@@ -113,12 +112,10 @@ _bitmap_xlog_insert_lovitem(XLogRecPtr lsn, XLogRecord *record)
 		Buffer		metabuf;
 
 		metabuf = XLogReadBufferExtended(xlrec->bm_node, xlrec->bm_fork,
-												BM_METAPAGE, RBM_ZERO);
+												BM_METAPAGE, RBM_ZERO_AND_LOCK);
 		if (!BufferIsValid(metabuf))
  			return;
 		
-		LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
-
 		metapage = (BMMetaPage) PageGetContents(BufferGetPage(metabuf));
 		if (PageGetLSN(BufferGetPage(metabuf)) < lsn)
 		{
@@ -146,9 +143,8 @@ _bitmap_xlog_insert_meta(XLogRecPtr lsn, XLogRecord *record)
 	Page			mp;
 	BMMetaPage		metapage;
 
-	metabuf = XLogReadBufferExtended(xlrec->bm_node, xlrec->bm_fork, BM_METAPAGE, RBM_ZERO);
+	metabuf = XLogReadBufferExtended(xlrec->bm_node, xlrec->bm_fork, BM_METAPAGE, RBM_ZERO_AND_LOCK);
 	Assert(BufferIsValid(metabuf));
-	LockBuffer(metabuf, BUFFER_LOCK_EXCLUSIVE);
 
 	mp = BufferGetPage(metabuf);
 	if (PageIsNew(mp))

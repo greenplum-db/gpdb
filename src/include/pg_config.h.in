@@ -106,6 +106,9 @@
 /* Define to 1 if you have the <atomic.h> header file. */
 #undef HAVE_ATOMIC_H
 
+/* Define to 1 if you have the `ASN1_STRING_get0_data' function. */
+#undef HAVE_ASN1_STRING_GET0_DATA
+
 /* Define to 1 if you have the `BIO_meth_new' function. */
 #undef HAVE_BIO_METH_NEW
 
@@ -157,6 +160,14 @@
 /* Define to 1 if you have the declaration of `strlcpy', and to 0 if you
    don't. */
 #undef HAVE_DECL_STRLCPY
+
+/* Define to 1 if you have the declaration of `strtoll', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRTOLL
+
+/* Define to 1 if you have the declaration of `strtoull', and to 0 if you
+   don't. */
+#undef HAVE_DECL_STRTOULL
 
 /* Define to 1 if you have the declaration of `sys_siglist', and to 0 if you
    don't. */
@@ -432,6 +443,9 @@
 /* Define to 1 if you have the <naucrates/init.h> header file. */
 #undef HAVE_NAUCRATES_INIT_H
 
+/* Define to 1 if you have the `mkdtemp' function. */
+#undef HAVE_MKDTEMP
+
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
 
@@ -462,6 +476,9 @@
 /* Define to 1 if you have the `posix_fadvise' function. */
 #undef HAVE_POSIX_FADVISE
 
+/* Define to 1 if you have the `posix_fallocate' function. */
+#undef HAVE_POSIX_FALLOCATE
+
 /* Define to 1 if you have the POSIX signal interface. */
 #undef HAVE_POSIX_SIGNALS
 
@@ -476,6 +493,9 @@
 
 /* Define if you have POSIX threads libraries and header files. */
 #undef HAVE_PTHREAD
+
+/* Define to 1 if you have the `pthread_is_threaded_np' function. */
+#undef HAVE_PTHREAD_IS_THREADED_NP
 
 /* Define to 1 if you have the <pwd.h> header file. */
 #undef HAVE_PWD_H
@@ -510,6 +530,9 @@
 
 /* Define to 1 if you have the `rl_filename_completion_function' function. */
 #undef HAVE_RL_FILENAME_COMPLETION_FUNCTION
+
+/* Define to 1 if you have the `rl_reset_screen_size' function. */
+#undef HAVE_RL_RESET_SCREEN_SIZE
 
 /* Define to 1 if you have the <security/pam_appl.h> header file. */
 #undef HAVE_SECURITY_PAM_APPL_H
@@ -779,6 +802,12 @@
 /* Define to 1 if your compiler understands __VA_ARGS__ in macros. */
 #undef HAVE__VA_ARGS
 
+/* Define to 1 if you have the `__strtoll' function. */
+#undef HAVE___STRTOLL
+
+/* Define to 1 if you have the `__strtoull' function. */
+#undef HAVE___STRTOULL
+
 /* Define to the appropriate snprintf format for 64-bit ints. */
 #undef INT64_FORMAT
 
@@ -874,7 +903,7 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define to 1 if strerror_r() returns a int. */
+/* Define to 1 if strerror_r() returns int. */
 #undef STRERROR_R_INT
 
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
@@ -964,6 +993,9 @@
 
 /* Define to select Win32-style shared memory. */
 #undef USE_WIN32_SHARED_MEMORY
+
+/* Define to 1 if `wcstombs_l' requires <xlocale.h>. */
+#undef WCSTOMBS_L_IN_XLOCALE
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

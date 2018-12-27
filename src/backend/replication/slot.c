@@ -40,6 +40,7 @@
 #include <sys/stat.h>
 
 #include "access/transam.h"
+#include "common/string.h"
 #include "miscadmin.h"
 #include "replication/slot.h"
 #include "storage/fd.h"
@@ -61,18 +62,29 @@ typedef struct ReplicationSlotOnDisk
 	uint32		version;
 	uint32		length;
 
+	/*
+	 * The actual data in the slot that follows can differ based on the above
+	 * 'version'.
+	 */
+
 	ReplicationSlotPersistentData slotdata;
 } ReplicationSlotOnDisk;
 
-/* size of the part of the slot that is version independent */
+/* size of version independent data */
 #define ReplicationSlotOnDiskConstantSize \
 	offsetof(ReplicationSlotOnDisk, slotdata)
-/* size of the slots that is not version indepenent */
-#define ReplicationSlotOnDiskDynamicSize \
+/* size of the part of the slot not covered by the checksum */
+#define SnapBuildOnDiskNotChecksummedSize \
+	offsetof(ReplicationSlotOnDisk, version)
+/* size of the part covered by the checksum */
+#define SnapBuildOnDiskChecksummedSize \
+	sizeof(ReplicationSlotOnDisk) - SnapBuildOnDiskNotChecksummedSize
+/* size of the slot data that is version dependant */
+#define ReplicationSlotOnDiskV2Size \
 	sizeof(ReplicationSlotOnDisk) - ReplicationSlotOnDiskConstantSize
 
 #define SLOT_MAGIC		0x1051CA1		/* format identifier */
-#define SLOT_VERSION	1		/* version for new files */
+#define SLOT_VERSION	2				/* version for new files */
 
 /* Control array for replication slot management */
 ReplicationSlotCtlData *ReplicationSlotCtl = NULL;
@@ -183,7 +195,7 @@ ReplicationSlotValidateName(const char *name, int elevel)
 					(errcode(ERRCODE_INVALID_NAME),
 			errmsg("replication slot name \"%s\" contains invalid character",
 				   name),
-					 errhint("Replication slot names may only contain letters, numbers and the underscore character.")));
+					 errhint("Replication slot names may only contain lower case letters, numbers, and the underscore character.")));
 			return false;
 		}
 	}
@@ -251,13 +263,22 @@ ReplicationSlotCreate(const char *name, bool db_specific,
 	 */
 	Assert(!slot->in_use);
 	Assert(!slot->active);
-	slot->data.persistency = persistency;
-	slot->data.xmin = InvalidTransactionId;
-	slot->effective_xmin = InvalidTransactionId;
-	strncpy(NameStr(slot->data.name), name, NAMEDATALEN);
-	NameStr(slot->data.name)[NAMEDATALEN - 1] = '\0';
+
+	/* first initialize persistent data */
+	memset(&slot->data, 0, sizeof(ReplicationSlotPersistentData));
+	StrNCpy(NameStr(slot->data.name), name, NAMEDATALEN);
 	slot->data.database = db_specific ? MyDatabaseId : InvalidOid;
-	slot->data.restart_lsn = InvalidXLogRecPtr;
+	slot->data.persistency = persistency;
+
+	/* and then data only present in shared memory */
+	slot->just_dirtied = false;
+	slot->dirty = false;
+	slot->effective_xmin = InvalidTransactionId;
+	slot->effective_catalog_xmin = InvalidTransactionId;
+	slot->candidate_catalog_xmin = InvalidTransactionId;
+	slot->candidate_xmin_lsn = InvalidXLogRecPtr;
+	slot->candidate_restart_valid = InvalidXLogRecPtr;
+	slot->candidate_restart_lsn = InvalidXLogRecPtr;
 
 	/*
 	 * Create the slot on disk.  We haven't actually marked the slot allocated
@@ -373,6 +394,22 @@ ReplicationSlotRelease(void)
 		SpinLockRelease(&slot->mutex);
 	}
 
+
+	/*
+	 * If slot needed to temporarily restrain both data and catalog xmin to
+	 * create the catalog snapshot, remove that temporary constraint.
+	 * Snapshots can only be exported while the initial snapshot is still
+	 * acquired.
+	 */
+	if (!TransactionIdIsValid(slot->data.xmin) &&
+		TransactionIdIsValid(slot->effective_xmin))
+	{
+		SpinLockAcquire(&slot->mutex);
+		slot->effective_xmin = InvalidTransactionId;
+		SpinLockRelease(&slot->mutex);
+		ReplicationSlotsComputeRequiredXmin(false);
+	}
+
 	MyReplicationSlot = NULL;
 
 	/* might not have been set when we've been a plain slot */
@@ -454,7 +491,7 @@ ReplicationSlotDropAcquired(void)
 
 		ereport(fail_softly ? WARNING : ERROR,
 				(errcode_for_file_access(),
-				 errmsg("could not rename \"%s\" to \"%s\": %m",
+				 errmsg("could not rename file \"%s\" to \"%s\": %m",
 						path, tmppath)));
 	}
 
@@ -532,7 +569,7 @@ ReplicationSlotMarkDirty(void)
 }
 
 /*
- * Convert a slot that's marked as RS_DROP_ON_ERROR to a RS_PERSISTENT slot,
+ * Convert a slot that's marked as RS_EPHEMERAL to a RS_PERSISTENT slot,
  * guaranteeing it will be there after a eventual crash.
  */
 void
@@ -557,6 +594,9 @@ ReplicationSlotPersist(void)
 
 /*
  * Compute the oldest xmin across all slots and store it in the ProcArray.
+ *
+ * If already_locked is true, ProcArrayLock has already been acquired
+ * exclusively.
  */
 void
 ReplicationSlotsComputeRequiredXmin(bool already_locked)
@@ -567,8 +607,7 @@ ReplicationSlotsComputeRequiredXmin(bool already_locked)
 
 	Assert(ReplicationSlotCtl != NULL);
 
-	if (!already_locked)
-		LWLockAcquire(ReplicationSlotControlLock, LW_SHARED);
+	LWLockAcquire(ReplicationSlotControlLock, LW_SHARED);
 
 	for (i = 0; i < max_replication_slots; i++)
 	{
@@ -601,8 +640,7 @@ ReplicationSlotsComputeRequiredXmin(bool already_locked)
 			agg_catalog_xmin = effective_catalog_xmin;
 	}
 
-	if (!already_locked)
-		LWLockRelease(ReplicationSlotControlLock);
+	LWLockRelease(ReplicationSlotControlLock);
 
 	ProcArraySetReplicationSlotXmin(agg_xmin, agg_catalog_xmin, already_locked);
 }
@@ -648,7 +686,7 @@ ReplicationSlotsComputeRequiredLSN(void)
 /*
  * Compute the oldest WAL LSN required by *logical* decoding slots..
  *
- * Returns InvalidXLogRecPtr if logical decoding is disabled or no logicals
+ * Returns InvalidXLogRecPtr if logical decoding is disabled or no logical
  * slots exist.
  *
  * NB: this returns a value >= ReplicationSlotsComputeRequiredLSN(), since it
@@ -757,6 +795,11 @@ ReplicationSlotsCountDBSlots(Oid dboid, int *nslots, int *nactive)
 void
 CheckSlotRequirements(void)
 {
+	/*
+	 * NB: Adding a new requirement likely means that RestoreSlotFromDisk()
+	 * needs the same check.
+	 */
+
 	if (max_replication_slots == 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
@@ -766,24 +809,6 @@ CheckSlotRequirements(void)
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("replication slots can only be used if wal_level >= archive")));
-}
-
-/*
- * Returns whether the string `str' has the postfix `end'.
- */
-static bool
-string_endswith(const char *str, const char *end)
-{
-	size_t		slen = strlen(str);
-	size_t		elen = strlen(end);
-
-	/* can't be a postfix if longer */
-	if (elen > slen)
-		return false;
-
-	/* compare the end of the strings */
-	str += slen - elen;
-	return strcmp(str, end) == 0;
 }
 
 /*
@@ -797,8 +822,7 @@ CheckPointReplicationSlots(void)
 {
 	int			i;
 
-	ereport(DEBUG1,
-			(errmsg("performing replication slot checkpoint")));
+	elog(DEBUG1, "performing replication slot checkpoint");
 
 	/*
 	 * Prevent any slot from being created/dropped while we're active. As we
@@ -829,33 +853,32 @@ CheckPointReplicationSlots(void)
  * needs to be run before we start crash recovery.
  */
 void
-StartupReplicationSlots(XLogRecPtr checkPointRedo)
+StartupReplicationSlots(void)
 {
 	DIR		   *replication_dir;
 	struct dirent *replication_de;
 
-	ereport(DEBUG1,
-			(errmsg("starting up replication slots")));
+	elog(DEBUG1, "starting up replication slots");
 
 	/* restore all slots by iterating over all on-disk entries */
 	replication_dir = AllocateDir("pg_replslot");
 	while ((replication_de = ReadDir(replication_dir, "pg_replslot")) != NULL)
 	{
 		struct stat statbuf;
-		char		path[MAXPGPATH];
+		char		path[MAXPGPATH + 12];
 
 		if (strcmp(replication_de->d_name, ".") == 0 ||
 			strcmp(replication_de->d_name, "..") == 0)
 			continue;
 
-		snprintf(path, MAXPGPATH, "pg_replslot/%s", replication_de->d_name);
+		snprintf(path, sizeof(path), "pg_replslot/%s", replication_de->d_name);
 
 		/* we're only creating directories here, skip if it's not our's */
 		if (lstat(path, &statbuf) == 0 && !S_ISDIR(statbuf.st_mode))
 			continue;
 
 		/* we crashed while a slot was being setup or deleted, clean up */
-		if (string_endswith(replication_de->d_name, ".tmp"))
+		if (pg_str_endswith(replication_de->d_name, ".tmp"))
 		{
 			if (!rmtree(path, true))
 			{
@@ -883,7 +906,7 @@ StartupReplicationSlots(XLogRecPtr checkPointRedo)
 }
 
 /* ----
- * Manipulation of ondisk state of replication slots
+ * Manipulation of on-disk state of replication slots
  *
  * NB: none of the routines below should take any notice whether a slot is the
  * current one or not, that's all handled a layer above.
@@ -994,8 +1017,8 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 
 	cp.magic = SLOT_MAGIC;
 	INIT_CRC32C(cp.checksum);
-	cp.version = 1;
-	cp.length = ReplicationSlotOnDiskDynamicSize;
+	cp.version = SLOT_VERSION;
+	cp.length = ReplicationSlotOnDiskV2Size;
 
 	SpinLockAcquire(&slot->mutex);
 
@@ -1004,15 +1027,19 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	SpinLockRelease(&slot->mutex);
 
 	COMP_CRC32C(cp.checksum,
-			   (char *) (&cp) + ReplicationSlotOnDiskConstantSize,
-			   ReplicationSlotOnDiskDynamicSize);
+				(char *) (&cp) + SnapBuildOnDiskNotChecksummedSize,
+				SnapBuildOnDiskChecksummedSize);
+	FIN_CRC32C(cp.checksum);
 
+	errno = 0;
 	if ((write(fd, &cp, sizeof(cp))) != sizeof(cp))
 	{
 		int			save_errno = errno;
 
 		CloseTransientFile(fd);
-		errno = save_errno;
+
+		/* if write didn't set errno, assume problem is no disk space */
+		errno = save_errno ? save_errno : ENOSPC;
 		ereport(elevel,
 				(errcode_for_file_access(),
 				 errmsg("could not write to file \"%s\": %m",
@@ -1041,7 +1068,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	{
 		ereport(elevel,
 				(errcode_for_file_access(),
-				 errmsg("could not rename \"%s\" to \"%s\": %m",
+				 errmsg("could not rename file \"%s\" to \"%s\": %m",
 						tmppath, path)));
 		return;
 	}
@@ -1050,7 +1077,7 @@ SaveSlotToPath(ReplicationSlot *slot, const char *dir, int elevel)
 	START_CRIT_SECTION();
 
 	fsync_fname(path, false);
-	fsync_fname((char *) dir, true);
+	fsync_fname(dir, true);
 	fsync_fname("pg_replslot", true);
 
 	END_CRIT_SECTION();
@@ -1079,7 +1106,8 @@ RestoreSlotFromDisk(const char *name)
 {
 	ReplicationSlotOnDisk cp;
 	int			i;
-	char		path[MAXPGPATH];
+	char		slotdir[MAXPGPATH + 12];
+	char		path[MAXPGPATH + 22];
 	int			fd;
 	bool		restored = false;
 	int			readBytes;
@@ -1088,17 +1116,18 @@ RestoreSlotFromDisk(const char *name)
 	/* no need to lock here, no concurrent access allowed yet */
 
 	/* delete temp file if it exists */
-	sprintf(path, "pg_replslot/%s/state.tmp", name);
+	sprintf(slotdir, "pg_replslot/%s", name);
+	sprintf(path, "%s/state.tmp", slotdir);
 	if (unlink(path) < 0 && errno != ENOENT)
 		ereport(PANIC,
 				(errcode_for_file_access(),
-				 errmsg("could not unlink file \"%s\": %m", path)));
+				 errmsg("could not remove file \"%s\": %m", path)));
 
-	sprintf(path, "pg_replslot/%s/state", name);
+	sprintf(path, "%s/state", slotdir);
 
 	elog(DEBUG1, "restoring replication slot from \"%s\"", path);
 
-	fd = OpenTransientFile(path, O_RDONLY | PG_BINARY, 0);
+	fd = OpenTransientFile(path, O_RDWR | PG_BINARY, 0);
 
 	/*
 	 * We do not need to handle this as we are rename()ing the directory into
@@ -1115,7 +1144,10 @@ RestoreSlotFromDisk(const char *name)
 	 */
 	if (pg_fsync(fd) != 0)
 	{
+		int			save_errno = errno;
+
 		CloseTransientFile(fd);
+		errno = save_errno;
 		ereport(PANIC,
 				(errcode_for_file_access(),
 				 errmsg("could not fsync file \"%s\": %m",
@@ -1124,7 +1156,7 @@ RestoreSlotFromDisk(const char *name)
 
 	/* Also sync the parent directory */
 	START_CRIT_SECTION();
-	fsync_fname(path, true);
+	fsync_fname(slotdir, true);
 	END_CRIT_SECTION();
 
 	/* read part of statefile that's guaranteed to be version independent */
@@ -1157,7 +1189,7 @@ RestoreSlotFromDisk(const char *name)
 				   path, cp.version)));
 
 	/* boundary check on length */
-	if (cp.length != ReplicationSlotOnDiskDynamicSize)
+	if (cp.length != ReplicationSlotOnDiskV2Size)
 		ereport(PANIC,
 				(errcode_for_file_access(),
 			   errmsg("replication slot file \"%s\" has corrupted length %u",
@@ -1181,16 +1213,58 @@ RestoreSlotFromDisk(const char *name)
 
 	CloseTransientFile(fd);
 
-	/* now verify the CRC32 */
+	/* now verify the CRC */
 	INIT_CRC32C(checksum);
 	COMP_CRC32C(checksum,
-			   (char *) &cp + ReplicationSlotOnDiskConstantSize,
-			   ReplicationSlotOnDiskDynamicSize);
+			   (char *) &cp + SnapBuildOnDiskNotChecksummedSize,
+			   SnapBuildOnDiskChecksummedSize);
+	FIN_CRC32C(checksum);
 
 	if (!EQ_CRC32C(checksum, cp.checksum))
 		ereport(PANIC,
 				(errmsg("replication slot file %s: checksum mismatch, is %u, should be %u",
 						path, checksum, cp.checksum)));
+
+	/*
+	 * If we crashed with an ephemeral slot active, don't restore but delete
+	 * it.
+	 */
+	if (cp.slotdata.persistency != RS_PERSISTENT)
+	{
+		if (!rmtree(slotdir, true))
+		{
+			ereport(WARNING,
+					(errcode_for_file_access(),
+					 errmsg("could not remove directory \"%s\"", slotdir)));
+		}
+		fsync_fname("pg_replslot", true);
+		return;
+	}
+
+	/*
+	 * Verify that requirements for the specific slot type are met. That's
+	 * important because if these aren't met we're not guaranteed to retain
+	 * all the necessary resources for the slot.
+	 *
+	 * NB: We have to do so *after* the above checks for ephemeral slots,
+	 * because otherwise a slot that shouldn't exist anymore could prevent
+	 * restarts.
+	 *
+	 * NB: Changing the requirements here also requires adapting
+	 * CheckSlotRequirements() and CheckLogicalDecodingRequirements().
+	 */
+	if (cp.slotdata.database != InvalidOid && wal_level < WAL_LEVEL_LOGICAL)
+		ereport(FATAL,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("logical replication slot \"%s\" exists, but wal_level < logical",
+						NameStr(cp.slotdata.name)),
+				 errhint("Change wal_level to be replica or higher.")));
+	else if (wal_level < WAL_LEVEL_ARCHIVE)
+		ereport(FATAL,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("physical replication slot \"%s\" exists, but wal_level < archive",
+						NameStr(cp.slotdata.name)),
+				 errhint("Change wal_level to be archive or higher.")));
 
 	/* nothing can be active yet, don't lock anything */
 	for (i = 0; i < max_replication_slots; i++)
@@ -1205,10 +1279,6 @@ RestoreSlotFromDisk(const char *name)
 		/* restore the entire set of persistent data */
 		memcpy(&slot->data, &cp.slotdata,
 			   sizeof(ReplicationSlotPersistentData));
-
-		/* Don't restore the slot if it's not parked as persistent. */
-		if (slot->data.persistency != RS_PERSISTENT)
-			return;
 
 		/* initialize in memory state */
 		slot->effective_xmin = cp.slotdata.xmin;

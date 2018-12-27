@@ -292,13 +292,18 @@ ReadBuffer(Relation reln, BlockNumber blockNum)
  * valid, the page is zeroed instead of throwing an error. This is intended
  * for non-critical data, where the caller is prepared to repair errors.
  *
- * In RBM_ZERO mode, if the page isn't in buffer cache already, it's filled
- * with zeros instead of reading it from disk.  Useful when the caller is
- * going to fill the page from scratch, since this saves I/O and avoids
+ * In RBM_ZERO_AND_LOCK mode, if the page isn't in buffer cache already, it's
+ * filled with zeros instead of reading it from disk.  Useful when the caller
+ * is going to fill the page from scratch, since this saves I/O and avoids
  * unnecessary failure if the page-on-disk has corrupt page headers.
+ * The page is returned locked to ensure that the caller has a chance to
+ * initialize the page before it's made visible to others.
  * Caution: do not use this mode to read a page that is beyond the relation's
  * current physical EOF; that is likely to cause problems in md.c when
  * the page is modified and written out. P_NEW is OK, though.
+ *
+ * RBM_ZERO_AND_CLEANUP_LOCK is the same as RBM_ZERO_AND_LOCK, but acquires
+ * a cleanup-strength lock on the page.
  *
  * RBM_NORMAL_NO_LOG mode is treated the same as RBM_NORMAL here.
  *
@@ -450,6 +455,18 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 											  isExtend,
 											  found);
 
+			/*
+			 * In RBM_ZERO_AND_LOCK mode, the caller expects the buffer to
+			 * be already locked on return.
+			 */
+			if (!isLocalBuf)
+			{
+				if (mode == RBM_ZERO_AND_LOCK)
+					LWLockAcquire(bufHdr->content_lock, LW_EXCLUSIVE);
+				else if (mode == RBM_ZERO_AND_CLEANUP_LOCK)
+					LockBufferForCleanup(BufferDescriptorGetBuffer(bufHdr));
+			}
+
 			return BufferDescriptorGetBuffer(bufHdr);
 		}
 
@@ -535,8 +552,11 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 		 * Read in the page, unless the caller intends to overwrite it and
 		 * just wants us to allocate a buffer.
 		 */
-		if (mode == RBM_ZERO)
+		if (mode == RBM_ZERO_AND_LOCK || mode == RBM_ZERO_AND_CLEANUP_LOCK ||
+			mode == RBM_DO_NOT_USE)
+		{
 			MemSet((char *) bufBlock, 0, BLCKSZ);
+		}
 		else
 		{
 			instr_time	io_start,
@@ -580,6 +600,19 @@ ReadBuffer_common(SMgrRelation smgr, char relpersistence, ForkNumber forkNum,
 #ifdef MPROTECT_BUFFERS
     BufferMProtect( bufHdr, PROT_READ );
 #endif
+	/*
+	 * In RBM_ZERO_AND_LOCK mode, grab the buffer content lock before marking
+	 * the page as valid, to make sure that no other backend sees the zeroed
+	 * page before the caller has had a chance to initialize it.
+	 *
+	 * Since no-one else can be looking at the page contents yet, there is no
+	 * difference between an exclusive lock and a cleanup-strength lock.
+	 * (Note that we cannot use LockBuffer() of LockBufferForCleanup() here,
+	 * because they assert that the buffer is already valid.)
+	 */
+	if ((mode == RBM_ZERO_AND_LOCK || mode == RBM_ZERO_AND_CLEANUP_LOCK) &&
+		!isLocalBuf)
+		LWLockAcquire(bufHdr->content_lock, LW_EXCLUSIVE);
 
 	if (isLocalBuf)
 	{
@@ -1319,9 +1352,10 @@ UnpinBuffer(volatile BufferDesc *buf, bool fixOwner)
  *
  * This is called at checkpoint time to write out all dirty shared buffers.
  * The checkpoint request flags should be passed in.  If CHECKPOINT_IMMEDIATE
- * is set, we disable delays between writes; if CHECKPOINT_IS_SHUTDOWN is
- * set, we write even unlogged buffers, which are otherwise skipped.  The
- * remaining flags currently have no effect here.
+ * is set, we disable delays between writes; if CHECKPOINT_IS_SHUTDOWN,
+ * CHECKPOINT_END_OF_RECOVERY or CHECKPOINT_FLUSH_ALL is set, we write even
+ * unlogged buffers, which are otherwise skipped.  The remaining flags
+ * currently have no effect here.
  */
 static void
 BufferSync(int flags)
@@ -1336,11 +1370,12 @@ BufferSync(int flags)
 	ResourceOwnerEnlargeBuffers(CurrentResourceOwner);
 
 	/*
-	 * Unless this is a shutdown checkpoint, we write only permanent, dirty
-	 * buffers.  But at shutdown or end of recovery, we write all dirty
-	 * buffers.
+	 * Unless this is a shutdown checkpoint or we have been explicitly told,
+	 * we write only permanent, dirty buffers.  But at shutdown or end of
+	 * recovery, we write all dirty buffers.
 	 */
-	if (!((flags & CHECKPOINT_IS_SHUTDOWN) || (flags & CHECKPOINT_END_OF_RECOVERY)))
+	if (!((flags & (CHECKPOINT_IS_SHUTDOWN | CHECKPOINT_END_OF_RECOVERY |
+					CHECKPOINT_FLUSH_ALL))))
 		mask |= BM_PERMANENT;
 
 	/*
@@ -2185,8 +2220,8 @@ FlushBuffer(volatile BufferDesc *buf, SMgrRelation reln)
 }
 
 /*
- * RelationGetNumberOfBlocks
- *		Determines the current number of pages in the relation.
+ * RelationGetNumberOfBlocksInFork
+ *		Determines the current number of pages in the specified relation fork.
  */
 BlockNumber
 RelationGetNumberOfBlocksInFork(Relation relation, ForkNumber forkNum)
@@ -2249,7 +2284,7 @@ BufferGetLSNAtomic(Buffer buffer)
 	/*
 	 * If we don't need locking for correctness, fastpath out.
 	 */
-	if (!DataChecksumsEnabled() || BufferIsLocal(buffer))
+	if (!XLogHintBitIsNeeded() || BufferIsLocal(buffer))
 		return PageGetLSN(page);
 
 	/* Make sure we've got a real buffer, and that we hold a pin on it. */
@@ -2681,6 +2716,27 @@ FlushDatabaseBuffers(Oid dbid)
 }
 
 /*
+ * Flush a previously, shared or exclusively, locked and pinned buffer to the
+ * OS.
+ */
+void
+FlushOneBuffer(Buffer buffer)
+{
+	volatile BufferDesc *bufHdr;
+
+	/* currently not needed, but no fundamental reason not to support */
+	Assert(!BufferIsLocal(buffer));
+
+	Assert(BufferIsPinned(buffer));
+
+	bufHdr = &BufferDescriptors[buffer - 1];
+
+	Assert(LWLockHeldByMe(bufHdr->content_lock));
+
+	FlushBuffer(bufHdr, NULL);
+}
+
+/*
  * ReleaseBuffer -- release the pin on a buffer
  */
 void
@@ -2735,11 +2791,11 @@ IncrBufferRefCount(Buffer buffer)
 {
 	Assert(BufferIsPinned(buffer));
 	ResourceOwnerEnlargeBuffers(CurrentResourceOwner);
-	ResourceOwnerRememberBuffer(CurrentResourceOwner, buffer);
 	if (BufferIsLocal(buffer))
 		LocalRefCount[-buffer - 1]++;
 	else
 		PrivateRefCount[buffer - 1]++;
+	ResourceOwnerRememberBuffer(CurrentResourceOwner, buffer);
 }
 
 
@@ -2751,7 +2807,7 @@ IncrBufferRefCount(Buffer buffer)
  * This is essentially the same as MarkBufferDirty, except:
  *
  * 1. The caller does not write WAL; so if checksums are enabled, we may need
- *	  to write an XLOG_HINT WAL record to protect against torn pages.
+ *	  to write an XLOG_FPI WAL record to protect against torn pages.
  * 2. The caller might have only share-lock instead of exclusive-lock on the
  *	  buffer's content lock.
  * 3. This function does not guarantee that the buffer is always marked dirty
@@ -3036,6 +3092,20 @@ LockBufferForCleanup(Buffer buffer)
 		}
 		else
 			ProcWaitForSignal();
+
+		/*
+		 * Remove flag marking us as waiter. Normally this will not be set
+		 * anymore, but ProcWaitForSignal() can return for other signals as
+		 * well.  We take care to only reset the flag if we're the waiter, as
+		 * theoretically another backend could have started waiting. That's
+		 * impossible with the current usages due to table level locking, but
+		 * better be safe.
+		 */
+		LockBufHdr(bufHdr);
+		if ((bufHdr->flags & BM_PIN_COUNT_WAITER) != 0 &&
+			bufHdr->wait_backend_pid == MyProcPid)
+			bufHdr->flags &= ~BM_PIN_COUNT_WAITER;
+		UnlockBufHdr(bufHdr);
 
 		PinCountWaitBuf = NULL;
 		/* Loop back and try again */

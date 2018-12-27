@@ -94,8 +94,15 @@ psql_start_test(const char *testname,
 	add_stringlist_item(expectfiles, expectfile);
 
 	if (launcher)
+	{
 		offset += snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset,
 						   "%s ", launcher);
+		if (offset >= sizeof(psql_cmd))
+		{
+			fprintf(stderr, _("command too long\n"));
+			exit(2);
+		}
+	}
 
 	/*
 	 * We need to pass multiple input files (prehook and infile) to psql,
@@ -116,17 +123,22 @@ psql_start_test(const char *testname,
 	 *     $(cat prehook infile)
 	 *     EOF
 	 */
-	snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset,
-			 "%s \"%s%spsql\" -X -a -q -d \"%s\" > \"%s\" 2>&1 <<EOF\n"
-			 "$(cat \"%s\" \"%s\")\n"
-			 "EOF",
-			 use_utility_mode ? "env PGOPTIONS='-c gp_session_role=utility'" : "",
-			 psqldir ? psqldir : "",
-			 psqldir ? "/" : "",
-			 dblist->str,
-			 outfile,
-			 prehook[0] ? prehook : "/dev/null",
-			 infile);
+	offset += snprintf(psql_cmd + offset, sizeof(psql_cmd) - offset,
+					   "%s \"%s%spsql\" -X -a -q -d \"%s\" > \"%s\" 2>&1 <<EOF\n"
+					   "$(cat \"%s\" \"%s\")\n"
+					   "EOF",
+					   use_utility_mode ? "env PGOPTIONS='-c gp_session_role=utility'" : "",
+					   psqldir ? psqldir : "",
+					   psqldir ? "/" : "",
+					   dblist->str,
+					   outfile,
+					   prehook[0] ? prehook : "/dev/null",
+					   infile);
+	if (offset >= sizeof(psql_cmd))
+	{
+		fprintf(stderr, _("command too long\n"));
+		exit(2);
+	}
 
 	pid = spawn_process(psql_cmd);
 

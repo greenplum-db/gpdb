@@ -426,7 +426,7 @@ CatCacheRemoveCList(CatCache *cache, CatCList *cl)
 
 
 /*
- *	CatalogCacheIdInvalidate
+ *	CatCacheInvalidate
  *
  *	Invalidate entries in the specified cache, given a hash value.
  *
@@ -444,71 +444,57 @@ CatCacheRemoveCList(CatCache *cache, CatCList *cl)
  *	This routine is only quasi-public: it should only be used by inval.c.
  */
 void
-CatalogCacheIdInvalidate(int cacheId, uint32 hashValue)
+CatCacheInvalidate(CatCache *cache, uint32 hashValue)
 {
-	slist_iter	cache_iter;
+	Index		hashIndex;
+	dlist_mutable_iter iter;
 
-	CACHE1_elog(DEBUG2, "CatalogCacheIdInvalidate: called");
+	CACHE1_elog(DEBUG2, "CatCacheInvalidate: called");
 
 	/*
-	 * inspect caches to find the proper cache
+	 * We don't bother to check whether the cache has finished initialization
+	 * yet; if not, there will be no entries in it so no problem.
 	 */
-	slist_foreach(cache_iter, &CacheHdr->ch_caches)
+
+	/*
+	 * Invalidate *all* CatCLists in this cache; it's too hard to tell which
+	 * searches might still be correct, so just zap 'em all.
+	 */
+	dlist_foreach_modify(iter, &cache->cc_lists)
 	{
-		CatCache   *ccp = slist_container(CatCache, cc_next, cache_iter.cur);
-		Index		hashIndex;
-		dlist_mutable_iter iter;
+		CatCList   *cl = dlist_container(CatCList, cache_elem, iter.cur);
 
-		if (cacheId != ccp->id)
-			continue;
+		if (cl->refcount > 0)
+			cl->dead = true;
+		else
+			CatCacheRemoveCList(cache, cl);
+	}
 
-		/*
-		 * We don't bother to check whether the cache has finished
-		 * initialization yet; if not, there will be no entries in it so no
-		 * problem.
-		 */
+	/*
+	 * inspect the proper hash bucket for tuple matches
+	 */
+	hashIndex = HASH_INDEX(hashValue, cache->cc_nbuckets);
+	dlist_foreach_modify(iter, &cache->cc_bucket[hashIndex])
+	{
+		CatCTup    *ct = dlist_container(CatCTup, cache_elem, iter.cur);
 
-		/*
-		 * Invalidate *all* CatCLists in this cache; it's too hard to tell
-		 * which searches might still be correct, so just zap 'em all.
-		 */
-		dlist_foreach_modify(iter, &ccp->cc_lists)
+		if (hashValue == ct->hash_value)
 		{
-			CatCList   *cl = dlist_container(CatCList, cache_elem, iter.cur);
-
-			if (cl->refcount > 0)
-				cl->dead = true;
-			else
-				CatCacheRemoveCList(ccp, cl);
-		}
-
-		/*
-		 * inspect the proper hash bucket for tuple matches
-		 */
-		hashIndex = HASH_INDEX(hashValue, ccp->cc_nbuckets);
-		dlist_foreach_modify(iter, &ccp->cc_bucket[hashIndex])
-		{
-			CatCTup    *ct = dlist_container(CatCTup, cache_elem, iter.cur);
-
-			if (hashValue == ct->hash_value)
+			if (ct->refcount > 0 ||
+				(ct->c_list && ct->c_list->refcount > 0))
 			{
-				if (ct->refcount > 0 ||
-					(ct->c_list && ct->c_list->refcount > 0))
-				{
-					ct->dead = true;
-					/* list, if any, was marked dead above */
-					Assert(ct->c_list == NULL || ct->c_list->dead);
-				}
-				else
-					CatCacheRemoveCTup(ccp, ct);
-				CACHE1_elog(DEBUG2, "CatalogCacheIdInvalidate: invalidated");
-#ifdef CATCACHE_STATS
-				ccp->cc_invals++;
-#endif
-				/* could be multiple matches, so keep looking! */
+				ct->dead = true;
+				/* list, if any, was marked dead above */
+				Assert(ct->c_list == NULL || ct->c_list->dead);
 			}
+			else
+				CatCacheRemoveCTup(cache, ct);
+			CACHE1_elog(DEBUG2, "CatCacheInvalidate: invalidated");
+#ifdef CATCACHE_STATS
+			cache->cc_invals++;
+#endif
+			/* could be multiple matches, so keep looking! */
 		}
-		break;					/* need only search this one cache */
 	}
 }
 
@@ -540,60 +526,6 @@ CreateCacheMemoryContext(void)
 												   ALLOCSET_DEFAULT_MAXSIZE);
 }
 
-
-/*
- *		AtEOXact_CatCache
- *
- * Clean up catcaches at end of main transaction (either commit or abort)
- *
- * As of PostgreSQL 8.1, catcache pins should get released by the
- * ResourceOwner mechanism.  This routine is just a debugging
- * cross-check that no pins remain.
- */
-void
-AtEOXact_CatCache(bool isCommit)
-{
-#ifdef USE_ASSERT_CHECKING
-	if (assert_enabled)
-	{
-		slist_iter	cache_iter;
-
-		slist_foreach(cache_iter, &CacheHdr->ch_caches)
-		{
-			CatCache   *ccp = slist_container(CatCache, cc_next, cache_iter.cur);
-			dlist_iter	iter;
-			int			i;
-
-			/* Check CatCLists */
-			dlist_foreach(iter, &ccp->cc_lists)
-			{
-				CatCList   *cl;
-
-				cl = dlist_container(CatCList, cache_elem, iter.cur);
-				Assert(cl->cl_magic == CL_MAGIC);
-				Assert(cl->refcount == 0);
-				Assert(!cl->dead);
-			}
-
-			/* Check individual tuples */
-			for (i = 0; i < ccp->cc_nbuckets; i++)
-			{
-				dlist_head *bucket = &ccp->cc_bucket[i];
-
-				dlist_foreach(iter, bucket)
-				{
-					CatCTup    *ct;
-
-					ct = dlist_container(CatCTup, cache_elem, iter.cur);
-					Assert(ct->ct_magic == CT_MAGIC);
-					Assert(ct->refcount == 0);
-					Assert(!ct->dead);
-				}
-			}
-		}
-	}
-#endif
-}
 
 /*
  *		ResetCatalogCache
@@ -1875,7 +1807,7 @@ build_dummy_tuple(CatCache *cache, int nkeys, ScanKey skeys)
  *	the specified relation, find all catcaches it could be in, compute the
  *	correct hash value for each such catcache, and call the specified
  *	function to record the cache id and hash value in inval.c's lists.
- *	CatalogCacheIdInvalidate will be called later, if appropriate,
+ *	SysCacheInvalidate will be called later, if appropriate,
  *	using the recorded information.
  *
  *	For an insert or delete, tuple is the target tuple and newtuple is NULL.

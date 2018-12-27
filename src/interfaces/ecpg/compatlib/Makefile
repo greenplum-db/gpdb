@@ -23,11 +23,11 @@ SO_MAJOR_VERSION= 3
 SO_MINOR_VERSION= 6
 
 override CPPFLAGS := -I../include -I$(top_srcdir)/src/interfaces/ecpg/include \
-	-I$(libpq_srcdir) -I$(top_srcdir)/src/include/utils $(CPPFLAGS)
+	-I$(libpq_srcdir) -I$(top_srcdir)/src/include/utils -DFRONTEND $(CPPFLAGS)
 override CFLAGS += $(PTHREAD_CFLAGS)
 
-SHLIB_LINK = -L../ecpglib -lecpg -L../pgtypeslib -lpgtypes $(libpq) \
-	$(filter -lintl -lm, $(LIBS)) $(PTHREAD_LIBS)
+SHLIB_LINK_INTERNAL = -L../ecpglib -lecpg -L../pgtypeslib -lpgtypes $(libpq)
+SHLIB_LINK = $(filter -lintl -lm, $(LIBS)) $(PTHREAD_LIBS)
 SHLIB_PREREQS = submake-ecpglib submake-pgtypeslib
 
 # For a bug in gcc on centos 32-bit

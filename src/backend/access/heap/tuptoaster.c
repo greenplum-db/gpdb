@@ -70,8 +70,9 @@ static void toast_close_indexes(Relation *toastidxs, int num_indexes,
  *
  * This will return a datum that contains all the data internally, ie, not
  * relying on external storage or memory, but it can still be compressed or
- * have a short header.
- ----------
+ * have a short header.  Note some callers assume that if the input is an
+ * EXTERNAL datum, the result will be a pfree'able chunk.
+ * ----------
  */
 struct varlena *
 heap_tuple_fetch_attr(struct varlena * attr)
@@ -88,9 +89,7 @@ heap_tuple_fetch_attr(struct varlena * attr)
 	else if (VARATT_IS_EXTERNAL_INDIRECT(attr))
 	{
 		/*
-		 * copy into the caller's memory context. That's not required in all
-		 * cases but sufficient for now since this is mainly used when we need
-		 * to persist a Datum for unusually long time, like in a HOLD cursor.
+		 * This is an indirect pointer --- dereference it
 		 */
 		struct varatt_indirect redirect;
 
@@ -100,11 +99,14 @@ heap_tuple_fetch_attr(struct varlena * attr)
 		/* nested indirect Datums aren't allowed */
 		Assert(!VARATT_IS_EXTERNAL_INDIRECT(attr));
 
-		/* doesn't make much sense, but better handle it */
-		if (VARATT_IS_EXTERNAL_ONDISK(attr))
+		/* recurse if value is still external in some other way */
+		if (VARATT_IS_EXTERNAL(attr))
 			return heap_tuple_fetch_attr(attr);
 
-		/* copy datum verbatim */
+		/*
+		 * Copy into the caller's memory context, in case caller tries to
+		 * pfree the result.
+		 */
 		result = (struct varlena *) palloc(VARSIZE_ANY(attr));
 		memcpy(result, attr, VARSIZE_ANY(attr));
 	}
@@ -235,7 +237,10 @@ varattrib_untoast_ptr_len(Datum d, char **datastart, int *len, void **tofree)
  * heap_tuple_untoast_attr -
  *
  *	Public entry point to get back a toasted value from compression
- *	or external storage.
+ *	or external storage.  The result is always non-extended varlena form.
+ *
+ * Note some callers assume that if the input is an EXTERNAL or COMPRESSED
+ * datum, the result will be a pfree'able chunk.
  * ----------
  */
 struct varlena *
@@ -260,6 +265,9 @@ heap_tuple_untoast_attr(struct varlena * attr)
 	}
 	else if (VARATT_IS_EXTERNAL_INDIRECT(attr))
 	{
+		/*
+		 * This is an indirect pointer --- dereference it
+		 */
 		struct varatt_indirect redirect;
 
 		VARATT_EXTERNAL_GET_POINTER(redirect, attr);
@@ -268,7 +276,18 @@ heap_tuple_untoast_attr(struct varlena * attr)
 		/* nested indirect Datums aren't allowed */
 		Assert(!VARATT_IS_EXTERNAL_INDIRECT(attr));
 
+		/* recurse in case value is still extended in some other way */
 		attr = heap_tuple_untoast_attr(attr);
+
+		/* if it isn't, we'd better copy it */
+		if (attr == (struct varlena *) redirect.pointer)
+		{
+			struct varlena *result;
+
+			result = (struct varlena *) palloc(VARSIZE_ANY(attr));
+			memcpy(result, attr, VARSIZE_ANY(attr));
+			attr = result;
+		}
 	}
 	else if (VARATT_IS_COMPRESSED(attr))
 	{
@@ -343,6 +362,8 @@ heap_tuple_untoast_attr_slice(struct varlena * attr,
 	}
 	else
 		preslice = attr;
+
+	Assert(!VARATT_IS_EXTERNAL(preslice));
 
 	if (VARATT_IS_COMPRESSED(preslice))
 	{
@@ -564,8 +585,6 @@ toast_delete(Relation rel, GenericTuple oldtup, MemTupleBinding *pbind)
 				continue;
 			else if (VARATT_IS_EXTERNAL_ONDISK(PointerGetDatum(value)))
 				toast_delete_datum(rel, value);
-			else if (VARATT_IS_EXTERNAL_INDIRECT(PointerGetDatum(value)))
-				elog(ERROR, "attempt to delete tuple containing indirect datums");
 		}
 	}
 }
@@ -757,7 +776,8 @@ toast_insert_or_update_generic(Relation rel, GenericTuple newtup, GenericTuple o
 
 			/*
 			 * We took care of UPDATE above, so any external value we find
-			 * still in the tuple must be someone else's we cannot reuse.
+			 * still in the tuple must be someone else's that we cannot reuse
+			 * (this includes the case of an out-of-line in-memory datum).
 			 * Fetch it back (without decompression, unless we are forcing
 			 * PLAIN storage).  If necessary, we'll push it out as a new
 			 * external value below.
@@ -1253,7 +1273,7 @@ toast_flatten_tuple(HeapTuple tup, TupleDesc tupleDesc)
 			new_value = (struct varlena *) DatumGetPointer(toast_values[i]);
 			if (VARATT_IS_EXTERNAL(new_value))
 			{
-				new_value = toast_fetch_datum(new_value);
+				new_value = heap_tuple_fetch_attr(new_value);
 				toast_values[i] = PointerGetDatum(new_value);
 				toast_free[i] = true;
 			}
@@ -1899,7 +1919,9 @@ toast_delete_datum(Relation rel __attribute__((unused)), Datum value)
 /* ----------
  * toastrel_valueid_exists -
  *
- *	Test whether a toast value with the given ID exists in the toast relation
+ *	Test whether a toast value with the given ID exists in the toast relation.
+ *	For safety, we consider a value to exist if there are either live or dead
+ *	toast rows with that ID; see notes for GetNewOid().
  * ----------
  */
 static bool
@@ -1931,7 +1953,7 @@ toastrel_valueid_exists(Relation toastrel, Oid valueid)
 	 */
 	toastscan = systable_beginscan(toastrel,
 								   RelationGetRelid(toastidxs[validIndex]),
-								   true, SnapshotToast, 1, &toastkey);
+								   true, SnapshotAny, 1, &toastkey);
 
 	if (systable_getnext(toastscan) != NULL)
 		result = true;
@@ -1995,8 +2017,8 @@ toast_fetch_datum(struct varlena * attr)
 	int			num_indexes;
 	int			validIndex;
 
-	if (VARATT_IS_EXTERNAL_INDIRECT(attr))
-		elog(ERROR, "shouldn't be called for indirect tuples");
+	if (!VARATT_IS_EXTERNAL_ONDISK(attr))
+		elog(ERROR, "toast_fetch_datum shouldn't be called for non-ondisk datums");
 
 	/*
 	 * GPDB: start with the assumption that chunks max out at
@@ -2207,7 +2229,8 @@ toast_fetch_datum_slice(struct varlena * attr, int32 sliceoffset, int32 length)
 	 */
 	int32		actual_max_chunk_size = TOAST_MAX_CHUNK_SIZE;
 
-	Assert(VARATT_IS_EXTERNAL_ONDISK(attr));
+	if (!VARATT_IS_EXTERNAL_ONDISK(attr))
+		elog(ERROR, "toast_fetch_datum_slice shouldn't be called for non-ondisk datums");
 
 	/* Must copy to access aligned fields */
 	VARATT_EXTERNAL_GET_POINTER(toast_pointer, attr);
@@ -2516,7 +2539,7 @@ toast_open_indexes(Relation toastrel,
 	 * wrong if there is nothing.
 	 */
 	if (!found)
-		elog(ERROR, "no valid index found for toast relation with Oid %d",
+		elog(ERROR, "no valid index found for toast relation with Oid %u",
 			 RelationGetRelid(toastrel));
 
 	return res;

@@ -508,9 +508,7 @@ create_lateral_join_info(PlannerInfo *root)
 				Assert(false);
 		}
 
-		/* We now know all the relids needed for lateral refs in this rel */
-		if (bms_is_empty(lateral_relids))
-			continue;			/* ensure lateral_relids is NULL if empty */
+		/* We now have all the direct lateral refs from this rel */
 		brel->lateral_relids = lateral_relids;
 	}
 
@@ -518,6 +516,14 @@ create_lateral_join_info(PlannerInfo *root)
 	 * Now check for lateral references within PlaceHolderVars, and make
 	 * LateralJoinInfos describing each such reference.  Unlike references in
 	 * unflattened LATERAL RTEs, the referencing location could be a join.
+	 *
+	 * For a PHV that is due to be evaluated at a join, we mark each of the
+	 * join's member baserels as having the PHV's lateral references too. Even
+	 * though the baserels could be scanned without considering those lateral
+	 * refs, we will never be able to form the join except as a path
+	 * parameterized by the lateral refs, so there is no point in considering
+	 * unparameterized paths for the baserels; and we mustn't try to join any
+	 * of those baserels to the lateral refs too soon, either.
 	 */
 	foreach(lc, root->placeholder_list)
 	{
@@ -530,6 +536,7 @@ create_lateral_join_info(PlannerInfo *root)
 											   PVC_RECURSE_AGGREGATES,
 											   PVC_INCLUDE_PLACEHOLDERS);
 			ListCell   *lc2;
+			int			ev_at;
 
 			foreach(lc2, vars)
 			{
@@ -559,6 +566,15 @@ create_lateral_join_info(PlannerInfo *root)
 			}
 
 			list_free(vars);
+
+			eval_at = bms_copy(eval_at);
+			while ((ev_at = bms_first_member(eval_at)) >= 0)
+			{
+				RelOptInfo *brel = find_base_rel(root, ev_at);
+
+				brel->lateral_relids = bms_add_members(brel->lateral_relids,
+													   phinfo->ph_lateral);
+			}
 		}
 	}
 
@@ -567,12 +583,88 @@ create_lateral_join_info(PlannerInfo *root)
 		return;
 
 	/*
-	 * Now that we've identified all lateral references, make a second pass in
-	 * which we mark each baserel with the set of relids of rels that
-	 * reference it laterally (essentially, the inverse mapping of
-	 * lateral_relids).  We'll need this for join_clause_is_movable_to().
+	 * At this point the lateral_relids sets represent only direct lateral
+	 * references.  Replace them by their transitive closure, so that they
+	 * describe both direct and indirect lateral references.  If relation X
+	 * references Y laterally, and Y references Z laterally, then we will have
+	 * to scan X on the inside of a nestloop with Z, so for all intents and
+	 * purposes X is laterally dependent on Z too.
 	 *
-	 * Also, propagate lateral_relids and lateral_referencers from appendrel
+	 * This code is essentially Warshall's algorithm for transitive closure.
+	 * The outer loop considers each baserel, and propagates its lateral
+	 * dependencies to those baserels that have a lateral dependency on it.
+	 */
+	for (rti = 1; rti < root->simple_rel_array_size; rti++)
+	{
+		RelOptInfo *brel = root->simple_rel_array[rti];
+		Relids		outer_lateral_relids;
+		Index		rti2;
+
+		if (brel == NULL || brel->reloptkind != RELOPT_BASEREL)
+			continue;
+
+		/* need not consider baserel further if it has no lateral refs */
+		outer_lateral_relids = brel->lateral_relids;
+		if (outer_lateral_relids == NULL)
+			continue;
+
+		/* else scan all baserels */
+		for (rti2 = 1; rti2 < root->simple_rel_array_size; rti2++)
+		{
+			RelOptInfo *brel2 = root->simple_rel_array[rti2];
+
+			if (brel2 == NULL || brel2->reloptkind != RELOPT_BASEREL)
+				continue;
+
+			/* if brel2 has lateral ref to brel, propagate brel's refs */
+			if (bms_is_member(rti, brel2->lateral_relids))
+				brel2->lateral_relids = bms_add_members(brel2->lateral_relids,
+														outer_lateral_relids);
+		}
+	}
+
+	/*
+	 * Now that we've identified all lateral references, mark each baserel
+	 * with the set of relids of rels that reference it laterally (possibly
+	 * indirectly) --- that is, the inverse mapping of lateral_relids.
+	 */
+	for (rti = 1; rti < root->simple_rel_array_size; rti++)
+	{
+		RelOptInfo *brel = root->simple_rel_array[rti];
+		Relids		lateral_relids;
+		int			rti2;
+
+		if (brel == NULL || brel->reloptkind != RELOPT_BASEREL)
+			continue;
+
+		/* Nothing to do at rels with no lateral refs */
+		lateral_relids = brel->lateral_relids;
+		if (lateral_relids == NULL)
+			continue;
+
+		/*
+		 * We should not have broken the invariant that lateral_relids is
+		 * exactly NULL if empty.
+		 */
+		Assert(!bms_is_empty(lateral_relids));
+
+		/* Also, no rel should have a lateral dependency on itself */
+		Assert(!bms_is_member(rti, lateral_relids));
+
+		/* Mark this rel's referencees */
+		lateral_relids = bms_copy(lateral_relids);
+		while ((rti2 = bms_first_member(lateral_relids)) >= 0)
+		{
+			RelOptInfo *brel2 = root->simple_rel_array[rti2];
+
+			Assert(brel2 != NULL && brel2->reloptkind == RELOPT_BASEREL);
+			brel2->lateral_referencers =
+				bms_add_member(brel2->lateral_referencers, rti);
+		}
+	}
+
+	/*
+	 * Lastly, propagate lateral_relids and lateral_referencers from appendrel
 	 * parent rels to their child rels.  We intentionally give each child rel
 	 * the same minimum parameterization, even though it's quite possible that
 	 * some don't reference all the lateral rels.  This is because any append
@@ -584,29 +676,10 @@ create_lateral_join_info(PlannerInfo *root)
 	for (rti = 1; rti < root->simple_rel_array_size; rti++)
 	{
 		RelOptInfo *brel = root->simple_rel_array[rti];
-		Relids		lateral_referencers;
 
-		if (brel == NULL)
-			continue;
-		if (brel->reloptkind != RELOPT_BASEREL)
+		if (brel == NULL || brel->reloptkind != RELOPT_BASEREL)
 			continue;
 
-		/* Compute lateral_referencers using the finished lateral_info_list */
-		lateral_referencers = NULL;
-		foreach(lc, root->lateral_info_list)
-		{
-			LateralJoinInfo *ljinfo = (LateralJoinInfo *) lfirst(lc);
-
-			if (bms_is_member(brel->relid, ljinfo->lateral_lhs))
-				lateral_referencers = bms_add_members(lateral_referencers,
-													  ljinfo->lateral_rhs);
-		}
-		brel->lateral_referencers = lateral_referencers;
-
-		/*
-		 * If it's an appendrel parent, copy its lateral_relids and
-		 * lateral_referencers to each child rel.
-		 */
 		if (root->simple_rte_array[rti]->inh)
 		{
 			foreach(lc, root->append_rel_list)
@@ -1198,13 +1271,39 @@ make_outerjoininfo(PlannerInfo *root,
 	min_righthand = bms_int_members(bms_union(clause_relids, inner_join_rels),
 									right_rels);
 
+	/*
+	 * Now check previous outer joins for ordering restrictions.
+	 */
 	foreach(l, root->join_info_list)
 	{
 		SpecialJoinInfo *otherinfo = (SpecialJoinInfo *) lfirst(l);
 
-		/* ignore full joins --- other mechanisms preserve their ordering */
+		/*
+		 * A full join is an optimization barrier: we can't associate into or
+		 * out of it.  Hence, if it overlaps either LHS or RHS of the current
+		 * rel, expand that side's min relset to cover the whole full join.
+		 */
 		if (otherinfo->jointype == JOIN_FULL)
+		{
+			if (bms_overlap(left_rels, otherinfo->syn_lefthand) ||
+				bms_overlap(left_rels, otherinfo->syn_righthand))
+			{
+				min_lefthand = bms_add_members(min_lefthand,
+											   otherinfo->syn_lefthand);
+				min_lefthand = bms_add_members(min_lefthand,
+											   otherinfo->syn_righthand);
+			}
+			if (bms_overlap(right_rels, otherinfo->syn_lefthand) ||
+				bms_overlap(right_rels, otherinfo->syn_righthand))
+			{
+				min_righthand = bms_add_members(min_righthand,
+												otherinfo->syn_lefthand);
+				min_righthand = bms_add_members(min_righthand,
+												otherinfo->syn_righthand);
+			}
+			/* Needn't do anything else with the full join */
 			continue;
+		}
 
 		/*
 		 * For a lower OJ in our LHS, if our join condition uses the lower
@@ -1237,8 +1336,14 @@ make_outerjoininfo(PlannerInfo *root,
 		 * For a lower OJ in our RHS, if our join condition does not use the
 		 * lower join's RHS and the lower OJ's join condition is strict, we
 		 * can interchange the ordering of the two OJs; otherwise we must add
-		 * lower OJ's full syntactic relset to min_righthand.  Here, we must
-		 * preserve ordering anyway if either the current join is a semijoin,
+		 * the lower OJ's full syntactic relset to min_righthand.
+		 *
+		 * Also, if our join condition does not use the lower join's LHS
+		 * either, force the ordering to be preserved.  Otherwise we can end
+		 * up with SpecialJoinInfos with identical min_righthands, which can
+		 * confuse join_is_legal (see discussion in backend/optimizer/README).
+		 *
+		 * Also, we must preserve ordering anyway if either the current join
 		 * or the lower OJ is either a semijoin or an antijoin.
 		 *
 		 * Here, we have to consider that "our join condition" includes any
@@ -1255,7 +1360,9 @@ make_outerjoininfo(PlannerInfo *root,
 		if (bms_overlap(right_rels, otherinfo->syn_righthand))
 		{
 			if (bms_overlap(clause_relids, otherinfo->syn_righthand) ||
+				!bms_overlap(clause_relids, otherinfo->min_lefthand) ||
 				jointype == JOIN_SEMI ||
+				jointype == JOIN_ANTI ||
 				otherinfo->jointype == JOIN_SEMI ||
 				otherinfo->jointype == JOIN_ANTI ||
 				!otherinfo->lhs_strict || otherinfo->delay_upper_joins)
@@ -1496,6 +1603,11 @@ distribute_qual_to_rels(PlannerInfo *root, Node *clause,
 	 * attach quals to the lowest level where they can be evaluated.  But
 	 * if we were ever to re-introduce a mechanism for delaying evaluation
 	 * of "expensive" quals, this area would need work.
+	 *
+	 * Note: generally, use of is_pushed_down has to go through the macro
+	 * RINFO_IS_PUSHED_DOWN, because that flag alone is not always sufficient
+	 * to tell whether a clause must be treated as pushed-down in context.
+	 * This seems like another reason why it should perhaps be rethought.
 	 *----------
 	 */
 	if (is_deduced)

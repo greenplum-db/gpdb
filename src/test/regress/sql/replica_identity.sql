@@ -60,7 +60,7 @@ ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_iden
 SELECT relreplident FROM pg_class WHERE oid = 'test_replica_identity'::regclass;
 \d test_replica_identity
 
--- succeed, nondeferrable unique constraint over nonullable cols
+-- succeed, nondeferrable unique constraint over nonnullable cols
 ALTER TABLE test_replica_identity REPLICA IDENTITY USING INDEX test_replica_identity_unique_nondefer;
 
 -- succeed unique index over nonnullable cols

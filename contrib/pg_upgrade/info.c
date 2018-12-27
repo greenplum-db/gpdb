@@ -518,7 +518,7 @@ get_rel_infos(ClusterInfo *cluster, DbInfo *dbinfo)
 	}
 
 	/*
-	 * pg_largeobject contains user data that does not appear in pg_dumpall
+	 * pg_largeobject contains user data that does not appear in pg_dump
 	 * --schema-only output, so we have to copy that system table heap and
 	 * index.  We could grab the pg_largeobject oids from template1, but it is
 	 * easy to treat it as a normal table. Order by oid so we can join old/new

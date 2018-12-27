@@ -196,6 +196,14 @@ AuxiliaryProcessMain(int argc, char *argv[])
 
 	MyStartTime = time(NULL);
 
+	/*
+	 * Initialize random() for the first time, like PostmasterMain() would.
+	 * In a regular IsUnderPostmaster backend, BackendRun() computes a
+	 * high-entropy seed before any user query.  Fewer distinct initial seeds
+	 * can occur here.
+	 */
+	srandom((unsigned int) (MyProcPid ^ MyStartTime));
+
 	/* Compute paths, if we didn't inherit them from postmaster */
 	if (my_exec_path[0] == '\0')
 	{
@@ -405,6 +413,12 @@ AuxiliaryProcessMain(int argc, char *argv[])
 			proc_exit(1);		/* should never return */
 
 		case BootstrapProcess:
+			/*
+			 * There was a brief instant during which mode was Normal; this is
+			 * okay.  We need to be in bootstrap mode during BootStrapXLOG for
+			 * the sake of multixact initialization.
+			 */
+			SetProcessingMode(BootstrapProcessing);
 			bootstrap_signals();
 			BootStrapXLOG();
 			BootstrapModeMain();
@@ -467,8 +481,7 @@ BootstrapModeMain(void)
 	int			i;
 
 	Assert(!IsUnderPostmaster);
-
-	SetProcessingMode(BootstrapProcessing);
+	Assert(IsBootstrapProcessingMode());
 
 	/*
 	 * Do backend-like initialization for bootstrap mode
@@ -1031,38 +1044,33 @@ AllocateAttribute(void)
 	return attribute;
 }
 
-/* ----------------
+/*
  *		MapArrayTypeName
- * XXX arrays of "basetype" are always "_basetype".
- *	   this is an evil hack inherited from rel. 3.1.
- * XXX array dimension is thrown away because we
- *	   don't support fixed-dimension arrays.  again,
- *	   sickness from 3.1.
  *
- * the string passed in must have a '[' character in it
+ * Given a type name, produce the corresponding array type name by prepending
+ * '_' and truncating as needed to fit in NAMEDATALEN-1 bytes.  This is only
+ * used in bootstrap mode, so we can get away with assuming that the input is
+ * ASCII and we don't need multibyte-aware truncation.
  *
- * the string returned is a pointer to static storage and should NOT
- * be freed by the CALLER.
- * ----------------
+ * The given string normally ends with '[]' or '[digits]'; we discard that.
+ *
+ * The result is a palloc'd string.
  */
 char *
-MapArrayTypeName(char *s)
+MapArrayTypeName(const char *s)
 {
 	int			i,
 				j;
-	static char newStr[NAMEDATALEN];	/* array type names < NAMEDATALEN long */
+	char		newStr[NAMEDATALEN];
 
-	if (s == NULL || s[0] == '\0')
-		return s;
-
-	j = 1;
 	newStr[0] = '_';
-	for (i = 0; i < NAMEDATALEN - 1 && s[i] != '['; i++, j++)
+	j = 1;
+	for (i = 0; i < NAMEDATALEN - 2 && s[i] != '['; i++, j++)
 		newStr[j] = s[i];
 
 	newStr[j] = '\0';
 
-	return newStr;
+	return pstrdup(newStr);
 }
 
 

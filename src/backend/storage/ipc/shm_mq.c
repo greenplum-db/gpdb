@@ -142,6 +142,8 @@ static shm_mq_result shm_mq_send_bytes(shm_mq_handle *mq, Size nbytes,
 				  void *data, bool nowait, Size *bytes_written);
 static shm_mq_result shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed,
 					 bool nowait, Size *nbytesp, void **datap);
+static bool shm_mq_counterparty_gone(volatile shm_mq *mq,
+						 BackgroundWorkerHandle *handle);
 static bool shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
 					 BackgroundWorkerHandle *handle);
 static uint64 shm_mq_get_bytes_read(volatile shm_mq *mq, bool *detached);
@@ -374,7 +376,7 @@ shm_mq_send(shm_mq_handle *mqh, Size nbytes, void *data, bool nowait)
  * it will point to a temporary buffer.  This mostly avoids data copying in
  * the hoped-for case where messages are short compared to the buffer size,
  * while still allowing longer messages.  In either case, the return value
- * remains valid until the next receive operation is perfomed on the queue.
+ * remains valid until the next receive operation is performed on the queue.
  *
  * When nowait = false, we'll wait on our process latch when the ring buffer
  * is empty and we have not yet received a full message.  The sender will
@@ -403,8 +405,27 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 	{
 		if (nowait)
 		{
+			int			counterparty_gone;
+
+			/*
+			 * We shouldn't return at this point at all unless the sender
+			 * hasn't attached yet.  However, the correct return value depends
+			 * on whether the sender is still attached.  If we first test
+			 * whether the sender has ever attached and then test whether the
+			 * sender has detached, there's a race condition: a sender that
+			 * attaches and detaches very quickly might fool us into thinking
+			 * the sender never attached at all.  So, test whether our
+			 * counterparty is definitively gone first, and only afterwards
+			 * check whether the sender ever attached in the first place.
+			 */
+			counterparty_gone = shm_mq_counterparty_gone(mq, mqh->mqh_handle);
 			if (shm_mq_get_sender(mq) == NULL)
-				return SHM_MQ_WOULD_BLOCK;
+			{
+				if (counterparty_gone)
+					return SHM_MQ_DETACHED;
+				else
+					return SHM_MQ_WOULD_BLOCK;
+			}
 		}
 		else if (!shm_mq_wait_internal(mq, &mq->mq_sender, mqh->mqh_handle)
 				 && shm_mq_get_sender(mq) == NULL)
@@ -488,7 +509,7 @@ shm_mq_receive(shm_mq_handle *mqh, Size *nbytesp, void **datap, bool nowait)
 			if (mqh->mqh_partial_bytes + rb > sizeof(Size))
 				lengthbytes = sizeof(Size) - mqh->mqh_partial_bytes;
 			else
-				lengthbytes = rb - mqh->mqh_partial_bytes;
+				lengthbytes = rb;
 			memcpy(&mqh->mqh_buffer[mqh->mqh_partial_bytes], rawdata,
 				   lengthbytes);
 			mqh->mqh_partial_bytes += lengthbytes;
@@ -676,31 +697,47 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, void *data, bool nowait,
 
 		/* Bail out if the queue has been detached. */
 		if (detached)
-			return SHM_MQ_DETACHED;
-
-		if (available == 0)
 		{
-			shm_mq_result res;
+			*bytes_written = sent;
+			return SHM_MQ_DETACHED;
+		}
 
+		if (available == 0 && !mqh->mqh_counterparty_attached)
+		{
 			/*
 			 * The queue is full, so if the receiver isn't yet known to be
 			 * attached, we must wait for that to happen.
 			 */
-			if (!mqh->mqh_counterparty_attached)
+			if (nowait)
 			{
-				if (nowait)
+				if (shm_mq_counterparty_gone(mq, mqh->mqh_handle))
 				{
-					if (shm_mq_get_receiver(mq) == NULL)
-						return SHM_MQ_WOULD_BLOCK;
-				}
-				else if (!shm_mq_wait_internal(mq, &mq->mq_receiver,
-											   mqh->mqh_handle))
-				{
-					mq->mq_detached = true;
+					*bytes_written = sent;
 					return SHM_MQ_DETACHED;
 				}
-				mqh->mqh_counterparty_attached = true;
+				if (shm_mq_get_receiver(mq) == NULL)
+				{
+					*bytes_written = sent;
+					return SHM_MQ_WOULD_BLOCK;
+				}
 			}
+			else if (!shm_mq_wait_internal(mq, &mq->mq_receiver,
+										   mqh->mqh_handle))
+			{
+				mq->mq_detached = true;
+				*bytes_written = sent;
+				return SHM_MQ_DETACHED;
+			}
+			mqh->mqh_counterparty_attached = true;
+
+			/*
+			 * The receiver may have read some data after attaching, so we
+			 * must not wait without rechecking the queue state.
+			 */
+		}
+		else if (available == 0)
+		{
+			shm_mq_result res;
 
 			/* Let the receiver know that we need them to read some data. */
 			res = shm_mq_notify_receiver(mq);
@@ -726,11 +763,11 @@ shm_mq_send_bytes(shm_mq_handle *mqh, Size nbytes, void *data, bool nowait,
 			 */
 			WaitLatch(&MyProc->procLatch, WL_LATCH_SET, 0);
 
-			/* An interrupt may have occurred while we were waiting. */
-			CHECK_FOR_INTERRUPTS();
-
 			/* Reset the latch so we don't spin. */
 			ResetLatch(&MyProc->procLatch);
+
+			/* An interrupt may have occurred while we were waiting. */
+			CHECK_FOR_INTERRUPTS();
 		}
 		else
 		{
@@ -823,12 +860,51 @@ shm_mq_receive_bytes(shm_mq *mq, Size bytes_needed, bool nowait,
 		 */
 		WaitLatch(&MyProc->procLatch, WL_LATCH_SET, 0);
 
-		/* An interrupt may have occurred while we were waiting. */
-		CHECK_FOR_INTERRUPTS();
-
 		/* Reset the latch so we don't spin. */
 		ResetLatch(&MyProc->procLatch);
+
+		/* An interrupt may have occurred while we were waiting. */
+		CHECK_FOR_INTERRUPTS();
 	}
+}
+
+/*
+ * Test whether a counterparty who may not even be alive yet is definitely gone.
+ */
+static bool
+shm_mq_counterparty_gone(volatile shm_mq *mq, BackgroundWorkerHandle *handle)
+{
+	bool	detached;
+	pid_t	pid;
+
+	/* Acquire the lock just long enough to check the pointer. */
+	SpinLockAcquire(&mq->mq_mutex);
+	detached = mq->mq_detached;
+	SpinLockRelease(&mq->mq_mutex);
+
+	/* If the queue has been detached, counterparty is definitely gone. */
+	if (detached)
+		return true;
+
+	/* If there's a handle, check worker status. */
+	if (handle != NULL)
+	{
+		BgwHandleStatus status;
+
+		/* Check for unexpected worker death. */
+		status = GetBackgroundWorkerPid(handle, &pid);
+		if (status != BGWH_STARTED && status != BGWH_NOT_YET_STARTED)
+		{
+			/* Mark it detached, just to make it official. */
+			SpinLockAcquire(&mq->mq_mutex);
+			mq->mq_detached = true;
+			SpinLockRelease(&mq->mq_mutex);
+			return true;
+		}
+	}
+
+	/* Counterparty is not definitively gone. */
+	return false;
 }
 
 /*
@@ -890,11 +966,11 @@ shm_mq_wait_internal(volatile shm_mq *mq, PGPROC *volatile * ptr,
 			/* Wait to be signalled. */
 			WaitLatch(&MyProc->procLatch, WL_LATCH_SET, 0);
 
-			/* An interrupt may have occurred while we were waiting. */
-			CHECK_FOR_INTERRUPTS();
-
 			/* Reset the latch so we don't spin. */
 			ResetLatch(&MyProc->procLatch);
+
+			/* An interrupt may have occurred while we were waiting. */
+			CHECK_FOR_INTERRUPTS();
 		}
 	}
 	PG_CATCH();

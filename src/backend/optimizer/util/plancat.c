@@ -964,7 +964,7 @@ get_relation_constraints(PlannerInfo *root,
 			 */
 			cexpr = eval_const_expressions(root, cexpr);
 
-			cexpr = (Node *) canonicalize_qual((Expr *) cexpr);
+			cexpr = (Node *) canonicalize_qual_ext((Expr *) cexpr, true);
 
 			/* Fix Vars to have the desired varno */
 			if (varno != 1)
@@ -998,7 +998,13 @@ get_relation_constraints(PlannerInfo *root,
 												  att->attcollation,
 												  0);
 					ntest->nulltesttype = IS_NOT_NULL;
-					ntest->argisrow = type_is_rowtype(att->atttypid);
+
+					/*
+					 * argisrow=false is correct even for a composite column,
+					 * because attnotnull does not represent a SQL-spec IS NOT
+					 * NULL test in such a case, just IS DISTINCT FROM NULL.
+					 */
+					ntest->argisrow = false;
 					result = lappend(result, ntest);
 				}
 			}

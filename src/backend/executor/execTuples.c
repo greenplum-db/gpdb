@@ -1106,28 +1106,25 @@ ExecTypeFromTLInternal(List *targetList, bool hasoid, bool skipjunk)
 /*
  * ExecTypeFromExprList - build a tuple descriptor from a list of Exprs
  *
- * Caller must also supply a list of field names (String nodes).
+ * This is roughly like ExecTypeFromTL, but we work from bare expressions
+ * not TargetEntrys.  No names are attached to the tupledesc's columns.
  */
 TupleDesc
-ExecTypeFromExprList(List *exprList, List *namesList)
+ExecTypeFromExprList(List *exprList)
 {
 	TupleDesc	typeInfo;
-	ListCell   *le;
-	ListCell   *ln;
+	ListCell   *lc;
 	int			cur_resno = 1;
-
-	Assert(list_length(exprList) == list_length(namesList));
 
 	typeInfo = CreateTemplateTupleDesc(list_length(exprList), false);
 
-	forboth(le, exprList, ln, namesList)
+	foreach(lc, exprList)
 	{
-		Node	   *e = lfirst(le);
-		char	   *n = strVal(lfirst(ln));
+		Node	   *e = lfirst(lc);
 
 		TupleDescInitEntry(typeInfo,
 						   cur_resno,
-						   n,
+						   NULL,
 						   exprType(e),
 						   exprTypmod(e),
 						   0);
@@ -1138,6 +1135,54 @@ ExecTypeFromExprList(List *exprList, List *namesList)
 	}
 
 	return typeInfo;
+}
+
+/*
+ * ExecTypeSetColNames - set column names in a TupleDesc
+ *
+ * Column names must be provided as an alias list (list of String nodes).
+ *
+ * For some callers, the supplied tupdesc has a named rowtype (not RECORD)
+ * and it is moderately likely that the alias list matches the column names
+ * already present in the tupdesc.  If we do change any column names then
+ * we must reset the tupdesc's type to anonymous RECORD; but we avoid doing
+ * so if no names change.
+ */
+void
+ExecTypeSetColNames(TupleDesc typeInfo, List *namesList)
+{
+	bool		modified = false;
+	int			colno = 0;
+	ListCell   *lc;
+
+	foreach(lc, namesList)
+	{
+		char	   *cname = strVal(lfirst(lc));
+		Form_pg_attribute attr;
+
+		/* Guard against too-long names list */
+		if (colno >= typeInfo->natts)
+			break;
+		attr = typeInfo->attrs[colno++];
+
+		/* Ignore empty aliases (these must be for dropped columns) */
+		if (cname[0] == '\0')
+			continue;
+
+		/* Change tupdesc only if alias is actually different */
+		if (strcmp(cname, NameStr(attr->attname)) != 0)
+		{
+			namestrcpy(&(attr->attname), cname);
+			modified = true;
+		}
+	}
+
+	/* If we modified the tupdesc, it's now a new record type */
+	if (modified)
+	{
+		typeInfo->tdtypeid = RECORDOID;
+		typeInfo->tdtypmod = -1;
+	}
 }
 
 /*
@@ -1396,33 +1441,32 @@ do_tup_output(TupOutputState *tstate, Datum *values, bool *isnull)
  * Should only be used with a single-TEXT-attribute tupdesc.
  */
 void
-do_text_output_multiline(TupOutputState *tstate, char *text)
+do_text_output_multiline(TupOutputState *tstate, const char *txt)
 {
 	Datum		values[1];
 	bool		isnull[1] = {false};
 
-	while (*text)
+	while (*txt)
 	{
-		char	   *eol;
+		const char *eol;
 		int			len;
 
-		eol = strchr(text, '\n');
+		eol = strchr(txt, '\n');
 		if (eol)
 		{
-			len = eol - text;
-
+			len = eol - txt;
 			eol++;
 		}
 		else
 		{
-			len = strlen(text);
-			eol += len;
+			len = strlen(txt);
+			eol = txt + len;
 		}
 
-		values[0] = PointerGetDatum(cstring_to_text_with_len(text, len));
+		values[0] = PointerGetDatum(cstring_to_text_with_len(txt, len));
 		do_tup_output(tstate, values, isnull);
 		pfree(DatumGetPointer(values[0]));
-		text = eol;
+		txt = eol;
 	}
 }
 
@@ -1438,12 +1482,14 @@ end_tup_output(TupOutputState *tstate)
 /*
  * Get a system attribute from the tuple table slot.
  */
-Datum
-slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
+bool
+slot_getsysattr(TupleTableSlot *slot, int attnum, Datum *result, bool *isnull)
 {
-        Datum   result = 0;
-        Assert(!TupIsNull(slot));
+		Assert(attnum < 0);         /* else caller error */
+		if (TupIsNull(slot))
+			return false;
 
+		*result = 0;
         /* Currently, no sys attribute ever reads as NULL. */
         if (isnull)
                 *isnull = false;
@@ -1459,16 +1505,16 @@ slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
                         case SelfItemPointerAttributeNumber:
 							Assert(ItemPointerIsValid(&(htup->t_self)));
 							
-							result = PointerGetDatum(&(htup->t_self));
+							*result = PointerGetDatum(&(htup->t_self));
 							break;
                         case ObjectIdAttributeNumber:
-							result = ObjectIdGetDatum(HeapTupleGetOid(htup));
+							*result = ObjectIdGetDatum(HeapTupleGetOid(htup));
 							break;
                         case TableOidAttributeNumber:
-							result = ObjectIdGetDatum(slot->tts_tableOid);
+							*result = ObjectIdGetDatum(slot->tts_tableOid);
 							break;
                         default:
-							result = heap_getsysattr(htup, attnum, slot->tts_tupleDescriptor, isnull);
+							*result = heap_getsysattr(htup, attnum, slot->tts_tupleDescriptor, isnull);
 							break;
                 }
         }
@@ -1482,27 +1528,27 @@ slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull)
                 {
                         case SelfItemPointerAttributeNumber:
 							Assert(ItemPointerIsValid(&(slot->PRIVATE_tts_synthetic_ctid)));
-							result = PointerGetDatum(&(slot->PRIVATE_tts_synthetic_ctid));
+							*result = PointerGetDatum(&(slot->PRIVATE_tts_synthetic_ctid));
 							break;
                         case ObjectIdAttributeNumber:
 							if(slot->PRIVATE_tts_memtuple)
-								result = ObjectIdGetDatum(MemTupleGetOid(slot->PRIVATE_tts_memtuple,
+								*result = ObjectIdGetDatum(MemTupleGetOid(slot->PRIVATE_tts_memtuple,
 																		 slot->tts_mt_bind));
 							else
-								result = ObjectIdGetDatum(InvalidOid);
+								*result = ObjectIdGetDatum(InvalidOid);
 							break;
                         case GpSegmentIdAttributeNumber:
-							result = Int32GetDatum(GpIdentity.segindex);
+							*result = Int32GetDatum(GpIdentity.segindex);
 							break;
                         case TableOidAttributeNumber:
-							result = ObjectIdGetDatum(slot->tts_tableOid);
+							*result = ObjectIdGetDatum(slot->tts_tableOid);
 							break;
                         default:
 							elog(ERROR, "Invalid attnum: %d", attnum);
                 }
         }
 
-        return result;
+        return true;
 }                               /* slot_getsysattr */
 
 /*

@@ -228,6 +228,9 @@ recurse_set_operations(Node *setOp, PlannerInfo *root,
 					   int flag, List *refnames_tlist,
 					   List **sortClauses, double *pNumGroups)
 {
+	/* Guard against stack overflow due to overly complex setop nests */
+	check_stack_depth();
+
 	if (IsA(setOp, RangeTblRef))
 	{
 		RangeTblRef *rtr = (RangeTblRef *) setOp;
@@ -671,12 +674,13 @@ generate_nonunion_plan(SetOperationStmt *op, PlannerInfo *root,
 	/* Identify the grouping semantics */
 	groupList = generate_setop_grouplist(op, tlist);
 
-	/* punt if nothing to group on (can this happen?) */
+	/* punt if nothing to group on (not worth fixing in back branches) */
 	if (groupList == NIL)
-	{
-		*sortClauses = NIL;
-		return plan;
-	}
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 /* translator: %s is UNION, INTERSECT, or EXCEPT */
+				 errmsg("%s over no columns is not supported",
+						(op->op == SETOP_INTERSECT) ? "INTERSECT" : "EXCEPT")));
 
 	/*
 	 * Estimate number of distinct groups that we'll need hashtable entries
@@ -819,12 +823,12 @@ make_union_unique(SetOperationStmt *op, Plan *plan,
 	/* Identify the grouping semantics */
 	groupList = generate_setop_grouplist(op, plan->targetlist);
 
-	/* punt if nothing to group on (can this happen?) */
+	/* punt if nothing to group on (not worth fixing in back branches) */
 	if (groupList == NIL)
-	{
-		*sortClauses = NIL;
-		return plan;
-	}
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 /* translator: %s is UNION, INTERSECT, or EXCEPT */
+				 errmsg("%s over no columns is not supported", "UNION")));
 
 	/*
 	 * XXX for the moment, take the number of distinct groups as equal to the
@@ -1619,7 +1623,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 		 */
 		if (old_attno < newnatts &&
 			(att = new_tupdesc->attrs[old_attno]) != NULL &&
-			!att->attisdropped && att->attinhcount != 0 &&
+			!att->attisdropped &&
 			strcmp(attname, NameStr(att->attname)) == 0)
 			new_attno = old_attno;
 		else
@@ -1627,7 +1631,7 @@ make_inh_translation_list(Relation oldrelation, Relation newrelation,
 			for (new_attno = 0; new_attno < newnatts; new_attno++)
 			{
 				att = new_tupdesc->attrs[new_attno];
-				if (!att->attisdropped && att->attinhcount != 0 &&
+				if (!att->attisdropped &&
 					strcmp(attname, NameStr(att->attname)) == 0)
 					break;
 			}
@@ -2153,4 +2157,27 @@ adjust_inherited_tlist(List *tlist, AppendRelInfo *context)
 	}
 
 	return new_tlist;
+}
+
+/*
+ * adjust_appendrel_attrs_multilevel
+ *	  Apply Var translations from a toplevel appendrel parent down to a child.
+ *
+ * In some cases we need to translate expressions referencing a baserel
+ * to reference an appendrel child that's multiple levels removed from it.
+ */
+Node *
+adjust_appendrel_attrs_multilevel(PlannerInfo *root, Node *node,
+								  RelOptInfo *child_rel)
+{
+	AppendRelInfo *appinfo = find_childrel_appendrelinfo(root, child_rel);
+	RelOptInfo *parent_rel = find_base_rel(root, appinfo->parent_relid);
+
+	/* If parent is also a child, first recurse to apply its translations */
+	if (parent_rel->reloptkind == RELOPT_OTHER_MEMBER_REL)
+		node = adjust_appendrel_attrs_multilevel(root, node, parent_rel);
+	else
+		Assert(parent_rel->reloptkind == RELOPT_BASEREL);
+	/* Now translate for this child */
+	return adjust_appendrel_attrs(root, node, appinfo);
 }

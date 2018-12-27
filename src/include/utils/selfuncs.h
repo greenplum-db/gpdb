@@ -76,6 +76,7 @@ typedef struct VariableStatData
 	Oid			atttype;		/* type to pass to get_attstatsslot */
 	int32		atttypmod;		/* typmod to pass to get_attstatsslot */
 	bool		isunique;		/* matches unique index or DISTINCT clause */
+	bool		acl_ok;			/* result of ACL check on table or column */
 } VariableStatData;
 
 /* get the pg_statistic tuple, or NULL if none */
@@ -115,6 +116,7 @@ extern PGDLLIMPORT get_index_stats_hook_type get_index_stats_hook;
 
 extern void examine_variable(PlannerInfo *root, Node *node, int varRelid,
 				 VariableStatData *vardata);
+extern bool statistic_proc_security_check(VariableStatData *vardata, Oid func_oid);
 extern bool get_restriction_variable(PlannerInfo *root, List *args,
 						 int varRelid,
 						 VariableStatData *vardata, Node **other,
@@ -133,7 +135,7 @@ extern double histogram_selectivity(VariableStatData *vardata, FmgrInfo *opproc,
 					  Datum constval, bool varonleft,
 					  int min_hist_size, int n_skip,
 					  int *hist_size);
-extern double convert_timevalue_to_scalar(Datum value, Oid typid);
+extern double convert_timevalue_to_scalar(Datum value, Oid typid, bool *failure);
 
 extern Pattern_Prefix_Status pattern_fixed_prefix(Const *patt,
 					 Pattern_Type ptype,

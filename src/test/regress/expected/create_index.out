@@ -3065,16 +3065,15 @@ explain (costs off)
 SELECT thousand, tenthous FROM tenk1
 WHERE thousand < 2 AND tenthous IN (1001,3000)
 ORDER BY thousand;
-                                         QUERY PLAN                                         
---------------------------------------------------------------------------------------------
+                         QUERY PLAN                          
+-------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)
    Merge Key: thousand
-   ->  Sort
-         Sort Key: thousand
-         ->  Index Only Scan using tenk1_thous_tenthous on tenk1
-               Index Cond: ((thousand < 2) AND (tenthous = ANY ('{1001,3000}'::integer[])))
+   ->  Index Only Scan using tenk1_thous_tenthous on tenk1
+         Index Cond: (thousand < 2)
+         Filter: (tenthous = ANY ('{1001,3000}'::integer[]))
  Optimizer: legacy query optimizer
-(7 rows)
+(6 rows)
 
 SELECT thousand, tenthous FROM tenk1
 WHERE thousand < 2 AND tenthous IN (1001,3000)
@@ -3089,6 +3088,34 @@ RESET enable_seqscan;
 RESET optimizer_enable_tablescan;
 RESET enable_indexscan;
 RESET enable_bitmapscan;
+SET enable_indexonlyscan = OFF;
+SET random_page_cost = 4; -- prefer index san.
+explain (costs off)
+SELECT thousand, tenthous FROM tenk1
+WHERE thousand < 2 AND tenthous IN (1001,3000)
+ORDER BY thousand;
+                                         QUERY PLAN                                         
+--------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: thousand
+   ->  Sort
+         Sort Key: thousand
+         ->  Index Scan using tenk1_thous_tenthous on tenk1
+               Index Cond: ((thousand < 2) AND (tenthous = ANY ('{1001,3000}'::integer[])))
+ Optimizer: legacy query optimizer
+(7 rows)
+
+SELECT thousand, tenthous FROM tenk1
+WHERE thousand < 2 AND tenthous IN (1001,3000)
+ORDER BY thousand;
+ thousand | tenthous 
+----------+----------
+        0 |     3000
+        1 |     1001
+(2 rows)
+
+RESET random_page_cost;
+RESET enable_indexonlyscan;
 --
 -- Check elimination of constant-NULL subexpressions
 --

@@ -7,6 +7,7 @@
 
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <fcntl.h>
 #include <time.h>
 #include <unistd.h>
 #include <signal.h>
@@ -259,8 +260,6 @@ test_sync(int writes_per_op)
 	}
 	else
 	{
-		if ((tmpfile = open(filename, O_RDWR | O_DSYNC | PG_O_DIRECT, 0)) == -1)
-			die("could not open output file");
 		START_TIMER;
 		for (ops = 0; alarm_triggered == false; ops++)
 		{

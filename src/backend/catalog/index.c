@@ -957,6 +957,12 @@ index_create(Relation heapRelation,
 						!concurrent);
 
 	/*
+	 * Register relcache invalidation on the indexes' heap relation, to
+	 * maintain consistency of its index list
+	 */
+	CacheInvalidateRelcache(heapRelation);
+
+	/*
 	 * Register constraint and dependencies for the index.
 	 *
 	 * If the index is from a CONSTRAINT clause, construct a pg_constraint
@@ -1892,14 +1898,6 @@ index_update_stats(Relation rel,
 	 * trying to change the pg_class row to the same thing, so it doesn't
 	 * matter which goes first).
 	 *
-	 * 4. Even with just a single CREATE INDEX, there's a risk factor because
-	 * someone else might be trying to open the rel while we commit, and this
-	 * creates a race condition as to whether he will see both or neither of
-	 * the pg_class row versions as valid.  Again, a non-transactional update
-	 * avoids the risk.  It is indeterminate which state of the row the other
-	 * process will see, but it doesn't matter (if he's only taking
-	 * AccessShareLock, then it's not critical that he see relhasindex true).
-	 *
 	 * It is safe to use a non-transactional update even though our
 	 * transaction could still fail before committing.  Setting relhasindex
 	 * true is safe even if there are no indexes (VACUUM will eventually fix
@@ -2515,7 +2513,7 @@ IndexBuildHeapScan(Relation heapRelation,
 							 */
 							LockBuffer(scan->rs_cbuf, BUFFER_LOCK_UNLOCK);
 							XactLockTableWait(xwait, heapRelation,
-											  &heapTuple->t_data->t_ctid,
+											  &heapTuple->t_self,
 											  XLTW_InsertIndexUnique);
 							CHECK_FOR_INTERRUPTS();
 							goto recheck;
@@ -2564,7 +2562,7 @@ IndexBuildHeapScan(Relation heapRelation,
 							 */
 							LockBuffer(scan->rs_cbuf, BUFFER_LOCK_UNLOCK);
 							XactLockTableWait(xwait, heapRelation,
-											  &heapTuple->t_data->t_ctid,
+											  &heapTuple->t_self,
 											  XLTW_InsertIndexUnique);
 							CHECK_FOR_INTERRUPTS();
 							goto recheck;
@@ -2664,9 +2662,12 @@ IndexBuildHeapScan(Relation heapRelation,
 			offnum = ItemPointerGetOffsetNumber(&heapTuple->t_self);
 
 			if (!OffsetNumberIsValid(root_offsets[offnum - 1]))
-				elog(ERROR, "failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"",
-					 ItemPointerGetBlockNumber(&heapTuple->t_self),
-					 offnum, RelationGetRelationName(heapRelation));
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg_internal("failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"",
+										 ItemPointerGetBlockNumber(&heapTuple->t_self),
+										 offnum,
+										 RelationGetRelationName(heapRelation))));
 
 			ItemPointerSetOffsetNumber(&rootTuple.t_self,
 									   root_offsets[offnum - 1]);
@@ -3305,10 +3306,12 @@ validate_index_heapscan(Relation heapRelation,
 		{
 			root_offnum = root_offsets[root_offnum - 1];
 			if (!OffsetNumberIsValid(root_offnum))
-				elog(ERROR, "failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"",
-					 ItemPointerGetBlockNumber(heapcursor),
-					 ItemPointerGetOffsetNumber(heapcursor),
-					 RelationGetRelationName(heapRelation));
+				ereport(ERROR,
+						(errcode(ERRCODE_DATA_CORRUPTED),
+						 errmsg_internal("failed to find parent tuple for heap-only tuple at (%u,%u) in table \"%s\"",
+										 ItemPointerGetBlockNumber(heapcursor),
+										 ItemPointerGetOffsetNumber(heapcursor),
+										 RelationGetRelationName(heapRelation))));
 			ItemPointerSetOffsetNumber(&rootTuple, root_offnum);
 		}
 

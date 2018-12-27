@@ -642,7 +642,14 @@ tuplesort_begin_common(int workMem, bool randomAccess, bool allocmemtuple)
 	state->tapeset = NULL;
 
 	state->memtupcount = 0;
-	state->memtupsize = 1024;	/* initial guess */
+
+	/*
+	 * Initial size of array must be more than ALLOCSET_SEPARATE_THRESHOLD;
+	 * see comments in grow_memtuples().
+	 */
+	state->memtupsize = Max(1024,
+						ALLOCSET_SEPARATE_THRESHOLD / sizeof(SortTuple) + 1);
+
 	state->growmemtuples = true;
 	state->memtupblimited = false;
 	state->discardcount = 0; /*CDB*/
@@ -1149,10 +1156,10 @@ grow_memtuples(Tuplesortstate *state)
 	 * never generate a dangerous request, but to be safe, check explicitly
 	 * that the array growth fits within availMem.  (We could still cause
 	 * LACKMEM if the memory chunk overhead associated with the memtuples
-	 * array were to increase.  That shouldn't happen with any sane value of
-	 * allowedMem, because at any array size large enough to risk LACKMEM,
-	 * palloc would be treating both old and new arrays as separate chunks.
-	 * But we'll check LACKMEM explicitly below just in case.)
+	 * array were to increase.  That shouldn't happen because we chose the
+	 * initial array size large enough to ensure that palloc will be treating
+	 * both old and new arrays as separate chunks.  But we'll check LACKMEM
+	 * explicitly below just in case.)
 	 */
 	if (state->availMem < (int64) ((newmemtupsize - memtupsize) * sizeof(SortTuple)))
 		goto noalloc;
@@ -1165,7 +1172,7 @@ grow_memtuples(Tuplesortstate *state)
 					  state->memtupsize * sizeof(SortTuple));
 	USEMEM(state, GetMemoryChunkSpace(state->memtuples));
 	if (LACKMEM(state))
-		elog(ERROR, "unexpected out-of-memory situation during sort");
+		elog(ERROR, "unexpected out-of-memory situation in tuplesort");
 	return true;
 
 noalloc:
@@ -2988,7 +2995,7 @@ tuplesort_heap_siftup(Tuplesortstate *state, bool checkIndex)
 {
 	SortTuple  *memtuples = state->memtuples;
 	SortTuple  *tuple;
-	int			i,
+	unsigned int i,
 				n;
 
 	if (--state->memtupcount <= 0)
@@ -2996,12 +3003,17 @@ tuplesort_heap_siftup(Tuplesortstate *state, bool checkIndex)
 
 	CHECK_FOR_INTERRUPTS();
 
+	/*
+	 * state->memtupcount is "int", but we use "unsigned int" for i, j, n.
+	 * This prevents overflow in the "2 * i + 1" calculation, since at the top
+	 * of the loop we must have i < n <= INT_MAX <= UINT_MAX/2.
+	 */
 	n = state->memtupcount;
 	tuple = &memtuples[n];		/* tuple that must be reinserted */
 	i = 0;						/* i is where the "hole" is */
 	for (;;)
 	{
-		int			j = 2 * i + 1;
+		unsigned int j = 2 * i + 1;
 
 		if (j >= n)
 			break;
@@ -3133,7 +3145,7 @@ inlineApplySortFunction(FmgrInfo *sortFunction, int sk_flags, Oid collation,
 													datum1, datum2));
 
 		if (sk_flags & SK_BT_DESC)
-			compare = -compare;
+			INVERT_COMPARE_RESULT(compare);
 	}
 
 	return compare;
@@ -3536,6 +3548,7 @@ comparetup_index_btree(const SortTuple *a, const SortTuple *b,
 	{
 		Datum		values[INDEX_MAX_KEYS];
 		bool		isnull[INDEX_MAX_KEYS];
+		char	   *key_desc;
 
 		/*
 		 * Some rather brain-dead implementations of qsort (such as the one in
@@ -3546,13 +3559,15 @@ comparetup_index_btree(const SortTuple *a, const SortTuple *b,
 		Assert(tuple1 != tuple2);
 
 		index_deform_tuple(tuple1, tupDes, values, isnull);
+
+		key_desc = BuildIndexValueDescription(state->indexRel, values, isnull);
+
 		ereport(ERROR,
 				(errcode(ERRCODE_UNIQUE_VIOLATION),
 				 errmsg("could not create unique index \"%s\"",
 						RelationGetRelationName(state->indexRel)),
-				 errdetail("Key %s is duplicated.",
-						   BuildIndexValueDescription(state->indexRel,
-													  values, isnull)),
+				 key_desc ? errdetail("Key %s is duplicated.", key_desc) :
+							errdetail("Duplicate keys exist."),
 				 errtableconstraint(state->heapRel,
 								 RelationGetRelationName(state->indexRel))));
 	}

@@ -33,7 +33,9 @@
 #include <sys/resource.h>
 #endif
 
+#include "common/username.h"
 #include "getopt_long.h"
+#include "libpq/pqcomm.h"		/* needed for UNIXSOCK_PATH() */
 #include "pg_config_paths.h"
 
 /* for resultmap we need a list of pairs of strings */
@@ -118,13 +120,20 @@ static _stringlist *extra_install = NULL;
 static char *initfile = NULL;
 static char *aodir = NULL;
 static char *resgroupdir = NULL;
-static bool ignore_plans = false;
+static char *config_auth_datadir = NULL;
+static bool  ignore_plans = false;
 
 /* internal variables */
 static const char *progname;
 static char *logfilename;
 static FILE *logfile;
 static char *difffilename;
+static const char *sockdir;
+#ifdef HAVE_UNIX_SOCKETS
+static const char *temp_sockdir;
+static char sockself[MAXPGPATH];
+static char socklock[MAXPGPATH];
+#endif
 
 static _resultmap *resultmap = NULL;
 
@@ -332,6 +341,82 @@ stop_postmaster(void)
 		postmaster_running = false;
 	}
 }
+
+#ifdef HAVE_UNIX_SOCKETS
+/*
+ * Remove the socket temporary directory.  pg_regress never waits for a
+ * postmaster exit, so it is indeterminate whether the postmaster has yet to
+ * unlink the socket and lock file.  Unlink them here so we can proceed to
+ * remove the directory.  Ignore errors; leaking a temporary directory is
+ * unimportant.  This can run from a signal handler.  The code is not
+ * acceptable in a Windows signal handler (see initdb.c:trapsig()), but
+ * Windows is not a HAVE_UNIX_SOCKETS platform.
+ */
+static void
+remove_temp(void)
+{
+	Assert(temp_sockdir);
+	unlink(sockself);
+	unlink(socklock);
+	rmdir(temp_sockdir);
+}
+
+/*
+ * Signal handler that calls remove_temp() and reraises the signal.
+ */
+static void
+signal_remove_temp(int signum)
+{
+	remove_temp();
+
+	pqsignal(signum, SIG_DFL);
+	raise(signum);
+}
+
+/*
+ * Create a temporary directory suitable for the server's Unix-domain socket.
+ * The directory will have mode 0700 or stricter, so no other OS user can open
+ * our socket to exploit our use of trust authentication.  Most systems
+ * constrain the length of socket paths well below _POSIX_PATH_MAX, so we
+ * place the directory under /tmp rather than relative to the possibly-deep
+ * current working directory.
+ *
+ * Compared to using the compiled-in DEFAULT_PGSOCKET_DIR, this also permits
+ * testing to work in builds that relocate it to a directory not writable to
+ * the build/test user.
+ */
+static const char *
+make_temp_sockdir(void)
+{
+	char	   *template = strdup("/tmp/pg_regress-XXXXXX");
+
+	temp_sockdir = mkdtemp(template);
+	if (temp_sockdir == NULL)
+	{
+		fprintf(stderr, _("%s: could not create directory \"%s\": %s\n"),
+				progname, template, strerror(errno));
+		exit(2);
+	}
+
+	/* Stage file names for remove_temp().  Unsafe in a signal handler. */
+	UNIXSOCK_PATH(sockself, port, temp_sockdir);
+	snprintf(socklock, sizeof(socklock), "%s.lock", sockself);
+
+	/* Remove the directory during clean exit. */
+	atexit(remove_temp);
+
+	/*
+	 * Remove the directory before dying to the usual signals.  Omit SIGQUIT,
+	 * preserving it as a quick, untidy exit.
+	 */
+	pqsignal(SIGHUP, signal_remove_temp);
+	pqsignal(SIGINT, signal_remove_temp);
+	pqsignal(SIGPIPE, signal_remove_temp);
+	pqsignal(SIGTERM, signal_remove_temp);
+
+	return temp_sockdir;
+}
+#endif   /* HAVE_UNIX_SOCKETS */
 
 /*
  * Always exit through here, not through plain exit(), to ensure we make
@@ -706,8 +791,8 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 	if (directory_exists(testtablespace))
 		if (!rmtree(testtablespace, true))
 		{
-			fprintf(stderr, _("\n%s: could not remove test tablespace \"%s\": %s\n"),
-					progname, testtablespace, strerror(errno));
+			fprintf(stderr, _("\n%s: could not remove test tablespace \"%s\"\n"),
+					progname, testtablespace);
 			exit(2);
 		}
 	make_directory(testtablespace);
@@ -1062,9 +1147,17 @@ initialize_environment(void)
 		unsetenv("LC_NUMERIC");
 		unsetenv("LC_TIME");
 		unsetenv("LANG");
-		/* On Windows the default locale cannot be English, so force it */
-#if defined(WIN32) || defined(__CYGWIN__)
-		putenv("LANG=en");
+
+		/*
+		 * Most platforms have adopted the POSIX locale as their
+		 * implementation-defined default locale.  Exceptions include native
+		 * Windows, Darwin with --enable-nls, and Cygwin with --enable-nls.
+		 * (Use of --enable-nls matters because libintl replaces setlocale().)
+		 * Also, PostgreSQL does not support Darwin with locale environment
+		 * variables unset; see PostmasterMain().
+		 */
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__darwin__)
+		putenv("LANG=C");
 #endif
 	}
 
@@ -1116,8 +1209,7 @@ initialize_environment(void)
 		 * the wrong postmaster, or otherwise behave in nondefault ways. (Note
 		 * we also use psql's -X switch consistently, so that ~/.psqlrc files
 		 * won't mess things up.)  Also, set PGPORT to the temp port, and set
-		 * or unset PGHOST depending on whether we are using TCP or Unix
-		 * sockets.
+		 * PGHOST depending on whether we are using TCP or Unix sockets.
 		 */
 		unsetenv("PGDATABASE");
 		unsetenv("PGUSER");
@@ -1126,10 +1218,20 @@ initialize_environment(void)
 		unsetenv("PGREQUIRESSL");
 		unsetenv("PGCONNECT_TIMEOUT");
 		unsetenv("PGDATA");
+#ifdef HAVE_UNIX_SOCKETS
 		if (hostname != NULL)
 			doputenv("PGHOST", hostname);
 		else
-			unsetenv("PGHOST");
+		{
+			sockdir = getenv("PG_REGRESS_SOCK_DIR");
+			if (!sockdir)
+				sockdir = make_temp_sockdir();
+			doputenv("PGHOST", sockdir);
+		}
+#else
+		Assert(hostname != NULL);
+		doputenv("PGHOST", hostname);
+#endif
 		unsetenv("PGHOSTADDR");
 		if (port != -1)
 		{
@@ -1229,6 +1331,176 @@ initialize_environment(void)
 	convert_sourcefiles();
 	load_resultmap();
 }
+
+#ifdef ENABLE_SSPI
+/*
+ * Get account and domain/realm names for the current user.  This is based on
+ * pg_SSPI_recvauth().  The returned strings use static storage.
+ */
+static void
+current_windows_user(const char **acct, const char **dom)
+{
+	static char accountname[MAXPGPATH];
+	static char domainname[MAXPGPATH];
+	HANDLE		token;
+	TOKEN_USER *tokenuser;
+	DWORD		retlen;
+	DWORD		accountnamesize = sizeof(accountname);
+	DWORD		domainnamesize = sizeof(domainname);
+	SID_NAME_USE accountnameuse;
+
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token))
+	{
+		fprintf(stderr,
+				_("%s: could not open process token: error code %lu\n"),
+				progname, GetLastError());
+		exit(2);
+	}
+
+	if (!GetTokenInformation(token, TokenUser, NULL, 0, &retlen) && GetLastError() != 122)
+	{
+		fprintf(stderr,
+				_("%s: could not get token user size: error code %lu\n"),
+				progname, GetLastError());
+		exit(2);
+	}
+	tokenuser = malloc(retlen);
+	if (!GetTokenInformation(token, TokenUser, tokenuser, retlen, &retlen))
+	{
+		fprintf(stderr,
+				_("%s: could not get token user: error code %lu\n"),
+				progname, GetLastError());
+		exit(2);
+	}
+
+	if (!LookupAccountSid(NULL, tokenuser->User.Sid, accountname, &accountnamesize,
+						  domainname, &domainnamesize, &accountnameuse))
+	{
+		fprintf(stderr,
+				_("%s: could not look up account SID: error code %lu\n"),
+				progname, GetLastError());
+		exit(2);
+	}
+
+	free(tokenuser);
+
+	*acct = accountname;
+	*dom = domainname;
+}
+
+/*
+ * Rewrite pg_hba.conf and pg_ident.conf to use SSPI authentication.  Permit
+ * the current OS user to authenticate as the bootstrap superuser and as any
+ * user named in a --create-role option.
+ */
+static void
+config_sspi_auth(const char *pgdata)
+{
+	const char *accountname,
+			   *domainname;
+	const char *username;
+	char	   *errstr;
+	bool		have_ipv6;
+	char		fname[MAXPGPATH];
+	int			res;
+	FILE	   *hba,
+			   *ident;
+	_stringlist *sl;
+
+	/*
+	 * "username", the initdb-chosen bootstrap superuser name, may always
+	 * match "accountname", the value SSPI authentication discovers.  The
+	 * underlying system functions do not clearly guarantee that.
+	 */
+	current_windows_user(&accountname, &domainname);
+	username = get_user_name(&errstr);
+	if (username == NULL)
+	{
+		fprintf(stderr, "%s: %s\n", progname, errstr);
+		exit(2);
+	}
+
+	/*
+	 * Like initdb.c:setup_config(), determine whether the platform recognizes
+	 * ::1 (IPv6 loopback) as a numeric host address string.
+	 */
+	{
+		struct addrinfo *gai_result;
+		struct addrinfo hints;
+		WSADATA		wsaData;
+
+		hints.ai_flags = AI_NUMERICHOST;
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = 0;
+		hints.ai_protocol = 0;
+		hints.ai_addrlen = 0;
+		hints.ai_canonname = NULL;
+		hints.ai_addr = NULL;
+		hints.ai_next = NULL;
+
+		have_ipv6 = (WSAStartup(MAKEWORD(2, 2), &wsaData) == 0 &&
+					 getaddrinfo("::1", NULL, &hints, &gai_result) == 0);
+	}
+
+	/* Check a Write outcome and report any error. */
+#define CW(cond)	\
+	do { \
+		if (!(cond)) \
+		{ \
+			fprintf(stderr, _("%s: could not write to file \"%s\": %s\n"), \
+					progname, fname, strerror(errno)); \
+			exit(2); \
+		} \
+	} while (0)
+
+	res = snprintf(fname, sizeof(fname), "%s/pg_hba.conf", pgdata);
+	if (res < 0 || res >= sizeof(fname))
+	{
+		/*
+		 * Truncating this name is a fatal error, because we must not fail to
+		 * overwrite an original trust-authentication pg_hba.conf.
+		 */
+		fprintf(stderr, _("%s: directory name too long\n"), progname);
+		exit(2);
+	}
+	hba = fopen(fname, "w");
+	if (hba == NULL)
+	{
+		fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+				progname, fname, strerror(errno));
+		exit(2);
+	}
+	CW(fputs("# Configuration written by config_sspi_auth()\n", hba) >= 0);
+	CW(fputs("host all all 127.0.0.1/32  sspi include_realm=1 map=regress\n",
+			 hba) >= 0);
+	if (have_ipv6)
+		CW(fputs("host all all ::1/128  sspi include_realm=1 map=regress\n",
+				 hba) >= 0);
+	CW(fclose(hba) == 0);
+
+	snprintf(fname, sizeof(fname), "%s/pg_ident.conf", pgdata);
+	ident = fopen(fname, "w");
+	if (ident == NULL)
+	{
+		fprintf(stderr, _("%s: could not open file \"%s\" for writing: %s\n"),
+				progname, fname, strerror(errno));
+		exit(2);
+	}
+	CW(fputs("# Configuration written by config_sspi_auth()\n", ident) >= 0);
+
+	/*
+	 * Double-quote for the benefit of account names containing whitespace or
+	 * '#'.  Windows forbids the double-quote character itself, so don't
+	 * bother escaping embedded double-quote characters.
+	 */
+	CW(fprintf(ident, "regress  \"%s@%s\"  \"%s\"\n",
+			   accountname, domainname, username) >= 0);
+	for (sl = extraroles; sl; sl = sl->next)
+		CW(fprintf(ident, "regress  \"%s@%s\"  \"%s\"\n",
+				   accountname, domainname, sl->str) >= 0);
+	CW(fclose(ident) == 0);
+}
+#endif
 
 /*
  * Issue a command via psql, connecting to the specified database
@@ -2039,13 +2311,10 @@ run_schedule(const char *schedule, test_function tfunc)
 			gettimeofday(&diff_start_time, NULL);
 			for (rl = resultfiles[i], el = expectfiles[i], tl = tags[i];
 				 rl != NULL;	/* rl and el have the same length */
-				 rl = rl->next, el = el->next)
+				 rl = rl->next, el = el->next,
+				 tl = tl ? tl->next : NULL)
 			{
 				bool		newdiff;
-
-				if (tl)
-					tl = tl->next;		/* tl has the same length as rl and el
-										 * if it exists */
 
 				newdiff = results_differ(tests[i], rl->str, el->str);
 				if (newdiff && tl)
@@ -2133,13 +2402,10 @@ run_single_test(const char *test, test_function tfunc)
 	 */
 	for (rl = resultfiles, el = expectfiles, tl = tags;
 		 rl != NULL;			/* rl and el have the same length */
-		 rl = rl->next, el = el->next)
+		 rl = rl->next, el = el->next,
+		 tl = tl ? tl->next : NULL)
 	{
 		bool		newdiff;
-
-		if (tl)
-			tl = tl->next;		/* tl has the same length as rl and el if it
-								 * exists */
 
 		newdiff = results_differ(test, rl->str, el->str);
 		if (newdiff && tl)
@@ -2422,6 +2688,7 @@ help(void)
 	printf(_("Usage:\n  %s [OPTION]... [EXTRA-TEST]...\n"), progname);
 	printf(_("\n"));
 	printf(_("Options:\n"));
+	printf(_("  --config-auth=DATADIR     update authentication settings for DATADIR\n"));
 	printf(_("  --create-role=ROLE        create the specified role before testing\n"));
 	printf(_("  --dbname=DB               use database DB (default \"regression\")\n"));
 	printf(_("  --debug                   turn on debug mode in programs that are run\n"));
@@ -2496,6 +2763,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"launcher", required_argument, NULL, 21},
 		{"load-extension", required_argument, NULL, 22},
 		{"extra-install", required_argument, NULL, 23},
+		{"config-auth", required_argument, NULL, 24},
         {"init-file", required_argument, NULL, 25},
         {"ao-dir", required_argument, NULL, 26},
         {"resgroup-dir", required_argument, NULL, 27},
@@ -2616,6 +2884,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			case 23:
 				add_stringlist_item(&extra_install, optarg);
 				break;
+			case 24:
+				config_auth_datadir = pstrdup(optarg);
+				break;
             case 25:
                 initfile = strdup(optarg);
                 break;
@@ -2651,12 +2922,22 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		optind++;
 	}
 
+	if (config_auth_datadir)
+	{
+#ifdef ENABLE_SSPI
+		config_sspi_auth(config_auth_datadir);
+#endif
+		exit(0);
+	}
+
 	if (temp_install && !port_specified_by_user)
 
 		/*
 		 * To reduce chances of interference with parallel installations, use
 		 * a port number starting in the private range (49152-65535)
-		 * calculated from the version number.
+		 * calculated from the version number.  This aids !HAVE_UNIX_SOCKETS
+		 * systems; elsewhere, the use of a private socket directory already
+		 * prevents interference.
 		 */
 		port = 0xC000 | (PG_VERSION_NUM & 0x3FFF);
 
@@ -2703,6 +2984,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	{
 		FILE	   *pg_conf;
 		_stringlist *sl;
+		const char *env_wait;
+		int			wait_seconds;
 
 		/*
 		 * Prepare the temp installation
@@ -2718,7 +3001,8 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 			header(_("removing existing temp installation"));
 			if (!rmtree(temp_install, true))
 			{
-				fprintf(stderr, _("\n%s: could not remove temp installation \"%s\": %s\n"), progname, temp_install, strerror(errno));
+				fprintf(stderr, _("\n%s: could not remove temp installation \"%s\"\n"),
+						progname, temp_install);
 				exit(2);
 			}
 		}
@@ -2817,6 +3101,18 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
 		fclose(pg_conf);
 
+#ifdef ENABLE_SSPI
+
+		/*
+		 * Since we successfully used the same buffer for the much-longer
+		 * "initdb" command, this can't truncate.
+		 */
+		snprintf(buf, sizeof(buf), "%s/data", temp_install);
+		config_sspi_auth(buf);
+#elif !defined(HAVE_UNIX_SOCKETS)
+#error Platform has no means to secure the test installation.
+#endif
+
 		/*
 		 * Check if there is a postmaster running already.
 		 */
@@ -2853,10 +3149,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		 */
 		header(_("starting postmaster"));
 		snprintf(buf, sizeof(buf),
-				 "\"%s/postgres\" -D \"%s/data\" -F%s -c \"listen_addresses=%s\" > \"%s/log/postmaster.log\" 2>&1",
-				 bindir, temp_install,
-				 debug ? " -d 5" : "",
-				 hostname ? hostname : "",
+				 "\"%s/postgres\" -D \"%s/data\" -F%s "
+				 "-c \"listen_addresses=%s\" -k \"%s\" "
+				 "> \"%s/log/postmaster.log\" 2>&1",
+				 bindir, temp_install, debug ? " -d 5" : "",
+				 hostname ? hostname : "", sockdir ? sockdir : "",
 				 outputdir);
 		postmaster_pid = spawn_process(buf);
 		if (postmaster_pid == INVALID_PID)
@@ -2867,11 +3164,23 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		}
 
 		/*
-		 * Wait till postmaster is able to accept connections (normally only a
-		 * second or so, but Cygwin is reportedly *much* slower).  Don't wait
-		 * forever, however.
+		 * Wait till postmaster is able to accept connections; normally this
+		 * is only a second or so, but Cygwin is reportedly *much* slower, and
+		 * test builds using Valgrind or similar tools might be too.  Hence,
+		 * allow the default timeout of 60 seconds to be overridden from the
+		 * PGCTLTIMEOUT environment variable.
 		 */
-		for (i = 0; i < 60; i++)
+		env_wait = getenv("PGCTLTIMEOUT");
+		if (env_wait != NULL)
+		{
+			wait_seconds = atoi(env_wait);
+			if (wait_seconds <= 0)
+				wait_seconds = 60;
+		}
+		else
+			wait_seconds = 60;
+
+		for (i = 0; i < wait_seconds; i++)
 		{
 			/* Done if psql succeeds */
 			if (system(buf2) == 0)
@@ -2892,9 +3201,10 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 
 			pg_usleep(1000000L);
 		}
-		if (i >= 60)
+		if (i >= wait_seconds)
 		{
-			fprintf(stderr, _("\n%s: postmaster did not respond within 60 seconds\nExamine %s/log/postmaster.log for the reason\n"), progname, outputdir);
+			fprintf(stderr, _("\n%s: postmaster did not respond within %d seconds\nExamine %s/log/postmaster.log for the reason\n"),
+					progname, wait_seconds, outputdir);
 
 			/*
 			 * If we get here, the postmaster is probably wedged somewhere in
@@ -2989,6 +3299,19 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 	{
 		header(_("shutting down postmaster"));
 		stop_postmaster();
+	}
+
+	/*
+	 * If there were no errors, remove the temp installation immediately to
+	 * conserve disk space.  (If there were errors, we leave the installation
+	 * in place for possible manual investigation.)
+	 */
+	if (temp_install && fail_count == 0 && fail_ignore_count == 0)
+	{
+		header(_("removing temporary installation"));
+		if (!rmtree(temp_install, true))
+			fprintf(stderr, _("\n%s: could not remove temp installation \"%s\"\n"),
+					progname, temp_install);
 	}
 
 	fclose(logfile);

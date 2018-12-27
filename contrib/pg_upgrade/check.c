@@ -24,6 +24,7 @@ static void check_proper_datallowconn(ClusterInfo *cluster);
 static void check_for_prepared_transactions(ClusterInfo *cluster);
 static void check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster);
 static void check_for_reg_data_type_usage(ClusterInfo *cluster);
+static void check_for_jsonb_9_4_usage(ClusterInfo *cluster);
 static void get_bin_version(ClusterInfo *cluster);
 static char *get_canonical_locale_name(int category, const char *locale);
 
@@ -120,6 +121,9 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 		old_GPDB4_check_no_free_aoseg();
 		check_hash_partition_usage();
 	}
+	if (GET_MAJOR_VERSION(old_cluster.major_version) == 904 &&
+		old_cluster.controldata.cat_ver < JSONB_FORMAT_CHANGE_CAT_VER)
+		check_for_jsonb_9_4_usage(&old_cluster);
 
 	/* old = PG 8.3 checks? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 803)
@@ -350,9 +354,9 @@ check_cluster_versions(void)
 				 PG_MAJORVERSION);
 
 	/*
-	 * We can't allow downgrading because we use the target pg_dumpall, and
-	 * pg_dumpall cannot operate on new database versions, only older
-	 * versions.
+	 * We can't allow downgrading because we use the target pg_dump, and
+	 * pg_dump cannot operate on newer database versions, only current and
+	 * older versions.
 	 */
 	if (old_cluster.major_version > new_cluster.major_version)
 		pg_fatal("This utility cannot be used to downgrade to older major Greenplum versions.\n");
@@ -590,18 +594,23 @@ void
 create_script_for_cluster_analyze(char **analyze_script_file_name)
 {
 	FILE	   *script = NULL;
-	char	   *user_specification = "";
+	PQExpBufferData user_specification;
 
 	prep_status("Creating script to analyze new cluster");
 
+	initPQExpBuffer(&user_specification);
 	if (os_info.user_specified)
-		user_specification = psprintf("-U \"%s\" ", os_info.user);
+	{
+		appendPQExpBufferStr(&user_specification, "-U ");
+		appendShellString(&user_specification, os_info.user);
+		appendPQExpBufferChar(&user_specification, ' ');
+	}
 
 	*analyze_script_file_name = psprintf("analyze_new_cluster.%s", SCRIPT_EXT);
 
 	if ((script = fopen_priv(*analyze_script_file_name, "w")) == NULL)
 		pg_fatal("Could not open file \"%s\": %s\n",
-				 *analyze_script_file_name, getErrorText(errno));
+				 *analyze_script_file_name, getErrorText());
 
 #ifndef WIN32
 	/* add shebang header */
@@ -634,18 +643,18 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 	fprintf(script, "echo %sthis script and run:%s\n",
 			ECHO_QUOTE, ECHO_QUOTE);
 	fprintf(script, "echo %s    \"%s/vacuumdb\" %s--all %s%s\n", ECHO_QUOTE,
-			new_cluster.bindir, user_specification,
+			new_cluster.bindir, user_specification.data,
 	/* Did we copy the free space files? */
 			(GET_MAJOR_VERSION(old_cluster.major_version) >= 804) ?
 			"--analyze-only" : "--analyze", ECHO_QUOTE);
 	fprintf(script, "echo%s\n\n", ECHO_BLANK);
 
 	fprintf(script, "\"%s/vacuumdb\" %s--all --analyze-in-stages\n",
-			new_cluster.bindir, user_specification);
+			new_cluster.bindir, user_specification.data);
 	/* Did we copy the free space files? */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) < 804)
 		fprintf(script, "\"%s/vacuumdb\" %s--all\n", new_cluster.bindir,
-				user_specification);
+				user_specification.data);
 
 	fprintf(script, "echo%s\n\n", ECHO_BLANK);
 	fprintf(script, "echo %sDone%s\n",
@@ -656,11 +665,10 @@ create_script_for_cluster_analyze(char **analyze_script_file_name)
 #ifndef WIN32
 	if (chmod(*analyze_script_file_name, S_IRWXU) != 0)
 		pg_fatal("Could not add execute permission to file \"%s\": %s\n",
-				 *analyze_script_file_name, getErrorText(errno));
+				 *analyze_script_file_name, getErrorText());
 #endif
 
-	if (os_info.user_specified)
-		pg_free(user_specification);
+	termPQExpBuffer(&user_specification);
 
 	check_ok();
 }
@@ -698,14 +706,14 @@ check_proper_datallowconn(ClusterInfo *cluster)
 		{
 			/* avoid restore failure when pg_dumpall tries to create template0 */
 			if (strcmp(datallowconn, "t") == 0)
-				pg_log(PG_FATAL, "template0 must not allow connections, "
+				pg_fatal("template0 must not allow connections, "
 						 "i.e. its pg_database.datallowconn must be false\n");
 		}
 		else
 		{
 			/* avoid datallowconn == false databases from being skipped on restore */
 			if (strcmp(datallowconn, "f") == 0)
-				pg_log(PG_FATAL, "All non-template0 databases must allow connections, "
+				pg_fatal("All non-template0 databases must allow connections, "
 						 "i.e. their pg_database.datallowconn must be true\n");
 		}
 	}
@@ -716,7 +724,6 @@ check_proper_datallowconn(ClusterInfo *cluster)
 
 	check_ok();
 }
-
 
 /*
  * create_script_for_old_cluster_deletion()
@@ -776,7 +783,7 @@ create_script_for_old_cluster_deletion(char **deletion_script_file_name)
 
 	if ((script = fopen_priv(*deletion_script_file_name, "w")) == NULL)
 		pg_fatal("Could not open file \"%s\": %s\n",
-				 *deletion_script_file_name, getErrorText(errno));
+				 *deletion_script_file_name, getErrorText());
 
 #ifndef WIN32
 	/* add shebang header */
@@ -830,7 +837,7 @@ create_script_for_old_cluster_deletion(char **deletion_script_file_name)
 #ifndef WIN32
 	if (chmod(*deletion_script_file_name, S_IRWXU) != 0)
 		pg_fatal("Could not add execute permission to file \"%s\": %s\n",
-				 *deletion_script_file_name, getErrorText(errno));
+				 *deletion_script_file_name, getErrorText());
 #endif
 
 	check_ok();
@@ -966,7 +973,7 @@ check_for_isn_and_int8_passing_mismatch(ClusterInfo *cluster)
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
 				pg_fatal("Could not open file \"%s\": %s\n",
-						 output_path, getErrorText(errno));
+						 output_path, getErrorText());
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1072,7 +1079,7 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 			found = true;
 			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
 				pg_fatal("Could not open file \"%s\": %s\n",
-						 output_path, getErrorText(errno));
+						 output_path, getErrorText());
 			if (!db_used)
 			{
 				fprintf(script, "Database: %s\n", active_db->db_name);
@@ -1107,6 +1114,96 @@ check_for_reg_data_type_usage(ClusterInfo *cluster)
 }
 
 
+/*
+ * check_for_jsonb_9_4_usage()
+ *
+ *	JSONB changed its storage format during 9.4 beta, so check for it.
+ */
+static void
+check_for_jsonb_9_4_usage(ClusterInfo *cluster)
+{
+	int			dbnum;
+	FILE	   *script = NULL;
+	bool		found = false;
+	char		output_path[MAXPGPATH];
+
+	prep_status("Checking for JSONB user data types");
+
+	snprintf(output_path, sizeof(output_path), "tables_using_jsonb.txt");
+
+	for (dbnum = 0; dbnum < cluster->dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		bool		db_used = false;
+		int			ntups;
+		int			rowno;
+		int			i_nspname,
+					i_relname,
+					i_attname;
+		DbInfo	   *active_db = &cluster->dbarr.dbs[dbnum];
+		PGconn	   *conn = connectToServer(cluster, active_db->db_name);
+
+		/*
+		 * While several relkinds don't store any data, e.g. views, they can
+		 * be used to define data types of other columns, so we check all
+		 * relkinds.
+		 */
+		res = executeQueryOrDie(conn,
+								"SELECT n.nspname, c.relname, a.attname "
+								"FROM	pg_catalog.pg_class c, "
+								"		pg_catalog.pg_namespace n, "
+								"		pg_catalog.pg_attribute a "
+								"WHERE	c.oid = a.attrelid AND "
+								"		NOT a.attisdropped AND "
+								"		a.atttypid = 'pg_catalog.jsonb'::pg_catalog.regtype AND "
+								"		c.relnamespace = n.oid AND "
+		/* exclude possible orphaned temp tables */
+								"  		n.nspname !~ '^pg_temp_' AND "
+							  "		n.nspname NOT IN ('pg_catalog', 'information_schema')");
+
+		ntups = PQntuples(res);
+		i_nspname = PQfnumber(res, "nspname");
+		i_relname = PQfnumber(res, "relname");
+		i_attname = PQfnumber(res, "attname");
+		for (rowno = 0; rowno < ntups; rowno++)
+		{
+			found = true;
+			if (script == NULL && (script = fopen_priv(output_path, "w")) == NULL)
+				pg_fatal("Could not open file \"%s\": %s\n",
+						 output_path, getErrorText());
+			if (!db_used)
+			{
+				fprintf(script, "Database: %s\n", active_db->db_name);
+				db_used = true;
+			}
+			fprintf(script, "  %s.%s.%s\n",
+					PQgetvalue(res, rowno, i_nspname),
+					PQgetvalue(res, rowno, i_relname),
+					PQgetvalue(res, rowno, i_attname));
+		}
+
+		PQclear(res);
+
+		PQfinish(conn);
+	}
+
+	if (script)
+		fclose(script);
+
+	if (found)
+	{
+		pg_log(PG_REPORT, "fatal\n");
+		pg_fatal("Your installation contains one of the JSONB data types in user tables.\n"
+		 "The internal format of JSONB changed during 9.4 beta so this cluster cannot currently\n"
+				 "be upgraded.  You can remove the problem tables and restart the upgrade.  A list\n"
+				 "of the problem columns is in the file:\n"
+				 "    %s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+
 static void
 get_bin_version(ClusterInfo *cluster)
 {
@@ -1121,7 +1218,7 @@ get_bin_version(ClusterInfo *cluster)
 	if ((output = popen(cmd, "r")) == NULL ||
 		fgets(cmd_output, sizeof(cmd_output), output) == NULL)
 		pg_fatal("Could not get pg_ctl version data using %s: %s\n",
-				 cmd, getErrorText(errno));
+				 cmd, getErrorText());
 
 	pclose(output);
 

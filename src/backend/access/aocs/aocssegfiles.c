@@ -892,7 +892,7 @@ AOCSFileSegInfoAddVpe(Relation prel, int32 segno,
 	}
 
 	acquireResult = LockRelationNoWait(prel, AccessExclusiveLock);
-	if (acquireResult != LOCKACQUIRE_ALREADY_HELD)
+	if (acquireResult != LOCKACQUIRE_ALREADY_HELD && acquireResult != LOCKACQUIRE_ALREADY_CLEAR)
 	{
 		elog(ERROR, "should already have (transaction-scope) AccessExclusive"
 			 " lock on relation %s, oid %d",

@@ -37,7 +37,7 @@ CREATE FUNCTION autoinc ()
 	AS '@libdir@/regress@DLSUFFIX@'
 	LANGUAGE C READS SQL DATA;
 
-CREATE FUNCTION funny_dup17 ()
+CREATE FUNCTION trigger_return_old ()
         RETURNS trigger
         AS '@libdir@/regress@DLSUFFIX@'
         LANGUAGE C READS SQL DATA;

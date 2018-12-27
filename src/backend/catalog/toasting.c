@@ -190,6 +190,21 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 				toastobject;
 
 	/*
+	 * Toast table is shared if and only if its parent is.
+	 *
+	 * We cannot allow toasting a shared relation after initdb (because
+	 * there's no way to mark it toasted in other databases' pg_class).
+	 */
+	shared_relation = rel->rd_rel->relisshared;
+	if (shared_relation && !IsBootstrapProcessingMode())
+		ereport(ERROR,
+				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
+				 errmsg("shared tables cannot be toasted after initdb")));
+
+	/* It's mapped if and only if its parent is, too */
+	mapped_relation = RelationIsMapped(rel);
+
+	/*
 	 * Is it already toasted?
 	 */
 	if (rel->rd_rel->reltoastrelid != InvalidOid)
@@ -236,36 +251,6 @@ create_toast_table(Relation rel, Oid toastOid, Oid toastIndexOid,
 		 *	return false;
 		 */
 	}
-
-	/*
-	 * Toast table is shared if and only if its parent is.
-	 *
-	 * We cannot allow toasting a shared relation after initdb (because
-	 * there's no way to mark it toasted in other databases' pg_class).
-	 */
-	shared_relation = rel->rd_rel->relisshared;
-	if (shared_relation && !IsBootstrapProcessingMode())
-		ereport(ERROR,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("shared tables cannot be toasted after initdb")));
-
-	/* It's mapped if and only if its parent is, too */
-	mapped_relation = RelationIsMapped(rel);
-
-	/*
-	 * Is it already toasted?
-	 */
-	if (rel->rd_rel->reltoastrelid != InvalidOid)
-		return false;
-
-	/*
-	 * Check to see whether the table actually needs a TOAST table.
-	 *
-	 * If an update-in-place toast relfilenode is specified, force toast file
-	 * creation even if it seems not to need one.
-	 */
-	if (!needs_toast_table(rel) && !IsBinaryUpgrade)
-		return false;
 
 	/*
 	 * If requested check lockmode is sufficient. This is a cross check in

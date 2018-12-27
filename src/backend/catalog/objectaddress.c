@@ -491,7 +491,7 @@ static void getRelationIdentity(StringInfo buffer, Oid relid);
  *
  * Note: If the object is not found, we don't give any indication of the
  * reason.  (It might have been a missing schema if the name was qualified, or
- * an inexistant type name in case of a cast, function or operator; etc).
+ * a nonexistent type name in case of a cast, function or operator; etc).
  * Currently there is only one caller that might be interested in such info, so
  * we don't spend much effort here.  If more callers start to care, it might be
  * better to add some support for that in this function.
@@ -1650,6 +1650,7 @@ getObjectDescription(const ObjectAddress *object)
 			{
 				HeapTuple	collTup;
 				Form_pg_collation coll;
+				char	   *nspname;
 
 				collTup = SearchSysCache1(COLLOID,
 										  ObjectIdGetDatum(object->objectId));
@@ -1657,8 +1658,16 @@ getObjectDescription(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for collation %u",
 						 object->objectId);
 				coll = (Form_pg_collation) GETSTRUCT(collTup);
+
+				/* Qualify the name if not visible in search path */
+				if (CollationIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(coll->collnamespace);
+
 				appendStringInfo(&buffer, _("collation %s"),
-								 NameStr(coll->collname));
+								 quote_qualified_identifier(nspname,
+															NameStr(coll->collname)));
 				ReleaseSysCache(collTup);
 				break;
 			}
@@ -1698,14 +1707,25 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_CONVERSION:
 			{
 				HeapTuple	conTup;
+				Form_pg_conversion conv;
+				char	   *nspname;
 
 				conTup = SearchSysCache1(CONVOID,
 										 ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(conTup))
 					elog(ERROR, "cache lookup failed for conversion %u",
 						 object->objectId);
+				conv = (Form_pg_conversion) GETSTRUCT(conTup);
+
+				/* Qualify the name if not visible in search path */
+				if (ConversionIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(conv->connamespace);
+
 				appendStringInfo(&buffer, _("conversion %s"),
-				 NameStr(((Form_pg_conversion) GETSTRUCT(conTup))->conname));
+								 quote_qualified_identifier(nspname,
+															NameStr(conv->conname)));
 				ReleaseSysCache(conTup);
 				break;
 			}
@@ -2000,14 +2020,25 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_TSPARSER:
 			{
 				HeapTuple	tup;
+				Form_pg_ts_parser prsForm;
+				char	   *nspname;
 
 				tup = SearchSysCache1(TSPARSEROID,
 									  ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for text search parser %u",
 						 object->objectId);
+				prsForm = (Form_pg_ts_parser) GETSTRUCT(tup);
+
+				/* Qualify the name if not visible in search path */
+				if (TSParserIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(prsForm->prsnamespace);
+
 				appendStringInfo(&buffer, _("text search parser %s"),
-					 NameStr(((Form_pg_ts_parser) GETSTRUCT(tup))->prsname));
+								 quote_qualified_identifier(nspname,
+															NameStr(prsForm->prsname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -2015,14 +2046,25 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_TSDICT:
 			{
 				HeapTuple	tup;
+				Form_pg_ts_dict dictForm;
+				char	   *nspname;
 
 				tup = SearchSysCache1(TSDICTOID,
 									  ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for text search dictionary %u",
 						 object->objectId);
+				dictForm = (Form_pg_ts_dict) GETSTRUCT(tup);
+
+				/* Qualify the name if not visible in search path */
+				if (TSDictionaryIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(dictForm->dictnamespace);
+
 				appendStringInfo(&buffer, _("text search dictionary %s"),
-					  NameStr(((Form_pg_ts_dict) GETSTRUCT(tup))->dictname));
+								 quote_qualified_identifier(nspname,
+															NameStr(dictForm->dictname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -2030,14 +2072,25 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_TSTEMPLATE:
 			{
 				HeapTuple	tup;
+				Form_pg_ts_template tmplForm;
+				char	   *nspname;
 
 				tup = SearchSysCache1(TSTEMPLATEOID,
 									  ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for text search template %u",
 						 object->objectId);
+				tmplForm = (Form_pg_ts_template) GETSTRUCT(tup);
+
+				/* Qualify the name if not visible in search path */
+				if (TSTemplateIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(tmplForm->tmplnamespace);
+
 				appendStringInfo(&buffer, _("text search template %s"),
-				  NameStr(((Form_pg_ts_template) GETSTRUCT(tup))->tmplname));
+								 quote_qualified_identifier(nspname,
+															NameStr(tmplForm->tmplname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -2045,14 +2098,25 @@ getObjectDescription(const ObjectAddress *object)
 		case OCLASS_TSCONFIG:
 			{
 				HeapTuple	tup;
+				Form_pg_ts_config cfgForm;
+				char	   *nspname;
 
 				tup = SearchSysCache1(TSCONFIGOID,
 									  ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for text search configuration %u",
 						 object->objectId);
+				cfgForm = (Form_pg_ts_config) GETSTRUCT(tup);
+
+				/* Qualify the name if not visible in search path */
+				if (TSConfigIsVisible(object->objectId))
+					nspname = NULL;
+				else
+					nspname = get_namespace_name(cfgForm->cfgnamespace);
+
 				appendStringInfo(&buffer, _("text search configuration %s"),
-					 NameStr(((Form_pg_ts_config) GETSTRUCT(tup))->cfgname));
+								 quote_qualified_identifier(nspname,
+															NameStr(cfgForm->cfgname)));
 				ReleaseSysCache(tup);
 				break;
 			}
@@ -2111,14 +2175,17 @@ getObjectDescription(const ObjectAddress *object)
 				HeapTuple	tup;
 				Oid			useid;
 				char	   *usename;
+				Form_pg_user_mapping umform;
+				ForeignServer *srv;
 
 				tup = SearchSysCache1(USERMAPPINGOID,
 									  ObjectIdGetDatum(object->objectId));
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for user mapping %u",
 						 object->objectId);
-
-				useid = ((Form_pg_user_mapping) GETSTRUCT(tup))->umuser;
+				umform = (Form_pg_user_mapping) GETSTRUCT(tup);
+				useid = umform->umuser;
+				srv = GetForeignServer(umform->umserver);
 
 				ReleaseSysCache(tup);
 
@@ -2127,7 +2194,8 @@ getObjectDescription(const ObjectAddress *object)
 				else
 					usename = "public";
 
-				appendStringInfo(&buffer, _("user mapping for %s"), usename);
+				appendStringInfo(&buffer, _("user mapping for %s on server %s"), usename,
+								 srv->servername);
 				break;
 			}
 
@@ -2898,6 +2966,7 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	conTup;
 				Form_pg_conversion conForm;
+				char	   *schema;
 
 				conTup = SearchSysCache1(CONVOID,
 										 ObjectIdGetDatum(object->objectId));
@@ -2905,8 +2974,11 @@ getObjectIdentity(const ObjectAddress *object)
 					elog(ERROR, "cache lookup failed for conversion %u",
 						 object->objectId);
 				conForm = (Form_pg_conversion) GETSTRUCT(conTup);
+				schema = get_namespace_name(conForm->connamespace);
 				appendStringInfoString(&buffer,
-								quote_identifier(NameStr(conForm->conname)));
+								quote_qualified_identifier(schema,
+														   NameStr(conForm->conname)));
+				pfree(schema);
 				ReleaseSysCache(conTup);
 				break;
 			}
@@ -3304,6 +3376,8 @@ getObjectIdentity(const ObjectAddress *object)
 			{
 				HeapTuple	tup;
 				Oid			useid;
+				Form_pg_user_mapping umform;
+				ForeignServer *srv;
 				const char *usename;
 
 				tup = SearchSysCache1(USERMAPPINGOID,
@@ -3311,8 +3385,9 @@ getObjectIdentity(const ObjectAddress *object)
 				if (!HeapTupleIsValid(tup))
 					elog(ERROR, "cache lookup failed for user mapping %u",
 						 object->objectId);
-
-				useid = ((Form_pg_user_mapping) GETSTRUCT(tup))->umuser;
+				umform = (Form_pg_user_mapping) GETSTRUCT(tup);
+				useid = umform->umuser;
+				srv = GetForeignServer(umform->umserver);
 
 				ReleaseSysCache(tup);
 
@@ -3321,7 +3396,8 @@ getObjectIdentity(const ObjectAddress *object)
 				else
 					usename = "public";
 
-				appendStringInfoString(&buffer, usename);
+				appendStringInfo(&buffer, "%s on server %s", usename,
+								 srv->servername);
 				break;
 			}
 

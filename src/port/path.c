@@ -813,7 +813,8 @@ get_home_path(char *ret_path)
 	struct passwd pwdstr;
 	struct passwd *pwd = NULL;
 
-	if (pqGetpwuid(geteuid(), &pwdstr, pwdbuf, sizeof(pwdbuf), &pwd) != 0)
+	(void) pqGetpwuid(geteuid(), &pwdstr, pwdbuf, sizeof(pwdbuf), &pwd);
+	if (pwd == NULL)
 		return false;
 	strlcpy(ret_path, pwd->pw_dir, MAXPGPATH);
 	return true;
@@ -821,9 +822,11 @@ get_home_path(char *ret_path)
 	char	   *tmppath;
 
 	/*
-	 * Note: We use getenv here because the more modern
-	 * SHGetSpecialFolderPath() will force us to link with shell32.lib which
-	 * eats valuable desktop heap.
+	 * Note: We use getenv() here because the more modern SHGetFolderPath()
+	 * would force the backend to link with shell32.lib, which eats valuable
+	 * desktop heap.  XXX This function is used only in psql, which already
+	 * brings in shell32 via libpq.  Moving this function to its own file
+	 * would keep it out of the backend, freeing it from this concern.
 	 */
 	tmppath = getenv("APPDATA");
 	if (!tmppath)

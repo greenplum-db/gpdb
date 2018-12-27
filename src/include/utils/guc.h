@@ -31,6 +31,13 @@ struct StringInfoData;                  /* #include "lib/stringinfo.h" */
 
 
 /*
+ * Automatic configuration file name for ALTER SYSTEM.
+ * This file will be used to store values of configuration parameters
+ * set by ALTER SYSTEM command.
+ */
+#define PG_AUTOCONF_FILENAME		"postgresql.auto.conf"
+
+/*
  * Certain options can only be set at certain times. The rules are
  * like this:
  *
@@ -116,8 +123,11 @@ typedef enum
 } GucSource;
 
 /*
- * Parsing the configuration file will return a list of name-value pairs
+ * Parsing the configuration file(s) will return a list of name-value pairs
  * with source location info.
+ *
+ * If "ignore" is true, don't attempt to apply the item (it might be an item
+ * we determined to be duplicate, for instance).
  */
 typedef struct ConfigVariable
 {
@@ -126,6 +136,7 @@ typedef struct ConfigVariable
 	char	   *filename;
 	int			sourceline;
 	struct ConfigVariable *next;
+	bool		ignore;
 } ConfigVariable;
 
 extern bool ParseConfigFile(const char *config_file, const char *calling_file,
@@ -208,6 +219,11 @@ typedef enum
 #define GUC_UNIT_TIME			0x7000	/* mask for MS, S, MIN */
 
 #define GUC_NOT_WHILE_SEC_REST	0x8000	/* can't set if security restricted */
+#define GUC_DISALLOW_IN_AUTO_FILE	0x00010000	/* can't set in PG_AUTOCONF_FILENAME */
+
+/* GPDB speific */
+#define GUC_GPDB_ADDOPT        0x00020000  /* Send by cdbgang */
+#define GUC_DISALLOW_USER_SET  0x00040000 /* Do not allow this GUC to be set by the user */
 
 /* GUC lists for gp_guc_list_show().  (List of struct config_generic) */
 extern List    *gp_guc_list_for_explain;
@@ -319,8 +335,8 @@ extern bool default_with_oids;
 extern bool SQL_inheritance;
 
 extern int	log_min_error_statement;
-extern int	log_min_messages;
-extern int	client_min_messages;
+extern PGDLLIMPORT int log_min_messages;
+extern PGDLLIMPORT int client_min_messages;
 extern int	log_min_duration_statement;
 extern int	log_temp_files;
 
@@ -367,7 +383,7 @@ extern int Debug_dtm_action_segment;
 extern int Debug_dtm_action_nestinglevel;
 
 extern char *data_directory;
-extern char *ConfigFileName;
+extern PGDLLIMPORT char *ConfigFileName;
 extern char *HbaFileName;
 extern char *IdentFileName;
 extern char *external_pid_file;
@@ -652,6 +668,7 @@ extern void EmitWarningsOnPlaceholders(const char *className);
 extern const char *GetConfigOption(const char *name, bool missing_ok,
 				bool restrict_superuser);
 extern const char *GetConfigOptionResetString(const char *name);
+extern int	GetConfigOptionFlags(const char *name, bool missing_ok);
 extern void ProcessConfigFile(GucContext context);
 extern void InitializeGUCOptions(void);
 extern bool SelectConfigFiles(const char *userDoption, const char *progname);

@@ -38,6 +38,8 @@ extern PQExpBuffer (*getLocalPQExpBuffer) (void);
 extern const char *fmtId(const char *identifier);
 extern const char *fmtQualifiedId(int remoteVersion,
 			   const char *schema, const char *id);
+extern char *formatPGVersionNumber(int version_number, bool include_minor,
+					  char *buf, size_t buflen);
 extern void appendStringLiteral(PQExpBuffer buf, const char *str,
 					int encoding, bool std_strings);
 extern void appendStringLiteralConn(PQExpBuffer buf, const char *str,
@@ -47,8 +49,11 @@ extern void appendStringLiteralDQ(PQExpBuffer buf, const char *str,
 extern void appendByteaLiteral(PQExpBuffer buf,
 				   const unsigned char *str, size_t length,
 				   bool std_strings);
+extern void appendShellString(PQExpBuffer buf, const char *str);
+extern void appendConnStrVal(PQExpBuffer buf, const char *str);
+extern void appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname);
 extern bool parsePGArray(const char *atext, char ***itemarray, int *nitems);
-extern bool buildACLCommands(const char *name, const char *subname,
+extern bool buildACLCommands(const char *name, const char *subname, const char *nspname,
 				 const char *type, const char *acls, const char *owner,
 				 const char *prefix, int remoteVersion,
 				 PQExpBuffer sql);
@@ -67,12 +72,17 @@ extern char *escape_fmtopts_string(const char *src);
 extern char *custom_fmtopts_string(const char *src);
 
 extern void buildShSecLabelQuery(PGconn *conn, const char *catalog_name,
-					 uint32 objectId, PQExpBuffer sql);
+					 Oid objectId, PQExpBuffer sql);
 extern void emitShSecLabels(PGconn *conn, PGresult *res,
-				PQExpBuffer buffer, const char *target, const char *objname);
+				PQExpBuffer buffer, const char *objtype, const char *objname);
 extern void set_dump_section(const char *arg, int *dumpSections);
 
 extern void simple_string_list_append(SimpleStringList *list, const char *val);
 extern bool simple_string_list_member(SimpleStringList *list, const char *val);
+
+extern bool variable_is_guc_list_quote(const char *name);
+
+extern bool SplitGUCList(char *rawstring, char separator,
+			 char ***namelist);
 
 #endif   /* DUMPUTILS_H */

@@ -1,0 +1,3269 @@
+<!-- doc/src/sgml/ddl.sgml -->
+
+<chapter id="ddl">
+ <title>Data Definition</title>
+
+ <para>
+  This chapter covers how one creates the database structures that
+  will hold one's data.  In a relational database, the raw data is
+  stored in tables, so the majority of this chapter is devoted to
+  explaining how tables are created and modified and what features are
+  available to control what data is stored in the tables.
+  Subsequently, we discuss how tables can be organized into
+  schemas, and how privileges can be assigned to tables.  Finally,
+  we will briefly look at other features that affect the data storage,
+  such as inheritance, views, functions, and triggers.
+ </para>
+
+ <sect1 id="ddl-basics">
+  <title>Table Basics</title>
+
+  <indexterm zone="ddl-basics">
+   <primary>table</primary>
+  </indexterm>
+
+  <indexterm>
+   <primary>row</primary>
+  </indexterm>
+
+  <indexterm>
+   <primary>column</primary>
+  </indexterm>
+
+  <para>
+   A table in a relational database is much like a table on paper: It
+   consists of rows and columns.  The number and order of the columns
+   is fixed, and each column has a name.  The number of rows is
+   variable &mdash; it reflects how much data is stored at a given moment.
+   SQL does not make any guarantees about the order of the rows in a
+   table.  When a table is read, the rows will appear in an unspecified order,
+   unless sorting is explicitly requested.  This is covered in <xref
+   linkend="queries">.  Furthermore, SQL does not assign unique
+   identifiers to rows, so it is possible to have several completely
+   identical rows in a table.  This is a consequence of the
+   mathematical model that underlies SQL but is usually not desirable.
+   Later in this chapter we will see how to deal with this issue.
+  </para>
+
+  <para>
+   Each column has a data type.  The data type constrains the set of
+   possible values that can be assigned to a column and assigns
+   semantics to the data stored in the column so that it can be used
+   for computations.  For instance, a column declared to be of a
+   numerical type will not accept arbitrary text strings, and the data
+   stored in such a column can be used for mathematical computations.
+   By contrast, a column declared to be of a character string type
+   will accept almost any kind of data but it does not lend itself to
+   mathematical calculations, although other operations such as string
+   concatenation are available.
+  </para>
+
+  <para>
+   <productname>PostgreSQL</productname> includes a sizable set of
+   built-in data types that fit many applications.  Users can also
+   define their own data types.  Most built-in data types have obvious
+   names and semantics, so we defer a detailed explanation to <xref
+   linkend="datatype">.  Some of the frequently used data types are
+   <type>integer</type> for whole numbers, <type>numeric</type> for
+   possibly fractional numbers, <type>text</type> for character
+   strings, <type>date</type> for dates, <type>time</type> for
+   time-of-day values, and <type>timestamp</type> for values
+   containing both date and time.
+  </para>
+
+  <indexterm>
+   <primary>table</primary>
+   <secondary>creating</secondary>
+  </indexterm>
+
+  <para>
+   To create a table, you use the aptly named <xref
+   linkend="sql-createtable"> command.
+   In this command you specify at least a name for the new table, the
+   names of the columns and the data type of each column.  For
+   example:
+<programlisting>
+CREATE TABLE my_first_table (
+    first_column text,
+    second_column integer
+);
+</programlisting>
+   This creates a table named <literal>my_first_table</literal> with
+   two columns.  The first column is named
+   <literal>first_column</literal> and has a data type of
+   <type>text</type>; the second column has the name
+   <literal>second_column</literal> and the type <type>integer</type>.
+   The table and column names follow the identifier syntax explained
+   in <xref linkend="sql-syntax-identifiers">.  The type names are
+   usually also identifiers, but there are some exceptions.  Note that the
+   column list is comma-separated and surrounded by parentheses.
+  </para>
+
+  <para>
+   Of course, the previous example was heavily contrived.  Normally,
+   you would give names to your tables and columns that convey what
+   kind of data they store.  So let's look at a more realistic
+   example:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric
+);
+</programlisting>
+   (The <type>numeric</type> type can store fractional components, as
+   would be typical of monetary amounts.)
+  </para>
+
+  <tip>
+   <para>
+    When you create many interrelated tables it is wise to choose a
+    consistent naming pattern for the tables and columns.  For
+    instance, there is a choice of using singular or plural nouns for
+    table names, both of which are favored by some theorist or other.
+   </para>
+  </tip>
+
+  <para>
+   There is a limit on how many columns a table can contain.
+   Depending on the column types, it is between 250 and 1600.
+   However, defining a table with anywhere near this many columns is
+   highly unusual and often a questionable design.
+  </para>
+
+  <indexterm>
+   <primary>table</primary>
+   <secondary>removing</secondary>
+  </indexterm>
+
+  <para>
+   If you no longer need a table, you can remove it using the <xref
+   linkend="sql-droptable"> command.
+   For example:
+<programlisting>
+DROP TABLE my_first_table;
+DROP TABLE products;
+</programlisting>
+   Attempting to drop a table that does not exist is an error.
+   Nevertheless, it is common in SQL script files to unconditionally
+   try to drop each table before creating it, ignoring any error
+   messages, so that the script works whether or not the table exists.
+   (If you like, you can use the <literal>DROP TABLE IF EXISTS</> variant
+   to avoid the error messages, but this is not standard SQL.)
+  </para>
+
+  <para>
+   If you need to modify a table that already exists, see <xref
+   linkend="ddl-alter"> later in this chapter.
+  </para>
+
+  <para>
+   With the tools discussed so far you can create fully functional
+   tables.  The remainder of this chapter is concerned with adding
+   features to the table definition to ensure data integrity,
+   security, or convenience.  If you are eager to fill your tables with
+   data now you can skip ahead to <xref linkend="dml"> and read the
+   rest of this chapter later.
+  </para>
+ </sect1>
+
+ <sect1 id="ddl-default">
+  <title>Default Values</title>
+
+  <indexterm zone="ddl-default">
+   <primary>default value</primary>
+  </indexterm>
+
+  <para>
+   A column can be assigned a default value.  When a new row is
+   created and no values are specified for some of the columns, those
+   columns will be filled with their respective default values.  A
+   data manipulation command can also request explicitly that a column
+   be set to its default value, without having to know what that value is.
+   (Details about data manipulation commands are in <xref linkend="dml">.)
+  </para>
+
+  <para>
+   <indexterm><primary>null value</primary><secondary>default value</secondary></indexterm>
+   If no default value is declared explicitly, the default value is the
+   null value.  This usually makes sense because a null value can
+   be considered to represent unknown data.
+  </para>
+
+  <para>
+   In a table definition, default values are listed after the column
+   data type.  For example:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric <emphasis>DEFAULT 9.99</emphasis>
+);
+</programlisting>
+  </para>
+
+  <para>
+   The default value can be an expression, which will be
+   evaluated whenever the default value is inserted
+   (<emphasis>not</emphasis> when the table is created).  A common example
+   is for a <type>timestamp</type> column to have a default of <literal>CURRENT_TIMESTAMP</>,
+   so that it gets set to the time of row insertion.  Another common
+   example is generating a <quote>serial number</> for each row.
+   In <productname>PostgreSQL</productname> this is typically done by
+   something like:
+<programlisting>
+CREATE TABLE products (
+    product_no integer <emphasis>DEFAULT nextval('products_product_no_seq')</emphasis>,
+    ...
+);
+</programlisting>
+   where the <literal>nextval()</> function supplies successive values
+   from a <firstterm>sequence object</> (see <xref
+   linkend="functions-sequence">). This arrangement is sufficiently common
+   that there's a special shorthand for it:
+<programlisting>
+CREATE TABLE products (
+    product_no <emphasis>SERIAL</emphasis>,
+    ...
+);
+</programlisting>
+   The <literal>SERIAL</> shorthand is discussed further in <xref
+   linkend="datatype-serial">.
+  </para>
+ </sect1>
+
+ <sect1 id="ddl-constraints">
+  <title>Constraints</title>
+
+  <indexterm zone="ddl-constraints">
+   <primary>constraint</primary>
+  </indexterm>
+
+  <para>
+   Data types are a way to limit the kind of data that can be stored
+   in a table.  For many applications, however, the constraint they
+   provide is too coarse.  For example, a column containing a product
+   price should probably only accept positive values.  But there is no
+   standard data type that accepts only positive numbers.  Another issue is
+   that you might want to constrain column data with respect to other
+   columns or rows.  For example, in a table containing product
+   information, there should be only one row for each product number.
+  </para>
+
+  <para>
+   To that end, SQL allows you to define constraints on columns and
+   tables.  Constraints give you as much control over the data in your
+   tables as you wish.  If a user attempts to store data in a column
+   that would violate a constraint, an error is raised.  This applies
+   even if the value came from the default value definition.
+  </para>
+
+  <sect2 id="ddl-constraints-check-constraints">
+   <title>Check Constraints</title>
+
+   <indexterm>
+    <primary>check constraint</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>check</secondary>
+   </indexterm>
+
+   <para>
+    A check constraint is the most generic constraint type.  It allows
+    you to specify that the value in a certain column must satisfy a
+    Boolean (truth-value) expression.  For instance, to require positive
+    product prices, you could use:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric <emphasis>CHECK (price &gt; 0)</emphasis>
+);
+</programlisting>
+   </para>
+
+   <para>
+    As you see, the constraint definition comes after the data type,
+    just like default value definitions.  Default values and
+    constraints can be listed in any order.  A check constraint
+    consists of the key word <literal>CHECK</literal> followed by an
+    expression in parentheses.  The check constraint expression should
+    involve the column thus constrained, otherwise the constraint
+    would not make too much sense.
+   </para>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>name</secondary>
+   </indexterm>
+
+   <para>
+    You can also give the constraint a separate name.  This clarifies
+    error messages and allows you to refer to the constraint when you
+    need to change it.  The syntax is:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric <emphasis>CONSTRAINT positive_price</emphasis> CHECK (price &gt; 0)
+);
+</programlisting>
+    So, to specify a named constraint, use the key word
+    <literal>CONSTRAINT</literal> followed by an identifier followed
+    by the constraint definition.  (If you don't specify a constraint
+    name in this way, the system chooses a name for you.)
+   </para>
+
+   <para>
+    A check constraint can also refer to several columns.  Say you
+    store a regular price and a discounted price, and you want to
+    ensure that the discounted price is lower than the regular price:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric CHECK (price &gt; 0),
+    discounted_price numeric CHECK (discounted_price &gt; 0),
+    <emphasis>CHECK (price &gt; discounted_price)</emphasis>
+);
+</programlisting>
+   </para>
+
+   <para>
+    The first two constraints should look familiar.  The third one
+    uses a new syntax.  It is not attached to a particular column,
+    instead it appears as a separate item in the comma-separated
+    column list.  Column definitions and these constraint
+    definitions can be listed in mixed order.
+   </para>
+
+   <para>
+    We say that the first two constraints are column constraints, whereas the
+    third one is a table constraint because it is written separately
+    from any one column definition.  Column constraints can also be
+    written as table constraints, while the reverse is not necessarily
+    possible, since a column constraint is supposed to refer to only the
+    column it is attached to.  (<productname>PostgreSQL</productname> doesn't
+    enforce that rule, but you should follow it if you want your table
+    definitions to work with other database systems.)  The above example could
+    also be written as:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0),
+    CHECK (price &gt; discounted_price)
+);
+</programlisting>
+    or even:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0 AND price &gt; discounted_price)
+);
+</programlisting>
+    It's a matter of taste.
+   </para>
+
+   <para>
+    Names can be assigned to table constraints in the same way as
+    column constraints:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    CHECK (price &gt; 0),
+    discounted_price numeric,
+    CHECK (discounted_price &gt; 0),
+    <emphasis>CONSTRAINT valid_discount</> CHECK (price &gt; discounted_price)
+);
+</programlisting>
+   </para>
+
+   <indexterm>
+    <primary>null value</primary>
+    <secondary sortas="check constraints">with check constraints</secondary>
+   </indexterm>
+
+   <para>
+    It should be noted that a check constraint is satisfied if the
+    check expression evaluates to true or the null value.  Since most
+    expressions will evaluate to the null value if any operand is null,
+    they will not prevent null values in the constrained columns.  To
+    ensure that a column does not contain null values, the not-null
+    constraint described in the next section can be used.
+   </para>
+  </sect2>
+
+  <sect2>
+   <title>Not-Null Constraints</title>
+
+   <indexterm>
+    <primary>not-null constraint</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>NOT NULL</secondary>
+   </indexterm>
+
+   <para>
+    A not-null constraint simply specifies that a column must not
+    assume the null value.  A syntax example:
+<programlisting>
+CREATE TABLE products (
+    product_no integer <emphasis>NOT NULL</emphasis>,
+    name text <emphasis>NOT NULL</emphasis>,
+    price numeric
+);
+</programlisting>
+   </para>
+
+   <para>
+    A not-null constraint is always written as a column constraint.  A
+    not-null constraint is functionally equivalent to creating a check
+    constraint <literal>CHECK (<replaceable>column_name</replaceable>
+    IS NOT NULL)</literal>, but in
+    <productname>PostgreSQL</productname> creating an explicit
+    not-null constraint is more efficient.  The drawback is that you
+    cannot give explicit names to not-null constraints created this
+    way.
+   </para>
+
+   <para>
+    Of course, a column can have more than one constraint.  Just write
+    the constraints one after another:
+<programlisting>
+CREATE TABLE products (
+    product_no integer NOT NULL,
+    name text NOT NULL,
+    price numeric NOT NULL CHECK (price &gt; 0)
+);
+</programlisting>
+    The order doesn't matter.  It does not necessarily determine in which
+    order the constraints are checked.
+   </para>
+
+   <para>
+    The <literal>NOT NULL</literal> constraint has an inverse: the
+    <literal>NULL</literal> constraint.  This does not mean that the
+    column must be null, which would surely be useless.  Instead, this
+    simply selects the default behavior that the column might be null.
+    The <literal>NULL</literal> constraint is not present in the SQL
+    standard and should not be used in portable applications.  (It was
+    only added to <productname>PostgreSQL</productname> to be
+    compatible with some other database systems.)  Some users, however,
+    like it because it makes it easy to toggle the constraint in a
+    script file.  For example, you could start with:
+<programlisting>
+CREATE TABLE products (
+    product_no integer NULL,
+    name text NULL,
+    price numeric NULL
+);
+</programlisting>
+    and then insert the <literal>NOT</literal> key word where desired.
+   </para>
+
+   <tip>
+    <para>
+     In most database designs the majority of columns should be marked
+     not null.
+    </para>
+   </tip>
+  </sect2>
+
+  <sect2 id="ddl-constraints-unique-constraints">
+   <title>Unique Constraints</title>
+
+   <indexterm>
+    <primary>unique constraint</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>unique</secondary>
+   </indexterm>
+
+   <para>
+    Unique constraints ensure that the data contained in a column, or a
+    group of columns, is unique among all the rows in the
+    table.  The syntax is:
+<programlisting>
+CREATE TABLE products (
+    product_no integer <emphasis>UNIQUE</emphasis>,
+    name text,
+    price numeric
+);
+</programlisting>
+    when written as a column constraint, and:
+<programlisting>
+CREATE TABLE products (
+    product_no integer,
+    name text,
+    price numeric,
+    <emphasis>UNIQUE (product_no)</emphasis>
+);
+</programlisting>
+    when written as a table constraint.
+   </para>
+
+   <para>
+    To define a unique constraint for a group of columns, write it as a
+    table constraint with the column names separated by commas:
+<programlisting>
+CREATE TABLE example (
+    a integer,
+    b integer,
+    c integer,
+    <emphasis>UNIQUE (a, c)</emphasis>
+);
+</programlisting>
+    This specifies that the combination of values in the indicated columns
+    is unique across the whole table, though any one of the columns
+    need not be (and ordinarily isn't) unique.
+   </para>
+
+   <para>
+    You can assign your own name for a unique constraint, in the usual way:
+<programlisting>
+CREATE TABLE products (
+    product_no integer <emphasis>CONSTRAINT must_be_different</emphasis> UNIQUE,
+    name text,
+    price numeric
+);
+</programlisting>
+   </para>
+
+   <para>
+    Adding a unique constraint will automatically create a unique B-tree
+    index on the column or group of columns listed in the constraint.
+    A uniqueness restriction covering only some rows cannot be written as
+    a unique constraint, but it is possible to enforce such a restriction by
+    creating a unique <link linkend="indexes-partial">partial index</link>.
+   </para>
+
+   <indexterm>
+    <primary>null value</primary>
+    <secondary sortas="unique constraints">with unique constraints</secondary>
+   </indexterm>
+
+   <para>
+    In general, a unique constraint is violated if there is more than
+    one row in the table where the values of all of the
+    columns included in the constraint are equal.
+    However, two null values are never considered equal in this
+    comparison.  That means even in the presence of a
+    unique constraint it is possible to store duplicate
+    rows that contain a null value in at least one of the constrained
+    columns.  This behavior conforms to the SQL standard, but we have
+    heard that other SQL databases might not follow this rule.  So be
+    careful when developing applications that are intended to be
+    portable.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-constraints-primary-keys">
+   <title>Primary Keys</title>
+
+   <indexterm>
+    <primary>primary key</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>primary key</secondary>
+   </indexterm>
+
+   <para>
+    A primary key constraint indicates that a column, or group of columns,
+    can be used as a unique identifier for rows in the table.  This
+    requires that the values be both unique and not null.  So, the following
+    two table definitions accept the same data:
+<programlisting>
+CREATE TABLE products (
+    product_no integer UNIQUE NOT NULL,
+    name text,
+    price numeric
+);
+</programlisting>
+
+<programlisting>
+CREATE TABLE products (
+    product_no integer <emphasis>PRIMARY KEY</emphasis>,
+    name text,
+    price numeric
+);
+</programlisting>
+   </para>
+
+   <para>
+    Primary keys can span more than one column; the syntax
+    is similar to unique constraints:
+<programlisting>
+CREATE TABLE example (
+    a integer,
+    b integer,
+    c integer,
+    <emphasis>PRIMARY KEY (a, c)</emphasis>
+);
+</programlisting>
+   </para>
+
+   <para>
+    Adding a primary key will automatically create a unique B-tree index
+    on the column or group of columns listed in the primary key, and will
+    force the column(s) to be marked <literal>NOT NULL</>.
+   </para>
+
+   <para>
+    A table can have at most one primary key.  (There can be any number
+    of unique and not-null constraints, which are functionally almost the
+    same thing, but only one can be identified as the primary key.)
+    Relational database theory
+    dictates that every table must have a primary key.  This rule is
+    not enforced by <productname>PostgreSQL</productname>, but it is
+    usually best to follow it.
+   </para>
+
+   <para>
+    Primary keys are useful both for
+    documentation purposes and for client applications.  For example,
+    a GUI application that allows modifying row values probably needs
+    to know the primary key of a table to be able to identify rows
+    uniquely.  There are also various ways in which the database system
+    makes use of a primary key if one has been declared; for example,
+    the primary key defines the default target column(s) for foreign keys
+    referencing its table.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-constraints-fk">
+   <title>Foreign Keys</title>
+
+   <indexterm>
+    <primary>foreign key</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>foreign key</secondary>
+   </indexterm>
+
+   <indexterm>
+    <primary>referential integrity</primary>
+   </indexterm>
+
+   <para>
+    A foreign key constraint specifies that the values in a column (or
+    a group of columns) must match the values appearing in some row
+    of another table.
+    We say this maintains the <firstterm>referential
+    integrity</firstterm> between two related tables.
+   </para>
+
+   <para>
+    Say you have the product table that we have used several times already:
+<programlisting>
+CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);
+</programlisting>
+    Let's also assume you have a table storing orders of those
+    products.  We want to ensure that the orders table only contains
+    orders of products that actually exist.  So we define a foreign
+    key constraint in the orders table that references the products
+    table:
+<programlisting>
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    product_no integer <emphasis>REFERENCES products (product_no)</emphasis>,
+    quantity integer
+);
+</programlisting>
+    Now it is impossible to create orders with non-NULL
+    <structfield>product_no</structfield> entries that do not appear in the
+    products table.
+   </para>
+
+   <para>
+    We say that in this situation the orders table is the
+    <firstterm>referencing</firstterm> table and the products table is
+    the <firstterm>referenced</firstterm> table.  Similarly, there are
+    referencing and referenced columns.
+   </para>
+
+   <para>
+    You can also shorten the above command to:
+<programlisting>
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    product_no integer <emphasis>REFERENCES products</emphasis>,
+    quantity integer
+);
+</programlisting>
+    because in absence of a column list the primary key of the
+    referenced table is used as the referenced column(s).
+   </para>
+
+   <para>
+    A foreign key can also constrain and reference a group of columns.
+    As usual, it then needs to be written in table constraint form.
+    Here is a contrived syntax example:
+<programlisting>
+CREATE TABLE t1 (
+  a integer PRIMARY KEY,
+  b integer,
+  c integer,
+  <emphasis>FOREIGN KEY (b, c) REFERENCES other_table (c1, c2)</emphasis>
+);
+</programlisting>
+    Of course, the number and type of the constrained columns need to
+    match the number and type of the referenced columns.
+   </para>
+
+   <para>
+    You can assign your own name for a foreign key constraint,
+    in the usual way.
+   </para>
+
+   <para>
+    A table can have more than one foreign key constraint.  This is
+    used to implement many-to-many relationships between tables.  Say
+    you have tables about products and orders, but now you want to
+    allow one order to contain possibly many products (which the
+    structure above did not allow).  You could use this table structure:
+<programlisting>
+CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);
+
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    shipping_address text,
+    ...
+);
+
+CREATE TABLE order_items (
+    product_no integer REFERENCES products,
+    order_id integer REFERENCES orders,
+    quantity integer,
+    PRIMARY KEY (product_no, order_id)
+);
+</programlisting>
+    Notice that the primary key overlaps with the foreign keys in
+    the last table.
+   </para>
+
+   <indexterm>
+    <primary>CASCADE</primary>
+    <secondary>foreign key action</secondary>
+   </indexterm>
+
+   <indexterm>
+    <primary>RESTRICT</primary>
+    <secondary>foreign key action</secondary>
+   </indexterm>
+
+   <para>
+    We know that the foreign keys disallow creation of orders that
+    do not relate to any products.  But what if a product is removed
+    after an order is created that references it?  SQL allows you to
+    handle that as well.  Intuitively, we have a few options:
+    <itemizedlist spacing="compact">
+     <listitem><para>Disallow deleting a referenced product</para></listitem>
+     <listitem><para>Delete the orders as well</para></listitem>
+     <listitem><para>Something else?</para></listitem>
+    </itemizedlist>
+   </para>
+
+   <para>
+    To illustrate this, let's implement the following policy on the
+    many-to-many relationship example above: when someone wants to
+    remove a product that is still referenced by an order (via
+    <literal>order_items</literal>), we disallow it.  If someone
+    removes an order, the order items are removed as well:
+<programlisting>
+CREATE TABLE products (
+    product_no integer PRIMARY KEY,
+    name text,
+    price numeric
+);
+
+CREATE TABLE orders (
+    order_id integer PRIMARY KEY,
+    shipping_address text,
+    ...
+);
+
+CREATE TABLE order_items (
+    product_no integer REFERENCES products <emphasis>ON DELETE RESTRICT</emphasis>,
+    order_id integer REFERENCES orders <emphasis>ON DELETE CASCADE</emphasis>,
+    quantity integer,
+    PRIMARY KEY (product_no, order_id)
+);
+</programlisting>
+   </para>
+
+   <para>
+    Restricting and cascading deletes are the two most common options.
+    <literal>RESTRICT</literal> prevents deletion of a
+    referenced row. <literal>NO ACTION</literal> means that if any
+    referencing rows still exist when the constraint is checked, an error
+    is raised; this is the default behavior if you do not specify anything.
+    (The essential difference between these two choices is that
+    <literal>NO ACTION</literal> allows the check to be deferred until
+    later in the transaction, whereas <literal>RESTRICT</literal> does not.)
+    <literal>CASCADE</> specifies that when a referenced row is deleted,
+    row(s) referencing it should be automatically deleted as well.
+    There are two other options:
+    <literal>SET NULL</literal> and <literal>SET DEFAULT</literal>.
+    These cause the referencing column(s) in the referencing row(s)
+    to be set to nulls or their default
+    values, respectively, when the referenced row is deleted.
+    Note that these do not excuse you from observing any constraints.
+    For example, if an action specifies <literal>SET DEFAULT</literal>
+    but the default value would not satisfy the foreign key constraint, the
+    operation will fail.
+   </para>
+
+   <para>
+    Analogous to <literal>ON DELETE</literal> there is also
+    <literal>ON UPDATE</literal> which is invoked when a referenced
+    column is changed (updated).  The possible actions are the same.
+    In this case, <literal>CASCADE</> means that the updated values of the
+    referenced column(s) should be copied into the referencing row(s).
+   </para>
+
+   <para>
+    Normally, a referencing row need not satisfy the foreign key constraint
+    if any of its referencing columns are null.  If <literal>MATCH FULL</>
+    is added to the foreign key declaration, a referencing row escapes
+    satisfying the constraint only if all its referencing columns are null
+    (so a mix of null and non-null values is guaranteed to fail a
+    <literal>MATCH FULL</> constraint).  If you don't want referencing rows
+    to be able to avoid satisfying the foreign key constraint, declare the
+    referencing column(s) as <literal>NOT NULL</>.
+   </para>
+
+   <para>
+    A foreign key must reference columns that either are a primary key or
+    form a unique constraint.  This means that the referenced columns always
+    have an index (the one underlying the primary key or unique constraint);
+    so checks on whether a referencing row has a match will be efficient.
+    Since a <command>DELETE</command> of a row from the referenced table
+    or an <command>UPDATE</command> of a referenced column will require
+    a scan of the referencing table for rows matching the old value, it
+    is often a good idea to index the referencing columns too.  Because this
+    is not always needed, and there are many choices available on how
+    to index, declaration of a foreign key constraint does not
+    automatically create an index on the referencing columns.
+   </para>
+
+   <para>
+    More information about updating and deleting data is in <xref
+    linkend="dml">.  Also see the description of foreign key constraint
+    syntax in the reference documentation for
+    <xref linkend="sql-createtable">.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-constraints-exclusion">
+   <title>Exclusion Constraints</title>
+
+   <indexterm>
+    <primary>exclusion constraint</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>exclusion</secondary>
+   </indexterm>
+
+   <para>
+    Exclusion constraints ensure that if any two rows are compared on
+    the specified columns or expressions using the specified operators,
+    at least one of these operator comparisons will return false or null.
+    The syntax is:
+<programlisting>
+CREATE TABLE circles (
+    c circle,
+    EXCLUDE USING gist (c WITH &amp;&amp;)
+);
+</programlisting>
+   </para>
+
+   <para>
+    See also <link linkend="SQL-CREATETABLE-EXCLUDE"><command>CREATE
+    TABLE ... CONSTRAINT ... EXCLUDE</></link> for details.
+   </para>
+
+   <para>
+    Adding an exclusion constraint will automatically create an index
+    of the type specified in the constraint declaration.
+   </para>
+  </sect2>
+ </sect1>
+
+ <sect1 id="ddl-system-columns">
+  <title>System Columns</title>
+
+  <para>
+   Every table has several <firstterm>system columns</> that are
+   implicitly defined by the system.  Therefore, these names cannot be
+   used as names of user-defined columns.  (Note that these
+   restrictions are separate from whether the name is a key word or
+   not; quoting a name will not allow you to escape these
+   restrictions.)  You do not really need to be concerned about these
+   columns; just know they exist.
+  </para>
+
+  <indexterm>
+   <primary>column</primary>
+   <secondary>system column</secondary>
+  </indexterm>
+
+  <variablelist>
+   <varlistentry>
+    <term><structfield>oid</></term>
+    <listitem>
+     <para>
+      <indexterm>
+       <primary>OID</primary>
+       <secondary>column</secondary>
+      </indexterm>
+      The object identifier (object ID) of a row. This column is only
+      present if the table was created using <literal>WITH
+      OIDS</literal>, or if the <xref linkend="guc-default-with-oids">
+      configuration variable was set at the time. This column is of type
+      <type>oid</type> (same name as the column); see <xref
+      linkend="datatype-oid"> for more information about the type.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>tableoid</></term>
+    <listitem>
+     <indexterm>
+      <primary>tableoid</primary>
+     </indexterm>
+
+     <para>
+      The OID of the table containing this row.  This column is
+      particularly handy for queries that select from inheritance
+      hierarchies (see <xref linkend="ddl-inherit">), since without it,
+      it's difficult to tell which individual table a row came from.  The
+      <structfield>tableoid</structfield> can be joined against the
+      <structfield>oid</structfield> column of
+      <structname>pg_class</structname> to obtain the table name.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>xmin</></term>
+    <listitem>
+     <indexterm>
+      <primary>xmin</primary>
+     </indexterm>
+
+     <para>
+      The identity (transaction ID) of the inserting transaction for
+      this row version.  (A row version is an individual state of a
+      row; each update of a row creates a new row version for the same
+      logical row.)
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>cmin</></term>
+    <listitem>
+     <indexterm>
+      <primary>cmin</primary>
+     </indexterm>
+
+     <para>
+      The command identifier (starting at zero) within the inserting
+      transaction.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>xmax</></term>
+    <listitem>
+     <indexterm>
+      <primary>xmax</primary>
+     </indexterm>
+
+     <para>
+      The identity (transaction ID) of the deleting transaction, or
+      zero for an undeleted row version.  It is possible for this column to
+      be nonzero in a visible row version. That usually indicates that the
+      deleting transaction hasn't committed yet, or that an attempted
+      deletion was rolled back.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>cmax</></term>
+    <listitem>
+     <indexterm>
+      <primary>cmax</primary>
+     </indexterm>
+
+     <para>
+      The command identifier within the deleting transaction, or zero.
+     </para>
+    </listitem>
+   </varlistentry>
+
+   <varlistentry>
+    <term><structfield>ctid</></term>
+    <listitem>
+     <indexterm>
+      <primary>ctid</primary>
+     </indexterm>
+
+     <para>
+      The physical location of the row version within its table.  Note that
+      although the <structfield>ctid</structfield> can be used to
+      locate the row version very quickly, a row's
+      <structfield>ctid</structfield> will change if it is
+      updated or moved by <command>VACUUM FULL</>.  Therefore
+      <structfield>ctid</structfield> is useless as a long-term row
+      identifier.  The OID, or even better a user-defined serial
+      number, should be used to identify logical rows.
+     </para>
+    </listitem>
+   </varlistentry>
+  </variablelist>
+
+   <para>
+    OIDs are 32-bit quantities and are assigned from a single
+    cluster-wide counter.  In a large or long-lived database, it is
+    possible for the counter to wrap around.  Hence, it is bad
+    practice to assume that OIDs are unique, unless you take steps to
+    ensure that this is the case.  If you need to identify the rows in
+    a table, using a sequence generator is strongly recommended.
+    However, OIDs can be used as well, provided that a few additional
+    precautions are taken:
+
+    <itemizedlist>
+     <listitem>
+      <para>
+       A unique constraint should be created on the OID column of each
+       table for which the OID will be used to identify rows.  When such
+       a unique constraint (or unique index) exists, the system takes
+       care not to generate an OID matching an already-existing row.
+       (Of course, this is only possible if the table contains fewer
+       than 2<superscript>32</> (4 billion) rows, and in practice the
+       table size had better be much less than that, or performance
+       might suffer.)
+      </para>
+     </listitem>
+     <listitem>
+      <para>
+       OIDs should never be assumed to be unique across tables; use
+       the combination of <structfield>tableoid</> and row OID if you
+       need a database-wide identifier.
+      </para>
+     </listitem>
+     <listitem>
+      <para>
+       Of course, the tables in question must be created <literal>WITH
+       OIDS</literal>.  As of <productname>PostgreSQL</productname> 8.1,
+       <literal>WITHOUT OIDS</> is the default.
+      </para>
+     </listitem>
+    </itemizedlist>
+   </para>
+
+   <para>
+    Transaction identifiers are also 32-bit quantities.  In a
+    long-lived database it is possible for transaction IDs to wrap
+    around.  This is not a fatal problem given appropriate maintenance
+    procedures; see <xref linkend="maintenance"> for details.  It is
+    unwise, however, to depend on the uniqueness of transaction IDs
+    over the long term (more than one billion transactions).
+   </para>
+
+   <para>
+    Command identifiers are also 32-bit quantities.  This creates a hard limit
+    of 2<superscript>32</> (4 billion) <acronym>SQL</acronym> commands
+    within a single transaction.  In practice this limit is not a
+    problem &mdash; note that the limit is on the number of
+    <acronym>SQL</acronym> commands, not the number of rows processed.
+    Also, only commands that actually modify the database contents will
+    consume a command identifier.
+   </para>
+ </sect1>
+
+ <sect1 id="ddl-alter">
+  <title>Modifying Tables</title>
+
+  <indexterm zone="ddl-alter">
+   <primary>table</primary>
+   <secondary>modifying</secondary>
+  </indexterm>
+
+  <para>
+   When you create a table and you realize that you made a mistake, or
+   the requirements of the application change, you can drop the
+   table and create it again.  But this is not a convenient option if
+   the table is already filled with data, or if the table is
+   referenced by other database objects (for instance a foreign key
+   constraint).  Therefore <productname>PostgreSQL</productname>
+   provides a family of commands to make modifications to existing
+   tables.  Note that this is conceptually distinct from altering
+   the data contained in the table: here we are interested in altering
+   the definition, or structure, of the table.
+  </para>
+
+  <para>
+   You can:
+   <itemizedlist spacing="compact">
+    <listitem>
+     <para>Add columns</para>
+    </listitem>
+    <listitem>
+     <para>Remove columns</para>
+    </listitem>
+    <listitem>
+     <para>Add constraints</para>
+    </listitem>
+    <listitem>
+     <para>Remove constraints</para>
+    </listitem>
+    <listitem>
+     <para>Change default values</para>
+    </listitem>
+    <listitem>
+     <para>Change column data types</para>
+    </listitem>
+    <listitem>
+     <para>Rename columns</para>
+    </listitem>
+    <listitem>
+     <para>Rename tables</para>
+    </listitem>
+   </itemizedlist>
+
+   All these actions are performed using the
+   <xref linkend="sql-altertable">
+   command, whose reference page contains details beyond those given
+   here.
+  </para>
+
+  <sect2 id="ddl-alter-adding-a-column">
+   <title>Adding a Column</title>
+
+   <indexterm>
+    <primary>column</primary>
+    <secondary>adding</secondary>
+   </indexterm>
+
+   <para>
+    To add a column, use a command like:
+<programlisting>
+ALTER TABLE products ADD COLUMN description text;
+</programlisting>
+    The new column is initially filled with whatever default
+    value is given (null if you don't specify a <literal>DEFAULT</> clause).
+   </para>
+
+   <para>
+    You can also define constraints on the column at the same time,
+    using the usual syntax:
+<programlisting>
+ALTER TABLE products ADD COLUMN description text CHECK (description &lt;&gt; '');
+</programlisting>
+    In fact all the options that can be applied to a column description
+    in <command>CREATE TABLE</> can be used here.  Keep in mind however
+    that the default value must satisfy the given constraints, or the
+    <literal>ADD</> will fail.  Alternatively, you can add
+    constraints later (see below) after you've filled in the new column
+    correctly.
+   </para>
+
+  <tip>
+   <para>
+    Adding a column with a default requires updating each row of the
+    table (to store the new column value).  However, if no default is
+    specified, <productname>PostgreSQL</productname> is able to avoid
+    the physical update.  So if you intend to fill the column with
+    mostly nondefault values, it's best to add the column with no default,
+    insert the correct values using <command>UPDATE</>, and then add any
+    desired default as described below.
+   </para>
+  </tip>
+  </sect2>
+
+  <sect2 id="ddl-alter-removing-a-column">
+   <title>Removing a Column</title>
+
+   <indexterm>
+    <primary>column</primary>
+    <secondary>removing</secondary>
+   </indexterm>
+
+   <para>
+    To remove a column, use a command like:
+<programlisting>
+ALTER TABLE products DROP COLUMN description;
+</programlisting>
+    Whatever data was in the column disappears.  Table constraints involving
+    the column are dropped, too.  However, if the column is referenced by a
+    foreign key constraint of another table,
+    <productname>PostgreSQL</productname> will not silently drop that
+    constraint.  You can authorize dropping everything that depends on
+    the column by adding <literal>CASCADE</>:
+<programlisting>
+ALTER TABLE products DROP COLUMN description CASCADE;
+</programlisting>
+    See <xref linkend="ddl-depend"> for a description of the general
+    mechanism behind this.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-alter-adding-a-constraint">
+   <title>Adding a Constraint</title>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>adding</secondary>
+   </indexterm>
+
+   <para>
+    To add a constraint, the table constraint syntax is used.  For example:
+<programlisting>
+ALTER TABLE products ADD CHECK (name &lt;&gt; '');
+ALTER TABLE products ADD CONSTRAINT some_name UNIQUE (product_no);
+ALTER TABLE products ADD FOREIGN KEY (product_group_id) REFERENCES product_groups;
+</programlisting>
+    To add a not-null constraint, which cannot be written as a table
+    constraint, use this syntax:
+<programlisting>
+ALTER TABLE products ALTER COLUMN product_no SET NOT NULL;
+</programlisting>
+   </para>
+
+   <para>
+    The constraint will be checked immediately, so the table data must
+    satisfy the constraint before it can be added.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-alter-removing-a-constraint">
+   <title>Removing a Constraint</title>
+
+   <indexterm>
+    <primary>constraint</primary>
+    <secondary>removing</secondary>
+   </indexterm>
+
+   <para>
+    To remove a constraint you need to know its name.  If you gave it
+    a name then that's easy.  Otherwise the system assigned a
+    generated name, which you need to find out.  The
+    <application>psql</application> command <literal>\d
+    <replaceable>tablename</replaceable></literal> can be helpful
+    here; other interfaces might also provide a way to inspect table
+    details.  Then the command is:
+<programlisting>
+ALTER TABLE products DROP CONSTRAINT some_name;
+</programlisting>
+    (If you are dealing with a generated constraint name like <literal>$2</>,
+    don't forget that you'll need to double-quote it to make it a valid
+    identifier.)
+   </para>
+
+   <para>
+    As with dropping a column, you need to add <literal>CASCADE</> if you
+    want to drop a constraint that something else depends on.  An example
+    is that a foreign key constraint depends on a unique or primary key
+    constraint on the referenced column(s).
+   </para>
+
+   <para>
+    This works the same for all constraint types except not-null
+    constraints. To drop a not null constraint use:
+<programlisting>
+ALTER TABLE products ALTER COLUMN product_no DROP NOT NULL;
+</programlisting>
+    (Recall that not-null constraints do not have names.)
+   </para>
+  </sect2>
+
+  <sect2>
+   <title>Changing a Column's Default Value</title>
+
+   <indexterm>
+    <primary>default value</primary>
+    <secondary>changing</secondary>
+   </indexterm>
+
+   <para>
+    To set a new default for a column, use a command like:
+<programlisting>
+ALTER TABLE products ALTER COLUMN price SET DEFAULT 7.77;
+</programlisting>
+    Note that this doesn't affect any existing rows in the table, it
+    just changes the default for future <command>INSERT</> commands.
+   </para>
+
+   <para>
+    To remove any default value, use:
+<programlisting>
+ALTER TABLE products ALTER COLUMN price DROP DEFAULT;
+</programlisting>
+    This is effectively the same as setting the default to null.
+    As a consequence, it is not an error
+    to drop a default where one hadn't been defined, because the
+    default is implicitly the null value.
+   </para>
+  </sect2>
+
+  <sect2>
+   <title>Changing a Column's Data Type</title>
+
+   <indexterm>
+    <primary>column data type</primary>
+    <secondary>changing</secondary>
+   </indexterm>
+
+   <para>
+    To convert a column to a different data type, use a command like:
+<programlisting>
+ALTER TABLE products ALTER COLUMN price TYPE numeric(10,2);
+</programlisting>
+    This will succeed only if each existing entry in the column can be
+    converted to the new type by an implicit cast.  If a more complex
+    conversion is needed, you can add a <literal>USING</> clause that
+    specifies how to compute the new values from the old.
+   </para>
+
+   <para>
+    <productname>PostgreSQL</> will attempt to convert the column's
+    default value (if any) to the new type, as well as any constraints
+    that involve the column.  But these conversions might fail, or might
+    produce surprising results.  It's often best to drop any constraints
+    on the column before altering its type, and then add back suitably
+    modified constraints afterwards.
+   </para>
+  </sect2>
+
+  <sect2>
+   <title>Renaming a Column</title>
+
+   <indexterm>
+    <primary>column</primary>
+    <secondary>renaming</secondary>
+   </indexterm>
+
+   <para>
+    To rename a column:
+<programlisting>
+ALTER TABLE products RENAME COLUMN product_no TO product_number;
+</programlisting>
+   </para>
+  </sect2>
+
+  <sect2>
+   <title>Renaming a Table</title>
+
+   <indexterm>
+    <primary>table</primary>
+    <secondary>renaming</secondary>
+   </indexterm>
+
+   <para>
+    To rename a table:
+<programlisting>
+ALTER TABLE products RENAME TO items;
+</programlisting>
+   </para>
+  </sect2>
+ </sect1>
+
+ <sect1 id="ddl-priv">
+  <title>Privileges</title>
+
+  <indexterm zone="ddl-priv">
+   <primary>privilege</primary>
+  </indexterm>
+
+  <indexterm>
+   <primary>permission</primary>
+   <see>privilege</see>
+  </indexterm>
+
+  <indexterm zone="ddl-priv">
+   <primary>owner</primary>
+  </indexterm>
+
+  <indexterm zone="ddl-priv">
+   <primary>GRANT</primary>
+  </indexterm>
+
+  <indexterm zone="ddl-priv">
+   <primary>REVOKE</primary>
+  </indexterm>
+
+  <para>
+   When an object is created, it is assigned an owner. The
+   owner is normally the role that executed the creation statement.
+   For most kinds of objects, the initial state is that only the owner
+   (or a superuser) can do anything with the object. To allow
+   other roles to use it, <firstterm>privileges</firstterm> must be
+   granted.
+  </para>
+
+  <para>
+   There are different kinds of privileges: <literal>SELECT</>,
+   <literal>INSERT</>, <literal>UPDATE</>, <literal>DELETE</>,
+   <literal>TRUNCATE</>, <literal>REFERENCES</>, <literal>TRIGGER</>,
+   <literal>CREATE</>, <literal>CONNECT</>, <literal>TEMPORARY</>,
+   <literal>EXECUTE</>, and <literal>USAGE</>.
+   The privileges applicable to a particular
+   object vary depending on the object's type (table, function, etc).
+   For complete information on the different types of privileges
+   supported by <productname>PostgreSQL</productname>, refer to the
+   <xref linkend="sql-grant"> reference
+   page.  The following sections and chapters will also show you how
+   those privileges are used.
+  </para>
+
+  <para>
+   The right to modify or destroy an object is always the privilege of
+   the owner only.
+  </para>
+
+  <para>
+   An object can be assigned to a new owner with an <command>ALTER</command>
+   command of the appropriate kind for the object, e.g. <xref
+   linkend="sql-altertable">.  Superusers can always do
+   this; ordinary roles can only do it if they are both the current owner
+   of the object (or a member of the owning role) and a member of the new
+   owning role.
+  </para>
+
+  <para>
+   To assign privileges, the <command>GRANT</command> command is
+   used. For example, if <literal>joe</literal> is an existing user, and
+   <literal>accounts</literal> is an existing table, the privilege to
+   update the table can be granted with:
+<programlisting>
+GRANT UPDATE ON accounts TO joe;
+</programlisting>
+   Writing <literal>ALL</literal> in place of a specific privilege grants all
+   privileges that are relevant for the object type.
+  </para>
+
+  <para>
+   The special <quote>user</quote> name <literal>PUBLIC</literal> can
+   be used to grant a privilege to every user on the system.  Also,
+   <quote>group</> roles can be set up to help manage privileges when
+   there are many users of a database &mdash; for details see
+   <xref linkend="user-manag">.
+  </para>
+
+  <para>
+   To revoke a privilege, use the fittingly named
+   <command>REVOKE</command> command:
+<programlisting>
+REVOKE ALL ON accounts FROM PUBLIC;
+</programlisting>
+   The special privileges of the object owner (i.e., the right to do
+   <command>DROP</>, <command>GRANT</>, <command>REVOKE</>, etc.)
+   are always implicit in being the owner,
+   and cannot be granted or revoked.  But the object owner can choose
+   to revoke his own ordinary privileges, for example to make a
+   table read-only for himself as well as others.
+  </para>
+
+  <para>
+   Ordinarily, only the object's owner (or a superuser) can grant or
+   revoke privileges on an object.  However, it is possible to grant a
+   privilege <quote>with grant option</>, which gives the recipient
+   the right to grant it in turn to others.  If the grant option is
+   subsequently revoked then all who received the privilege from that
+   recipient (directly or through a chain of grants) will lose the
+   privilege.  For details see the <xref linkend="sql-grant"> and
+   <xref linkend="sql-revoke"> reference pages.
+  </para>
+ </sect1>
+
+ <sect1 id="ddl-schemas">
+  <title>Schemas</title>
+
+  <indexterm zone="ddl-schemas">
+   <primary>schema</primary>
+  </indexterm>
+
+  <para>
+   A <productname>PostgreSQL</productname> database cluster
+   contains one or more named databases.  Users and groups of users are
+   shared across the entire cluster, but no other data is shared across
+   databases.  Any given client connection to the server can access
+   only the data in a single database, the one specified in the connection
+   request.
+  </para>
+
+  <note>
+   <para>
+    Users of a cluster do not necessarily have the privilege to access every
+    database in the cluster.  Sharing of user names means that there
+    cannot be different users named, say, <literal>joe</> in two databases
+    in the same cluster; but the system can be configured to allow
+    <literal>joe</> access to only some of the databases.
+   </para>
+  </note>
+
+  <para>
+   A database contains one or more named <firstterm>schemas</>, which
+   in turn contain tables.  Schemas also contain other kinds of named
+   objects, including data types, functions, and operators.  The same
+   object name can be used in different schemas without conflict; for
+   example, both <literal>schema1</> and <literal>myschema</> can
+   contain tables named <literal>mytable</>.  Unlike databases,
+   schemas are not rigidly separated: a user can access objects in any
+   of the schemas in the database he is connected to, if he has
+   privileges to do so.
+  </para>
+
+  <para>
+   There are several reasons why one might want to use schemas:
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      To allow many users to use one database without interfering with
+      each other.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      To organize database objects into logical groups to make them
+      more manageable.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Third-party applications can be put into separate schemas so
+      they do not collide with the names of other objects.
+     </para>
+    </listitem>
+   </itemizedlist>
+
+   Schemas are analogous to directories at the operating system level,
+   except that schemas cannot be nested.
+  </para>
+
+  <sect2 id="ddl-schemas-create">
+   <title>Creating a Schema</title>
+
+   <indexterm zone="ddl-schemas-create">
+    <primary>schema</primary>
+    <secondary>creating</secondary>
+   </indexterm>
+
+   <para>
+    To create a schema, use the <xref linkend="sql-createschema">
+    command.  Give the schema a name
+    of your choice.  For example:
+<programlisting>
+CREATE SCHEMA myschema;
+</programlisting>
+   </para>
+
+   <indexterm>
+    <primary>qualified name</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>name</primary>
+    <secondary>qualified</secondary>
+   </indexterm>
+
+   <para>
+    To create or access objects in a schema, write a
+    <firstterm>qualified name</> consisting of the schema name and
+    table name separated by a dot:
+<synopsis>
+<replaceable>schema</><literal>.</><replaceable>table</>
+</synopsis>
+    This works anywhere a table name is expected, including the table
+    modification commands and the data access commands discussed in
+    the following chapters.
+    (For brevity we will speak of tables only, but the same ideas apply
+    to other kinds of named objects, such as types and functions.)
+   </para>
+
+   <para>
+    Actually, the even more general syntax
+<synopsis>
+<replaceable>database</><literal>.</><replaceable>schema</><literal>.</><replaceable>table</>
+</synopsis>
+    can be used too, but at present this is just for <foreignphrase>pro
+    forma</> compliance with the SQL standard.  If you write a database name,
+    it must be the same as the database you are connected to.
+   </para>
+
+   <para>
+    So to create a table in the new schema, use:
+<programlisting>
+CREATE TABLE myschema.mytable (
+ ...
+);
+</programlisting>
+   </para>
+
+   <indexterm>
+    <primary>schema</primary>
+    <secondary>removing</secondary>
+   </indexterm>
+
+   <para>
+    To drop a schema if it's empty (all objects in it have been
+    dropped), use:
+<programlisting>
+DROP SCHEMA myschema;
+</programlisting>
+    To drop a schema including all contained objects, use:
+<programlisting>
+DROP SCHEMA myschema CASCADE;
+</programlisting>
+    See <xref linkend="ddl-depend"> for a description of the general
+    mechanism behind this.
+   </para>
+
+   <para>
+    Often you will want to create a schema owned by someone else
+    (since this is one of the ways to restrict the activities of your
+    users to well-defined namespaces).  The syntax for that is:
+<programlisting>
+CREATE SCHEMA <replaceable>schemaname</replaceable> AUTHORIZATION <replaceable>username</replaceable>;
+</programlisting>
+    You can even omit the schema name, in which case the schema name
+    will be the same as the user name.  See <xref
+    linkend="ddl-schemas-patterns"> for how this can be useful.
+   </para>
+
+   <para>
+    Schema names beginning with <literal>pg_</> are reserved for
+    system purposes and cannot be created by users.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-public">
+   <title>The Public Schema</title>
+
+   <indexterm zone="ddl-schemas-public">
+    <primary>schema</primary>
+    <secondary>public</secondary>
+   </indexterm>
+
+   <para>
+    In the previous sections we created tables without specifying any
+    schema names.  By default such tables (and other objects) are
+    automatically put into a schema named <quote>public</quote>.  Every new
+    database contains such a schema.  Thus, the following are equivalent:
+<programlisting>
+CREATE TABLE products ( ... );
+</programlisting>
+    and:
+<programlisting>
+CREATE TABLE public.products ( ... );
+</programlisting>
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-path">
+   <title>The Schema Search Path</title>
+
+   <indexterm>
+    <primary>search path</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>unqualified name</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>name</primary>
+    <secondary>unqualified</secondary>
+   </indexterm>
+
+   <para>
+    Qualified names are tedious to write, and it's often best not to
+    wire a particular schema name into applications anyway.  Therefore
+    tables are often referred to by <firstterm>unqualified names</>,
+    which consist of just the table name.  The system determines which table
+    is meant by following a <firstterm>search path</>, which is a list
+    of schemas to look in.  The first matching table in the search path
+    is taken to be the one wanted.  If there is no match in the search
+    path, an error is reported, even if matching table names exist
+    in other schemas in the database.
+   </para>
+
+  <para>
+    The ability to create like-named objects in different schemas complicates
+    writing a query that references precisely the same objects every time.  It
+    also opens up the potential for users to change the behavior of other
+    users' queries, maliciously or accidentally.  Due to the prevalence of
+    unqualified names in queries and their use
+    in <productname>PostgreSQL</productname> internals, adding a schema
+    to <varname>search_path</varname> effectively trusts all users having
+    <literal>CREATE</literal> privilege on that schema.  When you run an
+    ordinary query, a malicious user able to create objects in a schema of
+    your search path can take control and execute arbitrary SQL functions as
+    though you executed them.
+   </para>
+
+   <indexterm>
+    <primary>schema</primary>
+    <secondary>current</secondary>
+   </indexterm>
+
+   <para>
+    The first schema named in the search path is called the current schema.
+    Aside from being the first schema searched, it is also the schema in
+    which new tables will be created if the <command>CREATE TABLE</>
+    command does not specify a schema name.
+   </para>
+
+   <indexterm>
+    <primary><varname>search_path</varname> configuration parameter</primary>
+   </indexterm>
+
+   <para>
+    To show the current search path, use the following command:
+<programlisting>
+SHOW search_path;
+</programlisting>
+    In the default setup this returns:
+<screen>
+ search_path
+--------------
+ "$user",public
+</screen>
+    The first element specifies that a schema with the same name as
+    the current user is to be searched.  If no such schema exists,
+    the entry is ignored.  The second element refers to the
+    public schema that we have seen already.
+   </para>
+
+   <para>
+    The first schema in the search path that exists is the default
+    location for creating new objects.  That is the reason that by
+    default objects are created in the public schema.  When objects
+    are referenced in any other context without schema qualification
+    (table modification, data modification, or query commands) the
+    search path is traversed until a matching object is found.
+    Therefore, in the default configuration, any unqualified access
+    again can only refer to the public schema.
+   </para>
+
+   <para>
+    To put our new schema in the path, we use:
+<programlisting>
+SET search_path TO myschema,public;
+</programlisting>
+    (We omit the <literal>$user</literal> here because we have no
+    immediate need for it.)  And then we can access the table without
+    schema qualification:
+<programlisting>
+DROP TABLE mytable;
+</programlisting>
+    Also, since <literal>myschema</literal> is the first element in
+    the path, new objects would by default be created in it.
+   </para>
+
+   <para>
+    We could also have written:
+<programlisting>
+SET search_path TO myschema;
+</programlisting>
+    Then we no longer have access to the public schema without
+    explicit qualification.  There is nothing special about the public
+    schema except that it exists by default.  It can be dropped, too.
+   </para>
+
+   <para>
+    See also <xref linkend="functions-info"> for other ways to manipulate
+    the schema search path.
+   </para>
+
+   <para>
+    The search path works in the same way for data type names, function names,
+    and operator names as it does for table names.  Data type and function
+    names can be qualified in exactly the same way as table names.  If you
+    need to write a qualified operator name in an expression, there is a
+    special provision: you must write
+<synopsis>
+<literal>OPERATOR(</><replaceable>schema</><literal>.</><replaceable>operator</><literal>)</>
+</synopsis>
+    This is needed to avoid syntactic ambiguity.  An example is:
+<programlisting>
+SELECT 3 OPERATOR(pg_catalog.+) 4;
+</programlisting>
+    In practice one usually relies on the search path for operators,
+    so as not to have to write anything so ugly as that.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-priv">
+   <title>Schemas and Privileges</title>
+
+   <indexterm zone="ddl-schemas-priv">
+    <primary>privilege</primary>
+    <secondary sortas="schemas">for schemas</secondary>
+   </indexterm>
+
+   <para>
+    By default, users cannot access any objects in schemas they do not
+    own.  To allow that, the owner of the schema must grant the
+    <literal>USAGE</literal> privilege on the schema.  To allow users
+    to make use of the objects in the schema, additional privileges
+    might need to be granted, as appropriate for the object.
+   </para>
+
+   <para>
+    A user can also be allowed to create objects in someone else's
+    schema.  To allow that, the <literal>CREATE</literal> privilege on
+    the schema needs to be granted.  Note that by default, everyone
+    has <literal>CREATE</literal> and <literal>USAGE</literal> privileges on
+    the schema
+    <literal>public</literal>.  This allows all users that are able to
+    connect to a given database to create objects in its
+    <literal>public</literal> schema.
+    Some <link linkend="ddl-schemas-patterns">usage patterns</link> call for
+    revoking that privilege:
+<programlisting>
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+</programlisting>
+    (The first <quote>public</quote> is the schema, the second
+    <quote>public</quote> means <quote>every user</quote>.  In the
+    first sense it is an identifier, in the second sense it is a
+    key word, hence the different capitalization; recall the
+    guidelines from <xref linkend="sql-syntax-identifiers">.)
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-catalog">
+   <title>The System Catalog Schema</title>
+
+   <indexterm zone="ddl-schemas-catalog">
+    <primary>system catalog</primary>
+    <secondary>schema</secondary>
+   </indexterm>
+
+   <para>
+    In addition to <literal>public</> and user-created schemas, each
+    database contains a <literal>pg_catalog</> schema, which contains
+    the system tables and all the built-in data types, functions, and
+    operators.  <literal>pg_catalog</> is always effectively part of
+    the search path.  If it is not named explicitly in the path then
+    it is implicitly searched <emphasis>before</> searching the path's
+    schemas.  This ensures that built-in names will always be
+    findable.  However, you can explicitly place
+    <literal>pg_catalog</> at the end of your search path if you
+    prefer to have user-defined names override built-in names.
+   </para>
+
+   <para>
+    Since system table names begin with <literal>pg_</>, it is best to
+    avoid such names to ensure that you won't suffer a conflict if some
+    future version defines a system table named the same as your
+    table.  (With the default search path, an unqualified reference to
+    your table name would then be resolved as the system table instead.)
+    System tables will continue to follow the convention of having
+    names beginning with <literal>pg_</>, so that they will not
+    conflict with unqualified user-table names so long as users avoid
+    the <literal>pg_</> prefix.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-patterns">
+   <title>Usage Patterns</title>
+
+   <para>
+    Schemas can be used to organize your data in many ways.  There are a few
+    usage patterns easily supported by the default configuration, only one of
+    which suffices when database users mistrust other database users:
+    <itemizedlist>
+     <listitem>
+      <!-- "DROP SCHEMA public" is inferior to this REVOKE, because pg_dump
+           doesn't preserve that DROP. -->
+      <para>
+       Constrain ordinary users to user-private schemas.  To implement this,
+       issue <literal>REVOKE CREATE ON SCHEMA public FROM PUBLIC</literal>,
+       and create a schema for each user with the same name as that user.  If
+       affected users had logged in before this, consider auditing the public
+       schema for objects named like objects in
+       schema <literal>pg_catalog</literal>.  Recall that the default search
+       path starts with <literal>$user</literal>, which resolves to the user
+       name.  Therefore, if each user has a separate schema, they access their
+       own schemas by default.
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       Remove the public schema from each user's default search path
+       using <literal>ALTER ROLE <replaceable>user</replaceable> SET
+       search_path = "$user"</literal>.  Everyone retains the ability to
+       create objects in the public schema, but only qualified names will
+       choose those objects.  While qualified table references are fine, calls
+       to functions in the public schema <link linkend="typeconv-func">will be
+       unsafe or unreliable</link>.  Also, a user holding
+       the <literal>CREATEROLE</literal> privilege can undo this setting and
+       issue arbitrary queries under the identity of users relying on the
+       setting.  If you create functions or extensions in the public schema or
+       grant <literal>CREATEROLE</literal> to users not warranting this
+       almost-superuser ability, use the first pattern instead.
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       Remove the public schema from <varname>search_path</varname> in
+       <link linkend="config-setting-configuration-file"><filename>postgresql.conf</filename></link>.
+       The ensuing user experience matches the previous pattern.  In addition
+       to that pattern's implications for functions
+       and <literal>CREATEROLE</literal>, this trusts database owners
+       like <literal>CREATEROLE</literal>.  If you create functions or
+       extensions in the public schema or assign
+       the <literal>CREATEROLE</literal>
+       privilege, <literal>CREATEDB</literal> privilege or individual database
+       ownership to users not warranting almost-superuser access, use the
+       first pattern instead.
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       Keep the default.  All users access the public schema implicitly.  This
+       simulates the situation where schemas are not available at all, giving
+       a smooth transition from the non-schema-aware world.  However, any user
+       can issue arbitrary queries under the identity of any user not electing
+       to protect itself individually.  This pattern is acceptable only when
+       the database has a single user or a few mutually-trusting users.
+      </para>
+     </listitem>
+    </itemizedlist>
+   </para>
+
+   <para>
+    For any pattern, to install shared applications (tables to be used by
+    everyone, additional functions provided by third parties, etc.), put them
+    into separate schemas.  Remember to grant appropriate privileges to allow
+    the other users to access them.  Users can then refer to these additional
+    objects by qualifying the names with a schema name, or they can put the
+    additional schemas into their search path, as they choose.
+   </para>
+  </sect2>
+
+  <sect2 id="ddl-schemas-portability">
+   <title>Portability</title>
+
+   <para>
+    In the SQL standard, the notion of objects in the same schema
+    being owned by different users does not exist.  Moreover, some
+    implementations do not allow you to create schemas that have a
+    different name than their owner.  In fact, the concepts of schema
+    and user are nearly equivalent in a database system that
+    implements only the basic schema support specified in the
+    standard.  Therefore, many users consider qualified names to
+    really consist of
+    <literal><replaceable>username</>.<replaceable>tablename</></literal>.
+    This is how <productname>PostgreSQL</productname> will effectively
+    behave if you create a per-user schema for every user.
+   </para>
+
+   <para>
+    Also, there is no concept of a <literal>public</> schema in the
+    SQL standard.  For maximum conformance to the standard, you should
+    not use the <literal>public</> schema.
+   </para>
+
+   <para>
+    Of course, some SQL database systems might not implement schemas
+    at all, or provide namespace support by allowing (possibly
+    limited) cross-database access.  If you need to work with those
+    systems, then maximum portability would be achieved by not using
+    schemas at all.
+   </para>
+  </sect2>
+ </sect1>
+
+ <sect1 id="ddl-inherit">
+  <title>Inheritance</title>
+
+  <indexterm>
+   <primary>inheritance</primary>
+  </indexterm>
+
+  <indexterm>
+   <primary>table</primary>
+   <secondary>inheritance</secondary>
+  </indexterm>
+
+  <para>
+   <productname>PostgreSQL</productname> implements table inheritance,
+   which can be a useful tool for database designers.  (SQL:1999 and
+   later define a type inheritance feature, which differs in many
+   respects from the features described here.)
+  </para>
+
+  <para>
+   Let's start with an example: suppose we are trying to build a data
+   model for cities.  Each state has many cities, but only one
+   capital. We want to be able to quickly retrieve the capital city
+   for any particular state. This can be done by creating two tables,
+   one for state capitals and one for cities that are not
+   capitals. However, what happens when we want to ask for data about
+   a city, regardless of whether it is a capital or not? The
+   inheritance feature can help to resolve this problem. We define the
+   <structname>capitals</structname> table so that it inherits from
+   <structname>cities</structname>:
+
+<programlisting>
+CREATE TABLE cities (
+    name            text,
+    population      float,
+    altitude        int     -- in feet
+);
+
+CREATE TABLE capitals (
+    state           char(2)
+) INHERITS (cities);
+</programlisting>
+
+   In this case, the <structname>capitals</> table <firstterm>inherits</>
+   all the columns of its parent table, <structname>cities</>. State
+   capitals also have an extra column, <structfield>state</>, that shows
+   their state.
+  </para>
+
+  <para>
+   In <productname>PostgreSQL</productname>, a table can inherit from
+   zero or more other tables, and a query can reference either all
+   rows of a table or all rows of a table plus all of its descendant tables.
+   The latter behavior is the default.
+   For example, the following query finds the names of all cities,
+   including state capitals, that are located at an altitude over
+   500 feet:
+
+<programlisting>
+SELECT name, altitude
+    FROM cities
+    WHERE altitude &gt; 500;
+</programlisting>
+
+   Given the sample data from the <productname>PostgreSQL</productname>
+   tutorial (see <xref linkend="tutorial-sql-intro">), this returns:
+
+<programlisting>
+   name    | altitude
+-----------+----------
+ Las Vegas |     2174
+ Mariposa  |     1953
+ Madison   |      845
+</programlisting>
+  </para>
+
+  <para>
+   On the other hand, the following query finds all the cities that
+   are not state capitals and are situated at an altitude over 500 feet:
+
+<programlisting>
+SELECT name, altitude
+    FROM ONLY cities
+    WHERE altitude &gt; 500;
+
+   name    | altitude
+-----------+----------
+ Las Vegas |     2174
+ Mariposa  |     1953
+</programlisting>
+  </para>
+
+  <para>
+   Here the <literal>ONLY</literal> keyword indicates that the query
+   should apply only to <structname>cities</structname>, and not any tables
+   below <structname>cities</structname> in the inheritance hierarchy.  Many
+   of the commands that we have already discussed &mdash;
+   <command>SELECT</command>, <command>UPDATE</command> and
+   <command>DELETE</command> &mdash; support the
+   <literal>ONLY</literal> keyword.
+  </para>
+
+  <para>
+   You can also write the table name with a trailing <literal>*</>
+   to explicitly specify that descendant tables are included:
+
+<programlisting>
+SELECT name, altitude
+    FROM cities*
+    WHERE altitude &gt; 500;
+</programlisting>
+
+   Writing <literal>*</> is not necessary, since this behavior is
+   the default (unless you have changed the setting of the
+   <xref linkend="guc-sql-inheritance"> configuration option).
+   However writing <literal>*</> might be useful to emphasize that
+   additional tables will be searched.
+  </para>
+
+  <para>
+   In some cases you might wish to know which table a particular row
+   originated from. There is a system column called
+   <structfield>tableoid</structfield> in each table which can tell you the
+   originating table:
+
+<programlisting>
+SELECT c.tableoid, c.name, c.altitude
+FROM cities c
+WHERE c.altitude &gt; 500;
+</programlisting>
+
+   which returns:
+
+<programlisting>
+ tableoid |   name    | altitude
+----------+-----------+----------
+   139793 | Las Vegas |     2174
+   139793 | Mariposa  |     1953
+   139798 | Madison   |      845
+</programlisting>
+
+   (If you try to reproduce this example, you will probably get
+   different numeric OIDs.)  By doing a join with
+   <structname>pg_class</> you can see the actual table names:
+
+<programlisting>
+SELECT p.relname, c.name, c.altitude
+FROM cities c, pg_class p
+WHERE c.altitude &gt; 500 AND c.tableoid = p.oid;
+</programlisting>
+
+   which returns:
+
+<programlisting>
+ relname  |   name    | altitude
+----------+-----------+----------
+ cities   | Las Vegas |     2174
+ cities   | Mariposa  |     1953
+ capitals | Madison   |      845
+</programlisting>
+  </para>
+
+  <para>
+   Inheritance does not automatically propagate data from
+   <command>INSERT</command> or <command>COPY</command> commands to
+   other tables in the inheritance hierarchy. In our example, the
+   following <command>INSERT</command> statement will fail:
+<programlisting>
+INSERT INTO cities (name, population, altitude, state)
+VALUES ('New York', NULL, NULL, 'NY');
+</programlisting>
+   We might hope that the data would somehow be routed to the
+   <structname>capitals</structname> table, but this does not happen:
+   <command>INSERT</command> always inserts into exactly the table
+   specified.  In some cases it is possible to redirect the insertion
+   using a rule (see <xref linkend="rules">).  However that does not
+   help for the above case because the <structname>cities</> table
+   does not contain the column <structfield>state</>, and so the
+   command will be rejected before the rule can be applied.
+  </para>
+
+  <para>
+   All check constraints and not-null constraints on a parent table are
+   automatically inherited by its children.  Other types of constraints
+   (unique, primary key, and foreign key constraints) are not inherited.
+  </para>
+
+  <para>
+   A table can inherit from more than one parent table, in which case it has
+   the union of the columns defined by the parent tables.  Any columns
+   declared in the child table's definition are added to these.  If the
+   same column name appears in multiple parent tables, or in both a parent
+   table and the child's definition, then these columns are <quote>merged</>
+   so that there is only one such column in the child table.  To be merged,
+   columns must have the same data types, else an error is raised.  The
+   merged column will have copies of all the check constraints coming from
+   any one of the column definitions it came from, and will be marked not-null
+   if any of them are.
+  </para>
+
+  <para>
+   Table inheritance is typically established when the child table is
+   created, using the <literal>INHERITS</> clause of the
+   <xref linkend="sql-createtable">
+   statement.
+   Alternatively, a table which is already defined in a compatible way can
+   have a new parent relationship added, using the <literal>INHERIT</literal>
+   variant of <xref linkend="sql-altertable">.
+   To do this the new child table must already include columns with
+   the same names and types as the columns of the parent. It must also include
+   check constraints with the same names and check expressions as those of the
+   parent. Similarly an inheritance link can be removed from a child using the
+   <literal>NO INHERIT</literal> variant of <command>ALTER TABLE</>.
+   Dynamically adding and removing inheritance links like this can be useful
+   when the inheritance relationship is being used for table
+   partitioning (see <xref linkend="ddl-partitioning">).
+  </para>
+
+  <para>
+   One convenient way to create a compatible table that will later be made
+   a new child is to use the <literal>LIKE</literal> clause in <command>CREATE
+   TABLE</command>. This creates a new table with the same columns as
+   the source table. If there are any <literal>CHECK</literal>
+   constraints defined on the source table, the <literal>INCLUDING
+   CONSTRAINTS</literal> option to <literal>LIKE</literal> should be
+   specified, as the new child must have constraints matching the parent
+   to be considered compatible.
+  </para>
+
+  <para>
+   A parent table cannot be dropped while any of its children remain. Neither
+   can columns or check constraints of child tables be dropped or altered
+   if they are inherited
+   from any parent tables. If you wish to remove a table and all of its
+   descendants, one easy way is to drop the parent table with the
+   <literal>CASCADE</literal> option.
+  </para>
+
+  <para>
+   <xref linkend="sql-altertable"> will
+   propagate any changes in column data definitions and check
+   constraints down the inheritance hierarchy.  Again, dropping
+   columns that are depended on by other tables is only possible when using
+   the <literal>CASCADE</literal> option. <command>ALTER
+   TABLE</command> follows the same rules for duplicate column merging
+   and rejection that apply during <command>CREATE TABLE</command>.
+  </para>
+
+  <para>
+   Note how table access permissions are handled.  Querying a parent
+   table can automatically access data in child tables without further
+   access privilege checking.  This preserves the appearance that the
+   data is (also) in the parent table.  Accessing the child tables
+   directly is, however, not automatically allowed and would require
+   further privileges to be granted.
+  </para>
+
+ <sect2 id="ddl-inherit-caveats">
+  <title>Caveats</title>
+
+  <para>
+   Note that not all SQL commands are able to work on
+   inheritance hierarchies.  Commands that are used for data querying,
+   data modification, or schema modification
+   (e.g., <literal>SELECT</literal>, <literal>UPDATE</literal>, <literal>DELETE</literal>,
+   most variants of <literal>ALTER TABLE</literal>, but
+   not <literal>INSERT</literal> or <literal>ALTER TABLE ...
+   RENAME</literal>) typically default to including child tables and
+   support the <literal>ONLY</literal> notation to exclude them.
+   Commands that do database maintenance and tuning
+   (e.g., <literal>REINDEX</literal>, <literal>VACUUM</literal>)
+   typically only work on individual, physical tables and do not
+   support recursing over inheritance hierarchies.  The respective
+   behavior of each individual command is documented in its reference
+   page (<xref linkend="sql-commands">).
+  </para>
+
+  <para>
+   A serious limitation of the inheritance feature is that indexes (including
+   unique constraints) and foreign key constraints only apply to single
+   tables, not to their inheritance children. This is true on both the
+   referencing and referenced sides of a foreign key constraint. Thus,
+   in the terms of the above example:
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      If we declared <structname>cities</>.<structfield>name</> to be
+      <literal>UNIQUE</> or a <literal>PRIMARY KEY</>, this would not stop the
+      <structname>capitals</> table from having rows with names duplicating
+      rows in <structname>cities</>.  And those duplicate rows would by
+      default show up in queries from <structname>cities</>.  In fact, by
+      default <structname>capitals</> would have no unique constraint at all,
+      and so could contain multiple rows with the same name.
+      You could add a unique constraint to <structname>capitals</>, but this
+      would not prevent duplication compared to <structname>cities</>.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Similarly, if we were to specify that
+      <structname>cities</>.<structfield>name</> <literal>REFERENCES</> some
+      other table, this constraint would not automatically propagate to
+      <structname>capitals</>.  In this case you could work around it by
+      manually adding the same <literal>REFERENCES</> constraint to
+      <structname>capitals</>.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Specifying that another table's column <literal>REFERENCES
+      cities(name)</> would allow the other table to contain city names, but
+      not capital names.  There is no good workaround for this case.
+     </para>
+    </listitem>
+   </itemizedlist>
+
+   These deficiencies will probably be fixed in some future release,
+   but in the meantime considerable care is needed in deciding whether
+   inheritance is useful for your application.
+  </para>
+
+   </sect2>
+  </sect1>
+
+  <sect1 id="ddl-partitioning">
+   <title>Partitioning</title>
+
+   <indexterm>
+    <primary>partitioning</primary>
+   </indexterm>
+
+   <indexterm>
+    <primary>table</primary>
+    <secondary>partitioning</secondary>
+   </indexterm>
+
+   <para>
+    <productname>PostgreSQL</productname> supports basic table
+    partitioning. This section describes why and how to implement
+    partitioning as part of your database design.
+   </para>
+
+   <sect2 id="ddl-partitioning-overview">
+     <title>Overview</title>
+
+   <para>
+    Partitioning refers to splitting what is logically one large table
+    into smaller physical pieces.
+    Partitioning can provide several benefits:
+   <itemizedlist>
+    <listitem>
+     <para>
+      Query performance can be improved dramatically in certain situations,
+      particularly when most of the heavily accessed rows of the table are in a
+      single partition or a small number of partitions.  The partitioning
+      substitutes for leading columns of indexes, reducing index size and
+      making it more likely that the heavily-used parts of the indexes
+      fit in memory.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      When queries or updates access a large percentage of a single
+      partition, performance can be improved by taking advantage
+      of sequential scan of that partition instead of using an
+      index and random access reads scattered across the whole table.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Bulk loads and deletes can be accomplished by adding or removing
+      partitions, if that requirement is planned into the partitioning design.
+      <command>ALTER TABLE NO INHERIT</> and <command>DROP TABLE</> are
+      both far faster than a bulk operation.
+      These commands also entirely avoid the <command>VACUUM</command>
+      overhead caused by a bulk <command>DELETE</>.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Seldom-used data can be migrated to cheaper and slower storage media.
+     </para>
+    </listitem>
+   </itemizedlist>
+
+    The benefits will normally be worthwhile only when a table would
+    otherwise be very large. The exact point at which a table will
+    benefit from partitioning depends on the application, although a
+    rule of thumb is that the size of the table should exceed the physical
+    memory of the database server.
+   </para>
+
+   <para>
+    Currently, <productname>PostgreSQL</productname> supports partitioning
+    via table inheritance.  Each partition must be created as a child
+    table of a single parent table.  The parent table itself is normally
+    empty; it exists just to represent the entire data set.  You should be
+    familiar with inheritance (see <xref linkend="ddl-inherit">) before
+    attempting to set up partitioning.
+   </para>
+
+   <para>
+    The following forms of partitioning can be implemented in
+    <productname>PostgreSQL</productname>:
+
+    <variablelist>
+     <varlistentry>
+      <term>Range Partitioning</term>
+
+      <listitem>
+       <para>
+        The table is partitioned into <quote>ranges</quote> defined
+        by a key column or set of columns, with no overlap between
+        the ranges of values assigned to different partitions.  For
+        example one might partition by date ranges, or by ranges of
+        identifiers for particular business objects.
+       </para>
+      </listitem>
+     </varlistentry>
+
+     <varlistentry>
+      <term>List Partitioning</term>
+
+      <listitem>
+       <para>
+        The table is partitioned by explicitly listing which key values
+        appear in each partition.
+       </para>
+      </listitem>
+     </varlistentry>
+    </variablelist>
+   </para>
+   </sect2>
+
+   <sect2 id="ddl-partitioning-implementation">
+     <title>Implementing Partitioning</title>
+
+    <para>
+     To set up a partitioned table, do the following:
+     <orderedlist spacing="compact">
+      <listitem>
+       <para>
+        Create the <quote>master</quote> table, from which all of the
+        partitions will inherit.
+       </para>
+       <para>
+        This table will contain no data.  Do not define any check
+        constraints on this table, unless you intend them to
+        be applied equally to all partitions.  There is no point
+        in defining any indexes or unique constraints on it, either.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Create several <quote>child</quote> tables that each inherit from
+        the master table.  Normally, these tables will not add any columns
+        to the set inherited from the master.
+       </para>
+
+       <para>
+        We will refer to the child tables as partitions, though they
+        are in every way normal <productname>PostgreSQL</> tables.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Add table constraints to the partition tables to define the
+        allowed key values in each partition.
+       </para>
+
+       <para>
+        Typical examples would be:
+<programlisting>
+CHECK ( x = 1 )
+CHECK ( county IN ( 'Oxfordshire', 'Buckinghamshire', 'Warwickshire' ))
+CHECK ( outletID &gt;= 100 AND outletID &lt; 200 )
+</programlisting>
+        Ensure that the constraints guarantee that there is no overlap
+        between the key values permitted in different partitions.  A common
+        mistake is to set up range constraints like:
+<programlisting>
+CHECK ( outletID BETWEEN 100 AND 200 )
+CHECK ( outletID BETWEEN 200 AND 300 )
+</programlisting>
+        This is wrong since it is not clear which partition the key value
+        200 belongs in.
+       </para>
+
+       <para>
+        Note that there is no difference in
+        syntax between range and list partitioning; those terms are
+        descriptive only.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        For each partition, create an index on the key column(s),
+        as well as any other indexes you might want.  (The key index is
+        not strictly necessary, but in most scenarios it is helpful.
+        If you intend the key values to be unique then you should
+        always create a unique or primary-key constraint for each
+        partition.)
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Optionally, define a trigger or rule to redirect data inserted into
+        the master table to the appropriate partition.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Ensure that the <xref linkend="guc-constraint-exclusion">
+        configuration parameter is not disabled in
+        <filename>postgresql.conf</>.
+        If it is, queries will not be optimized as desired.
+       </para>
+      </listitem>
+
+     </orderedlist>
+    </para>
+
+    <para>
+     For example, suppose we are constructing a database for a large
+     ice cream company. The company measures peak temperatures every
+     day as well as ice cream sales in each region. Conceptually,
+     we want a table like:
+
+<programlisting>
+CREATE TABLE measurement (
+    city_id         int not null,
+    logdate         date not null,
+    peaktemp        int,
+    unitsales       int
+);
+</programlisting>
+
+     We know that most queries will access just the last week's, month's or
+     quarter's data, since the main use of this table will be to prepare
+     online reports for management.
+     To reduce the amount of old data that needs to be stored, we
+     decide to only keep the most recent 3 years worth of data. At the
+     beginning of each month we will remove the oldest month's data.
+    </para>
+
+    <para>
+     In this situation we can use partitioning to help us meet all of our
+     different requirements for the measurements table. Following the
+     steps outlined above, partitioning can be set up as follows:
+    </para>
+
+    <para>
+     <orderedlist spacing="compact">
+      <listitem>
+       <para>
+        The master table is the <structname>measurement</> table, declared
+        exactly as above.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        Next we create one partition for each active month:
+
+<programlisting>
+CREATE TABLE measurement_y2006m02 ( ) INHERITS (measurement);
+CREATE TABLE measurement_y2006m03 ( ) INHERITS (measurement);
+...
+CREATE TABLE measurement_y2007m11 ( ) INHERITS (measurement);
+CREATE TABLE measurement_y2007m12 ( ) INHERITS (measurement);
+CREATE TABLE measurement_y2008m01 ( ) INHERITS (measurement);
+</programlisting>
+
+        Each of the partitions are complete tables in their own right,
+        but they inherit their definitions from the
+        <structname>measurement</> table.
+       </para>
+
+       <para>
+        This solves one of our problems: deleting old data. Each
+        month, all we will need to do is perform a <command>DROP
+        TABLE</command> on the oldest child table and create a new
+        child table for the new month's data.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        We must provide non-overlapping table constraints.  Rather than
+        just creating the partition tables as above, the table creation
+        script should really be:
+
+<programlisting>
+CREATE TABLE measurement_y2006m02 (
+    CHECK ( logdate &gt;= DATE '2006-02-01' AND logdate &lt; DATE '2006-03-01' )
+) INHERITS (measurement);
+CREATE TABLE measurement_y2006m03 (
+    CHECK ( logdate &gt;= DATE '2006-03-01' AND logdate &lt; DATE '2006-04-01' )
+) INHERITS (measurement);
+...
+CREATE TABLE measurement_y2007m11 (
+    CHECK ( logdate &gt;= DATE '2007-11-01' AND logdate &lt; DATE '2007-12-01' )
+) INHERITS (measurement);
+CREATE TABLE measurement_y2007m12 (
+    CHECK ( logdate &gt;= DATE '2007-12-01' AND logdate &lt; DATE '2008-01-01' )
+) INHERITS (measurement);
+CREATE TABLE measurement_y2008m01 (
+    CHECK ( logdate &gt;= DATE '2008-01-01' AND logdate &lt; DATE '2008-02-01' )
+) INHERITS (measurement);
+</programlisting>
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        We probably need indexes on the key columns too:
+
+<programlisting>
+CREATE INDEX measurement_y2006m02_logdate ON measurement_y2006m02 (logdate);
+CREATE INDEX measurement_y2006m03_logdate ON measurement_y2006m03 (logdate);
+...
+CREATE INDEX measurement_y2007m11_logdate ON measurement_y2007m11 (logdate);
+CREATE INDEX measurement_y2007m12_logdate ON measurement_y2007m12 (logdate);
+CREATE INDEX measurement_y2008m01_logdate ON measurement_y2008m01 (logdate);
+</programlisting>
+
+        We choose not to add further indexes at this time.
+       </para>
+      </listitem>
+
+      <listitem>
+       <para>
+        We want our application to be able to say <literal>INSERT INTO
+        measurement ...</> and have the data be redirected into the
+        appropriate partition table.  We can arrange that by attaching
+        a suitable trigger function to the master table.
+        If data will be added only to the latest partition, we can
+        use a very simple trigger function:
+
+<programlisting>
+CREATE OR REPLACE FUNCTION measurement_insert_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO measurement_y2008m01 VALUES (NEW.*);
+    RETURN NULL;
+END;
+$$
+LANGUAGE plpgsql;
+</programlisting>
+
+        After creating the function, we create a trigger which
+        calls the trigger function:
+
+<programlisting>
+CREATE TRIGGER insert_measurement_trigger
+    BEFORE INSERT ON measurement
+    FOR EACH ROW EXECUTE PROCEDURE measurement_insert_trigger();
+</programlisting>
+
+        We must redefine the trigger function each month so that it always
+        points to the current partition.  The trigger definition does
+        not need to be updated, however.
+       </para>
+
+       <para>
+        We might want to insert data and have the server automatically
+        locate the partition into which the row should be added. We
+        could do this with a more complex trigger function, for example:
+
+<programlisting>
+CREATE OR REPLACE FUNCTION measurement_insert_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF ( NEW.logdate &gt;= DATE '2006-02-01' AND
+         NEW.logdate &lt; DATE '2006-03-01' ) THEN
+        INSERT INTO measurement_y2006m02 VALUES (NEW.*);
+    ELSIF ( NEW.logdate &gt;= DATE '2006-03-01' AND
+            NEW.logdate &lt; DATE '2006-04-01' ) THEN
+        INSERT INTO measurement_y2006m03 VALUES (NEW.*);
+    ...
+    ELSIF ( NEW.logdate &gt;= DATE '2008-01-01' AND
+            NEW.logdate &lt; DATE '2008-02-01' ) THEN
+        INSERT INTO measurement_y2008m01 VALUES (NEW.*);
+    ELSE
+        RAISE EXCEPTION 'Date out of range.  Fix the measurement_insert_trigger() function!';
+    END IF;
+    RETURN NULL;
+END;
+$$
+LANGUAGE plpgsql;
+</programlisting>
+
+        The trigger definition is the same as before.
+        Note that each <literal>IF</literal> test must exactly match the
+        <literal>CHECK</literal> constraint for its partition.
+       </para>
+
+       <para>
+        While this function is more complex than the single-month case,
+        it doesn't need to be updated as often, since branches can be
+        added in advance of being needed.
+       </para>
+
+       <note>
+        <para>
+         In practice it might be best to check the newest partition first,
+         if most inserts go into that partition.  For simplicity we have
+         shown the trigger's tests in the same order as in other parts
+         of this example.
+        </para>
+       </note>
+      </listitem>
+     </orderedlist>
+    </para>
+
+    <para>
+     As we can see, a complex partitioning scheme could require a
+     substantial amount of DDL. In the above example we would be
+     creating a new partition each month, so it might be wise to write a
+     script that generates the required DDL automatically.
+    </para>
+
+   </sect2>
+
+   <sect2 id="ddl-partitioning-managing-partitions">
+   <title>Managing Partitions</title>
+
+   <para>
+     Normally the set of partitions established when initially
+     defining the table are not intended to remain static. It is
+     common to want to remove old partitions of data and periodically
+     add new partitions for new data. One of the most important
+     advantages of partitioning is precisely that it allows this
+     otherwise painful task to be executed nearly instantaneously by
+     manipulating the partition structure, rather than physically moving large
+     amounts of data around.
+   </para>
+
+   <para>
+     The simplest option for removing old data is simply to drop the partition
+     that is no longer necessary:
+<programlisting>
+DROP TABLE measurement_y2006m02;
+</programlisting>
+     This can very quickly delete millions of records because it doesn't have
+     to individually delete every record.
+   </para>
+
+   <para>
+     Another option that is often preferable is to remove the partition from
+     the partitioned table but retain access to it as a table in its own
+     right:
+<programlisting>
+ALTER TABLE measurement_y2006m02 NO INHERIT measurement;
+</programlisting>
+     This allows further operations to be performed on the data before
+     it is dropped. For example, this is often a useful time to back up
+     the data using <command>COPY</>, <application>pg_dump</>, or
+     similar tools. It might also be a useful time to aggregate data
+     into smaller formats, perform other data manipulations, or run
+     reports.
+   </para>
+
+   <para>
+     Similarly we can add a new partition to handle new data. We can create an
+     empty partition in the partitioned table just as the original partitions
+     were created above:
+
+<programlisting>
+CREATE TABLE measurement_y2008m02 (
+    CHECK ( logdate &gt;= DATE '2008-02-01' AND logdate &lt; DATE '2008-03-01' )
+) INHERITS (measurement);
+</programlisting>
+
+     As an alternative, it is sometimes more convenient to create the
+     new table outside the partition structure, and make it a proper
+     partition later. This allows the data to be loaded, checked, and
+     transformed prior to it appearing in the partitioned table:
+
+<programlisting>
+CREATE TABLE measurement_y2008m02
+  (LIKE measurement INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
+ALTER TABLE measurement_y2008m02 ADD CONSTRAINT y2008m02
+   CHECK ( logdate &gt;= DATE '2008-02-01' AND logdate &lt; DATE '2008-03-01' );
+\copy measurement_y2008m02 from 'measurement_y2008m02'
+-- possibly some other data preparation work
+ALTER TABLE measurement_y2008m02 INHERIT measurement;
+</programlisting>
+    </para>
+   </sect2>
+
+   <sect2 id="ddl-partitioning-constraint-exclusion">
+   <title>Partitioning and Constraint Exclusion</title>
+
+   <indexterm>
+    <primary>constraint exclusion</primary>
+   </indexterm>
+
+   <para>
+    <firstterm>Constraint exclusion</> is a query optimization technique
+    that improves performance for partitioned tables defined in the
+    fashion described above.  As an example:
+
+<programlisting>
+SET constraint_exclusion = on;
+SELECT count(*) FROM measurement WHERE logdate &gt;= DATE '2008-01-01';
+</programlisting>
+
+    Without constraint exclusion, the above query would scan each of
+    the partitions of the <structname>measurement</> table. With constraint
+    exclusion enabled, the planner will examine the constraints of each
+    partition and try to prove that the partition need not
+    be scanned because it could not contain any rows meeting the query's
+    <literal>WHERE</> clause.  When the planner can prove this, it
+    excludes the partition from the query plan.
+   </para>
+
+   <para>
+    You can use the <command>EXPLAIN</> command to show the difference
+    between a plan with <varname>constraint_exclusion</> on and a plan
+    with it off.  A typical unoptimized plan for this type of table setup is:
+
+<programlisting>
+SET constraint_exclusion = off;
+EXPLAIN SELECT count(*) FROM measurement WHERE logdate &gt;= DATE '2008-01-01';
+
+                                          QUERY PLAN
+-----------------------------------------------------------------------------------------------
+ Aggregate  (cost=158.66..158.68 rows=1 width=0)
+   -&gt;  Append  (cost=0.00..151.88 rows=2715 width=0)
+         -&gt;  Seq Scan on measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+         -&gt;  Seq Scan on measurement_y2006m02 measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+         -&gt;  Seq Scan on measurement_y2006m03 measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+...
+         -&gt;  Seq Scan on measurement_y2007m12 measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+         -&gt;  Seq Scan on measurement_y2008m01 measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+</programlisting>
+
+    Some or all of the partitions might use index scans instead of
+    full-table sequential scans, but the point here is that there
+    is no need to scan the older partitions at all to answer this query.
+    When we enable constraint exclusion, we get a significantly
+    cheaper plan that will deliver the same answer:
+
+<programlisting>
+SET constraint_exclusion = on;
+EXPLAIN SELECT count(*) FROM measurement WHERE logdate &gt;= DATE '2008-01-01';
+                                          QUERY PLAN
+-----------------------------------------------------------------------------------------------
+ Aggregate  (cost=63.47..63.48 rows=1 width=0)
+   -&gt;  Append  (cost=0.00..60.75 rows=1086 width=0)
+         -&gt;  Seq Scan on measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+         -&gt;  Seq Scan on measurement_y2008m01 measurement  (cost=0.00..30.38 rows=543 width=0)
+               Filter: (logdate &gt;= '2008-01-01'::date)
+</programlisting>
+   </para>
+
+   <para>
+    Note that constraint exclusion is driven only by <literal>CHECK</>
+    constraints, not by the presence of indexes.  Therefore it isn't
+    necessary to define indexes on the key columns.  Whether an index
+    needs to be created for a given partition depends on whether you
+    expect that queries that scan the partition will generally scan
+    a large part of the partition or just a small part.  An index will
+    be helpful in the latter case but not the former.
+   </para>
+
+   <para>
+    The default (and recommended) setting of
+    <xref linkend="guc-constraint-exclusion"> is actually neither
+    <literal>on</> nor <literal>off</>, but an intermediate setting
+    called <literal>partition</>, which causes the technique to be
+    applied only to queries that are likely to be working on partitioned
+    tables.  The <literal>on</> setting causes the planner to examine
+    <literal>CHECK</> constraints in all queries, even simple ones that
+    are unlikely to benefit.
+   </para>
+
+   </sect2>
+
+   <sect2 id="ddl-partitioning-alternatives">
+   <title>Alternative Partitioning Methods</title>
+
+    <para>
+     A different approach to redirecting inserts into the appropriate
+     partition table is to set up rules, instead of a trigger, on the
+     master table.  For example:
+
+<programlisting>
+CREATE RULE measurement_insert_y2006m02 AS
+ON INSERT TO measurement WHERE
+    ( logdate &gt;= DATE '2006-02-01' AND logdate &lt; DATE '2006-03-01' )
+DO INSTEAD
+    INSERT INTO measurement_y2006m02 VALUES (NEW.*);
+...
+CREATE RULE measurement_insert_y2008m01 AS
+ON INSERT TO measurement WHERE
+    ( logdate &gt;= DATE '2008-01-01' AND logdate &lt; DATE '2008-02-01' )
+DO INSTEAD
+    INSERT INTO measurement_y2008m01 VALUES (NEW.*);
+</programlisting>
+
+     A rule has significantly more overhead than a trigger, but the overhead
+     is paid once per query rather than once per row, so this method might be
+     advantageous for bulk-insert situations.  In most cases, however, the
+     trigger method will offer better performance.
+    </para>
+
+    <para>
+     Be aware that <command>COPY</> ignores rules.  If you want to
+     use <command>COPY</> to insert data, you'll need to copy into the correct
+     partition table rather than into the master.  <command>COPY</> does fire
+     triggers, so you can use it normally if you use the trigger approach.
+    </para>
+
+    <para>
+     Another disadvantage of the rule approach is that there is no simple
+     way to force an error if the set of rules doesn't cover the insertion
+     date; the data will silently go into the master table instead.
+    </para>
+
+    <para>
+     Partitioning can also be arranged using a <literal>UNION ALL</literal>
+     view, instead of table inheritance.  For example,
+
+<programlisting>
+CREATE VIEW measurement AS
+          SELECT * FROM measurement_y2006m02
+UNION ALL SELECT * FROM measurement_y2006m03
+...
+UNION ALL SELECT * FROM measurement_y2007m11
+UNION ALL SELECT * FROM measurement_y2007m12
+UNION ALL SELECT * FROM measurement_y2008m01;
+</programlisting>
+
+     However, the need to recreate the view adds an extra step to adding and
+     dropping individual partitions of the data set.  In practice this
+     method has little to recommend it compared to using inheritance.
+    </para>
+
+   </sect2>
+
+   <sect2 id="ddl-partitioning-caveats">
+   <title>Caveats</title>
+
+   <para>
+    The following caveats apply to partitioned tables:
+   <itemizedlist>
+    <listitem>
+     <para>
+      There is no automatic way to verify that all of the
+      <literal>CHECK</literal> constraints are mutually
+      exclusive.  It is safer to create code that generates
+      partitions and creates and/or modifies associated objects than
+      to write each by hand.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      The schemes shown here assume that the partition key column(s)
+      of a row never change, or at least do not change enough to require
+      it to move to another partition.  An <command>UPDATE</> that attempts
+      to do that will fail because of the <literal>CHECK</> constraints.
+      If you need to handle such cases, you can put suitable update triggers
+      on the partition tables, but it makes management of the structure
+      much more complicated.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      If you are using manual <command>VACUUM</command> or
+      <command>ANALYZE</command> commands, don't forget that
+      you need to run them on each partition individually. A command like:
+<programlisting>
+ANALYZE measurement;
+</programlisting>
+      will only process the master table.
+     </para>
+    </listitem>
+
+   </itemizedlist>
+   </para>
+
+   <para>
+    The following caveats apply to constraint exclusion:
+
+   <itemizedlist>
+    <listitem>
+     <para>
+      Constraint exclusion only works when the query's <literal>WHERE</>
+      clause contains constants (or externally supplied parameters).
+      For example, a comparison against a non-immutable function such as
+      <function>CURRENT_TIMESTAMP</function> cannot be optimized, since the
+      planner cannot know which partition the function value might fall
+      into at run time.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      Keep the partitioning constraints simple, else the planner may not be
+      able to prove that partitions don't need to be visited.  Use simple
+      equality conditions for list partitioning, or simple
+      range tests for range partitioning, as illustrated in the preceding
+      examples.  A good rule of thumb is that partitioning constraints should
+      contain only comparisons of the partitioning column(s) to constants
+      using B-tree-indexable operators.
+     </para>
+    </listitem>
+
+    <listitem>
+     <para>
+      All constraints on all partitions of the master table are examined
+      during constraint exclusion, so large numbers of partitions are likely
+      to increase query planning time considerably.  Partitioning using
+      these techniques will work well with up to perhaps a hundred partitions;
+      don't try to use many thousands of partitions.
+     </para>
+    </listitem>
+
+   </itemizedlist>
+   </para>
+  </sect2>
+ </sect1>
+
+ <sect1 id="ddl-foreign-data">
+  <title>Foreign Data</title>
+
+   <indexterm>
+    <primary>foreign data</primary>
+   </indexterm>
+   <indexterm>
+    <primary>foreign table</primary>
+   </indexterm>
+   <indexterm>
+    <primary>user mapping</primary>
+   </indexterm>
+
+   <para>
+    <productname>PostgreSQL</productname> implements portions of the SQL/MED
+    specification, allowing you to access data that resides outside
+    PostgreSQL using regular SQL queries.  Such data is referred to as
+    <firstterm>foreign data</>.  (Note that this usage is not to be confused
+    with foreign keys, which are a type of constraint within the database.)
+   </para>
+
+   <para>
+    Foreign data is accessed with help from a
+    <firstterm>foreign data wrapper</firstterm>. A foreign data wrapper is a
+    library that can communicate with an external data source, hiding the
+    details of connecting to the data source and obtaining data from it.
+    There are some foreign data wrappers available as <filename>contrib</>
+    modules; see <xref linkend="contrib">.  Other kinds of foreign data
+    wrappers might be found as third party products.  If none of the existing
+    foreign data wrappers suit your needs, you can write your own; see <xref
+    linkend="fdwhandler">.
+   </para>
+
+   <para>
+    To access foreign data, you need to create a <firstterm>foreign server</>
+    object, which defines how to connect to a particular external data source
+    according to the set of options used by its supporting foreign data
+    wrapper. Then you need to create one or more <firstterm>foreign
+    tables</firstterm>, which define the structure of the remote data. A
+    foreign table can be used in queries just like a normal table, but a
+    foreign table has no storage in the PostgreSQL server.  Whenever it is
+    used, <productname>PostgreSQL</productname> asks the foreign data wrapper
+    to fetch data from the external source, or transmit data to the external
+    source in the case of update commands.
+   </para>
+
+   <para>
+    Accessing remote data may require authenticating to the external
+    data source.  This information can be provided by a
+    <firstterm>user mapping</>, which can provide additional data
+    such as user names and passwords based
+    on the current <productname>PostgreSQL</productname> role.
+   </para>
+
+   <para>
+    For additional information, see
+    <xref linkend="sql-createforeigndatawrapper">,
+    <xref linkend="sql-createserver">,
+    <xref linkend="sql-createusermapping">, and
+    <xref linkend="sql-createforeigntable">.
+   </para>
+ </sect1>
+
+ <sect1 id="ddl-others">
+  <title>Other Database Objects</title>
+
+  <para>
+   Tables are the central objects in a relational database structure,
+   because they hold your data.  But they are not the only objects
+   that exist in a database.  Many other kinds of objects can be
+   created to make the use and management of the data more efficient
+   or convenient.  They are not discussed in this chapter, but we give
+   you a list here so that you are aware of what is possible:
+  </para>
+
+  <itemizedlist>
+   <listitem>
+    <para>
+     Views
+    </para>
+   </listitem>
+
+   <listitem>
+    <para>
+     Functions and operators
+    </para>
+   </listitem>
+
+   <listitem>
+    <para>
+     Data types and domains
+    </para>
+   </listitem>
+
+   <listitem>
+    <para>
+     Triggers and rewrite rules
+    </para>
+   </listitem>
+  </itemizedlist>
+
+  <para>
+   Detailed information on
+   these topics appears in <xref linkend="server-programming">.
+  </para>
+ </sect1>
+
+ <sect1 id="ddl-depend">
+  <title>Dependency Tracking</title>
+
+  <indexterm zone="ddl-depend">
+   <primary>CASCADE</primary>
+   <secondary sortas="DROP">with DROP</secondary>
+  </indexterm>
+
+  <indexterm zone="ddl-depend">
+   <primary>RESTRICT</primary>
+   <secondary sortas="DROP">with DROP</secondary>
+  </indexterm>
+
+  <para>
+   When you create complex database structures involving many tables
+   with foreign key constraints, views, triggers, functions, etc. you
+   implicitly create a net of dependencies between the objects.
+   For instance, a table with a foreign key constraint depends on the
+   table it references.
+  </para>
+
+  <para>
+   To ensure the integrity of the entire database structure,
+   <productname>PostgreSQL</productname> makes sure that you cannot
+   drop objects that other objects still depend on.  For example,
+   attempting to drop the products table we considered in <xref
+   linkend="ddl-constraints-fk">, with the orders table depending on
+   it, would result in an error message like this:
+<screen>
+DROP TABLE products;
+
+ERROR:  cannot drop table products because other objects depend on it
+DETAIL:  constraint orders_product_no_fkey on table orders depends on table products
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+</screen>
+   The error message contains a useful hint: if you do not want to
+   bother deleting all the dependent objects individually, you can run:
+<screen>
+DROP TABLE products CASCADE;
+</screen>
+   and all the dependent objects will be removed.  In this case, it
+   doesn't remove the orders table, it only removes the foreign key
+   constraint.  (If you want to check what <command>DROP ... CASCADE</> will do,
+   run <command>DROP</> without <literal>CASCADE</> and read the
+   <literal>DETAIL</> output.)
+  </para>
+
+  <para>
+   All <command>DROP</> commands in <productname>PostgreSQL</> support
+   specifying <literal>CASCADE</literal>.  Of course, the nature of
+   the possible dependencies varies with the type of the object.  You
+   can also write <literal>RESTRICT</literal> instead of
+   <literal>CASCADE</literal> to get the default behavior, which is to
+   prevent the dropping of objects that other objects depend on.
+  </para>
+
+  <note>
+   <para>
+    According to the SQL standard, specifying either
+    <literal>RESTRICT</literal> or <literal>CASCADE</literal> is
+    required in a <command>DROP</> command.  No database system actually
+    enforces that rule, but whether the default behavior
+    is <literal>RESTRICT</literal> or <literal>CASCADE</literal> varies
+    across systems.
+   </para>
+  </note>
+
+  <para>
+   For user-defined functions, <productname>PostgreSQL</productname> tracks
+   dependencies associated with a function's externally-visible properties,
+   such as its argument and result types, but <emphasis>not</> dependencies
+   that could only be known by examining the function body.  As an example,
+   consider this situation:
+
+<programlisting>
+CREATE TYPE rainbow AS ENUM ('red', 'orange', 'yellow',
+                             'green', 'blue', 'purple');
+
+CREATE TABLE my_colors (color rainbow, note text);
+
+CREATE FUNCTION get_color_note (rainbow) RETURNS text AS
+  'SELECT note FROM my_colors WHERE color = $1'
+  LANGUAGE SQL;
+</programlisting>
+
+   (See <xref linkend="xfunc-sql"> for an explanation of SQL-language
+   functions.)  <productname>PostgreSQL</productname> will be aware that
+   the <function>get_color_note</> function depends on the <type>rainbow</>
+   type: dropping the type would force dropping the function, because its
+   argument type would no longer be defined.  But <productname>PostgreSQL</>
+   will not consider <function>get_color_note</> to depend on
+   the <structname>my_colors</> table, and so will not drop the function if
+   the table is dropped.  While there are disadvantages to this approach,
+   there are also benefits.  The function is still valid in some sense if the
+   table is missing, though executing it would cause an error; creating a new
+   table of the same name would allow the function to work again.
+  </para>
+ </sect1>
+
+</chapter>

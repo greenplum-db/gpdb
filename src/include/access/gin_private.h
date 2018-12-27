@@ -112,22 +112,22 @@ typedef struct GinMetaPageData
  */
 #define GinPageGetOpaque(page) ( (GinPageOpaque) PageGetSpecialPointer(page) )
 
-#define GinPageIsLeaf(page)    ( GinPageGetOpaque(page)->flags & GIN_LEAF )
+#define GinPageIsLeaf(page)    ( (GinPageGetOpaque(page)->flags & GIN_LEAF) != 0 )
 #define GinPageSetLeaf(page)   ( GinPageGetOpaque(page)->flags |= GIN_LEAF )
 #define GinPageSetNonLeaf(page)    ( GinPageGetOpaque(page)->flags &= ~GIN_LEAF )
-#define GinPageIsData(page)    ( GinPageGetOpaque(page)->flags & GIN_DATA )
+#define GinPageIsData(page)    ( (GinPageGetOpaque(page)->flags & GIN_DATA) != 0 )
 #define GinPageSetData(page)   ( GinPageGetOpaque(page)->flags |= GIN_DATA )
-#define GinPageIsList(page)    ( GinPageGetOpaque(page)->flags & GIN_LIST )
+#define GinPageIsList(page)    ( (GinPageGetOpaque(page)->flags & GIN_LIST) != 0 )
 #define GinPageSetList(page)   ( GinPageGetOpaque(page)->flags |= GIN_LIST )
-#define GinPageHasFullRow(page)    ( GinPageGetOpaque(page)->flags & GIN_LIST_FULLROW )
+#define GinPageHasFullRow(page)    ( (GinPageGetOpaque(page)->flags & GIN_LIST_FULLROW) != 0 )
 #define GinPageSetFullRow(page)   ( GinPageGetOpaque(page)->flags |= GIN_LIST_FULLROW )
-#define GinPageIsCompressed(page)	 ( GinPageGetOpaque(page)->flags & GIN_COMPRESSED )
+#define GinPageIsCompressed(page)	 ( (GinPageGetOpaque(page)->flags & GIN_COMPRESSED) != 0 )
 #define GinPageSetCompressed(page)	 ( GinPageGetOpaque(page)->flags |= GIN_COMPRESSED )
 
-#define GinPageIsDeleted(page) ( GinPageGetOpaque(page)->flags & GIN_DELETED)
+#define GinPageIsDeleted(page) ( (GinPageGetOpaque(page)->flags & GIN_DELETED) != 0 )
 #define GinPageSetDeleted(page)    ( GinPageGetOpaque(page)->flags |= GIN_DELETED)
 #define GinPageSetNonDeleted(page) ( GinPageGetOpaque(page)->flags &= ~GIN_DELETED)
-#define GinPageIsIncompleteSplit(page) ( GinPageGetOpaque(page)->flags & GIN_INCOMPLETE_SPLIT)
+#define GinPageIsIncompleteSplit(page) ( (GinPageGetOpaque(page)->flags & GIN_INCOMPLETE_SPLIT) != 0 )
 
 #define GinPageRightMost(page) ( GinPageGetOpaque(page)->rightlink == InvalidBlockNumber)
 
@@ -220,16 +220,24 @@ typedef signed char GinNullCategory;
 #define GinSetPostingTree(itup, blkno)	( GinSetNPosting((itup),GIN_TREE_POSTING), ItemPointerSetBlockNumber(&(itup)->t_tid, blkno) )
 #define GinGetPostingTree(itup) GinItemPointerGetBlockNumber(&(itup)->t_tid)
 
-#define GIN_ITUP_COMPRESSED		(1 << 31)
+#define GIN_ITUP_COMPRESSED		(1U << 31)
 #define GinGetPostingOffset(itup)	(GinItemPointerGetBlockNumber(&(itup)->t_tid) & (~GIN_ITUP_COMPRESSED))
 #define GinSetPostingOffset(itup,n) ItemPointerSetBlockNumber(&(itup)->t_tid,(n)|GIN_ITUP_COMPRESSED)
 #define GinGetPosting(itup)			((Pointer) ((char*)(itup) + GinGetPostingOffset(itup)))
-#define GinItupIsCompressed(itup)	(GinItemPointerGetBlockNumber(&(itup)->t_tid) & GIN_ITUP_COMPRESSED)
+#define GinItupIsCompressed(itup)	((GinItemPointerGetBlockNumber(&(itup)->t_tid) & GIN_ITUP_COMPRESSED) != 0)
 
+/*
+ * Maximum size of an item on entry tree page. Make sure that we fit at least
+ * three items on each page. (On regular B-tree indexes, we must fit at least
+ * three items: two data items and the "high key". In GIN entry tree, we don't
+ * currently store the high key explicitly, we just use the rightmost item on
+ * the page, so it would actually be enough to fit two items.)
+ */
 #define GinMaxItemSize \
 	Min(INDEX_SIZE_MASK, \
-		MAXALIGN_DOWN(((BLCKSZ - SizeOfPageHeaderData -					\
-						MAXALIGN(sizeof(GinPageOpaqueData))) / 6 - sizeof(ItemIdData))))
+		MAXALIGN_DOWN(((BLCKSZ - \
+						MAXALIGN(SizeOfPageHeaderData + 3 * sizeof(ItemIdData)) - \
+						MAXALIGN(sizeof(GinPageOpaqueData))) / 3)))
 
 /*
  * Access macros for non-leaf entry tuples
@@ -648,12 +656,12 @@ typedef struct GinBtreeStack
 
 typedef struct GinBtreeData *GinBtree;
 
-/* Return codes for GinBtreeData.placeToPage method */
+/* Return codes for GinBtreeData.beginPlaceToPage method */
 typedef enum
 {
-	UNMODIFIED,
-	INSERTED,
-	SPLIT
+	GPTP_NO_WORK,
+	GPTP_INSERT,
+	GPTP_SPLIT
 } GinPlaceToPageRC;
 
 typedef struct GinBtreeData
@@ -666,7 +674,8 @@ typedef struct GinBtreeData
 
 	/* insert methods */
 	OffsetNumber (*findChildPtr) (GinBtree, Page, BlockNumber, OffsetNumber);
-	GinPlaceToPageRC (*placeToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, XLogRecData **, Page *, Page *);
+	GinPlaceToPageRC (*beginPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void **, Page *, Page *, XLogRecData *);
+	void		(*execPlaceToPage) (GinBtree, Buffer, GinBtreeStack *, void *, BlockNumber, void *, XLogRecData *);
 	void	   *(*prepareDownlink) (GinBtree, Buffer);
 	void		(*fillRoot) (GinBtree, Page, BlockNumber, Page, BlockNumber, Page);
 
@@ -882,6 +891,7 @@ extern Datum ginrescan(PG_FUNCTION_ARGS);
 extern Datum ginmarkpos(PG_FUNCTION_ARGS);
 extern Datum ginrestrpos(PG_FUNCTION_ARGS);
 extern void ginNewScanKey(IndexScanDesc scan);
+extern void ginFreeScanKeys(GinScanOpaque so);
 
 /* ginget.c */
 extern Datum gingetbitmap(PG_FUNCTION_ARGS);

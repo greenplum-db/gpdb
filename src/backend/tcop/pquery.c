@@ -936,8 +936,9 @@ PortalRun(Portal portal, int64 count, bool isTopLevel,
 		ereport(ERROR,
 				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
 				 errmsg("portal \"%s\" cannot be run", portal->name)));
-
+	/* Perform the state transition */
 	portal->status = PORTAL_ACTIVE;
+	portal->activeSubid = GetCurrentSubTransactionId();
 
 	/*
 	 * Set up global portal context pointers.
@@ -1589,12 +1590,7 @@ PortalRunFetch(Portal portal,
 	/*
 	 * Check for improper portal use, and mark portal active.
 	 */
-	if (portal->status != PORTAL_READY)
-		ereport(ERROR,
-				(errcode(ERRCODE_OBJECT_NOT_IN_PREREQUISITE_STATE),
-				 errmsg("portal \"%s\" cannot be run", portal->name)));
-
-	portal->status = PORTAL_ACTIVE;
+	MarkPortalActive(portal);
 
 	/*
 	 * Set up global portal context pointers.

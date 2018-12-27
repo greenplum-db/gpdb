@@ -55,7 +55,7 @@ char	   *xlogFilePath;		/* where we are going to restore to */
 char	   *nextWALFileName;	/* the file we need to get from archive */
 char	   *restartWALFileName; /* the file from which we can restart restore */
 char	   *priorWALFileName;	/* the file we need to get from archive */
-char		WALFilePath[MAXPGPATH];		/* the file path including archive */
+char		WALFilePath[MAXPGPATH * 2];		/* the file path including archive */
 char		restoreCommand[MAXPGPATH];	/* run this to restore */
 char		exclusiveCleanupFileName[MAXPGPATH];		/* the file we need to
 														 * get from archive */
@@ -266,9 +266,9 @@ CustomizableCleanupPriorWALFiles(void)
 				  strcmp(xlde->d_name + 8, exclusiveCleanupFileName + 8) < 0)
 				{
 #ifdef WIN32
-					snprintf(WALFilePath, MAXPGPATH, "%s\\%s", archiveLocation, xlde->d_name);
+					snprintf(WALFilePath, sizeof(WALFilePath), "%s\\%s", archiveLocation, xlde->d_name);
 #else
-					snprintf(WALFilePath, MAXPGPATH, "%s/%s", archiveLocation, xlde->d_name);
+					snprintf(WALFilePath, sizeof(WALFilePath), "%s/%s", archiveLocation, xlde->d_name);
 #endif
 
 					if (debug)
@@ -418,7 +418,7 @@ CheckForExternalTrigger(void)
 		return;
 	}
 
-	if ((len = read(fd, buf, sizeof(buf))) < 0)
+	if ((len = read(fd, buf, sizeof(buf) - 1)) < 0)
 	{
 		fprintf(stderr, "WARNING: could not read \"%s\": %s\n",
 				triggerPath, strerror(errno));
@@ -794,7 +794,7 @@ main(int argc, char **argv)
 		{
 			/*
 			 * Once we have restored this file successfully we can remove some
-			 * prior WAL files. If this restore fails we musn't remove any
+			 * prior WAL files. If this restore fails we mustn't remove any
 			 * file because some of them will be requested again immediately
 			 * after the failed restore, or when we restart recovery.
 			 */

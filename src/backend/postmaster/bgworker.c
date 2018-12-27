@@ -245,14 +245,37 @@ BackgroundWorkerStateChange(void)
 				rw->rw_terminate = true;
 				if (rw->rw_pid != 0)
 					kill(rw->rw_pid, SIGTERM);
+				else
+				{
+					/* Report never-started, now-terminated worker as dead. */
+					ReportBackgroundWorkerPID(rw);
+				}
 			}
 			continue;
 		}
 
-		/* If it's already flagged as do not restart, just release the slot. */
+		/*
+		 * If the worker is marked for termination, we don't need to add it
+		 * to the registered workers list; we can just free the slot.
+		 * However, if bgw_notify_pid is set, the process that registered the
+		 * worker may need to know that we've processed the terminate request,
+		 * so be sure to signal it.
+		 */
 		if (slot->terminate)
 		{
+			int	notify_pid;
+
+			/*
+			 * We need a memory barrier here to make sure that the load of
+			 * bgw_notify_pid completes before the store to in_use.
+			 */
+			notify_pid = slot->worker.bgw_notify_pid;
+			pg_memory_barrier();
+			slot->pid = 0;
 			slot->in_use = false;
+			if (notify_pid != 0)
+				kill(notify_pid, SIGUSR1);
+
 			continue;
 		}
 
@@ -397,9 +420,9 @@ BackgroundWorkerStopNotifications(pid_t pid)
 /*
  * Reset background worker crash state.
  *
- * We assume that, after a crash-and-restart cycle, background workers should
- * be restarted immediately, instead of waiting for bgw_restart_time to
- * elapse.
+ * We assume that, after a crash-and-restart cycle, background workers without
+ * the never-restart flag should be restarted immediately, instead of waiting
+ * for bgw_restart_time to elapse.
  */
 void
 ResetBackgroundWorkerCrashTimes(void)
@@ -411,7 +434,14 @@ ResetBackgroundWorkerCrashTimes(void)
 		RegisteredBgWorker *rw;
 
 		rw = slist_container(RegisteredBgWorker, rw_lnode, iter.cur);
-		rw->rw_crashed_at = 0;
+
+		/*
+		 * For workers that should not be restarted, we don't want to lose
+		 * the information that they have crashed; otherwise, they would be
+		 * restarted, which is wrong.
+		 */
+		if (rw->rw_worker.bgw_restart_time != BGW_NEVER_RESTART)
+			rw->rw_crashed_at = 0;
 	}
 }
 
@@ -485,28 +515,21 @@ SanityCheckBackgroundWorker(BackgroundWorker *worker, int elevel)
 static void
 bgworker_quickdie(SIGNAL_ARGS)
 {
-	sigaddset(&BlockSig, SIGQUIT);		/* prevent nested calls */
-	PG_SETMASK(&BlockSig);
-
 	/*
-	 * We DO NOT want to run proc_exit() callbacks -- we're here because
-	 * shared memory may be corrupted, so we don't want to try to clean up our
-	 * transaction.  Just nail the windows shut and get out of town.  Now that
-	 * there's an atexit callback to prevent third-party code from breaking
-	 * things by calling exit() directly, we have to reset the callbacks
-	 * explicitly to make this work as intended.
-	 */
-	on_exit_reset();
-
-	/*
-	 * Note we do exit(2) not exit(0).  This is to force the postmaster into a
-	 * system reset cycle if some idiot DBA sends a manual SIGQUIT to a random
+	 * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
+	 * because shared memory may be corrupted, so we don't want to try to
+	 * clean up our transaction.  Just nail the windows shut and get out of
+	 * town.  The callbacks wouldn't be safe to run from a signal handler,
+	 * anyway.
+	 *
+	 * Note we do _exit(2) not _exit(0).  This is to force the postmaster into
+	 * a system reset cycle if someone sends a manual SIGQUIT to a random
 	 * backend.  This is necessary precisely because we don't clean up our
 	 * shared memory state.  (The "dead man switch" mechanism in pmsignal.c
 	 * should ensure the postmaster sees this as a crash, too, but no harm in
 	 * being doubly sure.)
 	 */
-	exit(2);
+	_exit(2);
 }
 
 /*
@@ -579,7 +602,6 @@ StartBackgroundWorker(void)
 	 */
 	if ((worker->bgw_flags & BGWORKER_SHMEM_ACCESS) == 0)
 	{
-		on_exit_reset();
 		dsm_detach_all();
 		PGSharedMemoryDetach();
 	}
@@ -815,7 +837,7 @@ RegisterDynamicBackgroundWorker(BackgroundWorker *worker,
 	/*
 	 * We can't register dynamic background workers from the postmaster. If
 	 * this is a standalone backend, we're the only process and can't start
-	 * any more.  In a multi-process environement, it might be theoretically
+	 * any more.  In a multi-process environment, it might be theoretically
 	 * possible, but we don't currently support it due to locking
 	 * considerations; see comments on the BackgroundWorkerSlot data
 	 * structure.
@@ -878,14 +900,18 @@ RegisterDynamicBackgroundWorker(BackgroundWorker *worker,
  * Get the PID of a dynamically-registered background worker.
  *
  * If the worker is determined to be running, the return value will be
- * BGWH_STARTED and *pidp will get the PID of the worker process.
- * Otherwise, the return value will be BGWH_NOT_YET_STARTED if the worker
- * hasn't been started yet, and BGWH_STOPPED if the worker was previously
- * running but is no longer.
+ * BGWH_STARTED and *pidp will get the PID of the worker process.  If the
+ * postmaster has not yet attempted to start the worker, the return value will
+ * be BGWH_NOT_YET_STARTED.  Otherwise, the return value is BGWH_STOPPED.
  *
- * In the latter case, the worker may be stopped temporarily (if it is
- * configured for automatic restart and exited non-zero) or gone for
- * good (if it exited with code 0 or if it is configured not to restart).
+ * BGWH_STOPPED can indicate either that the worker is temporarily stopped
+ * (because it is configured for automatic restart and exited non-zero),
+ * or that the worker is permanently stopped (because it exited with exit
+ * code 0, or was not configured for automatic restart), or even that the
+ * worker was unregistered without ever starting (either because startup
+ * failed and the worker is not configured for automatic restart, or because
+ * TerminateBackgroundWorker was used before the worker was successfully
+ * started).
  */
 BgwHandleStatus
 GetBackgroundWorkerPid(BackgroundWorkerHandle *handle, pid_t *pidp)
@@ -910,8 +936,11 @@ GetBackgroundWorkerPid(BackgroundWorkerHandle *handle, pid_t *pidp)
 	 * time, but we assume such changes are atomic.  So the value we read
 	 * won't be garbage, but it might be out of date by the time the caller
 	 * examines it (but that's unavoidable anyway).
+	 *
+	 * The in_use flag could be in the process of changing from true to false,
+	 * but if it is already false then it can't change further.
 	 */
-	if (handle->generation != slot->generation)
+	if (handle->generation != slot->generation || !slot->in_use)
 		pid = 0;
 	else
 		pid = slot->pid;

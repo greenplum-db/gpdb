@@ -20,11 +20,14 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <time.h>
-
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
 #ifdef HAVE_LIBZ
 #include <zlib.h>
 #endif
 
+#include "common/string.h"
 #include "getopt_long.h"
 #include "libpq-fe.h"
 #include "pqexpbuffer.h"
@@ -114,7 +117,6 @@ static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
 					 bool segment_finished);
 
 static const char *get_tablespace_mapping(const char *dir);
-static void update_tablespace_symlink(Oid oid, const char *old_dir);
 static void tablespace_list_append(const char *arg);
 
 
@@ -237,9 +239,10 @@ usage(void)
 	printf(_("\nOptions controlling the output:\n"));
 	printf(_("  -D, --pgdata=DIRECTORY receive base backup into directory\n"));
 	printf(_("  -F, --format=p|t       output format (plain (default), tar)\n"));
-	printf(_("  -r, --max-rate=RATE    maximum transfer rate to transfer data directory\n"));
+	printf(_("  -r, --max-rate=RATE    maximum transfer rate to transfer data directory\n"
+			 "                         (in kB/s, or use suffix \"k\" or \"M\")\n"));
 	printf(_("  -R, --write-recovery-conf\n"
-			 "                         write recovery.conf after backup\n"));
+			 "                         write recovery.conf for replication\n"));
 	printf(_("  -T, --tablespace-mapping=OLDDIR=NEWDIR\n"
 	  "                         relocate tablespace in OLDDIR to NEWDIR\n"));
 	printf(_("  -x, --xlog             include required WAL files in backup (fetch mode)\n"));
@@ -377,7 +380,7 @@ LogStreamerMain(logstreamer_param *param)
 	if (!ReceiveXlogStream(param->bgconn, param->startptr, param->timeline,
 						   param->sysidentifier, param->xlogdir,
 						   reached_end_position, standby_message_timeout,
-						   NULL))
+						   NULL, true))
 
 		/*
 		 * Any errors will already have been reported in the function process,
@@ -401,6 +404,7 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 	logstreamer_param *param;
 	uint32		hi,
 				lo;
+	char		statusdir[MAXPGPATH];
 
 	param = pg_malloc0(sizeof(logstreamer_param));
 	param->timeline = timeline;
@@ -435,13 +439,23 @@ StartLogStreamer(char *startpos, uint32 timeline, char *sysidentifier)
 		/* Error message already written in GetConnection() */
 		exit(1);
 
-	/*
-	 * Always in plain format, so we can write to basedir/pg_xlog. But the
-	 * directory entry in the tar file may arrive later, so make sure it's
-	 * created before we start.
-	 */
 	snprintf(param->xlogdir, sizeof(param->xlogdir), "%s/pg_xlog", basedir);
-	verify_dir_is_empty_or_create(param->xlogdir);
+
+	/*
+	 * Create pg_xlog/archive_status (and thus pg_xlog) so we can write to
+	 * basedir/pg_xlog as the directory entry in the tar file may arrive
+	 * later.
+	 */
+	snprintf(statusdir, sizeof(statusdir), "%s/pg_xlog/archive_status",
+			 basedir);
+
+	if (pg_mkdir_p(statusdir, S_IRWXU) != 0 && errno != EEXIST)
+	{
+		fprintf(stderr,
+				_("%s: could not create directory \"%s\": %s\n"),
+				progname, statusdir, strerror(errno));
+		disconnect_and_exit(1);
+	}
 
 	/*
 	 * Start a child process and tell it to start streaming. On Unix, this is
@@ -780,7 +794,7 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 	bool		in_tarhdr = true;
 	bool		skip_file = false;
 	size_t		tarhdrsz = 0;
-	size_t		filesz = 0;
+	pgoff_t		filesz = 0;
 
 #ifdef HAVE_LIBZ
 	gzFile		ztarfile = NULL;
@@ -793,6 +807,10 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 		 */
 		if (strcmp(basedir, "-") == 0)
 		{
+#ifdef WIN32
+			_setmode(fileno(stdout), _O_BINARY);
+#endif
+
 #ifdef HAVE_LIBZ
 			if (compresslevel != 0)
 			{
@@ -1045,7 +1063,7 @@ ReceiveTarFile(PGconn *conn, PGresult *res, int rownum)
 
 						skip_file = (strcmp(&tarhdr[0], "recovery.conf") == 0);
 
-						sscanf(&tarhdr[124], "%11o", (unsigned int *) &filesz);
+						filesz = read_tar_number(&tarhdr[124], 12);
 
 						padding = ((filesz + 511) & ~511) - filesz;
 						filesz += padding;
@@ -1124,34 +1142,6 @@ get_tablespace_mapping(const char *dir)
 
 
 /*
- * Update symlinks to reflect relocated tablespace.
- */
-static void
-update_tablespace_symlink(Oid oid, const char *old_dir)
-{
-	const char *new_dir = get_tablespace_mapping(old_dir);
-
-	if (strcmp(old_dir, new_dir) != 0)
-	{
-		char	   *linkloc = psprintf("%s/pg_tblspc/%d", basedir, oid);
-
-		if (unlink(linkloc) != 0 && errno != ENOENT)
-		{
-			fprintf(stderr, _("%s: could not remove symbolic link \"%s\": %s"),
-					progname, linkloc, strerror(errno));
-			disconnect_and_exit(1);
-		}
-		if (symlink(new_dir, linkloc) != 0)
-		{
-			fprintf(stderr, _("%s: could not create symbolic link \"%s\": %s"),
-					progname, linkloc, strerror(errno));
-			disconnect_and_exit(1);
-		}
-	}
-}
-
-
-/*
  * Receive a tar format stream from the connection to the server, and unpack
  * the contents of it into a directory. Only files, directories and
  * symlinks are supported, no other kinds of special files.
@@ -1165,12 +1155,14 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 {
 	char		current_path[MAXPGPATH];
 	char		filename[MAXPGPATH];
-	int			current_len_left;
+	const char *mapped_tblspc_path;
+	pgoff_t		current_len_left = 0;
 	int			current_padding = 0;
-	bool		basetablespace = PQgetisnull(res, rownum, 0);
+	bool		basetablespace;
 	char	   *copybuf = NULL;
 	FILE	   *file = NULL;
 
+	basetablespace = PQgetisnull(res, rownum, 0);
 	if (basetablespace)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
@@ -1240,20 +1232,10 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 			}
 			totaldone += 512;
 
-			if (sscanf(copybuf + 124, "%11o", &current_len_left) != 1)
-			{
-				fprintf(stderr, _("%s: could not parse file size\n"),
-						progname);
-				disconnect_and_exit(1);
-			}
+			current_len_left = read_tar_number(&copybuf[124], 12);
 
 			/* Set permissions on the file */
-			if (sscanf(&copybuf[100], "%07o ", &filemode) != 1)
-			{
-				fprintf(stderr, _("%s: could not parse file mode\n"),
-						progname);
-				disconnect_and_exit(1);
-			}
+			filemode = read_tar_number(&copybuf[100], 8);
 
 			/*
 			 * All files are padded up to 512 bytes
@@ -1325,11 +1307,12 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 						 * by the wal receiver process. Also, when transaction
 						 * log directory location was specified, pg_xlog has
 						 * already been created as a symbolic link before
-						 * starting the actual backup. So just ignore failure
-						 * on them.
+						 * starting the actual backup. So just ignore creation
+						 * failures on related directories.
 						 */
-						if ((!streamwal && (strcmp(xlog_dir, "") == 0))
-							|| strcmp(filename + strlen(filename) - 8, "/pg_xlog") != 0)
+						if (!((pg_str_endswith(filename, "/pg_xlog") ||
+							   pg_str_endswith(filename, "/archive_status")) &&
+							  errno == EEXIST))
 						{
 							fprintf(stderr,
 							_("%s: could not create directory \"%s\": %s\n"),
@@ -1348,13 +1331,25 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 				{
 					/*
 					 * Symbolic link
+					 *
+					 * It's most likely a link in pg_tblspc directory, to the
+					 * location of a tablespace. Apply any tablespace mapping
+					 * given on the command line (--tablespace-mapping).
+					 * (We blindly apply the mapping without checking that
+					 * the link really is inside pg_tblspc. We don't expect
+					 * there to be other symlinks in a data directory, but
+					 * if there are, you can call it an undocumented feature
+					 * that you can map them too.)
 					 */
 					filename[strlen(filename) - 1] = '\0';		/* Remove trailing slash */
-					if (symlink(&copybuf[157], filename) != 0)
+
+					mapped_tblspc_path = get_tablespace_mapping(&copybuf[157]);
+					if (symlink(mapped_tblspc_path, filename) != 0)
 					{
 						fprintf(stderr,
 								_("%s: could not create symbolic link from \"%s\" to \"%s\": %s\n"),
-						 progname, filename, &copybuf[157], strerror(errno));
+								progname, filename, mapped_tblspc_path,
+								strerror(errno));
 						disconnect_and_exit(1);
 					}
 				}
@@ -1772,6 +1767,15 @@ BaseBackup(void)
 		maxrate_clause = psprintf("MAX_RATE %u", maxrate);
 
 	exclude_list = build_exclude_list(excludes, num_exclude);
+
+	if (verbose)
+		fprintf(stderr,
+				_("%s: initiating base backup, waiting for checkpoint to complete\n"),
+				progname);
+
+	if (showprogress && !verbose)
+		fprintf(stderr, "waiting for checkpoint\r");
+
 	basebkp =
 		psprintf("BASE_BACKUP LABEL '%s' %s %s %s %s %s %s",
 				 escaped_label,
@@ -1811,6 +1815,9 @@ BaseBackup(void)
 	}
 
 	strlcpy(xlogstart, PQgetvalue(res, 0, 0), sizeof(xlogstart));
+
+	if (verbose)
+		fprintf(stderr, _("%s: checkpoint completed\n"), progname);
 
 	/*
 	 * 9.3 and later sends the TLI of the starting point. With older servers,
@@ -1909,17 +1916,6 @@ BaseBackup(void)
 		fprintf(stderr, "\n");	/* Need to move to next line */
 	}
 
-	if (format == 'p' && tablespace_dirs.head != NULL)
-	{
-		for (i = 0; i < PQntuples(res); i++)
-		{
-			Oid			tblspc_oid = atooid(PQgetvalue(res, i, 0));
-
-			if (tblspc_oid)
-				update_tablespace_symlink(tblspc_oid, PQgetvalue(res, i, 1));
-		}
-	}
-
 	PQclear(res);
 
 	/*
@@ -1960,6 +1956,11 @@ BaseBackup(void)
 		int			r;
 #else
 		DWORD		status;
+		/*
+		 * get a pointer sized version of bgchild to avoid warnings about
+		 * casting to a different size on WIN64.
+		 */
+		intptr_t	bgchild_handle = bgchild;
 		uint32		hi,
 					lo;
 #endif
@@ -2022,7 +2023,7 @@ BaseBackup(void)
 		InterlockedIncrement(&has_xlogendptr);
 
 		/* First wait for the thread to exit */
-		if (WaitForSingleObjectEx((HANDLE) bgchild, INFINITE, FALSE) !=
+		if (WaitForSingleObjectEx((HANDLE) bgchild_handle, INFINITE, FALSE) !=
 			WAIT_OBJECT_0)
 		{
 			_dosmaperr(GetLastError());
@@ -2030,7 +2031,7 @@ BaseBackup(void)
 					progname, strerror(errno));
 			disconnect_and_exit(1);
 		}
-		if (GetExitCodeThread((HANDLE) bgchild, &status) == 0)
+		if (GetExitCodeThread((HANDLE) bgchild_handle, &status) == 0)
 		{
 			_dosmaperr(GetLastError());
 			fprintf(stderr, _("%s: could not get child thread exit status: %s\n"),
@@ -2197,7 +2198,7 @@ main(int argc, char **argv)
 				break;
 			case 'Z':
 				compresslevel = atoi(optarg);
-				if (compresslevel <= 0 || compresslevel > 9)
+				if (compresslevel < 0 || compresslevel > 9)
 				{
 					fprintf(stderr, _("%s: invalid compression level \"%s\"\n"),
 							progname, optarg);
@@ -2383,7 +2384,7 @@ main(int argc, char **argv)
 			exit(1);
 		}
 #else
-		fprintf(stderr, _("%s: symlinks are not supported on this platform"));
+		fprintf(stderr, _("%s: symlinks are not supported on this platform\n"));
 		exit(1);
 #endif
 		free(linkloc);

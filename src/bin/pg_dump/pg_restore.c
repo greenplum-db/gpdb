@@ -334,6 +334,22 @@ main(int argc, char **argv)
 		exit_nicely(1);
 	}
 
+	if (numWorkers <= 0)
+	{
+		fprintf(stderr, _("%s: invalid number of parallel jobs\n"), progname);
+		exit(1);
+	}
+
+	/* See comments in pg_dump.c */
+#ifdef WIN32
+	if (numWorkers > MAXIMUM_WAIT_OBJECTS)
+	{
+		fprintf(stderr, _("%s: maximum number of parallel jobs is %d\n"),
+				progname, MAXIMUM_WAIT_OBJECTS);
+		exit(1);
+	}
+#endif
+
 	/* Can't do single-txn mode with multiple connections */
 	if (opts->single_txn && numWorkers > 1)
 	{
@@ -352,7 +368,7 @@ main(int argc, char **argv)
 
 	if (if_exists && !opts->dropSchema)
 	{
-		fprintf(stderr, _("%s: option --if-exists requires -c/--clean option\n"),
+		fprintf(stderr, _("%s: option --if-exists requires option -c/--clean\n"),
 				progname);
 		exit_nicely(1);
 	}
@@ -404,16 +420,6 @@ main(int argc, char **argv)
 	if (opts->tocFile)
 		SortTocFromFile(AH, opts);
 
-	/* See comments in pg_dump.c */
-#ifdef WIN32
-	if (numWorkers > MAXIMUM_WAIT_OBJECTS)
-	{
-		fprintf(stderr, _("%s: maximum number of parallel jobs is %d\n"),
-				progname, MAXIMUM_WAIT_OBJECTS);
-		exit(1);
-	}
-#endif
-
 	AH->numWorkers = numWorkers;
 
 	if (opts->tocSummary)
@@ -458,19 +464,19 @@ usage(const char *progname)
 	printf(_("  -c, --clean                  clean (drop) database objects before recreating\n"));
 	printf(_("  -C, --create                 create the target database\n"));
 	printf(_("  -e, --exit-on-error          exit on error, default is to continue\n"));
-	printf(_("  -I, --index=NAME             restore named indexes\n"));
+	printf(_("  -I, --index=NAME             restore named index\n"));
 	printf(_("  -j, --jobs=NUM               use this many parallel jobs to restore\n"));
 	printf(_("  -L, --use-list=FILENAME      use table of contents from this file for\n"
 			 "                               selecting/ordering output\n"));
-	printf(_("  -n, --schema=NAME            restore only objects in these schemas\n"));
+	printf(_("  -n, --schema=NAME            restore only objects in this schema\n"));
 	printf(_("  -O, --no-owner               skip restoration of object ownership\n"));
 	printf(_("  -P, --function='NAME(args)'\n"
 			 "                               restore named function. name must be exactly\n"
 			 "                               as appears in the TOC, and inside single quotes\n"));
 	printf(_("  -s, --schema-only            restore only the schema, no data\n"));
 	printf(_("  -S, --superuser=NAME         superuser user name to use for disabling triggers\n"));
-	printf(_("  -t, --table=NAME             restore named tables\n"));
-	printf(_("  -T, --trigger=NAME           restore named triggers\n"));
+	printf(_("  -t, --table=NAME             restore named table\n"));
+	printf(_("  -T, --trigger=NAME           restore named trigger\n"));
 	printf(_("  -x, --no-privileges          skip restoration of access privileges (grant/revoke)\n"));
 	printf(_("  -1, --single-transaction     restore as a single transaction\n"));
 	printf(_("  --disable-triggers           disable triggers during data-only restore\n"));
@@ -479,7 +485,7 @@ usage(const char *progname)
 			 "                               created\n"));
 	printf(_("  --no-security-labels         do not restore security labels\n"));
 	printf(_("  --no-tablespaces             do not restore tablespace assignments\n"));
-	printf(_("  --section=SECTION            restore named sections (pre-data, data, or post-data)\n"));
+	printf(_("  --section=SECTION            restore named section (pre-data, data, or post-data)\n"));
 	printf(_("  --use-set-session-authorization\n"
 			 "                               use SET SESSION AUTHORIZATION commands instead of\n"
 			 "                               ALTER OWNER commands to set ownership\n"));
@@ -492,6 +498,9 @@ usage(const char *progname)
 	printf(_("  -W, --password           force password prompt (should happen automatically)\n"));
 	printf(_("  --role=ROLENAME          do SET ROLE before restore\n"));
 
+	printf(_("\n"
+			 "The options -I, -n, -P, -t, -T, and --section can be combined and specified\n"
+			 "multiple times to select multiple objects.\n"));
 	printf(_("\nIf no input file name is supplied, then standard input is used.\n\n"));
 	printf(_("Report bugs to <bugs@greenplum.org>.\n"));
 }

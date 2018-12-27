@@ -19,10 +19,10 @@
  <para>
   There are several different ways of building PostgreSQL on
   <productname>Windows</productname>. The simplest way to build with
-  Microsoft tools is to install <productname>Visual Studio Express 2013
+  Microsoft tools is to install <productname>Visual Studio Express 2017
   for Windows Desktop</productname> and use the included
   compiler. It is also possible to build with the full
-  <productname>Microsoft Visual C++ 2005 to 2013</productname>.
+  <productname>Microsoft Visual C++ 2005 to 2017</productname>.
   In some cases that requires the installation of the
   <productname>Windows SDK</productname> in addition to the compiler.
  </para>
@@ -77,19 +77,28 @@
   <productname>Visual Studio Express</productname> or some versions of the
   <productname>Microsoft Windows SDK</productname>. If you do not already have a
   <productname>Visual Studio</productname> environment set up, the easiest
-  ways are to use the compilers from <productname>Visual Studio Express 2013
+  ways are to use the compilers from <productname>Visual Studio Express 2017
   for Windows Desktop</productname> or those in the <productname>Windows SDK
-  7.1</productname>, which are both free downloads from Microsoft.
+  8.1</productname>, which are both free downloads from Microsoft.
  </para>
 
  <para>
-  PostgreSQL is known to support compilation using the compilers shipped with
+  Both 32-bit and 64-bit builds are possible with the Microsoft Compiler suite.
+  32-bit PostgreSQL buils are possible with
   <productname>Visual Studio 2005</productname> to
-  <productname>Visual Studio 2013</productname> (including Express editions),
-  as well as standalone Windows SDK releases 6.0 to 7.1.
-  64-bit PostgreSQL builds are only supported with
-  <productname>Microsoft Windows SDK</productname> version 6.0a to 7.1 or
-  <productname>Visual Studio 2008</productname> and above.
+  <productname>Visual Studio 2017</productname> (including Express editions),
+  as well as standalone Windows SDK releases 6.0 to 8.1.
+  64-bit PostgreSQL builds are supported with
+  <productname>Microsoft Windows SDK</productname> version 6.0a to 8.1 or
+  <productname>Visual Studio 2008</productname> and above. Compilation
+  is supported down to <productname>Windows XP</productname> and
+  <productname>Windows Server 2003</> when building with
+  <productname>Visual Studio 2005</> to
+  <productname>Visual Studio 2013</productname>. Building with
+  <productname>Visual Studio 2015</productname> is supported down to
+  <productname>Windows Vista</> and <productname>Windows Server 2008</>.
+   Building with <productname>Visual Studio 2017</productname> is supported
+   down to <productname>Windows 7 SP1</> and <productname>Windows Server 2008 R2 SP1</>.
  </para>
 
  <para>
@@ -154,7 +163,7 @@ $ENV{PATH}=$ENV{PATH} . ';c:\some\where\bison\bin';
       <productname>Microsoft Windows SDK</productname> it
       is recommended that you upgrade to the latest version (currently
       version 7.1), available for download from
-      <ulink url="http://www.microsoft.com/downloads/"></>.
+      <ulink url="https://www.microsoft.com/download"></>.
      </para>
      <para>
       You must always include the
@@ -173,7 +182,8 @@ $ENV{PATH}=$ENV{PATH} . ';c:\some\where\bison\bin';
       ActiveState Perl is required to run the build generation scripts. MinGW
       or Cygwin Perl will not work. It must also be present in the PATH.
       Binaries can be downloaded from
-      <ulink url="http://www.activestate.com"></> (Note: version 5.8 or later is required,
+      <ulink url="http://www.activestate.com"></>
+      (Note: version 5.8.3 or later is required,
       the free Standard Distribution is sufficient).
      </para></listitem>
     </varlistentry>
@@ -210,9 +220,7 @@ $ENV{PATH}=$ENV{PATH} . ';c:\some\where\bison\bin';
       Both <productname>Bison</productname> and <productname>Flex</productname>
       are included in the <productname>msys</productname> tool suite, available
       from <ulink url="http://www.mingw.org/wiki/MSYS"></> as part of the
-      <productname>MinGW</productname> compiler suite. You can also get
-      <productname>msys</productname> as part of
-      <productname>msysGit</productname> from <ulink url="http://git-scm.com/"></>.
+      <productname>MinGW</productname> compiler suite.
      </para>
 
      <para>
@@ -221,9 +229,7 @@ $ENV{PATH}=$ENV{PATH} . ';c:\some\where\bison\bin';
       PATH environment variable in <filename>buildenv.pl</filename> unless
       they are already in PATH. In the case of MinGW, the directory is the
       <filename>\msys\1.0\bin</filename> subdirectory of your MinGW
-      installation directory. For msysGit, it's the <filename>bin</filename>
-      directory in your Git install directory. Do not add the MinGW compiler
-      tools themselves to PATH.
+      installation directory.
      </para>
 
      <note>
@@ -436,6 +442,10 @@ $ENV{CONFIG}="Debug";
 <userinput>vcregress installcheck</userinput>
 <userinput>vcregress plcheck</userinput>
 <userinput>vcregress contribcheck</userinput>
+<userinput>vcregress ecpgcheck</userinput>
+<userinput>vcregress isolationcheck</userinput>
+<userinput>vcregress bincheck</userinput>
+<userinput>vcregress upgradecheck</userinput>
 </screen>
 
    To change the schedule used (default is parallel), append it to the
@@ -446,6 +456,29 @@ $ENV{CONFIG}="Debug";
 
    For more information about the regression tests, see
    <xref linkend="regress">.
+  </para>
+
+  <para>
+   Running the regression tests on client programs, with "vcregress bincheck",
+   requires an additional Perl module to be installed:
+   <variablelist>
+    <varlistentry>
+     <term><productname>IPC::Run</productname></term>
+     <listitem><para>
+      As of this writing, <literal>IPC::Run</> is not included in the
+      ActiveState Perl installation, nor in the ActiveState Perl Package
+      Manager (PPM) library. To install, download the
+      <filename>IPC-Run-&lt;version&gt;.tar.gz</> source archive from CPAN,
+      at <ulink url="https://metacpan.org/release/IPC-Run/"></>, and
+      uncompress. Edit the <filename>buildenv.pl</> file, and add a PERL5LIB
+      variable to point to the <filename>lib</> subdirectory from the
+      extracted archive. For example:
+<programlisting>
+$ENV{PERL5LIB}=$ENV{PERL5LIB} . ';c:\IPC-Run-0.94\lib';
+</programlisting>
+     </para></listitem>
+    </varlistentry>
+   </variablelist>
   </para>
  </sect2>
 

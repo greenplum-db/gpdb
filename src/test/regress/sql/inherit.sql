@@ -145,6 +145,32 @@ insert into d values('test','one','two','three');
 alter table a alter column aa type integer using bit_length(aa);
 select * from d;
 
+-- check that oid column is handled properly during alter table inherit
+create table oid_parent (a int) with oids;
+
+create table oid_child () inherits (oid_parent);
+select attinhcount, attislocal from pg_attribute
+  where attrelid = 'oid_child'::regclass and attname = 'oid';
+drop table oid_child;
+
+create table oid_child (a int) without oids;
+alter table oid_child inherit oid_parent;  -- fail
+alter table oid_child set with oids;
+select attinhcount, attislocal from pg_attribute
+  where attrelid = 'oid_child'::regclass and attname = 'oid';
+alter table oid_child inherit oid_parent;
+select attinhcount, attislocal from pg_attribute
+  where attrelid = 'oid_child'::regclass and attname = 'oid';
+alter table oid_child set without oids;  -- fail
+alter table oid_parent set without oids;
+select attinhcount, attislocal from pg_attribute
+  where attrelid = 'oid_child'::regclass and attname = 'oid';
+alter table oid_child set without oids;
+select attinhcount, attislocal from pg_attribute
+  where attrelid = 'oid_child'::regclass and attname = 'oid';
+
+drop table oid_parent cascade;
+
 -- Test non-inheritable parent constraints
 create table p1(ff1 int);
 alter table p1 add constraint p1chk check (ff1 > 0) no inherit;
@@ -156,6 +182,9 @@ select pc.relname, pgc.conname, pgc.contype, pgc.conislocal, pgc.coninhcount, pg
 create table c1 () inherits (p1);
 \d p1
 \d c1
+
+-- Test that child does not override inheritable constraints of the parent
+create table c2 (constraint p2chk check (ff1 > 10) no inherit) inherits (p1);	--fails
 
 drop table p1 cascade;
 
@@ -334,6 +363,45 @@ DROP TABLE test_foreign_constraints_inh;
 DROP TABLE test_foreign_constraints;
 DROP TABLE test_primary_constraints;
 
+-- Test that parent and child CHECK constraints can be created in either order
+create table p1(f1 int);
+create table p1_c1() inherits(p1);
+
+alter table p1 add constraint inh_check_constraint1 check (f1 > 0);
+alter table p1_c1 add constraint inh_check_constraint1 check (f1 > 0);
+
+alter table p1_c1 add constraint inh_check_constraint2 check (f1 < 10);
+alter table p1 add constraint inh_check_constraint2 check (f1 < 10);
+
+select conrelid::regclass::text as relname, conname, conislocal, coninhcount
+from pg_constraint where conname like 'inh\_check\_constraint%'
+order by 1, 2;
+
+drop table p1 cascade;
+
+-- Test that a valid child can have not-valid parent, but not vice versa
+create table invalid_check_con(f1 int);
+create table invalid_check_con_child() inherits(invalid_check_con);
+
+alter table invalid_check_con_child add constraint inh_check_constraint check(f1 > 0) not valid;
+alter table invalid_check_con add constraint inh_check_constraint check(f1 > 0); -- fail
+alter table invalid_check_con_child drop constraint inh_check_constraint;
+
+insert into invalid_check_con values(0);
+
+alter table invalid_check_con_child add constraint inh_check_constraint check(f1 > 0);
+alter table invalid_check_con add constraint inh_check_constraint check(f1 > 0) not valid;
+
+insert into invalid_check_con values(0); -- fail
+insert into invalid_check_con_child values(0); -- fail
+
+select conrelid::regclass::text as relname, conname,
+       convalidated, conislocal, coninhcount, connoinherit
+from pg_constraint where conname like 'inh\_check\_constraint%'
+order by 1, 2;
+
+-- We don't drop the invalid_check_con* tables, to test dump/reload with
+
 --
 -- Test parameterized append plans for inheritance trees
 --
@@ -413,6 +481,27 @@ reset enable_bitmapscan;
 drop table matest0 cascade;
 
 --
+-- Check that use of an index with an extraneous column doesn't produce
+-- a plan with extraneous sorting
+--
+
+create table matest0 (a int, b int, c int, d int);
+create table matest1 () inherits(matest0);
+create index matest0i on matest0 (b, c);
+create index matest1i on matest1 (b, c);
+
+set enable_nestloop = off;  -- we want a plan with two MergeAppends
+
+explain (costs off)
+select t1.* from matest0 t1, matest0 t2
+where t1.b = t2.b and t2.c = t2.d
+order by t1.b limit 10;
+
+reset enable_nestloop;
+
+drop table matest0 cascade;
+
+--
 -- Test merge-append for UNION ALL append relations
 --
 
@@ -485,3 +574,15 @@ FROM generate_series(1, 3) g(i);
 reset enable_seqscan;
 reset enable_indexscan;
 reset enable_bitmapscan;
+
+--
+-- Check handling of a constant-null CHECK constraint
+--
+create table cnullparent (f1 int);
+create table cnullchild (check (f1 = 1 or f1 = null)) inherits(cnullparent);
+insert into cnullchild values(1);
+insert into cnullchild values(2);
+insert into cnullchild values(null);
+select * from cnullparent;
+select * from cnullparent where f1 = 2;
+drop table cnullparent cascade;

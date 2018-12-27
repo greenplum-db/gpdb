@@ -2037,9 +2037,10 @@ gpdb::ConvertTimeValueToScalar
 	Oid typid
 	)
 {
+	bool failure = false;
 	GP_WRAP_START;
 	{
-		return convert_timevalue_to_scalar(datum, typid);
+		return convert_timevalue_to_scalar(datum, typid, &failure);
 	}
 	GP_WRAP_END;
 	return 0.0;
@@ -2052,9 +2053,10 @@ gpdb::ConvertNetworkToScalar
 	Oid typid
 	)
 {
+	bool failure = false;
 	GP_WRAP_START;
 	{
-		return convert_network_to_scalar(datum, typid);
+		return convert_network_to_scalar(datum, typid, &failure);
 	}
 	GP_WRAP_END;
 	return 0.0;

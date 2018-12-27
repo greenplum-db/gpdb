@@ -140,9 +140,11 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
 
     <listitem>
      <para>
-      If the <literal>GROUP BY</literal> clause is specified, the
+      If the <literal>GROUP BY</literal> clause is specified,
+      or if there are aggregate function calls, the
       output is combined into groups of rows that match on one or more
-      values.  If the <literal>HAVING</literal> clause is present, it
+      values, and the results of aggregate functions are computed.
+      If the <literal>HAVING</literal> clause is present, it
       eliminates groups that do not satisfy the given condition.  (See
       <xref linkend="sql-groupby" endterm="sql-groupby-title"> and
       <xref linkend="sql-having" endterm="sql-having-title"> below.)
@@ -567,9 +569,12 @@ TABLE [ ONLY ] <replaceable class="parameter">table_name</replaceable> [ * ]
      <varlistentry>
       <term><literal>NATURAL</literal></term>
       <listitem>
-       <para><literal>NATURAL</literal> is shorthand for a
+       <para>
+        <literal>NATURAL</literal> is shorthand for a
         <literal>USING</> list that mentions all columns in the two
-        tables that have the same names.
+        tables that have matching names.  If there are no common
+        column names, <literal>NATURAL</literal> is equivalent
+        to <literal>ON TRUE</>.
        </para>
       </listitem>
      </varlistentry>
@@ -668,22 +673,35 @@ GROUP BY <replaceable class="parameter">expression</replaceable> [, ...]
 
    <para>
     Aggregate functions, if any are used, are computed across all rows
-    making up each group, producing a separate value for each group
-    (whereas without <literal>GROUP BY</literal>, an aggregate
-    produces a single value computed across all the selected rows).
-    The set of rows fed to the aggregate function can be further filtered by
+    making up each group, producing a separate value for each group.
+    (If there are aggregate functions but no <literal>GROUP BY</literal>
+    clause, the query is treated as having a single group comprising all
+    the selected rows.)
+    The set of rows fed to each aggregate function can be further filtered by
     attaching a <literal>FILTER</literal> clause to the aggregate function
     call; see <xref linkend="syntax-aggregates"> for more information.  When
     a <literal>FILTER</literal> clause is present, only those rows matching it
-    are included.
-    When <literal>GROUP BY</literal> is present, it is not valid for
+    are included in the input to that aggregate function.
+   </para>
+
+   <para>
+    When <literal>GROUP BY</literal> is present,
+    or any aggregate functions are present, it is not valid for
     the <command>SELECT</command> list expressions to refer to
-    ungrouped columns except within aggregate functions or if the
+    ungrouped columns except within aggregate functions or when the
     ungrouped column is functionally dependent on the grouped columns,
     since there would otherwise be more than one possible value to
     return for an ungrouped column.  A functional dependency exists if
     the grouped columns (or a subset thereof) are the primary key of
     the table containing the ungrouped column.
+   </para>
+
+   <para>
+    Keep in mind that all aggregate functions are evaluated before
+    evaluating any <quote>scalar</> expressions in the <literal>HAVING</>
+    clause or <literal>SELECT</> list.  This means that, for example,
+    a <literal>CASE</> expression cannot be used to skip evaluation of
+    an aggregate function; see <xref linkend="syntax-express-eval">.
    </para>
 
    <para>
@@ -714,7 +732,8 @@ HAVING <replaceable class="parameter">condition</replaceable>
     created by <literal>GROUP BY</literal>.  Each column referenced in
     <replaceable class="parameter">condition</replaceable> must
     unambiguously reference a grouping column, unless the reference
-    appears within an aggregate function.
+    appears within an aggregate function or the ungrouped column is
+    functionally dependent on the grouping columns.
    </para>
 
    <para>
@@ -794,8 +813,8 @@ WINDOW <replaceable class="parameter">window_name</replaceable> AS ( <replaceabl
     The <replaceable class="parameter">frame_clause</> can be one of
 
 <synopsis>
-[ RANGE | ROWS ] <replaceable>frame_start</>
-[ RANGE | ROWS ] BETWEEN <replaceable>frame_start</> AND <replaceable>frame_end</>
+{ RANGE | ROWS } <replaceable>frame_start</>
+{ RANGE | ROWS } BETWEEN <replaceable>frame_start</> AND <replaceable>frame_end</>
 </synopsis>
 
     where <replaceable>frame_start</> and <replaceable>frame_end</> can be
@@ -823,8 +842,9 @@ UNBOUNDED FOLLOWING
     The default framing option is <literal>RANGE UNBOUNDED PRECEDING</>,
     which is the same as <literal>RANGE BETWEEN UNBOUNDED PRECEDING AND
     CURRENT ROW</>; it sets the frame to be all rows from the partition start
-    up through the current row's last peer in the <literal>ORDER BY</>
-    ordering (which means all rows if there is no <literal>ORDER BY</>).
+    up through the current row's last peer (a row that <literal>ORDER
+    BY</> considers equivalent to the current row, or all rows if there
+    is no <literal>ORDER BY</>).
     In general, <literal>UNBOUNDED PRECEDING</> means that the frame
     starts with the first row of the partition, and similarly
     <literal>UNBOUNDED FOLLOWING</> means that the frame ends with the last
@@ -848,7 +868,7 @@ UNBOUNDED FOLLOWING
     results if the <literal>ORDER BY</> ordering does not order the rows
     uniquely.  The <literal>RANGE</> options are designed to ensure that
     rows that are peers in the <literal>ORDER BY</> ordering are treated
-    alike; any two peer rows will be both in or both not in the frame.
+    alike; all peer rows will be in the same frame.
    </para>
 
    <para>
@@ -1253,12 +1273,14 @@ OFFSET <replaceable class="parameter">start</replaceable>
 OFFSET <replaceable class="parameter">start</replaceable> { ROW | ROWS }
 FETCH { FIRST | NEXT } [ <replaceable class="parameter">count</replaceable> ] { ROW | ROWS } ONLY
 </synopsis>
-    In this syntax, to write anything except a simple integer constant for
-    <replaceable class="parameter">start</> or <replaceable
-    class="parameter">count</replaceable>, you must write parentheses
-    around it.
-    If <replaceable class="parameter">count</> is
-    omitted in a <literal>FETCH</> clause, it defaults to 1.
+    In this syntax, the <replaceable class="parameter">start</replaceable>
+    or <replaceable class="parameter">count</replaceable> value is required by
+    the standard to be a literal constant, a parameter, or a variable name;
+    as a <productname>PostgreSQL</productname> extension, other expressions
+    are allowed, but will generally need to be enclosed in parentheses to avoid
+    ambiguity.
+    If <replaceable class="parameter">count</replaceable> is
+    omitted in a <literal>FETCH</literal> clause, it defaults to 1.
     <literal>ROW</literal>
     and <literal>ROWS</literal> as well as <literal>FIRST</literal>
     and <literal>NEXT</literal> are noise words that don't influence
@@ -1328,64 +1350,8 @@ KEY SHARE
    </para>
 
    <para>
-    <literal>FOR UPDATE</literal> causes the rows retrieved by the
-    <command>SELECT</command> statement to be locked as though for
-    update.  This prevents them from being modified or deleted by
-    other transactions until the current transaction ends.  That is,
-    other transactions that attempt <command>UPDATE</command>,
-    <command>DELETE</command>,
-    <command>SELECT FOR UPDATE</command>,
-    <command>SELECT FOR NO KEY UPDATE</command>,
-    <command>SELECT FOR SHARE</command> or
-    <command>SELECT FOR KEY SHARE</command>
-    of these rows will be blocked until the current transaction ends.
-    The <literal>FOR UPDATE</> lock mode
-    is also acquired by any <command>DELETE</> on a row, and also by an
-    <command>UPDATE</> that modifies the values on certain columns.  Currently,
-    the set of columns considered for the <command>UPDATE</> case are those that
-    have an unique index on them that can be used in a foreign key (so partial
-    indexes and expressional indexes are not considered), but this may change
-    in the future.
-    Also, if an <command>UPDATE</command>, <command>DELETE</command>,
-    or <command>SELECT FOR UPDATE</command> from another transaction
-    has already locked a selected row or rows, <command>SELECT FOR
-    UPDATE</command> will wait for the other transaction to complete,
-    and will then lock and return the updated row (or no row, if the
-    row was deleted).  Within a <literal>REPEATABLE READ</> or <literal>SERIALIZABLE</> transaction,
-    however, an error will be thrown if a row to be locked has changed
-    since the transaction started.  For further discussion see <xref
-    linkend="mvcc">.
-   </para>
-
-   <para>
-    <literal>FOR NO KEY UPDATE</> behaves similarly, except that the lock
-    acquired is weaker: this lock will not block
-    <literal>SELECT FOR KEY SHARE</> commands that attempt to acquire
-    a lock on the same rows. This lock mode is also acquired by any
-    <command>UPDATE</> that does not acquire a <literal>FOR UPDATE</> lock.
-   </para>
-
-   <para>
-    <literal>FOR SHARE</literal> behaves similarly, except that it
-    acquires a shared rather than exclusive lock on each retrieved
-    row.  A shared lock blocks other transactions from performing
-    <command>UPDATE</command>, <command>DELETE</command>, <command>SELECT
-    FOR UPDATE</command> or <command>SELECT FOR NO KEY UPDATE</>
-    on these rows, but it does not prevent them
-    from performing <command>SELECT FOR SHARE</command> or
-    <command>SELECT FOR KEY SHARE</command>.
-   </para>
-
-   <para>
-    <literal>FOR KEY SHARE</> behaves similarly to <literal>FOR SHARE</literal>,
-    except that the lock
-    is weaker: <literal>SELECT FOR UPDATE</> is blocked, but
-    not <literal>SELECT FOR NO KEY UPDATE</>.  A key-shared
-    lock blocks other transactions from performing <command>DELETE</command>
-    or any <command>UPDATE</command> that changes the key values, but not
-    other <command>UPDATE</>, and neither does it prevent
-    <command>SELECT FOR NO KEY UPDATE</>, <command>SELECT FOR SHARE</>, or
-    <command>SELECT FOR KEY SHARE</>.
+    For more information on each row-level lock mode, refer to
+    <xref linkend="locking-rows">.
    </para>
 
    <para>

@@ -93,6 +93,13 @@ ECPGget_desc_header(int lineno, const char *desc_name, int *count)
 	PGresult   *ECPGresult;
 	struct sqlca_t *sqlca = ECPGget_sqlca();
 
+	if (sqlca == NULL)
+	{
+		ecpg_raise(lineno, ECPG_OUT_OF_MEMORY,
+				   ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
+		return false;
+	}
+
 	ecpg_init_sqlca(sqlca);
 	ECPGresult = ecpg_result_by_descriptor(lineno, desc_name);
 	if (!ECPGresult)
@@ -210,7 +217,7 @@ get_char_item(int lineno, void *var, enum ECPGttype vartype, char *value, int va
 				(struct ECPGgeneric_varchar *) var;
 
 				if (varcharsize == 0)
-					strncpy(variable->arr, value, strlen(value));
+					memcpy(variable->arr, value, strlen(value));
 				else
 					strncpy(variable->arr, value, varcharsize);
 
@@ -244,6 +251,13 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 				act_tuple;
 	struct variable data_var;
 	struct sqlca_t *sqlca = ECPGget_sqlca();
+
+	if (sqlca == NULL)
+	{
+		ecpg_raise(lineno, ECPG_OUT_OF_MEMORY,
+				   ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
+		return false;
+	}
 
 	va_start(args, index);
 	ecpg_init_sqlca(sqlca);
@@ -432,7 +446,7 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 				/* allocate storage if needed */
 				if (arrsize == 0 && *(void **) var == NULL)
 				{
-					void	   *mem = (void *) ecpg_alloc(offset * ntuples, lineno);
+					void	   *mem = (void *) ecpg_auto_alloc(offset * ntuples, lineno);
 
 					if (!mem)
 					{
@@ -440,7 +454,6 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 						return false;
 					}
 					*(void **) var = mem;
-					ecpg_add_mem(mem, lineno);
 					var = mem;
 				}
 
@@ -510,7 +523,7 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 		/* allocate storage if needed */
 		if (data_var.ind_arrsize == 0 && data_var.ind_value == NULL)
 		{
-			void	   *mem = (void *) ecpg_alloc(data_var.ind_offset * ntuples, lineno);
+			void	   *mem = (void *) ecpg_auto_alloc(data_var.ind_offset * ntuples, lineno);
 
 			if (!mem)
 			{
@@ -518,7 +531,6 @@ ECPGget_desc(int lineno, const char *desc_name, int index,...)
 				return false;
 			}
 			*(void **) data_var.ind_pointer = mem;
-			ecpg_add_mem(mem, lineno);
 			data_var.ind_value = mem;
 		}
 
@@ -703,6 +715,13 @@ ECPGdeallocate_desc(int line, const char *name)
 	struct descriptor *prev;
 	struct sqlca_t *sqlca = ECPGget_sqlca();
 
+	if (sqlca == NULL)
+	{
+		ecpg_raise(line, ECPG_OUT_OF_MEMORY,
+				   ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
+		return false;
+	}
+
 	ecpg_init_sqlca(sqlca);
 	for (desc = get_descriptors(), prev = NULL; desc; prev = desc, desc = desc->next)
 	{
@@ -741,6 +760,13 @@ ECPGallocate_desc(int line, const char *name)
 {
 	struct descriptor *new;
 	struct sqlca_t *sqlca = ECPGget_sqlca();
+
+	if (sqlca == NULL)
+	{
+		ecpg_raise(line, ECPG_OUT_OF_MEMORY,
+				   ECPG_SQLSTATE_ECPG_OUT_OF_MEMORY, NULL);
+		return false;
+	}
 
 	ecpg_init_sqlca(sqlca);
 	new = (struct descriptor *) ecpg_alloc(sizeof(struct descriptor), line);

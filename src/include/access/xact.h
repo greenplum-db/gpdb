@@ -61,7 +61,7 @@ typedef enum
 	SYNCHRONOUS_COMMIT_REMOTE_FLUSH		/* wait for local and remote flush */
 }	SyncCommitLevel;
 
-/* Define the default setting for synchonous_commit */
+/* Define the default setting for synchronous_commit */
 #define SYNCHRONOUS_COMMIT_ON	SYNCHRONOUS_COMMIT_REMOTE_FLUSH
 
 /* Synchronous commit level */
@@ -189,8 +189,7 @@ typedef struct xl_xact_abort
 /*
  * COMMIT_PREPARED and ABORT_PREPARED are identical to COMMIT/ABORT records
  * except that we have to store the XID of the prepared transaction explicitly
- * --- the XID in the record header will be for the transaction doing the
- * COMMIT PREPARED or ABORT PREPARED command.
+ * --- the XID in the record header will be invalid.
  */
 
 typedef struct xl_xact_commit_prepared

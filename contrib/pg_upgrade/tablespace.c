@@ -36,7 +36,7 @@ init_tablespaces(void)
  * get_tablespace_paths()
  *
  * Scans pg_tablespace and returns a malloc'ed array of all tablespace
- * paths. Its the caller's responsibility to free the array.
+ * paths. It's the caller's responsibility to free the array.
  */
 static void
 get_tablespace_paths(void)
@@ -94,7 +94,7 @@ get_tablespace_paths(void)
 			else
 				report_status(PG_FATAL,
 						   "cannot stat() tablespace directory \"%s\": %s\n",
-					   os_info.old_tablespaces[tblnum], getErrorText(errno));
+					   os_info.old_tablespaces[tblnum], getErrorText());
 		}
 		if (!S_ISDIR(statBuf.st_mode))
 			report_status(PG_FATAL,

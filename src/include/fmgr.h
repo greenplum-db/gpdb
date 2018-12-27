@@ -348,11 +348,18 @@ typedef const Pg_finfo_record *(*PGFInfoFunction) (void);
 
 /*
  *	Macro to build an info function associated with the given function name.
- *	Win32 loadable functions usually link with 'dlltool --export-all', but it
- *	doesn't hurt to add PGDLLIMPORT in case they don't.
+ *
+ *	As a convenience, also provide an "extern" declaration for the given
+ *	function name, so that writers of C functions need not write that too.
+ *
+ *	On Windows, the function and info function must be exported.  Our normal
+ *	build processes take care of that via .DEF files or --export-all-symbols.
+ *	Module authors using a different build process might need to manually
+ *	declare the function PGDLLEXPORT.  We do that automatically here for the
+ *	info function, since authors shouldn't need to be explicitly aware of it.
  */
 #define PG_FUNCTION_INFO_V1(funcname) \
-Datum funcname(PG_FUNCTION_ARGS); \
+extern Datum funcname(PG_FUNCTION_ARGS); \
 extern PGDLLEXPORT const Pg_finfo_record * CppConcat(pg_finfo_,funcname)(void); \
 const Pg_finfo_record * \
 CppConcat(pg_finfo_,funcname) (void) \

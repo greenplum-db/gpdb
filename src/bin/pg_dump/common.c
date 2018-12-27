@@ -37,11 +37,11 @@ static int	numCatalogIds = 0;
 
 /*
  * These variables are static to avoid the notational cruft of having to pass
- * them into findTableByOid() and friends.  For each of these arrays, we
- * build a sorted-by-OID index array immediately after it's built, and then
- * we use binary search in findTableByOid() and friends.  (qsort'ing the base
- * arrays themselves would be simpler, but it doesn't work because pg_dump.c
- * may have already established pointers between items.)
+ * them into findTableByOid() and friends.  For each of these arrays, we build
+ * a sorted-by-OID index array immediately after the objects are fetched,
+ * and then we use binary search in findTableByOid() and friends.  (qsort'ing
+ * the object arrays themselves would be simpler, but it doesn't work because
+ * pg_dump.c may have already established pointers between items.)
  */
 static DumpableObject **tblinfoindex;
 static DumpableObject **typinfoindex;

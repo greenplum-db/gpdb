@@ -1,8 +1,8 @@
 -- negative cases
 SELECT test_receive();
-ERROR:  could not receive data from WAL stream: connection pointer is NULL (libpqwalreceiver.c:530)
+ERROR:  could not receive data from WAL stream: connection pointer is NULL (libpqwalreceiver.c:537)
 SELECT test_send();
-ERROR:  could not send data to WAL stream: connection pointer is NULL (libpqwalreceiver.c:549)
+ERROR:  could not send data to WAL stream: connection pointer is NULL (libpqwalreceiver.c:556)
 SELECT test_disconnect();
  test_disconnect 
 -----------------

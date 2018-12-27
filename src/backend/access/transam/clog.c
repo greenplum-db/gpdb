@@ -223,21 +223,27 @@ set_status_by_pages(int nsubxids, TransactionId *subxids,
 	int			offset = 0;
 	int			i = 0;
 
+	Assert(nsubxids > 0);		/* else the pageno fetch above is unsafe */
+
 	while (i < nsubxids)
 	{
 		int			num_on_page = 0;
+		int			nextpageno;
 
-		while (TransactionIdToPage(subxids[i]) == pageno && i < nsubxids)
+		do
 		{
+			nextpageno = TransactionIdToPage(subxids[i]);
+			if (nextpageno != pageno)
+				break;
 			num_on_page++;
 			i++;
-		}
+		} while (i < nsubxids);
 
 		TransactionIdSetPageStatus(InvalidTransactionId,
 								   num_on_page, subxids + offset,
 								   status, lsn, pageno);
 		offset = i;
-		pageno = TransactionIdToPage(subxids[offset]);
+		pageno = nextpageno;
 	}
 }
 
@@ -526,7 +532,7 @@ CLOGTransactionIsOld(TransactionId xid)
  *
  * Testing during the PostgreSQL 9.2 development cycle revealed that on a
  * large multi-processor system, it was possible to have more CLOG page
- * requests in flight at one time than the numebr of CLOG buffers which existed
+ * requests in flight at one time than the number of CLOG buffers which existed
  * at that time, which was hardcoded to 8.  Further testing revealed that
  * performance dropped off with more than 32 CLOG buffers, possibly because
  * the linear buffer search algorithm doesn't scale well.

@@ -330,7 +330,8 @@ GetWalRcvWriteRecPtr(XLogRecPtr *latestChunkStart, TimeLineID *receiveTLI)
 }
 
 /*
- * Returns the replication apply delay in ms
+ * Returns the replication apply delay in ms or -1
+ * if the apply delay info is not available
  */
 int
 GetReplicationApplyDelay(void)
@@ -344,6 +345,8 @@ GetReplicationApplyDelay(void)
 	long		secs;
 	int			usecs;
 
+	TimestampTz	chunkReplayStartTime;
+
 	SpinLockAcquire(&walrcv->mutex);
 	receivePtr = walrcv->receivedUpto;
 	SpinLockRelease(&walrcv->mutex);
@@ -353,7 +356,12 @@ GetReplicationApplyDelay(void)
 	if (receivePtr == replayPtr)
 		return 0;
 
-	TimestampDifference(GetCurrentChunkReplayStartTime(),
+	chunkReplayStartTime = GetCurrentChunkReplayStartTime();
+
+	if (chunkReplayStartTime == 0)
+		return -1;
+
+	TimestampDifference(chunkReplayStartTime,
 						GetCurrentTimestamp(),
 						&secs, &usecs);
 

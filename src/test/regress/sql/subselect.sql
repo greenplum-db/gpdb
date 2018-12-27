@@ -388,26 +388,6 @@ select * from outer_7597 where (f1, f2) not in (select * from inner_7597);
 select '1'::text in (select '1'::name union all select '1'::name);
 
 --
--- Check for incorrect optimization when IN subquery contains a SRF
---
-set enable_hashjoin to 0;
-explain select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
-select * from int4_tbl o where (f1, f1) in
-  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
-reset enable_hashjoin;
-
---
--- check for over-optimization of whole-row Var referencing an Append plan
---
-select (select q from
-         (select 1,2,3 where f1 > 0
-          union all
-          select 4,5,6.0 where f1 <= 0
-         ) q )
-from int4_tbl;
-
---
 -- Test case for planner bug with nested EXISTS handling
 --
 select a.thousand from tenk1 a, tenk1 b
@@ -443,6 +423,16 @@ create temp table nocolumns();
 select exists(select * from nocolumns);
 
 --
+-- Check behavior with a SubPlan in VALUES (bug #14924)
+--
+select val.x
+  from generate_series(1,10) as s(i),
+  lateral (
+    values ((select s.i + 1)), (s.i + 101)
+  ) as val(x)
+where s.i < 10 and (select val.x) < 110;
+
+--
 -- Check sane behavior with nested IN SubLinks
 -- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
 --
@@ -453,3 +443,52 @@ select * from int4_tbl where
 select * from int4_tbl where
   (case when f1 in (select unique1 from tenk1 a) then f1 else null end) in
   (select ten from tenk1 b);
+
+--
+-- Check for incorrect optimization when IN subquery contains a SRF
+--
+explain (verbose, costs off)
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+select * from int4_tbl o where (f1, f1) in
+  (select f1, generate_series(1,2) / 10 g from int4_tbl i group by f1);
+
+--
+-- check for over-optimization of whole-row Var referencing an Append plan
+--
+select (select q from
+         (select 1,2,3 where f1 > 0
+          union all
+          select 4,5,6.0 where f1 <= 0
+         ) q )
+from int4_tbl;
+
+--
+-- Check that volatile quals aren't pushed down past a DISTINCT:
+-- nextval() should not be called more than the nominal number of times
+--
+create temp sequence ts1;
+
+select * from
+  (select distinct ten from tenk1) ss
+  where ten < 10 + nextval('ts1')
+  order by 1;
+
+select nextval('ts1');
+
+--
+-- Ensure that backward scan direction isn't propagated into
+-- expression subqueries (bug #15336)
+--
+--start_ignore
+begin;
+
+declare c1 scroll cursor for
+ select * from generate_series(1,4) i
+  where i <> all (values (2),(3));
+
+move forward all in c1;
+fetch backward all in c1;
+
+commit;
+--end_ignore

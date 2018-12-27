@@ -45,9 +45,9 @@ typedef struct ParallelSlot
 	ParallelArgs *args;
 	T_WorkerStatus workerStatus;
 	int			status;
-	int			pipeRead;
+	int			pipeRead;		/* master's end of the pipes */
 	int			pipeWrite;
-	int			pipeRevRead;
+	int			pipeRevRead;	/* child's end of the pipes */
 	int			pipeRevWrite;
 #ifdef WIN32
 	uintptr_t	hThread;
@@ -86,7 +86,7 @@ extern void DispatchJobForTocEntry(struct _archiveHandle * AH,
 					   struct _tocEntry * te, T_Action act);
 extern void ParallelBackupEnd(struct _archiveHandle * AH, ParallelState *pstate);
 
-extern void checkAborting(struct _archiveHandle * AH);
+extern void set_archive_cancel_info(struct _archiveHandle * AH, PGconn *conn);
 
 extern void
 exit_horribly(const char *modulename, const char *fmt,...)

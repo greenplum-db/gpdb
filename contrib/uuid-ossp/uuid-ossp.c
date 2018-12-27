@@ -17,6 +17,10 @@
 #include "utils/builtins.h"
 #include "utils/uuid.h"
 
+/* for ntohl/htonl */
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 /*
  * It's possible that there's more than one uuid.h header file present.
  * We expect configure to set the HAVE_ symbol for only the one we want.
@@ -26,14 +30,14 @@
  */
 #define uuid_hash bsd_uuid_hash
 
-#ifdef HAVE_UUID_H
+#if defined(HAVE_UUID_H)
 #include <uuid.h>
-#endif
-#ifdef HAVE_OSSP_UUID_H
+#elif defined(HAVE_OSSP_UUID_H)
 #include <ossp/uuid.h>
-#endif
-#ifdef HAVE_UUID_UUID_H
+#elif defined(HAVE_UUID_UUID_H)
 #include <uuid/uuid.h>
+#else
+#error "please use configure's --with-uuid switch to select a UUID library"
 #endif
 
 #undef uuid_hash

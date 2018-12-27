@@ -306,7 +306,7 @@ bit_recv(PG_FUNCTION_ARGS)
 	bits8		mask;
 
 	bitlen = pq_getmsgint(buf, sizeof(int32));
-	if (bitlen < 0)
+	if (bitlen < 0 || bitlen > VARBITMAXLEN)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 				 errmsg("invalid length in external bit string")));
@@ -369,7 +369,7 @@ bit(PG_FUNCTION_ARGS)
 	bits8		mask;
 
 	/* No work if typmod is invalid or supplied data matches it already */
-	if (len <= 0 || len == VARBITLEN(arg))
+	if (len <= 0 || len > VARBITMAXLEN || len == VARBITLEN(arg))
 		PG_RETURN_VARBIT_P(arg);
 
 	if (!isExplicit)
@@ -622,7 +622,7 @@ varbit_recv(PG_FUNCTION_ARGS)
 	bits8		mask;
 
 	bitlen = pq_getmsgint(buf, sizeof(int32));
-	if (bitlen < 0)
+	if (bitlen < 0 || bitlen > VARBITMAXLEN)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_BINARY_REPRESENTATION),
 				 errmsg("invalid length in external bit string")));
@@ -1388,9 +1388,14 @@ bitshiftleft(PG_FUNCTION_ARGS)
 
 	/* Negative shift is a shift to the right */
 	if (shft < 0)
+	{
+		/* Prevent integer overflow in negation */
+		if (shft < -VARBITMAXLEN)
+			shft = -VARBITMAXLEN;
 		PG_RETURN_DATUM(DirectFunctionCall2(bitshiftright,
 											VarBitPGetDatum(arg),
 											Int32GetDatum(-shft)));
+	}
 
 	result = (VarBit *) palloc(VARSIZE(arg));
 	SET_VARSIZE(result, VARSIZE(arg));
@@ -1448,9 +1453,14 @@ bitshiftright(PG_FUNCTION_ARGS)
 
 	/* Negative shift is a shift to the left */
 	if (shft < 0)
+	{
+		/* Prevent integer overflow in negation */
+		if (shft < -VARBITMAXLEN)
+			shft = -VARBITMAXLEN;
 		PG_RETURN_DATUM(DirectFunctionCall2(bitshiftleft,
 											VarBitPGetDatum(arg),
 											Int32GetDatum(-shft)));
+	}
 
 	result = (VarBit *) palloc(VARSIZE(arg));
 	SET_VARSIZE(result, VARSIZE(arg));
@@ -1508,7 +1518,7 @@ bitfromint4(PG_FUNCTION_ARGS)
 	int			destbitsleft,
 				srcbitsleft;
 
-	if (typmod <= 0)
+	if (typmod <= 0 || typmod > VARBITMAXLEN)
 		typmod = 1;				/* default bit length */
 
 	rlen = VARBITTOTALLEN(typmod);
@@ -1588,7 +1598,7 @@ bitfromint8(PG_FUNCTION_ARGS)
 	int			destbitsleft,
 				srcbitsleft;
 
-	if (typmod <= 0)
+	if (typmod <= 0 || typmod > VARBITMAXLEN)
 		typmod = 1;				/* default bit length */
 
 	rlen = VARBITTOTALLEN(typmod);

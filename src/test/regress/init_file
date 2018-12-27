@@ -116,4 +116,8 @@ s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have 
 # Mask out schema name of the reshuffle notice
 m/NOTICE:  Do not need to reshuffle /
 s/NOTICE:  Do not need to reshuffle .*\./NOTICE:  Do not need to reshuffle SCHEMA./
+
+# Mask out gp_execution_segment()
+m/One-Time Filter: \(gp_execution_segment\(\) = \d+/
+s/One-Time Filter: \(gp_execution_segment\(\) = \d+/One-Time Filter: \(gp_execution_segment\(\) = ###/
 -- end_matchsubs

@@ -43,8 +43,8 @@ INFO:  (slice 3) Dispatch command to SINGLE content
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 4) Dispatch command to SINGLE content
 select replicate_3_3.d, replicate_2_1.d, avg(random_2_0.c), max(hash_3_3_2.a) from ((((random_2_0 left join replicate_2_1 on random_2_0.c <= replicate_2_1.d) full join hash_3_3_2 on random_2_0.a > hash_3_3_2.d) full join replicate_3_3 on hash_3_3_2.a >= replicate_3_3.b) right join hash_2_3_4 on random_2_0.a = hash_2_3_4.b) left join replicate_2_5 on random_2_0.a > replicate_2_5.b group by replicate_3_3.d, replicate_2_1.d order by 1,2;
-INFO:  (slice 3) Dispatch command to ALL contents: 0 1 2
-INFO:  (slice 1) Dispatch command to PARTIAL contents: 0 1
+INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 3) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 2) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 4) Dispatch command to PARTIAL contents: 0 1
 INFO:  (slice 5) Dispatch command to PARTIAL contents: 0 1

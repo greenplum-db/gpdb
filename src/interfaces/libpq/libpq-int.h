@@ -419,6 +419,8 @@ struct pg_conn
 	bool		sigpipe_flag;	/* can we mask SIGPIPE via MSG_NOSIGNAL? */
 
 	/* Transient state needed while establishing connection */
+	bool		try_next_addr;	/* time to advance to next address? */
+	bool		is_new_addr;	/* need to (re)initialize for new address? */
 	struct addrinfo *addrlist;	/* list of possible backend addresses */
 	struct addrinfo *addr_cur;	/* the one currently being tried */
 	int			addrlist_family;	/* needed to know how to free addrlist */
@@ -539,7 +541,7 @@ extern char *const pgresStatus[];
 
 /* === in fe-connect.c === */
 
-extern void pqDropConnection(PGconn *conn);
+extern void pqDropConnection(PGconn *conn, bool flushInput);
 extern int pqPacketSend(PGconn *conn, char pack_type,
 			 const void *buf, size_t buf_len);
 extern bool pqGetHomeDirectory(char *buf, int bufsize);

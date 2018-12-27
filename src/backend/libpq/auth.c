@@ -20,6 +20,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>
+#endif
 
 #include "catalog/indexing.h"
 #include "catalog/pg_authid.h"
@@ -788,6 +791,7 @@ recv_password_packet(Port *port)
 {
 	StringInfoData buf;
 
+	pq_startmsgread();
 	if (PG_PROTOCOL_MAJOR(port->proto) >= 3)
 	{
 		/* Expect 'p' message type */
@@ -834,6 +838,20 @@ recv_password_packet(Port *port)
 		ereport(COMMERROR,
 				(errcode(ERRCODE_PROTOCOL_VIOLATION),
 				 errmsg("invalid password packet size")));
+
+	/*
+	 * Don't allow an empty password. Libpq treats an empty password the same
+	 * as no password at all, and won't even try to authenticate. But other
+	 * clients might, so allowing it would be confusing.
+	 *
+	 * Note that this only catches an empty password sent by the client in
+	 * plaintext. There's another check in md5_crypt_verify to prevent an
+	 * empty password from being used with MD5 authentication.
+	 */
+	if (buf.data[0] == '\0')
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PASSWORD),
+				 errmsg("empty password returned by client")));
 
 	/* Do not echo password to logs, for security. */
 	ereport(DEBUG5,
@@ -896,6 +914,10 @@ static GSS_DLLIMP gss_OID GSS_C_NT_USER_NAME = &GSS_C_NT_USER_NAME_desc;
 #endif
 
 
+/*
+ * Generate an error for GSSAPI authentication.  The caller should apply
+ * _() to errmsg to make it translatable.
+ */
 static void
 pg_GSS_error(int severity, char *errmsg, OM_uint32 maj_stat, OM_uint32 min_stat)
 {
@@ -1032,15 +1054,16 @@ pg_GSS_recvauth(Port *port)
 			size_t		kt_len = strlen(pg_krb_server_keyfile) + 14;
 			char	   *kt_path = malloc(kt_len);
 
-			if (!kt_path)
+			if (!kt_path ||
+				snprintf(kt_path, kt_len, "KRB5_KTNAME=%s",
+						 pg_krb_server_keyfile) != kt_len - 2 ||
+				putenv(kt_path) != 0)
 			{
 				ereport(LOG,
 						(errcode(ERRCODE_OUT_OF_MEMORY),
 						 errmsg("out of memory")));
 				return STATUS_ERROR;
 			}
-			snprintf(kt_path, kt_len, "KRB5_KTNAME=%s", pg_krb_server_keyfile);
-			putenv(kt_path);
 		}
 	}
 
@@ -1065,6 +1088,7 @@ pg_GSS_recvauth(Port *port)
 	 */
 	do
 	{
+		pq_startmsgread();
 		mtype = pq_getbyte();
 		if (mtype != 'p')
 		{
@@ -1131,7 +1155,7 @@ pg_GSS_recvauth(Port *port)
 		{
 			gss_delete_sec_context(&lmin_s, &port->gss->ctx, GSS_C_NO_BUFFER);
 			pg_GSS_error(ERROR,
-					   gettext_noop("accepting GSS security context failed"),
+						 _("accepting GSS security context failed"),
 						 maj_stat, min_stat);
 		}
 
@@ -1157,7 +1181,7 @@ pg_GSS_recvauth(Port *port)
 	maj_stat = gss_display_name(&min_stat, port->gss->name, &gbuf, NULL);
 	if (maj_stat != GSS_S_COMPLETE)
 		pg_GSS_error(ERROR,
-					 gettext_noop("retrieving GSS user name failed"),
+					 _("retrieving GSS user name failed"),
 					 maj_stat, min_stat);
 
 	/*
@@ -1221,12 +1245,19 @@ pg_GSS_recvauth(Port *port)
  *----------------------------------------------------------------
  */
 #ifdef ENABLE_SSPI
+
+/*
+ * Generate an error for SSPI authentication.  The caller should apply
+ * _() to errmsg to make it translatable.
+ */
 static void
 pg_SSPI_error(int severity, const char *errmsg, SECURITY_STATUS r)
 {
 	char		sysmsg[256];
 
-	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, NULL, r, 0,
+	if (FormatMessage(FORMAT_MESSAGE_IGNORE_INSERTS |
+					  FORMAT_MESSAGE_FROM_SYSTEM,
+					  NULL, r, 0,
 					  sysmsg, sizeof(sysmsg), NULL) == 0)
 		ereport(severity,
 				(errmsg_internal("%s", errmsg),
@@ -1299,6 +1330,7 @@ pg_SSPI_recvauth(Port *port)
 	 */
 	do
 	{
+		pq_startmsgread();
 		mtype = pq_getbyte();
 		if (mtype != 'p')
 		{
@@ -1466,6 +1498,8 @@ pg_SSPI_recvauth(Port *port)
 		ereport(ERROR,
 				(errmsg_internal("could not get user token: error code %lu",
 								 GetLastError())));
+
+	CloseHandle(token);
 
 	if (!LookupAccountSid(NULL, tokenuser->User.Sid, accountname, &accountnamesize,
 						  domainname, &domainnamesize, &accountnameuse))
@@ -1806,9 +1840,12 @@ auth_peer(hbaPort *port)
 	pw = getpwuid(uid);
 	if (!pw)
 	{
+		int			save_errno = errno;
+
 		ereport(LOG,
-				(errmsg("failed to look up local user id %ld: %s",
-		   (long) uid, errno ? strerror(errno) : _("user does not exist"))));
+				(errmsg("could not look up local user ID %ld: %s",
+						(long) uid,
+						save_errno ? strerror(save_errno) : _("user does not exist"))));
 		return STATUS_ERROR;
 	}
 
@@ -1897,12 +1934,6 @@ pam_passwd_conv_proc(int num_msg, const struct pam_message ** msg,
 						 * Client didn't want to send password.  We
 						 * intentionally do not log anything about this.
 						 */
-						goto fail;
-					}
-					if (strlen(passwd) == 0)
-					{
-						ereport(LOG,
-							  (errmsg("empty password returned by client")));
 						goto fail;
 					}
 				}
@@ -2187,16 +2218,11 @@ CheckLDAPAuth(Port *port)
 	if (passwd == NULL)
 		return STATUS_EOF;		/* client wouldn't send password */
 
-	if (strlen(passwd) == 0)
-	{
-		ereport(LOG,
-				(errmsg("empty password returned by client")));
-		return STATUS_ERROR;
-	}
-
 	if (InitializeLDAPConnection(port, &ldap) == STATUS_ERROR)
+	{
 		/* Error message already sent */
 		return STATUS_ERROR;
+	}
 
 	if (port->hba->ldapbasedn)
 	{
@@ -2243,7 +2269,8 @@ CheckLDAPAuth(Port *port)
 		{
 			ereport(LOG,
 					(errmsg("could not perform initial LDAP bind for ldapbinddn \"%s\" on server \"%s\": %s",
-							port->hba->ldapbinddn, port->hba->ldapserver, ldap_err2string(r))));
+							port->hba->ldapbinddn ? port->hba->ldapbinddn : "",
+							port->hba->ldapserver, ldap_err2string(r))));
 			return STATUS_ERROR;
 		}
 
@@ -2396,12 +2423,14 @@ CheckCertAuth(Port *port)
  */
 
 /*
- * RADIUS authentication is described in RFC2865 (and several
- * others).
+ * RADIUS authentication is described in RFC2865 (and several others).
  */
 
 #define RADIUS_VECTOR_LENGTH 16
 #define RADIUS_HEADER_LENGTH 20
+
+/* Maximum size of a RADIUS packet we will create or accept */
+#define RADIUS_BUFFER_SIZE 1024
 
 typedef struct
 {
@@ -2416,6 +2445,8 @@ typedef struct
 	uint8		id;
 	uint16		length;
 	uint8		vector[RADIUS_VECTOR_LENGTH];
+	/* this is a bit longer than strictly necessary: */
+	char		pad[RADIUS_BUFFER_SIZE - RADIUS_VECTOR_LENGTH];
 } radius_packet;
 
 /* RADIUS packet types */
@@ -2431,9 +2462,6 @@ typedef struct
 
 /* RADIUS service types */
 #define RADIUS_AUTHENTICATE_ONLY	8
-
-/* Maximum size of a RADIUS packet we will create or accept */
-#define RADIUS_BUFFER_SIZE 1024
 
 /* Seconds to wait - XXX: should be in a config variable! */
 #define RADIUS_TIMEOUT 3
@@ -2470,10 +2498,12 @@ CheckRADIUSAuth(Port *port)
 {
 	char	   *passwd;
 	char	   *identifier = "postgresql";
-	char		radius_buffer[RADIUS_BUFFER_SIZE];
-	char		receive_buffer[RADIUS_BUFFER_SIZE];
-	radius_packet *packet = (radius_packet *) radius_buffer;
-	radius_packet *receivepacket = (radius_packet *) receive_buffer;
+	radius_packet radius_send_pack;
+	radius_packet radius_recv_pack;
+	radius_packet *packet = &radius_send_pack;
+	radius_packet *receivepacket = &radius_recv_pack;
+	char	   *radius_buffer = (char *) &radius_send_pack;
+	char	   *receive_buffer = (char *) &radius_recv_pack;
 	int32		service = htonl(RADIUS_AUTHENTICATE_ONLY);
 	uint8	   *cryptvector;
 	uint8		encryptedpassword[RADIUS_VECTOR_LENGTH];
@@ -2543,13 +2573,6 @@ CheckRADIUSAuth(Port *port)
 	passwd = recv_password_packet(port);
 	if (passwd == NULL)
 		return STATUS_EOF;		/* client wouldn't send password */
-
-	if (strlen(passwd) == 0)
-	{
-		ereport(LOG,
-				(errmsg("empty password returned by client")));
-		return STATUS_ERROR;
-	}
 
 	if (strlen(passwd) > RADIUS_VECTOR_LENGTH)
 	{

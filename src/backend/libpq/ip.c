@@ -248,7 +248,7 @@ getnameinfo_unix(const struct sockaddr_un * sa, int salen,
 				 char *service, int servicelen,
 				 int flags)
 {
-	int			ret = -1;
+	int			ret;
 
 	/* Invalid arguments. */
 	if (sa == NULL || sa->sun_family != AF_UNIX ||
@@ -258,14 +258,14 @@ getnameinfo_unix(const struct sockaddr_un * sa, int salen,
 	if (node)
 	{
 		ret = snprintf(node, nodelen, "%s", "[local]");
-		if (ret == -1 || ret > nodelen)
+		if (ret < 0 || ret >= nodelen)
 			return EAI_MEMORY;
 	}
 
 	if (service)
 	{
 		ret = snprintf(service, servicelen, "%s", sa->sun_path);
-		if (ret == -1 || ret > servicelen)
+		if (ret < 0 || ret >= servicelen)
 			return EAI_MEMORY;
 	}
 
@@ -413,79 +413,6 @@ pg_sockaddr_cidr_mask(struct sockaddr_storage * mask, char *numbits, int family)
 	mask->ss_family = family;
 	return 0;
 }
-
-
-#ifdef HAVE_IPV6
-
-/*
- * pg_promote_v4_to_v6_addr --- convert an AF_INET addr to AF_INET6, using
- *		the standard convention for IPv4 addresses mapped into IPv6 world
- *
- * The passed addr is modified in place; be sure it is large enough to
- * hold the result!  Note that we only worry about setting the fields
- * that pg_range_sockaddr will look at.
- */
-void
-pg_promote_v4_to_v6_addr(struct sockaddr_storage * addr)
-{
-	struct sockaddr_in addr4;
-	struct sockaddr_in6 addr6;
-	uint32		ip4addr;
-
-	memcpy(&addr4, addr, sizeof(addr4));
-	ip4addr = ntohl(addr4.sin_addr.s_addr);
-
-	memset(&addr6, 0, sizeof(addr6));
-
-	addr6.sin6_family = AF_INET6;
-
-	addr6.sin6_addr.s6_addr[10] = 0xff;
-	addr6.sin6_addr.s6_addr[11] = 0xff;
-	addr6.sin6_addr.s6_addr[12] = (ip4addr >> 24) & 0xFF;
-	addr6.sin6_addr.s6_addr[13] = (ip4addr >> 16) & 0xFF;
-	addr6.sin6_addr.s6_addr[14] = (ip4addr >> 8) & 0xFF;
-	addr6.sin6_addr.s6_addr[15] = (ip4addr) & 0xFF;
-
-	memcpy(addr, &addr6, sizeof(addr6));
-}
-
-/*
- * pg_promote_v4_to_v6_mask --- convert an AF_INET netmask to AF_INET6, using
- *		the standard convention for IPv4 addresses mapped into IPv6 world
- *
- * This must be different from pg_promote_v4_to_v6_addr because we want to
- * set the high-order bits to 1's not 0's.
- *
- * The passed addr is modified in place; be sure it is large enough to
- * hold the result!  Note that we only worry about setting the fields
- * that pg_range_sockaddr will look at.
- */
-void
-pg_promote_v4_to_v6_mask(struct sockaddr_storage * addr)
-{
-	struct sockaddr_in addr4;
-	struct sockaddr_in6 addr6;
-	uint32		ip4addr;
-	int			i;
-
-	memcpy(&addr4, addr, sizeof(addr4));
-	ip4addr = ntohl(addr4.sin_addr.s_addr);
-
-	memset(&addr6, 0, sizeof(addr6));
-
-	addr6.sin6_family = AF_INET6;
-
-	for (i = 0; i < 12; i++)
-		addr6.sin6_addr.s6_addr[i] = 0xff;
-
-	addr6.sin6_addr.s6_addr[12] = (ip4addr >> 24) & 0xFF;
-	addr6.sin6_addr.s6_addr[13] = (ip4addr >> 16) & 0xFF;
-	addr6.sin6_addr.s6_addr[14] = (ip4addr >> 8) & 0xFF;
-	addr6.sin6_addr.s6_addr[15] = (ip4addr) & 0xFF;
-
-	memcpy(addr, &addr6, sizeof(addr6));
-}
-#endif   /* HAVE_IPV6 */
 
 
 /*

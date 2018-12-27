@@ -774,11 +774,16 @@ LockErrorCleanup(void)
 	LWLock	   *partitionLock;
 	DisableTimeoutParams timeouts[2];
 
+	HOLD_INTERRUPTS();
+
 	AbortStrongLockAcquire();
 
 	/* Nothing to do if we weren't waiting for a lock */
 	if (lockAwaited == NULL)
+	{
+		RESUME_INTERRUPTS();
 		return;
+	}
 
 	/* Don't try to cancel resource locks.*/
 	if (Gp_role == GP_ROLE_DISPATCH && IsResQueueEnabled() &&
@@ -833,6 +838,8 @@ LockErrorCleanup(void)
 	 * wakeup signal isn't harmful, and it seems not worth expending cycles to
 	 * get rid of a signal that most likely isn't there.
 	 */
+
+	RESUME_INTERRUPTS();
 }
 
 
@@ -1365,22 +1372,32 @@ ProcSleep(LOCALLOCK *locallock, LockMethod lockMethodTable)
 				/* release lock as quickly as possible */
 				LWLockRelease(ProcArrayLock);
 
-				ereport(LOG,
+				/* send the autovacuum worker Back to Old Kent Road */
+				ereport(DEBUG1,
 					  (errmsg("sending cancel to blocking autovacuum PID %d",
 							  pid),
 					   errdetail_log("%s", logbuf.data)));
 
-				pfree(logbuf.data);
-				pfree(locktagbuf.data);
-
-				/* send the autovacuum worker Back to Old Kent Road */
 				if (kill(pid, SIGINT) < 0)
 				{
-					/* Just a warning to allow multiple callers */
-					ereport(WARNING,
-							(errmsg("could not send signal to process %d: %m",
-									pid)));
+					/*
+					 * There's a race condition here: once we release the
+					 * ProcArrayLock, it's possible for the autovac worker to
+					 * close up shop and exit before we can do the kill().
+					 * Therefore, we do not whinge about no-such-process.
+					 * Other errors such as EPERM could conceivably happen if
+					 * the kernel recycles the PID fast enough, but such cases
+					 * seem improbable enough that it's probably best to issue
+					 * a warning if we see some other errno.
+					 */
+					if (errno != ESRCH)
+						ereport(WARNING,
+						   (errmsg("could not send signal to process %d: %m",
+								   pid)));
 				}
+
+				pfree(logbuf.data);
+				pfree(locktagbuf.data);
 			}
 			else
 				LWLockRelease(ProcArrayLock);

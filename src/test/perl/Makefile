@@ -14,6 +14,7 @@ top_builddir = ../../..
 include $(top_builddir)/src/Makefile.global
 
 ifeq ($(enable_tap_tests),yes)
+
 installdirs:
 	$(MKDIR_P) '$(DESTDIR)$(pgxsdir)/$(subdir)'
 
@@ -28,4 +29,5 @@ uninstall:
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/SimpleTee.pm'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/RecursiveCopy.pm'
 	rm -f '$(DESTDIR)$(pgxsdir)/$(subdir)/PostgresNode.pm'
+
 endif

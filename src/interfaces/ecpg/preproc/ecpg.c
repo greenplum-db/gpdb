@@ -54,7 +54,7 @@ help(const char *progname)
 	 "                 \"no_indicator\", \"prepare\", \"questionmarks\"\n"));
 	printf(_("  --regression   run in regression testing mode\n"));
 	printf(_("  -t             turn on autocommit of transactions\n"));
-	printf(_("  --version      output version information, then exit\n"));
+	printf(_("  -V, --version  output version information, then exit\n"));
 	printf(_("  -?, --help     show this help, then exit\n"));
 	printf(_("\nIf no output file is specified, the name is formed by adding .c to the\n"
 			 "input file name, after stripping off .pgc if present.\n"));
@@ -111,15 +111,11 @@ add_preprocessor_define(char *define)
 	defines->next = pd;
 }
 
-#define ECPG_GETOPT_LONG_HELP			1
-#define ECPG_GETOPT_LONG_VERSION		2
-#define ECPG_GETOPT_LONG_REGRESSION		3
+#define ECPG_GETOPT_LONG_REGRESSION		1
 int
 main(int argc, char *const argv[])
 {
 	static struct option ecpg_options[] = {
-		{"help", no_argument, NULL, ECPG_GETOPT_LONG_HELP},
-		{"version", no_argument, NULL, ECPG_GETOPT_LONG_VERSION},
 		{"regression", no_argument, NULL, ECPG_GETOPT_LONG_REGRESSION},
 		{NULL, 0, NULL, 0}
 	};
@@ -144,44 +140,37 @@ main(int argc, char *const argv[])
 		return (ILLEGAL_OPTION);
 	}
 
+	if (argc > 1)
+	{
+		if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-?") == 0)
+		{
+			help(progname);
+			exit(0);
+		}
+		if (strcmp(argv[1], "--version") == 0 || strcmp(argv[1], "-V") == 0)
+		{
+			printf("ecpg (PostgreSQL %s) %d.%d.%d\n", PG_VERSION,
+				   MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
+			exit(0);
+		}
+	}
+
 	output_filename = NULL;
-	while ((c = getopt_long(argc, argv, "vcio:I:tD:dC:r:h?", ecpg_options, NULL)) != -1)
+	while ((c = getopt_long(argc, argv, "vcio:I:tD:dC:r:h", ecpg_options, NULL)) != -1)
 	{
 		switch (c)
 		{
-			case ECPG_GETOPT_LONG_VERSION:
-				printf("ecpg (PostgreSQL %s) %d.%d.%d\n", PG_VERSION,
-					   MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
-				exit(0);
-			case ECPG_GETOPT_LONG_HELP:
-				help(progname);
-				exit(0);
-
-				/*
-				 * -? is an alternative spelling of --help. However it is also
-				 * returned by getopt_long for unknown options. We can
-				 * distinguish both cases by means of the optopt variable
-				 * which is set to 0 if it was really -? and not an unknown
-				 * option character.
-				 */
-			case '?':
-				if (optopt == 0)
-				{
-					help(progname);
-					exit(0);
-				}
-				break;
 			case ECPG_GETOPT_LONG_REGRESSION:
 				regression_mode = true;
 				break;
 			case 'o':
 				output_filename = mm_strdup(optarg);
 				if (strcmp(output_filename, "-") == 0)
-					yyout = stdout;
+					base_yyout = stdout;
 				else
-					yyout = fopen(output_filename, PG_BINARY_W);
+					base_yyout = fopen(output_filename, PG_BINARY_W);
 
-				if (yyout == NULL)
+				if (base_yyout == NULL)
 				{
 					fprintf(stderr, _("%s: could not open file \"%s\": %s\n"),
 							progname, output_filename, strerror(errno));
@@ -244,7 +233,7 @@ main(int argc, char *const argv[])
 				break;
 			case 'd':
 #ifdef YYDEBUG
-				yydebug = 1;
+				base_yydebug = 1;
 #else
 				fprintf(stderr, _("%s: parser debug support (-d) not available\n"),
 						progname);
@@ -291,7 +280,7 @@ main(int argc, char *const argv[])
 			{
 				input_filename = mm_alloc(strlen("stdin") + 1);
 				strcpy(input_filename, "stdin");
-				yyin = stdin;
+				base_yyin = stdin;
 			}
 			else
 			{
@@ -315,35 +304,37 @@ main(int argc, char *const argv[])
 					ptr2ext[4] = '\0';
 				}
 
-				yyin = fopen(input_filename, PG_BINARY_R);
+				base_yyin = fopen(input_filename, PG_BINARY_R);
 			}
 
 			if (out_option == 0)	/* calculate the output name */
 			{
 				if (strcmp(input_filename, "stdin") == 0)
-					yyout = stdout;
+					base_yyout = stdout;
 				else
 				{
-					output_filename = mm_strdup(input_filename);
+					output_filename = mm_alloc(strlen(input_filename) + 3);
+					strcpy(output_filename, input_filename);
 
 					ptr2ext = strrchr(output_filename, '.');
 					/* make extension = .c resp. .h */
 					ptr2ext[1] = (header_mode == true) ? 'h' : 'c';
 					ptr2ext[2] = '\0';
 
-					yyout = fopen(output_filename, PG_BINARY_W);
-					if (yyout == NULL)
+					base_yyout = fopen(output_filename, PG_BINARY_W);
+					if (base_yyout == NULL)
 					{
 						fprintf(stderr, _("%s: could not open file \"%s\": %s\n"),
 								progname, output_filename, strerror(errno));
 						free(output_filename);
+						output_filename = NULL;
 						free(input_filename);
 						continue;
 					}
 				}
 			}
 
-			if (yyin == NULL)
+			if (base_yyin == NULL)
 				fprintf(stderr, _("%s: could not open file \"%s\": %s\n"),
 						progname, argv[fnr], strerror(errno));
 			else
@@ -438,23 +429,23 @@ main(int argc, char *const argv[])
 				/* we need several includes */
 				/* but not if we are in header mode */
 				if (regression_mode)
-					fprintf(yyout, "/* Processed by ecpg (regression mode) */\n");
+					fprintf(base_yyout, "/* Processed by ecpg (regression mode) */\n");
 				else
-					fprintf(yyout, "/* Processed by ecpg (%d.%d.%d) */\n", MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
+					fprintf(base_yyout, "/* Processed by ecpg (%d.%d.%d) */\n", MAJOR_VERSION, MINOR_VERSION, PATCHLEVEL);
 
 				if (header_mode == false)
 				{
-					fprintf(yyout, "/* These include files are added by the preprocessor */\n#include <ecpglib.h>\n#include <ecpgerrno.h>\n#include <sqlca.h>\n");
+					fprintf(base_yyout, "/* These include files are added by the preprocessor */\n#include <ecpglib.h>\n#include <ecpgerrno.h>\n#include <sqlca.h>\n");
 
 					/* add some compatibility headers */
 					if (INFORMIX_MODE)
-						fprintf(yyout, "/* Needed for informix compatibility */\n#include <ecpg_informix.h>\n");
+						fprintf(base_yyout, "/* Needed for informix compatibility */\n#include <ecpg_informix.h>\n");
 
-					fprintf(yyout, "/* End of automatic include section */\n");
+					fprintf(base_yyout, "/* End of automatic include section */\n");
 				}
 
 				if (regression_mode)
-					fprintf(yyout, "#define ECPGdebug(X,Y) ECPGdebug((X)+100,(Y))\n");
+					fprintf(base_yyout, "#define ECPGdebug(X,Y) ECPGdebug((X)+100,(Y))\n");
 
 				output_line_number();
 
@@ -469,10 +460,10 @@ main(int argc, char *const argv[])
 					if (!(ptr->opened))
 						mmerror(PARSE_ERROR, ET_WARNING, "cursor \"%s\" has been declared but not opened", ptr->name);
 
-				if (yyin != NULL && yyin != stdin)
-					fclose(yyin);
-				if (out_option == 0 && yyout != stdout)
-					fclose(yyout);
+				if (base_yyin != NULL && base_yyin != stdin)
+					fclose(base_yyin);
+				if (out_option == 0 && base_yyout != stdout)
+					fclose(base_yyout);
 
 				/*
 				 * If there was an error, delete the output file.
@@ -484,8 +475,10 @@ main(int argc, char *const argv[])
 				}
 			}
 
-			if (output_filename && out_option == 0)
+			if (output_filename && out_option == 0) {
 				free(output_filename);
+				output_filename = NULL;
+			}
 
 			free(input_filename);
 		}

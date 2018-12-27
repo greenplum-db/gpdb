@@ -179,6 +179,44 @@ fmtQualifiedId(int remoteVersion, const char *schema, const char *id)
 }
 
 /*
+ * Format a Postgres version number (in the PG_VERSION_NUM integer format
+ * returned by PQserverVersion()) as a string.  This exists mainly to
+ * encapsulate knowledge about two-part vs. three-part version numbers.
+ *
+ * For re-entrancy, caller must supply the buffer the string is put in.
+ * Recommended size of the buffer is 32 bytes.
+ *
+ * Returns address of 'buf', as a notational convenience.
+ */
+char *
+formatPGVersionNumber(int version_number, bool include_minor,
+					  char *buf, size_t buflen)
+{
+	if (version_number >= 100000)
+	{
+		/* New two-part style */
+		if (include_minor)
+			snprintf(buf, buflen, "%d.%d", version_number / 10000,
+					 version_number % 10000);
+		else
+			snprintf(buf, buflen, "%d", version_number / 10000);
+	}
+	else
+	{
+		/* Old three-part style */
+		if (include_minor)
+			snprintf(buf, buflen, "%d.%d.%d", version_number / 10000,
+					 (version_number / 100) % 100,
+					 version_number % 100);
+		else
+			snprintf(buf, buflen, "%d.%d", version_number / 10000,
+					 (version_number / 100) % 100);
+	}
+	return buf;
+}
+
+
+/*
  * Convert a string value to an SQL string literal and append it to
  * the given buffer.  We assume the specified client_encoding and
  * standard_conforming_strings settings.
@@ -340,6 +378,210 @@ appendStringLiteralDQ(PQExpBuffer buf, const char *str, const char *dqprefix)
 
 
 /*
+ * Append the given string to the shell command being built in the buffer,
+ * with suitable shell-style quoting to create exactly one argument.
+ *
+ * Forbid LF or CR characters, which have scant practical use beyond designing
+ * security breaches.  The Windows command shell is unusable as a conduit for
+ * arguments containing LF or CR characters.  A future major release should
+ * reject those characters in CREATE ROLE and CREATE DATABASE, because use
+ * there eventually leads to errors here.
+ */
+void
+appendShellString(PQExpBuffer buf, const char *str)
+{
+	const char *p;
+
+#ifndef WIN32
+	appendPQExpBufferChar(buf, '\'');
+	for (p = str; *p; p++)
+	{
+		if (*p == '\n' || *p == '\r')
+		{
+			fprintf(stderr,
+					_("shell command argument contains a newline or carriage return: \"%s\"\n"),
+					str);
+			exit(EXIT_FAILURE);
+		}
+
+		if (*p == '\'')
+			appendPQExpBufferStr(buf, "'\"'\"'");
+		else
+			appendPQExpBufferChar(buf, *p);
+	}
+	appendPQExpBufferChar(buf, '\'');
+#else							/* WIN32 */
+	int			backslash_run_length = 0;
+
+	/*
+	 * A Windows system() argument experiences two layers of interpretation.
+	 * First, cmd.exe interprets the string.  Its behavior is undocumented,
+	 * but a caret escapes any byte except LF or CR that would otherwise have
+	 * special meaning.  Handling of a caret before LF or CR differs between
+	 * "cmd.exe /c" and other modes, and it is unusable here.
+	 *
+	 * Second, the new process parses its command line to construct argv (see
+	 * https://msdn.microsoft.com/en-us/library/17w5ykft.aspx).  This treats
+	 * backslash-double quote sequences specially.
+	 */
+	appendPQExpBufferStr(buf, "^\"");
+	for (p = str; *p; p++)
+	{
+		if (*p == '\n' || *p == '\r')
+		{
+			fprintf(stderr,
+					_("shell command argument contains a newline or carriage return: \"%s\"\n"),
+					str);
+			exit(EXIT_FAILURE);
+		}
+
+		/* Change N backslashes before a double quote to 2N+1 backslashes. */
+		if (*p == '"')
+		{
+			while (backslash_run_length)
+			{
+				appendPQExpBufferStr(buf, "^\\");
+				backslash_run_length--;
+			}
+			appendPQExpBufferStr(buf, "^\\");
+		}
+		else if (*p == '\\')
+			backslash_run_length++;
+		else
+			backslash_run_length = 0;
+
+		/*
+		 * Decline to caret-escape the most mundane characters, to ease
+		 * debugging and lest we approach the command length limit.
+		 */
+		if (!((*p >= 'a' && *p <= 'z') ||
+			  (*p >= 'A' && *p <= 'Z') ||
+			  (*p >= '0' && *p <= '9')))
+			appendPQExpBufferChar(buf, '^');
+		appendPQExpBufferChar(buf, *p);
+	}
+
+	/*
+	 * Change N backslashes at end of argument to 2N backslashes, because they
+	 * precede the double quote that terminates the argument.
+	 */
+	while (backslash_run_length)
+	{
+		appendPQExpBufferStr(buf, "^\\");
+		backslash_run_length--;
+	}
+	appendPQExpBufferStr(buf, "^\"");
+#endif   /* WIN32 */
+}
+
+
+/*
+ * Append the given string to the buffer, with suitable quoting for passing
+ * the string as a value, in a keyword/pair value in a libpq connection
+ * string
+ */
+void
+appendConnStrVal(PQExpBuffer buf, const char *str)
+{
+	const char *s;
+	bool		needquotes;
+
+	/*
+	 * If the string is one or more plain ASCII characters, no need to quote
+	 * it. This is quite conservative, but better safe than sorry.
+	 */
+	needquotes = true;
+	for (s = str; *s; s++)
+	{
+		if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') ||
+			  (*s >= '0' && *s <= '9') || *s == '_' || *s == '.'))
+		{
+			needquotes = true;
+			break;
+		}
+		needquotes = false;
+	}
+
+	if (needquotes)
+	{
+		appendPQExpBufferChar(buf, '\'');
+		while (*str)
+		{
+			/* ' and \ must be escaped by to \' and \\ */
+			if (*str == '\'' || *str == '\\')
+				appendPQExpBufferChar(buf, '\\');
+
+			appendPQExpBufferChar(buf, *str);
+			str++;
+		}
+		appendPQExpBufferChar(buf, '\'');
+	}
+	else
+		appendPQExpBufferStr(buf, str);
+}
+
+
+/*
+ * Append a psql meta-command that connects to the given database with the
+ * then-current connection's user, host and port.
+ */
+void
+appendPsqlMetaConnect(PQExpBuffer buf, const char *dbname)
+{
+	const char *s;
+	bool		complex;
+
+	/*
+	 * If the name is plain ASCII characters, emit a trivial "\connect "foo"".
+	 * For other names, even many not technically requiring it, skip to the
+	 * general case.  No database has a zero-length name.
+	 */
+	complex = false;
+	for (s = dbname; *s; s++)
+	{
+		if (*s == '\n' || *s == '\r')
+		{
+			fprintf(stderr,
+					_("database name contains a newline or carriage return: \"%s\"\n"),
+					dbname);
+			exit(EXIT_FAILURE);
+		}
+
+		if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') ||
+			  (*s >= '0' && *s <= '9') || *s == '_' || *s == '.'))
+		{
+			complex = true;
+		}
+	}
+
+	appendPQExpBufferStr(buf, "\\connect ");
+	if (complex)
+	{
+		PQExpBufferData connstr;
+
+		initPQExpBuffer(&connstr);
+		appendPQExpBuffer(&connstr, "dbname=");
+		appendConnStrVal(&connstr, dbname);
+
+		appendPQExpBuffer(buf, "-reuse-previous=on ");
+
+		/*
+		 * As long as the name does not contain a newline, SQL identifier
+		 * quoting satisfies the psql meta-command parser.  Prefer not to
+		 * involve psql-interpreted single quotes, which behaved differently
+		 * before PostgreSQL 9.2.
+		 */
+		appendPQExpBufferStr(buf, fmtId(connstr.data));
+
+		termPQExpBuffer(&connstr);
+	}
+	else
+		appendPQExpBufferStr(buf, fmtId(dbname));
+	appendPQExpBufferChar(buf, '\n');
+}
+
+
+/*
  * Convert a bytea value (presented as raw bytes) to an SQL string literal
  * and append it to the given buffer.  We assume the specified
  * standard_conforming_strings setting.
@@ -476,6 +718,7 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
  *
  *	name: the object name, in the form to use in the commands (already quoted)
  *	subname: the sub-object name, if any (already quoted); NULL if none
+ *	nspname: the namespace the object is in (NULL if none); not pre-quoted
  *	type: the object type (as seen in GRANT command: must be one of
  *		TABLE, SEQUENCE, FUNCTION, LANGUAGE, SCHEMA, DATABASE, TABLESPACE,
  *		FOREIGN DATA WRAPPER, SERVER, or LARGE OBJECT)
@@ -495,11 +738,12 @@ parsePGArray(const char *atext, char ***itemarray, int *nitems)
  * since this routine uses fmtId() internally.
  */
 bool
-buildACLCommands(const char *name, const char *subname,
+buildACLCommands(const char *name, const char *subname, const char *nspname,
 				 const char *type, const char *acls, const char *owner,
 				 const char *prefix, int remoteVersion,
 				 PQExpBuffer sql)
 {
+	bool		ok = true;
 	char	  **aclitems;
 	int			naclitems;
 	int			i;
@@ -548,7 +792,10 @@ buildACLCommands(const char *name, const char *subname,
 	appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
 	if (subname)
 		appendPQExpBuffer(firstsql, "(%s)", subname);
-	appendPQExpBuffer(firstsql, " ON %s %s FROM PUBLIC;\n", type, name);
+	appendPQExpBuffer(firstsql, " ON %s ", type);
+	if (nspname && *nspname)
+		appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
+	appendPQExpBuffer(firstsql, "%s FROM PUBLIC;\n", name);
 
 	/*
 	 * We still need some hacking though to cover the case where new default
@@ -570,9 +817,8 @@ buildACLCommands(const char *name, const char *subname,
 		if (!parseAclItem(aclitems[i], type, name, subname, remoteVersion,
 						  grantee, grantor, privs, privswgo))
 		{
-			if (aclitems)
-				free(aclitems);
-			return false;
+			ok = false;
+			break;
 		}
 
 		if (grantor->len == 0 && owner)
@@ -597,18 +843,33 @@ buildACLCommands(const char *name, const char *subname,
 					appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
 					if (subname)
 						appendPQExpBuffer(firstsql, "(%s)", subname);
-					appendPQExpBuffer(firstsql, " ON %s %s FROM %s;\n",
-									  type, name, fmtId(grantee->data));
+					appendPQExpBuffer(firstsql, " ON %s ", type);
+					if (nspname && *nspname)
+						appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
+					appendPQExpBuffer(firstsql, "%s FROM %s;\n",
+									  name, fmtId(grantee->data));
 					if (privs->len > 0)
+					{
 						appendPQExpBuffer(firstsql,
-										  "%sGRANT %s ON %s %s TO %s;\n",
-										  prefix, privs->data, type, name,
-										  fmtId(grantee->data));
+										  "%sGRANT %s ON %s ",
+										  prefix, privs->data, type);
+						if (nspname && *nspname)
+							appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
+						appendPQExpBuffer(firstsql,
+										  "%s TO %s;\n",
+										  name, fmtId(grantee->data));
+					}
 					if (privswgo->len > 0)
+					{
 						appendPQExpBuffer(firstsql,
-							"%sGRANT %s ON %s %s TO %s WITH GRANT OPTION;\n",
-										  prefix, privswgo->data, type, name,
-										  fmtId(grantee->data));
+										  "%sGRANT %s ON %s ",
+										  prefix, privswgo->data, type);
+						if (nspname && *nspname)
+							appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
+						appendPQExpBuffer(firstsql,
+										  "%s TO %s WITH GRANT OPTION;\n",
+										  name, fmtId(grantee->data));
+					}
 				}
 			}
 			else
@@ -623,8 +884,11 @@ buildACLCommands(const char *name, const char *subname,
 
 				if (privs->len > 0)
 				{
-					appendPQExpBuffer(secondsql, "%sGRANT %s ON %s %s TO ",
-									  prefix, privs->data, type, name);
+					appendPQExpBuffer(secondsql, "%sGRANT %s ON %s ",
+									  prefix, privs->data, type);
+					if (nspname && *nspname)
+						appendPQExpBuffer(secondsql, "%s.", fmtId(nspname));
+					appendPQExpBuffer(secondsql, "%s TO ", name);
 					if (grantee->len == 0)
 						appendPQExpBufferStr(secondsql, "PUBLIC;\n");
 					else if (strncmp(grantee->data, "group ",
@@ -636,8 +900,11 @@ buildACLCommands(const char *name, const char *subname,
 				}
 				if (privswgo->len > 0)
 				{
-					appendPQExpBuffer(secondsql, "%sGRANT %s ON %s %s TO ",
-									  prefix, privswgo->data, type, name);
+					appendPQExpBuffer(secondsql, "%sGRANT %s ON %s ",
+									  prefix, privswgo->data, type);
+					if (nspname && *nspname)
+						appendPQExpBuffer(secondsql, "%s.", fmtId(nspname));
+					appendPQExpBuffer(secondsql, "%s TO ", name);
 					if (grantee->len == 0)
 						appendPQExpBufferStr(secondsql, "PUBLIC");
 					else if (strncmp(grantee->data, "group ",
@@ -664,8 +931,11 @@ buildACLCommands(const char *name, const char *subname,
 		appendPQExpBuffer(firstsql, "%sREVOKE ALL", prefix);
 		if (subname)
 			appendPQExpBuffer(firstsql, "(%s)", subname);
-		appendPQExpBuffer(firstsql, " ON %s %s FROM %s;\n",
-						  type, name, fmtId(owner));
+		appendPQExpBuffer(firstsql, " ON %s ", type);
+		if (nspname && *nspname)
+			appendPQExpBuffer(firstsql, "%s.", fmtId(nspname));
+		appendPQExpBuffer(firstsql, "%s FROM %s;\n",
+						  name, fmtId(owner));
 	}
 
 	destroyPQExpBuffer(grantee);
@@ -679,7 +949,7 @@ buildACLCommands(const char *name, const char *subname,
 
 	free(aclitems);
 
-	return true;
+	return ok;
 }
 
 /*
@@ -716,7 +986,7 @@ buildDefaultACLCommands(const char *type, const char *nspname,
 	if (nspname)
 		appendPQExpBuffer(prefix, "IN SCHEMA %s ", fmtId(nspname));
 
-	result = buildACLCommands("", NULL,
+	result = buildACLCommands("", NULL, NULL,
 							  type, acls, owner,
 							  prefix->data, remoteVersion,
 							  sql);
@@ -1106,8 +1376,9 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 	}
 
 	/*
-	 * Now decide what we need to emit.  Note there will be a leading "^(" in
-	 * the patterns in any case.
+	 * Now decide what we need to emit.  We may run under a hostile
+	 * search_path, so qualify EVERY name.  Note there will be a leading "^("
+	 * in the patterns in any case.
 	 */
 	if (namebuf.len > 2)
 	{
@@ -1120,15 +1391,18 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 			WHEREAND();
 			if (altnamevar)
 			{
-				appendPQExpBuffer(buf, "(%s ~ ", namevar);
+				appendPQExpBuffer(buf,
+								  "(%s OPERATOR(pg_catalog.~) ", namevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
-				appendPQExpBuffer(buf, "\n        OR %s ~ ", altnamevar);
+				appendPQExpBuffer(buf,
+								  "\n        OR %s OPERATOR(pg_catalog.~) ",
+								  altnamevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
 				appendPQExpBufferStr(buf, ")\n");
 			}
 			else
 			{
-				appendPQExpBuffer(buf, "%s ~ ", namevar);
+				appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", namevar);
 				appendStringLiteralConn(buf, namebuf.data, conn);
 				appendPQExpBufferChar(buf, '\n');
 			}
@@ -1144,7 +1418,7 @@ processSQLNamePattern(PGconn *conn, PQExpBuffer buf, const char *pattern,
 		if (strcmp(schemabuf.data, "^(.*)$") != 0 && schemavar)
 		{
 			WHEREAND();
-			appendPQExpBuffer(buf, "%s ~ ", schemavar);
+			appendPQExpBuffer(buf, "%s OPERATOR(pg_catalog.~) ", schemavar);
 			appendStringLiteralConn(buf, schemabuf.data, conn);
 			appendPQExpBufferChar(buf, '\n');
 		}
@@ -1317,26 +1591,32 @@ custom_fmtopts_string(const char *src)
  * buildShSecLabelQuery
  *
  * Build a query to retrieve security labels for a shared object.
+ * The object is identified by its OID plus the name of the catalog
+ * it can be found in (e.g., "pg_database" for database names).
+ * The query is appended to "sql".  (We don't execute it here so as to
+ * keep this file free of assumptions about how to deal with SQL errors.)
  */
 void
-buildShSecLabelQuery(PGconn *conn, const char *catalog_name, uint32 objectId,
+buildShSecLabelQuery(PGconn *conn, const char *catalog_name, Oid objectId,
 					 PQExpBuffer sql)
 {
 	appendPQExpBuffer(sql,
 					  "SELECT provider, label FROM pg_catalog.pg_shseclabel "
-					  "WHERE classoid = '%s'::pg_catalog.regclass AND "
-					  "objoid = %u", catalog_name, objectId);
+					  "WHERE classoid = 'pg_catalog.%s'::pg_catalog.regclass "
+					  "AND objoid = '%u'", catalog_name, objectId);
 }
 
 /*
  * emitShSecLabels
  *
- * Format security label data retrieved by the query generated in
- * buildShSecLabelQuery.
+ * Construct SECURITY LABEL commands using the data retrieved by the query
+ * generated by buildShSecLabelQuery, and append them to "buffer".
+ * Here, the target object is identified by its type name (e.g. "DATABASE")
+ * and its name (not pre-quoted).
  */
 void
 emitShSecLabels(PGconn *conn, PGresult *res, PQExpBuffer buffer,
-				const char *target, const char *objname)
+				const char *objtype, const char *objname)
 {
 	int			i;
 
@@ -1348,7 +1628,7 @@ emitShSecLabels(PGconn *conn, PGresult *res, PQExpBuffer buffer,
 		/* must use fmtId result before calling it again */
 		appendPQExpBuffer(buffer,
 						  "SECURITY LABEL FOR %s ON %s",
-						  fmtId(provider), target);
+						  fmtId(provider), objtype);
 		appendPQExpBuffer(buffer,
 						  " %s IS ",
 						  fmtId(objname));
@@ -1388,4 +1668,136 @@ simple_string_list_member(SimpleStringList *list, const char *val)
 			return true;
 	}
 	return false;
+}
+
+/*
+ * Detect whether the given GUC variable is of GUC_LIST_QUOTE type.
+ *
+ * It'd be better if we could inquire this directly from the backend; but even
+ * if there were a function for that, it could only tell us about variables
+ * currently known to guc.c, so that it'd be unsafe for extensions to declare
+ * GUC_LIST_QUOTE variables anyway.  Lacking a solution for that, it doesn't
+ * seem worth the work to do more than have this list, which must be kept in
+ * sync with the variables actually marked GUC_LIST_QUOTE in guc.c.
+ */
+bool
+variable_is_guc_list_quote(const char *name)
+{
+	if (pg_strcasecmp(name, "temp_tablespaces") == 0 ||
+		pg_strcasecmp(name, "session_preload_libraries") == 0 ||
+		pg_strcasecmp(name, "shared_preload_libraries") == 0 ||
+		pg_strcasecmp(name, "local_preload_libraries") == 0 ||
+		pg_strcasecmp(name, "search_path") == 0)
+		return true;
+	else
+		return false;
+}
+
+/*
+ * SplitGUCList --- parse a string containing identifiers or file names
+ *
+ * This is used to split the value of a GUC_LIST_QUOTE GUC variable, without
+ * presuming whether the elements will be taken as identifiers or file names.
+ * See comparable code in src/backend/utils/adt/varlena.c.
+ *
+ * Inputs:
+ *	rawstring: the input string; must be overwritable!	On return, it's
+ *			   been modified to contain the separated identifiers.
+ *	separator: the separator punctuation expected between identifiers
+ *			   (typically '.' or ',').  Whitespace may also appear around
+ *			   identifiers.
+ * Outputs:
+ *	namelist: receives a malloc'd, null-terminated array of pointers to
+ *			  identifiers within rawstring.  Caller should free this
+ *			  even on error return.
+ *
+ * Returns true if okay, false if there is a syntax error in the string.
+ */
+bool
+SplitGUCList(char *rawstring, char separator,
+			 char ***namelist)
+{
+	char	   *nextp = rawstring;
+	bool		done = false;
+	char	  **nextptr;
+
+	/*
+	 * Since we disallow empty identifiers, this is a conservative
+	 * overestimate of the number of pointers we could need.  Allow one for
+	 * list terminator.
+	 */
+	*namelist = nextptr = (char **)
+		pg_malloc((strlen(rawstring) / 2 + 2) * sizeof(char *));
+	*nextptr = NULL;
+
+	while (isspace((unsigned char) *nextp))
+		nextp++;				/* skip leading whitespace */
+
+	if (*nextp == '\0')
+		return true;			/* allow empty string */
+
+	/* At the top of the loop, we are at start of a new identifier. */
+	do
+	{
+		char	   *curname;
+		char	   *endp;
+
+		if (*nextp == '"')
+		{
+			/* Quoted name --- collapse quote-quote pairs */
+			curname = nextp + 1;
+			for (;;)
+			{
+				endp = strchr(nextp + 1, '"');
+				if (endp == NULL)
+					return false;	/* mismatched quotes */
+				if (endp[1] != '"')
+					break;		/* found end of quoted name */
+				/* Collapse adjacent quotes into one quote, and look again */
+				memmove(endp, endp + 1, strlen(endp));
+				nextp = endp;
+			}
+			/* endp now points at the terminating quote */
+			nextp = endp + 1;
+		}
+		else
+		{
+			/* Unquoted name --- extends to separator or whitespace */
+			curname = nextp;
+			while (*nextp && *nextp != separator &&
+				   !isspace((unsigned char) *nextp))
+				nextp++;
+			endp = nextp;
+			if (curname == nextp)
+				return false;	/* empty unquoted name not allowed */
+		}
+
+		while (isspace((unsigned char) *nextp))
+			nextp++;			/* skip trailing whitespace */
+
+		if (*nextp == separator)
+		{
+			nextp++;
+			while (isspace((unsigned char) *nextp))
+				nextp++;		/* skip leading whitespace for next */
+			/* we expect another name, so done remains false */
+		}
+		else if (*nextp == '\0')
+			done = true;
+		else
+			return false;		/* invalid syntax */
+
+		/* Now safe to overwrite separator with a null */
+		*endp = '\0';
+
+		/*
+		 * Finished isolating current name --- add it to output array
+		 */
+		*nextptr++ = curname;
+
+		/* Loop back if we didn't reach end of string */
+	} while (!done);
+
+	*nextptr = NULL;
+	return true;
 }

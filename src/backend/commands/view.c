@@ -60,22 +60,20 @@ validateWithCheckOption(char *value)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("invalid value for \"check_option\" option"),
-				 errdetail("Valid values are \"local\", and \"cascaded\".")));
+				 errdetail("Valid values are \"local\" and \"cascaded\".")));
 	}
 }
 
 /*---------------------------------------------------------------------
  * DefineVirtualRelation
  *
- * Create the "view" relation. `DefineRelation' does all the work,
- * we just provide the correct arguments ... at least when we're
- * creating a view.  If we're updating an existing view, we have to
- * work harder.
+ * Create a view relation and use the rules system to store the query
+ * for the view.
  *---------------------------------------------------------------------
  */
 static Oid
 DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
-					  List *options)
+					  List *options, Query *viewParse)
 {
 	Oid			viewOid;
 	LOCKMODE	lockmode;
@@ -92,25 +90,14 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 	attrList = NIL;
 	foreach(t, tlist)
 	{
-		TargetEntry *tle = lfirst(t);
+		TargetEntry *tle = (TargetEntry *) lfirst(t);
 
 		if (!tle->resjunk)
 		{
-			ColumnDef  *def = makeNode(ColumnDef);
-
-			def->colname = pstrdup(tle->resname);
-			def->typeName = makeTypeNameFromOid(exprType((Node *) tle->expr),
-											 exprTypmod((Node *) tle->expr));
-			def->inhcount = 0;
-			def->is_local = true;
-			def->is_not_null = false;
-			def->is_from_type = false;
-			def->storage = 0;
-			def->raw_default = NULL;
-			def->cooked_default = NULL;
-			def->collClause = NULL;
-			def->collOid = exprCollation((Node *) tle->expr);
-			def->location = -1;
+			ColumnDef  *def = makeColumnDef(tle->resname,
+											exprType((Node *) tle->expr),
+											exprTypmod((Node *) tle->expr),
+										  exprCollation((Node *) tle->expr));
 
 			/*
 			 * It's possible that the column is of a collatable type but the
@@ -127,7 +114,6 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 			}
 			else
 				Assert(!OidIsValid(def->collOid));
-			def->constraints = NIL;
 
 			attrList = lappend(attrList, def);
 		}
@@ -183,18 +169,13 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 		checkViewTupleDesc(descriptor, rel->rd_att);
 
 		/*
-		 * The new options list replaces the existing options list, even if
-		 * it's empty.
-		 */
-		atcmd = makeNode(AlterTableCmd);
-		atcmd->subtype = AT_ReplaceRelOptions;
-		atcmd->def = (Node *) options;
-		atcmds = lappend(atcmds, atcmd);
-
-		/*
 		 * If new attributes have been added, we must add pg_attribute entries
 		 * for them.  It is convenient (although overkill) to use the ALTER
 		 * TABLE ADD COLUMN infrastructure for this.
+		 *
+		 * Note that we must do this before updating the query for the view,
+		 * since the rules system requires that the correct view columns be in
+		 * place when defining the new rules.
 		 */
 		if (list_length(attrList) > rel->rd_att->natts)
 		{
@@ -213,9 +194,38 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 				atcmd->def = (Node *) lfirst(c);
 				atcmds = lappend(atcmds, atcmd);
 			}
+
+			AlterTableInternal(viewOid, atcmds, true);
+
+			/* Make the new view columns visible */
+			CommandCounterIncrement();
 		}
 
-		/* OK, let's do it. */
+		/*
+		 * Update the query for the view.
+		 *
+		 * Note that we must do this before updating the view options, because
+		 * the new options may not be compatible with the old view query (for
+		 * example if we attempt to add the WITH CHECK OPTION, we require that
+		 * the new view be automatically updatable, but the old view may not
+		 * have been).
+		 */
+		StoreViewQuery(viewOid, viewParse, replace);
+
+		/* Make the new view query visible */
+		CommandCounterIncrement();
+
+		/*
+		 * Finally update the view options.
+		 *
+		 * The new options list replaces the existing options list, even if
+		 * it's empty.
+		 */
+		atcmd = makeNode(AlterTableCmd);
+		atcmd->subtype = AT_ReplaceRelOptions;
+		atcmd->def = (Node *) options;
+		atcmds = list_make1(atcmd);
+
 		AlterTableInternal(viewOid, atcmds, true);
 
 		/*
@@ -230,7 +240,7 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 		Oid			relid;
 
 		/*
-		 * now set the parameters for keys/inheritance etc. All of these are
+		 * Set the parameters for keys/inheritance etc. All of these are
 		 * uninteresting for views...
 		 */
 		createStmt->relation = relation;
@@ -246,12 +256,19 @@ DefineVirtualRelation(RangeVar *relation, List *tlist, bool replace,
 		createStmt->if_not_exists = false;
 
 		/*
-		 * finally create the relation (this will error out if there's an
-		 * existing view, so we don't need more code to complain if "replace"
-		 * is false).
+		 * Create the relation (this will error out if there's an existing
+		 * view, so we don't need more code to complain if "replace" is
+		 * false).
 		 */
 		relid = DefineRelation(createStmt, RELKIND_VIEW, InvalidOid, RELSTORAGE_VIRTUAL, false, true, NULL);
 		Assert(relid != InvalidOid);
+
+		/* Make the new view relation visible */
+		CommandCounterIncrement();
+
+		/* Store the query for the view */
+		StoreViewQuery(relid, viewParse, replace);
+
 		return relid;
 	}
 }
@@ -503,8 +520,8 @@ DefineView(ViewStmt *stmt, const char *queryString)
 		if (view_updatable_error)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("WITH CHECK OPTION is supported only on auto-updatable views"),
-					 errhint("%s", view_updatable_error)));
+					 errmsg("WITH CHECK OPTION is supported only on automatically updatable views"),
+					 errhint("%s", _(view_updatable_error))));
 	}
 
 	/*
@@ -567,16 +584,7 @@ DefineView(ViewStmt *stmt, const char *queryString)
 	 * aborted.
 	 */
 	viewOid = DefineVirtualRelation(view, viewParse->targetList,
-									stmt->replace, stmt->options);
-
-	/*
-	 * The relation we have just created is not visible to any other commands
-	 * running with the same transaction & command id. So, increment the
-	 * command id counter (but do NOT pfree any memory!!!!)
-	 */
-	CommandCounterIncrement();
-
-	StoreViewQuery(viewOid, viewParse, stmt->replace);
+									stmt->replace, stmt->options, viewParse);
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 	{

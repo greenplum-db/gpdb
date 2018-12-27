@@ -231,6 +231,19 @@ SELECT relname, relkind, reloptions FROM pg_class
                      'mysecview3'::regclass, 'mysecview4'::regclass)
        ORDER BY relname;
 
+-- This test checks that proper typmods are assigned in a multi-row VALUES
+
+CREATE VIEW tt1 AS
+  SELECT * FROM (
+    VALUES
+       ('abc'::varchar(3), '0123456789', 42, 'abcd'::varchar(4)),
+       ('0123456789', 'abc'::varchar(3), 42.12, 'abc'::varchar(4))
+  ) vv(a,b,c,d);
+\d+ tt1
+SELECT * FROM tt1;
+SELECT a::varchar(3) FROM tt1;
+DROP VIEW tt1;
+
 -- Test view decompilation in the face of relation renaming conflicts
 
 CREATE TABLE tt1 (f1 int, f2 int, f3 text);
@@ -441,6 +454,110 @@ select pg_get_viewdef('vv6', true);
 alter table tt11 add column z int;
 
 select pg_get_viewdef('vv6', true);
+
+--
+-- Check some cases involving dropped columns in a function's rowtype result
+--
+
+create table tt14t (f1 text, f2 text, f3 text, f4 text);
+insert into tt14t values('foo', 'bar', 'baz', 'quux');
+
+alter table tt14t drop column f2;
+
+create function tt14f() returns setof tt14t as
+$$
+declare
+    rec1 record;
+begin
+    for rec1 in select * from tt14t
+    loop
+        return next rec1;
+    end loop;
+end;
+$$
+language plpgsql;
+
+create view tt14v as select t.* from tt14f() t;
+
+select pg_get_viewdef('tt14v', true);
+select * from tt14v;
+
+-- this perhaps should be rejected, but it isn't:
+alter table tt14t drop column f3;
+
+-- f3 is still in the view but will read as nulls
+select pg_get_viewdef('tt14v', true);
+select * from tt14v;
+
+-- check display of whole-row variables in some corner cases
+
+create type nestedcomposite as (x int8_tbl);
+create view tt15v as select row(i)::nestedcomposite from int8_tbl i;
+select * from tt15v;
+select pg_get_viewdef('tt15v', true);
+select row(i.*::int8_tbl)::nestedcomposite from int8_tbl i;
+
+create view tt16v as select * from int8_tbl i, lateral(values(i)) ss;
+select * from tt16v;
+select pg_get_viewdef('tt16v', true);
+select * from int8_tbl i, lateral(values(i.*::int8_tbl)) ss;
+
+create view tt17v as select * from int8_tbl i where i in (values(i));
+select * from tt17v;
+select pg_get_viewdef('tt17v', true);
+select * from int8_tbl i where i.* in (values(i.*::int8_tbl));
+
+-- check unique-ification of overlength names
+
+create view tt18v as
+  select * from int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxy
+  union all
+  select * from int8_tbl xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxz;
+select pg_get_viewdef('tt18v', true);
+explain (costs off) select * from tt18v;
+
+-- check display of ScalarArrayOp with a sub-select
+
+select 'foo'::text = any(array['abc','def','foo']::text[]);
+select 'foo'::text = any((select array['abc','def','foo']::text[]));  -- fail
+select 'foo'::text = any((select array['abc','def','foo']::text[])::text[]);
+
+create view tt19v as
+select 'foo'::text = any(array['abc','def','foo']::text[]) c1,
+       'foo'::text = any((select array['abc','def','foo']::text[])::text[]) c2;
+select pg_get_viewdef('tt19v', true);
+
+-- check display of assorted RTE_FUNCTION expressions
+
+create view tt20v as
+select * from
+  coalesce(1,2) as c,
+  collation for ('x'::text) col,
+  current_date as d,
+  cast(1+2 as int4) as i4,
+  cast(1+2 as int8) as i8;
+select pg_get_viewdef('tt20v', true);
+
+-- corner cases with empty join conditions
+
+create view tt21v as
+select * from tt5 natural inner join tt6;
+select pg_get_viewdef('tt21v', true);
+
+create view tt22v as
+select * from tt5 natural left join tt6;
+select pg_get_viewdef('tt22v', true);
+
+-- check handling of views with immediately-renamed columns
+
+create view tt23v (col_a, col_b) as
+select q1 as other_name1, q2 as other_name2 from int8_tbl
+union
+select 42, 43;
+
+select pg_get_viewdef('tt23v', true);
+select pg_get_ruledef(oid, true) from pg_rewrite
+  where ev_class = 'tt23v'::regclass and ev_type = '1';
 
 -- clean up all the random objects we made above
 set client_min_messages = warning;

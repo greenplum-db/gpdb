@@ -43,6 +43,9 @@ SELECT gp_get_next_oid_segments();
 SELECT gp_set_next_oid_master(4290000000);
 SELECT gp_set_next_oid_segments(16384);
 
+-- GPDB_94_MERGE_FIXME: output will be 16389 instead of 16388
+-- see postgres commit: 5b3ed6b7880b88a355bf809dad83cbe7cbc49316
+
 -- We expect the QE to increment once to 16385 and the QD should
 -- fast-forward to 16388
 SELECT gp_get_next_oid_master();

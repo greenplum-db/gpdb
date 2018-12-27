@@ -903,6 +903,7 @@ _outAgg(StringInfo str, const Agg *node)
 	WRITE_INT_FIELD(rollupGSTimes);
 	WRITE_BOOL_FIELD(lastAgg);
 	WRITE_BOOL_FIELD(streaming);
+	WRITE_BITMAPSET_FIELD(aggParams);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -1980,7 +1981,10 @@ _outPathInfo(StringInfo str, const Path *node)
 {
 	WRITE_ENUM_FIELD(pathtype, NodeTag);
 	appendStringInfoString(str, " :parent_relids ");
-	_outBitmapset(str, node->parent->relids);
+	if (node->parent)
+		_outBitmapset(str, node->parent->relids);
+	else
+		_outBitmapset(str, NULL);
 	appendStringInfoString(str, " :required_outer ");
 	if (node->param_info)
 		_outBitmapset(str, node->param_info->ppi_req_outer);
@@ -2285,6 +2289,7 @@ _outRelOptInfo(StringInfo str, const RelOptInfo *node)
 	WRITE_FLOAT_FIELD(rows, "%.0f");
 	WRITE_INT_FIELD(width);
 	WRITE_BOOL_FIELD(consider_startup);
+	WRITE_BOOL_FIELD(consider_param_startup);
 	WRITE_NODE_FIELD(reltargetlist);
 	/* Skip writing Path ptrs to avoid endless recursion */
 	/* WRITE_NODE_FIELD(pathlist);              */
@@ -4090,8 +4095,14 @@ _outValue(StringInfo str, const Value *value)
 			appendStringInfoString(str, value->val.str);
 			break;
 		case T_String:
+
+			/*
+			 * We use _outToken to provide escaping of the string's content,
+			 * but we don't want it to do anything with an empty string.
+			 */
 			appendStringInfoChar(str, '"');
-			_outToken(str, value->val.str);
+			if (value->val.str[0] != '\0')
+				_outToken(str, value->val.str);
 			appendStringInfoChar(str, '"');
 			break;
 		case T_BitString:

@@ -281,6 +281,32 @@ order by thousand, tenthous;
       999 |     9999
 (25 rows)
 
+-- Test case for bug #14010: indexed row comparisons fail with nulls
+create temp table test_table (a text, b text);
+insert into test_table values ('a', 'b');
+insert into test_table select 'a', null from generate_series(1,1000);
+insert into test_table values ('b', 'a');
+create index on test_table (a,b);
+set enable_sort = off;
+explain (costs off)
+select a,b from test_table where (a,b) > ('a','a') order by a,b;
+                          QUERY PLAN                          
+--------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   Merge Key: a, b
+   ->  Index Only Scan using test_table_a_b_idx on test_table
+         Index Cond: (ROW(a, b) > ROW('a'::text, 'a'::text))
+ Optimizer: legacy query optimizer
+(5 rows)
+
+select a,b from test_table where (a,b) > ('a','a') order by a,b;
+ a | b 
+---+---
+ a | b
+ b | a
+(2 rows)
+
+reset enable_sort;
 -- Check row comparisons with IN
 select * from int8_tbl i8 where i8 in (row(123,456));  -- fail, type mismatch
 ERROR:  cannot compare dissimilar column types bigint and integer at record column 1
@@ -479,3 +505,230 @@ select (row('Jim', 'Beam')).text;  -- error
 ERROR:  could not identify column "text" in record data type
 LINE 1: select (row('Jim', 'Beam')).text;
                 ^
+--
+-- Test that composite values are seen to have the correct column names
+-- (bug #11210 and other reports)
+--
+select row_to_json(i) from int8_tbl i;
+                  row_to_json                   
+------------------------------------------------
+ {"q1":123,"q2":456}
+ {"q1":123,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":123}
+ {"q1":4567890123456789,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":-4567890123456789}
+(5 rows)
+
+select row_to_json(i) from int8_tbl i(x,y);
+                 row_to_json                  
+----------------------------------------------
+ {"x":123,"y":456}
+ {"x":123,"y":4567890123456789}
+ {"x":4567890123456789,"y":123}
+ {"x":4567890123456789,"y":4567890123456789}
+ {"x":4567890123456789,"y":-4567890123456789}
+(5 rows)
+
+create temp view vv1 as select * from int8_tbl;
+select row_to_json(i) from vv1 i;
+                  row_to_json                   
+------------------------------------------------
+ {"q1":123,"q2":456}
+ {"q1":123,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":123}
+ {"q1":4567890123456789,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":-4567890123456789}
+(5 rows)
+
+select row_to_json(i) from vv1 i(x,y);
+                 row_to_json                  
+----------------------------------------------
+ {"x":123,"y":456}
+ {"x":123,"y":4567890123456789}
+ {"x":4567890123456789,"y":123}
+ {"x":4567890123456789,"y":4567890123456789}
+ {"x":4567890123456789,"y":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1, q2 from int8_tbl) as ss;
+                  row_to_json                   
+------------------------------------------------
+ {"q1":123,"q2":456}
+ {"q1":123,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":123}
+ {"q1":4567890123456789,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1, q2 from int8_tbl offset 0) as ss;
+                  row_to_json                   
+------------------------------------------------
+ {"q1":123,"q2":456}
+ {"q1":123,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":123}
+ {"q1":4567890123456789,"q2":4567890123456789}
+ {"q1":4567890123456789,"q2":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1 as a, q2 as b from int8_tbl) as ss;
+                 row_to_json                  
+----------------------------------------------
+ {"a":123,"b":456}
+ {"a":123,"b":4567890123456789}
+ {"a":4567890123456789,"b":123}
+ {"a":4567890123456789,"b":4567890123456789}
+ {"a":4567890123456789,"b":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1 as a, q2 as b from int8_tbl offset 0) as ss;
+                 row_to_json                  
+----------------------------------------------
+ {"a":123,"b":456}
+ {"a":123,"b":4567890123456789}
+ {"a":4567890123456789,"b":123}
+ {"a":4567890123456789,"b":4567890123456789}
+ {"a":4567890123456789,"b":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1 as a, q2 as b from int8_tbl) as ss(x,y);
+                 row_to_json                  
+----------------------------------------------
+ {"x":123,"y":456}
+ {"x":123,"y":4567890123456789}
+ {"x":4567890123456789,"y":123}
+ {"x":4567890123456789,"y":4567890123456789}
+ {"x":4567890123456789,"y":-4567890123456789}
+(5 rows)
+
+select row_to_json(ss) from
+  (select q1 as a, q2 as b from int8_tbl offset 0) as ss(x,y);
+                 row_to_json                  
+----------------------------------------------
+ {"x":123,"y":456}
+ {"x":123,"y":4567890123456789}
+ {"x":4567890123456789,"y":123}
+ {"x":4567890123456789,"y":4567890123456789}
+ {"x":4567890123456789,"y":-4567890123456789}
+(5 rows)
+
+-- GPDB: Make the plan same as PG's to make further merge and testing easy.
+-- PG plan is index only scan, while GP plan is seq scan without the guc
+-- settings below. That is because:
+-- 1) Default large (different as PG's) random_page_cost makes planner incline to seq scan.
+-- 2) Low vis fraction estimation (pg_class.relallvisible) on GP causes higher
+--    index only scan cost so bitmap index scan outperforms index only scan.
+set random_page_cost = 4;
+set enable_bitmapscan = off;
+explain (costs off)
+select row_to_json(q) from
+  (select thousand, tenthous from tenk1
+   where thousand = 42 and tenthous < 2000 offset 0) q;
+                            QUERY PLAN                             
+-------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Subquery Scan on q
+         ->  Index Only Scan using tenk1_thous_tenthous on tenk1
+               Index Cond: ((thousand = 42) AND (tenthous < 2000))
+ Optimizer: legacy query optimizer
+(5 rows)
+
+select row_to_json(q) from
+  (select thousand, tenthous from tenk1
+   where thousand = 42 and tenthous < 2000 offset 0) q;
+           row_to_json           
+---------------------------------
+ {"thousand":42,"tenthous":42}
+ {"thousand":42,"tenthous":1042}
+(2 rows)
+
+select row_to_json(q) from
+  (select thousand as x, tenthous as y from tenk1
+   where thousand = 42 and tenthous < 2000 offset 0) q;
+    row_to_json    
+-------------------
+ {"x":42,"y":42}
+ {"x":42,"y":1042}
+(2 rows)
+
+select row_to_json(q) from
+  (select thousand as x, tenthous as y from tenk1
+   where thousand = 42 and tenthous < 2000 offset 0) q(a,b);
+    row_to_json    
+-------------------
+ {"a":42,"b":42}
+ {"a":42,"b":1042}
+(2 rows)
+
+-- GPDB: restore to the default or previously set values.
+reset random_page_cost;
+reset enable_bitmapscan;
+create temp table tt1 as select * from int8_tbl order by 1 limit 2;
+create temp table tt2 () inherits(tt1);
+insert into tt2 values(0,0);
+select row_to_json(r) from (select q2,q1 from tt1 offset 0) r;
+           row_to_json            
+----------------------------------
+ {"q2":456,"q1":123}
+ {"q2":4567890123456789,"q1":123}
+ {"q2":0,"q1":0}
+(3 rows)
+
+--
+-- IS [NOT] NULL should not recurse into nested composites (bug #14235)
+--
+explain (verbose, costs off)
+select r, r is null as isnull, r is not null as isnotnull
+from (values (1,row(1,2)), (1,row(null,null)), (1,null),
+             (null,row(1,2)), (null,row(null,null)), (null,null) ) r(a,b);
+                                                                                                         QUERY PLAN                                                                                                          
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Values Scan on "*VALUES*"
+   Output: ROW("*VALUES*".column1, "*VALUES*".column2), (("*VALUES*".column1 IS NULL) AND ("*VALUES*".column2 IS NOT DISTINCT FROM NULL)), (("*VALUES*".column1 IS NOT NULL) AND ("*VALUES*".column2 IS DISTINCT FROM NULL))
+(2 rows)
+
+select r, r is null as isnull, r is not null as isnotnull
+from (values (1,row(1,2)), (1,row(null,null)), (1,null),
+             (null,row(1,2)), (null,row(null,null)), (null,null) ) r(a,b);
+      r      | isnull | isnotnull 
+-------------+--------+-----------
+ (1,"(1,2)") | f      | t
+ (1,"(,)")   | f      | t
+ (1,)        | f      | f
+ (,"(1,2)")  | f      | f
+ (,"(,)")    | f      | f
+ (,)         | t      | f
+(6 rows)
+
+explain (verbose, costs off)
+with r(a,b) as
+  (values (1,row(1,2)), (1,row(null,null)), (1,null),
+          (null,row(1,2)), (null,row(null,null)), (null,null) )
+select r, r is null as isnull, r is not null as isnotnull from r;
+                       QUERY PLAN                       
+--------------------------------------------------------
+ Subquery Scan on r
+   Output: r.*, (r.* IS NULL), (r.* IS NOT NULL)
+   ->  Values Scan on "*VALUES*"
+         Output: "*VALUES*".column1, "*VALUES*".column2
+ Optimizer: legacy query optimizer
+(5 rows)
+
+with r(a,b) as
+  (values (1,row(1,2)), (1,row(null,null)), (1,null),
+          (null,row(1,2)), (null,row(null,null)), (null,null) )
+select r, r is null as isnull, r is not null as isnotnull from r;
+      r      | isnull | isnotnull 
+-------------+--------+-----------
+ (1,"(1,2)") | f      | t
+ (1,"(,)")   | f      | t
+ (1,)        | f      | f
+ (,"(1,2)")  | f      | f
+ (,"(,)")    | f      | f
+ (,)         | t      | f
+(6 rows)
+

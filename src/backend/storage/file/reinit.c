@@ -49,7 +49,7 @@ typedef struct
 void
 ResetUnloggedRelations(int op)
 {
-	char		temp_path[MAXPGPATH];
+	char		temp_path[MAXPGPATH + 10 + strlen(tablespace_version_directory()) + 1];
 	DIR		   *spc_dir;
 	struct dirent *spc_de;
 	MemoryContext tmpctx,
@@ -107,7 +107,7 @@ ResetUnloggedRelationsInTablespaceDir(const char *tsdirname, int op)
 {
 	DIR		   *ts_dir;
 	struct dirent *de;
-	char		dbspace_path[MAXPGPATH];
+	char		dbspace_path[MAXPGPATH * 2];
 
 	ts_dir = AllocateDir(tsdirname);
 	if (ts_dir == NULL)
@@ -148,7 +148,7 @@ ResetUnloggedRelationsInDbspaceDir(const char *dbspacedirname, int op)
 {
 	DIR		   *dbspace_dir;
 	struct dirent *de;
-	char		rm_path[MAXPGPATH];
+	char		rm_path[MAXPGPATH * 2];
 
 	/* Caller must specify at least one operation. */
 	Assert((op & (UNLOGGED_RELATION_CLEANUP | UNLOGGED_RELATION_INIT)) != 0);
@@ -311,7 +311,7 @@ ResetUnloggedRelationsInDbspaceDir(const char *dbspacedirname, int op)
 			ForkNumber	forkNum;
 			int			oidchars;
 			char		oidbuf[OIDCHARS + 1];
-			char		srcpath[MAXPGPATH];
+			char		srcpath[MAXPGPATH * 2];
 			char		dstpath[MAXPGPATH];
 
 			/* Skip anything that doesn't look like a relation data file. */
@@ -340,6 +340,53 @@ ResetUnloggedRelationsInDbspaceDir(const char *dbspacedirname, int op)
 		}
 
 		FreeDir(dbspace_dir);
+
+		/*
+		 * copy_file() above has already called pg_flush_data() on the
+		 * files it created. Now we need to fsync those files, because
+		 * a checkpoint won't do it for us while we're in recovery. We
+		 * do this in a separate pass to allow the kernel to perform
+		 * all the flushes (especially the metadata ones) at once.
+		 */
+		dbspace_dir = AllocateDir(dbspacedirname);
+		if (dbspace_dir == NULL)
+		{
+			/* we just saw this directory, so it really ought to be there */
+			elog(LOG,
+				 "could not open dbspace directory \"%s\": %m",
+				 dbspacedirname);
+			return;
+		}
+
+		while ((de = ReadDir(dbspace_dir, dbspacedirname)) != NULL)
+		{
+			ForkNumber	forkNum;
+			int			oidchars;
+			char		oidbuf[OIDCHARS + 1];
+			char		mainpath[MAXPGPATH];
+
+			/* Skip anything that doesn't look like a relation data file. */
+			if (!parse_filename_for_nontemp_relation(de->d_name, &oidchars,
+													 &forkNum))
+				continue;
+
+			/* Also skip it unless this is the init fork. */
+			if (forkNum != INIT_FORKNUM)
+				continue;
+
+			/* Construct main fork pathname. */
+			memcpy(oidbuf, de->d_name, oidchars);
+			oidbuf[oidchars] = '\0';
+			snprintf(mainpath, sizeof(mainpath), "%s/%s%s",
+					 dbspacedirname, oidbuf, de->d_name + oidchars + 1 +
+					 strlen(forkNames[INIT_FORKNUM]));
+
+			fsync_fname(mainpath, false);
+		}
+
+		FreeDir(dbspace_dir);
+
+		fsync_fname(dbspacedirname, true);
 	}
 }
 

@@ -24,6 +24,7 @@
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_type.h"	/* INT8OID */
 #include "access/skey.h"
+#include "access/sysattr.h"
 #include "catalog/pg_class.h"
 #include "foreign/fdwapi.h"
 #include "miscadmin.h"
@@ -40,6 +41,7 @@
 #include "optimizer/planner.h"
 #include "optimizer/planpartition.h"
 #include "optimizer/predtest.h"
+#include "optimizer/prep.h"
 #include "optimizer/restrictinfo.h"
 #include "optimizer/subselect.h"
 #include "optimizer/tlist.h"
@@ -267,6 +269,9 @@ Plan *
 create_plan_recurse(PlannerInfo *root, Path *best_path)
 {
 	Plan	   *plan;
+
+	/* Guard against stack overflow due to overly complex plans */
+	check_stack_depth();
 
 	switch (best_path->pathtype)
 	{
@@ -2187,7 +2192,7 @@ create_indexscan_plan(PlannerInfo *root,
 			if (best_path->indexinfo->indpred)
 			{
 				if (baserelid != root->parse->resultRelation &&
-					get_parse_rowmark(root->parse, baserelid) == NULL)
+					get_plan_rowmark(root->rowMarks, baserelid) == NULL)
 					if (predicate_implied_by(clausel,
 											 best_path->indexinfo->indpred))
 						continue;		/* implied by index predicate */
@@ -2908,6 +2913,8 @@ create_foreignscan_plan(PlannerInfo *root, ForeignPath *best_path,
 	RelOptInfo *rel = best_path->path.parent;
 	Index		scan_relid = rel->relid;
 	RangeTblEntry *rte;
+	Bitmapset  *attrs_used = NULL;
+	ListCell   *lc;
 	int			i;
 
 	/* it should be a base rel... */
@@ -2955,16 +2962,33 @@ create_foreignscan_plan(PlannerInfo *root, ForeignPath *best_path,
 	 * Detect whether any system columns are requested from rel.  This is a
 	 * bit of a kluge and might go away someday, so we intentionally leave it
 	 * out of the API presented to FDWs.
+	 *
+	 * First, examine all the attributes needed for joins or final output.
+	 * Note: we must look at reltargetlist, not the attr_needed data, because
+	 * attr_needed isn't computed for inheritance child rels.
 	 */
-	scan_plan->fsSystemCol = false;
-	for (i = rel->min_attr; i < 0; i++)
+	pull_varattnos((Node *) rel->reltargetlist, rel->relid, &attrs_used);
+
+	/* Add all the attributes used by restriction clauses. */
+	foreach(lc, rel->baserestrictinfo)
 	{
-		if (!bms_is_empty(rel->attr_needed[i - rel->min_attr]))
+		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
+
+		pull_varattnos((Node *) rinfo->clause, rel->relid, &attrs_used);
+	}
+
+	/* Now, are any system columns requested from rel? */
+	scan_plan->fsSystemCol = false;
+	for (i = FirstLowInvalidHeapAttributeNumber + 1; i < 0; i++)
+	{
+		if (bms_is_member(i - FirstLowInvalidHeapAttributeNumber, attrs_used))
 		{
 			scan_plan->fsSystemCol = true;
 			break;
 		}
 	}
+
+	bms_free(attrs_used);
 
 	return scan_plan;
 }
@@ -3125,6 +3149,7 @@ create_nestloop_plan(PlannerInfo *root,
 	if (IS_OUTER_JOIN(best_path->jointype))
 	{
 		extract_actual_join_clauses(joinrestrictclauses,
+									best_path->path.parent->relids,
 									&joinclauses, &otherclauses);
 	}
 	else
@@ -3219,6 +3244,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	List	   *mergeclauses;
 	Sort	   *sort;
 	bool		prefetch = false;
+	bool		set_mat_db_strict = false;
 	List	   *outerpathkeys;
 	List	   *innerpathkeys;
 	int			nClauses;
@@ -3226,6 +3252,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	Oid		   *mergecollations;
 	int		   *mergestrategies;
 	bool	   *mergenullsfirst;
+	PathKey    *opathkey;
+	EquivalenceClass *opeclass;
 	MergeJoin  *join_plan;
 	int			i;
 	ListCell   *lc;
@@ -3241,6 +3269,7 @@ create_mergejoin_plan(PlannerInfo *root,
 	if (IS_OUTER_JOIN(best_path->jpath.jointype))
 	{
 		extract_actual_join_clauses(joinclauses,
+									best_path->jpath.path.parent->relids,
 									&joinclauses, &otherclauses);
 	}
 	else
@@ -3328,19 +3357,9 @@ create_mergejoin_plan(PlannerInfo *root,
 		prefetch = true;
 		if (!IsA(inner_plan, Sort))
 		{
-			if (IsA(inner_plan, Material))
-			{
-				((Material *) inner_plan)->cdb_strict = true;
-			}
-			else
-			{
-				Material   *mat;
-
-				/* need to add slack. */
-				mat = make_material(inner_plan);
-				mat->cdb_strict = true;
-				inner_plan = (Plan *) mat;
-			}
+			if (!IsA(inner_plan, Material))
+				best_path->materialize_inner = true;
+			set_mat_db_strict = true;
 		}
 	}
 
@@ -3351,6 +3370,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	if (best_path->materialize_inner)
 	{
 		Plan	   *matplan = (Plan *) make_material(inner_plan);
+
+		Assert(!IsA(inner_plan, Material));
 
 		/*
 		 * We assume the materialize will not spill to disk, and therefore
@@ -3363,11 +3384,15 @@ create_mergejoin_plan(PlannerInfo *root,
 		inner_plan = matplan;
 	}
 
+	if (set_mat_db_strict)
+		((Material *) inner_plan)->cdb_strict = true;
+
 	/*
 	 * Compute the opfamily/collation/strategy/nullsfirst arrays needed by the
 	 * executor.  The information is in the pathkeys for the two inputs, but
 	 * we need to be careful about the possibility of mergeclauses sharing a
-	 * pathkey (compare find_mergeclauses_for_pathkeys()).
+	 * pathkey, as well as the possibility that the inner pathkeys are not in
+	 * an order matching the mergeclauses.
 	 */
 	nClauses = list_length(mergeclauses);
 	Assert(nClauses == list_length(best_path->path_mergeclauses));
@@ -3376,6 +3401,8 @@ create_mergejoin_plan(PlannerInfo *root,
 	mergestrategies = (int *) palloc(nClauses * sizeof(int));
 	mergenullsfirst = (bool *) palloc(nClauses * sizeof(bool));
 
+	opathkey = NULL;
+	opeclass = NULL;
 	lop = list_head(outerpathkeys);
 	lip = list_head(innerpathkeys);
 	i = 0;
@@ -3384,11 +3411,9 @@ create_mergejoin_plan(PlannerInfo *root,
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(lc);
 		EquivalenceClass *oeclass;
 		EquivalenceClass *ieclass;
-		PathKey    *opathkey;
-		PathKey    *ipathkey;
-		EquivalenceClass *opeclass;
-		EquivalenceClass *ipeclass;
-		ListCell   *l2;
+		PathKey    *ipathkey = NULL;
+		EquivalenceClass *ipeclass = NULL;
+		bool		first_inner_match = false;
 
 		/* fetch outer/inner eclass from mergeclause */
 		Assert(IsA(rinfo, RestrictInfo));
@@ -3406,104 +3431,96 @@ create_mergejoin_plan(PlannerInfo *root,
 		Assert(ieclass != NULL);
 
 		/*
-		 * For debugging purposes, we check that the eclasses match the paths'
-		 * pathkeys.  In typical cases the merge clauses are one-to-one with
-		 * the pathkeys, but when dealing with partially redundant query
-		 * conditions, we might have clauses that re-reference earlier path
-		 * keys.  The case that we need to reject is where a pathkey is
-		 * entirely skipped over.
+		 * We must identify the pathkey elements associated with this clause
+		 * by matching the eclasses (which should give a unique match, since
+		 * the pathkey lists should be canonical).  In typical cases the merge
+		 * clauses are one-to-one with the pathkeys, but when dealing with
+		 * partially redundant query conditions, things are more complicated.
 		 *
-		 * lop and lip reference the first as-yet-unused pathkey elements;
-		 * it's okay to match them, or any element before them.  If they're
-		 * NULL then we have found all pathkey elements to be used.
+		 * lop and lip reference the first as-yet-unmatched pathkey elements.
+		 * If they're NULL then all pathkey elements have been matched.
+		 *
+		 * The ordering of the outer pathkeys should match the mergeclauses,
+		 * by construction (see find_mergeclauses_for_outer_pathkeys()). There
+		 * could be more than one mergeclause for the same outer pathkey, but
+		 * no pathkey may be entirely skipped over.
 		 */
-		if (lop)
+		if (oeclass != opeclass)	/* multiple matches are not interesting */
 		{
+			/* doesn't match the current opathkey, so must match the next */
+			if (lop == NULL)
+				elog(ERROR, "outer pathkeys do not match mergeclauses");
 			opathkey = (PathKey *) lfirst(lop);
 			opeclass = opathkey->pk_eclass;
-			if (oeclass == opeclass)
-			{
-				/* fast path for typical case */
-				lop = lnext(lop);
-			}
-			else
-			{
-				/* redundant clauses ... must match something before lop */
-				foreach(l2, outerpathkeys)
-				{
-					if (l2 == lop)
-						break;
-					opathkey = (PathKey *) lfirst(l2);
-					opeclass = opathkey->pk_eclass;
-					if (oeclass == opeclass)
-						break;
-				}
-				if (oeclass != opeclass)
-					elog(ERROR, "outer pathkeys do not match mergeclauses");
-			}
-		}
-		else
-		{
-			/* redundant clauses ... must match some already-used pathkey */
-			opathkey = NULL;
-			opeclass = NULL;
-			foreach(l2, outerpathkeys)
-			{
-				opathkey = (PathKey *) lfirst(l2);
-				opeclass = opathkey->pk_eclass;
-				if (oeclass == opeclass)
-					break;
-			}
-			if (l2 == NULL)
+			lop = lnext(lop);
+			if (oeclass != opeclass)
 				elog(ERROR, "outer pathkeys do not match mergeclauses");
 		}
 
+		/*
+		 * The inner pathkeys likewise should not have skipped-over keys, but
+		 * it's possible for a mergeclause to reference some earlier inner
+		 * pathkey if we had redundant pathkeys.  For example we might have
+		 * mergeclauses like "o.a = i.x AND o.b = i.y AND o.c = i.x".  The
+		 * implied inner ordering is then "ORDER BY x, y, x", but the pathkey
+		 * mechanism drops the second sort by x as redundant, and this code
+		 * must cope.
+		 *
+		 * It's also possible for the implied inner-rel ordering to be like
+		 * "ORDER BY x, y, x DESC".  We still drop the second instance of x as
+		 * redundant; but this means that the sort ordering of a redundant
+		 * inner pathkey should not be considered significant.  So we must
+		 * detect whether this is the first clause matching an inner pathkey.
+		 */
 		if (lip)
 		{
 			ipathkey = (PathKey *) lfirst(lip);
 			ipeclass = ipathkey->pk_eclass;
 			if (ieclass == ipeclass)
 			{
-				/* fast path for typical case */
+				/* successful first match to this inner pathkey */
 				lip = lnext(lip);
-			}
-			else
-			{
-				/* redundant clauses ... must match something before lip */
-				foreach(l2, innerpathkeys)
-				{
-					if (l2 == lip)
-						break;
-					ipathkey = (PathKey *) lfirst(l2);
-					ipeclass = ipathkey->pk_eclass;
-					if (ieclass == ipeclass)
-						break;
-				}
-				if (ieclass != ipeclass)
-					elog(ERROR, "inner pathkeys do not match mergeclauses");
+				first_inner_match = true;
 			}
 		}
-		else
+		if (!first_inner_match)
 		{
-			/* redundant clauses ... must match some already-used pathkey */
-			ipathkey = NULL;
-			ipeclass = NULL;
+			/* redundant clause ... must match something before lip */
+			ListCell   *l2;
+
 			foreach(l2, innerpathkeys)
 			{
+				if (l2 == lip)
+					break;
 				ipathkey = (PathKey *) lfirst(l2);
 				ipeclass = ipathkey->pk_eclass;
 				if (ieclass == ipeclass)
 					break;
 			}
-			if (l2 == NULL)
+			if (ieclass != ipeclass)
 				elog(ERROR, "inner pathkeys do not match mergeclauses");
 		}
 
-		/* pathkeys should match each other too (more debugging) */
+		/*
+		 * The pathkeys should always match each other as to opfamily and
+		 * collation (which affect equality), but if we're considering a
+		 * redundant inner pathkey, its sort ordering might not match.  In
+		 * such cases we may ignore the inner pathkey's sort ordering and use
+		 * the outer's.  (In effect, we're lying to the executor about the
+		 * sort direction of this inner column, but it does not matter since
+		 * the run-time row comparisons would only reach this column when
+		 * there's equality for the earlier column containing the same eclass.
+		 * There could be only one value in this column for the range of inner
+		 * rows having a given value in the earlier column, so it does not
+		 * matter which way we imagine this column to be ordered.)  But a
+		 * non-redundant inner pathkey had better match outer's ordering too.
+		 */
 		if (opathkey->pk_opfamily != ipathkey->pk_opfamily ||
-			opathkey->pk_eclass->ec_collation != ipathkey->pk_eclass->ec_collation ||
-			opathkey->pk_strategy != ipathkey->pk_strategy ||
-			opathkey->pk_nulls_first != ipathkey->pk_nulls_first)
+			opathkey->pk_eclass->ec_collation != ipathkey->pk_eclass->ec_collation)
+			elog(ERROR, "left and right pathkeys do not match in mergejoin");
+		if (first_inner_match &&
+			(opathkey->pk_strategy != ipathkey->pk_strategy ||
+			 opathkey->pk_nulls_first != ipathkey->pk_nulls_first))
 			elog(ERROR, "left and right pathkeys do not match in mergejoin");
 
 		/* OK, save info for executor */
@@ -3570,6 +3587,7 @@ create_hashjoin_plan(PlannerInfo *root,
 	if (IS_OUTER_JOIN(best_path->jpath.jointype))
 	{
 		extract_actual_join_clauses(joinclauses,
+									best_path->jpath.path.parent->relids,
 									&joinclauses, &otherclauses);
 	}
 	else
@@ -5523,7 +5541,7 @@ make_sort_from_groupcols(PlannerInfo *root,
 		TargetEntry *tle = get_tle_by_resno(sub_tlist, grpColIdx[numsortkeys]);
 
 		if (!tle)
-			elog(ERROR, "could not retrive tle for sort-from-groupcols");
+			elog(ERROR, "could not retrieve tle for sort-from-groupcols");
 
 		sortColIdx[numsortkeys] = tle->resno;
 		sortOperators[numsortkeys] = grpcl->sortop;
@@ -5750,6 +5768,7 @@ make_agg(PlannerInfo *root, List *tlist, List *qual,
 	node->rollupGSTimes = rollupGSTimes;
 	node->lastAgg = false;
 	node->streaming = streaming;
+	node->aggParams = NULL;		/* SS_finalize_plan() will fill this */
 
 	copy_plan_costsize(plan, lefttree); /* only care about copying size */
 

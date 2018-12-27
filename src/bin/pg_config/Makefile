@@ -25,10 +25,11 @@ LIBS := $(filter-out -lreadline -ledit -ltermcap -lncurses -lcurses -lcurl -lssl
 
 
 # don't include subdirectory-path-dependent -I and -L switches
-STD_CPPFLAGS := $(filter-out -I%,$(CPPFLAGS))
+# GPDB_94_MERGE_FIXME: Need STD_CFLAGS and STD_LIBS follow the filters in STD_CPPFLAGS and STD_LDFLAGS?
 STD_CFLAGS := $(filter-out -I%,$(CFLAGS))
-STD_LDFLAGS := $(filter-out -L%,$(LDFLAGS))
 STD_LIBS := $(filter-out -L%,$(LIBS))
+STD_CPPFLAGS := $(filter-out -I$(top_srcdir)/src/include -I$(top_builddir)/src/include,$(CPPFLAGS))
+STD_LDFLAGS := $(filter-out -L$(top_builddir)/src/common -L$(top_builddir)/src/port,$(LDFLAGS))
 
 override CPPFLAGS += -DVAL_CONFIGURE="\"$(configure_args)\""
 override CPPFLAGS += -DVAL_CC="\"$(CC)\""

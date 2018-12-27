@@ -74,7 +74,7 @@ struct BufFile
 	int			nbytes;			/* total # of valid bytes in buffer */
 	int64		maxoffset;		/* maximum offset that this file has reached, for disk usage */
 
-	char	   *buffer;			/* CDB: -> buffer */
+	char        *buffer;        /* GPDB: PG upstream uses PGAlignedBlock */
 };
 
 static BufFile *makeBufFile(File firstfile);

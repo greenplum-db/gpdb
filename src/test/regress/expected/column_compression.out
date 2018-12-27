@@ -1958,14 +1958,14 @@ select pg_get_partition_def('ccddl'::regclass, true);
  PARTITION BY RANGE(i)                                                                                +
            SUBPARTITION BY RANGE(j)                                                                   +
            (                                                                                          +
-           PARTITION p1 START (1) END (2) WITH (appendonly=true, orientation=column)                  +
+           PARTITION p1 START (1) END (2) WITH (appendonly='true', orientation='column')              +
                      COLUMN i ENCODING (compresstype=none, blocksize=32768, compresslevel=0)          +
                      COLUMN j ENCODING (compresstype=none, blocksize=32768, compresslevel=0)          +
                    (                                                                                  +
-                   SUBPARTITION sp1 START (1) END (2) WITH (appendonly=true, orientation=column)      +
+                   SUBPARTITION sp1 START (1) END (2) WITH (appendonly='true', orientation='column')  +
                              COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)  +
                              COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0), +
-                   SUBPARTITION sp2 START (2) END (3) WITH (appendonly=true, orientation=column)      +
+                   SUBPARTITION sp2 START (2) END (3) WITH (appendonly='true', orientation='column')  +
                              COLUMN i ENCODING (compresstype=zlib, compresslevel=1, blocksize=32768)  +
                              COLUMN j ENCODING (blocksize=65536, compresstype=none, compresslevel=0)  +
                    )                                                                                  +

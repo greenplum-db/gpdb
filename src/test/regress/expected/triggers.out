@@ -145,6 +145,32 @@ DROP TABLE fkeys2;
 -- select count(*) from dup17 where x = 13;
 --
 -- DROP TABLE dup17;
+-- Check behavior when trigger returns unmodified trigtuple
+create table trigtest (f1 int, f2 text);
+create trigger trigger_return_old
+	before insert or delete or update on trigtest
+	for each row execute procedure trigger_return_old();
+insert into trigtest values(1, 'foo');
+select * from trigtest;
+ f1 | f2  
+----+-----
+  1 | foo
+(1 row)
+
+update trigtest set f2 = f2 || 'bar';
+select * from trigtest;
+ f1 | f2  
+----+-----
+  1 | foo
+(1 row)
+
+delete from trigtest;
+select * from trigtest;
+ f1 | f2 
+----+----
+(0 rows)
+
+drop table trigtest;
 create sequence ttdummy_seq increment 10 start 0 minvalue 0;
 create table tttest (
 	price_id	int4,
@@ -376,9 +402,9 @@ SELECT pg_get_triggerdef(oid, true) FROM pg_trigger WHERE tgrelid = 'main_table'
 (1 row)
 
 SELECT pg_get_triggerdef(oid, false) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'modified_a';
-                                                              pg_get_triggerdef                                                               
-----------------------------------------------------------------------------------------------------------------------------------------------
- CREATE TRIGGER modified_a BEFORE UPDATE OF a ON main_table FOR EACH ROW WHEN ((old.a <> new.a)) EXECUTE PROCEDURE trigger_func('modified_a')
+                                                                  pg_get_triggerdef                                                                  
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ CREATE TRIGGER modified_a BEFORE UPDATE OF a ON public.main_table FOR EACH ROW WHEN ((old.a <> new.a)) EXECUTE PROCEDURE trigger_func('modified_a')
 (1 row)
 
 SELECT pg_get_triggerdef(oid, true) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'modified_any';
@@ -406,9 +432,9 @@ FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('before_upd_a_stmt');
 CREATE TRIGGER after_upd_b_stmt_trig AFTER UPDATE OF b ON main_table
 FOR EACH STATEMENT EXECUTE PROCEDURE trigger_func('after_upd_b_stmt');
 SELECT pg_get_triggerdef(oid) FROM pg_trigger WHERE tgrelid = 'main_table'::regclass AND tgname = 'after_upd_a_b_row_trig';
-                                                             pg_get_triggerdef                                                             
--------------------------------------------------------------------------------------------------------------------------------------------
- CREATE TRIGGER after_upd_a_b_row_trig AFTER UPDATE OF a, b ON main_table FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_a_b_row')
+                                                                pg_get_triggerdef                                                                 
+--------------------------------------------------------------------------------------------------------------------------------------------------
+ CREATE TRIGGER after_upd_a_b_row_trig AFTER UPDATE OF a, b ON public.main_table FOR EACH ROW EXECUTE PROCEDURE trigger_func('after_upd_a_b_row')
 (1 row)
 
 UPDATE main_table SET a = 50;

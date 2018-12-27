@@ -272,7 +272,8 @@ slot_getallattrs(TupleTableSlot *slot)
 	slot_getsomeattrs(slot, slot->tts_tupleDescriptor->natts);
 }
 
-extern Datum slot_getsysattr(TupleTableSlot *slot, int attnum, bool *isnull);
+extern bool slot_getsysattr(TupleTableSlot *slot, int attnum,
+				Datum *value, bool *isnull);
 
 /*
  * Set the synthetic ctid to a given ctid value.
@@ -317,17 +318,25 @@ static inline ItemPointer slot_get_ctid(TupleTableSlot *slot)
 	return &(slot->PRIVATE_tts_synthetic_ctid);
 }
 
+/* GPDB_94_MERGE_FIXME: We really should move some large functions out of header files. */
+
 /*
  * Get an attribute from the tuple table slot.
  */
 static inline Datum slot_getattr(TupleTableSlot *slot, int attnum, bool *isnull)
 {
+	Datum value;
+
 	Assert(!TupIsNull(slot));
 	Assert(attnum <= slot->tts_tupleDescriptor->natts);
 
 	/* System attribute */
 	if(attnum <= 0)
-		return slot_getsysattr(slot, attnum, isnull);
+	{
+		if (slot_getsysattr(slot, attnum, &value, isnull) == false)
+			elog(ERROR, "Fail to get system attribute with attnum: %d", attnum);
+		return value;
+	}
 
 	/* fast path for virtual tuple */
 	if(TupHasVirtualTuple(slot) && slot->PRIVATE_tts_nvalid >= attnum)

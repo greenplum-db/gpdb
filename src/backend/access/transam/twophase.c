@@ -1369,7 +1369,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	RelFileNodeWithStorageType *delrels;
 	int			ndelrels;
 	SharedInvalidationMessage *invalmsgs;
-	int			i;
 
 	XLogReaderState *xlogreader;
 	struct XLogPageReadPrivate private;
@@ -1477,6 +1476,9 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 	/* compute latestXid among all children */
 	latestXid = TransactionIdLatest(xid, hdr->nsubxacts, children);
 
+	/* Prevent cancel/die interrupt while cleaning up */
+	HOLD_INTERRUPTS();
+
 	/*
 	 * The order of operations here is critical: make the XLOG entry for
 	 * commit or abort, then mark the transaction committed or aborted in
@@ -1526,13 +1528,9 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 		delrels = abortrels;
 		ndelrels = hdr->nabortrels;
 	}
-	for (i = 0; i < ndelrels; i++)
-	{
-		SMgrRelation srel = smgropen(delrels[i].node, InvalidBackendId);
 
-		smgrdounlink(srel, false, delrels[i].relstorage);
-		smgrclose(srel);
-	}
+	/* Make sure files supposed to be dropped are dropped */
+	DropRelationFiles(delrels, ndelrels, false);
 
 	/*
 	 * Handle cache invalidation messages.
@@ -1567,12 +1565,16 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	SIMPLE_FAULT_INJECTOR(FinishPreparedAfterRecordCommitPrepared);
 
-	/* Need to figure out the memory allocation and deallocationfor "buffer". For now, just let it leak. */
-
-
 	XLogReaderFree(xlogreader);
 	if (private.readFile != -1)
 		close(private.readFile);
+
+	RESUME_INTERRUPTS();
+
+	/* Need to figure out the memory allocation and deallocationfor "buffer". For now, just let it leak. */
+#if 0
+	pfree(buf); */
+#endif
 
 	return true;
 }

@@ -197,12 +197,15 @@ xlog_desc(StringInfo buf, XLogRecord *record)
 			}
 		}
 
-		appendStringInfo(buf, "parameter change: max_connections=%d max_worker_processes=%d max_prepared_xacts=%d max_locks_per_xact=%d wal_level=%s",
+		appendStringInfo(buf, "parameter change: max_connections=%d max_worker_processes=%d "
+						 "max_prepared_xacts=%d max_locks_per_xact=%d "
+						 "wal_level=%s wal_log_hints=%s",
 						 xlrec.MaxConnections,
 						 xlrec.max_worker_processes,
 						 xlrec.max_prepared_xacts,
 						 xlrec.max_locks_per_xact,
-						 wal_level_str);
+						 wal_level_str,
+						 xlrec.wal_log_hints ? "on" : "off");
 	}
 	else if (info == XLOG_FPW_CHANGE)
 	{

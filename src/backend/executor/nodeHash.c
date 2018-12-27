@@ -310,7 +310,8 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	 * Initialize the hash table control block.
 	 *
 	 * The hashtable control block is just palloc'd from the executor's
-	 * per-query memory context.
+	 * per-query memory context.  Everything else should be kept inside the
+	 * subsidiary hashCxt or batchCxt.
 	 */
 	hashtable = (HashJoinTable) palloc0(sizeof(HashJoinTableData));
 	hashtable->nbuckets = nbuckets;
@@ -343,6 +344,33 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 	hashtable->first_pass = true;
 
 	/*
+	 * Create temporary memory contexts in which to keep the hashtable working
+	 * storage.  See notes in executor/hashjoin.h.
+	 */
+	hashtable->hashCxt = AllocSetContextCreate(CurrentMemoryContext,
+											   "HashTableContext",
+											   ALLOCSET_DEFAULT_MINSIZE,
+											   ALLOCSET_DEFAULT_INITSIZE,
+											   ALLOCSET_DEFAULT_MAXSIZE);
+
+	hashtable->batchCxt = AllocSetContextCreate(hashtable->hashCxt,
+												"HashBatchContext",
+												ALLOCSET_DEFAULT_MINSIZE,
+												ALLOCSET_DEFAULT_INITSIZE,
+												ALLOCSET_DEFAULT_MAXSIZE);
+
+	/* CDB */ /* track temp buf file allocations in separate context */
+	hashtable->bfCxt = AllocSetContextCreate(CurrentMemoryContext,
+											 "hbbfcxt",
+											 ALLOCSET_DEFAULT_MINSIZE,
+											 ALLOCSET_DEFAULT_INITSIZE,
+											 ALLOCSET_DEFAULT_MAXSIZE);
+
+	/* Allocate data that will live for the life of the hashjoin */
+
+	oldcxt = MemoryContextSwitchTo(hashtable->hashCxt);
+
+	/*
 	 * Get info about the hash functions to be used for each hash key. Also
 	 * remember whether the join operators are strict.
 	 */
@@ -367,32 +395,6 @@ ExecHashTableCreate(HashState *hashState, HashJoinState *hjstate, List *hashOper
 		hashtable->hashStrict[i] = op_strict(hashop);
 		i++;
 	}
-
-	/*
-	 * Create temporary memory contexts in which to keep the hashtable working
-	 * storage.  See notes in executor/hashjoin.h.
-	 */
-	hashtable->hashCxt = AllocSetContextCreate(CurrentMemoryContext,
-											   "HashTableContext",
-											   ALLOCSET_DEFAULT_MINSIZE,
-											   ALLOCSET_DEFAULT_INITSIZE,
-											   ALLOCSET_DEFAULT_MAXSIZE);
-
-	hashtable->batchCxt = AllocSetContextCreate(hashtable->hashCxt,
-												"HashBatchContext",
-												ALLOCSET_DEFAULT_MINSIZE,
-												ALLOCSET_DEFAULT_INITSIZE,
-												ALLOCSET_DEFAULT_MAXSIZE);
-
-	/* CDB */ /* track temp buf file allocations in separate context */
-	hashtable->bfCxt = AllocSetContextCreate(CurrentMemoryContext,
-											 "hbbfcxt",
-											 ALLOCSET_DEFAULT_MINSIZE,
-											 ALLOCSET_DEFAULT_INITSIZE,
-											 ALLOCSET_DEFAULT_MAXSIZE);
-
-	/* Allocate data that will live for the life of the hashjoin */
-	oldcxt = MemoryContextSwitchTo(hashtable->hashCxt);
 
 	if (nbatch > 1)
 	{
@@ -457,6 +459,7 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	long		hash_table_bytes;
 	long		skew_table_bytes;
 	long		max_pointers;
+	long		mppow2;
 	int			nbatch;
 	int			nbuckets;
 	int			i;
@@ -524,10 +527,17 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 	 * Set nbuckets to achieve an average bucket load of gp_hashjoin_tuples_per_bucket when
 	 * memory is filled.  Set nbatch to the smallest power of 2 that appears
 	 * sufficient.  The Min() steps limit the results so that the pointer
-	 * arrays we'll try to allocate do not exceed work_mem.
+	 * arrays we'll try to allocate do not exceed work_mem nor MaxAllocSize.
 	 */
-	max_pointers = (operatorMemKB * 1024L) / sizeof(void *);
-	/* also ensure we avoid integer overflow in nbatch and nbuckets */
+	max_pointers = (operatorMemKB * 1024L) / sizeof(HashJoinTuple);
+	max_pointers = Min(max_pointers, MaxAllocSize / sizeof(HashJoinTuple));
+	/* If max_pointers isn't a power of 2, must round it down to one */
+	mppow2 = 1L << my_log2(max_pointers);
+	if (max_pointers != mppow2)
+		max_pointers = mppow2 / 2;
+
+	/* Also ensure we avoid integer overflow in nbatch and nbuckets */
+	/* (this step is redundant given the current value of MaxAllocSize) */
 	max_pointers = Min(max_pointers, INT_MAX / 2);
 
 	if (inner_rel_bytes > hash_table_bytes)
@@ -635,6 +645,9 @@ ExecChooseHashTableSize(double ntuples, int tupwidth, bool useskew,
 
 		nbatch = 1;
 	}
+
+	Assert(nbuckets > 0);
+	Assert(nbatch > 0);
 
 	*numbuckets = nbuckets;
 	*numbatches = nbatch;
@@ -823,6 +836,9 @@ ExecHashIncreaseNumBatches(HashJoinTable hashtable)
 			}
 
 			tuple = nexttuple;
+
+			/* allow this loop to be cancellable */
+			CHECK_FOR_INTERRUPTS();
 		}
 	}
 
@@ -2028,6 +2044,9 @@ ExecHashRemoveNextSkewBucket(HashState *hashState, HashJoinTable hashtable)
 		}
 
 		hashTuple = nextHashTuple;
+
+		/* allow this loop to be cancellable */
+		CHECK_FOR_INTERRUPTS();
 	}
 
 	/*

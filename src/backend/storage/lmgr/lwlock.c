@@ -97,8 +97,8 @@ static int32 held_lwlocks_depth[MAX_SIMUL_LWLOCKS];
 static int	lock_addin_request = 0;
 static bool lock_addin_request_allowed = true;
 
-static bool LWLockAcquireCommon(LWLock *l, LWLockMode mode, uint64 *valptr,
-					uint64 val);
+static inline bool LWLockAcquireCommon(LWLock *l, LWLockMode mode,
+					uint64 *valptr, uint64 val);
 
 #ifdef LWLOCK_STATS
 typedef struct lwlock_stats_key
@@ -565,10 +565,11 @@ LWLockAcquireWithVar(LWLock *l, uint64 *valptr, uint64 val)
 }
 
 /* internal function to implement LWLockAcquire and LWLockAcquireWithVar */
-static bool
+static inline bool
 LWLockAcquireCommon(LWLock *l, LWLockMode mode, uint64 *valptr, uint64 val)
 {
 	volatile LWLock *lock = l;
+	volatile uint64 *valp = valptr;
 	PGPROC	   *proc = MyProc;
 	bool		retry = false;
 	bool		result = true;
@@ -735,8 +736,8 @@ LWLockAcquireCommon(LWLock *l, LWLockMode mode, uint64 *valptr, uint64 val)
 	}
 
 	/* If there's a variable associated with this lock, initialize it */
-	if (valptr)
-		*valptr = val;
+	if (valp)
+		*valp = val;
 
 	/* We are done updating shared state of the lock itself. */
 	SpinLockRelease(&lock->mutex);
@@ -1080,13 +1081,17 @@ LWLockWaitForVar(LWLock *l, uint64 *valptr, uint64 oldval, uint64 *newval)
 		 */
 		proc->lwWaiting = true;
 		proc->lwWaitMode = LW_WAIT_UNTIL_FREE;
-		proc->lwWaitLink = NULL;
-
 		/* waiters are added to the front of the queue */
 		proc->lwWaitLink = lock->head;
 		if (lock->head == NULL)
 			lock->tail = proc;
 		lock->head = proc;
+
+		/*
+		 * Set releaseOK, to make sure we get woken up as soon as the lock is
+		 * released.
+		 */
+		lock->releaseOK = true;
 
 		/* Can release the mutex now */
 		SpinLockRelease(&lock->mutex);
@@ -1209,6 +1214,8 @@ LWLockUpdateVar(LWLock *l, uint64 *valptr, uint64 val)
 		proc = head;
 		head = proc->lwWaitLink;
 		proc->lwWaitLink = NULL;
+		/* check comment in LWLockRelease() about this barrier */
+		pg_write_barrier();
 		proc->lwWaiting = false;
 		PGSemaphoreUnlock(&proc->sem);
 	}
@@ -1351,6 +1358,16 @@ LWLockRelease(LWLock *l)
 		proc = head;
 		head = proc->lwWaitLink;
 		proc->lwWaitLink = NULL;
+		/*
+		 * Guarantee that lwWaiting being unset only becomes visible once the
+		 * unlink from the link has completed. Otherwise the target backend
+		 * could be woken up for other reason and enqueue for a new lock - if
+		 * that happens before the list unlink happens, the list would end up
+		 * being corrupted.
+		 *
+		 * The barrier pairs with the SpinLockAcquire() when enqueing for
+		 * another lock.
+		 */
 		pg_write_barrier();
 		proc->lwWaiting = false;
 		PGSemaphoreUnlock(&proc->sem);

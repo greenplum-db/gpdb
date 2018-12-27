@@ -1096,6 +1096,8 @@ typedef struct Agg
 
 	/* Stream entries when out of memory instead of spilling to disk */
 	bool 		streaming;
+	Bitmapset  *aggParams;		/* IDs of Params used in Aggref inputs */
+	/* Note: planner provides numGroups & aggParams only in AGG_HASHED case */
 } Agg;
 
 /* ----------------

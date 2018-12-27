@@ -28,6 +28,7 @@
 
 #include "dumputils.h"
 #include "pg_backup.h"
+#include "fe_utils/connect.h"
 
 /* version string we expect back from pg_dump */
 #define PGDUMP_VERSIONSTR "pg_dump (PostgreSQL) " PG_VERSION "\n"
@@ -54,13 +55,12 @@ static void makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
 					   const char *name2);
 static void dumpDatabases(PGconn *conn);
 static void dumpTimestamp(char *msg);
-static void doShellQuoting(PQExpBuffer buf, const char *str);
-static void doConnStrQuoting(PQExpBuffer buf, const char *str);
 
 static int	runPgDump(const char *dbname);
-static void buildShSecLabels(PGconn *conn, const char *catalog_name,
-				 uint32 objectId, PQExpBuffer buffer,
-				 const char *target, const char *objname);
+static void buildShSecLabels(PGconn *conn,
+				 const char *catalog_name, Oid objectId,
+				 const char *objtype, const char *objname,
+				 PQExpBuffer buffer);
 static PGconn *connectDatabase(const char *dbname, const char *connstr, const char *pghost, const char *pgport,
 	  const char *pguser, enum trivalue prompt_password, bool fail_on_error);
 static char *constructConnStr(const char **keywords, const char **values);
@@ -235,7 +235,7 @@ main(int argc, char *argv[])
 			case 'f':
 				filename = pg_strdup(optarg);
 				appendPQExpBufferStr(pgdumpopts, " -f ");
-				doShellQuoting(pgdumpopts, filename);
+				appendShellString(pgdumpopts, filename);
 				break;
 
 			case 'g':
@@ -286,7 +286,7 @@ main(int argc, char *argv[])
 
 			case 'S':
 				appendPQExpBufferStr(pgdumpopts, " -S ");
-				doShellQuoting(pgdumpopts, optarg);
+				appendShellString(pgdumpopts, optarg);
 				break;
 
 			case 't':
@@ -322,13 +322,13 @@ main(int argc, char *argv[])
 
 			case 2:
 				appendPQExpBufferStr(pgdumpopts, " --lock-wait-timeout ");
-				doShellQuoting(pgdumpopts, optarg);
+				appendShellString(pgdumpopts, optarg);
 				break;
 
 			case 3:
 				use_role = pg_strdup(optarg);
 				appendPQExpBufferStr(pgdumpopts, " --role ");
-				doShellQuoting(pgdumpopts, use_role);
+				appendShellString(pgdumpopts, use_role);
 				break;
 
 				/* START MPP ADDITION */
@@ -384,7 +384,7 @@ main(int argc, char *argv[])
 
 	if (if_exists && !output_clean)
 	{
-		fprintf(stderr, _("%s: option --if-exists requires -c/--clean option\n"),
+		fprintf(stderr, _("%s: option --if-exists requires option -c/--clean\n"),
 				progname);
 		exit_nicely(1);
 	}
@@ -627,6 +627,7 @@ help(void)
 
 	printf(_("\nGeneral options:\n"));
 	printf(_("  -f, --file=FILENAME          output file name\n"));
+	printf(_("  -v, --verbose                verbose mode\n"));
 	printf(_("  -V, --version                output version information, then exit\n"));
 	printf(_("  --lock-wait-timeout=TIMEOUT  fail after waiting TIMEOUT for a table lock\n"));
 	printf(_("  -?, --help                   show this help, then exit\n"));
@@ -1302,7 +1303,8 @@ dumpRoles(PGconn *conn)
 
 		if (!no_security_labels && server_version >= 90200)
 			buildShSecLabels(conn, "pg_authid", auth_oid,
-							 buf, "ROLE", rolename);
+							 "ROLE", rolename,
+							 buf);
 
 		fprintf(OPF, "%s", buf->data);
 	}
@@ -1511,7 +1513,7 @@ dumpTablespaces(PGconn *conn)
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		PQExpBuffer buf = createPQExpBuffer();
-		uint32		spcoid = atooid(PQgetvalue(res, i, 0));
+		Oid			spcoid = atooid(PQgetvalue(res, i, 0));
 		char	   *spcname = PQgetvalue(res, i, 1);
 		char	   *spcowner = PQgetvalue(res, i, 2);
 		char	   *spclocation = PQgetvalue(res, i, 3);
@@ -1535,11 +1537,12 @@ dumpTablespaces(PGconn *conn)
 							  fspcname, spcoptions);
 
 		if (!skip_acls &&
-			!buildACLCommands(fspcname, NULL, "TABLESPACE", spcacl, spcowner,
+			!buildACLCommands(fspcname, NULL, NULL, "TABLESPACE",
+							  spcacl, spcowner,
 							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for tablespace \"%s\"\n"),
-					progname, spcacl, fspcname);
+					progname, spcacl, spcname);
 			PQfinish(conn);
 			exit_nicely(1);
 		}
@@ -1554,7 +1557,8 @@ dumpTablespaces(PGconn *conn)
 
 		if (!no_security_labels && server_version >= 90200)
 			buildShSecLabels(conn, "pg_tablespace", spcoid,
-							 buf, "TABLESPACE", fspcname);
+							 "TABLESPACE", spcname,
+							 buf);
 
 		fprintf(OPF, "%s", buf->data);
 
@@ -1683,12 +1687,22 @@ dumpCreateDB(PGconn *conn)
 	PQclear(res);
 
 	/* Now collect all the information about databases to dump */
-	if (server_version >= 80400)
+	if (server_version >= 90300)
 		res = executeQuery(conn,
 						   "SELECT datname, "
 						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 						   "pg_encoding_to_char(d.encoding), "
-						   "datcollate, datctype, datfrozenxid, "
+						   "datcollate, datctype, datfrozenxid, datminmxid, "
+						   "datistemplate, datacl, datconnlimit, "
+						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
+			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
+						   "WHERE datallowconn ORDER BY 1");
+	else if (server_version >= 80400)
+		res = executeQuery(conn,
+						   "SELECT datname, "
+						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
+						   "pg_encoding_to_char(d.encoding), "
+						   "datcollate, datctype, datfrozenxid, 0 AS datminmxid, "
 						   "datistemplate, datacl, datconnlimit, "
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
@@ -1698,7 +1712,7 @@ dumpCreateDB(PGconn *conn)
 						   "SELECT datname, "
 						   "coalesce(rolname, (select rolname from pg_authid where oid=(select datdba from pg_database where datname='template0'))), "
 						   "pg_encoding_to_char(d.encoding), "
-		   "null::text AS datcollate, null::text AS datctype, datfrozenxid, "
+		   "null::text AS datcollate, null::text AS datctype, datfrozenxid, 0 AS datminmxid, "
 						   "datistemplate, datacl, datconnlimit, "
 						   "(SELECT spcname FROM pg_tablespace t WHERE t.oid = d.dattablespace) AS dattablespace "
 			  "FROM pg_database d LEFT JOIN pg_authid u ON (datdba = u.oid) "
@@ -1714,10 +1728,11 @@ dumpCreateDB(PGconn *conn)
 		char	   *dbcollate = PQgetvalue(res, i, 3);
 		char	   *dbctype = PQgetvalue(res, i, 4);
 		uint32		dbfrozenxid = atooid(PQgetvalue(res, i, 5));
-		char	   *dbistemplate = PQgetvalue(res, i, 6);
-		char	   *dbacl = PQgetvalue(res, i, 7);
-		char	   *dbconnlimit = PQgetvalue(res, i, 8);
-		char	   *dbtablespace = PQgetvalue(res, i, 9);
+		uint32		dbminmxid = atooid(PQgetvalue(res, i, 6));
+		char	   *dbistemplate = PQgetvalue(res, i, 7);
+		char	   *dbacl = PQgetvalue(res, i, 8);
+		char	   *dbconnlimit = PQgetvalue(res, i, 9);
+		char	   *dbtablespace = PQgetvalue(res, i, 10);
 		char	   *fdbname;
 
 		fdbname = pg_strdup(fmtId(dbname));
@@ -1729,6 +1744,8 @@ dumpCreateDB(PGconn *conn)
 		 * since they are presumably already there in the destination cluster.
 		 * We do want to emit their ACLs and config options if any, however.
 		 */
+		appendPQExpBuffer(buf, "SET allow_system_table_mods = true;\n");
+
 		if (strcmp(dbname, "template1") != 0 &&
 			strcmp(dbname, "postgres") != 0)
 		{
@@ -1775,31 +1792,46 @@ dumpCreateDB(PGconn *conn)
 
 			appendPQExpBufferStr(buf, ";\n");
 
-			appendPQExpBuffer(buf, "SET allow_system_table_mods = true;\n");
-
 			if (strcmp(dbistemplate, "t") == 0)
 			{
 				appendPQExpBufferStr(buf, "UPDATE pg_catalog.pg_database SET datistemplate = 't' WHERE datname = ");
 				appendStringLiteralConn(buf, dbname, conn);
 				appendPQExpBufferStr(buf, ";\n");
 			}
+		}
+		else if (strcmp(dbtablespace, "pg_default") != 0 && !no_tablespaces)
+		{
+			/*
+			 * Cannot change tablespace of the database we're connected to,
+			 * so to move "postgres" to another tablespace, we connect to
+			 * "template1", and vice versa.
+			 */
+			if (strcmp(dbname, "postgres") == 0)
+				appendPQExpBuffer(buf, "\\connect template1\n");
+			else
+				appendPQExpBuffer(buf, "\\connect postgres\n");
 
-			if (binary_upgrade)
-			{
-				appendPQExpBufferStr(buf, "-- For binary upgrade, set datfrozenxid.\n");
-				appendPQExpBuffer(buf, "UPDATE pg_catalog.pg_database "
-								  "SET datfrozenxid = '%u' "
-								  "WHERE datname = ",
-								  dbfrozenxid);
-				appendStringLiteralConn(buf, dbname, conn);
-				appendPQExpBufferStr(buf, ";\n");
-			}
+			appendPQExpBuffer(buf, "ALTER DATABASE %s SET TABLESPACE %s;\n",
+							  fdbname, fmtId(dbtablespace));
 
-			appendPQExpBuffer(buf, "RESET allow_system_table_mods;\n");
+			/* connect to original database */
+			appendPsqlMetaConnect(buf, dbname);
 		}
 
+		if (binary_upgrade)
+		{
+			appendPQExpBufferStr(buf, "-- For binary upgrade, set datfrozenxid and datminmxid.\n");
+			appendPQExpBuffer(buf, "UPDATE pg_catalog.pg_database "
+							  "SET datfrozenxid = '%u', datminmxid = '%u' "
+							  "WHERE datname = ",
+							  dbfrozenxid, dbminmxid);
+			appendStringLiteralConn(buf, dbname, conn);
+			appendPQExpBufferStr(buf, ";\n");
+		}
+		appendPQExpBuffer(buf, "RESET allow_system_table_mods;\n");
+
 		if (!skip_acls &&
-			!buildACLCommands(fdbname, NULL, "DATABASE", dbacl, dbowner,
+			!buildACLCommands(fdbname, NULL, NULL, "DATABASE", dbacl, dbowner,
 							  "", server_version, buf))
 		{
 			fprintf(stderr, _("%s: could not parse ACL list (%s) for database \"%s\"\n"),
@@ -1982,11 +2014,37 @@ makeAlterConfigCommand(PGconn *conn, const char *arrayitem,
 	appendPQExpBuffer(buf, "SET %s TO ", fmtId(mine));
 
 	/*
-	 * Some GUC variable names are 'LIST' type and hence must not be quoted.
+	 * Variables that are marked GUC_LIST_QUOTE were already fully quoted by
+	 * flatten_set_variable_args() before they were put into the setconfig
+	 * array.  However, because the quoting rules used there aren't exactly
+	 * like SQL's, we have to break the list value apart and then quote the
+	 * elements as string literals.  (The elements may be double-quoted as-is,
+	 * but we can't just feed them to the SQL parser; it would do the wrong
+	 * thing with elements that are zero-length or longer than NAMEDATALEN.)
+	 *
+	 * Variables that are not so marked should just be emitted as simple
+	 * string literals.  If the variable is not known to
+	 * variable_is_guc_list_quote(), we'll do that; this makes it unsafe to
+	 * use GUC_LIST_QUOTE for extension variables.
 	 */
-	if (pg_strcasecmp(mine, "DateStyle") == 0
-		|| pg_strcasecmp(mine, "search_path") == 0)
-		appendPQExpBufferStr(buf, pos + 1);
+	if (variable_is_guc_list_quote(mine))
+	{
+		char	  **namelist;
+		char	  **nameptr;
+
+		/* Parse string into list of identifiers */
+		/* this shouldn't fail really */
+		if (SplitGUCList(pos + 1, ',', &namelist))
+		{
+			for (nameptr = namelist; *nameptr; nameptr++)
+			{
+				if (nameptr != namelist)
+					appendPQExpBufferStr(buf, ", ");
+				appendStringLiteralConn(buf, *nameptr, conn);
+			}
+		}
+		pg_free(namelist);
+	}
 	else
 		appendStringLiteralConn(buf, pos + 1, conn);
 	appendPQExpBufferStr(buf, ";\n");
@@ -2014,11 +2072,15 @@ dumpDatabases(PGconn *conn)
 		int			ret;
 
 		char	   *dbname = PQgetvalue(res, i, 0);
+		PQExpBufferData connectbuf;
 
 		if (verbose)
 			fprintf(stderr, _("%s: dumping database \"%s\"...\n"), progname, dbname);
 
-		fprintf(OPF, "\\connect %s\n\n", fmtId(dbname));
+		initPQExpBuffer(&connectbuf);
+		appendPsqlMetaConnect(&connectbuf, dbname);
+		fprintf(OPF, "%s\n", connectbuf.data);
+		termPQExpBuffer(&connectbuf);
 
 		/*
 		 * Restore will need to write to the target cluster.  This connection
@@ -2086,9 +2148,9 @@ runPgDump(const char *dbname)
 	 * string.
 	 */
 	appendPQExpBuffer(connstrbuf, "%s dbname=", connstr);
-	doConnStrQuoting(connstrbuf, dbname);
+	appendConnStrVal(connstrbuf, dbname);
 
-	doShellQuoting(cmd, connstrbuf->data);
+	appendShellString(cmd, connstrbuf->data);
 
 	if (verbose)
 		fprintf(stderr, _("%s: running \"%s\"\n"), progname, cmd->data);
@@ -2109,19 +2171,23 @@ runPgDump(const char *dbname)
  *
  * Build SECURITY LABEL command(s) for an shared object
  *
- * The caller has to provide object type and identifier to select security
- * labels from pg_seclabels system view.
+ * The caller has to provide object type and identity in two separate formats:
+ * catalog_name (e.g., "pg_database") and object OID, as well as
+ * type name (e.g., "DATABASE") and object name (not pre-quoted).
+ *
+ * The command(s) are appended to "buffer".
  */
 static void
-buildShSecLabels(PGconn *conn, const char *catalog_name, uint32 objectId,
-				 PQExpBuffer buffer, const char *target, const char *objname)
+buildShSecLabels(PGconn *conn, const char *catalog_name, Oid objectId,
+				 const char *objtype, const char *objname,
+				 PQExpBuffer buffer)
 {
 	PQExpBuffer sql = createPQExpBuffer();
 	PGresult   *res;
 
 	buildShSecLabelQuery(conn, catalog_name, objectId, sql);
 	res = executeQuery(conn, sql->data);
-	emitShSecLabels(conn, res, buffer, target, objname);
+	emitShSecLabels(conn, res, buffer, objtype, objname);
 
 	PQclear(res);
 	destroyPQExpBuffer(sql);
@@ -2174,7 +2240,9 @@ connectDatabase(const char *dbname, const char *connection_string,
 
 		/*
 		 * Merge the connection info inputs given in form of connection string
-		 * and other options.
+		 * and other options.  Explicitly discard any dbname value in the
+		 * connection string; otherwise, PQconnectdbParams() would interpret
+		 * that value as being itself a connection string.
 		 */
 		if (connection_string)
 		{
@@ -2187,7 +2255,8 @@ connectDatabase(const char *dbname, const char *connection_string,
 
 			for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++)
 			{
-				if (conn_opt->val != NULL && conn_opt->val[0] != '\0')
+				if (conn_opt->val != NULL && conn_opt->val[0] != '\0' &&
+					strcmp(conn_opt->keyword, "dbname") != 0)
 					argcount++;
 			}
 
@@ -2196,7 +2265,8 @@ connectDatabase(const char *dbname, const char *connection_string,
 
 			for (conn_opt = conn_opts; conn_opt->keyword != NULL; conn_opt++)
 			{
-				if (conn_opt->val != NULL && conn_opt->val[0] != '\0')
+				if (conn_opt->val != NULL && conn_opt->val[0] != '\0' &&
+					strcmp(conn_opt->keyword, "dbname") != 0)
 				{
 					keywords[i] = conn_opt->keyword;
 					values[i] = conn_opt->val;
@@ -2272,7 +2342,7 @@ connectDatabase(const char *dbname, const char *connection_string,
 		if (fail_on_error)
 		{
 			fprintf(stderr,
-					_("%s: could not connect to database \"%s\": %s\n"),
+					_("%s: could not connect to database \"%s\": %s"),
 					progname, dbname, PQerrorMessage(conn));
 			exit_nicely(1);
 		}
@@ -2333,7 +2403,7 @@ connectDatabase(const char *dbname, const char *connection_string,
 	 * On 7.3 and later, make sure we are not fooled by non-system schemas in
 	 * the search path.
 	 */
-	executeCommand(conn, "SET search_path = pg_catalog");
+	PQclear(executeQuery(conn, ALWAYS_SECURE_SEARCH_PATH_SQL));
 
 	return conn;
 }
@@ -2368,7 +2438,7 @@ constructConnStr(const char **keywords, const char **values)
 			appendPQExpBufferChar(buf, ' ');
 		firstkeyword = false;
 		appendPQExpBuffer(buf, "%s=", keywords[i]);
-		doConnStrQuoting(buf, values[i]);
+		appendConnStrVal(buf, values[i]);
 	}
 
 	connstr = pg_strdup(buf->data);
@@ -2453,85 +2523,6 @@ dumpTimestamp(char *msg)
 				 localtime(&now)) != 0)
 		fprintf(OPF, "-- %s %s\n\n", msg, buf);
 }
-
-
-/*
- * Append the given string to the buffer, with suitable quoting for passing
- * the string as a value, in a keyword/pair value in a libpq connection
- * string
- */
-static void
-doConnStrQuoting(PQExpBuffer buf, const char *str)
-{
-	const char *s;
-	bool		needquotes;
-
-	/*
-	 * If the string consists entirely of plain ASCII characters, no need to
-	 * quote it. This is quite conservative, but better safe than sorry.
-	 */
-	needquotes = false;
-	for (s = str; *s; s++)
-	{
-		if (!((*s >= 'a' && *s <= 'z') || (*s >= 'A' && *s <= 'Z') ||
-			  (*s >= '0' && *s <= '9') || *s == '_' || *s == '.'))
-		{
-			needquotes = true;
-			break;
-		}
-	}
-
-	if (needquotes)
-	{
-		appendPQExpBufferChar(buf, '\'');
-		while (*str)
-		{
-			/* ' and \ must be escaped by to \' and \\ */
-			if (*str == '\'' || *str == '\\')
-				appendPQExpBufferChar(buf, '\\');
-
-			appendPQExpBufferChar(buf, *str);
-			str++;
-		}
-		appendPQExpBufferChar(buf, '\'');
-	}
-	else
-		appendPQExpBufferStr(buf, str);
-}
-
-/*
- * Append the given string to the shell command being built in the buffer,
- * with suitable shell-style quoting.
- */
-static void
-doShellQuoting(PQExpBuffer buf, const char *str)
-{
-	const char *p;
-
-#ifndef WIN32
-	appendPQExpBufferChar(buf, '\'');
-	for (p = str; *p; p++)
-	{
-		if (*p == '\'')
-			appendPQExpBufferStr(buf, "'\"'\"'");
-		else
-			appendPQExpBufferChar(buf, *p);
-	}
-	appendPQExpBufferChar(buf, '\'');
-#else							/* WIN32 */
-
-	appendPQExpBufferChar(buf, '"');
-	for (p = str; *p; p++)
-	{
-		if (*p == '"')
-			appendPQExpBufferStr(buf, "\\\"");
-		else
-			appendPQExpBufferChar(buf, *p);
-	}
-	appendPQExpBufferChar(buf, '"');
-#endif   /* WIN32 */
-}
-
 
 /*
  * This GPDB-specific function is copied (in spirit) from pg_dump.c.

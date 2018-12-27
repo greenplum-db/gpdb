@@ -59,13 +59,14 @@ CATALOG(pg_statistic,2619) BKI_WITHOUT_OIDS
 	 *		> 0		actual number of distinct values
 	 *		< 0		negative of multiplier for number of rows
 	 * The special negative case allows us to cope with columns that are
-	 * unique (stadistinct = -1) or nearly so (for example, a column in
-	 * which values appear about twice on the average could be represented
-	 * by stadistinct = -0.5).  Because the number-of-rows statistic in
-	 * pg_class may be updated more frequently than pg_statistic is, it's
-	 * important to be able to describe such situations as a multiple of
-	 * the number of rows, rather than a fixed number of distinct values.
-	 * But in other cases a fixed number is correct (eg, a boolean column).
+	 * unique (stadistinct = -1) or nearly so (for example, a column in which
+	 * non-null values appear about twice on the average could be represented
+	 * by stadistinct = -0.5 if there are no nulls, or -0.4 if 20% of the
+	 * column is nulls).  Because the number-of-rows statistic in pg_class may
+	 * be updated more frequently than pg_statistic is, it's important to be
+	 * able to describe such situations as a multiple of the number of rows,
+	 * rather than a fixed number of distinct values.  But in other cases a
+	 * fixed number is correct (eg, a boolean column).
 	 * ----------------
 	 */
 	float4		stadistinct;
@@ -283,7 +284,7 @@ typedef FormData_pg_statistic *Form_pg_statistic;
  * fraction of empty ranges. stavalues is a histogram of non-empty lengths, in
  * a format similar to STATISTIC_KIND_HISTOGRAM: it contains M (>=2) range
  * values that divide the column data values into M-1 bins of approximately
- * equal population. The lengths are stores as float8s, as measured by the
+ * equal population. The lengths are stored as float8s, as measured by the
  * range type's subdiff function. Only non-null rows are considered.
  */
 #define STATISTIC_KIND_RANGE_LENGTH_HISTOGRAM  6

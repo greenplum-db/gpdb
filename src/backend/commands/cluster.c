@@ -960,6 +960,12 @@ copy_heap_data(Oid OIDNewHeap, Oid OIDOldHeap, Oid OIDOldIndex, bool verbose,
 	if (TransactionIdPrecedes(FreezeXid, OldHeap->rd_rel->relfrozenxid))
 		FreezeXid = OldHeap->rd_rel->relfrozenxid;
 
+	/*
+	 * MultiXactCutoff, similarly, shouldn't go backwards either.
+	 */
+	if (MultiXactIdPrecedes(MultiXactCutoff, OldHeap->rd_rel->relminmxid))
+		MultiXactCutoff = OldHeap->rd_rel->relminmxid;
+
 	/* return selected values to caller */
 	*pFreezeXid = FreezeXid;
 	*pCutoffMulti = MultiXactCutoff;
@@ -1672,7 +1678,7 @@ finish_heap_swap(Oid OIDOldHeap, Oid OIDNewHeap,
 	 * swap_relation_files()), thus relfrozenxid was not updated. That's
 	 * annoying because a potential reason for doing a VACUUM FULL is a
 	 * imminent or actual anti-wraparound shutdown.  So, now that we can
-	 * access the new relation using it's indices, update relfrozenxid.
+	 * access the new relation using its indices, update relfrozenxid.
 	 * pg_class doesn't have a toast relation, so we don't need to update the
 	 * corresponding toast relation. Not that there's little point moving all
 	 * relfrozenxid updates here since swap_relation_files() needs to write to

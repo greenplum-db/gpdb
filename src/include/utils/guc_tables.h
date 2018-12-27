@@ -200,14 +200,6 @@ struct config_generic
 	int			sourceline;		/* line in source file */
 };
 
-/* bit values in flags field are defined in guc.h */
-
-#define GUC_NOT_WHILE_SEC_REST	0x8000	/* can't set if security restricted */
-
-#define GUC_GPDB_ADDOPT        0x10000  /* Send by cdbgang */
-
-#define GUC_DISALLOW_USER_SET  0x20000 /* Do not allow this GUC to be set by the user */
-
 /* bit values in status field */
 #define GUC_IS_IN_FILE		0x0001		/* found it in config file */
 /*

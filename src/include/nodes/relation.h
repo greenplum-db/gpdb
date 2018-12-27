@@ -442,8 +442,9 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *			   clauses have been applied (ie, output rows of a plan for it)
  *		width - avg. number of bytes per tuple in the relation after the
  *				appropriate projections have been done (ie, output width)
- *		consider_startup - true if there is any value in keeping paths for
+ *		consider_startup - true if there is any value in keeping plain paths for
  *						   this rel on the basis of having cheap startup cost
+ *		consider_param_startup - the same for parameterized paths
  *		reltargetlist - List of Var and PlaceHolderVar nodes for the values
  *						we need to output from this relation.
  *						List is in no particular order, but all rels of an
@@ -479,8 +480,10 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *		lateral_vars - lateral cross-references of rel, if any (list of
  *					   Vars and PlaceHolderVars)
  *		lateral_relids - required outer rels for LATERAL, as a Relids set
- *						 (for child rels this can be more than lateral_vars)
+ *			(includes both direct and indirect lateral references)
+ *			(this is now used for join rels too, but we won't move it till 9.5)
  *		lateral_referencers - relids of rels that reference this one laterally
+ *				(includes both direct and indirect lateral references)
  *		indexlist - list of IndexOptInfo nodes for relation's indexes
  *					(always NIL if it's not a table)
  *		pages - number of disk pages in relation (zero if not a table)
@@ -498,7 +501,7 @@ static inline void planner_subplan_put_plan(struct PlannerInfo *root, SubPlan *s
  *		and fdw_private are filled during initial path creation.
  *
  *		For otherrels that are appendrel members, these fields are filled
- *		in just as for a baserel.
+ *		in just as for a baserel, except we don't bother with lateral_vars.
  *
  * The presence of the remaining fields depends on the restrictions
  * and joins that the relation participates in:
@@ -555,6 +558,7 @@ typedef struct RelOptInfo
 
 	/* per-relation planner control flags */
 	bool		consider_startup;		/* keep cheap-startup-cost paths? */
+	bool		consider_param_startup; /* ditto, for parameterized paths? */
 
 	/* materialization information */
 	List	   *reltargetlist;	/* Vars to be output by scan of relation */
@@ -1407,7 +1411,8 @@ typedef struct HashPath
  * if we decide that it can be pushed down into the nullable side of the join.
  * In that case it acts as a plain filter qual for wherever it gets evaluated.
  * (In short, is_pushed_down is only false for non-degenerate outer join
- * conditions.  Possibly we should rename it to reflect that meaning?)
+ * conditions.  Possibly we should rename it to reflect that meaning?  But
+ * see also the comments for RINFO_IS_PUSHED_DOWN, below.)
  *
  * RestrictInfo nodes also contain an outerjoin_delayed flag, which is true
  * if the clause's applicability must be delayed due to any outer joins
@@ -1533,6 +1538,20 @@ typedef struct RestrictInfo
 	Selectivity left_bucketsize;	/* avg bucketsize of left side */
 	Selectivity right_bucketsize;		/* avg bucketsize of right side */
 } RestrictInfo;
+
+/*
+ * This macro embodies the correct way to test whether a RestrictInfo is
+ * "pushed down" to a given outer join, that is, should be treated as a filter
+ * clause rather than a join clause at that outer join.  This is certainly so
+ * if is_pushed_down is true; but examining that is not sufficient anymore,
+ * because outer-join clauses will get pushed down to lower outer joins when
+ * we generate a path for the lower outer join that is parameterized by the
+ * LHS of the upper one.  We can detect such a clause by noting that its
+ * required_relids exceed the scope of the join.
+ */
+#define RINFO_IS_PUSHED_DOWN(rinfo, joinrelids) \
+	((rinfo)->is_pushed_down || \
+	 !bms_is_subset((rinfo)->required_relids, joinrelids))
 
 /*
  * Since mergejoinscansel() is a relatively expensive function, and would
@@ -2014,12 +2033,10 @@ typedef struct JoinCostWorkspace
 	Cost		run_cost;		/* non-startup cost components */
 
 	/* private for cost_nestloop code */
+	Cost		inner_run_cost; /* also used by cost_mergejoin code */
 	Cost		inner_rescan_run_cost;
-	double		outer_matched_rows;
-	Selectivity inner_scan_frac;
 
 	/* private for cost_mergejoin code */
-	Cost		inner_run_cost;
 	double		outer_rows;
 	double		inner_rows;
 	double		outer_skip_rows;

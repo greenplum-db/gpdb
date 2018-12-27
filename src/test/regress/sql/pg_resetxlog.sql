@@ -1,6 +1,7 @@
 -- setup
 \! mkdir -p /tmp/test_pg_resetxlog/global /tmp/test_pg_resetxlog/pg_xlog
 \! touch /tmp/test_pg_resetxlog/global/pg_control
+\! echo "9.4" > /tmp/test_pg_resetxlog/PG_VERSION
 
 -- negative test:
 -- missing argument

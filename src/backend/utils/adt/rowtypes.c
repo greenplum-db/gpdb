@@ -21,6 +21,7 @@
 #include "catalog/pg_type.h"
 #include "funcapi.h"
 #include "libpq/pqformat.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/typcache.h"
@@ -73,12 +74,8 @@ record_in(PG_FUNCTION_ARGS)
 {
 	char	   *string = PG_GETARG_CSTRING(0);
 	Oid			tupType = PG_GETARG_OID(1);
-
-#ifdef NOT_USED
-	int32		typmod = PG_GETARG_INT32(2);
-#endif
+	int32		tupTypmod = PG_GETARG_INT32(2);
 	HeapTupleHeader result;
-	int32		tupTypmod;
 	TupleDesc	tupdesc;
 	HeapTuple	tuple;
 	RecordIOData *my_extra;
@@ -90,17 +87,20 @@ record_in(PG_FUNCTION_ARGS)
 	bool	   *nulls;
 	StringInfoData buf;
 
+	check_stack_depth();		/* recurses for record-type columns */
+
 	/*
-	 * Use the passed type unless it's RECORD; we can't support input of
-	 * anonymous types, mainly because there's no good way to figure out which
-	 * anonymous type is wanted.  Note that for RECORD, what we'll probably
-	 * actually get is RECORD's typelem, ie, zero.
+	 * Give a friendly error message if we did not get enough info to identify
+	 * the target record type.  (lookup_rowtype_tupdesc would fail anyway, but
+	 * with a non-user-friendly message.)  In ordinary SQL usage, we'll get -1
+	 * for typmod, since composite types and RECORD have no type modifiers at
+	 * the SQL level, and thus must fail for RECORD.  However some callers can
+	 * supply a valid typmod, and then we can do something useful for RECORD.
 	 */
-	if (tupType == InvalidOid || tupType == RECORDOID)
+	if (tupType == RECORDOID && tupTypmod < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 		   errmsg("input of anonymous composite types is not implemented")));
-	tupTypmod = -1;				/* for all non-anonymous types */
 
 	/*
 	 * This comes from the composite type's pg_type.oid and stores system oids
@@ -330,6 +330,8 @@ record_out(PG_FUNCTION_ARGS)
 	bool	   *nulls;
 	StringInfoData buf;
 
+	check_stack_depth();		/* recurses for record-type columns */
+
 	/* Extract type info from the tuple itself */
 	tupType = HeapTupleHeaderGetTypeId(rec);
 	tupTypmod = HeapTupleHeaderGetTypMod(rec);
@@ -466,12 +468,8 @@ record_recv(PG_FUNCTION_ARGS)
 {
 	StringInfo	buf = (StringInfo) PG_GETARG_POINTER(0);
 	Oid			tupType = PG_GETARG_OID(1);
-
-#ifdef NOT_USED
-	int32		typmod = PG_GETARG_INT32(2);
-#endif
+	int32		tupTypmod = PG_GETARG_INT32(2);
 	HeapTupleHeader result;
-	int32		tupTypmod;
 	TupleDesc	tupdesc;
 	HeapTuple	tuple;
 	RecordIOData *my_extra;
@@ -482,17 +480,21 @@ record_recv(PG_FUNCTION_ARGS)
 	Datum	   *values;
 	bool	   *nulls;
 
+	check_stack_depth();		/* recurses for record-type columns */
+
 	/*
-	 * Use the passed type unless it's RECORD; we can't support input of
-	 * anonymous types, mainly because there's no good way to figure out which
-	 * anonymous type is wanted.  Note that for RECORD, what we'll probably
-	 * actually get is RECORD's typelem, ie, zero.
+	 * Give a friendly error message if we did not get enough info to identify
+	 * the target record type.  (lookup_rowtype_tupdesc would fail anyway, but
+	 * with a non-user-friendly message.)  In ordinary SQL usage, we'll get -1
+	 * for typmod, since composite types and RECORD have no type modifiers at
+	 * the SQL level, and thus must fail for RECORD.  However some callers can
+	 * supply a valid typmod, and then we can do something useful for RECORD.
 	 */
-	if (tupType == InvalidOid || tupType == RECORDOID)
+	if (tupType == RECORDOID && tupTypmod < 0)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 		   errmsg("input of anonymous composite types is not implemented")));
-	tupTypmod = -1;				/* for all non-anonymous types */
+
 	tupdesc = lookup_rowtype_tupdesc(tupType, tupTypmod);
 	ncolumns = tupdesc->natts;
 
@@ -672,6 +674,8 @@ record_send(PG_FUNCTION_ARGS)
 	bool	   *nulls;
 	StringInfoData buf;
 
+	check_stack_depth();		/* recurses for record-type columns */
+
 	/* Extract type info from the tuple itself */
 	tupType = HeapTupleHeaderGetTypeId(rec);
 	tupTypmod = HeapTupleHeaderGetTypMod(rec);
@@ -813,6 +817,8 @@ record_cmp(FunctionCallInfo fcinfo)
 	int			i1;
 	int			i2;
 	int			j;
+
+	check_stack_depth();		/* recurses for record-type columns */
 
 	/* Extract type info from the tuples */
 	tupType1 = HeapTupleHeaderGetTypeId(record1);
@@ -1047,6 +1053,8 @@ record_eq(PG_FUNCTION_ARGS)
 	int			i1;
 	int			i2;
 	int			j;
+
+	check_stack_depth();		/* recurses for record-type columns */
 
 	/* Extract type info from the tuples */
 	tupType1 = HeapTupleHeaderGetTypeId(record1);

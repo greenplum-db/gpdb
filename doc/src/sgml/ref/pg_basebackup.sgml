@@ -88,7 +88,7 @@ PostgreSQL documentation
       There is no guarantee that all WAL files required for the backup are archived
       at the end of backup. If you are planning to use the backup for an archive
       recovery and want to ensure that all required files are available at that moment,
-      you need to include them into the backup by using <literal>-x</> option.
+      you need to include them into the backup by using the <literal>-x</> option.
      </para>
     </listitem>
     <listitem>
@@ -254,7 +254,7 @@ PostgreSQL documentation
       <term><option>--xlogdir=<replaceable class="parameter">xlogdir</replaceable></option></term>
       <listitem>
        <para>
-        Specifies the location for the transaction log directory. 
+        Specifies the location for the transaction log directory.
         <replaceable>xlogdir</replaceable> must be an absolute path.
         The transaction log directory can only be specified when
         the backup is in plain mode.
@@ -343,7 +343,7 @@ PostgreSQL documentation
       <listitem>
        <para>
         Enables gzip compression of tar file output, and specifies the
-        compression level (1 through 9, 9 being best
+        compression level (0 through 9, 0 being no compression and 9 being best
         compression). Compression is only available when using the tar
         format.
        </para>
@@ -361,7 +361,7 @@ PostgreSQL documentation
       <term><option>--checkpoint=<replaceable class="parameter">fast|spread</replaceable></option></term>
       <listitem>
        <para>
-        Sets checkpoint mode to fast or spread (default) (see <xref linkend="backup-lowlevel-base-backup">).
+        Sets checkpoint mode to fast (immediate) or spread (default) (see <xref linkend="backup-lowlevel-base-backup">).
        </para>
       </listitem>
      </varlistentry>
@@ -567,6 +567,14 @@ PostgreSQL documentation
 
  <refsect1>
   <title>Notes</title>
+
+  <para>
+   At the beginning of the backup, a checkpoint needs to be written on the
+   server the backup is taken from.  Especially if the option
+   <literal>--checkpoint=fast</literal> is not used, this can take some time
+   during which <application>pg_basebackup</application> will be appear
+   to be idle.
+  </para>
 
   <para>
    The backup will include all files in the data directory and tablespaces,

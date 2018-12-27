@@ -877,7 +877,7 @@ heap_modify_tuple(HeapTuple tuple,
 	 * repl information, as appropriate.
 	 *
 	 * NOTE: it's debatable whether to use heap_deform_tuple() here or just
-	 * heap_getattr() only the non-replaced colums.  The latter could win if
+	 * heap_getattr() only the non-replaced columns.  The latter could win if
 	 * there are many replaced columns and few non-replaced ones. However,
 	 * heap_deform_tuple costs only O(N) while the heap_getattr way would cost
 	 * O(N^2) if there are many non-replaced columns, so it seems better to
@@ -1259,6 +1259,34 @@ _slot_getsomeattrs(TupleTableSlot *slot, int attnum)
 	slot->PRIVATE_tts_nvalid = attnum;
 	TupSetVirtualTuple(slot);
 }
+
+#if 0
+/*
+ * slot_getsysattr
+ *		This function fetches a system attribute of the slot's current tuple.
+ *		Unlike slot_getattr, if the slot does not contain system attributes,
+ *		this will return false (with a NULL attribute value) instead of
+ *		throwing an error.
+ */
+bool
+slot_getsysattr(TupleTableSlot *slot, int attnum,
+				Datum *value, bool *isnull)
+{
+	HeapTuple	tuple = slot->tts_tuple;
+
+	Assert(attnum < 0);			/* else caller error */
+	if (tuple == NULL ||
+		tuple == &(slot->tts_minhdr))
+	{
+		/* No physical tuple, or minimal tuple, so fail */
+		*value = (Datum) 0;
+		*isnull = true;
+		return false;
+	}
+	*value = heap_getsysattr(tuple, attnum, slot->tts_tupleDescriptor, isnull);
+	return true;
+}
+#endif
 
 /*
  * heap_freetuple

@@ -199,6 +199,7 @@ WalReceiverMain(void)
 	/* use volatile pointer to prevent code rearrangement */
 	volatile WalRcvData *walrcv = WalRcv;
 	TimestampTz last_recv_timestamp;
+	TimestampTz now;
 	bool		ping_sent;
 	sigjmp_buf	local_sigjmp_buf;
 
@@ -207,6 +208,8 @@ WalReceiverMain(void)
 	 * by fork() or EXEC_BACKEND mechanism from the postmaster).
 	 */
 	Assert(walrcv != NULL);
+
+	now = GetCurrentTimestamp();
 
 	/*
 	 * Mark walreceiver as running in shared memory.
@@ -238,6 +241,7 @@ WalReceiverMain(void)
 		case WALRCV_RESTARTING:
 		default:
 			/* Shouldn't happen */
+			SpinLockRelease(&walrcv->mutex);
 			elog(PANIC, "walreceiver still running according to shared memory state");
 	}
 	/* Advertise our PID so that the startup process can kill us */
@@ -255,7 +259,8 @@ WalReceiverMain(void)
 	startpointTLI = walrcv->receiveStartTLI;
 
 	/* Initialise to a sanish value */
-	walrcv->lastMsgSendTime = walrcv->lastMsgReceiptTime = walrcv->latestWalEndTime = GetCurrentTimestamp();
+	walrcv->lastMsgSendTime =
+		walrcv->lastMsgReceiptTime = walrcv->latestWalEndTime = now;
 
 	SpinLockRelease(&walrcv->mutex);
 
@@ -809,27 +814,21 @@ WalRcvShutdownHandler(SIGNAL_ARGS)
 static void
 WalRcvQuickDieHandler(SIGNAL_ARGS)
 {
-	PG_SETMASK(&BlockSig);
-
 	/*
-	 * We DO NOT want to run proc_exit() callbacks -- we're here because
-	 * shared memory may be corrupted, so we don't want to try to clean up our
-	 * transaction.  Just nail the windows shut and get out of town.  Now that
-	 * there's an atexit callback to prevent third-party code from breaking
-	 * things by calling exit() directly, we have to reset the callbacks
-	 * explicitly to make this work as intended.
+	 * We DO NOT want to run proc_exit() or atexit() callbacks -- we're here
+	 * because shared memory may be corrupted, so we don't want to try to
+	 * clean up our transaction.  Just nail the windows shut and get out of
+	 * town.  The callbacks wouldn't be safe to run from a signal handler,
+	 * anyway.
+	 *
+	 * Note we use _exit(2) not _exit(0).  This is to force the postmaster
+	 * into a system reset cycle if someone sends a manual SIGQUIT to a
+	 * random backend.  This is necessary precisely because we don't clean up
+	 * our shared memory state.  (The "dead man switch" mechanism in
+	 * pmsignal.c should ensure the postmaster sees this as a crash, too, but
+	 * no harm in being doubly sure.)
 	 */
-	on_exit_reset();
-
-	/*
-	 * Note we do exit(2) not exit(0).  This is to force the postmaster into a
-	 * system reset cycle if some idiot DBA sends a manual SIGQUIT to a random
-	 * backend.  This is necessary precisely because we don't clean up our
-	 * shared memory state.  (The "dead man switch" mechanism in pmsignal.c
-	 * should ensure the postmaster sees this as a crash, too, but no harm in
-	 * being doubly sure.)
-	 */
-	exit(2);
+	_exit(2);
 }
 
 static void
@@ -1150,7 +1149,10 @@ XLogWalRcvSendReply(bool force, bool requestReply)
  * in case they don't have a watch.
  *
  * If the user disables feedback, send one final message to tell sender
- * to forget about the xmin on this standby.
+ * to forget about the xmin on this standby. We also send this message
+ * on first connect because a previous connection might have set xmin
+ * on a replication slot. (If we're not using a slot it's harmless to
+ * send a feedback message explicitly setting InvalidTransactionId).
  */
 static void
 XLogWalRcvSendHSFeedback(bool immed)
@@ -1160,7 +1162,8 @@ XLogWalRcvSendHSFeedback(bool immed)
 	uint32		nextEpoch;
 	TransactionId xmin;
 	static TimestampTz sendTime = 0;
-	static bool master_has_standby_xmin = false;
+	/* initially true so we always send at least one feedback message */
+	static bool master_has_standby_xmin = true;
 
 	/*
 	 * If the user doesn't want status to be reported to the master, be sure
@@ -1185,14 +1188,17 @@ XLogWalRcvSendHSFeedback(bool immed)
 	}
 
 	/*
-	 * If Hot Standby is not yet active there is nothing to send. Check this
-	 * after the interval has expired to reduce number of calls.
+	 * If Hot Standby is not yet accepting connections there is nothing to
+	 * send. Check this after the interval has expired to reduce number of
+	 * calls.
+	 *
+	 * Bailing out here also ensures that we don't send feedback until we've
+	 * read our own replication slot state, so we don't tell the master to
+	 * discard needed xmin or catalog_xmin from any slots that may exist
+	 * on this replica.
 	 */
 	if (!HotStandbyActive())
-	{
-		Assert(!master_has_standby_xmin);
 		return;
-	}
 
 	/*
 	 * Make the expensive call to get the oldest xmin once we are certain
@@ -1278,15 +1284,26 @@ ProcessWalSndrMessage(XLogRecPtr walEnd, TimestampTz sendTime)
 	{
 		char	   *sendtime;
 		char	   *receipttime;
+		int			applyDelay;
 
 		/* Copy because timestamptz_to_str returns a static buffer */
 		sendtime = pstrdup(timestamptz_to_str(sendTime));
 		receipttime = pstrdup(timestamptz_to_str(lastMsgReceiptTime));
-		elog(DEBUG2, "sendtime %s receipttime %s replication apply delay %d ms transfer latency %d ms",
-			 sendtime,
-			 receipttime,
-			 GetReplicationApplyDelay(),
-			 GetReplicationTransferLatency());
+		applyDelay = GetReplicationApplyDelay();
+
+		/* apply delay is not available */
+		if (applyDelay == -1)
+			elog(DEBUG2, "sendtime %s receipttime %s replication apply delay (N/A) transfer latency %d ms",
+				 sendtime,
+				 receipttime,
+				 GetReplicationTransferLatency());
+		else
+			elog(DEBUG2, "sendtime %s receipttime %s replication apply delay %d ms transfer latency %d ms",
+				 sendtime,
+				 receipttime,
+				 applyDelay,
+				 GetReplicationTransferLatency());
+
 		pfree(sendtime);
 		pfree(receipttime);
 	}

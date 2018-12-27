@@ -317,7 +317,7 @@ compare_dumps() {
     scp "$DIRNAME/dumpsort.gawk" ${MASTER_HOST}:~
 
     ssh -n ${MASTER_HOST} "
-        diff -U3 --speed-large-files --ignore-space-change \
+        diff -w -U3 --speed-large-files --ignore-space-change \
             <(gawk -f ~/dumpsort.gawk < '$old_dump') \
             <(gawk -f ~/dumpsort.gawk < '$new_dump')
     "

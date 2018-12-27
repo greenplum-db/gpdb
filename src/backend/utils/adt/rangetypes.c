@@ -33,6 +33,7 @@
 #include "access/hash.h"
 #include "lib/stringinfo.h"
 #include "libpq/pqformat.h"
+#include "miscadmin.h"
 #include "utils/builtins.h"
 #include "utils/date.h"
 #include "utils/int8.h"
@@ -89,6 +90,8 @@ range_in(PG_FUNCTION_ARGS)
 	RangeBound	lower;
 	RangeBound	upper;
 
+	check_stack_depth();		/* recurses when subtype is a range type */
+
 	cache = get_range_io_data(fcinfo, rngtypoid, IOFunc_input);
 
 	/* parse */
@@ -128,6 +131,8 @@ range_out(PG_FUNCTION_ARGS)
 	RangeBound	upper;
 	bool		empty;
 
+	check_stack_depth();		/* recurses when subtype is a range type */
+
 	cache = get_range_io_data(fcinfo, RangeTypeGetOid(range), IOFunc_output);
 
 	/* deserialize */
@@ -164,6 +169,8 @@ range_recv(PG_FUNCTION_ARGS)
 	char		flags;
 	RangeBound	lower;
 	RangeBound	upper;
+
+	check_stack_depth();		/* recurses when subtype is a range type */
 
 	cache = get_range_io_data(fcinfo, rngtypoid, IOFunc_receive);
 
@@ -244,6 +251,8 @@ range_send(PG_FUNCTION_ARGS)
 	RangeBound	lower;
 	RangeBound	upper;
 	bool		empty;
+
+	check_stack_depth();		/* recurses when subtype is a range type */
 
 	cache = get_range_io_data(fcinfo, RangeTypeGetOid(range), IOFunc_send);
 
@@ -917,12 +926,12 @@ range_overright_internal(TypeCacheEntry *typcache, RangeType *r1, RangeType *r2)
 
 	/* An empty range is neither before nor after any other range */
 	if (empty1 || empty2)
-		PG_RETURN_BOOL(false);
+		return false;
 
 	if (range_cmp_bounds(typcache, &lower1, &lower2) >= 0)
-		PG_RETURN_BOOL(true);
+		return true;
 
-	PG_RETURN_BOOL(false);
+	return false;
 }
 
 /* does not extend to left of? */
@@ -1114,6 +1123,8 @@ range_cmp(PG_FUNCTION_ARGS)
 				empty2;
 	int			cmp;
 
+	check_stack_depth();		/* recurses when subtype is a range type */
+
 	/* Different types should be prevented by ANYRANGE matching rules */
 	if (RangeTypeGetOid(r1) != RangeTypeGetOid(r2))
 		elog(ERROR, "range types do not match");
@@ -1192,6 +1203,8 @@ hash_range(PG_FUNCTION_ARGS)
 	char		flags;
 	uint32		lower_hash;
 	uint32		upper_hash;
+
+	check_stack_depth();		/* recurses when subtype is a range type */
 
 	typcache = range_get_typcache(fcinfo, RangeTypeGetOid(r));
 

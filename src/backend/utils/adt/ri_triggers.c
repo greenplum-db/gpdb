@@ -40,9 +40,12 @@
 #include "commands/trigger.h"
 #include "executor/executor.h"
 #include "executor/spi.h"
+#include "lib/ilist.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_relation.h"
 #include "miscadmin.h"
+#include "storage/bufmgr.h"
+#include "utils/acl.h"
 #include "utils/builtins.h"
 #include "utils/fmgroids.h"
 #include "utils/guc.h"
@@ -123,6 +126,7 @@ typedef struct RI_ConstraintInfo
 												 * PK) */
 	Oid			ff_eq_oprs[RI_MAX_NUMKEYS];		/* equality operators (FK =
 												 * FK) */
+	dlist_node	valid_link;		/* Link in list of valid entries */
 } RI_ConstraintInfo;
 
 
@@ -183,6 +187,8 @@ typedef struct RI_CompareHashEntry
 static HTAB *ri_constraint_cache = NULL;
 static HTAB *ri_query_cache = NULL;
 static HTAB *ri_compare_cache = NULL;
+static dlist_head ri_constraint_cache_valid_list;
+static int	ri_constraint_cache_valid_count = 0;
 
 
 /* ----------
@@ -201,7 +207,6 @@ static void ri_GenerateQual(StringInfo buf,
 				const char *leftop, Oid leftoptype,
 				Oid opoid,
 				const char *rightop, Oid rightoptype);
-static void ri_add_cast_to(StringInfo buf, Oid typid);
 static void ri_GenerateQualCollation(StringInfo buf, Oid collation);
 static int ri_NullCheck(HeapTuple tup,
 			 const RI_ConstraintInfo *riinfo, bool rel_is_pk);
@@ -280,20 +285,17 @@ RI_FKey_check(TriggerData *trigdata)
 	 * We should not even consider checking the row if it is no longer valid,
 	 * since it was either deleted (so the deferred check should be skipped)
 	 * or updated (in which case only the latest version of the row should be
-	 * checked).  Test its liveness according to SnapshotSelf.
-	 *
-	 * NOTE: The normal coding rule is that one must acquire the buffer
-	 * content lock to call HeapTupleSatisfiesVisibility.  We can skip that
-	 * here because we know that AfterTriggerExecute just fetched the tuple
-	 * successfully, so there cannot be a VACUUM compaction in progress on the
-	 * page (either heap_fetch would have waited for the VACUUM, or the
-	 * VACUUM's LockBufferForCleanup would be waiting for us to drop pin). And
-	 * since this is a row inserted by our open transaction, no one else can
-	 * be entitled to change its xmin/xmax.
+	 * checked).  Test its liveness according to SnapshotSelf.  We need pin
+	 * and lock on the buffer to call HeapTupleSatisfiesVisibility.  Caller
+	 * should be holding pin, but not lock.
 	 */
-	Assert(new_row_buf != InvalidBuffer);
-	if (!HeapTupleSatisfiesVisibility( /* relation = ??? */ NULL, new_row, SnapshotSelf, new_row_buf))
+	LockBuffer(new_row_buf, BUFFER_LOCK_SHARE);
+	if (!HeapTupleSatisfiesVisibility(NULL, new_row, SnapshotSelf, new_row_buf))
+	{
+		LockBuffer(new_row_buf, BUFFER_LOCK_UNLOCK);
 		return PointerGetDatum(NULL);
+	}
+	LockBuffer(new_row_buf, BUFFER_LOCK_UNLOCK);
 
 	/*
 	 * Get the relation descriptors of the FK and PK tables.
@@ -2544,13 +2546,10 @@ quoteRelationName(char *buffer, Relation rel)
 /*
  * ri_GenerateQual --- generate a WHERE clause equating two variables
  *
- * The idea is to append " sep leftop op rightop" to buf.  The complexity
- * comes from needing to be sure that the parser will select the desired
- * operator.  We always name the operator using OPERATOR(schema.op) syntax
- * (readability isn't a big priority here), so as to avoid search-path
- * uncertainties.  We have to emit casts too, if either input isn't already
- * the input type of the operator; else we are at the mercy of the parser's
- * heuristics for ambiguous-operator resolution.
+ * This basically appends " sep leftop op rightop" to buf, adding casts
+ * and schema qualification as needed to ensure that the parser will select
+ * the operator we specify.  leftop and rightop should be parenthesized
+ * if they aren't variables or parameters.
  */
 static void
 ri_GenerateQual(StringInfo buf,
@@ -2559,60 +2558,9 @@ ri_GenerateQual(StringInfo buf,
 				Oid opoid,
 				const char *rightop, Oid rightoptype)
 {
-	HeapTuple	opertup;
-	Form_pg_operator operform;
-	char	   *oprname;
-	char	   *nspname;
-
-	opertup = SearchSysCache1(OPEROID, ObjectIdGetDatum(opoid));
-	if (!HeapTupleIsValid(opertup))
-		elog(ERROR, "cache lookup failed for operator %u", opoid);
-	operform = (Form_pg_operator) GETSTRUCT(opertup);
-	Assert(operform->oprkind == 'b');
-	oprname = NameStr(operform->oprname);
-
-	nspname = get_namespace_name(operform->oprnamespace);
-
-	appendStringInfo(buf, " %s %s", sep, leftop);
-	if (leftoptype != operform->oprleft)
-		ri_add_cast_to(buf, operform->oprleft);
-	appendStringInfo(buf, " OPERATOR(%s.", quote_identifier(nspname));
-	appendStringInfoString(buf, oprname);
-	appendStringInfo(buf, ") %s", rightop);
-	if (rightoptype != operform->oprright)
-		ri_add_cast_to(buf, operform->oprright);
-
-	ReleaseSysCache(opertup);
-}
-
-/*
- * Add a cast specification to buf.  We spell out the type name the hard way,
- * intentionally not using format_type_be().  This is to avoid corner cases
- * for CHARACTER, BIT, and perhaps other types, where specifying the type
- * using SQL-standard syntax results in undesirable data truncation.  By
- * doing it this way we can be certain that the cast will have default (-1)
- * target typmod.
- */
-static void
-ri_add_cast_to(StringInfo buf, Oid typid)
-{
-	HeapTuple	typetup;
-	Form_pg_type typform;
-	char	   *typname;
-	char	   *nspname;
-
-	typetup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(typid));
-	if (!HeapTupleIsValid(typetup))
-		elog(ERROR, "cache lookup failed for type %u", typid);
-	typform = (Form_pg_type) GETSTRUCT(typetup);
-
-	typname = NameStr(typform->typname);
-	nspname = get_namespace_name(typform->typnamespace);
-
-	appendStringInfo(buf, "::%s.%s",
-					 quote_identifier(nspname), quote_identifier(typname));
-
-	ReleaseSysCache(typetup);
+	appendStringInfo(buf, " %s ", sep);
+	generate_operator_clause(buf, leftop, leftoptype, opoid,
+							 rightop, rightoptype);
 }
 
 /*
@@ -2910,6 +2858,13 @@ ri_LoadConstraintInfo(Oid constraintOid)
 
 	ReleaseSysCache(tup);
 
+	/*
+	 * For efficient processing of invalidation messages below, we keep a
+	 * doubly-linked list, and a count, of all currently valid entries.
+	 */
+	dlist_push_tail(&ri_constraint_cache_valid_list, &riinfo->valid_link);
+	ri_constraint_cache_valid_count++;
+
 	riinfo->valid = true;
 
 	return riinfo;
@@ -2922,21 +2877,41 @@ ri_LoadConstraintInfo(Oid constraintOid)
  * gets enough update traffic that it's probably worth being smarter.
  * Invalidate any ri_constraint_cache entry associated with the syscache
  * entry with the specified hash value, or all entries if hashvalue == 0.
+ *
+ * Note: at the time a cache invalidation message is processed there may be
+ * active references to the cache.  Because of this we never remove entries
+ * from the cache, but only mark them invalid, which is harmless to active
+ * uses.  (Any query using an entry should hold a lock sufficient to keep that
+ * data from changing under it --- but we may get cache flushes anyway.)
  */
 static void
 InvalidateConstraintCacheCallBack(Datum arg, int cacheid, uint32 hashvalue)
 {
-	HASH_SEQ_STATUS status;
-	RI_ConstraintInfo *hentry;
+	dlist_mutable_iter iter;
 
 	Assert(ri_constraint_cache != NULL);
 
-	hash_seq_init(&status, ri_constraint_cache);
-	while ((hentry = (RI_ConstraintInfo *) hash_seq_search(&status)) != NULL)
+	/*
+	 * If the list of currently valid entries gets excessively large, we mark
+	 * them all invalid so we can empty the list.  This arrangement avoids
+	 * O(N^2) behavior in situations where a session touches many foreign keys
+	 * and also does many ALTER TABLEs, such as a restore from pg_dump.
+	 */
+	if (ri_constraint_cache_valid_count > 1000)
+		hashvalue = 0;			/* pretend it's a cache reset */
+
+	dlist_foreach_modify(iter, &ri_constraint_cache_valid_list)
 	{
-		if (hentry->valid &&
-			(hashvalue == 0 || hentry->oidHashValue == hashvalue))
-			hentry->valid = false;
+		RI_ConstraintInfo *riinfo = dlist_container(RI_ConstraintInfo,
+													valid_link, iter.cur);
+
+		if (hashvalue == 0 || riinfo->oidHashValue == hashvalue)
+		{
+			riinfo->valid = false;
+			/* Remove invalidated entries from the list, too */
+			dlist_delete(iter.cur);
+			ri_constraint_cache_valid_count--;
+		}
 	}
 }
 
@@ -3170,6 +3145,9 @@ ri_ReportViolation(const RI_ConstraintInfo *riinfo,
 	bool		onfk;
 	const int16 *attnums;
 	int			idx;
+	Oid			rel_oid;
+	AclResult	aclresult;
+	bool		has_perm = true;
 
 	if (spi_err)
 		ereport(ERROR,
@@ -3188,37 +3166,68 @@ ri_ReportViolation(const RI_ConstraintInfo *riinfo,
 	if (onfk)
 	{
 		attnums = riinfo->fk_attnums;
+		rel_oid = fk_rel->rd_id;
 		if (tupdesc == NULL)
 			tupdesc = fk_rel->rd_att;
 	}
 	else
 	{
 		attnums = riinfo->pk_attnums;
+		rel_oid = pk_rel->rd_id;
 		if (tupdesc == NULL)
 			tupdesc = pk_rel->rd_att;
 	}
 
-	/* Get printable versions of the keys involved */
-	initStringInfo(&key_names);
-	initStringInfo(&key_values);
-	for (idx = 0; idx < riinfo->nkeys; idx++)
+	/*
+	 * Check permissions- if the user does not have access to view the data in
+	 * any of the key columns then we don't include the errdetail() below.
+	 *
+	 * Check table-level permissions first and, failing that, column-level
+	 * privileges.
+	 */
+	aclresult = pg_class_aclcheck(rel_oid, GetUserId(), ACL_SELECT);
+	if (aclresult != ACLCHECK_OK)
 	{
-		int			fnum = attnums[idx];
-		char	   *name,
+		/* Try for column-level permissions */
+		for (idx = 0; idx < riinfo->nkeys; idx++)
+		{
+			aclresult = pg_attribute_aclcheck(rel_oid, attnums[idx],
+											  GetUserId(),
+											  ACL_SELECT);
+
+			/* No access to the key */
+			if (aclresult != ACLCHECK_OK)
+			{
+				has_perm = false;
+				break;
+			}
+		}
+	}
+
+	if (has_perm)
+	{
+		/* Get printable versions of the keys involved */
+		initStringInfo(&key_names);
+		initStringInfo(&key_values);
+		for (idx = 0; idx < riinfo->nkeys; idx++)
+		{
+			int			fnum = attnums[idx];
+			char	   *name,
 				   *val;
 
-		name = SPI_fname(tupdesc, fnum);
-		val = SPI_getvalue(violator, tupdesc, fnum);
-		if (!val)
-			val = "null";
+			name = SPI_fname(tupdesc, fnum);
+			val = SPI_getvalue(violator, tupdesc, fnum);
+			if (!val)
+				val = "null";
 
-		if (idx > 0)
-		{
-			appendStringInfoString(&key_names, ", ");
-			appendStringInfoString(&key_values, ", ");
+			if (idx > 0)
+			{
+				appendStringInfoString(&key_names, ", ");
+				appendStringInfoString(&key_values, ", ");
+			}
+			appendStringInfoString(&key_names, name);
+			appendStringInfoString(&key_values, val);
 		}
-		appendStringInfoString(&key_names, name);
-		appendStringInfoString(&key_values, val);
 	}
 
 	if (onfk)
@@ -3227,9 +3236,12 @@ ri_ReportViolation(const RI_ConstraintInfo *riinfo,
 				 errmsg("insert or update on table \"%s\" violates foreign key constraint \"%s\"",
 						RelationGetRelationName(fk_rel),
 						NameStr(riinfo->conname)),
-				 errdetail("Key (%s)=(%s) is not present in table \"%s\".",
-						   key_names.data, key_values.data,
-						   RelationGetRelationName(pk_rel)),
+				 has_perm ?
+					 errdetail("Key (%s)=(%s) is not present in table \"%s\".",
+							   key_names.data, key_values.data,
+							   RelationGetRelationName(pk_rel)) :
+					 errdetail("Key is not present in table \"%s\".",
+							   RelationGetRelationName(pk_rel)),
 				 errtableconstraint(fk_rel, NameStr(riinfo->conname))));
 	else
 		ereport(ERROR,
@@ -3238,8 +3250,11 @@ ri_ReportViolation(const RI_ConstraintInfo *riinfo,
 						RelationGetRelationName(pk_rel),
 						NameStr(riinfo->conname),
 						RelationGetRelationName(fk_rel)),
+				 has_perm ?
 			errdetail("Key (%s)=(%s) is still referenced from table \"%s\".",
 					  key_names.data, key_values.data,
+					  RelationGetRelationName(fk_rel)) :
+					errdetail("Key is still referenced from table \"%s\".",
 					  RelationGetRelationName(fk_rel)),
 				 errtableconstraint(fk_rel, NameStr(riinfo->conname))));
 }

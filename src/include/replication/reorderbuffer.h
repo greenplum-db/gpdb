@@ -26,11 +26,18 @@ typedef struct ReorderBufferTupleBuf
 	/* position in preallocated list */
 	slist_node	node;
 
-	/* tuple, stored sequentially */
+	/* tuple header, the interesting bit for users of logical decoding */
 	HeapTupleData tuple;
-	HeapTupleHeaderData header;
-	char		data[MaxHeapTupleSize];
+
+	/* pre-allocated size of tuple buffer, different from tuple size */
+	Size	alloc_tuple_size;
+
+	/* actual tuple data follows */
 } ReorderBufferTupleBuf;
+
+/* pointer to the data stored in a TupleBuf */
+#define ReorderBufferTupleBufData(p) \
+	((HeapTupleHeader) MAXALIGN(((char *) p) + sizeof(ReorderBufferTupleBuf)))
 
 /*
  * Types of the change passed to a 'change' callback.
@@ -65,8 +72,8 @@ typedef struct ReorderBufferChange
 	enum ReorderBufferChangeType action;
 
 	/*
-	 * Context data for the change, which part of the union is valid depends
-	 * on action/action_internal.
+	 * Context data for the change. Which part of the union is valid depends
+	 * on action.
 	 */
 	union
 	{
@@ -75,6 +82,10 @@ typedef struct ReorderBufferChange
 		{
 			/* relation that has been changed */
 			RelFileNode relnode;
+
+			/* no previously reassembled toast chunks are necessary anymore */
+			bool clear_toast_afterwards;
+
 			/* valid for DELETE || UPDATE */
 			ReorderBufferTupleBuf *oldtuple;
 			/* valid for INSERT || UPDATE */
@@ -121,10 +132,9 @@ typedef struct ReorderBufferTXN
 	/* did the TX have catalog changes */
 	bool		has_catalog_changes;
 
-	/*
-	 * Do we know this is a subxact?
-	 */
+	/* Do we know this is a subxact?  Xid of top-level txn if so */
 	bool		is_known_as_subxact;
+	TransactionId toplevel_xid;
 
 	/*
 	 * LSN of the first data carrying, WAL record with knowledge about this
@@ -142,6 +152,8 @@ typedef struct ReorderBufferTXN
 	 * * plain abort record
 	 * * prepared transaction abort
 	 * * error during decoding
+	 * * for a crashed transaction, the LSN of the last change, regardless of
+	 *   what it was.
 	 * ----
 	 */
 	XLogRecPtr	final_lsn;
@@ -164,10 +176,13 @@ typedef struct ReorderBufferTXN
 	TimestampTz commit_time;
 
 	/*
-	 * Base snapshot or NULL.
+	 * The base snapshot is used to decode all changes until either this
+	 * transaction modifies the catalog, or another catalog-modifying
+	 * transaction commits.
 	 */
 	Snapshot	base_snapshot;
 	XLogRecPtr	base_snapshot_lsn;
+	dlist_node	base_snapshot_node;	/* link in txns_by_base_snapshot_lsn */
 
 	/*
 	 * How many ReorderBufferChange's do we have in this txn.
@@ -181,6 +196,15 @@ typedef struct ReorderBufferTXN
 	 * spilled to disk.
 	 */
 	uint64		nentries_mem;
+
+	/*
+	 * Has this transaction been spilled to disk?  It's not always possible to
+	 * deduce that fact by comparing nentries with nentries_mem, because
+	 * e.g. subtransactions of a large transaction might get serialized
+	 * together with the parent - if they're restored to memory they'd have
+	 * nentries_mem == nentries.
+	 */
+	bool		serialized;
 
 	/*
 	 * List of ReorderBufferChange structs, including new Snapshots and new
@@ -224,8 +248,8 @@ typedef struct ReorderBufferTXN
 	/* ---
 	 * Position in one of three lists:
 	 * * list of subtransactions if we are *known* to be subxact
-	 * * list of toplevel xacts (can be a as-yet unknown subxact)
-	 * * list of preallocated ReorderBufferTXNs
+	 * * list of toplevel xacts (can be an as-yet unknown subxact)
+	 * * list of preallocated ReorderBufferTXNs (if unused)
 	 * ---
 	 */
 	dlist_node	node;
@@ -262,9 +286,18 @@ struct ReorderBuffer
 
 	/*
 	 * Transactions that could be a toplevel xact, ordered by LSN of the first
-	 * record bearing that xid..
+	 * record bearing that xid.
 	 */
 	dlist_head	toplevel_by_lsn;
+
+	/*
+	 * Transactions and subtransactions that have a base snapshot, ordered by
+	 * LSN of the record which caused us to first obtain the base snapshot.
+	 * This is not the same as toplevel_by_lsn, because we only set the base
+	 * snapshot on the first logical-decoding-relevant record (eg. heap
+	 * writes), whereas the initial LSN could be set by other operations.
+	 */
+	dlist_head	txns_by_base_snapshot_lsn;
 
 	/*
 	 * one-entry sized cache for by_txn. Very frequently the same txn gets
@@ -274,7 +307,7 @@ struct ReorderBuffer
 	ReorderBufferTXN *by_txn_last_txn;
 
 	/*
-	 * Callacks to be called when a transactions commits.
+	 * Callbacks to be called when a transactions commits.
 	 */
 	ReorderBufferBeginCB begin;
 	ReorderBufferApplyChangeCB apply_change;
@@ -297,7 +330,7 @@ struct ReorderBuffer
 	 * overhead we cache some unused ones here.
 	 *
 	 * The maximum number of cached entries is controlled by const variables
-	 * ontop of reorderbuffer.c
+	 * on top of reorderbuffer.c
 	 */
 
 	/* cached ReorderBufferTXNs */
@@ -323,7 +356,7 @@ struct ReorderBuffer
 ReorderBuffer *ReorderBufferAllocate(void);
 void		ReorderBufferFree(ReorderBuffer *);
 
-ReorderBufferTupleBuf *ReorderBufferGetTupleBuf(ReorderBuffer *);
+ReorderBufferTupleBuf *ReorderBufferGetTupleBuf(ReorderBuffer *, Size tuple_len);
 void		ReorderBufferReturnTupleBuf(ReorderBuffer *, ReorderBufferTupleBuf *tuple);
 ReorderBufferChange *ReorderBufferGetChange(ReorderBuffer *);
 void		ReorderBufferReturnChange(ReorderBuffer *, ReorderBufferChange *);
@@ -348,12 +381,13 @@ void ReorderBufferAddNewTupleCids(ReorderBuffer *, TransactionId, XLogRecPtr lsn
 						 CommandId cmin, CommandId cmax, CommandId combocid);
 void ReorderBufferAddInvalidations(ReorderBuffer *, TransactionId, XLogRecPtr lsn,
 							  Size nmsgs, SharedInvalidationMessage *msgs);
-bool		ReorderBufferIsXidKnown(ReorderBuffer *, TransactionId xid);
+void		ReorderBufferProcessXid(ReorderBuffer *, TransactionId xid, XLogRecPtr lsn);
 void		ReorderBufferXidSetCatalogChanges(ReorderBuffer *, TransactionId xid, XLogRecPtr lsn);
 bool		ReorderBufferXidHasCatalogChanges(ReorderBuffer *, TransactionId xid);
 bool		ReorderBufferXidHasBaseSnapshot(ReorderBuffer *, TransactionId xid);
 
 ReorderBufferTXN *ReorderBufferGetOldestTXN(ReorderBuffer *);
+TransactionId ReorderBufferGetOldestXmin(ReorderBuffer *rb);
 
 void		ReorderBufferSetRestartPoint(ReorderBuffer *, XLogRecPtr ptr);
 

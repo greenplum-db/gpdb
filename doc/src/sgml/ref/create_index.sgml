@@ -386,7 +386,7 @@ CREATE [ UNIQUE ] INDEX [ <replaceable class="parameter">name</replaceable> ] ON
     When this option is used,
     <productname>PostgreSQL</> must perform two scans of the table, and in
     addition it must wait for all existing transactions that could potentially
-    use the index to terminate.  Thus
+    modify or use the index to terminate.  Thus
     this method requires more total work than a standard index build and takes
     significantly longer to complete.  However, since it allows normal
     operations to continue while the index is built, this method is useful for
@@ -397,12 +397,15 @@ CREATE [ UNIQUE ] INDEX [ <replaceable class="parameter">name</replaceable> ] ON
    <para>
     In a concurrent index build, the index is actually entered into
     the system catalogs in one transaction, then two table scans occur in
-    two more transactions.  Any transaction active when the second table
-    scan starts can block concurrent index creation until it completes,
-    even transactions that only reference the table after the second table
-    scan starts.   Concurrent index creation serially waits for each old
-    transaction to complete using the method outlined in section <xref
-    linkend="view-pg-locks">.
+    two more transactions.  Before each table scan, the index build must
+    wait for existing transactions that have modified the table to terminate.
+    After the second scan, the index build must wait for any transactions
+    that have a snapshot (see <xref linkend="mvcc">) predating the second
+    scan to terminate.  Then finally the index can be marked ready for use,
+    and the <command>CREATE INDEX</> command terminates.
+    Even then, however, the index may not be immediately usable for queries:
+    in the worst case, it cannot be used as long as transactions exist that
+    predate the start of the index build.
    </para>
 
    <para>
@@ -524,16 +527,7 @@ Indexes:
    dependent on the setting of <xref linkend="guc-maintenance-work-mem">.
    Larger values will reduce the time needed for index creation, so long
    as you don't make it larger than the amount of memory really available,
-   which would drive the machine into swapping.  For hash indexes, the
-   value of <xref linkend="guc-effective-cache-size"> is also relevant to
-   index creation time: <productname>PostgreSQL</productname> will use one
-   of two different hash index creation methods depending on whether the
-   estimated index size is more or less than <varname>effective_cache_size</>.
-   For best results, make sure that this parameter is also set to something
-   reflective of available memory, and be careful that the sum of
-   <varname>maintenance_work_mem</> and <varname>effective_cache_size</> is
-   less than the machine's RAM less whatever space is needed by other
-   programs.
+   which would drive the machine into swapping.
   </para>
 
   <para>

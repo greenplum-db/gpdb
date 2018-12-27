@@ -57,7 +57,7 @@ jsonb_exists_any(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < elem_count; i++)
 	{
-		JsonbValue strVal;
+		JsonbValue	strVal;
 
 		if (key_nulls[i])
 			continue;
@@ -90,7 +90,7 @@ jsonb_exists_all(PG_FUNCTION_ARGS)
 
 	for (i = 0; i < elem_count; i++)
 	{
-		JsonbValue strVal;
+		JsonbValue	strVal;
 
 		if (key_nulls[i])
 			continue;
@@ -117,8 +117,7 @@ jsonb_contains(PG_FUNCTION_ARGS)
 	JsonbIterator *it1,
 			   *it2;
 
-	if (JB_ROOT_COUNT(val) < JB_ROOT_COUNT(tmpl) ||
-		JB_ROOT_IS_OBJECT(val) != JB_ROOT_IS_OBJECT(tmpl))
+	if (JB_ROOT_IS_OBJECT(val) != JB_ROOT_IS_OBJECT(tmpl))
 		PG_RETURN_BOOL(false);
 
 	it1 = JsonbIteratorInit(&val->root);
@@ -137,8 +136,7 @@ jsonb_contained(PG_FUNCTION_ARGS)
 	JsonbIterator *it1,
 			   *it2;
 
-	if (JB_ROOT_COUNT(val) < JB_ROOT_COUNT(tmpl) ||
-		JB_ROOT_IS_OBJECT(val) != JB_ROOT_IS_OBJECT(tmpl))
+	if (JB_ROOT_IS_OBJECT(val) != JB_ROOT_IS_OBJECT(tmpl))
 		PG_RETURN_BOOL(false);
 
 	it1 = JsonbIteratorInit(&val->root);
@@ -256,8 +254,8 @@ jsonb_hash(PG_FUNCTION_ARGS)
 {
 	Jsonb	   *jb = PG_GETARG_JSONB(0);
 	JsonbIterator *it;
-	int32		r;
 	JsonbValue	v;
+	JsonbIteratorToken r;
 	uint32		hash = 0;
 
 	if (JB_ROOT_COUNT(jb) == 0)
@@ -285,7 +283,7 @@ jsonb_hash(PG_FUNCTION_ARGS)
 			case WJB_END_OBJECT:
 				break;
 			default:
-				elog(ERROR, "invalid JsonbIteratorNext rc: %d", r);
+				elog(ERROR, "invalid JsonbIteratorNext rc: %d", (int) r);
 		}
 	}
 

@@ -119,6 +119,8 @@ InitPlanCache(void)
 	CacheRegisterSyscacheCallback(NAMESPACEOID, PlanCacheSysCallback, (Datum) 0);
 	CacheRegisterSyscacheCallback(OPEROID, PlanCacheSysCallback, (Datum) 0);
 	CacheRegisterSyscacheCallback(AMOPOPID, PlanCacheSysCallback, (Datum) 0);
+	CacheRegisterSyscacheCallback(FOREIGNSERVEROID, PlanCacheSysCallback, (Datum) 0);
+	CacheRegisterSyscacheCallback(FOREIGNDATAWRAPPEROID, PlanCacheSysCallback, (Datum) 0);
 }
 
 /*
@@ -225,7 +227,7 @@ CreateCachedPlan(Node *raw_parse_tree,
  * invalidation, so plan use must be completed in the current transaction,
  * and DDL that might invalidate the querytree_list must be avoided as well.
  *
- * raw_parse_tree: output of raw_parser()
+ * raw_parse_tree: output of raw_parser(), or NULL if empty query
  * query_string: original query text
  * commandTag: compile-time-constant tag for query, or NULL if empty query
  */
@@ -661,13 +663,12 @@ RevalidateCachedQuery(CachedPlanSource *plansource, IntoClause *intoClause)
 		snapshot_set = true;
 	}
 
-	rawtree = copyObject(plansource->raw_parse_tree);
-
 	/*
 	 * Run parse analysis and rule rewriting.  The parser tends to scribble on
 	 * its input, so we must copy the raw parse tree to prevent corruption of
 	 * the cache.
 	 */
+	rawtree = copyObject(plansource->raw_parse_tree);
 	if (rawtree == NULL)
 		tlist = NIL;
 	else if (plansource->parserSetup != NULL)
@@ -1140,7 +1141,7 @@ CachedPlan *
 GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
 			  bool useResOwner, IntoClause *intoClause)
 {
-	CachedPlan *plan;
+	CachedPlan *plan = NULL;
 	List	   *qlist;
 	bool		customplan;
 
@@ -1221,6 +1222,8 @@ GetCachedPlan(CachedPlanSource *plansource, ParamListInfo boundParams,
 			plansource->num_custom_plans++;
 		}
 	}
+
+	Assert(plan != NULL);
 
 	/* Flag the plan as in use by caller */
 	if (useResOwner)

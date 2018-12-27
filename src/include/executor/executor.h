@@ -265,7 +265,7 @@ extern TupleTableSlot *EvalPlanQual(EState *estate, EPQState *epqstate,
 			 Relation relation, Index rti, int lockmode,
 			 ItemPointer tid, TransactionId priorXmax);
 extern HeapTuple EvalPlanQualFetch(EState *estate, Relation relation,
-				  int lockmode, ItemPointer tid, TransactionId priorXmax);
+				  int lockmode, bool noWait, ItemPointer tid, TransactionId priorXmax);
 extern void EvalPlanQualInit(EPQState *epqstate, EState *estate,
 				 Plan *subplan, List *auxrowmarks, int epqParam);
 extern void EvalPlanQualSetPlan(EPQState *epqstate,
@@ -330,6 +330,7 @@ extern ExprDoneCond ExecEvalFuncArgs(FunctionCallInfo fcinfo,
 									 ExprContext *econtext);
 extern Tuplestorestate *ExecMakeTableFunctionResult(ExprState *funcexpr,
 							ExprContext *econtext,
+							MemoryContext argContext,
 							TupleDesc expectedDesc,
 							bool randomAccess,
 							uint64 operatorMemKB);
@@ -367,7 +368,8 @@ extern TupleTableSlot *ExecInitNullTupleSlot(EState *estate,
 					  TupleDesc tupType);
 extern TupleDesc ExecTypeFromTL(List *targetList, bool hasoid);
 extern TupleDesc ExecCleanTypeFromTL(List *targetList, bool hasoid);
-extern TupleDesc ExecTypeFromExprList(List *exprList, List *namesList);
+extern TupleDesc ExecTypeFromExprList(List *exprList);
+extern void ExecTypeSetColNames(TupleDesc typeInfo, List *namesList);
 extern void UpdateChangedParamSet(PlanState *node, Bitmapset *newchg);
 
 typedef struct TupOutputState
@@ -379,7 +381,7 @@ typedef struct TupOutputState
 extern TupOutputState *begin_tup_output_tupdesc(DestReceiver *dest,
 						 TupleDesc tupdesc);
 extern void do_tup_output(TupOutputState *tstate, Datum *values, bool *isnull);
-extern void do_text_output_multiline(TupOutputState *tstate, char *text);
+extern void do_text_output_multiline(TupOutputState *tstate, const char *txt);
 extern void end_tup_output(TupOutputState *tstate);
 
 /*

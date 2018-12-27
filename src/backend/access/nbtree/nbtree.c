@@ -212,13 +212,18 @@ btbuildempty(PG_FUNCTION_ARGS)
 	metapage = (Page) palloc(BLCKSZ);
 	_bt_initmetapage(metapage, P_NONE, 0);
 
-	/* Write the page.  If archiving/streaming, XLOG it. */
+	/*
+	 * Write the page and log it.  It might seem that an immediate sync
+	 * would be sufficient to guarantee that the file exists on disk, but
+	 * recovery itself might remove it while replaying, for example, an
+	 * XLOG_DBASE_CREATE or XLOG_TBLSPC_CREATE record.  Therefore, we
+	 * need this even when wal_level=minimal.
+	 */
 	PageSetChecksumInplace(metapage, BTREE_METAPAGE);
 	smgrwrite(index->rd_smgr, INIT_FORKNUM, BTREE_METAPAGE,
 			  (char *) metapage, true);
-	if (XLogIsNeeded())
-		log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
-					BTREE_METAPAGE, metapage, false);
+	log_newpage(&index->rd_smgr->smgr_rnode.node, INIT_FORKNUM,
+				BTREE_METAPAGE, metapage, false);
 
 	/*
 	 * An immediate sync is required even if we xlog'd the page, because the
@@ -1053,6 +1058,10 @@ btvacuumscan(IndexVacuumInfo *info, IndexBulkDeleteResult *stats,
 	}
 
 	/*
+	 * Check to see if we need to issue one final WAL record for this index,
+	 * which may be needed for correctness on a hot standby node when non-MVCC
+	 * index scans could take place.
+	 *
 	 * If the WAL is replayed in hot standby, the replay process needs to get
 	 * cleanup locks on all index leaf pages, just as we've been doing here.
 	 * However, we won't issue any WAL records about pages that have no items
@@ -1260,10 +1269,13 @@ restart:
 		if (ndeletable > 0)
 		{
 			/*
-			 * Notice that the issued XLOG_BTREE_VACUUM WAL record includes an
-			 * instruction to the replay code to get cleanup lock on all pages
-			 * between the previous lastBlockVacuumed and this page.  This
-			 * ensures that WAL replay locks all leaf pages at some point.
+			 * Notice that the issued XLOG_BTREE_VACUUM WAL record includes
+			 * all information to the replay code to allow it to get a cleanup
+			 * lock on all pages between the previous lastBlockVacuumed and
+			 * this page. This ensures that WAL replay locks all leaf pages at
+			 * some point, which is important should non-MVCC scans be
+			 * requested. This is currently unused on standby, but we record
+			 * it anyway, so that the WAL contains the required information.
 			 *
 			 * Since we can visit leaf pages out-of-order when recursing,
 			 * replay might end up locking such pages an extra time, but it

@@ -175,6 +175,10 @@ extern RelOptInfo *build_join_rel(PlannerInfo *root,
 			   RelOptInfo *inner_rel,
 			   SpecialJoinInfo *sjinfo,
 			   List **restrictlist_ptr);
+extern Relids min_join_parameterization(PlannerInfo *root,
+						  Relids joinrelids,
+						  RelOptInfo *outer_rel,
+						  RelOptInfo *inner_rel);
 extern RelOptInfo *build_empty_join_rel(PlannerInfo *root);
 extern void build_joinrel_tlist(PlannerInfo *root, RelOptInfo *joinrel, List *input_tlist);
 
@@ -190,6 +194,8 @@ extern CdbRelColumnInfo *cdb_rte_find_pseudo_column(RangeTblEntry *rte, AttrNumb
 
 extern AppendRelInfo *find_childrel_appendrelinfo(PlannerInfo *root,
 							RelOptInfo *rel);
+extern RelOptInfo *find_childrel_top_parent(PlannerInfo *root, RelOptInfo *rel);
+extern Relids find_childrel_parents(PlannerInfo *root, RelOptInfo *rel);
 extern ParamPathInfo *get_baserel_parampathinfo(PlannerInfo *root,
 						  RelOptInfo *baserel,
 						  Relids required_outer);

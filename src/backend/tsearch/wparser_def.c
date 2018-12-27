@@ -2419,7 +2419,7 @@ mark_hl_words(HeadlineParsedText *prs, TSQuery query, int highlight,
 						break;
 				}
 				if (curlen < min_words && i >= prs->curwords)
-				{				/* got end of text and our cover is shoter
+				{				/* got end of text and our cover is shorter
 								 * than min_words */
 					for (i = p - 1; i >= 0; i--)
 					{
@@ -2439,6 +2439,8 @@ mark_hl_words(HeadlineParsedText *prs, TSQuery query, int highlight,
 			}
 			else
 			{					/* shorter cover :((( */
+				if (i > q)
+					i = q;
 				for (; curlen > min_words; i--)
 				{
 					if (!NONWORDTOKEN(prs->words[i].type))

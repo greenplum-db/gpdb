@@ -39,11 +39,16 @@ typedef enum BufferAccessStrategyType
 typedef enum
 {
 	RBM_NORMAL,					/* Normal read */
-	RBM_ZERO,					/* Don't read from disk, caller will
-								 * initialize */
+	RBM_DO_NOT_USE,				/* This used to be RBM_ZERO. Only kept for
+								 * binary compatibility with 3rd party
+								 * extensions. */
 	RBM_ZERO_ON_ERROR,			/* Read, but return an all-zeros page on error */
-	RBM_NORMAL_NO_LOG			/* Don't log page as invalid during WAL
+	RBM_NORMAL_NO_LOG,			/* Don't log page as invalid during WAL
 								 * replay; otherwise same as RBM_NORMAL */
+	RBM_ZERO_AND_LOCK,			/* Don't read from disk, caller will
+								 * initialize. Also locks the page. */
+	RBM_ZERO_AND_CLEANUP_LOCK	/* Like RBM_ZERO_AND_LOCK, but locks the page
+								 * in "cleanup" mode */
 } ReadBufferMode;
 
 /* in globals.c ... this duplicates miscadmin.h */
@@ -193,6 +198,7 @@ extern void CheckPointBuffers(int flags);
 extern BlockNumber BufferGetBlockNumber(Buffer buffer);
 extern BlockNumber RelationGetNumberOfBlocksInFork(Relation relation,
 								ForkNumber forkNum);
+extern void FlushOneBuffer(Buffer buffer);
 extern void FlushRelationBuffers(Relation rel);
 extern void FlushDatabaseBuffers(Oid dbid);
 extern void DropRelFileNodeBuffers(RelFileNodeBackend rnode,

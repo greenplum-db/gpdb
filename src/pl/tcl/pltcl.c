@@ -1078,17 +1078,19 @@ pltcl_trigger_handler(PG_FUNCTION_ARGS, bool pltrusted)
 			FmgrInfo	finfo;
 
 			/************************************************************
-			 * Ignore ".tupno" pseudo elements (see pltcl_set_tuple_values)
-			 ************************************************************/
-			if (strcmp(ret_name, ".tupno") == 0)
-				continue;
-
-			/************************************************************
 			 * Get the attribute number
+			 *
+			 * We silently ignore ".tupno", if it's present but doesn't match
+			 * any actual output column.  This allows direct use of a row
+			 * returned by pltcl_set_tuple_values().
 			 ************************************************************/
 			attnum = SPI_fnumber(tupdesc, ret_name);
 			if (attnum == SPI_ERROR_NOATTRIBUTE)
+			{
+				if (strcmp(ret_name, ".tupno") == 0)
+					continue;
 				elog(ERROR, "invalid attribute \"%s\"", ret_name);
+			}
 			if (attnum <= 0)
 				elog(ERROR, "cannot set system attribute \"%s\"", ret_name);
 
@@ -2110,6 +2112,7 @@ static int
 pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 				  int argc, CONST84 char *argv[])
 {
+	volatile MemoryContext plan_cxt = NULL;
 	int			nargs;
 	CONST84 char **args;
 	pltcl_query_desc *qdesc;
@@ -2138,13 +2141,24 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 
 	/************************************************************
 	 * Allocate the new querydesc structure
+	 *
+	 * struct qdesc and subsidiary data all live in plan_cxt.  Note that if the
+	 * function is recompiled for whatever reason, permanent memory leaks
+	 * occur.  FIXME someday.
 	 ************************************************************/
-	qdesc = (pltcl_query_desc *) malloc(sizeof(pltcl_query_desc));
+	plan_cxt = AllocSetContextCreate(TopMemoryContext,
+									 "PL/TCL spi_prepare query",
+									 ALLOCSET_SMALL_MINSIZE,
+									 ALLOCSET_SMALL_INITSIZE,
+									 ALLOCSET_SMALL_MAXSIZE);
+	MemoryContextSwitchTo(plan_cxt);
+	qdesc = (pltcl_query_desc *) palloc0(sizeof(pltcl_query_desc));
 	snprintf(qdesc->qname, sizeof(qdesc->qname), "%p", qdesc);
 	qdesc->nargs = nargs;
-	qdesc->argtypes = (Oid *) malloc(nargs * sizeof(Oid));
-	qdesc->arginfuncs = (FmgrInfo *) malloc(nargs * sizeof(FmgrInfo));
-	qdesc->argtypioparams = (Oid *) malloc(nargs * sizeof(Oid));
+	qdesc->argtypes = (Oid *) palloc(nargs * sizeof(Oid));
+	qdesc->arginfuncs = (FmgrInfo *) palloc(nargs * sizeof(FmgrInfo));
+	qdesc->argtypioparams = (Oid *) palloc(nargs * sizeof(Oid));
+	MemoryContextSwitchTo(oldcontext);
 
 	/************************************************************
 	 * Execute the prepare inside a sub-transaction, so we can cope with
@@ -2172,7 +2186,7 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 			getTypeInputInfo(typId, &typInput, &typIOParam);
 
 			qdesc->argtypes[i] = typId;
-			perm_fmgr_info(typInput, &(qdesc->arginfuncs[i]));
+			fmgr_info_cxt(typInput, &(qdesc->arginfuncs[i]), plan_cxt);
 			qdesc->argtypioparams[i] = typIOParam;
 		}
 
@@ -2199,10 +2213,7 @@ pltcl_SPI_prepare(ClientData cdata, Tcl_Interp *interp,
 	{
 		pltcl_subtrans_abort(interp, oldcontext, oldowner);
 
-		free(qdesc->argtypes);
-		free(qdesc->arginfuncs);
-		free(qdesc->argtypioparams);
-		free(qdesc);
+		MemoryContextDelete(plan_cxt);
 		ckfree((char *) args);
 
 		return TCL_ERROR;
@@ -2239,9 +2250,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 	int			j;
 	Tcl_HashEntry *hashent;
 	pltcl_query_desc *qdesc;
-	const char *volatile nulls = NULL;
-	CONST84 char *volatile arrayname = NULL;
-	CONST84 char *volatile loop_body = NULL;
+	const char *nulls = NULL;
+	CONST84 char *arrayname = NULL;
+	CONST84 char *loop_body = NULL;
 	int			count = 0;
 	int			callnargs;
 	CONST84 char **callargs = NULL;
@@ -2330,7 +2341,7 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 	}
 
 	/************************************************************
-	 * If there was a argtype list on preparation, we need
+	 * If there was an argtype list on preparation, we need
 	 * an argument value list now
 	 ************************************************************/
 	if (qdesc->nargs > 0)
@@ -2371,6 +2382,8 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 	if (i != argc)
 	{
 		Tcl_SetResult(interp, usage, TCL_STATIC);
+		if (callargs)
+			ckfree((char *) callargs);
 		return TCL_ERROR;
 	}
 
@@ -2409,10 +2422,6 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 			}
 		}
 
-		if (callargs)
-			ckfree((char *) callargs);
-		callargs = NULL;
-
 		/************************************************************
 		 * Execute the plan
 		 ************************************************************/
@@ -2438,6 +2447,9 @@ pltcl_SPI_execute_plan(ClientData cdata, Tcl_Interp *interp,
 		return TCL_ERROR;
 	}
 	PG_END_TRY();
+
+	if (callargs)
+		ckfree((char *) callargs);
 
 	return my_rc;
 }
@@ -2482,8 +2494,7 @@ pltcl_set_tuple_values(Tcl_Interp *interp, CONST84 char *arrayname,
 	CONST84 char *nullname = NULL;
 
 	/************************************************************
-	 * Prepare pointers for Tcl_SetVar2() below and in array
-	 * mode set the .tupno element
+	 * Prepare pointers for Tcl_SetVar2() below
 	 ************************************************************/
 	if (arrayname == NULL)
 	{
@@ -2494,6 +2505,12 @@ pltcl_set_tuple_values(Tcl_Interp *interp, CONST84 char *arrayname,
 	{
 		arrptr = &arrayname;
 		nameptr = &attname;
+
+		/*
+		 * When outputting to an array, fill the ".tupno" element with the
+		 * current tuple number.  This will be overridden below if ".tupno" is
+		 * in use as an actual field name in the rowtype.
+		 */
 		snprintf(buf, sizeof(buf), "%d", tupno);
 		Tcl_SetVar2(interp, arrayname, ".tupno", buf, 0);
 	}

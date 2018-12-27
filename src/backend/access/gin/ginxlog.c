@@ -144,6 +144,14 @@ ginRedoInsertEntry(Buffer buffer, bool isLeaf, BlockNumber rightblkno, void *rda
 	}
 }
 
+/*
+ * Redo recompression of posting list.  Doing all the changes in-place is not
+ * always possible, because it might require more space than we've on the page.
+ * Instead, once modification is required we copy unprocessed tail of the page
+ * into separately allocated chunk of memory for further reading original
+ * versions of segments.  Thanks to that we don't bother about moving page data
+ * in-place.
+ */
 static void
 ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 {
@@ -153,6 +161,9 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 	Pointer		segmentend;
 	char	   *walbuf;
 	int			totalsize;
+	Pointer		tailCopy = NULL;
+	Pointer		writePtr;
+	Pointer		segptr;
 
 	/*
 	 * If the page is in pre-9.4 format, convert to new format first.
@@ -162,21 +173,37 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 		ItemPointer uncompressed = (ItemPointer) GinDataPageGetData(page);
 		int			nuncompressed = GinPageGetOpaque(page)->maxoff;
 		int			npacked;
-		GinPostingList *plist;
 
-		plist = ginCompressPostingList(uncompressed, nuncompressed,
-									   BLCKSZ, &npacked);
-		Assert(npacked == nuncompressed);
+		/*
+		 * Empty leaf pages are deleted as part of vacuum, but leftmost and
+		 * rightmost pages are never deleted.  So, pg_upgrade'd from pre-9.4
+		 * instances might contain empty leaf pages, and we need to handle
+		 * them correctly.
+		 */
+		if (nuncompressed > 0)
+		{
+			GinPostingList *plist;
 
-		totalsize = SizeOfGinPostingList(plist);
+			plist = ginCompressPostingList(uncompressed, nuncompressed,
+										   BLCKSZ, &npacked);
+			totalsize = SizeOfGinPostingList(plist);
 
-		memcpy(GinDataLeafPageGetPostingList(page), plist, totalsize);
+			Assert(npacked == nuncompressed);
+
+			memcpy(GinDataLeafPageGetPostingList(page), plist, totalsize);
+		}
+		else
+		{
+			totalsize = 0;
+		}
+
 		GinDataPageSetDataSize(page, totalsize);
 		GinPageSetCompressed(page);
 		GinPageGetOpaque(page)->maxoff = InvalidOffsetNumber;
 	}
 
 	oldseg = GinDataLeafPageGetPostingList(page);
+	writePtr = (Pointer) oldseg;
 	segmentend = (Pointer) oldseg + GinDataLeafPageGetPostingListSize(page);
 	segno = 0;
 
@@ -194,8 +221,6 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 		ItemPointerData *newitems;
 		int			nnewitems;
 		int			segsize;
-		Pointer		segptr;
-		int			szleft;
 
 		/* Extract all the information we need from the WAL record */
 		if (a_action == GIN_SEGMENT_INSERT ||
@@ -218,6 +243,17 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 		Assert(segno <= a_segno);
 		while (segno < a_segno)
 		{
+			/*
+			 * Once modification is started and page tail is copied, we've
+			 * to copy unmodified segments.
+			 */
+			segsize = SizeOfGinPostingList(oldseg);
+			if (tailCopy)
+			{
+				Assert(writePtr + segsize < PageGetSpecialPointer(page));
+				memcpy(writePtr, (Pointer) oldseg, segsize);
+			}
+			writePtr += segsize;
 			oldseg = GinNextPostingListSegment(oldseg);
 			segno++;
 		}
@@ -258,36 +294,42 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 			Assert(a_action == GIN_SEGMENT_INSERT);
 			segsize = 0;
 		}
-		szleft = segmentend - segptr;
+
+		/*
+		 * We're about to start modification of the page.  So, copy tail of the
+		 * page if it's not done already.
+		 */
+		if (!tailCopy && segptr != segmentend)
+		{
+			int tailSize = segmentend - segptr;
+
+			tailCopy = (Pointer) palloc(tailSize);
+			memcpy(tailCopy, segptr, tailSize);
+			segptr = tailCopy;
+			oldseg = (GinPostingList *) segptr;
+			segmentend = segptr + tailSize;
+		}
 
 		switch (a_action)
 		{
 			case GIN_SEGMENT_DELETE:
-				memmove(segptr, segptr + segsize, szleft - segsize);
-				segmentend -= segsize;
-
+				segptr += segsize;
 				segno++;
 				break;
 
 			case GIN_SEGMENT_INSERT:
-				/* make room for the new segment */
-				memmove(segptr + newsegsize, segptr, szleft);
 				/* copy the new segment in place */
-				memcpy(segptr, newseg, newsegsize);
-				segmentend += newsegsize;
-				segptr += newsegsize;
+				Assert(writePtr + newsegsize <= PageGetSpecialPointer(page));
+				memcpy(writePtr, newseg, newsegsize);
+				writePtr += newsegsize;
 				break;
 
 			case GIN_SEGMENT_REPLACE:
-				/* shift the segments that follow */
-				memmove(segptr + newsegsize,
-						segptr + segsize,
-						szleft - segsize);
-				/* copy the replacement segment in place */
-				memcpy(segptr, newseg, newsegsize);
-				segmentend -= segsize;
-				segmentend += newsegsize;
-				segptr += newsegsize;
+				/* copy the new version of segment in place */
+				Assert(writePtr + newsegsize <= PageGetSpecialPointer(page));
+				memcpy(writePtr, newseg, newsegsize);
+				writePtr += newsegsize;
+				segptr += segsize;
 				segno++;
 				break;
 
@@ -297,7 +339,18 @@ ginRedoRecompress(Page page, ginxlogRecompressDataLeaf *data)
 		oldseg = (GinPostingList *) segptr;
 	}
 
-	totalsize = segmentend - (Pointer) GinDataLeafPageGetPostingList(page);
+	/* Copy the rest of unmodified segments if any. */
+	segptr = (Pointer) oldseg;
+	if (segptr != segmentend && tailCopy)
+	{
+		int restSize = segmentend - segptr;
+
+		Assert(writePtr + restSize <= PageGetSpecialPointer(page));
+		memcpy(writePtr, segptr, restSize);
+		writePtr += restSize;
+	}
+
+	totalsize = writePtr - (Pointer) GinDataLeafPageGetPostingList(page);
 	GinDataPageSetDataSize(page, totalsize);
 }
 

@@ -411,7 +411,8 @@ setup(char *argv0, bool *live_check)
 		 * start, assume the server is running.  If the pid file is left over
 		 * from a server crash, this also allows any committed transactions
 		 * stored in the WAL to be replayed so they are not lost, because WAL
-		 * files are not transfered from old to new servers.
+		 * files are not transfered from old to new servers.  We later check
+		 * for a clean shutdown.
 		 */
 		if (start_postmaster(&old_cluster, false))
 			stop_postmaster(false);
@@ -437,7 +438,7 @@ setup(char *argv0, bool *live_check)
 
 	/* get path to pg_upgrade executable */
 	if (find_my_exec(argv0, exec_path) < 0)
-		pg_fatal("Could not get path name to pg_upgrade: %s\n", getErrorText(errno));
+		pg_fatal("Could not get path name to pg_upgrade: %s\n", getErrorText());
 
 	/* Trim off program name and keep just path */
 	*last_dir_separator(exec_path) = '\0';
@@ -971,6 +972,17 @@ set_frozenxids(bool minmxid_only)
 		 */
 		PQclear(executeQueryOrDie(conn, "set allow_system_table_mods=true"));
 
+		/*
+		 * Instead of assuming template0 will be frozen by initdb, its worth
+		 * making sure we freeze it here before updating the relfrozenxid
+		 * directly for the tables in pg_class and datfrozenxid for the
+		 * database in pg_database. Its fast and safe worth than assuming for
+		 * template0.
+		 */
+		if (!minmxid_only && strcmp(datallowconn, "f") == 0)
+		{
+			PQclear(executeQueryOrDie(conn, "VACUUM FREEZE"));
+		}
 
 		if (!minmxid_only)
 			/* set pg_class.relfrozenxid */
@@ -996,7 +1008,6 @@ set_frozenxids(bool minmxid_only)
 		/* only heap, materialized view, and TOAST are vacuumed */
 								  "WHERE	relkind IN ('r', 'm', 't')",
 								  old_cluster.controldata.chkpnt_nxtmulti));
-
 		PQfinish(conn);
 
 		/* Reset datallowconn flag */

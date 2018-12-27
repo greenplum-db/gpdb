@@ -1263,7 +1263,7 @@ AlterTSConfiguration(AlterTSConfigurationStmt *stmt)
 	/* Update dependencies */
 	makeConfigurationDependencies(tup, true, relMap);
 
-	InvokeObjectPostAlterHook(TSConfigMapRelationId,
+	InvokeObjectPostAlterHook(TSConfigRelationId,
 							  HeapTupleGetOid(tup), 0);
 
 	heap_close(relMap, RowExclusiveLock);
