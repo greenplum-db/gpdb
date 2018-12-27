@@ -211,6 +211,8 @@ ExecInitBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
 	scanState->ss.ps.plan = (Plan *) node;
 	scanState->ss.ps.state = estate;
 
+	initGpmonPktForBitmapIndexScan((Plan *)node, &scanState->ss.ps.gpmon_pkt, estate);
+
 	/*
 	 * If we are just doing EXPLAIN (ie, aren't going to run the plan), stop
 	 * here.  This allows an index-advisor plugin to EXPLAIN a plan containing
@@ -227,8 +229,6 @@ ExecInitBitmapIndexScan(BitmapIndexScan *node, EState *estate, int eflags)
 	 * the heap relation throughout the execution of the plan tree.
 	 */
 	Assert(NULL == scanState->ss.ss_currentRelation);
-
-	initGpmonPktForBitmapIndexScan((Plan *)node, &scanState->ss.ps.gpmon_pkt, estate);
 
 	return indexstate;
 }

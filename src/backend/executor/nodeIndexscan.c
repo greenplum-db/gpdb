@@ -594,6 +594,8 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	ExecAssignResultTypeFromTL(&indexstate->ss.ps);
 	ExecAssignScanProjectionInfo(&indexstate->ss);
 
+	initGpmonPktForIndexScan((Plan *)node, &indexstate->ss.ps.gpmon_pkt, estate);
+
 	/*
 	 * If we are just doing EXPLAIN (ie, aren't going to run the plan), stop
 	 * here.  This allows an index-advisor plugin to EXPLAIN a plan containing
@@ -635,8 +637,6 @@ ExecInitIndexScan(IndexScan *node, EState *estate, int eflags)
 	 * Initialize index-specific scan state
 	 */
 	indexstate->iss_RuntimeKeysReady = false;
-
-	initGpmonPktForIndexScan((Plan *)node, &indexstate->ss.ps.gpmon_pkt, estate);
 
 	/*
 	 * If eflag contains EXEC_FLAG_REWIND or EXEC_FLAG_BACKWARD or EXEC_FLAG_MARK,

@@ -742,6 +742,9 @@ def impl(context, command, out_msg):
 def impl(context, command, out_msg):
     check_string_not_present_stdout(context, out_msg)
 
+@then('{command} should not print "{err_msg}" error message')
+def impl(context, command, err_msg):
+    check_string_not_present_stderr(context, err_msg)
 
 @then('{command} should print "{out_msg}" to stdout {num} times')
 def impl(context, command, out_msg, num):

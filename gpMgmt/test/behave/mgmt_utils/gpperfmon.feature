@@ -174,3 +174,15 @@ Feature: gpperfmon
         And wait until the process "gpsmon" is up
         # Note that the code considers partition_age + 1 as the number of partitions to keep
         Then wait until the results from boolean sql "SELECT count(*) = 5 FROM pg_partitions WHERE tablename = 'diskspace_history'" is "true"
+
+    @gpperfmon_index_scan
+    Scenario: Gpmon should not return "WARNING:  gpmon - bad magic 0" with explain plan includes index_scan
+        Given gpperfmon is configured and running in qamode
+        Then the user runs "psql -f 'test/behave/mgmt_utils/steps/data/gpperfmon/index_scan.sql'"
+        Then psql should not print "gpmon - bad magic 0" error message
+
+    @gpperfmon_bitmap_index_scan
+    Scenario: Gpmon should not return "WARNING:  gpmon - bad magic 0" with explain plan includes bitmap index_scan
+        Given gpperfmon is configured and running in qamode
+        Then the user runs "psql -f 'test/behave/mgmt_utils/steps/data/gpperfmon/bitmap_index_scan.sql'"
+        Then psql should not print "gpmon - bad magic 0" error message
