@@ -618,6 +618,22 @@ show_XactIsoLevel(void)
 	}
 }
 
+bool
+check_DefaultXactIsoLevel(int *newval, void **extra, GucSource source)
+{
+	/*
+	 * As the fixme in assign_XactIsoLevel, DefaultXactIsoLevel also need
+	 * to fallback from 'serializable' to 'repeatable read'
+	 */
+	if (*newval == XACT_SERIALIZABLE)
+	{
+		elog(LOG, "default serializable isolation requested, falling back to "
+				  "repeatable read until serializable is supported in Greenplum");
+		*newval = XACT_REPEATABLE_READ;
+	}
+
+	return true;
+}
 /*
  * SET TRANSACTION [NOT] DEFERRABLE
  */

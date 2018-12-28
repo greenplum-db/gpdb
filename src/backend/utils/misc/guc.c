@@ -3403,7 +3403,7 @@ static struct config_enum ConfigureNamesEnum[] =
 		},
 		&DefaultXactIsoLevel,
 		XACT_READ_COMMITTED, isolation_level_options,
-		NULL, NULL, NULL
+		check_DefaultXactIsoLevel, NULL, NULL
 	},
 
 	{
@@ -7194,26 +7194,8 @@ ExecSetVariableStmt(VariableSetStmt *stmt, bool isTopLevel)
 					DefElem    *item = (DefElem *) lfirst(head);
 
 					if (strcmp(item->defname, "transaction_isolation") == 0)
-					{
 						SetPGVariable("default_transaction_isolation",
 									  list_make1(item->arg), stmt->is_local);
-						/*
-						 * Greenplum needs to reconcile conflict detection based
-						 * on predicate locks across cluster to support true
-						 * serializability.  See merge fixme in
-						 * assign_XactIsoLevel().  The assign hook for enum GUCs
-						 * seems to behave differently as compared to string
-						 * GUCs, making it necessary to perform this check here
-						 * instead of defining a new assign hook for
-						 * default_transaction_isolation.
-						 */
-						if (DefaultXactIsoLevel == XACT_SERIALIZABLE)
-						{
-							elog(LOG, "serializable isolation requested, falling back to "
-								 "repeatable read until serializable is supported in Greenplum");
-							DefaultXactIsoLevel = XACT_REPEATABLE_READ;
-						}
-					}
 					else if (strcmp(item->defname, "transaction_read_only") == 0)
 						SetPGVariable("default_transaction_read_only",
 									  list_make1(item->arg), stmt->is_local);

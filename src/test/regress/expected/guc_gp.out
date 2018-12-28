@@ -120,3 +120,49 @@ SELECT DISTINCT to_timestamp(b)::date FROM timezone_table;
  12-12-2017
 (3 rows)
 
+-- Test default_transaction_isolation and transaction_isolation fallback from serializable to repeatable read
+CREATE TABLE test_serializable(a int);
+insert into test_serializable values(1);
+SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL serializable;
+show default_transaction_isolation;
+ default_transaction_isolation 
+-------------------------------
+ repeatable read
+(1 row)
+
+SELECT * FROM test_serializable;
+ a 
+---
+ 1
+(1 row)
+
+SET default_transaction_isolation = 'read committed';
+SET default_transaction_isolation = 'serializable';
+show default_transaction_isolation;
+ default_transaction_isolation 
+-------------------------------
+ repeatable read
+(1 row)
+
+SELECT * FROM test_serializable;
+ a 
+---
+ 1
+(1 row)
+
+SET default_transaction_isolation = 'read committed';
+BEGIN TRANSACTION ISOLATION LEVEL serializable;
+	show transaction_isolation;
+ transaction_isolation 
+-----------------------
+ repeatable read
+(1 row)
+
+	SELECT * FROM test_serializable;
+ a 
+---
+ 1
+(1 row)
+
+COMMIT;
+DROP TABLE test_serializable;
