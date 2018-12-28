@@ -19,7 +19,6 @@
       <topicref href="topics/g-recovering-a-failed-segment.xml" type="topic">
          <topicref href="topics/g-recovering-from-segment-failures.xml" type="topic">
             <topicref href="topics/g-when-a-segment-host-is-not-recoverable.xml" type="topic"/>
-            <topicref href="topics/gprecover-steps.xml"/>
          </topicref>
       </topicref>
       <topicref href="topics/g-recovering-a-failed-master.xml" type="topic">

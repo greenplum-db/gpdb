@@ -4,28 +4,30 @@
 <topic id="topic11">
   <title>Checking for Failed Segments</title>
   <body>
-    <p>With mirroring enabled, you may have failed segments in the system without interruption of
-      service or any indication that a failure has occurred. You can verify the status of your
-      system using the <codeph>gpstate</codeph> utility. <codeph>gpstate</codeph> provides the
-      status of each individual component of a Greenplum Database system, including
+    <p>With mirroring enabled, you can have failed segment instances in the system without
+      interruption of service or any indication that a failure has occurred. You can verify the
+      status of your system using the <codeph>gpstate</codeph> utility. <codeph>gpstate</codeph>
+      provides the status of each individual component of a Greenplum Database system, including
       primary segments, mirror segments, master, and standby master.</p>
     <section id="ki155580">
       <title>To check for failed segments</title>
       <ol>
-        <li id="ki155584">On the master, run the <codeph>gpstate</codeph> utility with the
-            <codeph>-e</codeph> option to show segments with error conditions:<codeblock>$ gpstate -e</codeblock>
-          <p>Segments in <i>Change Tracking</i> mode indicate the corresponding mirror segment is
-            down. When a segment is not in its <i>preferred role</i>, the segment does not operate
-            in the role to which it was assigned at system initialization. This means the system is
-            in a potentially unbalanced state, as some segment hosts may have more active segments
-            than is optimal for top system performance.</p>
-          <p>See <xref href="g-recovering-from-segment-failures.xml#topic14"
-            /> for instructions to fix this situation.</p>
-        </li>
-        <li id="ki165350">To get detailed information about a failed segment, check the
-            <i>gp_segment_configuration</i> catalog table. For
-          example:<codeblock>$ psql -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
-        </li>
+        <li id="ki155584">On the master host, run the <codeph><xref
+              href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
+            /></codeph> utility with the <codeph>-e</codeph> option to show segment instances with
+          error conditions:<codeblock>$ gpstate -e</codeblock><p>If the utility lists Segments with
+            Primary and Mirror Roles Switched, the segment is not in its <i>preferred role</i> (the
+            role to which it was assigned at system initialization). This means the system is in a
+            potentially unbalanced state, as some segment hosts may have more active segments than
+            is optimal for top system performance. </p><p>Segments that display the <codeph>Config
+              status</codeph> as <codeph>Down</codeph> indicate the corresponding mirror segment is
+            down. </p><p>See <xref href="g-recovering-from-segment-failures.xml#topic14"/> for
+            instructions to fix this situation.</p></li>
+        <li id="ki165350">To get detailed information about failed segments, you can check the
+              <codeph><xref href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"
+            /></codeph> catalog table. For example:<p>
+            <codeblock>$ psql postgres -c "SELECT * FROM gp_segment_configuration WHERE status='d';"</codeblock>
+          </p></li>
         <li id="ki162539">For failed segment instances, note the host, port, preferred role, and
           data directory. This information will help determine the host and segment instances to
           troubleshoot.</li>

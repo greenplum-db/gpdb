@@ -21,9 +21,13 @@
     <p>
       <xref href="#topic13/ki155628" type="fig" format="dita"/> shows the high-level steps for each
       of the preceding failure scenarios.<fig id="ki155628">
+        <!-- 2 image settings online and PDF width="660" height="630" -->
         <title>Segment Failure Troubleshooting Matrix</title>
-        <image href="../../graphics/recovermatrix.png" placement="break" width="460"
-          height="430px" id="image_cdg_nfp_34"/>
+        <image otherprops="op-print" href="../../graphics/recovermatrix.png" placement="break"
+          width="460" height="439px" id="image_cdg_nfp_35"/>
+        <image otherprops="op-help" href="../../graphics/recovermatrix.png" placement="break"
+          width="680" height="649" id="image_cdg_nfp_34"/>
+
       </fig></p>
   </body>
 </topic>

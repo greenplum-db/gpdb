@@ -8,14 +8,19 @@
       master. You can continue running that instance as the primary master if it has the same
       capabilities and dependability as the original master host. </p>
     <p>You must initialize a new standby master to continue providing master mirroring unless you
-      have already done so while activating the prior standby master. Run
-        <codeph>gpinitstandby</codeph> on the active master host to configure a new standby
-      master.</p>
-    <p>You may restore the primary and standby master instances on the original hosts. This process
+      have already done so while activating the prior standby master. Run <codeph><xref
+          href="../../../utility_guide/admin_utilities/gpinitstandby.xml"
+        >gpinitstandby</xref></codeph> on the active master host to configure a new standby master.
+      See <xref href="g-enabling-master-mirroring.xml#topic8"/>.</p>
+    <p>You can restore the primary and standby master instances on the original hosts. This process
       swaps the roles of the primary and standby master hosts, and it should be performed only if
       you strongly prefer to run the master instances on the same hosts they occupied prior to the
-      recovery scenario.</p>
-    <p>For information about the Greenplum Database utilities, see the <cite>Greenplum Database Utility Guide</cite>.</p>
+      recovery scenario. </p>
+    <note type="important">Restoring the primary and standby master instances to their original
+      hosts is not an online operation. The master host must be stopped to perform the
+      operation.</note>
+    <p>For information about the Greenplum Database utilities, see the <cite>Greenplum Database
+        Utility Guide</cite>.</p>
     <section id="ki160986">
       <title>To restore the master and standby instances on original hosts (optional)</title>
       <ol>
@@ -23,44 +28,49 @@
           the cause of the original failure is fixed.</li>
         <li>On the original master host, move or remove the data directory,
           <codeph>gpseg-1</codeph>. This example moves the directory to
-            <codeph>backup_gpseg-1</codeph>:<codeblock>$ mv /data/master/gpseg-1 /data/master/backup_gpseg-1</codeblock>
-          <p>You can remove the backup directory once the standby is successfully configured.</p>
-        </li>
+            <codeph>backup_gpseg-1</codeph>:<codeblock>$ mv /data/master/gpseg-1 /data/master/backup_gpseg-1</codeblock><p>You
+            can remove the backup directory once the standby is successfully configured.</p></li>
         <li id="ki160940">Initialize a standby master on the original master host. For example, run
           this command from the current master host,
-          smdw:<codeblock>$ gpinitstandby -s mdw</codeblock>
-        </li>
+          smdw:<codeblock>$ gpinitstandby -s mdw</codeblock></li>
         <li>After the initialization completes, check the status of standby master, mdw, run
-            <codeph>gpstate</codeph> with the <codeph>-f </codeph> option to check the status:<codeblock>$ gpstate -f</codeblock>
-          <p>The status should be <i>In Synch</i>.</p>
-        </li>
+              <codeph><xref href="../../../utility_guide/admin_utilities/gpstate.xml#topic1"
+              type="topic" format="dita"/></codeph> with the <codeph>-f</codeph> option to check the
+          standby master status:<codeblock>$ gpstate -f</codeblock> The standby master status should
+          be <codeph>passive</codeph>, and the WAL sender state should be
+          <codeph>streaming</codeph>.</li>
         <li>Stop Greenplum Database master instance on the standby master. For
-          example:<codeblock>$ gpstop -m</codeblock>
-        </li>
+          example:<codeblock>$ gpstop -m</codeblock></li>
         <li id="ki160961">Run the <codeph>gpactivatestandby</codeph> utility from the original
-          master host, mdw, that is currently a standby master. For example:<codeblock>$ gpactivatestandby -d $MASTER_DATA_DIRECTORY</codeblock>
-          <p>Where the <codeph>-d</codeph> option specifies the data directory of the host you are
-            activating.</p>
-        </li>
-        <li id="ki165618">After the utility completes, run <codeph>gpstate</codeph> to check the status:<codeblock>$ gpstate -f </codeblock>
-          <p>Verify the original primary master status is <i>Active</i>. When a standby master is
-            not configured, the command displays <codeph>-No entries found</codeph> and the message
-            indicates that a standby master instance is not configured.</p>
-        </li>
+          master host, mdw, that is currently a standby master. For
+            example:<codeblock>$ gpactivatestandby -d $MASTER_DATA_DIRECTORY</codeblock><p>Where the
+              <codeph>-d</codeph> option specifies the data directory of the host you are
+            activating.</p></li>
+        <li id="ki165618">After the utility completes, run <codeph>gpstate</codeph> with the
+            <codeph>-b</codeph> option to display a summary of the system
+            status:<codeblock>$ gpstate -b</codeblock><p>The master instance status should be
+              <codeph>Active</codeph>. When a standby master is not configured, the command displays
+              <codeph>No master standby configured</codeph>for the standby master state.</p></li>
         <li>On the standby master host, move or remove the data directory, <codeph>gpseg-1</codeph>.
-          This example moves the directory:<codeblock>$ mv /data/master/gpseg-1 /data/master/backup_gpseg-1</codeblock>
-          <p>You can remove the backup directory once the standby is successfully configured.</p>
-        </li>
-        <li id="ki165609">After the original master host runs the primary Greenplum Database master, you can initialize a standby master on the original
-          standby master host. For example:<codeblock>$ gpinitstandby -s smdw</codeblock>
-        </li>
+          This example moves the
+            directory:<codeblock>$ mv /data/master/gpseg-1 /data/master/backup_gpseg-1</codeblock><p>You
+            can remove the backup directory once the standby is successfully configured.</p></li>
+        <li id="ki165609">After the original master host runs the primary Greenplum Database master,
+          you can initialize a standby master on the original standby master host. For
+            example:<codeblock>$ gpinitstandby -s smdw</codeblock><p>After the command completes,
+            you can run the <codeph>gpstate -f</codeph> command on the primary master host, to check
+            the standby master status. </p></li>
       </ol>
+    </section>
+    <section>
       <title>To check the status of the master mirroring process (optional)</title>
-      <p>You can display the information in the Greenplum Database system view
-        pg_stat_replication. The view lists information about the <codeph>walsender</codeph> process
-        that is used for Greenplum Database master mirroring. For example, this
-        command displays the process ID and state of the <codeph>walsender</codeph> process:</p>
-      <codeblock>$ psql dbname -c 'SELECT procpid, state FROM pg_stat_replication;'</codeblock>
+      <p>You can run the <codeph>gpstate</codeph> utility with the <codeph>-f</codeph> option to
+        display details of the standby master host. <codeblock>$ gpstate -f</codeblock></p>
+      <p>The standby master status should be <codeph>passive</codeph>, and the WAL sender state
+        should be <codeph>streaming</codeph>.</p>
+      <p>For information about the <codeph><xref
+            href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
+          /></codeph> utility, see the <cite>Greenplum Database Utility Guide</cite>.</p>
     </section>
   </body>
 </topic>

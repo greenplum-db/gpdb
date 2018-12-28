@@ -6,27 +6,22 @@
       <body>
             <p>If a host is nonoperational, for example, due to hardware failure, recover the
                   segments onto a spare set of hardware resources. If mirroring is enabled, you can
-                  recover a segment from its mirror onto an alternate host using
-                        <codeph>gprecoverseg</codeph>. For example:</p>
+                  recover a segment instance from its mirror onto an alternate host using the
+                              <codeph><xref
+                              href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+                              >gprecoverseg</xref></codeph> utility. For example:</p>
             <codeblock>$ gprecoverseg -i <i>recover_config_file</i>
       </codeblock>
-            <p>Where the format of <codeph>
-                        <i>recover_config_file</i>
-                  </codeph> is:</p>
-            <codeblock>filespaceOrder=[<i>filespace1_name</i>[:<i>filespace2_name</i>:...]<i>failed_host_address</i>:
-<i>port</i>:<i>fselocation</i> [<i>recovery_host_address</i>:<i>port</i>:<i>replication_port</i>:<i>fselocation</i>
-[:<i>fselocation</i>:...]]</codeblock>
+            <p>Where the format of the <codeph><i>recover_config_file</i></codeph> file is:</p>
+            <codeblock>&lt;<varname>failed_host</varname>&gt;:&lt;<varname>port</varname>&gt;:&lt;<varname>data_dir</varname>&gt;[ &lt;<varname>recovery_host</varname>&gt;:&lt;<varname>port</varname>&gt;:&lt;<varname>recovery_data_dir</varname>&gt;]
+</codeblock>
             <p>For example, to recover to a different host than the failed host without additional
-                  filespaces configured (besides the default <i>pg_system</i> filespace):</p>
-            <codeblock>filespaceOrder=sdw5-2:50002:/gpdata/gpseg2 sdw9-2:50002:53002:/gpdata/gpseg2</codeblock>
-            <p>The <i>gp_segment_configuration</i> and <i>pg_filespace_entry</i> system catalog
-                  tables can help determine your current segment configuration so you can plan your
-                  mirror recovery configuration. For example, run the following query:</p>
-            <codeblock>=# SELECT dbid, content, hostname, address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid 
-   ORDER BY dbid;</codeblock>
+                  tablespaces configured (besides the default <i>pg_system</i> tablespace):</p>
+            <codeblock>sdw1-1:50001:/data1/mirror/gpseg16 sdw4-1:50001:/data1/recover1/gpseg16
+</codeblock>
+            <p>For information about creating a segment instance recovery file, see <codeph><xref
+                              href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
+                              >gprecoverseg</xref></codeph>.</p>
             <p>The new recovery segment host must be pre-installed with the Greenplum Database
                   software and configured exactly as the existing segment hosts.</p>
       </body>
