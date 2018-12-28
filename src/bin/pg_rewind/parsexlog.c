@@ -29,6 +29,7 @@
 
 #include <unistd.h>
 
+#include "access/bitmap.h"
 #include "access/heapam_xlog.h"
 #include "access/gin_private.h"
 #include "access/gist_private.h"
@@ -332,6 +333,7 @@ extractPageInfo(XLogRecord *record)
 		case RM_MULTIXACT_ID:
 		case RM_STANDBY_ID:
 		case RM_RELMAP_ID:
+		case RM_DISTRIBUTEDLOG_ID:
 			break;
 
 		case RM_HEAP_ID:
@@ -983,6 +985,64 @@ extractPageInfo(XLogRecord *record)
 					 */
 					break;
 				}
+			}
+			break;
+
+		case RM_BITMAP_ID:
+			switch (info)
+			{
+				case XLOG_BITMAP_INSERT_LOVITEM:
+					{
+						xl_bm_lovitem *xlrec = (xl_bm_lovitem *) XLogRecGetData(record);
+						pageinfo_add(xlrec->bm_fork, xlrec->bm_node, xlrec->bm_lov_blkno);
+						break;
+					}
+				case XLOG_BITMAP_INSERT_META:
+					{
+						xl_bm_metapage *xlrec = (xl_bm_metapage *) XLogRecGetData(record);
+						/* bitmap always uses block 0 as meta-page */
+						pageinfo_add(xlrec->bm_fork, xlrec->bm_node, 0);
+						break;
+					}
+				case XLOG_BITMAP_INSERT_BITMAP_LASTWORDS:
+					{
+						xl_bm_bitmap_lastwords *xlrec = (xl_bm_bitmap_lastwords *) XLogRecGetData(record);
+						pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_lov_blkno);
+						break;
+					}
+				case XLOG_BITMAP_INSERT_WORDS:
+					{
+						xl_bm_bitmapwords *xlrec = (xl_bm_bitmapwords *) XLogRecGetData(record);
+						pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_lov_blkno);
+						for (int bmpageno = 0; bmpageno < xlrec->bm_num_pages; bmpageno++)
+						{
+							xl_bm_bitmapwords_perpage *xlrec_perpage;
+							if (bmpageno == 0 && !xlrec->bm_init_first_page && record->xl_info & XLR_BKP_BLOCK(1))
+								continue;
+							xlrec_perpage = (xl_bm_bitmapwords_perpage *) xlrec;
+							pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec_perpage->bmp_blkno);
+						}
+						break;
+					}
+				case XLOG_BITMAP_UPDATEWORD:
+					{
+						xl_bm_updateword *xlrec = (xl_bm_updateword *) XLogRecGetData(record);
+						pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_blkno);
+						break;
+					}
+				case XLOG_BITMAP_UPDATEWORDS:
+					{
+						xl_bm_updatewords *xlrec = (xl_bm_updatewords*) XLogRecGetData(record);
+						pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_first_blkno);
+						if (xlrec->bm_two_pages)
+							pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_second_blkno);
+						if (xlrec->bm_new_lastpage)
+							pageinfo_add(MAIN_FORKNUM, xlrec->bm_node, xlrec->bm_lov_blkno);
+						break;
+					}
+				default:
+					fprintf(stderr, "unrecognized bitmap index wal record type %d\n", info);
+					exit(1);
 			}
 			break;
 		default:
