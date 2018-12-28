@@ -32,12 +32,13 @@
       <title>Description</title>
       <p>The <cmdname>analyzedb</cmdname> utility updates statistics on table data for the specified
         tables in a Greenplum database incrementally and concurrently. </p>
-      <p>While performing <codeph>ANALYZE</codeph> operations, <cmdname>analyzedb</cmdname> creates
-        a snapshot of the table metadata and stores it on disk on the master host. An
-          <codeph>ANALYZE</codeph> operation is performed only if the table has been modified. If a
-        table or partition has not been modified since the last time it was analyzed,
-          <cmdname>analyzedb</cmdname> automatically skips the table or partition because it already
-        contains up-to-date statistics.</p>
+      <p>While performing <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
+            >ANALYZE</xref></codeph> operations, <cmdname>analyzedb</cmdname> creates a snapshot of
+        the table metadata and stores it on disk on the master host. An <codeph>ANALYZE</codeph>
+        operation is performed only if the table has been modified. If a table or partition has not
+        been modified since the last time it was analyzed, <cmdname>analyzedb</cmdname>
+        automatically skips the table or partition because it already contains up-to-date
+        statistics.</p>
       <ul id="ul_vgw_25c_3r">
         <li>For append optimized tables, <cmdname>analyzedb</cmdname> updates statistics
           incrementally, if the statistics are not current. For example, if table data is changed
@@ -169,12 +170,13 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         </plentry>
         <plentry>
           <pt>--skip_root_stats</pt>
-          <pd>
-            <p>Skip refreshing root partition statistics if any of the leaf partitions that are also
-              analyzed require updating. </p>
-            <p>Do not specify this option if you use GPORCA to execute queries against partitioned
-              tables (the default).</p>
-          </pd>
+          <pd>Skip refreshing root partition statistics if any of the leaf partitions that are also
+            analyzed require updating.</pd>
+          <pd>When updating statistics for a partitioned table and you know which leaf partition
+            statistics require updating, you can specify those partitions and this option.</pd>
+          <pd>For information about how statistics are collected for partitioned tables, see
+                <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
+              >ANALYZE</xref></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>-s <varname>schema</varname></pt>
