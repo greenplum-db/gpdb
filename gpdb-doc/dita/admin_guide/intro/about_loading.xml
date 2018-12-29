@@ -9,7 +9,7 @@
     <p>In a large scale, multi-terabyte data warehouse, large amounts of data must be loaded within
       a relatively small maintenance window. Greenplum supports fast, parallel data loading with its
       external tables feature. Administrators can also load external tables in single row error
-      isolation mode to filter bad rows into a separate error table while continuing to load
+      isolation mode to filter bad rows into a separate error log while continuing to load
       properly formatted rows. Administrators can specify an error threshold for a load operation to
       control how many improperly formatted rows cause Greenplum to abort the load operation.</p>
 

@@ -16,7 +16,6 @@
          <topicref href="topics/g-define-an-external-table-with-single-row-error-isolation.xml"/>
          <topicref href="topics/g-create-an-error-table-and-declare-a-reject-limit.xml"/>
          <topicref href="topics/g-viewing-bad-rows-in-the-error-table-or-error-log.xml"/>
-         <topicref href="topics/g-identifying-invalid-csv-files-in-error-table-data.xml"/>
          <topicref href="topics/g-moving-data-between-tables.xml"/>
       </topicref>
       <topicref href="topics/g-loading-data-with-gpload.xml"/>
