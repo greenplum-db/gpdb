@@ -2945,7 +2945,7 @@ struct config_bool ConfigureNamesBool_gp[] =
 
 	{
 		{"gp_ignore_error_table", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
-			gettext_noop("Ignore INTO error-table in external table and COPY."),
+			gettext_noop("Ignore INTO error-table in external table and COPY (Deprecated)."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE | GUC_GPDB_ADDOPT
 		},
