@@ -170,10 +170,11 @@ public.lineitem -i l_shipdate, l_receiptdate </codeblock></pd>
         </plentry>
         <plentry>
           <pt>--skip_root_stats</pt>
-          <pd>Skip refreshing root partition statistics if any of the leaf partitions that are also
-            analyzed require updating.</pd>
+          <pd>For a partitioned table, skip refreshing root partition statistics if only some of the
+            leaf partitions statistics require updating. </pd>
           <pd>When updating statistics for a partitioned table and you know which leaf partition
-            statistics require updating, you can specify those partitions and this option.</pd>
+            statistics require updating, you can specify those partitions and this option to improve
+            performance.</pd>
           <pd>For information about how statistics are collected for partitioned tables, see
                 <codeph><xref href="../../ref_guide/sql_commands/ANALYZE.xml"
               >ANALYZE</xref></codeph>.</pd>
