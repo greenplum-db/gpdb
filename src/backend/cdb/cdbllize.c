@@ -10,8 +10,6 @@
  * IDENTIFICATION
  *	    src/backend/cdb/cdbllize.c
  *
- * NOTES
- *
  *-------------------------------------------------------------------------
  */
 
@@ -129,12 +127,7 @@ static Plan *materialize_subplan(PlannerInfo *root, Plan *subplan);
  * ------------------------------------------------------------------------- *
  */
 Plan *
-cdbparallelize(PlannerInfo *root,
-			   Plan *plan,
-			   Query *query,
-			   int cursorOptions __attribute__((unused)),
-			   ParamListInfo boundParams __attribute__((unused))
-)
+cdbparallelize(PlannerInfo *root, Plan *plan, Query *query)
 {
 	PlanProfile profile;
 	PlanProfile *context = &profile;
@@ -147,7 +140,7 @@ cdbparallelize(PlannerInfo *root,
 			 role_to_string(Gp_role));
 
 	Assert(is_plan_node((Node *) plan));
-	Assert(query !=NULL && IsA(query, Query));
+	Assert(query != NULL && IsA(query, Query));
 
 	/* Print plan if debugging. */
 	if (Debug_print_prelim_plan)
@@ -186,9 +179,8 @@ cdbparallelize(PlannerInfo *root,
 			break;
 
 		default:
-			Insist(0);
+			elog(ERROR, "Incorrect commandtype for plan parallelization");
 	}
-
 
 	/*
 	 * We need to keep track of whether any part of the plan needs to be
