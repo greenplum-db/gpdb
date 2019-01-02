@@ -11,30 +11,28 @@ function prep_env_for_centos() {
 }
 
 function install_system_deps() {
-  deps_list=" sudo 
-             passwd 
-             openssh-server 
-             ed 
-             readline-devel 
-             zlib-devel 
-             curl-devel 
-             bzip2-devel 
-             python-devel 
-             apr-devel 
-             libevent-devel 
-             openssl-libs 
-             openssl-devel 
-             libyaml 
-             libyaml-devel 
-             epel-release 
-             htop 
-             perl-Env 
-             perl-ExtUtils-Embed 
+  deps_list=" sudo
+             passwd
+             openssh-server
+             ed
+             readline-devel
+             zlib-devel
+             curl-devel
+             bzip2-devel
+             python-devel
+             apr-devel
+             libevent-devel
+             openssl-devel
+             libyaml
+             libyaml-devel
+             epel-release
+             htop
+             perl-ExtUtils-Embed
              libzstd-devel
-             libxml2-devel 
-             libxslt-devel 
+             libxml2-devel
+             libxslt-devel
              libffi-devel "
-  for dep in "$deps_list";
+  for dep in $deps_list;
   do
     yum install -y -d 1 $dep
   done
