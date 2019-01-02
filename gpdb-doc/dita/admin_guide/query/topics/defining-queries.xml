@@ -366,7 +366,7 @@
                         <title>Example 1 – Aggregate Window Function Over a Partition</title>
                         <p>The <codeph>PARTITION BY</codeph> list in the <codeph>OVER</codeph>
                             clause divides the rows into groups, or partitions, that have the same
-                            values as the specified expressions</p>
+                            values as the specified expressions.</p>
                         <p>This example compares employees' salaries with the average salaries for
                             their
                             departments:<codeblock>SELECT depname, empno, salary, avg(salary) OVER(PARTITION BY depname)
