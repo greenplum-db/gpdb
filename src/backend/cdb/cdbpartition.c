@@ -5047,23 +5047,15 @@ atpxPart_validate_spec(PartitionBy *pBy,
 {
 	PartitionSpec *spec = makeNode(PartitionSpec);
 	List	   *schema = NIL;
-	List	   *inheritOids;
-	List	   *old_constraints;
-	int			parentOidCount;
+	List *constraints = NIL;
+	RangeVar *parent_rv = makeRangeVar(
+		get_namespace_name(RelationGetNamespace(rel)),
+		pstrdup(RelationGetRelationName(rel)),
+		-1);
+	SetSchemaAndConstraints(parent_rv, &schema, &constraints);
+
 	int			result;
 	PartitionNode *pNode_tmpl = NULL;
-
-	/* get the table column defs */
-	schema =
-		MergeAttributes(schema,
-						list_make1(
-								   makeRangeVar(
-												get_namespace_name(
-																   RelationGetNamespace(rel)),
-												pstrdup(RelationGetRelationName(rel)), -1)),
-						RELPERSISTENCE_PERMANENT, /* GPDB_91_MERGE_FIXME: what if it's unlogged or temp? Where to get a proper value for this? */
-						true /* isPartitioned */ ,
-						&inheritOids, &old_constraints, &parentOidCount);
 
 	spec->partElem = list_make1(pelem);
 
@@ -6481,6 +6473,7 @@ atpxPartAddList(Relation rel,
 	ct = makeNode(CreateStmt);
 	ct->relation = makeRangeVar(get_namespace_name(RelationGetNamespace(par_rel)),
 								RelationGetRelationName(par_rel), -1);
+	ct->relation->relpersistence = rel->rd_rel->relpersistence;
 
 	/*
 	 * in analyze.c, fill in tableelts with a list of TableLikeClause of the
@@ -6544,6 +6537,8 @@ atpxPartAddList(Relation rel,
 	if (!ct->distributedBy)
 		ct->distributedBy = make_distributedby_for_rel(rel);
 
+	/* for ADD PARTITION or SPLIT PARTITION, there should be no case where the rel is temporary */
+	Assert(rel->rd_rel->relpersistence != RELPERSISTENCE_TEMP);
 	/* this function does transformExpr on the boundary specs */
 	(void) atpxPart_validate_spec(pBy, rel, ct, pelem, pNode, partName,
 								  isDefault, part_type, "");

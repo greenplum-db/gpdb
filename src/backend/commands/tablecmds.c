@@ -504,6 +504,10 @@ static void CheckDropRelStorage(RangeVar *rel, ObjectType removeType);
 
 static void inherit_parent(Relation parent_rel, Relation child_rel,
 						   bool is_partition, List *inhAttrNameList);
+static inline void SetConstraints(TupleDesc tupleDesc, char *relName, List **constraints, AttrNumber *attnos);
+static inline void SetSchema(TupleDesc tuple_desc, List **schema, AttrNumber **attnos);
+
+
 
 /* ----------------------------------------------------------------
  *		DefineRelation
@@ -18090,6 +18094,7 @@ ATPExecPartSplit(Relation *rel,
 		/* should be unique enough */
 		snprintf(tmpname, NAMEDATALEN, "pg_temp_%u", relid);
 		tmprv = makeRangeVar(nspname, tmpname, -1);
+		tmprv->relpersistence = (*rel)->rd_rel->relpersistence;
 		ct->relation = tmprv;
 		ct->relKind = RELKIND_RELATION;
 		ct->ownerid = (*rel)->rd_rel->relowner;
@@ -20462,4 +20467,155 @@ RangeVarCallbackForAlterRelation(const RangeVar *rv, Oid relid, Oid oldrelid,
 						rv->relname)));
 
 	ReleaseSysCache(tuple);
+}
+
+static inline void SetSchema(TupleDesc tuple_desc, List **schema, AttrNumber **attnos)
+{
+	AttrNumber	source_attno;
+	AttrNumber target_attno = 0;
+	TupleConstr *constr = tuple_desc->constr;
+
+	for (source_attno = 1; source_attno <= tuple_desc->natts;
+		 source_attno++)
+	{
+		Form_pg_attribute attribute = tuple_desc->attrs[source_attno - 1];
+		ColumnDef  *def;
+
+		/* Ignore dropped columns in the source. */
+		if (attribute->attisdropped)
+			continue;		/* leave attnos entry as zero */
+
+		def = makeNode(ColumnDef);
+		def->colname = pstrdup(NameStr(attribute->attname));
+		def->typeName = makeTypeNameFromOid(attribute->atttypid,
+			attribute->atttypmod);
+		def->inhcount = 1;
+		def->is_local = false;
+		def->is_not_null = attribute->attnotnull;
+		def->is_from_type = false;
+		def->storage = attribute->attstorage;
+		def->raw_default = NULL;
+		def->cooked_default = NULL;
+		def->collClause = NULL;
+		def->collOid = attribute->attcollation;
+		def->constraints = NIL;
+		def->location = -1;
+		(*attnos)[source_attno - 1] = ++target_attno;
+
+		/* Copy default if any */
+		if (attribute->atthasdef)
+		{
+			Node	   *this_default = NULL;
+			AttrDefault *attrdef;
+			int			i;
+
+			/* Find default in constraint structure */
+			Assert(constr != NULL);
+			attrdef = constr->defval;
+			for (i = 0; i < constr->num_defval; i++)
+			{
+				if (attrdef[i].adnum == source_attno)
+				{
+					this_default = stringToNode(attrdef[i].adbin);
+					break;
+				}
+			}
+			Assert(def->raw_default == NULL);
+			Assert(def->cooked_default == NULL);
+			/* we assume this is only called with cooked constraints */
+			def->cooked_default = this_default;
+		}
+		*schema = lappend(*schema, def);
+	}
+}
+
+static inline void SetConstraints(TupleDesc tupleDesc, char *relName, List **constraints, AttrNumber *attnos)
+{
+	Assert(tupleDesc->constr);
+	TupleConstr *tupleConstr = tupleDesc->constr;
+
+	ConstrCheck *check = tupleConstr->check;
+	int			i;
+
+	for (i = 0; i < tupleConstr->num_check; i++)
+	{
+		char	   *name = check[i].ccname;
+		Node	   *expr;
+		bool		found_whole_row;
+
+		/* ignore if the constraint is non-inheritable */
+		if (check[i].ccnoinherit)
+			continue;
+
+		/* Adjust Vars to match new table's column numbering */
+		expr = map_variable_attnos(stringToNode(check[i].ccbin), 1, 0, attnos,
+				tupleDesc->natts, &found_whole_row);
+
+		/*
+		* For the moment we have to reject whole-row variables. We
+		* could convert them, if we knew the new table's rowtype OID,
+		* but that hasn't been assigned yet.
+		* This is copied from the function, MergeAttributes, so add it here too
+		*/
+		if (found_whole_row)
+			ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("cannot convert whole-row table reference"),
+				 errdetail("Constraint \"%s\" contains a whole-row reference to table \"%s\".",
+					name, relName)));
+
+		CookedConstraint *cooked;
+
+		cooked = (CookedConstraint *) palloc(sizeof(CookedConstraint));
+		cooked->contype = CONSTR_CHECK;
+		cooked->name = pstrdup(name);
+		cooked->attnum = 0; /* not used for constraints */
+		cooked->expr = expr;
+		cooked->skip_validation = false;
+		cooked->is_local = false;
+		cooked->inhcount = 1;
+		cooked->is_no_inherit = false;
+		*constraints = lappend(*constraints, cooked);
+	}
+}
+
+/*
+ * SetSchemaAndConstraints
+ *		Find the attribute names and constraints and add them to the provided lists
+ *
+ * This is only used for partition tables because it sets cooked constraints
+ * In the list it makes, it skips dropped columns
+ */
+void SetSchemaAndConstraints(RangeVar *rangeVar, List **schema, List **constraints)
+{
+	Relation relation;
+	TupleDesc	tupleDesc;
+	AttrNumber *attrNumbers;
+
+	relation = heap_openrv(rangeVar, ShareUpdateExclusiveLock);
+	/* TODO: check if the relation is part of an inheritance hierarchy
+	 * if it is not, we cannot make assumptions about the Constraint being cooked
+	 */
+	ATSimplePermissions(relation, ATT_TABLE);
+
+	char *relname = RelationGetRelationName(relation);
+
+	tupleDesc = RelationGetDescr(relation);
+
+	/*
+	* attrNumbers[] will contain the child-table attribute numbers for the
+	* attributes of this parent table.  (They are not the same for
+	* parent after the first one, nor if we have dropped columns.)
+	*/
+	attrNumbers = (AttrNumber *)
+		palloc0(tupleDesc->natts * sizeof(AttrNumber));
+
+	SetSchema(tupleDesc, schema, &attrNumbers);
+	if (tupleDesc->constr && tupleDesc->constr->num_check > 0)
+	{
+		SetConstraints(tupleDesc, relname, constraints, attrNumbers);
+	}
+
+	pfree(attrNumbers);
+	heap_close(relation, NoLock);
 }

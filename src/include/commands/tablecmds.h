@@ -124,6 +124,8 @@ extern Oid get_settable_tablespace_oid(char *tablespacename);
 extern List * MergeAttributes(List *schema, List *supers, bool istemp, bool isPartitioned,
 			List **supOids, List **supconstr, int *supOidCount);
 
+extern void SetSchemaAndConstraints(RangeVar *rangeVar, List **schema, List **constraints);
+
 extern DistributedBy *make_distributedby_for_rel(Relation rel);
 
 extern Oid transformFkeyCheckAttrs(Relation pkrel,
