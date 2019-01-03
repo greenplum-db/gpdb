@@ -79,8 +79,6 @@ static volatile bool shutdown_requested = false;
 static volatile bool probe_requested = false;
 static volatile sig_atomic_t got_SIGHUP = false;
 
-static char *probeDatabase = "postgres";
-
 /*
  * FUNCTION PROTOTYPES
  */
@@ -316,10 +314,10 @@ ftsMain(int argc, char *argv[])
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
 	 */
-	if (!FindMyDatabase(probeDatabase, &MyDatabaseId, &MyDatabaseTableSpace))
+	if (!FindMyDatabase(DB_FOR_COMMON_ACCESS, &MyDatabaseId, &MyDatabaseTableSpace))
 		ereport(FATAL,
 				(errcode(ERRCODE_UNDEFINED_DATABASE),
-				 errmsg("database \"%s\" does not exit", probeDatabase)));
+				 errmsg("database \"%s\" does not exit", DB_FOR_COMMON_ACCESS)));
 
 	/* Now we can mark our PGPROC entry with the database ID */
 	/* (We assume this is an atomic store so no lock is needed) */

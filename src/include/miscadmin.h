@@ -382,6 +382,15 @@ extern void PreventCommandDuringRecovery(const char *cmdname);
 extern int	trace_recovery_messages;
 extern int	trace_recovery(int trace_level);
 
+/*
+ * database which is used by startup, gdd, fts, etc for catalog access.
+ * We are not using template1 since it seems that users would like to recreate
+ * the template1 database for customization sometimes. That means template1
+ * could be dropped and then recreated and thus that will break
+ * startup, gdd, fts, etc.
+ */
+#define DB_FOR_COMMON_ACCESS	"postgres"
+
 /*****************************************************************************
  *	  pdir.h --																 *
  *			POSTGRES directory path definitions.                             *

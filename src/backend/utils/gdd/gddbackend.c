@@ -155,7 +155,6 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	sigjmp_buf	local_sigjmp_buf;
 	Port		portbuf;
 	char	   *fullpath;
-	char	   *knownDatabase = "postgres";
 
 	IsUnderPostmaster = true;
 	am_global_deadlock_detector = true;
@@ -321,10 +320,10 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
 	 */
-	if (!FindMyDatabase(knownDatabase, &MyDatabaseId, &MyDatabaseTableSpace))
+	if (!FindMyDatabase(DB_FOR_COMMON_ACCESS, &MyDatabaseId, &MyDatabaseTableSpace))
 		ereport(FATAL,
 				(errcode(ERRCODE_UNDEFINED_DATABASE),
-				 errmsg("database \"%s\" does not exit", knownDatabase)));
+				 errmsg("database \"%s\" does not exit", DB_FOR_COMMON_ACCESS)));
 
 	/* Now we can mark our PGPROC entry with the database ID */
 	/* (We assume this is an atomic store so no lock is needed) */
@@ -342,7 +341,7 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	MyProcPort = &portbuf;
 	MyProcPort->user_name = MemoryContextStrdup(TopMemoryContext,
 												GetUserNameFromId(GetAuthenticatedUserId()));
-	MyProcPort->database_name = knownDatabase;
+	MyProcPort->database_name = DB_FOR_COMMON_ACCESS;
 
 	/* close the transaction we started above */
 	CommitTransactionCommand();

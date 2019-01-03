@@ -6272,8 +6272,10 @@ UpdateCatalogForStandbyPromotion(void)
 	 * tablespace; our access to the heap is going to be slightly
 	 * limited, so we'll just use some defaults.
 	 */
-	MyDatabaseId = TemplateDbOid;
-	MyDatabaseTableSpace = DEFAULTTABLESPACE_OID;
+	if (!FindMyDatabase(DB_FOR_COMMON_ACCESS, &MyDatabaseId, &MyDatabaseTableSpace))
+		ereport(FATAL,
+				(errcode(ERRCODE_UNDEFINED_DATABASE),
+				 errmsg("database \"%s\" does not exit", DB_FOR_COMMON_ACCESS)));
 
 	/*
 	 * Now we can mark our PGPROC entry with the database ID
