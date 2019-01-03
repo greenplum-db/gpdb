@@ -1722,6 +1722,8 @@ jobs:
     image: centos-gpdb-test-6
     params:
       TEST_OS: sles12
+      # TODO: remove this line as soon as zstd is vendored in the binary installer for SLES12
+      CONFIGURE_FLAGS: --without-zstd
     on_success:
       <<: *ccp_destroy
   ensure:

@@ -39,10 +39,12 @@ setup_demo_cluster() {
         cp -a ${SRCDIR_OLD} ${SRCDIR_NEW}
 
         cd ${SRCDIR_NEW}
+        # TODO: remove `--without-zstd` as soon as zstd is vendored in the binary installer for SLES12
         ./configure --prefix=/usr/local/greenplum-db-devel \
             --with-python --disable-orca --without-readline \
             --without-zlib --disable-gpfdist --without-libcurl \
-            --disable-pxf --without-libbz2 --enable-orafce
+            --disable-pxf --without-libbz2 --enable-orafce \
+            --without-zstd
 
         export DEFAULT_QD_MAX_CONNECT=150
         export STATEMENT_MEM=250MB

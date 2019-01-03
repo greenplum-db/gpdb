@@ -28,6 +28,8 @@ function install_external_depends() {
 function build_gpdb() {
     build_external_depends
     pushd gpdb_src
+        # TODO: remove this flag after adding zstd to the ubuntu build images
+        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
         CWD=$(pwd)
         LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --enable-orafce --with-gssapi --with-perl --with-libxml \
           --with-python \

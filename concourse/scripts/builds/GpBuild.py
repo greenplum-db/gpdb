@@ -15,6 +15,8 @@ class GpBuild(GpdbBuildBase):
                                     "--with-perl",
                                     "--with-libxml",
                                     "--with-python",
+                                    # TODO: Remove this line as soon as zstd is built into Ubuntu docker image
+                                    "--without-zstd",
                                     "--prefix={0}".format(INSTALL_DIR)
                                   ]
         self.source_gcc_env_cmd = ''

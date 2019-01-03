@@ -26,6 +26,11 @@ report_error() {
 
 pushd ${SRC_DIR}
     VERSION=`./getversion | tr " " "."`-oss
+
+    # EXTRA_CONFIGURE_FLAGS is used by debuild; see the debian-release repo
+    # TODO: remove the EXTRA_CONFIGURE_FLAGS once zstd is added to the ubuntu docker images
+    export EXTRA_CONFIGURE_FLAGS="--without-zstd"
+
     SHA=`git rev-parse --short HEAD`
     MESSAGE="Bumping to Greenplum version $VERSION, git SHA $SHA"
     PACKAGE=`cat debian/control | egrep "^Package: " | cut -d " " -f 2`

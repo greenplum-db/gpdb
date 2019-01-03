@@ -1099,8 +1099,8 @@ AC_SUBST(with_libbz2)
 #
 # zstd
 #
-PGAC_ARG_BOOL(with, zstd, no,
-              [build with Zstandard support (requires zstd library)])
+PGAC_ARG_BOOL(with, zstd, yes,
+              [do not build with Zstandard])
 AC_SUBST(with_zstd)
 
 #

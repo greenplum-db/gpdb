@@ -70,7 +70,19 @@ env:
 
 script:
   - cd ${TRAVIS_BUILD_DIR}
-  - ./configure --with-openssl --with-ldap --with-libcurl --prefix=${TRAVIS_BUILD_DIR}/gpsql --disable-orca --disable-gpcloud --enable-pxf --enable-mapreduce --with-perl --enable-orafce
+  - |
+    ./configure \
+        --with-openssl \
+        --with-ldap \
+        --with-libcurl \
+        --prefix=${TRAVIS_BUILD_DIR}/gpsql \
+        --disable-orca \
+        --disable-gpcloud \
+        --enable-pxf \
+        --enable-mapreduce \
+        --with-perl \
+        --enable-orafce \
+        --without-zstd
 
   - make
   - make install

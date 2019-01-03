@@ -1221,7 +1221,7 @@ validateAppendOnlyRelOptions(bool ao,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("Zstandard library is not supported by this build"),
-					 errhint("Compile with --with-zstd to use Zstandard compression.")));
+					 errhint("Compile without --without-zstd to use Zstandard compression.")));
 #endif
 			if (complevel < 0 || complevel > 19)
 				ereport(ERROR,

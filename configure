@@ -1593,7 +1593,7 @@ Optional Packages:
                           use system time zone data in DIR
   --without-zlib          do not use Zlib
   --without-libbz2        do not use bzip2
-  --with-zstd             build with Zstandard support (requires zstd library)
+  --without-zstd          do not build with Zstandard
   --without-rt            do not use Realtime Library
   --without-libcurl       do not use libcurl
   --with-apr-config=PATH  path to apr-1-config utility
@@ -8133,7 +8133,7 @@ if test "${with_zstd+set}" = set; then :
   esac
 
 else
-  with_zstd=no
+  with_zstd=yes
 
 fi
 
