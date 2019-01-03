@@ -34,6 +34,7 @@ import subprocess
 import threading
 import Queue
 import pipes  # for shell-quoting, pipes.quote()
+import time
 
 class ReplicaCheck(threading.Thread):
     def __init__(self, segrow, datname, relation_types):
@@ -70,6 +71,18 @@ Mirror Data Directory Location: %s' % (self.host, self.port, self.datname,
                 self.result = True if res.strip().split('\n')[-2].strip() == 't' else False
             except subprocess.CalledProcessError, e:
                 print 'returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output)
+
+def create_restartpoint_on_ckpt_record_replay(set):
+    if set:
+        cmd = "gpconfig -c create_restartpoint_on_ckpt_record_replay -v on --skipvalidation; gpstop -u"
+    else:
+        cmd = "gpconfig -r create_restartpoint_on_ckpt_record_replay --skipvalidation; gpstop -u"
+    print cmd
+    try:
+        res = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        print res
+    except subprocess.CalledProcessError, e:
+        print 'returncode: (%s), cmd: (%s), output: (%s)' % (e.returncode, e.cmd, e.output)
 
 def install_extension(databases):
     get_datname_sql = ''' SELECT datname FROM pg_database WHERE datname != 'template0' '''
@@ -150,6 +163,7 @@ def defargs():
 
 if __name__ == '__main__':
     args = defargs()
-
     install_extension(args.databases)
+    create_restartpoint_on_ckpt_record_replay(True)
     start_verification(get_segments(), get_databases(args.databases), args.relation_types)
+    create_restartpoint_on_ckpt_record_replay(False)

@@ -7375,8 +7375,11 @@ StartupXLOG(void)
 				 * it bypasses the shared buffer cache and reads directly from disk.
 				 * For now, restore the old behavior, before the upstream change
 				 * to start bgwriter during archive recovery, and create a
-				 * restartpoint immediately after replaying a checkpoint record.
+				 * restartpoint immediately after replaying a checkpoint record and
+				 * only if this GUC is set we force aggressive checkpoint, and
+				 * currently gp_replica_check forces this guc on.
 				 */
+				if (create_restartpoint_on_ckpt_record_replay && ArchiveRecoveryRequested)
 				{
 					uint8 xlogRecInfo = record->xl_info & ~XLR_INFO_MASK;
 

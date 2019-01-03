@@ -216,6 +216,8 @@ int			gp_connection_send_timeout;
 
 int			WalSendClientTimeout = 30000;		/* 30 seconds. */
 
+bool create_restartpoint_on_ckpt_record_replay = false;
+
 char	   *data_directory;
 
 static char *gp_resource_manager_str;
@@ -3009,6 +3011,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 			NULL
 		},
 		&pgstat_collect_queuelevel,
+		false, NULL, NULL
+	},
+
+	{
+		{"create_restartpoint_on_ckpt_record_replay", PGC_SIGHUP, DEVELOPER_OPTIONS,
+			gettext_noop("create a restartpoint only on mirror immediately after replaying a checkpoint record."),
+			NULL
+		},
+		&create_restartpoint_on_ckpt_record_replay,
 		false, NULL, NULL
 	},
 

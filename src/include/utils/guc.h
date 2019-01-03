@@ -404,6 +404,8 @@ extern int	gp_connection_send_timeout;
 
 extern int  WalSendClientTimeout;
 
+extern bool create_restartpoint_on_ckpt_record_replay;
+
 extern char  *data_directory;
 
 /* ORCA related definitions */
