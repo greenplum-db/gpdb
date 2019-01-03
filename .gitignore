@@ -64,3 +64,4 @@ lib*.pc
 /Debug/
 /Release/
 /CMakeLists.txt
+/build
