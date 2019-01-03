@@ -3161,7 +3161,17 @@ reloption_list:
 reloption_elem:
 			ColLabel '=' def_arg
 				{
-					$$ = makeDefElem($1, (Node *) $3);
+					/*
+					 * appendoptimized is an alias for appendonly in order to
+					 * provide a reloption syntax which better reflects the
+					 * featureset of AO tables. It is implemented as a very
+					 * thin alias, the reloptions and messaging will still
+					 * say appendonly.
+					 */
+					if (strcmp($1, "appendoptimized") == 0)
+						$$ = makeDefElem("appendonly", (Node *) $3);
+					else
+						$$ = makeDefElem($1, (Node *) $3);
 				}
 			| ColLabel
 				{

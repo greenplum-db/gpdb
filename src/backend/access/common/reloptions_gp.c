@@ -222,7 +222,13 @@ accumAOStorageOpt(char *name, char *value,
 
 	initStringInfo(&buf);
 
-	if (pg_strcasecmp(SOPT_APPENDONLY, name) == 0)
+	/*
+	 * "appendoptimized" is a recognized alias for "appendonly", but it's a
+	 * thin alias in the sense that "appendonly" will be saved as the storage
+	 * option.
+	 */
+	if ((pg_strcasecmp(SOPT_APPENDONLY, name) == 0) ||
+		(pg_strcasecmp(SOPT_ALIAS_APPENDOPTIMIZED, name) == 0))
 	{
 		if (!parse_bool(value, &boolval))
 			ereport(ERROR,
