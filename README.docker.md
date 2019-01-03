@@ -16,6 +16,10 @@ After installing, in Docker preferences, you may want to increase the CPUs/memor
 
 Note that the -v switch is used to mount the OS X’s gpdb folder into the container. The privileged and seccomp flags are used to allow gdb to work in Docker.
 
+To make Greenplum accessible outside of the docker container use the -p switch (add before the -i switch) in the run command with the following: `127.0.0.1:<port_on_local_machine>:<greenplum_port_in_docker>`
+
+This will proxy connections / requests made to the `<port_on_local_machine>` across to `<greenplum_port_in_docker>` which will allow Greenplum within docker to receive them.
+
 ```bash
 docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security-opt seccomp:unconfined -i pivotaldata/centos-gpdb-dev:7-gcc6.2-llvm3.7 bash
 ```
@@ -25,14 +29,13 @@ docker run -t -v ~/workspace/gpdb:/home/gpadmin/gpdb_src --privileged --security
 ***The following steps run inside the container***
 
 ```bash
-pip install psutil lockfile
-
 # Set up gpadmin user and SSH
 cd /home/gpadmin
 gpdb_src/concourse/scripts/setup_gpadmin_user.bash
 echo "/usr/sbin/sshd" >> /root/.bashrc
 
 su - gpadmin
+pip install --user psutil lockfile
 cat >> ~/.bash_profile <<EOF
 export PS1='\n\w\n$ '
 source /opt/gcc_env.sh
@@ -119,6 +122,14 @@ make cluster
 source gpdemo-env.sh
 psql postgres
 ```
+
+Assuming that `gpdemo-env.sh` has been sourced, modify the `pg_hba.conf` file located in `$MASTER_DATA_DIRECTORY` to include the following:
+
+`host all gpadmin 0.0.0.0 trust`
+
+This instructs Greenplum within docker to trust all connections from the local machine, like that from an SQL editor.
+
+Then run `gpstop -au` to reload the Greenplum cluster's config so that the changes in `pg_hba.conf` take effect.
 
 ### Running Regression Tests
 
