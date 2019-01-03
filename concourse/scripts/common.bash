@@ -18,6 +18,14 @@ function install_gpdb() {
     tar -xzf bin_gpdb/bin_gpdb.tar.gz -C /usr/local/greenplum-db-devel
 }
 
+function setup_configure_vars() {
+    # We need to add GPHOME paths for configure to check for packaged
+    # libraries (e.g. ZStandard).
+    source /usr/local/greenplum-db-devel/greenplum_path.sh
+    export LDFLAGS="-L${GPHOME}/lib"
+    export CPPFLAGS="-I${GPHOME}/include"
+}
+
 function configure() {
   source /opt/gcc_env.sh
   pushd gpdb_src

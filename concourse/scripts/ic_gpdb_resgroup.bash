@@ -58,6 +58,8 @@ run_resgroup_test() {
         source /usr/local/greenplum-db-devel/greenplum_path.sh
         export PGPORT=5432
         export MASTER_DATA_DIRECTORY=/data/gpdata/master/gpseg-1
+        export LDFLAGS="-L\${GPHOME}/lib"
+        export CPPFLAGS="-I\${GPHOME}/include"
 
         cd /home/gpadmin/gpdb_src
         ./configure --prefix=/usr/local/greenplum-db-devel \

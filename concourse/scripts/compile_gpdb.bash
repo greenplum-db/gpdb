@@ -90,6 +90,16 @@ function unittest_check_gpdb() {
   popd
 }
 
+function include_zstd() {
+  pushd ${GREENPLUM_INSTALL_DIR}
+    if [ "${TARGET_OS}" == "centos" ] ; then
+      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig/.
+      cp /usr/lib64/libzstd.so* lib/.
+      cp /usr/include/zstd*.h include/.
+    fi
+  popd
+}
+
 function export_gpdb() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"
   pushd ${GREENPLUM_INSTALL_DIR}
@@ -178,6 +188,7 @@ function _main() {
       # require `./configure --with-zlib`.
       unittest_check_gpdb
   fi
+  include_zstd
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl

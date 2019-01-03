@@ -76,9 +76,10 @@ function _main() {
       ln -sf "$libperl_path" /lib64/libperl.so || return 1
     fi
 
-    time configure
     time install_gpdb
     time setup_gpadmin_user
+    time setup_configure_vars
+    time configure
     time make_cluster
     time gen_env
     time run_test
