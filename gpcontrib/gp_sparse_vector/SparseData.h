@@ -127,7 +127,6 @@ typedef SparseDataStruct *SparseData;
 
 int64 *sdata_index_to_int64arr(SparseData sdata);
 void serializeSparseData(char *target, SparseData source);
-SparseData deserializeSparseData(char *source);
 
 SparseData makeEmptySparseData(void);
 SparseData makeInplaceSparseData(char *vals, char *index,

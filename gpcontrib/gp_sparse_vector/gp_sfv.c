@@ -14,19 +14,15 @@
 #include "sparse_vector.h"
 
 static char **get_text_array_contents(ArrayType *array, int *numitems);
-int gp_isnew_query(void);
+static int gp_isnew_query(void);
+static SvecType *classify_document(char **features, int num_features, char **document, int num_words, int allocate);
 
 #ifdef PG_MODULE_MAGIC
 PG_MODULE_MAGIC;
 #endif
 
-SvecType *classify_document(char **features, int num_features, char **document, int num_words, int allocate);
 
-Datum calc_logidf(PG_FUNCTION_ARGS);
 Datum gp_extract_feature_histogram(PG_FUNCTION_ARGS);
-
-void gp_extract_feature_histogram_usage(char *msg);
-void gp_extract_feature_histogram_errout(char *msg);
 
 /*
  * 	gp_extract_feature_histogram
@@ -133,7 +129,10 @@ gp_extract_feature_histogram(PG_FUNCTION_ARGS)
          * trying to call this in some sort of crazy way. 
          */
         if (PG_NARGS() != 2) 
-		gp_extract_feature_histogram_usage("gp_extract_feature_histogram called with wrong number of arguments");
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+					 errmsg("gp_extract_feature_histogram called with wrong number of arguments"),
+					 errhint("Required argument is a base 10 encoded IPv4 address. Example: 10.4.128.1 would be entered here as the number 10004128001.")));
 
 	/* Retrieve the C text array equivalents from the PG text[][] inputs */
 	features = get_text_array_contents(PG_GETARG_ARRAYTYPE_P(0),&num_features);
@@ -153,21 +152,9 @@ gp_extract_feature_histogram(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(returnval);
 }
 
-void
-gp_extract_feature_histogram_usage(char *msg) {
-	ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				errmsg(
-		"%s\ngp_extract_feature_histogram requires args: IP_Address INT8\nWhere IP_Address is a 10s encoded IPV4 address.  For example: 10.4.128.1 would be entered here as the number 10004128001.",msg)));
-}
-
-void
-gp_extract_feature_histogram_errout(char *msg) {
-	ereport(ERROR,(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
-				errmsg(
-		"%s\ngp_extract_feature_histogram internal error.",msg)));
-}
-
-SvecType *classify_document(char **features, int num_features, char **document, int num_words, int allocate) {
+static SvecType *
+classify_document(char **features, int num_features, char **document, int num_words, int allocate)
+{
 	float8 *histogram = NULL;
         ENTRY item, *found_item;
 	int i;
@@ -352,7 +339,9 @@ get_text_array_contents(ArrayType *array, int *numitems)
 extern int gp_command_count;
 extern int gp_session_id;
 
-int gp_isnew_query(void) {
+static int
+gp_isnew_query(void)
+{
 	static int firstcall=1;
 	static int last_cnt,last_sid;
 
