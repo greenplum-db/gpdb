@@ -3397,6 +3397,17 @@ static struct config_enum ConfigureNamesEnum[] =
 	},
 
 	{
+		/*
+		 * Greenplum needs to reconcile conflict detection based
+		 * on predicate locks across cluster to support true
+		 * serializability.  See merge fixme in
+		 * assign_XactIsoLevel(). String guc sets the value of the
+		 * corresponding variable via the assign hook, but enum guc
+		 * sets it in set_config_option by new_val. We can't change
+		 * the value of newval in the assignment hook, it's the
+		 * reason why assign hook function method didn't work in
+		 * past. Use the check hook to change 'newval'.
+		 */
 		{"default_transaction_isolation", PGC_USERSET, CLIENT_CONN_STATEMENT,
 			gettext_noop("Sets the transaction isolation level of each new transaction."),
 			NULL
