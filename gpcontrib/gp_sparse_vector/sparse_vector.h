@@ -15,7 +15,6 @@
 #define SPARSEVECTOR_H
 
 #include "SparseData.h"
-//#include "float_specials.h"
 
 typedef struct {
 	int32 vl_len_;

@@ -56,8 +56,3 @@ sparse_vector.c, sparse_vector.h, operators.c
 Functions for text processing (Sparse Feature Vector or SFV):
 ------------------------------------------------------------------------
 gp_sfv.c
-
-Definitions for IEEE double and float types including special denormalized
-types defined for use herein as "no value present":
-------------------------------------------------------------------------
-float_specials.h
