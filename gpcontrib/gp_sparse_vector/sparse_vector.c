@@ -1,3 +1,22 @@
+/*-------------------------------------------------------------------------
+ *
+ * sparse_vector.c
+ *
+ * Sparse Vector Datatype.  We would like to store sparse arrays in a terse
+ * representation that fits in a small amount of memory.  We also want to be
+ * able to compare the number of instances where the svec of one document
+ * intersects another.
+
+ * Copyright (c) 2010, Greenplum Software
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    gpcontrib/gp_sparse_vector/sparse_vector.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <search.h>
@@ -19,16 +38,6 @@
 #include "lib/stringinfo.h"
 #include "utils/memutils.h"
 
-/*
- * Sparse Vector Datatype
- *   We would like to store sparse arrays in a terse representation that fits in a small amount of memory.
- *   We also want to be able to compare the number of instances where the svec of one document intersects
- *   another.
- *
- * License: Use of this code is restricted to those with explicit authorization from Greenplum.
- * 	 All rights to this code are asserted.
- *
- */
 /*
  * Input and Output routines
  */

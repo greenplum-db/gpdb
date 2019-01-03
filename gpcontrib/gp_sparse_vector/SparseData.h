@@ -1,28 +1,30 @@
-/*------------------------------------------------------------------------------
+/*-------------------------------------------------------------------------
  *
  * SparseData.h
  *        Declarations/definitions for "SparseData" functions.
  *
- * SparseData provides array storage for repetitive data as commonly found
- * in numerical analysis of sparse arrays and matrices.
- * Sequential duplicate values in the array are represented in an index
- * structure that stores the count of the number of times a given value
- * is duplicated.
- * All storage is allocated with palloc().
+ * SparseData provides array storage for repetitive data as commonly found in
+ * numerical analysis of sparse arrays and matrices.  Sequential duplicate
+ * values in the array are represented in an index structure that stores the
+ * count of the number of times a given value is duplicated.  All storage is
+ * allocated with palloc().
  *
- * ***NOTE***
- * The SparseData structure is an in-memory structure and so must be
- * serialized into a persisted structure like a VARLENA when leaving
- * a GP / Postgres function.  This implies a COPY from the SparseData
- * to the VARLENA.
- * ***NOTE***
+ * NOTES
+ * The SparseData structure is an in-memory structure and so must be serialized
+ * into a persisted structure like a VARLENA when leaving a GP / Postgres
+ * function.  This implies a COPY from the SparseData to the VARLENA.
  *
  * Copyright (c) 2010, Greenplum Software
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
  *
- * $$
  *
- *------------------------------------------------------------------------------
+ * IDENTIFICATION
+ *	    gpcontrib/gp_sparse_vector/SparseData.h
+ *
+ *-------------------------------------------------------------------------
  */
+#ifndef SPARSEDATA_H
+#define SPARSEDATA_H
 
 #include <math.h>
 #include <string.h>
@@ -30,9 +32,6 @@
 #include "lib/stringinfo.h"
 #include "utils/array.h"
 #include "catalog/pg_type.h"
-
-#ifndef SPARSEDATA_H
-#define SPARSEDATA_H
 
 #define ABS(a)   (((a) < 0) ? -(a) : (a))
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))

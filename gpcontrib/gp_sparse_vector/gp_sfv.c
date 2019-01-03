@@ -1,3 +1,17 @@
+/*-------------------------------------------------------------------------
+ *
+ * gp_sfv.c
+ *
+ * Copyright (c) 2010, Greenplum Software
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    gpcontrib/gp_sparse_vector/gp_sfv.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <search.h>
@@ -62,9 +76,6 @@ Datum gp_extract_feature_histogram(PG_FUNCTION_ARGS);
  * 		  We would like to store the SFV in a terse representation that fits in a small amount of memory.
  * 		  We also want to be able to compare the number of instances where the SFV of one document intersects
  * 		  another.  This routine uses the Sparse Vector datatype to store the SFV.
- *
- * 	License: Use of this code is restricted to those with explicit authorization from Greenplum.
- * 		 All rights to this code are asserted.
  *
  * Function Signature is:
  *

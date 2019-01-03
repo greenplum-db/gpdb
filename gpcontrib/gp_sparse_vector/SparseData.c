@@ -1,3 +1,17 @@
+/*-------------------------------------------------------------------------
+ *
+ * SparseData.c
+ *
+ * Copyright (c) 2010, Greenplum Software
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    gpcontrib/gp_sparse_vector/SparseData.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -1,3 +1,17 @@
+/*-------------------------------------------------------------------------
+ *
+ * operators.c
+ *
+ * Copyright (c) 2010, Greenplum Software
+ * Portions Copyright (c) 2013-Present Pivotal Software, Inc.
+ *
+ *
+ * IDENTIFICATION
+ *	    gpcontrib/gp_sparse_vector/operators.c
+ *
+ *-------------------------------------------------------------------------
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
