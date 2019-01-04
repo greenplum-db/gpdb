@@ -1342,16 +1342,16 @@ GetOldestXmin(Relation rel, bool ignoreVacuum)
 	 * In QD node, all distributed transactions have an entry in the proc array,
 	 * so we're done.
 	 *
-	 * During binary upgrade, we don't have distributed transactions, so we're
-	 * done there too. This ensures correct operation of VACUUM FREEZE during
-	 * pg_upgrade.
+	 * During binary upgrade and in in maintenance mode, we don't have
+	 * distributed transactions, so we're done there too. This ensures correct
+	 * operation of VACUUM FREEZE during pg_upgrade and maintenance mode.
 	 *
 	 * In bootstrap or standalone backend case as well ignore the distributed
 	 * logs using IsPostmasterEnvironment. Otherwise, during initdb can't
 	 * vacuum freeze template0.
 	 */
 	if (IsPostmasterEnvironment && !IS_QUERY_DISPATCHER() &&
-		!IsBinaryUpgrade)
+		!IsBinaryUpgrade && !gp_maintenance_mode)
 	{
 		TransactionId distribOldestXmin;
 
@@ -2649,7 +2649,7 @@ GetSnapshotData(Snapshot snapshot)
 												 ds->distribTransactionTimeStamp,
 												 ds->xminAllDistributedSnapshots);
 		}
-		else
+		else if (!gp_maintenance_mode)
 			globalxmin = DistributedLog_GetOldestXmin(globalxmin);
 	}
 

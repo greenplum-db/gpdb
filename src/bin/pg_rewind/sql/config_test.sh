@@ -73,7 +73,12 @@ PGOPTIONS_UTILITY='-c gp_session_role=utility'
 MASTER_PSQL="psql -a --no-psqlrc -p $PORT_MASTER"
 STANDBY_PSQL="psql -a --no-psqlrc -p $PORT_STANDBY"
 STANDBY_PSQL_TUPLES_ONLY="psql -t --no-psqlrc -p $PORT_STANDBY"
-PG_CTL_COMMON_OPTIONS="--gp_dbid=2 --gp_contentid=0"
+# -m option is used for pg_rewind tests to convey starting in single
+# postgres instance mode the QE segment. So, ignore the distributed
+# log checking and hence enable vacuuming the tables in pg_rewind
+# tests. If pg_rewind tests use full GPDB cluster, -m option will not
+# be needed.
+PG_CTL_COMMON_OPTIONS="--gp_dbid=2 --gp_contentid=0 -m"
 MASTER_PG_CTL_OPTIONS="-p ${PORT_MASTER} $PG_CTL_COMMON_OPTIONS"
 STANDBY_PG_CTL_OPTIONS="-p ${PORT_STANDBY} $PG_CTL_COMMON_OPTIONS"
 MASTER_PG_CTL_STOP_MODE="fast"
