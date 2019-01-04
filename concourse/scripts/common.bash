@@ -43,6 +43,12 @@ function configure() {
   popd
 }
 
+function install_and_configure_gpdb() {
+  install_gpdb
+  setup_configure_vars
+  configure
+}
+
 function gen_gpexpand_input() {
   HOSTNAME=`hostname`
   PWD=`pwd`

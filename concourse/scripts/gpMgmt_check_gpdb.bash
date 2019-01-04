@@ -36,9 +36,7 @@ function setup_gpadmin_user() {
 
 function _main() {
 
-    install_gpdb
-    setup_configure_vars
-    configure
+    install_and_configure_gpdb
     setup_gpadmin_user
     make_cluster
     gen_env

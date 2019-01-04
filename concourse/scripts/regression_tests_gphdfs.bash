@@ -123,9 +123,7 @@ function _main() {
 
 	time setup_gpadmin_user
 	time install_mapr_client
-	time install_gpdb
-	time setup_configure_vars
-	time configure
+	time install_and_configure_gpdb
 	echo "*          soft    nproc     unlimited" >> /etc/security/limits.d/99-nproc.conf
 	time make_cluster
 	time copy_jar_to_mapr_host
