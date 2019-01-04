@@ -748,7 +748,7 @@ PostmasterMain(int argc, char *argv[])
 	 * tcop/postgres.c (the option sets should not conflict) and with the
 	 * common help() function in main/main.c.
 	 */
-	while ((opt = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMmN:nOo:Pp:r:S:sTt:UW:-:")) != -1)
+	while ((opt = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMmN:nOo:Pp:r:S:sTt:W:-:")) != -1)
 	{
 		switch (opt)
 		{
@@ -917,18 +917,6 @@ PostmasterMain(int argc, char *argv[])
 					}
 					break;
 				}
-
-			case 'U':
-				/*
-				 * In upgrade mode, we indicate we're in upgrade mode and
-				 * 1. allow DML on persistent table & catalog table
-				 * 2. alter DDL on catalog table (NOTE: upgrade_mode must set beforehand)
-				 * 3. TODO: disable the 4.1 xlog format (stick with the old)
-				 */
-				SetConfigOption("upgrade_mode",                         "true", PGC_POSTMASTER, PGC_S_ARGV);
-				SetConfigOption("allow_segment_DML",  		            "true", PGC_POSTMASTER, PGC_S_ARGV);
-				SetConfigOption("allow_system_table_mods",              "true",  PGC_POSTMASTER, PGC_S_ARGV);
-				break;
 
 			case 'W':
 				SetConfigOption("post_auth_delay", optarg, PGC_POSTMASTER, PGC_S_ARGV);

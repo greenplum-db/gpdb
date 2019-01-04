@@ -4293,7 +4293,7 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 	 * postmaster/postmaster.c (the option sets should not conflict) and with
 	 * the common help() function in main/main.c.
 	 */
-	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMm:N:nOo:Pp:r:S:sTt:Uv:W:y:-:")) != -1)
+	while ((flag = getopt(argc, argv, "A:B:bc:C:D:d:EeFf:h:ijk:lMm:N:nOo:Pp:r:S:sTt:v:W:y:-:")) != -1)
 	{
 		switch (flag)
 		{
@@ -4438,18 +4438,6 @@ process_postgres_switches(int argc, char *argv[], GucContext ctx,
 						errs++;
 					break;
 				}
-
-			case 'U':
-				/*
-				 * In upgrade mode, we indicate we're in upgrade mode and
-				 * 1. allow DML on persistent table & catalog table
-				 * 2. alter DDL on catalog table (NOTE: upgrade_mode must set beforehand)
-				 * 3. TODO: disable the 4.1 xlog format (stick with the old)
-				 */
-				SetConfigOption("upgrade_mode",                         "true", ctx, gucsource);
-				SetConfigOption("allow_segment_DML",  		            "true", ctx, gucsource);
-				SetConfigOption("allow_system_table_mods",              "true",  ctx, gucsource);
-				break;
 
 			case 'v':
 
