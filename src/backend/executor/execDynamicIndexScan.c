@@ -198,7 +198,7 @@ IndexScan_OpenIndexRelation(IndexScanState *scanState, Oid tableOid)
 
 	LOCKMODE lockMode = AccessShareLock;
 
-	if (!isDynamicScan((Scan *)&scanState->ss.ps.plan) &&
+	if (!isDynamicScan((Scan *)scanState->ss.ps.plan) &&
 			ExecRelationIsTargetRelation(scanState->ss.ps.state, ((Scan *)scanState->ss.ps.plan)->scanrelid))
 	{
 		lockMode = NoLock;
