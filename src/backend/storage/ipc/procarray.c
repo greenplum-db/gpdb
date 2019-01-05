@@ -1345,8 +1345,13 @@ GetOldestXmin(Relation rel, bool ignoreVacuum)
 	 * During binary upgrade, we don't have distributed transactions, so we're
 	 * done there too. This ensures correct operation of VACUUM FREEZE during
 	 * pg_upgrade.
+	 *
+	 * In bootstrap or standalone backend case as well ignore the distributed
+	 * logs using IsPostmasterEnvironment. Otherwise, during initdb can't
+	 * vacuum freeze template0.
 	 */
-	if (!IS_QUERY_DISPATCHER() && !IsBinaryUpgrade)
+	if (IsPostmasterEnvironment && !IS_QUERY_DISPATCHER() &&
+		!IsBinaryUpgrade)
 	{
 		TransactionId distribOldestXmin;
 
