@@ -7490,6 +7490,15 @@ is_exchangeable(Relation rel, Relation oldrel, Relation newrel, bool throw)
 							"which is not a table")));
 	}
 
+	if(oldrel->rd_rel->relpersistence != newrel->rd_rel->relpersistence)
+	{
+		congruent = FALSE;
+		if (throw)
+			ereport(ERROR,
+				(errcode(ERRCODE_WRONG_OBJECT_TYPE),
+					errmsg("cannot exchange relations with differing persistence types")));
+	}
+
 	if (RelationIsExternal(newrel))
 	{
 		if (rel_is_default_partition(oldrel->rd_id))
