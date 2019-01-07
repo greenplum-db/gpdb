@@ -387,7 +387,10 @@ extern int	trace_recovery(int trace_level);
  * We are not using template1 since it seems that users would like to recreate
  * the template1 database for customization sometimes. That means template1
  * could be dropped and then recreated and thus that will break
- * startup, gdd, fts, etc.
+ * startup, gdd, fts, etc. Also template1 is the default template for the
+ * 'create database' command. Using template1 will make that command fail:
+ * "ERROR:  source database "template1" is being accessed by other users"
+ * "DETAIL:  There are 2 other sessions using the database."
  */
 #define DB_FOR_COMMON_ACCESS	"postgres"
 
