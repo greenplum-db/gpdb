@@ -47,7 +47,7 @@
               <varname>address</varname> is the host name or IP address of the segment host, and
               <varname>port</varname> is the communication port.</p><p>For example, a mirror
             configuration file for two segment hosts and two segment instances per
-          host.</p><codeblock>mirror0=2:sdw1-1:41000:/data/mirror1/gp2
+          host:</p><codeblock>mirror0=2:sdw1-1:41000:/data/mirror1/gp2
 mirror1=3:sdw1-2:41001:/data/mirror2/gp3
 mirror2=0:sdw2-1:41000:/data/mirror1/gp0
 mirror3=1:sdw2-2:41001:/data/mirror2/gp1</codeblock></li>

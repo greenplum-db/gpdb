@@ -15,14 +15,15 @@
         <li id="ki155584">On the master host, run the <codeph><xref
               href="../../../utility_guide/admin_utilities/gpstate.xml" type="topic" format="dita"
             /></codeph> utility with the <codeph>-e</codeph> option to show segment instances with
-          error conditions:<codeblock>$ gpstate -e</codeblock><p>If the utility lists Segments with
-            Primary and Mirror Roles Switched, the segment is not in its <i>preferred role</i> (the
-            role to which it was assigned at system initialization). This means the system is in a
-            potentially unbalanced state, as some segment hosts may have more active segments than
-            is optimal for top system performance. </p><p>Segments that display the <codeph>Config
-              status</codeph> as <codeph>Down</codeph> indicate the corresponding mirror segment is
-            down. </p><p>See <xref href="g-recovering-from-segment-failures.xml#topic14"/> for
-            instructions to fix this situation.</p></li>
+          error conditions:<codeblock>$ gpstate -e</codeblock><p>If the utility lists
+              <codeph>Segments with Primary and Mirror Roles Switched</codeph>, the segment is not
+            in its <i>preferred role</i> (the role to which it was assigned at system
+            initialization). This means the system is in a potentially unbalanced state, as some
+            segment hosts may have more active segments than is optimal for top system performance.
+            </p><p>Segments that display the <codeph>Config status</codeph> as <codeph>Down</codeph>
+            indicate the corresponding mirror segment is down. </p><p>See <xref
+              href="g-recovering-from-segment-failures.xml#topic14"/> for instructions to fix this
+            situation.</p></li>
         <li id="ki165350">To get detailed information about failed segments, you can check the
               <codeph><xref href="../../../ref_guide/system_catalogs/gp_segment_configuration.xml"
             /></codeph> catalog table. For example:<p>

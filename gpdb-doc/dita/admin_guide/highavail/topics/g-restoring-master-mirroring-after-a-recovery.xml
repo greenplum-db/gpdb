@@ -33,13 +33,13 @@
         <li id="ki160940">Initialize a standby master on the original master host. For example, run
           this command from the current master host,
           smdw:<codeblock>$ gpinitstandby -s mdw</codeblock></li>
-        <li>After the initialization completes, check the status of standby master, mdw, run
+        <li>After the initialization completes, check the status of standby master, mdw. Run
               <codeph><xref href="../../../utility_guide/admin_utilities/gpstate.xml#topic1"
               type="topic" format="dita"/></codeph> with the <codeph>-f</codeph> option to check the
           standby master status:<codeblock>$ gpstate -f</codeblock> The standby master status should
           be <codeph>passive</codeph>, and the WAL sender state should be
           <codeph>streaming</codeph>.</li>
-        <li>Stop Greenplum Database master instance on the standby master. For
+        <li>Stop the Greenplum Database master instance on the standby master. For
           example:<codeblock>$ gpstop -m</codeblock></li>
         <li id="ki160961">Run the <codeph>gpactivatestandby</codeph> utility from the original
           master host, mdw, that is currently a standby master. For
@@ -50,7 +50,7 @@
             <codeph>-b</codeph> option to display a summary of the system
             status:<codeblock>$ gpstate -b</codeblock><p>The master instance status should be
               <codeph>Active</codeph>. When a standby master is not configured, the command displays
-              <codeph>No master standby configured</codeph>for the standby master state.</p></li>
+              <codeph>No master standby configured</codeph> for the standby master state.</p></li>
         <li>On the standby master host, move or remove the data directory, <codeph>gpseg-1</codeph>.
           This example moves the
             directory:<codeblock>$ mv /data/master/gpseg-1 /data/master/backup_gpseg-1</codeblock><p>You

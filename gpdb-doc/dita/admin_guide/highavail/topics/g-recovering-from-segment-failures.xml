@@ -28,7 +28,7 @@
         <li id="ki155646">After the host is online and you can connect to it, run the <codeph><xref
               href="../../../utility_guide/admin_utilities/gprecoverseg.xml"
             >gprecoverseg</xref></codeph> utility from the master host to reactivate the failed
-          segment instances and starts the process of sycnronizing the master and mirror instances.
+          segment instances and start the process of sycnronizing the master and mirror instances.
           For example:<codeblock>$ gprecoverseg</codeblock>
         </li>
         <li id="ki158500">The recovery process brings up the failed segments and identifies the
@@ -86,7 +86,7 @@
               href="../../../utility_guide/admin_utilities/gpstop.xml" type="topic" format="dita"
               >gpstop</xref></codeph> option <codeph>-r</codeph> stops and restarts the
           system.<codeblock>$ gpstop -r</codeblock></li>
-        <li id="ki165671">After the system restarts, run <codeph>gprecoverseg</codeph> reactivate
+        <li id="ki165671">After the system restarts, run <codeph>gprecoverseg</codeph> to reactivate
           the failed segment instances.<codeblock>$ gprecoverseg</codeblock>
           <note otherprops="pivotal"> If incremental recovery was not successful and the down
             segment instance data is not corrupted, contact Pivotal Support. </note></li>

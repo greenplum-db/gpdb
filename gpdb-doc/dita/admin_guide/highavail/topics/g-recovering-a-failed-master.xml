@@ -25,12 +25,12 @@
             <codeph>-b</codeph> option to display a summary of the system
             status:<codeblock>$ gpstate -b</codeblock><p>The master instance status should be
               <codeph>Active</codeph>. When a standby master is not configured, the command displays
-              <codeph>No master standby configured</codeph>for the standby master status. If you
+              <codeph>No master standby configured</codeph> for the standby master status. If you
             configured a new standby master, its status is <codeph>Passive</codeph>. </p></li>
         <li id="ki169625">After switching to the newly active master host, run
             <codeph>ANALYZE</codeph> on it. For
           example:<codeblock>$ psql <codeph>dbname</codeph> -c 'ANALYZE;'</codeblock></li>
-        <li id="ki155823">Optional: If you not have already done so while activating the prior
+        <li id="ki155823">Optional: If you have not already done so while activating the prior
           standby master, you can run <codeph>gpinitstandby</codeph> on the active master host to
           configure a new standby master.
           <note type="important">You must initialize a new standby master to continue providing
