@@ -455,21 +455,20 @@ resources:
 
 {% endif %}
 {% if "centos6" in os_types or "sles" in os_types or "aix7" in os_types %}
-- name: centos-gpdb-build-6
+- name: centos6-build-gpdb6
   type: docker-image
   source:
     repository: pivotaldata/centos6-build
     tag: gpdb6-latest
 
-- name: centos-gpdb-test-6
+- name: centos6-test-gpdb6
   type: docker-image
   source:
-    repository: pivotaldata/centos-gpdb-dev
-    tag: '6-gcc6.2-llvm3.7'
-
+    repository: pivotaldata/centos6-test
+    tag: gpdb6-latest
 {% endif %}
 {% if "centos7" in os_types %}
-- name: centos-gpdb-build-7
+- name: centos7-build-gpdb6
   type: docker-image
   source:
     repository: pivotaldata/centos7-build
@@ -839,10 +838,10 @@ jobs:
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpaddon_src
-    - get: centos-gpdb-build-6
+    - get: centos6-build-gpdb6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -854,7 +853,7 @@ jobs:
       TASK_OS_VERSION: 6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
@@ -875,10 +874,10 @@ jobs:
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-    - get: centos-gpdb-build-7
+    - get: centos7-build-gpdb6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
-    image: centos-gpdb-build-7
+    image: centos7-build-gpdb6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -889,7 +888,7 @@ jobs:
       TASK_OS: centos
       TASK_OS_VERSION: 7
   - task: compile_gpdb
-    image: centos-gpdb-build-7
+    image: centos7-build-gpdb6
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -911,10 +910,10 @@ jobs:
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
     - get: gpaddon_src
-    - get: centos-gpdb-build-7
+    - get: centos7-build-gpdb6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
-    image: centos-gpdb-build-7
+    image: centos7-build-gpdb6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -977,9 +976,9 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
-    - get: centos-gpdb-test-6
+    - get: centos6-build-gpdb6
   - task: compile_gpdb
-    image: centos-gpdb-test-6
+    image: centos6-build-gpdb6
     file: gpdb_src/concourse/tasks/compile_gpdb_open_source_centos.yml
     params:
         CONFIGURE_FLAGS: {{configure_flags}}
@@ -998,10 +997,10 @@ jobs:
       trigger: true
     - get: gpaddon_src
       resource: gpaddon_src_binary_swap
-    - get: centos-gpdb-build-6
+    - get: centos6-build-gpdb6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       IVYREPO_HOST: {{ivyrepo_host}}
       IVYREPO_REALM: {{ivyrepo_realm}}
@@ -1013,7 +1012,7 @@ jobs:
       TASK_OS_VERSION: 6
   - task: compile_gpdb
     file: gpdb_src/concourse/tasks/compile_gpdb.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       CONFIGURE_FLAGS: {{configure_flags}}
       TARGET_OS: centos
@@ -1037,10 +1036,10 @@ jobs:
       trigger: true
     - get: gpdb_src
     - get: gpaddon_src
-    - get: centos-gpdb-build-6
+    - get: centos6-build-gpdb6
   - task: compile_gpdb_aix7_remote
     file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       REMOTE_HOST: {{remote_host_build}}
       REMOTE_PORT: {{remote_port_build}}
@@ -1078,12 +1077,12 @@ jobs:
       passed:
       - compile_gpdb_centos6
       resource: bin_gpdb_centos6
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - put: aix_environments
       params: {acquire: true}
   - task: ic_gpdb_cl
     file: gpdb_src/concourse/tasks/ic_gpdb_remote.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BLD_TARGETS: "clients loaders"
       REMOTE_HOST: {{remote_host_test}}
@@ -1094,7 +1093,7 @@ jobs:
       do:
       - task: cleanup_aix
         file: gpdb_src/concourse/tasks/aix_remote_cleanup.yml
-        image: centos-gpdb-test-6
+        image: centos6-test-gpdb6
         params:
           REMOTE_HOST: {{remote_host_test}}
           REMOTE_PORT: {{remote_port_test}}
@@ -1128,10 +1127,10 @@ jobs:
       passed: [compile_gpdb_binary_swap_centos6]
       resource: binary_swap_gpdb_centos6
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1147,10 +1146,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
@@ -1169,10 +1168,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: optimizer_use_gpdb_allocators=on
@@ -1188,10 +1187,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       TEST_OS: centos
@@ -1284,7 +1283,7 @@ jobs:
       passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1305,7 +1304,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: sles12
@@ -1324,7 +1323,7 @@ jobs:
       passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1345,7 +1344,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: sles12
@@ -1495,7 +1494,7 @@ jobs:
       passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1509,7 +1508,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TINC_TARGET: [[ test_name ]]
     on_success:
@@ -1528,10 +1527,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: "-C src/test/regress && make -C src/test/walrep install installcheck"
       TEST_OS: centos
@@ -1557,10 +1556,10 @@ jobs:
       passed: [compile_gpdb_centos6]
       resource: bin_gpdb_centos6
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
@@ -1621,7 +1620,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - get: binary_swap_gpdb
       passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
@@ -1640,7 +1639,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: centos6
     on_success:
@@ -1659,7 +1658,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - get: binary_swap_gpdb
       passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
@@ -1680,7 +1679,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: centos7
     on_success:
@@ -1700,7 +1699,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: true
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1719,7 +1718,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: sles12
     on_success:
@@ -1763,7 +1762,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1781,7 +1780,7 @@ jobs:
       SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_FLAGS: --tags=gppkg
     on_success:
@@ -1803,7 +1802,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1817,7 +1816,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_FLAGS: --tags=[[ test_name ]]
     on_success:
@@ -1838,10 +1837,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: gpcheck_as_gpadmin
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
@@ -1852,7 +1851,7 @@ jobs:
   - aggregate: *gets_for_behave
   - task: [[ test_name ]]
     file: gpdb_src/concourse/tasks/behave_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_TAGS: [[ test_name ]]
 
@@ -1866,10 +1865,10 @@ jobs:
       resource: bin_gpdb_centos6
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: check_centos
     file: gpdb_src/concourse/tasks/gpMgmt_check_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: centos
 
@@ -1886,7 +1885,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1901,7 +1900,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_FLAGS: --tags=gpaddmirrors
     on_success:
@@ -1922,7 +1921,7 @@ jobs:
       passed: [gate_icw_end]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - get: icw_gporca_centos6_dump
       passed: [gate_icw_end]
   - put: terraform
@@ -1937,13 +1936,13 @@ jobs:
       <<: *ccp_gen_cluster_default_params
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
       BEHAVE_FLAGS: --tags=gpexpand
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     on_success:
       <<: *ccp_destroy
   ensure:
@@ -1959,7 +1958,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
@@ -2042,7 +2041,7 @@ jobs:
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
   - task: run_gptransfer_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
@@ -2066,7 +2065,6 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: icw_gporca_centos6_dump
       passed: [icw_gporca_centos6]
-    - get: centos-gpdb-test-6
     - get: ccp_src
   - put: terraform
     params:
@@ -2126,10 +2124,10 @@ jobs:
       passed: [gate_ud_start]
       trigger: [[ test_trigger ]]
       resource: bin_gpdb_centos6
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - task: regression_tests_gphdfs
     file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -2148,7 +2146,7 @@ jobs:
       trigger: [[ test_trigger ]]
       resource: bin_gpdb_centos6
     - get: ccp_src
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -2163,7 +2161,7 @@ jobs:
       <<: *ccp_gen_cluster_default_params
   - task: regression_tests_gphdfs_mapr
     file: gpdb_src/concourse/tasks/regression_tests_gphdfs_mapr.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TARGET_OS: centos
       TARGET_OS_VERSION: 6
@@ -2219,10 +2217,10 @@ jobs:
       passed: [gate_advanced_analytics_start]
     - get: bin_gpdb_centos7
       passed: [gate_advanced_analytics_start]
-    - get: centos-gpdb-build-6
+    - get: centos6-build-gpdb6
   - task: build_madlib_gppkg_from_source
     file: madlib_ci/concourse/tasks/madlib_build_gppkg_from_source.yml
-    image: centos-gpdb-build-6
+    image: centos6-build-gpdb6
     params:
       TEST_OS: centos6
       DB_TYPE: gpdb6
@@ -2243,13 +2241,13 @@ jobs:
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [madlib_build_gppkg]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - get: madlib_gppkg
       passed: [madlib_build_gppkg]
       trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: centos
       ORCA: "off"
@@ -2264,13 +2262,13 @@ jobs:
     - get: bin_gpdb
       resource: bin_gpdb_centos6
       passed: [madlib_build_gppkg]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
     - get: madlib_gppkg
       passed: [madlib_build_gppkg]
       trigger: true
   - task: MADlib_Test_gppkg
     file: madlib_ci/concourse/tasks/madlib_test_gppkg.yml
-    image: centos-gpdb-test-6
+    image: centos6-test-gpdb6
     params:
       TEST_OS: centos
       ORCA: "on"
@@ -2471,18 +2469,18 @@ jobs:
       trigger: [[ test_trigger ]]
     - get: bin_gpdb_centos6
       passed: [compile_gpdb_centos6]
-    - get: centos-gpdb-test-6
+    - get: centos6-test-gpdb6
   - aggregate:
     - task: unit_tests_gpcloud
       file: gpdb_src/concourse/tasks/unit_tests_gpcloud.yml
-      image: centos-gpdb-test-6
+      image: centos6-test-gpdb6
       params:
         TARGET_OS: centos
     - task: regression_tests_gpcloud_centos
       input_mapping:
         bin_gpdb: bin_gpdb_centos6
       file: gpdb_src/concourse/tasks/regression_tests_gpcloud.yml
-      image: centos-gpdb-test-6
+      image: centos6-test-gpdb6
       params:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
@@ -2491,7 +2489,7 @@ jobs:
       input_mapping:
         bin_gpdb: bin_gpdb_centos6
       file: gpdb_src/concourse/tasks/gpcheckcloud_tests_gpcloud.yml
-      image: centos-gpdb-test-6
+      image: centos6-test-gpdb6
       params:
         gpcloud_access_key_id: {{gpcloud-access-key-id}}
         gpcloud_secret_access_key: {{gpcloud-secret-access-key}}
