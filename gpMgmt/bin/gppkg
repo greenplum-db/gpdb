@@ -4,8 +4,19 @@
 #
 # import mainUtils FIRST to get python version check
 # THIS IMPORT SHOULD COME FIRST
+from gppylib.gplog import get_default_logger
 from gppylib.mainUtils import *
 from gppylib.programs.gppkg import *
+from gppylib.utils import checkGpexpandNotRunning
 
 if __name__ == '__main__':
+    logger = get_default_logger()
+    # gppkg should check gpexpand status
+    check_result, msg = checkGpexpandNotRunning("gppkg",
+                                                checkOnPhase1=True,
+                                                checkOnPhase2=False)
+    if not check_result:
+        logger.error(msg)
+        sys.exit(127)
+
     simple_main(GpPkgProgram.create_parser, GpPkgProgram.create_program)

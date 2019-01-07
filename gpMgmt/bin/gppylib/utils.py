@@ -2,10 +2,11 @@ import shutil, filecmp,re
 import os, fcntl, select, getpass, socket
 import stat
 from subprocess import *
-from sys import *
+import sys
 from xml.dom import minidom
 from xml.dom import Node
 
+from gppylib.db import dbconn
 from gppylib.gplog import *
 
 logger = get_default_logger()
@@ -701,3 +702,33 @@ def escapeDoubleQuoteInSQLString(string, forceDoubleQuote=True):
     if forceDoubleQuote:
         string = '"' + string + '"'
     return string
+
+def checkGpexpandNotRunning(utility, checkOnPhase1=True, checkOnPhase2=False):
+    dburl = dbconn.DbURL()
+    conn = dbconn.connect(dburl)
+    sql = "select * from gp_expand_get_status()"
+    code = dbconn.execSQLForSingletonRow(conn, sql)[0]
+    conn.close()
+
+    if code == 0:
+        current_phase = 0
+    elif code >= 100 and code < 200:
+        current_phase = 1
+    elif code >= 200:
+        current_phase = 2
+    else:
+        (False, "wrong status code({code}) of gp_expand_get_status()".format(code=str(code)))
+
+    if current_phase == 1 and checkOnPhase1:
+        err_msg = ("ERROR: Usage of {utility} is not supported while the"
+                   "cluster is in a reconfiguration state, "
+                   "exit {utility}")
+        return (False, err_msg.format(utility=utility))
+
+    if current_phase == 2 and checkOnPhase2:
+        err_msg = ("ERROR: Usage of {utility} is not supported while the"
+                   "cluster has tables waiting for expansion, "
+                   "exit {utility}")
+        return (False, err_msg.format(utility=utility))
+
+    return (True, "")

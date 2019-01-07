@@ -15,6 +15,7 @@ try:
     from gppylib.commands.gp import *
     from gppylib.db import dbconn
     from gppylib.userinput import *
+    from gppylib.utils import checkGpexpandNotRunning
     from pygresql.pg import DatabaseError
     from gpconfig_modules.segment_guc import SegmentGuc
     from gpconfig_modules.database_segment_guc import DatabaseSegmentGuc
@@ -508,6 +509,15 @@ def do_main():
         do_show(options)
 
     elif options.remove or options.change:
+        # gpconfig should check gpexpand runnning status when
+        # it wants to modify configurations
+        check_result, msg = checkGpexpandNotRunning("gpconfig",
+                                                    checkOnPhase1=True,
+                                                    checkOnPhase2=False)
+        if not check_result:
+            LOGGER.error(msg)
+            sys.exit(127)
+
         do_change(options)
 
 

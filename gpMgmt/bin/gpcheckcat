@@ -29,6 +29,7 @@ try:
     from gppylib.gpcatalog import *
     from gppylib.commands.unix import *
     from gppylib.system.info import *
+    from gppylib.utils import checkGpexpandNotRunning
     from pygresql.pgdb import DatabaseError
     from pygresql import pg
     from gpcheckcat_modules.unique_index_violation_check import UniqueIndexViolationCheck
@@ -4288,6 +4289,17 @@ def main():
     if GV.version < "4.0":
         myprint("Error: only Greenplum database version >= 4.0 are supported\n")
         sys.exit(GV.retcode)
+
+    # gpcheckcat should check gpexpand runnning status
+    enable_verbose_logging()
+    check_result, msg = checkGpexpandNotRunning("gpcheckcat",
+                                                checkOnPhase1=True,
+                                                checkOnPhase2=False)
+    if not check_result:
+        logger.error(msg)
+        sys.exit(127)
+
+    very_quiet_stdout_logging()
 
     GV.cfg = getGPConfiguration()
     truncate_batch_size(len(GV.cfg.keys()))
