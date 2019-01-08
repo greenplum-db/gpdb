@@ -150,6 +150,8 @@ ExecRefreshMatView(RefreshMatViewStmt *stmt, const char *queryString,
 	int			save_sec_context;
 	int			save_nestlevel;
 
+	/* MATERIALIZED_VIEW_FIXME: Refresh MatView is not MPP-fied. */
+
 	/* Determine strength of lock needed. */
 	concurrent = stmt->concurrent;
 	lockmode = concurrent ? ExclusiveLock : AccessExclusiveLock;

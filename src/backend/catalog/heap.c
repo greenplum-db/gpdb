@@ -1809,7 +1809,6 @@ heap_create_with_catalog(const char *relname,
 		switch (relkind)
 		{
 			case RELKIND_RELATION:
-				// GPDB_93_MERGE_FIXME: What about MATVIEW?
 				break;
 			case RELKIND_INDEX:
 				subtyp = "INDEX";
@@ -1819,6 +1818,9 @@ heap_create_with_catalog(const char *relname,
 				break;
 			case RELKIND_VIEW:
 				subtyp = "VIEW";
+				break;
+			case RELKIND_MATVIEW:
+				subtyp = "MATVIEW";
 				break;
 			default:
 				doIt = false;

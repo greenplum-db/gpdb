@@ -110,10 +110,7 @@ test: namespace
 # ----------
 test: privileges security_label collate lock replica_identity
 
-# GPDB_93_MERGE_FIXME: Materialized views have not been "MPP-ified", and don't
-# currently work. Disable test, until it's fixed. (If they still don't work when
-# we make a release, we should add a check in code, to throw a proper "not
-# supported" error message.)
+# MATERIALIZED_VIEW_FIXME : matview is not supported on greenplum. Enable the test when the feature is ready.
 #test: matview
 
 # ----------

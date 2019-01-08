@@ -3236,6 +3236,10 @@ transformCreateTableAsStmt(ParseState *pstate, CreateTableAsStmt *stmt)
 	/* additional work needed for CREATE MATERIALIZED VIEW */
 	if (stmt->relkind == OBJECT_MATVIEW)
 	{
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialized view is not supported on greenplum")));
+
 		/*
 		 * Prohibit a data-modifying CTE in the query used to create a
 		 * materialized view. It's not sufficiently clear what the user would
