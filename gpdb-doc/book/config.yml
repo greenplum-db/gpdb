@@ -55,10 +55,10 @@ template_variables:
   book_title: Greenplum Database Documentation
   book_title_short:  Greenplum Database Docs
   domain_name: greenplum.org
-  product_link: <div class="header-item"><a href="http://greenplum.org">Back to Greenplum Database</a></div>
-  product_url: http://greenplum.org
-  support_call_to_action: <a href="http://greenplum.org#contribute" target="_blank">Need Support?</a>
+  product_link: <div class="header-item"><a href="https://greenplum.org">Back to Greenplum Database</a></div>
+  product_url: https://greenplum.org
+  support_call_to_action: <a href="https://greenplum.org/community/" target="_blank">Need Support?</a>
   support_link: <a href="https://github.com/greenplum-db/gpdb/wiki">Wiki</a>
-  support_url: http://greenplum.org
+  support_url: https://greenplum.org
 
 broken_link_exclusions: iefix|arrowhead
