@@ -182,7 +182,7 @@ in the picture above) that has the word "master" in the `-D`parameter setting,
 whereas the segment hosts have the word "gpseg" in the `-D` parameter setting.
 
 Next, start ``gdb`` from a guest terminal. Once you get a prompt in gdb, type
-in the following (the pid you specify in the `attach` comnnand will be
+in the following (the pid you specify in the `attach` command will be
 different for you):
 ```gdb
 set follow-fork-mode child
