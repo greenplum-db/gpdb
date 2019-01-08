@@ -5,8 +5,8 @@
 
 ![Greenplum](logo-greenplum.png)
 
-The Greenplum Database (GPDB) is an advanced, fully featured, open
-source data warehouse. It provides powerful and rapid analytics on
+Greenplum Database (GPDB) is an advanced, fully featured, open
+source data warehouse, based on PostgreSQL. It provides powerful and rapid analytics on
 petabyte scale data volumes. Uniquely geared toward big data
 analytics, Greenplum Database is powered by the world’s most advanced
 cost-based query optimizer delivering high analytical query
@@ -14,7 +14,7 @@ performance on large data volumes.
 
 The Greenplum project is released under the [Apache 2
 license](http://www.apache.org/licenses/LICENSE-2.0). We want to thank
-all our current community contributors and are really interested in
+all our past and present community contributors and are really interested in
 all new potential contributions. For the Greenplum Database community
 no contribution is too small, we encourage all types of contributions.
 
@@ -26,10 +26,16 @@ contains only metadata. The master server, and all the segments, share
 the same schema.
 
 Users always connect to the master server, which divides up the query
-into fragments that are executed in the segments, sends the fragments
-to the segments, and collects the results.
+into fragments that are executed in the segments, and collects the results.
+
+More information can be found on the [project website](https://greenplum.org/).
 
 ## Building Greenplum Database with GPORCA
+GPORCA is a cost-based optimizer which is used by Greenplum Database in
+conjunction with the PostgreSQL planner.  It is also known as just ORCA,
+and Pivotal Query Optimizer (PQO). The code for GPORCA resides in a
+separate repository, below are steps outlining how to build Greenplum with
+GPORCA enabled.
 
 ### Installing dependencies (for macOS developers)
 Follow [these macOS steps](README.macOS.md) for getting your system ready for GPDB
@@ -50,9 +56,9 @@ cd ..
 ```
 
 #### Manually
-Follow the directions in the [ORCA README](https://github.com/greenplum-db/gporca).
+Follow the directions in the [GPORCA README](https://github.com/greenplum-db/gporca).
 
-**Note**: Get the latest ORCA `git pull --ff-only` if you see an error message like below:
+**Note**: Get the latest GPORCA `git pull --ff-only` if you see an error message like below:
 
     checking Checking ORCA version... configure: error: Your ORCA version is expected to be 2.33.XXX
 
@@ -94,7 +100,7 @@ Once build and started, run `psql` and check the GPOPT (e.g. GPORCA) version:
 select gp_opt_version();
 ```
 
-To turn ORCA off and use legacy planner for query optimization:
+To turn GPORCA off and use legacy planner for query optimization:
 ```
 set optimizer=off;
 ```
@@ -133,32 +139,14 @@ make installcheck-world
   upstream. We try to keep the upstream tests identical to the upstream
   versions, to make merging with newer PostgreSQL releases easier.
 
-### Running TINC tests
-
-* create TINC test cluster
-
-It's different from the `create-demo-cluster` to pass the ICW tests. It has
-less number of primaries and also support more connections.
-
-```
-# assuming repo cloned under ~/workspace/gpdb
-cd ~/workspace/gpdb
-source /usr/local/gpdb/greenplum_path.sh
-make create-tinc-test-cluster
-source gpAux/gpdemo/gpdemo-env.sh
-make -C src/test/tinc walrep_2 # to run walrep_2 tinc tests
-```
-
-To understand more about TINC, please refer to `src/test/tinc/README`.
-
 ## Alternative Configurations
 
 ### Building GPDB without GPORCA
 
-Currently, GPDB is built with ORCA by default so latest ORCA libraries and headers need
-to be available in the environment. [Build and Install](#buildOrca) the latest ORCA.
+Currently, GPDB is built with GPORCA by default so latest GPORCA libraries and headers need
+to be available in the environment. [Build and Install](#buildOrca) the latest GPORCA.
 
-If you want to build GPDB without ORCA, configure requires `--disable-orca` flag to be set.
+If you want to build GPDB without GPORCA, configure requires `--disable-orca` flag to be set.
 ```
 # Clean environment
 make distclean
@@ -220,9 +208,14 @@ throughout the codebase, but a few larger additions worth noting:
 
 * __gpAux/__
 
-  Contains Greenplum-specific extensions such as gpfdist and
-  gpmapreduce.  Some additional directories are submodules and will be
+  Contains Greenplum-specific release management scripts, and vendored
+  dependencies. Some additional directories are submodules and will be
   made available over time.
+
+* __gpcontrib/__
+
+  Much like the PostgreSQL contrib/ directory, this directory contains
+  extensions such as gpfdist, PXF and gpmapreduce which are Greenplum-specific.
 
 * __doc/__
 
@@ -251,10 +244,10 @@ throughout the codebase, but a few larger additions worth noting:
 
 * __src/backend/gpopt/__
 
-  Contains the so-called __translator__ library, for using the ORCA
+  Contains the so-called __translator__ library, for using the GPORCA
   optimizer with Greenplum. The translator library is written in C++
   code, and contains glue code for translating plans and queries
-  between the DXL format used by ORCA, and the PostgreSQL internal
+  between the DXL format used by GPORCA, and the PostgreSQL internal
   representation.
 
 * __src/backend/fts/__
@@ -276,7 +269,7 @@ future releases.
 Greenplum is developed on GitHub, and anybody wishing to contribute to it will
 have to [have a GitHub account](https://github.com/signup/free) and be familiar
 with [Git tools and workflow](https://wiki.postgresql.org/wiki/Working_with_Git).
-It is also recommend that you follow the [developer's mailing list](http://greenplum.org/#contribute)
+It is also recommend that you follow the [developer's mailing list](https://greenplum.org/community/)
 since some of the contributions may generate more detailed discussions there.
 
 Once you have your GitHub account, [fork](https://github.com/greenplum-db/gpdb/fork)
@@ -428,7 +421,7 @@ just commit to the repository directly.
 ## Documentation
 
 For Greenplum Database documentation, please check the
-[online documentation](http://greenplum.org/docs/).
+[online documentation](http://docs.greenplum.org/).
 
 For further information beyond the scope of this README, please see
 [our wiki](https://github.com/greenplum-db/gpdb/wiki)
