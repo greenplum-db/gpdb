@@ -41,8 +41,8 @@
     <title>Prerequisites</title>
     <body>
       <p>The source and destination Greenplum Database systems must already exist, have network
-        access between all hosts, and have master host and primary segment hosts in both systems.
-        Each system must be configured with the same number of segments.</p>
+        access between all hosts, and have master host and primary segment hosts in both
+        systems.</p>
       <p><codeph>gpcopy</codeph> is dependent on the <codeph>pg_dump</codeph>,
           <codeph>pg_dumpall</codeph>, and <codeph>psql</codeph> utilities installed with Greenplum
         Database. In most cases, you run <codeph>gpcopy</codeph> from a Greenplum Database cluster,
