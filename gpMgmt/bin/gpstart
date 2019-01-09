@@ -127,13 +127,6 @@ class GpStart:
                 self.master_checksum_value = HeapChecksum(gparray=self.gparray, num_workers=num_workers,
                                                           logger=logger).get_master_value()
 
-            # Do we have an even-number of recovered segments ?
-            if len(self.gparray.recoveredSegmentDbids) > 0 and len(self.gparray.recoveredSegmentDbids) % 2 == 0:
-                logger.info("Master start noticed recovered segments, updating configuration to rebalance.")
-                self.gparray.updateRoleForRecoveredSegs(self.dburl)
-                logger.info("Re-obtaining updated segment details from master...")
-                self.gparray = GpArray.initFromCatalog(self.dburl, utility=True)
-
             if not self.skip_standby_check:
                 self._check_standby_activated()
             else:
