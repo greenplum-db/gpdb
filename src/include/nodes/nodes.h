@@ -770,7 +770,7 @@ typedef enum JoinType
 	 * planner. A JOIN_DEDUP_SEMI join indicates a semi-join, but to be
 	 * implemented by performing a normal inner join, and eliminating the
 	 * duplicates with a UniquePath above the join. That can be useful in
-	 * an MPP enviroment, if performing the join as an inner join avoids
+	 * an MPP environment, if performing the join as an inner join avoids
 	 * moving the larger of the two relations.
 	 */
 	JOIN_DEDUP_SEMI,			/* inner join, LHS path must be made unique afterwards */

@@ -119,70 +119,70 @@ ExecHashJoin_guts(HashJoinState *node)
 				 */
 				Assert(hashtable == NULL);
 
-			  /*
-			   * MPP-4165: My fix for MPP-3300 was correct in that we avoided
-			   * the *deadlock* but had very unexpected (and painful)
-			   * performance characteristics: we basically de-pipeline and
-			   * de-parallelize execution of any query which has motion below
-			   * us.
-			   *
-			   * So now prefetch_inner is set (see createplan.c) if we have *any* motion
-			   * below us. If we don't have any motion, it doesn't matter.
-			   *
-			   * See motion_sanity_walker() for details on how a deadlock may occur.
-			   */
-			  if (!node->prefetch_inner)
-			  {
 				/*
-				 * If the outer relation is completely empty, and it's not
-				 * right/full join, we can quit without building the hash
-				 * table.  However, for an inner join it is only a win to
-				 * check this when the outer relation's startup cost is less
-				 * than the projected cost of building the hash table.
-				 * Otherwise it's best to build the hash table first and see
-				 * if the inner relation is empty.  (When it's a left join, we
-				 * should always make this check, since we aren't going to be
-				 * able to skip the join on the strength of an empty inner
-				 * relation anyway.)
+				 * MPP-4165: My fix for MPP-3300 was correct in that we avoided
+				 * the *deadlock* but had very unexpected (and painful)
+				 * performance characteristics: we basically de-pipeline and
+				 * de-parallelize execution of any query which has motion below
+				 * us.
 				 *
-				 * If we are rescanning the join, we make use of information
-				 * gained on the previous scan: don't bother to try the
-				 * prefetch if the previous scan found the outer relation
-				 * nonempty. This is not 100% reliable since with new
-				 * parameters the outer relation might yield different
-				 * results, but it's a good heuristic.
+				 * So now prefetch_inner is set (see createplan.c) if we have *any* motion
+				 * below us. If we don't have any motion, it doesn't matter.
 				 *
-				 * The only way to make the check is to try to fetch a tuple
-				 * from the outer plan node.  If we succeed, we have to stash
-				 * it away for later consumption by ExecHashJoinOuterGetTuple.
+				 * See motion_sanity_walker() for details on how a deadlock may occur.
 				 */
-				if (HJ_FILL_INNER(node))
+				if (!node->prefetch_inner)
 				{
-					/* no chance to not build the hash table */
-					node->hj_FirstOuterTupleSlot = NULL;
-				}
-				else if (HJ_FILL_OUTER(node) ||
+					/*
+					 * If the outer relation is completely empty, and it's not
+					 * right/full join, we can quit without building the hash
+					 * table.  However, for an inner join it is only a win to
+					 * check this when the outer relation's startup cost is less
+					 * than the projected cost of building the hash table.
+					 * Otherwise it's best to build the hash table first and see
+					 * if the inner relation is empty.  (When it's a left join, we
+					 * should always make this check, since we aren't going to be
+					 * able to skip the join on the strength of an empty inner
+					 * relation anyway.)
+					 *
+					 * If we are rescanning the join, we make use of information
+					 * gained on the previous scan: don't bother to try the
+					 * prefetch if the previous scan found the outer relation
+					 * nonempty. This is not 100% reliable since with new
+					 * parameters the outer relation might yield different
+					 * results, but it's a good heuristic.
+					 *
+					 * The only way to make the check is to try to fetch a tuple
+					 * from the outer plan node.  If we succeed, we have to stash
+					 * it away for later consumption by ExecHashJoinOuterGetTuple.
+					 */
+					if (HJ_FILL_INNER(node))
+					{
+						/* no chance to not build the hash table */
+						node->hj_FirstOuterTupleSlot = NULL;
+					}
+					else if (HJ_FILL_OUTER(node) ||
 						 (outerNode->plan->startup_cost < hashNode->ps.plan->total_cost &&
 						  !node->hj_OuterNotEmpty))
-				{
-					node->hj_FirstOuterTupleSlot = ExecProcNode(outerNode);
-					if (TupIsNull(node->hj_FirstOuterTupleSlot))
 					{
-						node->hj_OuterNotEmpty = false;
-						return NULL;
+						node->hj_FirstOuterTupleSlot = ExecProcNode(outerNode);
+						if (TupIsNull(node->hj_FirstOuterTupleSlot))
+						{
+							node->hj_OuterNotEmpty = false;
+							return NULL;
+						}
+						else
+							node->hj_OuterNotEmpty = true;
 					}
 					else
-						node->hj_OuterNotEmpty = true;
+						node->hj_FirstOuterTupleSlot = NULL;
 				}
 				else
+				{
+					/* see MPP-989 comment above, for now we assume that we have
+					* at least one row on the outer. */
 					node->hj_FirstOuterTupleSlot = NULL;
-			  }
-			  else
-			  {
-				  /* see MPP-989 comment above, for now we assume that we have
-				   * at least one row on the outer. */
-				  node->hj_FirstOuterTupleSlot = NULL;
-			  }
+				}
 
 				/*
 				 * create the hash table
