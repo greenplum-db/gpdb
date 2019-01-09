@@ -2,7 +2,8 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: pivotaldata/centos-gpdb-dev
+    repository: pivotaldata/centos6-test
+    tag: gpdb6-latest
     username:
     password:
 
