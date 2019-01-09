@@ -1221,6 +1221,7 @@ select * from
 -- test for appropriate join order in the presence of lateral references
 --
 -- start_ignore
+-- LATERAL_FIXME: lateral is not fully supported.
 -- GPDB_94_STABLE_MERGE_FIXME: Currently LATERAL is not fully supported in GPDB
 -- and the queries below are failing at the moment (The first one fails with
 -- error and the other two fail with panic). Comment them off temporarily.
@@ -1280,7 +1281,8 @@ where tt1.f1 = ss1.c0;
 -- check a case in which a PlaceHolderVar forces join order
 --
 
---start_ignore
+-- start_ignore
+-- LATERAL_FIXME: lateral is not fully supported.
 --GPDB_94_STABLE_MERGE_FIXME: This query is lateral related and its plan is
 --different from PostgreSQL's.  Do not know why yet. Ignore its plan
 --temporarily.
@@ -1294,7 +1296,6 @@ select ss2.* from
   on i41.f1 = ss1.c1,
   lateral (select i41.*, i8.*, ss1.* from text_tbl limit 1) ss2
 where ss1.c2 = 0;
---end_ignore
 
 select ss2.* from
   int4_tbl i41
@@ -1306,6 +1307,7 @@ select ss2.* from
   lateral (select i41.*, i8.*, ss1.* from text_tbl limit 1) ss2
 where ss1.c2 = 0;
 
+--end_ignore
 --
 -- test successful handling of full join underneath left join (bug #14105)
 --
@@ -1500,6 +1502,9 @@ select * from
 -- Test LATERAL
 --
 
+-- start_ignore
+-- LATERAL_FIXME: lateral is not fully supported.
+/*
 select unique2, x.*
 from tenk1 a, lateral (select * from int4_tbl b where f1 = a.unique1) x;
 explain (costs off)
@@ -1551,7 +1556,6 @@ select count(*) from tenk1 a,
   tenk1 b join lateral (values(a.unique1)) ss(x) on b.unique2 = ss.x;
 
 -- lateral injecting a strange outer join condition
--- start_ignore
 -- GPDB_93_MERGE_FIXME: These queries are failing at the moment. Need to investigate.
 -- There were a lot of LATERAL fixes in upstream minor versions, so I'm hoping that
 -- these will get fixed once we catch up to those. Or if not, at least it will be
@@ -1564,7 +1568,6 @@ explain (costs off)
 select * from int8_tbl a,
   int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)
     on x.q2 = ss.z;
---end_ignore
 
 -- lateral reference to a join alias variable
 select * from (select f1/2 as x from int4_tbl) ss1 join int4_tbl i4 on x = f1,
@@ -1649,7 +1652,6 @@ select * from int4_tbl a,
 -- GPDB_94_STABLE_MERGE_FIXME: The query below gives wrong results. The change
 -- is related to upstream commit acfcd4. Disable this case temporarily and will
 -- come back to fix it when understanding more about that commit.
---start_ignore
 explain (verbose, costs off)
 select * from
   int8_tbl a left join lateral
@@ -1661,7 +1663,6 @@ select * from
   (select b.q1 as bq1, c.q1 as cq1, least(a.q1,b.q1,c.q1) from
    int8_tbl b cross join int8_tbl c) ss
   on a.q2 = ss.bq1;
---end_ignore
 
 -- case requiring nested PlaceHolderVars
 explain (verbose, costs off)
@@ -1706,7 +1707,6 @@ select * from
   ) as q2;
 
 -- check we don't try to do a unique-ified semijoin with LATERAL
--- start_ignore
 -- GPDB_94_STABLE_MERGE_FIXME: The query below is 'deeply' correlated
 -- and GPDB would not pull up the sublink into a semijoin (why?), while
 -- PostgreSQL will do. So the following test is meaningless in GPDB.
@@ -1721,7 +1721,6 @@ select * from
   lateral (select f1 from int4_tbl
            where f1 = any (select unique1 from tenk1
                            where unique2 = v.x offset 0)) ss;
---end_ignore
 
 -- test some error cases where LATERAL should have been used but wasn't
 select f1,g from int4_tbl a, (select f1 as g) ss;
@@ -1753,3 +1752,5 @@ update xx1 set x2 = f1 from xx1, lateral (select * from int4_tbl where f1 = x1) 
 delete from xx1 using (select * from int4_tbl where f1 = x1) ss;
 delete from xx1 using (select * from int4_tbl where f1 = xx1.x1) ss;
 delete from xx1 using lateral (select * from int4_tbl where f1 = x1) ss;
+*/
+-- end_ignore

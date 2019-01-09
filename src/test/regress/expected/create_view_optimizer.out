@@ -1457,6 +1457,8 @@ select row(i.*::int8_tbl)::nestedcomposite from int8_tbl i;
 (5 rows)
 
 create view tt16v as select * from int8_tbl i, lateral(values(i)) ss;
+ERROR:  lateral is not supported on greenplum
+-- start_ignore
 select * from tt16v;
         q1        |        q2         |               column1                
 ------------------+-------------------+--------------------------------------
@@ -1487,6 +1489,7 @@ select * from int8_tbl i, lateral(values(i.*::int8_tbl)) ss;
  4567890123456789 | -4567890123456789 | (4567890123456789,-4567890123456789)
 (5 rows)
 
+-- end_ignore
 create view tt17v as select * from int8_tbl i where i in (values(i));
 select * from tt17v;
         q1        |        q2         

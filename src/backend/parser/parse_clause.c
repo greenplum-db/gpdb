@@ -665,6 +665,12 @@ transformRangeSubselect(ParseState *pstate, RangeSubselect *r)
 	Query	   *query;
 	RangeTblEntry *rte;
 
+	/* LATERAL_FIXME: lateral is not fully supported. */
+	if (r->lateral)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("lateral is not supported on greenplum")));
+
 	/*
 	 * We require user to supply an alias for a subselect, per SQL92. To relax
 	 * this, we'd have to be prepared to gin up a unique alias for an
@@ -985,6 +991,12 @@ transformRangeFunction(ParseState *pstate, RangeFunction *r)
 	 * there are any lateral cross-references in it.
 	 */
 	is_lateral = r->lateral || contain_vars_of_level((Node *) funcexprs, 0);
+
+	/* LATERAL_FIXME: lateral is not fully supported. */
+	if (r->lateral) /* Do not disable implicit lateral. */
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				errmsg("lateral is not supported on greenplum")));
 
 	/*
 	 * OK, build an RTE for the function.

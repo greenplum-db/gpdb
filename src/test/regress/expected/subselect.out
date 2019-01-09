@@ -724,6 +724,9 @@ select val.x
     values ((select s.i + 1)), (s.i + 101)
   ) as val(x)
 where s.i < 10 and (select val.x) < 110;
+ERROR:  lateral is not supported on greenplum
+-- start_ignore
+-- LATERAL_FIXME: lateral is not fully supported.
   x  
 -----
    2
@@ -745,6 +748,7 @@ where s.i < 10 and (select val.x) < 110;
   10
 (17 rows)
 
+-- end_ignore
 --
 -- Check sane behavior with nested IN SubLinks
 -- GPDB_94_MERGE_FIXME: ORCA plan is correct but very pricy. Should we fallback to planner?
