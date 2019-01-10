@@ -56,7 +56,6 @@ groups:
   ## --------------------------------------------------------------------
   - gate_replication_start
   - walrep_2
-  - segwalrep_mirrorless_centos6
   ## --------------------------------------------------------------------
   - interconnect
   ## --------------------------------------------------------------------
@@ -160,7 +159,6 @@ groups:
   jobs:
   - gate_replication_start
   - walrep_2
-  - segwalrep_mirrorless_centos6
   - compile_gpdb_centos6
 
 ## ======================================================================
@@ -1330,26 +1328,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-
-- name: segwalrep_mirrorless_centos6
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_replication_start]
-    - get: bin_gpdb
-      resource: bin_gpdb_centos6
-      passed: [gate_replication_start]
-      trigger: true
-    - get: centos6-test-gpdb6
-  - task: ic_gpdb
-    file: gpdb_src/concourse/tasks/ic_gpdb.yml
-    image: centos6-test-gpdb6
-    params:
-      MAKE_TEST_COMMAND: "-C src/test/regress && make -C src/test/walrep install installcheck"
-      TEST_OS: centos
-      CONFIGURE_FLAGS: {{configure_flags}}
-      WITH_MIRRORS: false
-
 ## ======================================================================
 ##  ___ _   _ _____ _____ ____   ____ ___  _   _ _   _ _____ ____ _____
 ## |_ _| \ | |_   _| ____|  _ \ / ___/ _ \| \ | | \ | | ____/ ___|_   _|
@@ -2250,7 +2228,6 @@ jobs:
       - resource_group_centos6
       - resource_group_centos7
       - resource_group_sles12
-      - segwalrep_mirrorless_centos6
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
       - gprecoverseg
@@ -2283,7 +2260,6 @@ jobs:
       - icw_extensions_gpcloud_centos6
       - client_loader_remote_test_aix
       - resource_group_centos6
-      - segwalrep_mirrorless_centos6
       - regression_tests_gphdfs_hadoop_centos
       - regression_tests_gphdfs_mapr_centos
       - gprecoverseg

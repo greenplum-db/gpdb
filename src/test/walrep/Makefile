@@ -6,16 +6,8 @@ top_builddir = ../../..
 
 include $(top_builddir)/src/Makefile.global
 
-WITH_MIRRORS ?= true
 REGRESS = setup
-
-# These two tests can only run without mirrors due to limit of 1
-# walsender-walreceiver connection only
-ifeq ($(WITH_MIRRORS), false)
-REGRESS += walreceiver generate_ao_xlog generate_aoco_xlog replication_views_mirrorless
-else
-REGRESS += replication_views_mirrored missing_xlog
-endif
+REGRESS += replication_views_mirrored missing_xlog walreceiver generate_ao_xlog generate_aoco_xlog
 REGRESS_OPTS = --dbname="walrep_regression"
 
 NO_PGXS = 1

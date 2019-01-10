@@ -21,7 +21,7 @@ declare
 begin
    i := 0;
    loop
-      SELECT count(*) into d FROM pg_stat_replication;
+      SELECT count(*) into d FROM pg_stat_replication where application_name = 'walreceiver_test';
       if (d = 0) then
          return true;
       end if;
@@ -34,14 +34,14 @@ begin
 end;
 $$ language plpgsql;
 -- Test connection
-SELECT test_connect('');
+SELECT test_connect('application_name=walreceiver_test');
  test_connect 
 --------------
  t
 (1 row)
 
 -- Should report 1 replication
-SELECT count(*) FROM pg_stat_replication;
+SELECT count(*) FROM pg_stat_replication where application_name = 'walreceiver_test';
  count 
 -------
      1
@@ -60,13 +60,13 @@ SELECT check_and_wait_for_replication(10);
 (1 row)
 
 -- Test connection passing hostname
-SELECT test_connect('host=localhost');
+SELECT test_connect('host=localhost application_name=walreceiver_test');
  test_connect 
 --------------
  t
 (1 row)
 
-SELECT count(*) FROM pg_stat_replication;
+SELECT count(*) FROM pg_stat_replication where application_name = 'walreceiver_test';
  count 
 -------
      1
