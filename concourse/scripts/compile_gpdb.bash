@@ -3,11 +3,12 @@ set -exo pipefail
 
 GREENPLUM_INSTALL_DIR=/usr/local/greenplum-db-devel
 export GPDB_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
-
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
+
 GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
+GREENPLUM_CL_INSTALL_DIR=/usr/local/greenplum-clients-devel
+GPDB_CL_FILENAME=${GPDB_CL_FILENAME:="gpdb-clients-${TARGET_OS}${TARGET_OS_VERSION}.tar.gz"}
 
 function expand_glob_ensure_exists() {
   local -a glob=($*)
@@ -29,7 +30,6 @@ function install_deps_for_centos() {
   # install libsigar from tar.gz
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
-
 
 function link_tools_for_centos() {
   tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
@@ -158,6 +158,16 @@ function export_gpdb_win32_ccl() {
     popd
 }
 
+function export_gpdb_clients() {
+  TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_CL_FILENAME}"
+  pushd ${GREENPLUM_CL_INSTALL_DIR}
+    source ./greenplum_clients_path.sh
+    python -m compileall -q -x test .
+    chmod -R 755 .
+    tar -czf "${TARBALL}" ./*
+  popd
+}
+
 function _main() {
   # Copy input ext dir; assuming ext doesnt exist
   mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
@@ -218,6 +228,11 @@ function _main() {
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
+
+  if echo "${BLD_TARGETS}" | grep -qwi "clients"
+  then
+      export_gpdb_clients
+  fi
 }
 
 _main "$@"
