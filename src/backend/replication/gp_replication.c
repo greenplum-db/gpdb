@@ -26,6 +26,7 @@ extern pg_time_t PMAcceptingConnectionsStartTime;
 static bool
 is_mirror_up(WalSnd *walsender)
 {
+	Assert(walsender->is_for_gp_walreceiver);
 	bool walsender_has_pid = walsender->pid != 0;
 
 	/*
@@ -36,9 +37,8 @@ is_mirror_up(WalSnd *walsender)
 	 */
 	bool is_communicating_with_mirror = walsender->state == WALSNDSTATE_CATCHUP ||
 		walsender->state == WALSNDSTATE_STREAMING;
-	
-	return walsender->is_for_gp_walreceiver && walsender_has_pid
-		&& is_communicating_with_mirror;
+
+	return walsender_has_pid && is_communicating_with_mirror;
 }
 
 /*
@@ -58,25 +58,25 @@ GetMirrorStatus(FtsResponse *response)
 
 	for (int i = 0; i < max_wal_senders; i++)
 	{
-		bool found_mirror_sender = false;
-
+		bool is_up;
+		bool is_streaming;
 		WalSnd *walsender = &WalSndCtl->walsnds[i];
 
 		SpinLockAcquire(&walsender->mutex);
+		if (!walsender->is_for_gp_walreceiver)
 		{
-			found_mirror_sender = walsender->is_for_gp_walreceiver;
-			walsender_replica_disconnected_at = walsender->replica_disconnected_at;
-
-			bool is_up = is_mirror_up(walsender);
-			bool is_streaming = (walsender->state == WALSNDSTATE_STREAMING);
-
-			response->IsMirrorUp = is_up;
-			response->IsInSync = (is_up && is_streaming);
+			SpinLockRelease(&walsender->mutex);
+			continue;
 		}
-		SpinLockRelease(&walsender->mutex);
 
-		if (found_mirror_sender)
-			break;
+		walsender_replica_disconnected_at = walsender->replica_disconnected_at;
+		is_up = is_mirror_up(walsender);
+		is_streaming = (walsender->state == WALSNDSTATE_STREAMING);
+
+		response->IsMirrorUp = is_up;
+		response->IsInSync = (is_up && is_streaming);
+		SpinLockRelease(&walsender->mutex);
+		break;
 	}
 
 	if (!response->IsMirrorUp)
@@ -89,7 +89,9 @@ GetMirrorStatus(FtsResponse *response)
 		 * processes can be spawned.
 		 */
 		Assert(PMAcceptingConnectionsStartTime);
-		pg_time_t delta = ((pg_time_t) time(NULL)) - Max(walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime);
+		pg_time_t delta = ((pg_time_t) time(NULL)) -
+			Max(walsender_replica_disconnected_at, PMAcceptingConnectionsStartTime);
+
 		/*
 		 * Report mirror as down, only if it didn't connect for below
 		 * grace period to primary. This helps to avoid marking mirror
