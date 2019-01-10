@@ -230,6 +230,14 @@ sync_wait(void)
 		LWLockAcquire(SyncRepLock, LW_SHARED);
 		for (i = 0; i < max_wal_senders; i++)
 		{
+			/*
+			 * Because we can have more than one type of walreciever connected at
+			 * any time, there may be other walrecievers (like pg_basebackup) in
+			 * the walsnds list.
+			 */
+			if (!WalSndCtl->walsnds[i].is_for_gp_walreceiver)
+				continue;
+
 			/* fail early in-case primary and mirror are not in sync */
 			if (WalSndCtl->walsnds[i].pid == 0
 				|| WalSndCtl->walsnds[i].state != WALSNDSTATE_STREAMING)
