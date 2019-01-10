@@ -145,8 +145,7 @@ extern char *AppendOnlyStorageFormat_SmallContentHeaderStr(
 
 extern char *AppendOnlyStorageFormat_LargeContentHeaderStr(
 	uint8			*headerPtr,
-	bool			usingChecksums,
-	int				version);
+	bool			usingChecksums);
 
 extern char *AppendOnlyStorageFormat_NonBulkDenseContentHeaderStr(
 	uint8			*headerPtr,

@@ -249,14 +249,12 @@ AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite)
 /*
  * Creates an on-demand Append-Only segment file under transaction.
  *
- * filePathName - name of the segment file to open.
  * logicalEof	- The last committed write transaction's EOF value to use as
  *				  the end of the segment file. If 0, we will create the file
  *				  if necessary. Otherwise, it must already exist.
  */
 void
 AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrite,
-											 char *filePathName,
 											 RelFileNodeBackend *relFileNode,
 											 int32 segmentFileNum)
 {
@@ -420,7 +418,6 @@ AppendOnlyStorageWrite_DoPadOutRemainder(AppendOnlyStorageWrite *storageWrite,
 		 * Pad to end of page.
 		 */
 		doPad = true;
-		padLen = safeWriteRemainder;
 	}
 	else
 		doPad = (safeWriteRemainder < padLen);
@@ -526,8 +523,6 @@ AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *stor
 													int64 *newLogicalEof,
 													int64 *fileLen_uncompressed)
 {
-	int32		segmentFileNum;
-
 	Assert(storageWrite != NULL);
 	Assert(storageWrite->isActive);
 
@@ -537,8 +532,6 @@ AppendOnlyStorageWrite_TransactionFlushAndCloseFile(AppendOnlyStorageWrite *stor
 		*fileLen_uncompressed = 0;
 		return;
 	}
-
-	segmentFileNum = storageWrite->segmentFileNum;
 
 	AppendOnlyStorageWrite_FlushAndCloseFile(storageWrite,
 											 newLogicalEof,

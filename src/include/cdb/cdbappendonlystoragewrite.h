@@ -186,7 +186,6 @@ extern void AppendOnlyStorageWrite_Init(AppendOnlyStorageWrite *storageWrite,
 extern void AppendOnlyStorageWrite_FinishSession(AppendOnlyStorageWrite *storageWrite);
 
 extern void AppendOnlyStorageWrite_TransactionCreateFile(AppendOnlyStorageWrite *storageWrite,
-											 char *filePathName,
 											 RelFileNodeBackend *relFileNode,
 											 int32 segmentFileNum);
 extern void AppendOnlyStorageWrite_OpenFile(AppendOnlyStorageWrite *storageWrite,

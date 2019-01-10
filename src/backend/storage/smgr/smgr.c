@@ -367,9 +367,6 @@ smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
  *
  *		If isRedo is true, it is okay for the underlying file(s) to be gone
  *		already.
- *
- *		This is equivalent to calling smgrdounlinkfork for each fork, but
- *		it's significantly quicker so should be preferred when possible.
  */
 void
 smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage)
@@ -506,74 +503,6 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages)
 	}
 
 	pfree(rnodes);
-}
-
-/*
- *	smgrdounlinkfork() -- Immediately unlink one fork of a relation.
- *
- *		The specified fork of the relation is removed from the store.  This
- *		should not be used during transactional operations, since it can't be
- *		undone.
- *
- *		If isRedo is true, it is okay for the underlying file to be gone
- *		already.
- */
-
-
-void
-smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum, bool isRedo, char relstorage)
-{
-	/*
-	 * AO/CO tables have only MAIN_FORKNUM we should exit early to prevent
-	 * extra work.
-	 */
-	if (relstorage_is_ao(relstorage) &&
-		forknum != MAIN_FORKNUM)
-		return;
-
-
-	RelFileNodeBackend rnode = reln->smgr_rnode;
-
-	/* Close the fork */
-	mdclose(reln, forknum);
-
-	/*
-	 * Get rid of any remaining buffers for the relation.  bufmgr will just
-	 * drop them without bothering to write the contents.
-	 *
-	 * Apart from relstorage == RELSTORAGE_HEAP do any other RELSTOARGE type
-	 * expected to have buffers in shared memory ? Can check only for
-	 * RELSTORAGE_HEAP below.
-	 */
-	if ((relstorage != RELSTORAGE_AOROWS) &&
-		(relstorage != RELSTORAGE_AOCOLS))
-		DropRelFileNodeBuffers(rnode, forknum, 0);
-
-	/*
-	 * It'd be nice to tell the stats collector to forget it immediately, too.
-	 * But we can't because we don't know the OID (and in cases involving
-	 * relfilenode swaps, it's not always clear which table OID to forget,
-	 * anyway).
-	 */
-
-	/*
-	 * Send a shared-inval message to force other backends to close any
-	 * dangling smgr references they may have for this rel.  We should do this
-	 * before starting the actual unlinking, in case we fail partway through
-	 * that step.  Note that the sinval message will eventually come back to
-	 * this backend, too, and thereby provide a backstop that we closed our
-	 * own smgr rel.
-	 */
-	CacheInvalidateSmgr(rnode);
-
-	/*
-	 * Delete the physical file(s).
-	 *
-	 * Note: smgr_unlink must treat deletion failure as a WARNING, not an
-	 * ERROR, because we've already decided to commit or abort the current
-	 * xact.
-	 */
-	mdunlink(rnode, forknum, isRedo, relstorage);
 }
 
 /*

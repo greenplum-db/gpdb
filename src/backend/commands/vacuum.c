@@ -478,8 +478,7 @@ vacuum_assign_compaction_segno(Relation onerel,
 		{
 			*insert_segno = SetSegnoForCompactionInsert(onerel,
 														new_compaction_list,
-														compactedSegmentFileList,
-														insertedSegmentFileList);
+														compactedSegmentFileList);
 		}
 		else
 		{

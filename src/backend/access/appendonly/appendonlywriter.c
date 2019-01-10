@@ -992,8 +992,7 @@ SetSegnoForCompaction(Relation rel,
 int
 SetSegnoForCompactionInsert(Relation rel,
 							List *compacted_segno,
-							List *compactedSegmentFileList,
-							List *insertedSegmentFileList)
+							List *compactedSegmentFileList)
 {
 	int			i,
 				usesegno = RESERVED_SEGNO;

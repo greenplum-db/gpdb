@@ -133,15 +133,6 @@ extern int64 BufferedReadNextBufferPosition(
     BufferedRead       *bufferedRead);
 
 /*
- * Get the next, maximum buffer space for reading.
- *
- * Returns NULL when the current file has been completely read.
- */
-extern uint8 *BufferedReadGetMaxBuffer(
-    BufferedRead       *bufferedRead,
-    int32              *nextBufferLen);
-
-/*
  * Get the next buffer space for reading with a specified max read-ahead
  * amount.
  *

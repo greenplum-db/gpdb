@@ -90,8 +90,6 @@ extern void smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo);
 extern void smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo);
 extern void smgrdounlink(SMgrRelation reln, bool isRedo, char relstorage);
 extern void smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages);
-extern void smgrdounlinkfork(SMgrRelation reln, ForkNumber forknum,
-		bool isRedo, char relstorage);
 extern void smgrextend(SMgrRelation reln, ForkNumber forknum,
 		   BlockNumber blocknum, char *buffer, bool skipFsync);
 extern void smgrprefetch(SMgrRelation reln, ForkNumber forknum,

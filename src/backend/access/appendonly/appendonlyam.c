@@ -486,7 +486,6 @@ SetCurrentFileSegForWrite(AppendOnlyInsertDesc aoInsertDesc)
 	if (aoInsertDesc->cur_segno > 0 && eof == 0)
 	{
 		AppendOnlyStorageWrite_TransactionCreateFile(&aoInsertDesc->storageWrite,
-													 aoInsertDesc->appendFilePathName,
 													 &rnode,
 													 aoInsertDesc->cur_segno);
 	}

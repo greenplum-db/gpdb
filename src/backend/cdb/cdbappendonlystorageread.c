@@ -516,7 +516,6 @@ AppendOnlyStorageRead_DoSkipPadding(AppendOnlyStorageRead *storageRead,
 		 * Skip to end of page.
 		 */
 		doSkip = true;
-		skipLen = safeWriteRemainder;
 	}
 	else
 		doSkip = (safeWriteRemainder < skipLen);

@@ -216,8 +216,7 @@ extern void DeregisterSegnoForCompactionDrop(Oid relid, List *compactedSegmentFi
 extern List *SetSegnoForCompaction(Relation rel, List *compactedSegmentFileList,
 					  List *insertedSegmentFileList, bool *isdrop);
 extern int SetSegnoForCompactionInsert(Relation rel, List *compacted_segno,
-							List *compactedSegmentFileList,
-							List *insertedSegmentFileList);
+							List *compactedSegmentFileList);
 extern List *assignPerRelSegno(List *all_rels);
 extern void UpdateMasterAosegTotals(Relation parentrel,
 						int segno,

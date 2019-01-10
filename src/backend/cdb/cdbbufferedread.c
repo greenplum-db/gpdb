@@ -582,26 +582,6 @@ BufferedReadGetNextBuffer(
 }
 
 /*
- * Get the next, maximum buffer space for reading.
- *
- * Returns NULL when the current file has been completely read.
- */
-uint8 *
-BufferedReadGetMaxBuffer(
-						 BufferedRead *bufferedRead,
-						 int32 *nextBufferLen)
-{
-	Assert(bufferedRead != NULL);
-	Assert(bufferedRead->file >= 0);
-	Assert(nextBufferLen != NULL);
-
-	return BufferedReadGetNextBuffer(
-									 bufferedRead,
-									 bufferedRead->maxBufferLen,
-									 nextBufferLen);
-}
-
-/*
  * Grow the available length of the current buffer.
  *
  * NOTE: The buffer address returned can be different, even for previously

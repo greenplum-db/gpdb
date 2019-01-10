@@ -805,7 +805,6 @@ datumstreamwrite_open_file(DatumStreamWrite *ds, char *fn, int64 eof, int64 eofU
 	if (segmentFileNum > 0 && eof == 0)
 	{
 		AppendOnlyStorageWrite_TransactionCreateFile(&ds->ao_write,
-													 fn,
 													 relFileNode,
 													 segmentFileNum);
 	}

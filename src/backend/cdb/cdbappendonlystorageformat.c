@@ -402,8 +402,7 @@ AppendOnlyStorageFormat_SmallContentHeaderStr(
 char *
 AppendOnlyStorageFormat_LargeContentHeaderStr(
 											  uint8 *headerPtr,
-											  bool usingChecksums,
-											  int version)
+											  bool usingChecksums)
 {
 	AOLargeContentHeader *blockHeader;
 	AoHeaderKind aoHeaderKind;
@@ -670,8 +669,7 @@ AppendOnlyStorageFormat_BlockHeaderStr(
 		case AoHeaderKind_LargeContent:
 			str = AppendOnlyStorageFormat_LargeContentHeaderStr(
 																headerPtr,
-																usingChecksums,
-																version);
+																usingChecksums);
 			break;
 
 		case AoHeaderKind_NonBulkDenseContent:
@@ -737,8 +735,7 @@ errdetail_appendonly_storage_largecontent_header(
 
 	str = AppendOnlyStorageFormat_LargeContentHeaderStr(
 														headerPtr,
-														usingChecksums,
-														version);
+														usingChecksums);
 
 	errdetail("%s", str);
 
