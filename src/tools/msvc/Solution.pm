@@ -125,6 +125,7 @@ sub copyFile
 sub GenerateFiles
 {
 	my $self = shift;
+	my $buildclient = shift;
 	my $bits = $self->{platform} eq 'Win32' ? 32 : 64;
 
 	# Parse configure.in to get version numbers
@@ -132,7 +133,11 @@ sub GenerateFiles
 	  || confess("Could not open configure.in for reading\n");
 	while (<C>)
 	{
-		if (/^AC_INIT\(\[PostgreSQL\], \[([^\]]+)\]/)
+		if (/^AC_INIT\(\[Greenplum Database\], \[([^\]]+)\]/)
+		{
+			$self->{gpdbver} = $1;
+		}
+		if (/\[PG_PACKAGE_VERSION=([^\]]+)\]/)
 		{
 			$self->{strver} = $1;
 			if ($self->{strver} !~ /^(\d+)\.(\d+)(?:\.(\d+))?/)
@@ -170,6 +175,7 @@ sub GenerateFiles
 s{PG_VERSION_STR "[^"]+"}{__STRINGIFY(x) #x\n#define __STRINGIFY2(z) __STRINGIFY(z)\n#define PG_VERSION_STR "PostgreSQL $self->{strver}, compiled by Visual C++ build " __STRINGIFY2(_MSC_VER) ", $bits-bit"};
 			print O;
 		}
+		print O "#define GP_VERSION \"$self->{gpdbver}\"\n";
 		print O "#define PG_MAJORVERSION \"$self->{majorver}\"\n";
 		print O "#define LOCALEDIR \"/share/locale\"\n"
 		  if ($self->{options}->{nls});
@@ -429,6 +435,8 @@ EOF
 		close(O);
 	}
 
+	if (!$buildclient)
+	{
 	my $mf = Project::read_file('src\backend\catalog\Makefile');
 	$mf =~ s{\\s*[\r\n]+}{}mg;
 	$mf =~ /^POSTGRES_BKI_SRCS\s*:?=[^,]+,(.*)\)$/gm
@@ -453,6 +461,7 @@ EOF
 				'src\include\catalog\schemapg.h');
 			last;
 		}
+	}
 	}
 
 	open(O, ">doc/src/sgml/version.sgml")
@@ -552,10 +561,10 @@ sub AddProject
 
 sub Save
 {
-	my ($self) = @_;
+	my ($self, $buildclient) = @_;
 	my %flduid;
 
-	$self->GenerateFiles();
+	$self->GenerateFiles($buildclient);
 	foreach my $fld (keys %{ $self->{projects} })
 	{
 		foreach my $proj (@{ $self->{projects}->{$fld} })

@@ -34,10 +34,16 @@ sub WriteHeader
 EOF
 	$self->WriteConfigurationHeader($f, 'Debug');
 	$self->WriteConfigurationHeader($f, 'Release');
+	my $sdkversion=$ENV{'WindowsSDKVersion'};
+	if ($sdkversion =~ /.*\\$/)
+	{
+		chop $sdkversion;
+	}
 	print $f <<EOF;
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>$self->{guid}</ProjectGuid>
+    <WindowsTargetPlatformVersion>$sdkversion</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="\$(VCTargetsPath)\\Microsoft.Cpp.Default.props" />
 EOF
