@@ -1,0 +1,56 @@
+---
+title: Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+PXF is installed with connectors to Azure Blob Storage, Azure Data Lake, Google Cloud Storage, Minio, and S3 object stores.
+
+## <a id="objstore_prereq"></a>Prerequisites
+
+Before working with object store data using PXF, ensure that:
+
+- You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
+- You have configured the PXF Object Store Connectors that you plan to use on each Greenplum Database segment host. Refer to [Configuring PXF Object Store Connectors](objstore_cfg.html) for instructions.
+
+
+## <a id="objstore_connectors"></a>Connectors, Data Formats, and Profiles
+
+The PXF object store connectors provide built-in profiles to support the following data formats:
+
+- Text
+- Avro
+- JSON
+- Parquet
+- AvroSequenceFile
+- SequenceFile
+
+The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the following profiles to read, and in many cases write, these supported data formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a file or directory in the specific object store.
+
+| Data Format | Azure Blob Storage | Azure Data Lake | Google Cloud Storage | S3 |
+|-----|------|---------|------------|----------------|
+| delimited single line [plain text](objstore_text.html) | wasbs:text | adl:text | gs:text | s3:text |
+| delimited [text with quoted linefeeds](objstore_text.html) | wasbs:text:multi | adl:text:multi | gs:text:multi | s3:text:multi |
+| [Avro](objstore_avro.html) | wasbs:avro | adl:avro | gs:avro | s3:avro |
+| [JSON](objstore_json.html) | wasbs:json | adl:json | gs:json | s3:json |
+| [Parquet](objstore_parquet.html) | wasbs:parquet | adl:parquet | gs:parquet | s3:parquet |
+| AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
+| [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
+

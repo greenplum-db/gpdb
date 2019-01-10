@@ -1,5 +1,5 @@
 ---
-title: Accessing HBase Table Data with PXF
+title: Reading HBase Table Data
 ---
 
 Apache HBase is a distributed, versioned, non-relational database on Hadoop.
@@ -8,15 +8,12 @@ The PXF HBase connector reads data stored in an HBase table. The HBase connector
 
 This section describes how to use the PXF HBase connector.
 
-## <a id="hbase_prereq"></a>Prerequisites
+## <a id="prereq"></a>Prerequisites
 
 Before working with HBase table data, ensure that you have:
 
-- Configured the PXF Hadoop and HBase Connectors on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions.
-
 - Copied `$GPHOME/pxf/lib/pxf-hbase-*.jar` to each node in your HBase cluster, and that the location of this PXF JAR file is in the `$HBASE_CLASSPATH`. This configuration is required for the PXF HBase connector to support filter pushdown.
-
-- Initialized PXF on your Greenplum Database segment hosts, and started PXF on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
+- Met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_prereq).
 
 ## <a id="hbase_primer"></a>HBase Primer
 
@@ -94,7 +91,7 @@ Use the following syntax to create a Greenplum Database external table referenci
 CREATE EXTERNAL TABLE <table_name>
     ( <column_name> <data_type> [, ...] | LIKE <other_table> )
 LOCATION ('pxf://<hbase-table-name>?PROFILE=HBase')
-FORMAT 'CUSTOM' (formatter='pxfwritable_import');
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
 HBase connector-specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) call are described below.
@@ -103,7 +100,7 @@ HBase connector-specific keywords and values used in the [CREATE EXTERNAL TABLE]
 |-------|-------------------------------------|
 | \<hbase&#8209;table&#8209;name\>    | The name of the HBase table. |
 | PROFILE    | The `PROFILE` keyword must specify `HBase`. |
-| FORMAT  | The `FORMAT` clause must specify `'CUSTOM' (formatter='pxfwritable_import')`.   |
+| FORMAT  | The `FORMAT` clause must specify `'CUSTOM' (FORMATTER='pxfwritable_import')`.   |
 
 
 
@@ -127,17 +124,17 @@ For example, to create a Greenplum Database external table accessing the followi
 -   qualifier `name` in the column family named `product`
 -   qualifier `zipcode` in the column family named `shipping_info` 
 
-from the `order_info` HBase table you created in [Example: Creating an HBase Table](#hbaseshell_example), use this `CREATE EXTERNAL TABLE` syntax:
+from the `order_info` HBase table that you created in [Example: Creating an HBase Table](#hbaseshell_example), use this `CREATE EXTERNAL TABLE` syntax:
 
 ``` sql
 CREATE EXTERNAL TABLE orderinfo_hbase ("product:name" varchar, "shipping_info:zipcode" int)
     LOCATION ('pxf://order_info?PROFILE=HBase')                                     
-    FORMAT 'CUSTOM' (formatter='pxfwritable_import');
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
 ### <a id="indirectmappingvialookuptable" class="no-quick-link"></a>Indirect Mapping via Lookup Table
 
-When you use indirect mapping to map Greenplum Database external table column names to HBase qualifiers, you specify the mapping in a lookup table you create in HBase. The lookup table maps a \<column-family\>:\<column-qualifier\> to a column name alias that you specify when you create the Greenplum Database external table. 
+When you use indirect mapping to map Greenplum Database external table column names to HBase qualifiers, you specify the mapping in a lookup table that you create in HBase. The lookup table maps a \<column-family\>:\<column-qualifier\> to a column name alias that you specify when you create the Greenplum Database external table. 
 
 You must name the HBase PXF lookup table `pxflookup`. And you must define this table with a single column family named `mapping`. For example:
 
@@ -167,7 +164,7 @@ Then create a Greenplum Database external table using the following `CREATE EXTE
 ``` sql
 CREATE EXTERNAL TABLE orderinfo_map (pname varchar, zip int)
     LOCATION ('pxf://order_info?PROFILE=HBase')
-    FORMAT 'CUSTOM' (formatter='pxfwritable_import');
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
 ## <a id="rowkey"></a>Row Key
@@ -183,7 +180,7 @@ For example:
 ``` sql
 CREATE EXTERNAL TABLE <table_name> (recordkey bytea, ... ) 
     LOCATION ('pxf://<hbase_table_name>?PROFILE=HBase')
-    FORMAT 'CUSTOM' (formatter='pxfwritable_import');
+    FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 ```
 
 After you have created the external table, you can use the `recordkey` in a `WHERE` clause to filter the HBase table on a range of row key values.

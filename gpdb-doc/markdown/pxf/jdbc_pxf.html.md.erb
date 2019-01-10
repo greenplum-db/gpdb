@@ -1,5 +1,5 @@
 ---
-title: Accessing an External SQL Database with PXF (JDBC)
+title: Accessing an SQL Database with PXF (JDBC)
 ---
 
 <!--
@@ -31,14 +31,14 @@ This section describes how to use the PXF JDBC connector to access data in an ex
 
 Before you access an external SQL database using the PXF JDBC connector, ensure that:
 
-- You have initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Initializing and Managing PXF](cfginitstart_pxf.html) for PXF initialization and startup information.
+- You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
 - You can identify the PXF user configuration directory (`$PXF_CONF`).
 - Connectivity exists between all Greenplum Database segment hosts and the external SQL database.
 - You have configured your external SQL database for user access from all Greenplum Database segment hosts.
 
 The PXF JDBC connector is installed with the `postgresql-8.4-702.jdbc4.jar` JAR file. If you require a different JDBC JAR file(s), ensure that:
 
-- You have installed the JDBC driver JAR files for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [PXF JAR Dependencies](using_pxf.html#profile-dependencies) for additional information.
+- You have installed the JDBC driver JAR files for the external SQL database in the `$PXF_CONF/lib` directory on each segment host. Be sure to install JDBC driver JAR files that are compatible with your JRE version. See [Registering PXF JAR Dependencies](reg_jar_depend.html) for additional information.
 
 ## <a id="datatypes"></a>Data Types Supported
 
@@ -69,7 +69,7 @@ LOCATION ('pxf://<external-table-name>?PROFILE=Jdbc[&<custom-option>=<value>[...
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
 ```
 
-The specific keywords and values used by the `pxf` protocol in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
+The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
 
 | Keyword  | Value |
 |-------|-------------------------------------|
@@ -231,10 +231,16 @@ You must download the PostgreSQL driver JAR file to your system, copy the JAR fi
 
 2. [Download](https://jdbc.postgresql.org/download.html) a PostgreSQL JDBC driver JAR file and note the location of the downloaded file.
 
-4. Copy the JDBC driver JAR file to `$PXF_CONF/lib` on each segment host. For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster, and `PXF_CONF=/etc/pxf/usercfg`:
+3. Copy the JDBC driver JAR file to `$PXF_CONF/lib` on the Greenplum Database master hosts. For example:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile postgresql-42.2.5.jar =:/etc/pxf/usercfg/lib/postgresql-42.2.5.jar
+    gpadmin@gpmaster$ cp postgresql-42.2.5.jar $PXF_CONF/lib/postgresql-42.2.5.jar
+    ``` 
+
+3. Synchronize PXF configuration to all Greenplum Database segment hosts. For example:
+
+    ``` shell
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ``` 
 
 6. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](cfginitstart_pxf.html#restart_pxf).

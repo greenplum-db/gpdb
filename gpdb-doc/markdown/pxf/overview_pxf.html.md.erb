@@ -23,43 +23,23 @@ under the License.
 
 The Greenplum Platform Extension Framework (PXF) provides parallel, high throughput data access and federated queries across heterogeneous data sources via built-in connectors that map a Greenplum Database external table definition to an external data source. PXF has its roots in the Apache HAWQ project.
 
--   [PXF Architecture](intro_pxf.html)
+-   [Introduction to PXF](intro_pxf.html)
 
-    This topic describes the architecture of PXF and its integration with Greenplum Database.
+    This topic introduces PXF concepts and usage.
 
--   [About the PXF Installation and Configuration Directories](about_pxf_dir.html)
+-   [Administering PXF](about_pxf_dir.html)
 
-    The PXF installation and configuration directories are discussed in this topic.
+    This set of topics details the adminstration of PXF including installation, configuration, initialization, upgrade, and management procedures.
 
--   [Configuring PXF](instcfg_pxf.html)
+-   [Accessing Hadoop with PXF](access_hdfs.html)
 
-    This topic details the PXF configuration, initialization, and startup procedures.
+    This set of topics describe the PXF Hadoop connectors, the data types they support, and the profiles that you can use to read from and write to HDFS.
 
--   [Upgrading PXF](upgrade_pxf.html)
+-   [Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF](access_objstore.html)
 
-    This topic describes the procedure that you must perform to upgrade PXF when you install a new version of Greenplum Database.
+    This set of topics describe the PXF cloud object storage connectors, the data types they support, and the profiles that you can use to read data from and write data to the object stores.
 
--   [Using PXF to Read and Write External Data](using_pxf.html)
-
-    This topic describes important PXF procedures and concepts, including enabling PXF for use in a database and PXF protocol and external table definitions.
-
--   [Reading Data from HDFS](hdfs_read_pxf.html)
-
-    This topic describes how to use the PXF HDFS connector and related profiles to read Text and Avro format HDFS files.
-
--   [Writing Data to HDFS](hdfs_write_pxf.html)
-
-    This topic describes how to use the PXF HDFS connector and related profiles to write Text and SequenceFile format binary data to HDFS files.
-
--   [Accessing Hive Table Data](hive_pxf.html)
-
-    This topic describes how to use the PXF Hive connector and related profiles to read Hive tables stored in TextFile, RCFile, Parquet, and ORC storage formats.
-
--   [Accessing HBase Table Data](hbase_pxf.html)
-
-    This topic describes how to use the PXF HBase connector to read HBase table data.
-
--   [Accessing an External SQL Database](jdbc_pxf.html)
+-   [Accessing an SQL Database with PXF (JDBC)](jdbc_pxf.html)
 
     This topic describes how to use the PXF JDBC connector to read from and write to an external SQL database such as Postgres or MySQL.
 
@@ -71,7 +51,9 @@ The Greenplum Platform Extension Framework (PXF) provides parallel, high through
 
     The PXF utility reference.
 
+<!--
 -   [Using the PXF Java SDK](sdk/dev_overview.html)
 
-    The PXF SDK provides the Java classes and interfaces that you use to add support for external data stores and new data formats and data access APIs to Greenplum Database. This topic describes how to set up your PXF development environment, use the PXF API, and deploy your extension.
+    The PXF SDK provides the Java classes and interfaces that you use to add support for external data stores and new data formats and data access APIs to Greenplum Database. This set of topics describe how to set up your PXF development environment, use the PXF API, and deploy your extension.
+-->
 
