@@ -10184,14 +10184,6 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 		 * users of the nextOid counter are required to avoid assignment of
 		 * duplicates, so that a somewhat out-of-date value should be safe.
 		 */
-		/*
-		 * GPDB_94_MERGE_FIXME: PG 94 STABLE removed similar code for nextOid.
-		 * Do we need to do that for gpdb specific nextRelfilenode also?
-		 */
-		LWLockAcquire(OidGenLock, LW_EXCLUSIVE);
-		ShmemVariableCache->nextRelfilenode = checkPoint.nextRelfilenode;
-		ShmemVariableCache->relfilenodeCount = 0;
-		LWLockRelease(OidGenLock);
 
 		/* Handle multixact */
 		MultiXactAdvanceNextMXact(checkPoint.nextMulti,
