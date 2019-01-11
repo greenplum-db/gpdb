@@ -803,10 +803,10 @@ main(int argc, char **argv)
 			 */
 			setpgid(newpid, newpid);
 
-			execl("/bin/sh", "sh", "-c", pszCmdLine->data, NULL);
+			execl("/bin/bash", "bash", "-c", pszCmdLine->data, NULL);
 
 			mpp_err_msg(logInfo, progname, "Error in gp_restore_agent - execl of %s with Command Line %s failed",
-						"/bin/sh", pszCmdLine->data);
+						"/bin/bash", pszCmdLine->data);
 
 			_exit(127);
 		}
