@@ -371,6 +371,12 @@ resources:
       bucket: gpdb5-pipeline-dynamic-terraform
       bucket_path: clusters-google/
 
+- name: ccp-image
+  type: docker-image
+  source:
+    repository: pivotaldata/ccp
+    tag: '7'
+
 {% endif %}
 {% endif %}
 {% if "centos6" in os_types and "ICW" in test_sections %}
@@ -1283,7 +1289,7 @@ jobs:
       passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1304,7 +1310,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: sles12
@@ -1323,7 +1329,7 @@ jobs:
       passed: [compile_gpdb_sles11]
       trigger: true
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1344,7 +1350,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: sles12
@@ -1494,7 +1500,7 @@ jobs:
       passed: [gate_replication_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1508,7 +1514,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       TINC_TARGET: [[ test_name ]]
     on_success:
@@ -1620,7 +1626,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
     - get: binary_swap_gpdb
       passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
@@ -1639,7 +1645,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       TEST_OS: centos6
     on_success:
@@ -1658,7 +1664,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
     - get: binary_swap_gpdb
       passed: [gate_resource_groups_start]
       resource: binary_swap_gpdb_centos6
@@ -1679,7 +1685,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       TEST_OS: centos7
     on_success:
@@ -1699,7 +1705,7 @@ jobs:
       passed: [gate_resource_groups_start]
       trigger: true
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1718,7 +1724,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/ic_gpdb_resgroup.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       TEST_OS: sles12
       # TODO: remove this line as soon as zstd is vendored in the binary installer for SLES12
@@ -1764,7 +1770,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1782,7 +1788,7 @@ jobs:
       SECOND_BINARY_INSTALL_LOCATION: /tmp/gppkg_migrate
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       BEHAVE_FLAGS: --tags=gppkg
     on_success:
@@ -1804,7 +1810,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1818,7 +1824,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       BEHAVE_FLAGS: --tags=[[ test_name ]]
     on_success:
@@ -1887,7 +1893,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   - put: terraform
     params:
       <<: *ccp_default_params
@@ -1902,7 +1908,7 @@ jobs:
     file: ccp_src/ci/tasks/gpinitsystem.yml
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       BEHAVE_FLAGS: --tags=gpaddmirrors
     on_success:
@@ -1923,7 +1929,7 @@ jobs:
       passed: [gate_icw_end]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
     - get: icw_gporca_centos6_dump
       passed: [gate_icw_end]
   - put: terraform
@@ -1938,13 +1944,13 @@ jobs:
       <<: *ccp_gen_cluster_default_params
   - task: pre_run_test_setup
     file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     input_mapping: {sqldump: icw_gporca_centos6_dump}
   - task: run_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
     params:
       BEHAVE_FLAGS: --tags=gpexpand
-    image: centos6-test-gpdb6
+    image: ccp-image
     on_success:
       <<: *ccp_destroy
   ensure:
@@ -1960,7 +1966,7 @@ jobs:
       passed: [gate_cli_start]
       trigger: [[ test_trigger ]]
     - get: ccp_src
-    - get: centos6-test-gpdb6
+    - get: ccp-image
   # The separate clusters can be created in parallel with the aggregate and do blocks
   #  The terraform put and gen cluster that correspond must still happen serially
   - aggregate:
@@ -2023,6 +2029,7 @@ jobs:
           run:
             path: ccp_src/scripts/gpinitsystem.sh
   - task: gptransfer_pre_test_setup
+    image: ccp-image
     config:
       platform: linux
       inputs:
@@ -2030,11 +2037,6 @@ jobs:
         - name: cluster_env_files2
         - name: ccp_src
         - name: gpdb_src
-      image_resource:
-        type: docker-image
-        source:
-          repository: pivotaldata/ccp
-          tag: "7"
       run:
         path: sh
         args:
@@ -2043,7 +2045,7 @@ jobs:
           source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
   - task: run_gptransfer_tests
     file: gpdb_src/concourse/tasks/run_behave.yml
-    image: centos6-test-gpdb6
+    image: ccp-image
     params:
       BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
       CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
