@@ -13,9 +13,19 @@ select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_isolatio
 -- base backup
 0U: select slot_name, slot_type, active, restart_lsn is not NULL as slot_was_used from pg_get_replication_slots() where slot_name = 'some_replication_slot';
 
+-- When another basebackup is run with the same slot name
+select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_other_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+
+-- Then the backup should exist on the filesystem, ready for mirroring
+!\retcode cat /tmp/some_other_isolation2_pg_basebackup/recovery.conf;
+
+-- And the replication slot information should be unchanged
+0U: select slot_name, slot_type, active, restart_lsn is not NULL as slot_was_used from pg_get_replication_slots() where slot_name = 'some_replication_slot';
+
 -- Given we remove the replication slot
 0U: select * from pg_drop_replication_slot('some_replication_slot');
 !\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
+!\retcode rm -rf /tmp/some_other_isolation2_pg_basebackup;
 
 -- When pg_basebackup runs without --slot
 select pg_basebackup(address, port, null, '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';

@@ -27,6 +27,30 @@ select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_isolatio
  some_replication_slot | physical  | f      | t             
 (1 row)
 
+-- When another basebackup is run with the same slot name
+select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_other_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+ pg_basebackup 
+---------------
+               
+(1 row)
+
+-- Then the backup should exist on the filesystem, ready for mirroring
+!\retcode cat /tmp/some_other_isolation2_pg_basebackup/recovery.conf;
+-- start_ignore
+standby_mode = 'on'
+primary_conninfo = 'user=adamberlin host=adamberlin-linux port=25432 sslmode=disable sslcompression=1 application_name=gp_walreceiver'
+primary_slot_name = 'some_replication_slot'
+
+-- end_ignore
+(exited with code 0)
+
+-- And the replication slot information should be unchanged
+0U: select slot_name, slot_type, active, restart_lsn is not NULL as slot_was_used from pg_get_replication_slots() where slot_name = 'some_replication_slot';
+ slot_name             | slot_type | active | slot_was_used 
+-----------------------+-----------+--------+---------------
+ some_replication_slot | physical  | f      | t             
+(1 row)
+
 -- Given we remove the replication slot
 0U: select * from pg_drop_replication_slot('some_replication_slot');
  pg_drop_replication_slot 
@@ -34,6 +58,11 @@ select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_isolatio
                           
 (1 row)
 !\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf /tmp/some_other_isolation2_pg_basebackup;
 -- start_ignore
 
 -- end_ignore

@@ -22,19 +22,66 @@ def _generate_input_config(spread=False):
     return mirror_config_output_file
 
 
+def do_write(template, config_file_path):
+    mirror_data_dir = make_data_directory_called('mirror')
+
+    with open(config_file_path, 'w') as fp:
+        contents = template.format(mirror_data_dir)
+        fp.write(contents)
+
+
 def _write_datadir_config():
-    mdd_parent_parent = os.path.realpath(os.getenv("MASTER_DATA_DIRECTORY") + "../../../")
-    mirror_data_dir = os.path.join(mdd_parent_parent, 'mirror')
+    datadir_config = '/tmp/gpaddmirrors_datadir_config'
+
+    template = """
+{0}
+{0}
+"""
+
+    do_write(template, datadir_config)
+
+    return datadir_config
+
+
+def _write_datadir_config_for_three_mirrors():
+    datadir_config='/tmp/gpaddmirrors_datadir_config'
+
+    template = """
+{0}
+{0}
+{0}
+"""
+
+    do_write(template, datadir_config)
+
+    return datadir_config
+
+
+def add_three_mirrors(context):
+    datadir_config = _write_datadir_config_for_three_mirrors()
+    mirror_config_output_file = "/tmp/test_gpaddmirrors.config"
+
+    cmd_str = 'gpaddmirrors -o %s -m %s' % (mirror_config_output_file, datadir_config)
+    Command('generate mirror_config file', cmd_str).run(validateAfter=True)
+
+    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % mirror_config_output_file)
+    cmd.run(validateAfter=True)
+
+
+def add_mirrors(context):
+    context.mirror_config = _generate_input_config()
+
+    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
+    cmd.run(validateAfter=True)
+
+
+def make_data_directory_called(data_directory_name):
+    mdd_parent_parent = os.path.realpath(
+        os.getenv("MASTER_DATA_DIRECTORY") + "../../../")
+    mirror_data_dir = os.path.join(mdd_parent_parent, data_directory_name)
     if not os.path.exists(mirror_data_dir):
         os.mkdir(mirror_data_dir)
-    datadir_config = '/tmp/gpaddmirrors_datadir_config'
-    contents = """
-{0}
-{0}
-""".format(mirror_data_dir)
-    with open(datadir_config, 'w') as fp:
-        fp.write(contents)
-    return datadir_config
+    return mirror_data_dir
 
 
 @then('verify the database has mirrors')
@@ -46,10 +93,7 @@ def impl(context):
 @given('gpaddmirrors adds mirrors')
 @then('gpaddmirrors adds mirrors')
 def impl(context):
-    context.mirror_config = _generate_input_config()
-
-    cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
-    cmd.run(validateAfter=True)
+    add_mirrors(context)
 
 
 @given('gpaddmirrors adds mirrors with temporary data dir')
@@ -63,6 +107,7 @@ def impl(context):
     finally:
         os.environ['MASTER_DATA_DIRECTORY'] = mdd
 
+
 @given('gpaddmirrors adds mirrors in spread configuration')
 def impl(context):
     context.mirror_config = _generate_input_config(spread=True)
@@ -70,10 +115,12 @@ def impl(context):
     cmd = Command('gpaddmirrors ', 'gpaddmirrors -a -i %s ' % context.mirror_config)
     cmd.run(validateAfter=True)
 
+
 @then('save the gparray to context')
 def impl(context):
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
     context.gparray = gparray
+
 
 @then('mirror hostlist matches the one saved in context')
 def impl(context):
@@ -95,6 +142,7 @@ def impl(context):
         if curr_contentId_to_host[key] != old_contentId_to_host[key]:
             raise Exception("Mirror host doesn't match for contentId %s (old host=%s) (new host=%s)"
             % (key, old_contentId_to_host[key], curr_contentId_to_host[key]))
+
 
 @then('verify the database has mirrors in spread configuration')
 def impl(context):

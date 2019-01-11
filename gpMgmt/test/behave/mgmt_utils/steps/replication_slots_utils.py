@@ -8,11 +8,21 @@ from test.behave_utils.utils import (
     stop_primary,
     trigger_fts_probe,
     run_gprecoverseg,
-    execute_sql
+    execute_sql,
 )
 
 
-def create_cluster(context):
+from addmirrors_mgmt_utils import (add_three_mirrors)
+
+
+def run_recovery_for_segments(context):
+    run_command(context, "gprecoverseg -aFv")
+
+    if context.ret_code != 0:
+        raise Exception('%s' % context.error_message)
+
+
+def create_cluster(context, with_mirrors=True):
     cmd = """
     cd ../gpAux/gpdemo; \
         export MASTER_DEMO_PORT={master_port} && \
@@ -24,7 +34,7 @@ def create_cluster(context):
     """.format(master_port=os.getenv('MASTER_PORT', 15432),
                port_base=os.getenv('PORT_BASE', 25432),
                num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
-               with_mirrors='true')
+               with_mirrors=('true' if with_mirrors else 'false'))
 
     run_command(context, cmd)
 
@@ -45,6 +55,11 @@ def ensure_primary_mirror_switched_roles():
 @given(u'I have a machine with no cluster')
 def step_impl(context):
     stop_database(context)
+
+
+@given(u'a mirror has crashed')
+def step_impl(context):
+    run_command(context, "ps aux | grep dbfast_mirror1 | awk '{print $2}' | xargs kill -9")
 
 
 @when(u'I create a cluster')
@@ -81,3 +96,24 @@ def step_impl(context):
     run_gprecoverseg()
 
     ensure_primary_mirror_switched_roles()
+
+
+
+@given("I cluster with no mirrors")
+def step_impl(context):
+    create_cluster(context, with_mirrors=False)
+
+
+@when("I add mirrors to the cluster")
+def step_impl(context):
+    add_three_mirrors(context)
+
+
+@given("I create a cluster")
+def step_impl(context):
+    create_cluster(context, with_mirrors=True)
+
+
+@when("I fully recover a mirror")
+def step_impl(context):
+    run_recovery_for_segments(context)

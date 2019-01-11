@@ -40,7 +40,8 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly, forceoverwrite):
+                    syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly, forceoverwrite,
+                    replicationSlotName):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -55,6 +56,7 @@ class ConfExpSegCmd(Command):
         self.isPrimary = isPrimary
         self.syncWithSegmentHostname = syncWithSegmentHostname
         self.syncWithSegmentPort = syncWithSegmentPort
+        self.replicationSlotName = replicationSlotName
 
         #
         # validationOnly if True then we validate directories and other simple things only; we don't
@@ -129,6 +131,7 @@ class ConfExpSegCmd(Command):
                         cmd = PgBaseBackup(pgdata=self.datadir,
                                            host=self.syncWithSegmentHostname,
                                            port=str(self.syncWithSegmentPort),
+                                           replication_slot_name=self.replicationSlotName,
                                            forceoverwrite=self.forceoverwrite,
                                            target_gp_dbid=self.dbid)
                         try:
@@ -230,6 +233,8 @@ def parseargs():
     # Parse the command line arguments
     (options, args) = parser.parse_args()
 
+    options.replicationSlotName = 'internal_wal_replication_slot'
+
     if not options.confinfo:
         raise Exception('Missing --confinfo argument.')
 
@@ -305,6 +310,7 @@ try:
                            , validationOnly = options.validationOnly
                            , writeGpDbidFileOnly = options.writeGpidFileOnly
                            , forceoverwrite = options.forceoverwrite
+                           , replicationSlotName = options.replicationSlotName
                            )
         pool.addCommand(cmd)
 
