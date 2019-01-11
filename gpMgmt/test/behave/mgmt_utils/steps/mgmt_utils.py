@@ -2163,6 +2163,18 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
+@when('the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check')
+def impl(context):
+    inputfile_contents = """sdw1:sdw1:20502:/data/gpdata/gpexpand/data/primary/gpseg2:7:2:p
+sdw1:sdw1:21502:/data/gpdata/gpexpand/data/mirror/gpseg2:8:2:m"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    inputfile_name = "%s/gpexpand_inputfile_%s" % (context.working_directory, timestamp)
+    with open(inputfile_name, 'w') as fd:
+        fd.write(inputfile_contents)
+
+    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand.initialize_segments()
+
 @given('the master pid has been saved')
 def impl(context):
     data_dir = os.path.join(context.working_directory,

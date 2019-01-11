@@ -337,7 +337,7 @@ Feature: expand the cluster by adding more segments
         # Temporarily comment the verifys until redistribute is fixed. This allows us to commit a resource to get a dump of the ICW dump for other tests to use
         # Then distribution information from table "public.redistribute" with data in "gptest" is verified against saved data
 
-    @gpexpand_no_mirrors
+    @gpexpand_mirrors
     @gpexpand_rollback
     Scenario: inject a fail and test if rollback is ok
         Given a working directory of the test as '/data/gpdata/gpexpand'
@@ -345,22 +345,20 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
         And the gp_segment_configuration have been saved
-        And the number of segments have been saved
         And set fault inject "gpexpand rollback test fault injection"
-        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
-        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 3
-        And verify that the cluster has 1 new segments
         And run rollback with database "gptest"
         And verify the gp_segment_configuration has been restored
         And unset fault inject
 
-    @gpexpand_no_mirrors
+    @gpexpand_mirrors
     @gpexpand_retry_failing_work_in_phase1_after_releasing_catalog_lock
     Scenario: inject a fail and test if retry is ok
         Given a working directory of the test as '/data/gpdata/gpexpand'
@@ -368,17 +366,15 @@ Feature: expand the cluster by adding more segments
         And the user runs command "rm -rf /data/gpdata/gpexpand/*"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
         And the database is not running
-        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And a cluster is created with mirrors on "mdw" and "sdw1"
+        And the user runs gpinitstandby with options " "
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
         And the gp_segment_configuration have been saved
-        And the number of segments have been saved
-        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
         And set fault inject "gpexpand retry after releaseing catalog lock fault injection"
-        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 3
         And unset fault inject
-        And verify that the cluster has 1 new segments
-        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0

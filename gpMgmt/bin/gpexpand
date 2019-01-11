@@ -525,7 +525,8 @@ class GpExpandStatus():
     def set_status(self, status, status_info=None, force=False):
         """Sets the current status.  gpexpand status must be set in
            proper order.  Any out of order status result in an
-           InvalidStatusError exception"""
+           InvalidStatusError exception. But if force is True, setting
+           status out of order is allowded"""
         self.logger.debug("Transitioning from %s to %s" % (self._status[-1], status))
 
         if not self._fp:
@@ -629,6 +630,18 @@ class GpExpandStatus():
         if int(self._status_values[status]) >= int(self._status_values['UPDATE_CATALOG_DONE']):
             return False
         return True
+
+    def rewind(self, status, status_info=None):
+        """
+        Rewind to a particular status.
+        """
+        self.logger.debug("Rewind the status to %s" % status)
+
+        if not self._fp:
+            self._fp = open(self._status_filename, 'a+')
+        if self._master_mirror and not self._fp_standby:
+            self._fp_standby = open(self._status_standby_filename, 'a+')
+        self.set_status(status, status_info, True)
 
 
 # -------------------------------------------------------------------------
@@ -2644,7 +2657,7 @@ def main(options, args, parser):
             Reset status to UPDATA_CATALOG_DONE
             So following work can continue
             """
-            _gp_expand.statusLogger.set_status('UPDATE_CATALOG_DONE', 'Reset status forcedly to retry the following work', True)
+            _gp_expand.statusLogger.rewind('UPDATE_CATALOG_DONE', 'Reset status forcedly to retry the following work')
 
             """Redo the following work"""
             _gp_expand.setup_schema()
