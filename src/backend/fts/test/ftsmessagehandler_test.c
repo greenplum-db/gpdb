@@ -80,7 +80,6 @@ test_HandleFtsWalRepProbePrimary(void **state)
 	will_be_called(GetMirrorStatus);
 
 	will_be_called(SetSyncStandbysDefined);
-	will_be_called(CheckPromoteSignal);
 
 	/* SyncRep should be enabled as soon as we found mirror is up. */
 	mockresponse.IsSyncRepEnabled = true;

@@ -304,6 +304,7 @@ extern CheckpointStatsData CheckpointStats;
 #define RECOVERY_COMMAND_FILE	"recovery.conf"
 #define RECOVERY_COMMAND_DONE	"recovery.done"
 #define PROMOTE_SIGNAL_FILE "promote"
+#define FALLBACK_PROMOTE_SIGNAL_FILE "fallback_promote"
 
 extern XLogRecPtr XLogInsert(RmgrId rmid, uint8 info, XLogRecData *rdata);
 extern XLogRecPtr XLogInsert_OverrideXid(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId overrideXid);

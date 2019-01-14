@@ -274,19 +274,6 @@ HandleFtsWalRepProbe(void)
 			/* Syncrep is enabled now, so respond accordingly. */
 			response.IsSyncRepEnabled = true;
 		}
-
-		/*
-		 * Precautionary action: Unlink PROMOTE_SIGNAL_FILE if incase it
-		 * exists. This is to avoid driving to any incorrect conclusions when
-		 * this segment starts acting as mirror or gets copied over using
-		 * pg_basebackup.
-		 */
-		// GPDB_93_MERGE_FIXME: should we check for FALLBACK_PROMOTE_SIGNAL_FILE, too?
-		if (CheckPromoteSignal())
-		{
-			unlink(PROMOTE_SIGNAL_FILE);
-			elog(LOG, "found and hence deleted '%s' file", PROMOTE_SIGNAL_FILE);
-		}
 	}
 
 	/*
