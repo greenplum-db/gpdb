@@ -6,7 +6,8 @@
                       'gpactivatestandby'] %}
 {% set CLI_2_suites = ['analyzedb',
                       'gpperfmon',
-                      'gpinitsystem'] %}
+                      'gpinitsystem',
+                      'replication_slots'] %}
 ## ======================================================================
 ##   __ _ _ __ ___  _   _ _ __  ___
 ##  / _` | '__/ _ \| | | | '_ \/ __|

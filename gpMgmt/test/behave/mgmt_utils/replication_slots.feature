@@ -1,3 +1,4 @@
+@replication_slots
 Feature: Replication Slots
 
   Scenario: Lifecycle of cluster's replication slots
