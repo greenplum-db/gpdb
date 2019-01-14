@@ -50,6 +50,18 @@ EOF
   chmod a+r $inputfile
 }
 
+# extract PGOPTIONS from MAKE_TEST_COMMAND
+function get_pgoptions() {
+  local pgoptions
+
+  cat >/tmp/get_pgoptions.mk <<"EOF"
+$(info $(PGOPTIONS))
+EOF
+
+  pgoptions="$(eval make $MAKE_TEST_COMMAND -f /tmp/get_pgoptions.mk -nq 2>/dev/null)"
+  echo "$pgoptions"
+}
+
 # usage: expand_cluster <old_size> <new_size>
 function expand_cluster() {
   local old="$1"
@@ -57,6 +69,7 @@ function expand_cluster() {
   local inputfile="/tmp/inputfile.${old}-${new}"
   local pidfile="/tmp/postmaster.pid.${old}-${new}"
   local dbname="gpstatus"
+  local pgoptions="$(get_pgoptions)"
   local uncompleted
   local partial
 
@@ -69,13 +82,13 @@ function expand_cluster() {
   su gpadmin -c "head -n 1 $MASTER_DATA_DIRECTORY/postmaster.pid >$pidfile"
   su gpadmin -c "createdb $dbname" 2>/dev/null || : # ignore failure
   # begin expansion
-  su gpadmin -c "yes | gpexpand -D $dbname -s -i $inputfile"
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -D $dbname -s -i $inputfile"
   # redistribute tables
-  su gpadmin -c "yes | gpexpand -D $dbname -s"
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -D $dbname -s"
   # check the result
   uncompleted=$(su gpadmin -c "psql -Aqtd $dbname -c \"select count(*) from gpexpand.status_detail where status <> 'COMPLETED'\"")
   # cleanup
-  su gpadmin -c "yes | gpexpand -D $dbname -s -c"
+  su gpadmin -c "yes | PGOPTIONS='$pgoptions' gpexpand -D $dbname -s -c"
 
   popd
 
