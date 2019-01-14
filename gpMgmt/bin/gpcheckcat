@@ -4278,6 +4278,13 @@ def truncate_batch_size(primaries):
         GV.opt['-B'] = primaries
         myprint("Truncated batch size to number of primaries: %d" % primaries)
 
+def check_gpexpand():
+    check_result, msg = checkGpexpandNotRunning("gpcheckcat",
+                                                checkOnPhase1=True,
+                                                checkOnPhase2=False)
+    if not check_result:
+        logger.error(msg)
+        sys.exit(127)
 
 def main():
     parseCommandLine()
@@ -4292,13 +4299,7 @@ def main():
 
     # gpcheckcat should check gpexpand runnning status
     enable_verbose_logging()
-    check_result, msg = checkGpexpandNotRunning("gpcheckcat",
-                                                checkOnPhase1=True,
-                                                checkOnPhase2=False)
-    if not check_result:
-        logger.error(msg)
-        sys.exit(127)
-
+    check_gpexpand()
     very_quiet_stdout_logging()
 
     GV.cfg = getGPConfiguration()

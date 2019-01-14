@@ -44,6 +44,7 @@ class GpConfig(GpTestCase):
         gpconfig_file = os.path.abspath(os.path.dirname(__file__) + "/../../../gpconfig")
         self.subject = imp.load_source('gpconfig', gpconfig_file)
         self.subject.LOGGER = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
+        self.subject.check_gpexpand = lambda : (True, "")
 
         self.conn = Mock()
         self.cursor = FakeCursor()

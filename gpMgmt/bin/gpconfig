@@ -499,6 +499,13 @@ def do_show(options):
 
     _print_gucs(gucname, gucs, options)
 
+def check_gpexpand():
+    check_result, msg = checkGpexpandNotRunning("gpconfig",
+                                                checkOnPhase1=True,
+                                                checkOnPhase2=False)
+    if not check_result:
+        LOGGER.error(msg)
+        sys.exit(127)
 
 def do_main():
     options = parseargs()
@@ -511,12 +518,7 @@ def do_main():
     elif options.remove or options.change:
         # gpconfig should check gpexpand runnning status when
         # it wants to modify configurations
-        check_result, msg = checkGpexpandNotRunning("gpconfig",
-                                                    checkOnPhase1=True,
-                                                    checkOnPhase2=False)
-        if not check_result:
-            LOGGER.error(msg)
-            sys.exit(127)
+        check_gpexpand()
 
         do_change(options)
 
