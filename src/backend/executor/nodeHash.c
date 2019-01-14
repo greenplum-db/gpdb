@@ -983,7 +983,7 @@ ExecHashTableInsert(HashState *hashState, HashJoinTable hashtable,
  * and stored at *hashvalue.  A FALSE result means the tuple cannot match
  * because it contains a null attribute, and hence it should be discarded
  * immediately.  (If keep_nulls is true then FALSE is never returned.)
- * Found_null indicates all the hashkeys are null.
+ * hashkeys_null indicates all the hashkeys are null.
  */
 bool
 ExecHashGetHashValue(HashState *hashState, HashJoinTable hashtable,
