@@ -62,9 +62,6 @@ ExecHashTableExplainBatches(HashJoinTable   hashtable,
                             int             ibatch_end,
                             const char     *title);
 
-/* Amount of metadata memory required per bucket */
-#define MD_MEM_PER_BUCKET (sizeof(HashJoinTuple) + sizeof(uint64))
-
 /* ----------------------------------------------------------------
  *		ExecHash
  *
