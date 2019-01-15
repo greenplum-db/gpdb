@@ -6464,18 +6464,6 @@ StartupXLOG(void)
 				   str_time(ControlFile->time)),
 			errhint("This probably means that some data is corrupted and"
 					" you will have to use the last backup for recovery.")));
-	else if (ControlFile->state == DB_IN_STANDBY_MODE)
-		ereport(LOG,
-				(errmsg("database system was interrupted while in standby mode at  %s",
-						str_time(ControlFile->checkPointCopy.time)),
-						errhint("This probably means something unexpected happened either"
-								" during replay at standby or receipt of XLog from primary.")));
-	else if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
-		ereport(LOG,
-				(errmsg("database system was interrupted after standby was promoted at %s",
-						str_time(ControlFile->checkPointCopy.time)),
-				 errhint("If this has occurred more than once something unexpected is happening"
-				" after standby has been promoted")));
 	else if (ControlFile->state == DB_IN_PRODUCTION)
 		ereport(LOG,
 				(errmsg("database system was interrupted; last known up at %s",
@@ -6531,20 +6519,6 @@ StartupXLOG(void)
 	 * recovery
 	 */
 	readRecoveryCommandFile();
-
-	if (StandbyModeRequested)
-	{
-		Assert(ControlFile->state != DB_IN_CRASH_RECOVERY);
-
-		/*
-		 * If the standby was promoted (last time) and recovery.conf
-		 * is still found this time with standby mode request,
-		 * it means the standby crashed post promotion but before recovery.conf
-		 * cleanup. Hence, it is not considered a standby request this time.
-		 */
-		if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
-			StandbyModeRequested = false;
-	}
 
 	/*
 	 * Save archive_cleanup_command in shared memory so that other processes
@@ -6605,23 +6579,13 @@ StartupXLOG(void)
 		 * archive recovery directly.
 		 */
 		InArchiveRecovery = true;
-
-		/*
-		 * Currently, it is assumed that a backup file exists iff a base backup
-		 * has been performed and then the recovery.conf file is generated, thus
-		 * standby mode has to be requested
-		 */
-		if (!StandbyModeRequested)
-			ereport(FATAL,
-					(errmsg("Found backup.label file without any standby mode request")));
-
-		/* Activate recovery in standby mode */
-		StandbyMode = true;
-
+		if (StandbyModeRequested)
+			StandbyMode = true;
 		/*
 		 * When a backup_label file is present, we want to roll forward from
 		 * the checkpoint it identifies, rather than using pg_control.
 		 */
+
 		record = ReadCheckpointRecord(xlogreader, checkPointLoc, 0, true);
 		if (record != NULL)
 		{
@@ -6658,12 +6622,6 @@ StartupXLOG(void)
 	}
 	else
 	{
-		if (StandbyModeRequested)
-		{
-			/* Activate recovery in standby mode */
-			StandbyMode = true;
-		}
-
 		/*
 		 * It's possible that archive recovery was requested, but we don't
 		 * know how far we need to replay the WAL before we reach consistency.
@@ -6902,7 +6860,7 @@ StartupXLOG(void)
 	else if (ControlFile->state != DB_SHUTDOWNED)
 		InRecovery = true;
 
-	/* Recovery from xlog */
+    /* REDO */
 	if (InRecovery)
 	{
 		int			rmid;
@@ -6916,11 +6874,9 @@ StartupXLOG(void)
 		 * pg_control with any minimum recovery stop point
 		 */
 		dbstate_at_startup = ControlFile->state;
-		if (StandbyMode)
+		if (InArchiveRecovery)
 		{
-			ereport(LOG,
-					(errmsg("recovery in standby mode in progress")));
-			ControlFile->state = DB_IN_STANDBY_MODE;
+			ControlFile->state = DB_IN_ARCHIVE_RECOVERY;
 		}
 		else
 		{
@@ -6934,15 +6890,14 @@ StartupXLOG(void)
 								ControlFile->checkPointCopy.ThisTimeLineID,
 								recoveryTargetTLI)));
 
-			if (ControlFile->state != DB_IN_STANDBY_PROMOTED)
-				ControlFile->state = DB_IN_CRASH_RECOVERY;
+			ControlFile->state = DB_IN_CRASH_RECOVERY;
 		}
 
 		ControlFile->prevCheckPoint = ControlFile->checkPoint;
 		ControlFile->checkPoint = checkPointLoc;
 		ControlFile->checkPointCopy = checkPoint;
 
-		if (StandbyMode)
+		if (InArchiveRecovery)
 		{
 			/* initialize minRecoveryPoint if not set yet */
 			if (ControlFile->minRecoveryPoint < checkPoint.redo)
@@ -6969,7 +6924,6 @@ StartupXLOG(void)
 		 */
 		if (haveBackupLabel)
 		{
-			Assert(ControlFile->state == DB_IN_STANDBY_MODE);
 			ControlFile->backupStartPoint = checkPoint.redo;
 			ControlFile->backupEndRequired = backupEndRequired;
 
@@ -7484,22 +7438,6 @@ StartupXLOG(void)
 		DisownLatch(&XLogCtl->recoveryWakeupLatch);
 
 	/*
-	 * We are now done reading the xlog from stream.
-	 */
-	if (StandbyMode)
-	{
-		Assert(ControlFile->state == DB_IN_STANDBY_MODE);
-		StandbyMode = false;
-
-		elog(LOG, "updating pg_control to state DB_IN_STANDBY_PROMOTED");
-
-		/* Transition to promoted mode */
-		ControlFile->state = DB_IN_STANDBY_PROMOTED;
-		ControlFile->time = (pg_time_t) time(NULL);
-		UpdateControlFile();
-	}
-
-	/*
 	 * We are now done reading the xlog from stream. Turn off streaming
 	 * recovery to force fetching the files (which would be required at end of
 	 * recovery, e.g., timeline history file) from archive or pg_xlog.
@@ -7613,19 +7551,6 @@ StartupXLOG(void)
 
 		writeTimeLineHistory(ThisTimeLineID, recoveryTargetTLI,
 							 EndRecPtr, reason);
-	}
-	else if (ControlFile->state == DB_IN_STANDBY_PROMOTED)
-	{
-		/*
-		 * If standby is promoted, we should advance timeline ID.
-		 */
-		ThisTimeLineID = findNewestTimeLine(recoveryTargetTLI) + 1;
-		ereport(LOG,
-				(errmsg("selected new timeline ID: %u", ThisTimeLineID)));
-		writeTimeLineHistory(ThisTimeLineID, recoveryTargetTLI,
-							 EndRecPtr, "standby promoted");
-
-		XLogFileCopy(endLogSegNo, xlogreader->readPageTLI, endLogSegNo);
 	}
 
 	/* Save the selected TimeLineID in shared memory, too */
@@ -7833,7 +7758,7 @@ StartupXLOG(void)
 	 * managed by FTS.
 	 */
 	bool needToPromoteCatalog = (IS_QUERY_DISPATCHER() &&
-								 ControlFile->state == DB_IN_STANDBY_PROMOTED);
+								 ControlFile->state == DB_IN_ARCHIVE_RECOVERY);
 
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
 	ControlFile->state = DB_IN_PRODUCTION;
@@ -8726,20 +8651,11 @@ CreateCheckPoint(int flags)
 
 	if (shutdown)
 	{
-		/*
-		 * This is an ugly fix to dis-allow changing the pg_control
-		 * state for standby promotion continuity.
-		 *
-		 * Refer to Startup_InProduction() for more details
-		 */
-		if (ControlFile->state != DB_IN_STANDBY_PROMOTED)
-		{
-			LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
-			ControlFile->state = DB_SHUTDOWNING;
-			ControlFile->time = (pg_time_t) time(NULL);
-			UpdateControlFile();
-			LWLockRelease(ControlFileLock);
-		}
+	    LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
+	    ControlFile->state = DB_SHUTDOWNING;
+	    ControlFile->time = (pg_time_t) time(NULL);
+	    UpdateControlFile();
+	    LWLockRelease(ControlFileLock);
 	}
 
 	/*
@@ -9082,12 +8998,7 @@ CreateCheckPoint(int flags)
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
 	if (shutdown)
 	{
-		/*
-		 * Ugly fix to dis-allow changing pg_control state
-		 * for standby promotion continuity
-		 */
-		if (ControlFile->state != DB_IN_STANDBY_PROMOTED)
-			ControlFile->state = DB_SHUTDOWNED;
+	    ControlFile->state = DB_SHUTDOWNED;
 	}
 
 	ControlFile->prevCheckPoint = ControlFile->checkPoint;
@@ -9455,18 +9366,9 @@ CreateRestartPoint(int flags)
 	 * IN_ARCHIVE_RECOVERY state and an older checkpoint, else do nothing;
 	 * this is a quick hack to make sure nothing really bad happens if somehow
 	 * we get here after the end-of-recovery checkpoint.
-	 *
-	 * GPDB allows replay to also change the control file during
-	 * DB_IN_STANDBY_MODE so that mirror can be restarted from the latest
-	 * checkpoint location. This will save the recovery time of mirror, and also
-	 * allow mirror to remove already replayed xlogs.
-	 *
-	 * FIXME: need to consider consolidating the DB_IN_ARCHIVE_RECOVERY (upstream)
-	 * and DB_IN_STANDBY_MODE (GPDB only)
 	 */
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
-	if ((ControlFile->state == DB_IN_ARCHIVE_RECOVERY
-		     || ControlFile->state == DB_IN_STANDBY_MODE) &&
+	if (ControlFile->state == DB_IN_ARCHIVE_RECOVERY &&
 	    ControlFile->checkPointCopy.redo < lastCheckPoint.redo)
 	{
 		ControlFile->prevCheckPoint = ControlFile->checkPoint;
@@ -10124,16 +10026,6 @@ xlog_redo(XLogRecPtr beginLoc __attribute__((unused)), XLogRecPtr lsn __attribut
 
 			StandbyRecoverPreparedTransactions(true);
 		}
-
-		/*
-		 * If we see a shutdown checkpoint while waiting for an end-of-backup
-		 * record, the backup was canceled and the end-of-backup record will
-		 * never arrive.
-		 */
-		if (StandbyMode &&
-			!XLogRecPtrIsInvalid(ControlFile->backupStartPoint))
-			ereport(PANIC,
-			(errmsg("online backup was canceled, recovery cannot continue")));
 
 		/* ControlFile->checkPointCopy always tracks the latest ckpt XID */
 		ControlFile->checkPointCopy.nextXidEpoch = checkPoint.nextXidEpoch;

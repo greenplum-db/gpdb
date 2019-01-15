@@ -389,7 +389,7 @@ HandleFtsWalRepPromote(void)
 	 * idempotent way.
 	 */
 	DBState state = GetCurrentDBState();
-	if (state == DB_IN_STANDBY_MODE)
+	if (state == DB_IN_ARCHIVE_RECOVERY)
 	{
 		/*
 		 * Reset sync_standby_names on promotion. This is to avoid commits
