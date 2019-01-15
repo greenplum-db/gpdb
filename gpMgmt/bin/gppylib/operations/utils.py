@@ -35,10 +35,11 @@ class RemoteOperation(Operation):
        reside in the __main__ module as opposed to gppylib.test_something. Again, this can be circumvented by invoking unit tests
        through PyUnit or python -m unittest, etc. 
     """
-    def __init__(self, operation, host):
+    def __init__(self, operation, host, dbid=-1):
         super(RemoteOperation, self).__init__()
         self.operation = operation
         self.host = host
+        self.dbid = dbid
     def execute(self):
         execname = os.path.split(sys.argv[0])[-1]
         pickled_execname = pickle.dumps(execname) 

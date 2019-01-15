@@ -1156,6 +1156,31 @@ class DumpTestCase(unittest.TestCase):
 
         db_connection.close.assert_any_call()
 
+    @patch('gppylib.operations.unix.ListFilesByPattern.run', return_value=["gp_dump_20190101010101.rpt"])
+    @patch('gppylib.operations.dump.PostDumpSegment.run', return_value=None)
+    @patch('gppylib.operations.utils.ParallelOperation.run')
+    @patch('gppylib.operations.package.RemoteOperation.get_ret', side_effect=[None, NoDumpFile("FOO")])
+    @patch('gppylib.operations.dump.logger.warn')
+    def test_PostDatabaseSegment_identifies_failing_segment(self, mock_warn, mockRemoteOperation,
+                                                            mock_parallel_operation_run,  mockPostDumpSegment,
+                                                            mockListFilesByPattern):
+        post_dump = PostDumpDatabase(self.context, "20190101010101")
+        post_dump.execute()
+        mock_warn.assert_called_with("The following segments had failed checks: [3]")
+
+    @patch('gppylib.operations.unix.ListFilesByPattern.run', return_value=["gp_dump_20190101010101.rpt"])
+    @patch('gppylib.operations.dump.PostDumpSegment.run', return_value=None)
+    @patch('gppylib.operations.utils.ParallelOperation.run')
+    @patch('gppylib.operations.package.RemoteOperation.get_ret', side_effect=[NoStatusFile("BAR"), NoDumpFile("FOO")])
+    @patch('gppylib.operations.dump.logger.warn')
+    def test_PostDatabaseSegment_identifies_multiple_failing_segments(self, mock_warn, mockRemoteOperation,
+                                                            mock_parallel_operation_run,  mockPostDumpSegment,
+                                                            mockListFilesByPattern):
+        post_dump = PostDumpDatabase(self.context, "20190101010101")
+        post_dump.execute()
+        mock_warn.assert_called_with("The following segments had failed checks: [2, 3]")
+
+
 if __name__ == '__main__':
     unittest.main()
 

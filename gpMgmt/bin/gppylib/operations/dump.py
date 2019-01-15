@@ -772,13 +772,16 @@ class PostDumpDatabase(Operation):
         operations = []
         primaries = self.context.get_current_primaries()
         for seg in primaries:
-            status_file = self.context.generate_filename("status", timestamp=timestamp, dbid=seg.getSegmentDbId())
-            dump_file = self.context.generate_filename("dump", timestamp=timestamp, dbid=seg.getSegmentDbId())
-            operations.append(RemoteOperation(PostDumpSegment(self.context, status_file, dump_file), seg.getSegmentHostName()))
+            dbid = seg.getSegmentDbId()
+            status_file = self.context.generate_filename("status", timestamp=timestamp, dbid=dbid)
+            dump_file = self.context.generate_filename("dump", timestamp=timestamp, dbid=dbid)
+            operations.append(RemoteOperation(PostDumpSegment(self.context, status_file, dump_file), seg.getSegmentHostName(), dbid))
 
         ParallelOperation(operations, self.context.batch_default).run()
 
         success = 0
+        failed_dbids = []
+
         for remote in operations:
             host = remote.host
             status_file = remote.operation.status_file
@@ -786,18 +789,23 @@ class PostDumpDatabase(Operation):
             try:
                 remote.get_ret()
             except NoStatusFile, e:
-                logger.warn('Status file %s not found on %s' % (status_file, host))
+                logger.warn('Status file %s not found on %s for dbid %d' % (status_file, host, remote.dbid))
+                failed_dbids.append(remote.dbid)
             except StatusFileError, e:
-                logger.warn('Status file %s on %s indicates errors' % (status_file, host))
+                logger.warn('Status file %s on %s indicates errors for dbid %d' % (status_file, host, remote.dbid))
+                failed_dbids.append(remote.dbid)
             except NoDumpFile, e:
-                logger.warn('Dump file %s not found on %s' % (dump_file, host))
+                logger.warn('Dump file %s not found on %s for dbid %d' % (dump_file, host, remote.dbid))
+                failed_dbids.append(remote.dbid)
             else:
                 success += 1
 
         if success < len(operations):
             logger.warn("Dump was unsuccessful. %d segment(s) failed post-dump checks." % (len(operations) - success))
+            logger.warn("The following segments had failed checks: %s" % str(failed_dbids))
             return {'exit_status': 1, 'timestamp': timestamp}
         return {'exit_status': 0, 'timestamp': timestamp}
+
 
 class PostDumpSegment(Operation):
     def __init__(self, context, status_file, dump_file):
