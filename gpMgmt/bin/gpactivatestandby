@@ -31,7 +31,6 @@ try:
     from gppylib.gplog import get_default_logger, setup_tool_logging, enable_verbose_logging, get_logger_if_verbose
     from gppylib import gparray
     from gppylib.userinput import ask_yesno
-    from gppylib.gp_dbid import GpDbidFile, writeGpDbidFile
 except ImportError, e_:
     sys.exit('ERROR: Cannot import modules.  Please check that you '
              'have sourced greenplum_path.sh.  Detail: ' + str(e_))
@@ -247,15 +246,6 @@ def get_config():
     return array
 
 #-------------------------------------------------------------------------
-def update_gpdbid_file(options, new_dbid):
-    """Updates to gp_dbid file in the data directory to reflect the standby masters dbid."""
-
-    datadir = options.master_data_dir
-
-    # MPP-13245, use single mechanism to manage gp_dbid file instead of ad-hoc replace
-    writeGpDbidFile(datadir, new_dbid, get_logger_if_verbose())
-
-#-------------------------------------------------------------------------
 def check_standby_running(options):
     """Checks if the standby postmaster process is running."""
     
@@ -374,8 +364,6 @@ try:
     # backwards.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    dbidfile = GpDbidFile(options_.master_data_dir, do_read=True)
-    old_dbid = dbidfile.dbid
     requires_restart = not check_or_start_standby(options_)
 
     # promote standby, only if the standby is running in recovery
@@ -388,7 +376,6 @@ try:
     # now we can access the catalog.  promote action has already updated
     # catalog, so array.master is the old (promoted) standby at this point.
     array_ = get_config()
-    update_gpdbid_file(options_, 1)
 
     # If we forced to start utility master, this is the time to restart
     # cluster so that the new master becomes dispatch mode.

@@ -1357,10 +1357,6 @@ UPDATE_GPCONFIG () {
 		else
 				LOG_MSG "[INFO]:-Content $U_CONTENT already exists in gp_segment_configuration system table"
 		fi
-		if [ $U_CONTENT -eq -1 ]
-		then
-			MAKE_DBID_FILE $U_DBID $U_HOSTNAME $U_DIR
-		fi
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 

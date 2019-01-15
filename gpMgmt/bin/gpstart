@@ -32,7 +32,6 @@ try:
     from gppylib.commands.pg import PgControlData
     from gppylib.operations.startSegments import *
     from gppylib.utils import TableLogger
-    from gppylib.gp_dbid import GpDbidFile
     from gppylib.gp_era import GpEraFile
 except ImportError, e:
     sys.exit('Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -76,7 +75,6 @@ class GpStart:
         #
         # Some variables that are set during execution
         #
-        self.dbidfile = None
         self.era = None
         self.gpversion = None
         self.gparray = None
@@ -95,15 +93,12 @@ class GpStart:
             if os.getenv('GPSTART_INTERNAL_MASTER_ONLY'):
                 logger.info('Master-only start requested for management utilities.')
             else:
-                if self.dbidfile.standby_dbid is not None:
-                    logger.warning("****************************************************************************")
-                    logger.warning("Master-only start requested in a configuration with a standby master.")
-                    logger.warning("This is advisable only under the direct supervision of Greenplum support. ")
-                    logger.warning("This mode of operation is not supported in a production environment and ")
-                    logger.warning("may lead to a split-brain condition and possible unrecoverable data loss.")
-                    logger.warning("****************************************************************************")
-                else:
-                    logger.info('Master-only start requested in configuration without a standby master.')
+                logger.warning("****************************************************************************")
+                logger.warning("Master-only start requested. Disruptive action if standby master configured.")
+                logger.warning("This is advisable only under the direct supervision of Greenplum support. ")
+                logger.warning("This mode of operation is not supported in a production environment and ")
+                logger.warning("may lead to a split-brain condition and possible unrecoverable data loss.")
+                logger.warning("****************************************************************************")
                 if self.interactive:
                     if not userinput.ask_yesno(None, "\nContinue with master-only startup", 'N'):
                         raise UserAbortedException()
@@ -193,7 +188,6 @@ class GpStart:
         self.user = unix.getUserName()
         gp.check_permissions(self.user)
         self._read_postgresqlconf()
-        self.dbidfile = GpDbidFile(self.master_datadir, do_read=True, logger=get_logger_if_verbose())
 
     ######
     def _read_postgresqlconf(self):
@@ -368,10 +362,6 @@ class GpStart:
     def _startMaster(self):
         logger.info("Starting Master instance in admin mode")
 
-        d = GpDbidFile(self.master_datadir)
-        d.read_gp_dbid()
-
-        numContentsInCluster = 0
         cmd = gp.MasterStart('master in utility mode', self.master_datadir,
                              self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
@@ -688,8 +678,6 @@ class GpStart:
         restrict_txt = ""
         if self.restricted:
             restrict_txt = "in RESTRICTED mode"
-
-        numContentsInCluster = self.gparray.getNumSegmentContents()
 
         logger.info("Starting Master instance %s directory %s %s" % (
         self.gparray.master.hostname, self.master_datadir, restrict_txt))

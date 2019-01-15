@@ -1379,36 +1379,6 @@ def createTempDirectoryName(masterDataDirectory, tempDirPrefix):
                                 datetime.datetime.now().strftime('%m%d%Y'),
                                 os.getpid())
 
-
-#-------------------------------------------------------------------------
-# gp_dbid methods moved to gp_dbid.py, but this class was left here
-#
-
-class GpCreateDBIdFile(Command):
-    def __init__(self, name, directory, dbid, verbose=False, ctxt=LOCAL, remoteHost=None):
-        if verbose:
-            setverbose="-v"
-        else:
-            setverbose=""
-        args = [
-            "$GPHOME/sbin/gpsetdbid.py",
-            "-d %s" % directory,
-            "-i %s" % dbid,
-            setverbose,
-            ]
-        cmdStr = " ".join(args)
-        Command.__init__(self, name, cmdStr, ctxt, remoteHost)
-
-    @staticmethod
-    def local(name, directory, dbid):
-        cmd = GpCreateDBIdFile(name, directory, dbid)
-        cmd.run(validateAfter=True)
-
-    @staticmethod
-    def remote(name, remoteHost, directory, dbid):
-        cmd = GpCreateDBIdFile(name, directory, dbid, ctxt=REMOTE, remoteHost=remoteHost)
-        cmd.run(validateAfter=True)
-
 #-------------------------------------------------------------------------
 class GpRecoverSeg(Command):
    """

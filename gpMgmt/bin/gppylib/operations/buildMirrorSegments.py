@@ -49,7 +49,6 @@ gDatabaseFiles = [
     "postmaster.log",
     "postmaster.opts",
     "postmaster.pid",
-    "gp_dbid"
 ]
 
 

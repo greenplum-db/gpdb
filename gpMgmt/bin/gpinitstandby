@@ -15,7 +15,6 @@ try:
     from gppylib import gparray
     from gppylib.db import dbconn
     from gppylib.userinput import *
-    from gppylib.gp_dbid import GpDbidFile
     from gppylib.operations.initstandby import cleanup_pg_hba_backup_on_segment, update_pg_hba_conf_on_segments, restore_pg_hba_on_segment
     from gppylib.operations.package import SyncPackages
     from gppylib.commands.pg import PgBaseBackup
@@ -398,7 +397,6 @@ def create_standby(options):
 
         copy_master_datadir_to_standby(options, array, standby_datadir)
         update_postgresql_conf(options, array)
-        update_gpdbid_file(options, array)
 
         try:
             dburl = getDbUrlForInitStandby()
@@ -642,12 +640,6 @@ def add_standby_to_catalog(options, standby_datadir):
         conn.close()
         logger.info('Database catalog updated successfully.')
         array = gparray.GpArray.initFromCatalog(dburl, utility=True)
-
-        # MPP-13245, store the new standby_dbid in the gp_dbid file
-        d = GpDbidFile( array.master.getSegmentDataDirectory(), do_read=True, logger=get_logger_if_verbose() )
-        d.standby_dbid = int(array.standbyMaster.getSegmentDbId())
-        d.write_gp_dbid()
-
         return array
     except Exception, ex:
         logger.error('Failed to add standby to master catalog.')
@@ -670,11 +662,6 @@ def remove_standby_from_catalog(options, array):
         conn.close()
         
         logger.info('Database catalog updated successfully.')
-
-        # MPP-13245, remove the standby_dbid from the gp_dbid file
-        d = GpDbidFile( array.master.getSegmentDataDirectory(), do_read=True, logger=get_logger_if_verbose() )
-        d.standby_dbid = None
-        d.write_gp_dbid()
 
     except Exception, ex:
         logger.error('Failed to remove standby from master catalog.')
@@ -725,29 +712,6 @@ def update_postgresql_conf(options, array):
                                ctxt=gp.REMOTE,
                                remoteHost=standby.getSegmentHostName())
     cmd.run(validateAfter=True)
-
-#-------------------------------------------------------------------------
-def update_gpdbid_file(options, array):
-    """Updates the gp_dbid file on the standby master to reflect the correct dbid."""
-    global g_init_standby_state
-    
-    g_init_standby_state = INIT_STANDBY_STATE_UPDATE_GPDBID
-    
-    standby_dbid = array.standbyMaster.getSegmentDbId()
-    standby_datadir = os.path.normpath(array.standbyMaster.getSegmentDataDirectory())
-    try:
-        # MPP-13245, use single mechanism to manage gp_dbid file instead of ad-hoc replace
-        cmd = gp.GpCreateDBIdFile('update gp_dbid file',
-                                  standby_datadir,
-                                  standby_dbid,
-                                  verbose=logging_is_verbose(),
-                                  ctxt=base.REMOTE,
-                                  remoteHost=options.standby_host)
-
-        cmd.run(validateAfter=True)
-    except Exception, ex:
-        logger.error('Failed to update standby master\'s gp_dbid file.')
-        raise GpInitStandbyException(ex)
 
 #-------------------------------------------------------------------------
 

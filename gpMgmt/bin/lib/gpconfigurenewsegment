@@ -14,7 +14,6 @@ from gppylib import gplog
 from gppylib.commands.base import *
 from gppylib.gparray import Segment
 from gppylib.utils import canStringBeParsedAsInt
-from gppylib.gp_dbid import writeGpDbidFile
 from time import sleep
 from gppylib.operations.buildMirrorSegments import gDatabaseDirectories, gDatabaseFiles
 
@@ -40,8 +39,7 @@ class ValidationException(Exception):
 
 class ConfExpSegCmd(Command):
     def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
-                    syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly, forceoverwrite,
-                    replicationSlotName):
+                    syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, forceoverwrite, replicationSlotName):
         """
         @param useLighterDirectoryValidation if True then we don't require an empty directory; we just require that
                                              database stuff is not there.
@@ -65,7 +63,6 @@ class ConfExpSegCmd(Command):
         #
         self.validationOnly = validationOnly
 
-        self.writeGpDbidFileOnly = writeGpDbidFileOnly
         self.forceoverwrite = forceoverwrite
         Command.__init__(self, name, cmdstr)
 
@@ -105,110 +102,103 @@ class ConfExpSegCmd(Command):
 
     def run(self):
         try:
-            if self.writeGpDbidFileOnly:
-                logger.info("create gp_dbid file for segment")
-                writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
-            else:
-                if self.newseg:
-                    # make directories, extract template update postgresql.conf
-                    logger.info("Validate data directories for new segment")
+            if self.newseg:
+                # make directories, extract template update postgresql.conf
+                logger.info("Validate data directories for new segment")
+                try:
+                    if not self.forceoverwrite:
+                        self.validatePath(self.datadir)
+                except ValidationException, e:
+                    msg = "for segment with port %s: %s" %  (self.port, e.getMessage())
+                    self.set_results(CommandResult(1, '', msg, True, False))
+                    raise
+                except Exception, e:
+                    self.set_results(CommandResult(1, '', e, True, False))
+                    raise
+
+                if self.validationOnly:
+                   self.set_results(CommandResult(0, '', '', True, False))
+                   return
+
+                if not self.isPrimary:
+                    # Create a mirror based on the primary
+                    cmd = PgBaseBackup(pgdata=self.datadir,
+                                       host=self.syncWithSegmentHostname,
+                                       port=str(self.syncWithSegmentPort),
+                                       replication_slot_name=self.replicationSlotName,
+                                       forceoverwrite=self.forceoverwrite,
+                                       target_gp_dbid=self.dbid)
                     try:
-                        if not self.forceoverwrite:
-                            self.validatePath(self.datadir)
-                    except ValidationException, e:
-                        msg = "for segment with port %s: %s" %  (self.port, e.getMessage())
-                        self.set_results(CommandResult(1, '', msg, True, False))
-                        raise
-                    except Exception, e:
-                        self.set_results(CommandResult(1, '', e, True, False))
-                        raise
-
-                    if self.validationOnly:
-                       self.set_results(CommandResult(0, '', '', True, False))
-                       return
-
-                    if not self.isPrimary:
-                        # Create a mirror based on the primary
-                        cmd = PgBaseBackup(pgdata=self.datadir,
-                                           host=self.syncWithSegmentHostname,
-                                           port=str(self.syncWithSegmentPort),
-                                           replication_slot_name=self.replicationSlotName,
-                                           forceoverwrite=self.forceoverwrite,
-                                           target_gp_dbid=self.dbid)
-                        try:
-                            cmd.run(validateAfter=True)
-                            self.set_results(CommandResult(0, '', '', True, False))
-                        except Exception, e:
-                            self.set_results(CommandResult(1,'',e,True,False))
-                            raise
-
-                        logger.info("ran pg_backbackup: %s" % cmd.cmdStr)
-                        return
-
-                    logger.info("Create or update data directories for new segment")
-                    try:
-                        self.makeOrUpdatePathAsNeeded(self.datadir)
+                        cmd.run(validateAfter=True)
+                        self.set_results(CommandResult(0, '', '', True, False))
                     except Exception, e:
                         self.set_results(CommandResult(1,'',e,True,False))
                         raise
 
-                    if self.tarfile:
-                        logger.info("extract tar file to new segment")
-                        extractTarCmd = unix.ExtractTar('extract tar file to new segment', self.tarfile, self.datadir )
-                        try:
-                            logger.debug('Extracting tar file %s to %s' % (self.tarfile, self.datadir))
-                            extractTarCmd.run(validateAfter=True)
-                        except:
-                            self.set_results(extractTarCmd.get_results())
-                            logger.error(extractTarCmd.get_results())
-                            raise
+                    logger.info("ran pg_backbackup: %s" % cmd.cmdStr)
+                    return
 
-                    logger.info("create gp_dbid file for segment")
-                    writeGpDbidFile(self.datadir, self.dbid, logger=gplog.get_logger_if_verbose())
+                logger.info("Create or update data directories for new segment")
+                try:
+                    self.makeOrUpdatePathAsNeeded(self.datadir)
+                except Exception, e:
+                    self.set_results(CommandResult(1,'',e,True,False))
+                    raise
 
-                    # Create pg_log for new segment in case it dosen't exist.
+                if self.tarfile:
+                    logger.info("extract tar file to new segment")
+                    extractTarCmd = unix.ExtractTar('extract tar file to new segment', self.tarfile, self.datadir )
                     try:
-                        self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_log"))
-                    except Exception, e:
-                        self.set_results(CommandResult(1,'',e,True,False))
+                        logger.debug('Extracting tar file %s to %s' % (self.tarfile, self.datadir))
+                        extractTarCmd.run(validateAfter=True)
+                    except:
+                        self.set_results(extractTarCmd.get_results())
+                        logger.error(extractTarCmd.get_results())
                         raise
 
-                    logger.info("Updating %s/postgresql.conf" % self.datadir)
-                    modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
-                                                                          self.datadir + '/postgresql.conf',
-                                                                          'port', self.port, optType='number')
-                    try:
-                        modifyPostgresqlConfCmd.run(validateAfter=True)
-                    except:
-                        self.set_results(modifyPostgresqlConfCmd.get_results())
-                        raise
+                # Create pg_log for new segment in case it dosen't exist.
+                try:
+                    self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_log"))
+                except Exception, e:
+                    self.set_results(CommandResult(1,'',e,True,False))
+                    raise
 
-                    modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
-                                                                          self.datadir + '/postgresql.conf',
-                                                                          'gp_contentid', self.contentid, optType='number')
-                    try:
-                        modifyPostgresqlConfCmd.run(validateAfter=True)
-                    except:
-                        self.set_results(modifyPostgresqlConfCmd.get_results())
-                        raise
+                logger.info("Updating %s/postgresql.conf" % self.datadir)
+                modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
+                                                                      self.datadir + '/postgresql.conf',
+                                                                      'port', self.port, optType='number')
+                try:
+                    modifyPostgresqlConfCmd.run(validateAfter=True)
+                except:
+                    self.set_results(modifyPostgresqlConfCmd.get_results())
+                    raise
 
-                    modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/internal.auto.conf' % self.datadir,
-                                                                          self.datadir + '/internal.auto.conf',
-                                                                          'gp_dbid', self.dbid, optType='number')
-                    try:
-                        modifyPostgresqlConfCmd.run(validateAfter=True)
-                    except:
-                        self.set_results(modifyPostgresqlConfCmd.get_results())
-                        raise
+                modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
+                                                                      self.datadir + '/postgresql.conf',
+                                                                      'gp_contentid', self.contentid, optType='number')
+                try:
+                    modifyPostgresqlConfCmd.run(validateAfter=True)
+                except:
+                    self.set_results(modifyPostgresqlConfCmd.get_results())
+                    raise
 
-                # We might need to stop the segment if the last setup failed past this point
-                if os.path.exists('%s/postmaster.pid' % self.datadir):
-                    logger.info('%s/postmaster.pid exists.  Stopping segment' % self.datadir)
-                    stopCmd = SegmentStop('Stop new segment', self.datadir)
-                    try:
-                        stopCmd.run(validateAfter=True)
-                    except:
-                        pass
+                modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/internal.auto.conf' % self.datadir,
+                                                                      self.datadir + '/internal.auto.conf',
+                                                                      'gp_dbid', self.dbid, optType='number')
+                try:
+                    modifyPostgresqlConfCmd.run(validateAfter=True)
+                except:
+                    self.set_results(modifyPostgresqlConfCmd.get_results())
+                    raise
+
+            # We might need to stop the segment if the last setup failed past this point
+            if os.path.exists('%s/postmaster.pid' % self.datadir):
+                logger.info('%s/postmaster.pid exists.  Stopping segment' % self.datadir)
+                stopCmd = SegmentStop('Stop new segment', self.datadir)
+                try:
+                    stopCmd.run(validateAfter=True)
+                except:
+                    pass
 
         except Exception, e:
             self.set_results(CommandResult(1, '', e, True, False))
@@ -331,7 +321,6 @@ try:
                            , syncWithSegmentPort = primarySegmentPort
                            , verbose = options.verbose
                            , validationOnly = options.validationOnly
-                           , writeGpDbidFileOnly = options.writeGpidFileOnly
                            , forceoverwrite = options.forceoverwrite
                            , replicationSlotName = options.replicationSlotName
                            )
