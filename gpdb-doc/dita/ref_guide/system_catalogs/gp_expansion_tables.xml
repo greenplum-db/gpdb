@@ -4,6 +4,8 @@
 <topic id="topic1" xml:lang="en">
   <title id="fb138336">gpexpand.status_detail</title>
   <body>
+    <draft-comment author="msk">updates for GPDB 6<p>distribution_policy_type,
+        root_partition_name</p></draft-comment>
     <p>The <codeph>gpexpand.status_detail</codeph> table contains information about the status of
       tables involved in a system expansion operation. You can query this table to determine the
       status of tables being expanded, or to view the start and end time for completed tables. </p>
@@ -84,6 +86,22 @@
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">Column IDs for the distribution keys of the table.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>distribution_policy _type</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">???</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>root_partition_name</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">???</entry>
           </row>
           <row>
             <entry colname="col1">

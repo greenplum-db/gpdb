@@ -2,11 +2,12 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="expand-planning" xml:lang="en">
-
   <title id="no159872">Planning Greenplum System Expansion</title>
   <shortdesc>Careful planning will help to ensure a successful Greenplum expansion
     project.</shortdesc>
   <body>
+    <draft-comment author="msk">Remove downtime when adding segment instances.<p>Add link to block
+        mirror?</p></draft-comment>
     <p>The topics in this section help to ensure that you are prepared to execute a system
       expansion.</p>
     <ul id="ul_gdc_hp5_mr">
@@ -87,7 +88,7 @@
                     id="image_qkb_t1m_2r"/>
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the new hardware or cloud resources
-                  (<codeph>gpcheckperf</codeph>).</entry>
+                    (<codeph>gpcheckperf</codeph>).</entry>
               </row>
               <row>
                 <entry>
@@ -99,25 +100,18 @@
                   <ph>directories</ph>.</entry>
               </row>
               <row>
+                <entry namest="c1" nameend="c2"><p><b>Offline Pre-Expansion Tasks</b></p>
+                  <ph otherprops="red">* The system is unavailable to all user activity during this
+                    process.</ph>
+                </entry>
+              </row>
+              <row>
                 <entry>
                   <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
                     id="image_wch_t1m_2r"/>
                 </entry>
                 <entry>Validate that there are no catalog issues
                   (<codeph>gpcheckcat</codeph>).</entry>
-              </row>
-              <row>
-                <entry>
-                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
-                    id="image_ct3_t1m_2r"/>
-                </entry>
-                <entry>Prepare an expansion input file (<codeph>gpexpand</codeph>). </entry>
-              </row>
-              <row>
-                <entry namest="c1" nameend="c2"><p><b>Offline Expansion Tasks</b></p>
-                  <ph otherprops="red">* The system is locked and unavailable to all user activity
-                    during this process.</ph>
-                </entry>
               </row>
               <row>
                 <entry>
@@ -134,6 +128,18 @@
                 </entry>
                 <entry>Validate disk I/O and memory bandwidth of the combined existing and new
                   hardware or cloud resources (<codeph>gpcheckperf</codeph>). </entry>
+              </row>
+              <row>
+                <entry namest="c1" nameend="c2"><p><b>Online Segment Instance
+                    Initialization</b></p><ph>* System is up and available</ph>
+                </entry>
+              </row>
+              <row>
+                <entry>
+                  <image href="../graphics/green-checkbox.jpg" width="29px" height="28px"
+                    id="image_ct3_t1m_2r"/>
+                </entry>
+                <entry>Prepare an expansion input file (<codeph>gpexpand</codeph>). </entry>
               </row>
               <row>
                 <entry>
@@ -192,9 +198,11 @@
     <body>
       <p>A deliberate, thorough approach to deploying compatible hardware greatly minimizes risk to
         the expansion process.</p>
+      <draft-comment author="msk">Change reference from Platform Engineering to Pivotal
+        Support</draft-comment>
       <p>Hardware resources and configurations for new segment hosts should match those of the
-        existing hosts. Work with <i>Greenplum Platform Engineering</i> before making a hardware
-        purchase to expand Greenplum Database.</p>
+        existing hosts.<ph otherprops="pivotal"> Work with <i>Pivotal Support</i> before making a
+          hardware purchase to expand Greenplum Database.</ph></p>
       <p>The steps to plan and set up new hardware platforms vary for each deployment. Some
         considerations include how to:</p>
       <ul id="ul_alt_tl5_mr">
@@ -217,33 +225,51 @@
   <topic id="topic6" xml:lang="en">
     <title>Planning New Segment Initialization</title>
     <body>
-      <p>Expanding Greenplum Database requires a limited period of system downtime. During this
-        period, run <codeph>gpexpand</codeph> to initialize new segments into the array and create
+      <p>Expanding Greenplum Database can be performed when the system is up and available. Run
+          <codeph>gpexpand</codeph> to initialize new segments instances into the array and create
         an expansion schema.</p>
       <p>The time required depends on the number of schema objects in the Greenplum system and other
         factors related to hardware performance. In most environments, the initialization of new
         segments requires less than thirty minutes offline.</p>
-      <note type="note">After you begin initializing new segments, you can no longer restore the
-        system using backup files created for the pre-expansion system. When initialization
+      <p>These utilities cannot be run while <codeph>gpexpand</codeph> is performing segment
+          initialization.<ul id="ul_c3w_wdp_lgb">
+          <li><codeph>gppkg</codeph></li>
+          <li><codeph>gpconfig</codeph></li>
+          <li><codeph>gpcheck</codeph></li>
+          <li><codeph>gpcheckat</codeph></li>
+        </ul></p>
+      <note type="important">After you begin initializing new segments, you can no longer restore
+        the system using backup files created for the pre-expansion system. When initialization
         successfully completes, the expansion is committed and cannot be rolled back. </note>
     </body>
     <topic id="topic7" xml:lang="en">
       <title id="no164776">Planning Mirror Segments</title>
       <body>
-        <p>If your existing array has mirror segments, the new segments must have mirroring
+        <draft-comment author="msk">Add link to block mirroring in Best Practices?</draft-comment>
+        <p>If your existing system has mirror segments, the new segments must have mirroring
           configured. If there are no mirrors configured for existing segments, you cannot add
-          mirrors to new hosts with the <codeph>gpexpand</codeph> utility. </p>
+          mirrors to new hosts with the <codeph>gpexpand</codeph> utility. For more information
+          about segment mirroring, see <xref href="../intro/about_ha.xml#about_ha/segment_mirroring"
+          />.</p>
         <p>For Greenplum Database arrays with mirror segments, ensure you add enough new host
           machines to accommodate new mirror segments. The number of new hosts required depends on
           your mirroring strategy:</p>
         <ul id="ul_dnt_tl5_mr">
           <li id="no165384"><b>Spread Mirroring</b> — Add at least one more host to the array than
             the number of segments per host. The number of separate hosts must be greater than the
-            number of segment instances per host to ensure even spreading.</li>
+            number of segment instances per host to ensure even spreading. You can specify this type
+            of mirroring during system initialization or when you enable segment mirroring for an
+            existing system.</li>
           <li id="no165386"><b>Grouped Mirroring</b> — Add at least two new hosts so the mirrors for
             the first host can reside on the second host, and the mirrors for the second host can
-            reside on the first. For more information, see <xref
-              href="../intro/about_ha.xml#about_ha/segment_mirroring"/>.</li>
+            reside on the first. This is the default type of mirroring if you enable segment
+            mirroring during system initialization if you enable segment mirroring for an existing
+            system.</li>
+          <li><b>Block Mirroring</b> — Adding one or more blocks of host systems. For example add a
+            block of four or eight hosts. Block mirroring is a custom mirroring configuration. For
+            more information about block mirroring, see <xref
+              href="../../best_practices/ha.xml#topic_cnm_vxc_54"/><ph otherprops="op-print"> in the
+                <cite>Greenplum Database Best Practices Guide</cite></ph>.</li>
         </ul>
       </body>
     </topic>
@@ -258,7 +284,7 @@
         <p>The interactive process for creating an expansion input file prompts for this option; you
           can also specify new segment directories manually in the input configuration file. For
           more information, see <xref href="expand-initialize.xml#topic23" type="topic"
-            format="dita" />.</p>
+            format="dita"/>.</p>
       </body>
     </topic>
     <topic id="topic9" xml:lang="en">
@@ -300,9 +326,11 @@
       <note type="important">To perform table redistribution, your segment hosts must have enough
         disk space to temporarily hold a copy of your largest table. All tables are unavailable for
         read and write operations during redistribution. </note>
+      <draft-comment author="msk">true for default of gp_expand_method GUC. recommendation for
+          <codeph>move</codeph> setting </draft-comment>
       <p>The performance impact of table redistribution depends on the size, storage type, and
         partitioning design of a table. For any given table, redistributing it with
-        <codeph>gpexpand</codeph> takes as much time as a <codeph>CREATE TABLE AS SELECT</codeph>
+          <codeph>gpexpand</codeph> takes as much time as a <codeph>CREATE TABLE AS SELECT</codeph>
         operation would. When redistributing a terabyte-scale fact table, the expansion utility can
         use much of the available system resources, which could affect query performance or other
         database workloads.</p>
@@ -310,14 +338,36 @@
     <topic id="topic11" xml:lang="en">
       <title id="no167000">Managing Redistribution in Large-Scale Greenplum Systems</title>
       <body>
+        <draft-comment author="msk">mention gp_expand_method GUC. Recommendations? </draft-comment>
         <p>You can manage the order in which tables are redistributed by adjusting their ranking.
           See <xref href="expand-redistribute.xml#topic29" type="topic" format="dita"/>.
           Manipulating the redistribution order can help adjust for limited disk space and restore
           optimal query performance for high-priority queries sooner. </p>
-        <p>When planning the redistribution phase, consider the impact of the exclusive lock taken
-          on each table during redistribution. User activity on a table can delay its
-          redistribution, but also tables are unavailable for user activity during redistribution.
-        </p>
+        <section>
+          <title>Table Redstribution Methods</title>
+          <draft-comment author="msk">add GUC - NEEDS EDIT</draft-comment>
+          <p>There are two methods of redistributing data when performing a Greenplum Database
+            expansion. <ul id="ul_hkz_jdv_kgb">
+              <li>rebuild - Create a new table, copy all the data from the old to the new table, and
+                replace the old table. This is the default. The rebuild method is similar creating a
+                new table with a <codeph>CREATE TABLE AS SELECT</codeph> command.</li>
+              <li>move - Scan all the data and perform an <codeph>UPDATE</codeph> operation to move
+                rows as needed to different segment instances. In general, this method requires less
+                disk space, however, it creates obsolete table rows and might require a
+                  <codeph>VACUUM</codeph> operation on the table. Also, this method updates indexes
+                one row at a time, which can be much slower than rebuilding the index with the
+                  <codeph>CREATE INDEX</codeph> command.</li>
+            </ul></p>
+          <p>The server configuration parameter <codeph><xref
+                href="../../ref_guide/config_params/guc-list.xml#gp_expand_method"
+                >gp_expand_method</xref></codeph> controls the redistribution method.</p>
+          <draft-comment author="msk">leave out until gp_use_legacy_hashops and upgrade are
+            available.</draft-comment>
+          <p>When planning the redistribution phase, consider the impact of the exclusive lock taken
+            on each table during redistribution. User activity on a table can delay its
+            redistribution, but also tables are unavailable for user activity during redistribution.
+          </p>
+        </section>
         <section>
           <title>Systems with Abundant Free Disk Space</title>
           <p>In systems with abundant free disk space (required to store a copy of the largest
@@ -349,6 +399,7 @@
     <topic id="topic13" xml:lang="en">
       <title>Redistributing Append-Optimized and Compressed Tables</title>
       <body>
+        <draft-comment author="msk">removed mention of zlib option.</draft-comment>
         <p><codeph>gpexpand</codeph> redistributes append-optimized and compressed append-optimized
           tables at different rates than heap tables. The CPU capacity required to compress and
           decompress data tends to increase the impact on system performance. For similar-sized
@@ -356,14 +407,14 @@
             following:<ul id="ul_ocf_3fr_g4">
             <li id="no163863">Uncompressed append-optimized tables expand 10% faster than heap
               tables.</li>
-            <li id="no170207"><codeph>zlib</codeph>-compressed append-optimized tables expand at a
-              significantly slower rate than uncompressed append-optimized tables, potentially up to
-              80% slower.</li>
+            <li id="no170207">Append-optimized tables are defined to use data compression expand at
+              a significantly slower rate than uncompressed append-optimized tables, potentially up
+              to 80% slower.</li>
             <li id="no170253">Systems with data compression such as ZFS/LZJB take longer to
               redistribute.</li>
           </ul></p>
-        <note type="important">If your system nodes use data compression, use identical compression
-          on new nodes to avoid disk space shortage. </note>
+        <note type="important">If your system hosts use data compression, use identical compression
+          setting on the new hosts to avoid disk space shortage. </note>
       </body>
     </topic>
     <topic id="topic14" xml:lang="en">

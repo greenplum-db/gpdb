@@ -4,7 +4,8 @@
 <topic id="topic1">
   <title id="kt20941">gpexpand</title>
   <body>
-    <p>Expands an existing Greenplum Database across new hosts in the array.</p>
+    <draft-comment author="msk">GPDB 6 - online expand</draft-comment>
+    <p>Expands an existing Greenplum Database across new hosts in the system.</p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock><b>gpexpand</b> [{<b>-f</b>|<b>--hosts-file</b>} <varname>hosts_file</varname>]
@@ -41,34 +42,39 @@
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
           specified to start Greenplum Database. </li>
       </ul>
+      <p>For information about preparing a system for expansion, see <xref
+          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
+          System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
+            Guide</cite></ph>.</p>
     </section>
     <section id="section4">
       <title>Description</title>
       <p>The <codeph>gpexpand</codeph> utility performs system expansion in two phases: segment
-        initialization and then table redistribution. </p>
+        instance initialization and then table data redistribution. </p>
       <p>In the initialization phase, <codeph>gpexpand</codeph> runs with an input file that
         specifies data directories, <varname>dbid</varname> values, and other characteristics of the
-        new segments. You can create the input file manually, or by following the prompts in an
-        interactive interview.</p>
+        new segment instances. You can create the input file manually, or by following the prompts
+        in an interactive interview.</p>
       <p>If you choose to create the input file using the interactive interview, you can optionally
-        specify a file containing a list of expansion hosts. If your platform or command shell
-        limits the length of the list of hostnames that you can type when prompted in the interview,
-        specifying the hosts with <codeph>-f</codeph> may be mandatory. </p>
-      <p>In addition to initializing the segments, the initialization phase performs these
+        specify a file containing a list of expansion system hosts. If your platform or command
+        shell limits the length of the list of hostnames that you can type when prompted in the
+        interview, specifying the hosts with <codeph>-f</codeph> may be mandatory. </p>
+      <p>In addition to initializing the segment instances, the initialization phase performs these
         actions:</p>
       <ul>
         <li id="kt138259">Creates an expansion schema to store the status of the expansion
           operation, including detailed status for tables.</li>
-        <li id="kt138260">Changes the distribution policy for all tables to <codeph>DISTRIBUTED
-            RANDOMLY</codeph>. The original distribution policies are later restored in the
-          redistribution phase.</li>
       </ul>
+      <p>In the table data redistribution phase, <codeph>gpexapand</codeph> redistributes table data
+        to rebalance the data across the old and new segment instances.</p>
       <note>Data redistribution should be performed during low-use hours. Redistribution can divided
         into batches over an extended period.</note>
+      <draft-comment author="msk">Reference to time is for default expand method. mention
+        gp_expand_method GUC. Recommendations? </draft-comment>
       <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
         options. If you specify an end time or duration, then the utility redistributes tables in
-        the expansion schema until the specified end time or duration is reached.  If you specify no
+        the expansion schema until the specified end time or duration is reached. If you specify no
         options, then the utility redistribution phase continues until all tables in the expansion
         schema are reorganized. Each table is reorganized using <codeph>ALTER TABLE</codeph>
         commands to rebalance the tables across new segments, and to set tables to their original
@@ -128,14 +134,14 @@
             Each line of the file must contain a single host name. </pd>
           <pd>This file can contain hostnames with or without network interfaces specified. The
               <codeph>gpexpand</codeph> utility handles either case, adding interface numbers to end
-            of the hostname if the original nodes are configured with multiple network
-              interfaces.<note>The Greenplum Database segment host naming convention is
-                <codeph>sdwN</codeph> where <codeph>sdw</codeph> is a prefix and <codeph>N</codeph>
-              is an integer. For example, <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on.
-              For hosts with multiple interfaces, the convention is to append a dash
-                (<codeph>-</codeph>) and number to the host name. For example,
-                <codeph>sdw1-1</codeph> and <codeph>sdw1-2</codeph> are the two interface names for
-              host <codeph>sdw1</codeph>. </note></pd>
+            of the hostname if the original nodes are configured with multiple network interfaces.
+            <note>The Greenplum Database segment host naming convention is <codeph>sdwN</codeph>
+              where <codeph>sdw</codeph> is a prefix and <codeph>N</codeph> is an integer. For
+              example, <codeph>sdw1</codeph>, <codeph>sdw2</codeph> and so on. For hosts with
+              multiple interfaces, the convention is to append a dash (<codeph>-</codeph>) and
+              number to the host name. For example, <codeph>sdw1-1</codeph> and
+                <codeph>sdw1-2</codeph> are the two interface names for host <codeph>sdw1</codeph>.
+            </note></pd>
         </plentry>
         <plentry>
           <pt>-i | --input <varname>input_file</varname></pt>
@@ -208,7 +214,8 @@
       <title>See Also</title>
       <p>
         <codeph><xref href="gpssh-exkeys.xml#topic1"/></codeph>, <xref
-          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum System</xref>
+          href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
+          System</xref>
         <ph otherprops="op-print">in the <cite>Greenplum Database Administrator
         Guide</cite></ph></p>
     </section>
