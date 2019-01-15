@@ -64,8 +64,6 @@ CATALOG(pg_authid,1260) BKI_SHARED_RELATION BKI_ROWTYPE_OID(2842) BKI_SCHEMA_MAC
 	bool		rolcreaterextgpfd;	/* allowed to create readable gpfdist tbl?  */
 	bool		rolcreaterexthttp;	/* allowed to create readable http tbl?  */
 	bool		rolcreatewextgpfd;	/* allowed to create writable gpfdist tbl?  */
-	bool		rolcreaterexthdfs;	/* allowed to create readable gphdfs tbl? */
-	bool		rolcreatewexthdfs;	/* allowed to create writable gphdfs tbl? */
 	Oid			rolresgroup;		/* ID of resource group for this role  */
 } FormData_pg_authid;
 
@@ -88,7 +86,7 @@ typedef FormData_pg_authid *Form_pg_authid;
  *		compiler constants for pg_authid
  * ----------------
  */
-#define Natts_pg_authid						18
+#define Natts_pg_authid						16
 #define Anum_pg_authid_rolname				1
 #define Anum_pg_authid_rolsuper				2
 #define Anum_pg_authid_rolinherit			3
@@ -104,9 +102,7 @@ typedef FormData_pg_authid *Form_pg_authid;
 #define Anum_pg_authid_rolcreaterextgpfd	13
 #define Anum_pg_authid_rolcreaterexthttp	14
 #define Anum_pg_authid_rolcreatewextgpfd	15
-#define Anum_pg_authid_rolcreaterexthdfs	16
-#define Anum_pg_authid_rolcreatewexthdfs	17
-#define Anum_pg_authid_rolresgroup			18
+#define Anum_pg_authid_rolresgroup			16
 
 /* ----------------
  *		initial contents of pg_authid
@@ -118,7 +114,7 @@ typedef FormData_pg_authid *Form_pg_authid;
  * add default group ADMINRESGROUP_OID 6438
  * ----------------
  */
-DATA(insert OID = 10 ( "POSTGRES" t t t t t t t -1 _null_ _null_ 6055 t t t t t 6438 ));
+DATA(insert OID = 10 ( "POSTGRES" t t t t t t t -1 _null_ _null_ 6055 t t t 6438 ));
 
 #define BOOTSTRAP_SUPERUSERID 10
 

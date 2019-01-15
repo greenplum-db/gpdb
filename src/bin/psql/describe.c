@@ -2197,16 +2197,6 @@ describeOneTableDetails(const char *schemaname,
 					format = "custom";
 				}
 				break;
-                case 'a':
-                {
-                    format = "avro";
-                }
-                break;
-                case 'p':
-                {
-                    format = "parquet";
-                }
-                break;
 				default:
 				{
 					format = "";
@@ -3428,6 +3418,7 @@ describeRoles(const char *pattern, bool verbose)
 	int			conns;
 	const char	align = 'l';
 	char	  **attr;
+	const int   numgreenplumspecificattrs = 3;
 
 	myopt.default_footer = false;
 
@@ -3448,8 +3439,6 @@ describeRoles(const char *pattern, bool verbose)
 		appendPQExpBufferStr(&buf, "\n, r.rolcreaterextgpfd");
 		appendPQExpBufferStr(&buf, "\n, r.rolcreatewextgpfd");
 		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthttp");
-		appendPQExpBufferStr(&buf, "\n, r.rolcreaterexthdfs");
-		appendPQExpBufferStr(&buf, "\n, r.rolcreatewexthdfs");
 
 		if (verbose && pset.sversion >= 80200)
 		{
@@ -3527,12 +3516,6 @@ describeRoles(const char *pattern, bool verbose)
 
 		if (strcmp(PQgetvalue(res, i, 11), "t") == 0)
 			add_role_attribute(&buf, _("Ext http Table"));
-
-		if (strcmp(PQgetvalue(res, i, 12), "t") == 0)
-			add_role_attribute(&buf, _("Ext hdfs Table"));
-
-		if (strcmp(PQgetvalue(res, i, 13), "t") == 0)
-			add_role_attribute(&buf, _("Wri Ext hdfs Table"));
 		/* end Greenplum specific attributes */
 
 
@@ -3540,8 +3523,8 @@ describeRoles(const char *pattern, bool verbose)
 			add_role_attribute(&buf, _("Cannot login"));
 
 		if (pset.sversion >= 90100)
-			/* +5 is due to additional Greenplum specific attributes */
-			if (strcmp(PQgetvalue(res, i, (verbose ? 10 + 5 : 9 + 5)), "t") == 0)
+			/* +numgreenplumspecificattrs is due to additional Greenplum specific attributes */
+			if (strcmp(PQgetvalue(res, i, (verbose ? 10 + numgreenplumspecificattrs : 9 + numgreenplumspecificattrs)), "t") == 0)
 				add_role_attribute(&buf, _("Replication"));
 
 		conns = atoi(PQgetvalue(res, i, 6));
@@ -3574,7 +3557,7 @@ describeRoles(const char *pattern, bool verbose)
 		printTableAddCell(&cont, PQgetvalue(res, i, 8), false, false);
 
 		if (verbose && pset.sversion >= 80200)
-			printTableAddCell(&cont, PQgetvalue(res, i, 9 + 5 /* Greenplum specific attributes */), false, false);
+			printTableAddCell(&cont, PQgetvalue(res, i, 9 + numgreenplumspecificattrs), false, false);
 	}
 	termPQExpBuffer(&buf);
 

@@ -159,7 +159,7 @@ CREATE EXTERNAL TABLE tbl (s1 text, s2 text, s3 text, dt timestamp,n1 smallint, 
 LOCATION ('gpfdists://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl','gpfdist://127.0.0.1:7070/gpfdist_ssl/tbl1.tbl')
 FORMAT 'TEXT' (DELIMITER '|' );
 ERROR:  URI protocols must be the same for all data sources
-HINT:  Available protocols are 'http', 'file', 'gphdfs', 'gpfdist' and 'gpfdists'
+HINT:  Available protocols are 'http', 'file', 'gpfdist' and 'gpfdists'
 DROP TABLE IF EXISTS tbl_on_heap;
 -- start_ignore
 select * from gpfdist_ssl_stop;

@@ -1277,14 +1277,6 @@ validatorfunc = url_validator
     drop role if exists demoprot_nopriv;
     create role demoprot_nopriv with login ;
 
-    -- Create a gphdfs_user with CREATEEXTTABLE privilege using gphdfs protocol
-    drop role if exists gphdfs_user;
-    create role gphdfs_user with login CREATEEXTTABLE (protocol='gphdfs');
-    -- WARNING:  GRANT/REVOKE on gphdfs is deprecated
-    -- HINT:  Issue the GRANT or REVOKE on the protocol itself
-    -- NOTICE:  resource queue required -- using default resource queue "pg_default"
-    -- CREATE ROLE
-
 
 -- Test 92: Rename existing protocol
     DROP FUNCTION IF EXISTS url_validator();

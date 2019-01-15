@@ -4,12 +4,7 @@
 CREATE ROLE exttab1_su SUPERUSER; -- SU with no privs in pg_auth
 CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable'); 
 CREATE ROLE exttab1_u2 CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
-CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict 
-CREATE ROLE exttab1_u4 CREATEEXTTABLE(protocol='gphdfs', type='readable'); 
-CREATE ROLE exttab1_u5 CREATEEXTTABLE(protocol='gphdfs', type='writable'); 
-CREATE ROLE exttab1_u6 NOCREATEEXTTABLE(protocol='gphdfs', type='readable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable');
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs') NOCREATEEXTTABLE(protocol='gphdfs', type='readable'); -- fail due to conflict 
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs', type='writable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable'); -- fail due to conflict 
+CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
 
 
 SET SESSION AUTHORIZATION exttab1_su;
@@ -39,9 +34,6 @@ drop external table auth_ext_test7;
 DROP ROLE exttab1_su;
 DROP ROLE exttab1_u1;
 DROP ROLE exttab1_u2;
-DROP ROLE exttab1_u4;
-DROP ROLE exttab1_u5;
-DROP ROLE exttab1_u6;
 
 --
 -- Role to create RET http

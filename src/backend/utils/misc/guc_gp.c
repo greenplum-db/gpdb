@@ -277,13 +277,6 @@ bool		gp_allow_rename_relation_without_lock = false;
 /* ignore EXCLUDE clauses in window spec for backwards compatibility */
 bool		gp_ignore_window_exclude = false;
 
-/* Hadoop Integration GUCs */
-char	   *gp_hadoop_connector_jardir;
-char	   *gp_hadoop_connector_version = "";	/* old GUC; now it's a global
-												 * var. */
-char	   *gp_hadoop_target_version;
-char	   *gp_hadoop_home;
-
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
 
@@ -4611,39 +4604,6 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
 		},
 		&pljava_classpath,
-		"",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_connector_jardir", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The directory of the Hadoop connector JAR, relative to $GPHOME."),
-			NULL,
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hadoop_connector_jardir,
-		"lib//hadoop",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_target_version", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The distro/version of Hadoop that external table is connecting to."),
-			gettext_noop("See release notes or gppkg readme for details."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_hadoop_target_version,
-		"hadoop",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_home", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The location where Hadoop is installed in each segment."),
-			NULL,
-			GUC_GPDB_ADDOPT
-		},
-		&gp_hadoop_home,
 		"",
 		NULL, NULL, NULL
 	},

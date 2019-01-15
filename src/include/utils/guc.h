@@ -553,12 +553,6 @@ extern bool	optimizer_partition_selection_log;
 #define JOIN_ORDER_GREEDY_SEARCH            1
 #define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
 
-/* Hadoop Integration GUCs */
-extern char  *gp_hadoop_connector_jardir;  /* relative dir on $GPHOME of the Hadoop connector jar is located */
-extern char  *gp_hadoop_connector_version; /* connector version (internal use only) */
-extern char  *gp_hadoop_target_version; /* the target hadoop distro/version */
-extern char  *gp_hadoop_home;    /* $HADOOP_HOME on all segments */
-
 /* Time based authentication GUC */
 extern char  *gp_auth_time_override_str;
 

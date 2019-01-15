@@ -739,10 +739,8 @@ class ValidateUninstallPackage(Operation):
 
         In simpler terms, consider this example:
             pljava depends on jre, which its gppkg contains
-            gphdfs depends on jre, which its gppkg contains
-            install the gppkgs for both pljava and gphdfs
+            install the gppkgs for pljava
             uninstall pljava gppkg
-            we internally attempt to "rpm -e" the jre rpm, hitting the gphdfs dependency error here involving "jre = 1.6"
             we determine that the jre rpm is responsible for *providing* "jre = 1.6"
             so, we ultimately omit the jre rpm from our "rpm -e" and move on
 

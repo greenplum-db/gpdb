@@ -213,13 +213,6 @@ PGAC_ARG_BOOL(enable, pxf, yes,
 AC_SUBST(enable_pxf)
 
 #
-# gphdfs
-#
-PGAC_ARG_BOOL(enable, gphdfs, no,
-             [build with gphdfs])
-AC_SUBST(enable_gphdfs)
-
-#
 # orafce
 #
 PGAC_ARG_BOOL(enable, orafce, no,

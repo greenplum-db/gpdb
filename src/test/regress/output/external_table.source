@@ -354,7 +354,7 @@ create writable external web table wet_pos4(a text, b text) execute 'some comman
 -- negative
 create writable external table wet_neg1(a text, b text) location('file://@hostname@@abs_srcdir@/badt1.tbl') format 'text';
 ERROR:  unsupported URI protocol 'file' for writable external table
-HINT:  Writable external tables may use 'gpfdist', 'gpfdists' or 'gphdfs' URIs only.
+HINT:  Writable external tables may use 'gpfdist' or 'gpfdists' URIs only.
 create writable external table wet_neg1(a text, b text) location('gpfdist://foo:7070/wet.out', 'gpfdist://foo:7070/wet.out') format 'text';
 ERROR:  duplicate location uri
 LINE 1: ...t, b text) location('gpfdist://foo:7070/wet.out', 'gpfdist:/...

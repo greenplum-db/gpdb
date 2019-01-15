@@ -6,51 +6,7 @@ CREATE ROLE exttab1_u1 CREATEEXTTABLE(protocol='gpfdist', type='readable');
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE ROLE exttab1_u2 CREATEEXTTABLE(protocol='gpfdist', type='writable'); 
 NOTICE:  resource queue required -- using default resource queue "pg_default"
-CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict 
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
-CREATE ROLE exttab1_u4 CREATEEXTTABLE(protocol='gphdfs', type='readable'); 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u5 CREATEEXTTABLE(protocol='gphdfs', type='writable'); 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u6 NOCREATEEXTTABLE(protocol='gphdfs', type='readable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable');
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg0 @hostname@:50000 pid=64819)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated  (seg1 @hostname@:50001 pid=64820)
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs') NOCREATEEXTTABLE(protocol='gphdfs', type='readable'); -- fail due to conflict 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
-CREATE ROLE exttab1_u7 CREATEEXTTABLE(protocol='gphdfs', type='writable') NOCREATEEXTTABLE(protocol='gphdfs', type='writable'); -- fail due to conflict 
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
+CREATE ROLE exttab1_u3 CREATEEXTTABLE(protocol='gpfdist') NOCREATEEXTTABLE(protocol='gpfdist', type='readable'); -- fail due to conflict
 NOTICE:  resource queue required -- using default resource queue "pg_default"
 ERROR:  conflicting specifications in CREATEEXTTABLE and NOCREATEEXTTABLE
 SET SESSION AUTHORIZATION exttab1_su;
@@ -79,9 +35,6 @@ ERROR:  table "auth_ext_test7" does not exist
 DROP ROLE exttab1_su;
 DROP ROLE exttab1_u1;
 DROP ROLE exttab1_u2;
-DROP ROLE exttab1_u4;
-DROP ROLE exttab1_u5;
-DROP ROLE exttab1_u6;
 --
 -- Role to create RET http
 --

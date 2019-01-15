@@ -34,8 +34,6 @@
               [ESCAPE [AS] '<varname>escape</varname>']
               [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
               [FILL MISSING FIELDS] )]
-          | 'AVRO' 
-          | 'PARQUET'
           | 'CUSTOM' (Formatter=<varname>&lt;formatter_specifications&gt;</varname>)
     [ ENCODING '<varname>encoding</varname>' ]
       [ [LOG ERRORS] SEGMENT REJECT LIMIT <varname>count</varname>
@@ -87,8 +85,6 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE <varname>table_name</varname>
                [NULL [AS] '<varname>null string</varname>']
                [FORCE QUOTE <varname>column</varname> [, ...]] | * ]
                [ESCAPE [AS] '<varname>escape</varname>'] )]
-           | 'AVRO' 
-           | 'PARQUET'
 
            | 'CUSTOM' (Formatter=<varname>&lt;formatter specifications&gt;</varname>)
     [ ENCODING '<varname>write_encoding</varname>' ]
@@ -317,7 +313,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
       </parml>
       <parml>
         <plentry>
-          <pt>FORMAT 'TEXT | CSV | AVRO | PARQUET' <varname>(options)</varname></pt>
+          <pt>FORMAT 'TEXT | CSV' <varname>(options)</varname></pt>
           <pd>When the <codeph>FORMAT</codeph> clause identfies delimited text (<codeph>TEXT</codeph>)
             or comma separated values (<codeph>CSV</codeph>) format, formatting options are similar
         to those available with the
@@ -327,11 +323,6 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
         the data in the external file is read correctly by Greenplum Database. For information about
         using a custom format, see "Loading and Unloading Data" in the <cite>Greenplum Database
           Administrator Guide</cite>.</pd>
-          <pd>The <codeph>AVRO</codeph> and <codeph>PARQUET</codeph> formats are supported only when 
-            you specify the <codeph>gphdfs</codeph> protocol. Refer to <xref
-          href="../../admin_guide/external/g-using-hadoop-distributed-file-system--hdfs--tables.xml"/>
-         for detailed information about the <codeph>gphdfs</codeph> protocol <codeph>FORMAT</codeph>
-         clause syntax.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
           refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
           documentation for detailed information about

@@ -117,9 +117,7 @@ extern ExtTableEntry *GetExtTableEntryIfExists(Oid relid);
 
 extern void RemoveExtTableEntry(Oid relid);
 
-#define fmttype_is_custom(c) (c == 'b' || c == 'a' || c == 'p')
-#define fmttype_is_avro(c) (c == 'a')
-#define fmttype_is_parquet(c) (c == 'p')
+#define fmttype_is_custom(c) (c == 'b')
 #define fmttype_is_text(c)   (c == 't')
 #define fmttype_is_csv(c)    (c == 'c')
 

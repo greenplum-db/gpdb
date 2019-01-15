@@ -27,8 +27,6 @@ CREATE VIEW pg_roles AS
         rolcreaterextgpfd,
         rolcreaterexthttp,
         rolcreatewextgpfd,
-        rolcreaterexthdfs,
-        rolcreatewexthdfs,
         rolresgroup
     FROM pg_authid LEFT JOIN pg_db_role_setting s
     ON (pg_authid.oid = setrole AND setdatabase = 0);

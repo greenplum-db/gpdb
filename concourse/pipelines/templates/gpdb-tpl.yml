@@ -96,12 +96,6 @@ groups:
   - gppkg
   - check_centos
 {% endif %}
-{% if "UD" in test_sections %}
-  ## --------------------------------------------------------------------
-  - gate_ud_start
-  - regression_tests_gphdfs_hadoop_centos
-  - regression_tests_gphdfs_mapr_centos
-{% endif %}
 {% if "AA" in test_sections %}
   ## --------------------------------------------------------------------
   - gate_advanced_analytics_start
@@ -268,17 +262,6 @@ groups:
 {% endif %}
 
 {% endif %}
-{% if "UD" in test_sections %}
-## ======================================================================
-
-- name: UD
-  jobs:
-  - gate_ud_start
-  - regression_tests_gphdfs_hadoop_centos
-  - regression_tests_gphdfs_mapr_centos
-  - compile_gpdb_centos6
-
-{% endif %}
 
 {% if "AA" in test_sections %}
 - name: AdvancedAnalytics
@@ -325,8 +308,7 @@ resource_types:
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
       "ResourceGroups"     in test_sections or
-      "CLI"      in test_sections or
-      "UD"      in test_sections %}
+      "CLI"      in test_sections %}
 - name: ccp_src
   type: git
   source:
@@ -1954,78 +1936,6 @@ jobs:
 {% endif %}
 
 {% endif %} # end CLI test_sections
-{% if "UD" in test_sections %}
-## ======================================================================
-##  _   _ ____
-## | | | |  _ \
-## | | | | | | |
-## | |_| | |_| |
-##  \___/|____/
-## ======================================================================
-
-- name: gate_ud_start
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_centos6
-      trigger: true
-    - get: bin_gpdb_centos6
-      passed:
-      - compile_gpdb_centos6
-
-- name: regression_tests_gphdfs_hadoop_centos
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-      resource: bin_gpdb_centos6
-    - get: gpdb6-centos6-test
-  - task: regression_tests_gphdfs
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs.yml
-    image: gpdb6-centos6-test
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-- name: regression_tests_gphdfs_mapr_centos
-  ensure:
-    <<: *set_failed
-  on_success:
-    <<: *ccp_destroy
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_ud_start]
-    - get: bin_gpdb
-      passed: [gate_ud_start]
-      trigger: [[ test_trigger ]]
-      resource: bin_gpdb_centos6
-    - get: ccp_src
-    - get: gpdb6-centos6-test
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 1
-        PLATFORM: centos7
-        instance_type: n1-standard-4
-  - task: gen_and_initialize_mapr
-    file: gpdb_src/concourse/tasks/gen_mapr.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: regression_tests_gphdfs_mapr
-    file: gpdb_src/concourse/tasks/regression_tests_gphdfs_mapr.yml
-    image: gpdb6-centos6-test
-    params:
-      TARGET_OS: centos
-      TARGET_OS_VERSION: 6
-
-{% endif %}
 
 {% if "AA" in test_sections %}
 ## ======================================================================
@@ -2217,8 +2127,6 @@ jobs:
       - resource_group_centos6
       - resource_group_centos7
  ##     - resource_group_sles12
-      - regression_tests_gphdfs_hadoop_centos
-      - regression_tests_gphdfs_mapr_centos
 {% for test_name in CLI_1_suites +
                     CLI_2_suites %}
       - [[ test_name ]]
@@ -2245,8 +2153,6 @@ jobs:
       - icw_extensions_gpcloud_centos6
  ##   - client_loader_remote_test_aix
       - resource_group_centos6
-      - regression_tests_gphdfs_hadoop_centos
-      - regression_tests_gphdfs_mapr_centos
 {% for test_name in CLI_1_suites +
                     CLI_2_suites %}
       - [[ test_name ]]

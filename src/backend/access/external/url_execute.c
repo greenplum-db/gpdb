@@ -228,12 +228,6 @@ make_command(const char *cmd, extvar_t *ev)
 	make_export("GP_SEGMENT_COUNT", ev->GP_SEGMENT_COUNT, &buf);
 	make_export("GP_QUERY_STRING", ev->GP_QUERY_STRING, &buf);
 
-	/* hadoop env var */
-	make_export("GP_HADOOP_CONN_JARDIR", ev->GP_HADOOP_CONN_JARDIR, &buf);
-	make_export("GP_HADOOP_CONN_VERSION", ev->GP_HADOOP_CONN_VERSION, &buf);
-	if (strlen(ev->GP_HADOOP_HOME) > 0)
-		make_export("HADOOP_HOME",    ev->GP_HADOOP_HOME,    &buf);
-
 	appendStringInfoString(&buf, cmd);
 
 	return buf.data;

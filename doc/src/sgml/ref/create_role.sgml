@@ -32,7 +32,7 @@ CREATE ROLE <replaceable class="PARAMETER">name</replaceable> [ [ WITH ] <replac
       [ ( attribute='value'[, ...] ) ]
            where attributes and values are:
            type='readable'|'writable'
-           protocol='gpfdist'|'http'|'gphdfs'
+           protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
     | REPLICATION | NOREPLICATION
