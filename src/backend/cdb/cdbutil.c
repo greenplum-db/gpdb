@@ -1517,6 +1517,20 @@ getgpsegmentCount(void)
 		numsegments = cdbcomponent_getCdbComponents(true)->total_segments;
 	else if (Gp_role == GP_ROLE_EXECUTE)
 		numsegments = numsegmentsFromQD;
+	/*
+	 * If we are in 'Utility & Binary Upgrade' mode, it must be launched
+	 * by the pg_upgrade, so we give it an correct numsegments to make
+	 * sure the pg_upgrade can run normally.
+	 * Only Utility QD process have the entire information in the
+	 * gp_segment_configuration, so we count the segments count in this
+	 * process.
+	 */
+	else if (Gp_role == GP_ROLE_UTILITY &&
+			 IsBinaryUpgrade &&
+			 GpIdentity.segindex == -1)
+	{
+		numsegments = cdbcomponent_getCdbComponents(true)->total_segments;
+	}
 
 	return numsegments;
 }
