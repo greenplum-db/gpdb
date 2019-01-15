@@ -9456,17 +9456,11 @@ CreateRestartPoint(int flags)
 	 * this is a quick hack to make sure nothing really bad happens if somehow
 	 * we get here after the end-of-recovery checkpoint.
 	 *
-	 * GPDB allows replay to also change the control file during
-	 * DB_IN_STANDBY_MODE so that mirror can be restarted from the latest
-	 * checkpoint location. This will save the recovery time of mirror, and also
-	 * allow mirror to remove already replayed xlogs.
-	 *
 	 * FIXME: need to consider consolidating the DB_IN_ARCHIVE_RECOVERY (upstream)
 	 * and DB_IN_STANDBY_MODE (GPDB only)
 	 */
 	LWLockAcquire(ControlFileLock, LW_EXCLUSIVE);
-	if ((ControlFile->state == DB_IN_ARCHIVE_RECOVERY
-		     || ControlFile->state == DB_IN_STANDBY_MODE) &&
+	if (ControlFile->state == DB_IN_ARCHIVE_RECOVERY &&
 	    ControlFile->checkPointCopy.redo < lastCheckPoint.redo)
 	{
 		ControlFile->prevCheckPoint = ControlFile->checkPoint;
