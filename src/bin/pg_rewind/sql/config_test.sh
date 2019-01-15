@@ -84,7 +84,7 @@ STANDBY_PG_CTL_OPTIONS="-p ${PORT_STANDBY} $PG_CTL_COMMON_OPTIONS"
 MASTER_PG_CTL_STOP_MODE="fast"
 
 function wait_for_promotion {
-   retry=50
+   retry=150
    until [ $retry -le 0 ]
    do
       PGOPTIONS=${PGOPTIONS_UTILITY} ${1} -c "select 1;" && break
