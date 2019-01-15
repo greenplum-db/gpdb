@@ -18,6 +18,7 @@
 #include <replication/slot.h>
 
 #include "access/xlog.h"
+#include "cdb/cdbvars.h"
 #include "libpq/pqformat.h"
 #include "libpq/libpq.h"
 #include "postmaster/fts.h"
@@ -417,6 +418,34 @@ HandleFtsWalRepPromote(void)
 void
 HandleFtsMessage(const char* query_string)
 {
+	int dbid;
+	int contid;
+	char message_type[FTS_MSG_MAX_LEN];
+	int error_level;
+
+	if (sscanf(query_string, FTS_MSG_FORMAT,
+			   message_type, &dbid, &contid) != 3)
+	{
+		ereport(ERROR,
+				(errmsg("received invalid FTS query: %s", query_string)));
+	}
+
+#ifdef USE_ASSERT_CHECKING
+	error_level = PANIC;
+#else
+	error_level = WARNING;
+#endif
+
+	if (dbid != GpIdentity.dbid)
+		ereport(error_level,
+				(errmsg("message type: %s received dbid:%d doesn't match this segments configured dbid:%d",
+						message_type, dbid, GpIdentity.dbid)));
+
+	if (contid != GpIdentity.segindex)
+		ereport(error_level,
+				(errmsg("message type: %s received contentid:%d doesn't match this segments configured contentid:%d",
+						message_type, contid, GpIdentity.segindex)));
+
 	SIMPLE_FAULT_INJECTOR(FtsHandleMessage);
 
 	if (strncmp(query_string, FTS_MSG_PROBE,

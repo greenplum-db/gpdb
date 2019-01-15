@@ -515,7 +515,8 @@ static void
 ftsSend(fts_context *context)
 {
 	fts_segment_info *ftsInfo;
-	const char *message;
+	const char *message_type;
+	char message[FTS_MSG_MAX_LEN];
 	int i;
 
 	for (i = 0; i < context->num_pairs; i++)
@@ -542,11 +543,17 @@ ftsSend(fts_context *context)
 				    !(ftsInfo->poll_revents & POLLOUT))
 					break;
 				if (ftsInfo->state == FTS_PROBE_SEGMENT)
-					message = FTS_MSG_PROBE;
+					message_type = FTS_MSG_PROBE;
 				else if (ftsInfo->state == FTS_SYNCREP_OFF_SEGMENT)
-					message = FTS_MSG_SYNCREP_OFF;
+					message_type = FTS_MSG_SYNCREP_OFF;
 				else
-					message = FTS_MSG_PROMOTE;
+					message_type = FTS_MSG_PROMOTE;
+
+				snprintf(message, FTS_MSG_MAX_LEN, FTS_MSG_FORMAT,
+						 message_type,
+						 ftsInfo->primary_cdbinfo->dbid,
+						 ftsInfo->primary_cdbinfo->segindex);
+
 				if (PQsendQuery(ftsInfo->conn, message))
 				{
 					/*

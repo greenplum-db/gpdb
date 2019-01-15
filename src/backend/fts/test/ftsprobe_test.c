@@ -339,6 +339,7 @@ test_ftsConnect_ftsPoll(void **state)
 void
 test_ftsSend_success(void **state)
 {
+	char message[FTS_MSG_MAX_LEN];
 	CdbComponentDatabases *cdbs = InitTestCdb(
 		1, true, GP_SEGMENT_CONFIGURATION_MODE_INSYNC);
 	fts_context context;
@@ -347,10 +348,16 @@ test_ftsSend_success(void **state)
 	fts_segment_info *ftsInfo = &context.perSegInfos[0];
 	ftsInfo->conn->asyncStatus = PGASYNC_IDLE;
 	ftsInfo->poll_revents = POLLOUT;
+
+	snprintf(message, FTS_MSG_MAX_LEN, FTS_MSG_FORMAT,
+			 FTS_MSG_PROBE,
+			 ftsInfo->primary_cdbinfo->dbid,
+			 ftsInfo->primary_cdbinfo->segindex);
+
 	expect_value(PQstatus, conn, ftsInfo->conn);
 	will_return(PQstatus, CONNECTION_OK);
 	expect_value(PQsendQuery, conn, ftsInfo->conn);
-	expect_string(PQsendQuery, query, FTS_MSG_PROBE);
+	expect_string(PQsendQuery, query, message);
 	will_return(PQsendQuery, 1);
 
 	ftsSend(&context);

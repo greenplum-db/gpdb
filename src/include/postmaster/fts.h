@@ -25,6 +25,20 @@
 #define FTS_MSG_SYNCREP_OFF "SYNCREP_OFF"
 #define FTS_MSG_PROMOTE "PROMOTE"
 
+/*
+ * This is used for constructing string to store the full fts message request
+ * string from QD to QE. Format for which is defined using FTS_MSG_FORMAT and
+ * first part of it string to define type of fts message like FTS_MSG_PROBE,
+ * FTS_MSG_SYNCREP_OFF or FTS_MSG_PROMOTE.
+ */
+#define FTS_MSG_MAX_LEN 100
+
+/*
+ * If altering the fts message format, consider if FTS_MSG_MAX_LEN is enough
+ * to store the modified format.
+ */
+#define FTS_MSG_FORMAT "%s dbid=%d contid=%d"
+
 #define Natts_fts_message_response 5
 #define Anum_fts_message_response_is_mirror_up 0
 #define Anum_fts_message_response_is_in_sync 1
