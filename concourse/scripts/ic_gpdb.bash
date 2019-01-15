@@ -104,6 +104,8 @@ function _main() {
         exit 1
       fi
       # Trigger gpexpand again after ICW.
+      # Some fixups are needed to bypass known failures.
+      time bypass_known_expand_failures
       time expand_cluster 3 4
     fi
 

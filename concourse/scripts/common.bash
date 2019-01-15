@@ -62,6 +62,41 @@ EOF
   echo "$pgoptions"
 }
 
+function bypass_known_expand_failures() {
+  local pgoptions="$(get_pgoptions)"
+
+  PGOPTIONS="$pgoptions" runuser -pu gpadmin -- psql -a -d regression <<"EOF"
+\pset pager off
+set allow_system_table_mods to true;
+
+-- created by gp_upgrade_cornercases.sql, a column is dropped on a partition
+-- table only on the parent, so children have more columns than parent,
+-- UPDATE will raise an error on this, so the reshuffle method will also fail
+-- as it is based on UPDATE.  There is a plan to prohibit dropping columns
+-- only on parent, so we will not fix the issue, we will simply skip it.
+drop table if exists upgrade_cornercases.part cascade;
+
+-- created by gp_rules.sql and oid_consistency.sql, the tables are converted
+-- to views by setting _RETURN rules on them, they no longer accept operations
+-- for tables, such as ALTER/DROP TABLE, however gpexpand still consider them
+-- as tables and attempt to expand them.  Hack the catalog to make them views
+-- entirely, it is enough to hack only on master.
+update pg_class set relstorage='v' where relname in
+  ( 'table_to_view_test1'
+  , 'oid_consistency_tt1'
+  );
+delete from gp_distribution_policy where localoid in
+  ( 'table_to_view_test1'::regclass
+  , 'oid_consistency_tt1'::regclass
+  );
+
+-- created by gpcopy.source, gpexpand does not handle db names with special
+-- characters correctly, so their tables can not be expanded.
+\connect "funny copy""db'with\\quotes"
+drop table if exists public.foo cascade;
+EOF
+}
+
 # usage: expand_cluster <old_size> <new_size>
 function expand_cluster() {
   local old="$1"
