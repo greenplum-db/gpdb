@@ -328,3 +328,8 @@ SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 
 (3 rows)
 
 reset gp_autostats_mode;
+-- Check forbidden relkind for vacuum is correctly skipped
+CREATE SEQUENCE s_serial START 100;
+VACUUM (ANALYZE, VERBOSE) s_serial;
+WARNING:  skipping "s_serial" --- cannot vacuum non-tables or special system tables
+DROP SEQUENCE s_serial;

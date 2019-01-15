@@ -202,3 +202,8 @@ SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 
 VACUUM ANALYZE vacuum_gp_pt;
 SELECT relname, reltuples, relpages FROM pg_catalog.pg_class WHERE relname like 'vacuum_gp_pt%';
 reset gp_autostats_mode;
+
+-- Check forbidden relkind for vacuum is correctly skipped
+CREATE SEQUENCE s_serial START 100;
+VACUUM (ANALYZE, VERBOSE) s_serial;
+DROP SEQUENCE s_serial;
