@@ -1,15 +1,12 @@
 /*
- * Copyright (c) 2011 EMC Corporation All Rights Reserved
+ * quicklz_compression.c
+ *	Interfaces to quicklz compression functionality.
  *
- * This software is protected, without limitation, by copyright law
- * and international treaties. Use of this software and the intellectual
- * property contained therein is expressly limited to the terms and
- * conditions of the License Agreement under which it is provided by
- * or on behalf of EMC.
+ * Portions Copyright (c) 2011, EMC Corporation
+ * Portions Copyright (c) 2013-Present, Pivotal Software, Inc.
  *
- * ---------------------------------------------------------------------
- *
- * Interfaces to quicklz compression functionality.
+ * IDENTIFICATION
+ *	gpcontrib/quicklz/quicklz_compression.c
  */
 
 #include "postgres.h"
