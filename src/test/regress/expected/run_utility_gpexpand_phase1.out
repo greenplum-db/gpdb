@@ -3,9 +3,9 @@
 -- end_matchignore
 \! echo 'EXPANSION_PREPARE_STARTED:<path> to inputfile' > $MASTER_DATA_DIRECTORY/gpexpand.status
 \! gpcheckcat
-20190107:14:45:14:022869 gpcheckcat:zlv:gpadmin-[ERROR]:-ERROR: Usage of gpcheckcat is not supported while thecluster is in a reconfiguration state, exit gpcheckcat
+ERROR: Usage of gpcheckcat is not supported while the cluster is in a reconfiguration state, exit gpcheckcat
 \! gpconfig -r gp_debug_linger
-20190107:14:45:14:022890 gpconfig:zlv:gpadmin-[ERROR]:-ERROR: Usage of gpconfig is not supported while thecluster is in a reconfiguration state, exit gpconfig
+20190116:16:55:31:057863 gpconfig:zlv:gpadmin-[ERROR]:-ERROR: Usage of gpconfig is not supported while the cluster is in a reconfiguration state, exit gpconfig
 \! gppkg
-20190107:14:45:14:022909 gppkg:default-[ERROR]:-ERROR: Usage of gppkg is not supported while thecluster is in a reconfiguration state, exit gppkg
+20190116:16:55:32:057884 gppkg:default-[ERROR]:-ERROR: Usage of gppkg is not supported while the cluster is in a reconfiguration state, exit gppkg
 \! rm $MASTER_DATA_DIRECTORY/gpexpand.status

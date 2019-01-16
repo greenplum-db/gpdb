@@ -4283,7 +4283,7 @@ def check_gpexpand():
                                                 checkOnPhase1=True,
                                                 checkOnPhase2=False)
     if not check_result:
-        logger.error(msg)
+        myprint(msg)
         sys.exit(127)
 
 def main():
@@ -4298,10 +4298,8 @@ def main():
         sys.exit(GV.retcode)
 
     # gpcheckcat should check gpexpand runnning status
-    enable_verbose_logging()
     check_gpexpand()
-    very_quiet_stdout_logging()
-
+    
     GV.cfg = getGPConfiguration()
     truncate_batch_size(len(GV.cfg.keys()))
 

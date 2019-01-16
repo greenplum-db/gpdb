@@ -720,13 +720,13 @@ def checkGpexpandNotRunning(utility, checkOnPhase1=True, checkOnPhase2=False):
         (False, "wrong status code({code}) of gp_expand_get_status()".format(code=str(code)))
 
     if current_phase == 1 and checkOnPhase1:
-        err_msg = ("ERROR: Usage of {utility} is not supported while the"
+        err_msg = ("ERROR: Usage of {utility} is not supported while the "
                    "cluster is in a reconfiguration state, "
                    "exit {utility}")
         return (False, err_msg.format(utility=utility))
 
     if current_phase == 2 and checkOnPhase2:
-        err_msg = ("ERROR: Usage of {utility} is not supported while the"
+        err_msg = ("ERROR: Usage of {utility} is not supported while the "
                    "cluster has tables waiting for expansion, "
                    "exit {utility}")
         return (False, err_msg.format(utility=utility))
