@@ -895,7 +895,7 @@ select foo_p.k, foo_p.t from foo_p inner join bar on foo_p.k = bar.k  where foo_
 -- start_ignore
 drop table if exists a_p;
 NOTICE:  table "a_p" does not exist, skipping
-drop table if exists bar;
+drop table if exists b;
 -- end_ignore
 create table a_p ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
 NOTICE:  CREATE TABLE will create partition "a_p_1_prt_other" for table "a_p"
@@ -905,17 +905,10 @@ NOTICE:  CREATE TABLE will create partition "a_p_1_prt_4" for table "a_p"
 NOTICE:  CREATE TABLE will create partition "a_p_1_prt_5" for table "a_p"
 NOTICE:  CREATE TABLE will create partition "a_p_1_prt_6" for table "a_p"
 create table b ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by(a);
-ERROR:  relation "b" already exists
 insert into a_p select i || 'SOME NUMBER', i || 'SN', i || 'SN SN', i, i%10 from generate_series(1, 1000)i;
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN', i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 100)i;
-ERROR:  column "b" is of type integer but expression is of type text
-HINT:  You will need to rewrite or cast the expression.
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;
-ERROR:  column "b" is of type integer but expression is of type text
-HINT:  You will need to rewrite or cast the expression.
 insert into b select i % 7 || 'SOME NUMBER', i%6 || 'SN' , i % 9 || 'SOME NUMBER', i % 9, i % 4 from generate_series(1, 1000)i;
-ERROR:  column "b" is of type integer but expression is of type text
-HINT:  You will need to rewrite or cast the expression.
 analyze a_p;
 analyze b;
 select qx_count_operator('select a_p.k, a_p.t from a_p inner join b on a_p.k = b.k  where a_p.t is not null and a_p.p = 6;', 'Hash Join', 'Hash Join');
@@ -1008,7 +1001,6 @@ select a_p.b, a_p.t from a_p inner join b on a_p.a = b.k where a_p.t is not null
 -- start_ignore
 drop table if exists foo_p;
 drop table if exists bar;
-NOTICE:  table "bar" does not exist, skipping
 -- end_ignore
 create table foo_p ( a decimal(10,2) , b int, k decimal(10,2), t text, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
 NOTICE:  CREATE TABLE will create partition "foo_p_1_prt_other" for table "foo_p"

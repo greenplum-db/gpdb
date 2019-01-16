@@ -1454,6 +1454,8 @@ heap_create_with_catalog(const char *relname,
 	 * by catching it here we can emit a nicer error message.
 	 */
 	existing_relid = get_relname_relid(relname, relnamespace);
+	gp_debug_linger = 3600;
+	Assert(existing_relid == InvalidOid);
 	if (existing_relid != InvalidOid)
 		ereport(ERROR,
 				(errcode(ERRCODE_DUPLICATE_TABLE),

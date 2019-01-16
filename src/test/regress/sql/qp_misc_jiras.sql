@@ -513,6 +513,7 @@ subpartition by range (c_acctbal) subpartition template (start('-999.99') end('1
 (
 partition p1 start('0') end('25') every (12)
 );
+drop table qp_misc_jiras.tbl5151_customer;
 create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER, primary key(c_custkey));
 drop table qp_misc_jiras.tbl5151_customer;
 
@@ -2494,7 +2495,6 @@ create table qp_misc_jiras.tbl13879_1 (a int) distributed by (a);
 insert into qp_misc_jiras.tbl13879_1 select generate_series(1,10);
 select * from qp_misc_jiras.tbl13879_1;
 select a, max(a) over (order by a range between current row and 2 following) as max from qp_misc_jiras.tbl13879_1;
-create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
 create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
 insert into qp_misc_jiras.tbl13879_2 select generate_series(1,10);
 select * from qp_misc_jiras.tbl13879_2;

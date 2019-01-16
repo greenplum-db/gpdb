@@ -648,8 +648,8 @@ NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_3
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_4" for table "tbl5151_customer_1_prt_p1_3"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_5" for table "tbl5151_customer_1_prt_p1_3"
 NOTICE:  CREATE TABLE will create partition "tbl5151_customer_1_prt_p1_3_2_prt_6" for table "tbl5151_customer_1_prt_p1_3"
+drop table qp_misc_jiras.tbl5151_customer;
 create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER, primary key(c_custkey));
-ERROR:  relation "tbl5151_customer" already exists
 drop table qp_misc_jiras.tbl5151_customer;
 --    invalid syntax
 create table qp_misc_jiras.tbl5151_customer(C_CUSTKEY INTEGER) partition by range (c_nationkey) (start('0') end('25') every 8 (12));
@@ -4118,8 +4118,6 @@ select a, max(a) over (order by a range between current row and 2 following) as 
 (10 rows)
 
 create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
-create table qp_misc_jiras.tbl13879_2 (a numeric) distributed by (a);
-ERROR:  relation "tbl13879_2" already exists
 insert into qp_misc_jiras.tbl13879_2 select generate_series(1,10);
 select * from qp_misc_jiras.tbl13879_2;
  a  

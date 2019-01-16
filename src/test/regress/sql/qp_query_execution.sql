@@ -401,7 +401,7 @@ select foo_p.k, foo_p.t from foo_p inner join bar on foo_p.k = bar.k  where foo_
 -- Varchar in the select list with redistribute on top of an append with flow node
 -- start_ignore
 drop table if exists a_p;
-drop table if exists bar;
+drop table if exists b;
 -- end_ignore
 create table a_p ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by (a,b) partition by range(p)  ( start(0) end(10) every (2), default partition other);
 create table b ( a character varying(60), b character varying(60), k character varying(60), t int, p int) distributed by(a);
