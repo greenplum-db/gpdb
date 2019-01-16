@@ -33,9 +33,9 @@
       <title>Description</title>
       <p>The <codeph>gpcheckcat</codeph> utility runs multiple tests that check for database catalog
         inconsistencies. Some of the tests cannot be run concurrently with other workload statements
-        or the results will not be usable. Restart the database in restricted
-        mode when running <codeph>gpcheckcat</codeph>, otherwise <codeph>gpcheckcat</codeph> might
-        report inconsistencies due to ongoing database operations rather than the actual number of
+        or the results will not be usable. Restart the database in restricted mode when running
+          <codeph>gpcheckcat</codeph>, otherwise <codeph>gpcheckcat</codeph> might report
+        inconsistencies due to ongoing database operations rather than the actual number of
         inconsistencies. If you run <codeph>gpcheckcat</codeph> without stopping database activity,
         run it with <codeph>-O</codeph> option. </p>
       <note>Any time you run the utility, it checks for and deletes orphaned, temporary database
@@ -53,8 +53,8 @@
             is missing row on one segment, but other segments have this row. As another example, the
             values of specific row column data are different across segments, such as table owner or
             table access privileges.</li>
-          <li>Inconsistency between a catalog table and the filesystem. For example, a file exists in
-            database directory, but there is no entry for it in the pg_class table.</li>
+          <li>Inconsistency between a catalog table and the filesystem. For example, a file exists
+            in database directory, but there is no entry for it in the pg_class table.</li>
         </ul></p>
     </section>
     <section id="section4">
@@ -73,12 +73,12 @@
               simultaneous processes (the batch size) to use. The utility assumes it can use a
               buffer with a minimum of 20MB for each process. The maximum number of parallel
               processes is the number of Greenplum Database segment instances. The utility displays
-              the number of parallel processes that it uses when it starts checking the
-                catalog.<note>The utility might run out of memory if the number of errors returned
-                exceeds the buffer size. If an out of memory error occurs, you can lower the batch
-                size with the <codeph>-B</codeph> option. For example, if the utility displays a
-                batch size of 936 and runs out of memory, you can specify <codeph>-B 468</codeph> to
-                run 468 processes in parallel. </note></p>
+              the number of parallel processes that it uses when it starts checking the catalog.
+              <note>The utility might run out of memory if the number of errors returned exceeds the
+                buffer size. If an out of memory error occurs, you can lower the batch size with the
+                  <codeph>-B</codeph> option. For example, if the utility displays a batch size of
+                936 and runs out of memory, you can specify <codeph>-B 468</codeph> to run 468
+                processes in parallel. </note></p>
           </pd>
         </plentry>
         <plentry>
@@ -113,21 +113,38 @@
           </pt>
           <pd>Specify a test to run. Some tests can be run only when Greenplum Database is in
             restricted mode.</pd>
-            <pd>These are the tests that can be performed:
-	    <p><codeph>acl</codeph> - Cross consistency check for access control privileges</p>
-	    <p><codeph>duplicate</codeph> - Check for duplicate entries</p>
-	    <p><codeph>foreign_key</codeph> - Check foreign keys</p>
-	    <p><codeph>inconsistent</codeph> - Cross consistency check for master segment inconsistency</p>
-	    <p><codeph>missing_extraneous</codeph> - Cross consistency check for missing or extraneous entries</p>
-	    <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the master database</p>
-	    <p><codeph>part_integrity</codeph> - Check <i>pg_partition</i> branch integrity, partition with OIDs, partition distribution policy</p>
-	    <p><codeph>part_constraint</codeph> - Check constraints on partitioned tables</p>
-	    <p><codeph>unique_index_violation</codeph> - Check tables that have columns with the unique index constraint for duplicate entries</p>
-	    <p><codeph>dependency</codeph> - Check for dependency on non-existent objects (restricted mode only)</p>
-	    <p><codeph>distribution_policy</codeph> - Check constraints on randomly distributed tables (restricted mode only)</p>
-	    <p><codeph>namespace</codeph> - Check for schemas with a missing schema definition (restricted mode only)</p>
-	    <p><codeph>pgclass</codeph> - Check <i>pg_class</i> entry that does not have any corresponding <i>pg_attribute</i> entry (restricted mode only)</p>
-	  </pd>
+          <pd>These are the tests that can be performed: <p><codeph>acl</codeph> - Cross consistency
+              check for access control privileges</p>
+            <p><codeph>duplicate</codeph> - Check for duplicate entries</p>
+            <p><codeph>foreign_key</codeph> - Check foreign keys</p>
+            <p><codeph>inconsistent</codeph> - Cross consistency check for master segment
+              inconsistency</p>
+            <p><codeph>missing_extraneous</codeph> - Cross consistency check for missing or
+              extraneous entries</p>
+            <p><codeph>owner</codeph> - Check table ownership that is inconsistent with the master
+              database</p>
+            <p><codeph>orphaned_toast_tables</codeph> - Check for orphaned TOAST tables.
+              <note>Mismatched orphaned TOAST tables due to a <codeph>reltoastrelid</codeph> entry
+                in <i>pg_class</i> pointing to an incorrect TOAST table requires a manual catalogue
+                change. If a manual change is required,<ph otherprops="oss-only"> update the
+                    <codeph>pg_depend</codeph> TOAST table entry and set the
+                    <codeph>refobjid</codeph> field to the correct dependent table.</ph><ph
+                  otherprops="pivotal"> contact Pivotal
+                Support.</ph></note></p><p><codeph>part_integrity</codeph> - Check
+                <i>pg_partition</i> branch integrity, partition with OIDs, partition distribution
+              policy</p>
+            <p><codeph>part_constraint</codeph> - Check constraints on partitioned tables</p>
+            <p><codeph>unique_index_violation</codeph> - Check tables that have columns with the
+              unique index constraint for duplicate entries</p>
+            <p><codeph>dependency</codeph> - Check for dependency on non-existent objects
+              (restricted mode only)</p>
+            <p><codeph>distribution_policy</codeph> - Check constraints on randomly distributed
+              tables (restricted mode only)</p>
+            <p><codeph>namespace</codeph> - Check for schemas with a missing schema definition
+              (restricted mode only)</p>
+            <p><codeph>pgclass</codeph> - Check <i>pg_class</i> entry that does not have any
+              corresponding <i>pg_attribute</i> entry (restricted mode only)</p>
+          </pd>
         </plentry>
         <plentry>
           <pt>-S {none | only}</pt>
