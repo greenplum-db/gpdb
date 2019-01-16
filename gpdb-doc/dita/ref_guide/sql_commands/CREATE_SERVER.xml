@@ -9,7 +9,7 @@
             <title>Synopsis</title>
             <codeblock id="sql_command_synopsis">CREATE SERVER <varname>server_name</varname> [ TYPE '<varname>server_type</varname>' ] [ VERSION '<varname>server_version</varname>' ]
     FOREIGN DATA WRAPPER <varname>fdw_name</varname>
-    [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
+    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -52,6 +52,23 @@
                     <pt>OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] )</pt>
                     <pd>
                         <p>The options for the new foreign server. The options typically define the connection details of the server, but the actual names and values are dependent upon the server's foreign-data wrapper.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
+                    <pd>
+                        <p>An option that identifies the host from which the foreign data-wrapper
+                            requests data: <ul id="ul_zcg_2vd_mgb">
+                                <li><codeph>master</codeph> (the default)—Request data from the
+                                    master host.</li>
+                                <li><codeph>any</codeph>—Request data from either the master host or
+                                    one any segment, depending on which path costs less.</li>
+                                <li><codeph>all segments</codeph>—Request data from all segments.
+                                    With this option value, the foreign data-wrapper must have a
+                                    policy that matches the segments to data.</li>
+                            </ul></p>
+                        <p>Any <codeph>mpp_execute</codeph> option that is specified for a foreign
+                            table takes precedence over this option.</p>
                     </pd>
                 </plentry>
             </parml>

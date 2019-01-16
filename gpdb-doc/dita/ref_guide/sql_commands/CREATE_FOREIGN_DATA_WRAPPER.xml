@@ -10,7 +10,7 @@
             <codeblock id="sql_command_synopsis">CREATE FOREIGN DATA WRAPPER <varname>name</varname>
     [ HANDLER <varname>handler_function</varname> | NO HANDLER ]
     [ VALIDATOR <varname>validator_function</varname> | NO VALIDATOR ]
-    [ OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] )  ]</codeblock>
+    [ OPTIONS ( [ mpp_execute { 'master' | 'any' | 'all segments' } [, ] ] <varname>option</varname> '<varname>value</varname>' [, ... ] ) ]</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -45,6 +45,23 @@
                     <pt>OPTIONS ( <varname>option</varname> '<varname>value</varname>' [, ... ] )</pt>
                     <pd>
                         <p>The options for the new foreign-data wrapper. Option names must be unique. The option names and values are foreign-data wrapper-specific and are validated using the foreign-data wrappers' <varname>validator_function</varname>.</p>
+                    </pd>
+                </plentry>
+                <plentry>
+                    <pt>mpp_execute { 'master | 'any' | 'all segments' }</pt>
+                    <pd>
+                        <p>An option that identifies the host from which the foreign data-wrapper
+                            requests data: <ul id="ul_zcg_2vd_mgb">
+                                <li><codeph>master</codeph> (the default)—Request data from the
+                                    master host.</li>
+                                <li><codeph>any</codeph>—Request data from either the master host or
+                                    one any segment, depending on which path costs less.</li>
+                                <li><codeph>all segments</codeph>—Request data from all segments.
+                                    With this option value, the foreign data-wrapper must have a
+                                    policy that matches the segments to data.</li>
+                            </ul></p>
+                        <p>Any <codeph>mpp_execute</codeph> option that is specified for the foreign
+                            data-wrapper's foreign server takes precedence over this option.</p>
                     </pd>
                 </plentry>
             </parml>
