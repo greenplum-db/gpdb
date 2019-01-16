@@ -60,8 +60,11 @@
                                     With this option value, the foreign data-wrapper must have a
                                     policy that matches the segments to data.</li>
                             </ul></p>
-                        <p>Any <codeph>mpp_execute</codeph> option that is specified for the foreign
-                            data-wrapper's foreign server takes precedence over this option.</p>
+                        <p>The <codeph>mpp_execute</codeph> option can be configured in multiple
+                            commands: <codeph>CREATE FOREIGN TABLE</codeph>, <codeph>CREATE
+                                SERVER</codeph>, and <codeph>CREATE FOREIGN DATA WRAPPER</codeph>.
+                            The foreign table setting takes precedence over the foreign server
+                            setting, followed by the foreign data wrapper setting.</p>
                     </pd>
                 </plentry>
             </parml>

@@ -110,9 +110,11 @@
                             </ul></p>
                         <p>Use of the foreign table <codeph>mpp_execute</codeph> option, and the
                             specific modes supported, is foreign data-wrapper-specific.</p>
-                        <p>If this option is not set, then the <codeph>mpp_execute</codeph> option
-                            setting at the foreign server level or at the foreign data-wrapper level
-                            is used, in that order of precedence.</p>
+                        <p>The <codeph>mpp_execute</codeph> option can be configured in multiple
+                            commands: <codeph>CREATE FOREIGN TABLE</codeph>, <codeph>CREATE
+                                SERVER</codeph>, and <codeph>CREATE FOREIGN DATA WRAPPER</codeph>.
+                            The foreign table setting takes precedence over the foreign server
+                            setting, followed by the foreign data wrapper setting.</p>
                     </pd>
                 </plentry>
             </parml>
