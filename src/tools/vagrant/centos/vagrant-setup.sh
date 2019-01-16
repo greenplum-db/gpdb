@@ -16,27 +16,24 @@ sudo yum -y install openssl-libs openssl-devel
 sudo yum -y install libyaml libyaml-devel
 sudo yum -y install epel-release
 sudo yum -y install htop
-sudo yum -y install perl-Env
+sudo yum -y install perl-Env perl-ExtUtils-Embed
 sudo yum -y install ccache
 sudo yum -y install libffi-devel
-wget https://bootstrap.pypa.io/get-pip.py
+sudo yum -y install libzstd-devel
+sudo yum -y install libxml2-devel
+sudo yum -y install net-tools
+
+# so we can call cmake
+sudo yum -y install cmake3
+sudo ln -s /usr/bin/cmake{3,}
+
+# python/pip
+curl https://bootstrap.pypa.io/get-pip.py > get-pip.py
 sudo python get-pip.py
 sudo pip install psutil lockfile paramiko setuptools
 rm get-pip.py
 
 # Misc
 sudo yum -y install vim mc psmisc
-
-# cmake 3.0
-pushd ~
-  wget http://www.cmake.org/files/v3.0/cmake-3.0.0.tar.gz
-  tar -zxvf cmake-3.0.0.tar.gz
-  pushd cmake-3.0.0
-    ./bootstrap
-    make
-    make install
-    export PATH=/usr/local/bin:$PATH
-  popd
-popd
 
 sudo chown -R vagrant:vagrant /usr/local

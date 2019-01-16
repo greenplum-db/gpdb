@@ -1,25 +1,34 @@
-cd /gpdb
+set -ex
 
-sudo mkdir /usr/local/gpdb
-sudo chown vagrant:vagrant /usr/local/gpdb
-./configure --enable-debug --with-python --with-perl --enable-mapreduce --with-libxml --prefix=/usr/local/gpdb
+GPDB_SRC=/home/vagrant/workspace/gpdb
+cd "$GPDB_SRC"
+
+export CC="ccache cc"
+export CXX="ccache c++"
+export PATH=/usr/local/bin:$PATH
+
+rm -rf /usr/local/gpdb
+mkdir /usr/local/gpdb
+./configure --prefix=/usr/local/gpdb "$@"
 
 make clean
 make -j 4
 make install
 
-cd /gpdb/gpAux
+cd ${GPDB_SRC}/gpAux
 cp -rp gpdemo /home/vagrant/
-sudo chown -R vagrant:vagrant /home/vagrant/gpdemo
 cat /home/vagrant/.ssh/id_rsa.pub >> /home/vagrant/.ssh/authorized_keys
 # make sure ssh is not stuck asking if the host is known
 ssh-keyscan -H localhost >> /home/vagrant/.ssh/known_hosts
 ssh-keyscan -H 127.0.0.1 >> /home/vagrant/.ssh/known_hosts
-ssh-keyscan -H debian-jessie >> /home/vagrant/.ssh/known_hosts
+ssh-keyscan -H jessie >> /home/vagrant/.ssh/known_hosts
+
+# BUG: fix the LD_LIBRARY_PATH to find installed GPOPT libraries
+echo export LD_LIBRARY_PATH=/usr/local/lib:\$LD_LIBRARY_PATH >> /usr/local/gpdb/greenplum_path.sh
+
 cd /home/vagrant/gpdemo
 source /usr/local/gpdb/greenplum_path.sh
-make cluster
-
+make
 
 #cd /vagrant/src/pl/plspython/tests
 #make containers

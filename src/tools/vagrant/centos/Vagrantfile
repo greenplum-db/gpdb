@@ -5,7 +5,7 @@ Vagrant.configure(2) do |config|
   # Base box: Centos-7 box
   # NOTE: Over time the VMI below may become outdated, so may need to be
   #       substituted with a more recent VMI
-  config.vm.box = "boxcutter/centos72"
+  config.vm.box = "centos/7"
 
   config.vm.hostname="gpdbvagrant"
 
@@ -14,7 +14,7 @@ Vagrant.configure(2) do |config|
     vb.name = "gpdb-dev-host" # Name in VirtualBox
     vb.memory = 8192
     vb.cpus = 4
-    vb.customize ["storagectl", :id, "--name", "SATA Controller", "--hostiocache", "on"]
+    vb.customize ["storagectl", :id, "--name", "IDE", "--hostiocache", "on"]
     vb.customize ['modifyvm', :id, '--cableconnected1', 'on']
   end
 
@@ -29,12 +29,12 @@ Vagrant.configure(2) do |config|
     gpdb.vm.provision "shell", path: "vagrant-setup.sh"
     gpdb.vm.provision "shell", path: "vagrant-configure-os.sh"
     gpdb.vm.provision "shell", path: "vagrant-build-gporca.sh", privileged: false
-    gpdb.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false, args: "--enable-orca"
+    gpdb.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false, args: 'LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH'
   end
 
   config.vm.define("gpdb_without_gporca") do |gpdb_without_gporca|
     gpdb_without_gporca.vm.provision "shell", path: "vagrant-setup.sh"
     gpdb_without_gporca.vm.provision "shell", path: "vagrant-configure-os.sh"
-    gpdb_without_gporca.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false
+    gpdb_without_gporca.vm.provision "shell", path: "vagrant-build-gpdb.sh", privileged: false, args: '--disable-orca'
   end
 end
