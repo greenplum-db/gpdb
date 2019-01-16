@@ -532,11 +532,17 @@ lazy_vacuum_aorel(Relation onerel, VacuumStmt *vacstmt)
 							false,
 							true /* isvacuum */);
 
-		/* report results to the stats collector, too */
+		/*
+		 * Report results to the stats collector.
+		 * Explicitly pass 0 as num_dead_tuples. AO tables use hidden
+		 * tuples in a conceptually similar way that regular tables
+		 * use dead tuples. However with regards to pgstat these are
+		 * semantically distinct thus exposing them will be ambiguous.
+		 */
 		pgstat_report_vacuum(RelationGetRelid(onerel),
 							 onerel->rd_rel->relisshared,
 							 vacrelstats->new_rel_tuples,
-							 0); // GPDB_94_MERGE_FIXME: is 0 dead tuples appropriate for AO tables?
+							 0 /* num_dead_tuples */);
 	}
 }
 
