@@ -14539,7 +14539,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 				char tmpExtTable[500] = {0};
 				relname = pg_strdup(PQgetvalue(res, i, i_relname));
 				snprintf(tmpExtTable, sizeof(tmpExtTable), "%s%s", relname, EXT_PARTITION_NAME_POSTFIX);
-				appendPQExpBuffer(q, "ALTER TABLE %s ", fmtId(tbinfo->dobj.name));
+				const char *qualTmpExtTable = fmtQualifiedId(fout->remoteVersion,
+															 tbinfo->dobj.namespace->dobj.name,
+															 tmpExtTable);
+
+				appendPQExpBuffer(q, "ALTER TABLE %s ", qualrelname);
 				/*
 				 * If it is an anonymous range partition we must exchange for
 				 * the rank rather than the parname.
@@ -14554,11 +14558,11 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 					appendPQExpBuffer(q, "EXCHANGE PARTITION %s ",
 									  fmtId(PQgetvalue(res, i, i_parname)));
 				}
-				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION; ", fmtId(tmpExtTable));
+				appendPQExpBuffer(q, "WITH TABLE %s WITHOUT VALIDATION; ", qualTmpExtTable);
 
 				appendPQExpBuffer(q, "\n");
 
-				appendPQExpBuffer(q, "DROP TABLE %s; ", fmtId(tmpExtTable));
+				appendPQExpBuffer(q, "DROP TABLE %s; ", qualTmpExtTable);
 
 				appendPQExpBuffer(q, "\n");
 				free(relname);
