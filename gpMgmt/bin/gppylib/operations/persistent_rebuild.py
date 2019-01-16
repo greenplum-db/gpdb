@@ -971,9 +971,9 @@ class RebuildTable:
         logger.info('Starting persistent table rebuild operation')
         for di in valid_dbid_info:
             if di.content != -1:
-                operation_list.append(RemoteOperation(RebuildTableOperation(di, self.has_mirrors), di.hostname))
+                operation_list.append(RemoteOperation(RebuildTableOperation(di, self.has_mirrors), di.hostname, di.dbid))
             else:
-                operation_list.append(RemoteOperation(RebuildTableOperation(di, False), di.hostname))
+                operation_list.append(RemoteOperation(RebuildTableOperation(di, False), di.hostname, di.dbid))
 
         try:
             ParallelOperation(operation_list, self.batch_size).run()
