@@ -1,7 +1,7 @@
 # Makefile for QuickLZ compressor
 
 MODULE_big = quicklz_compressor
-OBJS = quicklz.o
+OBJS = quicklz_compression.o
 CFLAGS_SL += -lquicklz
 LDFLAGS_SL += -lquicklz
 
