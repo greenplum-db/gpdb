@@ -68,7 +68,7 @@ After you upgrade to the new version of Greenplum Database, perform the followin
     2. Simlarly, if you updated the `pxf-profiles.xml` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-profiles.xml` on the master host.
 
         **Note:** Starting in Greenplum Database version 5.12, the package name for PXF classes was changed to use the prefix `org.greenplum.*`. If you are upgrading from an older *PXF.from* version and you customized the `pxf-profiles.xml` file, you must change any `org.apache.hawq.pxf.*` references to `org.greenplum.pxf.*` when you re-apply your changes.
-    3. If you updated the `pxf-log4j.properties` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-log4j.properties on the master host.
+    3. If you updated the `pxf-log4j.properties` configuration file in your *PXF.from* installation, re-apply those changes to `$PXF_CONF/conf/pxf-log4j.properties` on the master host.
     4. If you updated the `pxf-public.classpath` configuration file in your *PXF.from* installation, copy every JAR referenced in the file to `$PXF_CONF/lib` on the master host.
     5. If you added additional JAR files to your *PXF.from* installation, copy them to `$PXF_CONF/lib` on the master host.
     5. Starting in Greenplum Database version 5.15, PXF requires that the Hadoop configuration files reside in the `$PXF_CONF/servers/default` directory. If you configured PXF Hadoop connectors in your *PXF.from* installation, copy the Hadoop configuration files in `/etc/<hadoop_service>/conf` to `$PXF_CONF/servers/default` on the Greenplum Database master host.
