@@ -78,19 +78,19 @@ The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores d
 
 Refer to [Example: Writing Binary Data to HDFS](hdfs_seqfile.html#write_seqfile_example) in the PXF HDFS SequenceFile documentation for a write/read example. Modifications that you must make to run the example with an object store include:
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE WRITABLE EXTERNAL TABLE pxf_tbl_seqfile_s3(location text, month text, number_of_orders integer, total_sales real)
-      LOCATION ('pxf://BUCKET/pxf_examples/pxf_seqfile?PROFILE=s3:SequenceFile&DATA-SCHEMA=com.example.pxf.hdfs.writable.dataschema.PxfExample_CustomWritable&COMPRESSION_TYPE=BLOCK&COMPRESSION_CODEC=org.apache.hadoop.io.compress.BZip2Codec&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION ('pxf://BUCKET/pxf_examples/pxf_seqfile?PROFILE=s3:SequenceFile&DATA-SCHEMA=com.example.pxf.hdfs.writable.dataschema.PxfExample_CustomWritable&COMPRESSION_TYPE=BLOCK&COMPRESSION_CODEC=org.apache.hadoop.io.compress.BZip2Codec&SERVER=srvname')
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');
     ```
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the readable external table:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the readable external table. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE EXTERNAL TABLE read_pxf_tbl_seqfile_s3(location text, month text, number_of_orders integer, total_sales real)
-      LOCATION ('pxf://BUCKET/pxf_examples/pxf_seqfile?PROFILE=s3:SequenceFile&DATA-SCHEMA=com.example.pxf.hdfs.writable.dataschema.PxfExample_CustomWritable&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION ('pxf://BUCKET/pxf_examples/pxf_seqfile?PROFILE=s3:SequenceFile&DATA-SCHEMA=com.example.pxf.hdfs.writable.dataschema.PxfExample_CustomWritable&SERVER=srvname')
      FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 

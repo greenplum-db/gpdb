@@ -115,11 +115,11 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_s3_simple.txt
     $ psql -d postgres
     ```
 
-1. Use the PXF `s3:text` profile to create a Greenplum Database external table referencing the `pxf_s3_simple.txt` file you just created and added to S3. Provide your AWS access id and secret key in the command:
+1. Use the PXF `s3:text` profile to create a Greenplum Database external table referencing the `pxf_s3_simple.txt` file you just created and added to S3. For example, if your server name is `srvname`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textsimple(location text, month text, num_orders int, total_sales float8)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_simple.txt?PROFILE=s3:text&accesskey=your_accesskey&secretkey=your_secretkey')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_simple.txt?PROFILE=s3:text&SERVER=srvname')
               FORMAT 'TEXT' (delimiter=E',');
     ```
               
@@ -143,7 +143,7 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_s3_simple.txt
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textsimple_csv(location text, month text, num_orders int, total_sales float8)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_simple.txt?PROFILE=s3:text&accesskey=your_accesskey&secretkey=your_secretkey')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_simple.txt?PROFILE=s3:text&SERVER=srvname')
               FORMAT 'CSV';
     postgres=# SELECT * FROM pxf_s3_textsimple_csv;          
     ```
@@ -220,11 +220,11 @@ To run this example, you must:
     $ aws s3 cp /tmp/pxf_s3_multi.txt s3://BUCKET/pxf_examples/
     ```
 
-4. Use the `s3:text:multi` profile to create an external table referencing the `pxf_s3_multi.txt` S3 file, making sure to identify the `:` (colon) as the field separator. Provide the AWS credentials with the command:
+4. Use the `s3:text:multi` profile to create an external table referencing the `pxf_s3_multi.txt` S3 file, making sure to identify the `:` (colon) as the field separator. For example, if your server name is `srvname`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textmulti(address text, month text, year int)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_multi.txt?PROFILE=s3:text:multi&accesskey=your_accesskey&secretkey=your_secretkey')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxf_s3_multi.txt?PROFILE=s3:text:multi&SERVER=srvname')
               FORMAT 'CSV' (delimiter ':');
     ```
     
@@ -321,11 +321,11 @@ This example also optionally uses the Greenplum Database external table named `p
 
 Perform the following procedure to create Greenplum Database writable external tables utilizing the same data schema as described above, one of which will employ compression. You will use the PXF `s3:text` profile to write data to S3. You will also create a separate, readable external table to read the data that you wrote to S3.
 
-1. Create a Greenplum Database writable external table utilizing the data schema described above. Write to the S3 directory `BUCKET/pxf_examples/pxfwrite_s3_textsimple1`. Create the table specifying a comma `,` as the delimiter, and provide your AWS credentials with the command:
+1. Create a Greenplum Database writable external table utilizing the data schema described above. Write to the S3 directory `BUCKET/pxf_examples/pxfwrite_s3_textsimple1`. Create the table specifying a comma `,` as the delimiter. For example, if your server name is `srvname`:
 
     ``` sql
     postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_s3_writetbl_1(location text, month text, num_orders int, total_sales float8)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple1?PROFILE=s3:text&accesskey=your_accesskey&secretkey=your_secretkey')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple1?PROFILE=s3:text&SERVER=srvname')
               FORMAT 'TEXT' (delimiter=',');
     ```
     
@@ -356,7 +356,7 @@ Perform the following procedure to create Greenplum Database writable external t
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textsimple_r1(location text, month text, num_orders int, total_sales float8)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple1?PROFILE=s3:text&accesskey=your_accesskey&secretkey=your_secretkey')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple1?PROFILE=s3:text&SERVER=srvname')
 			    FORMAT 'CSV';
     ```
 
@@ -386,7 +386,7 @@ Perform the following procedure to create Greenplum Database writable external t
 
     ``` sql
     postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_s3_writetbl_2 (location text, month text, num_orders int, total_sales float8)
-                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple2?PROFILE=s3:text&accesskey=your_accesskey&secretkey=your_secretkey&COMPRESSION_CODEC=org.apache.hadoop.io.compress.GzipCodec')
+                LOCATION ('pxf://BUCKET/pxf_examples/pxfwrite_s3_textsimple2?PROFILE=s3:text&SERVER=srvname&COMPRESSION_CODEC=org.apache.hadoop.io.compress.GzipCodec')
               FORMAT 'TEXT' (delimiter=':');
     ```
 

@@ -84,7 +84,7 @@ Refer to [Loading the Sample JSON Data to HDFS](hdfs_json.html#jsontohdfs) and [
     $ aws s3 cp /tmp/multiline.json s3://BUCKET/pxf_examples/
     ```
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE EXTERNAL TABLE singleline_json_s3(
@@ -95,7 +95,7 @@ Refer to [Loading the Sample JSON Data to HDFS](hdfs_json.html#jsontohdfs) and [
       "coordinates.values[0]" INTEGER,
       "coordinates.values[1]" INTEGER
     )
-      LOCATION('pxf://BUCKET/pxf_examples/singleline.json?PROFILE=s3:json&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION('pxf://BUCKET/pxf_examples/singleline.json?PROFILE=s3:json&SERVER=srvname')
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 

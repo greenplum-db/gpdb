@@ -84,19 +84,19 @@ The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores d
 
 Refer to the [Example](hdfs_parquet.html#parquet_write) in the PXF HDFS Parquet documentation for a parquet write/read example. Modifications that you must make to run the example with an object store include:
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE WRITABLE EXTERNAL TABLE pxf_tbl_parquet_s3 (location text, month text, number_of_orders int, total_sales double precision)
-      LOCATION ('pxf://BUCKET/pxf_examples/pxf_parquet?PROFILE=s3:parquet&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION ('pxf://BUCKET/pxf_examples/pxf_parquet?PROFILE=s3:parquet&SERVER=srvname')
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');
     ```
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the readable external table:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the readable external table. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE EXTERNAL TABLE read_pxf_parquet_s3(location text, month text, number_of_orders int, total_sales double precision)
-      LOCATION ('pxf://BUCKET/pxf_examples/pxf_parquet?PROFILE=s3:parquet&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION ('pxf://BUCKET/pxf_examples/pxf_parquet?PROFILE=s3:parquet&SERVER=srvname')
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 

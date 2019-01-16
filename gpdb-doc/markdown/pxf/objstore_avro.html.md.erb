@@ -84,11 +84,11 @@ Refer to [Example: Reading Avro Data](hdfs_avro.html#avro_example) in the PXF HD
     $ aws s3 cp /tmp/pxf_avro.avro s3://BUCKET/pxf_examples/
     ```
 
-- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above:
+- Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above. For example, if your server name is `srvname`:
 
     ``` sql
     CREATE EXTERNAL TABLE pxf_s3_avro(id bigint, username text, followers text, fmap text, relationship text, address text)
-      LOCATION ('pxf://BUCKET/pxf_examples/pxf_avro.avro?PROFILE=s3:avro&COLLECTION_DELIM=,&MAPKEY_DELIM=:&RECORDKEY_DELIM=:&accesskey=your_accesskey&secretkey=your_secretkey')
+      LOCATION ('pxf://BUCKET/pxf_examples/pxf_avro.avro?PROFILE=s3:avro&SERVER=srvname&COLLECTION_DELIM=,&MAPKEY_DELIM=:&RECORDKEY_DELIM=:')
     FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
     ```
 
