@@ -1,0 +1,10 @@
+---
+synced_folder:
+  - folder:
+    local: /Users/pivotal/workspace/gpdb
+    shared: /home/vagrant/gpdb # don't change
+    type: rsync # can change to nfs
+    rsync__exclude: .git
+    rsync__args:
+      - -a
+...
