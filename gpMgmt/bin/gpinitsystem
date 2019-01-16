@@ -1430,6 +1430,20 @@ CREATE_QES_PRIMARY () {
 		LOG_MSG "[INFO]:-End Function $FUNCNAME"
 }
 
+REGISTER_MIRRORS () {
+		LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+		for I in "${QE_MIRROR_ARRAY[@]}"
+		do
+			SET_VAR $I
+			dbid=`env PGOPTIONS="-c gp_session_role=utility" $PSQL -p $MASTER_PORT -d "${DEFAULTDB}" -A -t -c "select pg_catalog.gp_add_segment_mirror(${GP_CONTENT}::int2, '${GP_HOSTADDRESS}', '${GP_HOSTADDRESS}', ${GP_PORT}, '${GP_DIR}');" 2>/dev/null` >> $LOG_FILE 2>&1
+			ERROR_CHK $? "failed to register mirror for contentid=${GP_CONTENT}" 2
+			MIRRORS_UPDATED_DBID=(${MIRRORS_UPDATED_DBID[@]} ${GP_HOSTADDRESS}~${GP_PORT}~${GP_DIR}~${dbid}~${GP_CONTENT}~${GP_REPLICATION_PORT})
+		done
+
+		QE_MIRROR_ARRAY=(${MIRRORS_UPDATED_DBID[@]})
+		LOG_MSG "[INFO]:-End Function $FUNCNAME"
+}
+
 CREATE_QES_MIRROR () {
 	LOG_MSG "[INFO]:-Start Function $FUNCNAME"
 	LOG_MSG "[INFO]:-Commencing parallel build of mirror segment instances" 1
@@ -1612,6 +1626,7 @@ CREATE_DATABASE () {
 
 FORCE_FTS_PROBE () {
     LOG_MSG "[INFO]:-Start Function $FUNCNAME"
+    SET_VAR $QD_PRIMARY_ARRAY
     # loop on gp_segment_configuration to make sure primary/mirror pairs are up and in sync
     for i in {1..60}; do
         if [ $i == 60 ]; then
@@ -2080,6 +2095,7 @@ fi
 SET_GP_USER_PW
 
 if [ $MIRRORING -ne 0 ]; then
+    REGISTER_MIRRORS
     CREATE_QES_MIRROR
     FORCE_FTS_PROBE
 fi
