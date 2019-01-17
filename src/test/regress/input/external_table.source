@@ -3551,12 +3551,3 @@ SELECT * FROM tbl_ext_gpformatter;
 -- Test information_schema views for external tables
 --
 SELECT * FROM information_schema.tables WHERE table_name IN ('wet_pos4', 'exttab_basic_1');
-
---
--- Test external partitions
--- leave the table behind, pg_upgrade will test dumping and restoring it.
---
-CREATE TABLE ext_part_tab (a int4, b int4) DISTRIBUTED BY (a) PARTITION BY RANGE (a) (START (1) END (5) EVERY (2));
-CREATE EXTERNAL WEB TABLE ext_part (a int4, b int4) EXECUTE 'echo 1,2' FORMAT 'text' (DELIMITER ',');
-ALTER TABLE ext_part_tab EXCHANGE PARTITION FOR (1) WITH TABLE ext_part WITHOUT VALIDATION;
-DROP TABLE ext_part;
