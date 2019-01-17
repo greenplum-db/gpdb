@@ -500,12 +500,15 @@ transformDeleteStmt(ParseState *pstate, DeleteStmt *stmt)
 	qry->hasWindowFuncs = pstate->p_hasWindowFuncs;
 	qry->hasAggs = pstate->p_hasAggs;
 	qry->hasFuncsWithExecRestrictions = pstate->p_hasFuncsWithExecRestrictions;
-	if (pstate->p_hasAggs)
-		parseCheckAggregates(pstate, qry);
+
 	if (pstate->p_hasTblValueExpr)
 		parseCheckTableFunctions(pstate, qry);
 
 	assign_query_collations(pstate, qry);
+
+	/* this must be done after collations, for reliable comparison of exprs */
+	if (pstate->p_hasAggs)
+		parseCheckAggregates(pstate, qry);
 
 	return qry;
 }
@@ -1775,8 +1778,6 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->hasWindowFuncs = pstate->p_hasWindowFuncs;
 	qry->hasFuncsWithExecRestrictions = pstate->p_hasFuncsWithExecRestrictions;
 	qry->hasAggs = pstate->p_hasAggs;
-	if (pstate->p_hasAggs || qry->groupClause || qry->havingQual)
-		parseCheckAggregates(pstate, qry);
 
 	if (pstate->p_hasTblValueExpr)
 		parseCheckTableFunctions(pstate, qry);
@@ -1788,6 +1789,10 @@ transformSelectStmt(ParseState *pstate, SelectStmt *stmt)
 	}
 
 	assign_query_collations(pstate, qry);
+
+	/* this must be done after collations, for reliable comparison of exprs */
+	if (pstate->p_hasAggs || qry->groupClause || qry->havingQual)
+		parseCheckAggregates(pstate, qry);
 
 	/*
 	 * If the query mixes window functions and aggregates, we need to
@@ -2262,8 +2267,6 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	qry->hasWindowFuncs = pstate->p_hasWindowFuncs;
 	qry->hasFuncsWithExecRestrictions = pstate->p_hasFuncsWithExecRestrictions;
 	qry->hasAggs = pstate->p_hasAggs;
-	if (pstate->p_hasAggs || qry->groupClause || qry->havingQual)
-		parseCheckAggregates(pstate, qry);
 
 	if (pstate->p_hasTblValueExpr)
 		parseCheckTableFunctions(pstate, qry);
@@ -2275,6 +2278,10 @@ transformSetOperationStmt(ParseState *pstate, SelectStmt *stmt)
 	}
 
 	assign_query_collations(pstate, qry);
+
+	/* this must be done after collations, for reliable comparison of exprs */
+	if (pstate->p_hasAggs || qry->groupClause || qry->havingQual)
+		parseCheckAggregates(pstate, qry);
 
 	return qry;
 }
