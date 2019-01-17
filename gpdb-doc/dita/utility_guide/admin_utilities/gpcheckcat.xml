@@ -125,11 +125,11 @@
               database</p>
             <p><codeph>orphaned_toast_tables</codeph> - Check for orphaned TOAST tables.
               <note>A TOAST table can become orphaned if the <codeph>reltoastrelid</codeph> entry in
-                  <i>pg_class</i> points to an incorrect TOAST table. Fixing this type of orphaned
-                TOAST table requires a manual catalog change. If a manual change is required,<ph
-                  otherprops="oss-only"> update the <i>pg_depend</i> TOAST table entry and set the
-                    <codeph>refobjid</codeph> field to the correct dependent table.</ph><ph
-                  otherprops="pivotal"> contact Pivotal
+                  <i>pg_class</i> points to an incorrect TOAST table (a TOAST table mismatch).
+                Fixing this type of orphaned TOAST table requires a manual catalog change. If a
+                manual change is required,<ph otherprops="oss-only"> update the <i>pg_depend</i>
+                  TOAST table entry and set the <codeph>refobjid</codeph> field to the correct
+                  dependent table.</ph><ph otherprops="pivotal"> contact Pivotal
                 Support.</ph></note></p><p><codeph>part_integrity</codeph> - Check
                 <i>pg_partition</i> branch integrity, partition with OIDs, partition distribution
               policy</p>
