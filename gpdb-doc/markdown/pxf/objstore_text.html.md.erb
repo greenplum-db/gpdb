@@ -344,14 +344,6 @@ Perform the following procedure to create Greenplum Database writable external t
     postgres=# INSERT INTO pxf_s3_writetbl_1 SELECT * FROM pxf_s3_textsimple;
     ```
 
-4. In another terminal window, display the data that you just added to S3. For example:
-
-    ``` shell
-    $ HOW XXX ???
-    ```
-
-    Because you specified comma `,` as the delimiter when you created the writable external table, this character is the field separator used in each record of the S3 data.
-
 5. Greenplum Database does not support directly querying a writable external table. To query the data that you just added to S3, you must create a readable external Greenplum Database table that references the S3 directory:
 
     ``` sql
@@ -397,13 +389,5 @@ Perform the following procedure to create Greenplum Database writable external t
     gpadmin=# INSERT INTO pxf_s3_writetbl_2 VALUES ( 'Cleveland', 'Oct', 3812, 96645.37 );
     ```
 
-9. In another terminal window, display the contents of the data that you added to S3. For example:
-
-    ``` shell
-    $ HOW XXX ???
-    ```
-
-    Notice that the colon `:` is the field separator in this S3 data.
-
-    To query data from the newly-created S3 directory named `pxfwrite_s3_textsimple2`, you can create a readable external Greenplum Database table as described above that references this S3 directory and specifies `FORMAT 'CSV' (delimiter=':')`.
+9. To query data from the newly-created S3 directory named `pxfwrite_s3_textsimple2`, you can create a readable external Greenplum Database table as described above that references this S3 directory and specifies `FORMAT 'CSV' (delimiter=':')`.
 
