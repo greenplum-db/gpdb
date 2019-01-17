@@ -39,7 +39,7 @@ For example, the contents of the `s3-site.xml` template file follow:
 </configuration>
 ```
 
-**Note**: PXF supports only clear-text credentials to object stores at this time.
+<div class="note warning">PXF supports only clear-text credentials to object stores at this time.</div>
 
 When you configure a PXF object store connector, you add at least one named PXF server configuration for the connector. You:
 
@@ -49,36 +49,34 @@ When you configure a PXF object store connector, you add at least one named PXF 
 4. Fill in appropriate values for the properties in the template file.
 5. Add additional properties and values if required for your environment.
 6. Synchronize the server configuration to each Greenplum Database segment host.
-7. Publish the PXF server names to your Greenplum Database end users as appropriate. The end user will specify the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option when accessing the object store.
+7. Publish the PXF server names to your Greenplum Database end users as appropriate. The end user will specify the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the object store.
 
 ### <a id="s3_cfg"></a>S3 Configuration
 
-The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. S3 properties specified in this file include:
+The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. You must provide the following S3 server configuration properties, and replace the appropriate values with your credentials:
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
 | fs.s3a.access.key | The AWS account access key ID. |
 | fs.s3a.secret.key | The secret key associated with the AWS access key ID. |
-| fs.s3a.fast.upload | Should specify `true`. |
+
 
 **Note**: You can instead have the end user specify the S3 access and secret keys in clear text in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command.
 
 ### <a id="minio_cfg"></a>Minio Configuration
 
-The template configuration file for Minio is `$PXF_CONF/templates/minio-site.xml`. This file specifies the following properties:
+The template configuration file for Minio is `$PXF_CONF/templates/minio-site.xml`. You must provide the follwing Minio server configuration properties, and replace the appropriate values with your credentials:
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
 | fs.s3a.endpoint | The Minio S3 endpoint to which to connect. |
 | fs.s3a.access.key | The Minio account access key ID. |
 | fs.s3a.secret.key | The secret key associated with the Minio access key ID. |
-| fs.s3a.fast.upload | Should specify `true`. |
-| fs.s3a.path.style.access | Must specify `true`. |
 
 
 ### <a id="adl_cfg"></a>Azure Blob Storage Configuration
 
-The template configuration file for Azure Blob Storage is `$PXF_CONF/templates/wasbs-site.xml`. Azure Blob Storage properties specified in this file include:
+The template configuration file for Azure Blob Storage is `$PXF_CONF/templates/wasbs-site.xml`. You must provide the following Azure Blob Storage server configuration properties, and replace with your account name:
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
@@ -89,7 +87,7 @@ The template configuration file for Azure Blob Storage is `$PXF_CONF/templates/w
 
 ### <a id="adl_cfg"></a>Azure Data Lake Configuration
 
-The template configuration file for Azure Data Lake is `$PXF_CONF/templates/adl-site.xml`. This file specifies the following properties:
+The template configuration file for Azure Data Lake is `$PXF_CONF/templates/adl-site.xml`. You must provide the following Azure Data Lake server configuration properties, and replace the appropriate values with your credentials:
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
@@ -101,7 +99,7 @@ The template configuration file for Azure Data Lake is `$PXF_CONF/templates/adl-
 
 ### <a id="gcs_cfg"></a>Google Cloud Storage Configuration
 
-The template configuration file for Google Cloud Storage is `$PXF_CONF/templates/gs-site.xml`. This file specifies the following properties:
+The template configuration file for Google Cloud Storage is `$PXF_CONF/templates/gs-site.xml`. You must provide the following GCS server configuration properties, and replace the appropriate values with your credentials:
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
@@ -125,7 +123,7 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
 3. For each object store connector that you configure:
 
-    1. Determine a name for the server. You will provide the name to end users that need to referenc files in the object store.
+    1. Determine a name for the server. You will provide the name to end users that need to reference files in the object store.
 
         **Note**: The server name `default` is reserved.
 
