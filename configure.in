@@ -1308,7 +1308,10 @@ fi
 
 if test "$with_zstd" = yes; then
   AC_CHECK_LIB(zstd, ZSTD_compressCCtx, [],
-               [AC_MSG_ERROR([zstd library not found.])])
+               [AC_MSG_ERROR([zstd library not found
+If you have libzstd already installed, see config.log for details on the
+failure.  It is possible the compiler isn't looking in the proper directory.
+Use --without-zstd to disable zstd support.])])
 fi
 
 if test "$enable_spinlocks" = yes; then

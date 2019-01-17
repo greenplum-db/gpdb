@@ -10831,7 +10831,10 @@ _ACEOF
   LIBS="-lzstd $LIBS"
 
 else
-  as_fn_error $? "zstd library not found." "$LINENO" 5
+  as_fn_error $? "zstd library not found
+If you have libzstd already installed, see config.log for details on the
+failure.  It is possible the compiler isn't looking in the proper directory.
+Use --without-zstd to disable zstd support." "$LINENO" 5
 fi
 
 fi
