@@ -51,7 +51,7 @@ When you configure a PXF object store connector, you add at least one named PXF 
 6. Synchronize the server configuration to each Greenplum Database segment host.
 7. Publish the PXF server names to your Greenplum Database end users as appropriate. The end user will specify the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the object store.
 
-<div class="note info">A Greenplum Database user who creates an external table that specifies a server name (`&SERVER=<server_name>`) accesses the external object store with the credentials configured for that server.</div>
+<div class="note info">A Greenplum Database user who creates an external table that specifies a server name accesses the external object store with the credentials configured for that server.</div>
 
 ### <a id="abs_cfg"></a>Azure Blob Storage Server Configuration
 
@@ -105,7 +105,7 @@ The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. Whe
 | fs.s3a.access.key | The AWS account access key ID. |
 | fs.s3a.secret.key | The secret key associated with the AWS access key ID. |
 
-**Note**: The PXF S3 object store connector also supports specifying the S3 access ID and secret key via custom options in the `CREATE EXTERNAL TABLE` command `LOCATION` clause. As with the credentials that you configure in the `s3-site.xml` file, these keys are clear text, PXF does not encrypt them.
+<div class="note warning">The PXF S3 object store connector also supports specifying the S3 access ID and secret key via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. As with the credentials that you configure in the s3-site.xml file, these keys are clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
 
 ## <a id="cfg_proc"></a>Example Configuration Procedure
 
