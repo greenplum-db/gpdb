@@ -54,7 +54,7 @@ The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the foll
 | AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
 | [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
 
-You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a file or directory in the specific object store. For example, the following command creates an external table that specifies the profile named `s3:text`:
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a file or directory in the specific object store. For example, the following command creates an external table that specifies the profile named `s3:text`:
 
 ``` sql
 CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, total_sales float8)

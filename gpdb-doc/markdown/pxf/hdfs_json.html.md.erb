@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Use the PXF HDFS Connector to read JSON-format data. This section describes how to use PXF to access JSON data in HDFS, including how to create and query an external table referencing JSON files in the HDFS data store.
+Use the PXF HDFS Connector to read JSON-format data. This section describes how to use PXF to access JSON data in HDFS, including how to create and query an external table that references a JSON file in the HDFS data store.
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -189,8 +189,9 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:json`. |
 | \<custom&#8209;option\>  | \<custom-option\>s are discussed below.|
-| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:json` profile. The `'CUSTOM'` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
+| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:json` profile. The `CUSTOM` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
 
+<a id="customopts"></a>
 PXF supports single- and multi- line JSON records. When you want to read multi-line JSON records, you must provide an `IDENTIFIER` \<custom-option\> and value. Use this \<custom-option\> to identify the member name of the first field in the JSON record object:
 
 | Option Keyword  | &nbsp;&nbsp;Syntax,&nbsp;&nbsp;Example(s)&nbsp;&nbsp; | Description |

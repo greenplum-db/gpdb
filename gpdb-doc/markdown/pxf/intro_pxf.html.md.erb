@@ -4,6 +4,7 @@ title: Introduction to PXF
 
 The Greenplum Platform Extension Framework (PXF) provides *connectors* that enable you to access data stored in sources external to your Greenplum Database deployment. These connectors map an external data source to a Greenplum Database *external table* definition. When you create the Greenplum Database external table, you identify the external data store and the format of the data via a *server* name and a *profile* name that you provide in the command.
 
+You can query the external table via Greenplum Database, leaving the referenced data in place. Or, you can use the external table to load the data into Greenplum Database for higher performance.
 
 
 ## <a id="arch"></a> Architectural Overview
@@ -13,15 +14,15 @@ Your Greenplum Database deployment consists of a master node and multiple segmen
 
 ## <a id="more"></a> About Connectors, Servers, and Profiles
 
-*Connector* is a generic term that encapsulates the implementation details required to read from and/or write to an external data store. PXF provides built-in connectors to Hadoop (HDFS, Hive, HBase), Cloud Object Stores (Azure, Google Cloud Storage, Minio, S3), and SQL databases (JDBC).
+*Connector* is a generic term that encapsulates the implementation details required to read from or write to an external data store. PXF provides built-in connectors to Hadoop (HDFS, Hive, HBase), object stores (Azure, Google Cloud Storage, Minio, S3), and SQL databases (JDBC).
 
 A PXF *server* is a named configuration for Hadoop or an object store connector. A server definition provides the information required for PXF to access an external data source. This configuration information is data-store-specific, and may include server location and access credentials.
 
-**Note**: PXF supports only clear-text credentials to cloud object stores at this time.
+**Note**: PXF supports only clear-text credentials to object stores at this time.
 
 The default PXF server is named `default`, and when configured provides the information required for PXF to access Hadoop services including HDFS, Hive, and HBase.
 
-The Greenplum Database administrator will configure at least one server definition for each cloud object store that he will permit Greenplum Database users to access, and will publish the available server names as appropriate.
+The Greenplum Database administrator will configure at least one server definition for each object store that they will permit Greenplum Database users to access, and will publish the available server names as appropriate.
 
 Finally, a PXF *profile* is a named mapping identifying a specific data format supported by a specific external data store. PXF supports text, Avro, JSON, RCFile, Parquet, SequenceFile, and ORC data formats, and provides several built-in profiles as discussed in the following section.
 
@@ -36,7 +37,7 @@ LOCATION('pxf://<path-to-data>?PROFILE=<profile_name>[&SERVER=<server_name>][&<c
 FORMAT '[TEXT|CSV|CUSTOM]' (<formatting-properties>);
 ```
 
-The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI. This URI identifies the path to, or other information describing, the location of the external data. For example, if the external data store is HDFS, the \<path-to-data\> would identify the absolute path to a specific HDFS file. If the external data store is Hive, \<path-to-data\> would identify a schema-qualified Hive table name.
+The `LOCATION` clause in a `CREATE EXTERNAL TABLE` statement specifying the `pxf` protocol is a URI. This URI identifies the path to, or other information describing, the location of the external data. For example, if the external data store is HDFS, the \<path-to-data\> identifies the absolute path to a specific HDFS file. If the external data store is Hive, \<path-to-data\> identifies a schema-qualified Hive table name.
 
 You use the query portion of the URI, introduced by the question mark (?), to identify the PXF server and profile names.
 
@@ -49,10 +50,10 @@ PXF may require additional information to read or write certain data formats. Yo
 | Keyword               | Value and Description                                                                                                                                                                                                                                                          |
 |-------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | \<path&#8209;to&#8209;data\>        | A directory, file name, wildcard pattern, table name, etc. The syntax of \<path-to-data\> is dependent upon the external data source.                                                                                                                                                                                                                    |
-| PROFILE=\<profile_name\>  | The profile that PXF uses to access the data. PXF supports profiles that access text, Avro, JSON, RCFile, Parquet, SequenceFile, and ORC data in [Hadoop services](access_hdfs.html), [cloud object stores](access_objstore.html), and [other SQL databases](jdbc_pxf.html).  |
+| PROFILE=\<profile_name\>  | The profile that PXF uses to access the data. PXF supports profiles that access text, Avro, JSON, RCFile, Parquet, SequenceFile, and ORC data in [Hadoop services](access_hdfs.html), [object stores](access_objstore.html), and [other SQL databases](jdbc_pxf.html).  |
 | SERVER=\<server_name\>   | The named server configuration that PXF uses to access the data. The default server is a Hadoop server named `default`. The Greenplum Database administrator may configure other servers. |
 | \<custom&#8209;option\>=\<value\> | Additional options and their values supported by the profile or the server. |
-| FORMAT&nbsp;\<value\>| PXF profiles support the '`TEXT`', '`CSV`', and '`CUSTOM`' formats.  |
+| FORMAT&nbsp;\<value\>| PXF profiles support the `TEXT`, `CSV`, and `CUSTOM` formats.  |
 | \<formatting&#8209;properties\> | Formatting properties supported by the profile; for example, the `FORMATTER` or `delimiter`.                                                                   |
 
 **Note:** When you create a PXF external table, you cannot use the `HEADER` option in your formatter specification.

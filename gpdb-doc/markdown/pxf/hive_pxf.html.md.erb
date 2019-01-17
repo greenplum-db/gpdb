@@ -175,7 +175,7 @@ You can create a Greenplum Database external table to access Hive table data.   
 
 The `HiveText` and `HiveRC` profiles are specifically optimized for text and RCFile formats, respectively. The `HiveORC` and `HiveVectorizedORC` profiles are optimized for ORC file formats. The `Hive` profile is optimized for all file storage types; you can use the `Hive` profile when the underlying Hive table is composed of multiple partitions with differing file formats.
 
-Use the following syntax to create a Greenplum Database external table referencing a Hive table:
+Use the following syntax to create a Greenplum Database external table that references a Hive table:
 
 ``` sql
 CREATE EXTERNAL TABLE <table_name>
@@ -193,7 +193,7 @@ Hive connector-specific keywords and values used in the [CREATE EXTERNAL TABLE](
 | \<hive&#8209;table&#8209;name\>    | The name of the Hive table. |
 | PROFILE    | The `PROFILE` keyword must specify one of the values `Hive`, `HiveText`, `HiveRC`, `HiveORC`, or `HiveVectorizedORC`. |
 | DELIMITER    | The custom options `DELIMITER` clause is required for both the `HiveText` and `HiveRC` profiles and identifies the field delimiter used in the Hive data set.  \<delim\> must be a single ascii character or specified in hexadecimal representation. |
-| FORMAT (`Hive`, `HiveORC`, and `HiveVectorizedORC` profiles)   | The `FORMAT` clause must specify `CUSTOM`. The `CUSTOM` format requires the built-in `pxfwritable_import` `formatter`.   |
+| FORMAT (`Hive`, `HiveORC`, and `HiveVectorizedORC` profiles)   | The `FORMAT` clause must specify `'CUSTOM'`. The `CUSTOM` format requires the built-in `pxfwritable_import` `formatter`.   |
 | FORMAT (`HiveText` and `HiveRC` profiles) | The `FORMAT` clause must specify `TEXT`. The `delimiter` must be specified a second time in the '\<delim\>' formatting option. |
 
 
@@ -205,7 +205,7 @@ You can use the `Hive` and `HiveText` profiles to access Hive table data stored 
 
 ### <a id="hive_hive_example" class="no-quick-link"></a>Example: Using the Hive Profile
 
-Use the `Hive` profile to create a readable Greenplum Database external table referencing the Hive `sales_info` textfile format table that you created earlier.
+Use the `Hive` profile to create a readable Greenplum Database external table that references the Hive `sales_info` textfile format table that you created earlier.
 
 1. Create the external table:
 
@@ -298,7 +298,7 @@ Use the `HiveRC` profile to query RCFile-formatted data in a Hive table.
     hive> SELECT * FROM sales_info_rcfile;
     ```
 
-4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table referencing the Hive `sales_info_rcfile` table that you created in the previous steps. You *must* specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.:
+4. Use the PXF `HiveRC` profile to create a readable Greenplum Database external table that references the Hive `sales_info_rcfile` table that you created in the previous steps. You *must* specify a delimiter option in both the `LOCATION` and `FORMAT` clauses.:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE salesinfo_hivercprofile(location text, month text, num_orders int, total_sales float8)
@@ -387,7 +387,7 @@ In the following example, you will create a Hive table stored in ORC format and 
     Timing is on.
     ```
 
-4. Use the PXF `HiveORC` profile to create a Greenplum Database external table referencing the Hive table named `sales_info_ORC` you created in Step 1. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
+4. Use the PXF `HiveORC` profile to create a Greenplum Database external table that references the Hive table named `sales_info_ORC` you created in Step 1. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
 
     ``` sql
     postgres=> CREATE EXTERNAL TABLE salesinfo_hiveORCprofile(location text, month text, num_orders int, total_sales float8)
@@ -423,7 +423,7 @@ In the following example, you will use the `HiveVectorizedORC` profile to query 
     $ psql -d postgres
     ```
 
-2. Use the PXF `HiveVectorizedORC` profile to create a readable Greenplum Database external table referencing the Hive table named `sales_info_ORC` that you created in Step 1 of the previous example. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveVectorizedORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
+2. Use the PXF `HiveVectorizedORC` profile to create a readable Greenplum Database external table that references the Hive table named `sales_info_ORC` that you created in Step 1 of the previous example. The `FORMAT` clause must specify `'CUSTOM'`. The `HiveVectorizedORC` `CUSTOM` format supports only the built-in `'pxfwritable_import'` `formatter`.
 
     ``` sql
     postgres=> CREATE EXTERNAL TABLE salesinfo_hiveVectORC(location text, month text, num_orders int, total_sales float8)
@@ -549,7 +549,7 @@ When you specify an array field in a Hive table, you must identify the terminato
     ...
     ```
 
-6. Use the PXF `Hive` profile to create a readable Greenplum Database external table referencing the Hive table named `table_complextypes`:
+6. Use the PXF `Hive` profile to create a readable Greenplum Database external table that references the Hive table named `table_complextypes`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE complextypes_hiveprofile(index int, name text, intarray text, propmap text)
@@ -823,7 +823,7 @@ In this example, you create a partitioned Hive external table. The table is comp
     $ psql -d postgres
     ```
 
-8. Use the PXF `Hive` profile to create a readable Greenplum Database external table referencing from the Hive `hive_multiformpart` external table that you created in the previous steps:
+8. Use the PXF `Hive` profile to create a readable Greenplum Database external table that references the Hive `hive_multiformpart` external table that you created in the previous steps:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_multiformpart(location text, month text, num_orders int, total_sales float8, year text)

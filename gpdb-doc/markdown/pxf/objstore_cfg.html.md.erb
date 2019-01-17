@@ -8,7 +8,7 @@ You can use PXF to access Azure Data Lake, Azure Blob Storage, Google Cloud Stor
 
 ## <a id="s3_cfg"></a>About Object Store Configuration
 
-PXF bundles all of the JAR files on which it depends, including those for cloud object stores, and loads these JARs at runtime.
+PXF bundles all of the JAR files on which it depends, including those for object stores, and loads these JARs at runtime.
 
 To access data in an object store, you must provide a server location and client credentials. PXF provides a template configuration file for each Hadoop and object store connector.  These template configuration files, located in the `$PXF_CONF/templates/` directory, identify the minimum set of properties that you must configure to use the connector.
 
@@ -39,7 +39,7 @@ For example, the contents of the `s3-site.xml` template file follow:
 </configuration>
 ```
 
-**Note**: PXF supports only clear-text credentials to cloud object stores at this time.
+**Note**: PXF supports only clear-text credentials to object stores at this time.
 
 When you configure a PXF object store connector, you add at least one named PXF server configuration for the connector. You:
 
@@ -57,11 +57,11 @@ The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. S3 
 
 | Property       | Description                                |
 |----------------|--------------------------------------------|
-| fs.s3a.access.key | The AWS account access key id. |
-| fs.s3a.secret.key | The secret key associated with the AWS access key id. |
+| fs.s3a.access.key | The AWS account access key ID. |
+| fs.s3a.secret.key | The secret key associated with the AWS access key ID. |
 | fs.s3a.fast.upload | Should specify `true`. |
 
-**Note**: You can also have the end user specify the S3 access and secret keys in clear text in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command.
+**Note**: You can instead have the end user specify the S3 access and secret keys in clear text in the `LOCATION` clause of the `CREATE EXTERNAL TABLE` command.
 
 ### <a id="minio_cfg"></a>Minio Configuration
 
@@ -70,8 +70,8 @@ The template configuration file for Minio is `$PXF_CONF/templates/minio-site.xml
 | Property       | Description                                |
 |----------------|--------------------------------------------|
 | fs.s3a.endpoint | The Minio S3 endpoint to which to connect. |
-| fs.s3a.access.key | The Minio account access key id. |
-| fs.s3a.secret.key | The secret key associated with the Minio access key id. |
+| fs.s3a.access.key | The Minio account access key ID. |
+| fs.s3a.secret.key | The secret key associated with the Minio access key ID. |
 | fs.s3a.fast.upload | Should specify `true`. |
 | fs.s3a.path.style.access | Must specify `true`. |
 
@@ -111,7 +111,7 @@ The template configuration file for Google Cloud Storage is `$PXF_CONF/templates
 
 ## <a id="cfg_proc"></a>Configuration Procedure
 
-Ensure that you have initialized PXF before you configure an object store connector(s).
+Ensure that you have initialized PXF before you configure an object store connector.
 
 In this procedure, you name and add a PXF server configuration in the `$PXF_CONF/servers` directory on the Greenplum Database master host for each object store connector that you plan to use. You then use the `pxf cluster sync` command to sync the server configuration(s) to all segment hosts.
 
@@ -125,15 +125,15 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
 3. For each object store connector that you configure:
 
-    1. Determine a name for the server. You will provide the name to end users to whom you give permission to create external tables referencing files in the object store.
+    1. Determine a name for the server. You will provide the name to end users that need to referenc files in the object store.
 
-    **Note**: The server name `default` is reserved.
+        **Note**: The server name `default` is reserved.
 
     2. Create the `$PXF_HOME/servers/*server_name*` directory. For example, use the following command if you are creating a server configuration for Google Cloud Storage and you want to name the server `gs_public`:
 
-    ``` shell
-    gpadmin@gpmaster$ mkdir $PXF_CONF/servers/gs_public
-    ````
+        ``` shell
+        gpadmin@gpmaster$ mkdir $PXF_CONF/servers/gs_public
+        ````
 
     3. Copy the PXF template file for the object store to the server configuration directory. For example:
 
@@ -162,7 +162,7 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
         ```
     5. Save your changes and exit the editor.
 
-    6. Go to Step 3 to configure the next object store connector.
+    6. Repeat Step 3 to configure the next object store connector.
 
 4. Use the `pxf cluster sync` command to copy the new server configurations to each Greenplum Database segment host. For example:
     

@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF HDFS Connector supports plain delimited and comma-separated value form text data. This section describes how to use PXF to access HDFS text data, including how to create, query, and insert data into an external table referencing files in the HDFS data store.
+The PXF HDFS Connector supports plain delimited and comma-separated value form text data. This section describes how to use PXF to access HDFS text data, including how to create, query, and insert data into an external table that references files in the HDFS data store.
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -86,7 +86,7 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_hdfs_simple.txt
     $ psql -d postgres
     ```
 
-1. Use the PXF `hdfs:text` profile to create a Greenplum Database external table referencing the `pxf_hdfs_simple.txt` file you just created and added to HDFS:
+1. Use the PXF `hdfs:text` profile to create a Greenplum Database external table that references the `pxf_hdfs_simple.txt` file that you just created and added to HDFS:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple(location text, month text, num_orders int, total_sales float8)
@@ -110,7 +110,7 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_hdfs_simple.txt
     (4 rows)
     ```
 
-2. Create a second external table referencing `pxf_hdfs_simple.txt`, this time specifying the `CSV` `FORMAT`:
+2. Create a second external table that references `pxf_hdfs_simple.txt`, this time specifying the `CSV` `FORMAT`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textsimple_csv(location text, month text, num_orders int, total_sales float8)
@@ -174,7 +174,7 @@ Perform the following steps to create a sample text file, copy the file to HDFS,
     $ hdfs dfs -put /tmp/pxf_hdfs_multi.txt /data/pxf_examples/
     ```
 
-4. Use the `hdfs:text:multi` profile to create an external table referencing the `pxf_hdfs_multi.txt` HDFS file, making sure to identify the `:` (colon) as the field separator:
+4. Use the `hdfs:text:multi` profile to create an external table that references the `pxf_hdfs_multi.txt` HDFS file, making sure to identify the `:` (colon) as the field separator:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_hdfs_textmulti(address text, month text, year int)
@@ -240,7 +240,7 @@ Writable external tables that you create using the `hdfs:text` profile can optio
 - org.apache.hadoop.io.compress.GzipCodec
 - org.apache.hadoop.io.compress.BZip2Codec
 
-You specify the compression codec via custom options that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:text` profile support the following custom write options:
+You specify the compression codec via custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:text` profile support the following custom write options:
 
 | Option  | Value Description |
 |-------|-------------------------------------|

@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF object store connectors support SequenceFile format binary data. This section describes how to use PXF to read and write SequenceFile data, including how to create, insert, and query data in external tables that reference files in object store.
+The PXF object store connectors support SequenceFile format binary data. This section describes how to use PXF to read and write SequenceFile data, including how to create, insert, and query data in external tables that reference files in an object store.
 
 **Note**: Accessing SequenceFile-format data from an object store is very similar to accessing SequenceFile-format data in HDFS. This topic identifies object store-specific information required to read and write SequenceFile data, and links to the PXF HDFS SequenceFile documentation where appropriate for common information.
 
@@ -60,16 +60,16 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;dir\>    | The absolute path to the directory in the object store. |
 | PROFILE=\<objstore\>:SequenceFile    | The `PROFILE` keyword must identify the specific object store. For example, `s3:SequenceFile`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
-| \<custom&#8209;option\>=\<value\> | SequenceFile-specific custom options are described in the [PXF HDFS SequenceFile documentation](hdfs_seqfile.html#hdfswrite_writeextdata). Server-specific custom options are described below. |
+| \<custom&#8209;option\>=\<value\> | SequenceFile-specific custom options are described in the [PXF HDFS SequenceFile documentation](hdfs_seqfile.html#customopts). Server-specific custom options are described below. |
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
-If you are accessing the S3 object store, you can override the server-configured S3 access id and secret key via \<custom\-option\>s that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing the S3 object store, you can override the server-configured S3 access ID and secret key via \<custom\-option\>s in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 Option  | Value Description |
 |-------|-------------------------------------|
-| accesskey    | The AWS account access key id. |
-| secretkey    | The secret key associated with the AWS access key id. |
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
 
 The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores do not define any server-specific custom options.
 

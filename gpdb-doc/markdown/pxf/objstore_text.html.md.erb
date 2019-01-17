@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF object store connectors support plain delimited and comma-separated value form text data. This section describes how to use PXF to access text data in an object store, including how to create, query, and insert data into an external table referencing files in the object store.
+The PXF object store connectors support plain delimited and comma-separated value format text data. This section describes how to use PXF to access text data in an object store, including how to create, query, and insert data into an external table that references files in the object store.
 
 **Note**: Accessing text data from an object store is very similar to accessing text data in HDFS.
 
@@ -61,12 +61,12 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
-If you are accessing the S3 object store, you can override the server-configured S3 access id and secret key via \<custom\-option\>s that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing the S3 object store, you can override the server-configured S3 access ID and secret key via \<custom\-option\>s in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 Option  | Value Description |
 |-------|-------------------------------------|
-| accesskey    | The AWS account access key id. |
-| secretkey    | The secret key associated with the AWS access key id. |
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
 
 The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores do not define any server-specific custom options.
 
@@ -77,7 +77,7 @@ Perform the following procedure to create a sample text file, copy the file to S
 To run this example, you must:
 
 - Have the AWS CLI tools installed on your system
-- Know your AWS access id and secret key
+- Know your AWS access ID and secret key
 - Have write permission to an S3 bucket
 
 1. Create a directory in S3 for PXF example data files. For example, if you have write access to an S3 bucket named `BUCKET`:
@@ -115,7 +115,7 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_s3_simple.txt
     $ psql -d postgres
     ```
 
-1. Use the PXF `s3:text` profile to create a Greenplum Database external table referencing the `pxf_s3_simple.txt` file you just created and added to S3. For example, if your server name is `srvname`:
+1. Use the PXF `s3:text` profile to create a Greenplum Database external table that references the `pxf_s3_simple.txt` file that you just created and added to S3. For example, if your server name is `srvname`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textsimple(location text, month text, num_orders int, total_sales float8)
@@ -139,7 +139,7 @@ Beijing,Jul,411,11600.67' > /tmp/pxf_s3_simple.txt
     (4 rows)
     ```
 
-2. Create a second external table referencing `pxf_s3_simple.txt`, this time specifying the `CSV` `FORMAT`:
+2. Create a second external table that references `pxf_s3_simple.txt`, this time specifying the `CSV` `FORMAT`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textsimple_csv(location text, month text, num_orders int, total_sales float8)
@@ -172,12 +172,12 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'` when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
-If you are accessing the S3 object store, you can override the server-configured S3 access id and secret key via \<custom\-option\>s that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing the S3 object store, you can override the server-configured S3 access ID and secret key via \<custom\-option\>s in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 Option  | Value Description |
 |-------|---------------------------------|
-| accesskey    | The AWS account access key id. |
-| secretkey    | The secret key associated with the AWS access key id. |
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
 
 The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores do not define any server-specific custom options.
 
@@ -188,7 +188,7 @@ Perform the following steps to create a sample text file, copy the file to S3, a
 To run this example, you must:
 
 - Have the AWS CLI tools installed on your system
-- Know your AWS access id and secret key
+- Know your AWS access ID and secret key
 - Have write permission to an S3 bucket
 
 1. Create a second delimited plain text file:
@@ -220,7 +220,7 @@ To run this example, you must:
     $ aws s3 cp /tmp/pxf_s3_multi.txt s3://BUCKET/pxf_examples/
     ```
 
-4. Use the `s3:text:multi` profile to create an external table referencing the `pxf_s3_multi.txt` S3 file, making sure to identify the `:` (colon) as the field separator. For example, if your server name is `srvname`:
+4. Use the `s3:text:multi` profile to create an external table that references the `pxf_s3_multi.txt` S3 file, making sure to identify the `:` (colon) as the field separator. For example, if your server name is `srvname`:
 
     ``` sql
     postgres=# CREATE EXTERNAL TABLE pxf_s3_textmulti(address text, month text, year int)
@@ -287,7 +287,7 @@ Writable external tables that you create using an `<objstore>:text` profile can 
 - org.apache.hadoop.io.compress.GzipCodec
 - org.apache.hadoop.io.compress.BZip2Codec
 
-You specify the compression codec via custom options that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `<objstore>:text` profile support the following custom write options:
+You specify the compression codec via custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `<objstore>:text` profile support the following custom write options:
 
 | Option  | Value Description |
 |-------|-------------------------------------|
@@ -295,12 +295,12 @@ You specify the compression codec via custom options that you provide in the `CR
 | COMPRESSION_TYPE    | The compression type to employ; supported values are `RECORD` (the default) or `BLOCK`. |
 | THREAD-SAFE | Boolean value determining if a table query can run in multi-threaded mode. The default value is `TRUE`. Set this option to `FALSE` to handle all requests in a single thread for operations that are not thread-safe (for example, compression). |
 
-If you are accessing the S3 object store, you can override the server-configured S3 access id and secret key via \<custom\-option\>s that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing the S3 object store, you can override the server-configured S3 access ID and secret key via \<custom\-option\>s in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 Option  | Value Description |
 |-------|-------------------------------------|
-| accesskey    | The AWS account access key id. |
-| secretkey    | The secret key associated with the AWS access key id. |
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
 
 The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores do not define any server-specific custom options.
 

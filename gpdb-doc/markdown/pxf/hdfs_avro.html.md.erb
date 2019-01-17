@@ -22,7 +22,7 @@ under the License.
 -->
 
 
-Use the PXF HDFS Connector to read Avro-format data. This section describes how to use PXF to access Avro data in HDFS, including how to create and query an external table referencing Avro files in the HDFS data store.
+Use the PXF HDFS Connector to read Avro-format data. This section describes how to use PXF to access Avro data in HDFS, including how to create and query an external table that references an Avro file in the HDFS data store.
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -83,8 +83,9 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory or file in the HDFS data store. |
 | PROFILE    | The `PROFILE` keyword must specify `hdfs:avro`. |
 | \<custom&#8209;option\>  | \<custom-option\>s are discussed below.|
-| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:avro` profile. The `'CUSTOM'` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
+| FORMAT 'CUSTOM' | Use `FORMAT` `'CUSTOM'` with  the `hdfs:avro` profile. The `CUSTOM` `FORMAT` requires that you specify `(FORMATTER='pxfwritable_import')`. |
 
+<a id="customopts"></a>
 For complex types, the PXF `hdfs:avro` profile inserts default delimiters between collection items and values. You can use non-default delimiter characters by identifying values for specific `hdfs:avro` custom options in the `CREATE EXTERNAL TABLE` command. 
 
 The `hdfs:avro` profile supports the following \<custom-option\>s:
@@ -198,7 +199,7 @@ Perform the following steps to create a sample Avro data file conforming to the 
     
 ### <a id="topic_avro_querydata"></a>Query With hdfs:avro Profile
 
-Perform the following operations to create and query an external table referencing the `pxf_avro.avro` file that you added to HDFS in the previous section. When creating the table:
+Perform the following operations to create and query an external table that references the `pxf_avro.avro` file that you added to HDFS in the previous section. When creating the table:
 
 -  Map the top-level primitive fields, `id` (type long) and `username` (type string), to their equivalent Greenplum Database types (bigint and text). 
 -  Map the remaining complex fields to type text.

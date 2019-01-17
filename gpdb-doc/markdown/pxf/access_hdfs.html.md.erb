@@ -21,11 +21,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache Hadoop distributions. PXF is installed with HDFS, Hive, and HBase connectors. You use these connectors to access varied formats of data from these Hadoop services.
+PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache Hadoop distributions. PXF is installed with HDFS, Hive, and HBase connectors. You use these connectors to access varied formats of data from these Hadoop distributions.
 
 ## <a id="hdfs_arch"></a>Architecture
 
-HDFS is the primary distributed storage mechanism used by Apache Hadoop services. When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to all segment hosts. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
+HDFS is the primary distributed storage mechanism used by Apache Hadoop. When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to all segment hosts. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
 
 1. Allocates a worker thread to serve the request from a segment.
 2. Invokes the HDFS Java API to request metadata information for the HDFS file from the HDFS NameNode. 
@@ -45,8 +45,8 @@ The PXF agent invokes the HDFS Java API to read the data and delivers it to the 
 Before working with Hadoop data using PXF, ensure that:
 
 - You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
-- You have configured the PXF Hadoop Connectors that you plan to use on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions. If you plan to access JSON format data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
-- If user impersonation is enabled (the default), you have granted read (and write as appropriate) permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database to each Greenplum Database user/role name that will access the HDFS files and directories. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
+- You have configured the PXF Hadoop Connectors that you plan to use on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions. If you plan to access JSON-formatted data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
+- If user impersonation is enabled (the default), ensure that you have granted read (and write as appropriate) permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database to each Greenplum Database user/role name that will access the HDFS files and directories. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
 
 
 ## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer
@@ -101,8 +101,8 @@ The PXF Hadoop connectors expose the following profiles to read, and in many cas
 
 | Data Source | Data Format | Profile Name(s) | Deprecated Profile Name |
 |-----|------|---------|------------|
-| [HDFS](hdfs_text.html) | delimited single line [text](hdfs_text.html#profile_text) | hdfs:text | HdfsTextSimple |
-| [HDFS](hdfs_text.html) | delimited [text with quoted linefeeds](hdfs_text.html#profile_textmulti) | hdfs:text:multi | HdfsTextMulti |
+| HDFS | delimited single line [text](hdfs_text.html#profile_text) | hdfs:text | HdfsTextSimple |
+| HDFS | delimited [text with quoted linefeeds](hdfs_text.html#profile_textmulti) | hdfs:text:multi | HdfsTextMulti |
 | HDFS | [Avro](hdfs_avro.html) | hdfs:avro | Avro |
 | HDFS | [JSON](hdfs_json.html) | hdfs:json | Json |
 | HDFS | [Parquet](hdfs_parquet.html) | hdfs:parquet | Parquet |
@@ -115,7 +115,7 @@ The PXF Hadoop connectors expose the following profiles to read, and in many cas
 | [Hive](hive_pxf.html) | stored as Parquet | Hive | n/a |
 | [HBase](hbase_pxf.html) | Any | HBase | n/a |
 
-You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a Hadoop file, directory, or table. For example, the following command creates an external table that specifies the profile named `hdfs:text`:
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a Hadoop file, directory, or table. For example, the following command creates an external table that specifies the profile named `hdfs:text`:
 
 ``` sql
 CREATE EXTERNAL TABLE pxf_hdfs_text(location text, month text, num_orders int, total_sales float8)

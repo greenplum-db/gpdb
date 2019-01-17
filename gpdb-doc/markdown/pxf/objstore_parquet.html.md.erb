@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF object store connectors support reading and writing parquet-format data. This section decribes how to use PXF to access parquet-format data in an object store, including how to create and query an external table referencing a parquet file in the store.
+The PXF object store connectors support reading and writing parquet-format data. This section decribes how to use PXF to access parquet-format data in an object store, including how to create and query an external table that references a parquet file in the store.
 
 <div class="note warning">PXF parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
 
@@ -67,16 +67,16 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | \<path&#8209;to&#8209;dir\>    | The absolute path to the directory in the object store. |
 | PROFILE=\<objstore\>:parquet    | The `PROFILE` keyword must identify the specific object store. For example, `s3:parquet`. |
 | SERVER=\<server_name\>    | The named server configuration that PXF uses to access the data. |
-| \<custom&#8209;option\>=\<value\> | Parquet-specific custom options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#profile_cet). Server-specific custom options are described below. |
+| \<custom&#8209;option\>=\<value\> | Parquet-specific custom options are described in the [PXF HDFS Parquet documentation](hdfs_parquet.html#customopts). Server-specific custom options are described below. |
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
-If you are accessing the S3 object store, you can override the server-configured S3 access id and secret key via \<custom\-option\>s that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing the S3 object store, you can override the server-configured S3 access ID and secret key via \<custom\-option\>s in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 Option  | Value Description |
 |-------|-------------------------------------|
-| accesskey    | The AWS account access key id. |
-| secretkey    | The secret key associated with the AWS access key id. |
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
 
 The PXF connectors to the Azure, Google Cloud Storage, and Minio object stores do not define any server-specific custom options.
 

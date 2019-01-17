@@ -21,7 +21,7 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Use the PXF HDFS connector to read and write parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create and query an external table referencing files in the HDFS data store.
+Use the PXF HDFS connector to read and write parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create and query an external table that references files in the HDFS data store.
 
 <div class="note warning">PXF parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
 
@@ -91,7 +91,8 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
-The PXF `hdfs:parquet` profile supports write compression. You specify the compression codec via a custom option that you provide in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
+<a id="customopts"></a>
+The PXF `hdfs:parquet` profile supports write compression. You specify the compression codec via a custom option in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
 
 | Option  | Value Description |
 |-------|-------------------------------------|
@@ -112,7 +113,7 @@ This example utilizes the data schema introduced in [Example: Reading Text Data 
 | number\_of\_orders | int |
 | total\_sales | float8 |
 
-In this example, you create a parquet-format writable external table referencing parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
+In this example, you create a parquet-format writable external table that references parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
 
 1. Use the `hdfs:parquet` profile to create a writable external table. For example:
 
