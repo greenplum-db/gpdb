@@ -236,8 +236,9 @@ double *sdata_to_float8arr(SparseData sdata) {
 
 	if (sdata->type_of_data != FLOAT8OID)
 	{
-		ereport(ERROR,(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			errmsg("data type of SparseData is not FLOAT64")));
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("data type of SparseData is not FLOAT64")));
 	}
 
 	array = (double *) palloc(sizeof(double) * sdata->total_value_count);

@@ -152,8 +152,8 @@ gp_extract_feature_histogram(PG_FUNCTION_ARGS)
 /* End of UDF wrapper =================================================== */
 
 #ifdef VERBOSE
-	elog(NOTICE,"Number of text items in the feature array is: %d\n",num_features);
-	elog(NOTICE,"Number of text items in the document array is: %d\n",num_words);
+	elog(NOTICE,"Number of text items in the feature array is: %d",num_features);
+	elog(NOTICE,"Number of text items in the document array is: %d",num_words);
 #endif
        	returnval = classify_document(features,num_features,document,num_words,gp_isnew_query());
 
@@ -198,7 +198,7 @@ classify_document(char **features, int num_features, char **document, int num_wo
 	if (allocate) {
 		int *ordinals;
 #ifdef VERBOSE
-		elog(NOTICE,"Classify_document allocating..., Number of features = %d\n",num_features);
+		elog(NOTICE,"Classify_document allocating..., Number of features = %d",num_features);
 #endif
 		/*
 		 * Calling hdestroy() isn't guaranteed to free any memory allocated
@@ -269,7 +269,7 @@ classify_document(char **features, int num_features, char **document, int num_wo
 			histogram[*((int *)found_item->data)]++; //Increment the count at the appropriate ordinal
 		  } else {
 #ifdef VERBOSE
-			elog(NOTICE,"Item not found in feature list %s\n",(char *)item.key);
+			elog(NOTICE,"Item not found in feature list %s",(char *)item.key);
 #endif
 			  continue;
 		  }
@@ -304,7 +304,7 @@ get_text_array_contents(ArrayType *array, int *numitems)
 
         if (ARR_ELEMTYPE(array) != TEXTOID) {
 		*numitems = 0;
-		elog(WARNING,"attempt to use a non-text[][] variable with a function that uses text[][] argumenst.\n");
+		elog(WARNING,"attempt to use a non-text[][] variable with a function that uses text[][] arguments");
 		return(NULL);
 	}
 

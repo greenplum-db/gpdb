@@ -506,8 +506,8 @@ check_sdata_dimensions(SparseData left, SparseData right)
 	if (left->total_value_count != right->total_value_count)
 	{
 		ereport(ERROR, 
-			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errmsg("Operation undefined when dimension of left and right vectors are not the same")));
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("operation undefined when dimension of left and right vectors are not the same")));
 	}
 }
 
@@ -718,8 +718,8 @@ static inline SparseData op_sdata_by_sdata(int operation,SparseData left,
 
 	if ((operation > 3)|| (operation < 0))
 		ereport(ERROR, 
-			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errmsg("Operation not in range 0-3")));
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("operation not in range 0-3")));
 
 	while (1)
 	{

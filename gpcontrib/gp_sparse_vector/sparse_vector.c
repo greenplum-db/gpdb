@@ -235,7 +235,7 @@ svec_in(PG_FUNCTION_ARGS)
 	pgarray_vals = DatumGetArrayTypeP(OidFunctionCall3(F_ARRAY_IN,CStringGetDatum(values),
 				ObjectIdGetDatum(FLOAT8OID),Int32GetDatum(-1)));
 
-	/* Make an empty StringInfo becase we have the data array already */
+	/* Make an empty StringInfo because we have the data array already */
 	vals = (double *)ARR_DATA_PTR(pgarray_vals);
 	num_values = *(ARR_DIMS(pgarray_vals));
 

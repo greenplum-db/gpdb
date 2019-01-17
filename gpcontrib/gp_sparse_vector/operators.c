@@ -610,12 +610,10 @@ void check_dimension(SvecType *svec1, SvecType *svec2, char *msg) {
 	if ((!IS_SCALAR(svec1)) &&
 	    (!IS_SCALAR(svec2)) &&
 			(svec1->dimension != svec2->dimension)) {
-//		elog(NOTICE,"svec1: %s",svec_out_internal(svec1));
-//		elog(NOTICE,"svec2: %s",svec_out_internal(svec2));
 		ereport(ERROR,
-			(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-			 errmsg("%s: array dimension of inputs are not the same: dim1=%d, dim2=%d\n",
-			msg, svec1->dimension, svec2->dimension)));
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("%s: array dimension of inputs are not the same: dim1=%d, dim2=%d\n",
+						msg, svec1->dimension, svec2->dimension)));
 	}
 }
 
@@ -633,14 +631,12 @@ svec_cast_float8arr(PG_FUNCTION_ARGS) {
 	if (ARR_NDIM(A_PG) != 1)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("svec_cast_float8arr only defined over 1 dimensional arrays"))
-		       );
+				 errmsg("svec_cast_float8arr only defined over 1 dimensional arrays")));
 
 	if (ARR_NULLBITMAP(A_PG))
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("svec_cast_float8arr does not allow null bitmaps on arrays"))
-		       );
+				 errmsg("svec_cast_float8arr does not allow null bitmaps on arrays")));
 
 
 	/* Extract array */
@@ -1251,8 +1247,6 @@ partition_select (char **lists, size_t nlists, size_t *widths,
 				(const char **)lists,nlists,widths);
 		int nextRealIndex = realIndexCalc(MIN(maxlen,pivotNewIndex+1),
 	                                (const char **)lists,nlists,widths);
-//		elog(NOTICE,"k,realIndex,nextRealIndex,pni=%d,%d,%d,%d",k,realIndex,nextRealIndex,
-//				pivotNewIndex);
 		if ((realIndex <= k) && (k < nextRealIndex ))
 		{
 			break;
