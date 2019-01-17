@@ -1291,11 +1291,15 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 					 */
 					if (forceoverwrite && pg_check_dir(filename) != 0)
 					{
-						int filename_offset = strlen(filename) - 7;
-
-						/* replace with pg_str_endswith() after merging Postgres 9.5 */
-						if (filename_offset >= 0 &&
-							strcmp(filename + filename_offset, "/pg_log") == 0)
+						/*
+						 * We want to retain the contents of pg_log. And for
+						 * pg_xlog we assume is deleted at the start of
+						 * pg_basebackup. We cannot delete pg_xlog because if
+						 * streammode was used then it may have already copied
+						 * new xlog files into pg_xlog directory.
+						 */
+						if (pg_str_endswith(filename, "/pg_log") ||
+							pg_str_endswith(filename, "/pg_xlog"))
 							continue;
 
 						rmtree(filename, true);
@@ -1890,6 +1894,21 @@ BaseBackup(void)
 				_("%s: can only write single tablespace to stdout, database has %d\n"),
 				progname, PQntuples(res));
 		disconnect_and_exit(1);
+	}
+
+	/*
+	 * In the case of forceoverwrite the base directory may already exist. In
+	 * this case we need to wipeout the old pg_xlog directory. This is done
+	 * before StartLogStreamer and ReceiveAndUnpackTarFile so that either can
+	 * create pg_xlog directory and begin populating new contents to it.
+	 */
+	if (forceoverwrite)
+	{
+		char xlog_path[MAXPGPATH];
+		snprintf(xlog_path, MAXPGPATH, "%s/pg_xlog", basedir);
+
+		if (pg_check_dir(xlog_path) != 0)
+			rmtree(xlog_path, true);
 	}
 
 	/*
