@@ -142,3 +142,31 @@ BEGIN TRANSACTION ISOLATION LEVEL serializable;
 	SELECT * FROM test_serializable;
 COMMIT;
 DROP TABLE test_serializable;
+--
+-- Test DISCARD TEMP.
+--
+-- There's a test like this in upstream 'guc' test, but this expanded version
+-- verifies that temp tables are dropped on segments, too.
+--
+CREATE TEMP TABLE reset_test ( data text ) ON COMMIT DELETE ROWS;
+DISCARD TEMP;
+-- Try to create a new temp table with same. Should work.
+CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;
+
+-- Now test that the effects of DISCARD TEMP can be rolled back
+BEGIN;
+DISCARD TEMP;
+ROLLBACK;
+-- the table should still exist.
+INSERT INTO reset_test VALUES (1);
+
+-- Unlike DISCARD TEMP, DISCARD ALL cannot be run in a transaction.
+BEGIN;
+DISCARD ALL;
+COMMIT;
+-- the table should still exist.
+INSERT INTO reset_test VALUES (2);
+SELECT * FROM reset_test;
+
+DISCARD ALL;
+CREATE TEMP TABLE reset_test ( data text ) ON COMMIT PRESERVE ROWS;

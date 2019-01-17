@@ -22,6 +22,10 @@
 #include "utils/guc.h"
 #include "utils/portal.h"
 
+#include "cdb/cdbdisp_query.h"
+#include "cdb/cdbgang.h"
+#include "cdb/cdbvars.h"
+
 static void DiscardAll(bool isTopLevel);
 
 /*
@@ -34,18 +38,34 @@ DiscardCommand(DiscardStmt *stmt, bool isTopLevel)
 	{
 		case DISCARD_ALL:
 			DiscardAll(isTopLevel);
+
+			/*
+			 * DISCARD ALL is not allowed in a transaction block, so no
+			 * two-phase commit required.
+			 */
+			if (Gp_role == GP_ROLE_DISPATCH)
+				CdbDispatchCommand("DISCARD ALL", 0, NULL);
 			break;
 
 		case DISCARD_PLANS:
 			ResetPlanCache();
+			/* no dispatch, there should be no cached plans in segments */
 			break;
 
 		case DISCARD_SEQUENCES:
 			ResetSequenceCaches();
+			/* no dispatch, there should be no sequence caches in segments */
 			break;
 
 		case DISCARD_TEMP:
 			ResetTempTableNamespace();
+
+			/*
+			 * Dispatch using two-phase commit, so that the effect of DISCARD
+			 * TEMP can be rolled back if it's run in a transaction.
+			 */
+			if (Gp_role == GP_ROLE_DISPATCH)
+				CdbDispatchCommand("DISCARD TEMP", DF_NEED_TWO_PHASE, NULL);
 			break;
 
 		default:
