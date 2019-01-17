@@ -114,7 +114,6 @@ restore_cluster()
 check_vacuum_worked()
 {
 	local datadir=$1
-	local contentid=$2
 
 	if (( !$run_check_vacuum_worked )) ; then
         return 0;
@@ -130,7 +129,7 @@ check_vacuum_worked()
 
 	# Start the instance using the same pg_ctl invocation used by pg_upgrade.
 	"${NEW_BINDIR}/pg_ctl" -w -l /dev/null -D "${datadir}" \
-		-o "-p 18432 --gp_dbid=1 --gp_contentid=${contentid} --xid_warn_limit=10000000 -b" \
+		-o "-p 18432 --xid_warn_limit=10000000 -b" \
 		start
 
 	# Query for the xmin ages.
@@ -167,7 +166,7 @@ upgrade_qd()
 	fi
 	popd
 
-	if ! check_vacuum_worked "$3" -1; then
+	if ! check_vacuum_worked "$3"; then
 		echo "ERROR: VACUUM FREEZE appears to have failed during QD upgrade"
 		exit 1
 	fi
@@ -450,9 +449,9 @@ main() {
 		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/postgresql.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/postgresql.conf"
 		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/pg_hba.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/pg_hba.conf"
 		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/postmaster.opts" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/postmaster.opts"
-		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/gp_replication.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gp_replication.conf"
+		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/postgresql.auto.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/postgresql.auto.conf"
+		cp "${NEW_DATADIR}/dbfast$i/demoDataDir$j.old/internal.auto.conf" "${NEW_DATADIR}/dbfast$i/demoDataDir$j/internal.auto.conf"
 		# Remove QD only files
-		rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gp_dbid"
 		rm -f "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpssh.conf"
 		rm -rf "${NEW_DATADIR}/dbfast$i/demoDataDir$j/gpperfmon"
 		# Upgrade the segment data files without dump/restore of the schema

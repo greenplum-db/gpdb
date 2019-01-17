@@ -29,14 +29,12 @@ $$ language plpythonu;
 --
 --   datadir: data directory of process to target with `pg_ctl`
 --   port: which port the server should start on
---   gp_contentid: argument to be passed to `pg_ctl` as the `gp_contentid`
---   gp_dbid: argument to be passed to `pg_ctl` as the `gp_dbid`
 --
-create or replace function pg_ctl_start(datadir text, port int, contentid int, dbid int)
+create or replace function pg_ctl_start(datadir text, port int)
 returns text as $$
     import subprocess
     cmd = 'pg_ctl -l postmaster.log -D %s ' % datadir
-    opts = '-p %d -\-gp_dbid=%d -i -\-gp_contentid=%d' % (port, dbid, contentid)
+    opts = '-p %d' % (port)
     cmd = cmd + '-o "%s" start' % opts
     return subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
 $$ language plpythonu;

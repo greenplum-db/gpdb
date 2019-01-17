@@ -5,7 +5,7 @@ import os
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 
 from gppylib.gpparseopts import OptParser, OptChecker
-from gppylib.commands.gp import ModifyPostgresqlConfSetting, SegmentStart, SegmentStop
+from gppylib.commands.gp import ModifyConfSetting, SegmentStart, SegmentStop
 from gppylib.commands.pg import PgBaseBackup
 from gppylib.db import dbconn
 from gppylib.commands import unix
@@ -39,7 +39,7 @@ class ValidationException(Exception):
         return self.__msg
 
 class ConfExpSegCmd(Command):
-    def __init__(self, name, cmdstr, datadir, port, dbid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
+    def __init__(self, name, cmdstr, datadir, port, dbid, contentid, newseg, tarfile, useLighterDirectoryValidation, isPrimary,
                     syncWithSegmentHostname, syncWithSegmentPort, verbose, validationOnly, writeGpDbidFileOnly, forceoverwrite,
                     replicationSlotName):
         """
@@ -49,6 +49,7 @@ class ConfExpSegCmd(Command):
         self.datadir = datadir
         self.port = int(port)
         self.dbid = dbid
+        self.contentid = contentid
         self.newseg = newseg
         self.tarfile = tarfile
         self.verbose = verbose
@@ -182,6 +183,24 @@ class ConfExpSegCmd(Command):
                         self.set_results(modifyPostgresqlConfCmd.get_results())
                         raise
 
+                    modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/postgresql.conf' % self.datadir,
+                                                                          self.datadir + '/postgresql.conf',
+                                                                          'gp_contentid', self.contentid, optType='number')
+                    try:
+                        modifyPostgresqlConfCmd.run(validateAfter=True)
+                    except:
+                        self.set_results(modifyPostgresqlConfCmd.get_results())
+                        raise
+
+                    modifyPostgresqlConfCmd = ModifyPostgresqlConfSetting('Updating %s/internal.auto.conf' % self.datadir,
+                                                                          self.datadir + '/internal.auto.conf',
+                                                                          'gp_dbid', self.dbid, optType='number')
+                    try:
+                        modifyPostgresqlConfCmd.run(validateAfter=True)
+                    except:
+                        self.set_results(modifyPostgresqlConfCmd.get_results())
+                        raise
+
                 # We might need to stop the segment if the last setup failed past this point
                 if os.path.exists('%s/postmaster.pid' % self.datadir):
                     logger.info('%s/postmaster.pid exists.  Stopping segment' % self.datadir)
@@ -261,6 +280,8 @@ def parseargs():
             raise Exception('Invalid directory validation option in: %s' % conf_vals)
         if not canStringBeParsedAsInt(conf_vals[4]):
             raise Exception('Invalid dbid option in: %s' % conf_vals)
+        if not canStringBeParsedAsInt(conf_vals[5]):
+            raise Exception('Invalid contentid option in: %s' % conf_vals)
         seg_info.append(conf_vals)
 
     seg_info_len = len(seg_info)
@@ -289,17 +310,19 @@ try:
         isPrimary = seg[2] == "true"
         directoryValidationLevel = seg[3] == "true"
         dbid = int(seg[4])
+        contentid = int(seg[5])
 
         # These variables should not be used if it's a primary
         # they will be junk data passed through the config.
-        primaryHostName = seg[5]
-        primarySegmentPort = int(seg[6])
+        primaryHostName = seg[6]
+        primarySegmentPort = int(seg[7])
 
         cmd = ConfExpSegCmd( name = 'Configure segment directory'
                            , cmdstr = ' '.join(sys.argv)
                            , datadir = dataDir
                            , port = port
                            , dbid = dbid
+                           , contentid = contentid
                            , newseg = options.newsegments
                            , tarfile = options.tarfile
                            , useLighterDirectoryValidation = directoryValidationLevel

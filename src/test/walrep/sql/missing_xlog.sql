@@ -2,7 +2,7 @@
 create language plpythonu;
 -- end_ignore
 
-create or replace function pg_ctl(datadir text, command text, port int, contentid int)
+create or replace function pg_ctl(datadir text, command text, port int)
 returns text as $$
     import subprocess
 
@@ -10,7 +10,7 @@ returns text as $$
     if command in ('stop', 'restart'):
         cmd = cmd + '-w -m immediate %s' % command
     elif command == 'start':
-        opts = '-p %d -\-gp_dbid=0 -i -\-gp_contentid=%d' % (port, contentid)
+        opts = '-p %d -i ' % (port)
         cmd = cmd + '-o "%s" start' % opts
     elif command == 'reload':
         cmd = cmd + 'reload'
@@ -123,7 +123,7 @@ select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- stop a mirror
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL, NULL);
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'stop', NULL);
 
 -- checkpoint and switch the xlog to avoid corrupting the xlog due to background processes
 checkpoint;
@@ -134,7 +134,7 @@ select substring(pg_switch_xlog()::text, 0, 0) from gp_dist_random('gp_id') wher
 select move_xlog((select datadir || '/pg_xlog' from gp_segment_configuration c where c.role='p' and c.content=0), '/tmp/missing_xlog');
 
 -- bring the mirror back up
-select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'), 0);
+select pg_ctl((select datadir from gp_segment_configuration c where c.role='m' and c.content=0), 'start', (select port from gp_segment_configuration where content = 0 and preferred_role = 'm'));
 
 -- check the view, we expect to see error
 select wait_for_replication_error('walread', 0, 500);

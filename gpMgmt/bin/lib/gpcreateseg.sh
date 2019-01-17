@@ -53,6 +53,8 @@ PORT_TXT="#port"
 LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
 CHKPOINT_SEG_TXT="checkpoint_segments"
+CONTENT_ID_TXT="gp_contentid"
+DBID_TXT="gp_dbid"
 TMP_PG_HBA=/tmp/pg_hba_conf_master.$$
 
 #******************************************************************************
@@ -136,7 +138,8 @@ PROCESS_QE () {
     if [ x"" != x"$COPY_FROM_PRIMARY_HOSTADDRESS" ]; then
         LOG_MSG "[INFO]:-Running pg_basebackup to init mirror on ${GP_HOSTADDRESS} using primary on ${COPY_FROM_PRIMARY_HOSTADDRESS} ..." 1
         RUN_COMMAND_REMOTE ${COPY_FROM_PRIMARY_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; echo 'host  replication ${GP_USER} samenet trust' >> ${COPY_FROM_PRIMARY_DIR}/pg_hba.conf; pg_ctl -D ${COPY_FROM_PRIMARY_DIR} reload"
-        RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${COPY_FROM_PRIMARY_HOSTADDRESS} -p ${COPY_FROM_PRIMARY_PORT};"
+        RUN_COMMAND_REMOTE ${GP_HOSTADDRESS} "${EXPORT_GPHOME}; . ${GPHOME}/greenplum_path.sh; rm -rf ${GP_DIR}; ${GPHOME}/bin/pg_basebackup --xlog-method=stream --slot='internal_wal_replication_slot' -R -c fast -E ./db_dumps -E ./gpperfmon/data -E ./gpperfmon/logs -D ${GP_DIR} -h ${COPY_FROM_PRIMARY_HOSTADDRESS} -p ${COPY_FROM_PRIMARY_PORT} --target-gp-dbid ${GP_DBID};"
+
         START_QE "-w"
         RETVAL=$?
         PARA_EXIT $RETVAL "pg_basebackup of segment data directory from ${COPY_FROM_PRIMARY_HOSTADDRESS} to ${GP_HOSTADDRESS}"
@@ -158,6 +161,10 @@ PROCESS_QE () {
         PARA_EXIT $RETVAL "Update listen address"
         SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" checkpoint_segments=$CHECK_POINT_SEGMENTS 0 $GP_HOSTADDRESS
         PARA_EXIT $RETVAL "Update checkpoint segments"
+        SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=${GP_CONTENT}" 0 $GP_HOSTADDRESS
+        PARA_EXIT $RETVAL "Update gp_contentid"
+        SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=${GP_DBID}" 0 $GP_HOSTADDRESS
+        PARA_EXIT $RETVAL "Update gp_dbid"
 
         if [ x"" != x"$PG_CONF_ADD_FILE" ]; then
 	        LOG_MSG "[INFO][$INST_COUNT]:-Processing additional configuration parameters"
@@ -239,7 +246,7 @@ PROCESS_QE () {
 START_QE() {
 	LOG_MSG "[INFO][$INST_COUNT]:-Starting Functioning instance on segment ${GP_HOSTADDRESS}"
 	PG_CTL_WAIT=$1
-	$TRUSTED_SHELL ${GP_HOSTADDRESS} "$EXPORT_LIB_PATH;export PGPORT=${GP_PORT}; $PG_CTL $PG_CTL_WAIT -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o \"-i -p ${GP_PORT} --gp_dbid=${GP_DBID} --gp_contentid=${GP_CONTENT}\" start" >> $LOG_FILE 2>&1
+	$TRUSTED_SHELL ${GP_HOSTADDRESS} "$EXPORT_LIB_PATH;export PGPORT=${GP_PORT}; $PG_CTL $PG_CTL_WAIT -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o \"-i -p ${GP_PORT}\" start" >> $LOG_FILE 2>&1
 	RETVAL=$?
 	if [ $RETVAL -ne 0 ]; then
 		BACKOUT_COMMAND "$TRUSTED_SHELL $GP_HOSTADDRESS \"${EXPORT_LIB_PATH};export PGPORT=${GP_PORT}; $PG_CTL -w -D $GP_DIR -o \"-i -p ${GP_PORT}\" -m immediate  stop\""

@@ -373,8 +373,7 @@ class GpStart:
 
         numContentsInCluster = 0
         cmd = gp.MasterStart('master in utility mode', self.master_datadir,
-                             self.port, d.dbid,
-                             numContentsInCluster, self.era,
+                             self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, timeout=self.timeout, utilityMode=True
                              )
@@ -697,8 +696,7 @@ class GpStart:
 
         # attempt to start master
         gp.MasterStart.local("Starting Master instance",
-                             self.master_datadir, self.port, self.gparray.master.dbid,
-                             numContentsInCluster, self.era,
+                             self.master_datadir, self.port, self.era,
                              wrapper=self.wrapper, wrapper_args=self.wrapper_args,
                              specialMode=self.specialMode, restrictedMode=self.restricted, timeout=self.timeout,
                              max_connections=self.max_connections
@@ -749,8 +747,7 @@ class GpStart:
                 port = self.gparray.standbyMaster.port
                 dbid = self.gparray.standbyMaster.dbid
                 ncontents = self.gparray.getNumSegmentContents()
-                return gp.start_standbymaster(host, datadir, port, dbid,
-                                              ncontents, era=self.era,
+                return gp.start_standbymaster(host, datadir, port, era=self.era,
                                               wrapper=self.wrapper,
                                               wrapper_args=self.wrapper_args)
             except base.ExecutionError, e:

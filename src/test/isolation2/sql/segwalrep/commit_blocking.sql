@@ -47,7 +47,7 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 4: insert into segwalrep_commit_blocking values (3);
 
 -- bring the mirror back up
--1U: select pg_ctl_start(datadir, port, content, dbid) from gp_segment_configuration where role = 'm' and content = 0;
+-1U: select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;
 
 -- should unblock and commit now that mirror is back up and in-sync
 3<:

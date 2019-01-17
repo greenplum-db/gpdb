@@ -11,7 +11,7 @@ ERROR:  replication slot "some_replication_slot" does not exist
 (exited with code 0)
 
 -- When pg_basebackup runs with --slot and stream as xlog-method
-select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, 'some_replication_slot', '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -28,7 +28,7 @@ select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_isolatio
 (1 row)
 
 -- When another basebackup is run with the same slot name
-select pg_basebackup(address, port, 'some_replication_slot', '/tmp/some_other_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, 'some_replication_slot', '/tmp/some_other_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -69,7 +69,7 @@ primary_slot_name = 'some_replication_slot'
 (exited with code 0)
 
 -- When pg_basebackup runs without --slot
-select pg_basebackup(address, port, null, '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, null, '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                

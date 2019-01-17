@@ -62,6 +62,8 @@ PORT_TXT="#port"
 LOG_STATEMENT_TXT="#log_statement ="
 LISTEN_ADR_TXT="listen_addresses"
 CHKPOINT_SEG_TXT="checkpoint_segments"
+CONTENT_ID_TXT="gp_contentid"
+DBID_TXT="gp_dbid"
 INIT_STANDBY_PROG=$GPINITSTANDBY
 QE_MIRROR_ARRAY=""
 GP_PASSWD=gparray
@@ -1265,7 +1267,15 @@ CREATE_QD_DB () {
 		LOG_MSG "[INFO]:-Setting Master instance check point segments"
 		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CHKPOINT_SEG_TXT" "checkpoint_segments=$CHECK_POINT_SEGMENTS" 0
 		ERROR_CHK $? "set checkpoint_segments=$CHECK_POINT_SEGMENTS in ${GP_DIR}/$PG_CONF" 1
-		
+
+		LOG_MSG "[INFO]:-Setting Master instance content id"
+		SED_PG_CONF ${GP_DIR}/$PG_CONF "$CONTENT_ID_TXT" "gp_contentid=-1" 0
+		ERROR_CHK $? "set gp_contentid=-1 in ${GP_DIR}/$PG_CONF" 1
+
+		LOG_MSG "[INFO]:-Setting Master instance db id"
+		SED_PG_CONF ${GP_DIR}/$PG_INTERNAL_CONF "$DBID_TXT" "gp_dbid=1" 0
+		ERROR_CHK $? "set gp_dbid=1 in ${GP_DIR}/$PG_INTERNAL_CONF" 1
+
 		if [  x"" != x"$PG_CONF_ADD_FILE" ]; then
 				LOG_MSG "[INFO]:-Processing additional configuration parameters"
 				for NEW_PARAM in `$CAT $PG_CONF_ADD_FILE|$TR -s ' '|$TR -d ' '|$GREP -v "^#"`
@@ -1285,7 +1295,7 @@ CREATE_QD_DB () {
 		ERROR_CHK $? "create perfmon directories and configuration file" 1
 		LOG_MSG "[INFO]:-Starting the Master in admin mode" 1
 		export PGPORT=$GP_PORT;$PG_CTL -w -l $GP_DIR/pg_log/startup.log -D $GP_DIR -o "-i -p $GP_PORT -c gp_role=utility \
-		--gp_dbid=1 --gp_contentid=-1 -m" start >> /dev/null 2>&1
+		-m" start >> /dev/null 2>&1
 		RET_TEXT="`$PG_CTL status -D $GP_DIR`"
 		RUNNING=`$ECHO $RET_TEXT|$EGREP -c "not running|neither"`
 		if [ $RUNNING -ne 0 ]; then

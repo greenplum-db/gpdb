@@ -118,7 +118,7 @@ static bool reached_end_position(XLogRecPtr segendpos, uint32 timeline,
 
 static const char *get_tablespace_mapping(const char *dir);
 static void tablespace_list_append(const char *arg);
-
+static void WriteInternalConfFile(void);
 
 static void
 disconnect_and_exit(int code)
@@ -1172,7 +1172,7 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 
 		if (target_gp_dbid < 1)
 		{
-			fprintf(stderr, _("%s: cannot restore user-defined tablespaces without the --target-gp-dbid option"),
+			fprintf(stderr, _("%s: cannot restore user-defined tablespaces without the --target-gp-dbid option\n"),
 					progname);
 			disconnect_and_exit(1);
 		}
@@ -1454,6 +1454,9 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 
 	if (basetablespace && writerecoveryconf)
 		WriteRecoveryConf();
+
+	if (basetablespace)
+		WriteInternalConfFile();
 }
 
 /*
@@ -2310,6 +2313,13 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
+	if (target_gp_dbid <= 0)
+	{
+		fprintf(stderr, _("%s: no target dbid specified, --target-gp-dbid is required.\n"),
+				progname);
+		exit(1);
+	}
+
 	/*
 	 * Mutually exclusive arguments
 	 */
@@ -2412,4 +2422,34 @@ main(int argc, char **argv)
 	BaseBackup();
 
 	return 0;
+}
+
+static void
+WriteInternalConfFile(void)
+{
+	char		filename[MAXPGPATH];
+	FILE	   *cf;
+	char line_to_write[100];
+	int length;
+
+	sprintf(filename, "%s/%s", basedir, GP_INTERNAL_AUTO_CONF_FILE_NAME);
+
+	cf = fopen(filename, "w");
+	if (cf == NULL)
+	{
+		fprintf(stderr, _("%s: could not create file \"%s\": %s\n"), progname, filename, strerror(errno));
+		disconnect_and_exit(1);
+	}
+
+	length = snprintf(line_to_write, 100, "gp_dbid=%d\n", target_gp_dbid);
+
+	if (fwrite(line_to_write, length, 1, cf) != 1)
+	{
+		fprintf(stderr,
+				_("%s: could not write to file \"%s\": %s\n"),
+				progname, filename, strerror(errno));
+		disconnect_and_exit(1);
+	}
+
+	fclose(cf);
 }

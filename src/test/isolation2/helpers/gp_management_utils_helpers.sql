@@ -9,9 +9,9 @@ create or replace language plpythonu;
 --
 -- usage: `select pg_basebackup('somehost', 12345, 'some_slot_name', '/some/destination/data/directory')`
 --
-create or replace function pg_basebackup(host text, port int, slotname text, datadir text) returns text as $$
+create or replace function pg_basebackup(host text, dbid int, port int, slotname text, datadir text) returns text as $$
     import subprocess
-    cmd = 'pg_basebackup -h %s -p %d --xlog-method stream -R -D %s' % (host, port, datadir)
+    cmd = 'pg_basebackup -h %s -p %d --xlog-method stream -R -D %s --target-gp-dbid %d' % (host, port, datadir, dbid)
 
     if slotname is not None:
         cmd += ' --slot %s' % (slotname)

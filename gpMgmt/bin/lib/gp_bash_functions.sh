@@ -176,6 +176,7 @@ HOSTFILE=/etc/hosts
 PG_PID=postmaster.pid
 PG_OPT=postmaster.opts
 PG_CONF=postgresql.conf
+PG_INTERNAL_CONF=internal.auto.conf
 PG_HBA=pg_hba.conf
 if [ x"$TRUSTED_SHELL" = x"" ]; then TRUSTED_SHELL="$SSH"; fi
 if [ x"$TRUSTED_COPY" = x"" ]; then TRUSTED_COPY="$SCP"; fi

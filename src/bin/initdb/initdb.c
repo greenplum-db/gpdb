@@ -258,7 +258,7 @@ static char *get_encoding_id(char *encoding_name);
 static void set_input(char **dest, char *filename);
 static void check_input(char *path);
 static void write_version_file(char *extrapath);
-static void set_null_conf(void);
+static void set_null_conf(const char*);
 static void test_config_settings(void);
 static void setup_config(void);
 static void bootstrap_template1(void);
@@ -1129,12 +1129,12 @@ write_version_file(char *extrapath)
  * a test backend
  */
 static void
-set_null_conf(void)
+set_null_conf(const char* filename)
 {
 	FILE	   *conf_file;
 	char	   *path;
 
-	path = psprintf("%s/postgresql.conf", pg_data);
+	path = psprintf("%s/%s", pg_data, filename);
 	conf_file = fopen(path, PG_BINARY_W);
 	if (conf_file == NULL)
 	{
@@ -1411,6 +1411,9 @@ setup_config(void)
 			 dynamic_shared_memory_type);
 	conflines = replace_token(conflines, "#dynamic_shared_memory_type = posix",
 							  repltok);
+
+	conflines = add_assignment(conflines, "include", "'%s'",
+							   GP_INTERNAL_AUTO_CONF_FILE_NAME);
 
 	snprintf(path, sizeof(path), "%s/postgresql.conf", pg_data);
 
@@ -3687,7 +3690,8 @@ initialize_data_directory(void)
 	write_version_file(NULL);
 
 	/* Select suitable configuration settings */
-	set_null_conf();
+	set_null_conf("postgresql.conf");
+	set_null_conf(GP_INTERNAL_AUTO_CONF_FILE_NAME);
 	test_config_settings();
 
 	/* Now create all the text config files */
