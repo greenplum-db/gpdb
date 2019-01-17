@@ -4596,16 +4596,15 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					{
 						case PART_STATUS_NONE:
 						case PART_STATUS_ROOT:
-						case PART_STATUS_LEAF:
 							break;
-
+						case PART_STATUS_LEAF:
 						case PART_STATUS_INTERIOR:
 							/*Reject interior branches of partitioned tables.*/
 							ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 									 errmsg("can't set the distribution policy of \"%s\"",
 											RelationGetRelationName(rel)),
-									 errhint("Distribution policy may be set for an entire partitioned table or one of its leaf parts; not for an interior branch.")));
+									 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
 							break; /* tidy */
 					}
 				}
@@ -4614,49 +4613,16 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					switch (ps)
 					{
 						case PART_STATUS_NONE:
-						case PART_STATUS_LEAF:
 							break;
-
+						case PART_STATUS_LEAF:
 						case PART_STATUS_ROOT:
 						case PART_STATUS_INTERIOR:
 							ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-									 errmsg("can't set the distribution policy "
-											"of ONLY \"%s\"",
+									 errmsg("can't set the distribution policy of ONLY \"%s\"",
 											RelationGetRelationName(rel)),
-									 errhint("Distribution policy may be set "
-											 "for an entire partitioned table"
-											 " or one of its leaf parts."
-											 )));
+									 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
 							break; /* tidy */
-					}
-				}
-
-				if ( ps == PART_STATUS_LEAF )
-				{
-					Oid ptrelid = rel_partition_get_master(relid);
-					DistributedBy *dist = lsecond((List*)cmd->def);
-
-					/*	might be null if no policy set, e.g. just
-					 *  a change of storage options...
-					 */
-					if (dist)
-					{
-						Relation ptrel = heap_open(ptrelid,
-												   AccessShareLock);
-						Assert(IsA(dist, DistributedBy));
-
-						if (! can_implement_dist_on_part(ptrel,
-														 dist) )
-							ereport(ERROR,
-									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 errmsg("cannot SET DISTRIBUTED BY for %s",
-											RelationGetRelationName(rel)),
-									 errhint("Leaf distribution policy must be"
-											 " random or match that of the"
-											 " entire partitioned table.")
-									 ));
-						heap_close(ptrel, AccessShareLock);
 					}
 				}
 			}
