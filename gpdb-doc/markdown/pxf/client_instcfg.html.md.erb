@@ -10,15 +10,13 @@ PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache H
 
 PXF bundles all of the JAR files on which it depends, including those for Hadoop services, and loads these JARs at runtime. Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to each Greenplum Database segment host. Before you configure PXF Hadoop, Hive, and HBase connectors, ensure that you can copy configuration files from HDFS, Hive, and HBase hosts in your Hadoop cluster to the Greenplum Database master host.
 
-In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on each Greenplum Database segment host. PXF creates this directory when you run `pxf cluster init`.
+In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on the Greenplum Database master host and synchronize the configuration to the segment hosts. PXF creates the`$PXF_CONF/servers/default` directory when you run `pxf cluster init`.
 
-**Note**: After you complete the configuration procedure, you will have configured the PXF default Hadoop server. End users need not provide a `SERVER` option in a `CREATE EXTERNAL TABLE` command when they access the default Hadoop configuration.
+**Note**: After you complete the configuration procedure, you will have configured the PXF default Hadoop server. End users need not provide a `SERVER` option in a `CREATE EXTERNAL TABLE` command when they access the default Hadoop server configuration.
 
 ## <a id="client-pxf-config-steps"></a>Procedure
 
-Perform the following procedure to configure the desired PXF Hadoop-related connectors on each segment host in your Greenplum Database cluster.
-
-After you configure the connectors, you will use the `pxf cluster sync` command to copy PXF configuration to the segment hosts in your Greenplum Database cluster.
+Perform the following procedure to configure the desired PXF Hadoop-related connectors on the Greenplum Database master host. After you configure the connectors, you will use the `pxf cluster sync` command to copy PXF configuration to the segment hosts in your Greenplum Database cluster.
 
 1. Log in to your Greenplum Database master node:
 
@@ -63,5 +61,11 @@ After you configure the connectors, you will use the `pxf cluster sync` command 
 
 ## <a id="client-cfg-update"></a>Updating Hadoop Configuration
 
-If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must copy the updated `.xml` file(s) to each Greenplum Database segment host and restart PXF on each host.
+If you update your Hadoop, Hive, or HBase configuration while the PXF service is running, you must re-sync the PXF configuration to your Greenplum Database cluster and restart PXF on each segment host in the cluster. For example:
+
+``` shell
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster stop
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster start
+```
 

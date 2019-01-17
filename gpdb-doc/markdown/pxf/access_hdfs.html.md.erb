@@ -27,7 +27,7 @@ PXF is compatible with Cloudera, Hortonworks Data Platform, and generic Apache H
 
 HDFS is the primary distributed storage mechanism used by Apache Hadoop services. When a user or application performs a query on a PXF external table that references an HDFS file, the Greenplum Database master node dispatches the query to all segment hosts. Each segment instance contacts the PXF agent running on its host. When it receives the request from a segment instance, the PXF agent:
 
-1. Spawns a thread for the segment instance.
+1. Allocates a worker thread to serve the request from a segment.
 2. Invokes the HDFS Java API to request metadata information for the HDFS file from the HDFS NameNode. 
 3. Provides the metadata information returned by the HDFS NameNode to the segment instance.  
 
@@ -37,7 +37,7 @@ HDFS is the primary distributed storage mechanism used by Apache Hadoop services
 
 A segment instance uses its Greenplum Database `gp_segment_id` and the file block information described in the metadata to assign itself a specific portion of the query data. The segment instance then sends a request to the PXF agent to read the assigned data. This data may reside on one or more HDFS DataNodes.
 
-The PXF agent invokes the HDFS Java API to read the data and deliver it to the segment instance. The segment instance delivers its portion of the data to the Greenplum Database master node. This communication occurs across segment hosts and segment instances in parallel.
+The PXF agent invokes the HDFS Java API to read the data and delivers it to the segment instance. The segment instance delivers its portion of the data to the Greenplum Database master node. This communication occurs across segment hosts and segment instances in parallel.
 
 
 ## <a id="hadoop_prereq"></a>Prerequisites
@@ -97,7 +97,7 @@ The PXF Hadoop connectors provide built-in profiles to support the following dat
 - SequenceFile
 - AvroSequenceFile
 
-The PXF Hadoop connectors expose the following profiles to read, and in many cases write, these supported data formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a Hadoop file, directory, or table.
+The PXF Hadoop connectors expose the following profiles to read, and in many cases write, these supported data formats:
 
 | Data Source | Data Format | Profile Name(s) | Deprecated Profile Name |
 |-----|------|---------|------------|
@@ -115,3 +115,10 @@ The PXF Hadoop connectors expose the following profiles to read, and in many cas
 | [Hive](hive_pxf.html) | stored as Parquet | Hive | n/a |
 | [HBase](hbase_pxf.html) | Any | HBase | n/a |
 
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a Hadoop file, directory, or table. For example, the following command creates an external table that specifies the profile named `hdfs:text`:
+
+``` sql
+CREATE EXTERNAL TABLE pxf_hdfs_text(location text, month text, num_orders int, total_sales float8)
+   LOCATION ('pxf://data/pxf_examples/pxf_hdfs_simple.txt?PROFILE=hdfs:text')
+FORMAT 'TEXT' (delimiter=E',');
+```

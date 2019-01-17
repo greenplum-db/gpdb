@@ -42,7 +42,7 @@ The PXF object store connectors provide built-in profiles to support the followi
 - AvroSequenceFile
 - SequenceFile
 
-The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the following profiles to read, and in many cases write, these supported data formats. You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a file or directory in the specific object store.
+The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the following profiles to read, and in many cases write, these supported data formats:
 
 | Data Format | Azure Blob Storage | Azure Data Lake | Google Cloud Storage | S3 |
 |-----|------|---------|------------|----------------|
@@ -54,3 +54,10 @@ The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the foll
 | AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
 | [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
 
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table referencing a file or directory in the specific object store. For example, the following command creates an external table that specifies the profile named `s3:text`:
+
+``` sql
+CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, total_sales float8)
+  LOCATION ('pxf://S3_BUCKET/pxf_examples/pxf_s3_simple.txt?PROFILE=s3:text&SERVER=srvname')
+FORMAT 'TEXT' (delimiter=E',');
+```

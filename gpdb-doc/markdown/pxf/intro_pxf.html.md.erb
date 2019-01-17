@@ -8,7 +8,7 @@ The Greenplum Platform Extension Framework (PXF) provides *connectors* that enab
 
 ## <a id="arch"></a> Architectural Overview
 
-Your Greenplum Database deployment consists of a master node and multiple segment hosts. A single PXF agent process on each Greenplum Database segment host spawns a thread for each segment instance on a segment host that participates in a query against an external table. The PXF agents on multiple segment hosts communicate with the external data store in parallel.
+Your Greenplum Database deployment consists of a master node and multiple segment hosts. A single PXF agent process on each Greenplum Database segment host allocates a worker thread for each segment instance on a segment host that participates in a query against an external table. The PXF agents on multiple segment hosts communicate with the external data store in parallel.
 
 
 ## <a id="more"></a> About Connectors, Servers, and Profiles

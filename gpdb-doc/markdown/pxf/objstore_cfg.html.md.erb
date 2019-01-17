@@ -173,7 +173,7 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
 ## <a id="client-cfg-update"></a>Updating Object Store Configuration
 
-If you add or update object store server configuration while the PXF service is running, you must re-sync the PXF configuration to your Greenplum Database cluster restart PXF on each segment host in the cluster. For example:
+If you add or update object store server configuration while the PXF service is running, you must re-sync the PXF configuration to your Greenplum Database cluster and restart PXF on each segment host in the cluster. For example:
 
 ``` shell
 gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
