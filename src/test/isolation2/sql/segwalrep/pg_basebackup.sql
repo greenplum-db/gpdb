@@ -23,21 +23,3 @@ select pg_basebackup(address, port, null, '/tmp/some_isolation2_pg_basebackup') 
 -- Then there should NOT be a replication slot
 0U: select count(1) from pg_get_replication_slots() where slot_name = 'some_replication_slot';
 
--- Given that we suspend a WAL sender
-create extension if not exists gp_inject_fault;
-select gp_inject_fault_infinite('wal_sender_loop', 'suspend', 2);
-!\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
-
--- And we make a call pg_basebackup that will lead to WAL sender fork
-1&:select pg_basebackup(address, port, null, '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
-SELECT gp_wait_until_triggered_fault('wal_sender_loop', 1, dbid) FROM gp_segment_configuration WHERE content = 0 AND role = 'p';
-
--- Then we expect that the application_name of the  WAL sender is not the same
--- 'gp_walreceiver' application name used by primary/mirror WAL sender
-0U: select count(application_name) > 0 as has_replication_app_names from pg_stat_replication where application_name <> 'gp_walreceiver';
-
-select gp_inject_fault('wal_sender_loop', 'resume', 2);
-select gp_inject_fault('wal_sender_loop', 'reset', 2);
-
-1<:
-
