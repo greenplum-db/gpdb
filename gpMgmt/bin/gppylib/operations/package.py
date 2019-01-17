@@ -1037,7 +1037,10 @@ class InstallPackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = []
         self.segment_host_list = segment_host_list
 
     def execute(self):
@@ -1118,7 +1121,10 @@ class PerformHooks(Operation):
         """
         self.hooks = hooks
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = []
         self.segment_host_list = segment_host_list
 
     def execute(self):
@@ -1149,7 +1155,10 @@ class UninstallPackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = []
         self.segment_host_list = segment_host_list
 
     def execute(self):
@@ -1186,7 +1195,7 @@ class UninstallPackage(Operation):
 
             UninstallPackageLocally(self.gppkg.pkg).run()
 
-        # perform any pre-installation steps
+        # perform any post-installation steps
         PerformHooks(hooks=self.gppkg.postuninstall,
                      master_host=self.master_host,
                      standby_host=self.standby_host,
@@ -1375,7 +1384,10 @@ class UpdatePackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = []
         self.segment_host_list = segment_host_list
 
     def execute(self):
