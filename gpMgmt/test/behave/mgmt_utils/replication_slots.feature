@@ -12,6 +12,7 @@ Feature: Replication Slots
 
     When the user runs "gprecoverseg -ra"
     Then gprecoverseg should return a return code of 0
+    And the primaries and mirrors should be replicating using replication slots
 
     When a mirror has crashed
     And I fully recover a mirror
