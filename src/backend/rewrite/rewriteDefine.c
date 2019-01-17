@@ -549,6 +549,8 @@ DefineQueryRewrite(char *rulename,
 		/* drop storage while table still looks like a table  */
 		RelationDropStorage(event_relation);
 		DeleteSystemAttributeTuples(event_relid);
+		/* delete distribution policy record */
+		GpPolicyRemove(event_relid);
 
 		/*
 		 * Drop the toast table if any.  (This won't take care of updating the
@@ -585,8 +587,8 @@ DefineQueryRewrite(char *rulename,
 
 		/*
 		 * Fix pg_class entry to look like a normal view's, including setting
-		 * the correct relkind and removal of reltoastrelid of the toast table
-		 * we potentially removed above.
+		 * the correct relkind/relstorage and removal of reltoastrelid of the
+		 * toast table we potentially removed above.
 		 */
 		classTup = SearchSysCacheCopy1(RELOID, ObjectIdGetDatum(event_relid));
 		if (!HeapTupleIsValid(classTup))
@@ -600,6 +602,7 @@ DefineQueryRewrite(char *rulename,
 		classForm->reltoastrelid = InvalidOid;
 		classForm->relhasindex = false;
 		classForm->relkind = RELKIND_VIEW;
+		classForm->relstorage = RELSTORAGE_VIRTUAL;
 		classForm->relhasoids = false;
 		classForm->relhaspkey = false;
 		classForm->relfrozenxid = InvalidTransactionId;
