@@ -21,9 +21,12 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Use the PXF HDFS connector to read and write parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create and query an external table that references files in the HDFS data store.
+Use the PXF HDFS connector to read and write parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into an external table that references files in the HDFS data store.
+
+PXF currently supports reading and writing primitive parquet data types only.
 
 <div class="note warning">PXF parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
+
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -31,40 +34,22 @@ Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_
 
 
 ## <a id="datatype_map"></a>Data Type Mapping
-### <a id="p2gdatamap"></a>Parquet to Greenplum (Read) Data Type Mapping
 
-To represent Parquet data types in Greenplum Database, map data values to Greenplum Database columns of the same type. The following table summarizes external mapping rules for reading Parquet data.
+To read and write Parquet primitive data types in Greenplum Database, map parquet data values to Greenplum Database columns of the same type. The following table summarizes the external mapping rules:
 
 <a id="p2g_type_mapping_table"></a>
 
 | Parquet Data Type | PXF/Greenplum Data Type |
 |-------------------|-------------------------|
-| boolean | boolean |
-| byte_array | bytea, text |
-| double | float8 |
-| fixed\_len\_byte\_array | numeric |
-| float | real |
-| int\_8, int\_16 | smallint, integer |
-| int64 | bigint |
-| int96 | timestamp |
+| boolean | Boolean |
+| byte_array | Bytea, Text |
+| double | Float8 |
+| fixed\_len\_byte\_array | Numeric |
+| float | Real |
+| int\_8, int\_16 | Smallint, Integer |
+| int64 | Bigint |
+| int96 | Timestamp |
 
-
-### <a id="p2gdatamap"></a>Greenplum to Parquet (Write) Data Type Mapping
-
-To represent Greenplum Database data types in Parquet format, map data values to Parquet columns of the same type. The following table summarizes external mapping rules for writing Parquet data.
-
-<a id="g2p_type_mapping_table"></a>
-
-| PXF/Greenplm Data Type | Parquet Data Type |
-|-------------------|-------------------------|
-| boolean | boolean |
-| bytea, text | byte_array |
-| float8 | double |
-| numeric | fixed\_len\_byte\_array |
-| real | float |
-| smallint, integer | int\_8, int\_16 |
-| bigint | int64 |
-| timestamp | int96 |
 
 ## <a id="profile_cet"></a>Creating the External Table
 
@@ -100,7 +85,7 @@ The PXF `hdfs:parquet` profile supports write compression. You specify the compr
 
 **Note**: You must explicitly specify `uncompressed` if you do not want PXF to compress the data.
 
-Parquet files that you write to HDFS have the following naming format: `<file>.<compression_codec>.parquet`, for example `1547061635-0000004417_0.gz.parquet`.
+Parquet files that you write to HDFS have the following naming format: `<file>.<compress_extension>.parquet`, for example `1547061635-0000004417_0.gz.parquet`.
 
 ## <a id="parquet_write"></a> Example
 
