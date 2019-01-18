@@ -21,11 +21,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-The PXF object store connectors support reading and writing parquet-format data. This section decribes how to use PXF to access parquet-format data in an object store, including how to create and query an external table that references a parquet file in the store.
+The PXF object store connectors support reading and writing Parquet-format data. This section decribes how to use PXF to access Parquet-format data in an object store, including how to create and query an external table that references a Parquet file in the store.
 
-<div class="note warning">PXF parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
+<div class="note warning">PXF Parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
 
-**Note**: Accessing parquet-format data from an object store is very similar to accessing parquet-format data in HDFS. This topic identifies object store-specific information required to read and write parquet data, and links to the [PXF HDFS Parquet documentation](hdfs_parquet.html) where appropriate for common information.
+**Note**: Accessing Parquet-format data from an object store is very similar to accessing Parquet-format data in HDFS. This topic identifies object store-specific information required to read and write Parquet data, and links to the [PXF HDFS Parquet documentation](hdfs_parquet.html) where appropriate for common information.
 
 ## <a id="prereq"></a>Prerequisites
 
@@ -38,7 +38,7 @@ Refer to [Data Type Mapping](hdfs_parquet.html#datatype_map) in the PXF HDFS Par
 
 ## <a id="profile_cet"></a>Creating the External Table
 
-The PXF `<objstore>:parquet` profiles support reading and writing data in parquet-format. PXF supports the following `<objstore>` profile prefixes:
+The PXF `<objstore>:parquet` profiles support reading and writing data in Parquet-format. PXF supports the following `<objstore>` profile prefixes:
 
 | Object Store  | Profile Prefix |
 |-------|-------------------------------------|
@@ -71,11 +71,11 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
 | DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
 
-If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding S3 Server Configuration](access_objstore.html#s3_override).
+If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration](access_objstore.html#s3_override).
 
 ## <a id="example"></a> Example
 
-Refer to the [Example](hdfs_parquet.html#parquet_write) in the PXF HDFS Parquet documentation for a parquet write/read example. Modifications that you must make to run the example with an object store include:
+Refer to the [Example](hdfs_parquet.html#parquet_write) in the PXF HDFS Parquet documentation for a Parquet write/read example. Modifications that you must make to run the example with an object store include:
 
 - Using the `CREATE EXTERNAL TABLE` syntax and `LOCATION` keywords and settings described above for the writable external table. For example, if your server name is `s3srvcfg`:
 

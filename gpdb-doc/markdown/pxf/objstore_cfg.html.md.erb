@@ -49,7 +49,7 @@ When you configure a PXF object store connector, you add at least one named PXF 
 6. Synchronize the server configuration to each Greenplum Database segment host.
 7. Publish the PXF server names to your Greenplum Database end users as appropriate.
 
-The Greenplum Database user will specify the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the object store. For example:
+The Greenplum Database user specifies the server name in the `CREATE EXTERNAL TABLE` `LOCATION` clause `SERVER` option to access the object store. For example:
 
 <pre>
 CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
@@ -109,12 +109,12 @@ The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. Whe
 | Property       | Description                                | Value |
 |----------------|--------------------------------------------|-------|
 | fs.s3a.access.key | The AWS account access key ID. | Your access key. |
-| fs.s3a.secret.key | The secret key associated with the AWS access key ID. | Your secred key. |
+| fs.s3a.secret.key | The secret key associated with the AWS access key ID. | Your secret key. |
 
 <div class="note warning">You can override an S3 server configuration by directly specifying the S3 access ID and secret key via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. For example:<br>
 <pre>CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
   LOCATION ('pxf://BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
-FORMAT 'TEXT' (delimiter=E',');</pre><br>As with the credentials that you configure in the s3-site.xml file, these keys are sent clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
+FORMAT 'TEXT' (delimiter=E',');</pre><br>As with the credentials that you configure in the s3-site.xml file, these keys are sent in clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
 
 ## <a id="cfg_proc"></a>Example Configuration Procedure
 
@@ -180,7 +180,7 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
 
 ## <a id="client-cfg-update"></a>Adding or Updating Object Store Configuration
 
-If you add or update object store server configuration on the Greenplum Database master host, you must re-sync the PXF configuration to the Greenplum Database cluster:
+If you add or update the object store server configuration on the Greenplum Database master host, you must re-sync the PXF configuration to the Greenplum Database cluster:
 
 ``` shell
 gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

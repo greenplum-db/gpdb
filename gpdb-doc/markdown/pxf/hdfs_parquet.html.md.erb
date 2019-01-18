@@ -21,11 +21,11 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-Use the PXF HDFS connector to read and write parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into an external table that references files in the HDFS data store.
+Use the PXF HDFS connector to read and write Parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into an external table that references files in the HDFS data store.
 
-PXF currently supports reading and writing primitive parquet data types only.
+PXF currently supports reading and writing primitive Parquet data types only.
 
-<div class="note warning">PXF parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
+<div class="note warning">PXF Parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
 
 
 ## <a id="prereq"></a>Prerequisites
@@ -35,7 +35,7 @@ Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_
 
 ## <a id="datatype_map"></a>Data Type Mapping
 
-To read and write Parquet primitive data types in Greenplum Database, map parquet data values to Greenplum Database columns of the same type. The following table summarizes the external mapping rules:
+To read and write Parquet primitive data types in Greenplum Database, map Parquet data values to Greenplum Database columns of the same type. The following table summarizes the external mapping rules:
 
 <a id="p2g_type_mapping_table"></a>
 
@@ -53,7 +53,7 @@ To read and write Parquet primitive data types in Greenplum Database, map parque
 
 ## <a id="profile_cet"></a>Creating the External Table
 
-The PXF HDFS connector `hdfs:parquet` profile supports reading and writing HDFS data in parquet-format. When you insert records into a writable external table, the block(s) of data that you insert are written to one or more files in the directory that you specified.
+The PXF HDFS connector `hdfs:parquet` profile supports reading and writing HDFS data in Parquet-format. When you insert records into a writable external table, the block(s) of data that you insert are written to one or more files in the directory that you specified.
 
 Use the following syntax to create a Greenplum Database external table that references an HDFS directory:
 
@@ -81,7 +81,7 @@ The PXF `hdfs:parquet` profile supports write compression. You specify the compr
 
 | Option  | Value Description |
 |-------|-------------------------------------|
-| COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using snappy compression. |
+| COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using snappy compression. |
 
 **Note**: You must explicitly specify `uncompressed` if you do not want PXF to compress the data.
 
@@ -98,7 +98,7 @@ This example utilizes the data schema introduced in [Example: Reading Text Data 
 | number\_of\_orders | int |
 | total\_sales | float8 |
 
-In this example, you create a parquet-format writable external table that references parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
+In this example, you create a Parquet-format writable external table that references Parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
 
 1. Use the `hdfs:parquet` profile to create a writable external table. For example:
 

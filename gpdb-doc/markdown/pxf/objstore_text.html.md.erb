@@ -60,7 +60,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'`  when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
-If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding S3 Server Configuration](access_objstore.html#s3_override).
+If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration](access_objstore.html#s3_override).
 
 ### <a id="profile_text_query"></a>Example: Reading Text Data from S3
 
@@ -163,7 +163,7 @@ The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guid
 | FORMAT | Use `FORMAT` `'TEXT'` when \<path-to-file\> references plain text delimited data.<br> Use `FORMAT` `'CSV'` when \<path-to-file\> references comma-separated value data.  |
 | delimiter    | The delimiter character in the data. For `FORMAT` `'CSV'`, the default \<delim_value\> is a comma `,`. Preface the \<delim_value\> with an `E` when the value is an escape sequence. Examples: `(delimiter=E'\t')`, `(delimiter ':')`. |
 
-If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding S3 Server Configuration](access_objstore.html#s3_override).
+If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration](access_objstore.html#s3_override).
 
 ### <a id="profile_textmulti_query"></a>Example: Reading Multi-Line Text Data from S3
 
@@ -279,7 +279,7 @@ You specify the compression codec via custom options in the `CREATE EXTERNAL TAB
 | COMPRESSION_TYPE    | The compression type to employ; supported values are `RECORD` (the default) or `BLOCK`. |
 | THREAD-SAFE | Boolean value determining if a table query can run in multi-threaded mode. The default value is `TRUE`. Set this option to `FALSE` to handle all requests in a single thread for operations that are not thread-safe (for example, compression). |
 
-If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding S3 Server Configuration](access_objstore.html#s3_override).
+If you are accessing an S3 object store, you can provide S3 credentials directly in the `CREATE EXTERNAL TABLE` command as described in [Overriding the S3 Server Configuration](access_objstore.html#s3_override).
 
 ### <a id="write_s3textsimple_example"></a>Example: Writing Text Data to S3
 

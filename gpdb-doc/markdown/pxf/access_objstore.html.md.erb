@@ -62,9 +62,9 @@ CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, tot
 FORMAT 'TEXT' (delimiter=E',');
 </pre>
 
-## <a id="s3_override"></a>Overriding S3 Server Configuration
+## <a id="s3_override"></a>Overriding the S3 Server Configuration
 
-If you are accessing the S3 object store, you can override an S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+If you are accessing an S3 object store, you can override the S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
 
 | Custom Option  | Value Description |
 |-------|-------------------------------------|
@@ -76,7 +76,7 @@ For example:
   LOCATION ('pxf://S3_BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
 FORMAT 'TEXT' (delimiter=E',');</pre>
 
-<div class="note warning">Credentials that you provide in this manner are sent clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
+<div class="note warning">Credentials that you provide in this manner are sent in clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
 
-PXF does not support overriding Azure, Google Cloud Storage, and Minio server configuration at this time.
+PXF does not support overriding Azure, Google Cloud Storage, and Minio server configurations at this time.
 
