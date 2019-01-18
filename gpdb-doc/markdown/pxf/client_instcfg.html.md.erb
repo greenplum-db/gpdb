@@ -10,7 +10,7 @@ PXF is compatible with Cloudera, Hortonworks Data Platform, MapR, and generic Ap
 
 Configuring PXF Hadoop connectors involves copying configuration files from your Hadoop cluster to the Greenplum Database master host. If you are using the MapR Hadoop distribution, you must also copy certain JAR files to the master host. Before you configure the PXF Hadoop connectors, ensure that you can copy files from hosts in your Hadoop cluster to the Greenplum Database master.
 
-In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on the Greenplum Database master host. You may also copy libraries to `$PXF_CONF/lib. You then synchronize the PXF configuration on the master host to the segment hosts. (PXF creates the`$PXF_CONF/*` directories when you run `pxf cluster init`.)
+In this procedure, you copy Hadoop configuration files to the `$PXF_CONF/servers/default` directory on the Greenplum Database master host. You may also copy libraries to `$PXF_CONF/lib`. You then synchronize the PXF configuration on the master host to the segment hosts. (PXF creates the`$PXF_CONF/*` directories when you run `pxf cluster init`.)
 
 **Note**: After you complete the configuration procedure, you will have configured the PXF default Hadoop server. End users need not provide a `SERVER` option in a `CREATE EXTERNAL TABLE` command when they access the default Hadoop server configuration.
 
