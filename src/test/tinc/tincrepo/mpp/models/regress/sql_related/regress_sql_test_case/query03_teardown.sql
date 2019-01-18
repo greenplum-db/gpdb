@@ -1,1 +1,0 @@
-select 'testcase_teardown';
