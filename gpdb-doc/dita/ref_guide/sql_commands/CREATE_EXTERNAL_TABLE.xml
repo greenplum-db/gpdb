@@ -218,7 +218,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
           href="../../admin_guide/external/g-specify-hdfs-data-in-an-external-table-definition.xml"/> for additional information about
          the <codeph>gphdfs</codeph> protocol <codeph>LOCATION</codeph> clause syntax.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
           documentation for detailed information about
           the <codeph>pxf</codeph> protocol <codeph>LOCATION</codeph> clause syntax.</pd>
           <pd>If you use the <codeph>s3</codeph> protocol to read or write to S3, refer to <xref
@@ -333,7 +333,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
          for detailed information about the <codeph>gphdfs</codeph> protocol <codeph>FORMAT</codeph>
          clause syntax.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the PXF <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
           documentation for detailed information about
           the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
         </plentry>
@@ -344,7 +344,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE <varname>table_name</varna
             to the formatter function. The length of the formatter specification, the string
             including <codeph>Formatter=</codeph>, can be up to approximately 50K bytes.</pd>
           <pd>If you use the <codeph>pxf</codeph> protocol to access an external data source,
-          refer to the PXF <xref href="../../pxf/using_pxf.html#creatinganexternaltable" format="html">Creating an External Table Using PXF</xref>
+          refer to the PXF <xref href="../../pxf/intro_pxf.html#create_external_table" format="html">Creating an External Table</xref>
           documentation for detailed information about
           the <codeph>pxf</codeph> protocol <codeph>FORMAT</codeph> clause syntax.</pd>
           <pd>For general information about using a custom format, see "Loading and Unloading Data" in the
