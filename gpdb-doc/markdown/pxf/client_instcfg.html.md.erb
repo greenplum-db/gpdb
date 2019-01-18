@@ -46,7 +46,7 @@ Perform the following procedure to configure the desired PXF Hadoop-related conn
     gpadmin@gpmaster$ scp hbaseuser@hbasehost:/etc/hbase/conf/hbase-site.xml .
     ```
 
-2. If you are using PXF with the MapR Hadoop distribution, you must copy certain JAR files from your MapR cluster to the Greenplum Database master host. For example, these commands use `scp` to copy the files:
+2. If you are using PXF with the MapR Hadoop distribution, you must copy certain JAR files from your MapR cluster to the Greenplum Database master host. (Your file paths may differ based on the version of MapR in use.) For example, these commands use `scp` to copy the files:
 
     ``` shell
     gpadmin@gpmaster$ cd $PXF_CONF/lib
