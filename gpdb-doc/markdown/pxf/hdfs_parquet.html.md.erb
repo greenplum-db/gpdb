@@ -1,0 +1,139 @@
+---
+title: Reading and Writing HDFS Parquet Data
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+Use the PXF HDFS connector to read and write Parquet-format data. This section decribes how to read and write HDFS files that are stored in Parquet format, including how to create, query, and insert into an external table that references files in the HDFS data store.
+
+PXF currently supports reading and writing primitive Parquet data types only.
+
+<div class="note warning">PXF Parquet write support is an experimental feature and is not intended for use in a production environment. Experimental features are subject to change without notice in future releases.</div>
+
+
+## <a id="prereq"></a>Prerequisites
+
+Ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_prereq) before you attempt to read data from or write data to HDFS.
+
+
+## <a id="datatype_map"></a>Data Type Mapping
+
+To read and write Parquet primitive data types in Greenplum Database, map Parquet data values to Greenplum Database columns of the same type. The following table summarizes the external mapping rules:
+
+<a id="p2g_type_mapping_table"></a>
+
+| Parquet Data Type | PXF/Greenplum Data Type |
+|-------------------|-------------------------|
+| boolean | Boolean |
+| byte_array | Bytea, Text |
+| double | Float8 |
+| fixed\_len\_byte\_array | Numeric |
+| float | Real |
+| int\_8, int\_16 | Smallint, Integer |
+| int64 | Bigint |
+| int96 | Timestamp |
+
+
+## <a id="profile_cet"></a>Creating the External Table
+
+The PXF HDFS connector `hdfs:parquet` profile supports reading and writing HDFS data in Parquet-format. When you insert records into a writable external table, the block(s) of data that you insert are written to one or more files in the directory that you specified.
+
+Use the following syntax to create a Greenplum Database external table that references an HDFS directory:
+
+``` sql
+CREATE [WRITABLE] EXTERNAL TABLE <table_name>
+    ( <column_name> <data_type> [, ...] | LIKE <other_table> )
+LOCATION ('pxf://<path-to-hdfs-dir>
+    ?PROFILE=hdfs:parquet[&<custom-option>=<value>[...]]')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import'|'pxfwritable_export');
+[DISTRIBUTED BY (<column_name> [, ... ] ) | DISTRIBUTED RANDOMLY];
+```
+
+The specific keywords and values used in the [CREATE EXTERNAL TABLE](../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.html) command are described in the table below.
+
+| Keyword  | Value |
+|-------|-------------------------------------|
+| \<path&#8209;to&#8209;hdfs&#8209;file\>    | The absolute path to the directory in the HDFS data store. |
+| PROFILE    | The `PROFILE` keyword must specify `hdfs:parquet`. |
+| \<custom&#8209;option\>=\<value\>  | \<custom-option\>s are described below.|
+| FORMAT 'CUSTOM' | Use `FORMAT` '`CUSTOM`' with `(FORMATTER='pxfwritable_export')` (write) or `(FORMATTER='pxfwritable_import')` (read). |
+| DISTRIBUTED BY    | If you plan to load the writable external table with data from an existing Greenplum Database table, consider specifying the same distribution policy or \<column_name\> on the writable external table as that defined for the table from which you plan to load the data. Doing so will avoid extra motion of data between segments on the load operation. |
+
+<a id="customopts"></a>
+The PXF `hdfs:parquet` profile supports write compression. You specify the compression codec via a custom option in the `CREATE EXTERNAL TABLE` `LOCATION` clause. The `hdfs:parquet` profile supports the following custom options:
+
+| Option  | Value Description |
+|-------|-------------------------------------|
+| COMPRESSION_CODEC    | The compression codec alias. Supported compression codecs for writing Parquet data include: `snappy`, `gzip`, `lzo`, and `uncompressed` . If this option is not provided, PXF compresses the data using snappy compression. |
+
+**Note**: You must explicitly specify `uncompressed` if you do not want PXF to compress the data.
+
+Parquet files that you write to HDFS have the following naming format: `<file>.<compress_extension>.parquet`, for example `1547061635-0000004417_0.gz.parquet`.
+
+## <a id="parquet_write"></a> Example
+
+This example utilizes the data schema introduced in [Example: Reading Text Data on HDFS](hdfs_text.html#profile_text_query).
+
+| Column Name  | Data Type |
+|-------|-------------------------------------|
+| location | text |
+| month | text |
+| number\_of\_orders | int |
+| total\_sales | float8 |
+
+In this example, you create a Parquet-format writable external table that references Parquet-format data in HDFS, insert some data into the table, and then create a readable external table to read the data.
+
+1. Use the `hdfs:parquet` profile to create a writable external table. For example:
+
+    ``` sql
+    postgres=# CREATE WRITABLE EXTERNAL TABLE pxf_tbl_parquet (location text, month text, number_of_orders int, total_sales double precision)
+        LOCATION ('pxf://data/pxf_examples/pxf_parquet?PROFILE=hdfs:parquet')
+      FORMAT 'CUSTOM' (FORMATTER='pxfwritable_export');
+    ```
+
+2. Write a few records to the `pxf_parquet` HDFS directory by inserting directly into the `pxf_tbl_parquet` table. For example:
+
+    ``` sql
+    postgres=# INSERT INTO pxf_tbl_parquet VALUES ( 'Frankfurt', 'Mar', 777, 3956.98 );
+    postgres=# INSERT INTO pxf_tbl_parquet VALUES ( 'Cleveland', 'Oct', 3812, 96645.37 );
+    ```
+
+3. Recall that Greenplum Database does not support directly querying a writable external table. To read the data in `pxf_parquet`, create a readable external Greenplum Database referencing this HDFS directory:
+
+    ``` sql
+    postgres=# CREATE EXTERNAL TABLE read_pxf_parquet(location text, month text, number_of_orders int, total_sales double precision)
+        LOCATION ('pxf://data/pxf_examples/pxf_parquet?PROFILE=hdfs:parquet')
+        FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
+    ```
+
+4. Query the readable external table `read_pxf_parquet`:
+
+    ``` sql
+    gpadmin=# SELECT * FROM read_pxf_parquet ORDER BY total_sales;
+    ```
+
+    ``` pre
+     location  | month | number_of_orders | total_sales
+    -----------+-------+------------------+-------------
+     Frankfurt | Mar   |              777 |     3956.98
+     Cleveland | Oct   |             3812 |     96645.4
+    (2 rows)
+    ```
+

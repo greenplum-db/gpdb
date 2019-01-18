@@ -1,0 +1,82 @@
+---
+title: Accessing Azure, Google Cloud Storage, Minio, and S3 Object Stores with PXF
+---
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+PXF is installed with connectors to Azure Blob Storage, Azure Data Lake, Google Cloud Storage, Minio, and S3 object stores.
+
+## <a id="objstore_prereq"></a>Prerequisites
+
+Before working with object store data using PXF, ensure that:
+
+- You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
+- You have configured the PXF Object Store Connectors that you plan to use on each Greenplum Database segment host. Refer to [Configuring Connectors to Azure, Google Cloud Storage, Minio, and S3 Object Stores](objstore_cfg.html) for instructions.
+
+
+## <a id="objstore_connectors"></a>Connectors, Data Formats, and Profiles
+
+The PXF object store connectors provide built-in profiles to support the following data formats:
+
+- Text
+- Avro
+- JSON
+- Parquet
+- AvroSequenceFile
+- SequenceFile
+
+The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the following profiles to read, and in many cases write, these supported data formats:
+
+| Data Format | Azure Blob Storage | Azure Data Lake | Google Cloud Storage | S3 or Minio |
+|-----|------|---------|------------|----------------|
+| delimited single line [plain text](objstore_text.html) | wasbs:text | adl:text | gs:text | s3:text |
+| delimited [text with quoted linefeeds](objstore_text.html) | wasbs:text:multi | adl:text:multi | gs:text:multi | s3:text:multi |
+| [Avro](objstore_avro.html) | wasbs:avro | adl:avro | gs:avro | s3:avro |
+| [JSON](objstore_json.html) | wasbs:json | adl:json | gs:json | s3:json |
+| [Parquet](objstore_parquet.html) | wasbs:parquet | adl:parquet | gs:parquet | s3:parquet |
+| AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
+| [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
+
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a file or directory in the specific object store. For example, the following command creates an external table that specifies the profile named `s3:text`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, total_sales float8)
+  LOCATION ('pxf://S3_BUCKET/pxf_examples/pxf_s3_simple.txt?<b>PROFILE=s3:text</b>&SERVER=s3srvcfg')
+FORMAT 'TEXT' (delimiter=E',');
+</pre>
+
+## <a id="s3_override"></a>Overriding the S3 Server Configuration
+
+If you are accessing an S3 object store, you can override the S3 server configuration by directly specifying the S3 access ID and secret key via these custom options in the `CREATE EXTERNAL TABLE` `LOCATION` clause:
+
+| Custom Option  | Value Description |
+|-------|-------------------------------------|
+| accesskey    | The AWS account access key ID. |
+| secretkey    | The secret key associated with the AWS access key ID. |
+
+For example:
+<pre>CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
+  LOCATION ('pxf://S3_BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
+FORMAT 'TEXT' (delimiter=E',');</pre>
+
+<div class="note warning">Credentials that you provide in this manner are sent in clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
+
+PXF does not support overriding Azure, Google Cloud Storage, and Minio server configurations at this time.
+

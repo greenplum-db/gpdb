@@ -1,5 +1,5 @@
 ---
-title: Initializing and Managing PXF
+title: Starting, Stopping, and Restarting PXF
 ---
 
 <!--
@@ -21,57 +21,15 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-You must initialize and start PXF before you can use the framework.
 
 PXF provides two management commands:
 
 - `pxf cluster` - manage all PXF service instances in the Greenplum Database cluster
 - `pxf` - manage the PXF service instance on a specific Greenplum Database host
 
-The [`pxf cluster`](ref/pxf-cluster.html) command supports `init`, `start`, and `stop` subcommands. When you run a `pxf cluster` subcommand, you perform the operation on all segment hosts in the Greenplum Database cluster.
+The [`pxf cluster`](ref/pxf-cluster.html) command supports `init`, `start`, `stop`, and `sync` subcommands. When you run a `pxf cluster` subcommand on the Greenplum Database master host, you perform the operation on all segment hosts in the Greenplum Database cluster.
 
 The [`pxf`](ref/pxf.html) command supports `init`, `start`, `stop`, `restart`, and `status` operations. These operations run locally. That is, if you want to start or stop the PXF agent on a specific Greenplum Database segment host, you log in to the host and run the command. 
-
-
-## <a id="init_pxf"></a>Initializing PXF
-
-You must explicitly initialize the PXF service instance. This one-time initialization creates the PXF service web application and generates PXF configuration files and templates.
-
-PXF supports both internal and user-customizable configuration properties. Initializing PXF generates PXF internal configuration files, setting default properties specific to your configuration. Initializing PXF also generates configuration file templates for user-customizable settings such as custom profiles and PXF runtime and logging settings.
-
-PXF internal configuration files are located in `$GPHOME/pxf/conf`. You identify the PXF user configuration directory at initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF may prompt you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
-
-**Note**: The `gpadmin` user must have permission to either create, or write to, the specified `$PXF_CONF` directory.
-
-During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [PXF User Configuration Directories](about_pxf_dir.html#usercfg) for a list of these directories and their contents.
-
-
-### <a id="init-pxf-prereq" class="no-quick-link"></a>Prerequisites
-
-Before initializing PXF in your Greenplum Database cluster, ensure that:
-
-- Your Greenplum Database cluster is up and running.
-- You have identified the PXF user configuration directory filesystem location, `$PXF_CONF`.
- 
-### <a id="init-pxf-steps" class="no-quick-link"></a>Procedure
-
-Perform the following procedure to initialize PXF on each segment host in your Greenplum Database cluster.
-
-1. Log in to the Greenplum Database master node:
-
-    ``` shell
-    $ ssh gpadmin@<gpmaster>
-    ```
-
-4. Run the `pxf cluster init` command to initialize the PXF service on the master and on each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization.)
-
-    ``` shell
-    gpadmin@gpmaster$ PXF_CONF=/etc/pxf/usercfg $GPHOME/pxf/bin/pxf cluster init
-    ```
-
-    The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.
-
-    **Note**: The PXF service runs only on the segment hosts. However,`pxf cluster init` also sets up the PXF user configuration directories on the Greenplum Database master host.
 
 
 ## <a id="start_pxf"></a>Starting PXF
@@ -91,12 +49,12 @@ The `pxf-env.sh` file exposes the following PXF runtime configuration parameters
 | Parameter  | Description | Default Value |
 |-----------|---------------| ------------|
 | JAVA_HOME    | The Java JRE home directory. | /usr/java/default |
-| PXF_LOG_DIR   | The PXF log directory. | $PXF_CONF/logs |
+| PXF_LOGDIR   | The PXF log directory. | $PXF_CONF/logs |
 | PXF_JVM_OPTS  | Default options for the PXF Java virtual machine. | -Xmx2g -Xms1g |
 | PXF_KEYTAB  | The absolute path to the PXF service Kerberos principal keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
 | PXF_PRINCIPAL  | The PXF service Kerberos principal. | gpadmin/\_HOST@EXAMPLE.COM |
 
-You must propagate any changes that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
+You must synchronize any changes that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
 
 ### <a id="start_pxf_prereq" class="no-quick-link"></a>Prerequisites
 
@@ -170,25 +128,5 @@ Perform the following procedure to restart PXF in your Greenplum Database cluste
     ```shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster stop
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster start
-    ```
-
-## <a id="status_pxf"></a>Displaying PXF Status
-
-If you want to display PXF status, you must explicitly request the status of the PXF service instance on each segment host in your Greenplum Database cluster.
-
-Only the `gpadmin` user can request the status of the PXF service.
-
-Perform the following procedure to request PXF status on each segment host in your Greenplum Database cluster.
-
-1. Log in to the Greenplum Database master node:
-
-    ``` shell
-    $ ssh gpadmin@<gpmaster>
-    ```
-
-2. Use the `gpssh` command and a seghostfile to run the `pxf status` command on each segment host:
-
-    ```shell
-    gpadmin@gpmaster$ gpssh -e -v -f seghostfile "/usr/local/greenplum-db/pxf/bin/pxf status"
     ```
 
