@@ -128,15 +128,15 @@ In this procedure, you name and add a PXF server configuration in the `$PXF_CONF
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. PXF includes connectors to the Azure Data Lake, Azure Blob Storage, Google Cloud Storage, and S3 object stores. Determine the PXF object store connectors that you want to configure.
+2. PXF includes connectors to the Azure Data Lake, Azure Blob Storage, Google Cloud Storage, Minio, and S3 object stores. Identify the PXF object store connectors that you want to configure.
 
 3. For each object store connector that you configure:
 
-    1. Determine a name for the server. You will provide the name to end users that need to reference files in the object store.
+    1. Choose a name for the server. You will provide the name to end users that need to reference files in the object store.
 
         **Note**: The server name `default` is reserved.
 
-    2. Create the `$PXF_HOME/servers/*server_name*` directory. For example, use the following command if you are creating a server configuration for Google Cloud Storage and you want to name the server `gs_public`:
+    2. Create the `$PXF_HOME/servers/<server_name>` directory. For example, use the following command if you are creating a server configuration for Google Cloud Storage and you want to name the server `gs_public`:
 
         ``` shell
         gpadmin@gpmaster$ mkdir $PXF_CONF/servers/gs_public

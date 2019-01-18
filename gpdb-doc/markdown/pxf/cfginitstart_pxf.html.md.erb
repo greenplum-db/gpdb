@@ -27,7 +27,7 @@ PXF provides two management commands:
 - `pxf cluster` - manage all PXF service instances in the Greenplum Database cluster
 - `pxf` - manage the PXF service instance on a specific Greenplum Database host
 
-The [`pxf cluster`](ref/pxf-cluster.html) command supports `init`, `start`, and `stop` subcommands. When you run a `pxf cluster` subcommand on the Greenplum Database master host, you perform the operation on all segment hosts in the Greenplum Database cluster.
+The [`pxf cluster`](ref/pxf-cluster.html) command supports `init`, `start`, `stop`, and `sync` subcommands. When you run a `pxf cluster` subcommand on the Greenplum Database master host, you perform the operation on all segment hosts in the Greenplum Database cluster.
 
 The [`pxf`](ref/pxf.html) command supports `init`, `start`, `stop`, `restart`, and `status` operations. These operations run locally. That is, if you want to start or stop the PXF agent on a specific Greenplum Database segment host, you log in to the host and run the command. 
 
@@ -49,12 +49,12 @@ The `pxf-env.sh` file exposes the following PXF runtime configuration parameters
 | Parameter  | Description | Default Value |
 |-----------|---------------| ------------|
 | JAVA_HOME    | The Java JRE home directory. | /usr/java/default |
-| PXF_LOG_DIR   | The PXF log directory. | $PXF_CONF/logs |
+| PXF_LOGDIR   | The PXF log directory. | $PXF_CONF/logs |
 | PXF_JVM_OPTS  | Default options for the PXF Java virtual machine. | -Xmx2g -Xms1g |
 | PXF_KEYTAB  | The absolute path to the PXF service Kerberos principal keytab file. | $PXF_CONF/keytabs/pxf.service.keytab |
 | PXF_PRINCIPAL  | The PXF service Kerberos principal. | gpadmin/\_HOST@EXAMPLE.COM |
 
-You must propagate any changes that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
+You must synchronize any changes that you make to `pxf-env.sh`, `pxf-log4j.properties`, or `pxf-profiles.xml` to each Greenplum Database segment host, and (re)start PXF on each host.
 
 ### <a id="start_pxf_prereq" class="no-quick-link"></a>Prerequisites
 
