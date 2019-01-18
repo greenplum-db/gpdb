@@ -1,5 +1,4 @@
 
-{% set walrep_suites = ['walrep_2'] %}
 {% set CLI_1_suites = ['gprecoverseg',
                       'gpcheckcat',
                       'gpinitstandby',
@@ -68,11 +67,6 @@ groups:
   - gpdb_packaging_ubuntu16
 {% endif %}
   - gate_icw_end
-{% endif %}
-{% if "Replication" in test_sections %}
-  ## --------------------------------------------------------------------
-  - gate_replication_start
-  - walrep_2
 {% endif %}
 {% if "Interconnect" in test_sections %}
   ## --------------------------------------------------------------------
@@ -225,16 +219,6 @@ groups:
 {% endif %}
 
 {% endif %}
-{% if "Replication" in test_sections %}
-## ======================================================================
-
-- name: Replication
-  jobs:
-  - gate_replication_start
-  - walrep_2
-  - compile_gpdb_centos6
-
-{% endif %}
 {% if "Interconnect" in test_sections %}
 ## ======================================================================
 
@@ -339,7 +323,6 @@ resource_types:
 
 resources:
 {% if ("ICW"    in test_sections and "sles" in os_types) or
-      "Replication"      in test_sections or
       "ResourceGroups"     in test_sections or
       "CLI"      in test_sections or
       "UD"      in test_sections %}
@@ -808,11 +791,6 @@ anchors:
         AWS_DEFAULT_REGION: {{tf-machine-region}}
         BUCKET_PATH: clusters-google/
         BUCKET_NAME: {{tf-bucket-name}}
-
-replication_ccp_gen_cluster_params_anchor: &replication_ccp_gen_cluster_params
-  file: ccp_src/ci/tasks/gen_cluster.yml
-  params:
-    <<: *ccp_gen_cluster_default_params
 
 ## ======================================================================
 ##    _       _
@@ -1465,63 +1443,6 @@ jobs:
     params:
       file: bin_gpdb_centos6/bin_gpdb.tar.gz
 {% endif %}
-
-{% endif %}
-{% if "Replication" in test_sections %}
-## ======================================================================
-##  ____            _ _           _   _
-## |  _ \ ___ _ __ | (_) ___ __ _| |_(_) ___  _ __
-## | |_) / _ \ '_ \| | |/ __/ _` | __| |/ _ \| '_ \
-## |  _ <  __/ |_) | | | (_| (_| | |_| | (_) | | | |
-## |_| \_\___| .__/|_|_|\___\__,_|\__|_|\___/|_| |_|
-##           |_|
-## ======================================================================
-
-- name: gate_replication_start
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed:
-      - compile_gpdb_centos6
-      trigger: true
-    - get: bin_gpdb_centos6
-      passed:
-      - compile_gpdb_centos6
-
-{% for test_name in walrep_suites %}
-- name: [[ test_name ]]
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_replication_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_replication_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: gpinitsystem
-    file: ccp_src/ci/tasks/gpinitsystem.yml
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_tinc.yml
-    image: ccp-image
-    params:
-      TINC_TARGET: [[ test_name ]]
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
-{% endfor %}
 
 {% endif %}
 {% if "Interconnect" in test_sections %}
