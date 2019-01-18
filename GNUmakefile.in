@@ -118,10 +118,6 @@ create-demo-cluster:
 destroy-demo-cluster:
 	$(MAKE) -C gpAux/gpdemo destroy-demo-cluster
 
-create-tinc-test-cluster: destroy-demo-cluster
-	$(MAKE) -C gpAux/gpdemo DEFAULT_QD_MAX_CONNECT=150 NUM_PRIMARY_MIRROR_PAIRS=2
-	. gpAux/gpdemo/gpdemo-env.sh && createdb gptest
-
 check check-tests: all
 
 check check-tests installcheck installcheck-parallel installcheck-tests:
