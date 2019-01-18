@@ -132,7 +132,7 @@ pg_dist_wait_status(PG_FUNCTION_ARGS)
 			int			i;
 
 			CdbDispatchCommand("SELECT * FROM pg_catalog.pg_dist_wait_status()",
-							   DF_WITH_SNAPSHOT, &ctx->cdb_pgresults);
+							   DF_NONE, &ctx->cdb_pgresults);
 
 			if (ctx->cdb_pgresults.numResults == 0)
 				elog(ERROR, "pg_dist_wait_status() didn't get back any data from the segDBs");

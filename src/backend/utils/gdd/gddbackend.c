@@ -222,13 +222,6 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	InitBufferPoolBackend();
 	InitXLOGAccess();
 
-	/*
-	 * This is tricky, adding SharedLocalSnapshotSlot to make GDD to be a dispatcher,
-	 * see isDtxQueryDispatcher(), so GDD can get newest segment configuration.
-	 * see setCurrentGxact()
-	 */ 
-	addSharedSnapshot("GDD Dispatcher", gp_session_id);
-
 	SetProcessingMode(NormalProcessing);
 
 	/* Allocate MemoryContext */
