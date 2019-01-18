@@ -2597,8 +2597,10 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 {
 	IndexStmt  *index;
 	ListCell   *lc;
+	Oid namespaceId = 0;
 
 	index = makeNode(IndexStmt);
+	
 
 	index->unique = (constraint->contype != CONSTR_EXCLUSION);
 	index->primary = (constraint->contype == CONSTR_PRIMARY);
@@ -2624,11 +2626,13 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 	/*
 	 * We used to force the index name to be the constraint name, but they
 	 * are in different namespaces and so have different  requirements for
-	 * uniqueness. Here we leave the index name alone and put the constraint
-	 * name in the IndexStmt, for use in DefineIndex.
+	 * uniqueness. At one point we were choosing the name in DefineIndex, 
+	 * but that doesn't work if we want to point to this table in an
+	 * AlterTableStmt in the same dispatch.
 	 */
-	index->idxname = NULL;	/* DefineIndex will choose name */
+	index->idxname = NULL;	/* ChooseIndexName will choose name below */
 	index->altconname = constraint->conname; /* User may have picked the name. */
+
 
 	index->relation = cxt->relation;
 	index->accessMethod = constraint->access_method ? constraint->access_method : DEFAULT_INDEX_TYPE;
@@ -2642,6 +2646,15 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 	index->oldNode = InvalidOid;
 	index->concurrent = false;
 
+
+	/*
+	 * Get the namespaceId for use in 
+	 */
+	if (cxt->relation->schemaname != NULL) 
+		namespaceId = GetSysCacheOid(NAMESPACENAME,
+									 CStringGetDatum(cxt->relation->schemaname),
+									 0, 0, 0);
+	
 	/*
 	 * If it's ALTER TABLE ADD CONSTRAINT USING INDEX, look up the index and
 	 * verify it's usable, then extract the implied column name list.  (We
@@ -2832,6 +2845,17 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 			index->excludeOpNames = lappend(index->excludeOpNames, opname);
 		}
 
+
+		/*
+		 * Select name for index if it is a partitioned table
+		 */
+		if (cxt->iscreatepart || cxt->issplitpart)
+			index->idxname = ChooseIndexName(cxt->relation->relname,
+											 namespaceId,
+											 ChooseIndexColumnNames(index->indexParams),
+											 index->excludeOpNames,
+											 index->primary,
+											 index->isconstraint);
 		return index;
 	}
 
@@ -2965,6 +2989,16 @@ transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 		index->indexParams = lappend(index->indexParams, iparam);
 	}
 
+	/*
+	 * Select name for index if it is a partitioned table
+	 */
+	if (cxt->iscreatepart || cxt->issplitpart)
+		index->idxname = ChooseIndexName(cxt->relation->relname,
+										 namespaceId,
+										 ChooseIndexColumnNames(index->indexParams),
+										 index->excludeOpNames,
+										 index->primary,
+										 index->isconstraint);
 	return index;
 }
 
@@ -3690,6 +3724,7 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 	cxt.inhRelations = NIL;
 	cxt.isalter = true;
 	cxt.iscreatepart = false;
+	cxt.issplitpart = false;
 	cxt.hasoids = false;		/* need not be right */
 	cxt.columns = NIL;
 	cxt.ckconstraints = NIL;
