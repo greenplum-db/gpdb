@@ -1749,6 +1749,8 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 	char		modlabel[NAMEDATALEN];
 	bool		found = false;
 
+	Assert(GP_ROLE_EXECUTE != Gp_role);
+
 	/* try the unmodified label first */
 	StrNCpy(modlabel, label, sizeof(modlabel));
 
@@ -1789,6 +1791,8 @@ ChooseIndexName(const char *tabname, Oid namespaceId,
 {
 	char	   *indexname;
 
+	
+	
 	if (primary)
 	{
 		/* the primary key's name does not depend on the specific column(s) */
