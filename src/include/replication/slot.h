@@ -128,6 +128,8 @@ typedef struct ReplicationSlot
 #define SlotIsPhysical(slot) (slot->data.database == InvalidOid)
 #define SlotIsLogical(slot) (slot->data.database != InvalidOid)
 
+#define INTERNAL_WAL_REPLICATION_SLOT_NAME	"internal_wal_replication_slot"
+
 /*
  * Shared memory control area for all of replication slots.
  */
@@ -178,5 +180,7 @@ extern Datum pg_create_physical_replication_slot(PG_FUNCTION_ARGS);
 extern Datum pg_create_logical_replication_slot(PG_FUNCTION_ARGS);
 extern Datum pg_drop_replication_slot(PG_FUNCTION_ARGS);
 extern Datum pg_get_replication_slots(PG_FUNCTION_ARGS);
+
+extern void ReplicationSlotDropIfExists(const char *name);
 
 #endif   /* SLOT_H */

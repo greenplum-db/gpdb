@@ -114,6 +114,18 @@ def step_impl(context):
                 (content_id, result[0])
             )
 
+@then(u'the mirrors should not have replication slots')
+def step_impl(context):
+    result_cursor = execute_sql(
+        "postgres",
+        "select datadir from gp_segment_configuration where role='m';"
+    )
+
+    for content_id, result in enumerate(result_cursor.fetchall()):
+        path_to_replslot = os.path.join(result[0], 'pg_replslot')
+        if len(os.listdir(path_to_replslot)) > 0:
+            raise Exception("expected replication slot directory to be empty")
+
 
 @given(u'a preferred primary has failed')
 def step_impl(context):

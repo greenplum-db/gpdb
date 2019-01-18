@@ -95,8 +95,6 @@ enum probe_transition_e
 /* buffer size for SQL command */
 #define SQL_CMD_BUF_SIZE     1024
 
-#define INTERNAL_WAL_REPLICATION_SLOT_NAME	"internal_wal_replication_slot"
-
 /*
  * STRUCTURES
  */

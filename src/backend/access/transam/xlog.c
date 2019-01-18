@@ -6827,6 +6827,11 @@ StartupXLOG(void)
 	 */
 	StartupReplicationSlots();
 
+	if (ArchiveRecoveryRequested)
+	{
+		ReplicationSlotDropIfExists(INTERNAL_WAL_REPLICATION_SLOT_NAME);
+	}
+
 	/*
 	 * Startup logical state, needs to be setup now so we have proper data
 	 * during crash recovery.
