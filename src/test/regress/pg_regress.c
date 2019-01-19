@@ -96,6 +96,7 @@ static char *temp_config = NULL;
 static char *top_builddir = NULL;
 static int	temp_port = 65432;
 static bool nolocale = false;
+static bool use_existing = false;
 static char *hostname = NULL;
 static int	port = -1;
 static char *user = NULL;
@@ -2409,6 +2410,7 @@ help(void)
 	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
 	printf(_("                            UAO row and column tests\n"));
 	printf(_("  --resgroup-dir=DIR        directory name prefix containing resgroup tests\n"));
+	printf(_("  --use-existing            use an existing installation\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-install\" mode:\n"));
 	printf(_("  --no-locale               use C locale\n"));
@@ -2463,6 +2465,7 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
         {"ao-dir", required_argument, NULL, 21},
         {"resgroup-dir", required_argument, NULL, 22},
         {"exclude-tests", required_argument, NULL, 23},
+        {"use-existing", no_argument, NULL, 24},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2572,6 +2575,9 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
                 break;
             case 23:
                 split_to_stringlist(strdup(optarg), ", ", &exclude_tests);
+                break;
+            case 24:
+                use_existing = true;
                 break;
 			default:
 				/* getopt_long already emitted a complaint */
@@ -2770,19 +2776,25 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		 * Using an existing installation, so may need to get rid of
 		 * pre-existing database(s) and role(s)
 		 */
-		for (sl = dblist; sl; sl = sl->next)
-			drop_database_if_exists(sl->str);
-		for (sl = extraroles; sl; sl = sl->next)
-			drop_role_if_exists(sl->str);
+		if (!use_existing)
+		{
+			for (sl = dblist; sl; sl = sl->next)
+				drop_database_if_exists(sl->str);
+			for (sl = extraroles; sl; sl = sl->next)
+				drop_role_if_exists(sl->str);
+		}
 	}
 
 	/*
 	 * Create the test database(s) and role(s)
 	 */
-	for (sl = dblist; sl; sl = sl->next)
-		create_database(sl->str);
-	for (sl = extraroles; sl; sl = sl->next)
-		create_role(sl->str, dblist);
+	if (!use_existing)
+	{
+		for (sl = dblist; sl; sl = sl->next)
+			create_database(sl->str);
+		for (sl = extraroles; sl; sl = sl->next)
+			create_role(sl->str, dblist);
+	}
 
 	/*
 	 * Find out if optimizer is on or off
