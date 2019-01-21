@@ -3011,22 +3011,10 @@ create_nestloop_path(PlannerInfo *root,
 {
 	NestPath   *pathnode;
 	CdbPathLocus join_locus;
-	bool		inner_must_be_local = false;
+	Relids		outer_req_outer = PATH_REQ_OUTER(outer_path);
+	bool		outer_must_be_local = !bms_is_empty(outer_req_outer);
 	Relids		inner_req_outer = PATH_REQ_OUTER(inner_path);
-
-	/*
-	 * CDB: Inner indexpath must execute in the same backend as the
-	 * nested join to receive input values from the outer rel.
-	 */
-	inner_must_be_local = path_contains_inner_index(inner_path);
-
-	/*
-	 * If the inner path is parameterized by the outer, we can't insert
-	 * a Motion node in between, because the parameter cannot be transferred
-	 * through the Motion
-	 */
-	if (bms_overlap(inner_req_outer, outer_path->parent->relids))
-		inner_must_be_local = true;
+	bool		inner_must_be_local = !bms_is_empty(inner_req_outer);
 
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
@@ -3036,7 +3024,7 @@ create_nestloop_path(PlannerInfo *root,
 										 redistribution_clauses,
 										 pathkeys,
 										 NIL,
-										 false,
+										 outer_must_be_local,
 										 inner_must_be_local);
 	if (CdbPathLocus_IsNull(join_locus))
 		return NULL;
@@ -3240,6 +3228,9 @@ create_mergejoin_path(PlannerInfo *root,
 	else
 		preserve_outer_ordering = preserve_inner_ordering = false;
 
+	preserve_outer_ordering = preserve_outer_ordering || !bms_is_empty(PATH_REQ_OUTER(outer_path));
+	preserve_inner_ordering = preserve_inner_ordering || !bms_is_empty(PATH_REQ_OUTER(inner_path));
+
 	join_locus = cdbpath_motion_for_join(root,
 										 jointype,
 										 &outer_path,       /* INOUT */
@@ -3336,6 +3327,8 @@ create_hashjoin_path(PlannerInfo *root,
 {
 	HashPath   *pathnode;
 	CdbPathLocus join_locus;
+	bool		outer_must_be_local = !bms_is_empty(PATH_REQ_OUTER(outer_path));
+	bool		inner_must_be_local = !bms_is_empty(PATH_REQ_OUTER(inner_path));
 
 	/* Add motion nodes above subpaths and decide where to join. */
 	join_locus = cdbpath_motion_for_join(root,
@@ -3345,8 +3338,8 @@ create_hashjoin_path(PlannerInfo *root,
 										 redistribution_clauses,
 										 NIL,   /* don't care about ordering */
 										 NIL,
-										 false,
-										 false);
+										 outer_must_be_local,
+										 inner_must_be_local);
 	if (CdbPathLocus_IsNull(join_locus))
 		return NULL;
 

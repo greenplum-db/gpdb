@@ -1557,6 +1557,7 @@ select count(*) from tenk1 a,
 -- these will get fixed once we catch up to those. Or if not, at least it will be
 -- nicer to work on the code, knowing that there aren't going to be a dozen commits
 -- coming up, touching the same area.
+-- FAIL with ERROR:  could not devise a query plan for the given query (pathnode.c:416)
 explain (costs off)
   select * from int8_tbl a,
     int8_tbl x left join lateral (select a.q1 from int4_tbl y) ss(z)

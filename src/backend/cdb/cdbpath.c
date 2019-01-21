@@ -1292,8 +1292,10 @@ cdbpath_motion_for_join(PlannerInfo *root,
 		/* If the bottlenecked rel can't be moved, bring the other rel to it. */
 		if (single_immovable)
 		{
-			Assert(!other_immovable);
-			other->move_to = single->locus;
+			if (other_immovable)
+				goto fail;
+			else
+				other->move_to = single->locus;
 		}
 
 		/* Redistribute single rel if joining on other rel's partitioning key */

@@ -810,3 +810,44 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
 (4 rows)
 
 drop table t1, t2, t3;
+--
+-- Test a bug that nestloop path previously can not generate motion above
+-- index path, which sometimes is wrong (this test case is an example).
+-- We now depend on parameterized path related variables to judge instead.
+-- We conservatively disallow motion when there is parameter requirement
+-- for either outer or inner at this moment though there could be room
+-- for further improvement (e.g. referring subplan code to do broadcast
+-- for base rel if needed, which needs much effort and does not seem to
+-- be deserved given we will probably refactor related code for the lateral
+-- support in the near future). For the query and guc settings below, legacy
+-- planner can not generate a plan.
+set enable_nestloop = 1;
+set enable_material = 0;
+set enable_seqscan = 0;
+set enable_bitmapscan = 0;
+explain select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.00..1885517.36 rows=1 width=1)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..1885517.36 rows=1 width=1)
+         ->  Limit  (cost=0.00..1885517.36 rows=1 width=1)
+               ->  Result  (cost=0.00..1885517.36 rows=33336667 width=1)
+                     ->  Nested Loop Left Join  (cost=0.00..1885484.02 rows=33336667 width=4)
+                           Join Filter: true
+                           ->  Seq Scan on tenk1  (cost=0.00..431.51 rows=3334 width=4)
+                           ->  Materialize  (cost=0.00..431.70 rows=10000 width=1)
+                                 ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.69 rows=10000 width=1)
+                                       ->  Seq Scan on tenk2  (cost=0.00..431.50 rows=3334 width=1)
+ Optimizer: PQO version 3.23.0
+(11 rows)
+
+select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+ ?column? 
+----------
+ t
+(1 row)
+
+reset enable_nestloop;
+reset enable_material;
+reset enable_seqscan;
+reset enable_bitmapscan;

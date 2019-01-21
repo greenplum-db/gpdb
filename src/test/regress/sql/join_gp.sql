@@ -402,3 +402,25 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
   join t3 t3_1 on tt1.t1b = t3_1.b and (tt1.t2a is NULL OR tt1.t1b = t3.b);
 
 drop table t1, t2, t3;
+
+--
+-- Test a bug that nestloop path previously can not generate motion above
+-- index path, which sometimes is wrong (this test case is an example).
+-- We now depend on parameterized path related variables to judge instead.
+-- We conservatively disallow motion when there is parameter requirement
+-- for either outer or inner at this moment though there could be room
+-- for further improvement (e.g. referring subplan code to do broadcast
+-- for base rel if needed, which needs much effort and does not seem to
+-- be deserved given we will probably refactor related code for the lateral
+-- support in the near future). For the query and guc settings below, legacy
+-- planner can not generate a plan.
+set enable_nestloop = 1;
+set enable_material = 0;
+set enable_seqscan = 0;
+set enable_bitmapscan = 0;
+explain select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+reset enable_nestloop;
+reset enable_material;
+reset enable_seqscan;
+reset enable_bitmapscan;

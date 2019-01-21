@@ -759,3 +759,42 @@ select * from (select t1.a t1a, t1.b t1b, t2.a t2a, t2.b t2b from t1 left join t
 (4 rows)
 
 drop table t1, t2, t3;
+--
+-- Test a bug that nestloop path previously can not generate motion above
+-- index path, which sometimes is wrong (this test case is an example).
+-- We now depend on parameterized path related variables to judge instead.
+-- We conservatively disallow motion when there is parameter requirement
+-- for either outer or inner at this moment though there could be room
+-- for further improvement (e.g. referring subplan code to do broadcast
+-- for base rel if needed, which needs much effort and does not seem to
+-- be deserved given we will probably refactor related code for the lateral
+-- support in the near future). For the query and guc settings below, legacy
+-- planner can not generate a plan.
+set enable_nestloop = 1;
+set enable_material = 0;
+set enable_seqscan = 0;
+set enable_bitmapscan = 0;
+explain select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.32..0.38 rows=1 width=4)
+   ->  Gather Motion 3:1  (slice2; segments: 3)  (cost=0.32..0.38 rows=1 width=4)
+         ->  Limit  (cost=0.32..0.36 rows=1 width=4)
+               ->  Nested Loop Left Join  (cost=0.32..3520104.27 rows=33333334 width=4)
+                     ->  Index Only Scan using tenk1_unique2 on tenk1  (cost=0.16..1650.16 rows=3334 width=4)
+                     ->  Materialize  (cost=0.16..18479.11 rows=10000 width=0)
+                           ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.16..18329.11 rows=10000 width=0)
+                                 ->  Index Only Scan using tenk2_unique2 on tenk2  (cost=0.16..17929.11 rows=3334 width=0)
+ Optimizer: legacy query optimizer
+(9 rows)
+
+select tenk1.unique2 >= 0 from tenk1 left join tenk2 on true limit 1;
+ ?column? 
+----------
+ t
+(1 row)
+
+reset enable_nestloop;
+reset enable_material;
+reset enable_seqscan;
+reset enable_bitmapscan;
