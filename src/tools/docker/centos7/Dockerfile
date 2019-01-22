@@ -13,7 +13,7 @@ RUN yum makecache && \
     yum -y install python2-pip && \
     yum -y install python-devel python-paramiko python-psutil python-setuptools && \
     yum -y install apr-devel bzip2-devel expat-devel libcurl-devel && \
-    yum -y install libevent-devel libuuid-devel libxml2-devel libyaml-devel && \
+    yum -y install libevent-devel libuuid-devel libxml2-devel libyaml-devel libzstd-devel && \
     yum -y install openssl-devel pam-devel readline-devel snappy-devel && \
     yum -y install apache-ivy libicu perl-ExtUtils-Embed perl-Env perl-JSON && \
     pip install psi lockfile && \
