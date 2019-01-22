@@ -437,6 +437,9 @@ DefineIndex(Oid relationId,
 	else
 		shouldDispatch = false;
 
+	/* Exlusion constraint not allowed */
+	Assert(!stmt->excludeOpNames);
+
 	/*
 	 * count attributes in index
 	 */

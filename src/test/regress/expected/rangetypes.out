@@ -1097,6 +1097,8 @@ drop table test_range_elem;
 -- constraints with range types, use singleton int ranges for the "="
 -- portion of the constraint.
 --
+-- start_ignore
+-- GPDB does not support exclusion constraints, so no need to run this test
 create table test_range_excl(
   id int4,
   room int4range,
@@ -1119,6 +1121,7 @@ insert into test_range_excl
   values(1, int4range(125, 125, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
 ERROR:  conflicting key value violates exclusion constraint "test_range_excl_speaker_during_excl"  (seg0 127.0.0.1:25432 pid=8632)
 DETAIL:  Key (speaker, during)=([1,2), ["Sat Jan 02 10:10:00 2010","Sat Jan 02 11:00:00 2010")) conflicts with existing key (speaker, during)=([1,2), ["Sat Jan 02 10:00:00 2010","Sat Jan 02 11:00:00 2010")).
+-- end_ignore
 -- test bigint ranges
 select int8range(10000000000::int8, 20000000000::int8,'(]');
          int8range         

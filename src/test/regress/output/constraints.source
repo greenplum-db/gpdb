@@ -623,6 +623,8 @@ DROP TABLE unique_tbl;
 --
 -- EXCLUDE constraints
 --
+-- start_ignore
+-- GPDB does not support exclusion constraints, so no need to run these tests
 CREATE TABLE circles (
   c1 CIRCLE,
   c2 TEXT,
@@ -689,18 +691,11 @@ SELECT * FROM deferred_excl;
 ALTER TABLE deferred_excl DROP CONSTRAINT deferred_excl_con;
 -- This should fail, but worth testing because of HOT updates
 UPDATE deferred_excl SET f1 = 3;
--- In the original postgres test, both the tuples in this table will be updated
--- (probably by HOT update) in the previous statement, and would now be equal. In
--- greenplum, the planner does not support updating distribution keys, so we need
--- to add in these tuples manually to make the next queries in this test valid.
--- ORCA actually DOES support updating the distribution key of tables, so if using
--- the optimizer, this is technically not necessary.  
-INSERT INTO deferred_excl VALUES(3);
-INSERT INTO deferred_excl VALUES(3);
 ALTER TABLE deferred_excl ADD EXCLUDE (f1 WITH =);
 ERROR:  could not create exclusion constraint "deferred_excl_f1_excl"
 DETAIL:  Key (f1)=(3) conflicts with key (f1)=(3).
 DROP TABLE deferred_excl;
+-- end_ignore
 --
 -- Test foreign key constraints
 --

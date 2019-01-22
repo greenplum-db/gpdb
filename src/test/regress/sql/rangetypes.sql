@@ -311,6 +311,8 @@ drop table test_range_elem;
 -- portion of the constraint.
 --
 
+-- start_ignore
+-- GPDB does not support exclusion constraints, so no need to run this test
 create table test_range_excl(
   id int4,
   room int4range,
@@ -330,6 +332,7 @@ insert into test_range_excl
   values(1, int4range(124, 124, '[]'), int4range(3, 3, '[]'), '[2010-01-02 10:10, 2010-01-02 11:10)');
 insert into test_range_excl
   values(1, int4range(125, 125, '[]'), int4range(1, 1, '[]'), '[2010-01-02 10:10, 2010-01-02 11:00)');
+-- end_ignore
 
 -- test bigint ranges
 select int8range(10000000000::int8, 20000000000::int8,'(]');

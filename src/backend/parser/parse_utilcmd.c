@@ -800,6 +800,11 @@ transformTableConstraint(CreateStmtContext *cxt, Constraint *constraint)
 				 parser_errposition(cxt->pstate,
 									constraint->location)));
 
+	if (constraint->contype == CONSTR_EXCLUSION)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("GPDB does not support exclusion constraints.")));
+
 	switch (constraint->contype)
 	{
 		case CONSTR_PRIMARY:
@@ -2465,9 +2470,13 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 		Constraint *constraint = (Constraint *) lfirst(lc);
 
 		Assert(IsA(constraint, Constraint));
+		if(constraint->contype == CONSTR_EXCLUSION)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						errmsg("GPDB does not support exclusion constraints.")));
+
 		Assert(constraint->contype == CONSTR_PRIMARY ||
-			   constraint->contype == CONSTR_UNIQUE ||
-			   constraint->contype == CONSTR_EXCLUSION);
+			   constraint->contype == CONSTR_UNIQUE);
 
 		index = transformIndexConstraint(constraint, cxt);
 
@@ -2595,6 +2604,8 @@ transformIndexConstraints(CreateStmtContext *cxt, bool mayDefer)
 static IndexStmt *
 transformIndexConstraint(Constraint *constraint, CreateStmtContext *cxt)
 {
+	Assert(constraint->contype !=  CONSTR_EXCLUSION);
+
 	IndexStmt  *index;
 	ListCell   *lc;
 
