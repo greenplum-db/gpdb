@@ -51,6 +51,9 @@
 		 (code) < GP_EXPAND_STATUS_PHASE2_UNKNOWN; \
 		 (code)++)
 
+#define EXPAND_PHASE1_STATUS_FILE "gpexpand.status"
+#define EXPAND_PHASE2_STATUS_FILE "gpexpand.phase2.status"
+
 enum
 {
 	GP_EXPAND_STATUS_PHASE0 = 0,
@@ -456,7 +459,7 @@ parse_phase1_status_line(_ExpandStatus *status, char *line)
 static void
 get_phase1_status(_ExpandStatus *status)
 {
-	get_phase1_status_from_file(status, "gpexpand.status");
+	get_phase1_status_from_file(status, EXPAND_PHASE1_STATUS_FILE);
 }
 
 static void
@@ -482,7 +485,7 @@ get_phase2_status(_ExpandStatus *status)
 	 * We can only get the detailed progress information when connecting to
 	 * the correct db, nothing to do otherwise.
 	 */
-	if (get_database_oid(dbname, true) != MyDatabaseId)
+	if (dbname == NULL || get_database_oid(dbname, true) != MyDatabaseId)
 		return;
 
 	/*
@@ -529,37 +532,47 @@ static const char *
 get_phase2_status_from_file(_ExpandStatus *status)
 {
 	const char *dbname = NULL;
+	StringInfo	fullname = makeStringInfo();
+	FILE	   *fstatus;
 
-	/*
-	 * Both phases share the same status file format, so reuse the parse logic.
-	 */
-	get_phase1_status_from_file(status, "gpexpand.phase2.status");
+	appendStringInfo(fullname, "%s/%s", data_directory, EXPAND_PHASE2_STATUS_FILE);
 
-	/*
-	 * The last step of initialization phase is "EXPANSION_PREPARE_DONE", it
-	 * also contains the database name where the schema tables are created.
-	 */
-	if (status->code == GP_EXPAND_STATUS_PHASE1_EXPANSION_PREPARE_DONE)
+	while (!(fstatus = fopen(fullname->data, "r")) && errno == EINTR) ;
+
+	if (fstatus)
 	{
+		/* must initilize line to "" in case the file is empty */
+		char		line[MAXPGPATH * 2] = "";
+		char		*sep;
+
+		/* status file exists, parse the information from it */
+
+		/* phase2 status file only contains one line, dbname */
+		fgets(line, sizeof(line), fstatus);
+		fclose(fstatus);
+
+		sep = strpbrk(line, "\r\n");
+		if (sep)
+			*sep = '\0';
+
+		dbname = pstrdup(line);
+		status->code = GP_EXPAND_STATUS_PHASE2_UNKNOWN;
+		status->status = phase2_status_from_code(status->code);
+
 		StringInfo	detail = makeStringInfo();
-
-		dbname = status->detail;
-
 		appendStringInfo(detail,
 						 "detailed phase2 information are only available in database \"%s\"",
 						 dbname);
 
 		status->detail = detail->data;
 	}
-
-	/*
-	 * As long as the status file exists we know it is redistribution phase,
-	 * but nothing more.
-	 */
-	if (status->code != GP_EXPAND_STATUS_PHASE0)
+	else
 	{
-		status->code = GP_EXPAND_STATUS_PHASE2_UNKNOWN;
-		status->status = phase2_status_from_code(status->code);
+		/* status file does not exist */
+
+		status->code = GP_EXPAND_STATUS_PHASE0;
+		status->status = phase0_status_from_code(status->code);
+		status->detail = "";
 	}
 
 	return dbname;

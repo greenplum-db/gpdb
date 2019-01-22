@@ -572,12 +572,8 @@ class GpExpandStatus():
         if self._fp_standby:
             self._fp_standby.close()
             self._fp_standby = None
-        if os.path.exists(self._status_phase2_filename):
-            os.unlink(self._status_phase2_filename)
         if os.path.exists(self._status_filename):
-            # instead of removing the status we rename it, so phase2 can be
-            # detected without querying the schema table.
-            os.rename(self._status_filename, self._status_phase2_filename)
+            os.unlink(self._status_filename)
         if os.path.exists(self._status_standby_filename):
             os.unlink(self._status_standby_filename)
         if self._master_mirror:
@@ -585,9 +581,28 @@ class GpExpandStatus():
                               self._master_mirror.getSegmentHostName(),
                               self._status_filename)
 
+    def create_phase2_status_file(self, dbname):
+        """Just create an empty file to indicate it's phase2 now"""
+        fd = open(self._status_phase2_filename, 'w')
+        fd.write(dbname + '\n')
+        fd.close()
+
+        """Syncs the gpexpand phase2 status file with the master mirror"""
+        if self._master_mirror:
+            cpCmd = Scp('gpexpand copying status file to master mirror',
+                        srcFile=self._status_phase2_filename,
+                        dstFile=self._status_phase2_filename,
+                        dstHost=self._master_mirror.getSegmentHostName())
+            cpCmd.run(validateAfter=True)
+
     def remove_phase2_status_file(self):
         if os.path.exists(self._status_phase2_filename):
             os.unlink(self._status_phase2_filename)
+
+        if self._master_mirror:
+            RemoveFile.remote('gpexpand master mirror phase2 status file cleanup',
+                              self._master_mirror.getSegmentHostName(),
+                              self._status_phase2_filename)
 
     def remove_segment_configuration_backup_file(self):
         """ Remove the segment configuration backup file """
@@ -1215,6 +1230,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.conn.close()
 
         self.statusLogger.remove_status_file()
+        self.statusLogger.remove_phase2_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()
 
     def get_state(self):
@@ -1575,6 +1591,13 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
             self.statusLogger.set_status('EXPANSION_PREPARE_STARTED', os.path.abspath(self.options.filename))
 
     def finalize_prepare(self):
+        """
+        phase2 status file indicate that segment preparation is finished. We create
+        this file first to avoid the time-window when there is neither gpexpand status
+        file nor phase2 status file. The udf gp_expand_get_status gets the status
+        based on these status files.
+        """
+        self.statusLogger.create_phase2_status_file(self.options.database)
         """Removes the gpexpand status file and segment configuration backup file"""
         self.statusLogger.remove_status_file()
         self.statusLogger.remove_segment_configuration_backup_file()

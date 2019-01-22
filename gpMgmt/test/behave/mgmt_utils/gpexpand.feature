@@ -378,3 +378,4 @@ Feature: expand the cluster by adding more segments
         And unset fault inject
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0
+        And phase2 status file is right

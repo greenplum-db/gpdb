@@ -2104,6 +2104,7 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
     for i in range(0, num_of_segments):
         directory_pairs.append((primary_dir,mirror_dir))
 
+    context.dbname = 'gptest'
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     output, returncode = gpexpand.do_interview(hosts=hosts,
                                                num_of_segments=num_of_segments,
@@ -2118,6 +2119,7 @@ def impl(context):
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
 def impl(context, additional_params=''):
+    context.dbname = 'gptest'
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     ret_code, std_err, std_out = gpexpand.initialize_segments(additional_params)
     if ret_code != 0:
@@ -2125,19 +2127,23 @@ def impl(context, additional_params=''):
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile without ret code check')
 def impl(context):
+    context.dbname = 'gptest'
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     gpexpand.initialize_segments()
 
 @when('the user runs gpexpand against database "{dbname}" to redistribute with duration "{duration}"')
 def impl(context, dbname, duration):
+    context.dbname = dbname
     _gpexpand_redistribute(context, dbname, duration)
 
 @when('the user runs gpexpand against database "{dbname}" to redistribute with the --end flag')
 def impl(context, dbname):
+    context.dbname = dbname
     _gpexpand_redistribute(context, dbname, endtime=True)
 
 @when('the user runs gpexpand against database "{dbname}" to redistribute')
 def impl(context, dbname):
+    context.dbname = dbname
     _gpexpand_redistribute(context, dbname)
 
 def _gpexpand_redistribute(context, dbname, duration=False, endtime=False):
@@ -2158,6 +2164,7 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
     with open(inputfile_name, 'w') as fd:
         fd.write(inputfile_contents)
 
+    context.dbname = 'gptest'
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     ret_code, std_err, std_out = gpexpand.initialize_segments()
     if ret_code != 0:
@@ -2172,6 +2179,7 @@ sdw1:sdw1:21502:/data/gpdata/gpexpand/data/mirror/gpseg2:8:2:m"""
     with open(inputfile_name, 'w') as fd:
         fd.write(inputfile_contents)
 
+    context.dbname = 'gptest'
     gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
     gpexpand.initialize_segments()
 
@@ -2612,3 +2620,16 @@ def impl(context, database):
     ret_code, std_err, std_out = gpexpand.rollback()
     if ret_code != 0:
         raise Exception("rollback exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
+
+@then('phase2 status file is right')
+def impl(context):
+    phase2_status_file = os.path.join(context.working_directory,
+                                      'data/master/gpseg-1/gpexpand.phase2.status')
+    fd = open(phase2_status_file, 'r')
+    if not fd:
+        raise Exception('phase2 status file %s not exists', phase2_status_file)
+    dbname = fd.readline().strip('\r\n')
+    fd.close()
+    if dbname != context.dbname:
+        raise Exception('dbname in phase2 status file is not correct.'
+                        'expected:%s, actually:%s', context.dbname, dbname)

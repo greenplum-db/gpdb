@@ -240,7 +240,8 @@ select * from get_all_status();
 -- phase2: no longer phase1 as long as phase1 status file is removed
 -- - when connected to gpexpand1 the progress information is available
 -- - when connected to other databases we can still know it is phase2
-\! mv $MASTER_DATA_DIRECTORY/gpexpand.status $MASTER_DATA_DIRECTORY/gpexpand.phase2.status
+\! rm $MASTER_DATA_DIRECTORY/gpexpand.status
+\! echo 'gpexpand1' > $MASTER_DATA_DIRECTORY/gpexpand.phase2.status
 select * from get_all_status();
     db     | code |        status         |                                 detail                                 
 -----------+------+-----------------------+------------------------------------------------------------------------
