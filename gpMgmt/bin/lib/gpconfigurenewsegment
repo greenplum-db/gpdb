@@ -2,6 +2,7 @@
 
 import sys
 import os
+import shutil
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 
 from gppylib.gpparseopts import OptParser, OptChecker
@@ -156,6 +157,35 @@ class ConfExpSegCmd(Command):
                         logger.error(extractTarCmd.get_results())
                         raise
 
+                # Restore tablespace if there exists info in template
+                tblspc_info_dir = os.path.join(self.datadir, "gpexpand_tablespace_info")
+                if os.path.exists(tblspc_info_dir):
+                    # template dir contains tablespace dump info
+                    # have to restore it on new segment
+                    # the dumped info struct is defined in
+                    # the utility `gpexpand.SegmentTemplate._handle_tablespace_for_template`
+                    # the restore process is:
+                    #     1. build the space dir if not exists
+                    #     2. copy the template into the space dir and rename it using seg.dbid
+                    logger.info("restore tablespace")
+                    tblspc_oids = os.listdir(tblspc_info_dir)
+                    for tblspc_oid in tblspc_oids:
+                        with open(os.path.join(tblspc_info_dir,
+                                               tblspc_oid,
+                                               "spacelocation")) as f:
+                            spacelocation = f.read().strip()
+                        if not os.path.exists(spacelocation):
+                            os.makedirs(spacelocation)
+                        fns = os.listdir(os.path.join(tblspc_info_dir,
+                                                      tblspc_oid))
+                        tblspc_dbdir = [fn for fn in fns if fn.endswith("_db1")][0]
+                        new_tblspc_dbdir = tblspc_dbdir[:-1] + str(self.dbid)
+                        cpCmd = unix.Scp(name="Restore Tablespace",
+                                         srcFile=os.path.join(tblspc_info_dir, tblspc_oid, tblspc_dbdir),
+                                         dstFile=os.path.join(spacelocation, new_tblspc_dbdir),
+                                         recursive=True)
+                        cpCmd.run(validateAfter=True)
+                    shutil.rmtree(tblspc_info_dir)
                 # Create pg_log for new segment in case it dosen't exist.
                 try:
                     self.makeOrUpdatePathAsNeeded(os.path.join(self.datadir, "pg_log"))

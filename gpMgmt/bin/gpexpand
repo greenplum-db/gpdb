@@ -682,6 +682,7 @@ class SegmentTemplate:
         """Builds segment template tar file"""
         self.statusLogger.set_status('BUILD_SEGMENT_TEMPLATE_STARTED', self.tempDir)
         self._create_template()
+        self._handle_tablespace_for_template()
         self._fixup_template()
         self._tar_template()
         self.statusLogger.set_status('BUILD_SEGMENT_TEMPLATE_DONE')
@@ -829,6 +830,55 @@ class SegmentTemplate:
         self.pool.check_results()
 
         self._stop_new_primary_segments()
+
+    def _handle_tablespace_for_template(self):
+        """
+        dump the tablespace info into the template
+
+        Master's tablespace info directory picture:
+        MASTER_DATA_DIR
+              \__ pg_tblspc
+                   \__ oid1 ----symlink to----> tablespace_location
+                                                  \_ GDPBxxx_db1
+
+        dumped tablespace info in the template dir
+        TemplateDir
+            \__ gpexpand_tablespace_info
+                 \__ oid1
+                      \__ spacelocation (text file to save the path to space)
+                         | GDPBxxx_db1
+
+        the restore process has to be consistent with the dumping design,
+        the restore tablespace code is in internal utility `gpconfigurenewsegment`
+        """
+
+        def _get_qd_tblspc_dbdir(spacedir):
+            fns = os.listdir(spacedir)
+            for fn in fns:
+                if fn.endswith("_db1"):
+                    return fn
+
+        self.logger.info("Copy Tablespace from master into template")
+
+        qd_datadir = self.gparray.master.getSegmentDataDirectory()
+        qd_tblspc_dir = os.path.join(qd_datadir, "pg_tblspc")
+        tblspc_oids = os.listdir(qd_tblspc_dir)
+        tblspc_info_dir = os.path.join(self.tempDir, "gpexpand_tablespace_info")
+
+        for tblspc_oid in tblspc_oids:
+            symlink_fullpath = os.path.join(qd_tblspc_dir, tblspc_oid)
+            space_path = os.readlink(symlink_fullpath)
+            qd_dbdir = _get_qd_tblspc_dbdir(space_path)
+            dbdir_in_template = os.path.join(tblspc_info_dir, tblspc_oid)
+            os.makedirs(dbdir_in_template)
+            with open(os.path.join(dbdir_in_template, "spacelocation"), "w") as f:
+                print >>f, space_path
+            cpCmd = Scp(name="Copy tablespace(%s) db dir into template",
+                        srcFile=os.path.join(space_path, qd_dbdir),
+                        dstFile=dbdir_in_template,
+                        dstHost=self.gparray.master.getSegmentHostName(),
+                        recursive=True)
+            cpCmd.run(validateAfter=True)
 
     def _fixup_template(self):
         """Copies postgresql.conf and pg_hba.conf files from a valid segment on the system.

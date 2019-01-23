@@ -2248,6 +2248,33 @@ def impl(context, table_name):
         dbconn.execSQL(conn, query)
         conn.commit()
 
+@given('user has created {table_name} table in database {dbname}')
+def impl(context, table_name, dbname):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        query = """CREATE TABLE %s(a INT)""" % table_name
+        dbconn.execSQL(conn, query)
+        conn.commit()
+
+@given('user has created {newdbname} database in tablespace {tablespacename}')
+def impl(context, newdbname, tablespacename):
+    dbname = 'gptest'
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        sql = "CREATE DATABASE {newdbname} OWNER gpadmin TABLESPACE {tablespacename}"
+        dbconn.execSQL(conn, sql.format(newdbname=newdbname,
+                                        tablespacename=tablespacename))
+        conn.commit()
+
+@given('user has created tablespace {tablespace_name}')
+def impl(context, tablespace_name):
+    dbname = 'gptest'
+    tblspc_location = os.path.join("/data/tablespaces/", tablespace_name)
+    os.makedirs(tblspc_location)
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        sql = "CREATE TABLESPACE {name} LOCATION '{LOCATION}'"
+        dbconn.execSQL(conn, sql.format(name=tablespace_name,
+                                        LOCATION=tblspc_location))
+        conn.commit()
+
 @given('a long-run read-only transaction exists on {table_name}')
 def impl(context, table_name):
     dbname = 'gptest'
@@ -2278,6 +2305,18 @@ def impl(context, table_name):
         error_str = "Incorrect xid or select result of long run read-only transaction: \
                 xid(before %s, after %), result(before %s, after %s)"
         raise Exception(error_str % (context.long_run_select_only_xid, xid, context.long_run_select_only_data_result, data_result))
+
+@then('verify that the table {tabname} in database {dbname} contains exact one row {val}')
+def impl(context, tabname, dbname, val):
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        sql = "SELECT * FROM {tabname}".format(tabname=tabname)
+        data_result = dbconn.execSQL(conn, sql).fetchall()
+
+    if (len(data_result) != 1 or
+        len(data_result[0]) != 1 or
+        data_result[0][0] != int(val)):
+        err_str = "Data in table {tabname} in database {dbname} is not correct after expanding cluster"
+        raise Exception(err_str.format(tabname=tabname, dbname=dbname))
 
 @given('a long-run transaction starts')
 def impl(context):
