@@ -80,7 +80,9 @@
             <pd>Include large objects in the dump. This is the default behavior except when
                 <codeph>--schema</codeph>, <codeph>--table</codeph>, or
                 <codeph>--schema-only</codeph> is specified, so the <codeph>-b</codeph> switch is
-              only useful to add large objects to selective dumps. </pd>
+              only useful to add large objects to selective dumps.<note>Greenplum Database does not
+                support large object datatypes (<codeph>BLOB</codeph>, <codeph>CLOB</codeph>, <codeph>NCLOB</codeph>). </note>
+            </pd>
           </plentry>
           <plentry>
             <pt>--binary-upgrade</pt>

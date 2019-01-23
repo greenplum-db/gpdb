@@ -469,6 +469,10 @@ testdb=#</codeblock>
           <pt>\dl</pt>
           <pd>This is an alias for <codeph>\lo_list</codeph>, which shows a list of large
             objects.</pd>
+          <pd>
+            <note>Greenplum Database does not support large object datatypes (<codeph>BLOB</codeph>,
+                <codeph>CLOB</codeph>, <codeph>NCLOB</codeph>). </note>
+          </pd>
         </plentry>
         <plentry>
           <pt>\dn [<varname>schema_pattern</varname>] | \dn+
