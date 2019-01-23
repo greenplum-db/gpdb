@@ -97,7 +97,7 @@ function git_info() {
 
 	EOF
 
-  git log --abbrev-commit --date=relative "${PREV_TAG}..HEAD" | tee -a ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt
+  git log --abbrev-commit --date=relative "${PREV_TAG}..HEAD" >> ${GREENPLUM_INSTALL_DIR}/etc/git-current-changelog.txt
 
   popd
 }
