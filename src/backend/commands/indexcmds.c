@@ -1744,6 +1744,9 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 	char		modlabel[NAMEDATALEN];
 	bool		found = false;
 
+	if (GP_ROLE_EXECUTE == Gp_role)
+		elog(ERROR, "relation names cannot be chosen on QE");
+
 	/* try the unmodified label first */
 	StrNCpy(modlabel, label, sizeof(modlabel));
 
