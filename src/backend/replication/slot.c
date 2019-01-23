@@ -1382,6 +1382,12 @@ ReplicationSlotDropIfExists(const char *name)
 	bool exists = false;
 	int i;
 
+	/*
+	 * There exists a race condition if multiple callers check the existence of
+	 * replication slot at the same time. Then we may incorrectly try to drop
+	 * the same slot twice.  Currently this is not an issue as this function is
+	 * only called once at startup from StartupXLOG.
+	 */
 	LWLockAcquire(ReplicationSlotControlLock, LW_SHARED);
 	for (i = 0; i < max_replication_slots; i++)
 	{
