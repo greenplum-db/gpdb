@@ -427,15 +427,9 @@ DefineIndex(Oid relationId,
 	LOCKMODE	lockmode;
 	Snapshot	snapshot;
 	bool		need_longlock = true;
-	bool		shouldDispatch;
+	bool		shouldDispatch = Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode();
 	char	   *altconname = stmt ? stmt->altconname : NULL;
 	int			i;
-
-	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode() &&
-		!is_alter_table)
-		shouldDispatch = true;
-	else
-		shouldDispatch = false;
 
 	/*
 	 * count attributes in index
