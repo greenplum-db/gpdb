@@ -103,7 +103,7 @@
                                 <li><codeph>master</codeph> (the default)—Request data from the
                                     master host.</li>
                                 <li><codeph>any</codeph>—Request data from either the master host or
-                                    one any segment, depending on which path costs less.</li>
+                                    any one segment, depending on which path costs less.</li>
                                 <li><codeph>all segments</codeph>—Request data from all segments.
                                     With this option value, the foreign data-wrapper must have a
                                     policy that matches the segments to data.</li>
