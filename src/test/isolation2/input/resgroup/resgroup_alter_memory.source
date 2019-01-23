@@ -1,6 +1,7 @@
 -- start_ignore
 DROP ROLE IF EXISTS role1_memory_test;
 DROP ROLE IF EXISTS role2_memory_test;
+DROP RESOURCE GROUP rg0_memory_test;
 DROP RESOURCE GROUP rg1_memory_test;
 DROP RESOURCE GROUP rg2_memory_test;
 -- end_ignore
@@ -35,6 +36,8 @@ CREATE OR REPLACE VIEW rg_mem_status AS
 	WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test'
 	ORDER BY groupid;
 
+CREATE RESOURCE GROUP rg0_memory_test
+    WITH (cpu_rate_limit=1, memory_limit=30);
 CREATE RESOURCE GROUP rg1_memory_test
     WITH (concurrency=2, cpu_rate_limit=10,
           memory_limit=60, memory_shared_quota=0, memory_spill_ratio=5);
@@ -544,3 +547,4 @@ select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_tes
 
 DROP ROLE rg_test_role;
 DROP RESOURCE GROUP rg_test_group;
+DROP RESOURCE GROUP rg0_memory_test;

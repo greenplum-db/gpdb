@@ -770,4 +770,8 @@ extern bool gpvars_check_gp_gpperfmon_send_interval(int *newval, void **extra, G
 
 extern StdRdOptions *defaultStdRdOptions(char relkind);
 
+extern bool gpvars_check_memory_spill_ratio(const char **newval, void **extra, GucSource source);
+extern void gpvars_assign_memory_spill_ratio(const char *newval, void *extra);
+extern const char *gpvars_show_memory_spill_ratio(void);
+
 #endif   /* GUC_H */

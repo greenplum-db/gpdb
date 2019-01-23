@@ -79,7 +79,7 @@ ANALYZE test_zero_workmem;
 SELECT count(*) FROM test_zero_workmem;
 
 --clean env
-SET ROLE to gpadmin;
+RESET ROLE;
 DROP TABLE test_zero_workmem;
 DROP ROLE role_zero_workmem;
 DROP RESOURCE GROUP rg_zero_workmem;

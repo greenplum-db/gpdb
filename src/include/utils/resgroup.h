@@ -201,7 +201,8 @@ extern void CpusetDifference(char *cpuset1, const char *cpuset2, int len);
 extern bool CpusetIsEmpty(const char *cpuset);
 extern void SetCpusetEmpty(char *cpuset, int cpusetSize);
 extern bool EnsureCpusetIsAvailable(int elevel);
-
+extern int32 ResGroupMemorySpillFromStr(const char *str, const char *prop);
+extern void ResGroupMemorySpillToStr(int32 value, char *buf, int bufsize);
 #define LOG_RESGROUP_DEBUG(...) \
 	do {if (Debug_resource_group) elog(__VA_ARGS__); } while(false);
 

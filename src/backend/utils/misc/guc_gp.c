@@ -203,6 +203,7 @@ char	   *data_directory;
  * and is kept in sync by assign_hooks.
  */
 static char *gp_resource_manager_str;
+static char *memory_spill_ratio_str;
 
 /* Backoff-related GUCs */
 bool		gp_enable_resqueue_priority;
@@ -3063,16 +3064,6 @@ struct config_int ConfigureNamesInt_gp[] =
 	},
 
 	{
-		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
-			gettext_noop("Sets the memory_spill_ratio for resource group."),
-			NULL
-		},
-		&memory_spill_ratio,
-		20, 0, 100,
-		NULL, NULL, NULL
-	},
-
-	{
 		{"gp_resource_group_cpu_priority", PGC_POSTMASTER, RESOURCES,
 			gettext_noop("Sets the cpu priority for postgres processes when resource group is enabled."),
 			NULL
@@ -4407,6 +4398,21 @@ struct config_string ConfigureNamesString_gp[] =
 		gpvars_check_gp_resource_manager_policy,
 		gpvars_assign_gp_resource_manager_policy,
 		gpvars_show_gp_resource_manager_policy,
+	},
+
+	/*
+	 * Default value of the memory_spill_ratio GUC will be ignored.
+	 * Refer to ResGroupMemorySpillFromStr() for details of the string format.
+	 */
+	{
+		{"memory_spill_ratio", PGC_USERSET, RESOURCES_MEM,
+			gettext_noop("Sets the memory_spill_ratio for resource group.")
+		},
+		&memory_spill_ratio_str,
+		"0",
+		gpvars_check_memory_spill_ratio,
+		gpvars_assign_memory_spill_ratio,
+		gpvars_show_memory_spill_ratio
 	},
 
 	/* for pljava */

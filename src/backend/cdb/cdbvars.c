@@ -33,6 +33,7 @@
 #include "libpq/libpq-be.h"
 #include "postmaster/backoff.h"
 #include "utils/resource_manager.h"
+#include "utils/resgroup.h"
 #include "utils/resgroup-ops.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
@@ -697,6 +698,33 @@ gpvars_show_gp_resource_manager_policy(void)
 			Assert(!"unexpected resource manager policy");
 			return "unknown";
 	}
+}
+
+bool
+gpvars_check_memory_spill_ratio(const char **newval, void **extra, GucSource source)
+{
+	ResGroupMemorySpillFromStr(*newval, "memory_spill_ratio");
+
+	return true;
+}
+
+void
+gpvars_assign_memory_spill_ratio(const char *newval, void *extra)
+{
+	int32		value = ResGroupMemorySpillFromStr(newval,
+												   "memory_spill_ratio");
+
+	memory_spill_ratio = value;
+}
+
+const char *
+gpvars_show_memory_spill_ratio(void)
+{
+	static char buf[16];
+
+	ResGroupMemorySpillToStr(memory_spill_ratio, buf, sizeof(buf));
+
+	return buf;
 }
 
 /*

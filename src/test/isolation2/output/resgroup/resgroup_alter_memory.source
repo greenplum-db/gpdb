@@ -3,6 +3,8 @@ DROP ROLE IF EXISTS role1_memory_test;
 DROP
 DROP ROLE IF EXISTS role2_memory_test;
 DROP
+DROP RESOURCE GROUP rg0_memory_test;
+ERROR:  resource group "rg0_memory_test" does not exist
 DROP RESOURCE GROUP rg1_memory_test;
 ERROR:  resource group "rg1_memory_test" does not exist
 DROP RESOURCE GROUP rg2_memory_test;
@@ -28,6 +30,8 @@ CREATE
 CREATE OR REPLACE VIEW rg_mem_status AS SELECT groupname, memory_limit, proposed_memory_limit, memory_shared_quota, proposed_memory_shared_quota FROM gp_toolkit.gp_resgroup_config WHERE groupname='rg1_memory_test' OR groupname='rg2_memory_test' ORDER BY groupid;
 CREATE
 
+CREATE RESOURCE GROUP rg0_memory_test WITH (cpu_rate_limit=1, memory_limit=30);
+CREATE
 CREATE RESOURCE GROUP rg1_memory_test WITH (concurrency=2, cpu_rate_limit=10, memory_limit=60, memory_shared_quota=0, memory_spill_ratio=5);
 CREATE
 CREATE ROLE role1_memory_test RESOURCE GROUP rg1_memory_test;
@@ -939,4 +943,6 @@ select memory_limit from gp_toolkit.gp_resgroup_config where groupname = 'rg_tes
 DROP ROLE rg_test_role;
 DROP
 DROP RESOURCE GROUP rg_test_group;
+DROP
+DROP RESOURCE GROUP rg0_memory_test;
 DROP

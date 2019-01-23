@@ -30,7 +30,7 @@ SET MEMORY_SPILL_RATIO TO 70;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
 
--- positive set to session level
+-- positive set to session level use work_mem
 SET MEMORY_SPILL_RATIO TO 0;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
@@ -49,6 +49,52 @@ SELECT 1;
 SET MEMORY_SPILL_RATIO TO 20;
 SHOW MEMORY_SPILL_RATIO;
 SELECT 1;
+
+-- positive set to session level
+SET MEMORY_SPILL_RATIO TO '20MB';
+SHOW MEMORY_SPILL_RATIO;
+SELECT 1;
+
+-- positive set to session level
+SET MEMORY_SPILL_RATIO TO '20000kB';
+SHOW MEMORY_SPILL_RATIO;
+SELECT 1;
+
+-- positive set to session level? can run?
+SET MEMORY_SPILL_RATIO TO '20GB';
+SHOW MEMORY_SPILL_RATIO;
+SELECT 1;
+
+-- positive set to session level? can run?
+SET MEMORY_SPILL_RATIO TO '20  MB  ';
+SHOW MEMORY_SPILL_RATIO;
+SELECT 1;
+
+-- negative oom when oprator memory is too large
+SET MEMORY_SPILL_RATIO TO '1TB';
+SHOW MEMORY_SPILL_RATIO;
+SELECT * FROM gp_toolkit.gp_resgroup_config ;
+RESET MEMORY_SPILL_RATIO;
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '10 %';
+SHOW MEMORY_SPILL_RATIO;
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '10.M';
+SHOW MEMORY_SPILL_RATIO;
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '-10M';
+SHOW MEMORY_SPILL_RATIO;
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '-10';
+SHOW MEMORY_SPILL_RATIO;
+
+-- negative set to session level
+SET MEMORY_SPILL_RATIO TO '0x10M';
+SHOW MEMORY_SPILL_RATIO;
 
 -- reset to resource group level
 RESET MEMORY_SPILL_RATIO;

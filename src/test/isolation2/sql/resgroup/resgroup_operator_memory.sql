@@ -7,6 +7,7 @@ SET optimizer TO off;
 --start_ignore
 DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
+DROP RESOURCE GROUP rg0_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
 --end_ignore
@@ -51,6 +52,8 @@ UNION SELECT * FROM gp_toolkit.gp_resgroup_config WHERE groupid=6437
 -- - rg1's memory quota is 682 * 1% = 6;
 -- - per-xact quota is 6/3=2;
 -- - spill memory is 2 * 60% = 1;
+CREATE RESOURCE GROUP rg0_opmem_test
+  WITH (cpu_rate_limit=1, memory_limit=30);
 CREATE RESOURCE GROUP rg1_opmem_test
   WITH (cpu_rate_limit=10, memory_limit=1, memory_shared_quota=0,
         concurrency=3, memory_spill_ratio=60);
@@ -193,4 +196,5 @@ RESET role;
 
 DROP VIEW many_ops;
 DROP ROLE r1_opmem_test;
+DROP RESOURCE GROUP rg0_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;

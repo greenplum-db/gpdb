@@ -54,11 +54,11 @@ DATA(insert ( 6437, 1, 20, 20 ));
 
 DATA(insert ( 6437, 2, 30, 30 ));
 
-DATA(insert ( 6437, 3, 30, 30 ));
+DATA(insert ( 6437, 3, 0, 0 ));
 
-DATA(insert ( 6437, 4, 50, 50 ));
+DATA(insert ( 6437, 4, 80, 80 ));
 
-DATA(insert ( 6437, 5, 20, 20 ));
+DATA(insert ( 6437, 5, "128 MB", "128 MB" ));
 
 DATA(insert ( 6437, 6, 0, 0 ));
 
@@ -70,9 +70,9 @@ DATA(insert ( 6438, 2, 10, 10 ));
 
 DATA(insert ( 6438, 3, 10, 10 ));
 
-DATA(insert ( 6438, 4, 50, 50 ));
+DATA(insert ( 6438, 4, 80, 80 ));
 
-DATA(insert ( 6438, 5, 20, 20 ));
+DATA(insert ( 6438, 5, "128 MB", "128 MB" ));
 
 DATA(insert ( 6438, 6, 0, 0 ));
 

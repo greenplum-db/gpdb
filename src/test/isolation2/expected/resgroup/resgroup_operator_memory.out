@@ -8,6 +8,7 @@ SET
 --start_ignore
 DROP VIEW IF EXISTS many_ops;
 DROP ROLE r1_opmem_test;
+DROP RESOURCE GROUP rg0_opmem_test;
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP RESOURCE GROUP rg2_opmem_test;
 --end_ignore
@@ -32,6 +33,8 @@ CREATE
 -- - rg1's memory quota is 682 * 1% = 6;
 -- - per-xact quota is 6/3=2;
 -- - spill memory is 2 * 60% = 1;
+CREATE RESOURCE GROUP rg0_opmem_test WITH (cpu_rate_limit=1, memory_limit=30);
+CREATE
 CREATE RESOURCE GROUP rg1_opmem_test WITH (cpu_rate_limit=10, memory_limit=1, memory_shared_quota=0, concurrency=3, memory_spill_ratio=60);
 CREATE
 
@@ -62,7 +65,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -74,7 +77,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -86,7 +89,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -152,7 +155,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -164,7 +167,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -176,7 +179,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -203,7 +206,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -215,7 +218,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -227,7 +230,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 RESET role;
 RESET
@@ -246,7 +249,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 SELECT f1_opmem_test();
  f1_opmem_test 
@@ -263,7 +266,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 SELECT f1_opmem_test();
  f1_opmem_test 
@@ -280,7 +283,7 @@ SET
 SELECT * FROM many_ops;
  groupid | groupname     | concurrency | proposed_concurrency | cpu_rate_limit | memory_limit | proposed_memory_limit | memory_shared_quota | proposed_memory_shared_quota | memory_spill_ratio | proposed_memory_spill_ratio | memory_auditor | cpuset 
 ---------+---------------+-------------+----------------------+----------------+--------------+-----------------------+---------------------+------------------------------+--------------------+-----------------------------+----------------+--------
- 6437    | default_group | 20          | 20                   | 30             | 30           | 30                    | 50                  | 50                           | 20                 | 20                          | vmtracker      | -1     
+ 6437    | default_group | 20          | 20                   | 30             | 0            | 0                     | 80                  | 80                           | 128 MB             | 128 MB                      | vmtracker      | -1     
 (1 row)
 SELECT f1_opmem_test();
  f1_opmem_test 
@@ -297,6 +300,8 @@ RESET
 DROP VIEW many_ops;
 DROP
 DROP ROLE r1_opmem_test;
+DROP
+DROP RESOURCE GROUP rg0_opmem_test;
 DROP
 DROP RESOURCE GROUP rg1_opmem_test;
 DROP
