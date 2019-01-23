@@ -53,10 +53,14 @@ Enter mirror segment data directory location 2 of 2 &gt; /gpdb/m2</codeblock>
                 detailed configuration file using the <codeph>-i</codeph> option. This is useful if
                 you want your mirror segments on a completely different set of hosts than your
                 primary segments. The format of the mirror configuration file is:</p>
-            <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>fselocation</varname></codeblock>
-            <p>For example:</p>
-            <codeblock>mirror0=0:sdw1-1:60000:/gpdata/mir1/gp0
-mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
+            <codeblock>mirror<varname>&lt;row_id></varname>=<varname>&lt;contentID></varname>:<varname>&lt;address></varname>:<varname>&lt;port></varname>:<varname>&lt;data_dir></varname></codeblock>
+            <p>Where <codeph>row_id</codeph> is the row in the file, <varname>contentID</varname> is
+                the segment instance content ID, <varname>address</varname> is the host name or IP
+                address of the segment host, <varname>port</varname> is the communication port, and
+                    <codeph>data_dir</codeph> is the segment instance data directory.</p>
+            <p>For
+                example:<codeblock>mirror0=0:sdw1-1:60000:/gpdata/mir1/gp0
+mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock></p>
             <p>The <codeph>gp_segment_configuration</codeph> system catalog table can help you
                 determine your current primary segment configuration so that you can plan your
                 mirror segment configuration. For example, run the following query:</p>
@@ -106,7 +110,15 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
                         the system. The format of this file is as follows (as per attributes in the
                             <codeph>gp_segment_configuration</codeph> catalog table):</pd>
                     <pd>
-                        <codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname/></codeblock>
+                        <codeblock>mirror<varname>&lt;row_id></varname>=<varname>&lt;contentID></varname>:<varname>&lt;address></varname>:<varname>&lt;port></varname>:<varname>&lt;data_dir></varname></codeblock>
+                    </pd>
+                    <pd>
+                        <p>Where <codeph>row_id</codeph> is the row in the file,
+                                <varname>contentID</varname> is the segment instance content ID,
+                                <varname>address</varname> is the host name or IP address of the
+                            segment host, <varname>port</varname> is the communication port, and
+                                <codeph>data_dir</codeph> is the segment instance data
+                            directory.</p>
                     </pd>
                 </plentry>
                 <plentry>
@@ -179,12 +191,12 @@ mirror1=1:sdw1-1:60001:/gpdata/mir2/gp1</codeblock>
                 from your primary data:</p>
             <codeblock>$ gpaddmirrors -i mirror_config_file</codeblock>
             <p>Where <codeph>mirror_config_file</codeph> looks something like this:</p>
-            <codeblock>mirror0=0:sdw1-1:52001:53001:54001:/gpdata/mir1/gp0
+            <codeblock>mirror0=0:sdw1-1:52001:/gpdata/mir1/gp0
 mirror1=1:sdw1-2:52002:/gpdata/mir2/gp1
 mirror2=2:sdw2-1:52001:/gpdata/mir1/gp2
 mirror3=3:sdw2-2:52002:/gpdata/mir2/gp3</codeblock>
-            <p>Output a sample mirror configuration file to use with <codeph>gpaddmirrors
-                    -i</codeph>:</p>
+            <p>Generate a sample mirror configuration file with the <codeph>-o</codeph> option to
+                use with <codeph>gpaddmirrors -i</codeph>:</p>
             <codeblock>$ gpaddmirrors -o /home/gpadmin/sample_mirror_config</codeblock>
         </section>
         <section id="section6">

@@ -4,9 +4,10 @@
 <topic id="topic1" xml:lang="en">
   <title id="ey142834">gp_distribution_policy</title>
   <body>
-    <p>The <codeph>gp_distribution_policy</codeph> table contains information about Greenplum Database tables and their policy for distributing table data across the
-      segments. This table is populated only on the master. This table is not globally shared,
-      meaning each database has its own copy of this table.</p>
+    <p>The <codeph>gp_distribution_policy</codeph> table contains information about Greenplum
+      Database tables and their policy for distributing table data across the segments. This table
+      is populated only on the master. This table is not globally shared, meaning each database has
+      its own copy of this table.</p>
     <table id="ey142842">
       <title>pg_catalog.gp_distribution_policy</title>
       <tgroup cols="4">
@@ -25,7 +26,7 @@
         <tbody>
           <row>
             <entry colname="col1">
-              <codeph id="ey142864">localoid</codeph>
+              <codeph>localoid</codeph>
             </entry>
             <entry colname="col2">oid</entry>
             <entry colname="col3">pg_class.oid</entry>
@@ -33,7 +34,7 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph id="ey142874">attrnums</codeph>
+              <codeph>attrnums</codeph>
             </entry>
             <entry colname="col2">smallint[]</entry>
             <entry colname="col3">pg_attribute.attnum</entry>
@@ -41,15 +42,21 @@
           </row>
           <row>
             <entry colname="col1">
-              <codeph id="ey142874">policytype</codeph>
+              <codeph>policytype</codeph>
             </entry>
             <entry colname="col2">char</entry>
-            <entry colname="col3"></entry>
+            <entry colname="col3"/>
             <entry colname="col4">The table distribution policy:<ul>
-              <li><codeph>p</codeph> - The table has a partitioned
-                distribution policy.</li>
-              <li><codeph>r</codeph> - The table has a replicated distribution
-                policy.</li></ul></entry>
+                <li><codeph>p</codeph> - Table data is distributed among segment instances.</li>
+                <li><codeph>r</codeph> - Table data is replicated on each segment instance.</li>
+              </ul></entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>numsegments</codeph></entry>
+            <entry colname="col2">integer</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">The number of segment instances the table data is distributed
+              on.</entry>
           </row>
         </tbody>
       </tgroup>

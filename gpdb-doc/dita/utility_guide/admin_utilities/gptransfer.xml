@@ -134,8 +134,8 @@
             <p>The source and destination Greenplum Database segment hosts need to be able to
                 communicate with each other. To ensure that the segment hosts can communicate, you
                 can use a tool such as the Linux <codeph>netperf</codeph> utility. </p>
-            <p>If a filespace has been created for a source Greenplum Database system, a
-                corresponding filespace must exist on the target system. </p>
+            <p>If a tablespace has been created for a source Greenplum Database system, the
+                corresponding tablespace must exist on the target system. </p>
             <p>SSH keys must be exchanged between the two systems before using
                     <codeph>gptransfer</codeph>. The <codeph>gptransfer</codeph> utility connects to
                 the source system with SSH to create the named pipes and start the

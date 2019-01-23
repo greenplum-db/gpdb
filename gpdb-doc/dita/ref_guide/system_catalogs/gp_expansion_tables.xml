@@ -75,7 +75,8 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Column names for the hash distribution key.</entry>
+            <entry colname="col4">Column names for the hash distribution key. Value is
+                <codeph>None</codeph> if the table does not have a distribution key column.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -83,7 +84,27 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Column IDs for the distribution keys of the table.</entry>
+            <entry colname="col4">Column OIDs for the distribution keys of the table. Value is
+                <codeph>None</codeph> if the table does not have a distribution key column.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>distribution_policy _type</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Table data distribution. Valid values are: <codeph>p</codeph> -
+              table data is distributed among segment instances, <codeph>r</codeph> table data is
+              replicated on each segment instance.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
+              <codeph>root_partition_name</codeph>
+            </entry>
+            <entry colname="col2">text</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">For a partitioned table, the name of the root partition.
+              Otherwise, <codeph>None</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">

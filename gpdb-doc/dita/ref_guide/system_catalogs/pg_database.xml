@@ -52,6 +52,18 @@
               name.</entry>
           </row>
           <row>
+            <entry colname="col1"><codeph>datcollate</codeph></entry>
+            <entry colname="col2">name</entry>
+            <entry colname="col3"/>
+            <entry colname="col4"><codeph>LC_COLLATE</codeph> for this database.</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>datctype</codeph></entry>
+            <entry colname="col2">name</entry>
+            <entry colname="col3"/>
+            <entry colname="col4"><codeph>LC_CTYPE</codeph> for this database.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>datistemplate</codeph>
             </entry>
@@ -93,11 +105,22 @@
             </entry>
             <entry colname="col2">xid</entry>
             <entry colname="col3"/>
-            <entry colname="col4">All transaction IDs before this one have been replaced with a
-              permanent (frozen) transaction ID in this database. This is used to track whether the
-              database needs to be vacuumed in order to prevent transaction ID wraparound or to
+            <entry colname="col4">All transaction IDs (XIDs) before this one have been replaced with
+              a permanent (frozen) transaction ID in this database. This is used to track whether
+              the database needs to be vacuumed in order to prevent transaction ID wraparound or to
               allow pg_clog to be shrunk. It is the minimum of the per-table
                 <i>pg_class.relfrozenxid</i> values.</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>datminmxid</codeph></entry>
+            <entry colname="col2">xid</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">A <i>Multixact ID</i> is used to support row locking by multiple
+              transactions. All multixact IDs before this one have been replaced with a transaction
+              ID in this database. This is used to track whether the database needs to be vacuumed
+              in order to prevent multixact ID wraparound or to allow <codeph>pg_multixact</codeph>
+              to be shrunk. It is the minimum of the per-table <i>pg_class.relminmxid</i>
+              values.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -108,6 +131,15 @@
             <entry colname="col4">The default tablespace for the database. Within this database, all
               tables for which <i>pg_class.reltablespace</i> is zero will be stored in this
               tablespace. All non-shared system catalogs will also be there.</entry>
+          </row>
+          <row>
+            <entry colname="col1"><codeph>hashmethod</codeph></entry>
+            <entry colname="col2">integer</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">
+              <p>The value is either <codeph>1</codeph> for jump consistent hash or
+                  <codeph>0</codeph> for modulo hash.</p>
+            </entry>
           </row>
           <row>
             <entry colname="col1">

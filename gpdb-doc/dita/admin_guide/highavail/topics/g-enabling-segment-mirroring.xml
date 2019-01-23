@@ -34,7 +34,8 @@
         <li id="ki155416">Ensure the Greenplum Database software is installed on all hosts. <ph>See
             the <i>Greenplum Database Installation Guide</i> for detailed installation
             instructions.</ph></li>
-        <li id="ki161799">Allocate the data storage area for mirror data on all segment hosts.</li>
+        <li id="ki161799">Allocate the data storage area for mirror data, and tablespaces if needed,
+          on all segment hosts.</li>
         <li id="ki160816">Use <codeph>gpssh-exkeys</codeph> to ensure the segment hosts can SSH and
           SCP to each other without a password prompt.</li>
         <li id="ki155422">Create a configuration file that lists the host names, ports, and data
@@ -42,11 +43,13 @@
           starting point,
             run:<codeblock>$ gpaddmirrors -o <i>filename</i>          </codeblock><p>The format of
             the mirror configuration file is:
-            </p><codeblock>mirror[<varname>content</varname>]=<varname>content</varname>:<varname>address</varname>:<varname>port</varname>:<varname>fselocation</varname>[:<varname>fselocation</varname>:...]</codeblock><p>Where
-              <varname>content</varname> is the segment instance content ID,
-              <varname>address</varname> is the host name or IP address of the segment host, and
-              <varname>port</varname> is the communication port.</p><p>For example, a mirror
-            configuration file for two segment hosts and two segment instances per
+            </p><codeblock>mirror<varname>row_id</varname>=<varname>contentID</varname>:<varname>address</varname>:<varname>port</varname>:<varname>data_dir</varname></codeblock><p>Where
+              <codeph>row_id</codeph> is the row in the file, <varname>contentID</varname> is the
+            segment instance content ID, <varname>address</varname> is the host name or IP address
+            of the segment host, <varname>port</varname> is the communication port, and
+              <codeph>data_dir</codeph> is the segment instance data directory.</p><p>For example,
+            this is contents of a mirror configuration file for two segment hosts and two segment
+            instances per
           host:</p><codeblock>mirror0=2:sdw1-1:41000:/data/mirror1/gp2
 mirror1=3:sdw1-2:41001:/data/mirror2/gp3
 mirror2=0:sdw2-1:41000:/data/mirror1/gp0
