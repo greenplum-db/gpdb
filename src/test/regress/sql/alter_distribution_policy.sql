@@ -75,67 +75,6 @@ alter table atsdb_ao set distributed randomly;
 select count(*) from atsdb_ao;
 drop table atsdb_ao;
 
--- Check divergent distribution policies for partitioning.
-create table atsdb (i int, j int, k int) distributed by (i) partition by range(k)
-(start(1) end(4) every(1));
-alter table atsdb_1_prt_2 set distributed by (j);
-alter table atsdb_1_prt_3 set distributed randomly;
--- test COPY
-copy atsdb from stdin delimiter '|';
-1|1|1
-2|1|1
-2|2|1
-3|1|1
-3|2|1
-3|3|1
-1|1|2
-2|1|2
-2|2|2
-3|1|2
-3|2|2
-3|3|2
-1|1|3
-2|1|3
-2|2|3
-3|1|3
-3|2|3
-3|3|3
-\.
-
-select count(*) from atsdb;
-
--- compare distribution: we create a table, identical to the partitioned table,
--- and compare how the tuples have been distributed.
-create table atsdb_1 (like atsdb_1_prt_1) distributed by (i);
-copy atsdb_1 from stdin delimiter '|';
-1|1|1
-2|1|1
-2|2|1
-3|1|1
-3|2|1
-3|3|1
-\.
-select gp_segment_id, * from atsdb where k = 1 except
-select gp_segment_id, * from atsdb_1;
-
-create table atsdb_2 (like atsdb_1_prt_2) distributed by (i);
-copy atsdb_2 from stdin delimiter '|';
-1|1|2
-2|1|2
-2|2|2
-3|1|2
-3|2|2
-3|3|2
-\.
-select gp_segment_id, * from atsdb where k = 2 except
-select gp_segment_id, * from atsdb_2;
-
--- Can't test randomly distributed
-
--- Can't test INSERT (yet)
-
-drop table atsdb, atsdb_1, atsdb_2;
-
 -- Can't redistribute system catalogs
 alter table pg_class set distributed by (relname);
 alter table pg_class set with(appendonly = true);
@@ -439,34 +378,6 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
-
--- Altering distribution policy for subpartitioned tables
-CREATE TABLE mpp6489
-(
-	id int,
-	rank int,
-	year date,
-	gender char(1)
-)
-DISTRIBUTED BY (id, gender, year)
-partition by list (gender)
-subpartition by range (year)
-subpartition template
-(
-	start (date '2001-01-01'),
-	start (date '2002-01-01'),
-	start (date '2003-01-01'),
-	start (date '2004-01-01'),
-	start (date '2005-01-01')
-)
-(
-	values ('M'),
-	values ('F')
-);
-
-ALTER TABLE mpp6489_1_prt_1_2_prt_5 set distributed randomly;
-ALTER TABLE "mpp6489" ALTER PARTITION FOR('M'::bpchar) alter PARTITION
-FOR(RANK(5)) set distributed by (id, gender, year);
 
 -- Altering distribution policy for temp tables
 create temp table atsdb (c1 int, c2 int) distributed randomly;

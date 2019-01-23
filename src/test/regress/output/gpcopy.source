@@ -1267,10 +1267,6 @@ SET gp_enable_segment_copy_checking=off;
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 SET gp_enable_segment_copy_checking=on;
 set gp_vmem_idle_resource_timeout=18000;
--- If the partition is made randomly distributed, it works even with the
--- checking enabled.
-ALTER table copy_on_segment_check_distkey_partioned_1_prt_1 set DISTRIBUTED RANDOMLY ;
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED<SEGID>.csv' ON SEGMENT CSV;
 -- But make sure we still perform the checks for the other partition that is
 -- hash distributed.
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED_1_prt_2 to '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_PARTIONED0.csv' CSV;
@@ -1341,9 +1337,6 @@ COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION to '/tmp/COPY_ON_SEGMENT_CHECK_D
 COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
 ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=13100)
 CONTEXT:  COPY copy_on_segment_check_distkey_subpartition, line 2: "0,0"
-ALTER table copy_on_segment_check_distkey_subpartition_1_prt_1_2_prt_1 set DISTRIBUTED RANDOMLY ;
-COPY COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION FROM '/tmp/COPY_ON_SEGMENT_CHECK_DISTKEY_SUBPARTITION<SEGID>.csv' ON SEGMENT CSV;
-ERROR:  value of distribution key doesn't belong to segment with ID 0, it belongs to segment with ID 1  (seg0 127.0.0.1:40000 pid=31639)
 -- start_ignore
 DROP TABLE IF EXISTS LINEITEM_1;
 DROP TABLE IF EXISTS LINEITEM_2;

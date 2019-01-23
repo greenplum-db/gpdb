@@ -536,8 +536,8 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- One partition is randomly distributed, while others are distributed by key.
 alter table ddtesttab_1_prt_2 set distributed randomly;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+ERROR:  can't set the distribution policy of "ddtesttab_1_prt_2"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into ddtesttab values (1, 1, 5);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content

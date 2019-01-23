@@ -285,7 +285,7 @@ INSERT INTO customer_on VALUES (599, 'Customer#000000599', 'fIvpza0tlXAVjOAPkWN5
 
 SELECT * from customer_off a, customer_off b where a.gp_segment_id <> b.gp_segment_id and a.c_custkey = b.c_custkey;
 
--- Test partitioned tables which have child with different distribution policies
+-- Test partitioned tables which have child with same distribution policies
 
 set gp_enable_fast_sri to on;
 -- single level case
