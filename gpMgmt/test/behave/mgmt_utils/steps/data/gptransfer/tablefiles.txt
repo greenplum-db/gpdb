@@ -1,3 +1,0 @@
-gptransfer_testdb_table_count_one.public.t1
-gptransfer_testdb_table_count_two.public.table1
-gptransfer_testdb_table_count_two.public.table2

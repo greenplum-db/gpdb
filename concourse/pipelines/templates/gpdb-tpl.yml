@@ -94,7 +94,6 @@ groups:
   - gpcheck
   - gppkg
   - check_centos
-  - gptransfer
 {% endif %}
 {% if "UD" in test_sections %}
   ## --------------------------------------------------------------------
@@ -263,7 +262,6 @@ groups:
   - gppkg
   - check_centos
   - compile_gpdb_centos6
-  - gptransfer
 {% if "centos6" in os_types and "ICW" in test_sections %}
   - pg_upgrade
 {% endif %}
@@ -370,24 +368,6 @@ resources:
     region_name: {{aws-region}}
     versioned_file: gpdb6/icw_gporca_centos6/dump.sql.xz
 
-{% endif %}
-{% if "CLI" in test_sections %}
-# a second cluster for gptransfer tests
-- name: terraform2
-  type: terraform
-  source:
-    env:
-      AWS_ACCESS_KEY_ID: {{tf-machine-access-key-id}}
-      AWS_SECRET_ACCESS_KEY: {{tf-machine-secret-access-key}}
-      GOOGLE_CREDENTIALS: {{google-service-account-key}}
-    vars:
-      project_id: {{google-project-id}}
-    storage:
-      access_key_id: {{tf-machine-access-key-id}}
-      secret_access_key: {{tf-machine-secret-access-key}}
-      region_name: {{aws-region}}
-      bucket: gpdb5-pipeline-dynamic-terraform
-      bucket_path: clusters-google/
 {% endif %}
 {% if "aix7" in os_types %}
 - name: aix_environments
@@ -1816,104 +1796,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: gptransfer
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      passed: [gate_cli_start]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_cli_start]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-  # The separate clusters can be created in parallel with the aggregate and do blocks
-  #  The terraform put and gen cluster that correspond must still happen serially
-  - aggregate:
-    - do:
-      - put: terraform
-        params:
-          <<: *ccp_default_params
-          vars:
-            <<: *ccp_default_vars
-            instance_type: n1-standard-2
-      - task: gen_cluster1
-        file: ccp_src/ci/tasks/gen_cluster.yml
-        params:
-          <<: *ccp_gen_cluster_default_params
-      - task: gpinitsystem
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source:
-              repository: pivotaldata/ccp
-              tag: "7"
-          inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files
-          run:
-            path: ccp_src/scripts/gpinitsystem.sh
-    - do:
-      - put: terraform2
-        params:
-          <<: *ccp_default_params
-          vars:
-            <<: *ccp_default_vars
-            instance_type: n1-standard-2
-            cluster_suffix: "-2"
-      - task: gen_cluster2
-        file: ccp_src/ci/tasks/gen_cluster.yml
-        params:
-          <<: *ccp_gen_cluster_default_params
-        input_mapping:
-          terraform: terraform2
-        output_mapping:
-          cluster_env_files: cluster_env_files2
-      - task: gpinitsystem
-        input_mapping:
-          terraform: terraform2
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source:
-              repository: pivotaldata/ccp
-              tag: "7"
-          inputs:
-          - name: terraform
-          - name: ccp_src
-          - name: cluster_env_files2
-            path: cluster_env_files
-          run:
-            path: ccp_src/scripts/gpinitsystem.sh
-  - task: gptransfer_pre_test_setup
-    image: ccp-image
-    config:
-      platform: linux
-      inputs:
-        - name: cluster_env_files
-        - name: cluster_env_files2
-        - name: ccp_src
-        - name: gpdb_src
-      run:
-        path: sh
-        args:
-        - -exc
-        - |
-          source gpdb_src/concourse/scripts/transfer_utils.sh; setup_gptransfer
-  - task: run_gptransfer_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    image: ccp-image
-    params:
-      BEHAVE_FLAGS: --tags=gptransfer --tags=-skip_source_5
-      CUSTOM_ENV: export GPTRANSFER_DEST_HOST=mdw; export GPTRANSFER_DEST_PORT=5432; export GPTRANSFER_DEST_USER=gpadmin; export GPTRANSFER_MAP_FILE=/tmp/source_map_file; export GPTRANSFER_SOURCE_HOST=mdw-2; export GPTRANSFER_SOURCE_PORT=5432; export GPTRANSFER_SOURCE_USER=gpadmin;
-    on_success:
-      <<: *ccp_destroy_two_clusters
-  ensure:
-    <<: *set_failed_two_clusters
-
 {% if "centos6" in os_types and "ICW" in test_sections %}
 - name: pg_upgrade
   ensure:
@@ -2280,7 +2162,6 @@ jobs:
       - gpcheck
       - gppkg
       - check_centos
-      - gptransfer
       - interconnect
     - get: bin_gpdb_centos6
       trigger: true
@@ -2304,7 +2185,6 @@ jobs:
       - gpcheck
       - gppkg
       - check_centos
-      - gptransfer
       - interconnect
     - get: bin_gpdb_centos7
       trigger: true

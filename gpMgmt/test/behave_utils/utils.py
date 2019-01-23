@@ -602,32 +602,6 @@ def check_row_count(context, tablename, dbname, nrows):
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
 
 
-def match_table_select(context, src_tablename, src_dbname, dest_tablename, dest_dbname, orderby=None, options=''):
-    if orderby != None:
-        dest_tbl_qry = 'psql -d %s -c \'select * from %s order by %s\' %s' % (
-        dest_dbname, dest_tablename, orderby, options)
-        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s order by %s\' %s''' % (
-            os.environ.get('GPTRANSFER_SOURCE_PORT'),
-            os.environ.get('GPTRANSFER_SOURCE_HOST'),
-            os.environ.get('GPTRANSFER_SOURCE_USER'),
-            src_dbname, src_tablename, orderby, options)
-    else:
-        dest_tbl_qry = 'psql -d %s -c \'select * from %s\' %s' % (dest_dbname, dest_tablename, options)
-        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s\' %s''' % (
-            os.environ.get('GPTRANSFER_SOURCE_PORT'),
-            os.environ.get('GPTRANSFER_SOURCE_HOST'),
-            os.environ.get('GPTRANSFER_SOURCE_USER'),
-            src_dbname, src_tablename, options)
-
-    (_, dest_content, _) = run_cmd(dest_tbl_qry)
-    (_, src_content, _) = run_cmd(src_tbl_qry)
-    if src_content != dest_content:
-        raise Exception('''table %s in database %s of source system does not match rows with table %s in database %s of destination system.\n
-                         destination table content:\n%s\n
-                         source table content:\n%s\n''' % (
-            src_tablename, src_dbname, dest_tablename, dest_dbname, dest_content, src_content))
-
-
 def get_master_hostname(dbname='template1'):
     master_hostname_sql = "SELECT DISTINCT hostname FROM gp_segment_configuration WHERE content=-1 AND role='p'"
     return getRows(dbname, master_hostname_sql)

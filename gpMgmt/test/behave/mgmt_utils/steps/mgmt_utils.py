@@ -414,35 +414,6 @@ def impl(context):
     raise Exception('segments are not in sync after %d seconds' % (times * sleeptime))
 
 
-@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dirname}"')
-def impl(context, dbname, dirname):
-    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s' % dbname
-    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s' % dbname
-    for filename in os.listdir(dirname):
-        if filename.endswith('.sql'):
-            filename_prefix = os.path.splitext(filename)[0]
-            ans_file_path = os.path.join(dirname, filename_prefix + '.ans')
-            out_file_path = os.path.join(dirname, filename_prefix + '.out')
-            diff_file_path = os.path.join(dirname, filename_prefix + '.diff')
-            # run the command to get the exact data from the source system
-            command = '%s -a -f %s > %s' % (dbconn_src, os.path.join(dirname, filename), ans_file_path)
-            run_command(context, command)
-
-            # run the command to get the data from the destination system, locally
-            command = '%s -a -f %s > %s' % (dbconn_dest, os.path.join(dirname, filename), out_file_path)
-            run_command(context, command)
-
-            gpdiff_cmd = 'gpdiff.pl -u -w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gpd_init=test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s' % (
-            ans_file_path, out_file_path, diff_file_path)
-            run_command(context, gpdiff_cmd)
-            if context.ret_code != 0:
-                with open(diff_file_path, 'r') as diff_file:
-                    diff_file_contents = diff_file.read()
-                    raise Exception(
-                        "Found difference between source and destination system, see %s. \n Diff contents: \n %s" % (
-                        diff_file_path, diff_file_contents))
-
-
 @then('verify that there is no table "{tablename}" in "{dbname}"')
 def impl(context, tablename, dbname):
     dbname = replace_special_char_env(dbname)
@@ -474,17 +445,6 @@ def impl(context, table_name, part_level, dbname):
 def impl(context, tname, dbname, nrows):
     check_row_count(context, tname, dbname, int(nrows))
 
-@then(
-    'verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with options "{options}"')
-def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, options):
-    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, options)
-
-
-@then(
-    'verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with order by "{orderby}"')
-def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby):
-    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby)
-
 @given('schema "{schema_list}" exists in "{dbname}"')
 @then('schema "{schema_list}" exists in "{dbname}"')
 def impl(context, schema_list, dbname):
@@ -498,13 +458,6 @@ def impl(context, schema_list, dbname):
 def impl(context, filename):
     if os.path.exists(filename):
         os.remove(filename)
-
-
-@then('the temporary table file "{filename}" is removed')
-def impl(context, filename):
-    table_file = 'test/behave/mgmt_utils/steps/data/gptransfer/%s' % filename
-    if os.path.exists(table_file):
-        os.remove(table_file)
 
 
 def create_table_file_locally(context, filename, table_list, location=os.getcwd()):
@@ -1230,26 +1183,10 @@ def impl(context, utilname, dirname):
         raise Exception('Logs matching "%s" were not created' % pattern)
 
 
-@given('a table is created containing rows of length "{length}" with connection "{dbconn}"')
-def impl(context, length, dbconn):
-    length = int(length)
-    wide_row_file = 'test/behave/mgmt_utils/steps/data/gptransfer/wide_row_%s.sql' % length
-    tablename = 'public.wide_row_%s' % length
-    entry = "x" * length
-    with open(wide_row_file, 'w') as sql_file:
-        sql_file.write("CREATE TABLE %s (a integer, b text);\n" % tablename)
-        for i in range(10):
-            sql_file.write("INSERT INTO %s VALUES (%d, \'%s\');\n" % (tablename, i, entry))
-    command = '%s -f %s' % (dbconn, wide_row_file)
-    run_gpcommand(context, command)
-
-
 @then('drop the table "{tablename}" with connection "{dbconn}"')
 def impl(context, tablename, dbconn):
     command = "%s -c \'drop table if exists %s\'" % (dbconn, tablename)
     run_gpcommand(context, command)
-
-
 
 
 def _get_gpAdminLogs_directory():
@@ -1260,16 +1197,6 @@ def _get_gpAdminLogs_directory():
 def impl(context):
     with open('/tmp/incomplete_map_file', 'w') as fd:
         fd.write('nonexistent_host,nonexistent_host')
-
-
-@given(
-    'there is a table "{table_name}" dependent on function "{func_name}" in database "{dbname}" on the source system')
-def impl(context, table_name, func_name, dbname):
-    dbconn = 'psql -d %s -p $GPTRANSFER_SOURCE_PORT -U $GPTRANSFER_SOURCE_USER -h $GPTRANSFER_SOURCE_HOST' % dbname
-    SQL = """CREATE TABLE %s (num integer); CREATE FUNCTION %s (integer) RETURNS integer AS 'select abs(\$1);' LANGUAGE SQL IMMUTABLE; CREATE INDEX test_index ON %s (%s(num))""" % (
-    table_name, func_name, table_name, func_name)
-    command = '%s -c "%s"' % (dbconn, SQL)
-    run_command(context, command)
 
 
 @then('verify that function "{func_name}" exists in database "{dbname}"')
@@ -1420,38 +1347,6 @@ def impl(context, filepath, line):
     filepath = glob.glob(filepath)[0]
     if line in open(filepath).read():
         raise Exception("The file '%s' does contain '%s'" % (filepath, line))
-
-
-@then('verify that gptransfer is in order of "{filepath}" when partition transfer is "{is_partition_transfer}"')
-def impl(context, filepath, is_partition_transfer):
-    with open(filepath) as f:
-        table = f.read().splitlines()
-        if is_partition_transfer != "None":
-            table = [x.split(',')[0] for x in table]
-
-    split_message = re.findall("Starting transfer of.*\n", context.stdout_message)
-
-    if len(split_message) == 0 and len(table) != 0:
-        raise Exception("There were no tables transfered")
-
-    counter_table = 0
-    counter_split = 0
-    found = 0
-
-    while counter_table < len(table) and counter_split < len(split_message):
-        for i in range(counter_split, len(split_message)):
-            pat = table[counter_table] + " to"
-            prog = re.compile(pat)
-            res = prog.search(split_message[i])
-            if not res:
-                counter_table += 1
-                break
-            else:
-                found += 1
-                counter_split += 1
-
-    if found != len(split_message):
-        raise Exception("expected to find %s tables in order and only found %s in order" % (len(split_message), found))
 
 
 @given('database "{dbname}" is dropped and recreated')
@@ -1731,19 +1626,6 @@ def impl(context, table_name, db_name):
     with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
         dbconn.execSQL(conn, index_qry)
         conn.commit()
-
-
-@given('the gptransfer test is initialized')
-def impl(context):
-    context.execute_steps(u'''
-        Given the database is running
-        And the database "gptest" does not exist
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-    ''')
 
 
 @given('gpperfmon is configured and running in qamode')
