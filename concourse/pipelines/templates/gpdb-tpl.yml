@@ -264,7 +264,6 @@ groups:
   - check_centos
   - compile_gpdb_centos6
   - gptransfer
-  - compile_gpdb_centos6
 {% if "centos6" in os_types and "ICW" in test_sections %}
   - pg_upgrade
 {% endif %}
