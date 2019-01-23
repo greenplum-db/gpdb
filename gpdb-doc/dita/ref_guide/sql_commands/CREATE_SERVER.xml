@@ -62,12 +62,12 @@
                                 <li><codeph>master</codeph> (the default)—Request data from the
                                     master host.</li>
                                 <li><codeph>any</codeph>—Request data from either the master host or
-                                    one any segment, depending on which path costs less.</li>
-                                <li><codeph>all segments</codeph>—Request data from all segments.
-                                    With this option value, the foreign data-wrapper must have a
+                                    any one segment, depending on which path costs less.</li>
+                                <li><codeph>all segments</codeph>—Request data from all segments. To
+                                    support this option value, the foreign data-wrapper must have a
                                     policy that matches the segments to data.</li>
                             </ul></p>
-                        <p>The <codeph>mpp_execute</codeph> option can be configured in multiple
+                        <p>The <codeph>mpp_execute</codeph> option can be specified in multiple
                             commands: <codeph>CREATE FOREIGN TABLE</codeph>, <codeph>CREATE
                                 SERVER</codeph>, and <codeph>CREATE FOREIGN DATA WRAPPER</codeph>.
                             The foreign table setting takes precedence over the foreign server
