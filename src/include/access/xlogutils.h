@@ -30,6 +30,5 @@ extern Relation CreateFakeRelcacheEntry(RelFileNode rnode);
 extern void FreeFakeRelcacheEntry(Relation fakerel);
 
 extern void XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum);
-extern void XLogAODropSegmentFile(RelFileNode rnode, uint32 segmentFileNum);
 
 #endif

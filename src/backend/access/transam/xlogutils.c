@@ -203,31 +203,6 @@ forget_invalid_pages_db(Oid dbid)
 	}
 }
 
-/* Forget an invalid AO/AOCO segment file */
-static void
-forget_invalid_segment_file(RelFileNode rnode, uint32 segmentFileNum)
-{
-	xl_invalid_page_key key;
-	bool		found;
-
-	if (invalid_page_tab == NULL)
-		return;					/* nothing to do */
-
-	key.node = rnode;
-	key.forkno = MAIN_FORKNUM;
-	key.blkno = segmentFileNum;
-	hash_search(invalid_page_tab,
-				(void *) &key,
-				HASH_FIND, &found);
-	if (!found)
-		return;
-
-	if (hash_search(invalid_page_tab,
-					(void *) &key,
-					HASH_REMOVE, &found) == NULL)
-		elog(ERROR, "hash table corrupted");
-}
-
 /* Are there any unresolved references to invalid pages? */
 bool
 XLogHaveInvalidPages(void)
@@ -411,10 +386,12 @@ XLogReadBufferExtended(RelFileNode rnode, ForkNumber forknum,
 
 /*
  * If the AO segment file does not exist, log the relfilenode into the
- * invalid_page_table hash table using the segment file number as the
- * block number to avoid creating a new hash table.  The entry will be
- * removed if there is a following MMXLOG_REMOVE_FILE record for the
- * relfilenode.
+ * invalid_page_table hash table using the segment file number as the block
+ * number to avoid creating a new hash table specifically for AO.  The entry
+ * will be removed if there is a following xlog redo commit prepared record
+ * for deleting the relfilenode.  The segment file number here is only used
+ * for a debug message since XLogDropRelation logic will remove all
+ * invalid_page_tab entries that have the same relfilenode and fork number.
  */
 void
 XLogAOSegmentFile(RelFileNode rnode, uint32 segmentFileNum)
@@ -506,13 +483,6 @@ void
 XLogDropRelation(RelFileNode rnode, ForkNumber forknum)
 {
 	forget_invalid_pages(rnode, forknum, 0);
-}
-
-/* Drop an AO/CO segment file from the invalid_page_tab hash table */
-void
-XLogAODropSegmentFile(RelFileNode rnode, uint32 segmentFileNum)
-{
-	forget_invalid_segment_file(rnode, segmentFileNum);
 }
 
 /*
