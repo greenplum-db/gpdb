@@ -745,45 +745,6 @@ class SegmentTemplate:
         self.pool.join()
         self.pool.check_results()
 
-    def _start_new_primary_segments(self):
-        newSegments = self.gparray.getExpansionSegDbList()
-        for seg in newSegments:
-            if seg.isSegmentMirror():
-                continue
-            """ Start all the new segments in utilty mode. """
-            segStartCmd = SegmentStart(
-                name="Starting new segment dbid %s on host %s." % (str(seg.getSegmentDbId()), seg.getSegmentHostName())
-                , gpdb=seg
-                , numContentsInCluster=0  # Starting seg on it's own.
-                , era=None
-                , mirrormode=MIRROR_MODE_MIRRORLESS
-                , utilityMode=True
-                , specialMode='convertMasterDataDirToSegment'
-                , ctxt=REMOTE
-                , remoteHost=seg.getSegmentHostName()
-                , pg_ctl_wait=True
-                , timeout=SEGMENT_TIMEOUT_DEFAULT)
-            self.pool.addCommand(segStartCmd)
-        self.pool.join()
-        self.pool.check_results()
-
-    def _stop_new_primary_segments(self):
-        newSegments = self.gparray.getExpansionSegDbList()
-        for seg in newSegments:
-            if seg.isSegmentMirror() == True:
-                continue
-            segStopCmd = SegmentStop(
-                name="Stopping new segment dbid %s on host %s." % (str(seg.getSegmentDbId), seg.getSegmentHostName())
-                , dataDir=seg.getSegmentDataDirectory()
-                , mode='smart'
-                , nowait=False
-                , ctxt=REMOTE
-                , remoteHost=seg.getSegmentHostName()
-            )
-            self.pool.addCommand(segStopCmd)
-        self.pool.join()
-        self.pool.check_results()
-
     def _configure_new_segments(self):
         """Configures new segments.  This includes modifying the postgresql.conf file
         and setting up the gp_id table"""
@@ -801,34 +762,6 @@ class SegmentTemplate:
 
         self.pool.join()
         self.pool.check_results()
-
-        self._start_new_primary_segments()
-
-        self.logger.info('Configuring new segments (mirror)')
-
-        # This loop enriches segments which are mirrors with two fields, primaryHostname and primarySegmentPort.
-        mirrorsList = []
-        for segPair in self.gparray.getExpansionSegPairList():
-            if segPair.mirrorDB is None:
-                continue
-            mirror = segPair.mirrorDB
-            mirror.primaryHostname = segPair.primaryDB.getSegmentHostName()
-            mirror.primarySegmentPort = segPair.primaryDB.getSegmentPort()
-            mirrorsList.append(mirror)
-
-        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(mirrorsList, primaryMirror='mirror')
-
-        for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
-                                            tarFile=self.schema_tar_file, newSegments=True,
-                                            verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
-                                            ctxt=REMOTE, remoteHost=host, validationOnly=False)
-            self.pool.addCommand(segCfgCmd)
-
-        self.pool.join()
-        self.pool.check_results()
-
-        self._stop_new_primary_segments()
 
     def _fixup_template(self):
         """Copies postgresql.conf and pg_hba.conf files from a valid segment on the system.
