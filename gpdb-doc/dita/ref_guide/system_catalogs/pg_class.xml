@@ -173,8 +173,8 @@
                 = TOAST value, <codeph>v</codeph> = view, <codeph>c</codeph> = composite type,
                   <codeph>f</codeph> = foreign table, <codeph>u</codeph> = uncatalogued temporary
                 heap table, <codeph>o</codeph> = internal append-optimized segment files and EOFs,
-                  <codeph>c</codeph> = composite type, <codeph>b</codeph> = append-only block
-                directory, <codeph>M</codeph> = append-only visibility map</p></entry>
+                  <codeph>b</codeph> = append-only block directory, <codeph>M</codeph> = append-only
+                visibility map</p></entry>
           </row>
           <row>
             <entry colname="col1">
