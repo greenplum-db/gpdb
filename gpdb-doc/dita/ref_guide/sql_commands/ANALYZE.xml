@@ -229,6 +229,12 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
       <p>The largest statistics target among the columns being analyzed determines the number of
         table rows sampled to prepare the statistics. Increasing the target causes a proportional
         increase in the time and space needed to do <codeph>ANALYZE</codeph>.</p>
+      <p>One of the values estimated by <codeph>ANALYZE</codeph> is the number of distinct values
+        that appear in each column. Because only a subset of the rows are examined, this estimate
+        can sometimes be quite inaccurate, even with the largest possible statistics target. If this
+        inaccuracy leads to bad query plans, a more accurate value can be determined manually and
+        then installed with <codeph>ALTER TABLE ... ALTER COLUMN ... SET STATISTICS
+          DISTINCT</codeph> (see <xref href="ALTER_TABLE.xml#topic1"/>).</p>
       <p>When Greenplum Database performs an <codeph>ANALYZE</codeph> operation to collect
         statistics for a table and detects that all the sampled table data pages are empty (do not
         contain valid data), Greenplum Database displays a message that a <codeph>VACUUM
