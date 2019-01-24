@@ -2464,56 +2464,41 @@ distinct_col_search(int colno, List *colnos, List *opids)
 }
 
 static bool
-subquery_motionHazard_walker(Plan *node, void *context)
+subquery_motionHazard_walker(Plan *node)
 {
+	List       *planlist = NIL;
+
 	if (node == NULL)
 		return false;
 
 	if (IsA(node, Motion))
 		return true;
+	else if (IsA(node, SubqueryScan))
+		return subquery_motionHazard_walker(((SubqueryScan *) node)->subplan);
 	else if (IsA(node, Append))
-	{
-		ListCell   *l;
-
-		foreach(l, ((Append *) node)->appendplans)
-		{
-			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
-				return true;
-		}
-	}
+		planlist = ((Append *) node)->appendplans;
 	else if (IsA(node, MergeAppend))
-	{
-		ListCell   *l;
-
-		foreach(l, ((MergeAppend *) node)->mergeplans)
-		{
-			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
-				return true;
-		}
-	}
+		planlist = ((MergeAppend *) node)->mergeplans;
 	else if (IsA(node, BitmapAnd))
-	{
-		ListCell   *l;
-
-		foreach(l, ((BitmapAnd *) node)->bitmapplans)
-		{
-			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
-				return true;
-		}
-	}
+		planlist = ((BitmapAnd *) node)->bitmapplans;
 	else if (IsA(node, BitmapOr))
-	{
-		ListCell   *l;
+		planlist = ((BitmapOr *) node)->bitmapplans;
+	else if (IsA(node, Sequence))
+		planlist = ((Sequence *) node)->subplans;
+	else if (IsA(node, ModifyTable))
+		planlist = ((ModifyTable *) node)->plans;
 
-		foreach(l, ((BitmapOr *) node)->bitmapplans)
-		{
-			if (subquery_motionHazard_walker((Plan *) lfirst(l), NULL))
-				return true;
-		}
+	/* Handle plan lists */
+	ListCell   *l;
+	foreach(l, planlist)
+	{
+		if (subquery_motionHazard_walker((Plan *) lfirst(l)))
+			return true;
 	}
 
-	if (subquery_motionHazard_walker(node->lefttree, NULL) ||
-		subquery_motionHazard_walker(node->righttree, NULL))
+	/* left tree and right tree */
+	if (subquery_motionHazard_walker(node->lefttree) ||
+		subquery_motionHazard_walker(node->righttree))
 		return true;
 
 	return false;
@@ -2537,7 +2522,7 @@ create_subqueryscan_path(PlannerInfo *root, RelOptInfo *rel,
 	pathnode->pathkeys = pathkeys;
 
 	pathnode->locus = cdbpathlocus_from_subquery(root, rel->subplan, rel->relid);
-	pathnode->motionHazard = subquery_motionHazard_walker(rel->subplan, NULL);
+	pathnode->motionHazard = subquery_motionHazard_walker(rel->subplan);
 	pathnode->rescannable = false;
 	pathnode->sameslice_relids = NULL;
 

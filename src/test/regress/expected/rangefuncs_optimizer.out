@@ -2024,3 +2024,43 @@ select x from int8_tbl, extractq2_2(int8_tbl) f(x);
   4567890123456789
 (5 rows)
 
+-- gpdb: test append node in subquery_motionHazard_walker(). Without that
+-- change the select query below will panic.
+create function extractq2_append(t int8_tbl) returns table(ret1 int8) as $$
+  select extractq2(t) union all select extractq2(t)
+$$ language sql immutable;
+explain (verbose, costs off)
+select x from int8_tbl, extractq2_append(int8_tbl) f(x);
+                   QUERY PLAN                   
+------------------------------------------------
+ Nested Loop
+   Output: ((int8_tbl.*).q2)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: int8_tbl.*
+         ->  Seq Scan on public.int8_tbl
+               Output: int8_tbl.*
+   ->  Materialize
+         Output: ((int8_tbl.*).q2)
+         ->  Append
+               ->  Result
+                     Output: (int8_tbl.*).q2
+               ->  Result
+                     Output: (int8_tbl.*).q2
+ Optimizer: legacy query optimizer
+(14 rows)
+
+select x from int8_tbl, extractq2_append(int8_tbl) f(x);
+         x         
+-------------------
+               123
+               123
+  4567890123456789
+  4567890123456789
+ -4567890123456789
+ -4567890123456789
+               456
+               456
+  4567890123456789
+  4567890123456789
+(10 rows)
+

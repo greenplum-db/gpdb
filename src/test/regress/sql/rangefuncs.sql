@@ -648,3 +648,14 @@ explain (verbose, costs off)
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
 
 select x from int8_tbl, extractq2_2(int8_tbl) f(x);
+
+-- gpdb: test append node in subquery_motionHazard_walker(). Without that
+-- change the select query below will panic.
+create function extractq2_append(t int8_tbl) returns table(ret1 int8) as $$
+  select extractq2(t) union all select extractq2(t)
+$$ language sql immutable;
+
+explain (verbose, costs off)
+select x from int8_tbl, extractq2_append(int8_tbl) f(x);
+
+select x from int8_tbl, extractq2_append(int8_tbl) f(x);
