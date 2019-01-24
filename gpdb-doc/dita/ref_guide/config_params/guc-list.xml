@@ -3354,24 +3354,21 @@
   <topic id="gp_expand_method">
     <title>gp_expand_method</title>
     <body>
-      <draft-comment author="msk">DRAFT <xref
-          href="https://www.pivotaltracker.com/story/show/162535111" format="html" scope="external"
-          >162535111</xref>
-        <xref href="https://github.com/greenplum-db/gpdb/pull/6630" format="html" scope="external"
-          >gpdb-feature/pull/66300</xref> merged to feature<p><b>[Q:]</b> Will both expand methods
-          work with both hashmethods?</p></draft-comment>
-      <p>This parameter controls how<codeph>gpexpand</codeph> redistributes table data during the
+      <p>This parameter controls how <codeph>gpexpand</codeph> redistributes table data during the
         table data redistribution phase of a system expansion. There are two ways
           <codeph>gpexpand</codeph> can perform table data redistribution.<ul id="ol_xdd_1py_jgb">
-          <li>rebuild - Create a new table, copy all the data from the old to the new table, and
-            replace the old table. This is the default. The rebuild method is similar creating a new
-            table with a <codeph>CREATE TABLE AS SELECT</codeph> command.</li>
-          <li>move - Scan the table data and perform an <codeph>UPDATE</codeph> operation to move
-            rows as needed to different segment instances. In general, this method requires less
-            disk space, however, it creates obsolete table rows and might require a
-              <codeph>VACUUM</codeph> operation on the table. Also, this method updates indexes one
-            row at a time, which can be much slower than rebuilding the index with the
-              <codeph>CREATE INDEX</codeph> command.</li>
+          <li><codeph>rebuild</codeph> - Create a new table, copy all the data from the old to the
+            new table, and replace the old table. This is the default. The rebuild method is similar
+            to creating a new table with a <codeph>CREATE TABLE AS SELECT</codeph> command. During
+            data redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the
+            table.</li>
+          <li><codeph>move</codeph> - Scan the table data and perform an <codeph>UPDATE</codeph>
+            operation to move rows as needed to different segment instances. During data
+            redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the table. In
+            general, this method requires less disk space, however, it creates obsolete table rows
+            and might require a <codeph>VACUUM</codeph> operation on the table. Also, this method
+            updates indexes one row at a time, which can be much slower than rebuilding the index
+            with the <codeph>CREATE INDEX</codeph> command.</li>
         </ul></p>
       <table id="table_utp_zny_jgb">
         <tgroup cols="3">

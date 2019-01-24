@@ -6,8 +6,6 @@
   <shortdesc>You can perform a Greenplum Database expansion to add segment instances and segment
     hosts with minimal downtime.</shortdesc>
   <body>
-    <draft-comment author="msk">GPDB 6 - does not require downtime to add segment
-      instances</draft-comment>
     <p>Data warehouses typically grow over time, often at a continuous pace, as additional data is
       gathered and the retention period increases for existing data. At times, it is necessary to
       increase database capacity to consolidate disparate data warehouses into a single database.
@@ -50,9 +48,7 @@
       /> for steps to prepare the new hosts for Greenplum Database.</p>
     <p>Once the new servers are installed and tested, the software phase of the Greenplum Database
       expansion process begins. The software phase is designed to be minimally disruptive,
-      transactionally consistent, reliable, and flexible. <draft-comment author="msk">Remove system
-        restart information. Remove change in distribution policy</draft-comment><ul
-        id="ul_zwt_png_tt">
+      transactionally consistent, reliable, and flexible. <ul id="ul_zwt_png_tt">
         <li>The first step of the software phase of expansion process is preparing the Greenplum
           Database system: adding new segment hosts and initializing new segment instances. This
           phase can be scheduled to occur during a period of low activity to avoid disrupting
@@ -61,15 +57,15 @@
             <li>Greenplum Database software is installed. </li>
             <li>Databases and database objects are created in the new segment instances on the new
               segment hosts. </li>
-            <li>The <i>gpexpand</i> schema is created in the master database. You use the tables in
-              the schema to control the expansion process.</li>
+            <li>The <i>gpexpand</i> schema is created in the master database. You can use the tables
+              in the schema to monitor and control the expansion process.</li>
           </ul><p>After the system has been updated, the new segment instances on the new segment
             hosts are available.</p><ul id="ul_dy3_xxn_kgb">
             <li>New segments are immediately available and participate in new queries and data
               loads. The existing data, however, is skewed. It is concentrated on the original
               segments and must be redistributed across the new total number of primary segments. </li>
             <li>Because some the table data is skewed, some queries might be less efficient because
-              more data motion operators might be needed. </li>
+              more data motion operations might be needed. </li>
           </ul></li>
         <li>The last step of the software phase is redistributing table data. Using the expansion
           control tables in the <i>gpexpand</i> schema as a guide, tables are redistributed. For

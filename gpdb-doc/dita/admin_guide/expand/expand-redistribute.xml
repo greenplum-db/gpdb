@@ -5,7 +5,6 @@
   <title id="expand-redistribute">Redistributing Tables</title>
   <shortdesc>Redistribute tables to balance existing data over the newly expanded cluster. </shortdesc>
   <body>
-    <draft-comment author="msk">GPDB 6 - online expand</draft-comment>
     <p>After creating an expansion schema, you can redistribute tables across the entire system with
           <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
         >gpexand</xref></codeph>. Aim to run this during low-use hours when the utility's CPU usage
@@ -16,8 +15,6 @@
           href="../../utility_guide/admin_utilities/gpstart.xml">gpstart</xref></codeph> options
         <codeph>-R</codeph> or <codeph>-m</codeph> cannot be specified to start Greenplum
       Database.</note>
-    <draft-comment author="msk">Mention two redistribute methods see GUC
-      gp_expand_method</draft-comment>
     <p>While table redistribution is underway, any new tables or partitions created are distributed
       across all segments exactly as they would be under normal operating conditions. Queries can
       access all segments, even before the relevant data is redistributed to tables on the new

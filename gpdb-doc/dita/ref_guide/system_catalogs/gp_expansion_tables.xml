@@ -4,16 +4,14 @@
 <topic id="topic1" xml:lang="en">
   <title id="fb138336">gpexpand.status_detail</title>
   <body>
-    <draft-comment author="msk">updates for GPDB 6<p>distribution_policy_type,
-        root_partition_name</p></draft-comment>
     <p>The <codeph>gpexpand.status_detail</codeph> table contains information about the status of
       tables involved in a system expansion operation. You can query this table to determine the
       status of tables being expanded, or to view the start and end time for completed tables. </p>
     <p>This table also stores related information about the table such as the oid, disk size, and
       normal distribution policy and key. Overall status information for the expansion is stored in
         <xref href="gp_expansion_status.xml#topic1" type="topic" format="dita"/>.</p>
-    <p>In a normal expansion operation it is not necessary to modify the data stored in this table.
-      .</p>
+    <p>In a normal expansion operation it is not necessary to modify the data stored in this
+      table.</p>
     <table id="fb138428">
       <title>gpexpand.status_detail</title>
       <tgroup cols="4">
@@ -85,7 +83,8 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">Column IDs for the distribution keys of the table.</entry>
+            <entry colname="col4">Column IDs for the distribution keys of the table. Value is
+                <codeph>None</codeph> if the table does not have a distribution key column.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -93,7 +92,9 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">???</entry>
+            <entry colname="col4">Table data distribution. Valid values are: <codeph>p</codeph> -
+              table data is distributed among segment instances, <codeph>r</codeph> - table data is
+              replicated on each segment instance.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -101,7 +102,8 @@
             </entry>
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
-            <entry colname="col4">???</entry>
+            <entry colname="col4">For a partitioned table, the name of the root partition.
+              Otherwise, <codeph>None</codeph>.</entry>
           </row>
           <row>
             <entry colname="col1">
