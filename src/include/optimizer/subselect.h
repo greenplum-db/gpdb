@@ -17,7 +17,10 @@
 #include "nodes/plannodes.h"
 #include "nodes/relation.h"
 
+#if 0
+/* Not used in GPDB */
 extern void SS_process_ctes(PlannerInfo *root);
+#endif
 extern Node *convert_testexpr(PlannerInfo *root,
 				 Node *testexpr,
 				 List *subst_nodes);

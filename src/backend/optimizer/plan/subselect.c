@@ -1174,6 +1174,13 @@ hash_ok_operator(OpExpr *expr)
 }
 
 
+#if 0
+/*
+ * GPDB doesn't use initplan + CteScan, so running SS_process_ctes will only
+ * generate unused initplans. Keep commented out to avoid merge conflicts with
+ * upstream.
+ */
+
 /*
  * SS_process_ctes: process a query's WITH list
  *
@@ -1290,6 +1297,7 @@ SS_process_ctes(PlannerInfo *root)
 		cost_subplan(root, splan, plan);
 	}
 }
+#endif
 
 /*
  * convert_ANY_sublink_to_join: try to convert an ANY SubLink to a join
