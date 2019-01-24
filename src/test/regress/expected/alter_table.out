@@ -831,9 +831,10 @@ insert into atacc1 select i from generate_series(3,10)i;
 alter table atacc1 add constraint atacc_oid1 unique(oid);
 ERROR:  cannot create unique index on system column
 -- try to create duplicates via alter table using - should fail
+-- this errors out in Greenplum for a different reason: we don't support
+-- SET DATA TYPE on an indexed column yet
 alter table atacc1 alter column test type integer using 0;
-ERROR:  could not create unique index "atacc1_test_key"  (seg2 172.17.0.2:25434 pid=389538)
-DETAIL:  Key (test)=(0) is duplicated.
+ERROR:  relation "atacc1_test_key" already exists  (seg2 127.0.1.1:25434 pid=8596)
 drop table atacc1;
 -- let's do one where the unique constraint fails when added
 create table atacc1 ( test int ) distributed by (test);

@@ -8783,6 +8783,10 @@ ATExecAddIndex(AlteredTableInfo *tab, Relation rel,
 	Assert(IsA(stmt, IndexStmt));
 	Assert(!stmt->concurrent);
 
+	/* The index should already be built if we are a QE */
+	if (Gp_role == GP_ROLE_EXECUTE)
+		return;
+
 	/* suppress schema rights check when rebuilding existing index */
 	check_rights = !is_rebuild;
 	/* skip index build if phase 3 will do it or we're reusing an old one */
@@ -11864,6 +11868,11 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 	{
 		Oid			oldId = lfirst_oid(oid_item);
 		Oid			relid;
+
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			errmsg("cannot alter indexed column"),
+			errhint("DROP the index first, and recreate it after the ALTER")));
 
 		relid = IndexGetRelation(oldId, false);
 		ATPostAlterTypeParse(oldId, relid, InvalidOid,

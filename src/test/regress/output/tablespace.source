@@ -78,6 +78,8 @@ Tablespace: "testspace"
 SET default_tablespace TO testspace;
 -- tablespace should not change if no rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
 \d testschema.test_index1
 Index "testschema.test_index1"
  Column |  Type  | Definition 
@@ -102,18 +104,20 @@ SELECT * FROM testschema.test_default_tab;
 
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
 \d testschema.test_index1
 Index "testschema.test_index1"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 
 \d testschema.test_index2
 Index "testschema.test_index2"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
@@ -128,23 +132,27 @@ SELECT * FROM testschema.test_default_tab;
 SET default_tablespace TO '';
 -- tablespace should not change if no rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
 \d testschema.test_index1
 Index "testschema.test_index1"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 
 \d testschema.test_index2
 Index "testschema.test_index2"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
 \d testschema.test_index1
 Index "testschema.test_index1"
  Column |  Type  | Definition 
@@ -197,9 +205,9 @@ ALTER TABLE testschema.tablespace_acl OWNER TO tablespace_testuser2;
 SET SESSION ROLE tablespace_testuser2;
 CREATE TABLE tablespace_table (i int) TABLESPACE testspace; -- fail
 ERROR:  permission denied for tablespace testspace
---start_ignore
 ALTER TABLE testschema.tablespace_acl ALTER c TYPE bigint;
---end_ignore
+ERROR:  cannot alter indexed column
+HINT:  DROP the index first, and recreate it after the ALTER
 RESET ROLE;
 ALTER TABLESPACE testspace RENAME TO testspace_renamed;
 ALTER TABLE ALL IN TABLESPACE testspace_renamed SET TABLESPACE pg_default;

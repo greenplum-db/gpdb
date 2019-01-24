@@ -610,6 +610,7 @@ insert into d values('test','one','two','three');
 ERROR:  invalid input syntax for integer: "test"
 LINE 1: insert into d values('test','one','two','three');
                              ^
+alter table z drop constraint z_pkey;
 alter table a alter column aa type integer using bit_length(aa);
 select * from d;
  dummy | aa | bb | cc | dd 

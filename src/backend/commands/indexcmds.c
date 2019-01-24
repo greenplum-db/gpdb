@@ -429,8 +429,7 @@ DefineIndex(Oid relationId,
 	char	   *altconname = stmt ? stmt->altconname : NULL;
 	int			i;
 
-	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode() &&
-		!is_alter_table)
+	if (Gp_role == GP_ROLE_DISPATCH && !IsBootstrapProcessingMode())
 		shouldDispatch = true;
 	else
 		shouldDispatch = false;
@@ -1755,6 +1754,9 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 	char	   *relname = NULL;
 	char		modlabel[NAMEDATALEN];
 	bool		found = false;
+
+	if (GP_ROLE_EXECUTE == Gp_role)
+		elog(ERROR, "relation names cannot be chosen on QE");
 
 	/* try the unmodified label first */
 	StrNCpy(modlabel, label, sizeof(modlabel));
