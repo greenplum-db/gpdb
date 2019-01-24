@@ -78,6 +78,7 @@ Tablespace: "testspace"
 SET default_tablespace TO testspace;
 -- tablespace should not change if no rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
+ERROR:  relation "test_index2" already exists  (seg2 127.0.1.1:25434 pid=8704)
 \d testschema.test_index1
 Index "testschema.test_index1"
  Column |  Type  | Definition 
@@ -102,18 +103,19 @@ SELECT * FROM testschema.test_default_tab;
 
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
+ERROR:  relation "test_index2" already exists  (seg0 127.0.1.1:25432 pid=7122)
 \d testschema.test_index1
 Index "testschema.test_index1"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 
 \d testschema.test_index2
 Index "testschema.test_index2"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
@@ -128,23 +130,25 @@ SELECT * FROM testschema.test_default_tab;
 SET default_tablespace TO '';
 -- tablespace should not change if no rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE int;
+ERROR:  relation "test_index2" already exists  (seg1 127.0.1.1:25433 pid=7123)
 \d testschema.test_index1
 Index "testschema.test_index1"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 
 \d testschema.test_index2
 Index "testschema.test_index2"
- Column |  Type   | Definition 
---------+---------+------------
- id     | integer | id
+ Column |  Type  | Definition 
+--------+--------+------------
+ id     | bigint | id
 btree, for table "testschema.test_default_tab"
 Tablespace: "testspace"
 
 -- tablespace should not change even if there is an index rewrite
 ALTER TABLE testschema.test_default_tab ALTER id TYPE bigint;
+ERROR:  relation "test_index2" already exists  (seg0 127.0.1.1:25432 pid=7941)
 \d testschema.test_index1
 Index "testschema.test_index1"
  Column |  Type  | Definition 

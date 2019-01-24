@@ -607,6 +607,8 @@ insert into atacc1 select i from generate_series(3,10)i;
 -- try adding a unique oid constraint
 alter table atacc1 add constraint atacc_oid1 unique(oid);
 -- try to create duplicates via alter table using - should fail
+-- this errors out in Greenplum for a different reason: we don't support
+-- SET DATA TYPE on an indexed column yet
 alter table atacc1 alter column test type integer using 0;
 drop table atacc1;
 
