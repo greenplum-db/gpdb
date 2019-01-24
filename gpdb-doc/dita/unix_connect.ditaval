@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<val>
-	<prop att="otherprops" val="op-draft" action="exclude"/>
-	<prop att="otherprops" val="op-help" action="exclude"/>
-	<prop att="otherprops" val="op-hidden" action="exclude"/>
-	<prop att="otherprops" val="op-print" action="include"/>
-</val>
