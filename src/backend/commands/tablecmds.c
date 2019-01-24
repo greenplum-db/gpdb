@@ -11787,6 +11787,11 @@ ATPostAlterTypeCleanup(List **wqueue, AlteredTableInfo *tab, LOCKMODE lockmode)
 		Oid			oldId = lfirst_oid(oid_item);
 		Oid			relid;
 
+		ereport(ERROR,
+			(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+			errmsg("cannot alter indexed column"),
+			errhint("DROP the index first, and recreate it after the ALTER")));
+
 		relid = IndexGetRelation(oldId, false);
 		ATPostAlterTypeParse(oldId, relid, InvalidOid,
 							 (char *) lfirst(def_item),
