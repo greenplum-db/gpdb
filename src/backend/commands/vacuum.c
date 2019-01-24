@@ -1664,13 +1664,19 @@ vac_update_relstats(Relation relation,
 
 	/* Apply statistical updates, if any, to copied tuple */
 
+	/* GPDB-specific not allow change relpages and reltuples when vacuum in utility mode on QD
+	 * Because there's a chance that we overwrite perfectly good stats with zeros
+	 */
+
+	bool ifUpdate = ! (IS_QUERY_DISPATCHER() && Gp_role == GP_ROLE_UTILITY);
+
 	dirty = false;
-	if (pgcform->relpages != (int32) num_pages)
+	if (pgcform->relpages != (int32) num_pages && ifUpdate)
 	{
 		pgcform->relpages = (int32) num_pages;
 		dirty = true;
 	}
-	if (pgcform->reltuples != (float4) num_tuples)
+	if (pgcform->reltuples != (float4) num_tuples && ifUpdate)
 	{
 		pgcform->reltuples = (float4) num_tuples;
 		dirty = true;
