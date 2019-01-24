@@ -638,10 +638,10 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	if (parse->setOperations)
 		flatten_simple_union_all(root);
 
-	if (parent_root && parent_root->is_correlated_subplan ||
-		(Gp_role == GP_ROLE_DISPATCH) &&
+	if ((parent_root && parent_root->is_correlated_subplan) ||
+		((Gp_role == GP_ROLE_DISPATCH) &&
 		root->config->is_under_subplan &&
-		IsSubqueryCorrelated(parse))
+		IsSubqueryCorrelated(parse)))
 	{
 		root->is_correlated_subplan = true;
 		/*
