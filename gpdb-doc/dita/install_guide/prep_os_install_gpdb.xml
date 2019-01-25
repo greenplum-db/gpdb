@@ -52,11 +52,11 @@
     <title id="ji162781">System Requirements</title>
     <body>
       <p>The following table lists minimum recommended specifications for servers intended to run
-        Greenplum Database on Linux systems in a production environment. <ph
-          otherprops="pivotal">Pivotal also provides hardware build guides for its certified
-          hardware platforms. It is recommended that you work with a Greenplum Systems Engineer to
-          review your anticipated environment to ensure an appropriate hardware configuration for
-          Greenplum Database.</ph></p>
+        Greenplum Database on Linux systems in a production environment. <ph otherprops="pivotal"
+          >Pivotal also provides hardware build guides for its certified hardware platforms. It is
+          recommended that you work with a Greenplum Systems Engineer to review your anticipated
+          environment to ensure an appropriate hardware configuration for Greenplum
+        Database.</ph></p>
       <table id="ji162790">
         <title>System Prerequisites for Greenplum Database 5.0</title>
         <tgroup cols="2">
@@ -66,9 +66,9 @@
             <row>
               <entry colname="col1">Operating System</entry>
               <entry colname="col2">SUSE Linux Enterprise Server 64-bit 11 SP4<p>CentOS 64-bit 6.x
-                  or 7.x</p><p>Red Hat Enterprise Linux (RHEL) 64-bit 6.x or 7.x</p><note>See the
-                    <cite otherprops="pivotal">Greenplum Database Release Notes</cite> for current
-                  supported platform information.</note></entry>
+                  or 7.x</p><p>Red Hat Enterprise Linux (RHEL) 64-bit 6.x or 7.x</p>
+                <note>See the <cite otherprops="pivotal">Greenplum Database Release Notes</cite> for
+                  current supported platform information.</note></entry>
             </row>
             <row>
               <entry colname="col1">File Systems</entry>
@@ -187,8 +187,7 @@ SELinuxstatus: disabled</codeblock>
             the host names and all interface address names for every machine participating in your
             Greenplum Database system.</li>
           <li id="ji162191">Set the following parameters in the <codeph>/etc/sysctl.conf</codeph>
-            file and reboot:
-              <codeblock>kernel.shmmax = 500000000
+            file and reboot: <codeblock>kernel.shmmax = 500000000
 kernel.shmmni = 4096
 kernel.shmall = 4000000000
 kernel.sem = 500 1024000 200 4096
@@ -213,15 +212,18 @@ vm.dirty_writeback_centisecs = 100
 vm.dirty_background_ratio = 0
 vm.dirty_ratio=0
 vm.dirty_background_bytes = 1610612736
-vm.dirty_bytes = 4294967296</codeblock><note>
-              When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
+vm.dirty_bytes = 4294967296</codeblock>
+            <note> When <codeph>vm.overcommit_memory</codeph> is 2, you specify a value for
                 <codeph>vm.overcommit_ratio</codeph>. For information about calculating the value
-              for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management is active, see the Greenplum Database server
-              configuration parameter <codeph>gp_vmem_protect_limit</codeph> in the <cite>Greenplum
-                Database Reference Guide</cite>. When resource group-based resource management is active, the operating system <codeph>vm.overcomit_ratio</codeph> default value is a good starting point.<p>To avoid port conflicts between Greenplum
-                Database and other applications, when initializing Greenplum Database, do not
-                specify Greenplum Database ports in the range specified by the operating system
-                parameter <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if
+              for <codeph>vm.overcommit_ratio</codeph> when resource queue-based resource management
+              is active, see the Greenplum Database server configuration parameter
+                <codeph>gp_vmem_protect_limit</codeph> in the <cite>Greenplum Database Reference
+                Guide</cite>. When resource group-based resource management is active, the operating
+              system <codeph>vm.overcomit_ratio</codeph> default value is a good starting
+                point.<p>To avoid port conflicts between Greenplum Database and other applications,
+                when initializing Greenplum Database, do not specify Greenplum Database ports in the
+                range specified by the operating system parameter
+                  <codeph>net.ipv4.ip_local_port_range</codeph>. For example, if
                   <codeph>net.ipv4.ip_local_port_range = 10000 65535</codeph>, you could set the
                 Greenplum Database base port numbers to these values.</p><p>
                 <codeblock>PORT_BASE = 6000
@@ -318,7 +320,8 @@ always [never]</codeblock></p><p>For
               <li>Create the <codeph>gpadmin</codeph> user as a system account. For the
                   <codeph>useradd</codeph> command, the <codeph>-r</codeph> option creates a user as
                 a system user and the <codeph>-m</codeph> option creates a home directory for the
-                user. <note>When you run the <codeph>gpseginstall</codeph> utility as the
+                user.
+                <note>When you run the <codeph>gpseginstall</codeph> utility as the
                     <codeph>root</codeph> user to install Greenplum Database on host systems, the
                   utility creates the <codeph>gpadmin</codeph> user as a system account on the
                   hosts. See <xref href="#topic8" type="topic" format="dita"/></note></li>
@@ -597,17 +600,16 @@ sdw3-2</codeblock><p>Check
           databases either on the same database host, or on a remote host. Greenplum Database
           provides <codeph>dblink</codeph> support for database users to perform short ad hoc
           queries in other databases. It is not intended as a replacement for external tables or
-          administrative tools such as <codeph>gptransfer</codeph>.</p>
+          administrative tools such as <codeph>gpcopy</codeph>.</p>
         <p>Before you can use <codeph>dblink</codeph> functions, run the installation script
             <codeph>$GPHOME/share/postgresql/contrib/dblink.sql</codeph> in each database where you
           want the ability to query other
           databases:<codeblock>$ psql -d testdb -f $GPHOME/share/postgresql/contrib/dblink.sql</codeblock></p>
         <p>See <xref href="../utility_guide/dblink.html" format="dita" scope="peer" type="topic"
             >dblink Functions</xref> for basic information about using <codeph>dblink</codeph> to
-          query other databases. See <xref
-            href="https://www.postgresql.org/docs/8.3/dblink.html" format="html"
-            scope="external">dblink</xref> in the PostgreSQL documentation for more information
-          about individual functions.</p>
+          query other databases. See <xref href="https://www.postgresql.org/docs/8.3/dblink.html"
+            format="html" scope="external">dblink</xref> in the PostgreSQL documentation for more
+          information about individual functions.</p>
       </body>
     </topic>
     <topic id="topic_qml_2rd_yz">
@@ -849,9 +851,9 @@ server 10.6.220.20</codeblock></li>
               about the <varname>hostfile_gpinitsystem</varname> file and the
                 <codeph>gpinitsystem</codeph> command. </p></li>
           <li id="ji163212" otherprops="dca">For the administration network on a Greenplum DCA,
-            allow communication using <codeph>ssh</codeph>, 
-              <codeph>ntp</codeph>, and <codeph>icmp</codeph> protocols. (<codeph>eth0</codeph>
-            interface in the example).</li>
+            allow communication using <codeph>ssh</codeph>, <codeph>ntp</codeph>, and
+              <codeph>icmp</codeph> protocols. (<codeph>eth0</codeph> interface in the
+            example).</li>
         </ul>
         <p>In the <codeph>iptables</codeph> file, each append rule command (lines starting with
             <codeph>-A</codeph>) is a single line.</p>
