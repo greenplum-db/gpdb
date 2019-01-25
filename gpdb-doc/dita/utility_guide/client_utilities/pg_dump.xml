@@ -81,7 +81,10 @@
                 <codeph>--schema</codeph>, <codeph>--table</codeph>, or
                 <codeph>--schema-only</codeph> is specified, so the <codeph>-b</codeph> switch is
               only useful to add large objects to selective dumps.<note>Greenplum Database does not
-                support large object datatypes (<codeph>BLOB</codeph>, <codeph>CLOB</codeph>, <codeph>NCLOB</codeph>). </note>
+                support the PostgreSQL <xref
+                  href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                  scope="external">large object facility</xref> for streaming user data that is
+                stored in large-object structures.</note>
             </pd>
           </plentry>
           <plentry>
