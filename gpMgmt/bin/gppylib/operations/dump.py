@@ -775,7 +775,7 @@ class PostDumpDatabase(Operation):
             dbid = seg.getSegmentDbId()
             status_file = self.context.generate_filename("status", timestamp=timestamp, dbid=dbid)
             dump_file = self.context.generate_filename("dump", timestamp=timestamp, dbid=dbid)
-            operations.append(RemoteOperation(PostDumpSegment(self.context, status_file, dump_file), seg.getSegmentHostName(), dbid))
+            operations.append(RemoteOperation(PostDumpSegment(self.context, status_file, dump_file), seg.getSegmentHostName(), "dbid %s"%dbid))
 
         ParallelOperation(operations, self.context.batch_default).run()
 
@@ -789,14 +789,14 @@ class PostDumpDatabase(Operation):
             try:
                 remote.get_ret()
             except NoStatusFile, e:
-                logger.warn('Status file %s not found on %s for dbid %d' % (status_file, host, remote.dbid))
-                failed_dbids.append(remote.dbid)
+                logger.warn('Status file %s not found on %s for %s' % (status_file, host, remote.msg_ctx))
+                failed_dbids.append(remote.msg_ctx)
             except StatusFileError, e:
-                logger.warn('Status file %s on %s indicates errors for dbid %d' % (status_file, host, remote.dbid))
-                failed_dbids.append(remote.dbid)
+                logger.warn('Status file %s on %s indicates errors for %s' % (status_file, host, remote.msg_ctx))
+                failed_dbids.append(remote.msg_ctx)
             except NoDumpFile, e:
-                logger.warn('Dump file %s not found on %s for dbid %d' % (dump_file, host, remote.dbid))
-                failed_dbids.append(remote.dbid)
+                logger.warn('Dump file %s not found on %s for %s' % (dump_file, host, remote.msg_ctx))
+                failed_dbids.append(remote.msg_ctx)
             else:
                 success += 1
 
@@ -805,7 +805,6 @@ class PostDumpDatabase(Operation):
             logger.warn("The following segments had failed checks: %s" % str(failed_dbids))
             return {'exit_status': 1, 'timestamp': timestamp}
         return {'exit_status': 0, 'timestamp': timestamp}
-
 
 class PostDumpSegment(Operation):
     def __init__(self, context, status_file, dump_file):

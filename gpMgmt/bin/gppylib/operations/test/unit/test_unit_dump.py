@@ -1166,7 +1166,7 @@ class DumpTestCase(unittest.TestCase):
                                                             mockListFilesByPattern):
         post_dump = PostDumpDatabase(self.context, "20190101010101")
         post_dump.execute()
-        mock_warn.assert_called_with("The following segments had failed checks: [3]")
+        mock_warn.assert_called_with("The following segments had failed checks: ['dbid 3']")
 
     @patch('gppylib.operations.unix.ListFilesByPattern.run', return_value=["gp_dump_20190101010101.rpt"])
     @patch('gppylib.operations.dump.PostDumpSegment.run', return_value=None)
@@ -1178,7 +1178,7 @@ class DumpTestCase(unittest.TestCase):
                                                             mockListFilesByPattern):
         post_dump = PostDumpDatabase(self.context, "20190101010101")
         post_dump.execute()
-        mock_warn.assert_called_with("The following segments had failed checks: [2, 3]")
+        mock_warn.assert_called_with("The following segments had failed checks: ['dbid 2', 'dbid 3']")
 
 
 if __name__ == '__main__':

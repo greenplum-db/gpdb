@@ -107,11 +107,11 @@ class UtilsTestCase(GpTestCase):
     @patch('os.path.split', return_value = '/')
     def test_RemoteOperation_logger_debug(self, mock_split, mock_cmd, mock_lods, mock_debug):
         mock_cmd.run = MagicMock()
-        mockRemoteOperation = RemoteOperation(operation=TestOperation(), host="sdw1", dbid=2)
+        mockRemoteOperation = RemoteOperation(operation=TestOperation(), host="sdw1", msg_ctx="dbid 2")
         mockRemoteOperation.execute()
         mock_debug.assert_called()
-        first_call = mock_debug.call_args_list[0]
-        self.assertTrue(first_call.startswith("Output for dbid 2 for host sdw1:"))
+        first_call_args, fist_call_kwargs = mock_debug.call_args_list[0]
+        self.assertTrue(first_call_args[0].startswith("Output for dbid 2 on host sdw1:"))
 
 if __name__ == '__main__':
     run_tests()

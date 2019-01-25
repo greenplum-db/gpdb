@@ -303,7 +303,7 @@ class CheckFilespaceConsistency(Operation):
                                               flat_file)
             logger.debug('flat file location = %s' % flat_file_location)
             operations.append(RemoteOperation(CheckFilespaceOidLocally(flat_file_location),
-                                              seg.getSegmentHostName(), dbid
+                                              seg.getSegmentHostName(), "dbid %d"%dbid
                                               )
                               )
         ParallelOperation(operations, NUM_WORKERS).run()
@@ -345,7 +345,7 @@ class CheckFilespaceConsistency(Operation):
             operation_list.append(RemoteOperation(
                 CheckFilespaceEntriesLocally(cur_filespace_entry, peer_filespace_entry,
                                              pg_system_fs_entries[dbid][2], self.file_type),
-                seg.getSegmentHostName(), dbid
+                seg.getSegmentHostName(), "dbid %d"%dbid
                 )
                                   )
 
@@ -483,7 +483,7 @@ class UpdateFlatFiles(Operation):
                                                                              cur_filespace_entry,
                                                                              peer_filespace_entry
                                                                              ),
-                                                      seg.getSegmentHostName(), dbid)
+                                                      seg.getSegmentHostName(), "dbid %d"%dbid)
                                       )
 
             ParallelOperation(operation_list, NUM_WORKERS).run()
@@ -517,7 +517,7 @@ class UpdateFlatFiles(Operation):
                                                                              cur_filespace_entry,
                                                                              peer_filespace_entry
                                                                              ),
-                                                      seg.getSegmentHostName(), dbid)
+                                                      seg.getSegmentHostName(), "dbid %d"%dbid)
                                       )
 
             ParallelOperation(operation_list, NUM_WORKERS).run()
@@ -908,7 +908,7 @@ class RollBackFilespaceChanges(Operation):
                                                               self.pg_system_filespace_entries[dbid],
                                                               rollback=True
                                                               ),
-                                    seg.getSegmentHostName(), dbid
+                                    seg.getSegmentHostName(), "dbid %d"%dbid
                                     ),
                     )
             elif self.file_type == FileType.TEMPORARY_FILES:
@@ -920,7 +920,7 @@ class RollBackFilespaceChanges(Operation):
                                                              self.pg_system_filespace_entries[seg.getSegmentDbId()],
                                                              rollback=True
                                                              ),
-                                    seg.getSegmentHostName(), dbid
+                                    seg.getSegmentHostName(), "dbid %d"%dbid
                                     ),
                     )
 
@@ -966,7 +966,7 @@ class GetMoveOperationList(Operation):
                                                               peer_filespace_entry,
                                                               self.pg_system_filespace_entries[dbid]
                                                               ),
-                                    seg.getSegmentHostName(), dbid))
+                                    seg.getSegmentHostName(), "dbid %d"%dbid))
             elif self.file_type == FileType.TEMPORARY_FILES:
                 operations.append(
                     RemoteOperation(MoveTempFilespaceLocally(self.cur_filespace_entries[dbid],
@@ -975,7 +975,7 @@ class GetMoveOperationList(Operation):
                                                              peer_filespace_entry,
                                                              self.pg_system_filespace_entries[dbid]
                                                              ),
-                                    seg.getSegmentHostName(), dbid))
+                                    seg.getSegmentHostName(), "dbid %d"%dbid))
         return operations
 
 
