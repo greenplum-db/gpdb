@@ -2772,12 +2772,11 @@ CTranslatorQueryToDXL::TranslateSetOpChild
 			Query *query_derived_tbl = CTranslatorUtils::FixUnknownTypeConstant(rte->subquery, target_list);
 			GPOS_ASSERT(NULL != query_derived_tbl);
 
-			CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(m_mp);
 			CTranslatorQueryToDXL query_to_dxl_translator
 					(
 					m_context,
 					m_md_accessor,
-					var_colid_mapping,
+					m_var_to_colid_map,
 					query_derived_tbl,
 					m_query_level + 1,
 					IsDMLQuery(),
@@ -3505,13 +3504,11 @@ CTranslatorQueryToDXL::TranslateDerivedTablesToDXL
 	Query *query_derived_tbl = rte->subquery;
 	GPOS_ASSERT(NULL != query_derived_tbl);
 
-	CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(m_mp);
-
 	CTranslatorQueryToDXL query_to_dxl_translator
 		(
 		m_context,
 		m_md_accessor,
-		var_colid_mapping,
+		m_var_to_colid_map,
 		query_derived_tbl,
 		m_query_level + 1,
 		IsDMLQuery(),
@@ -4199,13 +4196,12 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		
 		// the query representing the cte can only access variables defined in the current level as well as
 		// those defined at prior query levels
-		CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(cte_query_level);
 
 		CTranslatorQueryToDXL query_to_dxl_translator
 			(
 			m_context,
 			m_md_accessor,
-			var_colid_mapping,
+			m_var_to_colid_map,
 			cte_query,
 			cte_query_level + 1,
 			IsDMLQuery(),
