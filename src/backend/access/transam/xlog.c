@@ -6850,17 +6850,17 @@ StartupXLOG(void)
 					(errmsg("invalid redo record in shutdown checkpoint")));
 		InRecovery = true;
 	}
-	else if (StandbyModeRequested)
+	else if (ControlFile->state != DB_SHUTDOWNED)
+		InRecovery = true;
+	else if (ArchiveRecoveryRequested)
 	{
 		/* force recovery due to presence of recovery.conf */
 		ereport(LOG,
 				(errmsg("setting recovery standby mode active")));
 		InRecovery = true;
 	}
-	else if (ControlFile->state != DB_SHUTDOWNED)
-		InRecovery = true;
 
-    /* REDO */
+	/* REDO */
 	if (InRecovery)
 	{
 		int			rmid;
@@ -6875,9 +6875,7 @@ StartupXLOG(void)
 		 */
 		dbstate_at_startup = ControlFile->state;
 		if (InArchiveRecovery)
-		{
 			ControlFile->state = DB_IN_ARCHIVE_RECOVERY;
-		}
 		else
 		{
 			ereport(LOG,
