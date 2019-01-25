@@ -1817,46 +1817,6 @@ jobs:
   ensure:
     <<: *set_failed
 
-- name: gpexpand
-  plan:
-  - aggregate:
-    - get: gpdb_src
-      params:
-        submodules:
-        - gpMgmt/bin/pythonSrc/ext
-      passed: [gate_icw_end]
-    - get: gpdb_binary
-      resource: bin_gpdb_centos6
-      passed: [gate_icw_end]
-      trigger: [[ test_trigger ]]
-    - get: ccp_src
-    - get: ccp-image
-    - get: icw_gporca_centos6_dump
-      passed: [gate_icw_end]
-  - put: terraform
-    params:
-      <<: *ccp_default_params
-      vars:
-        <<: *ccp_default_vars
-        number_of_nodes: 5
-  - task: gen_cluster
-    file: ccp_src/ci/tasks/gen_cluster.yml
-    params:
-      <<: *ccp_gen_cluster_default_params
-  - task: pre_run_test_setup
-    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
-    image: ccp-image
-    input_mapping: {sqldump: icw_gporca_centos6_dump}
-  - task: run_tests
-    file: gpdb_src/concourse/tasks/run_behave.yml
-    params:
-      BEHAVE_FLAGS: --tags=gpexpand
-    image: ccp-image
-    on_success:
-      <<: *ccp_destroy
-  ensure:
-    <<: *set_failed
-
 - name: gptransfer
   plan:
   - aggregate:
@@ -1997,6 +1957,47 @@ jobs:
       sqldump: icw_gporca_centos6_dump
     params:
       NUMBER_OF_NODES: 2
+
+- name: gpexpand
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [icw_gporca_centos6]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [icw_gporca_centos6]
+      trigger: [[ test_trigger ]]
+    - get: ccp_src
+    - get: ccp-image
+    - get: icw_gporca_centos6_dump
+      passed: [icw_gporca_centos6]
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 5
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: pre_run_test_setup
+    file: gpdb_src/concourse/tasks/setup_for_gpexpand_to_make_new_gpdb.yml
+    image: ccp-image
+    input_mapping: {sqldump: icw_gporca_centos6_dump}
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    params:
+      BEHAVE_FLAGS: --tags=gpexpand
+    image: ccp-image
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
 {% endif %}
 
 {% endif %} # end CLI test_sections
