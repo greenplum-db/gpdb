@@ -40,7 +40,11 @@ had been called directly from the query using the view. Therefore the
 user of a view must have permissions to call any functions used by the
 view.</p><p>If you create a view with an <codeph>ORDER BY</codeph> clause, the
 <codeph>ORDER BY</codeph> clause is ignored when you do a <codeph>SELECT</codeph>
-from the view.</p></section><section id="section6"><title>Examples</title><p>Create a view consisting of all comedy films: </p><codeblock>CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 
+from the view.</p>
+      <p>When <codeph>CREATE OR REPLACE VIEW</codeph> is used on an existing view, only the view's
+        defining <codeph>SELECT</codeph> rule is changed. Other view properties, including
+        ownership, permissions, and non-<codeph>SELECT</codeph> rules, remain unchanged. You must
+        own the view to replace it (this includes being a member of the owning role).</p></section><section id="section6"><title>Examples</title><p>Create a view consisting of all comedy films: </p><codeblock>CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 
 'comedy';</codeblock><p>Create a view that gets the top ten ranked baby names:</p><codeblock>CREATE VIEW topten AS SELECT name, rank, gender, year FROM 
 names, rank WHERE rank &lt; '11' AND names.id=rank.id;</codeblock></section><section id="section7"><title>Compatibility</title><p>The SQL standard specifies some additional capabilities for the <codeph>CREATE
 VIEW</codeph> statement that are not in Greenplum Database. The optional
