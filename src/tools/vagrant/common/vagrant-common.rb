@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'yaml'
+
 def process_vagrant_local(config)
   return unless File.file? 'vagrant-local.yml'
   local_config = YAML.load_file 'vagrant-local.yml'
@@ -31,3 +33,33 @@ def name_vm(config, name)
   end
 end
 
+def all_remotes
+  hash = {}
+  `git remote -v`.split(/\n/).each do |x|
+    arr = x.split(/\t/)
+    hash[arr[0]] = arr[1].split(/ /)[0]
+  end
+  hash
+end
+
+# returns a hash with { ENV_NAME: value }
+# can be loaded into vagrant-shell's env
+def current_git_data
+  current = `git branch -vv | grep '^*' | grep -o '\\[.*\\]'`.chomp "]\n"
+  current[0] = ''
+  r_and_b = current.split(%r{[:/]})
+  remotes = all_remotes
+  env_vars = {
+    CURRENT_GIT_REMOTE: r_and_b[0],
+    CURRENT_GIT_BRANCH: r_and_b[1],
+    CURRENT_GIT_REMOTE_PATH: remotes[r_and_b[0]],
+    CURRENT_GIT_USER_NAME: `git config user.name`.strip,
+    CURRENT_GIT_USER_EMAIL: `git config user.email`.strip
+  }
+  remotes.each do |name, path|
+    var_name = 'GIT_REMOTE_PATH_' + name
+    next if name == 'origin'
+    env_vars[var_name.to_sym] = path
+  end
+  env_vars
+end

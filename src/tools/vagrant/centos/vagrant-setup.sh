@@ -25,11 +25,14 @@ dependencies=(
   cmake3
   net-tools # gives us netstat
   vim mc psmisc # miscellaneous
+  git2u # requires ius-release
 )
 
 yum -y groupinstall 'Development tools'
 # epel-release needed first in order to get cmake3, htop, and ccache
 yum -y install epel-release
+yum -y remove git
+rpm -U https://centos7.iuscommunity.org/ius-release.rpm
 yum -y install "${dependencies[@]}"
 
 # so we can call cmake
