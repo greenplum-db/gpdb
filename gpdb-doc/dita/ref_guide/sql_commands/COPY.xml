@@ -672,6 +672,38 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
     <section id="section12">
       <title>Compatibility</title>
       <p>There is no <codeph>COPY</codeph> statement in the SQL standard. </p>
+      <p>The following syntax was used in earlier versions of Greenplum Database and is still supported:
+        <codeblock>COPY <varname>tablename</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+     [ [WITH]  
+       [ON SEGMENT]
+       [BINARY]
+       [OIDS]
+       [HEADER]
+       [DELIMITER [ AS ] '<varname>delimiter</varname>']
+       [NULL [ AS ] '<varname>null string</varname>']
+       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+       [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
+            [FORCE NOT NULL <varname>column</varname> [, ...]]
+       [FILL MISSING FIELDS]
+       [[LOG ERRORS]  
+       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+
+COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+      [ [WITH] 
+        [ON SEGMENT]
+        [BINARY]
+        [OIDS]
+        [HEADER]
+        [DELIMITER [ AS ] 'delimiter']
+        [NULL [ AS ] 'null string']
+        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+        [CSV [QUOTE [ AS ] 'quote'] 
+             [FORCE QUOTE column [, ...]] | * ]
+      [IGNORE EXTERNAL PARTITIONS ]</codeblock>
+      </p>
+      <p>Note that in this syntax, <codeph>BINARY</codeph> and <codeph>CSV</codeph> are treated as
+        independent keywords, not as arguments of a FORMAT option.</p>
     </section>
     <section id="section13">
       <title>See Also</title>
