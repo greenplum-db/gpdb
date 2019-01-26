@@ -352,11 +352,16 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
       </p>When the <codeph>ON SEGMENT</codeph> clause is specified, the <codeph>COPY</codeph>
       command does not support specifying a <codeph>SELECT</codeph> statement in the <codeph>COPY
         TO</codeph> command. For example, this command is not
-        supported.<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT</codeblock><p>To
-        copy data from a partitioned table with a leaf child partition that is an external table,
-        use an SQL query to copy the data. For example, if the table <codeph>my_sales</codeph>
-        contains a with a leaf child partition that is an external table, this command <codeph>COPY
-          my_sales TO stdout</codeph> returns an error. This command sends the data to
+          supported.<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT</codeblock><p><codeph>COPY</codeph>
+        only deals with the specific table named; it does not copy data to or from child tables.
+        Thus for example <codeph>COPY <varname>table</varname> TO</codeph> shows the same data as
+          <codeph>SELECT * FROM ONLY <codeph>table</codeph></codeph>. But <codeph>COPY (SELECT *
+          FROM <varname>table</varname>) TO ...</codeph> can be used to dump all of the data in an
+        inheritance hierarchy.</p><p>Similarly, to copy data from a partitioned table with a leaf
+        child partition that is an external table, use an SQL query to copy the data. For example,
+        if the table <codeph>my_sales</codeph> contains a with a leaf child partition that is an
+        external table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This
+        command sends the data to
         stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p><p>The
           <codeph>BINARY</codeph> key word causes all data to be stored/read as binary format rather
         than as text. It is somewhat faster than the normal text mode, but a binary-format file is
@@ -377,30 +382,32 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         isolation mode.</p><p><codeph>COPY</codeph> input and output is affected by
           <codeph>DateStyle</codeph>. To ensure portability to other Greenplum Database
         installations that might use non-default <codeph>DateStyle</codeph> settings,
-          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>.
-            It is also a good idea to avoid dumping
-            data with <varname>IntervalStyle</varname> set to
-            <codeph>sql_standard</codeph>, because negative interval values might be
-              misinterpreted by a server that has a different setting for
-              <varname>IntervalStyle</varname>.        </p><p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
-        affects the validation of the XML data that is copied. If the value is
-          <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
-        If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
-        document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p><p>By
-        default, <codeph>COPY</codeph> stops operation at the first error. This should not lead to
-        problems in the event of a <codeph>COPY TO</codeph>, but the target table will already have
-        received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible or
-        accessible, but they still occupy disk space. This may amount to a considerable amount of
-        wasted disk space if the failure happened well into a large <codeph>COPY FROM</codeph>
-        operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
-        Another option would be to use single row error isolation mode to filter out error rows
-        while still loading good rows. </p><p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command
-        is run, the server configuration parameter <codeph>gp_enable_segment_copy_checking</codeph>
-        controls whether the table distribution policy (from the table <codeph>DISTRIBUTED</codeph>
-        clause) is checked when data is copied into the table. The default is to check the
-        distribution policy. An error is returned if the row of data violates the distribution
-        policy for the segment instance. For information about the parameter, see <xref
+          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>. It
+        is also a good idea to avoid dumping data with <varname>IntervalStyle</varname> set to
+          <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
+        a server that has a different setting for <varname>IntervalStyle</varname>. </p><p>Input
+        data is interpreted according to the current client encoding, and output data is encoded in
+        the current client encoding, even if the data does not pass through the client but is read
+        from or written to a file directly by the server.</p><p>When copying XML data from a file in
+        text mode, the server configuration parameter <codeph><xref
+            href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph> affects the
+        validation of the XML data that is copied. If the value is <codeph>content</codeph> (the
+        default), XML data is validated as an XML content fragment. If the parameter value is
+          <codeph>document</codeph>, XML data is validated as an XML document. If the XML data is
+        not valid, <codeph>COPY</codeph> returns an error.</p><p>By default, <codeph>COPY</codeph>
+        stops operation at the first error. This should not lead to problems in the event of a
+          <codeph>COPY TO</codeph>, but the target table will already have received earlier rows in
+        a <codeph>COPY FROM</codeph>. These rows will not be visible or accessible, but they still
+        occupy disk space. This may amount to a considerable amount of wasted disk space if the
+        failure happened well into a large <codeph>COPY FROM</codeph> operation. You may wish to
+        invoke <codeph>VACUUM</codeph> to recover the wasted space. Another option would be to use
+        single row error isolation mode to filter out error rows while still loading good rows.
+        </p><p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command is run, the server
+        configuration parameter <codeph>gp_enable_segment_copy_checking</codeph> controls whether
+        the table distribution policy (from the table <codeph>DISTRIBUTED</codeph> clause) is
+        checked when data is copied into the table. The default is to check the distribution policy.
+        An error is returned if the row of data violates the distribution policy for the segment
+        instance. For information about the parameter, see <xref
           href="../config_params/guc_config.xml#topic1"/>. </p><p>Data from a table that is
         generated by a <codeph>COPY TO...ON SEGMENT</codeph> command can be used to restore table
         data with <codeph>COPY FROM...ON SEGMENT</codeph>. However, data restored to the segments is
