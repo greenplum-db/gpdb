@@ -3309,22 +3309,6 @@ is_dummy_plan_walker(Node *node, bool *context)
 
 	switch (nodeTag(node))
 	{
-		case T_LockRows:
-
-			/*
-			 * GPDB_94_MERGE_FIXME
-			 * If the LockRow node is a dummy plan, then we should think of it
-			 * as a dummy plan. Is this assumption correct?
-			 */
-			{
-				if (is_dummy_plan(outerPlan(node)))
-				{
-					*context = true;
-					return true;
-				}
-			}
-			return false;
-
 		case T_Result:
 
 			/*
@@ -3348,23 +3332,6 @@ is_dummy_plan_walker(Node *node, bool *context)
 							*context = true;
 						return true;
 					}
-				}
-			}
-			return false;
-
-		case T_SubqueryScan:
-
-			/*
-			 * A SubqueryScan is dummy, if its subplan is dummy.
-			 */
-			{
-				SubqueryScan *subqueryscan = (SubqueryScan *) node;
-				Plan	   *subplan = subqueryscan->subplan;
-
-				if (is_dummy_plan(subplan))
-				{
-					*context = true;
-					return true;
 				}
 			}
 			return false;
@@ -3415,10 +3382,12 @@ is_dummy_plan_walker(Node *node, bool *context)
 		case T_Material:
 		case T_Sort:
 		case T_Unique:
+		case T_LockRows:
+		case T_SubqueryScan:
 
 			/*
-			 * Some node types are dummy, if their outer plan is dummy so we
-			 * just recur.
+			 * Some node types are dummy, if their outer plan or subplan is
+			 * dummy so we just recur.
 			 *
 			 * We don't include "tricky" nodes like Motion that might affect
 			 * plan topology, even though we know they will return no rows
