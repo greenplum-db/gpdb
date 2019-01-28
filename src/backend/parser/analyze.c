@@ -414,6 +414,18 @@ transformDeleteStmt(ParseState *pstate, DeleteStmt *stmt)
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
 		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
+
+		/*
+		 * Since GPDB currently only support a single writer gang, only one
+		 * writable clause is permitted per CTE. Once we get flexible gangs
+		 * with more than one writer gang we can lift this restriction.
+		 */
+		if (pstate->p_hasModifyingCTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("writable CTE queries cannot be themselves writable"),
+					 errdetail("Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context."),
+					 errhint("Rewrite the query to only include one writable clause.")));
 	}
 
 	/* set up range table with just the result rel */
@@ -500,6 +512,18 @@ transformInsertStmt(ParseState *pstate, InsertStmt *stmt)
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
 		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
+
+		/*
+		 * Since GPDB currently only support a single writer gang, only one
+		 * writable clause is permitted per CTE. Once we get flexible gangs
+		 * with more than one writer gang we can lift this restriction.
+		 */
+		if (pstate->p_hasModifyingCTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("writable CTE queries cannot be themselves writable"),
+					 errdetail("Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context."),
+					 errhint("Rewrite the query to only include one writable clause.")));
 	}
 
 	/*
@@ -2941,6 +2965,18 @@ transformUpdateStmt(ParseState *pstate, UpdateStmt *stmt)
 		qry->hasRecursive = stmt->withClause->recursive;
 		qry->cteList = transformWithClause(pstate, stmt->withClause);
 		qry->hasModifyingCTE = pstate->p_hasModifyingCTE;
+
+		/*
+		 * Since GPDB currently only support a single writer gang, only one
+		 * writable clause is permitted per CTE. Once we get flexible gangs
+		 * with more than one writer gang we can lift this restriction.
+		 */
+		if (pstate->p_hasModifyingCTE)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("writable CTE queries cannot be themselves writable"),
+					 errdetail("Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context."),
+					 errhint("Rewrite the query to only include one writable clause.")));
 	}
 
 	qry->resultRelation = setTargetTable(pstate, stmt->relation,

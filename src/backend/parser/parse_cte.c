@@ -146,6 +146,19 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 				   IsA(cte->ctequery, UpdateStmt) ||
 				   IsA(cte->ctequery, DeleteStmt));
 
+
+			/*
+			 * Since GPDB currently only support a single writer gang, only one
+			 * writable clause is permitted per CTE. Once we get flexible gangs
+			 * with more than one writer gang we can lift this restriction.
+			 */
+			if (pstate->p_hasModifyingCTE)
+				ereport(ERROR,
+						(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+						 errmsg("only one modifying WITH clause allowed per query"),
+						 errdetail("Greenplum Database currently only support CTEs with one writable clause."),
+						 errhint("Rewrite the query to only include one writable CTE clause.")));
+
 			pstate->p_hasModifyingCTE = true;
 		}
 	}
