@@ -10,5 +10,7 @@
       space to migrate between Greenplum Database systems that co-exist on the same hosts. </p>
     <p>The <codeph>gpransfer</codeph> utility can migrate data between Greenplum Database
       installations running any 5.x version software.</p>
+    <note><codeph>gptransfer</codeph> is deprecated and will be removed in the next major release of
+      Greenplum Database.</note>
   </body>
 </topic>

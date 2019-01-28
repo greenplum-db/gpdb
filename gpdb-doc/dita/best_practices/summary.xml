@@ -30,8 +30,8 @@
         <li>Avoid performing singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
             <codeph>DELETE</codeph> operations on append-optimized tables. </li>
         <li>Avoid performing concurrent batch <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
-          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph>
-          operations are acceptable. </li>
+          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph> operations
+          are acceptable. </li>
       </ul>
       <p>See <xref href="schema.xml#storage_model/heap_vs_ao"/>.</p>
     </section>
@@ -197,7 +197,7 @@
     <section id="_Toc286661612">
       <title>ANALYZE</title>
       <ul id="ul_spn_src_3r">
-        <li>Determine if  analyzing the database is actually needed. Analyzing is not needed if
+        <li>Determine if analyzing the database is actually needed. Analyzing is not needed if
             g<codeph>p_autostats_mode</codeph> is set to <codeph>on_no_stats</codeph> (the default)
           and the table is not partitioned.</li>
         <li>Use <codeph>analyzedb</codeph> in preference to <codeph>ANALYZE</codeph> when dealing
@@ -256,7 +256,9 @@
       <p>See <xref href="data_loading.xml#topic_fj5_b1x_r4"/>.</p>
     </section>
     <section>
-      <title>gptransfer</title>
+      <title>gptransfer (deprecated)</title>
+      <note><codeph>gptransfer</codeph> is deprecated and will be removed in the next major release
+        of Greenplum Database.</note>
       <ul id="ul_c2p_tl4_1s">
         <li>Avoid using the <codeph>--full</codeph> or <codeph>--schema-only</codeph> options.
           Instead, copy schemas to the destination database using a different method, and then
@@ -296,7 +298,7 @@
           Attributes" in the <i>Greenplum Database Administrator Guide</i>. </li>
         <li>Database users should never log on as <codeph>gpadmin</codeph>, and ETL or production
           workloads should never run as <codeph>gpadmin</codeph>. </li>
-        <li>Assign a distinct Greenplum Database role to each user, application, or  service that
+        <li>Assign a distinct Greenplum Database role to each user, application, or service that
           logs in. </li>
         <li>For applications or web services, consider creating a distinct role for each application
           or service. </li>
@@ -366,8 +368,8 @@
           column-oriented partitions are modified between backups.</li>
         <li>If backups are saved to local cluster storage, move the files to a safe, off-cluster
           location when the backup is complete. </li>
-        <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to
-          prevent IO bottlenecks.</li>
+        <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon
+          to prevent IO bottlenecks.</li>
         <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain or
           Veritas NetBackup enterprise backup platforms.</li>
       </ul>
