@@ -146,14 +146,6 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
               manage the Greenplum system within the cluster. </entry>
           </row>
           <row>
-            <entry>gphdfs</entry>
-            <entry>TCP 8020</entry>
-            <entry>The gphdfs protocol allows access to data in a Hadoop file system via Greenplum
-              external tables. The URL in the <codeph>LOCATION</codeph> clause of the <codeph>CREATE
-                EXTERNAL TABLE</codeph> command specifies the host address and port number for the
-              Hadoop namenode service. </entry>
-          </row>
-          <row>
             <entry>Greenplum Platform Extension Framework (PXF)</entry>
             <entry>TCP 5888</entry>
             <entry>The PXF Java service runs on port number 5888 on each Greenplum Database

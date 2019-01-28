@@ -115,7 +115,7 @@ to <codeph>PUBLIC</codeph>.</p></sectiondiv><sectiondiv id="section6"><b>GRANT o
             protocol:<codeblock>GRANT SELECT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157705">To allow a user to create a writable external table with a trusted
             protocol:<codeblock>GRANT INSERT ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li><li id="ds157707">To allow a user to create both readable and writable external table with a trusted
             protocol:<codeblock>GRANT ALL ON PROTOCOL <varname>protocolname</varname> TO <varname>username</varname></codeblock></li></ul><p>You can also use this command to grant users permissions to
-          create and use <codeph>hdfs</codeph>, <codeph>s3</codeph>, and
+          create and use <codeph>s3</codeph> and
             <codeph>pxf</codeph> external tables. However, external tables of
           type <codeph>http</codeph>, <codeph>https</codeph>,
             <codeph>gpfdist</codeph>, and <codeph>gpfdists</codeph>, are

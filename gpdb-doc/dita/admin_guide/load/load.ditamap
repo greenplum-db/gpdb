@@ -30,7 +30,7 @@
       <topicref href="topics/g-unloading-data-from-greenplum-database.xml" type="topic">
          <topicref href="topics/g-defining-a-file-based-writable-external-table.xml" type="topic">
             <topicref href="topics/g-example-1-greenplum-file-server-gpfdist.xml" type="topic"/>
-            <topicref href="topics/g-example-2-hadoop-file-server-gphdfs.xml" type="topic"/>
+            <topicref href="topics/g-example-2-hadoop-file-server.xml" type="topic"/>
          </topicref>
          <topicref href="topics/g-defining-a-command-based-writable-external-web-table.xml"
             type="topic">

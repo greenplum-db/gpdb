@@ -13,7 +13,6 @@
         <topicref href="topics/gpcc.xml" otherprops="pivotal"/>
         <topicref href="topics/Auditing.xml"/>
         <topicref href="topics/Encryption.xml"/>
-        <topicref href="topics/kerberos-hdfs.xml"/>
         <topicref href="topics/BestPractices.xml"/>
     </topicref>
 </map>

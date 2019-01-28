@@ -115,8 +115,6 @@
             <topicref href="guc-list.xml#gp_global_deadlock_detector_period"/>
             <topicref href="guc-list.xml#gp_gpperfmon_send_interval"/>
             <topicref href="guc-list.xml#gpperfmon_log_alert_level"/>
-            <topicref href="guc-list.xml#gp_hadoop_home"/>
-            <topicref href="guc-list.xml#gp_hadoop_target_version"/>
             <topicref href="guc-list.xml#gp_hashjoin_tuples_per_bucket"/>
             <topicref href="guc-list.xml#gp_ignore_error_table"/>
             <topicref href="guc-list.xml#topic_lvm_ttc_3p"/>

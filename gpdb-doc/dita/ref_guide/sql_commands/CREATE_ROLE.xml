@@ -97,7 +97,7 @@
                         created by superusers. </pd>
                     <pd>Use the <codeph>GRANT...ON PROTOCOL</codeph> command to allow users to
                         create and use external tables with a custom protocol type, including the
-                            <codeph>gphdfs</codeph>, <codeph>s3</codeph>, and <codeph>pxf</codeph>
+                            <codeph>s3</codeph> and <codeph>pxf</codeph>
                         protocols included with Greenplum Database.</pd>
                 </plentry>
                 <plentry>

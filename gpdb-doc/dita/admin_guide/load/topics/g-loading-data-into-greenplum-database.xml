@@ -12,9 +12,6 @@
          <li id="du224656">
             <xref href="g-using-the-greenplum-parallel-file-server--gpfdist-.xml#topic13"/>
          </li>
-         <li id="du195811">
-            <xref href="g-using-hadoop-distributed-file-system--hdfs--tables.xml#topic19"/>
-         </li>
          <li>
             <xref href="g-command-based-web-external-tables.xml#topic32"/>
          </li>
