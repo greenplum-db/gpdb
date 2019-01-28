@@ -94,7 +94,7 @@
             <entry colname="col2">text</entry>
             <entry colname="col3"/>
             <entry colname="col4">Table data distribution. Valid values are: <codeph>p</codeph> -
-              table data is distributed among segment instances, <codeph>r</codeph> table data is
+              table data is distributed among segment instances, <codeph>r</codeph> - table data is
               replicated on each segment instance.</entry>
           </row>
           <row>

@@ -411,7 +411,7 @@
           Follow these steps: </p>
         <ol id="ol_qqn_nly_5t">
           <li>Run the following query to find the current locations of the primary and mirror
-              segments:<codeblock>select dbid, content, role, port, hostname, datadir from gp_segment_configuration ;</codeblock><p>The
+              segments:<codeblock>SELECT dbid, content, role, port, hostname, datadir FROM gp_segment_configuration WHERE content > -1 ;</codeblock><p>The
                 <codeph>gp_segment_configuration</codeph> system catalog table contains the current
               segment configuration.</p></li>
           <li>Create a list with the current mirror location and the desired block mirroring
