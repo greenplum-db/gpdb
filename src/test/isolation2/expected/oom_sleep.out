@@ -1,0 +1,10 @@
+-- start_ignore
+1&: SELECT COUNT(1) from lineitem, (SELECT pg_sleep(50)) AS t;  <waiting ...>
+2&: SELECT COUNT(1) from lineitem, (SELECT pg_sleep(50)) AS t;  <waiting ...>
+1<:  <... completed>
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=27988)
+DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested 26376 bytes, available 0 MB
+2<:  <... completed>
+ERROR:  Out of memory  (seg0 slice1 172.17.0.2:25432 pid=27997)
+DETAIL:  Per-query VM protect limit reached: current limit is 2048 kB, requested 524312 bytes, available 0 MB
+-- end_ignore
