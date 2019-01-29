@@ -37,6 +37,7 @@
 #include "replication/basebackup.h"
 #include "replication/walsender.h"
 #include "replication/walsender_private.h"
+#include "storage/dsm_impl.h"
 #include "storage/fd.h"
 #include "storage/ipc.h"
 #include "storage/lmgr.h"
@@ -118,6 +119,72 @@ typedef struct
 	int64		size;
 } tablespaceinfo;
 
+
+/*
+ * The contents of these directories are removed or recreated during server
+ * start so they are not included in backups.  The directories themselves are
+ * kept and included as empty to preserve access permissions.
+ */
+static const char *excludeDirContents[] =
+{
+	/*
+	 * Skip temporary statistics files. PG_STAT_TMP_DIR must be skipped even
+	 * when stats_temp_directory is set because PGSS_TEXT_FILE is always created
+	 * there.
+	 */
+	PG_STAT_TMP_DIR,
+
+	/*
+	 * It is generally not useful to backup the contents of this directory even
+	 * if the intention is to restore to another master. See backup.sgml for a
+	 * more detailed description.
+	 */
+	"pg_replslot",
+
+	/* Contents removed on startup, see dsm_cleanup_for_mmap(). */
+	PG_DYNSHMEM_DIR,
+
+	/* Contents removed on startup, see AsyncShmemInit(). */
+	"pg_notify",
+
+	/*
+	 * Old contents are loaded for possible debugging but are not required for
+	 * normal operation, see OldSerXidInit().
+	 */
+	"pg_serial",
+
+	/* Contents removed on startup, see DeleteAllExportedSnapshotFiles(). */
+	"pg_snapshots",
+
+	/* Contents zeroed on startup, see StartupSUBTRANS(). */
+	"pg_subtrans",
+
+	/* end of list */
+	NULL
+};
+
+/*
+ * List of files excluded from backups.
+ */
+static const char *excludeFiles[] =
+{
+	/* Skip auto conf temporary file. */
+	PG_AUTOCONF_FILENAME ".tmp",
+
+	/*
+	 * If there's a backup_label or tablespace_map file, it belongs to a
+	 * backup started by the user with pg_start_backup().  It is *not* correct
+	 * for this backup.  Our backup_label/tablespace_map is injected into the
+	 * tar separately.
+	 */
+	BACKUP_LABEL_FILE,
+
+	"postmaster.pid",
+	"postmaster.opts",
+
+	/* end of list */
+	NULL
+};
 
 /*
  * Called when ERROR or FATAL happens in perform_base_backup() after
@@ -1022,6 +1089,9 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 	dir = AllocateDir(path);
 	while ((de = ReadDir(dir, path)) != NULL)
 	{
+		int			excludeIdx;
+		bool		excludeFound;
+
 		/* Skip special stuff */
 		if (strcmp(de->d_name, ".") == 0 || strcmp(de->d_name, "..") == 0)
 			continue;
@@ -1030,20 +1100,6 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		if (strncmp(de->d_name,
 					PG_TEMP_FILE_PREFIX,
 					strlen(PG_TEMP_FILE_PREFIX)) == 0)
-			continue;
-
-		/* skip auto conf temporary file */
-		if (strncmp(de->d_name,
-					PG_AUTOCONF_FILENAME ".tmp",
-					sizeof(PG_AUTOCONF_FILENAME) + 4) == 0)
-			continue;
-
-		/*
-		 * If there's a backup_label file, it belongs to a backup started by
-		 * the user with pg_start_backup(). It is *not* correct for this
-		 * backup, our backup_label is injected into the tar separately.
-		 */
-		if (strcmp(de->d_name, BACKUP_LABEL_FILE) == 0)
 			continue;
 
 		/*
@@ -1063,12 +1119,22 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 						 "and should not be used. "
 						 "Try taking another online backup.")));
 
-		snprintf(pathbuf, sizeof(pathbuf), "%s/%s", path, de->d_name);
+		/* Scan for files that should be excluded */
+		excludeFound = false;
+		for (excludeIdx = 0; excludeFiles[excludeIdx] != NULL; excludeIdx++)
+		{
+			if (strcmp(de->d_name, excludeFiles[excludeIdx]) == 0)
+			{
+				elog(DEBUG1, "file \"%s\" excluded from backup", de->d_name);
+				excludeFound = true;
+				break;
+			}
+		}
 
-		/* Skip postmaster.pid and postmaster.opts in the data directory */
-		if (strcmp(pathbuf, "./postmaster.pid") == 0 ||
-			strcmp(pathbuf, "./postmaster.opts") == 0)
+		if (excludeFound)
 			continue;
+
+		snprintf(pathbuf, MAXPGPATH, "%s/%s", path, de->d_name);
 
 		/* Skip pg_control here to back up it last */
 		if (strcmp(pathbuf, "./global/pg_control") == 0)
@@ -1082,27 +1148,31 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 						 errmsg("could not stat file or directory \"%s\": %m",
 								pathbuf)));
 
-			/* If the file went away while scanning, it's no error. */
+			/* If the file went away while scanning, it's not an error. */
 			continue;
 		}
 
-		/*
-		 * Skip temporary statistics files. PG_STAT_TMP_DIR must be skipped
-		 * even when stats_temp_directory is set because PGSS_TEXT_FILE is
-		 * always created there.
-		 */
-		if ((statrelpath != NULL && strcmp(pathbuf, statrelpath) == 0) ||
-		  strncmp(de->d_name, PG_STAT_TMP_DIR, strlen(PG_STAT_TMP_DIR)) == 0)
+		/* Scan for directories whose contents should be excluded */
+		excludeFound = false;
+		for (excludeIdx = 0; excludeDirContents[excludeIdx] != NULL; excludeIdx++)
 		{
-			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
-			continue;
+			if (strcmp(de->d_name, excludeDirContents[excludeIdx]) == 0)
+			{
+				elog(DEBUG1, "contents of directory \"%s\" excluded from backup", de->d_name);
+				size += _tarWriteDir(pathbuf, basepathlen, &statbuf,  sizeonly);
+				excludeFound = true;
+				break;
+			}
 		}
 
+		if (excludeFound)
+			continue;
+
 		/*
-		 * Skip pg_replslot, not useful to copy. But include it as an empty
-		 * directory anyway, so we get permissions right.
+		 * Exclude contents of directory specified by statrelpath if not set
+		 * to the default (pg_stat_tmp) which is caught in the loop above.
 		 */
-		if (strcmp(de->d_name, "pg_replslot") == 0)
+		if (statrelpath != NULL && strcmp(pathbuf, statrelpath) == 0)
 		{
 			size += _tarWriteDir(pathbuf, basepathlen, &statbuf, sizeonly);
 			continue;
@@ -1138,6 +1208,7 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 		{
 			if (!sizeonly)
 				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
+			size += 512;        /* Size of the header just added */
 
 			continue;
 		}
