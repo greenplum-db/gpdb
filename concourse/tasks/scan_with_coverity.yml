@@ -5,6 +5,8 @@ image_resource:
     repository: pivotaldata/centos-coverity
 inputs:
   - name: gpdb_src
+  - name: libquicklz-installer
+  - name: libquicklz-devel-installer
 outputs:
   - name: gpdb_coverity_artifacts
 run:

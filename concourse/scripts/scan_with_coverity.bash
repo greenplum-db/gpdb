@@ -81,7 +81,14 @@ function upload_to_coverity() {
   )
 }
 
+function install_deps_for_centos() {
+  # quicklz is proprietary code that we cannot put in our public Docker images.
+  rpm -i libquicklz-installer/libquicklz-*.rpm
+  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+}
+
 function _main() {
+  install_deps_for_centos
   prep_env_for_centos
   generate_build_number
   make_sync_tools
