@@ -1,11 +1,21 @@
 -- Tests exercising different behaviour of the WITH RECURSIVE implementation in GPDB
 -- GPDB's distributed nature requires thorough testing of many use cases in order to ensure correctness
 -- Setup
--- WITH RECURSIVE ref in a sublink in the main query
 create schema recursive_cte;
 set search_path=recursive_cte;
 create table recursive_table_1(id int);
 insert into recursive_table_1 values (1), (2), (100);
+-- Test the featureblocking GUC for recursive CTE
+set gp_recursive_cte_prototype to off;
+with recursive r(i) as (
+   select 1
+   union all
+   select i + 1 from r
+)
+select * from recursive_table_1 where recursive_table_1.id IN (select * from r limit 10);
+ERROR:  RECURSIVE clauses in WITH queries are currently disabled
+HINT:  In order to use recursive CTEs, "gp_recursive_cte_prototype" must be turned on.
+set gp_recursive_cte_prototype to on;
 -- WITH RECURSIVE ref used with IN without correlation
 with recursive r(i) as (
    select 1

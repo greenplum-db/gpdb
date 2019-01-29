@@ -1,3 +1,6 @@
+-- start_ignore
+SET gp_recursive_cte_prototype TO ON;
+-- end_ignore
 /*
  * This test is intended to pass on all platforms supported by Postgres.
  * We can therefore only assume that the default, C, and POSIX collations
