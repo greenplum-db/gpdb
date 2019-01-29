@@ -76,6 +76,9 @@ static const char *excludeDirContents[] =
 	/* Contents zeroed on startup, see StartupSUBTRANS(). */
 	"pg_subtrans",
 
+	/* Contents unique to each segment instance. */
+	"pg_log",
+
 	/* end of list */
 	NULL
 };

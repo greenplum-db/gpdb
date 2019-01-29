@@ -162,6 +162,9 @@ static const char *excludeDirContents[] =
 	/* Contents zeroed on startup, see StartupSUBTRANS(). */
 	"pg_subtrans",
 
+	/* Contents unique to each segment instance. */
+	"pg_log",
+
 	/* end of list */
 	NULL
 };
@@ -1200,20 +1203,6 @@ sendDir(char *path, int basepathlen, bool sizeonly, List *tablespaces,
 			size += 512;		/* Size of the header just added */
 
 			continue;			/* don't recurse into pg_xlog */
-		}
-
-		/*
-		 * We can skip pg_log because the segment logs should be unique to
-		 * each segment. However, include pg_log as an empty directory because
-		 * it is required to start the segment.
-		 */
-		if (strcmp(pathbuf, "./pg_log") == 0)
-		{
-			if (!sizeonly)
-				_tarWriteHeader(pathbuf + basepathlen + 1, NULL, &statbuf);
-			size += 512;        /* Size of the header just added */
-
-			continue;
 		}
 
 		/* Skip if client does not want */
