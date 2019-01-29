@@ -76,7 +76,7 @@ For example:
   LOCATION ('pxf://S3_BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
 FORMAT 'TEXT' (delimiter=E',');</pre>
 
-<div class="note warning">Credentials that you provide in this manner are sent in clear text and are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
+<div class="note warning">Credentials that you provide in this manner are visible as part of the external table definition. Do not use this method of passing credentials in a production environment.</div>
 
 PXF does not support overriding Azure, Google Cloud Storage, and Minio server credentials in this manner at this time.
 
