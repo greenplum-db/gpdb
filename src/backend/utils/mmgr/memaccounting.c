@@ -250,6 +250,11 @@ MemoryAccounting_Reset()
 	 */
 	if (MemoryAccounting_IsInitialized())
 	{
+		if (gp_dump_memory_usage)
+		{
+			MemoryAccounting_SaveToFile(currentSliceId);
+		}
+
 		/* No one should create child context under MemoryAccountMemoryContext */
 		Assert(MemoryAccountMemoryContext->firstchild == NULL);
 
@@ -1513,7 +1518,7 @@ SaveMemoryBufToDisk(struct StringInfoData *memoryBuf, char *prefix)
 	Assert((strlen("pg_log/") + strlen("memory_") + strlen(prefix) + strlen(".mem")) < MEMORY_REPORT_FILE_NAME_LENGTH);
 	snprintf(fileName, MEMORY_REPORT_FILE_NAME_LENGTH, "%s/memory_%s.mem", "pg_log", prefix);
 
-	FILE *file = fopen(fileName, "w");
+	FILE *file = AllocateFile(fileName, "w");
 
 	if (file == NULL)
 		elog(ERROR, "Could not write memory usage information. Failed to open file: %s", fileName);
@@ -1523,7 +1528,7 @@ SaveMemoryBufToDisk(struct StringInfoData *memoryBuf, char *prefix)
 	if (bytes != memoryBuf->len)
 		elog(ERROR, "Could not write memory usage information. Attempted to write %d", memoryBuf->len);
 
-	fclose(file);
+	FreeFile(file);
 }
 
 /*

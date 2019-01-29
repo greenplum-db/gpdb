@@ -166,6 +166,7 @@ char	   *memory_profiler_run_id = "none";
 char	   *memory_profiler_dataset_id = "none";
 char	   *memory_profiler_query_id = "none";
 int			memory_profiler_dataset_size = 0;
+bool		gp_dump_memory_usage = FALSE;
 
 bool		rle_type_compression_stats = false;
 
@@ -878,6 +879,16 @@ struct config_bool ConfigureNamesBool_gp[] =
 		&gp_enable_explain_allstat,
 		false,
 		NULL, NULL, NULL
+	},
+
+	{
+			{"gp_dump_memory_usage", PGC_USERSET, CLIENT_CONN_OTHER,
+			 gettext_noop("Save memory usage in each segment."),
+			 NULL,
+			 GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+			},
+			&gp_dump_memory_usage,
+			false, NULL, NULL
 	},
 
 	{
