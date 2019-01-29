@@ -323,6 +323,15 @@ class GpMirrorListToBuild:
             conn = dbconn.connect(dburl, utility=True)
             dbconn.execSQL(conn, "CHECKPOINT")
 
+            # If the postmaster.pid still exists and another process
+            # is actively using that pid, pg_rewind will fail when it
+            # tries to start the failed segment in single-user
+            # mode. It should be safe to remove the postmaster.pid
+            # file since we do not expect the failed segment to be up.
+            self.remove_postmaster_pid_from_remotehost(
+                targetSegment.getSegmentHostName(),
+                targetSegment.getSegmentDataDirectory())
+
             # Run pg_rewind to do incremental recovery.
             cmd = gp.SegmentRewind('segment rewind',
                                    targetSegment.getSegmentHostName(),
@@ -339,6 +348,16 @@ class GpMirrorListToBuild:
                 rewindFailedSegments.append(targetSegment)
 
         return rewindFailedSegments
+
+    def remove_postmaster_pid_from_remotehost(self, host, datadir):
+        cmd = base.Command(name = 'remove the postmaster.pid file',
+                           cmdStr = 'rm -f %s/postmaster.pid' % datadir,
+                           ctxt=gp.REMOTE, remoteHost = host)
+        cmd.run()
+
+        return_code = cmd.get_return_code()
+        if return_code != 0:
+            raise ExecutionError("Failed while trying to remove postmaster.pid.", cmd)
 
     def checkForPortAndDirectoryConflicts(self, gpArray):
         """

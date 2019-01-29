@@ -12,16 +12,16 @@ Feature: gprecoverseg tests
         Given the database is running
         And user kills a primary postmaster process
         And user can start transactions
-        # WALREP_FIXME: Change to incremental once pg_rewind is introduced into gprecoverseg
-        When the user runs "gprecoverseg -F -a"
+        When the user runs "gprecoverseg -a"
         Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
-    Scenario: Pid corresponds to a non postgres process
+    Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running
         And the segments are synchronized
@@ -32,11 +32,34 @@ Feature: gprecoverseg tests
         And the background pid is killed on "primary" segment
         And we run a sample background script to generate a pid on "primary" segment
         And we generate the postmaster.pid file with the background pid on "primary" segment
-        # WALREP_FIXME: Change to incremental once pg_rewind is introduced into gprecoverseg
         And the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And gprecoverseg should print "Skipping to stop segment.* on host.* since it is not a postgres process" to stdout
+        And all the segments are running
+        And the segments are synchronized
+        When the user runs "gprecoverseg -ra"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
+        And the segments are synchronized
+        And the backup pid file is deleted on "primary" segment
+        And the background pid is killed on "primary" segment
+
+    Scenario: When gprecoverseg incremental recovery uses pg_rewind to recover and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And the "primary" segment information is saved
+        When the postmaster.pid file on "primary" segment is saved
+        And user kills a primary postmaster process
+        When user can start transactions
+        And the background pid is killed on "primary" segment
+        And we run a sample background script to generate a pid on "primary" segment
+        And we generate the postmaster.pid file with the background pid on "primary" segment
+        And the user runs "gprecoverseg -a"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
+        And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
         And the segments are synchronized
         When the user runs "gprecoverseg -ra"
@@ -55,8 +78,8 @@ Feature: gprecoverseg tests
         And user kills a primary postmaster process
         When user can start transactions
         And we generate the postmaster.pid file with a non running pid on the same "primary" segment
-        # WALREP_FIXME: Change to incremental once pg_rewind is introduced into gprecoverseg
-        And the user runs "gprecoverseg -F -a"
+        And the user runs "gprecoverseg -a"
+        And gprecoverseg should print "Running pg_rewind on required mirrors" to stdout
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
         And all the segments are running
@@ -78,6 +101,7 @@ Feature: gprecoverseg tests
         Then the saved "mirror" segment is marked down in config
         When the user runs "gprecoverseg -F -a"
         Then gprecoverseg should return a return code of 0
+        And gprecoverseg should not print "Running pg_rewind on required mirrors" to stdout
         And all the segments are running
         And the segments are synchronized
 
