@@ -10,7 +10,7 @@
       <p>
          <codeblock>=# CREATE EXTERNAL TABLE ext_expenses ( name text, 
    date date,  amount float4, category text, desc1 text ) 
-   LOCATION ('pxf://dir/data/filename.txt') 
+   LOCATION ('pxf://dir/data/filename.txt?PROFILE=hdfs:text') 
    FORMAT 'TEXT' (DELIMITER '|');
 </codeblock>
       </p>

@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic69">
-   <title>Example—Greenplum file server (gpfdist)</title>
+   <title>Example 1—Greenplum file server (gpfdist)</title>
    <body>
       <p>
          <codeblock>=# CREATE WRITABLE EXTERNAL TABLE unload_expenses 
