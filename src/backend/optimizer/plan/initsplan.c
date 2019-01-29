@@ -1021,6 +1021,11 @@ deconstruct_recurse(PlannerInfo *root, Node *jtnode, bool below_outer_join,
 				 *
 				 * select * from A where exists (select * from B where A.i in
 				 * (select C.i from C where C.i = B.i));
+				 *
+				 * We are unsure if postponing quals past a semi-join is always
+				 * semantically correct, see discussion on mailing list here:
+				 * "Regarding postponing quals past an semi join"
+				 * https://groups.google.com/a/greenplum.org/d/msg/gpdb-dev/YHYNIUZnecI/Rlum0VD3FwAJ
 				 */
 				Assert(j->jointype == JOIN_INNER || j->jointype == JOIN_SEMI);
 				*postponed_qual_list = lappend(*postponed_qual_list, pq);
