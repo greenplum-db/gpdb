@@ -182,7 +182,6 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 	/* Ensure that plan refers to vars that have varlevelsup = 0 AND varno is in the rtable */
 	List *allVars = extract_nodes(glob, (Node *) plan, T_Var);
 	ListCell *lc = NULL;
-	List *allParams;
 
 	foreach (lc, allVars)
 	{
@@ -220,41 +219,6 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 		}
 
 	}
-
-	/* Ensure that all params that the plan refers to has a corresponding subplan */
-	allParams = extract_nodes(glob, (Node *) plan, T_Param);
-
-	// GPDB_93_MERGE_FIXME: this stopped working, when 'paramlist' was removed from
-	// PlannerGlobal. I think list_length(glob->paramlist) should now be glob->nParamExec,
-	// but how do you get the individal params? In boundParams perhaps?
-#if 0
-	foreach (lc, allParams)
-	{
-		Param *param = lfirst(lc);
-		if (param->paramkind == PARAM_EXEC)
-		{
-			Assert(param->paramid < list_length(glob->paramlist) && "Parameter ID outside range of parameters known at the global level.");
-			PlannerParamItem *paramItem = list_nth(glob->paramlist, param->paramid);
-			Assert(paramItem);
-
-			if (IsA(paramItem->item, Var))
-			{
-				Var *var = (Var *) paramItem->item;
-				Assert(param->paramtype == var->vartype && "Parameter type and var type do not match!");
-			}
-			else if (IsA(paramItem->item, Aggref))
-			{
-				Aggref *aggRef = (Aggref *) paramItem->item;
-				Assert(param->paramtype == aggRef->aggtype && "Param type and aggref type do not match!");
-			}
-			else
-			{
-				Assert("Global PlannerParamItem is not a var or an aggref node");
-			}
-		}
-	}
-#endif
-
 }
 
 /**
