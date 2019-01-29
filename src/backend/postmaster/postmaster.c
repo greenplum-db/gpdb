@@ -2172,21 +2172,6 @@ initMasks(fd_set *rmask)
 }
 
 /*
- * Check to see if we're a mirror, and if we are: (1) Assume that we are
- * running as superuser; (2) No data pages need to be accessed by this backend
- * - no snapshot / transaction needed.
- *
- * The recovery.conf file is renamed to recovery.done at the end of xlog
- * replay.  Normal backends can be created thereafter.
- */
-static bool
-IsRoleMirror(void)
-{
-	struct stat stat_buf;
-	return (stat(RECOVERY_COMMAND_FILE, &stat_buf) == 0);
-}
-
-/*
  * Once the flag is reset, libpq connections (e.g. FTS probe requests) should
  * not get CAC_MIRROR_READY response.  This flag is needed during GPDB startup
  * to enable "pg_ctl -w".  It need not interfere during or after promotion.
@@ -5775,20 +5760,6 @@ sigusr1_handler(SIGNAL_ARGS)
 	PG_SETMASK(&UnBlockSig);
 
 	errno = save_errno;
-}
-
-/*
- * GPDB_90_MERGE_FIXME: This function should be removed once hot
- * standby can and will be enabled for mirrors.
- */
-void SignalPromote(void)
-{
-	FILE *fd;
-	if ((fd = fopen(PROMOTE_SIGNAL_FILE, "w")))
-	{
-		fclose(fd);
-		kill(PostmasterPid, SIGUSR1);
-	}
 }
 
 /*

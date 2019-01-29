@@ -60,7 +60,6 @@ extern int	MaxLivePostmasterChildren(void);
 extern int	GetNumShmemAttachedBgworkers(void);
 extern bool PostmasterMarkPIDForWorkerNotify(int);
 
-extern void SignalPromote(void);
 extern void ResetMirrorReadyFlag(void);
 
 #ifdef EXEC_BACKEND
