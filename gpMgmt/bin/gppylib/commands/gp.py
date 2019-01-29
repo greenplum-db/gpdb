@@ -1202,7 +1202,7 @@ def is_pid_postmaster(datadir, pid, remoteHost=None):
     is_postmaster = True
     if (validate_command ('pgrep', datadir, ctxt, remoteHost) and
             validate_command ('pwdx', datadir, ctxt, remoteHost)):
-        cmdStr = 'pgrep postgres | xargs -i pwdx {} | grep "%s" | grep "^%s:" | cat' % (datadir, pid)
+        cmdStr = 'pgrep postgres | xargs -I{} pwdx {} | grep "%s" | grep "^%s:" | cat' % (datadir, pid)
         cmd = Command("search for postmaster process", cmdStr, ctxt=ctxt, remoteHost=remoteHost)
         res = None
         try:
