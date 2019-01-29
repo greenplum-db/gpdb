@@ -293,7 +293,6 @@ static bool recoveryStopAfter;
  */
 static TimeLineID recoveryTargetTLI;
 static bool recoveryTargetIsLatest = false; // GPDB_93_MERGE_FIXME: should this be set somewhere?
-List *expectedTLIs;
 
 static List *expectedTLEs;
 static TimeLineID curFileTLI;
@@ -800,6 +799,7 @@ static bool bgwriterLaunched = false;
 static int	MyLockNo = 0;
 static bool holdingAllLocks = false;
 
+static void readRecoveryCommandFile(void);
 static void exitArchiveRecovery(TimeLineID endTLI, XLogSegNo endLogSegNo);
 static bool recoveryStopsBefore(XLogRecord *record);
 static bool recoveryStopsAfter(XLogRecord *record);
@@ -5215,7 +5215,7 @@ str_time(pg_time_t tnow)
  *
  * The file is parsed using the main configuration parser.
  */
-void
+static void
 readRecoveryCommandFile(void)
 {
 	FILE	   *fd;

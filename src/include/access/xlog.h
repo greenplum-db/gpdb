@@ -373,7 +373,6 @@ extern void do_pg_abort_backup(void);
 #define BACKUP_LABEL_OLD		"backup_label.old"
 
 /* Greenplum additions */
-extern void readRecoveryCommandFile(void);
 extern List *XLogReadTimeLineHistory(TimeLineID targetTLI);
 extern bool IsStandbyMode(void);
 extern DBState GetCurrentDBState(void);
