@@ -188,6 +188,8 @@ static const char *excludeFiles[] =
 	"postmaster.pid",
 	"postmaster.opts",
 
+	GP_INTERNAL_AUTO_CONF_FILE_NAME,
+
 	/* end of list */
 	NULL
 };

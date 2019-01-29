@@ -108,6 +108,8 @@ static const char *excludeFiles[] =
 	"postmaster.pid",
 	"postmaster.opts",
 
+	GP_INTERNAL_AUTO_CONF_FILE_NAME,
+
 	/* end of list */
 	NULL
 };
@@ -259,7 +261,7 @@ process_source_file(const char *path, file_type_t type, size_t newsize,
 				 * An exception: PG_VERSIONs should be identical, but avoid
 				 * overwriting it for paranoia.
 				 */
-				if (endswith(path, "PG_VERSION") || endswith(path, GP_INTERNAL_AUTO_CONF_FILE_NAME))
+				if (endswith(path, "PG_VERSION"))
 				{
 					action = FILE_ACTION_NONE;
 					oldsize = statbuf.st_size;
