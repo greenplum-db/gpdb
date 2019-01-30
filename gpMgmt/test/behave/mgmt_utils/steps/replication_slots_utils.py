@@ -59,8 +59,8 @@ def expand(context):
     run_command(context, "createdb expansion_database")
 
     expansion_command = """gpexpand -D expansion_database --input <(echo '
-    localhost:localhost:55432:/tmp/behave_test_expansion_primary:8:3:p
-    localhost:localhost:55433:/tmp/behave_test_expansion_mirror:9:3:m
+    localhost:localhost:25438:/tmp/behave_test_expansion_primary:8:3:p
+    localhost:localhost:25439:/tmp/behave_test_expansion_mirror:9:3:m
 ')
 """
     # Initialize
