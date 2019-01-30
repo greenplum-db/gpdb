@@ -23,7 +23,7 @@ under the License.
 
 PXF is compatible with Cloudera, Hortonworks Data Platform, MapR, and generic Apache Hadoop distributions. PXF is installed with HDFS, Hive, and HBase connectors. You use these connectors to access varied formats of data from these Hadoop distributions.
 
-**Note**: In previous versions of Greenplum Database, you may haved used the `gphdfs` external table protocol to access Hadoop. You can use the `pxf` external table protocol to access Hadoop in Greenplum Database version 6.x.
+<div class="note">In previous versions of Greenplum Database, you may haved used the <code>gphdfs</code> external table protocol to access data stored in Hadoop. Greenplum Database version 6.0.0 removes the <code>gphdfs</code> protocol. You must use PXF and the <code>pxf</code> external table protocol to access Hadoop in Greenplum Database version 6.x.</div>
 
 ## <a id="hdfs_arch"></a>Architecture
 
