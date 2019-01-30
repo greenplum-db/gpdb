@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection_option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
         [<b>-O</b> <varname>owner</varname>] [<b>-T</b> <varname>template</varname>] [<b>-e</b>] [<varname>dbname</varname> ['<varname>description</varname>']]
 
-<b>createdb</b> <b>--help</b> 
+<b>createdb</b> <b>-? | --help</b>
 
-<b>createdb</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
-owner of the new database. However a different owner can be specified
+<b>createdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
+owner of the new database. However, a different owner can be specified
 via the <codeph>-O</codeph> option, if the executing user has appropriate
 privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph>CREATE
 DATABASE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>dbname</pt><pd>The name of the database to be created. The name must be unique among all other databases in the
@@ -32,8 +32,17 @@ containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D
             use the default encoding. <ph>See the Greenplum Database Reference
               Guide for information about supported character sets.</ph></pd></plentry><plentry><pt>-O <varname>owner</varname> | --owner <varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
 to the user executing this command. </pd></plentry><plentry><pt>-T <varname>template</varname> | --template <varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
-              <codeph>template1</codeph>. </pd></plentry></parml>
-      <p>The options <codeph>-D</codeph>, <codeph>-E</codeph>, <codeph>-l</codeph>,
+              <codeph>template1</codeph>. </pd></plentry>
+        <plentry>
+          <pt>-V | --version</pt>
+          <pd>Print the <codeph>createdb</codeph> version and exit.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | --help</pt>
+          <pd>Show help about <codeph>createdb</codeph> command line arguments, and exit.</pd>
+        </plentry>
+        </parml>
+      <p>The options <codeph>-D</codeph>, <codeph>-l</codeph>, <codeph>-E</codeph>, 
           <codeph>-O</codeph>, and <codeph>-T</codeph> correspond to options of the the underlying
         SQL command <codeph>CREATE DATABASE</codeph>; see <ph><xref
             href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1" otherprops="op-help"
@@ -53,5 +62,6 @@ batch jobs and scripts where no user is present to enter a password.</pd></plent
       <title>See Also</title>
       <p><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum Database
             Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph></ph></p>
+              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/></codeph>,
+            <codeph><xref href="dropdb.xml#topic1"/></codeph></ph></p>
     </section></body></topic>

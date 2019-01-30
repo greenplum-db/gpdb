@@ -8,7 +8,11 @@
             to a single script file or other archive file.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [<varname>connection_option</varname> ...] [<varname>dump_option</varname> ...]</codeblock>
+            <codeblock id="client_util_synopsis"><b>pg_dumpall</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...]
+
+<b>pg_dumpall</b> <b>-? | --help</b>
+
+<b>pg_dumpall</b> <b>-V | --version</b></codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -31,7 +35,8 @@
                 likely have to connect as a database superuser in order to produce a complete dump.
                 Also you will need superuser privileges to execute the saved script in order to be
                 allowed to add users and groups, and to create databases.</p>
-            <p>The SQL script will be written to the standard output. Shell operators should be used
+            <p>The SQL script will be written to the standard output. Use the
+              <codeph>[-f | --file]</codeph> option or shell operators
                 to redirect it into a file.</p>
             <p><codeph>pg_dumpall</codeph> needs to connect several times to the Greenplum Database master server (once per database). If you use password
                 authentication it is likely to ask for a password each time. It is convenient to
@@ -112,10 +117,10 @@
                         <pd>Do not wait forever to acquire shared table locks at the beginning of
                             the dump. Instead, fail if unable to lock a table within the specified
                                 <varname>timeout</varname>. The timeout may be specified in any of
-                            the formats accepted by <codeph>SET statement_timeout</codeph>. (Allowed
+                            the formats accepted by <codeph>SET statement_timeout</codeph>. Allowed
                             values vary depending on the server version you are dumping from, but an
                             integer number of milliseconds is accepted by all Greenplum Database
-                            versions.)</pd>
+                            versions.</pd>
                     </plentry>
                     <plentry>
                         <pt>-o | --oids</pt>
@@ -162,6 +167,10 @@
                                     href="pg_dump.xml#topic1" type="topic" format="dita"/></codeph>
                             to output detailed object comments and start/stop times to the dump
                             file, and progress messages to standard error.</pd>
+                    </plentry>
+                    <plentry>
+                      <pt>-V | --version</pt>
+                      <pd>Print the <codeph>pg_dumpall</codeph> version and exit.</pd>
                     </plentry>
                     <plentry>
                         <pt>-x | --no-privileges | --no-acl</pt>
@@ -226,6 +235,10 @@
                         <pt>--no-gp-syntax</pt>
                         <pd>Do not output the table distribution clauses in the <codeph>CREATE
                                 TABLE</codeph> statements. </pd>
+                    </plentry>
+                    <plentry>
+                      <pt>-? | --help</pt>
+                      <pd>Show help about <codeph>pg_dumpall</codeph> command line arguments, and exit.</pd>
                     </plentry>
                 </parml>
             </sectiondiv>
@@ -293,14 +306,14 @@
                 query planner has useful statistics. You can also run <codeph>vacuumdb -a
                     -z</codeph> to analyze all databases. </p>
             <p><codeph>pg_dumpall</codeph> requires all needed tablespace directories to
-                exist before the restore or database creation will fail for databases in non-default
-                locations.</p>
+                exist before the restore; otherwise database creation will fail for
+                databases in non-default locations.</p>
         </section>
         <section id="section8">
             <title>Examples</title>
             <p>To dump all databases: </p>
             <codeblock>pg_dumpall &gt; db.out</codeblock>
-            <p>To reload this file:</p>
+            <p>To reload database(s) from this file, you can use:</p>
             <codeblock>psql template1 -f db.out</codeblock>
             <p>To dump only global objects (including resource queues):</p>
             <codeblock>pg_dumpall -g --resource-queues</codeblock>

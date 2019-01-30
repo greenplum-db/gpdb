@@ -60,11 +60,11 @@
             <topicref href="client_utilities/ClientUtilitySummary.xml" linking="targetonly">
                 <topicref href="client_utilities/clusterdb.xml"/>
                 <topicref href="client_utilities/createdb.xml"/>
+                <topicref href="client_utilities/createlang.xml"/>
                 <topicref href="client_utilities/createuser.xml"/>
                 <topicref href="client_utilities/dropdb.xml"/>
                 <topicref href="client_utilities/droplang.xml"/>
                 <topicref href="client_utilities/dropuser.xml"/>
-                <topicref href="client_utilities/createlang.xml"/>
                 <topicref href="client_utilities/pg_config.xml"/>
                 <topicref href="client_utilities/pg_dump.xml"/>
                 <topicref href="client_utilities/pg_dumpall.xml"/>

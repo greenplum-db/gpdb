@@ -8,7 +8,11 @@
         <codeph>pg_dump</codeph>.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_restore</b> [<varname>connection_option</varname> ...] [<varname>restore_option</varname> ...] <varname>filename</varname></codeblock>
+      <codeblock id="client_util_synopsis"><b>pg_restore</b> [<varname>connection-option</varname> ...] [<varname>restore_option</varname> ...] <varname>filename</varname>
+
+<b>pg_restore</b> <b>-? | --help</b>
+
+<b>pg_restore</b> <b>-V | --version</b></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -109,7 +113,7 @@
               the number of CPU cores and the disk setup. A good place to start
               is the number of CPU cores on the server, but values larger than
               that can also lead to faster restore times in many cases. Of
-              course, values that are too high will lead to decreasing
+              course, values that are too high will lead to decreased
               performance because of thrashing. </pd>
             <pd>Only the custom archive format is supported with this option.
               The input file must be a regular file (not, for example, a pipe).
@@ -159,8 +163,8 @@
           </plentry>
           <plentry>
             <pt>-s | --schema-only</pt>
-            <pd>Restore only the schema (data definitions), not the data (table contents). Sequence
-              current values will not be restored, either. (Do not confuse this with the
+            <pd>Restore only the schema (data definitions), not the data (table contents). Current
+              sequence values will not be restored, either. (Do not confuse this with the
                 <codeph>--schema</codeph> option, which uses the word schema in a different
               meaning.) </pd>
           </plentry>
@@ -171,7 +175,8 @@
           </plentry>
           <plentry>
             <pt>-t <varname>table</varname> | --table=<varname>table</varname></pt>
-            <pd>Restore definition and/or data of named table only. </pd>
+            <pd>Restore definition and/or data of named table only. This can be
+              combined with the <codeph>-n</codeph> option to specify a schema.</pd>
           </plentry>
           <plentry>
             <pt>-T <varname>trigger</varname> | --trigger=<varname>trigger</varname></pt>
@@ -181,6 +186,10 @@
           <plentry>
             <pt>-v | --verbose</pt>
             <pd>Specifies verbose mode.</pd>
+          </plentry>
+          <plentry>
+            <pt>-V | --version</pt>
+            <pd>Print the <codeph>pg_restore</codeph> version and exit.</pd>
           </plentry>
           <plentry>
             <pt>-x | --no-privileges | --no-acl</pt>
@@ -213,6 +222,10 @@
               either all the commands complete successfully, or no changes are
               applied.</pd>
           </plentry>
+          <plentry>
+            <pt>-? | --help</pt>
+            <pd>Show help about <codeph>pg_restore</codeph> command line arguments, and exit.</pd>
+        </plentry>
         </parml>
       </sectiondiv>
       <sectiondiv id="section5">
@@ -272,7 +285,7 @@
       <codeblock>CREATE DATABASE foo WITH TEMPLATE template0;</codeblock>
       <p>When restoring data to a pre-existing table and the option
           <codeph>--disable-triggers</codeph> is used, <codeph>pg_restore</codeph> emits commands to
-        disable triggers on user tables before inserting the data then emits commands to re-enable
+        disable triggers on user tables before inserting the data, then emits commands to re-enable
         them after the data has been inserted. If the restore is stopped in the middle, the system
         catalogs may be left in the wrong state.</p>
       <p>See also the <codeph>pg_dump</codeph> documentation for details on limitations of
@@ -298,30 +311,27 @@ pg_restore -d newdb db.dump</codeblock>
         archive:</p>
       <codeblock>pg_restore -l db.dump &gt; db.list</codeblock>
       <p>The listing file consists of a header and one line for each item, for example,</p>
-      <codeblock>; Archive created at Fri Jul 28 22:28:36 2006
-;     dbname: mydb
-;     TOC Entries: 74
-;     Compression: 0
-;     Dump Version: 1.4-0
+      <codeblock>; Archive created at Mon Sep 14 13:55:39 2009
+;     dbname: DBDEMOS
+;     TOC Entries: 81
+;     Compression: 9
+;     Dump Version: 1.10-0
 ;     Format: CUSTOM
+;     Integer: 4 bytes
+;     Offset: 8 bytes
+;     Dumped from database version: 8.3.5
+;     Dumped by pg_dump version: 8.3.8
 ;
 ; Selected TOC Entries:
 ;
-2; 145344 TABLE species postgres
-3; 145344 ACL species
-4; 145359 TABLE nt_header postgres
-5; 145359 ACL nt_header
-6; 145402 TABLE species_records postgres
-7; 145402 ACL species_records
-8; 145416 TABLE ss_old postgres
-9; 145416 ACL ss_old
-10; 145433 TABLE map_resolutions postgres
-11; 145433 ACL map_resolutions
-12; 145443 TABLE hs_old postgres
-13; 145443 ACL hs_old</codeblock>
+3; 2615 2200 SCHEMA - public pasha
+1861; 0 0 COMMENT - SCHEMA public pasha
+1862; 0 0 ACL - public pasha
+317; 1247 17715 TYPE public composite pasha
+319; 1247 25899 DOMAIN public domain0 pasha2</codeblock>
       <p>Semicolons start a comment, and the numbers at the start of lines refer to the internal
         archive ID assigned to each item. Lines in the file can be commented out, deleted, and
-        reordered. For example,</p>
+        reordered. For example:</p>
       <codeblock>10; 145433 TABLE map_resolutions postgres
 ;2; 145344 TABLE species postgres
 ;4; 145359 TABLE nt_header postgres
@@ -329,7 +339,7 @@ pg_restore -d newdb db.dump</codeblock>
 ;8; 145416 TABLE ss_old postgres</codeblock>
       <p>Could be used as input to <codeph>pg_restore</codeph> and would only restore items 10 and
         6, in that order:</p>
-      <p>pg_restore -L db.list db.dump</p>
+      <codeblock>pg_restore -L db.list db.dump</codeblock>
     </section>
     <section id="section8">
       <title>See Also</title>

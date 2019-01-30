@@ -8,14 +8,15 @@
     <section id="section2">
       <title>Synopsis</title>
       <codeblock id="client_util_synopsis"><b>vacuumdb</b> [<varname>connection-option</varname>...] [--full | -f] [<b>--freeze</b> | <b>-F</b>] [<b>--verbose</b> | <b>-v</b>]
-    [<b>--analyze</b> | <b>-z</b>] [<b>--table</b> | <b>-t</b> <varname>table</varname> [( <varname>column</varname> [,...] )] ] [<varname>dbname</varname>]
+    [<b>--analyze</b> | <b>-z</b>] [<b>--analyze-only</b> | <b>-Z</b>] [<b>--table</b> | <b>-t</b> <varname>table</varname> [( <varname>column</varname> [,...] )] ] [<varname>dbname</varname>]
 
-<b>vacuumdb</b> [<varname>connection-options</varname>...] [<b>--all</b> | <b>-a</b>] [--full | -f] [<b>-F</b>] 
+<b>vacuumdb</b> [<varname>connection-option</varname>...] [<b>--all</b> | <b>-a</b>] [--full | -f] [<b>-F</b>] 
     [<b>--verbose</b> | <b>-v</b>] [<b>--analyze</b> | <b>-z</b>]
+    [<b>--analyze-only</b> | <b>-Z</b>]
 
-<b>vacuumdb</b> <b>--help</b> 
+<b>vacuumdb</b> <b>-? | --help</b>
 
-<b>vacuumdb</b> <b>--version</b></codeblock>
+<b>vacuumdb</b> <b>-V | --version</b></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -62,7 +63,7 @@
           <pt>-t <varname>table</varname> [(<varname>column</varname>)] | --table
               <varname>table</varname> [(<varname>column</varname>)]</pt>
           <pd>Clean or analyze this table only. Column names may be specified only in conjunction
-            with the <codeph>--analyze</codeph> option. If you specify columns, you probably have to
+            with the <codeph>--analyze</codeph> or <codeph>--analyze-all</codeph> options. If you specify columns, you probably have to
             escape the parentheses from the shell.</pd>
         </plentry>
         <plentry>
@@ -72,6 +73,18 @@
         <plentry>
           <pt>-z | --analyze</pt>
           <pd>Collect statistics for use by the query planner.</pd>
+        </plentry>
+        <plentry>
+          <pt>-Z | --analyze-only</pt>
+          <pd>Only calculate statistics for use by the query planner (no vacuum).</pd>
+        </plentry>
+        <plentry>
+          <pt>-V | --version</pt>
+          <pd>Print the <codeph>vacuumdb</codeph> version and exit.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | --help</pt>
+          <pd>Show help about <codeph>vacuumdb</codeph> command line arguments, and exit.</pd>
         </plentry>
       </parml>
       <sectiondiv id="section5">

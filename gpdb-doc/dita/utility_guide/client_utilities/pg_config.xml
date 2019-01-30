@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="pf137116">pg_config</title><body><p id="client_util_desc">Retrieves information about the installed version of Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>pg_config</b> [<varname>option</varname> ...]</codeblock></section><section id="section3"><title>Description</title><p>The <codeph>pg_config</codeph> utility prints configuration parameters
+<topic id="topic1"><title id="pf137116">pg_config</title><body><p id="client_util_desc">Retrieves information about the installed version of Greenplum Database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>pg_config</b> [<varname>option</varname> ...]
+
+<b>pg_config</b> <b>-? | --help</b>
+
+<b>pg_config</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>pg_config</codeph> utility prints configuration parameters
 of the currently installed version of Greenplum Database. It is intended,
 for example, to be used by software packages that want to interface to
 Greenplum Database to facilitate finding the required header files and
@@ -21,9 +25,11 @@ used for building Greenplum Database. This shows C compiler switches.
 </pd></plentry><plentry><pt>--cflags_sl</pt><pd>Print the value of the <codeph>CFLAGS_SL</codeph> variable that was
 used for building Greenplum Database. This shows extra C compiler switches
 used for building shared libraries. </pd></plentry><plentry><pt>--ldflags</pt><pd>Print the value of the <codeph>LDFLAGS</codeph> variable that was
-used for building Greenplum Database. This shows linker switches. </pd></plentry><plentry><pt>--ldflags_sl</pt><pd>Print the value of the <codeph>LDFLAGS_SL</codeph> variable that
+used for building Greenplum Database. This shows linker switches. </pd></plentry>
+         <plentry><pt>--ldflags_ex</pt><pd>Print the value of the <codeph>LDFLAGS_EX</codeph> variable that was
+used for building Greenplum Database. This shows linker switches that were used for building executables only. </pd></plentry><plentry><pt>--ldflags_sl</pt><pd>Print the value of the <codeph>LDFLAGS_SL</codeph> variable that
 was used for building Greenplum Database. This shows linker switches
-used for building shared libraries. </pd></plentry><plentry><pt>--libs</pt><pd>Print the value of the <codeph>LIBS</codeph> variable that was used
+used for building shared libraries only. </pd></plentry><plentry><pt>--libs</pt><pd>Print the value of the <codeph>LIBS</codeph> variable that was used
 for building Greenplum Database. This normally contains <codeph>-l</codeph>
 switches for external libraries linked into Greenplum Database. </pd></plentry><plentry><pt>--version</pt><pd>Print the version of Greenplum Database. </pd></plentry></parml></section><section id="section5"><title>Examples</title><p>To reproduce the build configuration of the current Greenplum Database
 installation, run the following command:</p><codeblock>eval ./configure 'pg_config --configure'</codeblock><p>The output of <codeph>pg_config --configure</codeph> contains shell quotation

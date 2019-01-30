@@ -11,9 +11,9 @@
 
 <b>createlang</b> [<varname>connection-option</varname> ...] <b>-l</b> <varname>dbname</varname>
 
-<b>createlang</b> <b>--help</b> 
+<b>createlang</b> <b>-? | --help</b>
 
-<b>createlang</b> <b>--version</b></codeblock>
+<b>createlang</b> <b>-V | --version</b></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -41,7 +41,7 @@
         </plentry>
         <plentry>
           <pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt>
-          <pd>Specifies to which database the language should be added. The default is to use the
+          <pd>Specifies the database to which the language should be added. The default is to use the
               <codeph>PGDATABASE</codeph> environment variable setting, or the same name as the
             current system user.</pd>
         </plentry>
@@ -53,6 +53,14 @@
         <plentry>
           <pt>-l <varname>dbname</varname> | --list <varname>dbname</varname></pt>
           <pd>Show a list of already installed languages in the target database. </pd>
+        </plentry>
+        <plentry>
+          <pt>-V | --version</pt>
+          <pd>Print the <codeph>createlang</codeph> version and exit.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | --help</pt>
+          <pd>Show help about <codeph>createlang</codeph> command line arguments, and exit.</pd>
         </plentry>
       </parml><sectiondiv id="section5"><b>Connection Options</b><parml>
           <plentry>
@@ -97,7 +105,8 @@
           otherprops="op-help"><codeph><xref
               href="../../ref_guide/sql_commands/CREATE_LANGUAGE.xml#topic1"/></codeph>,
               <codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"
-          /></codeph></ph></p>
+          /></codeph>,
+              <codeph><xref href="droplang.xml#topic1"/></codeph></ph></p>
     </section>
   </body>
 </topic>

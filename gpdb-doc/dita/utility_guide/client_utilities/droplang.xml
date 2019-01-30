@@ -5,9 +5,9 @@
 
 <b>droplang</b> [<varname>connection-option</varname> ...] [-e] <b>-l</b> <varname>dbname</varname>
 
-<b>droplang</b> <b>--help</b> 
+<b>droplang</b> <b>-? | --help</b> 
 
-<b>droplang</b> <b>--version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>droplang</codeph> removes an existing programming language from
+<b>droplang</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>droplang</codeph> removes an existing programming language from
 a database. <codeph>droplang</codeph> can drop any procedural language,
 even those not supplied by the Greenplum Database distribution. </p><p>Although programming languages can be removed directly using several
 SQL commands, it is recommended to use <codeph>droplang</codeph> because
@@ -16,7 +16,15 @@ LANGUAGE</codeph>.</p></section><section id="section4"><title>Options</title><pa
 default is to use the <codeph>PGDATABASE</codeph> environment variable
 setting, or the same name as the current system user.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>droplang</codeph> generates and sends
 to the server.</pd></plentry><plentry><pt>-l | --list</pt><pd>Show a list of already installed languages in the target database.
-</pd></plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
+</pd></plentry>
+        <plentry>
+          <pt>-V | --version</pt>
+          <pd>Print the <codeph>droplang</codeph> version and exit.</pd>
+        </plentry>
+        <plentry>
+          <pt>-? | --help</pt>
+          <pd>Show help about <codeph>droplang</codeph> command line arguments, and exit.</pd>
+        </plentry></parml><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
 server is running. If not specified, reads from the environment variable
 <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port <varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is listening
 for connections. If not specified, reads from the environment variable
@@ -26,4 +34,4 @@ system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never is
 and a password is not available by other means such as a <codeph>.pgpass</codeph>
 file, the connection attempt will fail. This option can be useful in
 batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Examples</title><p>To remove the language <codeph>pltcl</codeph> from the <codeph>mydatabase</codeph> database:</p><codeblock>droplang pltcl mydatabase</codeblock></section><section id="section7"><title>See Also</title><p><ph otherprops="op-print"><codeph>DROP LANGUAGE</codeph> in the <i>Greenplum Database
-            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"/></codeph></ph></p></section></body></topic>
+            Reference Guide</i></ph><ph otherprops="op-help"><codeph><xref href="createlang.xml#topic1"/></codeph>, <codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"/></codeph></ph></p></section></body></topic>

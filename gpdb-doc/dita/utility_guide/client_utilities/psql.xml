@@ -346,12 +346,14 @@ testdb=#</codeblock>
             [quote [as] 'character'] [escape [as] '<varname>character</varname>'] [force quote
             column_list] [force not null column_list]]</pt>
           <pd>Performs a frontend (client) copy. This is an operation that runs an SQL
-              <codeph>COPY</codeph> command, but instead of the server reading or writing the
+            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph>
+            command, but instead of the server reading or writing the
             specified file, <codeph>psql</codeph> reads or writes the file and routes the data
             between the server and the local file system. This means that file accessibility and
             privileges are those of the local user, not the server, and no SQL superuser privileges
             are required.</pd>
-          <pd>The syntax of the command is similar to that of the SQL <codeph>COPY</codeph> command.
+          <pd>The syntax of the command is similar to that of the SQL
+            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command.
             Note that, because of this, special parsing rules apply to the <codeph>\copy</codeph>
             command. In particular, the variable substitution rules and backslash escapes do not
             apply. </pd>
@@ -376,11 +378,10 @@ testdb=#</codeblock>
           <pd>For each relation (table, external table, view, index, or sequence) matching the
             relation pattern, show all columns, their types, the tablespace (if not the default) and
             any special attributes such as <codeph>NOT NULL</codeph> or defaults, if any. Associated
-            indexes, constraints, rules, and triggers are also shown, as is the view definition if
-            the relation is a view.<ul id="ul_qda_zxh_no">
+            indexes, constraints, rules, and triggers are also shown.<ul id="ul_qda_zxh_no">
               <li id="kb143931">The command form <codeph>\d+</codeph> is identical, except that more
                 information is displayed: any comments associated with the columns of the table are
-                shown, as is the presence of OIDs in the table.<p>For partitioned tables, the
+                shown, as is the presence of OIDs in the table, and the view definition if the relation is a view.<p>For partitioned tables, the
                   command <codeph>\d</codeph> or <codeph>\d+</codeph> specified with the root
                   partition table or child partition table displays information about the table
                   including partition keys on the current level of the partition table. The command
@@ -391,18 +392,18 @@ testdb=#</codeblock>
                   displayed for the table. For column-oriented tables, storage options are displayed
                   for each column. </p></li>
               <li id="kb151095">The command form <codeph>\dS</codeph> is identical, except that
-                system information is displayed as well as user information. For example,
+                system objects are displayed as well as user objects. For example,
                   <codeph>\dt</codeph> displays user tables, but not system tables;
-                  <codeph>\dtS</codeph> displays both user and system tables. Both these commands
+                  <codeph>\dtS</codeph> displays both user and system tables. Both of these commands
                 can take the <codeph>+</codeph> parameter to display additional information, as in
                   <codeph>\dt+</codeph> and <codeph>\dtS+</codeph>.<p>If <codeph>\d</codeph> is used
                   without a pattern argument, it is equivalent to <codeph>\dtvs</codeph> which will
-                  show a list of all tables, views, and sequences.</p></li>
+                  show a list of all visible tables, views, and sequences.</p></li>
             </ul></pd>
         </plentry>
         <plentry>
           <pt>\da [<varname>aggregate_pattern</varname>]</pt>
-          <pd>Lists all available aggregate functions, together with the data types they operate on.
+          <pd>Lists aggregate functions, together with the data types they operate on.
             If a pattern is specified, only aggregates whose names match the pattern are shown.
           </pd>
         </plentry>
@@ -424,9 +425,15 @@ testdb=#</codeblock>
           <pd>Lists all available type casts. </pd>
         </plentry>
         <plentry>
-          <pt>\dd [<varname>object_pattern</varname>]</pt>
-          <pd>Lists all available objects. If pattern is specified, only matching objects are
-            shown.</pd>
+          <pt>\dd[S] [<varname>pattern</varname>]</pt>
+          <pd>Shows the descriptions of objects matching the <varname>pattern</varname>,
+            or of all visible objects if no argument is given. But in either case, only
+            objects that have a description are listed. (Use the
+            <codeph><xref href="../../ref_guide/sql_commands/COMMENT.xml#topic1"/></codeph>
+            SQL command to add a description for an object.) By default, only user-created
+            objects are shown; supply a pattern or the <codeph>S</codeph> modifier to
+            include system objects. "Object" covers aggregates, functions, operators,
+            types, relations (tables, views, indexes, sequences), rules, and triggers.</pd>
         </plentry>
         <plentry>
           <pt>\dD [<varname>domain_pattern</varname>]</pt>
@@ -450,20 +457,25 @@ testdb=#</codeblock>
         <plentry>
           <pt>\dg [<varname>role_pattern</varname>]</pt>
           <pd>Lists all database roles. If pattern is specified, only those roles whose names match
-            the pattern are listed.</pd>
+            the pattern are listed. (This command is now effectively the same as
+            <codeph>\du</codeph>).  If the form <codeph>\dg+</codeph> is used,
+            additional information is shown about each role, including the comment for
+            each role.</pd>
         </plentry>
         <plentry>
-          <pt>\distPvES [<varname>index | sequence | table | parent table | view | external_table |
-              system_object</varname>] </pt>
+          <pt>\distPvEr[S+] [<varname>index | sequence | table | parent table | view | external_table |
+              foreign table</varname>] </pt>
           <pd>This is not the actual command name: the letters <codeph>i</codeph>,
               <codeph>s</codeph>, <codeph>t</codeph>, <codeph>P</codeph>, <codeph>v</codeph>,
-              <codeph>E</codeph>, <codeph>S</codeph> stand for index, sequence, table, parent table,
-            view, external table, and system table, respectively. You can specify any or all of
-            these letters, in any order, to obtain a listing of all the matching objects. The letter
-              <codeph>S</codeph> restricts the listing to system objects; without
-            <codeph>S</codeph>, only non-system objects are shown. If + is appended to the command
-            name, each object is listed with its associated description, if any. If a pattern is
-            specified, only objects whose names match the pattern are listed.</pd>
+              <codeph>E</codeph>, <codeph>r</codeph> stand for index, sequence, table, parent table,
+            view, external table, and foreign table, respectively. You can specify any or all of
+            these letters, in any order, to obtain a listing of objects of these types.
+            For example, <codeph>\dit</codeph> lists indexes and tables.  If <codeph>+</codeph> is
+            appended to the command name, each object is listed with its physical size
+            on disk and its associated description, if any. If a pattern is specified,
+            only objects whose names match the pattern are listed. By default, only
+            user-created objects are shown; supply a pattern or the <codeph>S</codeph>
+            modifier to include system objects.</pd>
         </plentry>
         <plentry>
           <pt>\dl</pt>
@@ -493,8 +505,11 @@ testdb=#</codeblock>
           <pt>\dp [<varname>relation_pattern_to_show_privileges</varname>]</pt>
           <pd>Produces a list of all available tables, views and sequences with their associated
             access privileges. If pattern is specified, only tables, views and sequences whose names
-            match the pattern are listed. The <codeph>GRANT</codeph> and <codeph>REVOKE</codeph>
-            commands are used to set access privileges. </pd>
+            match the pattern are listed. The
+            <codeph><xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"/></codeph> and
+            <codeph><xref href="../../ref_guide/sql_commands/REVOKE.xml#topic1"/></codeph>
+            commands are used to set access privileges. The meaning of the privilege display
+            is explained under <codeph><xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"/></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>\dT [<varname>datatype_pattern</varname>] | \dT+
@@ -664,7 +679,7 @@ lo_import 152801</codeblock>
                 abbreviations are allowed. Unaligned writes all columns of a row on a line,
                 separated by the currently active field separator. This is intended to create output
                 that might be intended to be read in by other programs. Aligned mode is the
-                standard, human-readable, nicely formatted text output that is default. The HTML and
+                standard, human-readable, nicely formatted text output; this is the default. The HTML and
                 LaTeX modes put out tables that are intended to be included in documents using the
                 respective mark-up language. They are not complete documents! (This might not be so
                 dramatic in HTML, but in LaTeX you must have a complete document wrapper.) <p>The
@@ -794,7 +809,7 @@ lo_import 152801</codeblock>
           <pd>Although you are welcome to set any variable to anything you want,
               <codeph>psql</codeph> treats several variables as special. They are documented in the
             topic about variables.</pd>
-          <pd>This command is totally separate from the SQL command <codeph>SET</codeph>.</pd>
+          <pd>This command is totally separate from the SQL command <codeph><xref href="../../ref_guide/sql_commands/SET.xml#topic1"/></codeph>.</pd>
         </plentry>
         <plentry>
           <pt>\t [novalue | on | off]</pt>

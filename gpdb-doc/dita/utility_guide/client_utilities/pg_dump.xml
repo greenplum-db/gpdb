@@ -8,7 +8,11 @@
       file.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection_option</varname> ...] [<varname>dump_option</varname> ...] <varname>dbname</varname></codeblock>
+      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...] <varname>dbname</varname>
+
+<b>pg_dump</b> <b>-? | --help</b>
+
+<b>pg_dump</b> <b>-V | --version</b></codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -49,7 +53,7 @@
         of the database are to be restored. The most flexible output file format is the
           <varname>custom</varname> format (<codeph>-Fc</codeph>). It allows for selection and
         reordering of all archived items, and is compressed by default. The tar format
-          (<codeph>-Ft</codeph>) is not compressed and it is not possible to reorder data when
+          (<codeph>-Ft</codeph>) is not compressed and has restrictions on reordering data when
         loading, but it is otherwise quite flexible. It can be manipulated with standard UNIX tools
         such as <codeph>tar</codeph>.</p>
       <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
@@ -117,7 +121,7 @@
             <pt>--inserts</pt>
             <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
               This will make restoration very slow; it is mainly useful for making dumps that can be
-              loaded into non-PostgreSQL-based databases. Also, since this option generates a
+              loaded into non-PostgreSQL-based databases. However, since this option generates a
               separate command for each row, an error in reloading a row causes only that row to be
               lost rather than the entire table contents. Note that the restore may fail altogether
               if you have rearranged column order. The <codeph>--column-inserts</codeph> option is
@@ -129,7 +133,7 @@
                 <codeph>(INSERT
                 INTO</codeph><varname>table</varname><codeph>(</codeph><varname>column</varname><codeph>,
                 ...) VALUES ...)</codeph>. This will make restoration very slow; it is mainly useful
-              for making dumps that can be loaded into non-PostgreSQL-based databases. Also, since
+              for making dumps that can be loaded into non-PostgreSQL-based databases. However, since
               this option generates a separate command for each row, an error in reloading a row
               causes only that row to be lost rather than the entire table contents.</pd>
           </plentry>
@@ -151,13 +155,15 @@
             <pd>p | plain — Output a plain-text SQL script file (the default). </pd>
             <pd>c | custom — Output a custom archive suitable for input into <codeph><xref
                   href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. This is the
-              most flexible format in that it allows reordering of loading data as well as object
-              definitions. This format is also compressed by default. </pd>
-            <pd>t | tar — Output a tar archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. Using this
-              archive format allows reordering and/or exclusion of database objects at the time the
-              database is restored. It is also possible to limit which data is reloaded at restore
-              time. </pd>
+              most flexible format in that it allows manual selection and reordering
+              of archived items during restore. This format is also compressed by default. </pd>
+            <pd>t | tar — Output a tar-format archive suitable for input into <codeph><xref
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
+              This output format allows manual selection and reordering of
+              archived items during restore, but there is a restriction: the
+              relative order of table data items cannot be changed during
+              restore.  Also, tar format does not support compression
+              and has a limit of 8 GB on the size of individual tables.</pd>
           </plentry>
           <plentry>
             <pt>-i | --ignore-version</pt>
@@ -263,6 +269,10 @@
               standard error.</pd>
           </plentry>
           <plentry>
+          <pt>-V | --version</pt>
+          <pd>Print the <codeph>pg_dump</codeph> version and exit.</pd>
+        </plentry>
+          <plentry>
             <pt>-x | --no-privileges | --no-acl</pt>
             <pd>Prevent dumping of access privileges (<codeph>GRANT/REVOKE</codeph> commands).</pd>
           </plentry>
@@ -303,7 +313,7 @@
             <pt>--use-set-session-authorization</pt>
             <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands instead of
                 <codeph>ALTER OWNER</codeph> commands to determine object ownership. This makes the
-              dump more standards compatible, but depending on the history of the objects in the
+              dump more standards-compatible, but depending on the history of the objects in the
               dump, may not restore properly. A dump using <codeph>SET SESSION
                 AUTHORIZATION</codeph> will require superuser privileges to restore correctly,
               whereas <codeph>ALTER OWNER</codeph> requires lesser privileges.</pd>
@@ -341,6 +351,10 @@
               file to be compressed, as though it had been fed through <codeph>gzip</codeph>; but
               the default is not to compress. The tar archive format currently does not support
               compression at all.</pd>
+          </plentry>
+          <plentry>
+            <pt>-? | --help</pt>
+            <pd>Show help about <codeph>pg_dump</codeph> command line arguments, and exit.</pd>
           </plentry>
         </parml>
       </sectiondiv>
@@ -401,7 +415,7 @@
         operating system.</p>
       <p>The dump file produced by <codeph>pg_dump</codeph> does not contain the statistics used by
         the optimizer to make query planning decisions. Therefore, it is wise to run
-          <codeph>ANALYZE</codeph> after restoring from a dump file to ensure good performance.</p>
+          <codeph>ANALYZE</codeph> after restoring from a dump file to ensure optimal performance.</p>
       <p>The database activity of <codeph>pg_dump</codeph> is normally collected by the statistics
         collector. If this is undesirable, you can set parameter <codeph>track_counts</codeph> to
         false via <codeph>PGOPTIONS</codeph> or the <codeph>ALTER USER</codeph> command.</p>
