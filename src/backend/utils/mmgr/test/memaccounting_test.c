@@ -1211,8 +1211,19 @@ test__MemoryAccounting_SaveToFile__GeneratesCorrectString(void **state)
 	memory_profiler_dataset_id = "unittest";
 	memory_profiler_query_id = "q";
 	memory_profiler_dataset_size = INT_MAX;
+	statement_mem = 0;
+	gp_session_id = 0;
 
 	GpIdentity.segindex = CHAR_MAX;
+
+
+
+	expect_string(AllocateFile, name, "pg_log/memory_test,unittest,q,2147483647,0,0,999,10,127.mem");
+	expect_any(AllocateFile, mode);
+	will_return(AllocateFile, 0xabcdee);
+
+	expect_any(FreeFile, file);
+	will_return(FreeFile, 0);
 
 	MemoryAccounting_SaveToFile(10 /* Arbitrary slice id */);
 

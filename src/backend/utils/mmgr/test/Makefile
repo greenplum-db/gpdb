@@ -39,7 +39,8 @@ redzone_handler.t: \
 memaccounting.t: \
 	$(MOCK_DIR)/backend/access/transam/xact_mock.o \
 	$(MOCK_DIR)/backend/utils/error/assert_mock.o \
-	$(MOCK_DIR)/backend/utils/error/elog_mock.o
+	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
+	$(MOCK_DIR)/backend/storage/file/fd_mock.o
 
 runaway_cleaner.t: \
 	$(MOCK_DIR)/backend/utils/error/elog_mock.o \
