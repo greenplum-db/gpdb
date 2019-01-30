@@ -2944,9 +2944,11 @@ gpdb::InjectFaultInOptTasks
 	FaultInjectorIdentifier_e identifier
 	)
 {
-	// use gpfaultinjector to activate
-	// e.g. gpfaultinjector -f opt_task_allocate_string_buffer -y <fault_type> --seg_dbid 1
-	// use 'reset' as <fault_type> to clear injected fault
+	/*
+	 * To activate this fault injection point, use gp_inject_fault
+	 * extension with opt_task_allocate_string_buffer as the fault
+	 * name.
+	 */
 	GP_WRAP_START;
 	{
 		return FaultInjector_InjectFaultIfSet(identifier, DDLNotSpecified, "", "");
