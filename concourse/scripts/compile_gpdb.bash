@@ -23,20 +23,13 @@ function install_deps_for_centos() {
 
 function prep_env_for_centos() {
   case "${TARGET_OS_VERSION}" in
-    6)
-      BLD_ARCH=rhel6_x86_64
-      ;;
-
-    7)
-      BLD_ARCH=rhel7_x86_64
-      ;;
-
-    *)
-    echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL"
-    exit 1
-    ;;
+    6|7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
+    *) echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL" ; exit 1 ;;
   esac
+}
 
+function link_tools_for_centos() {
+  tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
   ln -sf $(pwd)/${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}/python-2.7.12 /opt/python-2.7.12
 }
 
@@ -155,13 +148,18 @@ function export_gpdb_win32_ccl() {
 }
 
 function _main() {
+  # Copy input ext dir; assuming ext doesnt exist
+  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
+
   case "${TARGET_OS}" in
-   centos)
+    centos)
       install_deps_for_centos
       prep_env_for_centos
+      link_tools_for_centos
       ;;
     sles)
       prep_env_for_sles
+      link_tools_for_sles
       ;;
     win32)
         export BLD_ARCH=win32
@@ -174,13 +172,6 @@ function _main() {
   esac
 
   generate_build_number
-  
-  # Copy input ext dir; assuming ext doesnt exist
-  mv gpAux_ext/ext ${GPDB_SRC_PATH}/gpAux
-
-  case "${TARGET_OS}" in
-    sles) link_tools_for_sles ;;
-  esac
 
   # By default, only GPDB Server binary is build.
   # Use BLD_TARGETS flag with appropriate value string to generate client, loaders

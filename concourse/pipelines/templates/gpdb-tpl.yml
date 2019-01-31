@@ -457,6 +457,24 @@ resources:
     regexp: centos7/libquicklz-devel-(\d.*)\.el7\.x86_64\.rpm
 
 {% endif %}
+{% if "centos6" in os_types %}
+- name: python-centos6
+  type: gcs
+  source:
+    bucket: gp-internal-artifacts
+    json_key: ((gcs-key))
+    versioned_file: centos6/python-2.7.12.tar.gz
+
+{% endif %}
+{% if "centos7" in os_types %}
+- name: python-centos7
+  type: gcs
+  source:
+    bucket: gp-internal-artifacts
+    json_key: ((gcs-key))
+    versioned_file: centos7/python-2.7.12.tar.gz
+
+{% endif %}
 {% if "centos6" in os_types or "sles" in os_types or "aix7" in os_types %}
 - name: centos6-build-gpdb6
   type: docker-image
@@ -841,6 +859,8 @@ jobs:
       resource: libquicklz-centos6
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos6
+    - get: python-tarball
+      resource: python-centos6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos6-build-gpdb6
@@ -881,6 +901,8 @@ jobs:
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
+    - get: python-tarball
+      resource: python-centos7
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos7-build-gpdb6
