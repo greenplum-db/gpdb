@@ -292,7 +292,7 @@ static bool recoveryStopAfter;
  * to decrease.
  */
 static TimeLineID recoveryTargetTLI;
-static bool recoveryTargetIsLatest = false; // GPDB_93_MERGE_FIXME: should this be set somewhere?
+static bool recoveryTargetIsLatest = false;
 
 static List *expectedTLEs;
 static TimeLineID curFileTLI;
