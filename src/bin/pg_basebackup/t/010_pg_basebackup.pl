@@ -38,8 +38,13 @@ command_fails(
 	[ 'pg_basebackup', '-D', "$tempdir/backup" ],
 	'pg_basebackup fails because of WAL configuration');
 
+#
+# TODO: When we re-enable pg_basebackup TAP tests, we need to make sure
+# this configuration variable matches the actual default guc value for
+# max_wal_senders, which increased with the addition of replication slots.
+#
 open CONF, ">>$tempdir/pgdata/postgresql.conf";
-print CONF "max_wal_senders = 1\n"; # GPDB: Upstream sets this to 10, but GPDB caps the value at 1.
+print CONF "max_wal_senders = 1\n";
 print CONF "wal_level = archive\n";
 close CONF;
 restart_test_server;
