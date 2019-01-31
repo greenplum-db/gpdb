@@ -596,7 +596,7 @@ Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dy
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
 # TODO: Remove the condition below once libldap is installed on SLES images
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
-Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libyaml*so*
+Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so*
 else
 Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libldap_r-*so* libyaml*so*
 endif
