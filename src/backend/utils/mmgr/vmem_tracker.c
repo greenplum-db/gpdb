@@ -106,7 +106,7 @@ VmemTracker_ShmemInit()
 
 	if(!IsUnderPostmaster)
 	{
-		Assert(chunkSizeInBits == BITS_IN_MB);
+		chunkSizeInBits = BITS_IN_MB;
 
 		vmemChunksQuota = gp_vmem_protect_limit;
 		/*
