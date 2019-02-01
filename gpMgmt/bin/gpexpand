@@ -291,7 +291,7 @@ status_detail_table_sql = """CREATE TABLE %s.%s
                           fq_name text,
                           schema_oid oid,
                           table_oid oid,
-                          distribution_policy smallint[],
+                          distribution_policy int2vector,
                           distribution_policy_names text,
                           distribution_policy_coloids text,
                           distribution_policy_type text,
@@ -1626,16 +1626,10 @@ WHERE
                 fqname = row[0]
                 schema_oid = row[1]
                 table_oid = row[2]
-                if row[3]:
-                    self.logger.debug("dist policy raw: %s " % row[3].decode('utf-8'))
-                else:
-                    self.logger.debug("dist policy raw: NULL")
                 dist_policy = row[3]
+                self.logger.debug("dist policy raw: %r" % dist_policy)
                 (policy_name, policy_oids) = self.form_dist_policy_name(table_conn, row[3], table_oid)
                 rel_bytes = int(row[5])
-
-                if dist_policy is None:
-                    dist_policy = 'NULL'
 
                 dist_policy_type = row[6];
                 root_partition_name = row[7]
@@ -1721,16 +1715,10 @@ ORDER BY fq_name, tableoid desc;
                 fqname = row[0]
                 schema_oid = row[1]
                 table_oid = row[2]
-                if row[3]:
-                    self.logger.debug("dist policy raw: %s " % row[3])
-                else:
-                    self.logger.debug("dist policy raw: NULL")
                 dist_policy = row[3]
+                self.logger.debug("dist policy raw: %r" % dist_policy)
                 (policy_name, policy_oids) = self.form_dist_policy_name(table_conn, row[3], table_oid)
                 rel_bytes = int(row[5])
-
-                if dist_policy is None:
-                    dist_policy = 'NULL'
 
                 dist_policy_type = 'p';
                 root_partition_name = row[6]
@@ -1760,9 +1748,9 @@ ORDER BY fq_name, tableoid desc;
         table_conn.close()
 
     def form_dist_policy_name(self, conn, rs_val, table_oid):
-        if rs_val is None:
+        if not rs_val:
             return (None, None)
-        rs_val = rs_val.lstrip('{').rstrip('}').strip()
+        rs_val = rs_val.strip()
 
         namedict = {}
         oiddict = {}
@@ -1776,7 +1764,7 @@ ORDER BY fq_name, tableoid desc;
         oid_list = []
 
         if rs_val != "":
-            rs_list = rs_val.split(',')
+            rs_list = rs_val.split()
 
             for colnum in rs_list:
                 name_list.append(namedict[int(colnum)])
