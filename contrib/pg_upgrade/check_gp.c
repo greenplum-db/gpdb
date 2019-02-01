@@ -21,6 +21,7 @@ static void check_covering_aoindex(void);
 static void check_partition_indexes(void);
 static void check_orphaned_toastrels(void);
 static void check_online_expansion(void);
+static void check_gphdfs_external_tables(void);
 
 /*
  *	check_greenplum
@@ -38,6 +39,7 @@ check_greenplum(void)
 	check_covering_aoindex();
 	check_partition_indexes();
 	check_orphaned_toastrels();
+	check_gphdfs_external_tables();
 }
 
 /*
@@ -451,6 +453,79 @@ check_partition_indexes(void)
 			   "| indexes defined on them.  Indexes on partition parents,\n"
 			   "| as well as children, must be dropped before upgrade.\n"
 			   "| A list of the problem tables is in the file:\n"
+			   "| \t%s\n\n", output_path);
+	}
+	else
+		check_ok();
+}
+
+/*
+ * check_gphdfs_external_tables
+ *
+ * Check if there are any remaining gphdfs external tables in the database.
+ * We error if any gphdfs external tables remain and let the users know that,
+ * any remaining gphdfs external tables have to be removed.
+ */
+static void
+check_gphdfs_external_tables(void)
+{
+	char		output_path[MAXPGPATH];
+	FILE	   *script = NULL;
+	bool		found = false;
+	int			dbnum;
+
+	prep_status("Checking for gphdfs external tables");
+
+	snprintf(output_path, sizeof(output_path), "gphdfs_external_tables.txt");
+
+
+	for (dbnum = 0; dbnum < old_cluster.dbarr.ndbs; dbnum++)
+	{
+		PGresult   *res;
+		int			ntups;
+		int			rowno;
+		DbInfo	   *active_db = &old_cluster.dbarr.dbs[dbnum];
+		PGconn	   *conn;
+
+		conn = connectToServer(&old_cluster, active_db->db_name);
+		res = executeQueryOrDie(conn,
+			 "SELECT d.objid::regclass as tablename "
+			 "FROM pg_catalog.pg_depend d "
+			 "       JOIN pg_catalog.pg_exttable x ON ( d.objid = x.reloid ) "
+			 "       JOIN pg_catalog.pg_extprotocol p ON ( p.oid = d.refobjid ) "
+			 "       JOIN pg_catalog.pg_class c ON ( c.oid = d.objid ) "
+			 "       WHERE d.refclassid = 'pg_extprotocol'::regclass "
+			 "       AND p.ptcname = 'gphdfs';");
+
+		ntups = PQntuples(res);
+
+		if (ntups > 0)
+		{
+			found = true;
+
+			if (script == NULL && (script = fopen(output_path, "w")) == NULL)
+				pg_log(PG_FATAL, "Could not create necessary file:  %s\n",
+					   output_path);
+
+			for (rowno = 0; rowno < ntups; rowno++)
+			{
+				fprintf(script, "gphdfs external table \"%s\" in database \"%s\"\n",
+						PQgetvalue(res, rowno, PQfnumber(res, "tablename")),
+						active_db->db_name);
+			}
+		}
+
+		PQclear(res);
+		PQfinish(conn);
+	}
+	if (found)
+	{
+		fclose(script);
+		pg_log(PG_REPORT, "fatal\n");
+		pg_log(PG_FATAL,
+			   "| Your installation contains gphdfs external tables.  These \n"
+			   "| tables need to be dropped before upgrade.  A list of\n"
+			   "| external gphdfs tables to remove is provided in the file:\n"
 			   "| \t%s\n\n", output_path);
 	}
 	else
