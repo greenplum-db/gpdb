@@ -163,17 +163,17 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=10000.21..14403.95 rows=5 width=12)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part1  (cost=10000.21..10003.34 rows=4 width=12)
-                                 Recheck Cond: col1 < 10
-                                 ->  Bitmap Index Scan on idx1_1_prt_part1  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part2 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part3 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part4 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part5 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
+                                 Recheck Cond: (col1 < 10)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col1_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
  Optimizer: legacy query optimizer
 (20 rows)
 
@@ -192,16 +192,16 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=5500.82..5500.83 rows=2 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..5500.76 rows=2 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part2 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part3 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part4 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part5 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col1_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
  Optimizer: legacy query optimizer
 (18 rows)
 
@@ -221,16 +221,16 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 = 25 ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=5500.82..5500.83 rows=2 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..5500.76 rows=2 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 25
-                           ->  Index Scan using idx1_1_prt_part2 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 25
-                           ->  Index Scan using idx1_1_prt_part3 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 25
-                           ->  Index Scan using idx1_1_prt_part4 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 25
-                           ->  Index Scan using idx1_1_prt_part5 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 25
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col1_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 = 25)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 = 25)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 = 25)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 = 25)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 = 25)
  Optimizer: legacy query optimizer
 (18 rows)
 
@@ -287,24 +287,24 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 AND col1 < 50 ORDER BY col2,col3
                ->  Sort  (cost=41114.39..41114.49 rows=14 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..41113.70 rows=14 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 10 AND col1 < 50
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col1_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 > 10) AND (col1 < 50))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col1 > 10 AND col1 < 50
-                                 ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col1 > 10 AND col1 < 50
+                                 Recheck Cond: ((col1 > 10) AND (col1 < 50))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col1 > 10) AND (col1 < 50))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col1 > 10 AND col1 < 50
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col1 > 10 AND col1 < 50
+                                 Recheck Cond: ((col1 > 10) AND (col1 < 50))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col1 > 10) AND (col1 < 50))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col1 > 10 AND col1 < 50
-                                 ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col1 > 10 AND col1 < 50
+                                 Recheck Cond: ((col1 > 10) AND (col1 < 50))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col1 > 10) AND (col1 < 50))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col1 > 10 AND col1 < 50
-                                 ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col1 > 10 AND col1 < 50
+                                 Recheck Cond: ((col1 > 10) AND (col1 < 50))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col1 > 10) AND (col1 < 50))
  Optimizer: legacy query optimizer
 (26 rows)
 
@@ -331,38 +331,38 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 10 OR col1 = 25 ORDER BY col2,col3 
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part1  (cost=2000.29..2100.30 rows=1 width=12)
                                  Recheck Cond: col1 > 10 OR col1 = 25
                                  ->  BitmapOr  (cost=2000.29..2000.29 rows=1 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part1  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 > 10
-                                       ->  Bitmap Index Scan on idx1_1_prt_part1  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 25
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 > 10)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 25)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col1 > 10 OR col1 = 25
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col1 > 10
-                                       ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 25
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col1 > 10)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 25)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col1 > 10 OR col1 = 25
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col1 > 10
-                                       ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 25
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col1 > 10)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 25)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col1 > 10 OR col1 = 25
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col1 > 10
-                                       ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 25
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col1 > 10)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 25)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col1 > 10 OR col1 = 25
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col1 > 10
-                                       ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 25
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col1 > 10)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 25)
  Optimizer: legacy query optimizer
 (43 rows)
 
@@ -386,20 +386,20 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
                ->  Sort  (cost=17307.38..17307.43 rows=6 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..17307.10 rows=6 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 >= 10 AND col1 <= 25
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col1_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 >= 10) AND (col1 <= 25))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col1 >= 10 AND col1 <= 25
-                                 ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col1 >= 10 AND col1 <= 25
+                                 Recheck Cond: ((col1 >= 10) AND (col1 <= 25))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col1 >= 10) AND (col1 <= 25))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=4000.18..4003.24 rows=2 width=12)
-                                 Recheck Cond: col1 >= 10 AND col1 <= 25
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..4000.18 rows=2 width=0)
-                                       Index Cond: col1 >= 10 AND col1 <= 25
-                           ->  Index Scan using idx1_1_prt_part4 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 >= 10 AND col1 <= 25
-                           ->  Index Scan using idx1_1_prt_part5 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 >= 10 AND col1 <= 25
+                                 Recheck Cond: ((col1 >= 10) AND (col1 <= 25))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_idx  (cost=0.00..4000.18 rows=2 width=0)
+                                       Index Cond: ((col1 >= 10) AND (col1 <= 25))
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 >= 10) AND (col1 <= 25))
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 >= 10) AND (col1 <= 25))
  Optimizer: legacy query optimizer
 (22 rows)
 
@@ -407,11 +407,11 @@ DROP INDEX idx1;
 WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col1_idx;
 -- @description B-tree single index key = partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col2);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
@@ -440,9 +440,9 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 < 10 ORDER BY col2,col3 LIMIT 5;
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=10000.21..10003.34 rows=4 width=12)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part1  (cost=10000.21..10003.34 rows=4 width=12)
-                                 Recheck Cond: col2 < 10::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part1  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col2 < 10::numeric
+                                 Recheck Cond: (col2 < 10::numeric)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col2 < 10::numeric)
  Optimizer: legacy query optimizer
 (12 rows)
 
@@ -478,8 +478,8 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=1100.16..1100.17 rows=1 width=12)
                      Sort Key: pt_lt_tab_1_prt_part3.col3
                      ->  Append  (cost=0.14..1100.15 rows=1 width=12)
-                           ->  Index Scan using idx1_1_prt_part3 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col2 = 25::numeric
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col2 = 25::numeric)
  Optimizer: legacy query optimizer
 (10 rows)
 
@@ -537,21 +537,21 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col2 < 50 ORDER BY col2,col3
                      Sort Key: pt_lt_tab_1_prt_part2.col2, pt_lt_tab_1_prt_part2.col3
                      ->  Append  (cost=10000.24..40013.55 rows=14 width=12)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 > 10::numeric AND col2 < 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 > 10::numeric AND col2 < 50::numeric
+                                 Recheck Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 > 10::numeric AND col2 < 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 > 10::numeric AND col2 < 50::numeric
+                                 Recheck Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 > 10::numeric AND col2 < 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 > 10::numeric AND col2 < 50::numeric
+                                 Recheck Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 > 10::numeric AND col2 < 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 > 10::numeric AND col2 < 50::numeric
+                                 Recheck Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 > 10::numeric) AND (col2 < 50::numeric))
  Optimizer: legacy query optimizer
 (24 rows)
 
@@ -578,31 +578,31 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 OR col2 = 50 ORDER BY col2,col3 
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10::numeric OR col2 = 50::numeric
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10::numeric
-                                       ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col2 = 50::numeric
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10::numeric)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col2 = 50::numeric)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10::numeric OR col2 = 50::numeric
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10::numeric
-                                       ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col2 = 50::numeric
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10::numeric)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col2 = 50::numeric)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10::numeric OR col2 = 50::numeric
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10::numeric
-                                       ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col2 = 50::numeric
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10::numeric)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col2 = 50::numeric)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10::numeric OR col2 = 50::numeric
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10::numeric
-                                       ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col2 = 50::numeric
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10::numeric)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col2 = 50::numeric)
  Optimizer: legacy query optimizer
 (36 rows)
 
@@ -626,24 +626,24 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
                ->  Sort  (cost=41114.39..41114.49 rows=14 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..41113.70 rows=14 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col2_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part2  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
  Optimizer: legacy query optimizer
 (26 rows)
 
@@ -678,17 +678,17 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 < 10 ORDER BY col2,col3 LIMIT 5;
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=10000.21..14403.95 rows=5 width=12)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part1  (cost=10000.21..10003.34 rows=4 width=12)
-                                 Recheck Cond: col1 < 10
-                                 ->  Bitmap Index Scan on idx1_1_prt_part11  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part21 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part31 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part41 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
-                           ->  Index Scan using idx1_1_prt_part51 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 < 10
+                                 Recheck Cond: (col1 < 10)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_col2_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_col2_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 < 10)
  Optimizer: legacy query optimizer
 (20 rows)
 
@@ -707,16 +707,16 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 > 50 ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=5500.82..5500.83 rows=2 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..5500.76 rows=2 width=12)
-                           ->  Index Scan using idx1_1_prt_part11 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part21 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part31 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part41 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
-                           ->  Index Scan using idx1_1_prt_part51 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 > 50
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col1_col2_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_col2_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_col2_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col1 > 50)
  Optimizer: legacy query optimizer
 (18 rows)
 
@@ -736,8 +736,8 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 = 25 ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=1100.16..1100.17 rows=1 width=12)
                      Sort Key: pt_lt_tab_1_prt_part3.col3
                      ->  Append  (cost=0.14..1100.15 rows=1 width=12)
-                           ->  Index Scan using idx1_1_prt_part3 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col2 = 25::numeric
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: (col2 = 25::numeric)
  Optimizer: legacy query optimizer
 (10 rows)
 
@@ -789,14 +789,14 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10 AND col1 = 10 ORDER BY col2,col3
                ->  Sort  (cost=4400.66..4400.67 rows=2 width=12)
                      Sort Key: pt_lt_tab_1_prt_part2.col2, pt_lt_tab_1_prt_part2.col3
                      ->  Append  (cost=0.14..4400.62 rows=2 width=12)
-                           ->  Index Scan using idx1_1_prt_part21 on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 10 AND col2 > 10::numeric
-                           ->  Index Scan using idx1_1_prt_part31 on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 10 AND col2 > 10::numeric
-                           ->  Index Scan using idx1_1_prt_part41 on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 10 AND col2 > 10::numeric
-                           ->  Index Scan using idx1_1_prt_part51 on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col1 = 10 AND col2 > 10::numeric
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col1_col2_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
+                           ->  Index Scan using pt_lt_tab_1_prt_part3_col1_col2_idx on pt_lt_tab_1_prt_part3  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
+                           ->  Index Scan using pt_lt_tab_1_prt_part4_col1_col2_idx on pt_lt_tab_1_prt_part4  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
+                           ->  Index Scan using pt_lt_tab_1_prt_part5_col1_col2_idx on pt_lt_tab_1_prt_part5  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col1 = 10) AND (col2 > 10::numeric))
  Optimizer: legacy query optimizer
 (16 rows)
 
@@ -823,38 +823,38 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 > 10.00 OR col1 = 50 ORDER BY col2,co
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part1  (cost=2000.29..2100.30 rows=1 width=12)
                                  Recheck Cond: col2 > 10.00 OR col1 = 50
                                  ->  BitmapOr  (cost=2000.29..2000.29 rows=1 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part1  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col2 > 10.00
-                                       ->  Bitmap Index Scan on idx1_1_prt_part11  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 50
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col2 > 10.00)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part1_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 50)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10.00 OR col1 = 50
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part21  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10.00
-                                       ->  Bitmap Index Scan on idx1_1_prt_part21  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 50
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10.00)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 50)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10.00 OR col1 = 50
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part31  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10.00
-                                       ->  Bitmap Index Scan on idx1_1_prt_part31  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 50
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10.00)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 50)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10.00 OR col1 = 50
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part41  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10.00
-                                       ->  Bitmap Index Scan on idx1_1_prt_part41  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 50
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10.00)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 50)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=11000.36..11003.51 rows=4 width=12)
                                  Recheck Cond: col2 > 10.00 OR col1 = 50
                                  ->  BitmapOr  (cost=11000.36..11000.36 rows=4 width=0)
-                                       ->  Bitmap Index Scan on idx1_1_prt_part51  (cost=0.00..10000.21 rows=4 width=0)
-                                             Index Cond: col2 > 10.00
-                                       ->  Bitmap Index Scan on idx1_1_prt_part51  (cost=0.00..1000.14 rows=1 width=0)
-                                             Index Cond: col1 = 50
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_col2_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                             Index Cond: (col2 > 10.00)
+                                       ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_col2_idx  (cost=0.00..1000.14 rows=1 width=0)
+                                             Index Cond: (col1 = 50)
  Optimizer: legacy query optimizer
 (43 rows)
 
@@ -878,24 +878,24 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
                ->  Sort  (cost=41114.39..41114.49 rows=14 width=12)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..41113.70 rows=14 width=12)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
-                                 Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col2_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1100.15 rows=1 width=12)
+                                 Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part2  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part21  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part2_col1_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part31  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col1_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part41  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col1_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.24..10003.39 rows=4 width=12)
-                                 Recheck Cond: col2 >= 10::numeric AND col2 <= 50::numeric
-                                 ->  Bitmap Index Scan on idx1_1_prt_part51  (cost=0.00..10000.24 rows=4 width=0)
-                                       Index Cond: col2 >= 10::numeric AND col2 <= 50::numeric
+                                 Recheck Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col1_col2_idx  (cost=0.00..10000.24 rows=4 width=0)
+                                       Index Cond: ((col2 >= 10::numeric) AND (col2 <= 50::numeric))
  Optimizer: legacy query optimizer
 (26 rows)
 
@@ -903,11 +903,11 @@ DROP INDEX idx1;
 WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col2_idx;
 -- @description multi-column unique constraint (= b-tree index). Essentially the
 -- same as the previous case, but the columns are the other way 'round, and we
 -- do this on the table with default partition.
@@ -1950,24 +1950,24 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 is False ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=32014.75..32014.83 rows=11 width=8)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..32014.22 rows=11 width=8)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
-                                 Index Cond: col4 = false
-                                 Filter: col4 IS FALSE
-                           ->  Index Scan using idx1_1_prt_part2 on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
-                                 Index Cond: col4 = false
-                                 Filter: col4 IS FALSE
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
+                                 Index Cond: (col4 = false)
+                                 Filter: (col4 IS FALSE)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
+                                 Index Cond: (col4 = false)
+                                 Filter: (col4 IS FALSE)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: col4 IS FALSE
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (col4 IS FALSE)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: col4 IS FALSE
-                                 ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (col4 IS FALSE)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: col4 IS FALSE
-                                 ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (col4 IS FALSE)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
  Optimizer: legacy query optimizer
 (26 rows)
 
@@ -1991,24 +1991,24 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col4 = False ORDER BY col2,col3 LIMIT 5;
                ->  Sort  (cost=32014.75..32014.83 rows=11 width=8)
                      Sort Key: pt_lt_tab_1_prt_part1.col2, pt_lt_tab_1_prt_part1.col3
                      ->  Append  (cost=0.14..32014.22 rows=11 width=8)
-                           ->  Index Scan using idx1_1_prt_part1 on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
-                                 Index Cond: col4 = false
-                                 Filter: NOT col4
-                           ->  Index Scan using idx1_1_prt_part2 on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
-                                 Index Cond: col4 = false
-                                 Filter: NOT col4
+                           ->  Index Scan using pt_lt_tab_1_prt_part1_col4_idx on pt_lt_tab_1_prt_part1  (cost=0.14..1002.14 rows=1 width=8)
+                                 Index Cond: (col4 = false)
+                                 Filter: (NOT col4)
+                           ->  Index Scan using pt_lt_tab_1_prt_part2_col4_idx on pt_lt_tab_1_prt_part2  (cost=0.14..1002.14 rows=1 width=8)
+                                 Index Cond: (col4 = false)
+                                 Filter: (NOT col4)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part3  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: NOT col4
-                                 ->  Bitmap Index Scan on idx1_1_prt_part3  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (NOT col4)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part3_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part4  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: NOT col4
-                                 ->  Bitmap Index Scan on idx1_1_prt_part4  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (NOT col4)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part4_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
                            ->  Bitmap Heap Scan on pt_lt_tab_1_prt_part5  (cost=10000.21..10003.31 rows=4 width=8)
-                                 Filter: NOT col4
-                                 ->  Bitmap Index Scan on idx1_1_prt_part5  (cost=0.00..10000.21 rows=4 width=0)
-                                       Index Cond: col4 = false
+                                 Filter: (NOT col4)
+                                 ->  Bitmap Index Scan on pt_lt_tab_1_prt_part5_col4_idx  (cost=0.00..10000.21 rows=4 width=0)
+                                       Index Cond: (col4 = false)
  Optimizer: legacy query optimizer
 (26 rows)
 
@@ -2113,25 +2113,25 @@ EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
  Gather Motion 1:1  (slice1; segments: 1)  (cost=100.65..6405.82 rows=9 width=20)
    ->  Append  (cost=100.65..6405.82 rows=3 width=20)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p11  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p11  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p11_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p12  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p12  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p11  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p11  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p11_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p12  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
  Optimizer: legacy query optimizer
 (23 rows)
 
@@ -3242,23 +3242,23 @@ explain select * from sales where date = '2011-01-01' and region = 'usa';
  Gather Motion 3:1  (slice1; segments: 3)  (cost=100.46..4773.02 rows=5 width=47)
    ->  Append  (cost=100.46..4773.02 rows=2 width=47)
          ->  Bitmap Heap Scan on sales_1_prt_outlying_dates_2_prt_usa  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: date = '01-01-2011'::date
-               Filter: region = 'usa'::text
-               ->  Bitmap Index Scan on idx_sales_date_1_prt_outlying_dates_2_prt_usa  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: date = '01-01-2011'::date
+               Recheck Cond: (date = '01-01-2011'::date)
+               Filter: (region = 'usa'::text)
+               ->  Bitmap Index Scan on sales_1_prt_outlying_dates_2_prt_usa_date_idx  (cost=0.00..100.46 rows=13 width=0)
+                     Index Cond: (date = '01-01-2011'::date)
          ->  Bitmap Heap Scan on sales_1_prt_outlying_dates_2_prt_other_regions  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: date = '01-01-2011'::date
-               Filter: region = 'usa'::text
-               ->  Bitmap Index Scan on idx_sales_date_1_prt_outlying_dates_2_prt_other_regions  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: date = '01-01-2011'::date
+               Recheck Cond: (date = '01-01-2011'::date)
+               Filter: (region = 'usa'::text)
+               ->  Bitmap Index Scan on sales_1_prt_outlying_dates_2_prt_other_regions_date_idx  (cost=0.00..100.46 rows=13 width=0)
+                     Index Cond: (date = '01-01-2011'::date)
          ->  Bitmap Heap Scan on sales_1_prt_2_2_prt_other_regions  (cost=100.46..1524.29 rows=1 width=54)
-               Recheck Cond: date = '01-01-2011'::date
-               Filter: region = 'usa'::text
-               ->  Bitmap Index Scan on idx_sales_date_1_prt_2_2_prt_other_regions  (cost=0.00..100.46 rows=13 width=0)
-                     Index Cond: date = '01-01-2011'::date
-         ->  Index Scan using idx_sales_date_1_prt_2_2_prt_usa on sales_1_prt_2_2_prt_usa  (cost=0.12..200.14 rows=1 width=19)
-               Index Cond: date = '01-01-2011'::date
-               Filter: region = 'usa'::text
+               Recheck Cond: (date = '01-01-2011'::date)
+               Filter: (region = 'usa'::text)
+               ->  Bitmap Index Scan on sales_1_prt_2_2_prt_other_regions_date_idx  (cost=0.00..100.46 rows=13 width=0)
+                     Index Cond: (date = '01-01-2011'::date)
+         ->  Index Scan using sales_1_prt_2_2_prt_usa_date_idx on sales_1_prt_2_2_prt_usa  (cost=0.12..200.14 rows=1 width=19)
+               Index Cond: (date = '01-01-2011'::date)
+               Filter: (region = 'usa'::text)
  Optimizer: legacy query optimizer
 (21 rows)
 
@@ -3281,7 +3281,7 @@ select * from sales_1_prt_2_2_prt_europe;
 (0 rows)
 
 update sales set region = 'europe' where trans_id = 1;
-ERROR:  moving tuple from partition "sales_1_prt_2_2_prt_usa" to partition "sales_1_prt_2_2_prt_europe" not supported  (seg0 127.0.0.1:25432 pid=63794)
+ERROR:  moving tuple from partition "sales_1_prt_2_2_prt_usa" to partition "sales_1_prt_2_2_prt_europe" not supported  (seg2 127.0.1.1:25434 pid=17863)
 select * from sales_1_prt_2_2_prt_europe;
  trans_id | date | amount | region 
 ----------+------+--------+--------

@@ -336,11 +336,11 @@ DROP INDEX idx1;
 WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col1_idx;
 -- @description B-tree single index key = partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col2);
 NOTICE:  building index for child partition "pt_lt_tab_1_prt_part1"
@@ -737,11 +737,11 @@ DROP INDEX idx1;
 WARNING:  only dropped the index "idx1"
 HINT:  To drop other indexes on child partitions, drop each one explicitly.
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col2_idx;
 -- @description multi-column unique constraint (= b-tree index). Essentially the
 -- same as the previous case, but the columns are the other way 'round, and we
 -- do this on the table with default partition.
@@ -1724,25 +1724,25 @@ EXPLAIN SELECT * FROM pt_complex WHERE i = 1 AND j = 1;
  Gather Motion 1:1  (slice1; segments: 1)  (cost=100.65..6405.82 rows=9 width=20)
    ->  Append  (cost=100.65..6405.82 rows=3 width=20)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p11  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p11  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p11_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p12  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p1_2_prt_p11_3_prt_p12  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p1_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p11  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p11  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p11_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
          ->  Bitmap Heap Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12  (cost=100.65..1601.46 rows=1 width=20)
-               Recheck Cond: i = 1
-               Filter: j = 1
-               ->  Bitmap Index Scan on i_pt_complex_1_prt_p2_2_prt_p11_3_prt_p12  (cost=0.00..100.65 rows=22 width=0)
-                     Index Cond: i = 1
+               Recheck Cond: (i = 1)
+               Filter: (j = 1)
+               ->  Bitmap Index Scan on pt_complex_1_prt_p2_2_prt_p11_3_prt_p12_i_idx  (cost=0.00..100.65 rows=22 width=0)
+                     Index Cond: (i = 1)
  Optimizer: legacy query optimizer
 (23 rows)
 

@@ -131,8 +131,8 @@ Compression Level: 1
 Block Size: 32768
 Checksum: t
 Indexes:
-    "heap_idx1_1_prt_def" btree (a) WHERE c > 10
-    "heap_idx2_1_prt_def" btree (upper(b))
+    "pt_heap_tab_1_prt_def_a_idx" btree (a) WHERE c > 10
+    "pt_heap_tab_1_prt_def_upper_idx" btree (upper(b))
 Check constraints:
     "pt_heap_tab_1_prt_def_check" CHECK (b = 'def'::text OR b = 'def1'::text OR b = 'def3'::text)
 Distributed by: (a)
@@ -329,8 +329,8 @@ Compression Level: 1
 Block Size: 32768
 Checksum: t
 Indexes:
-    "ao_idx1_1_prt_def" btree (a) WHERE c > 10
-    "ao_idx2_1_prt_def" btree (upper(b))
+    "pt_ao_tab_1_prt_def_a_idx" btree (a) WHERE c > 10
+    "pt_ao_tab_1_prt_def_upper_idx" btree (upper(b))
 Check constraints:
     "pt_ao_tab_1_prt_def_check" CHECK (b = 'def'::text OR b = 'def1'::text OR b = 'def3'::text)
 Distributed by: (a)

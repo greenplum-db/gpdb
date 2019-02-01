@@ -4,25 +4,25 @@ insert into reindex_dropindex_crtab_part_aoco_btree (id, owner, description, pro
 INSERT 1000
 insert into reindex_dropindex_crtab_part_aoco_btree (id, owner, description, property, poli, target) select i, 'user' || i, 'Testing GiST Index', '((3, 1300), (33, 1330))','( (22,660), (57, 650), (68, 660) )', '( (76, 76), 76)' from generate_series(1,1000) i ;
 INSERT 1000
-create index idx_reindex_dropindex_crtab_part_aoco_btree on reindex_dropindex_crtab_part_aoco_btree(id);
+create index on reindex_dropindex_crtab_part_aoco_btree(id);
 CREATE
-create index idx_reindex_dropindex_crtab_part_owner_aoco_btree on reindex_dropindex_crtab_part_aoco_btree(owner);
+create index on reindex_dropindex_crtab_part_aoco_btree(owner);
 CREATE
 
 -- start_ignore
-create table before_reindex_dropindex_crtab_part_aoco_btree as select oid as c_oid, gp_segment_id as c_gp_segment_id, relfilenode as c_relfilenode, relname as c_relname from gp_dist_random('pg_class') where relname like 'idx_reindex_dropindex_crtab_part_aoco_btree%';
+create table before_reindex_dropindex_crtab_part_aoco_btree as select oid as c_oid, gp_segment_id as c_gp_segment_id, relfilenode as c_relfilenode, relname as c_relname from gp_dist_random('pg_class') where relname like 'reindex_dropindex_crtab_part_aoco_btree%_id_idx';
 CREATE 9
 -- end_ignore
 
 select c_relname, 1 as have_same_number_of_rows from before_reindex_dropindex_crtab_part_aoco_btree group by c_oid, c_relname having count(*) = (select count(*) from gp_segment_configuration where role = 'p' and content > -1);
- c_relname                                                  | have_same_number_of_rows 
-------------------------------------------------------------+--------------------------
- idx_reindex_dropindex_crtab_part_aoco_btree_1_prt_p_one    | 1                        
- idx_reindex_dropindex_crtab_part_aoco_btree                | 1                        
- idx_reindex_dropindex_crtab_part_aoco_btree_1_prt_de_fault | 1                        
+ c_relname                                                     | have_same_number_of_rows 
+---------------------------------------------------------------+--------------------------
+ reindex_dropindex_crtab_part_aoco_btree_id_idx                | 1                        
+ reindex_dropindex_crtab_part_aoco_btree_1_prt_p_one_id_idx    | 1                        
+ reindex_dropindex_crtab_part_aoco_btree_1_prt_de_fault_id_idx | 1                        
 (3 rows)
 
-select 1 AS index_exists_on_all_segs from gp_dist_random('pg_class') WHERE relname = 'idx_reindex_dropindex_crtab_part_owner_aoco_btree' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
+select 1 AS index_exists_on_all_segs from gp_dist_random('pg_class') WHERE relname = 'reindex_dropindex_crtab_part_aoco_btree_owner_idx' GROUP BY oid having count(*) = (SELECT count(*) FROM gp_segment_configuration WHERE role='p' AND content > -1);
  index_exists_on_all_segs 
 --------------------------
  1                        
@@ -39,7 +39,7 @@ BEGIN
 BEGIN
 1: REINDEX TABLE  reindex_dropindex_crtab_part_aoco_btree;
 REINDEX
-2&: DROP INDEX idx_reindex_dropindex_crtab_part_owner_aoco_btree;  <waiting ...>
+2&: DROP INDEX reindex_dropindex_crtab_part_aoco_btree_owner_idx;  <waiting ...>
 1: COMMIT;
 COMMIT
 2<:  <... completed>
@@ -61,16 +61,16 @@ SET
  2     
 (1 row)
 
-3: select c_relname, 1 as different_relfilenode from before_reindex_dropindex_crtab_part_aoco_btree b where exists (select oid, gp_segment_id, relfilenode from gp_dist_random('pg_class') where relname like 'idx_reindex_dropindex_crtab_part_aoco_btree%' and b.c_oid = oid and b.c_gp_segment_id = gp_segment_id and b.c_relfilenode != relfilenode) group by b.c_oid, b.c_relname;
- c_relname                                                  | different_relfilenode 
-------------------------------------------------------------+-----------------------
- idx_reindex_dropindex_crtab_part_aoco_btree_1_prt_p_one    | 1                     
- idx_reindex_dropindex_crtab_part_aoco_btree_1_prt_de_fault | 1                     
- idx_reindex_dropindex_crtab_part_aoco_btree                | 1                     
+3: select c_relname, 1 as different_relfilenode from before_reindex_dropindex_crtab_part_aoco_btree b where exists (select oid, gp_segment_id, relfilenode from gp_dist_random('pg_class') where relname like 'reindex_dropindex_crtab_part_aoco_btree%_id_idx' and b.c_oid = oid and b.c_gp_segment_id = gp_segment_id and b.c_relfilenode != relfilenode) group by b.c_oid, b.c_relname;
+ c_relname                                                     | different_relfilenode 
+---------------------------------------------------------------+-----------------------
+ reindex_dropindex_crtab_part_aoco_btree_id_idx                | 1                     
+ reindex_dropindex_crtab_part_aoco_btree_1_prt_p_one_id_idx    | 1                     
+ reindex_dropindex_crtab_part_aoco_btree_1_prt_de_fault_id_idx | 1                     
 (3 rows)
 
 -- expect only the index on parent table to be dropped; drop index will not drop indexes on child partitions
-3: select 1-count(1) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'idx_reindex_dropindex_crtab_part_owner_aoco_btree';
+3: select 1-count(1) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'reindex_dropindex_crtab_part_aoco_btree_owner_idx';
  index_dropped 
 ---------------
  1             

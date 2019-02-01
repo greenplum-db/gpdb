@@ -249,18 +249,36 @@ NOTICE:  building index for child partition "partlockt_1_prt_7"
 NOTICE:  building index for child partition "partlockt_1_prt_8"
 NOTICE:  building index for child partition "partlockt_1_prt_9"
 select * from locktest_master where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-   coalesce    |        mode         | locktype |  node  
----------------+---------------------+----------+--------
- partlockt     | ShareLock           | relation | master
- partlockt_idx | AccessExclusiveLock | relation | master
-(2 rows)
+     coalesce      |        mode         | locktype |  node  
+-------------------+---------------------+----------+--------
+ partlockt         | ShareLock           | relation | master
+ partlockt_1_prt_1 | ShareLock           | relation | master
+ partlockt_1_prt_2 | ShareLock           | relation | master
+ partlockt_1_prt_3 | ShareLock           | relation | master
+ partlockt_1_prt_4 | ShareLock           | relation | master
+ partlockt_1_prt_5 | ShareLock           | relation | master
+ partlockt_1_prt_6 | ShareLock           | relation | master
+ partlockt_1_prt_7 | ShareLock           | relation | master
+ partlockt_1_prt_8 | ShareLock           | relation | master
+ partlockt_1_prt_9 | ShareLock           | relation | master
+ partlockt_idx     | AccessExclusiveLock | relation | master
+(11 rows)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-   coalesce    |        mode         | locktype |    node    
----------------+---------------------+----------+------------
- partlockt     | ShareLock           | relation | n segments
- partlockt_idx | AccessExclusiveLock | relation | n segments
-(2 rows)
+     coalesce      |        mode         | locktype |    node    
+-------------------+---------------------+----------+------------
+ partlockt_1_prt_6 | ShareLock           | relation | n segments
+ partlockt_1_prt_5 | ShareLock           | relation | n segments
+ partlockt         | ShareLock           | relation | n segments
+ partlockt_1_prt_9 | ShareLock           | relation | n segments
+ partlockt_1_prt_1 | ShareLock           | relation | n segments
+ partlockt_1_prt_3 | ShareLock           | relation | n segments
+ partlockt_1_prt_8 | ShareLock           | relation | n segments
+ partlockt_1_prt_4 | ShareLock           | relation | n segments
+ partlockt_1_prt_7 | ShareLock           | relation | n segments
+ partlockt_1_prt_2 | ShareLock           | relation | n segments
+ partlockt_idx     | AccessExclusiveLock | relation | n segments
+(11 rows)
 
 commit;
 -- Force use of the index in the select and delete below. We're not interested
@@ -283,10 +301,10 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 (1 row)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-       coalesce        |      mode       | locktype |   node    
------------------------+-----------------+----------+-----------
- partlockt_idx_1_prt_1 | AccessShareLock | relation | 1 segment
- partlockt_1_prt_1     | AccessShareLock | relation | 1 segment
+        coalesce         |      mode       | locktype |   node    
+-------------------------+-----------------+----------+-----------
+ partlockt_1_prt_1       | AccessShareLock | relation | 1 segment
+ partlockt_1_prt_1_i_idx | AccessShareLock | relation | 1 segment
 (2 rows)
 
 commit;
@@ -318,11 +336,11 @@ select * from locktest_master where coalesce not like 'gp_%' and coalesce not li
 (1 row)
 
 select * from locktest_segments where coalesce not like 'gp_%' and coalesce not like 'pg_%';
-       coalesce        |       mode       | locktype |    node    
------------------------+------------------+----------+------------
- partlockt             | RowExclusiveLock | relation | n segments
- partlockt_1_prt_4     | AccessShareLock  | relation | n segments
- partlockt_idx_1_prt_4 | AccessShareLock  | relation | n segments
+        coalesce         |       mode       | locktype |    node    
+-------------------------+------------------+----------+------------
+ partlockt               | RowExclusiveLock | relation | n segments
+ partlockt_1_prt_4       | AccessShareLock  | relation | n segments
+ partlockt_1_prt_4_i_idx | AccessShareLock  | relation | n segments
 (3 rows)
 
 commit;

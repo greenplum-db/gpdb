@@ -1480,8 +1480,6 @@ ProcessUtilitySlow(Node *parsetree,
 					IndexStmt  *stmt = (IndexStmt *) parsetree;
 					Oid			relid;
 					LOCKMODE	lockmode;
-					ListCell   *lc;
-					List	   *stmts;
 
 					if (stmt->concurrent)
 						PreventTransactionChain(isTopLevel,
@@ -1512,48 +1510,17 @@ ProcessUtilitySlow(Node *parsetree,
 												 RangeVarCallbackOwnsRelation,
 												 NULL);
 
-					/*
-					 * For unnamed indexes, choose an index name that will be
-					 * used later when creating IndexStmts for the leaf
-					 * partitions in a partitioned table.
-					 */
-					if (stmt->idxname == NULL && rel_is_partitioned(relid))
-					{
-						Relation rel = heap_open(relid, NoLock);
-						stmt->idxname = ChooseIndexName(RelationGetRelationName(rel),
-														RelationGetNamespace(rel),
-														ChooseIndexColumnNames(stmt->indexParams),
-														stmt->excludeOpNames,
-														stmt->primary,
-														stmt->isconstraint);
-						heap_close(rel, NoLock);
-					}
-
 					/* Run parse analysis ... */
-					stmts = transformIndexStmt(relid, stmt, queryString);
+					stmt = transformIndexStmt(relid, stmt, queryString);
 
-					/*
-					 * In GPDB, a single IndexStmt can be expanded to several
-					 * IndexStmts, if the table is partitioned.
-					 */
-					foreach (lc, stmts)
-					{
-						IndexStmt  *stmt = (IndexStmt *) lfirst(lc);
-
-						/* ... and do it */
-						/*
-						 * transformIndexStmt() should've stored the heap
-						 * relation's OID in stmt-->relid
-						 */
-						Assert(OidIsValid(stmt->relationOid));
-						DefineIndex(stmt->relationOid,	/* OID of heap relation */
-								stmt,
-								InvalidOid,		/* no predefined OID */
-								false,	/* is_alter_table */
-								true,	/* check_rights */
-								false,	/* skip_build */
-								stmt->is_split_part); /* quiet */
-					}
+					/* ... and do it */
+					DefineIndex(relid,	/* OID of heap relation */
+							stmt,
+							InvalidOid,		/* no predefined OID */
+							false,	/* is_alter_table */
+							true,	/* check_rights */
+							false,	/* skip_build */
+							stmt->is_split_part); /* quiet */
 				}
 				break;
 

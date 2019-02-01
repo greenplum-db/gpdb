@@ -149,11 +149,11 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col1 between 10 AND 25 ORDER BY col2,col3 
 
 DROP INDEX idx1;
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col1_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col1_idx;
 
 -- @description B-tree single index key = partitioning key
 CREATE INDEX idx1 on pt_lt_tab(col2);
@@ -196,11 +196,11 @@ EXPLAIN SELECT * FROM pt_lt_tab WHERE col2 between 10 AND 50 ORDER BY col2,col3 
 
 DROP INDEX idx1;
 -- have to drop the indexes on the partitions explicitly.
-DROP INDEX idx1_1_prt_part1;
-DROP INDEX idx1_1_prt_part2;
-DROP INDEX idx1_1_prt_part3;
-DROP INDEX idx1_1_prt_part4;
-DROP INDEX idx1_1_prt_part5;
+DROP INDEX pt_lt_tab_1_prt_part1_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part2_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part3_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part4_col2_idx;
+DROP INDEX pt_lt_tab_1_prt_part5_col2_idx;
 
 
 

@@ -771,13 +771,13 @@ EXPLAIN SELECT * FROM geometricTypesPartition
  Gather Motion 3:1  (slice1; segments: 3)  (cost=100.49..2673.65 rows=54 width=92)
    ->  Append  (cost=100.49..2673.65 rows=18 width=92)
          ->  Bitmap Heap Scan on geometrictypespartition_1_prt_1  (cost=100.49..1336.82 rows=9 width=92)
-               Recheck Cond: c ~= '<(8479,-3121),8441>'::circle
-               ->  Bitmap Index Scan on gt_index_c_part_1_prt_1  (cost=0.00..100.48 rows=9 width=0)
-                     Index Cond: c ~= '<(8479,-3121),8441>'::circle
+               Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
+               ->  Bitmap Index Scan on geometrictypespartition_1_prt_1_c_idx  (cost=0.00..100.48 rows=9 width=0)
+                     Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
          ->  Bitmap Heap Scan on geometrictypespartition_1_prt_2  (cost=100.49..1336.82 rows=9 width=92)
-               Recheck Cond: c ~= '<(8479,-3121),8441>'::circle
-               ->  Bitmap Index Scan on gt_index_c_part_1_prt_2  (cost=0.00..100.48 rows=9 width=0)
-                     Index Cond: c ~= '<(8479,-3121),8441>'::circle
+               Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
+               ->  Bitmap Index Scan on geometrictypespartition_1_prt_2_c_idx  (cost=0.00..100.48 rows=9 width=0)
+                     Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
  Optimizer: legacy query optimizer
 (11 rows)
 

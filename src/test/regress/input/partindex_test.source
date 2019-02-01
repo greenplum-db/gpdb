@@ -160,9 +160,14 @@ create index fourth_index4 on part_table2_1_prt_11_2_prt_other_regions(date);
 select indKey, partCons from gp_build_logical_index('part_table2'::regclass)
 order by indKey;
 
--- create an index on the mid-level -- internal part -- will not show up
--- in the result
+-- Create an index on the mid-level -- internal part -- will not show up
+-- in the result.  Adding indexes to mid-level/internal root partitions will
+-- recurse to their children. Upstream Postgres has CREATE INDEX ONLY, but GPDB
+-- does not have this feature yet.  Set SQL_inheritance to false temporarily to
+-- force it to be created on the mid-level partition
+set SQL_inheritance to false;
 create index idummy1 on part_table2_1_prt_9(date); 
+set SQL_inheritance to true;
 select indKey, defaultLevels, partCons from gp_build_logical_index('part_table2'::regclass)
 order by indKey;
 
@@ -364,14 +369,14 @@ create unique index id_index_unique on part_table4_1_prt_girls_2_prt_1(id);
 -- create another index on column id
 create index id_rank_index on part_table4_1_prt_girls_2_prt_1(id, rank); 
 
--- given index on id_index_1_prt_boys_2_prt_3, return similar index on part_table4_1_prt_girls_2_prt_1
+-- given index on part_table4_1_prt_boys_2_prt_3_id_idx, return similar index on part_table4_1_prt_girls_2_prt_1
 -- return the non-unique index on column "id" on part "part_table4_1_prt_girls_2_prt_1"
 select relname from
 pg_class where
 pg_class.oid =
 (select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, indkey, indpred, indexprs, indisunique)
 	from pg_index
-	where indexrelid = ('id_index_1_prt_boys_2_prt_3'::regclass));
+	where indexrelid = ('part_table4_1_prt_boys_2_prt_3_id_idx'::regclass));
 
 -- return the unique index on column "id" on part "part_table4_1_prt_girls_2_prt_1"
 select relname from
@@ -379,7 +384,7 @@ pg_class where
 pg_class.oid =
 (select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, indkey, indpred, indexprs, true)
 	from pg_index
-	where indexrelid = ('id_index_1_prt_boys_2_prt_3'::regclass));
+	where indexrelid = ('part_table4_1_prt_boys_2_prt_3_id_idx'::regclass));
 
 -- ************************************************************
 -- * Scenario 6
@@ -422,7 +427,7 @@ select indKey, defaultLevels, partCons from gp_build_logical_index('pg_class'::r
 -- index doesn't exist on attnum 3 in the partition
 select gp_get_physical_index_relid('part_table4'::regclass, 'part_table4_1_prt_girls_2_prt_1'::regclass, ('3'::int2vector), indpred, indexprs, true)
 	from pg_index
-	where indexrelid = ('id_index_1_prt_boys_2_prt_3'::regclass);
+	where indexrelid = ('part_table4_1_prt_boys_2_prt_3_id_idx'::regclass);
 
 -- ************************************************************
 -- * Scenario 8

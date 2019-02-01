@@ -313,6 +313,89 @@ convert_tuples_by_name(TupleDesc indesc,
 }
 
 /*
+ * Return a palloc'd bare attribute map for tuple conversion, matching input
+ * and output columns by name.  (Dropped columns are ignored in both input and
+ * output.)  This is normally a subroutine for convert_tuples_by_name, but can
+ * be used standalone.
+ */
+AttrNumber *
+convert_tuples_by_name_map(TupleDesc indesc,
+						   TupleDesc outdesc,
+						   const char *msg)
+{
+	AttrNumber *attrMap;
+	int			outnatts;
+	int			innatts;
+	int			i;
+	int			nextindesc = -1;
+
+	outnatts = outdesc->natts;
+	innatts = indesc->natts;
+
+	attrMap = (AttrNumber *) palloc0(outnatts * sizeof(AttrNumber));
+	for (i = 0; i < outnatts; i++)
+	{
+		Form_pg_attribute outatt = TupleDescAttr(outdesc, i);
+		char	   *attname;
+		Oid			atttypid;
+		int32		atttypmod;
+		int			j;
+
+		if (outatt->attisdropped)
+			continue;			/* attrMap[i] is already 0 */
+		attname = NameStr(outatt->attname);
+		atttypid = outatt->atttypid;
+		atttypmod = outatt->atttypmod;
+
+		/*
+		 * Now search for an attribute with the same name in the indesc. It
+		 * seems likely that a partitioned table will have the attributes in
+		 * the same order as the partition, so the search below is optimized
+		 * for that case.  It is possible that columns are dropped in one of
+		 * the relations, but not the other, so we use the 'nextindesc'
+		 * counter to track the starting point of the search.  If the inner
+		 * loop encounters dropped columns then it will have to skip over
+		 * them, but it should leave 'nextindesc' at the correct position for
+		 * the next outer loop.
+		 */
+		for (j = 0; j < innatts; j++)
+		{
+			Form_pg_attribute inatt;
+
+			nextindesc++;
+			if (nextindesc >= innatts)
+				nextindesc = 0;
+
+			inatt = TupleDescAttr(indesc, nextindesc);
+			if (inatt->attisdropped)
+				continue;
+			if (strcmp(attname, NameStr(inatt->attname)) == 0)
+			{
+				/* Found it, check type */
+				if (atttypid != inatt->atttypid || atttypmod != inatt->atttypmod)
+					ereport(ERROR,
+							(errcode(ERRCODE_DATATYPE_MISMATCH),
+									errmsg_internal("%s", _(msg)),
+									errdetail("Attribute \"%s\" of type %s does not match corresponding attribute of type %s.",
+											  attname,
+											  format_type_be(outdesc->tdtypeid),
+											  format_type_be(indesc->tdtypeid))));
+				attrMap[i] = inatt->attnum;
+				break;
+			}
+		}
+		if (attrMap[i] == 0)
+			ereport(ERROR,
+					(errcode(ERRCODE_DATATYPE_MISMATCH),
+							errmsg_internal("%s", _(msg)),
+							errdetail("Attribute \"%s\" of type %s does not exist in type %s.",
+									  attname,
+									  format_type_be(outdesc->tdtypeid),
+									  format_type_be(indesc->tdtypeid))));
+	}
+	return attrMap;
+}
+/*
  * Perform conversion of a tuple according to the map.
  */
 HeapTuple

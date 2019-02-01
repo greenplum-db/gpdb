@@ -130,9 +130,6 @@ static AlterTableCmd *transformAlterTable_all_PartitionStmt(ParseState *pstate,
 									  AlterTableStmt *stmt,
 									  CreateStmtContext *pCxt,
 									  AlterTableCmd *cmd);
-static List *transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
-						   ParseState *masterpstate, bool recurseToPartitions);
-
 /*
  * transformCreateStmt -
  *	  parse analysis for CREATE TABLE
@@ -3079,46 +3076,14 @@ transformFKConstraints(CreateStmtContext *cxt,
  * To avoid race conditions, it's important that this function rely only on
  * the passed-in relid (and not on stmt->relation) to determine the target
  * relation.
-
- * In GPDB, this returns a list, because the single statement can be
- * expanded into multiple IndexStmts, if the table is a partitioned table.
  */
-List *
+IndexStmt *
 transformIndexStmt(Oid relid, IndexStmt *stmt, const char *queryString)
-{
-	bool		recurseToPartitions = false;
-
-	/*
-	 * If the table already exists (i.e., this isn't a create table time
-	 * expansion of primary key() or unique()) and we're the ultimate parent
-	 * of a partitioned table, cascade to all children. We don't do this
-	 * at create table time because transformPartitionBy() automatically
-	 * creates the indexes on the child tables for us.
-	 *
-	 * If this is a CREATE INDEX statement, idxname should already exist.
-	 */
-	if (Gp_role != GP_ROLE_EXECUTE && stmt->idxname != NULL)
-	{
-		Oid			relId;
-
-		relId = RangeVarGetRelid(stmt->relation, NoLock, true);
-
-		if (relId != InvalidOid && rel_is_partitioned(relId))
-			recurseToPartitions = true;
-	}
-
-	return transformIndexStmt_recurse(relid, stmt, queryString, NULL, recurseToPartitions);
-
-}
-static List *
-transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
-						   ParseState *masterpstate, bool recurseToPartitions)
 {
 	ParseState *pstate;
 	RangeTblEntry *rte;
 	ListCell   *l;
 	Relation	rel;
-	List	   *result = NIL;
 	LOCKMODE	lockmode;
 
 	/*
@@ -3126,13 +3091,6 @@ transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
 	 * overkill, but easy.)
 	 */
 	stmt = (IndexStmt *) copyObject(stmt);
-
-	/*
-	 * Remember the OID in the IndexStmt. This is important for any additional
-	 * IndexStmts we might create for the partitions, but let's fill it in for
-	 * the main index too, for completeness.
-	 */
-	stmt->relationOid = relid;
 
 	/*
 	 * Open the parent table with appropriate locking.	We must do this
@@ -3148,132 +3106,6 @@ transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
 	/* Set up pstate */
 	pstate = make_parsestate(NULL);
 	pstate->p_sourcetext = queryString;
-
-	/* Recurse into (sub)partitions if this is a partitioned table */
-	if (recurseToPartitions)
-	{
-		List		*children;
-		struct HTAB *nameCache;
-		Oid			nspOid;
-
-		nspOid = RangeVarGetCreationNamespace(stmt->relation);
-
-		if (masterpstate == NULL)
-			masterpstate = pstate;
-
-		/* Lookup the parser object name cache */
-		nameCache = parser_get_namecache(masterpstate);
-
-		/*
-		 * Loop over all partition children. The lock on the root partition
-		 * table above will prevent any ALTER TABLE operations from changing
-		 * the child partition list we get here.
-		 */
-		children = find_inheritance_children(RelationGetRelid(rel), NoLock);
-
-		foreach(l, children)
-		{
-			Oid			relid = lfirst_oid(l);
-			Relation	crel = heap_open(relid, NoLock); /* lock on master
-															 is enough */
-			IndexStmt  *chidx;
-			Relation	partrel;
-			HeapTuple	tuple;
-			ScanKeyData scankey;
-			SysScanDesc sscan;
-			char	   *parname;
-			int16		position;
-			int32		depth;
-			NameData	name;
-			Oid			paroid;
-			char		depthstr[NAMEDATALEN];
-			char		prtstr[NAMEDATALEN];
-
-			if (RelationIsExternal(crel))
-			{
-				ereport(NOTICE,
-						(errmsg("skip building index for external partition \"%s\"",
-								RelationGetRelationName(crel))));
-				heap_close(crel, NoLock);
-				continue;
-			}
-
-			chidx = (IndexStmt *)copyObject((Node *)stmt);
-
-			/*
-			 * Now just update the relation and index name fields. Also remember
-			 * the OID of the partition, so that the caller doesn't need to look
-			 * it up again.
-			 */
-			chidx->relation =
-				makeRangeVar(get_namespace_name(RelationGetNamespace(crel)),
-							 pstrdup(RelationGetRelationName(crel)), -1);
-			chidx->relationOid = relid;
-
-			ereport(NOTICE,
-					(errmsg("building index for child partition \"%s\"",
-							RelationGetRelationName(crel))));
-
-			/*
-			 * We want the index name to resemble our partition table name
-			 * with the master index name on the front. This means, we
-			 * append to the indexname the parname, position, and depth
-			 * as we do in transformPartitionBy().
-			 *
-			 * So, firstly we must retrieve from pg_partition_rule the
-			 * partition descriptor for the current relid. This gives us
-			 * partition name and position. With paroid, we can get the
-			 * partition level descriptor from pg_partition and therefore
-			 * our depth.
-			 */
-			partrel = heap_open(PartitionRuleRelationId, AccessShareLock);
-
-			/* SELECT * FROM pg_partition_rule WHERE parchildrelid = :1 */
-			ScanKeyInit(&scankey,
-						Anum_pg_partition_rule_parchildrelid,
-						BTEqualStrategyNumber, F_OIDEQ,
-						ObjectIdGetDatum(relid));
-			sscan = systable_beginscan(partrel, PartitionRuleParchildrelidIndexId,
-									   true, NULL, 1, &scankey);
-			tuple = systable_getnext(sscan);
-			Assert(HeapTupleIsValid(tuple));
-
-			name = ((Form_pg_partition_rule)GETSTRUCT(tuple))->parname;
-			parname = pstrdup(NameStr(name));
-			position = ((Form_pg_partition_rule)GETSTRUCT(tuple))->parruleord;
-			paroid = ((Form_pg_partition_rule)GETSTRUCT(tuple))->paroid;
-
-			systable_endscan(sscan);
-			heap_close(partrel, NoLock);
-
-			tuple = SearchSysCache1(PARTOID,
-									ObjectIdGetDatum(paroid));
-			Assert(HeapTupleIsValid(tuple));
-
-			depth = ((Form_pg_partition)GETSTRUCT(tuple))->parlevel + 1;
-
-			ReleaseSysCache(tuple);
-
-			heap_close(crel, NoLock);
-
-			/* now, build the piece to append */
-			snprintf(depthstr, sizeof(depthstr), "%d", depth);
-			if (strlen(parname) == 0)
-				snprintf(prtstr, sizeof(prtstr), "prt_%d", position);
-			else
-				snprintf(prtstr, sizeof(prtstr), "prt_%s", parname);
-
-			chidx->idxname = ChooseRelationNameWithCache(stmt->idxname,
-														 depthstr, /* depth */
-														 prtstr,   /* part spec */
-														 nspOid,
-														 nameCache);
-
-			result = list_concat(result,
-								 transformIndexStmt_recurse(relid, chidx, queryString,
-															masterpstate, true));
-		}
-	}
 
 	/*
 	 * Put the parent table into the rtable so that the expressions can refer
@@ -3354,9 +3186,7 @@ transformIndexStmt_recurse(Oid relid, IndexStmt *stmt, const char *queryString,
 	else
 		heap_close(rel, NoLock);
 
-	result = lcons(stmt, result);
-
-	return result;
+	return stmt;
 }
 
 
@@ -3875,22 +3705,13 @@ transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 	foreach(l, cxt.alist)
 	{
 		IndexStmt  *idxstmt = (IndexStmt *) lfirst(l);
-		List	   *idxstmts;
-		ListCell   *li;
 
-		idxstmts = transformIndexStmt(relid, idxstmt, queryString);
-		/*
-		 * This is a loop in GPDB because transformIndexStmt() returns a list.
-		 * See notes there for more details.
-		 */
-		foreach(li, idxstmts)
-		{
-			Assert(IsA(idxstmt, IndexStmt));
-			newcmd = makeNode(AlterTableCmd);
-			newcmd->subtype = OidIsValid(idxstmt->indexOid) ? AT_AddIndexConstraint : AT_AddIndex;
-			newcmd->def = lfirst(li);
-			newcmds = lappend(newcmds, newcmd);
-		}
+		Assert(IsA(idxstmt, IndexStmt));
+		idxstmt = transformIndexStmt(relid, idxstmt, queryString);
+		newcmd = makeNode(AlterTableCmd);
+		newcmd->subtype = OidIsValid(idxstmt->indexOid) ? AT_AddIndexConstraint : AT_AddIndex;
+		newcmd->def = (Node *) idxstmt;
+		newcmds = lappend(newcmds, newcmd);
 	}
 	cxt.alist = NIL;
 

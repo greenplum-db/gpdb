@@ -776,18 +776,18 @@ explain select * from t, pt where tid = ptid and pt1 = 'hello0';
                ->  Seq Scan on t  (cost=10000000000.00..10000000002.02 rows=1 width=19)
          ->  Materialize  (cost=0.14..1200.94 rows=2 width=31)
                ->  Append  (cost=0.14..1200.91 rows=2 width=31)
-                     ->  Index Scan using pt1_idx_1_prt_junk_data on pt_1_prt_junk_data  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
-                     ->  Index Scan using pt1_idx_1_prt_2 on pt_1_prt_2  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
-                     ->  Index Scan using pt1_idx_1_prt_3 on pt_1_prt_3  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
-                     ->  Index Scan using pt1_idx_1_prt_4 on pt_1_prt_4  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
-                     ->  Index Scan using pt1_idx_1_prt_5 on pt_1_prt_5  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
-                     ->  Index Scan using pt1_idx_1_prt_6 on pt_1_prt_6  (cost=0.14..200.15 rows=1 width=31)
-                           Index Cond: pt1 = 'hello0'::text
+                     ->  Index Scan using pt_1_prt_junk_data_pt1_idx on pt_1_prt_junk_data  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
+                     ->  Index Scan using pt_1_prt_2_pt1_idx on pt_1_prt_2  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
+                     ->  Index Scan using pt_1_prt_3_pt1_idx on pt_1_prt_3  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
+                     ->  Index Scan using pt_1_prt_4_pt1_idx on pt_1_prt_4  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
+                     ->  Index Scan using pt_1_prt_5_pt1_idx on pt_1_prt_5  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
+                     ->  Index Scan using pt_1_prt_6_pt1_idx on pt_1_prt_6  (cost=0.14..200.15 rows=1 width=31)
+                           Index Cond: (pt1 = 'hello0'::text)
  Optimizer: legacy query optimizer
 (20 rows)
 
@@ -814,12 +814,12 @@ explain select * from t, pt where tid = ptid;
                ->  Seq Scan on t  (cost=10000000000.00..10000000002.02 rows=1 width=19)
          ->  Materialize  (cost=0.14..4237.53 rows=18 width=31)
                ->  Append  (cost=0.14..4237.26 rows=18 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_junk_data on pt_1_prt_junk_data  (cost=0.14..706.21 rows=3 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_2 on pt_1_prt_2  (cost=0.14..706.21 rows=3 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_3 on pt_1_prt_3  (cost=0.14..706.21 rows=3 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_4 on pt_1_prt_4  (cost=0.14..706.21 rows=3 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_5 on pt_1_prt_5  (cost=0.14..706.21 rows=3 width=31)
-                     ->  Index Scan using ptid_idx_1_prt_6 on pt_1_prt_6  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_junk_data_ptid_idx on pt_1_prt_junk_data  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_2_ptid_idx on pt_1_prt_2  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_3_ptid_idx on pt_1_prt_3  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_4_ptid_idx on pt_1_prt_4  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_5_ptid_idx on pt_1_prt_5  (cost=0.14..706.21 rows=3 width=31)
+                     ->  Index Scan using pt_1_prt_6_ptid_idx on pt_1_prt_6  (cost=0.14..706.21 rows=3 width=31)
  Optimizer: legacy query optimizer
 (14 rows)
 

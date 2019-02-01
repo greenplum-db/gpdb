@@ -23,7 +23,7 @@ extern List *transformCreateStmt(CreateStmt *stmt, const char *queryString, bool
 extern List *transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString);
 extern List *transformAlterTableStmt(Oid relid, AlterTableStmt *stmt,
 						const char *queryString);
-extern List *transformIndexStmt(Oid relid, IndexStmt *stmt,
+extern IndexStmt *transformIndexStmt(Oid relid, IndexStmt *stmt,
 				   const char *queryString);
 extern void transformRuleStmt(RuleStmt *stmt, const char *queryString,
 				  List **actions, Node **whereClause);

@@ -8,21 +8,21 @@ INSERT 1000
 insert into reindex_serialize_tab_ao_part (id, owner, description, property, poli, target) select i, 'user' || i, 'Testing GiST Index', '((3, 1300), (33, 1330))','( (22,660), (57, 650), (68, 660) )', '( (76, 76), 76)' from generate_series(1,1000) i ;
 INSERT 1000
 
-create index idxa_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part(id);
+create index reindex_serialize_tab_ao_part_idxa on reindex_serialize_tab_ao_part(id);
 CREATE
-create index idxb_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part(owner);
+create index reindex_serialize_tab_ao_part_idxb on reindex_serialize_tab_ao_part(owner);
 CREATE
-create index idxc_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING GIST(property);
+create index reindex_serialize_tab_ao_part_idxc on reindex_serialize_tab_ao_part USING GIST(property);
 CREATE
-create index idxd_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING GIST(poli);
+create index reindex_serialize_tab_ao_part_idxd on reindex_serialize_tab_ao_part USING GIST(poli);
 CREATE
-create index idxe_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING GIST(target);
+create index reindex_serialize_tab_ao_part_idxe on reindex_serialize_tab_ao_part USING GIST(target);
 CREATE
-create index idxf_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING BITMAP(v);
+create index reindex_serialize_tab_ao_part_idxf on reindex_serialize_tab_ao_part USING BITMAP(v);
 CREATE
-create index idxh_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part USING GIST(c);
+create index reindex_serialize_tab_ao_part_idxg on reindex_serialize_tab_ao_part USING GIST(c);
 CREATE
-create index idxi_reindex_serialize_tab_ao_part on reindex_serialize_tab_ao_part(f);
+create index reindex_serialize_tab_ao_part_idxh on reindex_serialize_tab_ao_part(f);
 CREATE
 1: BEGIN;
 BEGIN
@@ -41,7 +41,7 @@ ALTER
 COMMIT
 -- Remember index relfilenodes from master and segments before
 -- reindex.
-2: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_serialize_tab_ao_part%' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname like 'idx%_reindex_serialize_tab_ao_part%');
+2: create temp table old_relfilenodes as (select gp_segment_id as dbid, relfilenode, oid, relname from gp_dist_random('pg_class') where relname like 'reindex_serialize_tab_ao_part%_idx%' union all select gp_segment_id as dbid, relfilenode, oid, relname from pg_class where relname like 'reindex_serialize_tab_ao_part%_idx%');
 CREATE 96
 2: reindex table reindex_serialize_tab_ao_part;
 REINDEX
@@ -49,7 +49,7 @@ REINDEX
 COMMIT
 -- Validate that reindex changed all index relfilenodes on master as well as
 -- segments.  The following query should return 0 tuples.
-2: select oldrels.* from old_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname like 'idx%_reindex_serialize_tab_ao_part%' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname like 'idx%_reindex_serialize_tab_ao_part%') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
+2: select oldrels.* from old_relfilenodes oldrels join (select gp_segment_id as dbid, relfilenode, relname from gp_dist_random('pg_class') where relname like 'reindex_serialize_tab_ao_part%_idx%' union all select gp_segment_id as dbid, relfilenode, relname from pg_class where relname like 'reindex_serialize_tab_ao_part%_idx%') newrels on oldrels.relfilenode = newrels.relfilenode and oldrels.dbid = newrels.dbid and oldrels.relname = newrels.relname;
  dbid | relfilenode | oid | relname 
 ------+-------------+-----+---------
 (0 rows)
@@ -69,7 +69,7 @@ SET
 (1 row)
 
 -- expect index to be dropped
-3: select 1-count(*) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'idxi_reindex_serialize_tab_ao_part';
+3: select 1-count(*) as index_dropped from (select * from pg_class union all select * from gp_dist_random('pg_class')) t where t.relname = 'reindex_serialize_tab_ao_part_idxh';
  index_dropped 
 ---------------
  1             

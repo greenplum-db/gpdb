@@ -763,7 +763,7 @@ EXPLAIN SELECT * FROM geometricTypesPartition
                Partitions selected: 2 (out of 2)
          ->  Dynamic Bitmap Heap Scan on geometrictypespartition (dynamic scan id: 1)  (cost=0.00..0.00 rows=1 width=68)
                Recheck Cond: (c ~= '<(8479,-3121),8441>'::circle)
-               ->  Dynamic Bitmap Index Scan on gt_index_c_part_1_prt_1  (cost=0.00..0.00 rows=0 width=0)
+               ->  Dynamic Bitmap Index Scan on geometrictypespartition_1_prt_1_c_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: (c ~= '<(8479,-3121),8441>'::circle)
  Planning time: 26.900 ms
  Optimizer: PQO version 3.9.0

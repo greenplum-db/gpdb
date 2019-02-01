@@ -141,14 +141,14 @@ show vacuum_freeze_min_age;
 
 select relname from pg_class where relname like 'ao_age_test%'
 order by relname;
-        relname         
-------------------------
+          relname           
+----------------------------
  ao_age_test
  ao_age_test_1_prt_b1
+ ao_age_test_1_prt_b1_i_idx
  ao_age_test_1_prt_b2
+ ao_age_test_1_prt_b2_i_idx
  ao_age_test_i
- ao_age_test_i_1_prt_b1
- ao_age_test_i_1_prt_b2
 (6 rows)
 
 vacuum ao_age_test;

@@ -19,6 +19,7 @@
 
 #include "access/htup_details.h"
 #include "access/reloptions.h"
+#include "access/tupconvert.h"
 #include "access/xact.h"
 #include "catalog/catalog.h"
 #include "catalog/index.h"
@@ -34,12 +35,15 @@
 #include "commands/tablespace.h"
 #include "mb/pg_wchar.h"
 #include "miscadmin.h"
+#include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "optimizer/clauses.h"
 #include "optimizer/planner.h"
+#include "parser/parse_clause.h"
 #include "parser/parse_coerce.h"
 #include "parser/parse_func.h"
 #include "parser/parse_oper.h"
+#include "rewrite/rewriteManip.h"
 #include "storage/lmgr.h"
 #include "storage/proc.h"
 #include "storage/procarray.h"
@@ -383,8 +387,7 @@ CheckIndexCompatible(Oid oldId,
  * 'is_alter_table': this is due to an ALTER rather than a CREATE operation.
  * 'check_rights': check for CREATE rights in namespace and tablespace.  (This
  *		should be true except when ALTER is deleting/recreating an index.)
- * 'skip_build': make the catalog entries but leave the index file empty;
- *		it will be filled later.
+ * 'skip_build': make the catalog entries but don't create the index files
  * 'quiet': suppress the NOTICE chatter ordinarily provided for constraints.
  *
  * Returns the OID of the created index.
@@ -413,6 +416,7 @@ DefineIndex(Oid relationId,
 	Form_pg_am	accessMethodForm;
 	bool		amcanorder;
 	RegProcedure amoptions;
+	bool		partitioned;
 	Datum		reloptions;
 	int16	   *coloptions;
 	IndexInfo  *indexInfo;
@@ -494,6 +498,29 @@ DefineIndex(Oid relationId,
 			ereport(ERROR,
 					(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 					 errmsg("\"%s\" is not a table or materialized view",
+							RelationGetRelationName(rel))));
+	}
+
+	/*
+	 * Establish behavior for partitioned tables, and verify sanity of
+	 * parameters.
+	 *
+	 * We do not build an actual index in this case; we only create a few
+	 * catalog entries.  The actual indexes are built by recursing for each
+	 * partition.
+	 */
+	partitioned = (rel_part_status(relationId) != PART_STATUS_NONE);
+	if (partitioned)
+	{
+		if (stmt->concurrent)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot create index on partitioned table \"%s\" concurrently",
+							RelationGetRelationName(rel))));
+		if (stmt->excludeOpNames)
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("cannot create exclusion constraints on partitioned table \"%s\"",
 							RelationGetRelationName(rel))));
 	}
 
@@ -745,7 +772,7 @@ DefineIndex(Oid relationId,
 				  indexRelationName, RelationGetRelationName(rel))));
 	}
 
-   	if (shouldDispatch)
+	if (shouldDispatch)
 	{
 		cdb_sync_oid_to_segments();
 
@@ -792,6 +819,7 @@ DefineIndex(Oid relationId,
 	{
 		/* make sure the QE uses the same index name that we chose */
 		stmt->idxname = indexRelationName;
+		stmt->oldNode = InvalidOid;
 		CdbDispatchUtilityStatement((Node *) stmt,
 									DF_CANCEL_ON_ERROR |
 									DF_WITH_SNAPSHOT |
@@ -808,6 +836,119 @@ DefineIndex(Oid relationId,
 	if (stmt->idxcomment != NULL)
 		CreateComments(indexRelationId, RelationRelationId, 0,
 					   stmt->idxcomment);
+
+	if (partitioned)
+	{
+		/*
+		 * Unless caller specified to skip this step (via ONLY), process each
+		 * partition to make sure they all contain a corresponding index.
+		 *
+		 * GPDB: Upstream uses stmt->relation here to determine whether to continue
+		 * recusing in DefineIndex. However, GPDB always sets stmt->relation
+		 * because it needs to be dispatched to the QEs.
+		 */
+		if (interpretInhOption(stmt->relation->inhOpt) && (Gp_role == GP_ROLE_DISPATCH))
+		{
+			List *my_part_oids = find_inheritance_children(RelationGetRelid(rel), NoLock);
+			TupleDesc	parentDesc;
+			Oid		   *opfamOids;
+			ListCell   *lc;
+
+			parentDesc = CreateTupleDescCopy(RelationGetDescr(rel));
+			opfamOids = palloc(sizeof(Oid) * numberOfAttributes);
+			for (i = 0; i < numberOfAttributes; i++)
+				opfamOids[i] = get_opclass_family(classObjectId[i]);
+
+			if (need_longlock)
+				heap_close(rel, NoLock);
+			else
+				heap_close(rel, lockmode);
+
+			/*
+			 * For each partition, scan all existing indexes; if one matches
+			 * our index definition and is not already attached to some other
+			 * parent index, attach it to the one we just created.
+			 *
+			 * If none matches, build a new index by calling ourselves
+			 * recursively with the same options (except for the index name).
+			 */
+			foreach(lc, my_part_oids)
+			{
+				Oid			childRelid = lfirst_oid(lc);
+				Relation	childrel;
+				AttrNumber *attmap;
+				int			maplen;
+				char	   *childnamespace_name;
+
+				childrel = heap_open(childRelid, lockmode);
+				attmap =
+					convert_tuples_by_name_map(RelationGetDescr(childrel),
+											   parentDesc,
+											   gettext_noop("could not convert row type"));
+				maplen = parentDesc->natts;
+
+				childnamespace_name = get_namespace_name(RelationGetNamespace(childrel));
+
+				heap_close(childrel, NoLock);
+
+				{
+					IndexStmt  *childStmt = copyObject(stmt);
+					bool		found_whole_row;
+					ListCell   *lc;
+
+					/*
+					 * Adjust any Vars (both in expressions and in the index's
+					 * WHERE clause) to match the partition's column numbering
+					 * in case it's different from the parent's.
+					 */
+					foreach(lc, childStmt->indexParams)
+					{
+						IndexElem  *ielem = lfirst(lc);
+
+						/*
+						 * If the index parameter is an expression, we must
+						 * translate it to contain child Vars.
+						 */
+						if (ielem->expr)
+						{
+							ielem->expr =
+								map_variable_attnos((Node *) ielem->expr,
+													1, 0, attmap, maplen,
+													&found_whole_row);
+							if (found_whole_row)
+								elog(ERROR, "cannot convert whole-row table reference");
+						}
+					}
+					childStmt->whereClause =
+						map_variable_attnos(stmt->whereClause, 1, 0,
+											attmap, maplen,
+											&found_whole_row);
+					if (found_whole_row)
+						elog(ERROR, "cannot convert whole-row table reference");
+
+					childStmt->relation = makeRangeVar(childnamespace_name,
+													   get_rel_name(childRelid), -1);
+					childStmt->idxname = NULL;
+
+					DefineIndex(childRelid, childStmt,
+								InvalidOid,			/* no predefined OID */
+								is_alter_table, check_rights,
+								skip_build, quiet);
+				}
+
+				pfree(attmap);
+			}
+
+		}
+		else
+		{
+			if (need_longlock)
+				heap_close(rel, NoLock);
+			else
+				heap_close(rel, lockmode);
+		}
+		return indexRelationId;
+	}
 
 	if (!stmt->concurrent)
 	{

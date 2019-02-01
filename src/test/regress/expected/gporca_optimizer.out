@@ -9652,7 +9652,7 @@ explain select * from orca.bm_dyn_test where i=2 and t='2';
          ->  Dynamic Bitmap Heap Scan on bm_dyn_test (dynamic scan id: 1)  (cost=0.00..204.40 rows=1 width=8)
                Recheck Cond: (i = 2)
                Filter: ((i = 2) AND (t = '2'::text))
-               ->  Dynamic Bitmap Index Scan on bm_dyn_test_idx_1_prt_part0  (cost=0.00..0.00 rows=0 width=0)
+               ->  Dynamic Bitmap Index Scan on bm_dyn_test_1_prt_part0_i_idx  (cost=0.00..0.00 rows=0 width=0)
                      Index Cond: (i = 2)
  Planning time: 26.274 ms
  Optimizer: PQO version 3.9.0
