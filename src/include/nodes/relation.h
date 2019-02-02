@@ -67,8 +67,7 @@ typedef struct AggClauseCosts
 {
 	int			numAggs;		/* total number of aggregate functions */
 	int			numOrderedAggs; /* number w/ DISTINCT/ORDER BY/WITHIN GROUP */
-	/* GPDB_94_MERGE_FIXME: does numPureOrderedAggs include WITHIN GROUP aggs? Should it? */
-	int			numPureOrderedAggs; /* CDB: number that use ORDER BY, not counting DISTINCT */
+	int			numPureOrderedAggs; /* CDB: number that use ORDER BY/WITHIN GROUP, not counting DISTINCT */
 	bool		hasNonCombine;	/* CDB: any agg func w/o a combine func? */
 	bool		hasNonSerial;	/* CDB: is any partial agg non-serializable? */
 	QualCost	transCost;		/* total per-input-row execution costs */
