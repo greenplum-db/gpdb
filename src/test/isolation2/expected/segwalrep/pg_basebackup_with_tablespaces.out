@@ -1,0 +1,47 @@
+include: helpers/gp_management_utils_helpers.sql;
+CREATE
+
+-- Ensure we have a clean slate to begin with
+!\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf /tmp/some_isolation2_pg_basebackup_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+-- Given a segment with a database that has a tablespace
+!\retcode mkdir /tmp/some_isolation2_pg_basebackup_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+drop tablespace if exists some_isolation2_pg_basebackup_tablespace;
+DROP
+create tablespace some_isolation2_pg_basebackup_tablespace location '/tmp/some_isolation2_pg_basebackup_tablespace';
+CREATE
+
+-- And a database using the tablespace
+drop database if exists some_database_with_tablespace;
+DROP
+create database some_database_with_tablespace tablespace some_isolation2_pg_basebackup_tablespace;
+CREATE
+
+-- When we create a full backup
+select pg_basebackup(address, 100, port, 'some_replication_slot', '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+ pg_basebackup 
+---------------
+               
+(1 row)
+
+-- Then we should have a backup of the source segment files in the newly created target tablespace
+-- expect: 1
+select count_of_items_in_directory('/tmp/some_isolation2_pg_basebackup_tablespace/GPDB_*db100/');
+ count_of_items_in_directory 
+-----------------------------
+ 1                           
+(1 row)

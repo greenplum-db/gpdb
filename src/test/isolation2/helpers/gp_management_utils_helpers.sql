@@ -23,3 +23,11 @@ create or replace function pg_basebackup(host text, dbid int, port int, slotname
 
     return results
 $$ language plpythonu;
+
+
+create or replace function count_of_items_in_directory(user_path text) returns text as $$
+       import subprocess
+       cmd = 'ls {user_path}'.format(user_path=user_path)
+       results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+       return len([result for result in results.splitlines() if result != ''])
+$$ language plpythonu;

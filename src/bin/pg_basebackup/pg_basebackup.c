@@ -1156,6 +1156,7 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 {
 	char		current_path[MAXPGPATH];
 	char		filename[MAXPGPATH];
+	char		gp_tablespace_filename[MAXPGPATH] = {0};
 	const char *mapped_tblspc_path;
 	pgoff_t		current_len_left = 0;
 	int			current_padding = 0;
@@ -1168,7 +1169,15 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
 	{
+		/*
+		 * Reconstruct the current path replacing the source tablespace path's
+		 * dbid with the dbid provided from --target-gp-dbid option.
+		 */
 		strlcpy(current_path, get_tablespace_mapping(PQgetvalue(res, rownum, 1)), sizeof(current_path));
+		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%s_db%d",
+				 current_path,
+				 GP_TABLESPACE_VERSION_DIRECTORY,
+				 target_gp_dbid);
 
 		if (target_gp_dbid < 1)
 		{
@@ -1250,8 +1259,7 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 			if (!basetablespace)
 			{
 				/*
-				 * Reconstruct the path replacing the source tablespace path's
-				 * dbid with the dbid provided from --target-gp-dbid option.
+				 * Append relfile path to --target-gp-dbid tablespace path.
 				 *
 				 * For example, copybuf can be
 				 * "<GP_TABLESPACE_VERSION_DIRECTORY>_db<dbid>/16384/16385".
@@ -1261,9 +1269,9 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 				 */
 				char *copybuf_dbid_relfile = strstr(copybuf, "/");
 
-				snprintf(filename, sizeof(filename), "%s/%s_db%d", current_path,
-						 GP_TABLESPACE_VERSION_DIRECTORY, target_gp_dbid);
-				strcat(filename, copybuf_dbid_relfile);
+				snprintf(filename, sizeof(filename), "%s%s",
+						 gp_tablespace_filename,
+						 copybuf_dbid_relfile);
 			}
 			else
 			{
@@ -1303,9 +1311,14 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 							continue;
 
 						rmtree(filename, true);
+
 					}
 
-					if (mkdir(filename, S_IRWXU) != 0)
+					bool is_gp_tablespace_directory = strcmp(gp_tablespace_filename, filename) == 0;
+					if (is_gp_tablespace_directory) {
+						continue;
+					}
+					else if (mkdir(filename, S_IRWXU) != 0)
 					{
 						/*
 						 * When streaming WAL, pg_xlog will have been created
