@@ -636,9 +636,8 @@ resources:
 - name: madlib_src
   type: git
   source:
-    branch: master
-    uri: https://github.com/apache/madlib.git
-    tag_filter: rel/*
+    branch: {{madlib-git-branch}}
+    uri: {{madlib-git-remote}}
 
 - name: madlib_ci
   type: git
