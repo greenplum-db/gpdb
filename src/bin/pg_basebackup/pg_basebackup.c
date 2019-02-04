@@ -1321,7 +1321,8 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 						 */
 						continue;
 					}
-					else if (mkdir(filename, S_IRWXU) != 0)
+
+					if (mkdir(filename, S_IRWXU) != 0)
 					{
 						/*
 						 * When streaming WAL, pg_xlog will have been created
