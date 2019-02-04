@@ -1544,7 +1544,7 @@
         transaction submitted by a user against the limits configured for the user's resource group
         before running the transaction.</p>
       <p>You can use the <codeph>gp_resgroup_config</codeph> view to check the configuration of each
-        resource group. You can use the <codeph>gp_resgroup_status</codeph> view to display the
+        resource group. You can use the <codeph>gp_resgroup_status*</codeph> views to display the
         current transaction status and resource usage of each resource group.</p>
       <ul class="- topic/ul ">
         <li id="ie193806" class="- topic/li ">
@@ -1552,6 +1552,12 @@
         </li>
         <li id="ie193833" class="- topic/li ">
           <xref href="#topic31x" type="topic" format="dita"/>
+        </li>
+        <li id="tperhost" class="- topic/li ">
+          <xref href="#perhost" type="topic" format="dita"/>
+        </li>
+        <li id="tperseg" class="- topic/li ">
+          <xref href="#perseg" type="topic" format="dita"/>
         </li>
       </ul>
     </body>
@@ -1750,6 +1756,216 @@
           memory limit on each segment. The following example shows <codeph>memory_usage</codeph>
           column output for an external component resource group for a single segment:
           <codeblock>"1":{"used":11, "limit_granted":15}</codeblock></p>
+        <note>See the <codeph>gp_resgroup_status_per_host</codeph> and
+          <codeph>gp_resgroup_status_per_segment</codeph> views, described below, for
+          more user-friendly display of CPU and memory usage.</note>
+      </body>
+    </topic>
+    <topic id="perhost">
+      <title id="ie193152x">gp_resgroup_status_per_host</title>
+      <body>
+        <p>The <codeph><xref href="system_catalogs/gp_resgroup_status_per_host.xml"
+          type="topic" format="dita">gp_resgroup_status_per_host</xref></codeph>
+          view displays the real-time CPU and memory usage (MBs) for each resource
+          group on a per-host basis. The view also displays available and granted
+          group fixed and shared memory for each resource group on a host.</p>
+        
+        <table id="fp141982">
+          <title class="- topic/title ">gp_resgroup_status_per_host view</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="130pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="238pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Column</entry>
+                <entry colname="col2" class="- topic/entry ">Description</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1"><codeph>rsgname</codeph></entry>
+                <entry colname="col2">The name of the resource group.</entry>
+              </row>
+              <row>
+                <entry colname="col1"><codeph>groupid</codeph></entry>
+                <entry colname="col2">The ID of the resource group.</entry>
+              </row>
+              <row>
+                <entry colname="col1"><codeph>hostname</codeph></entry>
+                <entry colname="col2">The hostname of the segment host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"><codeph>cpu</codeph></entry>
+                <entry colname="col2">The real-time CPU usage of the resource group on the
+                  host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_used</codeph> </entry>
+                <entry colname="col2">The real-time memory usage of the resource group on
+                  the host. This total includes resource group fixed and shared memory.
+                  It does not include resource group global shared memory.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_available</codeph> </entry>
+                <entry colname="col2">The unused fixed and shared memory for the resource
+                  group that is available on the host. This total does not include available
+                  resource group global shared memory.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_used</codeph> </entry>
+                <entry colname="col2">The real-time fixed memory usage for the resource
+                  group on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_available</codeph> </entry>
+                <entry colname="col2">The fixed memory available to the resource group
+                  on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_proposed</codeph> </entry>
+                <entry colname="col2">The total amount of fixed memory that Greenplum
+                  Database has allotted to the resource group on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_used</codeph> </entry>
+                <entry colname="col2">The group shared memory used by the resource
+                  group on the host. If Greenplum Database has allotted any global shared
+                  memory to the resource group, this amount is included in the total as
+                  well.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_available</codeph> </entry>
+                <entry colname="col2">The amount of group shared memory available to the
+                  resource group on the host. Resource group global shared memory is not
+                  included in this total.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_granted</codeph> </entry>
+                <entry colname="col2">The portion of group shared memory that Greenplum
+                  Database has granted to the resource group on the host. Resource group
+                  global shared memory is not included in this value.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_proposed</codeph> </entry>
+                <entry colname="col2">The total amount of group shared memory that
+                  Greenplum Database has allotted to the resource group on the host.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p>Sample output for the <codeph>gp_resgroup_status_per_host</codeph> view:</p>
+        <codeblock> rsgname       | groupid | hostname   | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_quota_proposed | memory_shared_used | memory_shared_available | memory_shared_granted | memory_shared_proposed 
+---------------+---------+------------+------+-------------+------------------+-------------------+------------------------+-----------------------+--------------------+-------------------------+-----------------------+------------------------
+ admin_group   | 6438    | my-desktop | 0.84 | 1           | 271              | 68                | 68                     | 136                   | 0                  | 136                     | 136                   | 136                    
+ default_group | 6437    | my-desktop | 0.00 | 0           | 816              | 0                 | 400                    | 400                   | 0                  | 416                     | 416                   | 416                    
+(2 rows)</codeblock>
+      </body>
+    </topic>
+    <topic id="perseg">
+      <title id="ie193152x">gp_resgroup_status_per_segment</title>
+      <body>
+        <p>The <codeph><xref href="system_catalogs/gp_resgroup_status_per_segment.xml"
+          type="topic" format="dita">gp_resgroup_status_per_segment</xref></codeph>
+          view displays the real-time CPU and memory usage (MBs) for each resource
+          group on a per-segment-instance and per-host basis. The view also
+          displays available and granted group fixed and shared memory for each
+          resource group and segment instance combination on the host.</p>
+        
+        
+        <table id="fp141982">
+          <title class="- topic/title ">gp_resgroup_status_per_segment view</title>
+          <tgroup cols="2" class="- topic/tgroup ">
+            <colspec colnum="1" colname="col1" colwidth="130pt" class="- topic/colspec "/>
+            <colspec colnum="2" colname="col2" colwidth="238pt" class="- topic/colspec "/>
+            <thead class="- topic/thead ">
+              <row class="- topic/row ">
+                <entry colname="col1" class="- topic/entry ">Column</entry>
+                <entry colname="col2" class="- topic/entry ">Description</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry colname="col1"> <codeph>rsgname</codeph> </entry>
+                <entry colname="col4">The name of the resource group.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>groupid</codeph> </entry>
+                <entry colname="col4">The ID of the resource group.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>hostname</codeph> </entry>
+                <entry colname="col4">The hostname of the segment host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>segment_id</codeph> </entry>
+                <entry colname="col4">The content ID for a segment instance on the
+                  segment host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>cpu</codeph> </entry>
+                <entry colname="col4">The real-time CPU usage of the resource group for the
+                  segment instance on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_used</codeph> </entry>
+                <entry colname="col4">The real-time memory usage of the resource group for
+                  the segment instance on the host. This total includes resource group
+                  fixed and shared memory. It does not include resource group global shared
+                  memory.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_available</codeph> </entry>
+                <entry colname="col4">The unused fixed and shared memory for the resource
+                  group for the segment instance on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_used</codeph> </entry>
+                <entry colname="col4">The real-time fixed memory usage for the resource group
+                  for the segment instance on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_available</codeph> </entry>
+                <entry colname="col4">The fixed memory available to the resource group for
+                  the segment instance on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_quota_proposed</codeph> </entry>
+                <entry colname="col4">The total amount of fixed memory that Greenplum Database
+                  has allotted to the resource group for the segment on the host. This value
+                  will be the same for all resource group and segment instance combinations
+                  on a host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_used</codeph> </entry>
+                <entry colname="col4">The group shared memory used by the resource
+                  group for the segment instance on the host.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_available</codeph> </entry>
+                <entry colname="col4">The amount of group shared memory available
+                  for the segment instance on the host. Resource group global shared memory
+                  is not included in this total.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_granted</codeph> </entry>
+                <entry colname="col4">The portion of group shared memory that
+                  Greenplum Database has granted to the resource group for the segment instance
+                  on the host. Resource group global shared memory is not included in this
+                  value.</entry>
+              </row>
+              <row>
+                <entry colname="col1"> <codeph>memory_shared_proposed</codeph> </entry>
+                <entry colname="col4">The total amount of group shared memory that
+                  Greenplum Database has allotted to the resource group for the segment
+                  instance on the host. This value will be the same for all resource group
+                  and segment instance combinations on a host.</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <p>Query output for this view is similar to that of the 
+          <codeph>gp_resgroup_status_per_host</codeph> view, and breaks out the CPU and
+          memory (used and available) for each segment instance on each host.</p>
       </body>
     </topic>
   </topic>

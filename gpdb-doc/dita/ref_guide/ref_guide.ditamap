@@ -182,6 +182,8 @@
 				<topicref href="system_catalogs/gp_pgdatabase.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_config.xml"/>
 				<topicref href="system_catalogs/gp_resgroup_status.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_status_per_host.xml"/>
+				<topicref href="system_catalogs/gp_resgroup_status_per_segment.xml"/>
 				<topicref href="system_catalogs/gp_resqueue_status.xml"/>
 				<topicref href="system_catalogs/gp_stat_replication.xml"/>
 				<topicref href="system_catalogs/gp_segment_configuration.xml"/>

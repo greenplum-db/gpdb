@@ -876,6 +876,34 @@ gpstart
 </codeblock>
         </p>
       </body>
+      <topic id="topic23a" xml:lang="en">
+        <title id="iz152239">Viewing Resource Group CPU/Memory Usage Per Host</title>
+        <body>
+          <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#perhost" type="topic" format="dita"
+            /></codeph>
+          <codeph>gp_toolkit</codeph> system view enables you to view the real-time CPU
+            and memory usage of a resource group on a per-host basis. To view this
+            information:</p>
+        <p>
+          <codeblock>=# SELECT * FROM gp_toolkit.gp_resgroup_status_per_host;
+</codeblock>
+        </p>
+        </body>
+      </topic>
+      <topic id="topic23b" xml:lang="en">
+        <title id="iz152239">Viewing Resource Group CPU/Memory Usage Per Segment</title>
+        <body>
+          <p>The <codeph><xref href="../ref_guide/gp_toolkit.xml#perseg" type="topic" format="dita"
+            /></codeph>
+          <codeph>gp_toolkit</codeph> system view enables you to view the real-time CPU
+            and memory usage of a resource group on a per-segment, per-host basis. To
+            view this information:</p>
+        <p>
+          <codeblock>=# SELECT * FROM gp_toolkit.gp_resgroup_status_per_segment;
+</codeblock>
+        </p>
+        </body>
+      </topic>
     </topic>
     <topic id="topic25" xml:lang="en">
       <title id="iz152239">Viewing the Resource Group Assigned to a Role</title>
