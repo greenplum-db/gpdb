@@ -216,18 +216,17 @@
                 from sources.</p>
             </li>
             <li dir="ltr">
-              <p dir="ltr">Use the <codeph>gpbackup</codeph>
-                  command to specify only the schema and tables that you want
-                backed up. See the <xref
+              <p dir="ltr">Use the <codeph>gpbackup</codeph> command to specify only the schema and
+                tables that you want backed up. See the <xref
                   href="https://gpdb.docs.pivotal.io/latest/utility_guide/admin_utilities/gpbackup.html"
                   format="html" scope="external">gpbackup</xref> reference in the <cite>Greenplum
                   Database Utility Reference Guide</cite> for more information.</p>
             </li>
             <li dir="ltr">
-              <p dir="ltr"><codeph>gpbackup</codeph> places SHARED ACCESS locks on the set of
-                tables to back up.  Backups with fewer tables
-                are more efficient for selectively restoring schemas and tables, since
-                  <codeph>gprestore</codeph> does not have to search through the entire database.</p>
+              <p dir="ltr"><codeph>gpbackup</codeph> places SHARED ACCESS locks on the set of tables
+                to back up. Backups with fewer tables are more efficient for selectively restoring
+                schemas and tables, since <codeph>gprestore</codeph> does not have to search through
+                the entire database.</p>
             </li>
             <li dir="ltr">If backups are saved to local cluster storage, move the files to a safe,
               off-cluster location when the backup is complete. Backup files and database files that
@@ -309,14 +308,15 @@
       <p>The two standard mirroring arrangements are <i>group mirroring</i> and <i>spread
           mirroring</i>:<ul id="ul_uwr_gkv_tt">
           <li><b>Group mirroring</b> — Each host mirrors another host's primary segments. This is
-            the default for <codeph>gpinitsystem</codeph> and <codeph>gpaddmirrors</codeph>.</li>
+            the default for <codeph><xref href="../utility_guide/admin_utilities/gpinitsystem.xml"
+                >gpinitsystem</xref></codeph> and <codeph>gpaddmirrors</codeph>.</li>
           <li><b>Spread mirroring</b> — Mirrors are spread across the available hosts. This requires
             that the number of hosts in the cluster is greater than the number of segments per
             host.</li>
         </ul></p>
-      <p>You can design a custom mirroring configuration and use the Greenplum
-          <codeph>gpaddmirrors</codeph> or <codeph>gpmovemirrors</codeph> utilities to set up the
-        configuration.</p>
+      <p>You can design a custom mirroring configuration and use the Greenplum <codeph><xref
+            href="../utility_guide/admin_utilities/gpaddmirrors.xml">gpaddmirrors</xref></codeph> or
+          <codeph>gpmovemirrors</codeph> utilities to set up the configuration.</p>
       <p><i>Block mirroring</i> is a custom mirror configuration that divides hosts in the cluster
         into equally sized blocks and distributes mirrors evenly to hosts within the block. If a
         primary segment fails, its mirror on another host within the same block becomes the active
@@ -399,8 +399,8 @@
             <codeph>gpaddmirrors -i <varname>mirror_config_file</varname></codeph> with a custom
           mirror configuration file to create the mirrors for each block. You must create the file
           system locations for the mirror segments before you run <codeph>gpaddmirrors</codeph>. See
-          the <codeph>gpaddmirrors</codeph> reference page in the <cite>Greenplum Database Management
-            Utility Guide</cite> for details. </p>
+          the <codeph>gpaddmirrors</codeph> reference page in the <cite>Greenplum Database
+            Management Utility Guide</cite> for details. </p>
         <p>If you expand a system that has block mirroring or you want to implement block mirroring
           at the same time you expand a cluster, it is recommended that you complete the expansion
           first, using the default grouping mirror configuration, and then use the
@@ -411,13 +411,8 @@
           Follow these steps: </p>
         <ol id="ol_qqn_nly_5t">
           <li>Run the following query to find the current locations of the primary and mirror
-              segments:<codeblock>SELECT dbid, content, address, port, 
-   replication_port, fselocation as datadir 
-   FROM gp_segment_configuration, pg_filespace_entry 
-   WHERE dbid=fsedbid AND content > -1
-   ORDER BY dbid;</codeblock><p>The
-                <codeph>gp_segment_configuration</codeph>, <codeph>pg_filespace</codeph>, and
-                <codeph>pg_filespace_entry</codeph> system catalog tables contain the current
+              segments:<codeblock>SELECT dbid, content, role, port, hostname, datadir FROM gp_segment_configuration WHERE content > -1 ;</codeblock><p>The
+                <codeph>gp_segment_configuration</codeph> system catalog table contains the current
               segment configuration.</p></li>
           <li>Create a list with the current mirror location and the desired block mirroring
             location, then remove any mirrors from the list that are already on the correct
@@ -425,17 +420,15 @@
           <li>Create an input file for the <codeph>gpmovemirrors</codeph> utility with an entry for
             each mirror that must be moved.<p>The <codeph>gpmovemirrors</codeph> input file has the
               following
-              format:<codeblock>filespaceOrder=[filespace1_fsname[:filespace2_fsname:...]
-old_address:port:fselocation new_address:port:replication_port:fselocation[:fselocation:...]</codeblock></p><p>The
-              first non-comment line must be a line beginning with <codeph>filespaceOrder=</codeph>.
-              Do not include the default <codeph>pg_system</codeph> filespace in the list of
-              filespaces. Leave the list empty if you are using only the <codeph>pg_system</codeph>
-              filespace.</p><p>The following example <codeph>gpmovemirrors</codeph> input file
-              specifies three mirror segments to move.
-              <codeblock>filespaceOrder=
-sdw2:50001:/data2/mirror/gpseg1 sdw3:50000:51000:/data/mirror/gpseg1
-sdw2:50001:/data2/mirror/gpseg2 sdw4:50000:51000:/data/mirror/gpseg2
-sdw3:50001:/data2/mirror/gpseg3 sdw1:50000:51000:/data/mirror/gpseg3
+              format:<codeblock><varname>contentID</varname>:<varname>address</varname>:<varname>port</varname>:<varname>data_dir</varname> <varname>new_address</varname>:<varname>port</varname>:<varname>data_dir</varname></codeblock></p>Where
+              <varname>contentID</varname> is the segment instance content ID,
+              <varname>address</varname> is the host name or IP address of the segment host,
+              <varname>port</varname> is the communication port, and <codeph>data_dir</codeph> is
+            the segment instance data directory.<p>The following example
+                <codeph>gpmovemirrors</codeph> input file specifies three mirror segments to move.
+              <codeblock>1:sdw2:50001:/data2/mirror/gpseg1 sdw3:50001:/data/mirror/gpseg1
+2:sdw2:50001:/data2/mirror/gpseg2 sdw4:50001:/data/mirror/gpseg2
+3:sdw3:50001:/data2/mirror/gpseg3 sdw1:50001:/data/mirror/gpseg3
 </codeblock></p></li>
           <li>Run <codeph>gpmovemirrors</codeph> with a command like the
             following:<codeblock>gpmovemirrors -i <varname>mirror_config_file</varname></codeblock></li>

@@ -18,7 +18,8 @@
       <ol id="ol_x55_3gs_rcb">
         <li id="ki160206">Ensure the standby master host is installed and configured:
             <codeph>gpadmin</codeph> system user created, Greenplum Database binaries installed,
-          environment variables set, SSH keys exchanged, and data directory created.</li>
+          environment variables set, SSH keys exchanged, and that the data directories and
+          tablespace directories, if needed, are created.</li>
         <li id="ki155475">Run the <codeph>gpinitstandby</codeph> utility on the currently active
             <i>primary</i> master host to add a standby master host to your Greenplum Database
           system. For example:<codeblock>$ gpinitstandby -s smdw</codeblock> Where

@@ -97,8 +97,8 @@
                 can use a tool such as the Linux <codeph>netperf</codeph> utility. </p>
             <p>When the <codeph>--full</codeph> option is specified, resource groups and table
                 spaces are copied, however, the utility does not configure the destination system.
-                You must configure the system to use resource groups and create filespaces for the
-                tablespaces. </p>
+                For example, you must configure the system to use resource groups and create the
+                host directories for the tablespaces. </p>
         </section>
         <section id="section6">
             <title>Options</title>
