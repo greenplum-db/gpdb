@@ -403,10 +403,7 @@ plan_tree_walker(Node *node,
 			if (walk_plan_node_fields((Plan *) node, walker, context))
 				return true;
 
-			if (walker((Node *) ((Motion *)node)->hashExpr, context))
-				return true;
-
-			if (walker((Node *) ((Motion *)node)->hashDataTypes, context))
+			if (walker((Node *) ((Motion *)node)->hashExprs, context))
 				return true;
 
 			break;

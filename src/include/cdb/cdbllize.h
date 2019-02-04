@@ -31,7 +31,7 @@ extern Flow *pull_up_Flow(Plan *plan, Plan *subplan);
 
 extern bool focusPlan(Plan *plan, bool stable, bool rescannable);
 extern bool repartitionPlan(Plan *plan, bool stable, bool rescannable,
-							List *hashExpr, int numsegments);
+							List *hashExpr, List *hashOpfamilies, int numsegments);
 extern bool broadcastPlan(Plan *plan, bool stable, bool rescannable,
 						  int numsegments);
 

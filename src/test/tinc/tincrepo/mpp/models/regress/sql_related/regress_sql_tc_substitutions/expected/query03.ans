@@ -1,8 +1,0 @@
--- start_ignore
--- end_ignore
-select '%foo%';
- ?column? 
-----------
- %foo%
-(1 row)
-

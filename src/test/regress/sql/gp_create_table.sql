@@ -26,25 +26,21 @@ drop table distrand;
 
 -- Make sure distribution policy determined from CTAS actually works, MPP-101
 create table distpol as select random(), 1 as a, 2 as b distributed by (random);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
 drop table distpol;
 create table distpol as select random(), 2 as foo distributed by (foo);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
 drop table distpol;
 -- now test that MPP-101 /actually/ works
 create table distpol (i int, j int, k int) distributed by (i);
 alter table distpol add primary key (j);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
 -- make sure we can't overwrite it
 create unique index distpol_uidx on distpol(k);
 -- should be able to now
 alter table distpol drop constraint distpol_pkey;
 create unique index distpol_uidx on distpol(k);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
 drop index distpol_uidx;
 -- expressions shouldn't be able to update the distribution key
 create unique index distpol_uidx on distpol(ln(k));
@@ -55,6 +51,12 @@ create unique index distpol_uidx on distpol(i);
 alter table distpol add primary key (i);
 drop table distpol;
 
+-- if the datatype of the index column is not hashable, can't update distribution
+-- key to it.
+create table distpol_ts (i int4, t tsvector) distributed by (i);
+create unique index on distpol_ts(t);
+drop table distpol_ts;
+
 -- Make sure that distribution policy is derived correctly from PRIMARY KEY
 -- or UNIQUE index. Even with gp_create_table_random_default_distribution=on
 SET gp_create_table_random_default_distribution=on;
@@ -63,7 +65,7 @@ create table distpol_no_pk (i int, j int, k int);
 create table distpol_with_pk (i int, j int, k int, PRIMARY KEY (i));
 create table distpol_with_unique (i int, j int, k int, CONSTRAINT uconn UNIQUE (i, j));
 
-select localoid::regclass, attrnums from gp_distribution_policy where
+select localoid::regclass, distkey, distclass from gp_distribution_policy where
   localoid IN ('distpol_no_pk'::regclass,
                'distpol_with_pk'::regclass,
 	       'distpol_with_unique'::regclass);
@@ -81,13 +83,11 @@ create table distpol1 (i int, j int);
 create table distpol2 (i int, j int);
 create table distpol3 as select i, j from distpol1 union 
   select i, j from distpol2 distributed by (j);
-select attrnums from gp_distribution_policy where
-  localoid = 'distpol3'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol3'::regclass;
 drop table distpol3;
 create table distpol3 as (select i, j from distpol1 union
   select i, j from distpol2) distributed by (j);
-select attrnums from gp_distribution_policy where
-  localoid = 'distpol3'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol3'::regclass;
 
 
 -- MPP-7268: CTAS produces incorrect distribution.
@@ -95,13 +95,13 @@ drop table if exists foo;
 drop table if exists bar;
 create table foo (a varchar(15), b int) distributed by (b);
 create table bar as select * from foo distributed by (b);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
 
 drop table if exists foo;
 drop table if exists bar;
 create table foo (a int, b varchar(15)) distributed by (b);
 create table bar as select * from foo distributed by (b);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
 
 drop table if exists foo;
 drop table if exists bar;
@@ -113,7 +113,7 @@ col_with_constraint numeric UNIQUE
 ) DISTRIBUTED BY (col_with_constraint);
 
 CREATE TABLE bar AS SELECT * FROM foo distributed by (col_with_constraint);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
 
 drop table if exists foo;
 drop table if exists bar;
@@ -127,7 +127,7 @@ create table foo (a int, b int) distributed by (c,C);
 create table foo (a int, b int, c int) distributed by (b, c, c);
 create table foo (a int, b int, c int) distributed by (c, c, b);
 create table foo ("I" int, i int) distributed by ("I",I);
-select attrnums from gp_distribution_policy where localoid='foo'::regclass;
+select distkey, distclass from gp_distribution_policy where localoid='foo'::regclass;
 create table fooctas as select * from foo distributed by (i,i);
 drop table foo;
 

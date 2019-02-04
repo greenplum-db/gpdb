@@ -204,37 +204,6 @@ DefineExternalRelation(CreateExternalStmt *createExtStmt)
 								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
 								 errmsg("permission denied: no privilege to create a readable gpfdist(s) external table")));
 				}
-				else if (uri->protocol == URI_GPHDFS && iswritable)
-				{
-					Datum		d_wexthdfs;
-					bool		createwexthdfs;
-
-					d_wexthdfs = SysCacheGetAttr(AUTHOID, tuple,
-												 Anum_pg_authid_rolcreatewexthdfs,
-												 &isnull);
-					createwexthdfs = (isnull ? false : DatumGetBool(d_wexthdfs));
-
-					if (!createwexthdfs)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								 errmsg("permission denied: no privilege to create a writable gphdfs external table")));
-				}
-				else if (uri->protocol == URI_GPHDFS && !iswritable)
-				{
-					Datum		d_rexthdfs;
-					bool		createrexthdfs;
-
-					d_rexthdfs = SysCacheGetAttr(AUTHOID, tuple,
-												 Anum_pg_authid_rolcreaterexthdfs,
-												 &isnull);
-					createrexthdfs = (isnull ? false : DatumGetBool(d_rexthdfs));
-
-					if (!createrexthdfs)
-						ereport(ERROR,
-								(errcode(ERRCODE_INSUFFICIENT_PRIVILEGE),
-								 errmsg("permission denied: no privilege to create a readable gphdfs external table")));
-
-				}
 				else if (uri->protocol == URI_HTTP && !iswritable)
 				{
 					Datum		d_exthttp;
@@ -537,15 +506,6 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 		}
 
 		/*
-		 * check for various errors
-		 */
-		if (!first_uri && uri->protocol == URI_GPHDFS)
-			ereport(ERROR,
-					(errcode(ERRCODE_SYNTAX_ERROR),
-					 errmsg("GPHDFS can only have one location list"),
-					 errhint("Combine multiple HDFS files into a single file.")));
-
-		/*
 		 * If a custom protocol is used, validate its existence. If it exists,
 		 * and a custom protocol url validator exists as well, invoke it now.
 		 */
@@ -575,7 +535,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("URI protocols must be the same for all data sources"),
-					 errhint("Available protocols are 'http', 'file', 'gphdfs', 'gpfdist' and 'gpfdists'.")));
+					 errhint("Available protocols are 'http', 'file', 'gpfdist' and 'gpfdists'.")));
 
 		}
 
@@ -596,7 +556,7 @@ transformLocationUris(List *locs, bool isweb, bool iswritable)
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("unsupported URI protocol \'%s\' for writable external table",
 							(uri->protocol == URI_HTTP ? "http" : "file")),
-					 errhint("Writable external tables may use \'gpfdist\', \'gpfdists\' or \'gphdfs\' URIs only.")));
+					 errhint("Writable external tables may use \'gpfdist\' or \'gpfdists\' URIs only.")));
 
 		if (uri->protocol != URI_CUSTOM && iswritable && strchr(uri->path, '*'))
 			ereport(ERROR,
@@ -722,15 +682,11 @@ transformFormatType(char *formatname)
 		result = 'c';
 	else if (pg_strcasecmp(formatname, "custom") == 0)
 		result = 'b';
-	else if (pg_strcasecmp(formatname, "avro") == 0)
-		result = 'a';
-	else if (pg_strcasecmp(formatname, "parquet") == 0)
-		result = 'p';
 	else
 		ereport(ERROR,
 				(errcode(ERRCODE_SYNTAX_ERROR),
 				 errmsg("unsupported format '%s'", formatname),
-				 errhint("Available formats for external tables are \"text\", \"csv\", \"avro\", \"parquet\" and \"custom\".")));
+				 errhint("Available formats for external tables are \"text\", \"csv\" and \"custom\".")));
 
 	return result;
 }
@@ -786,9 +742,7 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 
 	Assert(fmttype_is_custom(formattype) ||
 		   fmttype_is_text(formattype) ||
-		   fmttype_is_csv(formattype) ||
-		   fmttype_is_avro(formattype) ||
-		   fmttype_is_parquet(formattype));
+		   fmttype_is_csv(formattype));
 
 	/* Extract options from the statement node tree */
 	if (fmttype_is_text(formattype) || fmttype_is_csv(formattype))
@@ -902,21 +856,6 @@ transformFormatOpts(char formattype, List *formatOpts, int numcols, bool iswrita
 			appendStringInfo(&cfbuf, " newline '%s'", cstate->eol_str);
 
 		format_str = cfbuf.data;
-	}
-	else if (fmttype_is_avro(formattype) || fmttype_is_parquet(formattype))
-	{
-		/*
-		 * avro format, add "formatter 'gphdfs_import’ " directly, user
-		 * don't need to set this value
-		 */
-		char	   *val;
-
-		if (iswritable)
-			val = "gphdfs_export";
-		else
-			val = "gphdfs_import";
-
-		format_str = psprintf("formatter '%s' ", val);
 	}
 	else
 	{

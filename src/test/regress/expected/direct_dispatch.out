@@ -218,21 +218,21 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 --                hash all these values to the same content! (and so test would change)
 --
 update direct_test set value = 'pig' where key in (1,2,3,4,5);
-INFO:  (slice 0) Dispatch command to ALL contents: 2 1 0
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 1 0
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 1 0
+INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 1 0 2
 update direct_test_two_column set value = 'pig' where key1 = 100 and key2 in (1,2,3,4);
-INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 2
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 2
+INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101,102,103,104) and key2 in (1);
-INFO:  (slice 0) Dispatch command to PARTIAL contents: 2 0
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 2 0
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 2 0
+INFO:  (slice 0) Dispatch command to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 1 0 2
 update direct_test_two_column set value = 'pig' where key1 in (100,101) and key2 in (1,2);
-INFO:  (slice 0) Dispatch command to PARTIAL contents: 0 2
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 2
+INFO:  (slice 0) Dispatch command to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
 -- Multiple row update, where clause lists values which all hash to same segment
 -- DO direct dispatch
 -- CAN'T IMPLEMENT THIS TEST BECAUSE THE # of segments changes again (unless we use a # of segments function, and exploit the simple nature of int4 hashing -- can we do that?)
@@ -395,21 +395,21 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 update direct_dispatch_bar set id2 = 1 where id1 = 1 and exists (select * from direct_dispatch_foo where id = 2);
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 0 1
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 0 1
 -- init plan to see how transaction escalation happens
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id = (select max(id2) from direct_dispatch_bar where id1 = 5);
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 1 0 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 1 0 2
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 2 0 1
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 2 0 1
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar where id1 = 5) AND id = 3;
 INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 1 2
+INFO:  Distributed transaction command 'Distributed Prepare' to PARTIAL contents: 2 0
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to PARTIAL contents: 2 0
 -- Known_opt_diff: MPP-21346
 delete from direct_dispatch_foo where id * id = (select max(id2) from direct_dispatch_bar) AND id = 3;
 INFO:  (slice 1) Dispatch command to ALL contents: 0 1 2
@@ -528,8 +528,8 @@ INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 -- One partition is randomly distributed, while others are distributed by key.
 alter table ddtesttab_1_prt_2 set distributed randomly;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
+ERROR:  can't set the distribution policy of "ddtesttab_1_prt_2"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into ddtesttab values (1, 1, 5);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
@@ -540,9 +540,10 @@ INFO:  (slice 1) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, nextval('ddtestseq'));
-INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
+INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
+INFO:  (slice 1) Dispatch command to SINGLE content
+INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
+INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 insert into ddtesttab values (1, 1, 5 + nextval('ddtestseq'));
 INFO:  (slice 0) Dispatch command to ALL contents: 0 1 2
 INFO:  (slice 1) Dispatch command to SINGLE content

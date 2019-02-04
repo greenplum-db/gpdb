@@ -19,8 +19,8 @@ $$ language plpgsql VOLATILE;
 
 SELECT role, preferred_role, content, mode, status FROM gp_segment_configuration;
 create table store_session_id(a int, sess_id int);
--- adding `0` as first column as the distribution column and add this tuple to segment 0
-1: insert into store_session_id select 0, sess_id from pg_stat_activity where pid = pg_backend_pid();
+-- adding `2` as first column as the distribution column and add this tuple to segment 0
+1: insert into store_session_id select 2, sess_id from pg_stat_activity where pid = pg_backend_pid();
 -- suspend to hit commit-prepared point on segment (as we are
 -- interested in testing Commit here and not really Prepare)
 select gp_inject_fault_infinite('finish_prepared_start_of_function', 'suspend', 2);

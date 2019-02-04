@@ -35,9 +35,6 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 create table direct_test_type_numeric (real1 real, smallint1 smallint, boolean1 boolean, int1 int, double1 double precision, date1 date, numeric1 numeric) distributed by (numeric1);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
-create table direct_test_type_abstime (x abstime) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_bit (x bit) distributed by (x);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
@@ -54,9 +51,6 @@ create table direct_test_type_inet (x inet) distributed by (x);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_macaddr (x macaddr) distributed by (x);
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
-create table direct_test_type_tinterval (x tinterval) distributed by (x);
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 create table direct_test_type_varbit (x varbit) distributed by (x);
@@ -98,10 +92,6 @@ insert into direct_test_type_numeric values (8,8,true,8,8,'2008-08-08',8.8);
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
-insert into direct_test_type_abstime values('2008-08-08');
-INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_bit values('1');
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
@@ -123,10 +113,6 @@ INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
 insert into direct_test_type_macaddr values('12:34:56:78:90:ab');
-INFO:  (slice 0) Dispatch command to SINGLE content
-INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
-insert into direct_test_type_tinterval values('["2008-08-08" "2010-10-10"]');
 INFO:  (slice 0) Dispatch command to SINGLE content
 INFO:  Distributed transaction command 'Distributed Prepare' to SINGLE content
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to SINGLE content
@@ -177,13 +163,6 @@ INFO:  (slice 1) Dispatch command to SINGLE content
      8 |         8 | t        |    8 |       8 | 08-08-2008 |      8.8
 (1 row)
 
-select 1 from direct_test_type_abstime where x = '2008-08-08';
-INFO:  (slice 1) Dispatch command to SINGLE content
- ?column? 
-----------
-        1
-(1 row)
-
 select * from direct_test_type_bit where x = '1';
 INFO:  (slice 1) Dispatch command to SINGLE content
  x 
@@ -225,13 +204,6 @@ INFO:  (slice 1) Dispatch command to SINGLE content
          x         
 -------------------
  12:34:56:78:90:ab
-(1 row)
-
-select 1 from direct_test_type_tinterval where x = '["2008-08-08" "2010-10-10"]';
-INFO:  (slice 1) Dispatch command to SINGLE content
- ?column? 
-----------
-        1
 (1 row)
 
 select * from direct_test_type_varbit where x = '0101010';
@@ -440,9 +412,6 @@ INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL cont
 drop table direct_test_type_int8;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
-drop table direct_test_type_abstime;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_bit;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
@@ -459,9 +428,6 @@ drop table direct_test_type_inet;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_macaddr;
-INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
-INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
-drop table direct_test_type_tinterval;
 INFO:  Distributed transaction command 'Distributed Prepare' to ALL contents: 0 1 2
 INFO:  Distributed transaction command 'Distributed Commit Prepared' to ALL contents: 0 1 2
 drop table direct_test_type_varbit;

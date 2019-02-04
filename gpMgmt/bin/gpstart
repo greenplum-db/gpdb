@@ -473,16 +473,13 @@ class GpStart:
     ####
     def _verify_enough_segments(self, startResult, gparray):
         successfulSegments = startResult.getSuccessfulSegments()
-        mirroringFailures = [f.getSegment() for f in startResult.getFailedSegmentObjs() \
-                             if f.getReasonCode() == gp.SEGSTART_ERROR_MIRRORING_FAILURE]
 
         allSegmentsByContent = GpArray.getSegmentsByContentId(gparray.getSegDbList())
         successfulSegmentsByDbId = GpArray.getSegmentsGroupedByValue(successfulSegments, Segment.getSegmentDbId)
-        mirroringFailuresByDbId = GpArray.getSegmentsGroupedByValue(mirroringFailures, Segment.getSegmentDbId)
 
         #
-        # look at each content, see if there is a segment available (or one which can be made
-        #   available by the fault prober by switching to changetracking)
+        # look at each content, see if there is a segment available (or one
+        # which can be made available by failing over)
         #
         for primary in gparray.getSegDbList():
 
@@ -499,19 +496,8 @@ class GpStart:
                 # good, we can continue!
                 continue
 
-            if primary.getSegmentDbId() in mirroringFailuresByDbId \
-                    and not primary.isSegmentModeInChangeLogging():
-                #
-                # we have a mirroring failure so the fault prober can probably convert us to changetracking
-                #
-                #   note that if the primary is already in changetracking then a mirroring failure is
-                #   considered fatal here
-                #
-                continue
-
             if mirror is not None \
-                    and (
-                            mirror.getSegmentDbId() in successfulSegmentsByDbId or mirror.getSegmentDbId() in mirroringFailuresByDbId) \
+                    and mirror.getSegmentDbId() in successfulSegmentsByDbId \
                     and primary.isSegmentModeSynchronized():
                 #
                 # we could fail over to that mirror, so it's okay to start up like this
@@ -575,17 +561,11 @@ class GpStart:
         invalidSegments are those that we didn't even try to start because they are marked as down or should otherwise
            not be started
         """
-        mirroringFailures = [f for f in segmentStartResult.getFailedSegmentObjs() \
-                             if f.getReasonCode() == gp.SEGSTART_ERROR_MIRRORING_FAILURE]
-        nonMirroringFailures = [f for f in segmentStartResult.getFailedSegmentObjs() \
-                                if f.getReasonCode() != gp.SEGSTART_ERROR_MIRRORING_FAILURE]
-
         started = len(segmentStartResult.getSuccessfulSegments())
-        failedFromMirroring = len(mirroringFailures)
-        failedNotFromMirroring = len(nonMirroringFailures)
-        totalTriedToStart = started + failedFromMirroring + failedNotFromMirroring
+        failed = len(segmentStartResult.getFailedSegmentObjs())
+        totalTriedToStart = started + failed
 
-        if failedFromMirroring > 0 or failedNotFromMirroring > 0 or logging_is_verbose():
+        if failed or logging_is_verbose():
             logger.info("----------------------------------------------------")
             for failure in segmentStartResult.getFailedSegmentObjs():
                 segment = failure.getSegment()
@@ -601,14 +581,7 @@ class GpStart:
         tableLog.addSeparator()
         tableLog.info(["Successful segment starts", "= %d" % started])
 
-        if self.gparray.hasMirrors and failedFromMirroring > 0:
-            tableLog.warn(["Failed segment starts, from mirroring connection between primary and mirror",
-                           "= %d" % failedFromMirroring])
-            tableLog.infoOrWarn(failedNotFromMirroring > 0,
-                                ["Other failed segment starts", "= %d" % failedNotFromMirroring])
-        else:
-            assert failedFromMirroring == 0
-            tableLog.infoOrWarn(failedNotFromMirroring > 0, ["Failed segment starts", "= %d" % failedNotFromMirroring])
+        tableLog.infoOrWarn(failed, ["Failed segment starts", "= %d" % failed])
 
         tableLog.infoOrWarn(len(invalidSegments) > 0,
                             ["Skipped segment starts (segments are marked down in configuration)",
@@ -625,10 +598,10 @@ class GpStart:
                     (started, totalTriedToStart, skippedMsg, attentionFlag))
         logger.info("----------------------------------------------------")
 
-        if failedNotFromMirroring > 0 or failedFromMirroring > 0:
+        if failed:
             logger.warning("Segment instance startup failures reported")
             logger.warning("Failed start %d of %d segment instances %s" % \
-                           (failedNotFromMirroring + failedFromMirroring, totalTriedToStart, attentionFlag))
+                           (failed, totalTriedToStart, attentionFlag))
             logger.warning("Review %s" % get_logfile())
             if not willShutdownSegments:
                 logger.warning("For more details on segment startup failure(s)")

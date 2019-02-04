@@ -7407,7 +7407,6 @@ can_implement_dist_on_part(Relation rel, DistributedBy *dist)
 {
 	ListCell	*lc;
 	int		i;
-	List		*dist_cnames;	
 
 	if (Gp_role != GP_ROLE_DISPATCH)
 	{
@@ -7417,41 +7416,38 @@ can_implement_dist_on_part(Relation rel, DistributedBy *dist)
 	}
 
 	/* Random is okay.  It is represented by a list of one empty list. */
-	if (dist->ptype == POLICYTYPE_PARTITIONED && dist->keys == NIL)
+	if (dist->ptype == POLICYTYPE_PARTITIONED && dist->keyCols == NIL)
 		return true;
 
 	if (dist->ptype == POLICYTYPE_REPLICATED)
 		return false;
 
-	dist_cnames = dist->keys;	
-
 	/* Require an exact match to the policy of the parent. */
-	if (list_length(dist_cnames) != rel->rd_cdbpolicy->nattrs)
+	if (list_length(dist->keyCols) != rel->rd_cdbpolicy->nattrs)
 		return false;
 
 	i = 0;
-	foreach(lc, dist_cnames)
+	foreach(lc, dist->keyCols)
 	{
+		IndexElem  *ielem = (IndexElem *) lfirst(lc);
 		AttrNumber	attnum;
-		char	   *cname;
 		HeapTuple	tuple;
-		Node	   *item = lfirst(lc);
 		bool		ok = false;
 
-		if (!(item && IsA(item, String)))
-			return false;
+		Assert(IsA(ielem, IndexElem));
 
-		cname = strVal((Value *) item);
-		tuple = SearchSysCacheAttName(RelationGetRelid(rel), cname);
+		tuple = SearchSysCacheAttName(RelationGetRelid(rel), ielem->name);
 		if (!HeapTupleIsValid(tuple))
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_COLUMN),
 					 errmsg("column \"%s\" of relation \"%s\" does not exist",
-							cname,
+							ielem->name,
 							RelationGetRelationName(rel))));
 
 		attnum = ((Form_pg_attribute) GETSTRUCT(tuple))->attnum;
-		ok = attnum == rel->rd_cdbpolicy->attrs[i++];
+
+		if (attnum == rel->rd_cdbpolicy->attrs[i++])
+			ok = true;
 
 		ReleaseSysCache(tuple);
 

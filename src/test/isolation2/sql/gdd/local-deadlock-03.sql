@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS t03;
 CREATE TABLE t03 (id int, val int);
-INSERT INTO t03 (id, val) SELECT i, i FROM generate_series(1, 20) i;
+INSERT INTO t03 (id, val) SELECT i, i FROM generate_series(1, 100) i;
 
 10: BEGIN;
 20: BEGIN;

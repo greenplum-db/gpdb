@@ -67,6 +67,7 @@
 #include "utils/typcache.h"
 #include "utils/xml.h"
 
+#include "cdb/cdbhash.h"
 #include "cdb/cdbpartition.h"
 #include "catalog/pg_partition.h"
 #include "catalog/pg_partition_rule.h"
@@ -9414,6 +9415,53 @@ get_opclass_name(Oid opclass, Oid actual_datatype,
 }
 
 /*
+ * Like get_opclass_name(), but with special treatment for gp_use_legacy_hashops=on
+ */
+static void
+get_opclass_name_for_distribution_key(Oid opclass, Oid actual_datatype,
+									  StringInfo buf)
+{
+	Oid		legacy_opclass;
+
+	Assert(OidIsValid(actual_datatype));
+
+	/* With gp_use_legacy_hashops=off, use the normal rules. */
+	if (!gp_use_legacy_hashops)
+	{
+		get_opclass_name(opclass, actual_datatype, buf);
+		return;
+	}
+
+	/*
+	 * Otherwise, treat the legacy opclasses as the default, and refrain
+	 * from outputting them.
+	 */
+	legacy_opclass = get_legacy_cdbhash_opclass_for_base_type(actual_datatype);
+
+	if (legacy_opclass == InvalidOid)
+	{
+		/*
+		 * No legacy opclass for this datatype. Then treat the usual default
+		 * as the default like usual.
+		 */
+		get_opclass_name(opclass, actual_datatype, buf);
+	}
+	else if (opclass != legacy_opclass)
+	{
+		/*
+		 * This is not the legacy opclass. Force printing it, by
+		 * passing InvalidOid as the 'actual_datatype' to get_opclass_name.
+		 */
+		get_opclass_name(opclass, InvalidOid, buf);
+	}
+	else
+	{
+		/* it is the legacy opclass. Don't print it */
+	}
+}
+
+
+/*
  * processIndirection - take care of array and subfield assignment
  *
  * We strip any top-level FieldStore or assignment ArrayRef nodes that
@@ -11344,4 +11392,98 @@ pg_get_partition_template_def(PG_FUNCTION_ARGS)
 		PG_RETURN_NULL();
 
 	PG_RETURN_TEXT_P(string_to_text(str));
+}
+
+/* ----------
+ * get_table_distributedby		- Get the DISTRIBUTED BY definition of a table.
+ * ----------
+ */
+Datum
+pg_get_table_distributedby(PG_FUNCTION_ARGS)
+{
+	Oid			relid = PG_GETARG_OID(0);
+	HeapTuple	gp_policy_tuple;
+	Form_gp_policy policyform;
+	StringInfoData buf;
+
+	/*
+	 * Fetch the policy tuple
+	 */
+	gp_policy_tuple = SearchSysCache1(GPPOLICYID, ObjectIdGetDatum(relid));
+	if (!HeapTupleIsValid(gp_policy_tuple))
+	{
+		/* not distributed */
+		PG_RETURN_TEXT_P(cstring_to_text(""));
+	}
+	policyform = (Form_gp_policy) GETSTRUCT(gp_policy_tuple);
+
+	initStringInfo(&buf);
+
+	if (policyform->policytype == SYM_POLICYTYPE_REPLICATED)
+	{
+		appendStringInfo(&buf, "DISTRIBUTED REPLICATED");
+	}
+	else if (policyform->policytype == SYM_POLICYTYPE_PARTITIONED)
+	{
+		int			nkeys;
+		bool		isNull;
+		int2vector *distkey;
+		oidvector  *distclass;
+
+		/*
+		 * Get the attributes on which to partition.
+		 */
+		distkey = (int2vector *) DatumGetPointer(
+			SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
+							Anum_gp_policy_distkey,
+							&isNull));
+
+		nkeys = isNull ? 0 : distkey->dim1;
+
+		if (nkeys == 0)
+			appendStringInfo(&buf, "DISTRIBUTED RANDOMLY");
+		else
+		{
+			int			keyno;
+			char	   *sep;
+
+			distclass = (oidvector *) DatumGetPointer(
+				SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
+								Anum_gp_policy_distclass,
+								&isNull));
+			Assert(!isNull);
+			Assert(distclass->dim1 == nkeys);
+
+			appendStringInfoString(&buf, "DISTRIBUTED BY (");
+
+			sep = "";
+			for (keyno = 0; keyno < nkeys; keyno++)
+			{
+				AttrNumber	attnum = distkey->values[keyno];
+				Oid			opclass = distclass->values[keyno];
+				Oid			keycoltype;
+				char	   *attname;
+
+				appendStringInfoString(&buf, sep);
+				sep = ", ";
+
+				attname = get_relid_attribute_name(relid, attnum);
+				appendStringInfoString(&buf, quote_identifier(attname));
+
+				/* Add the operator class name, if not default */
+				keycoltype = get_atttype(relid, attnum);
+				get_opclass_name_for_distribution_key(opclass, keycoltype, &buf);
+			}
+			appendStringInfoChar(&buf, ')');
+		}
+	}
+	else
+	{
+		elog(ERROR, "unexpected policy type '%c'", policyform->policytype);
+	}
+
+	/* Clean up */
+	ReleaseSysCache(gp_policy_tuple);
+
+	PG_RETURN_TEXT_P(string_to_text(buf.data));
 }

@@ -27,7 +27,7 @@ create table r2 (c1 int, c2 int, c3 int, c4 int) distributed randomly;
 
 select gp_debug_reset_create_table_default_numsegments();
 
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in (
 		't1'::regclass, 'd1'::regclass, 'r1'::regclass,
 		't2'::regclass, 'd2'::regclass, 'r2'::regclass);
@@ -164,61 +164,61 @@ select gp_debug_set_create_table_default_numsegments(2);
 
 -- none of the clauses
 create table t ();
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- DISTRIBUTED BY only
 create table t () distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- INHERITS only
 create table t () inherits (t2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- LIKE only
 create table t (like d1);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- DISTRIBUTED BY + INHERITS
 create table t () inherits (t2) distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- DISTRIBUTED BY + LIKE
 create table t (like d1) distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- INHERITS + LIKE
 create table t (like d1) inherits (t2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- DISTRIBUTED BY + INHERITS + LIKE
 create table t (like d1) inherits (t2) distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- INHERITS from multiple parents
 create table t () inherits (r1, t2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 -- DISTRIBUTED BY + INHERITS from multiple parents
 create table t () inherits (r1, t2) distributed by (c1);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
@@ -229,32 +229,33 @@ select gp_debug_reset_create_table_default_numsegments();
 select gp_debug_set_create_table_default_numsegments('full');
 
 create table t as table t1;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 create table t as select * from t1;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 create table t as select * from t1 distributed by (c1, c2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 create table t as select * from t1 distributed replicated;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 create table t as select * from t1 distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
 select * into table t from t1;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 drop table t;
 
@@ -268,27 +269,27 @@ select gp_debug_reset_create_table_default_numsegments();
 select gp_debug_set_create_table_default_numsegments(1);
 
 create table t (like t1);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 alter table t set distributed replicated;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 alter table t set distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 alter table t set distributed by (c1, c2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 alter table t add column c10 int;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 alter table t alter column c10 type text;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
 
 drop table t;

@@ -104,7 +104,7 @@ INFO:  corrupting file base/107062/107070.1 at 8  (seg2 slice1 127.0.0.1:40002 p
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_header_large_co;
-ERROR:  header checksum does not match, expected 0xBA9CC649 and found 0xC997AE7   (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  header checksum does not match, expected 0xBA9CC649 and found 0x0C997AE7   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Large content, corrupt content
 create table corrupt_content_large_co(comment bytea ) with (appendonly=true, orientation=column, checksum=true) DISTRIBUTED RANDOMLY;
 insert into corrupt_content_large_co select ("decode"(repeat('a',33554432),'escape')) from generate_series(1,8)  ;
@@ -118,7 +118,7 @@ INFO:  corrupting file base/107062/107080.1 at -3  (seg2 slice1 127.0.0.1:40002 
 (1 row)
 
 SELECT COUNT(*) FROM corrupt_content_large_co;
-ERROR:  block checksum does not match, expected 0x9C02F450 and found 0xA78638C   (seg0 slice1 127.0.0.1:40000 pid=28137)
+ERROR:  block checksum does not match, expected 0x9C02F450 and found 0x0A78638C   (seg0 slice1 127.0.0.1:40000 pid=28137)
 -- Small content, corrupt block header
 create table corrupt_header_small_co(a int) with (appendonly=true, orientation=column, checksum=true);
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.

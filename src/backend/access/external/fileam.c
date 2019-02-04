@@ -2257,20 +2257,6 @@ external_set_env_vars_ext(extvar_t *extvar, char *uri, bool csv, char *escape, c
 	sprintf(extvar->GP_SESSION_ID, "%d", gp_session_id);
 	sprintf(extvar->GP_SEGMENT_COUNT, "%d", getgpsegmentCount());
 
-	/*
-	 * Hadoop Connector env var
-	 *
-	 * Those has to be set into the env because the gphdfs env setup script
-	 * (hadoop_env.sh) relies on those to set the classpath to the connector
-	 * jar as well as the Hadoop jar.
-	 *
-	 * Setting these var here (instead of inside gphdfs protocol) allows
-	 * ordinary "execute" external table to run hadoop connector jar for other
-	 * purposes.
-	 */
-	extvar->GP_HADOOP_CONN_JARDIR = gp_hadoop_connector_jardir;
-	extvar->GP_HADOOP_CONN_VERSION = gp_hadoop_connector_version;
-	extvar->GP_HADOOP_HOME = gp_hadoop_home;
 	extvar->GP_QUERY_STRING = (char *)debug_query_string;
 
 	if (NULL != params)

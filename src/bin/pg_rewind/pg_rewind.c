@@ -125,7 +125,7 @@ main(int argc, char **argv)
 		}
 	}
 
-	while ((c = getopt_long(argc, argv, "D:nPR:S", long_options, &option_index)) != -1)
+	while ((c = getopt_long(argc, argv, "D:nPRS:", long_options, &option_index)) != -1)
 	{
 		switch (c)
 		{

@@ -28,7 +28,7 @@ else
 	print CONF "listen_addresses = '127.0.0.1'\n";
 }
 close CONF;
-command_ok([ 'pg_ctl', 'start', '-D', "$tempdir/data", '-w' ],
+command_ok([ 'pg_ctl', 'start', '-D', "$tempdir/data", '-w', '-o', '-c gp_role=utility --gp_dbid=-1 --gp_contentid=-1'],
 	'pg_ctl start -w');
 # sleep here is because Windows builds can't check postmaster.pid exactly,
 # so they may mistake a pre-existing postmaster.pid for one created by the

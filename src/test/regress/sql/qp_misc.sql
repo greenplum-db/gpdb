@@ -15593,4 +15593,4 @@ CREATE TABLE test_nullifexpr(f1 text, f2 text) distributed by (f1);
 INSERT INTO test_nullifexpr VALUES (null,'A');
 INSERT INTO test_nullifexpr VALUES ('','y');
 ANALYZE test_nullifexpr;
-SELECT NULLIF( f1,'') AS f3, CASE WHEN f2 = 'A' THEN 'X' ELSE 'Z' END AS f4 FROM test_nullifexpr ORDER BY f3;
+SELECT NULLIF( f1,'') AS f3, CASE WHEN f2 = 'A' THEN 'X' ELSE 'Z' END AS f4 FROM test_nullifexpr ORDER BY f3, f4;

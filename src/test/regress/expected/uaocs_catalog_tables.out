@@ -30,28 +30,28 @@ insert into uaocs_table_check_hidden_tup_count_after_delete select i,'aa'||i,i+1
 select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
+ (1,0,1)
+ (1,0,4)
  (1,0,5)
- (1,0,3)
- (1,0,2)
 (3 rows)
 
 delete from uaocs_table_check_hidden_tup_count_after_delete where i = 1;
 select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
+ (1,1,1)
  (1,0,5)
- (1,0,3)
- (1,1,2)
+ (1,0,4)
 (3 rows)
 
 vacuum full uaocs_table_check_hidden_tup_count_after_delete;
 select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count_after_delete'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
- (1,0,3)
- (2,0,0)
  (1,0,0)
- (2,0,1)
+ (2,0,0)
+ (1,0,4)
+ (2,0,0)
  (1,0,5)
  (2,0,0)
 (6 rows)
@@ -62,18 +62,18 @@ insert into uaocs_table_check_hidden_tup_count_after_update select i,'aa'||i,i+1
 select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
- (1,0,3)
- (1,0,2)
  (1,0,5)
+ (1,0,4)
+ (1,0,1)
 (3 rows)
 
 update uaocs_table_check_hidden_tup_count_after_update set j = 'test_update';
 select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
- (1,2,4)
- (1,3,6)
  (1,5,10)
+ (1,1,2)
+ (1,4,8)
 (3 rows)
 
 vacuum full uaocs_table_check_hidden_tup_count_after_update;
@@ -81,10 +81,10 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uaocs_table_check_hidden_tup_count
  __gp_aovisimap_hidden_info 
 ----------------------------
  (1,0,0)
- (2,0,3)
+ (2,0,4)
  (1,0,0)
  (2,0,5)
  (1,0,0)
- (2,0,2)
+ (2,0,1)
 (6 rows)
 

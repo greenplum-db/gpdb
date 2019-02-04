@@ -189,6 +189,8 @@ typedef struct AlteredTableInfo
 	List	   *newvals;		/* List of NewColumnValue */
 	bool		new_notnull;	/* T if we added new NOT NULL constraints */
 	bool		rewrite;		/* T if a rewrite is forced */
+	bool		dist_opfamily_changed; /* T if changing datatype of distribution key column and new opclass is in different opfamily than old one */
+	Oid			new_opclass;		/* new opclass, if changing a distribution key column */
 	Oid			newTableSpace;	/* new tablespace; 0 means no change */
 	Oid			exchange_relid;	/* for EXCHANGE, the exchanged in rel */
 	/* Objects to rebuild after completing ALTER TYPE operations */
@@ -4611,16 +4613,15 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					{
 						case PART_STATUS_NONE:
 						case PART_STATUS_ROOT:
-						case PART_STATUS_LEAF:
 							break;
-
+						case PART_STATUS_LEAF:
 						case PART_STATUS_INTERIOR:
 							/*Reject interior branches of partitioned tables.*/
 							ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
 									 errmsg("can't set the distribution policy of \"%s\"",
 											RelationGetRelationName(rel)),
-									 errhint("Distribution policy may be set for an entire partitioned table or one of its leaf parts; not for an interior branch.")));
+									 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
 							break; /* tidy */
 					}
 				}
@@ -4629,49 +4630,16 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 					switch (ps)
 					{
 						case PART_STATUS_NONE:
-						case PART_STATUS_LEAF:
 							break;
-
+						case PART_STATUS_LEAF:
 						case PART_STATUS_ROOT:
 						case PART_STATUS_INTERIOR:
 							ereport(ERROR,
 									(errcode(ERRCODE_WRONG_OBJECT_TYPE),
-									 errmsg("can't set the distribution policy "
-											"of ONLY \"%s\"",
+									 errmsg("can't set the distribution policy of ONLY \"%s\"",
 											RelationGetRelationName(rel)),
-									 errhint("Distribution policy may be set "
-											 "for an entire partitioned table"
-											 " or one of its leaf parts."
-											 )));
+									 errhint("Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.")));
 							break; /* tidy */
-					}
-				}
-
-				if ( ps == PART_STATUS_LEAF )
-				{
-					Oid ptrelid = rel_partition_get_master(relid);
-					DistributedBy *dist = lsecond((List*)cmd->def);
-
-					/*	might be null if no policy set, e.g. just
-					 *  a change of storage options...
-					 */
-					if (dist)
-					{
-						Relation ptrel = heap_open(ptrelid,
-												   AccessShareLock);
-						Assert(IsA(dist, DistributedBy));
-
-						if (! can_implement_dist_on_part(ptrel,
-														 dist) )
-							ereport(ERROR,
-									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 errmsg("cannot SET DISTRIBUTED BY for %s",
-											RelationGetRelationName(rel)),
-									 errhint("Leaf distribution policy must be"
-											 " random or match that of the"
-											 " entire partitioned table.")
-									 ));
-						heap_close(ptrel, AccessShareLock);
 					}
 				}
 			}
@@ -10928,6 +10896,10 @@ ATPrepAlterColumnType(List **wqueue,
 	NewColumnValue *newval;
 	ParseState *pstate = make_parsestate(NULL);
 	AclResult	aclresult;
+	Oid			new_opclass = InvalidOid;
+	Oid			old_opclass = InvalidOid;
+	Oid			old_opfamily = InvalidOid;
+	Oid			new_opfamily = InvalidOid;
 
 	if (rel->rd_rel->reloftype && !recursing)
 		ereport(ERROR,
@@ -10972,6 +10944,54 @@ ATPrepAlterColumnType(List **wqueue,
 	CheckAttributeType(colName, targettype, targetcollid,
 					   list_make1_oid(rel->rd_rel->reltype),
 					   false);
+
+	/*
+	 * If the column is part of the distribution key, look up the new operator
+	 * class
+	 */
+	if (rel->rd_cdbpolicy)
+	{
+		GpPolicy   *policy = rel->rd_cdbpolicy;
+		int			i;
+
+		for (i = 0; i < policy->nattrs; i++)
+		{
+			if (policy->attrs[i] == attnum)
+			{
+				/* found it! */
+				old_opclass = policy->opclasses[i];
+				break;
+			}
+		}
+
+		if (old_opclass)
+		{
+			old_opfamily = get_opclass_family(old_opclass);
+
+			new_opclass = GetDefaultOpClass(targettype, HASH_AM_OID);
+			if (new_opclass)
+			{
+				new_opfamily = get_opclass_family(new_opclass);
+
+				if (new_opclass != old_opclass)
+					tab->new_opclass = new_opclass;
+
+				if (new_opfamily != old_opfamily)
+					tab->dist_opfamily_changed = true;
+			}
+			else
+			{
+				/*
+				 * The new datatype doesn't have a default operator class.
+				 * We'll have to turn the table randomly distributed.
+				 */
+				new_opfamily = InvalidOid;
+				tab->new_opclass = InvalidOid;
+				tab->dist_opfamily_changed = true;
+			}
+		}
+	}
+
 	if (tab->relkind == RELKIND_RELATION &&
 		rel->rd_rel->relstorage != RELSTORAGE_EXTERNAL)
 	{
@@ -11071,6 +11091,16 @@ ATPrepAlterColumnType(List **wqueue,
 
 		tab->newvals = lappend(tab->newvals, newval);
 		if (ATColumnChangeRequiresRewrite(transform, attnum))
+			tab->rewrite = true;
+
+		/*
+		 * If the column is part of the distribution key, and the new opclass is not
+		 * in the same family as the old one, we'll need to rewrite the table because
+		 * the distribution changes. (Unless the new datatype is not hashable, in
+		 * which case we're going to drop it from the distribution key, and make
+		 * the table randomly distributed.)
+		 */
+		if (old_opfamily != new_opfamily && new_opfamily != InvalidOid)
 			tab->rewrite = true;
 	}
 	else if (transform &&
@@ -11173,11 +11203,6 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	ScanKeyData key[3];
 	SysScanDesc scan;
 	HeapTuple	depTup;
-	bool		sourceIsInt = false;
-	bool		targetIsInt = false;
-	bool		sourceIsVarlenA = false;
-	bool		targetIsVarlenA = false;
-	bool		hashCompatible = false;
 	bool		relContainsTuples = false;
 
 	attrelation = heap_open(AttributeRelationId, RowExclusiveLock);
@@ -11206,31 +11231,6 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	targettype = HeapTupleGetOid(typeTuple);
 	/* And the collation */
 	targetcollid = GetColumnDefCollation(NULL, def, targettype);
-
-	if (targettype == INT4OID ||
-		targettype == INT2OID ||
-		targettype == INT8OID)
-		sourceIsInt = true;
-
-	if (attTup->atttypid == INT4OID ||
-		attTup->atttypid == INT2OID ||
-		attTup->atttypid == INT8OID)
-		targetIsInt = true;
-
-	if (targettype == VARCHAROID ||
-		targettype == CHAROID ||
-		targettype == TEXTOID)
-		targetIsVarlenA = true;
-
-	if (attTup->atttypid == VARCHAROID ||
-		attTup->atttypid == CHAROID ||
-		attTup->atttypid == TEXTOID)
-		sourceIsVarlenA = true;
-
-	if (sourceIsInt && targetIsInt)
-		hashCompatible = true;
-	else if (sourceIsVarlenA && targetIsVarlenA)
-		hashCompatible = true;
 
 	/*
 	 * If there is a default expression for the column, get it and ensure we
@@ -11266,7 +11266,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	if (Gp_role == GP_ROLE_DISPATCH &&
 		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
-		!hashCompatible)
+		tab->dist_opfamily_changed)
 	{
 		relContainsTuples = cdbRelMaxSegSize(rel) > 0;
 	}
@@ -11339,7 +11339,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 							{
 								Assert(Gp_role == GP_ROLE_DISPATCH &&
 									   GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
-									   !hashCompatible);
+									   tab->dist_opfamily_changed);
 
 								for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
 								{
@@ -11381,7 +11381,7 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						(strstr(defstring," UNIQUE") != 0 || strstr(defstring,"PRIMARY KEY") != 0))
 					{
 						Assert(Gp_role == GP_ROLE_DISPATCH &&
-							   !hashCompatible &&
+							   tab->dist_opfamily_changed &&
 							   rel->rd_cdbpolicy != NULL &&
 							   rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
 
@@ -11547,12 +11547,29 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 
 	heap_close(depRel, RowExclusiveLock);
 
-	if (Gp_role == GP_ROLE_DISPATCH &&
-		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
-		!hashCompatible)
+	/*
+	 * FIXME: we used to allow changing partition key datatype, if the old
+	 * and new types were "compatible". The compatibility used to be hard-coded,
+	 * so that int2, int4 and int4 were compatible, as were text, varchar, bpchar.
+	 * For the check below, on changing the DISTRIBUTED BY columns, I replaced
+	 * that hard-coded notion by checking that the old and new hash opclass belongs
+	 * to the same operator family. But that's not quite right for the partitioning
+	 * key. Firstly, the partitioning is based on the btree operators, not hash
+	 * compatibility, so if you used something funny as the hash opclass, even if
+	 * the hash opfamily is the same, it doesn't necessarily mean that the btree
+	 * operators are compatible. Secondly, even if you change the datatype from
+	 * e.g. int4 to int2, their default opclasses belong to the same operator family,
+	 * but int2 has a smaller range so the partition boundaries might be out-of-range
+	 * with the new datatype (That's actually an existing bug, see issue
+	 * https://github.com/greenplum-db/gpdb/issues/6181)
+	 *
+	 * I think the right thing to do would be to check if the old and new 'partclass'
+	 * are in the same opfamily.
+	 */
+	if (Gp_role == GP_ROLE_DISPATCH)
 	{
-		ListCell *lc;
-		List *partkeys;
+		ListCell   *lc;
+		List	   *partkeys;
 
 		partkeys = rel_partition_key_attrs(rel->rd_id);
 		foreach (lc, partkeys)
@@ -11563,7 +11580,12 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 						 errmsg("cannot alter type of a column used in "
 								"a partitioning key")));
 		}
+	}
 
+	if (Gp_role == GP_ROLE_DISPATCH &&
+		GpPolicyIsPartitioned(rel->rd_cdbpolicy) &&
+		tab->dist_opfamily_changed)
+	{
 		if (relContainsTuples)
 		{
 			for (int ia = 0; ia < rel->rd_cdbpolicy->nattrs; ia++)
@@ -11598,6 +11620,35 @@ ATExecAlterColumnType(AlteredTableInfo *tab, Relation rel,
 	CatalogUpdateIndexes(attrelation, heapTup);
 
 	heap_close(attrelation, RowExclusiveLock);
+
+	/* Update gp_distribution_policy */
+	if (tab->dist_opfamily_changed || tab->new_opclass)
+	{
+		GpPolicy   *newpolicy;
+		int			i;
+
+		if (tab->dist_opfamily_changed && tab->new_opclass == InvalidOid)
+		{
+			/*
+			 * The column was part of the distribution key, but the new datatype
+			 * is not hashable. Make it randomly distributed.
+			 *
+			 * XXX: Perhaps a NOTICE would be in order? Or an ERROR?
+			 */
+			newpolicy = createRandomPartitionedPolicy(rel->rd_cdbpolicy->numsegments);
+		}
+		else
+		{
+			newpolicy = GpPolicyCopy(rel->rd_cdbpolicy);
+			for (i = 0; i < newpolicy->nattrs; i++)
+			{
+				if (newpolicy->attrs[i] == attnum)
+					newpolicy->opclasses[i] = tab->new_opclass;
+			}
+		}
+
+		GpPolicyReplace(RelationGetRelid(rel), newpolicy);
+	}
 
 	/* Install dependencies on new datatype and collation */
 	add_column_datatype_dependency(RelationGetRelid(rel), attnum, targettype);
@@ -15408,7 +15459,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (ldistro)
 			change_policy = true;
 
-		if (ldistro && ldistro->ptype == POLICYTYPE_PARTITIONED && ldistro->keys == NIL)
+		if (ldistro && ldistro->ptype == POLICYTYPE_PARTITIONED && ldistro->keyCols == NIL)
 		{
 			rand_pol = true;
 
@@ -15530,16 +15581,19 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 		if (change_policy)
 		{
 			List	*policykeys = NIL;
+			List	*policyopclasses = NIL;
 
 			/* Step (a) */
 			if (!(rand_pol || rep_pol))
 			{
-				foreach(lc, ldistro->keys)
+				foreach(lc, ldistro->keyCols)
 				{
-					char	   *colName = strVal((Value *)lfirst(lc));
+					IndexElem  *ielem = (IndexElem *) lfirst(lc);
+					char	   *colName = ielem->name;
 					HeapTuple	tuple;
 					AttrNumber	attnum;
 					Form_pg_attribute attform;
+					Oid			opclass;
 
 					tuple = SearchSysCacheAttName(RelationGetRelid(rel), colName);
 
@@ -15559,16 +15613,12 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 								 errmsg("cannot distribute by system column \"%s\"",
 										colName)));
 
-					/* The attribute must be hashable. */
-					if (!isGreenplumDbHashable(attform->atttypid))
-					{
-						ereport(ERROR,
-								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-								 errmsg("type \"%s\" cannot be a part of a distribution key",
-										format_type_be(attform->atttypid))));
-					}
-
+					/*
+					 * Look up the opclass, like we do in for CREATE TABLE.
+					 */
+					opclass = cdb_get_opclass_for_column_def(ielem->opclass, attform->atttypid);
 					policykeys = lappend_int(policykeys, attnum);
+					policyopclasses = lappend_oid(policyopclasses, opclass);
 
 					ReleaseSysCache(tuple);
 					cols = lappend(cols, lfirst(lc));
@@ -15576,6 +15626,7 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 
 				Assert(policykeys != NIL);
 				policy = createHashPartitionedPolicy(policykeys,
+													 policyopclasses,
 													 ldistro->numsegments);
 
 				/*
@@ -15596,37 +15647,37 @@ ATExecSetDistributedBy(Relation rel, Node *node, AlterTableCmd *cmd)
 							diff = true;
 							break;
 						}
+						if (policy->opclasses[i] != rel->rd_cdbpolicy->opclasses[i])
+						{
+							diff = true;
+							break;
+						}
 					}
 					if (!diff)
 					{
-						/*
-						 * This string length calculation relies on that we add
-						 * a comma after each column entry except the last one,
-						 * at which point the string should be NULL terminated
-						 * instead.
-						 */
-						char *dist = palloc(list_length(ldistro->keys) * (NAMEDATALEN + 1));
+						StringInfoData buf;
 
-						dist[0] = '\0';
-
-						foreach(lc, ldistro->keys)
+						initStringInfo(&buf);
+						foreach(lc, ldistro->keyCols)
 						{
-							if (lc != list_head(ldistro->keys))
-								strcat(dist, ",");
-							strcat(dist, strVal(lfirst(lc)));
+							IndexElem *ielem = (IndexElem *) lfirst(lc);
+
+							if (buf.len > 0)
+								appendStringInfo(&buf, ", ");
+							appendStringInfoString(&buf, ielem->name);
 						}
 						ereport(WARNING,
 							(errcode(ERRCODE_DUPLICATE_OBJECT),
 							 errmsg("distribution policy of relation \"%s\" "
 								"already set to (%s)",
 								RelationGetRelationName(rel),
-								dist),
+								buf.data),
 							 errhint("Use ALTER TABLE \"%s\" "
 								"SET WITH (REORGANIZE=TRUE) "
 								"DISTRIBUTED BY (%s) "
 								"to force redistribution",
 								RelationGetRelationName(rel),
-								dist)));
+								buf.data)));
 						heap_close(rel, NoLock);
 						/* Tell QEs to do nothing */
 						linitial(lprime) = NULL;
@@ -17736,39 +17787,56 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 DistributedBy *
 make_distributedby_for_rel(Relation rel)
 {
+	GpPolicy *policy = rel->rd_cdbpolicy;
 	int			i;
 	DistributedBy *dist;
-	List 		*distro = NIL;
 
 	dist = makeNode(DistributedBy);
 
-	Assert(rel->rd_cdbpolicy->ptype != POLICYTYPE_ENTRY);
+	Assert(policy->ptype != POLICYTYPE_ENTRY);
 
-	if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
+	if (GpPolicyIsReplicated(policy))
 	{
 		/* must be random distribution */
 		dist->ptype = POLICYTYPE_REPLICATED;
-		dist->numsegments = rel->rd_cdbpolicy->numsegments;
-		dist->keys = NIL;
+		dist->numsegments = policy->numsegments;
+		dist->keyCols = NIL;
 	}
 	else
 	{
-		for (i = 0; i < rel->rd_cdbpolicy->nattrs; i++)
+		TupleDesc tupdesc = RelationGetDescr(rel);
+		List 		*keys = NIL;
+
+		for (i = 0; i < policy->nattrs; i++)
 		{
-			AttrNumber attno = rel->rd_cdbpolicy->attrs[i];
-			TupleDesc tupdesc = RelationGetDescr(rel);
-			Value *attstr;
-			NameData attname;
+			int			attno = policy->attrs[i];
+			Oid			opclassoid = policy->opclasses[i];
+			char	   *attname = pstrdup(NameStr(tupdesc->attrs[attno - 1]->attname));
+			IndexElem  *ielem;
+			HeapTuple	ht_opc;
+			Form_pg_opclass opcrec;
+			char	   *opcname;
+			char	   *nspname;
 
-			attname = tupdesc->attrs[attno - 1]->attname;
-			attstr = makeString(pstrdup(NameStr(attname)));
+			ht_opc = SearchSysCache1(CLAOID, ObjectIdGetDatum(opclassoid));
+			if (!HeapTupleIsValid(ht_opc))
+				elog(ERROR, "cache lookup failed for opclass %u", opclassoid);
+			opcrec = (Form_pg_opclass) GETSTRUCT(ht_opc);
+			nspname = get_namespace_name(opcrec->opcnamespace);
+			opcname = pstrdup(NameStr(opcrec->opcname));
 
-			distro = lappend(distro, attstr);
+			ielem = makeNode(IndexElem);
+			ielem->name = attname;
+			ielem->opclass = list_make2(makeString(nspname), makeString(opcname));
+
+			keys = lappend(keys, ielem);
+
+			ReleaseSysCache(ht_opc);
 		}
 
 		dist->ptype = POLICYTYPE_PARTITIONED;
-		dist->numsegments = rel->rd_cdbpolicy->numsegments;
-		dist->keys = distro;
+		dist->numsegments = policy->numsegments;
+		dist->keyCols = keys;
 	}
 
 	return dist;

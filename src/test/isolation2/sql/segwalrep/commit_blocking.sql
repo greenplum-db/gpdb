@@ -10,7 +10,7 @@ select content, role, preferred_role, mode, status from gp_segment_configuration
 
 -- create table and show commits are not blocked
 create table segwalrep_commit_blocking (a int) distributed by (a);
-insert into segwalrep_commit_blocking values (1);
+insert into segwalrep_commit_blocking values (5);
 
 -- skip FTS probes always
 create extension if not exists gp_inject_fault;
@@ -40,11 +40,11 @@ select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
 -- this should block since mirror is not up and sync replication is on
 3: begin;
-3: insert into segwalrep_commit_blocking values (1);
+3: insert into segwalrep_commit_blocking values (5);
 3&: commit;
 
 -- this should not block due to direct dispatch to primary with active synced mirror
-4: insert into segwalrep_commit_blocking values (3);
+4: insert into segwalrep_commit_blocking values (6);
 
 -- bring the mirror back up
 -1U: select pg_ctl_start(datadir, port) from gp_segment_configuration where role = 'm' and content = 0;

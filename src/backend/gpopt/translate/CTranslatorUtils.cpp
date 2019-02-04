@@ -39,6 +39,7 @@
 #include "gpopt/translate/CTranslatorUtils.h"
 #include "gpopt/translate/CDXLTranslateContext.h"
 #include "gpopt/translate/CTranslatorRelcacheToDXL.h"
+#include "gpopt/translate/CTranslatorScalarToDXL.h"
 
 #include "naucrates/dxl/CDXLUtils.h"
 #include "naucrates/dxl/xml/dxltokens.h"

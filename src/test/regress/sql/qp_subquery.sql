@@ -647,6 +647,20 @@ select * from subselect_tab1 where b::bool = exists(select c from subselect_tab2
 SELECT * FROM subselect_tab3 WHERE (EXISTS(SELECT c FROM subselect_tab2) AND NOT EXISTS (SELECT c from subselect_tab3)) IN (SELECT b::BOOL from subselect_tab1);
 SELECT * FROM subselect_tab3 WHERE (NOT EXISTS(SELECT c FROM subselect_tab2)) IN (SELECT b::boolean  from subselect_tab1);
 
+-- Test to verify that planner for subqueries, generates different copy of SubPlans referring to the same initplan
+-- and does not Assert on the subplan's being same
+-- start_ignore
+drop table if exists append_rel2;
+drop table if exists append_rel1;
+drop table if exists append_rel;
+-- end_ignore
+create table append_rel(att1 int, att2 int);
+create table append_rel1(att3 int) INHERITS (append_rel);
+create table append_rel2(att4 int) INHERITS(append_rel);
+insert into append_rel values(1,10),(2,20),(3,30);
+explain with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
+with test as (select * from (select * from append_rel) p where att1 in (select att1 from append_rel where att2 >= 19) ) select att2 from append_rel where att1 in (select att1 from test where att2 <= 21);
+
 -- start_ignore
 drop schema qp_subquery cascade;
 -- end_ignore

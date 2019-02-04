@@ -116,13 +116,12 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
               GPCC instance.</entry>
           </row>
           <row>
-            <entry>Greenplum database file load and transfer utilities: gpfdist, gpload,
-              gptransfer</entry>
+            <entry>Greenplum database file load and transfer utilities: gpfdist, gpload.</entry>
             <entry>TCP 8080, HTTP<p>TCP 9000, HTTPS</p></entry>
             <entry>The gpfdist file serving utility can run on Greenplum hosts or external hosts.
               Specify the connection port with the <codeph>-p</codeph> option when starting the
-              server. <p>The gpload and gptransfer utilities run one or more instances of gpfdist
-                with ports or port ranges specified in a configuration file.</p></entry>
+              server. <p>The gpload utility runs one or more instances of gpfdist with ports or port
+                ranges specified in a configuration file.</p></entry>
           </row>
           <row>
             <entry>GPCC agents</entry>
@@ -134,9 +133,9 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
           <row>
             <entry>Backup completion notification</entry>
             <entry>TCP 25, TCP 587, SMTP</entry>
-            <entry>The <codeph>gpbackup</codeph> backup utility can optionally send email to a list of email
-              addresses at completion of a backup. The SMTP service must be enabled on the Greenplum
-              master host. </entry>
+            <entry>The <codeph>gpbackup</codeph> backup utility can optionally send email to a list
+              of email addresses at completion of a backup. The SMTP service must be enabled on the
+              Greenplum master host. </entry>
           </row>
           <row>
             <entry>Greenplum Database secure shell (SSH): gpssh, gpscp, gpssh-exkeys, gppkg,
@@ -148,8 +147,8 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
           <row>
             <entry>Greenplum Platform Extension Framework (PXF)</entry>
             <entry>TCP 5888</entry>
-            <entry>The PXF Java service runs on port number 5888 on each Greenplum Database
-              segment host.</entry>
+            <entry>The PXF Java service runs on port number 5888 on each Greenplum Database segment
+              host.</entry>
           </row>
           <row otherprops="pivotal">
             <entry morerows="2">Greenplum Workload Manager (GP-WLM)</entry>

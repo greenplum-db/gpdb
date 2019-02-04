@@ -469,6 +469,12 @@ testdb=#</codeblock>
           <pt>\dl</pt>
           <pd>This is an alias for <codeph>\lo_list</codeph>, which shows a list of large
             objects.</pd>
+          <pd>
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note>
+          </pd>
         </plentry>
         <plentry>
           <pt>\dn [<varname>schema_pattern</varname>] | \dn+

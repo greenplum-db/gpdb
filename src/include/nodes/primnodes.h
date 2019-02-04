@@ -1480,7 +1480,8 @@ typedef struct Flow
      * partitioning for a hash motion.  Else if flotype is FLOW_PARTITIONED,
      * this is the partitioning key.  Otherwise NIL.
 	 * otherwise, they are NIL. */
-	List       *hashExpr;			/* list of hash expressions */
+	List       *hashExprs;			/* list of hash expressions */
+	List	   *hashOpfamilies;
 
 	/* If req_move is MOVEMENT_EXPLICIT, this contains the index of the segid column
 	 * to use in the motion	 */
@@ -1608,8 +1609,8 @@ typedef struct ReshuffleExpr
 	Expr		xpr;
 	int			newSegs;
 	int			oldSegs;
-	List	   *hashKeys;
-	List	   *hashTypes;
+	List	   *hashKeys;		/* Expr nodes */
+	List	   *hashFuncs;		/* list of corresponding hash func OIDs */
 	GpPolicyType ptype;
 } ReshuffleExpr;
 

@@ -28,7 +28,7 @@ CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE <replaceable
     [ TABLESPACE <replaceable class="PARAMETER">tablespace_name</replaceable> ]
     AS <replaceable>query</replaceable>
     [ WITH [ NO ] DATA ]
-   [DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
+   [DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
 where storage_parameter is:
    APPENDONLY={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}

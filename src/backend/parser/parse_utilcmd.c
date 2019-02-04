@@ -1700,7 +1700,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 			 */
 			stmt->distributedBy = makeNode(DistributedBy);
 			stmt->distributedBy->ptype = POLICYTYPE_PARTITIONED;
-			stmt->distributedBy->keys = NIL;
+			stmt->distributedBy->keyCols = NIL;
 			stmt->distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
 		}
 		else
@@ -1771,7 +1771,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 	/* Explictly specified distributed randomly, no futher check needed */
 	if (distributedBy &&
-		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keys == NIL))
+		(distributedBy->ptype == POLICYTYPE_PARTITIONED && distributedBy->keyCols == NIL))
 	{
 		distributedBy->numsegments = numsegments;
 		return distributedBy;
@@ -1790,7 +1790,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 	}
 
 	if (distributedBy)
-		distrkeys = distributedBy->keys;
+		distrkeys = distributedBy->keyCols;
 
 	/*
 	 * If distributedBy is NIL, the user did not explicitly say what he
@@ -1821,7 +1821,12 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 				if (iparam && iparam->name != 0)
 				{
-					distrkeys = lappend(distrkeys, (Node *) makeString(iparam->name));
+					IndexElem *distrkey = makeNode(IndexElem);
+
+					distrkey->name = iparam->name;
+					distrkey->opclass = NULL;
+
+					distrkeys = lappend(distrkeys, distrkey);
 				}
 			}
 		}
@@ -1846,9 +1851,18 @@ transformDistributedBy(CreateStmtContext *cxt,
 				foreach(ip, constraint->keys)
 				{
 					Value	   *v = lfirst(ip);
+					ListCell   *dkcell;
 
-					if (list_member(distrkeys, v))
-						new_distrkeys = lappend(new_distrkeys, v);
+					foreach(dkcell, distrkeys)
+					{
+						IndexElem  *dk = (IndexElem *) lfirst(dkcell);
+
+						if (strcmp(dk->name, strVal(v)) == 0)
+						{
+							new_distrkeys = lappend(new_distrkeys, dk);
+							break;
+						}
+					}
 				}
 
 				/* If there were no common columns, we're out of luck. */
@@ -1863,7 +1877,17 @@ transformDistributedBy(CreateStmtContext *cxt,
 				/*
 				 * No distribution key chosen yet. Use this key as is.
 				 */
-				new_distrkeys = constraint->keys;
+				new_distrkeys = NIL;
+				foreach(ip, constraint->keys)
+				{
+					Value	   *v = lfirst(ip);
+					IndexElem  *dk = makeNode(IndexElem);
+
+					dk->name = strVal(v);
+					dk->opclass = NULL;
+
+					new_distrkeys = lappend(new_distrkeys, dk);
+				}
 			}
 
 			distrkeys = new_distrkeys;
@@ -1943,7 +1967,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 					(errmsg("table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table")));
 
 		if (likeDistributedBy->ptype == POLICYTYPE_PARTITIONED &&
-			likeDistributedBy->keys == NIL)
+			likeDistributedBy->keyCols == NIL)
 		{
 			distributedBy = makeNode(DistributedBy);
 			distributedBy->ptype = POLICYTYPE_PARTITIONED;
@@ -1958,7 +1982,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 			return distributedBy;
 		}
 
-		distrkeys = likeDistributedBy->keys;
+		distrkeys = likeDistributedBy->keyCols;
 	}
 
 	if (gp_create_table_random_default_distribution && NIL == distrkeys)
@@ -2015,10 +2039,16 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 					if (inhattr->attisdropped)
 						continue;
-					if(isGreenplumDbHashable(typeOid))
+					if (cdb_default_distribution_opclass_for_type(typeOid) != InvalidOid)
 					{
 						char	   *inhname = NameStr(inhattr->attname);
-						distrkeys = list_make1(makeString(inhname));
+						IndexElem  *ielem;
+
+						ielem = makeNode(IndexElem);
+						ielem->name = inhname;
+						ielem->opclass = NULL;
+
+						distrkeys = list_make1(ielem);
 						if (!bQuiet)
 							ereport(NOTICE,
 								(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
@@ -2049,12 +2079,17 @@ transformDistributedBy(CreateStmtContext *cxt,
 				typeOid = typenameTypeId(NULL, column->typeName);
 
 				/*
-				 * if we can hash on this type, or if it's an array type (which
-				 * we can always hash) this column with be our default key.
+				 * If we can hash this type, this column will be our default
+				 * key.
 				 */
-				if (isGreenplumDbHashable(typeOid))
+				if (cdb_default_distribution_opclass_for_type(typeOid))
 				{
-					distrkeys = list_make1(makeString(column->colname));
+					IndexElem  *ielem = makeNode(IndexElem);
+
+					ielem->name = column->colname;
+					ielem->opclass = NULL;		/* or should we explicitly set the opclass we just looked up? */
+
+					distrkeys = list_make1(ielem);
 					if (!bQuiet)
 						ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
@@ -2094,7 +2129,8 @@ transformDistributedBy(CreateStmtContext *cxt,
 		 */
 		foreach(keys, distrkeys)
 		{
-			char	   *key = strVal(lfirst(keys));
+			IndexElem  *ielem = (IndexElem *) lfirst(keys);
+			char	   *colname = ielem->name;
 			bool		found = false;
 			ListCell   *columns;
 
@@ -2123,7 +2159,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 
 						if (inhattr->attisdropped)
 							continue;
-						if (strcmp(key, inhname) == 0)
+						if (strcmp(colname, inhname) == 0)
 						{
 							found = true;
 
@@ -2146,27 +2182,8 @@ transformDistributedBy(CreateStmtContext *cxt,
 					ColumnDef *column = (ColumnDef *) lfirst(columns);
 					Assert(IsA(column, ColumnDef));
 
-					if (strcmp(column->colname, key) == 0)
+					if (strcmp(column->colname, colname) == 0)
 					{
-						Oid			typeOid;
-
-						typeOid = typenameTypeId(NULL, column->typeName);
-
-						/*
-						 * To be a part of a distribution key, this type must
-						 * be supported for hashing internally in Greenplum
-						 * Database. We check if the base type is supported
-						 * for hashing or if it is an array type (we support
-						 * hashing on all array types).
-						 */
-						if (!isGreenplumDbHashable(typeOid))
-						{
-							ereport(ERROR,
-									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-									 errmsg("type \"%s\" cannot be a part of a distribution key",
-											format_type_be(typeOid))));
-						}
-
 						found = true;
 						break;
 					}
@@ -2183,7 +2200,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 				ereport(ERROR,
 						(errcode(ERRCODE_UNDEFINED_COLUMN),
 						 errmsg("column \"%s\" named in 'DISTRIBUTED BY' clause does not exist",
-								key)));
+								colname)));
 		}
 	}
 
@@ -2273,7 +2290,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 	/* Form the resulting Distributed By clause */
 	distributedBy = makeNode(DistributedBy);
 	distributedBy->ptype = POLICYTYPE_PARTITIONED;
-	distributedBy->keys = distrkeys;
+	distributedBy->keyCols = distrkeys;
 	distributedBy->numsegments = numsegments;
 
 	return distributedBy;
@@ -2286,6 +2303,7 @@ GpPolicy *
 getPolicyForDistributedBy(DistributedBy *distributedBy, TupleDesc tupdesc)
 {
 	List	   *policykeys;
+	List	   *policyopclasses;
 	ListCell   *lc;
 
 	if (!distributedBy)
@@ -2296,9 +2314,11 @@ getPolicyForDistributedBy(DistributedBy *distributedBy, TupleDesc tupdesc)
 		case POLICYTYPE_PARTITIONED:
 			/* Look up the attribute numbers for each column */
 			policykeys = NIL;
-			foreach(lc, distributedBy->keys)
+			policyopclasses = NIL;
+			foreach(lc, distributedBy->keyCols)
 			{
-				char	   *colname = strVal((Value *) lfirst(lc));
+				IndexElem  *ielem = (IndexElem *) lfirst(lc);
+				char	   *colname = ielem->name;
 				int			i;
 				bool		found = false;
 
@@ -2308,8 +2328,13 @@ getPolicyForDistributedBy(DistributedBy *distributedBy, TupleDesc tupdesc)
 
 					if (strcmp(colname, NameStr(attr->attname)) == 0)
 					{
-						found = true;
+						Oid			opclass;
+
+						opclass = cdb_get_opclass_for_column_def(ielem->opclass, attr->atttypid);
+
 						policykeys = lappend_int(policykeys, attr->attnum);
+						policyopclasses = lappend_oid(policyopclasses, opclass);
+						found = true;
 					}
 				}
 				if (!found)
@@ -2317,6 +2342,7 @@ getPolicyForDistributedBy(DistributedBy *distributedBy, TupleDesc tupdesc)
 			}
 
 			return createHashPartitionedPolicy(policykeys,
+											   policyopclasses,
 											   distributedBy->numsegments);;
 
 		case POLICYTYPE_ENTRY:

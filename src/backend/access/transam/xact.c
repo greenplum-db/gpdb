@@ -2494,11 +2494,16 @@ StartTransaction(void)
 	s->state = TRANS_INPROGRESS;
 
 	/*
-	 * update the snapshot of gp_segment_configuration, it's not changed
+	 * Update the snapshot of gp_segment_configuration, it's not changed
 	 * until the end of transaction, do this update inside a transaction
 	 * because it does a catalog lookup.
+	 *
+	 * Sometimes, a new transaction is started before first access to db,
+	 * however, reading a catalog like gp_segment_configuration need a
+	 * database be selected. In such case, we disallow updating the snapshot
+	 * of segments configuration.
 	 */
-	if (DistributedTransactionContext == DTX_CONTEXT_QD_DISTRIBUTED_CAPABLE)
+	if (Gp_role == GP_ROLE_DISPATCH && OidIsValid(MyDatabaseId))
 		cdbcomponent_updateCdbComponents();
 
 	/*

@@ -23,24 +23,34 @@
             <title>Parameters</title>
             <parml>
                 <plentry>
-                    <pt>SERIALIZABLE</pt>
-                    <pt>READ COMMITTED</pt>
                     <pt>READ UNCOMMITTED</pt>
+                    <pt>READ COMMITTED</pt>
+                    <pt>REPEATABLE READ</pt>
+                    <pt>SERIALIZABLE</pt>
                     <pd>The SQL standard defines four transaction isolation levels: <codeph>READ
-                            COMMITTED</codeph>, <codeph>READ UNCOMMITTED</codeph>,
-                            <codeph>SERIALIZABLE</codeph>, and <codeph>REPEATABLE READ</codeph>. The
-                        default behavior is that a statement can only see rows committed before it
-                        began (<codeph>READ COMMITTED</codeph>). In Greenplum Database <codeph>READ
-                            UNCOMMITTED</codeph> is treated the same as <codeph>READ
-                            COMMITTED</codeph>.  <codeph>REPEATABLE READ</codeph> is not supported;
-                        use <codeph>SERIALIZABLE</codeph> if this behavior is required.
-                            <codeph>SERIALIZABLE</codeph>, wherein all statements of the current
-                        transaction can only see rows committed before the first statement was
-                        executed in the transaction, is the strictest transaction isolation. This
-                        level emulates serial transaction execution, as if transactions had been
-                        executed one after another, serially, rather than concurrently. Applications
-                        using this level must be prepared to retry transactions due to serialization
-                        failures.</pd>
+                            UNCOMMITTED</codeph>, <codeph>READ COMMITTED</codeph>,
+                            <codeph>REPEATABLE READ</codeph>, and
+                        <codeph>SERIALIZABLE</codeph>.</pd>
+                    <pd><codeph>READ UNCOMMITTED</codeph> allows transactions to see changes made by
+                        uncomitted concurrent transactions. This is not possible in Greenplum
+                        Database, so <codeph>READ UNCOMMITTED</codeph> is treated the same as
+                            <codeph>READ COMMITTED</codeph>.</pd>
+                    <pd><codeph>READ COMMITTED</codeph>, the default isolation level in Greenplum
+                        Database, guarantees that a statement can only see rows committed before it
+                        began. The same statement executed twice in a transaction can produce
+                        different results if another concurrent transaction commits after the
+                        statement is executed the first time. </pd>
+                    <pd>The <codeph>REPEATABLE READ</codeph> isolation level guarantees that a
+                        transaction can only see rows committed before it began. <codeph>REPEATABLE
+                            READ</codeph> is the strictest transaction isolation level Greenplum
+                        Database supports. Applications that use the <codeph>REPEATABLE
+                            READ</codeph> isolation level must be prepared to retry transactions due
+                        to serialization failures.</pd>
+                    <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees
+                        that executing multiple concurrent transactions produces the same effects as
+                        running the same transactions one at a time. If you specify
+                            <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to
+                            <codeph>REPEATABLE READ</codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>READ WRITE</pt>
@@ -73,7 +83,7 @@
                 relational database systems may offer an autocommit feature as a convenience. </p>
             <p>The SQL standard requires commas between successive
                     <varname>transaction_modes</varname>, but for historical reasons Greenplum
-                Database allows the commas to be omitted. </p>
+                Database allows the commas to be omitted.</p>
             <p>See also the compatibility section of <codeph><xref href="SET_TRANSACTION.xml#topic1"
                         type="topic" format="dita"/></codeph>.</p>
         </section>

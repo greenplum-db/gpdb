@@ -512,7 +512,11 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 
 	SegmentDatabaseDescriptor *segdbDesc = (SegmentDatabaseDescriptor *) arg;
 
-	if (!res)
+	/*
+	 * If MyProcPort is NULL, there is no client, so no need to generate notice.
+	 * One example is that there is no client for a background worker.
+	 */
+	if (!res || MyProcPort == NULL) 
 		return;
 
 	strcpy(message, "missing error text");
@@ -693,12 +697,15 @@ MPPnoticeReceiver(void *arg, const PGresult *res)
 void
 forwardQENotices(void)
 {
+	bool hasNotices = false;
+
 	while (qeNotices_head)
 	{
 		QENotice *notice;;
 		StringInfoData msgbuf;
 
 		notice = qeNotices_head;
+		hasNotices = true;
 
 		/*
 		 * Unlink it first, so that if something goes wrong in sending it to
@@ -803,6 +810,6 @@ forwardQENotices(void)
 		}
 		PG_END_TRY();
 	}
-
-	pq_flush();
+	if (hasNotices)
+		pq_flush();
 }

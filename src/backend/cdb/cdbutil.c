@@ -532,9 +532,8 @@ cdbcomponent_cleanupIdleQEs(bool includeWriter)
 }
 
 /* 
- * This function is called when current global transaction is set,
- * the snapshot of segments info will not changed within a global
- * transaction
+ * This function is called when a transaction is started and the snapshot of
+ * segments info will not changed until the end of transaction
  */
 void
 cdbcomponent_updateCdbComponents(void)

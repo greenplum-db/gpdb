@@ -19,10 +19,14 @@
 #include "postgres.h"
 #include "nodes/parsenodes.h"
 #include "nodes/plannodes.h"
+#include "utils/rel.h"
 
 #include "gpopt/translate/CContextDXLToPlStmt.h"
 #include "gpopt/gpdbwrappers.h"
 #include "gpos/base.h"
+
+#include "naucrates/exception.h"
+
 using namespace gpdxl;
 
 //---------------------------------------------------------------------------
@@ -39,6 +43,7 @@ CContextDXLToPlStmt::CContextDXLToPlStmt
 	CIdGenerator *plan_id_counter,
 	CIdGenerator *motion_id_counter,
 	CIdGenerator *param_id_counter,
+	DistributionHashOpsKind distribution_hashops,
 	List **rtable_entries_list,
 	List **subplan_entries_list
 	)
@@ -47,6 +52,7 @@ CContextDXLToPlStmt::CContextDXLToPlStmt
 	m_plan_id_counter(plan_id_counter),
 	m_motion_id_counter(motion_id_counter),
 	m_param_id_counter(param_id_counter),
+	m_distribution_hashops(distribution_hashops),
 	m_rtable_entries_list(rtable_entries_list),
 	m_partitioned_tables_list(NULL),
 	m_num_partition_selectors_array(NULL),
@@ -361,6 +367,98 @@ CContextDXLToPlStmt::AddCtasInfo
 	
 	m_into_clause = into_clause;
 	m_distribution_policy = distribution_policy;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CContextDXLToPlStmt::GetDistributionHashOpclassForType
+//
+//	@doc:
+//		Return a hash operator class to use for computing
+//		distribution key values for the given datatype.
+//
+//		This returns either the default opclass, or the legacy
+//		opclass of the type, depending on what opclasses we have
+//		seen being used in tables so far.
+//---------------------------------------------------------------------------
+Oid
+CContextDXLToPlStmt::GetDistributionHashOpclassForType(Oid typid)
+{
+	Oid opclass = InvalidOid;
+
+	switch (m_distribution_hashops)
+	{
+		case DistrUseDefaultHashOps:
+			opclass = gpdb::GetDefaultDistributionOpclassForType(typid);
+			break;
+
+		case DistrUseLegacyHashOps:
+			opclass = gpdb::GetLegacyCdbHashOpclassForBaseType(typid);
+			break;
+
+		case DistrHashOpsNotDeterminedYet:
+			// None of the tables we have seen so far have been
+			// hash distributed, so we haven't made up our mind
+			// on which opclasses to use yet. But we have to
+			// pick something now.
+			//
+			// FIXME: It's quite unoptimal that this ever happens.
+			// To avoid this we should make a pass over the tree to
+			// determine the opclasses, before translating
+			// anything. But there is no convenient way to "walk"
+			// the DXL representation AFAIK.
+			//
+			// Example query where this happens:
+			// select * from dd_singlecol_1 t1,
+			//               generate_series(1,10) g
+			// where t1.a=g.g and t1.a=1 ;
+			//
+			// The ORCA plan consists of a join between
+			// Result+FunctionScan and TableScan. The
+			// Result+FunctionScan side is processed first, and
+			// this gets called to generate a "hash filter" for
+			// it Result. The TableScan is encountered and
+			// added to the range table only later. If it uses
+			// legacy ops, we have already decided to use default
+			// ops here, and we fall back unnecessarily.
+			m_distribution_hashops = DistrUseDefaultHashOps;
+			opclass = gpdb::GetDefaultDistributionOpclassForType(typid);
+			break;
+	}
+
+	return opclass;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CContextDXLToPlStmt::GetDistributionHashFuncForType
+//
+//	@doc:
+//		Return a hash function to use for computing distribution key
+//		values for the given datatype.
+//
+//		This returns the hash function either from the default
+//		opclass, or the legacy opclass of the type, depending on
+//		what opclasses we have seen being used in tables so far.
+//---------------------------------------------------------------------------
+Oid
+CContextDXLToPlStmt::GetDistributionHashFuncForType(Oid typid)
+{
+	Oid opclass;
+	Oid opfamily;
+	Oid hashproc;
+
+	opclass = GetDistributionHashOpclassForType(typid);
+
+	if (opclass == InvalidOid)
+	{
+		GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("no default hash opclasses found"));
+	}
+
+	opfamily = gpdb::GetOpclassFamily(opclass);
+	hashproc = gpdb::GetHashProcInOpfamily(opfamily, typid);
+
+	return hashproc;
 }
 
 // EOF

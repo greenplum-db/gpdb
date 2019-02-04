@@ -2815,7 +2815,7 @@ select * from test_table; -- expected, no rows
 insert into test_table values(1,2,3); -- reinsert data
 
 -- all partitions should have same distribution policy
-select relname, attrnums as distribution_attributes from
+select relname, distkey as distribution_attributes from
 gp_distribution_policy p, pg_class c
 where p.localoid = c.oid and relname like 'test_table%' order by p.localoid;
 
@@ -2825,7 +2825,7 @@ alter table test_table split default partition
 	into (partition p2, partition default_partition);
 
 
-select relname, attrnums as distribution_attributes from
+select relname, distkey as distribution_attributes from
 gp_distribution_policy p, pg_class c where p.localoid = c.oid and 
 relname like 'test_table%' order by p.localoid;
 
@@ -2837,7 +2837,7 @@ alter table test_table drop partition default_partition;
 
 alter table test_table add partition foo start(10) end(20);
 
-select relname, attrnums as distribution_attributes from
+select relname, distkey as distribution_attributes from
 gp_distribution_policy p, pg_class c where p.localoid = c.oid and
 relname like 'test_table%' order by p.localoid;
 

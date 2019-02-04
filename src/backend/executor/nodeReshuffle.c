@@ -139,23 +139,20 @@
  * 	compute the Hash keys
  */
 static int
-EvalHashSegID(Datum *values, bool *nulls, List *policyAttrs, CdbHash *h)
+EvalHashSegID(Datum *values, bool *nulls, int numPolicyAttrs, AttrNumber *policyAttrs, CdbHash *h)
 {
 	uint32		newSeg;
-	ListCell   *lc;
 	int			i;
 
 	Assert(policyAttrs);
 
 	cdbhashinit(h);
 
-	i = 0;
-	foreach(lc, policyAttrs)
+	for (i = 0; i < numPolicyAttrs; i++)
 	{
-		AttrNumber attidx = lfirst_int(lc);
+		AttrNumber attidx = policyAttrs[i];
 
 		cdbhash(h, i + 1, values[attidx - 1], nulls[attidx - 1]);
-		i++;
 	}
 
 	newSeg = cdbhashreduce(h);
@@ -237,6 +234,7 @@ ExecReshuffle(ReshuffleState *node)
 				values[reshuffle->tupleSegIdx - 1] =
 						Int32GetDatum(EvalHashSegID(values,
 													nulls,
+													reshuffle->numPolicyAttrs,
 													reshuffle->policyAttrs,
 													node->cdbhash));
 			}
@@ -267,6 +265,7 @@ ExecReshuffle(ReshuffleState *node)
 				Datum newSegID = Int32GetDatum(
 						EvalHashSegID(values,
 									  nulls,
+									  reshuffle->numPolicyAttrs,
 									  reshuffle->policyAttrs,
 									  node->oldcdbhash));
 
@@ -358,9 +357,6 @@ ReshuffleState *
 ExecInitReshuffle(Reshuffle *node, EState *estate, int eflags)
 {
 	ReshuffleState *reshufflestate;
-	Oid		   *typeoids;
-	int			i;
-	ListCell   *lc;
 
 	/* check for unsupported flags */
 	Assert(!(eflags & (EXEC_FLAG_REWIND | EXEC_FLAG_MARK | EXEC_FLAG_BACKWARD)) ||
@@ -425,19 +421,9 @@ ExecInitReshuffle(Reshuffle *node, EState *estate, int eflags)
 	}
 
 	/* Initialize cdbhash objects */
-	typeoids = palloc(list_length(node->policyAttrs) * sizeof(Oid));
-	i = 0;
-	foreach(lc, node->policyAttrs)
-	{
-		AttrNumber attidx = lfirst_int(lc);
-		TargetEntry *entry = list_nth(node->plan.targetlist, attidx - 1);
-
-		typeoids[i] = exprType((Node *) entry->expr);
-		i++;
-	}
-	reshufflestate->cdbhash = makeCdbHash(getgpsegmentCount(), list_length(node->policyAttrs), typeoids);
+	reshufflestate->cdbhash = makeCdbHash(getgpsegmentCount(), node->numPolicyAttrs, node->policyHashFuncs);
 #ifdef USE_ASSERT_CHECKING
-	reshufflestate->oldcdbhash = makeCdbHash(node->oldSegs, list_length(node->policyAttrs), typeoids);
+	reshufflestate->oldcdbhash = makeCdbHash(node->oldSegs, node->numPolicyAttrs, node->policyHashFuncs);
 #endif
 
 	reshufflestate->newTargetIdx = INIT_IDX;

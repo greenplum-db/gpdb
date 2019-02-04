@@ -384,3 +384,20 @@ select * from recursive_table_4 where a > ALL (
 	)
 	select * from r
 );
+
+with recursive x(i) as (
+    select 1
+),
+y(i) as (
+    select sum(i) from x
+    union all
+    select i + 1 from y
+),
+z(i) as (
+    select avg(i) from x
+    union all
+    select i + 1 from z
+)
+(select * from y limit 5)
+union
+(select * from z limit 10);

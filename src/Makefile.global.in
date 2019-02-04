@@ -212,7 +212,6 @@ enable_largefile	= @enable_largefile@
 enable_orca		= @enable_orca@
 enable_gpfdist		= @enable_gpfdist@
 enable_pxf			= @enable_pxf@
-enable_gphdfs		= @enable_gphdfs@
 enable_orafce		= @enable_orafce@
 enable_mapreduce    = @enable_mapreduce@
 enable_gpcloud 	    = @enable_gpcloud@

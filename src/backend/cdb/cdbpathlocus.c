@@ -14,6 +14,7 @@
 #include "postgres.h"
 
 #include "catalog/gp_policy.h"	/* GpPolicy */
+#include "cdb/cdbhash.h"
 #include "cdb/cdbdef.h"			/* CdbSwap() */
 #include "cdb/cdbpullup.h"		/* cdbpullup_findDistributionKeyExprInTargetList() */
 #include "nodes/makefuncs.h"	/* makeVar() */
@@ -23,15 +24,16 @@
 #include "optimizer/pathnode.h" /* Path */
 #include "optimizer/paths.h"	/* cdb_make_distkey_for_expr() */
 #include "optimizer/tlist.h"	/* tlist_member() */
+#include "utils/lsyscache.h"
 
+#include "cdb/cdbpath.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
 #include "cdb/cdbpathlocus.h"	/* me */
 
 static List *cdb_build_distribution_keys(PlannerInfo *root,
 								RelOptInfo *rel,
-								int nattrs,
-								AttrNumber *attrs);
+								GpPolicy *policy);
 
 /*
  * cdbpathlocus_equal
@@ -91,6 +93,9 @@ cdbpathlocus_equal(CdbPathLocus a, CdbPathLocus b)
 
 				if (!list_member_ptr(bdistkey->dk_eclasses, a_ec))
 					return false;
+
+				if (adistkey->dk_opfamily != bdistkey->dk_opfamily)
+					return false;
 			}
 		}
 		return true;
@@ -102,31 +107,69 @@ cdbpathlocus_equal(CdbPathLocus a, CdbPathLocus b)
 
 /*
  * cdb_build_distribution_keys
- *	  Build distribution keys for given columns of rel.
+ *	  Build DistributionKeys that match the policy of the given relation.
  */
 static List *
-cdb_build_distribution_keys(PlannerInfo *root,
-							RelOptInfo *rel,
-							int nattrs,
-							AttrNumber *attrs)
+cdb_build_distribution_keys(PlannerInfo *root, RelOptInfo *rel,
+							GpPolicy *policy)
 {
 	List	   *retval = NIL;
-	List	   *eq = list_make1(makeString("="));
 	int			i;
 
-	for (i = 0; i < nattrs; ++i)
+	for (i = 0; i < policy->nattrs; ++i)
 	{
 		DistributionKey *cdistkey;
 
 		/* Find or create a Var node that references the specified column. */
-		Var		   *expr = find_indexkey_var(root, rel, attrs[i]);
+		Var		   *expr = find_indexkey_var(root, rel, policy->attrs[i]);
+		Oid			eqopoid;
+		Oid			opfamily = get_opclass_family(policy->opclasses[i]);
+		Oid			opcintype = get_opclass_input_type(policy->opclasses[i]);
+		Oid			typeoid = expr->vartype;
+		List	   *mergeopfamilies;
+		EquivalenceClass *eclass;
+
+		/*
+		 * Look up the equality operator corresponding to the distribution
+		 * opclass.
+		 */
+		eqopoid = get_opfamily_member(opfamily, opcintype, opcintype, 1);
+
+		/*
+		 * Get Oid of the sort operator that would be used for a sort-merge
+		 * equijoin on a pair of exprs of the same type.
+		 */
+		if (eqopoid == InvalidOid || !op_mergejoinable(eqopoid, typeoid))
+		{
+			/*
+			 * It's in principle possible that there is no b-tree operator family
+			 * that's compatible with the hash opclass's equality operator. However,
+			 * we cannot construct an EquivalenceClass without the b-tree operator
+			 * family, and therefore cannot build a DistributionKey to represent it.
+			 * Bail out. (That makes the distribution key rather useless.)
+			 */
+			return NIL;
+		}
+
+		mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
+
+		eclass = get_eclass_for_sort_expr(root, (Expr *) expr,
+										  NULL, /* nullable_relids */ /* GPDB_94_MERGE_FIXME: is NULL ok here? */
+										  mergeopfamilies,
+										  opcintype,
+										  exprCollation((Node *) expr),
+										  0,
+										  NULL,
+										  true);
 
 		/* Create a distribution key for it. */
-		cdistkey = cdb_make_distkey_for_expr(root, (Node *) expr, eq);
+		cdistkey = makeNode(DistributionKey);
+		cdistkey->dk_opfamily = opfamily;
+		cdistkey->dk_eclasses = list_make1(eclass);
+
 		retval = lappend(retval, cdistkey);
 	}
 
-	list_free_deep(eq);
 	return retval;
 }
 
@@ -155,10 +198,18 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 		{
 			List	   *distkeys = cdb_build_distribution_keys(root,
 															   rel,
-															   policy->nattrs,
-															   policy->attrs);
+															   policy);
 
-			CdbPathLocus_MakeHashed(&result, distkeys, policy->numsegments);
+			if (distkeys)
+				CdbPathLocus_MakeHashed(&result, distkeys, policy->numsegments);
+			else
+			{
+				/*
+				 * It's possible that we fail to build a DistributionKey
+				 * representation for the distribution policy.
+				 */
+				CdbPathLocus_MakeStrewn(&result, policy->numsegments);
+			}
 		}
 
 		/* Rows are distributed on an unknown criterion (uniformly, we hope!) */
@@ -185,24 +236,24 @@ cdbpathlocus_from_baserel(struct PlannerInfo *root,
 CdbPathLocus
 cdbpathlocus_from_exprs(struct PlannerInfo *root,
 						List *hash_on_exprs,
+						List *hash_opfamilies,
 						int numsegments)
 {
 	CdbPathLocus locus;
 	List	   *distkeys = NIL;
-	List	   *eq = list_make1(makeString("="));
-	ListCell   *cell;
+	ListCell   *le, *lof;
 
-	foreach(cell, hash_on_exprs)
+	forboth(le, hash_on_exprs, lof, hash_opfamilies)
 	{
-		Node	   *expr = (Node *) lfirst(cell);
+		Node	   *expr = (Node *) lfirst(le);
+		Oid			opfamily = lfirst_oid(lof);
 		DistributionKey *distkey;
 
-		distkey = cdb_make_distkey_for_expr(root, expr, eq);
+		distkey = cdb_make_distkey_for_expr(root, expr, opfamily);
 		distkeys = lappend(distkeys, distkey);
 	}
 
 	CdbPathLocus_MakeHashed(&locus, distkeys, numsegments);
-	list_free_deep(eq);
 	return locus;
 }								/* cdbpathlocus_from_exprs */
 
@@ -258,12 +309,13 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 		case FLOW_PARTITIONED:
 			{
 				List	   *distkeys = NIL;
-				ListCell   *hashexprcell;
-				List	   *eq = list_make1(makeString("="));
+				ListCell   *expr_cell;
+				ListCell   *opf_cell;
 
-				foreach(hashexprcell, flow->hashExpr)
+				forboth(expr_cell, flow->hashExprs, opf_cell, flow->hashOpfamilies)
 				{
-					Node	   *expr = (Node *) lfirst(hashexprcell);
+					Node	   *expr = (Node *) lfirst(expr_cell);
+					Oid			opfamily = lfirst_oid(opf_cell);
 					TargetEntry *tle;
 					Var		   *var;
 					DistributionKey *distkey;
@@ -283,15 +335,13 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 								  exprTypmod((Node *) tle->expr),
 								  exprCollation((Node *) tle->expr),
 								  0);
-					distkey = cdb_make_distkey_for_expr(root, (Node *) var, eq);
+					distkey = cdb_make_distkey_for_expr(root, (Node *) var, opfamily);
 					distkeys = lappend(distkeys, distkey);
 				}
-				if (distkeys &&
-					!hashexprcell)
+				if (distkeys && !expr_cell)
 					CdbPathLocus_MakeHashed(&locus, distkeys, numsegments);
 				else
 					CdbPathLocus_MakeStrewn(&locus, numsegments);
-				list_free_deep(eq);
 				break;
 			}
 		default:
@@ -310,15 +360,21 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
  * and uses only rels in the given set of relids.  Returns NIL if the
  * distkey cannot be expressed in terms of the given relids and targetlist.
  */
-List *
+void
 cdbpathlocus_get_distkey_exprs(CdbPathLocus locus,
 							   Bitmapset *relids,
-							   List *targetlist)
+							   List *targetlist,
+							   List **exprs_p,
+							   List **opfamilies_p)
 {
-	List	   *result = NIL;
+	List	   *result_exprs = NIL;
+	List	   *result_opfamilies = NIL;
 	ListCell   *distkeycell;
 
 	Assert(cdbpathlocus_is_valid(locus));
+
+	*exprs_p = NIL;
+	*opfamilies_p = NIL;
 
 	if (CdbPathLocus_IsHashed(locus) || CdbPathLocus_IsHashedOJ(locus))
 	{
@@ -335,18 +391,17 @@ cdbpathlocus_get_distkey_exprs(CdbPathLocus locus,
 				item = cdbpullup_findEclassInTargetList(dk_eclass, targetlist);
 
 				if (item)
-				{
-					result = lappend(result, item);
 					break;
-				}
 			}
 			if (!item)
-				return NIL;
+				return;
+
+			result_exprs = lappend(result_exprs, item);
+			result_opfamilies = lappend_oid(result_opfamilies, distkey->dk_opfamily);
 		}
-		return result;
+		*exprs_p = result_exprs;
+		*opfamilies_p = result_opfamilies;
 	}
-	else
-		return NIL;
 }								/* cdbpathlocus_get_distkey_exprs */
 
 
@@ -436,6 +491,7 @@ cdbpathlocus_pull_above_projection(struct PlannerInfo *root,
 
 			newdistkey = makeNode(DistributionKey);
 			newdistkey->dk_eclasses = list_make1(new_ec);
+			newdistkey->dk_opfamily = olddistkey->dk_opfamily;
 
 			/* Assemble new distkeys. */
 			newdistkeys = lappend(newdistkeys, newdistkey);
@@ -575,10 +631,14 @@ cdbpathlocus_join(JoinType jointype, CdbPathLocus a, CdbPathLocus b)
 		{
 			DistributionKey *adistkey = (DistributionKey *) lfirst(acell);
 			DistributionKey *bdistkey = (DistributionKey *) lfirst(bcell);
+			DistributionKey *newdistkey;
 
-			DistributionKey *newdistkey = makeNode(DistributionKey);
+			Assert(adistkey->dk_opfamily == bdistkey->dk_opfamily);
+
+			newdistkey = makeNode(DistributionKey);
 			newdistkey->dk_eclasses = list_union_ptr(adistkey->dk_eclasses,
 													 bdistkey->dk_eclasses);
+			newdistkey->dk_opfamily = adistkey->dk_opfamily;
 
 			newdistkeys = lappend(newdistkeys, newdistkey);
 		}
@@ -812,6 +872,9 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 
 			if (!item || !IsA(item, DistributionKey))
 				goto bad;
+
+			if (!OidIsValid(item->dk_opfamily))
+				goto bad;
 		}
 	}
 	return true;
@@ -819,22 +882,3 @@ cdbpathlocus_is_valid(CdbPathLocus locus)
 bad:
 	return false;
 }								/* cdbpathlocus_is_valid */
-
-List *
-cdbpathlocus_get_distkeys_for_pathkeys(List *pathkeys)
-{
-	ListCell   *lc;
-	List	   *result = NIL;
-
-	foreach(lc, pathkeys)
-	{
-		PathKey *pk = (PathKey *) lfirst(lc);
-		DistributionKey *dk;
-
-		dk = makeNode(DistributionKey);
-		dk->dk_eclasses = list_make1(pk->pk_eclass);
-		result = lappend(result, dk);
-	}
-
-	return result;
-}

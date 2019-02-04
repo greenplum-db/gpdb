@@ -44,75 +44,6 @@ extern Datum gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(gp_distribution_policy_heap_table_check);
 
-/* Extracts array of the form {1,2,3} to an ArrayType. */
-static void
-extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp);
-
-/* Allocate GpPolicy struct from an ArrayType */
-static GpPolicy *
-set_distribution_policy (Datum array_distribution, Datum numsegments);
-
-
-/*
- * Extract len and pointer to buffer from an int16[] (vector) Datum
- * representing a PostgreSQL INT2OID type.
- */
-static void
-extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp)
-{
-	ArrayType  *array_type;
-	
-	Assert(lenp != NULL);
-	Assert(vecp != NULL);
-
-	array_type = DatumGetArrayTypeP(array_datum);
-	
-	Assert(ARR_NDIM(array_type) == 1);
-	Assert(ARR_ELEMTYPE(array_type) == INT2OID);
-	Assert(ARR_LBOUND(array_type)[0] == 1);
-	*lenp = ARR_DIMS(array_type)[0];
-	*vecp = (int16 *) ARR_DATA_PTR(array_type);
-	
-	return;
-}
-
-/* 
- * Allocate GpPolicy from a given distribution in an Array of OIDs 
- */
-static GpPolicy *
-set_distribution_policy (Datum array_distribution, Datum numsegments)
-{
-	GpPolicy  *policy = NULL;
-	
-	int nattrs = 0;
-	int16      *attrnums = NULL;
-	
-	extract_INT2OID_array(array_distribution, &nattrs, &attrnums);
-	
-	/* Validate that there is a distribution policy */
-	if (0 >= nattrs)
-	{
-		ereport(ERROR,
-				(errcode(ERRCODE_INTERNAL_ERROR),
-				errmsg("there is no distribution set in target table")));
-	}
-
-	/*
-	 * FIXME_TABLE_EXPAND: set_distribution_policy function only used for checking
-	 * the distribution policy of the relation, we set the EVIL numbers for the
-	 * segment count simply, it need to be fixed in the future.
-	 */
-	policy = makeGpPolicy(POLICYTYPE_PARTITIONED, nattrs,
-						  DatumGetInt32(numsegments));
-	
-	for (int i = 0; i < nattrs; i++)
-	{
-		policy->attrs[i] = attrnums[i];
-	}
-	
-	return policy;
-}
-
 /* 
  * Verifies the correct data distribution (given a GpPolicy) 
  * of a heap table in a segment. 
@@ -120,23 +51,13 @@ set_distribution_policy (Datum array_distribution, Datum numsegments)
 Datum
 gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 {
-	bool result = true;
-	
-	Assert(3 == PG_NARGS());
-
-	Oid relOid = PG_GETARG_OID(0);
-	Datum  array_distribution = PG_GETARG_DATUM(1);
-	Datum  numsegments = PG_GETARG_DATUM(2);
-	Oid		   *typeoids;
-
-	Assert(array_distribution);
-
-	/* Get distribution policy from arguments */
-	GpPolicy  *policy = set_distribution_policy(array_distribution,
-												numsegments);
+	Oid			relOid = PG_GETARG_OID(0);
+	bool		result = true;
 
 	/* Open relation in segment */
 	Relation rel = heap_open(relOid, AccessShareLock);
+
+	GpPolicy *policy = rel->rd_cdbpolicy;
 
 	/* Validate that the relation is a heap table */
 	if (!RelationIsHeap(rel))
@@ -153,15 +74,7 @@ gp_distribution_policy_heap_table_check(PG_FUNCTION_ARGS)
 	/* Initialize hash function and structure */
 	CdbHash *hash;
 
-	typeoids = palloc(policy->nattrs * sizeof(Oid));
-	for(int i = 0; i < policy->nattrs; i++)
-	{
-		AttrNumber	attnum = policy->attrs[i];
-		Oid			att_type = desc->attrs[attnum]->atttypid;
-
-		typeoids[i] = att_type;
-	}
-	hash = makeCdbHash(policy->numsegments, policy->nattrs, typeoids);
+	hash = makeCdbHashForRelation(rel);
 
 	while (HeapTupleIsValid(tuple))
 	{

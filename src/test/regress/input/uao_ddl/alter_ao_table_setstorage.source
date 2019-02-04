@@ -49,10 +49,10 @@ not NULL AND visimapidxid is not NULL AND relid='sto_alt_uao1_setstorage'::regcl
 -- relcache wasn't invalidated by the previous ALTER TABLE command, then the
 -- table will revert to the original distribution policy.
 ALTER TABLE sto_alt_uao1_setstorage SET WITH (reorganize='true');
-SELECT gp_segment_id, attrnums, policytype FROM gp_distribution_policy WHERE
+SELECT gp_segment_id, distkey, policytype FROM gp_distribution_policy WHERE
 localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass
 UNION
-SELECT gp_segment_id, attrnums, policytype
+SELECT gp_segment_id, distkey, policytype
 FROM gp_dist_random('gp_distribution_policy') WHERE
 localoid='alter_ao_table_setstorage_@orientation@.sto_alt_uao1_setstorage'::regclass;
 

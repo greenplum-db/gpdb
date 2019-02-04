@@ -342,7 +342,8 @@ COptTasks::ConvertToPlanStmtFromDXL
 	IMemoryPool *mp,
 	CMDAccessor *md_accessor,
 	const CDXLNode *dxlnode,
-	bool can_set_tag
+	bool can_set_tag,
+	DistributionHashOpsKind distribution_hashops
 	)
 {
 
@@ -362,6 +363,7 @@ COptTasks::ConvertToPlanStmtFromDXL
 							&plan_id_generator,
 							&motion_id_generator,
 							&param_id_generator,
+							distribution_hashops,
 							&table_list,
 							&subplans_list
 							);
@@ -755,7 +757,7 @@ COptTasks::OptimizeTask
 			{
 				// always use opt_ctxt->m_query->can_set_tag as the query_to_dxl_translator->Pquery() is a mutated Query object
 				// that may not have the correct can_set_tag
-				opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(mp, &mda, plan_dxl, opt_ctxt->m_query->canSetTag));
+			  opt_ctxt->m_plan_stmt = (PlannedStmt *) gpdb::CopyObject(ConvertToPlanStmtFromDXL(mp, &mda, plan_dxl, opt_ctxt->m_query->canSetTag, query_to_dxl_translator->GetDistributionHashOpsKind()));
 			}
 
 			CStatisticsConfig *stats_conf = optimizer_config->GetStatsConf();

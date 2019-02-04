@@ -32,26 +32,6 @@ NOTICE:  Success:
  t
 (1 row)
 
--- skip GDD scan always
-select gp_inject_fault_infinite('gdd_probe', 'skip', 1);
-NOTICE:  Success:
- gp_inject_fault_infinite 
---------------------------
- t
-(1 row)
-
--- acting like gp_request_fts_probe_scan() to wake up GDD backend so
--- 'gdd_probe' can be triggered as soon as possible
--- start_ignore
-\! gpstop -u
--- end_ignore
-select gp_wait_until_triggered_fault('gdd_probe', 1, 1);
-NOTICE:  Success:
- gp_wait_until_triggered_fault 
--------------------------------
- t
-(1 row)
-
 -- Test quoting of GUC values and database names when they're sent to segments
 set client_min_messages='warning';
 DROP DATABASE IF EXISTS "funny""db'with\\quotes";
@@ -719,14 +699,6 @@ NOTICE:  Success:
 
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);
-NOTICE:  Success:
- gp_inject_fault 
------------------
- t
-(1 row)
-
--- resume GDD scan 
-select gp_inject_fault('gdd_probe', 'reset', 1);
 NOTICE:  Success:
  gp_inject_fault 
 -----------------

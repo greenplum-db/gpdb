@@ -60,10 +60,7 @@ bin/gplogfilter         -  Filters log files
 bin/gpstart             -  Start a Greenplum Database
 bin/gpstop              -  Stop a Greenplum Database
 
-bin/gpfaultinjector     -  Cause a host or segment to fail
-
 sbin/gpaddconfig.py     -  Helper script for gpaddconfig
-sbin/gpfaultinjector.py -  Helper script for gpfaultinjector
 sbin/gpsegcopy          -  Helper script for gpexpand
 sbin/gpsegstart.py      -  Helper script for gpstart
 sbin/gpsegstop.py       -  Helper script for gpstop
@@ -136,9 +133,6 @@ commands/base.py  - Core of commands submodule  (could use some work)
   +- Command       - abstract class for executing (shell level) commands
   |
   +- SQLCommand    - abstract class for executing SQL commands
-
-commands/clsInjectFault - binary for filerep fault injection
-        \- doesn't belong as a part of commands submodule
 
 commands/gp.py     - Implements lots of subclasses of Command for various tasks
 commands/pg.py     - Like gp.py, not clear what the separation is, if any.

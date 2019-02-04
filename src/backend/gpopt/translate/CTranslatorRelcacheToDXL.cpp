@@ -614,7 +614,7 @@ CTranslatorRelcacheToDXL::RetrieveRel
 		// get distribution columns
 		if (IMDRelation::EreldistrHash == dist)
 		{
-			distr_cols = RetrieveRelDistrbutionCols(mp, gp_policy, mdcol_array, max_cols);
+			distr_cols = RetrieveRelDistributionCols(mp, gp_policy, mdcol_array, max_cols);
 		}
 
 		convert_hash_to_random = gpdb::IsChildPartDistributionMismatched(rel);
@@ -922,14 +922,14 @@ CTranslatorRelcacheToDXL::GetRelDistribution
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CTranslatorRelcacheToDXL::RetrieveRelDistrbutionCols
+//		CTranslatorRelcacheToDXL::RetrieveRelDistributionCols
 //
 //	@doc:
 //		Get distribution columns
 //
 //---------------------------------------------------------------------------
 ULongPtrArray *
-CTranslatorRelcacheToDXL::RetrieveRelDistrbutionCols
+CTranslatorRelcacheToDXL::RetrieveRelDistributionCols
 	(
 	IMemoryPool *mp,
 	GpPolicy *gp_policy,
@@ -953,6 +953,7 @@ CTranslatorRelcacheToDXL::RetrieveRelDistrbutionCols
 	for (ULONG ul = 0; ul < (ULONG) gp_policy->nattrs; ul++)
 	{
 		AttrNumber attno = gp_policy->attrs[ul];
+
 		distr_cols->Append(GPOS_NEW(mp) ULONG(GetAttributePosition(attno, attno_mapping)));
 	}
 
@@ -1631,7 +1632,7 @@ CTranslatorRelcacheToDXL::RetrieveType
 	// get array type mdid
 	CMDIdGPDB *mdid_type_array = GPOS_NEW(mp) CMDIdGPDB(gpdb::GetArrayType(oid_type));
 
-	BOOL is_redistributable = gpdb::IsGreenplumDbHashable(oid_type);
+	BOOL is_redistributable = gpdb::GetDefaultDistributionOpclassForType(oid_type) != InvalidOid;
 
 	mdid->AddRef();
 

@@ -1440,16 +1440,74 @@ gpdb::IndexExists
 	return false;
 }
 
-bool
-gpdb::IsGreenplumDbHashable
+Oid
+gpdb::GetDefaultDistributionOpclassForType
 	(
 	Oid typid
 	)
 {
 	GP_WRAP_START;
 	{
-		/* catalog tables: pg_type */
-		return isGreenplumDbHashable(typid);
+		/* catalog tables: pg_type, pg_opclass */
+		return cdb_default_distribution_opclass_for_type(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
+gpdb::GetHashProcInOpfamily
+	(
+	Oid opfamily,
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		/* catalog tables: pg_amproc, pg_type, pg_opclass */
+		return cdb_hashproc_in_opfamily(opfamily, typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
+gpdb::IsLegacyCdbHashFunction
+	(
+	Oid funcid
+	)
+{
+	GP_WRAP_START;
+	{
+		return isLegacyCdbHashFunction(funcid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
+gpdb::GetLegacyCdbHashOpclassForBaseType
+	(
+	Oid typid
+	)
+{
+	GP_WRAP_START;
+	{
+		return get_legacy_cdbhash_opclass_for_base_type(typid);
+	}
+	GP_WRAP_END;
+	return false;
+}
+
+Oid
+gpdb::GetOpclassFamily
+	(
+	Oid opclass
+	)
+{
+	GP_WRAP_START;
+	{
+		return get_opclass_family(opclass);
 	}
 	GP_WRAP_END;
 	return false;
@@ -2742,12 +2800,13 @@ int32
 gpdb::CdbHashConstList
 	(
 	List *constants,
-	int num_segments
+	int num_segments,
+	Oid *hashfuncs
 	)
 {
 	GP_WRAP_START;
 	{
-		return cdbhash_const_list(constants, num_segments);
+		return cdbhash_const_list(constants, num_segments, hashfuncs);
 	}
 	GP_WRAP_END;
 	return 0;
@@ -2944,9 +3003,11 @@ gpdb::InjectFaultInOptTasks
 	FaultInjectorIdentifier_e identifier
 	)
 {
-	// use gpfaultinjector to activate
-	// e.g. gpfaultinjector -f opt_task_allocate_string_buffer -y <fault_type> --seg_dbid 1
-	// use 'reset' as <fault_type> to clear injected fault
+	/*
+	 * To activate this fault injection point, use gp_inject_fault
+	 * extension with opt_task_allocate_string_buffer as the fault
+	 * name.
+	 */
 	GP_WRAP_START;
 	{
 		return FaultInjector_InjectFaultIfSet(identifier, DDLNotSpecified, "", "");

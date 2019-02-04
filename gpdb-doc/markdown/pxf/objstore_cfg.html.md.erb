@@ -6,7 +6,7 @@ You can use PXF to access Azure Data Lake, Azure Blob Storage, Google Cloud Stor
 
 *If you do not plan to use the PXF object store connectors, then you do not need to perform this procedure.*
 
-## <a id="s3_cfg"></a>About Object Store Configuration
+## <a id="about_cfg"></a>About Object Store Configuration
 
 To access data in an object store, you must provide a server location and client credentials. PXF provides a template configuration file for each Hadoop and object store connector.  These server template configuration files, located in the `$PXF_CONF/templates/` directory, identify the minimum set of properties that you must configure to use the connector.
 
@@ -37,7 +37,7 @@ For example, the contents of the `s3-site.xml` template file follow:
 </configuration>
 ```
 
-<div class="note warning">You specify your object store credentials to PXF in clear text. PXF does not encrypt these credentials.</div>
+<div class="note">You specify object store credentials to PXF in clear text in configuration files.</div>
 
 When you configure a PXF object store connector, you add at least one named PXF server configuration for the connector. You:
 
@@ -111,10 +111,7 @@ The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. Whe
 | fs.s3a.access.key | The AWS account access key ID. | Your access key. |
 | fs.s3a.secret.key | The secret key associated with the AWS access key ID. | Your secret key. |
 
-<div class="note warning">You can override an S3 server configuration by directly specifying the S3 access ID and secret key via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. For example:<br>
-<pre>CREATE EXTERNAL TABLE pxf_ext_tbl(name text, orders int)
-  LOCATION ('pxf://BUCKET/dir/file.txt?PROFILE=s3:text&SERVER=s3srvcfg<b>&accesskey=YOURKEY&secretkey=YOURSECRET</b>')
-FORMAT 'TEXT' (delimiter=E',');</pre><br>As with the credentials that you configure in the s3-site.xml file, these keys are sent in clear text, PXF does not encrypt them. Do not use this method of passing credentials in a production environment.</div>
+You can override an S3 server configuration by directly specifying the S3 access ID and secret key via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. Refer to [Overriding the S3 Server Configuration](access_objstore.html#s3_override) for additional information.
 
 ## <a id="cfg_proc"></a>Example Configuration Procedure
 

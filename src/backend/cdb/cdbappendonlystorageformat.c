@@ -196,7 +196,7 @@ AppendOnlyStorageFormat_AddBlockHeaderChecksums(
 			case AoHeaderKind_NonBulkDenseContent:
 				elog(LOG,
 					 "Append-Only storage make with checksums block header result: block_bytes_0_3 0x%X, block_bytes_4_7 0x%X, "
-					 "header checksum 0x%X, block checksum 0x%X, overallBlockLen %d",
+					 "header checksum 0x%08X, block checksum 0x%08X, overallBlockLen %d",
 					 blockHeader->smallcontent_bytes_0_3,
 					 blockHeader->smallcontent_bytes_4_7,
 					 *headerChecksumPtr,
@@ -217,7 +217,7 @@ AppendOnlyStorageFormat_AddBlockHeaderChecksums(
 						 "Append-Only storage make with checksums Bulk Dense Content header result: "
 						 "bulkdensecontent_bytes_0_3 0x%X, bulkdensecontent_bytes_4_7 0x%X "
 						 "bulkdensecontent_ext_bytes_0_3 0x%X, bulkdensecontent_ext_bytes_4_7 0x%X, "
-						 "header checksum 0x%X, block checksum 0x%X, overallBlockLen %d",
+						 "header checksum 0x%08X, block checksum 0x%08X, overallBlockLen %d",
 						 bulkDenseHeader->bulkdensecontent_bytes_0_3,
 						 bulkDenseHeader->bulkdensecontent_bytes_4_7,
 						 bulkDenseHeaderExt->bulkdensecontent_ext_bytes_0_3,
@@ -384,7 +384,7 @@ AppendOnlyStorageFormat_SmallContentHeaderStr(
 					"smallcontent_bytes_0_3 0x%X, smallcontent_bytes_4_7 0x%X, "
 					"headerKind = %d, "
 					"executorBlockKind = %d, "
-					"rowCount = %d, usingChecksums = %s, header checksum 0x%X, block checksum 0x%X, "
+					"rowCount = %d, usingChecksums = %s, header checksum 0x%08X, block checksum 0x%08X, "
 					"dataLength %d, compressedLength %d, overallBlockLen %d",
 					blockHeader->smallcontent_bytes_0_3,
 					blockHeader->smallcontent_bytes_4_7,
@@ -458,7 +458,7 @@ AppendOnlyStorageFormat_LargeContentHeaderStr(
 					"largecontent_bytes_0_3 0x%X, largecontent_bytes_4_7 0x%X, "
 					"headerKind = %d, "
 					"executorBlockKind = %d, "
-					"rowCount = %d, usingChecksums = %s, header checksum 0x%X, block checksum 0x%X, "
+					"rowCount = %d, usingChecksums = %s, header checksum 0x%08X, block checksum 0x%08X, "
 					"largeContentLength %d, overallBlockLen %d",
 					blockHeader->largecontent_bytes_0_3,
 					blockHeader->largecontent_bytes_4_7,
@@ -534,7 +534,7 @@ AppendOnlyStorageFormat_NonBulkDenseContentHeaderStr(
 					"nonbulkdensecontent_bytes_0_3 0x%X, nonbulkdensecontent_bytes_4_7 0x%X, "
 					"headerKind = %d, "
 					"executorBlockKind = %d, "
-					"rowCount = %d, usingChecksums = %s, header checksum 0x%X, block checksum 0x%X, "
+					"rowCount = %d, usingChecksums = %s, header checksum 0x%08X, block checksum 0x%08X, "
 					"dataLength %d, overallBlockLen %d",
 					blockHeader->nonbulkdensecontent_bytes_0_3,
 					blockHeader->nonbulkdensecontent_bytes_4_7,
@@ -626,7 +626,7 @@ AppendOnlyStorageFormat_BulkDenseContentHeaderStr(
 					"bulkdensecontent_ext_bytes_0_3 0x%X, bulkdensecontent_ext_bytes_4_7 0x%X, "
 					"headerKind = %d, "
 					"executorBlockKind = %d, "
-					"rowCount = %d, usingChecksums = %s, header checksum 0x%X, block checksum 0x%X, "
+					"rowCount = %d, usingChecksums = %s, header checksum 0x%08X, block checksum 0x%08X, "
 					"dataLength %d, compressedLength %d, overallBlockLen %d",
 					blockHeader->bulkdensecontent_bytes_0_3,
 					blockHeader->bulkdensecontent_bytes_4_7,

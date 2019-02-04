@@ -62,8 +62,8 @@ void adjust_setop_arguments(PlannerInfo *root, List *planlist, GpSetOpType setop
 extern
 Motion* make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan);
 
-extern
-Motion* make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashexprs);
+extern Motion *make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashexprs, List *hashopfamilies);
+extern Motion *make_motion_hash_exprs(PlannerInfo *root, Plan *subplan, List *hashexprs);
 
 extern
 Motion* make_motion_gather_to_QD(PlannerInfo *root, Plan *subplan, List *sortPathKeys);

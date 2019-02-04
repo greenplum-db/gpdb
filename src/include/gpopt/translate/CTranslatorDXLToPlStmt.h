@@ -679,7 +679,7 @@ namespace gpdxl
 			IntoClause *TranslateDXLPhyCtasToIntoClause(const CDXLPhysicalCTAS *dxlop);
 			
 			// translate the distribution policy for a DXL physical CTAS operator
-			GpPolicy *TranslateDXLPhyCtasToDistrPolicy(const CDXLPhysicalCTAS *dxlop);
+			GpPolicy *TranslateDXLPhyCtasToDistrPolicy(const CDXLPhysicalCTAS *dxlop, List *target_list);
 
 			// translate CTAS storage options
 			List *TranslateDXLCtasStorageOptions(CDXLCtasStorageOptions::CDXLCtasOptionArray *ctas_storage_options);

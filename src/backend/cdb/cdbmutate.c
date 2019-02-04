@@ -15,6 +15,7 @@
 
 #include "postgres.h"
 
+#include "access/hash.h"
 #include "access/xact.h"
 #include "parser/parsetree.h"	/* for rt_fetch() */
 #include "parser/parse_oper.h"	/* for compatible_oper_opid() */
@@ -36,6 +37,7 @@
 #include "optimizer/planmain.h"
 #include "nodes/makefuncs.h"
 
+#include "commands/defrem.h"
 #include "commands/tablecmds.h"
 #include "commands/tablespace.h"
 #include "commands/trigger.h"
@@ -47,7 +49,7 @@
 #include "catalog/pg_trigger.h"
 
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbhash.h"		/* isGreenplumDbHashable() */
+#include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbpartition.h"
@@ -95,9 +97,9 @@ static Node *pre_dispatch_function_evaluation_mutator(Node *node,
 static void assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode);
 
 static void add_slice_to_motion(Motion *motion,
-					MotionType motionType, List *hashExpr,
-					bool isBroadcast,
-					int numsegments);
+					MotionType motionType,
+					List *hashExprs, List *hashOpfamilies, int numsegments,
+					bool isBroadcast);
 
 static Node *apply_motion_mutator(Node *node, ApplyMotionState *context);
 
@@ -137,17 +139,14 @@ allConstantValuesClause(Plan *node)
 }
 
 static void
-directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
+directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy, Oid *hashfuncs)
 {
 	int			i;
-	CdbHash    *h;
 	ListCell   *cell = NULL;
 	bool		directDispatch;
-	Oid		   *typeoids;
 	Datum	   *values;
 	bool	   *nulls;
 
-	typeoids = (Oid *) palloc(targetPolicy->nattrs * sizeof(Oid));
 	values = (Datum *) palloc(targetPolicy->nattrs * sizeof(Datum));
 	nulls = (bool *) palloc(targetPolicy->nattrs * sizeof(bool));
 
@@ -160,12 +159,10 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 	directDispatch = true;
 	for (i = 0; i < targetPolicy->nattrs; i++)
 	{
-		Const	   *c;
-		TargetEntry *tle;
-
 		foreach(cell, plan->targetlist)
 		{
-			tle = (TargetEntry *) lfirst(cell);
+			TargetEntry *tle = (TargetEntry *) lfirst(cell);
+			Const	   *c;
 
 			Assert(tle->expr);
 
@@ -181,7 +178,6 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 
 			c = (Const *) tle->expr;
 
-			typeoids[i] = c->consttype;
 			values[i] = c->constvalue;
 			nulls[i] = c->constisnull;
 			break;
@@ -195,8 +191,9 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 	if (directDispatch)
 	{
 		uint32		hashcode;
+		CdbHash    *h;
 
-		h = makeCdbHash(targetPolicy->numsegments, targetPolicy->nattrs, typeoids);
+		h = makeCdbHash(targetPolicy->numsegments, targetPolicy->nattrs, hashfuncs);
 
 		cdbhashinit(h);
 		for (i = 0; i < targetPolicy->nattrs; i++)
@@ -210,7 +207,6 @@ directDispatchCalculateHash(Plan *plan, GpPolicy *targetPolicy)
 
 		elog(DEBUG1, "sending single row constant insert to content %d", hashcode);
 	}
-	pfree(typeoids);
 	pfree(values);
 	pfree(nulls);
 }
@@ -226,7 +222,9 @@ get_partitioned_policy_from_flow(Plan *plan)
 {
 	/* Find out what the flow is partitioned on */
 	List	   *policykeys;
-	ListCell   *exp1;
+	List	   *policyopclasses;
+	ListCell   *exp_cell;
+	ListCell   *opf_cell;
 
 	/*
 	 * Is it a Hashed distribution?
@@ -244,15 +242,25 @@ get_partitioned_policy_from_flow(Plan *plan)
 	 * but hashExpr are not set because we have lost track of the
 	 * expressions it's hashed on.
 	 */
-	if (!plan->flow->hashExpr)
+	if (!plan->flow->hashExprs)
 		return NULL;
 
 	policykeys = NIL;
-	foreach(exp1, plan->flow->hashExpr)
+	policyopclasses = NIL;
+	forboth(exp_cell, plan->flow->hashExprs,
+			opf_cell, plan->flow->hashOpfamilies)
 	{
-		Expr	   *var1 = (Expr *) lfirst(exp1);
+		Expr	   *var1 = (Expr *) lfirst(exp_cell);
+		Oid			opf1 = lfirst_oid(opf_cell);
 		AttrNumber	n;
 		bool		found_expr = false;
+
+		/*
+		 * Right side variable may be encapsulated by a relabel node.
+		 * Motion, however, does not care about relabel nodes.
+		 */
+		if (IsA(var1, RelabelType))
+			var1 = ((RelabelType *) var1)->arg;
 
 		/* See if this Expr is a column of the result table */
 
@@ -263,13 +271,6 @@ get_partitioned_policy_from_flow(Plan *plan)
 
 			if (target->resjunk)
 				continue;
-
-			/*
-			 * Right side variable may be encapsulated by a relabel node.
-			 * Motion, however, does not care about relabel nodes.
-			 */
-			if (IsA(var1, RelabelType))
-				var1 = ((RelabelType *) var1)->arg;
 
 			/*
 			 * If subplan expr is a Var, copy to preserve its EXPLAIN info.
@@ -299,6 +300,8 @@ get_partitioned_policy_from_flow(Plan *plan)
 				 * If it is, use it to partition the result table, to avoid
 				 * unnecessary redistribution of data
 				 */
+				Oid			opclass;
+
 				Assert(list_length(policykeys) < MaxPolicyAttributeNumber);
 
 				if (list_member_int(policykeys, n))
@@ -307,7 +310,28 @@ get_partitioned_policy_from_flow(Plan *plan)
 							 errmsg("duplicate DISTRIBUTED BY column '%s'",
 									target->resname ? target->resname : "???")));
 
+
+				/*
+				 * We know the operator family to use, but the problem is, we
+				 * don't know the exact operator class within the family. In
+				 * the common case, the datatype has exactly one default
+				 * operator, and you usually use only that. So look up the
+				 * default operator class for the datatype, and if it's in
+				 * the same operator family, use that.
+				 *
+				 * If that fails, we could do some further checks. We could
+				 * check if there is exactly one operator class for the
+				 * datatype in the operator family, and if so, use that.
+				 * But it doesn't seem worth adding much extra code to deal
+				 * with more obscure cases. Deriving the distribution key
+				 * from the query plan is a heuristic, anyway.
+				 */
+				opclass = GetDefaultOpClass(new_var->vartype, HASH_AM_OID);
+				if (get_opclass_family(opclass) != opf1)
+					continue;	/* not compatible */
+
 				policykeys = lappend_int(policykeys, n);
+				policyopclasses = lappend_oid(policyopclasses, opclass);
 				found_expr = true;
 				break;
 			}
@@ -330,7 +354,9 @@ get_partitioned_policy_from_flow(Plan *plan)
 	 * anyway. But presumably if the user had expanded the cluster, they want
 	 * to use all the segments for new tables.
 	 */
-	return createHashPartitionedPolicy(policykeys, GP_POLICY_DEFAULT_NUMSEGMENTS);
+	return createHashPartitionedPolicy(policykeys,
+									   policyopclasses,
+									   GP_POLICY_DEFAULT_NUMSEGMENTS);
 }
 
 
@@ -425,6 +451,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					{
 						int			i;
 						List	   *policykeys = NIL;
+						List	   *policyopclasses = NIL;
 
 						for (i = 0; i < list_length(plan->targetlist); i++)
 						{
@@ -434,15 +461,19 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 							if (target)
 							{
 								Oid			typeOid = exprType((Node *) target->expr);
+								Oid			opclass;
 
-								if (isGreenplumDbHashable(typeOid))
+								opclass = cdb_default_distribution_opclass_for_type(typeOid);
+								if (OidIsValid(opclass))
 								{
 									policykeys = lappend_int(policykeys, i + 1);
+									policyopclasses = lappend_oid(policyopclasses, opclass);
 									break;
 								}
 							}
 						}
 						targetPolicy = createHashPartitionedPolicy(policykeys,
+																   policyopclasses,
 																   GP_POLICY_DEFAULT_NUMSEGMENTS);
 					}
 
@@ -522,14 +553,24 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 					 * the target list will correspond to the attributes of
 					 * the target relation in order.
 					 */
-					List	   *hashExpr;
+					List	   *hashExprs;
+					List	   *hashOpfamilies;
 
-					hashExpr = getExprListFromTargetList(plan->targetlist,
-														 targetPolicy->nattrs,
-														 targetPolicy->attrs,
-														 true);
+					hashExprs = getExprListFromTargetList(plan->targetlist,
+														  targetPolicy->nattrs,
+														  targetPolicy->attrs,
+														  true);
+					hashOpfamilies = NIL;
+					for (int i = 0; i < targetPolicy->nattrs; i++)
+					{
+						Oid			opfamily = get_opclass_family(targetPolicy->opclasses[i]);
 
-					if (!repartitionPlan(plan, false, false, hashExpr, numsegments))
+						hashOpfamilies = lappend_oid(hashOpfamilies, opfamily);
+					}
+
+					if (!repartitionPlan(plan, false, false,
+										 hashExprs, hashOpfamilies,
+										 numsegments))
 						ereport(ERROR,
 								(errcode(ERRCODE_GP_FEATURE_NOT_YET),
 								 errmsg("cannot parallelize that SELECT INTO yet")));
@@ -805,7 +846,8 @@ apply_motion_mutator(Node *node, ApplyMotionState *context)
 
 		case MOVEMENT_REPARTITION:
 			newnode = (Node *) make_hashed_motion(plan,
-												  flow->hashExpr,
+												  flow->hashExprs,
+												  flow->hashOpfamilies,
 												  true	/* useExecutorVarFormat */,
 												  flow->numsegments
 				);
@@ -925,10 +967,15 @@ assignMotionID(Node *newnode, ApplyMotionState *context, Node *oldnode)
 
 static void
 add_slice_to_motion(Motion *motion,
-					MotionType motionType, List *hashExpr,
-					bool isBroadcast,
-					int numsegments)
+					MotionType motionType,
+					List *hashExprs, List *hashOpfamilies, int numsegments,
+					bool isBroadcast)
 {
+	Oid		   *hashFuncs;
+	ListCell   *expr_cell;
+	ListCell   *opf_cell;
+	int			i;
+
 	Assert(numsegments > 0);
 	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
 	{
@@ -936,48 +983,25 @@ add_slice_to_motion(Motion *motion,
 	}
 
 	AssertImply(isBroadcast, motionType == MOTIONTYPE_FIXED);
+	Assert(list_length(hashExprs) == list_length(hashOpfamilies));
+
+	hashFuncs = palloc(list_length(hashExprs) * sizeof(Oid));
+	i = 0;
+	forboth(expr_cell, hashExprs, opf_cell, hashOpfamilies)
+	{
+		Node	   *expr = lfirst(expr_cell);
+		Oid			opfamily = lfirst_oid(opf_cell);
+		Oid			typeoid = exprType(expr);
+
+		hashFuncs[i++] = cdb_hashproc_in_opfamily(opfamily, typeoid);
+	}
 
 	motion->motionType = motionType;
-	motion->hashExpr = hashExpr;
-	motion->hashDataTypes = NULL;
+	motion->hashExprs = hashExprs;
+	motion->hashFuncs = hashFuncs;
 	motion->isBroadcast = isBroadcast;
 
 	Assert(motion->plan.lefttree);
-
-	/* Build list of hash key expression data types. */
-	if (hashExpr)
-	{
-		List	   *eq = list_make1(makeString("="));
-		ListCell   *cell;
-
-		foreach(cell, hashExpr)
-		{
-			Node	   *expr = (Node *) lfirst(cell);
-			Oid			typeoid = exprType(expr);
-			Oid			eqopoid;
-			Oid			lefttype;
-			Oid			righttype;
-
-			/* Get oid of the equality operator for this data type. */
-			eqopoid = compatible_oper_opid(eq, typeoid, typeoid, true);
-			if (eqopoid == InvalidOid)
-				ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-								errmsg("no equality operator for typid %d",
-									   typeoid)));
-
-			/* Get the equality operator's operand type. */
-			op_input_types(eqopoid, &lefttype, &righttype);
-			Assert(lefttype == righttype);
-
-			/* If this type is a domain type, get its base type. */
-			if (get_typtype(lefttype) == 'd')
-				lefttype = getBaseType(lefttype);
-
-			motion->hashDataTypes = lappend_oid(motion->hashDataTypes, lefttype);
-		}
-		list_free_deep(eq);
-	}
-
 
 	/* Attach a descriptive Flow. */
 	switch (motion->motionType)
@@ -985,7 +1009,8 @@ add_slice_to_motion(Motion *motion,
 		case MOTIONTYPE_HASH:
 			motion->plan.flow = makeFlow(FLOW_PARTITIONED, numsegments);
 			motion->plan.flow->locustype = CdbLocusType_Hashed;
-			motion->plan.flow->hashExpr = copyObject(motion->hashExpr);
+			motion->plan.flow->hashExprs = copyObject(motion->hashExprs);
+			motion->plan.flow->hashOpfamilies = copyObject(hashOpfamilies);
 
 			break;
 		case MOTIONTYPE_FIXED:
@@ -1033,7 +1058,7 @@ make_union_motion(Plan *lefttree, bool useExecutorVarFormat, int numsegments)
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, false, numsegments);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
 	return motion;
 }
 
@@ -1048,34 +1073,27 @@ make_sorted_union_motion(PlannerInfo *root, Plan *lefttree, int numSortCols,
 	motion = make_motion(root, lefttree,
 						 numSortCols, sortColIdx, sortOperators, collations, nullsFirst,
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, false, numsegments);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NIL, NIL, numsegments, false);
 	return motion;
 }
 
 Motion *
 make_hashed_motion(Plan *lefttree,
-				   List *hashExpr,
+				   List *hashExprs,
+				   List *hashOpfamilies,
 				   bool useExecutorVarFormat,
 				   int numsegments)
 {
 	Motion	   *motion;
-	ListCell   *lc;
 
-	/*
-	 * The expressions used as the distribution key must be "GPDB-hashable".
-	 * There's also an assertion for this in setrefs.c, but better to catch
-	 * these as early as possible.
-	 */
-	foreach(lc, hashExpr)
-	{
-		if (!isGreenplumDbHashable(exprType((Node *) lfirst(lc))))
-			elog(ERROR, "cannot use expression as distribution key, because it is not hashable");
-	}
+	Assert(list_length(hashExprs) == list_length(hashOpfamilies));
 
 	motion = make_motion(NULL, lefttree,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
-	add_slice_to_motion(motion, MOTIONTYPE_HASH, hashExpr, false, numsegments);
+	add_slice_to_motion(motion, MOTIONTYPE_HASH,
+						hashExprs, hashOpfamilies, numsegments,
+						false);
 	return motion;
 }
 
@@ -1089,7 +1107,9 @@ make_broadcast_motion(Plan *lefttree, bool useExecutorVarFormat,
 						 0, NULL, NULL, NULL, NULL, /* no ordering */
 						 useExecutorVarFormat);
 
-	add_slice_to_motion(motion, MOTIONTYPE_FIXED, NULL, true, numsegments);
+	add_slice_to_motion(motion, MOTIONTYPE_FIXED,
+						NIL, NIL, numsegments,
+						true);
 	return motion;
 }
 
@@ -1113,7 +1133,9 @@ make_explicit_motion(Plan *lefttree, AttrNumber segidColIdx, bool useExecutorVar
 	 */
 	numsegments = lefttree->flow->numsegments;
 
-	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT, NULL, false, numsegments);
+	add_slice_to_motion(motion, MOTIONTYPE_EXPLICIT,
+						NIL, NIL, numsegments,
+						false);
 	return motion;
 }
 
@@ -1562,10 +1584,23 @@ make_reshuffle(PlannerInfo *root,
 		find_segid_column(reshufflePlan->plan.targetlist,
 						  resultRelationsIdx);
 
+	reshufflePlan->numPolicyAttrs = policy->nattrs;
+
+	reshufflePlan->policyAttrs = palloc(policy->nattrs * sizeof(AttrNumber));
+	reshufflePlan->policyHashFuncs = palloc(policy->nattrs * sizeof(Oid));
+
 	for(i = 0; i < policy->nattrs; i++)
 	{
-		reshufflePlan->policyAttrs = lappend_int(reshufflePlan->policyAttrs,
-												 policy->attrs[i]);
+		AttrNumber	attnum = policy->attrs[i];
+		Oid			opfamily = get_opclass_family(policy->opclasses[i]);
+		TargetEntry *tle = list_nth(subplan->targetlist, attnum - 1);
+		Oid			typeoid = exprType((Node *) tle->expr);
+		Oid			hashFunc;
+
+		hashFunc = get_opfamily_proc(opfamily, typeoid, typeoid, HASHPROC);
+
+		reshufflePlan->policyAttrs[i] = policy->attrs[i];
+		reshufflePlan->policyHashFuncs[i] = hashFunc;
 	}
 
 	reshufflePlan->ptype = policy->ptype;
@@ -1818,7 +1853,13 @@ shareinput_walker(SHAREINPUT_MUTATOR f, Node *node, PlannerInfo *root)
 			if (root->glob->finalrtable == NULL)
 			{
 				rel = find_base_rel(root, subqscan->scan.scanrelid);
-				Assert(rel->subplan == subqscan->subplan);
+				/*
+				 * The Assert() on RelOptInfo's subplan being
+				 * same as the subqueryscan's subplan, is valid
+				 * in Upstream but for not for GPDB, since we
+				 * create a new copy of the subplan if two
+				 * SubPlans refer to the same initplan.
+				 */
 				subroot = rel->subroot;
 				glob->share.curr_rtable = subroot->parse->rtable;
 			}
@@ -2681,29 +2722,15 @@ assign_plannode_id(PlannedStmt *stmt)
  * Hash a list of const values with GPDB's hash function
  */
 int32
-cdbhash_const_list(List *plConsts, int iSegments)
+cdbhash_const_list(List *plConsts, int iSegments, Oid *hashfuncs)
 {
 	ListCell   *lc;
 	CdbHash    *pcdbhash;
-	Oid		   *typeoids;
 	int			i;
 
 	Assert(0 < list_length(plConsts));
 
-	typeoids = palloc(list_length(plConsts) * sizeof(Oid));
-
-	i = 0;
-	foreach(lc, plConsts)
-	{
-		Const	   *pconst = (Const *) lfirst(lc);
-
-		Assert(IsA(pconst, Const));
-
-		typeoids[i] = pconst->consttype;
-		i++;
-	}
-
-	pcdbhash = makeCdbHash(iSegments, list_length(plConsts), typeoids);
+	pcdbhash = makeCdbHash(iSegments, list_length(plConsts), hashfuncs);
 
 	cdbhashinit(pcdbhash);
 
@@ -2717,8 +2744,6 @@ cdbhash_const_list(List *plConsts, int iSegments)
 		cdbhash(pcdbhash, i + 1, pconst->constvalue, pconst->constisnull);
 		i++;
 	}
-
-	pfree(typeoids);
 
 	return cdbhashreduce(pcdbhash);
 }
@@ -3430,7 +3455,7 @@ pre_dispatch_function_evaluation_mutator(Node *node,
  */
 void
 sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
-						GpPolicy **targetPolicy, List **hashExpr)
+						GpPolicy **targetPolicy, List **hashExprs_p, List **hashOpfamilies_p)
 {
 	ListCell   *cell;
 	bool		typesOK = true;
@@ -3547,24 +3572,16 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 	}
 	relation_close(rel, NoLock);
 
-	*hashExpr = getExprListFromTargetList(plan->targetlist,
-										 (*targetPolicy)->nattrs,
-										 (*targetPolicy)->attrs,
-										 false);
-	/* check the types. */
-	foreach(cell, *hashExpr)
+	*hashExprs_p = getExprListFromTargetList(plan->targetlist,
+										   (*targetPolicy)->nattrs,
+										   (*targetPolicy)->attrs,
+										   false);
+	*hashOpfamilies_p = NIL;
+	for (int i = 0; i < (*targetPolicy)->nattrs; i++)
 	{
-		Expr	   *elem = NULL;
-		Oid			att_type = InvalidOid;
+		Oid			opfamily = get_opclass_family((*targetPolicy)->opclasses[i]);
 
-		elem = (Expr *) lfirst(cell);
-		att_type = exprType((Node *) elem);
-		Assert(att_type != InvalidOid);
-		if (!isGreenplumDbHashable(att_type))
-		{
-			typesOK = false;
-			break;
-		}
+		*hashOpfamilies_p = lappend_oid(*hashOpfamilies_p, opfamily);
 	}
 
 	/*
@@ -3573,47 +3590,71 @@ sri_optimize_for_result(PlannerInfo *root, Plan *plan, RangeTblEntry *rte,
 	 * GPDB_90_MERGE_FIXME: Is that the right thing to do? Couldn't we
 	 * direct dispatch to any arbitrarily chosen segment, in that case?
 	 */
-	if ((*targetPolicy)->nattrs == 0)
-		typesOK = false;
-
-	/*
-	 * all constants in values clause -- no need to repartition.
-	 */
-	if (typesOK && allConstantValuesClause(plan))
+	if (allConstantValuesClause(plan))
 	{
-		Result	   *rNode = (Result *) plan;
+		int			numHashAttrs;
+		AttrNumber *hashAttrs;
+		Oid		   *hashFuncs;
 		int			i;
 
-		/*
-		 * If this table has child tables, we need to find out destination
-		 * partition.
-		 *
-		 * See partition check above.
-		 */
+		numHashAttrs = (*targetPolicy)->nattrs;
 
-		if (root->config->gp_enable_direct_dispatch)
+		if (numHashAttrs == 0)
+			typesOK = false;
+
+		/* Get hash functions for the columns. */
+		hashFuncs = palloc(numHashAttrs * sizeof(Oid));
+		i = 0;
+		foreach(cell, *hashExprs_p)
 		{
-			directDispatchCalculateHash(plan, *targetPolicy);
+			Expr	   *elem = (Expr *) lfirst(cell);
+			Oid			att_type = exprType((Node *) elem);
+			Oid			opclass = (*targetPolicy)->opclasses[i];
+
+			hashFuncs[i++] =
+				cdb_hashproc_in_opfamily(get_opclass_family(opclass),
+										 att_type);
+		}
+
+		/*
+		 * all constants in values clause -- no need to repartition.
+		 */
+		if (typesOK)
+		{
+			Result	   *rNode = (Result *) plan;
+			int			i;
 
 			/*
-			 * we now either have a hash-code, or we've marked the plan
-			 * non-directed.
+			 * If this table has child tables, we need to find out destination
+			 * partition.
+			 *
+			 * See partition check above.
 			 */
+
+			/* copy the attributes array */
+			hashAttrs = palloc(numHashAttrs * sizeof(AttrNumber));
+			for (i = 0; i < numHashAttrs; i++)
+				hashAttrs[i] = (*targetPolicy)->attrs[i];
+
+			if (root->config->gp_enable_direct_dispatch)
+			{
+				directDispatchCalculateHash(plan, *targetPolicy, hashFuncs);
+
+				/*
+				 * we now either have a hash-code, or we've marked the plan
+				 * non-directed.
+				 */
+			}
+
+			rNode->numHashFilterCols = numHashAttrs;
+			rNode->hashFilterColIdx = hashAttrs;
+			rNode->hashFilterFuncs = hashFuncs;
+
+			/* Build a partitioned flow */
+			plan->flow->flotype = FLOW_PARTITIONED;
+			plan->flow->locustype = CdbLocusType_Hashed;
+			plan->flow->hashExprs = *hashExprs_p;
+			plan->flow->hashOpfamilies = *hashOpfamilies_p;
 		}
-
-		/* Set a hash filter in the Result plan node */
-		rNode->numHashFilterCols = (*targetPolicy)->nattrs;
-		rNode->hashFilterColIdx = palloc((*targetPolicy)->nattrs * sizeof(AttrNumber));
-		for (i = 0; i < (*targetPolicy)->nattrs; i++)
-		{
-			Assert((*targetPolicy)->attrs[i] > 0);
-
-			rNode->hashFilterColIdx[i] = (*targetPolicy)->attrs[i];
-		}
-
-		/* Build a partitioned flow */
-		plan->flow->flotype = FLOW_PARTITIONED;
-		plan->flow->locustype = CdbLocusType_Hashed;
-		plan->flow->hashExpr = *hashExpr;
 	}
 }

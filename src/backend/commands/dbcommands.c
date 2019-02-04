@@ -523,8 +523,6 @@ createdb(const CreatedbStmt *stmt)
 	new_record[Anum_pg_database_datfrozenxid - 1] = TransactionIdGetDatum(src_frozenxid);
 	new_record[Anum_pg_database_datminmxid - 1] = TransactionIdGetDatum(src_minmxid);
 	new_record[Anum_pg_database_dattablespace - 1] = ObjectIdGetDatum(dst_deftablespace);
-	/* new created dbs all use jump hash */
-	new_record[Anum_pg_database_hashmethod - 1] = Int32GetDatum(JUMP_HASH_METHOD);
 	/*
 	 * We deliberately set datacl to default (NULL), rather than copying it
 	 * from the template database.  Copying it would be a bad idea when the
@@ -2105,21 +2103,6 @@ get_database_name(Oid dbid)
 	}
 	else
 		result = NULL;
-
-	return result;
-}
-
-int
-get_database_hash_method(Oid dbid)
-{
-	HeapTuple	dbtuple;
-	int         result;
-
-	dbtuple = SearchSysCache1(DATABASEOID, ObjectIdGetDatum(dbid));
-	if (!HeapTupleIsValid(dbtuple))
-		elog(ERROR, "cache lookup failed for database %u", dbid);
-	result = ((Form_pg_database) GETSTRUCT(dbtuple))->hashmethod;
-	ReleaseSysCache(dbtuple);
 
 	return result;
 }

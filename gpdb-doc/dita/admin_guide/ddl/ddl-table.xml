@@ -231,7 +231,109 @@
 </codeph></codeblock>
           </p>
           <note type="important">A Primary Key is always the Distribution Key for a table. If no
-              Primary Key exists, but a Unique Key exists, this is the Distribution Key for the table.</note>
+            Primary Key exists, but a Unique Key exists, this is the Distribution Key for the
+            table.</note>
+        </body>
+      </topic>
+      <topic id="topic36" xml:lang="en">
+        <title>Custom Distribution Key Hash Functions</title>
+        <body>
+          <p>The hash function used for hash distribution policy is defined by the hash operator
+            class for the column's data type. As the default Greenplum Database uses the data type's
+            default hash operator class, the same operator class used for hash joins and hash
+            aggregates, which is suitable for most use cases. However, you can declare a non-default
+            hash operator class in the <codeph>DISTRIBUTED BY</codeph> clause. </p>
+          <p> Using a custom hash operator class can be useful to support co-located joins on a
+            different operator than the default equality operator (<codeph>=</codeph>). </p>
+          <section>
+            <title>Example Custom Hash Operator Class</title>
+            <p>This example creates a custom hash operator class for the integer data type that is
+              used to improve query performance. The operator class compares the absolute values of
+              integers.</p>
+            <p>Create a function and an equality operator that returns true if the absolute values
+              of two integers are
+              equal.<codeblock>CREATE FUNCTION abseq(int, int) RETURNS BOOL AS
+$$
+  begin return abs($1) = abs($2); end;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR |=| (
+  PROCEDURE = abseq,
+  LEFTARG = int,
+  RIGHTARG = int,
+  COMMUTATOR = |=|,
+  hashes, merges);</codeblock></p>
+            <p>Now, create a hash function and operator class that uses the
+              operator.<codeblock>CREATE FUNCTION abshashfunc(int) RETURNS int AS
+$$
+  begin return hashint(abs($1)); end;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR CLASS abs_int_hash_ops FOR TYPE int4
+  USING hash AS
+  OPERATOR 1 |=|,
+  FUNCTION 1 abshashfunc(int);</codeblock></p>
+            <p>Also, create less than and greater than operators, and a btree operator class for
+              them. We don't need them for our queries, but the Greenplum Database legacy query
+              planner will not consider co-location of joins without
+              them.<codeblock>CREATE FUNCTION abslt(int, int) RETURNS BOOL AS
+$$
+  begin return abs($1) &lt; abs($2); end;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR |&lt;| (
+  PROCEDURE = abslt,
+  LEFTARG = int,
+  RIGHTARG = int);
+
+CREATE FUNCTION absgt(int, int) RETURNS BOOL AS
+$$
+  begin return abs($1) &gt; abs($2); end;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR |&gt;| (
+  PROCEDURE = absgt,
+  LEFTARG = int,
+  RIGHTARG = int);
+
+CREATE FUNCTION abscmp(int, int) RETURNS int AS
+$$
+  begin return btint4cmp(abs($1),abs($2)); end;
+$$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR CLASS abs_int_btree_ops FOR TYPE int4
+  USING btree AS
+  OPERATOR 1 |&lt;|,
+  OPERATOR 3 |=|,
+  OPERATOR 5 |&gt;|,
+  FUNCTION 1 abscmp(int, int);</codeblock></p>
+            <p>Now, you can use the custom hash operator class in tables.
+              <codeblock>CREATE TABLE atab (a int) DISTRIBUTED BY (a abs_int_hash_ops);
+CREATE TABLE btab (b int) DISTRIBUTED BY (b abs_int_hash_ops);
+
+INSERT INTO atab VALUES (-1), (0), (1);
+INSERT INTO btab VALUES (-1), (0), (1), (2);</codeblock></p>
+            <p>Queries that perform a join that use the custom equality operator
+                <codeph>|=|</codeph> can take advantage of the co-location. With the default integer
+              opclass, this query would require Redistribute Motion nodes, but with the custom
+              opclass, a more efficient plan is
+              possible.<codeblock>EXPLAIN (COSTS OFF) SELECT a, b FROM atab, btab WHERE a = b;
+                            QUERY PLAN                            
+------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)
+   -&gt;  Hash Join
+         Hash Cond: (btab.b = atab.a)
+         -&gt;  Redistribute Motion 3:3  (slice1; segments: 3)
+               Hash Key: btab.b
+               -&gt;  Seq Scan on btab
+         -&gt;  Hash
+               -&gt;  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Hash Key: atab.a
+                     -&gt;  Seq Scan on atab
+ Optimizer: legacy query optimizer
+(11 rows)
+</codeblock></p>
+          </section>
         </body>
       </topic>
     </topic>

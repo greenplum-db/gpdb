@@ -23,7 +23,7 @@
    [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] )
    [ ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP} ]
    [ TABLESPACE <varname>tablespace</varname> ]
-   [ DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY 
+   [ DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY
        | DISTRIBUTED REPLICATED ]
    [ PARTITION BY <varname>partition_type</varname> (<varname>column</varname>)
        [ SUBPARTITION BY <varname>partition_type</varname> (<varname>column</varname>) ] 
@@ -467,7 +467,7 @@
             not specified, the database's default tablespace is used. </pd>
         </plentry>
         <plentry>
-          <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
+          <pt>DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] )</pt>
           <pt>DISTRIBUTED RANDOMLY</pt>
           <pt>DISTRIBUTED REPLICATED</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the table.
@@ -475,7 +475,8 @@
             declared as the distribution key. For the most even data distribution, the distribution
             key should be the primary key of the table or a unique column (or set of columns). If
             that is not possible, then you may choose <codeph>DISTRIBUTED RANDOMLY</codeph>, which
-            will send the data round-robin to the segment instances. </pd>
+            will send the data round-robin to the segment instances. Additionally, an operator
+            class, <codeph>opclass</codeph>, can be specified, to use a non-default hash function. </pd>
           <pd>The Greenplum Database server configuration parameter
               <codeph>gp_create_table_random_default_distribution</codeph> controls the default
             table distribution policy if the <cmdname>DISTRIBUTED BY</cmdname> clause is not
@@ -644,9 +645,9 @@
             constraints, indexes and table privileges are <i>not</i> inherited in the current
             implementation.</p></li>
         <li>For append-optimized tables, <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not
-          allowed in a serializable transaction and will cause the transaction to abort.
-            <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are not
-          supported with append-optimized tables.</li>
+          allowed in a repeatable read or serializable transaction and will cause the transaction to
+          abort. <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are
+          not supported with append-optimized tables.</li>
         <li>To insert data into a partitioned table, you specify the root partitioned table, the
           table created with the <codeph>CREATE TABLE</codeph> command. You also can specify a leaf
           child table of the partitioned table in an <codeph>INSERT</codeph> command. An error is

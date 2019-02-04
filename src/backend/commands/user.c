@@ -78,8 +78,7 @@ static void DelRoleMems(const char *rolename, Oid roleid,
 static extAuthPair *TransformExttabAuthClause(DefElem *defel);
 static void SetCreateExtTableForRole(List* allow,
 			List* disallow, bool* createrextgpfd,
-			bool* createrexthttp, bool* createwextgpfd,
-			bool* createrexthdfs, bool* createwexthdfs);
+			bool* createrexthttp, bool* createwextgpfd);
 
 static char *daysofweek[] = {"Sunday", "Monday", "Tuesday", "Wednesday",
 							 "Thursday", "Friday", "Saturday"};
@@ -126,8 +125,6 @@ CreateRole(CreateRoleStmt *stmt)
 	bool		createrextgpfd = false; /* Can create readable gpfdist exttab? */
 	bool		createrexthttp = false; /* Can create readable http exttab? */
 	bool		createwextgpfd = false; /* Can create writable gpfdist exttab? */
-	bool		createrexthdfs = false; /* Can create readable gphdfs exttab? */
-	bool		createwexthdfs = false; /* Can create writable gphdfs exttab? */
 	int			connlimit = -1; /* maximum connections allowed */
 	List	   *addroleto = NIL;	/* roles to make this a member of */
 	List	   *rolemembers = NIL;		/* roles to be members of this role */
@@ -453,14 +450,11 @@ CreateRole(CreateRoleStmt *stmt)
 	/* Set the CREATE EXTERNAL TABLE permissions for this role */
 	if (exttabcreate || exttabnocreate)
 		SetCreateExtTableForRole(exttabcreate, exttabnocreate, &createrextgpfd,
-								 &createrexthttp, &createwextgpfd,
-								 &createrexthdfs, &createwexthdfs);
+								 &createrexthttp, &createwextgpfd);
 
 	new_record[Anum_pg_authid_rolcreaterextgpfd - 1] = BoolGetDatum(createrextgpfd);
 	new_record[Anum_pg_authid_rolcreaterexthttp - 1] = BoolGetDatum(createrexthttp);
 	new_record[Anum_pg_authid_rolcreatewextgpfd - 1] = BoolGetDatum(createwextgpfd);
-	new_record[Anum_pg_authid_rolcreaterexthdfs - 1] = BoolGetDatum(createrexthdfs);
-	new_record[Anum_pg_authid_rolcreatewexthdfs - 1] = BoolGetDatum(createwexthdfs);
 
 	if (password)
 	{
@@ -714,8 +708,6 @@ AlterRole(AlterRoleStmt *stmt)
 	bool		createrextgpfd;
 	bool 		createrexthttp;
 	bool		createwextgpfd;
-	bool 		createrexthdfs;
-	bool		createwexthdfs;
 	List	   *addintervals = NIL;		/* list of time intervals for which login should be denied */
 	List	   *dropintervals = NIL;	/* list of time intervals for which matching rules should be dropped */
 	Oid			queueid;
@@ -1112,8 +1104,6 @@ AlterRole(AlterRoleStmt *stmt)
 		Datum 	dcreaterextgpfd;
 		Datum 	dcreaterexthttp;
 		Datum 	dcreatewextgpfd;
-		Datum 	dcreaterexthdfs;
-		Datum 	dcreatewexthdfs;
 
 		/*
 		 * get bool values from catalog. we don't ever expect a NULL value, but just
@@ -1125,14 +1115,9 @@ AlterRole(AlterRoleStmt *stmt)
 		createrexthttp = (isnull ? false : DatumGetBool(dcreaterexthttp));
 		dcreatewextgpfd = heap_getattr(tuple, Anum_pg_authid_rolcreatewextgpfd, pg_authid_dsc, &isnull);
 		createwextgpfd = (isnull ? false : DatumGetBool(dcreatewextgpfd));
-		dcreaterexthdfs = heap_getattr(tuple, Anum_pg_authid_rolcreaterexthdfs, pg_authid_dsc, &isnull);
-		createrexthdfs = (isnull ? false : DatumGetBool(dcreaterexthdfs));
-		dcreatewexthdfs = heap_getattr(tuple, Anum_pg_authid_rolcreatewexthdfs, pg_authid_dsc, &isnull);
-		createwexthdfs = (isnull ? false : DatumGetBool(dcreatewexthdfs));
 
 		SetCreateExtTableForRole(exttabcreate, exttabnocreate, &createrextgpfd,
-								 &createrexthttp, &createwextgpfd,
-								 &createrexthdfs, &createwexthdfs);
+								 &createrexthttp, &createwextgpfd);
 
 		new_record[Anum_pg_authid_rolcreaterextgpfd - 1] = BoolGetDatum(createrextgpfd);
 		new_record_repl[Anum_pg_authid_rolcreaterextgpfd - 1] = true;
@@ -1140,10 +1125,6 @@ AlterRole(AlterRoleStmt *stmt)
 		new_record_repl[Anum_pg_authid_rolcreaterexthttp - 1] = true;
 		new_record[Anum_pg_authid_rolcreatewextgpfd - 1] = BoolGetDatum(createwextgpfd);
 		new_record_repl[Anum_pg_authid_rolcreatewextgpfd - 1] = true;
-		new_record[Anum_pg_authid_rolcreaterexthdfs - 1] = BoolGetDatum(createrexthdfs);
-		new_record_repl[Anum_pg_authid_rolcreaterexthdfs - 1] = true;
-		new_record[Anum_pg_authid_rolcreatewexthdfs - 1] = BoolGetDatum(createwexthdfs);
-		new_record_repl[Anum_pg_authid_rolcreatewexthdfs - 1] = true;
 	}
 
 	/* resource queue */
@@ -2103,15 +2084,9 @@ static void CheckValueBelongsToKey(char *key, char *val, const char **keys, cons
 	}
 	else /* keys[1] */
 	{
-		if (strcasecmp(val, "gphdfs") == 0 && Gp_role == GP_ROLE_DISPATCH)
-			ereport(WARNING,
-					(errmsg("GRANT/REVOKE on gphdfs is deprecated"),
-					 errhint("Issue the GRANT or REVOKE on the protocol itself")));
-
 		if(strcasecmp(val, "gpfdist") != 0 &&
 		   strcasecmp(val, "gpfdists") != 0 &&
-		   strcasecmp(val, "http") != 0 &&
-		   strcasecmp(val, "gphdfs") != 0)
+		   strcasecmp(val, "http") != 0)
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("invalid %s value \"%s\"", key, val)));
@@ -2146,10 +2121,10 @@ TransformExttabAuthClause(DefElem *defel)
 	} genpair;
 
 	const int	numkeys = 2;
-	const int	numvals = 6;
+	const int	numvals = 5;
 	const char *keys[] = { "type", "protocol"};	 /* order matters for validation. don't change! */
 	const char *vals[] = { /* types     */ "readable", "writable",
-						   /* protocols */ "gpfdist", "gpfdists" , "http", "gphdfs"};
+						   /* protocols */ "gpfdist", "gpfdists" , "http"};
 	extAuthPair *result;
 
 	if(list_length(l) > 2)
@@ -2249,16 +2224,12 @@ static void SetCreateExtTableForRole(List* allow,
 									 List* disallow,
 									 bool* createrextgpfd,
 									 bool* createrexthttp,
-									 bool* createwextgpfd,
-									 bool* createrexthdfs,
-									 bool* createwexthdfs)
+									 bool* createwextgpfd)
 {
 	ListCell*	lc;
 	bool		createrextgpfd_specified = false;
 	bool		createwextgpfd_specified = false;
 	bool		createrexthttp_specified = false;
-	bool		createrexthdfs_specified = false;
-	bool		createwexthdfs_specified = false;
 
 	if(list_length(allow) > 0)
 	{
@@ -2280,19 +2251,6 @@ static void SetCreateExtTableForRole(List* allow,
 				{
 					*createwextgpfd = true;
 					createwextgpfd_specified = true;
-				}
-			}
-			else if(strcasecmp(extauth->protocol, "gphdfs") == 0)
-			{
-				if(strcasecmp(extauth->type, "readable") == 0)
-				{
-					*createrexthdfs = true;
-					createrexthdfs_specified = true;
-				}
-				else
-				{
-					*createwexthdfs = true;
-					createwexthdfs_specified = true;
 				}
 			}
 			else /* http */
@@ -2344,23 +2302,6 @@ static void SetCreateExtTableForRole(List* allow,
 						conflict = true;
 
 					*createwextgpfd = false;
-				}
-			}
-			else if(strcasecmp(extauth->protocol, "gphdfs") == 0)
-			{
-				if(strcasecmp(extauth->type, "readable") == 0)
-				{
-					if(createrexthdfs_specified)
-						conflict = true;
-
-					*createrexthdfs = false;
-				}
-				else
-				{
-					if(createwexthdfs_specified)
-						conflict = true;
-
-					*createwexthdfs = false;
 				}
 			}
 			else /* http */

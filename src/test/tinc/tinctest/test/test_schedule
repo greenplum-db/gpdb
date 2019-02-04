@@ -1,3 +1,0 @@
-Name=Test Schedule
-TimeLimit=10
-Options=discover -s folderx -s $HOME

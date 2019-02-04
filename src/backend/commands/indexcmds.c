@@ -78,8 +78,6 @@ static void ComputeIndexAttrs(IndexInfo *indexInfo,
 				  char *accessMethodName, Oid accessMethodId,
 				  bool amcanorder,
 				  bool isconstraint);
-static Oid GetIndexOpClass(List *opclass, Oid attrType,
-				char *accessMethodName, Oid accessMethodId);
 static char *ChooseIndexNameAddition(List *colnames);
 static void RangeVarCallbackForReindexIndex(const RangeVar *relation,
 								Oid relId, Oid oldRelId, void *arg);
@@ -1430,7 +1428,7 @@ ComputeIndexAttrs(IndexInfo *indexInfo,
 /*
  * Resolve possibly-defaulted operator class specification
  */
-static Oid
+Oid
 GetIndexOpClass(List *opclass, Oid attrType,
 				char *accessMethodName, Oid accessMethodId)
 {
@@ -1473,11 +1471,17 @@ GetIndexOpClass(List *opclass, Oid attrType,
 		/* no operator class specified, so find the default */
 		opClassId = GetDefaultOpClass(attrType, accessMethodId);
 		if (!OidIsValid(opClassId))
+		{
+			/*
+			 * In GPDB, this function is also used for DISTRIBUTED BY. That's why
+			 * we've removed "for index" from the error message.
+			 */
 			ereport(ERROR,
 					(errcode(ERRCODE_UNDEFINED_OBJECT),
 					 errmsg("data type %s has no default operator class for access method \"%s\"",
 							format_type_be(attrType), accessMethodName),
-					 errhint("You must specify an operator class for the index or define a default operator class for the data type.")));
+					 errhint("You must specify an operator class or define a default operator class for the data type.")));
+		}
 		return opClassId;
 	}
 

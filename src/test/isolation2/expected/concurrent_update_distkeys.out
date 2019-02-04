@@ -1,0 +1,173 @@
+-- IF we enable the GDD, then the lock maybe downgrade to
+-- RowExclusiveLock, when we UPDATE the distribution keys,
+-- A SplitUpdate node will add to the Plan, then an UPDATE
+-- operator may split to DELETE and INSERT.
+-- IF we UPDATE the distribution keys concurrently, the
+-- DELETE operator will not execute EvalPlanQual and the
+-- INSERT operator can not be *blocked*, so it will
+-- generate more tuples in the tables.
+-- We raise an error when the GDD is enabled and the
+-- distribution keys is updated.
+
+-- create heap table
+0: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ off                                
+(1 row)
+0: create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
+CREATE
+0: insert into tab_update_hashcol values(1,1);
+INSERT 1
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+-- test for heap table
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+UPDATE 0
+2: end;
+END
+
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_hashcol;
+DROP
+
+-- create AO table
+0: create table tab_update_hashcol (c1 int, c2 int) with(appendonly=true) distributed by(c1);
+CREATE
+0: insert into tab_update_hashcol values(1,1);
+INSERT 1
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+-- test for AO table
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+UPDATE 0
+2: end;
+END
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_hashcol;
+DROP
+1q: ... <quitting>
+2q: ... <quitting>
+0q: ... <quitting>
+
+-- enable gdd
+-- start_ignore
+! gpconfig -c gp_enable_global_deadlock_detector -v on;
+
+! gpstop -rai;
+-- end_ignore
+
+-- create heap table
+0: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ on                                 
+(1 row)
+0: create table tab_update_hashcol (c1 int, c2 int) distributed by(c1);
+CREATE
+0: insert into tab_update_hashcol values(1,1);
+INSERT 1
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+-- test for heap table
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+ERROR:  concurrent updates distribution keys on the same row is not allowed  (seg2 127.0.0.1:25434 pid=33685)
+2: end;
+END
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_hashcol;
+DROP
+
+-- create AO table
+0: create table tab_update_hashcol (c1 int, c2 int) with(appendonly=true) distributed by(c1);
+CREATE
+0: insert into tab_update_hashcol values(1,1);
+INSERT 1
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 1  | 1  
+(1 row)
+
+-- test for AO table
+1: begin;
+BEGIN
+2: begin;
+BEGIN
+1: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;
+UPDATE 1
+2&: update tab_update_hashcol set c1 = c1 + 1 where c1 = 1;  <waiting ...>
+1: end;
+END
+2<:  <... completed>
+UPDATE 0
+2: end;
+END
+0: select * from tab_update_hashcol;
+ c1 | c2 
+----+----
+ 2  | 1  
+(1 row)
+0: drop table tab_update_hashcol;
+DROP
+1q: ... <quitting>
+2q: ... <quitting>
+0q: ... <quitting>
+
+-- disable gdd
+-- start_ignore
+! gpconfig -c gp_enable_global_deadlock_detector -v off;
+
+! gpstop -rai;
+-- end_ignore

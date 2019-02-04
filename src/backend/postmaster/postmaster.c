@@ -1756,10 +1756,15 @@ ServiceStartable(PMSubProc *subProc)
 	/*
 	 * GUC gp_enable_gpperfmon controls the start
 	 * of both the 'perfmon' and 'stats sender' processes
+	 *
+	 * Use gp_enable_global_deadlock_detector to check if the GDD need
+	 * to startup
 	 */
 	if (subProc->procType == PerfmonProc && !gp_enable_gpperfmon)
 		result = 0;
 	else if (subProc->procType == PerfmonSegmentInfoProc && !gp_enable_gpperfmon && !gp_enable_query_metrics)
+		result = 0;
+	else if (subProc->procType == GlobalDeadLockDetectorProc && !gp_enable_global_deadlock_detector)
 		result = 0;
 	else
 		result = ((subProc->flags & flagNeeded) != 0);
@@ -2169,21 +2174,6 @@ initMasks(fd_set *rmask)
 	}
 
 	return maxsock + 1;
-}
-
-/*
- * Check to see if we're a mirror, and if we are: (1) Assume that we are
- * running as superuser; (2) No data pages need to be accessed by this backend
- * - no snapshot / transaction needed.
- *
- * The recovery.conf file is renamed to recovery.done at the end of xlog
- * replay.  Normal backends can be created thereafter.
- */
-static bool
-IsRoleMirror(void)
-{
-	struct stat stat_buf;
-	return (stat(RECOVERY_COMMAND_FILE, &stat_buf) == 0);
 }
 
 /*
@@ -2619,8 +2609,10 @@ retry1:
 			ereport(FATAL,
 					(errcode(ERRCODE_MIRROR_READY),
 					 errmsg(POSTMASTER_IN_RECOVERY_MSG),
-					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X",
-						   (uint32) (recptr >> 32), (uint32) recptr)));
+					 errdetail(POSTMASTER_IN_RECOVERY_DETAIL_MSG " %X/%X\n"
+							   POSTMASTER_MIRROR_VERSION_DETAIL_MSG " %s",
+							   (uint32) (recptr >> 32), (uint32) recptr,
+							   TextDatumGetCString(pgsql_version(NULL)))));
 			break;
 		case CAC_OK:
 			break;
@@ -5775,20 +5767,6 @@ sigusr1_handler(SIGNAL_ARGS)
 	PG_SETMASK(&UnBlockSig);
 
 	errno = save_errno;
-}
-
-/*
- * GPDB_90_MERGE_FIXME: This function should be removed once hot
- * standby can and will be enabled for mirrors.
- */
-void SignalPromote(void)
-{
-	FILE *fd;
-	if ((fd = fopen(PROMOTE_SIGNAL_FILE, "w")))
-	{
-		fclose(fd);
-		kill(PostmasterPid, SIGUSR1);
-	}
 }
 
 /*

@@ -2867,7 +2867,6 @@ DecodeNumberField(int len, char *str, int fmask,
 				int *tmask, struct pg_tm * tm, fsec_t *fsec, bool *is2digits)
 {
 	char	   *cp;
-	bool		have_frac = false;
 
 	/*
 	 * Have a decimal point? Then this is a date or something with a seconds
@@ -2881,7 +2880,6 @@ DecodeNumberField(int len, char *str, int fmask,
 		 */
 		double		frac;
 
-		have_frac = true;
 		errno = 0;
 		frac = strtod(cp, NULL);
 		if (errno != 0)
@@ -2896,29 +2894,8 @@ DecodeNumberField(int len, char *str, int fmask,
 		len = strlen(str);
 	}
 	/* No decimal point and no complete date yet? */
-	if ((fmask & DTK_DATE_M) != DTK_DATE_M && !have_frac)
+	else if ((fmask & DTK_DATE_M) != DTK_DATE_M)
 	{
-		/* GPDB_94_MERGE_FIXME: Why does GPDB have this special case for this case? */
-		/* yyyymmddhhmmss? */
-		if ((fmask & DTK_DATE_M) != DTK_DATE_M && 
-			(fmask & DTK_TIME_M) != DTK_TIME_M &&
-			len == 14)
-		{
-            *tmask = DTK_DATE_M | DTK_TIME_M; 
-
-            tm->tm_sec = atoi(str + 12); 
-            *(str + 12) = '\0'; 
-            tm->tm_min = atoi(str + 10); 
-            *(str + 10) = '\0'; 
-            tm->tm_hour = atoi(str + 8); 
-            *(str + 8) = '\0'; 
-            tm->tm_mday = atoi(str + 6); 
-            *(str + 6) = '\0'; 
-            tm->tm_mon = atoi(str + 4); 
-            *(str + 4) = '\0'; 
-            tm->tm_year = atoi(str + 0); 
-            return DTK_DATE; 
-        } 
 		if (len >= 6)
 		{
 			*tmask = DTK_DATE_M;
@@ -2937,28 +2914,6 @@ DecodeNumberField(int len, char *str, int fmask,
 
 			return DTK_DATE;
 		}
-	}
-	else if ((fmask & DTK_DATE_M) != DTK_DATE_M && 
-			 (fmask & DTK_TIME_M) != DTK_TIME_M)
-	{
-        	/* yyyymmddhhmmss? */ 
-        	if (len == 14) 
-        	{ 
-            		*tmask = DTK_DATE_M | DTK_TIME_M; 
-
-            		tm->tm_sec = atoi(str + 12); 
-            		*(str + 12) = '\0'; 
-            		tm->tm_min = atoi(str + 10); 
-            		*(str + 10) = '\0'; 
-            		tm->tm_hour = atoi(str + 8); 
-            		*(str + 8) = '\0'; 
-            		tm->tm_mday = atoi(str + 6); 
-            		*(str + 6) = '\0'; 
-            		tm->tm_mon = atoi(str + 4); 
-            		*(str + 4) = '\0'; 
-            		tm->tm_year = atoi(str + 0); 
-            		return DTK_DATE; 
-        	} 
 	}
 
 	/* not all time fields are specified? */

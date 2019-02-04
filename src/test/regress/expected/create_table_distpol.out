@@ -6,9 +6,9 @@ NOTICE:  table "distpol" does not exist, skipping
 create table distpol as select random(), 1 as a, 2 as b;
 NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
-select attrnums from gp_distribution_policy where localoid = 'distpol'::regclass;
- attrnums 
-----------
+select distkey from gp_distribution_policy where localoid = 'distpol'::regclass;
+ distkey 
+---------
  
 (1 row)
 
@@ -22,9 +22,9 @@ HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribut
 CREATE TABLE distpol_bar AS SELECT * FROM distpol_hobbies_r;
 NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
-select attrnums from gp_distribution_policy where localoid='distpol_bar'::regclass;
- attrnums 
-----------
+select distkey from gp_distribution_policy where localoid='distpol_bar'::regclass;
+ distkey 
+---------
  
 (1 row)
 
@@ -33,27 +33,27 @@ begin;
 create temp table r3_1 on commit preserve rows as select 10 as a1, 20 as b1, 30 as c1, 40 as d1;
 NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
-select attrnums from gp_distribution_policy where localoid='r3_1'::regclass;
- attrnums 
-----------
+select distkey from gp_distribution_policy where localoid='r3_1'::regclass;
+ distkey 
+---------
  
 (1 row)
 
 create temp table r3_2 on commit delete rows as select 10 as a2, 20 as b2, 30 as c2, 40 as d2;
 NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
-select attrnums from gp_distribution_policy where localoid='r3_2'::regclass;
- attrnums 
-----------
+select distkey from gp_distribution_policy where localoid='r3_2'::regclass;
+ distkey 
+---------
  
 (1 row)
 
 create temp table r3_3 on commit drop as select 10 as a3, 20 as b3, 30 as c3, 40 as d3;
 NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
-select attrnums from gp_distribution_policy where localoid='r3_3'::regclass;
- attrnums 
-----------
+select distkey from gp_distribution_policy where localoid='r3_3'::regclass;
+ distkey 
+---------
  
 (1 row)
 
@@ -73,20 +73,20 @@ CREATE TABLE distpol_staff_member (
 NOTICE:  table has parent, setting distribution columns to match parent table
 NOTICE:  OIDS=TRUE is not recommended for user-created tables
 HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-select attrnums from gp_distribution_policy where localoid = 'distpol_staff_member'::regclass;
- attrnums 
-----------
- {1}
+select distkey from gp_distribution_policy where localoid = 'distpol_staff_member'::regclass;
+ distkey 
+---------
+ 1
 (1 row)
 
 CREATE TABLE distpol_student (
   gpa      float8
 ) INHERITS (distpol_person);
 NOTICE:  table has parent, setting distribution columns to match parent table
-select attrnums from gp_distribution_policy where localoid = 'distpol_student'::regclass;
- attrnums 
-----------
- {1}
+select distkey from gp_distribution_policy where localoid = 'distpol_student'::regclass;
+ distkey 
+---------
+ 1
 (1 row)
 
 CREATE TABLE distpol_stud_emp (
@@ -98,10 +98,10 @@ NOTICE:  merging multiple inherited definitions of column "age"
 NOTICE:  merging multiple inherited definitions of column "location"
 NOTICE:  OIDS=TRUE is not recommended for user-created tables
 HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
-select attrnums from gp_distribution_policy where localoid = 'distpol_stud_emp'::regclass;
- attrnums 
-----------
- {1}
+select distkey from gp_distribution_policy where localoid = 'distpol_stud_emp'::regclass;
+ distkey 
+---------
+ 1
 (1 row)
 
 RESET gp_create_table_random_default_distribution;
@@ -115,18 +115,18 @@ CREATE TABLE distpol_person (
   age       int4,
   location  point
 ) DISTRIBUTED BY (name);
-select attrnums from gp_distribution_policy where localoid = 'distpol_person'::regclass;
- attrnums 
-----------
- {1}
+select distkey from gp_distribution_policy where localoid = 'distpol_person'::regclass;
+ distkey 
+---------
+ 1
 (1 row)
 
 CREATE TABLE distpol_person_copy (LIKE distpol_person);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-select attrnums from gp_distribution_policy where localoid = 'distpol_person_copy'::regclass;
- attrnums 
-----------
- {1}
+select distkey from gp_distribution_policy where localoid = 'distpol_person_copy'::regclass;
+ distkey 
+---------
+ 1
 (1 row)
 
 RESET gp_create_table_random_default_distribution;
@@ -154,12 +154,35 @@ create temporary table foo (i int, j int) distributed by (i, j);
 create table distpol_ctas3 as select 1 as col1, i from (select i, j from foo) x;
 create table distpol_ctas4 as select 1 as col1, i, j from (select i, j from foo) x;
 -- Check the results.
-select localoid::regclass, attrnums from gp_distribution_policy where localoid::regclass::text like 'distpol_ctas%';
-   localoid    | attrnums 
----------------+----------
- distpol_ctas1 | {2}
- distpol_ctas2 | {1}
- distpol_ctas3 | {1}
- distpol_ctas4 | {2,3}
+select localoid::regclass, distkey from gp_distribution_policy where localoid::regclass::text like 'distpol_ctas%';
+   localoid    | distkey 
+---------------+---------
+ distpol_ctas1 | 2
+ distpol_ctas2 | 1
+ distpol_ctas3 | 1
+ distpol_ctas4 | 2 3
 (4 rows)
 
+--
+-- Test using various datatypes as distribution keys.
+--
+-- Arrays can be used, if the base type is hashable.
+create table distpol_text (t text[]) distributed by (t);
+-- 'point' doesn't have a hash opclass, so these aren't allowed
+create table distpol_point (p point) distributed by (p);
+ERROR:  data type point has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
+create table distpol_point_array (p point[]) distributed by (p);
+ERROR:  data type point[] has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
+-- Same with ranges
+create table distpol_intrange (t int4range) distributed by (t);
+-- tsvector has a btree opfamily, so you can create a range type on it, but
+-- no hash opfamily, so its range type can't be used as distribution key.
+create type tsvector_range as range (subtype = tsvector);
+create table distpol_tsvector (t tsvector) distributed by (t);
+ERROR:  data type tsvector has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
+create table distpol_tsvector_range (t tsvector_range) distributed by (t);
+ERROR:  data type tsvector_range has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.

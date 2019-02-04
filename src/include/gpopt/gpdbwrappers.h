@@ -326,8 +326,20 @@ namespace gpdb {
 	// does an index exist with the given oid
 	bool IndexExists(Oid oid);
 
-	// check if given oid is hashable internally in Greenplum Database
-	bool IsGreenplumDbHashable(Oid typid);
+	// get the default hash opclass for type
+	Oid GetDefaultDistributionOpclassForType(Oid typid);
+
+	// get the hash function in an opfamily for given datatype
+	Oid GetHashProcInOpfamily(Oid opfamily, Oid typid);
+
+	// is the given hash function a legacy cdbhash function?
+	Oid IsLegacyCdbHashFunction(Oid hashfunc);
+
+	// is the given hash function a legacy cdbhash function?
+	Oid GetLegacyCdbHashOpclassForBaseType(Oid typid);
+
+	// return the operator family the given opclass belongs to
+	Oid GetOpclassFamily(Oid opclass);
 
 	// append an element to a list
 	List *LAppend(List *list, void *datum);
@@ -586,7 +598,7 @@ namespace gpdb {
 	bool ResolvePolymorphicArgType(int numargs, Oid *argtypes, char *argmodes, FuncExpr *call_expr);
 
 	// hash a list of const values with GPDB's hash function
-	int32 CdbHashConstList(List *constants, int num_segments);
+	int32 CdbHashConstList(List *constants, int num_segments, Oid *hashfuncs);
 
 	// get a random segment number
 	unsigned int CdbHashRandomSeg(int num_segments);

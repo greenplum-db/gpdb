@@ -45,11 +45,13 @@
 #include "parser/parse_relation.h"
 #include "parser/parsetree.h"
 #include "rewrite/rewriteManip.h"
+#include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/selfuncs.h"
 
 #include "catalog/gp_segment_config.h"
 #include "catalog/pg_proc.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"		/* apply_shareinput */
 #include "cdb/cdbpartition.h"
@@ -638,10 +640,10 @@ subquery_planner(PlannerGlobal *glob, Query *parse,
 	if (parse->setOperations)
 		flatten_simple_union_all(root);
 
-	if (parent_root && parent_root->is_correlated_subplan ||
-		(Gp_role == GP_ROLE_DISPATCH) &&
+	if ((parent_root && parent_root->is_correlated_subplan) ||
+		((Gp_role == GP_ROLE_DISPATCH) &&
 		root->config->is_under_subplan &&
-		IsSubqueryCorrelated(parse))
+		IsSubqueryCorrelated(parse)))
 	{
 		root->is_correlated_subplan = true;
 		/*
@@ -1171,9 +1173,6 @@ inheritance_planner(PlannerInfo *root)
 	{
 		RangeTblEntry *rte = (RangeTblEntry *) lfirst(lc);
 
-		/*
-		 * GPDB_94_STABLE_MERGE_FIXME: Is CTE handled right here?
-		 */
 		if (rte->rtekind == RTE_SUBQUERY || rte->rtekind == RTE_CTE)
 			subqueryRTindexes = bms_add_member(subqueryRTindexes, rti);
 		rti++;
@@ -1697,6 +1696,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	List	   *distinctExprs = NIL;
 	List	   *distinct_dist_pathkeys = NIL;
 	List	   *distinct_dist_exprs = NIL;
+	List	   *distinct_dist_opfamilies = NIL;
 	bool		must_gather;
 
 	double		motion_cost_per_row =
@@ -2547,7 +2547,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 
 			/* Add any Vars needed to compute the distribution key. */
 			window_tlist = add_to_flat_tlist_junk(window_tlist,
-												  result_plan->flow->hashExpr,
+												  result_plan->flow->hashExprs,
 												  true /* resjunk */);
 
 			/*
@@ -2588,12 +2588,14 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 				{
 					List	   *partition_dist_pathkeys;
 					List	   *partition_dist_exprs;
+					List	   *partition_dist_opfamilies;
 
-					make_distribution_pathkeys_for_groupclause(root,
-															   wc->partitionClause,
-															   tlist,
-															   &partition_dist_pathkeys,
-															   &partition_dist_exprs);
+					make_distribution_exprs_for_groupclause(root,
+															wc->partitionClause,
+															tlist,
+															&partition_dist_pathkeys,
+															&partition_dist_exprs,
+															&partition_dist_opfamilies);
 					if (!partition_dist_exprs)
 					{
 						/*
@@ -2610,7 +2612,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 					else
 					{
 						result_plan = (Plan *) make_motion_hash(root, result_plan,
-																partition_dist_exprs);
+																partition_dist_exprs,
+																partition_dist_opfamilies);
 						result_plan->total_cost += motion_cost_per_row * result_plan->plan_rows;
 						current_pathkeys = NIL; /* no longer sorted */
 						Assert(result_plan->flow);
@@ -2619,10 +2622,22 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 						 * Change current_locus based on the new distribution
 						 * pathkeys.
 						 */
-						CdbPathLocus_MakeHashed(&current_locus,
-												cdbpathlocus_get_distkeys_for_pathkeys(partition_dist_pathkeys),
-												result_plan->flow->numsegments);
+						List *partition_dist_distkeys = NIL;
+						ListCell *lc;
+						ListCell *lc2;
+						forboth(lc, partition_dist_pathkeys, lc2, partition_dist_opfamilies)
+						{
+							PathKey	   *pk = (PathKey *) lfirst(lc);
+							Oid			opfamily = lfirst_oid(lc2);
+							DistributionKey *dk = makeNode(DistributionKey);
 
+							dk->dk_opfamily = opfamily;
+							dk->dk_eclasses = list_make1(pk->pk_eclass);
+							partition_dist_distkeys = lappend(partition_dist_distkeys, dk);
+						}
+
+						CdbPathLocus_MakeHashed(&current_locus, partition_dist_distkeys,
+												CdbPathLocus_NumSegments(current_locus));
 						need_gather_for_partitioning = false;
 					}
 				}
@@ -2854,11 +2869,12 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		 * the cost of an extra Redistribute-Sort-Unique on the pre-uniqued
 		 * (reduced) input.
 		 */
-		make_distribution_pathkeys_for_groupclause(root,
-												   parse->distinctClause,
-												   result_plan->targetlist,
-												   &distinct_dist_pathkeys,
-												   &distinct_dist_exprs);
+		make_distribution_exprs_for_groupclause(root,
+												parse->distinctClause,
+												result_plan->targetlist,
+												&distinct_dist_pathkeys,
+												&distinct_dist_exprs,
+												&distinct_dist_opfamilies);
 
 		distinctExprs = get_sortgrouplist_exprs(parse->distinctClause,
 												result_plan->targetlist);
@@ -2939,7 +2955,9 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 			{
 				if (distinct_dist_exprs)
 				{
-					result_plan = (Plan *) make_motion_hash(root, result_plan, distinct_dist_exprs);
+					result_plan = (Plan *) make_motion_hash(root, result_plan,
+															distinct_dist_exprs,
+															distinct_dist_opfamilies);
 					current_pathkeys = NIL;		/* Any pre-existing order now lost. */
 				}
 				else
@@ -3194,6 +3212,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	{
 		bool		r;
 		List	   *exprList;
+		List	   *opfamilies;
+		ListCell   *lc;
 
 		/* Deal with the special case of SCATTER RANDOMLY */
 		if (list_length(parse->scatterClause) == 1 && linitial(parse->scatterClause) == NULL)
@@ -3201,11 +3221,22 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 		else
 			exprList = parse->scatterClause;
 
+		opfamilies = NIL;
+		foreach(lc, exprList)
+		{
+			Node	   *expr = lfirst(lc);
+			Oid			opfamily;
+
+			opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
+			opfamilies = lappend_oid(opfamilies, opfamily);
+		}
+
 		/*
 		 * Repartition the subquery plan based on our distribution
 		 * requirements
 		 */
-		r = repartitionPlan(result_plan, false, false, exprList,
+		r = repartitionPlan(result_plan, false, false,
+							exprList, opfamilies,
 							result_plan->flow->numsegments);
 		if (!r)
 		{
@@ -3312,22 +3343,6 @@ is_dummy_plan_walker(Node *node, bool *context)
 
 	switch (nodeTag(node))
 	{
-		case T_LockRows:
-
-			/*
-			 * GPDB_94_MERGE_FIXME
-			 * If the LockRow node is a dummy plan, then we should think of it
-			 * as a dummy plan. Is this assumption correct?
-			 */
-			{
-				if (is_dummy_plan(outerPlan(node)))
-				{
-					*context = true;
-					return true;
-				}
-			}
-			return false;
-
 		case T_Result:
 
 			/*
@@ -3351,23 +3366,6 @@ is_dummy_plan_walker(Node *node, bool *context)
 							*context = true;
 						return true;
 					}
-				}
-			}
-			return false;
-
-		case T_SubqueryScan:
-
-			/*
-			 * A SubqueryScan is dummy, if its subplan is dummy.
-			 */
-			{
-				SubqueryScan *subqueryscan = (SubqueryScan *) node;
-				Plan	   *subplan = subqueryscan->subplan;
-
-				if (is_dummy_plan(subplan))
-				{
-					*context = true;
-					return true;
 				}
 			}
 			return false;
@@ -3418,10 +3416,12 @@ is_dummy_plan_walker(Node *node, bool *context)
 		case T_Material:
 		case T_Sort:
 		case T_Unique:
+		case T_LockRows:
+		case T_SubqueryScan:
 
 			/*
-			 * Some node types are dummy, if their outer plan is dummy so we
-			 * just recur.
+			 * Some node types are dummy, if their outer plan or subplan is
+			 * dummy so we just recur.
 			 *
 			 * We don't include "tricky" nodes like Motion that might affect
 			 * plan topology, even though we know they will return no rows

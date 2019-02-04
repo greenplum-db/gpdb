@@ -22,6 +22,7 @@
 #include "nodes/parsenodes.h"
 #include "nodes/makefuncs.h"
 #include "optimizer/walkers.h"
+#include "utils/rel.h"
 
 #include "gpos/base.h"
 #include "gpos/common/CAutoTimer.h"
@@ -738,7 +739,10 @@ CTranslatorQueryToDXL::TranslateInsertQueryToDXL()
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("INSERT with constraints"));
 	}
-	
+
+	// make note of the operator classes used in the distribution key
+	NoteDistributionPolicyOpclasses(rte);
+
 	const ULONG num_table_columns = CTranslatorUtils::GetNumNonSystemColumns(md_rel);
 	const ULONG target_list_length = gpdb::ListLength(m_query->targetList);
 	GPOS_ASSERT(num_table_columns >= target_list_length);
@@ -1147,6 +1151,9 @@ CTranslatorQueryToDXL::TranslateDeleteQueryToDXL()
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("DELETE with triggers"));
 	}
 
+	// make note of the operator classes used in the distribution key
+	NoteDistributionPolicyOpclasses(rte);
+
 	ULONG ctid_colid = 0;
 	ULONG segid_colid = 0;
 	GetCtidAndSegmentId(&ctid_colid, &segid_colid);
@@ -1200,7 +1207,9 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 	{
 		GPOS_RAISE(gpdxl::ExmaDXL, gpdxl::ExmiQuery2DXLUnsupportedFeature, GPOS_WSZ_LIT("UPDATE with constraints"));
 	}
-	
+
+	// make note of the operator classes used in the distribution key
+	NoteDistributionPolicyOpclasses(rte);
 
 	ULONG ctid_colid = 0;
 	ULONG segmentid_colid = 0;
@@ -2772,12 +2781,11 @@ CTranslatorQueryToDXL::TranslateSetOpChild
 			Query *query_derived_tbl = CTranslatorUtils::FixUnknownTypeConstant(rte->subquery, target_list);
 			GPOS_ASSERT(NULL != query_derived_tbl);
 
-			CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(m_mp);
 			CTranslatorQueryToDXL query_to_dxl_translator
 					(
 					m_context,
 					m_md_accessor,
-					var_colid_mapping,
+					m_var_to_colid_map,
 					query_derived_tbl,
 					m_query_level + 1,
 					IsDMLQuery(),
@@ -3086,7 +3094,107 @@ CTranslatorQueryToDXL::TranslateRTEToDXLLogicalGet
 	// make note of new columns from base relation
 	m_var_to_colid_map->LoadTblColumns(m_query_level, rt_index, dxl_table_descr);
 
+	// make note of the operator classes used in the distribution key
+	NoteDistributionPolicyOpclasses(rte);
+
 	return dxl_node;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses
+//
+//	@doc:
+//		Observe what operator classes are used in the distribution
+//		keys of the given RTE's relation.
+//
+//---------------------------------------------------------------------------
+void
+CTranslatorQueryToDXL::NoteDistributionPolicyOpclasses
+	(
+	const RangeTblEntry *rte
+	)
+{
+	// What opclasses are being used in the distribution policy?
+	// We categorize them into three categories:
+	//
+	// 1. Default opclasses for the datatype
+	// 2. Legacy cdbhash opclasses for the datatype
+	// 3. Any other opclasses
+	//
+	// ORCA doesn't know about hash opclasses attached to distribution
+	// keys. So if a query involves two tables, with e.g. integer
+	// datatype as distribution key, but with different opclasses,
+	// ORCA doesn'thinks they're nevertheless compatible, and will
+	// merrily create a join between them without a Redistribute
+	// Motion. To avoid incorrect plans like that, we keep track of the
+	// opclasses used in the distribution keys of all the tables
+	// being referenced in the plan.  As long the all use the default
+	// opclasses, or the legacy ones, ORCA will produce a valid plan.
+	// But if we see mixed use, or non-default opclasses, throw an error.
+	//
+	// This conservative, there are many cases that we bail out on,
+	// for which the ORCA-generated plan would in fact be OK, but
+	// we have to play it safe. When converting the DXL plan to
+	// a Plan tree, we will use the default opclasses, or the legacy
+	// ones, for all hashing within the query.
+	if (rte->rtekind == RTE_RELATION)
+	{
+		Relation rel = gpdb::GetRelation(rte->relid);
+		GpPolicy *policy = rel->rd_cdbpolicy;
+		int policy_nattrs = policy ? policy->nattrs : 0;
+		TupleDesc desc = rel->rd_att;
+		bool contains_default_hashops = false;
+		bool contains_legacy_hashops = false;
+		bool contains_nondefault_hashops = false;
+		Oid *opclasses = policy->opclasses;
+
+		for (int i = 0; i < policy_nattrs; i++)
+		{
+			AttrNumber attnum = policy->attrs[i];
+			Oid typeoid = desc->attrs[attnum - 1]->atttypid;
+			Oid opfamily;
+			Oid hashfunc;
+
+			opfamily = gpdb::GetOpclassFamily(opclasses[i]);
+			hashfunc = gpdb::GetHashProcInOpfamily(opfamily, typeoid);
+
+			if (gpdb::IsLegacyCdbHashFunction(hashfunc))
+			{
+				contains_legacy_hashops = true;
+			}
+			else
+			{
+				Oid default_opclass = gpdb::GetDefaultDistributionOpclassForType(typeoid);
+
+				if (opclasses[i] == default_opclass)
+					contains_default_hashops = true;
+				else
+					contains_nondefault_hashops = true;
+			}
+		}
+		gpdb::CloseRelation(rel);
+
+		if (contains_nondefault_hashops)
+		{
+			/* have to fall back */
+			GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Query contains relations with non-default hash opclasses"));
+		}
+		if (contains_default_hashops &&
+		    m_context->m_distribution_hashops != DistrUseDefaultHashOps)
+		{
+			if (m_context->m_distribution_hashops != DistrHashOpsNotDeterminedYet)
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Query contains relations with a mix of default and legacy hash opclasses"));
+			m_context->m_distribution_hashops = DistrUseDefaultHashOps;
+		}
+		if (contains_legacy_hashops &&
+		    m_context->m_distribution_hashops != DistrUseLegacyHashOps)
+		{
+			if (m_context->m_distribution_hashops != DistrHashOpsNotDeterminedYet)
+				GPOS_RAISE(gpdxl::ExmaMD, gpdxl::ExmiMDObjUnsupported, GPOS_WSZ_LIT("Query contains relations with a mix of default and legacy hash opclasses"));
+			m_context->m_distribution_hashops = DistrUseLegacyHashOps;
+		}
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -3505,13 +3613,11 @@ CTranslatorQueryToDXL::TranslateDerivedTablesToDXL
 	Query *query_derived_tbl = rte->subquery;
 	GPOS_ASSERT(NULL != query_derived_tbl);
 
-	CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(m_mp);
-
 	CTranslatorQueryToDXL query_to_dxl_translator
 		(
 		m_context,
 		m_md_accessor,
-		var_colid_mapping,
+		m_var_to_colid_map,
 		query_derived_tbl,
 		m_query_level + 1,
 		IsDMLQuery(),
@@ -4199,13 +4305,12 @@ CTranslatorQueryToDXL::ConstructCTEProducerList
 		
 		// the query representing the cte can only access variables defined in the current level as well as
 		// those defined at prior query levels
-		CMappingVarColId *var_colid_mapping = m_var_to_colid_map->CopyMapColId(cte_query_level);
 
 		CTranslatorQueryToDXL query_to_dxl_translator
 			(
 			m_context,
 			m_md_accessor,
-			var_colid_mapping,
+			m_var_to_colid_map,
 			cte_query,
 			cte_query_level + 1,
 			IsDMLQuery(),

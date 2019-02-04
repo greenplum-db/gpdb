@@ -245,6 +245,8 @@
             <li>
               <xref href="#gp_enable_sort_limit"/>
             </li>
+            <li><xref href="#gp_expand_method"/>
+            </li>
           </ul>
         </stentry>
         <stentry>
@@ -401,6 +403,8 @@
             </li>
             <li>
               <xref href="#gp_statistics_use_fkeys"/>
+            </li>
+            <li><xref href="#gp_use_legacy_hashops"/>
             </li>
             <li>
               <xref href="#gp_vmem_idle_resource_timeout"/>
@@ -1660,7 +1664,9 @@
   <topic id="default_transaction_isolation">
     <title>default_transaction_isolation</title>
     <body>
-      <p>Controls the default isolation level of each new transaction.</p>
+      <p>Controls the default isolation level of each new transaction. Greenplum Database treats
+          <codeph>read uncommitted</codeph> the same as <codeph>read committed</codeph>, and treats
+          <codeph>serializable</codeph> the same as <codeph>repeatable read</codeph>. </p>
       <table id="default_transaction_isolation_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -1675,7 +1681,8 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1">read committed<p>read uncommitted</p><p>serializable</p></entry>
+              <entry colname="col1">read committed<p>read uncommitted</p><p>repeatable
+                  read</p><p>serializable</p></entry>
               <entry colname="col2">read committed</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
@@ -3334,6 +3341,48 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">on</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_expand_method">
+    <title>gp_expand_method</title>
+    <body>
+      <p>This parameter controls how <codeph>gpexpand</codeph> redistributes table data during the
+        table data redistribution phase of a system expansion. There are two ways
+          <codeph>gpexpand</codeph> can perform table data redistribution.<ul id="ol_xdd_1py_jgb">
+          <li><codeph>rebuild</codeph> - Create a new table, copy all the data from the old to the
+            new table, and replace the old table. This is the default. The rebuild method is similar
+            to creating a new table with a <codeph>CREATE TABLE AS SELECT</codeph> command. During
+            data redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the
+            table.</li>
+          <li><codeph>move</codeph> - Scan the table data and perform an <codeph>UPDATE</codeph>
+            operation to move rows as needed to different segment instances. During data
+            redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the table. In
+            general, this method requires less disk space, however, it creates obsolete table rows
+            and might require a <codeph>VACUUM</codeph> operation on the table. Also, this method
+            updates indexes one row at a time, which can be much slower than rebuilding the index
+            with the <codeph>CREATE INDEX</codeph> command.</li>
+        </ul></p>
+      <table id="table_utp_zny_jgb">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">rebuild<p>move</p></entry>
+              <entry colname="col2">rebuild</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -5013,6 +5062,43 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
+              <entry colname="col3">master<p>session</p><p>reload</p></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </body>
+  </topic>
+  <topic id="gp_use_legacy_hashops">
+    <title>gp_use_legacy_hashops</title>
+    <body>
+      <draft-comment author="msk">DRAFT <xref
+          href="https://github.com/greenplum-db/gpdb/pull/6327/commits/e6ce8e2a" format="html"
+          scope="external">gpdb/pull/6327/commits/e6ce8e2a</xref><p><b>[Q:]</b> expand changes
+          hashmethod from 0 (modulo) to 1 (jump consistent) - What happens if GUC is
+        true?</p></draft-comment>
+      <p>For a table that is defined with a <codeph>DISTRIBUTED BY
+          <varname>key_column</varname></codeph> clause, this parameter controls the hash algorithm
+        that is used to distribute table data among segment instances. The default value is
+          <codeph>false</codeph>, use the jump constant hash algorithm. </p>
+      <p>Setting the value to <codeph>true</codeph> uses the modulo hash algorithm that is
+        compatible with Greenplum Database 5.x and earlier releases.</p>
+      <table id="gp_interconnect_fc_method_table">
+        <tgroup cols="3">
+          <colspec colnum="1" colname="col1" colwidth="1*"/>
+          <colspec colnum="2" colname="col2" colwidth="1*"/>
+          <colspec colnum="3" colname="col3" colwidth="1*"/>
+          <thead>
+            <row>
+              <entry colname="col1">Value Range</entry>
+              <entry colname="col2">Default</entry>
+              <entry colname="col3">Set Classifications</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry colname="col1">Boolean</entry>
+              <entry colname="col2">false</entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>

@@ -1244,14 +1244,18 @@ typedef enum SetOperation
 /*
  * In raw parser output, this represents what the user wrote in the
  * DISTRIBUTED BY clause. In parse analysis, if no distributed by
- * wa given, we add implicit columns. XXX
+ * was given, we add implicit columns.
+ *
+ * 'keyCols' is a List of IndexElems. It is used as a handy container
+ * for column name + operator class pair. Only the 'indexcolname' and
+ * 'opclass' fields are used.
  */
 typedef struct DistributedBy
 {
 	NodeTag		type;
 	GpPolicyType ptype;
 	int			numsegments;
-	List	   *keys; /* valid when ptype is POLICYTYPE_PARTITIONED */
+	List	   *keyCols;	/* valid when ptype is POLICYTYPE_PARTITIONED */
 } DistributedBy;
 
 typedef struct SelectStmt

@@ -58,7 +58,6 @@
         <topicref href="best_practices/logfiles.xml"/>
     </chapter>
     <chapter href="best_practices/data_loading.xml"/>
-    <chapter href="best_practices/gptransfer.xml"/>
     <chapter href="best_practices/security.xml"/>
     <chapter href="best_practices/encryption.xml"/>
     <chapter href="best_practices/tuning_queries.xml"/>

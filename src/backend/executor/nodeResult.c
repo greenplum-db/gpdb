@@ -390,10 +390,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 	 */
 	if (node->numHashFilterCols > 0)
 	{
-		TupleDesc	resultDesc = resstate->ps.ps_ResultTupleSlot->tts_tupleDescriptor;
 		int			numSegments;
-		Oid		   *typeoids;
-		int			i;
 
 		if (resstate->ps.state->es_plannedstmt->planGen == PLANGEN_PLANNER)
 		{
@@ -414,16 +411,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
 		}
 
-		typeoids = (Oid *) palloc(node->numHashFilterCols * sizeof(Oid));
-		for (i = 0; i < node->numHashFilterCols; i++)
-		{
-			int			attnum = node->hashFilterColIdx[i];
-
-			Assert(attnum > 0);
-			typeoids[i] = resultDesc->attrs[attnum - 1]->atttypid;
-		}
-
-		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, typeoids);
+		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, node->hashFilterFuncs);
 	}
 
 	if (!IsResManagerMemoryPolicyNone()

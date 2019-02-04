@@ -139,7 +139,7 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 			old_8_3_invalidate_bpchar_pattern_ops_indexes(&old_cluster, true);
 		}
 		else
-
+		{
 			/*
 			 * While we have the old server running, create the script to
 			 * properly restore its sequence values but we report this at the
@@ -147,8 +147,10 @@ check_and_dump_old_cluster(bool live_check, char **sequence_script_file_name)
 			 */
 			*sequence_script_file_name =
 				old_8_3_create_sequence_script(&old_cluster);
-	}
+		}
 
+		old_GPDB5_check_for_unsupported_distribution_key_data_types();
+	}
 	/* Pre-PG 9.4 had a different 'line' data type internal format */
 	if (GET_MAJOR_VERSION(old_cluster.major_version) <= 903)
 		old_9_3_check_for_line_data_type_usage(&old_cluster);

@@ -15,7 +15,7 @@ ALTER TABLE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 
 ALTER TABLE [ONLY] <varname>name</varname> SET 
      WITH (REORGANIZE=true|false)
-   | DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) 
+   | DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] )
    | DISTRIBUTED RANDOMLY
    | DISTRIBUTED REPLICATED 
  
@@ -227,7 +227,7 @@ ALTER TABLE <varname>name</varname>
                                         need to rewrite the table to get the desired effects.</li>
                                 <li id="ay141947"><b>SET DISTRIBUTED</b> — Changes the distribution
                                         policy of a table. Changing a hash distribution policy, or
-                                        changing to or from a  replicated policy, will cause the
+                                        changing to or from a replicated policy, will cause the
                                         table data to be physically redistributed on disk, which can
                                         be resource intensive.</li>
                                 <li id="ay137232"><b>INHERIT <varname>parent_table</varname> / NO
@@ -317,7 +317,7 @@ ALTER TABLE <varname>name</varname>
                                                 specified, only that table is altered. If
                                                   <codeph>ONLY</codeph> is not specified, the table
                                                 and all its descendant tables (if any) are updated.
-                                                  <note type="note">Constraints can only be added to
+                                                <note type="note">Constraints can only be added to
                                                   an entire table, not to a partition. Because of
                                                   that restriction, the <varname>name</varname>
                                                   parameter can only contain a table name, not a
@@ -432,7 +432,8 @@ ALTER TABLE <varname>name</varname>
                                                 100 is the default.</pd>
                                 </plentry>
                                 <plentry>
-                                        <pt>DISTRIBUTED BY (<varname>column</varname>) | DISTRIBUTED
+                                        <pt>DISTRIBUTED BY ({<varname>column</varname>
+                                                  [<varname>opclass</varname>]}) | DISTRIBUTED
                                                 RANDOMLY | DISTRIBUTED REPLICATED</pt>
                                         <pd>Specifies the distribution policy for a table. Changing
                                                 a hash distribution policy causes the table data to
@@ -815,7 +816,7 @@ ALTER TABLE <varname>name</varname>
                         <p>Add a check constraint to a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors ADD CONSTRAINT zipchk CHECK 
 (char_length(zipcode) = 5);</codeblock>
-                        <p>Remove a check constraint from  a table and all of its children:</p>
+                        <p>Remove a check constraint from a table and all of its children:</p>
                         <codeblock>ALTER TABLE distributors DROP CONSTRAINT zipchk;</codeblock>
                         <p>Remove a check constraint from a table only:</p>
                         <codeblock>ALTER TABLE ONLY distributors DROP CONSTRAINT zipchk;</codeblock>

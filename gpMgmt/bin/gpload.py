@@ -2636,13 +2636,12 @@ class gpload:
         return tblname
 
     def get_table_dist_key(self):
-
         # NOTE: this query should be re-written better. the problem is that it is
         # not possible to perform a cast on a table name with spaces...
         sql = "select attname from pg_attribute a, gp_distribution_policy p , pg_class c, pg_namespace n "+\
               "where a.attrelid = c.oid and " + \
               "a.attrelid = p.localoid and " + \
-              "a.attnum = any (p.attrnums) and " + \
+              "a.attnum = any (p.distkey) and " + \
               "c.relnamespace = n.oid and " + \
               "n.nspname = '%s' and c.relname = '%s'; " % (quote_unident(self.schema), quote_unident(self.table))
 

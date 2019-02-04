@@ -25,8 +25,8 @@ SELECT depname, empno, salary, sum(salary) OVER (PARTITION BY depname) FROM emps
 -----------+-------+--------+-------
  develop   |     7 |   4200 | 25100
  develop   |     9 |   4500 | 25100
- develop   |    11 |   5200 | 25100
  develop   |    10 |   5200 | 25100
+ develop   |    11 |   5200 | 25100
  develop   |     8 |   6000 | 25100
  personnel |     5 |   3500 |  7400
  personnel |     2 |   3900 |  7400

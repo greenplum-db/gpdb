@@ -16,12 +16,16 @@
 #include "postgres.h"
 
 #include "access/genam.h"
+#include "catalog/dependency.h"
 #include "catalog/gp_policy.h"
 #include "catalog/indexing.h"
+#include "catalog/objectaddress.h"
 #include "catalog/pg_exttable.h"
 #include "catalog/pg_namespace.h"
+#include "catalog/pg_opclass.h"
 #include "catalog/pg_type.h"
 #include "cdb/cdbcat.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbrelsize.h"
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"		/* Gp_role */
@@ -47,24 +51,37 @@
  */
 int			gp_create_table_default_numsegments = GP_DEFAULT_NUMSEGMENTS_FULL;
 
-static void extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp);
 
 GpPolicy *
 makeGpPolicy(GpPolicyType ptype, int nattrs, int numsegments)
 {
-	GpPolicy *policy;
-	size_t	size;
+	GpPolicy   *policy;
+	size_t		size;
+	char	   *p;
 
-	size = sizeof(GpPolicy) + nattrs * sizeof(AttrNumber);
-	policy = palloc(size);
-	policy->type = T_GpPolicy;
-	policy->numsegments = numsegments;
-	policy->ptype = ptype; 
-	policy->nattrs = nattrs; 
+	size = MAXALIGN(sizeof(GpPolicy)) +
+		MAXALIGN(nattrs * sizeof(AttrNumber)) +
+		MAXALIGN(nattrs * sizeof(Oid));
+	p = palloc(size);
+	policy = (GpPolicy *) p;
+	p += MAXALIGN(sizeof(GpPolicy));
 	if (nattrs > 0)
-		policy->attrs = (AttrNumber *) ((char*)policy + sizeof(GpPolicy));
+	{
+		policy->attrs = (AttrNumber *) p;
+		p += MAXALIGN(nattrs * sizeof(AttrNumber));
+		policy->opclasses = (Oid *) p;
+		p += MAXALIGN(nattrs * sizeof(Oid));
+	}
 	else
+	{
 		policy->attrs = NULL;
+		policy->opclasses = NULL;
+	}
+
+	policy->type = T_GpPolicy;
+	policy->ptype = ptype; 
+	policy->numsegments = numsegments;
+	policy->nattrs = nattrs; 
 
 	Assert(numsegments > 0);
 	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
@@ -99,20 +116,25 @@ createRandomPartitionedPolicy(int numsegments)
  * partitioned by keys 
  */
 GpPolicy *
-createHashPartitionedPolicy(List *keys, int numsegments)
+createHashPartitionedPolicy(List *keys, List *opclasses, int numsegments)
 {
 	GpPolicy	*policy;
 	ListCell 	*lc;
+	ListCell 	*lop;
 	int 		idx = 0;
 	int 		len = list_length(keys);
+
+	Assert(list_length(keys) == list_length(opclasses));
 
 	if (len == 0)
 		return createRandomPartitionedPolicy(numsegments);
 
 	policy = makeGpPolicy(POLICYTYPE_PARTITIONED, len, numsegments);
-	foreach(lc, keys)
+	forboth(lc, keys, lop, opclasses)
 	{
-		policy->attrs[idx++] = (AttrNumber)lfirst_int(lc);
+		policy->attrs[idx] = (AttrNumber) lfirst_int(lc);
+		policy->opclasses[idx] = (Oid) lfirst_oid(lop);
+		idx++;
 	}
 
 	return policy;	
@@ -135,7 +157,10 @@ GpPolicyCopy(const GpPolicy *src)
 	tgt = makeGpPolicy(src->ptype, src->nattrs, src->numsegments);
 
 	for (i = 0; i < src->nattrs; i++)
+	{
 		tgt->attrs[i] = src->attrs[i];
+		tgt->opclasses[i] = src->opclasses[i];
+	}
 
 	return tgt;
 }								/* GpPolicyCopy */
@@ -164,8 +189,12 @@ GpPolicyEqual(const GpPolicy *lft, const GpPolicy *rgt)
 		return false;
 
 	for (i = 0; i < lft->nattrs; i++)
+	{
 		if (lft->attrs[i] != rgt->attrs[i])
 			return false;
+		if (lft->opclasses[i] != rgt->opclasses[i])
+			return false;
+	}
 
 	return true;
 }								/* GpPolicyEqual */
@@ -292,59 +321,51 @@ GpPolicyFetch(Oid tbloid)
 	 */
 	if (HeapTupleIsValid(gp_policy_tuple))
 	{
+		Form_gp_policy policyform = (Form_gp_policy) GETSTRUCT(gp_policy_tuple);
 		bool		isNull;
-		Datum		attr;
-		int			i,
-					numsegments,
-					nattrs = 0;
-		int16	   *attrnums = NULL;
+		int			i;
+		int			nattrs;
+		int2vector *distkey;
+		oidvector  *distopclasses;
 
-		attr = SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
-							   Anum_gp_policy_numsegments,
-							   &isNull);
-
-		if (isNull)
-			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
-		else
-			numsegments = DatumGetInt32(attr);
-
-		attr = SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
-							   Anum_gp_policy_type,
-							   &isNull);
-
-		Assert(!isNull);
-
-		char ptype = DatumGetChar(attr);
-
-		switch (ptype)
+		switch (policyform->policytype)
 		{
 			case SYM_POLICYTYPE_REPLICATED:
-				policy = createReplicatedGpPolicy(numsegments);
+				policy = createReplicatedGpPolicy(policyform->numsegments);
 				break;
 			case SYM_POLICYTYPE_PARTITIONED:
 				/*
 				 * Get the attributes on which to partition.
 				 */
-				attr = SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
-									   Anum_gp_policy_attrnums,
-									   &isNull);
+				distkey = (int2vector *) DatumGetPointer(
+					SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
+									Anum_gp_policy_distkey,
+									&isNull));
 
 				/*
 				 * Get distribution keys only if this table has a policy.
 				 */
 				if (!isNull)
 				{
-					extract_INT2OID_array(attr, &nattrs, &attrnums);
-					Assert(nattrs >= 0);
+					nattrs = distkey->dim1;
+					distopclasses = (oidvector *) DatumGetPointer(
+						SysCacheGetAttr(GPPOLICYID, gp_policy_tuple,
+										Anum_gp_policy_distclass,
+										&isNull));
+					Assert(!isNull);
+					Assert(distopclasses->dim1 == nattrs);
 				}
+				else
+					nattrs = 0;
 
 				/* Create a GpPolicy object. */
 				policy = makeGpPolicy(POLICYTYPE_PARTITIONED,
-									  nattrs, numsegments);
+									  nattrs, policyform->numsegments);
 
 				for (i = 0; i < nattrs; i++)
 				{
-					policy->attrs[i] = attrnums[i];
+					policy->attrs[i] = distkey->values[i];
+					policy->opclasses[i] = distopclasses->values[i];
 				}
 				break;
 			default:
@@ -365,29 +386,6 @@ GpPolicyFetch(Oid tbloid)
 	return policy;
 }								/* GpPolicyFetch */
 
-
-/*
- * Extract len and pointer to buffer from an int16[] (vector) Datum
- * representing a PostgreSQL INT2OID type.
- */
-static void
-extract_INT2OID_array(Datum array_datum, int *lenp, int16 **vecp)
-{
-	ArrayType  *array_type;
-
-	Assert(lenp != NULL);
-	Assert(vecp != NULL);
-
-	array_type = DatumGetArrayTypeP(array_datum);
-	Assert(ARR_NDIM(array_type) == 1);
-	Assert(ARR_ELEMTYPE(array_type) == INT2OID);
-	Assert(ARR_LBOUND(array_type)[0] == 1);
-	*lenp = ARR_DIMS(array_type)[0];
-	*vecp = (int16 *) ARR_DATA_PTR(array_type);
-
-	return;
-}
-
 /*
  * Sets the policy of a table into the gp_distribution_policy table
  * from a GpPolicy structure.
@@ -398,19 +396,28 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 	Relation	gp_policy_rel;
 	HeapTuple	gp_policy_tuple = NULL;
 
-	ArrayType  *attrnums;
+	bool		nulls[5];
+	Datum		values[5];
+	ObjectAddress myself,
+				referenced;
+	int			i;
 
-	bool		nulls[4];
-	Datum		values[4];
-
-	Insist(policy->ptype != POLICYTYPE_ENTRY);
+	/* Sanity check the policy and its opclasses before storing it. */
+	if (policy->ptype == POLICYTYPE_ENTRY)
+		elog(ERROR, "cannot store entry-type policy in gp_distribution_policy");
+	for (i = 0; i < policy->nattrs; i++)
+	{
+		if (policy->opclasses[i] == InvalidOid)
+			elog(ERROR, "no hash operator class for distribution key column %d", i + 1);
+	}
 
 	nulls[0] = false;
 	nulls[1] = false;
 	nulls[2] = false;
 	nulls[3] = false;
+	nulls[4] = false;
 	values[0] = ObjectIdGetDatum(tbloid);
-	values[3] = Int32GetDatum(policy->numsegments);
+	values[2] = Int32GetDatum(policy->numsegments);
 
 	/*
 	 * Open and lock the gp_distribution_policy catalog.
@@ -419,42 +426,49 @@ GpPolicyStore(Oid tbloid, const GpPolicy *policy)
 
 	if (GpPolicyIsReplicated(policy))
 	{
-		nulls[1] = true;
-		values[2] = CharGetDatum(SYM_POLICYTYPE_REPLICATED);
+		values[1] = CharGetDatum(SYM_POLICYTYPE_REPLICATED);
 	}
 	else
 	{
 		/*
 		 * Convert C arrays into Postgres arrays.
 		 */
-		int			i;
-		Datum	   *akey;
-
 		Assert(GpPolicyIsPartitioned(policy));
 
-		if (policy->nattrs > 0)
-		{
-			akey = (Datum *) palloc(policy->nattrs * sizeof(Datum));
-			for (i = 0; i < policy->nattrs; i++)
-				akey[i] = Int16GetDatum(policy->attrs[i]);
-			attrnums = construct_array(akey, policy->nattrs,
-					INT2OID, 2, true, 's');
-
-			values[1] = PointerGetDatum(attrnums); 
-			values[2] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
-		}
-		else
-		{
-			nulls[1] = true;
-			values[2] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
-		}
+		values[1] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
 	}
+	int2vector *attrnums = buildint2vector(policy->attrs, policy->nattrs);
+	oidvector  *opclasses = buildoidvector(policy->opclasses, policy->nattrs);
+
+	values[3] = PointerGetDatum(attrnums);
+	values[4] = PointerGetDatum(opclasses);
 
 	gp_policy_tuple = heap_form_tuple(RelationGetDescr(gp_policy_rel), values, nulls);
 
 	/* Insert tuple into the relation */
 	simple_heap_insert(gp_policy_rel, gp_policy_tuple);
 	CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
+
+	/*
+	 * Register the table as dependent on the operator classes used in the
+	 * distribution key.
+	 *
+	 * XXX: This prevents you from dropping the operator class, which is
+	 * good. However, CASCADE behaviour is not so nice: if you do DROP
+	 * OPERATOR CLASS CASCADE, we drop the whole table. Ideally, we would
+	 * just change the policy to randomly distributed.
+	 */
+	myself.classId = RelationRelationId;
+	myself.objectId = tbloid;
+	myself.objectSubId = 0;
+	for (i = 0; i < policy->nattrs; i++)
+	{
+		referenced.classId = OperatorClassRelationId;
+		referenced.objectId = policy->opclasses[i];
+		referenced.objectSubId = 0;
+
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
 
 	/*
 	 * Close the gp_distribution_policy relcache entry without unlocking. We
@@ -475,19 +489,29 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 	HeapTuple	gp_policy_tuple = NULL;
 	SysScanDesc scan;
 	ScanKeyData skey;
-	ArrayType  *attrnums;
-	bool		nulls[4];
-	Datum		values[4];
-	bool		repl[4];
+	bool		nulls[5];
+	Datum		values[5];
+	bool		repl[5];
+	ObjectAddress myself,
+				referenced;
+	int			i;
 
-	Insist(!GpPolicyIsEntry(policy));
+	/* Sanity check the policy and its opclasses before storing it. */
+	if (policy->ptype == POLICYTYPE_ENTRY)
+		elog(ERROR, "cannot store entry-type policy in gp_distribution_policy");
+	for (i = 0; i < policy->nattrs; i++)
+	{
+		if (policy->opclasses[i] == InvalidOid)
+			elog(ERROR, "no hash operator class for distribution key column %d", i + 1);
+	}
 
 	nulls[0] = false;
 	nulls[1] = false;
 	nulls[2] = false;
 	nulls[3] = false;
+	nulls[4] = false;
 	values[0] = ObjectIdGetDatum(tbloid);
-	values[3] = Int32GetDatum(policy->numsegments);
+	values[2] = Int32GetDatum(policy->numsegments);
 
 	/*
 	 * Open and lock the gp_distribution_policy catalog.
@@ -496,42 +520,28 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 
 	if (GpPolicyIsReplicated(policy))
 	{
-		nulls[1] = true;
-		values[2] = CharGetDatum(SYM_POLICYTYPE_REPLICATED);
+		values[1] = CharGetDatum(SYM_POLICYTYPE_REPLICATED);
 	}
 	else
 	{
 		/*
 		 * Convert C arrays into Postgres arrays.
 		 */
-		int			i;
-		Datum	   *akey;
-
 		Assert(GpPolicyIsPartitioned(policy));
 
-		if (policy->nattrs > 0)
-		{
-			akey = (Datum *) palloc(policy->nattrs * sizeof(Datum));
-			for (i = 0; i < policy->nattrs; i++)
-				akey[i] = Int16GetDatum(policy->attrs[i]);
-			attrnums = construct_array(akey, policy->nattrs,
-					INT2OID, 2, true, 's');
-
-			values[1] = PointerGetDatum(attrnums); 
-			values[2] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
-		}
-		else
-		{
-
-			nulls[1] = true;
-			values[2] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
-		}
+		values[1] = CharGetDatum(SYM_POLICYTYPE_PARTITIONED);
 	}
+	int2vector *attrnums = buildint2vector(policy->attrs, policy->nattrs);
+	oidvector  *opclasses = buildoidvector(policy->opclasses, policy->nattrs);
+
+	values[3] = PointerGetDatum(attrnums);
+	values[4] = PointerGetDatum(opclasses);
 
 	repl[0] = false;
 	repl[1] = true;
 	repl[2] = true;
 	repl[3] = true;
+	repl[4] = true;
 
 
 	/*
@@ -565,6 +575,25 @@ GpPolicyReplace(Oid tbloid, const GpPolicy *policy)
 		CatalogUpdateIndexes(gp_policy_rel, gp_policy_tuple);
 	}
 	systable_endscan(scan);
+
+	/*
+	 * Remove old dependencies on opclasses, and store dependencies on the
+	 * new ones.
+	 */
+	deleteDependencyRecordsForClass(RelationRelationId, tbloid,
+									OperatorClassRelationId, DEPENDENCY_NORMAL);
+
+	myself.classId = RelationRelationId;
+	myself.objectId = tbloid;
+	myself.objectSubId = 0;
+	for (i = 0; i < policy->nattrs; i++)
+	{
+		referenced.classId = OperatorClassRelationId;
+		referenced.objectId = policy->opclasses[i];
+		referenced.objectSubId = 0;
+
+		recordDependencyOn(&myself, &referenced, DEPENDENCY_NORMAL);
+	}
 
 	/*
 	 * Close the gp_distribution_policy relcache entry without unlocking. We
@@ -608,6 +637,11 @@ GpPolicyRemove(Oid tbloid)
 	systable_endscan(sscan);
 
 	/*
+	 * This is currently only used while dropping the whole relation, which
+	 * removes all pg_depend entries. So no need to remove them here.
+	 */
+
+	/*
 	 * Close the gp_distribution_policy relcache entry without unlocking. We
 	 * have updated the catalog: consequently the lock must be held until end
 	 * of transaction.
@@ -637,6 +671,7 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	Bitmapset  *polbm = NULL;
 	Bitmapset  *indbm = NULL;
 	int			i;
+	TupleDesc	desc = RelationGetDescr(rel);
 
 	/*
 	 * Firstly, unique/primary key indexes aren't supported if we're
@@ -703,7 +738,28 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 										rel->rd_cdbpolicy->numsegments);
 
 		for (i = 0; i < nidxatts; i++)
-			policy->attrs[i] = indattr[i];
+		{
+			AttrNumber attno = indattr[i];
+			Oid			opclass;
+
+			opclass = cdb_default_distribution_opclass_for_type(desc->attrs[attno - 1]->atttypid);
+			if (!opclass)
+			{
+				/*
+				 * The datatype has no default opclass. Can't use it in the
+				 * distribution key.
+				 */
+				ereport(ERROR,
+						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+						 errmsg("%s must contain all columns in the "
+								"distribution key of relation \"%s\"",
+								isprimary ? "PRIMARY KEY" : "UNIQUE index",
+								RelationGetRelationName(rel))));
+			}
+
+			policy->attrs[i] = attno;
+			policy->opclasses[i] = opclass;
+		}
 
 		GpPolicyReplace(rel->rd_id, policy);
 		rel->rd_cdbpolicy = policy;

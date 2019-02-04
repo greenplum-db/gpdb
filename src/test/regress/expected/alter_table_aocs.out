@@ -28,7 +28,6 @@ select count(*) from addcol1;
 alter table addcol1
    add column b varchar default 'I am in a small content varblock';
 -- verification on master catalog
--- TODO: How to run this on segments, through a TINC test?
 -- Moreover, gp_toolkit schema is not populated in regression database
 -- select segno,column_num,physical_segno,tupcount,modcount,state
 --    from gp_toolkit.__gp_aocsseg(aocs_oid('addcol1')) order by segno,column_num;

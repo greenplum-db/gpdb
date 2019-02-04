@@ -1201,9 +1201,51 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
   7
 (7 rows)
 
+-- Test if the equality operator is implemented by a SQL function
+--
+--q45
+--
+create domain absint as int4;
+create function iszero(absint) returns bool as $$ begin return $1::int4 = 0; end; $$ language plpgsql immutable strict;
+create or replace function abseq (absint, absint) returns bool as $$ select iszero(abs($1) - abs($2)); $$ language sql immutable strict;
+create operator = (PROCEDURE = abseq, leftarg=absint, rightarg=absint);
+explain select c1 from t1 where c1::absint not in
+	(select c1n::absint from t1n);
+                                                                                                                                                                               QUERY PLAN                                                                                                                                                                                
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=0.00..1324036.49 rows=10 width=4)
+   ->  Result  (cost=0.00..1324036.49 rows=4 width=4)
+         Filter: (NOT CASE WHEN (NOT ((t1.c1)::absint IS NULL)) THEN CASE WHEN ((pg_catalog.sum((sum((CASE WHEN (((t1n.c1n)::absint) IS NULL) THEN 1 ELSE 0 END))))) = (count((count())))) THEN NULL::boolean WHEN (NOT ((pg_catalog.sum((sum((CASE WHEN (((t1n.c1n)::absint) IS NULL) THEN 1 ELSE 0 END))))) IS NULL)) THEN true ELSE false END ELSE NULL::boolean END)
+         ->  GroupAggregate  (cost=0.00..1324036.49 rows=4 width=20)
+               Group Key: t1.c1, t1.ctid, t1.gp_segment_id
+               ->  Sort  (cost=0.00..1324036.49 rows=4 width=30)
+                     Sort Key: t1.ctid, t1.gp_segment_id
+                     ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1324036.49 rows=4 width=30)
+                           Hash Key: t1.ctid, t1.gp_segment_id
+                           ->  Result  (cost=0.00..1324036.49 rows=4 width=30)
+                                 ->  HashAggregate  (cost=0.00..1324036.49 rows=4 width=30)
+                                       Group Key: t1.c1, t1.ctid, t1.gp_segment_id
+                                       ->  Nested Loop Left Join  (cost=0.00..1324036.48 rows=17 width=18)
+                                             Join Filter: (((t1.c1)::absint = ((t1n.c1n)::absint)) OR (((t1n.c1n)::absint) IS NULL))
+                                             ->  Seq Scan on t1  (cost=0.00..431.00 rows=4 width=14)
+                                             ->  Result  (cost=0.00..431.00 rows=7 width=8)
+                                                   ->  Materialize  (cost=0.00..431.00 rows=7 width=4)
+                                                         ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=7 width=4)
+                                                               ->  Result  (cost=0.00..431.00 rows=3 width=4)
+                                                                     ->  Seq Scan on t1n  (cost=0.00..431.00 rows=3 width=4)
+ Planning time: 48.367 ms
+ Optimizer: PQO version 3.17.0
+(22 rows)
+
+select c1 from t1 where c1::absint not in
+	(select c1n::absint from t1n);
+ c1 
+----
+(0 rows)
+
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 7 other objects
+NOTICE:  drop cascades to 11 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1211,3 +1253,7 @@ drop cascades to table notin.t4
 drop cascades to table notin.t1n
 drop cascades to table notin.g1
 drop cascades to table notin.l1
+drop cascades to type notin.absint
+drop cascades to function notin.iszero(notin.absint)
+drop cascades to function notin.abseq(notin.absint,notin.absint)
+drop cascades to operator notin.=(notin.absint,notin.absint)

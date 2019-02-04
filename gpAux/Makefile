@@ -162,8 +162,8 @@ APU_CONFIG=--with-apu-config=$(BLD_THIRDPARTY_BIN_DIR)/apu-1-config
 aix7_ppc_64_CONFIGFLAGS=--disable-gpcloud --without-readline --without-libcurl --disable-orca --disable-pxf --without-zstd $(APR_CONFIG)
 win32_CONFIGFLAGS=--with-gssapi --without-libcurl --disable-orca --disable-pxf --disable-gpcloud --without-libbz2 $(APR_CONFIG)
 sol10_x86_64_CONFIGFLAGS= --with-libxml $(APR_CONFIG)
-rhel6_x86_64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
-rhel7_x86_64_CONFIGFLAGS=--enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel6_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
+rhel7_x86_64_CONFIGFLAGS=--with-quicklz --enable-tap-tests --enable-gpperfmon --with-gssapi --enable-mapreduce --enable-orafce ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 #suse10_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 #suse11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
 #sles11_x86_64_CONFIGFLAGS=--enable-gpperfmon --with-gssapi ${ORCA_CONFIG} --with-libxml $(APR_CONFIG) $(APU_CONFIG)
@@ -216,7 +216,7 @@ CONFIGFLAGS+= --with-includes="$(CONFIG_INCLUDES)" --with-libraries="$(CONFIG_LI
 
 # Configure in "authlibs"...
 # ...without an ext/ dir copy of curl-config on Tiger or AIX
-ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32)" ""
+ifeq "$(findstring $(BLD_ARCH),aix7_ppc_64 aix5_ppc_64 aix5_ppc_32 rhel6_x86_64 rhel7_x86_64)" ""
 BLD_CURL_CONFIG=CURL_CONFIG=$(BLD_THIRDPARTY_BIN_DIR)/curl-config
 endif
 # ...and do not include the authlibs on Windows or AIX
@@ -334,9 +334,6 @@ define BUILD_STEPS
 	#@$(MAKE) mgmtcopy INSTLOC=$(INSTLOC)
 	@$(MAKE) mkpgbouncer INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
 	@$(MAKE) mkpgbench INSTLOC=$(INSTLOC) BUILDDIR=$(BUILDDIR)
-	if [ "$(findstring $(BLD_ARCH),$(SERVER_PLATFORMS))" != "" ]; then \
-	  $(MAKE) -C ../gpcontrib mkgphdfs INSTLOC=$(INSTLOC); \
-	fi
 	@$(MAKE) copydocs INSTLOC=$(INSTLOC)
 	@$(MAKE) copylibs INSTLOC=$(INSTLOC)
 	@$(MAKE) clients INSTLOC=$(INSTLOC) CLIENTINSTLOC=$(CLIENTINSTLOC)
@@ -594,7 +591,12 @@ endif
 AIX_LOADERS_LIBS=libbz2.a libz.a libpq.a liblber*.a libldap*.a libyaml*.a libcrypto.so* libevent*.a
 Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dylib libcom_err.*.dylib libldap_r-*.dylib libk5crypto.*.dylib libkrb5support.*.dylib liblber-*.dylib libyaml*.dylib
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
-Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libkrb5.so* libcom_err.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libgssapi_krb5.so* libyaml*so*
+# TODO: Remove the condition below once libldap is installed on SLES images
+ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
+Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so*
+else
+Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libldap_r-*so* libyaml*so*
+endif
 SunOS_LOADERS_LIBS=libcrypto.so* libssl.so.* libgcc_s.so.1 libz.so* libpq.so* libk5crypto.so* libkrb5support.so* liblber*.so* libldap_r-*so* libcom_err.so* libkrb5.so* libyaml*so*
 Windows_LOADERS_LIBS=comerr32.dll gssapi32.dll k5sprt32.dll kclnt32.dll kfwlogon.dll krb4cred.dll krb4cred_en_us.dll krb524.dll krb5_32.dll krb5cred.dll krb5cred_en_us.dll krbcc32.dll krbv4w32.dll leashw32.dll nidmgr32.dll wshelp32.dll xpprof32.dll libpq.dll
 define tmpLOADERS_FILESET_LIB
@@ -847,7 +849,6 @@ SET_VERSION_SCRIPTS = \
 	sbin/gpupgrademirror.py \
 	lib/python/gppylib/programs/clsAddMirrors.py \
 	lib/python/gppylib/programs/clsHostCacheLookup.py \
-	lib/python/gppylib/programs/clsInjectFault.py \
 	lib/python/gppylib/programs/clsRecoverSegment.py \
 	lib/python/gppylib/programs/clsSystemState.py \
 	lib/python/gppylib/programs/gppkg.py \
@@ -984,11 +985,11 @@ copylibs : thirdparty-dist
 	fi
 	mkdir -p $(INSTLOC)/etc
 	mkdir -p $(INSTLOC)/include
-ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 aix5_ppc_64 aix7_ppc_64 win32 win64)" ""
 	# Copy curl header file
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/curl $(INSTLOC)/include/
 endif
-ifeq "$(findstring $(BLD_ARCH),aix5_ppc_32 win32 win64)" ""
+ifeq "$(findstring $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64 aix5_ppc_32 win32 win64)" ""
 ifneq "$(BLD_ARCH)" "osx104_x86"
 	cp -rp $(BLD_THIRDPARTY_BIN_DIR)/openssl $(INSTLOC)/bin/
 	cp -rp $(BLD_THIRDPARTY_INCLUDE_DIR)/openssl $(INSTLOC)/include/

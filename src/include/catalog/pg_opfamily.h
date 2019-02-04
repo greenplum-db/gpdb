@@ -208,4 +208,45 @@ DATA(insert OID = 7077 (	405		tid_ops		PGNSP PGUID ));
 DATA(insert OID = 7078 (	405		bit_ops		PGNSP PGUID ));
 DATA(insert OID = 7079 (	405		varbit_ops	PGNSP PGUID ));
 
+/* Hash opfamilies to represent the legacy "cdbhash" function */
+/* int2, int4, int8 */
+DATA(insert OID = 7100 (	405		cdbhash_integer_ops	PGNSP PGUID ));
+DATA(insert OID = 7101 (	405		cdbhash_float4_ops	PGNSP PGUID ));
+DATA(insert OID = 7102 (	405		cdbhash_float8_ops	PGNSP PGUID ));
+DATA(insert OID = 7103 (	405		cdbhash_numeric_ops	PGNSP PGUID ));
+DATA(insert OID = 7104 (	405		cdbhash_char_ops	PGNSP PGUID ));
+/* text is also for varchar */
+DATA(insert OID = 7105 (	405		cdbhash_text_ops	PGNSP PGUID ));
+/*
+ * In the legacy hash functions, the hashing of 'text' and 'bpchar' are
+ * actually compatible. But there are no cross-datatype operators between
+ * them, we rely on casts. Better to put them in different operator families,
+ * to avoid confusion.
+ */
+DATA(insert OID = 7106 (	405		cdbhash_bpchar_ops	PGNSP PGUID ));
+DATA(insert OID = 7107 (	405		cdbhash_bytea_ops	PGNSP PGUID ));
+DATA(insert OID = 7108 (	405		cdbhash_name_ops	PGNSP PGUID ));
+DATA(insert OID = 7109 (	405		cdbhash_oid_ops		PGNSP PGUID ));
+DATA(insert OID = 7110 (	405		cdbhash_tid_ops		PGNSP PGUID ));
+DATA(insert OID = 7111 (	405		cdbhash_timestamp_ops	PGNSP PGUID ));
+DATA(insert OID = 7112 (	405		cdbhash_timestamptz_ops	PGNSP PGUID ));
+DATA(insert OID = 7113 (	405		cdbhash_date_ops	PGNSP PGUID ));
+DATA(insert OID = 7114 (	405		cdbhash_time_ops	PGNSP PGUID ));
+DATA(insert OID = 7115 (	405		cdbhash_timetz_ops	PGNSP PGUID ));
+DATA(insert OID = 7116 (	405		cdbhash_interval_ops	PGNSP PGUID ));
+DATA(insert OID = 7117 (	405		cdbhash_abstime_ops	PGNSP PGUID ));
+DATA(insert OID = 7118 (	405		cdbhash_reltime_ops	PGNSP PGUID ));
+DATA(insert OID = 7119 (	405		cdbhash_tinterval_ops	PGNSP PGUID ));
+DATA(insert OID = 7120 (	405		cdbhash_inet_ops	PGNSP PGUID ));
+DATA(insert OID = 7121 (	405		cdbhash_macaddr_ops	PGNSP PGUID ));
+DATA(insert OID = 7122 (	405		cdbhash_bit_ops		PGNSP PGUID ));
+DATA(insert OID = 7123 (	405		cdbhash_varbit_ops	PGNSP PGUID ));
+DATA(insert OID = 7124 (	405		cdbhash_bool_ops	PGNSP PGUID ));
+DATA(insert OID = 7125 (	405		cdbhash_array_ops	PGNSP PGUID ));
+DATA(insert OID = 7126 (	405		cdbhash_oidvector_ops	PGNSP PGUID ));
+DATA(insert OID = 7127 (	405		cdbhash_cash_ops	PGNSP PGUID ));
+DATA(insert OID = 7128 (	405		cdbhash_complex_ops	PGNSP PGUID ));
+DATA(insert OID = 7129 (	405		cdbhash_uuid_ops	PGNSP PGUID ));
+DATA(insert OID = 7130 (	405		cdbhash_enum_ops	PGNSP PGUID ));
+
 #endif   /* PG_OPFAMILY_H */

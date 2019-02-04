@@ -847,8 +847,9 @@
           <row>
             <entry colname="col1">E152-01</entry>
             <entry colname="col2"><codeph>ISOLATION LEVEL SERIALIZABLE</codeph> clause</entry>
-            <entry colname="col3">YES</entry>
-            <entry colname="col4"/>
+            <entry colname="col3">NO</entry>
+            <entry colname="col4">Can be declared but is treated as a synonym for <codeph>REPEATABLE
+                READ</codeph></entry>
           </row>
           <row>
             <entry colname="col1">E152-02</entry>
@@ -1179,9 +1180,8 @@
           <row>
             <entry colname="col1">F111-03</entry>
             <entry colname="col2"><codeph>REPEATABLE READ</codeph> isolation level</entry>
-            <entry colname="col3">NO</entry>
-            <entry colname="col4">Use <codeph>SERIALIZABLE</codeph>
-            </entry>
+            <entry colname="col3">YES</entry>
+            <entry colname="col4"> </entry>
           </row>
           <row>
             <entry colname="col1">F121</entry>

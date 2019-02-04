@@ -17,7 +17,7 @@ CREATE EXTENSION IF NOT EXISTS gp_inject_fault;
 1: set vacuum_freeze_min_age = 0;
 -- Check the age of the table just before vacuum (use BETWEEN to mask minor
 -- differences that might happen if e.g. autovacuum kicks in)
-1: select age(relfrozenxid) between 7 and 9, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
 
 -- Hold AccessShareLock to make AO VACUUM skip drop phase
 2: begin;

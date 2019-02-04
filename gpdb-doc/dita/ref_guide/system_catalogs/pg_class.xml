@@ -52,6 +52,13 @@
               type, if any (zero for indexes, which have no pg_type entry)</entry>
           </row>
           <row>
+            <entry><codeph>reloftype</codeph></entry>
+            <entry>oid</entry>
+            <entry>pg_type.oid</entry>
+            <entry>The OID of an entry in <codeph>pg_type</codeph> for an underlying composite
+              type.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>relowner</codeph>
             </entry>
@@ -106,6 +113,12 @@
             <entry colname="col4">Number of rows in the table. This is only an estimate used by the
               planner. It is updated by <codeph>VACUUM</codeph>, <codeph>ANALYZE</codeph>, and a few
               DDL commands.</entry>
+          </row>
+          <row>
+            <entry><codeph>relallvisible</codeph></entry>
+            <entry>int32</entry>
+            <entry/>
+            <entry>Number of all-visible blocks (this value may not be up-to-date).</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -163,17 +176,26 @@
               Only certain system catalog tables are shared.</entry>
           </row>
           <row>
+            <entry><codeph>relpersistence</codeph></entry>
+            <entry>char</entry>
+            <entry/>
+            <entry>The type of object persistence: <codeph>p</codeph> = heap or append-optimized
+              table, <codeph>u</codeph> = unlogged temporary table, <codeph>t</codeph> = temporary
+              table.</entry>
+          </row>
+          <row>
             <entry colname="col1">
               <codeph>relkind</codeph>
             </entry>
             <entry colname="col2">char</entry>
             <entry colname="col3"/>
             <entry colname="col4">The type of object<p><codeph>r</codeph> = heap or append-optimized
-                table, <codeph>i</codeph> = index, <codeph>S</codeph> = sequence, <codeph>v</codeph>
-                = view, <codeph>c</codeph> = composite type, <codeph>t</codeph> = TOAST value,
-                  <codeph>o</codeph> = internal append-optimized segment files and EOFs,
-                  <codeph>c</codeph> = composite type, <codeph>u</codeph> = uncataloged temporary
-                heap table</p></entry>
+                table, <codeph>i</codeph> = index, <codeph>S</codeph> = sequence, <codeph>t</codeph>
+                = TOAST value, <codeph>v</codeph> = view, <codeph>c</codeph> = composite type,
+                  <codeph>f</codeph> = foreign table, <codeph>u</codeph> = uncatalogued temporary
+                heap table, <codeph>o</codeph> = internal append-optimized segment files and EOFs,
+                  <codeph>b</codeph> = append-only block directory, <codeph>M</codeph> = append-only
+                visibility map</p></entry>
           </row>
           <row>
             <entry colname="col1">
@@ -257,6 +279,12 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">True if table has rules.</entry>
+          </row>
+          <row>
+            <entry><codeph>relhastriggers</codeph></entry>
+            <entry>boolean</entry>
+            <entry/>
+            <entry>True if table has (or once had) triggers.</entry>
           </row>
           <row>
             <entry colname="col1">

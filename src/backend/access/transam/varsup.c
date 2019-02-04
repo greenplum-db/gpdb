@@ -368,8 +368,6 @@ SetTransactionIdLimit(TransactionId oldest_datfrozenxid, Oid oldest_datoid)
 	 * clients that won't pay attention to warnings. (No, we're not gonna make
 	 * this configurable.  If you know enough to configure it, you know enough
 	 * to not get in this kind of trouble in the first place.)
-	 *
-	 * GPDB_94_MERGE_FIXME: well, we've made it configurable anyway. Not sure why.
 	 */
 	xidWarnLimit = xidStopLimit  - (TransactionId)xid_warn_limit;
 	if (xidWarnLimit < FirstNormalTransactionId)

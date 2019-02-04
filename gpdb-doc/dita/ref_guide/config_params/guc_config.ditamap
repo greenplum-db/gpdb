@@ -105,6 +105,7 @@
             <topicref href="guc-list.xml#gp_enable_segment_copy_checking"/>
             <topicref href="guc-list.xml#gp_enable_sort_distinct"/>
             <topicref href="guc-list.xml#gp_enable_sort_limit"/>
+            <topicref href="guc-list.xml#gp_expand_method"/>
             <topicref href="guc-list.xml#gp_external_enable_exec"/>
             <topicref href="guc-list.xml#gp_external_max_segs"/>
             <topicref href="guc-list.xml#gp_external_enable_filter_pushdown"/>
@@ -159,6 +160,7 @@
             <topicref href="guc-list.xml#gp_set_read_only"/>
             <topicref href="guc-list.xml#gp_statistics_pullup_from_child_partition"/>
             <topicref href="guc-list.xml#gp_statistics_use_fkeys"/>
+            <topicref href="guc-list.xml#gp_use_legacy_hashops"/>
             <topicref href="guc-list.xml#gp_vmem_idle_resource_timeout"/>
             <topicref href="guc-list.xml#gp_vmem_protect_limit"/>
             <topicref href="guc-list.xml#gp_vmem_protect_segworker_cache_limit"/>

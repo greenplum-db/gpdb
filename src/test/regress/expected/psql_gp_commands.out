@@ -101,28 +101,6 @@ ERROR:  invalid CREATEEXTTABLE specification. writable http external tables do n
 
 DROP ROLE test_psql_du_e6;
 ERROR:  role "test_psql_du_e6" does not exist
--- pg_catalog.pg_roles.rolcreaterexthdfs
-CREATE ROLE test_psql_du_e7 WITH SUPERUSER CREATEEXTTABLE (type = 'readable', protocol = 'gphdfs');
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-\du test_psql_du_e7
-                             List of roles
-    Role name    |               Attributes                | Member of 
------------------+-----------------------------------------+-----------
- test_psql_du_e7 | Superuser, Ext hdfs Table, Cannot login | {}
-
-DROP ROLE test_psql_du_e7;
--- pg_catalog.pg_roles.rolcreatewexthdfs
-CREATE ROLE test_psql_du_e8 WITH SUPERUSER CREATEEXTTABLE (type = 'writable', protocol = 'gphdfs');
-WARNING:  GRANT/REVOKE on gphdfs is deprecated
-HINT:  Issue the GRANT or REVOKE on the protocol itself
-\du test_psql_du_e8
-                               List of roles
-    Role name    |                 Attributes                  | Member of 
------------------+---------------------------------------------+-----------
- test_psql_du_e8 | Superuser, Wri Ext hdfs Table, Cannot login | {}
-
-DROP ROLE test_psql_du_e8;
 -- Test replication and verbose. GPDB specific attributes are mixed with PG attributes.
 -- Our role describe code is easy to be buggy when we merge with PG upstream code.
 -- The tests here are used to double-confirm the correctness of our role describe code.
@@ -142,27 +120,105 @@ COMMENT ON ROLE test_psql_du_e9 IS 'test_role_description';
 
 DROP ROLE test_psql_du_e9;
 --
--- Test that \dE displays both external and foreign tables
+-- Test \d commands.
 --
+-- Create a test schema, with different kinds of relations. To make the
+-- expected output insensitive to the current username, change the owner.
+CREATE ROLE test_psql_de_role;
+NOTICE:  resource queue required -- using default resource queue "pg_default"
 CREATE FOREIGN DATA WRAPPER dummy_wrapper;
 COMMENT ON FOREIGN DATA WRAPPER dummy_wrapper IS 'useless';
 CREATE SERVER dummy_server FOREIGN DATA WRAPPER dummy_wrapper;
+CREATE SCHEMA test_psql_schema;
+GRANT CREATE, USAGE ON SCHEMA test_psql_schema TO test_psql_de_role;
+SET search_path = 'test_psql_schema';
+SET ROLE test_psql_de_role;
+CREATE TABLE d_heap (i int4) with (appendonly = false);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE d_ao (i int4) with (appendonly = true, orientation = row);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE TABLE d_aocs (i int4) with (appendonly = true, orientation = column);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE VIEW d_view as SELECT 123;
+CREATE INDEX d_index on d_heap(i);
+-- Only superuser can create external or foreign tables.
+RESET ROLE;
 CREATE FOREIGN TABLE "dE_foreign_table" (c1 integer)
   SERVER dummy_server;
+ALTER FOREIGN TABLE "dE_foreign_table" OWNER TO test_psql_de_role;
 CREATE EXTERNAL TABLE "dE_external_table"  (c1 integer)
   LOCATION ('file://localhost/dummy') FORMAT 'text';
--- Change the owner, so that the expected output is not sensitive to current
--- username.
-CREATE ROLE test_psql_de_role;
-NOTICE:  resource queue required -- using default resource queue "pg_default"
-ALTER FOREIGN TABLE "dE_foreign_table" OWNER TO test_psql_de_role;
 ALTER EXTERNAL TABLE "dE_external_table" OWNER TO test_psql_de_role;
+-- There's a GPDB-specific Storage column.
+\d
+                                        List of relations
+      Schema      |       Name        |     Type      |       Owner       |       Storage        
+------------------+-------------------+---------------+-------------------+----------------------
+ test_psql_schema | dE_external_table | table         | test_psql_de_role | external
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign
+ test_psql_schema | d_ao              | table         | test_psql_de_role | append only
+ test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar
+ test_psql_schema | d_heap            | table         | test_psql_de_role | heap
+ test_psql_schema | d_view            | view          | test_psql_de_role | none
+(6 rows)
+
+\d+
+                                                    List of relations
+      Schema      |       Name        |     Type      |       Owner       |       Storage        |  Size   | Description 
+------------------+-------------------+---------------+-------------------+----------------------+---------+-------------
+ test_psql_schema | dE_external_table | table         | test_psql_de_role | external             | 0 bytes | 
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role | foreign              | 0 bytes | 
+ test_psql_schema | d_ao              | table         | test_psql_de_role | append only          | 128 kB  | 
+ test_psql_schema | d_aocs            | table         | test_psql_de_role | append only columnar | 128 kB  | 
+ test_psql_schema | d_heap            | table         | test_psql_de_role | heap                 | 0 bytes | 
+ test_psql_schema | d_view            | view          | test_psql_de_role | none                 | 0 bytes | 
+(6 rows)
+
+-- The Storage column is not interesting for indexes, so it's omitted with
+-- \di
+\di
+                        List of relations
+      Schema      |  Name   | Type  |       Owner       | Table  
+------------------+---------+-------+-------------------+--------
+ test_psql_schema | d_index | index | test_psql_de_role | d_heap
+(1 row)
+
+\di+
+                                   List of relations
+      Schema      |  Name   | Type  |       Owner       | Table  |  Size  | Description 
+------------------+---------+-------+-------------------+--------+--------+-------------
+ test_psql_schema | d_index | index | test_psql_de_role | d_heap | 128 kB | 
+(1 row)
+
+-- But if tables are shown, too, then it's interesting again.
+\dti
+                                   List of relations
+      Schema      |  Name   | Type  |       Owner       |       Storage        | Table  
+------------------+---------+-------+-------------------+----------------------+--------
+ test_psql_schema | d_ao    | table | test_psql_de_role | append only          | 
+ test_psql_schema | d_aocs  | table | test_psql_de_role | append only columnar | 
+ test_psql_schema | d_heap  | table | test_psql_de_role | heap                 | 
+ test_psql_schema | d_index | index | test_psql_de_role | heap                 | d_heap
+(4 rows)
+
+-- \dE should display both external and foreign tables
 \dE "dE"*
-                             List of relations
- Schema |       Name        |     Type      |       Owner       | Storage  
---------+-------------------+---------------+-------------------+----------
- public | dE_external_table | table         | test_psql_de_role | external
- public | dE_foreign_table  | foreign table | test_psql_de_role | foreign
+                            List of relations
+      Schema      |       Name        |     Type      |       Owner       
+------------------+-------------------+---------------+-------------------
+ test_psql_schema | dE_external_table | table         | test_psql_de_role
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role
+(2 rows)
+
+\dE
+                            List of relations
+      Schema      |       Name        |     Type      |       Owner       
+------------------+-------------------+---------------+-------------------
+ test_psql_schema | dE_external_table | table         | test_psql_de_role
+ test_psql_schema | dE_foreign_table  | foreign table | test_psql_de_role
 (2 rows)
 
 -- Clean up

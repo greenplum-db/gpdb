@@ -1,7 +1,12 @@
+-- start_ignore
+! gpconfig -c gp_enable_global_deadlock_detector -v on;
+! gpstop -rai;
+-- end_ignore
+
 -- t0r is the reference table to provide the data distribution info.
 DROP TABLE IF EXISTS t0p;
 CREATE TABLE t0p (id int, val int);
-INSERT INTO t0p (id, val) SELECT i, i FROM generate_series(1, 20) i;
+INSERT INTO t0p (id, val) SELECT i, i FROM generate_series(1, 100) i;
 
 DROP TABLE IF EXISTS t0r;
 CREATE TABLE t0r (id int, val int, segid int) DISTRIBUTED REPLICATED;
@@ -41,11 +46,11 @@ RETURNS void AS $$
 $$ LANGUAGE sql;
 
 -- verify the function
--- Data distribution is sensitive to the underlying hash algorithm.
-SELECT segid(0,1);
-SELECT segid(0,2);
-SELECT segid(1,1);
-SELECT segid(1,2);
+-- Data distribution is sensitive to the underlying hash algorithm, we need each
+-- segment has enough tuples for test, 10 should be enough.
+SELECT segid(0,10) is not null;
+SELECT segid(1,10) is not null;
+SELECT segid(2,10) is not null;
 
 -- start_ignore
 ! gpconfig -c gp_global_deadlock_detector_period -v 10;

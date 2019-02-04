@@ -19,7 +19,7 @@ try:
     from gppylib.commands.unix import *
     from gppylib.fault_injection import inject_fault
     from gppylib.commands.gp import *
-    from gppylib.gparray import GpArray, MODE_CHANGELOGGING, STATUS_DOWN
+    from gppylib.gparray import GpArray, MODE_NOT_SYNC, STATUS_DOWN
     from gppylib.gpparseopts import OptParser, OptChecker
     from gppylib.gplog import *
     from gppylib.db import catalog
@@ -803,31 +803,6 @@ class SegmentTemplate:
         self.pool.check_results()
 
         self._start_new_primary_segments()
-
-        self.logger.info('Configuring new segments (mirror)')
-
-        # This loop enriches segments which are mirrors with two fields, primaryHostname and primarySegmentPort.
-        mirrorsList = []
-        for segPair in self.gparray.getExpansionSegPairList():
-            if segPair.mirrorDB is None:
-                continue
-            mirror = segPair.mirrorDB
-            mirror.primaryHostname = segPair.primaryDB.getSegmentHostName()
-            mirror.primarySegmentPort = segPair.primaryDB.getSegmentPort()
-            mirrorsList.append(mirror)
-
-        new_segment_info = ConfigureNewSegment.buildSegmentInfoForNewSegment(mirrorsList, primaryMirror='mirror')
-
-        for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
-                                            tarFile=self.schema_tar_file, newSegments=True,
-                                            verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
-                                            ctxt=REMOTE, remoteHost=host, validationOnly=False)
-            self.pool.addCommand(segCfgCmd)
-
-        self.pool.join()
-        self.pool.check_results()
-
         self._stop_new_primary_segments()
 
     def _fixup_template(self):
@@ -1348,12 +1323,12 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
 
-        # Put expansion segment primaries in change tracking
+        # Mark expansion segment primaries not in sync
         for seg in self.gparray.getExpansionSegDbList():
             if seg.isSegmentMirror() == True:
                 continue
             if self.gparray.get_mirroring_enabled() == True:
-                seg.setSegmentMode(MODE_CHANGELOGGING)
+                seg.setSegmentMode(MODE_NOT_SYNC)
 
         # Set expansion segment mirror state = down
         for seg in self.gparray.getExpansionSegDbList():
@@ -1620,7 +1595,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     n.oid as schemaoid,
     c.oid as tableoid,
-    p.attrnums as distribution_policy,
+    p.distkey as distribution_policy,
     now() as last_updated,
     %s,
     p.policytype as distribution_policy_type,
@@ -1716,7 +1691,7 @@ SELECT
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     n.oid as schemaoid,
     c.oid as tableoid,
-    d.attrnums as distributed_policy,
+    d.distkey as distributed_policy,
     now() as last_updated,
     %s,
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name

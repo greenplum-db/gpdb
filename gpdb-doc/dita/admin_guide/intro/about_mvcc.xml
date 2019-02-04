@@ -118,10 +118,11 @@
           <li><i>Phantom read</i> – a query executed twice in the same transaction can return two
             different sets of rows because another concurrent transaction added rows.</li>
         </ul></p>
-      <p>The SQL standard defines four transaction isolation modes that database systems must
-        support: </p>
+      <p>The SQL standard defines four transaction isolation levels that database systems can
+        support, with the phenomena that are allowed when transactions execute concurrently for each
+        level. </p>
       <table frame="all" id="table_gxb_qsz_nt">
-        <title>Transaction Isolation Modes</title>
+        <title>SQL Transaction Isolation Modes</title>
         <tgroup cols="4">
           <colspec colname="c1" colnum="1" colwidth="1*"/>
           <colspec colname="c2" colnum="2" colwidth="1*"/>
@@ -163,54 +164,59 @@
           </tbody>
         </tgroup>
       </table>
-      <p>The Greenplum Database SQL commands allow you to request <codeph>READ UNCOMMITTED</codeph>,
-          <codeph>READ COMMITTED</codeph>, or <codeph>SERIALIZABLE</codeph>. Greenplum Database
-        treats <codeph>READ UNCOMMITTED</codeph> the same as <codeph>READ COMMITTED</codeph>.
-        Requesting <codeph>REPEATABLE READ</codeph> produces an error; use
-          <codeph>SERIALIZABLE</codeph> instead. The default isolation mode is <codeph>READ
-          COMMITTED</codeph>. </p>
-      <p>The difference between <codeph>READ COMMITTED</codeph> and <codeph>SERIALIZABLE</codeph> is
-        that in <codeph>READ COMMITTED</codeph> mode, each statement in a transaction sees only rows
-        committed before the <i>statement</i> started, while in <codeph>SERIALIZABLE</codeph> mode,
-        all statements in a transaction see only rows committed before the <i>transaction</i>
-        started. </p>
-      <p>The <codeph>READ COMMITTED</codeph> isolation mode permits greater concurrency and better
-        performance than the <codeph>SERIALIZABLE</codeph> mode. It allows <i>non-repeatable
-          reads</i>, where the values in a row retrieved twice in a transaction can differ because
-        another concurrent transaction has committed changes since the transaction began.
-          <codeph>READ COMMITTED</codeph> mode also permits <i>phantom reads</i>, where a query
-        executed twice in the same transaction can return two different sets of rows.</p>
-      <p>The <codeph>SERIALIZABLE</codeph> isolation mode prevents both non-repeatable reads and
-        phantom reads, but at the cost of concurrency and performance. Each concurrent transaction
-        has a consistent view of the database taken at the beginning of execution. A concurrent
-        transaction that attempts to modify data modified by another transaction is rolled back.
-        Applications that execute transactions in <codeph>SERIALIZABLE</codeph> mode must be
-        prepared to handle transactions that fail due to serialization errors. If
-          <codeph>SERIALIZABLE</codeph> isolation mode is not required by the application, it is
-        better to use <codeph>READ COMMITTED</codeph> mode. </p>
-      <p>The SQL standard specifies that concurrent serializable transactions produce the same
-        database state they would produce if executed sequentially. The MVCC snapshot isolation
-        model prevents dirty reads, non-repeatable reads, and phantom reads without expensive
-        locking, but there are other interactions that can occur between some
+      <p>Greenplum Database <codeph>READ UNCOMMITTED</codeph> and <codeph>READ COMMITTED</codeph>
+        isolation modes behave like the SQL standard <codeph>READ COMMITTED</codeph> mode. Greenplum
+        Database <codeph>SERIALIZABLE</codeph> and <codeph>REPEATABLE READ</codeph> isolation modes
+        behave like the SQL standard <codeph>READ COMMITTED</codeph> mode, except that Greenplum
+        Database also prevents phantom reads.</p>
+      <p>The difference between <codeph>READ COMMITTED</codeph> and <codeph>REPEATABLE READ</codeph>
+        is that with <codeph>READ COMMITTED</codeph>, each statement in a transaction sees only rows
+        committed before the <i>statement</i> started, while in <codeph>READ COMMITTED</codeph>
+        mode, statements in a transaction see only rows committed before the <i>transaction</i>
+        started.</p>
+      <p>With <codeph>READ COMMITTED</codeph> isolation mode the values in a row retrieved twice in
+        a transaction can differ if another concurrent transaction has committed changes since the
+        transaction began. <codeph>READ COMMITTED</codeph> mode also permits <i>phantom reads</i>,
+        where a query executed twice in the same transaction can return two different sets of
+        rows.</p>
+      <p>The <codeph>REPEATABLE READ</codeph> isolation mode prevents non-repeatable reads and
+        phantom reads, although the latter is not required by the standard. A transaction that
+        attempts to modify data modified by another concurrent transaction is rolled back.
+        Applications that execute transactions in <codeph>REPEATABLE READ</codeph> mode must be
+        prepared to handle transactions that fail due to serialization errors. If <codeph>REPEATABLE
+          READ</codeph> isolation mode is not required by the application, it is better to use
+          <codeph>READ COMMITTED</codeph> mode. </p>
+      <p><codeph>SERIALIZABLE</codeph> mode, which Greenplum Database does not fully support,
+        guarantees that a set of transactions executed concurrently produces the same result as if
+        the transactions executed sequentially one after the other. If <codeph>SERIALIZABLE</codeph>
+        is specified, Greenplum Database falls back to <codeph>REPEATABLE READ</codeph>. The MVCC
+        Snapshot Isolation (SI) model prevents dirty reads, non-repeatable reads, and phantom reads
+        without expensive locking, but there are other interactions that can occur between some
           <codeph>SERIALIZABLE</codeph> transactions in Greenplum Database that prevent them from
         being truly serializable. These anomalies can often be attributed to the fact that Greenplum
         Database does not perform <i>predicate locking</i>, which means that a write in one
-        transaction can affect the result of a previous read in another concurrent transaction. </p>
-      <p>Transactions that run concurrently should be examined to identify interactions that are not
-        prevented by disallowing concurrent updates of the same data. Problems identified can be
-        prevented by using explicit table locks or by requiring the conflicting transactions to
-        update a dummy row introduced to represent the conflict. </p>
+        transaction can affect the result of a previous read in another concurrent transaction.</p>
+      <note>The PostgreSQL 9.1 <codeph>SERIALIZABLE</codeph> isolation level introduces a new
+        Serializable Snapshot Isolation (SSI) model, which is fully compliant with the SQL standard
+        definition of serializable transactions. This model is not available in Greenplum Database.
+        SSI monitors concurrent transactions for conditions that could cause serialization
+        anomalies. When potential serialization problems are found, one transaction is allowed to
+        commit and others are rolled back and must be retried. </note>
+      <p>Greenplum Database transactions that run concurrently should be examined to identify
+        interactions that may update the same data concurrently.
+        Problems identified can be prevented by using explicit table locks or by requiring the
+        conflicting transactions to update a dummy row introduced to represent the conflict. </p>
       <p>The SQL <codeph>SET TRANSACTION ISOLATION LEVEL</codeph> statement sets the isolation mode
         for the current transaction. The mode must be set before any <codeph>SELECT</codeph>,
           <codeph>INSERT</codeph>, <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, or
           <codeph>COPY</codeph>
         statements:<codeblock>BEGIN;
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;
 ...
 COMMIT;
 </codeblock></p>
       <p>The isolation mode can also be specified as part of the <codeph>BEGIN</codeph>
-        statement:<codeblock>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</codeblock></p>
+        statement:<codeblock>BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock></p>
       <p>The default transaction isolation mode can be changed for a session by setting the
           <varname>default_transaction_isolation</varname> configuration property.</p>
     </section>

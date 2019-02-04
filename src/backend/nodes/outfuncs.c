@@ -434,6 +434,9 @@ _outResult(StringInfo str, const Result *node)
 	appendStringInfoString(str, " :hashFilterColIdx");
 	for (i = 0; i < node->numHashFilterCols; i++)
 		appendStringInfo(str, " %d", node->hashFilterColIdx[i]);
+
+	for (i = 0; i < node->numHashFilterCols; i++)
+		appendStringInfo(str, " %u", node->hashFilterFuncs[i]);
 }
 #endif
 
@@ -1159,8 +1162,10 @@ _outMotion(StringInfo str, const Motion *node)
 
 	WRITE_BOOL_FIELD(sendSorted);
 
-	WRITE_NODE_FIELD(hashExpr);
-	WRITE_NODE_FIELD(hashDataTypes);
+	WRITE_NODE_FIELD(hashExprs);
+	appendStringInfoLiteral(str, " :hashFuncs");
+	for (i = 0; i < list_length(node->hashExprs); i++)
+		appendStringInfo(str, " %u", node->hashFuncs[i]);
 
 	WRITE_INT_FIELD(isBroadcast);
 
@@ -1219,17 +1224,27 @@ _outSplitUpdate(StringInfo str, const SplitUpdate *node)
 /*
  * _outReshuffle
  */
+#ifndef COMPILING_BINARY_FUNCS
 static void
 _outReshuffle(StringInfo str, const Reshuffle *node)
 {
+	int			i;
+
 	WRITE_NODE_TYPE("Reshuffle");
 
 	WRITE_INT_FIELD(tupleSegIdx);
-	WRITE_NODE_FIELD(policyAttrs);
+	WRITE_INT_FIELD(numPolicyAttrs);
+	appendStringInfoLiteral(str, " :policyAttrs");
+	for (i = 0; i < node->numPolicyAttrs; i++)
+		appendStringInfo(str, " %d", node->policyAttrs[i]);
+	appendStringInfoLiteral(str, " :policyHashFuncs");
+	for (i = 0; i < node->numPolicyAttrs; i++)
+		appendStringInfo(str, " %u", node->policyHashFuncs[i]);
 	WRITE_INT_FIELD(oldSegs);
 	WRITE_INT_FIELD(ptype);
 	_outPlanInfo(str, (Plan *) node);
 }
+#endif
 
 /*
  * _outRowTrigger
@@ -1938,7 +1953,8 @@ _outFlow(StringInfo str, const Flow *node)
 	WRITE_INT_FIELD(segindex);
 	WRITE_INT_FIELD(numsegments);
 
-	WRITE_NODE_FIELD(hashExpr);
+	WRITE_NODE_FIELD(hashExprs);
+	WRITE_NODE_FIELD(hashOpfamilies);
 
 	WRITE_NODE_FIELD(flow_before_req_move);
 }
@@ -2403,6 +2419,7 @@ _outDistributionKey(StringInfo str, const DistributionKey *node)
 	WRITE_NODE_TYPE("DISTRIBUTIONKEY");
 
 	WRITE_NODE_FIELD(dk_eclasses);
+	WRITE_OID_FIELD(dk_opfamily);
 }
 #endif /* COMPILING_BINARY_FUNCS */
 
@@ -2638,7 +2655,7 @@ _outDistributedBy(StringInfo str, const DistributedBy *node)
 
 	WRITE_ENUM_FIELD(ptype, GpPolicyType);
 	WRITE_INT_FIELD(numsegments);
-	WRITE_NODE_FIELD(keys);
+	WRITE_NODE_FIELD(keyCols);
 }
 
 
@@ -4641,7 +4658,7 @@ _outReshuffleExpr(StringInfo str, const ReshuffleExpr *node)
 	WRITE_INT_FIELD(newSegs);
 	WRITE_INT_FIELD(oldSegs);
 	WRITE_NODE_FIELD(hashKeys);
-	WRITE_NODE_FIELD(hashTypes);
+	WRITE_NODE_FIELD(hashFuncs);
 	WRITE_INT_FIELD(ptype);
 }
 

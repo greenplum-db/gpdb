@@ -833,7 +833,7 @@ AppendOnlyStorageRead_ReadNextBlock(AppendOnlyStorageRead *storageRead)
 														  &computedChecksum))
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("header checksum does not match, expected 0x%X and found 0x%X",
+					 errmsg("header checksum does not match, expected 0x%08X and found 0x%08X",
 							storedChecksum, computedChecksum),
 					 errdetail_appendonly_read_storage_content_header(storageRead),
 					 errcontext_appendonly_read_storage_block(storageRead)));
@@ -1175,7 +1175,7 @@ AppendOnlyStorageRead_InternalGetBuffer(AppendOnlyStorageRead *storageRead,
 														 &computedChecksum))
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_CORRUPTED),
-					 errmsg("block checksum does not match, expected 0x%X and found 0x%X",
+					 errmsg("block checksum does not match, expected 0x%08X and found 0x%08X",
 							storedChecksum,
 							computedChecksum),
 					 errdetail_appendonly_read_storage_content_header(storageRead),

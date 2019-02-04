@@ -13,7 +13,7 @@ INSERT 100
 BEGIN
 2: BEGIN;
 BEGIN
-2: DELETE FROM ao WHERE a = 1;
+2: DELETE FROM ao WHERE a = 2;
 DELETE 1
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
  coalesce | mode                | locktype                 | node   
@@ -28,8 +28,8 @@ DELETE 1
  ao       | AccessShareLock  | relation | n segments 
  ao       | RowExclusiveLock | relation | n segments 
 (2 rows)
--- The case here should delete a tuple at the same seg with(1).
--- Under jump hash, (3) and (1) are on the same seg(seg2).
+-- The case here should delete a tuple at the same seg with(2).
+-- Under jump hash, (2) and (3) are on the same seg(seg0).
 1&: DELETE FROM ao WHERE a = 3;  <waiting ...>
 2: COMMIT;
 COMMIT
@@ -42,12 +42,12 @@ BEGIN
 3: SELECT * FROM ao WHERE a < 5 ORDER BY a;
  a 
 ---
- 2 
+ 1 
  4 
 (2 rows)
 3: COMMIT;
 COMMIT
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap('ao');
+0U: SELECT * FROM gp_toolkit.__gp_aovisimap('ao');
  tid          | segno | row_num 
 --------------+-------+---------
  (33554432,1) | 1     | 1       

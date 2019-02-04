@@ -1071,7 +1071,8 @@
               <xref href="guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref>
             </p>
             <p>
-              <xref href="guc-list.xml#gp_global_deadlock_detector_period" type="section">gp_global_deadlock_detector_period</xref>
+              <xref href="guc-list.xml#gp_global_deadlock_detector_period" type="section"
+                >gp_global_deadlock_detector_period</xref>
             </p>
           </stentry>
           <stentry>
@@ -1263,6 +1264,10 @@
             </p>
             <p><xref href="guc-list.xml#gp_enable_segment_copy_checking"
                 >gp_enable_segment_copy_checking</xref></p>
+            <p><xref href="guc-list.xml#gp_expand_method">gp_expand_method</xref></p>
+            <p>
+              <xref href="guc-list.xml#gp_use_legacy_hashops" type="section"
+                >gp_use_legacy_hashops</xref></p>
           </stentry>
         </strow>
       </simpletable>
@@ -1320,8 +1325,7 @@
               </p>
             </stentry>
             <stentry>
-              <p>
-                <xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
+              <p><xref href="guc-list.xml#regex_flavor" type="section">regex_flavor</xref>
               </p>
               <p>
                 <xref href="guc-list.xml#standard_conforming_strings" type="section"

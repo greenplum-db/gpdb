@@ -696,7 +696,7 @@ DESCR("horizontally aligned");
 DATA(insert OID =  809 (  "?|"	   PGNSP PGUID b f f	600  600	 16  809  0 point_vert - - ));
 DESCR("vertically aligned");
 
-DATA(insert OID = 811 (  "="	   PGNSP PGUID b t f 704 704	16 811 812 tintervaleq eqsel eqjoinsel ));
+DATA(insert OID = 811 (  "="	   PGNSP PGUID b t t 704 704	16 811 812 tintervaleq eqsel eqjoinsel ));
 DESCR("equal");
 #define TIntervalEqualOperator 811
 DATA(insert OID = 812 (  "<>"	   PGNSP PGUID b f f 704 704	16 812 811 tintervalne neqsel neqjoinsel ));
@@ -717,7 +717,7 @@ DESCR("divide");
 DATA(insert OID = 845 (  "*"	   PGNSP PGUID b f f	700  790	790 843 0 flt4_mul_cash - - ));
 DESCR("multiply");
 
-DATA(insert OID = 900 (  "="	   PGNSP PGUID b t f	790  790	16 900 901 cash_eq eqsel eqjoinsel ));
+DATA(insert OID = 900 (  "="	   PGNSP PGUID b t t	790  790	16 900 901 cash_eq eqsel eqjoinsel ));
 DESCR("equal");
 #define CashEqualOperator 900
 DATA(insert OID = 901 (  "<>"	   PGNSP PGUID b f f	790  790	16 901 900 cash_ne neqsel neqjoinsel ));

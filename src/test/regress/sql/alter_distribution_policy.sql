@@ -15,11 +15,11 @@ alter table atsdb set distributed by (i);
 
 -- should work
 alter table atsdb set distributed randomly;
-select localoid::regclass, attrnums from gp_distribution_policy where localoid = 'atsdb'::regclass;
+select localoid::regclass, distkey from gp_distribution_policy where localoid = 'atsdb'::regclass;
 -- not possible to correctly verify random distribution
 
 alter table atsdb set distributed by (j);
-select localoid::regclass, attrnums from gp_distribution_policy where localoid = 'atsdb'::regclass;
+select localoid::regclass, distkey from gp_distribution_policy where localoid = 'atsdb'::regclass;
 -- verify that the data is correctly redistributed by building a fresh
 -- table with the same policy
 create table ats_test (i int, j text) distributed by (j);
@@ -29,7 +29,7 @@ select gp_segment_id, * from atsdb;
 drop table ats_test;
 
 alter table atsdb set distributed by (i, j);
-select localoid::regclass, attrnums from gp_distribution_policy where localoid = 'atsdb'::regclass;
+select localoid::regclass, distkey from gp_distribution_policy where localoid = 'atsdb'::regclass;
 -- verify
 create table ats_test (i int, j text) distributed by (i, j);
 insert into ats_test :DATA;
@@ -38,7 +38,7 @@ select gp_segment_id, * from atsdb;
 drop table ats_test;
 
 alter table atsdb set distributed by (j, i);
-select localoid::regclass, attrnums from gp_distribution_policy where localoid = 'atsdb'::regclass;
+select localoid::regclass, distkey from gp_distribution_policy where localoid = 'atsdb'::regclass;
 -- verify
 create table ats_test (i int, j text) distributed by (j, i);
 insert into ats_test :DATA;
@@ -75,67 +75,6 @@ alter table atsdb_ao set distributed randomly;
 select count(*) from atsdb_ao;
 drop table atsdb_ao;
 
--- Check divergent distribution policies for partitioning.
-create table atsdb (i int, j int, k int) distributed by (i) partition by range(k)
-(start(1) end(4) every(1));
-alter table atsdb_1_prt_2 set distributed by (j);
-alter table atsdb_1_prt_3 set distributed randomly;
--- test COPY
-copy atsdb from stdin delimiter '|';
-1|1|1
-2|1|1
-2|2|1
-3|1|1
-3|2|1
-3|3|1
-1|1|2
-2|1|2
-2|2|2
-3|1|2
-3|2|2
-3|3|2
-1|1|3
-2|1|3
-2|2|3
-3|1|3
-3|2|3
-3|3|3
-\.
-
-select count(*) from atsdb;
-
--- compare distribution: we create a table, identical to the partitioned table,
--- and compare how the tuples have been distributed.
-create table atsdb_1 (like atsdb_1_prt_1) distributed by (i);
-copy atsdb_1 from stdin delimiter '|';
-1|1|1
-2|1|1
-2|2|1
-3|1|1
-3|2|1
-3|3|1
-\.
-select gp_segment_id, * from atsdb where k = 1 except
-select gp_segment_id, * from atsdb_1;
-
-create table atsdb_2 (like atsdb_1_prt_2) distributed by (i);
-copy atsdb_2 from stdin delimiter '|';
-1|1|2
-2|1|2
-2|2|2
-3|1|2
-3|2|2
-3|3|2
-\.
-select gp_segment_id, * from atsdb where k = 2 except
-select gp_segment_id, * from atsdb_2;
-
--- Can't test randomly distributed
-
--- Can't test INSERT (yet)
-
-drop table atsdb, atsdb_1, atsdb_2;
-
 -- Can't redistribute system catalogs
 alter table pg_class set distributed by (relname);
 alter table pg_class set with(appendonly = true);
@@ -153,7 +92,7 @@ drop table atsdb;
 
 create view distcheck as select relname as rel, attname from
 gp_distribution_policy g, pg_attribute p, pg_class c
-where g.localoid = p.attrelid and attnum = any(g.attrnums) and
+where g.localoid = p.attrelid and attnum = any(g.distkey) and
 c.oid = p.attrelid;
 
 -- dropped columns
@@ -440,34 +379,6 @@ ALTER TABLE t_dist2 SET DISTRIBUTED BY(col1, col2, col3);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col3);
 ALTER TABLE t_dist2 SET DISTRIBUTED BY(col4);
 
--- Altering distribution policy for subpartitioned tables
-CREATE TABLE mpp6489
-(
-	id int,
-	rank int,
-	year date,
-	gender char(1)
-)
-DISTRIBUTED BY (id, gender, year)
-partition by list (gender)
-subpartition by range (year)
-subpartition template
-(
-	start (date '2001-01-01'),
-	start (date '2002-01-01'),
-	start (date '2003-01-01'),
-	start (date '2004-01-01'),
-	start (date '2005-01-01')
-)
-(
-	values ('M'),
-	values ('F')
-);
-
-ALTER TABLE mpp6489_1_prt_1_2_prt_5 set distributed randomly;
-ALTER TABLE "mpp6489" ALTER PARTITION FOR('M'::bpchar) alter PARTITION
-FOR(RANK(5)) set distributed by (id, gender, year);
-
 -- Altering distribution policy for temp tables
 create temp table atsdb (c1 int, c2 int) distributed randomly;
 select * from atsdb;
@@ -475,3 +386,38 @@ alter table atsdb set distributed by (c1);
 select * from atsdb;
 alter table atsdb set distributed by (c2);
 select * from atsdb;
+
+--
+-- ALTER TABLE SET DATA TYPE tests, where the column is part of the
+-- distribution key.
+--
+CREATE TABLE distpol_typechange (i int2) DISTRIBUTED BY (i);
+INSERT INTO distpol_typechange values (123);
+ALTER TABLE distpol_typechange ALTER COLUMN i SET DATA TYPE int4;
+DROP TABLE distpol_typechange;
+CREATE TABLE distpol_typechange (p text) DISTRIBUTED BY (p);
+
+-- This should throw an error, you can't change the datatype of a distribution
+-- key column.
+INSERT INTO distpol_typechange VALUES ('(1,1)');
+ALTER TABLE distpol_typechange ALTER COLUMN p TYPE point USING p::point;
+
+-- unless it's completely empty! But 'point' doesn't have hash a opclass,
+-- so it cannot be part of the distribution key. We silently turn the
+-- table randomly distributed.
+TRUNCATE distpol_typechange;
+ALTER TABLE distpol_typechange ALTER COLUMN p TYPE point USING p::point;
+
+select policytype, distkey, distclass from gp_distribution_policy where localoid='distpol_typechange'::regclass;
+
+
+-- Similar case, but with CREATE UNIQUE INDEX, rather than ALTER TABLE.
+-- Creating a unique index on a completely empty table automatically updates
+-- the distribution key to match the unique index.  (This allows the common
+-- case, where no DISTRIBUTED BY was given explicitly, and the system just
+-- picked the first column, which isn't compatible with the unique index
+-- that's created later, to work.) But not if the unique column doesn't
+-- have a hash opclass!
+CREATE TABLE tstab (i int4, t tsvector) distributed by (i);
+CREATE UNIQUE INDEX tstab_idx ON tstab(t);
+INSERT INTO tstab VALUES (1, 'foo');

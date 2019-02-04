@@ -62,7 +62,6 @@ extern Oid	AlterDatabaseOwner(const char *dbname, Oid newOwnerId);
 
 extern Oid	get_database_oid(const char *dbname, bool missingok);
 extern char *get_database_name(Oid dbid);
-extern int get_database_hash_method(Oid dbid);
 
 extern void dbase_redo(XLogRecPtr beginLoc  __attribute__((unused)), XLogRecPtr lsn  __attribute__((unused)), XLogRecord *rptr);
 extern void dbase_desc(StringInfo buf, XLogRecord *record);

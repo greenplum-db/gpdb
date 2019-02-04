@@ -21,6 +21,7 @@
 
 #include "nodes/makefuncs.h"
 #include "optimizer/planmain.h"
+#include "utils/lsyscache.h"
 
 #include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
@@ -272,9 +273,9 @@ copyFlow(Flow *model_flow, bool withExprs, bool withSort)
 	if (model_flow->flotype == FLOW_PARTITIONED)
 	{
 		/* Copy hash attribute definitions, if wanted and available. */
-		if (withExprs && model_flow->hashExpr != NULL)
+		if (withExprs && model_flow->hashExprs != NIL)
 		{
-			new_flow->hashExpr = copyObject(model_flow->hashExpr);
+			new_flow->hashExprs = copyObject(model_flow->hashExprs);
 		}
 	}
 	else if (model_flow->flotype == FLOW_SINGLETON)
@@ -389,29 +390,36 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 {
 	ListCell   *cell;
 	List	   *hashexprs = NIL;
+	List	   *hashopfamilies = NIL;
 
 	foreach(cell, subplan->targetlist)
 	{
 		TargetEntry *tle = (TargetEntry *) lfirst(cell);
+		Oid			opfamily;
 
 		if (tle->resjunk)
 			continue;
 
-		if (!isGreenplumDbHashable(exprType((Node *) tle->expr)))
-			continue;
+		opfamily = cdb_default_distribution_opfamily_for_type(exprType((Node *) tle->expr));
+		if (!opfamily)
+			continue;		/* not hashable */
 
 		hashexprs = lappend(hashexprs, copyObject(tle->expr));
+		hashopfamilies = lappend_oid(hashopfamilies, opfamily);
 	}
 
 	if (hashexprs)
+	{
 		/*
 		 * FIXME: ALL as numsegments is correct,
 		 *        but can we decide a better value?
 		 */
 		return make_hashed_motion(subplan,
 								  hashexprs,
+								  hashopfamilies,
 								  false /* useExecutorVarFormat */,
 								  GP_POLICY_ALL_NUMSEGMENTS);
+	}
 	else
 	{
 		/*
@@ -432,21 +440,53 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
  *      motion should only be applied to a non-replicated, non-root subplan.
  */
 Motion *
-make_motion_hash(PlannerInfo *root __attribute__((unused)), Plan *subplan, List *hashexprs)
+make_motion_hash(PlannerInfo *root, Plan *subplan, List *hashExprs, List *hashOpfamilies)
 {
-	Motion	   *motion;
-
 	Assert(subplan->flow != NULL);
 
 	/* FIXME: numsegments */
 
-	motion = make_hashed_motion(
-								subplan,
-								hashexprs,
-								false /* useExecutorVarFormat */,
-								subplan->flow->numsegments);
+	return make_hashed_motion(subplan,
+							  hashExprs,
+							  hashOpfamilies,
+							  false /* useExecutorVarFormat */,
+							  subplan->flow->numsegments);
+}
 
-	return motion;
+
+/*
+ * make_motion_hash_exprs
+ *		Add a Motion node atop the given subplan to hash collocate
+ *      tuples non-distinct on the values of the hash expressions.  This
+ *      motion should only be applied to a non-replicated, non-root subplan.
+ *
+ * This variant uses the default hash opfamilies for each expression
+ */
+Motion *
+make_motion_hash_exprs(PlannerInfo *root, Plan *subplan, List *hashExprs)
+{
+	ListCell   *lc;
+	List	   *hashOpfamilies;
+
+	Assert(subplan->flow != NULL);
+
+	hashOpfamilies = NIL;
+	foreach(lc, hashExprs)
+	{
+		Node	   *expr = lfirst(lc);
+		Oid			opfamily;
+
+		opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
+		hashOpfamilies = lappend_oid(hashOpfamilies, opfamily);
+	}
+
+	/* FIXME: numsegments */
+
+	return make_hashed_motion(subplan,
+							  hashExprs,
+							  hashOpfamilies,
+							  false /* useExecutorVarFormat */,
+							  subplan->flow->numsegments);
 }
 
 /*
@@ -513,7 +553,7 @@ mark_passthru_locus(Plan *plan, bool with_hash, bool with_sort)
 		 * Make sure all the expressions the flow thinks we're hashed on occur
 		 * in the subplan targetlist.
 		 */
-		foreach(c, subplanflow->hashExpr)
+		foreach(c, subplanflow->hashExprs)
 		{
 			Node	   *x = (Node *) lfirst(c);
 
@@ -522,7 +562,8 @@ mark_passthru_locus(Plan *plan, bool with_hash, bool with_sort)
 			hash = lappend(hash, exprNew);
 		}
 
-		flow->hashExpr = hash;
+		flow->hashExprs = hash;
+		flow->hashOpfamilies = list_copy(subplanflow->hashOpfamilies);
 	}
 
 	plan->flow = flow;

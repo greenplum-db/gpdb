@@ -28,12 +28,23 @@ if (open BADCHARS, ">>$tempdir/pgdata/FOO\xe0\xe0\xe0BAR")
 configure_hba_for_replication "$tempdir/pgdata";
 system_or_bail 'pg_ctl', '-D', "$tempdir/pgdata", 'reload';
 
+# GPDB: The value of max_wal_senders defaults to 1 in GPDB, instead of 0 in Postgres.
+open CONF, ">>$tempdir/pgdata/postgresql.conf";
+print CONF "max_wal_senders = 0\n";
+close CONF;
+restart_test_server;
+
 command_fails(
 	[ 'pg_basebackup', '-D', "$tempdir/backup" ],
 	'pg_basebackup fails because of WAL configuration');
 
+#
+# TODO: When we re-enable pg_basebackup TAP tests, we need to make sure
+# this configuration variable matches the actual default guc value for
+# max_wal_senders, which increased with the addition of replication slots.
+#
 open CONF, ">>$tempdir/pgdata/postgresql.conf";
-print CONF "max_wal_senders = 10\n";
+print CONF "max_wal_senders = 1\n";
 print CONF "wal_level = archive\n";
 close CONF;
 restart_test_server;

@@ -35,18 +35,18 @@ select gp_debug_reset_create_table_default_numsegments();
  
 (1 row)
 
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in (
 		't1'::regclass, 'd1'::regclass, 'r1'::regclass,
 		't2'::regclass, 'd2'::regclass, 'r2'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t1       | {1,2}    | p          |           1
- d1       |          | r          |           1
- r1       |          | p          |           1
- t2       | {1,2}    | p          |           2
- d2       |          | r          |           2
- r2       |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t1       | 1 2     | p          |           1
+ d1       |         | r          |           1
+ r1       |         | p          |           1
+ t2       | 1 2     | p          |           2
+ d2       |         | r          |           2
+ r2       |         | p          |           2
 (6 rows)
 
 analyze t1;
@@ -473,63 +473,63 @@ select gp_debug_set_create_table_default_numsegments(2);
 -- none of the clauses
 create table t ();
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
 -- DISTRIBUTED BY only
 create table t () distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
 -- INHERITS only
 create table t () inherits (t2);
 NOTICE:  table has parent, setting distribution columns to match parent table
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           2
 (1 row)
 
 drop table t;
 -- LIKE only
 create table t (like d1);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | r          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | r          |           2
 (1 row)
 
 drop table t;
 -- DISTRIBUTED BY + INHERITS
 create table t () inherits (t2) distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
 -- DISTRIBUTED BY + LIKE
 create table t (like d1) distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
@@ -540,11 +540,11 @@ NOTICE:  merging column "c1" with inherited definition
 NOTICE:  merging column "c2" with inherited definition
 NOTICE:  merging column "c3" with inherited definition
 NOTICE:  merging column "c4" with inherited definition
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           2
 (1 row)
 
 drop table t;
@@ -554,11 +554,11 @@ NOTICE:  merging column "c1" with inherited definition
 NOTICE:  merging column "c2" with inherited definition
 NOTICE:  merging column "c3" with inherited definition
 NOTICE:  merging column "c4" with inherited definition
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
@@ -569,11 +569,11 @@ NOTICE:  merging multiple inherited definitions of column "c1"
 NOTICE:  merging multiple inherited definitions of column "c2"
 NOTICE:  merging multiple inherited definitions of column "c3"
 NOTICE:  merging multiple inherited definitions of column "c4"
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           2
 (1 row)
 
 drop table t;
@@ -583,11 +583,11 @@ NOTICE:  merging multiple inherited definitions of column "c1"
 NOTICE:  merging multiple inherited definitions of column "c2"
 NOTICE:  merging multiple inherited definitions of column "c3"
 NOTICE:  merging multiple inherited definitions of column "c4"
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1}      | p          |           2
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1       | p          |           2
 (1 row)
 
 drop table t;
@@ -608,60 +608,60 @@ select gp_debug_set_create_table_default_numsegments('full');
 create table t as table t1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1, c2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           3
 (1 row)
 
 drop table t;
 create table t as select * from t1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1, c2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           3
 (1 row)
 
 drop table t;
 create table t as select * from t1 distributed by (c1, c2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           3
 (1 row)
 
 drop table t;
 create table t as select * from t1 distributed replicated;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | r          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | r          |           3
 (1 row)
 
 drop table t;
 create table t as select * from t1 distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           3
 (1 row)
 
 drop table t;
 select * into table t from t1;
 NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column(s) named 'c1, c2' as the Greenplum Database data distribution key for this table.
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           3
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           3
 (1 row)
 
 drop table t;
@@ -683,51 +683,51 @@ select gp_debug_set_create_table_default_numsegments(1);
 
 create table t (like t1);
 NOTICE:  table doesn't have 'DISTRIBUTED BY' clause, defaulting to distribution columns from LIKE table
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           1
 (1 row)
 
 alter table t set distributed replicated;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | r          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | r          |           1
 (1 row)
 
 alter table t set distributed randomly;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        |          | p          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        |         | p          |           1
 (1 row)
 
 alter table t set distributed by (c1, c2);
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           1
 (1 row)
 
 alter table t add column c10 int;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           1
 (1 row)
 
 alter table t alter column c10 type text;
-select localoid::regclass, attrnums, policytype, numsegments
+select localoid::regclass, distkey, policytype, numsegments
 	from gp_distribution_policy where localoid in ('t'::regclass);
- localoid | attrnums | policytype | numsegments 
-----------+----------+------------+-------------
- t        | {1,2}    | p          |           1
+ localoid | distkey | policytype | numsegments 
+----------+---------+------------+-------------
+ t        | 1 2     | p          |           1
 (1 row)
 
 drop table t;

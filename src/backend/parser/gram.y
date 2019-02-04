@@ -389,7 +389,6 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				scatter_clause
 				create_generic_options alter_generic_options
 				relation_expr_list dostmt_opt_list
-				columnListUnique
 
 %type <node>    table_value_select_clause
 
@@ -583,6 +582,9 @@ static Node *makeIsNotDistinctFromNode(Node *expr, int position);
 				opt_frame_clause frame_extent frame_bound
 %type <str>		opt_existing_window_name
 %type <ival>	window_frame_exclusion
+
+%type <list>	distributed_by_list
+%type <ielem>	distributed_by_elem
 
 %type <boolean> opt_if_not_exists
 
@@ -3161,7 +3163,17 @@ reloption_list:
 reloption_elem:
 			ColLabel '=' def_arg
 				{
-					$$ = makeDefElem($1, (Node *) $3);
+					/*
+					 * appendoptimized is an alias for appendonly in order to
+					 * provide a reloption syntax which better reflects the
+					 * featureset of AO tables. It is implemented as a very
+					 * thin alias, the reloptions and messaging will still
+					 * say appendonly.
+					 */
+					if (strcmp($1, "appendoptimized") == 0)
+						$$ = makeDefElem("appendonly", (Node *) $3);
+					else
+						$$ = makeDefElem($1, (Node *) $3);
 				}
 			| ColLabel
 				{
@@ -4642,21 +4654,42 @@ columnList:
 			| columnList ',' columnElem				{ $$ = lappend($1, $3); }
 		;
 
-columnListUnique:
-			columnElem								{ $$ = list_make1($1); }
-			| columnListUnique ',' columnElem
-				{
-					if (list_member($1, $3))
-						ereport(ERROR,
-								(errcode(ERRCODE_DUPLICATE_COLUMN),
-								 errmsg("duplicate column in DISTRIBUTED BY clause"),
-								 parser_errposition(@3)));
-					$$ = lappend($1, $3);
-				}
-
 columnElem: ColId
 				{
 					$$ = (Node *) makeString($1);
+				}
+		;
+
+distributed_by_list:
+			distributed_by_elem						{ $$ = list_make1($1); }
+			| distributed_by_list ',' distributed_by_elem
+				{
+					IndexElem *newelem = $3;
+					ListCell *lc;
+
+					foreach(lc, $1)
+					{
+						IndexElem  *oldelem = (IndexElem *) lfirst(lc);
+
+						if (strcmp(oldelem->name, newelem->name) == 0)
+							ereport(ERROR,
+									(errcode(ERRCODE_DUPLICATE_COLUMN),
+									 errmsg("duplicate column in DISTRIBUTED BY clause"),
+									 parser_errposition(@3)));
+					}
+
+					$$ = lappend($1, newelem);
+				}
+			;
+
+distributed_by_elem: ColId opt_class
+				{
+					/*
+					 * only these fields are used, leave others as 0/NULL
+					 */
+					$$ = makeNode(IndexElem);
+					$$->name = $1;
+					$$->opclass = $2;
 				}
 		;
 
@@ -4766,12 +4799,12 @@ OptConsTableSpace:   USING INDEX TABLESPACE name	{ $$ = $4; }
 ExistingIndex:   USING INDEX index_name				{ $$ = $3; }
 		;
 
-DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'
+DistributedBy:   DISTRIBUTED BY  '(' distributed_by_list ')'
 			{
 				DistributedBy *distributedBy = makeNode(DistributedBy);
 				distributedBy->ptype = POLICYTYPE_PARTITIONED;
 				distributedBy->numsegments = -1;
-				distributedBy->keys = $4;
+				distributedBy->keyCols = $4;
 				$$ = (Node *)distributedBy;
 			}
 			| DISTRIBUTED RANDOMLY
@@ -4779,7 +4812,7 @@ DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'
 				DistributedBy *distributedBy = makeNode(DistributedBy);
 				distributedBy->ptype = POLICYTYPE_PARTITIONED;
 				distributedBy->numsegments = -1;
-				distributedBy->keys = NIL;
+				distributedBy->keyCols = NIL;
 				$$ = (Node *)distributedBy;
 			}
 			| DISTRIBUTED REPLICATED
@@ -4787,7 +4820,7 @@ DistributedBy:   DISTRIBUTED BY  '(' columnListUnique ')'
 				DistributedBy *distributedBy = makeNode(DistributedBy);
 				distributedBy->ptype = POLICYTYPE_REPLICATED;
 				distributedBy->numsegments = -1;
-				distributedBy->keys = NIL;
+				distributedBy->keyCols = NIL;
 				$$ = (Node *)distributedBy;
 			}
 		;

@@ -1320,20 +1320,6 @@ select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_ji
 
 drop table qp_misc_jiras.tbl_694_1;
 drop table qp_misc_jiras.tbl_694_2;
--- Postgres timestamp
-select '20081225 130000'::timestamp;
-      timestamp      
----------------------
- 2008-12-25 13:00:00
-(1 row)
-
--- Teradata timestamp
-select '20081225130000'::timestamp;
-      timestamp      
----------------------
- 2008-12-25 13:00:00
-(1 row)
-
 select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
  a | b 
 ---+---
@@ -1713,16 +1699,16 @@ drop table qp_misc_jiras.tbl6833_vac;
 drop table if exists qp_misc_jiras_foo;
 NOTICE:  table "qp_misc_jiras_foo" does not exist, skipping
 create table qp_misc_jiras_foo(x int) distributed by (x);
-SELECT t.attrnums, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
+SELECT t.distkey, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
 a.attnotnull, a.attnum, pg_catalog.col_description(a.attrelid, a.attnum)
 FROM pg_catalog.pg_class c
 LEFT outer JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 left outer join pg_catalog.gp_distribution_policy t on localoid = c.oid
-left outer join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attnum in (select unnest(t.attrnums))
+left outer join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attnum in (select unnest(t.distkey))
 WHERE c.relname ~ '^(qp_misc_jiras_foo)$';
- attrnums | attname | format_type | attnotnull | attnum | col_description 
-----------+---------+-------------+------------+--------+-----------------
- {1}      | x       | integer     | f          |      1 | 
+ distkey | attname | format_type | attnotnull | attnum | col_description 
+---------+---------+-------------+------------+--------+-----------------
+ 1       | x       | integer     | f          |      1 | 
 (1 row)
 
 -- previously supported query
@@ -2583,9 +2569,9 @@ language plpgsql;
 select gp_segment_id, a, func3(a) from qp_misc_jiras.fim1; -- we allow this
  gp_segment_id |  a  | func3 
 ---------------+-----+-------
-             0 | 300 |     1
-             1 | 200 |     1
+             1 | 300 |     1
              2 | 100 |     1
+             2 | 200 |     1
 (3 rows)
 
 --
@@ -2796,9 +2782,9 @@ SELECT * FROM pg_indexes WHERE tablename='inet_ip_pairs';
 SELECT gp_segment_id,count(*) FROM qp_misc_jiras.inet_ip_pairs GROUP BY 1;
  gp_segment_id | count  
 ---------------+--------
-             2 | 333127
-             1 | 333558
-             0 | 333315
+             2 | 331726
+             1 | 333028
+             0 | 335246
 (3 rows)
 
 -- start_ignore
@@ -3512,15 +3498,15 @@ insert into qp_misc_jiras.tbl9706aoc select i from generate_series(1, 100) i;
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706ao'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       32
-         1 |       40
+         0 |       38
+         1 |       37
 (2 rows)
 
 select * from pg_catalog.get_ao_distribution('qp_misc_jiras.tbl9706aoc'::regclass) order by 1 limit 2;
  segmentid | tupcount 
 -----------+----------
-         0 |       32
-         1 |       40
+         0 |       38
+         1 |       37
 (2 rows)
 
 create table qp_misc_jiras.bmap2 (a varchar, b varchar);
@@ -3619,7 +3605,7 @@ INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'before creating trigger');
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             2 |  1 | before creating trigger
+             1 |  1 | before creating trigger
 (1 row)
 
 CREATE OR REPLACE FUNCTION fn_trig() RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3635,27 +3621,27 @@ BEFORE INSERT OR UPDATE ON qp_misc_jiras.test_trig
 FOR EACH ROW
     EXECUTE PROCEDURE fn_trig();
 INSERT INTO qp_misc_jiras.test_trig VALUES (0, 'after creating trigger');
-NOTICE:  1  (seg0 192.168.1.64:25432 pid=44904)
+NOTICE:  1  (seg1 127.0.0.1:40001 pid=16301)
 INSERT INTO qp_misc_jiras.test_trig VALUES (1, 'aaa');
-NOTICE:  2  (seg0 192.168.1.64:25432 pid=44904)
+NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa           
 ---------------+----+-------------------------
-             0 |  1 | after creating trigger1
-             2 |  1 | before creating trigger
-             2 |  2 | aaa1
+             1 |  1 | before creating trigger
+             1 |  1 | after creating trigger1
+             1 |  2 | aaa1
 (3 rows)
 
 UPDATE qp_misc_jiras.test_trig SET id = id;
-NOTICE:  2  (seg0 192.168.1.64:25432 pid=44904)
-NOTICE:  2  (seg0 192.168.1.64:25432 pid=44904)
-NOTICE:  3  (seg0 192.168.1.64:25432 pid=44904)
+NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
+NOTICE:  2  (seg1 127.0.0.1:40001 pid=16301)
+NOTICE:  3  (seg1 127.0.0.1:40001 pid=16301)
 SELECT gp_segment_id, * FROM qp_misc_jiras.test_trig;
  gp_segment_id | id |           aaa            
 ---------------+----+--------------------------
-             0 |  2 | after creating trigger11
-             2 |  2 | before creating trigger1
-             2 |  3 | aaa11
+             1 |  2 | before creating trigger1
+             1 |  2 | after creating trigger11
+             1 |  3 | aaa11
 (3 rows)
 
 DROP TABLE qp_misc_jiras.test_trig;
@@ -3675,12 +3661,12 @@ partition d_2010_09_28 start (date '2010-09-28') end (date '2010-09-29')
 );
 NOTICE:  CREATE TABLE will create partition "tbl1_tbl_11257_1_prt_default_partition" for table "tbl1_tbl_11257"
 NOTICE:  CREATE TABLE will create partition "tbl1_tbl_11257_1_prt_d_2010_09_28" for table "tbl1_tbl_11257"
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%';
                 relname                 | distribution_attributes 
 ----------------------------------------+-------------------------
- tbl1_tbl_11257                         | {3}
- tbl1_tbl_11257_1_prt_default_partition | {3}
- tbl1_tbl_11257_1_prt_d_2010_09_28      | {3}
+ tbl1_tbl_11257                         | 3
+ tbl1_tbl_11257_1_prt_default_partition | 3
+ tbl1_tbl_11257_1_prt_d_2010_09_28      | 3
 (3 rows)
 
 -- start_ignore
@@ -3693,13 +3679,13 @@ NOTICE:  dropped partition "default_partition" for relation "tbl1_tbl_11257"
 NOTICE:  CREATE TABLE will create partition "tbl1_tbl_11257_1_prt_d_2010_09_27" for table "tbl1_tbl_11257"
 NOTICE:  CREATE TABLE will create partition "tbl1_tbl_11257_1_prt_default_partition" for table "tbl1_tbl_11257"
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%';
                 relname                 | distribution_attributes 
 ----------------------------------------+-------------------------
- tbl1_tbl_11257                         | {3}
- tbl1_tbl_11257_1_prt_d_2010_09_28      | {3}
- tbl1_tbl_11257_1_prt_d_2010_09_27      | {3}
- tbl1_tbl_11257_1_prt_default_partition | {3}
+ tbl1_tbl_11257                         | 3
+ tbl1_tbl_11257_1_prt_d_2010_09_28      | 3
+ tbl1_tbl_11257_1_prt_d_2010_09_27      | 3
+ tbl1_tbl_11257_1_prt_default_partition | 3
 (4 rows)
 
 create table qp_misc_jiras.tbl2_tbl_11257 (
@@ -3730,12 +3716,12 @@ select * from qp_misc_jiras.tbl2_tbl_11257;
 (0 rows)
 
 insert into qp_misc_jiras.tbl2_tbl_11257 values(1,2,3); 
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%';
                 relname                 | distribution_attributes 
 ----------------------------------------+-------------------------
- tbl2_tbl_11257                         | {1}
- tbl2_tbl_11257_1_prt_default_partition | {1}
- tbl2_tbl_11257_1_prt_p1                | {1}
+ tbl2_tbl_11257                         | 1
+ tbl2_tbl_11257_1_prt_default_partition | 1
+ tbl2_tbl_11257_1_prt_p1                | 1
 (3 rows)
 
 -- start_ignore
@@ -3748,13 +3734,13 @@ NOTICE:  dropped partition "default_partition" for relation "tbl2_tbl_11257"
 NOTICE:  CREATE TABLE will create partition "tbl2_tbl_11257_1_prt_p2" for table "tbl2_tbl_11257"
 NOTICE:  CREATE TABLE will create partition "tbl2_tbl_11257_1_prt_default_partition" for table "tbl2_tbl_11257"
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%';
                 relname                 | distribution_attributes 
 ----------------------------------------+-------------------------
- tbl2_tbl_11257                         | {1}
- tbl2_tbl_11257_1_prt_p1                | {1}
- tbl2_tbl_11257_1_prt_p2                | {1}
- tbl2_tbl_11257_1_prt_default_partition | {1}
+ tbl2_tbl_11257                         | 1
+ tbl2_tbl_11257_1_prt_p1                | 1
+ tbl2_tbl_11257_1_prt_p2                | 1
+ tbl2_tbl_11257_1_prt_default_partition | 1
 (4 rows)
 
 delete from qp_misc_jiras.tbl2_tbl_11257 where a=1 and b=2 and c=3;

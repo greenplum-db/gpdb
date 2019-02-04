@@ -1718,10 +1718,17 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			 * Push down quals, like we do in set_subquery_pathlist()
 			 */
 			subquery = push_down_restrict(root, rel, rte, rel->relid, subquery);
-		}
 
-		subplan = subquery_planner(cteroot->glob, subquery, root, cte->cterecursive,
-								   tuple_fraction, &subroot, config);
+			subplan = subquery_planner(cteroot->glob, subquery, root,
+									   cte->cterecursive,
+									   tuple_fraction, &subroot, config);
+		}
+		else
+		{
+			subplan = subquery_planner(cteroot->glob, subquery, cteroot,
+									   cte->cterecursive,
+									   tuple_fraction, &subroot, config);
+		}
 
 		/*
 		 * Do not store the subplan in cteplaninfo, since we will not share

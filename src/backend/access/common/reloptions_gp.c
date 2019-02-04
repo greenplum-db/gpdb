@@ -222,7 +222,13 @@ accumAOStorageOpt(char *name, char *value,
 
 	initStringInfo(&buf);
 
-	if (pg_strcasecmp(SOPT_APPENDONLY, name) == 0)
+	/*
+	 * "appendoptimized" is a recognized alias for "appendonly", but it's a
+	 * thin alias in the sense that "appendonly" will be saved as the storage
+	 * option.
+	 */
+	if ((pg_strcasecmp(SOPT_APPENDONLY, name) == 0) ||
+		(pg_strcasecmp(SOPT_ALIAS_APPENDOPTIMIZED, name) == 0))
 	{
 		if (!parse_bool(value, &boolval))
 			ereport(ERROR,
@@ -866,7 +872,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option \"compresstype\" for base relation"),
-					 errhint("\"compresstype\" is only valid for Append Only relations, create an AO relation to use \"compresstype\"")));
+					 errhint("\"compresstype\" is only valid for Append Only relations, create an AO relation to use \"compresstype\".")));
 
 		if (!compresstype_is_valid(comptype_opt->values.string_val))
 			ereport(ERROR,
@@ -997,7 +1003,7 @@ validate_and_adjust_options(StdRdOptions *result,
 			ereport(ERROR,
 					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 					 errmsg("invalid option \"checksum\" for base relation"),
-					 errhint("\"checksum\" option only valid for Append Only relations, data checksum for heap relations are turned on at cluster creation")));
+					 errhint("\"checksum\" option only valid for Append Only relations, data checksum for heap relations are turned on at cluster creation.")));
 		result->checksum = checksum_opt->values.bool_val;
 	}
 	/* Disable checksum for heap relations. */
@@ -1214,7 +1220,7 @@ validateAppendOnlyRelOptions(bool ao,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
 				 errmsg("block size (%d) is smaller gp_safefswritesize (%d)",
 						blocksize, gp_safefswritesize),
-				 errhint("Increase blocksize or decrease gp_safefswritesize if it is safe to do so on this file system")));
+				 errhint("Increase blocksize or decrease gp_safefswritesize if it is safe to do so on this file system.")));
 }
 
 /*

@@ -553,12 +553,6 @@ extern bool	optimizer_partition_selection_log;
 #define JOIN_ORDER_GREEDY_SEARCH            1
 #define JOIN_ORDER_EXHAUSTIVE_SEARCH        2
 
-/* Hadoop Integration GUCs */
-extern char  *gp_hadoop_connector_jardir;  /* relative dir on $GPHOME of the Hadoop connector jar is located */
-extern char  *gp_hadoop_connector_version; /* connector version (internal use only) */
-extern char  *gp_hadoop_target_version; /* the target hadoop distro/version */
-extern char  *gp_hadoop_home;    /* $HADOOP_HOME on all segments */
-
 /* Time based authentication GUC */
 extern char  *gp_auth_time_override_str;
 
@@ -571,6 +565,9 @@ extern int writable_external_table_bufsize;
 
 /* Enable passing of query constraints to external table providers */
 extern bool gp_external_enable_filter_pushdown;
+
+/* Enable the Global Deadlock Detector */
+extern bool gp_enable_global_deadlock_detector;
 
 typedef enum
 {
@@ -590,6 +587,8 @@ extern IndexCheckType gp_indexcheck_vacuum;
 #define SOPT_COMPLEVEL     "compresslevel"
 #define SOPT_CHECKSUM      "checksum"
 #define SOPT_ORIENTATION   "orientation"
+/* Aliases for storage option names */
+#define SOPT_ALIAS_APPENDOPTIMIZED "appendoptimized"
 /* Max number of chars needed to hold value of a storage option. */
 #define MAX_SOPT_VALUE_LEN 15
 

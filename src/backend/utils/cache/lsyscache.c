@@ -519,15 +519,31 @@ bool
 get_compatible_hash_operators(Oid opno,
 							  Oid *lhs_opno, Oid *rhs_opno)
 {
+	return get_compatible_hash_operators_and_family(opno, lhs_opno, rhs_opno,
+													NULL);
+}
+
+/*
+ * Extended version of get_compatible_hash_operators, which also returns
+ * the operator family that the returned operators belong to.
+ */
+bool
+get_compatible_hash_operators_and_family(Oid opno,
+										 Oid *lhs_opno, Oid *rhs_opno,
+										 Oid *opfamily)
+{
 	bool		result = false;
 	CatCList   *catlist;
 	int			i;
+	Oid			this_opfamily = InvalidOid;
 
 	/* Ensure output args are initialized on failure */
 	if (lhs_opno)
 		*lhs_opno = InvalidOid;
 	if (rhs_opno)
 		*rhs_opno = InvalidOid;
+	if (opfamily)
+		*opfamily = InvalidOid;
 
 	/*
 	 * Search pg_amop to see if the target operator is registered as the "="
@@ -540,6 +556,8 @@ get_compatible_hash_operators(Oid opno,
 	{
 		HeapTuple	tuple = &catlist->members[i]->tuple;
 		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
+
+		this_opfamily = aform->amopfamily;
 
 		if (aform->amopmethod == HASH_AM_OID &&
 			aform->amopstrategy == HTEqualStrategyNumber)
@@ -592,6 +610,49 @@ get_compatible_hash_operators(Oid opno,
 				result = true;
 				break;
 			}
+		}
+	}
+
+	if (result && opfamily)
+		*opfamily = this_opfamily;
+
+	ReleaseSysCacheList(catlist);
+
+	return result;
+}
+
+Oid
+get_compatible_hash_opfamily(Oid opno)
+{
+	Oid			result = InvalidOid;
+	CatCList   *catlist;
+	int			i;
+
+	/*
+	 * Search pg_amop to see if the target operator is registered as the "="
+	 * operator of any hash opfamily.  If the operator is registered in
+	 * multiple opfamilies, assume we can use any one.
+	 */
+	catlist = SearchSysCacheList1(AMOPOPID, ObjectIdGetDatum(opno));
+
+	for (i = 0; i < catlist->n_members; i++)
+	{
+		HeapTuple	tuple = &catlist->members[i]->tuple;
+		Form_pg_amop aform = (Form_pg_amop) GETSTRUCT(tuple);
+
+		/*
+		 * The given operator should be an "=" operator with same input
+		 * types. So this shouldn't happen. But if it does, let's avoid
+		 * getting even more confused.
+		 */
+		if (aform->amoplefttype != aform->amoprighttype)
+			continue;
+
+		if (aform->amopmethod == HASH_AM_OID &&
+			aform->amopstrategy == HTEqualStrategyNumber)
+		{
+			result = aform->amopfamily;
+			break;
 		}
 	}
 

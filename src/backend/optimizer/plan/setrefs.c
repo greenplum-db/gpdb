@@ -182,7 +182,6 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 	/* Ensure that plan refers to vars that have varlevelsup = 0 AND varno is in the rtable */
 	List *allVars = extract_nodes(glob, (Node *) plan, T_Var);
 	ListCell *lc = NULL;
-	List *allParams;
 
 	foreach (lc, allVars)
 	{
@@ -220,41 +219,6 @@ static void set_plan_references_input_asserts(PlannerGlobal *glob, Plan *plan, L
 		}
 
 	}
-
-	/* Ensure that all params that the plan refers to has a corresponding subplan */
-	allParams = extract_nodes(glob, (Node *) plan, T_Param);
-
-	// GPDB_93_MERGE_FIXME: this stopped working, when 'paramlist' was removed from
-	// PlannerGlobal. I think list_length(glob->paramlist) should now be glob->nParamExec,
-	// but how do you get the individal params? In boundParams perhaps?
-#if 0
-	foreach (lc, allParams)
-	{
-		Param *param = lfirst(lc);
-		if (param->paramkind == PARAM_EXEC)
-		{
-			Assert(param->paramid < list_length(glob->paramlist) && "Parameter ID outside range of parameters known at the global level.");
-			PlannerParamItem *paramItem = list_nth(glob->paramlist, param->paramid);
-			Assert(paramItem);
-
-			if (IsA(paramItem->item, Var))
-			{
-				Var *var = (Var *) paramItem->item;
-				Assert(param->paramtype == var->vartype && "Parameter type and var type do not match!");
-			}
-			else if (IsA(paramItem->item, Aggref))
-			{
-				Aggref *aggRef = (Aggref *) paramItem->item;
-				Assert(param->paramtype == aggRef->aggtype && "Param type and aggref type do not match!");
-			}
-			else
-			{
-				Assert("Global PlannerParamItem is not a var or an aggref node");
-			}
-		}
-	}
-#endif
-
 }
 
 /**
@@ -620,16 +584,16 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
      * CDB: If plan has a Flow node, fix up its hashExpr to refer to the
      * plan's own targetlist.
      */
-	if (plan->flow && plan->flow->hashExpr)
+	if (plan->flow && plan->flow->hashExprs)
     {
         indexed_tlist  *plan_itlist = build_tlist_index(plan->targetlist);
 
-        plan->flow->hashExpr =
-		(List *)fix_upper_expr(root,
-							   (Node *)plan->flow->hashExpr,
-							   plan_itlist,
-							   OUTER_VAR,
-							   rtoffset);
+		plan->flow->hashExprs =
+			(List *) fix_upper_expr(root,
+									(Node *) plan->flow->hashExprs,
+									plan_itlist,
+									OUTER_VAR,
+									rtoffset);
         pfree(plan_itlist);
     }
 
@@ -1218,25 +1182,17 @@ set_plan_refs(PlannerInfo *root, Plan *plan, int rtoffset)
 				indexed_tlist *childplan_itlist =
 					build_tlist_index(plan->lefttree->targetlist);
 
-				motion->hashExpr = (List *)
-					fix_upper_expr(root, (Node*) motion->hashExpr, childplan_itlist,  OUTER_VAR, rtoffset);
+				motion->hashExprs = (List *)
+					fix_upper_expr(root, (Node*) motion->hashExprs, childplan_itlist,  OUTER_VAR, rtoffset);
 
 #ifdef USE_ASSERT_CHECKING
 				/* 1. Assert that the Motion node has same number of hash data types as that of hash expressions*/
 				/* 2. Motion node must have atleast one hash expression */
 				/* 3. If the Motion node is of type hash_motion: ensure that the expression that it is hashed on is a hashable datatype in gpdb*/
 
-				Assert(list_length(motion->hashExpr) == list_length(motion->hashDataTypes)  && "Number of hash expression not equal to number of hash data types!");
-
 				if (MOTIONTYPE_HASH == motion->motionType)
 				{
-					Assert(1 <= list_length(motion->hashExpr) && "Motion node must have atleast one hash expression!");
-
-					ListCell *lcNode;
-					foreach(lcNode, motion->hashExpr)
-					{
-						Assert(isGreenplumDbHashable(exprType((Node *) lfirst(lcNode)))  && "The expression is not GPDB hashable!");
-					}
+					Assert(1 <= list_length(motion->hashExprs) && "Motion node must have atleast one hash expression!");
 				}
 
 #endif			/* USE_ASSERT_CHECKING */
@@ -1336,7 +1292,12 @@ set_subqueryscan_references(PlannerInfo *root,
 
 	/* Need to look up the subquery's RelOptInfo, since we need its subroot */
 	rel = find_base_rel(root, plan->scan.scanrelid);
-	Assert(rel->subplan == plan->subplan);
+	/*
+	 * The Assert() on RelOptInfo's subplan being same as the
+	 * subqueryscan's subplan, is valid in Upstream but not for GPDB,
+	 * since we create a new copy of the subplan if two SubPlans refer to
+	 * the same initplan inside adjust_appendrel_attrs_mutator().
+	 */
 
 	/* Recursively process the subplan */
 	plan->subplan = set_plan_references(rel->subroot, plan->subplan);

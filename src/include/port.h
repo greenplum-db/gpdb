@@ -426,14 +426,8 @@ extern void unsetenv(const char *name);
 extern void srandom(unsigned int seed);
 #endif
 
-/*
- * GPDB_94_MERGE_FIXME: Some versions of gcc do not support the same
- * syntax for such macros and function names. Temporary wolk around.
- */
-#if 0
 #ifndef HAVE_SSL_GET_CURRENT_COMPRESSION
 #define SSL_get_current_compression(x) 0
-#endif
 #endif
 
 /* thread.h */

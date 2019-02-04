@@ -31,6 +31,7 @@
 #include "utils/selfuncs.h"
 
 #include "catalog/pg_proc.h"
+#include "cdb/cdbhash.h"        /* cdb_default_distribution_opfamily_for_type() */
 #include "cdb/cdbpath.h"        /* cdb_create_motion_path() etc */
 #include "cdb/cdbutil.h"		/* getgpsegmentCount() */
 #include "executor/nodeHash.h"
@@ -1781,7 +1782,19 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 	{
 		int			numsegments = CdbPathLocus_NumSegments(subpath->locus);
 
-        locus = cdbpathlocus_from_exprs(root, uniq_exprs, numsegments);
+		List	   *opfamilies = NIL;
+		ListCell   *lc;
+
+		foreach(lc, uniq_exprs)
+		{
+			Node	   *expr = lfirst(lc);
+			Oid			opfamily;
+
+			opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
+			opfamilies = lappend_oid(opfamilies, opfamily);
+		}
+
+		locus = cdbpathlocus_from_exprs(root, uniq_exprs, opfamilies, numsegments);
         subpath = cdbpath_create_motion_path(root, subpath, NIL, false, locus);
 		/*
 		 * We probably add agg/sort node above the added motion node, but it is

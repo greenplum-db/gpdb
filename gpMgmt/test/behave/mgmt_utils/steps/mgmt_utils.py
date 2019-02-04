@@ -18,11 +18,12 @@ import commands
 import signal
 from collections import defaultdict
 
+import psutil
 from behave import given, when, then
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
-
+from gppylib.gparray import GpArray, ROLE_PRIMARY, ROLE_MIRROR
 from gppylib.commands.gp import SegmentStart, GpStandbyStart, MasterStop
 from gppylib.commands import gp
 from gppylib.commands.unix import findCmdInPath, Scp
@@ -41,72 +42,91 @@ master_data_dir = os.environ.get('MASTER_DATA_DIRECTORY')
 if master_data_dir is None:
     raise Exception('Please set MASTER_DATA_DIRECTORY in environment')
 
-@given('the cluster config is generated with HBA_HOSTNAMES "{hba_hostnames_toggle}"')
-def impl(context, hba_hostnames_toggle):
-    stop_database(context)
+def create_local_demo_cluster(context, extra_config='', with_mirrors='true', with_standby='true', num_primaries=None):
+    stop_database_if_started(context)
+
+    if num_primaries is None:
+        num_primaries = os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3)
+
+    standby_port = ''
+    if with_standby == 'true':
+        standby_port=os.getenv('STANDBY_DEMO_PORT', 16432)
 
     cmd = """
-    cd ../gpAux/gpdemo; \
-        export MASTER_DEMO_PORT={master_port} && \
-        export DEMO_PORT_BASE={port_base} && \
-        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
-        export WITH_MIRRORS={with_mirrors} && \
-        ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
-        env EXTRA_CONFIG="HBA_HOSTNAMES={hba_hostnames_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
+        cd ../gpAux/gpdemo &&
+        export MASTER_DEMO_PORT={master_port} &&
+        export DEMO_PORT_BASE={port_base} &&
+        export STANDBY_DEMO_PORT={standby_port} &&
+        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} &&
+        export WITH_STANDBY={with_standby} &&
+        export WITH_MIRRORS={with_mirrors} &&
+        ./demo_cluster.sh -d && ./demo_cluster.sh -c &&
+        {extra_config} ./demo_cluster.sh
     """.format(master_port=os.getenv('MASTER_PORT', 15432),
                port_base=os.getenv('PORT_BASE', 25432),
-               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
-               with_mirrors='true',
-               hba_hostnames_toggle=hba_hostnames_toggle)
-
+               standby_port=standby_port,
+               num_primary_mirror_pairs=num_primaries,
+               with_mirrors=with_mirrors,
+               with_standby=with_standby,
+               extra_config=extra_config)
     run_command(context, cmd)
 
     if context.ret_code != 0:
         raise Exception('%s' % context.error_message)
+
+def _cluster_contains_standard_demo_segments():
+    """
+    Returns True iff a cluster contains a master, a standby, and three
+    primary/mirror pairs, and each segment is in the correct role.
+    """
+    # We expect four pairs -- one for each demo cluster content ID. The set
+    # contains a (content, role, preferred_role) tuple for each segment.
+    expected_segments = set()
+    for contentid in [-1, 0, 1, 2]:
+        expected_segments.add( (contentid, 'p', 'p') )
+        expected_segments.add( (contentid, 'm', 'm') )
+
+    # Now check to see if the actual segments match expectations.
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+
+    actual_segments = set()
+    for seg in segments:
+        actual_segments.add( (seg.content, seg.role, seg.preferred_role) )
+
+    return expected_segments == actual_segments
+
+@given('a standard local demo cluster is running')
+def impl(context):
+    if (check_database_is_running(context)
+        and master_data_dir.endswith("demoDataDir-1")
+        and _cluster_contains_standard_demo_segments()
+        and are_segments_running()):
+        return
+
+    create_local_demo_cluster(context, num_primaries=3)
+
+@given('a standard local demo cluster is created')
+def impl(context):
+    create_local_demo_cluster(context, num_primaries=3)
+
+@given('the cluster config is generated with HBA_HOSTNAMES "{hba_hostnames_toggle}"')
+def impl(context, hba_hostnames_toggle):
+    extra_config = 'env EXTRA_CONFIG="HBA_HOSTNAMES={}" ONLY_PREPARE_CLUSTER_ENV=true'.format(hba_hostnames_toggle)
+    create_local_demo_cluster(context, extra_config=extra_config)
 
 @given('the cluster config is generated with data_checksums "{checksum_toggle}"')
 def impl(context, checksum_toggle):
-    stop_database(context)
-
-    cmd = """
-    cd ../gpAux/gpdemo; \
-        export MASTER_DEMO_PORT={master_port} && \
-        export DEMO_PORT_BASE={port_base} && \
-        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
-        export WITH_MIRRORS={with_mirrors} && \
-        ./demo_cluster.sh -d && ./demo_cluster.sh -c && \
-        env EXTRA_CONFIG="HEAP_CHECKSUM={checksum_toggle}" ONLY_PREPARE_CLUSTER_ENV=true ./demo_cluster.sh
-    """.format(master_port=os.getenv('MASTER_PORT', 15432),
-               port_base=os.getenv('PORT_BASE', 25432),
-               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', 3),
-               with_mirrors='true',
-               checksum_toggle=checksum_toggle)
-    run_command(context, cmd)
-
-    if context.ret_code != 0:
-        raise Exception('%s' % context.error_message)
+    extra_config = 'env EXTRA_CONFIG="HEAP_CHECKSUM={}" ONLY_PREPARE_CLUSTER_ENV=true'.format(checksum_toggle)
+    create_local_demo_cluster(context, extra_config=extra_config)
 
 @given('the cluster is generated with "{num_primaries}" primaries only')
 def impl(context, num_primaries):
-    cmd = """
-    cd ../gpAux/gpdemo; \
-        export MASTER_DEMO_PORT={master_port} && \
-        export DEMO_PORT_BASE={port_base} && \
-        export NUM_PRIMARY_MIRROR_PAIRS={num_primary_mirror_pairs} && \
-        export WITH_MIRRORS=false && \
-        export WITH_STANDBY=false && \
-        ./demo_cluster.sh -d && ./demo_cluster.sh
-    """.format(master_port=os.getenv('MASTER_PORT', 15432),
-               port_base=os.getenv('PORT_BASE', 25432),
-               num_primary_mirror_pairs=os.getenv('NUM_PRIMARY_MIRROR_PAIRS', num_primaries))
-
     os.environ['PGPORT'] = '15432'
     demoDir = os.path.abspath("%s/../gpAux/gpdemo" % os.getcwd())
     os.environ['MASTER_DATA_DIRECTORY'] = "%s/datadirs/qddir/demoDataDir-1" % demoDir
-    run_command(context, cmd)
 
-    if context.ret_code != 0:
-        raise Exception('%s' % context.error_message)
+    create_local_demo_cluster(context, with_mirrors='false', with_standby='false', num_primaries=num_primaries)
 
     context.gpexpand_mirrors_enabled = False
 
@@ -414,35 +434,6 @@ def impl(context):
     raise Exception('segments are not in sync after %d seconds' % (times * sleeptime))
 
 
-@then('verify data integrity of database "{dbname}" between source and destination system, work-dir "{dirname}"')
-def impl(context, dbname, dirname):
-    dbconn_src = 'psql -p $GPTRANSFER_SOURCE_PORT -h $GPTRANSFER_SOURCE_HOST -U $GPTRANSFER_SOURCE_USER -d %s' % dbname
-    dbconn_dest = 'psql -p $GPTRANSFER_DEST_PORT -h $GPTRANSFER_DEST_HOST -U $GPTRANSFER_DEST_USER -d %s' % dbname
-    for filename in os.listdir(dirname):
-        if filename.endswith('.sql'):
-            filename_prefix = os.path.splitext(filename)[0]
-            ans_file_path = os.path.join(dirname, filename_prefix + '.ans')
-            out_file_path = os.path.join(dirname, filename_prefix + '.out')
-            diff_file_path = os.path.join(dirname, filename_prefix + '.diff')
-            # run the command to get the exact data from the source system
-            command = '%s -a -f %s > %s' % (dbconn_src, os.path.join(dirname, filename), ans_file_path)
-            run_command(context, command)
-
-            # run the command to get the data from the destination system, locally
-            command = '%s -a -f %s > %s' % (dbconn_dest, os.path.join(dirname, filename), out_file_path)
-            run_command(context, command)
-
-            gpdiff_cmd = 'gpdiff.pl -u -w -I NOTICE: -I HINT: -I CONTEXT: -I GP_IGNORE: --gpd_init=test/behave/mgmt_utils/steps/data/global_init_file %s %s > %s' % (
-            ans_file_path, out_file_path, diff_file_path)
-            run_command(context, gpdiff_cmd)
-            if context.ret_code != 0:
-                with open(diff_file_path, 'r') as diff_file:
-                    diff_file_contents = diff_file.read()
-                    raise Exception(
-                        "Found difference between source and destination system, see %s. \n Diff contents: \n %s" % (
-                        diff_file_path, diff_file_contents))
-
-
 @then('verify that there is no table "{tablename}" in "{dbname}"')
 def impl(context, tablename, dbname):
     dbname = replace_special_char_env(dbname)
@@ -474,17 +465,6 @@ def impl(context, table_name, part_level, dbname):
 def impl(context, tname, dbname, nrows):
     check_row_count(context, tname, dbname, int(nrows))
 
-@then(
-    'verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with options "{options}"')
-def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, options):
-    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, options)
-
-
-@then(
-    'verify that table "{src_tname}" in database "{src_dbname}" of source system has same data with table "{dest_tname}" in database "{dest_dbname}" of destination system with order by "{orderby}"')
-def impl(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby):
-    match_table_select(context, src_tname, src_dbname, dest_tname, dest_dbname, orderby)
-
 @given('schema "{schema_list}" exists in "{dbname}"')
 @then('schema "{schema_list}" exists in "{dbname}"')
 def impl(context, schema_list, dbname):
@@ -498,13 +478,6 @@ def impl(context, schema_list, dbname):
 def impl(context, filename):
     if os.path.exists(filename):
         os.remove(filename)
-
-
-@then('the temporary table file "{filename}" is removed')
-def impl(context, filename):
-    table_file = 'test/behave/mgmt_utils/steps/data/gptransfer/%s' % filename
-    if os.path.exists(table_file):
-        os.remove(table_file)
 
 
 def create_table_file_locally(context, filename, table_list, location=os.getcwd()):
@@ -778,6 +751,48 @@ def impl(context):
     cmd_str = 'gpssh-exkeys %s' % host_str
     run_gpcommand(context, cmd_str)
 
+def _process_exists(pid, host):
+    """
+    Returns True if a process of the given PID exists on the given host, and
+    False otherwise. If host is None, this check is done locally instead of
+    remotely.
+    """
+    if host is None:
+        # Local case is easy.
+        return psutil.pid_exists(pid)
+
+    # Remote case.
+    cmd = Command(name="check for pid %d" % pid,
+                  cmdStr="ps -p %d > /dev/null" % pid,
+                  ctxt=REMOTE,
+                  remoteHost=host)
+
+    cmd.run()
+    return cmd.get_return_code() == 0
+
+def _wait_for_process_exit(pid, host, timeout=30):
+    """
+    Waits up to timeout (default 30) seconds for the process with the given PID
+    to exit. Returns True if this occurs within the timeout and False otherwise.
+
+    Be mindful of the inherent problems with this approach -- if you pass a PID
+    that never existed, it will appear to have "exited" here. Conversely, if the
+    OS is quick enough to recycle a process' PID after it exits, this function
+    may incorrectly show that the exit never happened.
+    """
+    end_time = datetime.now() + timedelta(seconds=timeout)
+    interval = 0.05
+
+    while _process_exists(pid, host):
+        if end_time < datetime.now():
+            # Time's up.
+            return False
+
+        # Sleep with exponential backoff and a maximum of 1 second.
+        time.sleep(interval)
+        interval = min(interval * 2, 1)
+
+    return True
 
 @given('user kills a primary postmaster process')
 @when('user kills a primary postmaster process')
@@ -801,8 +816,7 @@ def impl(context):
         raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
 
     kill_process(int(pid), seg_host, signal.SIGKILL)
-
-    has_process_eventually_stopped(pid, seg_host)
+    _wait_for_process_exit(pid, seg_host)
 
     pid = get_pid_for_segment(seg_data_dir, seg_host)
     if pid is not None:
@@ -812,28 +826,44 @@ def impl(context):
     context.killed_seg_port = seg_port
 
 
-@given('user kills all primary processes')
-@when('user kills all primary processes')
-@then('user kills all primary processes')
-def impl(context):
+@given('user kills all {segment_type} processes')
+@when('user kills all {segment_type} processes')
+@then('user kills all {segment_type} processes')
+def impl(context, segment_type):
+    context.execute_steps(
+        u'given user kills all {} processes with SIGTERM'.format(segment_type)
+    )
+
+@given('user kills all {segment_type} processes with {signal_name}')
+@when('user kills all {segment_type} processes with {signal_name}')
+@then('user kills all {segment_type} processes with {signal_name}')
+def impl(context, segment_type, signal_name):
+    # Look up the signal code by name. This is easier in Python 3, with the
+    # introduction of signal.Signals, but for now we do it the hard way.
+    if (not signal_name.startswith('SIG')) or signal_name.startswith('SIG_'):
+        raise Exception("'{}' is not a valid signal name".format(signal_name))
+    try:
+        signal_code = signal.__dict__[signal_name]
+    except KeyError:
+        raise Exception("'{}' is not a valid signal name".format(signal_name))
+
     gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    for seg in gparray.getDbList():
-        if seg.isSegmentPrimary():
-            seg_data_dir = seg.getSegmentDataDirectory()
-            seg_host = seg.getSegmentHostName()
-            seg_port = seg.getSegmentPort()
+    role = ROLE_PRIMARY if segment_type == 'primary' else ROLE_MIRROR
+    filtered_segments = filter(lambda seg: seg.preferred_role == role and seg.content != -1, gparray.getDbList())
+    for seg in filtered_segments:
+        seg_data_dir = seg.getSegmentDataDirectory()
+        seg_host = seg.getSegmentHostName()
 
-            pid = get_pid_for_segment(seg_data_dir, seg_host)
-            if pid is None:
-                raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
+        pid = get_pid_for_segment(seg_data_dir, seg_host)
+        if pid is None:
+            raise Exception('Unable to locate segment "%s" on host "%s"' % (seg_data_dir, seg_host))
 
-            kill_process(int(pid), seg_host, signal.SIGKILL)
+        kill_process(int(pid), seg_host, signal_code)
+        _wait_for_process_exit(pid, seg_host)
 
-            has_process_eventually_stopped(pid, seg_host)
-
-            pid = get_pid_for_segment(seg_data_dir, seg_host)
-            if pid is not None:
-                raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
+        pid = get_pid_for_segment(seg_data_dir, seg_host)
+        if pid is not None:
+            raise Exception('Unable to kill postmaster with pid "%d" datadir "%s"' % (pid, seg_data_dir))
 
 
 @given('user can start transactions')
@@ -1230,26 +1260,10 @@ def impl(context, utilname, dirname):
         raise Exception('Logs matching "%s" were not created' % pattern)
 
 
-@given('a table is created containing rows of length "{length}" with connection "{dbconn}"')
-def impl(context, length, dbconn):
-    length = int(length)
-    wide_row_file = 'test/behave/mgmt_utils/steps/data/gptransfer/wide_row_%s.sql' % length
-    tablename = 'public.wide_row_%s' % length
-    entry = "x" * length
-    with open(wide_row_file, 'w') as sql_file:
-        sql_file.write("CREATE TABLE %s (a integer, b text);\n" % tablename)
-        for i in range(10):
-            sql_file.write("INSERT INTO %s VALUES (%d, \'%s\');\n" % (tablename, i, entry))
-    command = '%s -f %s' % (dbconn, wide_row_file)
-    run_gpcommand(context, command)
-
-
 @then('drop the table "{tablename}" with connection "{dbconn}"')
 def impl(context, tablename, dbconn):
     command = "%s -c \'drop table if exists %s\'" % (dbconn, tablename)
     run_gpcommand(context, command)
-
-
 
 
 def _get_gpAdminLogs_directory():
@@ -1260,16 +1274,6 @@ def _get_gpAdminLogs_directory():
 def impl(context):
     with open('/tmp/incomplete_map_file', 'w') as fd:
         fd.write('nonexistent_host,nonexistent_host')
-
-
-@given(
-    'there is a table "{table_name}" dependent on function "{func_name}" in database "{dbname}" on the source system')
-def impl(context, table_name, func_name, dbname):
-    dbconn = 'psql -d %s -p $GPTRANSFER_SOURCE_PORT -U $GPTRANSFER_SOURCE_USER -h $GPTRANSFER_SOURCE_HOST' % dbname
-    SQL = """CREATE TABLE %s (num integer); CREATE FUNCTION %s (integer) RETURNS integer AS 'select abs(\$1);' LANGUAGE SQL IMMUTABLE; CREATE INDEX test_index ON %s (%s(num))""" % (
-    table_name, func_name, table_name, func_name)
-    command = '%s -c "%s"' % (dbconn, SQL)
-    run_command(context, command)
 
 
 @then('verify that function "{func_name}" exists in database "{dbname}"')
@@ -1420,38 +1424,6 @@ def impl(context, filepath, line):
     filepath = glob.glob(filepath)[0]
     if line in open(filepath).read():
         raise Exception("The file '%s' does contain '%s'" % (filepath, line))
-
-
-@then('verify that gptransfer is in order of "{filepath}" when partition transfer is "{is_partition_transfer}"')
-def impl(context, filepath, is_partition_transfer):
-    with open(filepath) as f:
-        table = f.read().splitlines()
-        if is_partition_transfer != "None":
-            table = [x.split(',')[0] for x in table]
-
-    split_message = re.findall("Starting transfer of.*\n", context.stdout_message)
-
-    if len(split_message) == 0 and len(table) != 0:
-        raise Exception("There were no tables transfered")
-
-    counter_table = 0
-    counter_split = 0
-    found = 0
-
-    while counter_table < len(table) and counter_split < len(split_message):
-        for i in range(counter_split, len(split_message)):
-            pat = table[counter_table] + " to"
-            prog = re.compile(pat)
-            res = prog.search(split_message[i])
-            if not res:
-                counter_table += 1
-                break
-            else:
-                found += 1
-                counter_split += 1
-
-    if found != len(split_message):
-        raise Exception("expected to find %s tables in order and only found %s in order" % (len(split_message), found))
 
 
 @given('database "{dbname}" is dropped and recreated')
@@ -1731,19 +1703,6 @@ def impl(context, table_name, db_name):
     with dbconn.connect(dbconn.DbURL(dbname=db_name)) as conn:
         dbconn.execSQL(conn, index_qry)
         conn.commit()
-
-
-@given('the gptransfer test is initialized')
-def impl(context):
-    context.execute_steps(u'''
-        Given the database is running
-        And the database "gptest" does not exist
-        And the database "gptransfer_destdb" does not exist
-        And the database "gptransfer_testdb1" does not exist
-        And the database "gptransfer_testdb3" does not exist
-        And the database "gptransfer_testdb4" does not exist
-        And the database "gptransfer_testdb5" does not exist
-    ''')
 
 
 @given('gpperfmon is configured and running in qamode')
@@ -2417,6 +2376,7 @@ def impl(context):
         return
 
 @given('an FTS probe is triggered')
+@when('an FTS probe is triggered')
 def impl(context):
     with dbconn.connect(dbconn.DbURL(dbname='postgres')) as conn:
         dbconn.execSQLForSingleton(conn, "SELECT gp_request_fts_probe_scan()")

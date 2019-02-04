@@ -25,6 +25,8 @@
 
 #include "executor/execdebug.h"
 #include "executor/nodeNestloop.h"
+#include "optimizer/clauses.h"
+#include "utils/lsyscache.h"
 #include "utils/memutils.h"
 
 static void splitJoinQualExpr(NestLoopState *nlstate);
@@ -634,11 +636,31 @@ splitJoinQualExpr(NestLoopState *nlstate)
  * given lists:
  *   - lclauses for the left side of the expression,
  *   - rclauses for the right side
+ *
+ * This function is only used for LASJ. Once we find a NULL from inner side, we
+ * can skip the join and just return an empty set as result. This is only true
+ * if the equality operator is strict, that is, if a tuple from inner side is
+ * NULL then the equality operator returns NULL.
+ *
+ * If the number of arguments is not two, we just return leaving lclauses and
+ * rclauses remaining NULL. In this case, the LASJ join would be actually
+ * performed.
  * ----------------------------------------------------------------
  */
 static void
 extractFuncExprArgs(FuncExprState *fstate, List **lclauses, List **rclauses)
 {
-	*lclauses = lappend(*lclauses, linitial(fstate->args));
-	*rclauses = lappend(*rclauses, lsecond(fstate->args));
+	Node *clause;
+
+	if (list_length(fstate->args) != 2)
+		return;
+
+	/* Check for strictness of the equality operator */
+	clause = (Node *)fstate->xprstate.expr;
+	if ((is_opclause(clause) && op_strict(((OpExpr *) clause)->opno)) ||
+			(is_funcclause(clause) && func_strict(((FuncExpr *) clause)->funcid)))
+	{
+		*lclauses = lappend(*lclauses, linitial(fstate->args));
+		*rclauses = lappend(*rclauses, lsecond(fstate->args));
+	}
 }

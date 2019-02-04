@@ -1,17 +1,18 @@
+
 -- t0r is the reference table to provide the data distribution info.
 DROP TABLE IF EXISTS t0p;
 DROP
 CREATE TABLE t0p (id int, val int);
 CREATE
-INSERT INTO t0p (id, val) SELECT i, i FROM generate_series(1, 20) i;
-INSERT 20
+INSERT INTO t0p (id, val) SELECT i, i FROM generate_series(1, 100) i;
+INSERT 100
 
 DROP TABLE IF EXISTS t0r;
 DROP
 CREATE TABLE t0r (id int, val int, segid int) DISTRIBUTED REPLICATED;
 CREATE
 INSERT INTO t0r (id, val, segid) SELECT id, val, gp_segment_id from t0p;
-INSERT 20
+INSERT 100
 
 -- GDD tests rely on the data distribution, but depends on the number of
 -- the segments the distribution might be different.
@@ -41,26 +42,22 @@ CREATE OR REPLACE FUNCTION barrier() RETURNS void AS $$ SELECT pg_sleep(4) $$ LA
 CREATE
 
 -- verify the function
--- Data distribution is sensitive to the underlying hash algorithm.
-SELECT segid(0,1);
- segid 
--------
- 4     
+-- Data distribution is sensitive to the underlying hash algorithm, we need each
+-- segment has enough tuples for test, 10 should be enough.
+SELECT segid(0,10) is not null;
+ ?column? 
+----------
+ t        
 (1 row)
-SELECT segid(0,2);
- segid 
--------
- 7     
+SELECT segid(1,10) is not null;
+ ?column? 
+----------
+ t        
 (1 row)
-SELECT segid(1,1);
- segid 
--------
- 2     
-(1 row)
-SELECT segid(1,2);
- segid 
--------
- 5     
+SELECT segid(2,10) is not null;
+ ?column? 
+----------
+ t        
 (1 row)
 
 -- start_ignore

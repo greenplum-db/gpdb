@@ -153,8 +153,12 @@ NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2" for table "
 NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_1_2_prt_1" for table "mdt_test_part1_1_prt_1"
 NOTICE:  CREATE TABLE will create partition "mdt_test_part1_1_prt_2_2_prt_1" for table "mdt_test_part1_1_prt_2"
 alter table mdt_test_part1_1_prt_1_2_prt_1 set distributed randomly;
+ERROR:  can't set the distribution policy of "mdt_test_part1_1_prt_1_2_prt_1"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 ALTER TABLE mdt_test_part1 ALTER PARTITION FOR('M'::bpchar) alter PARTITION FOR(RANK(1)) set distributed by (id, gender, year);
 NOTICE:  altering table "mdt_test_part1_1_prt_1_2_prt_1" (partition for rank 1 of partition for value ('M'::bpchar) of relation "mdt_test_part1")
+WARNING:  distribution policy of relation "mdt_test_part1_1_prt_1_2_prt_1" already set to (id, gender, year)
+HINT:  Use ALTER TABLE "mdt_test_part1_1_prt_1_2_prt_1" SET WITH (REORGANIZE=TRUE) DISTRIBUTED BY (id, gender, year) to force redistribution
 drop table mdt_test_part1;
 --
 create table mdt_part_tbl_subpartition (a char, b int, d char)

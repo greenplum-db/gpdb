@@ -43,7 +43,6 @@ CATALOG(pg_database,1262) BKI_SHARED_RELATION BKI_ROWTYPE_OID(1248) BKI_SCHEMA_M
 	TransactionId datfrozenxid; /* all Xids < this are frozen in this DB */
 	TransactionId datminmxid;	/* all multixacts in the DB are >= this */
 	Oid			dattablespace;	/* default table space for this DB */
-	int32		hashmethod;		/* hashmethod for dist of tables in the db */
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */
 	aclitem		datacl[1];		/* access permissions */
 #endif
@@ -64,7 +63,7 @@ typedef FormData_pg_database *Form_pg_database;
  *		compiler constants for pg_database
  * ----------------
  */
-#define Natts_pg_database				14
+#define Natts_pg_database				13
 #define Anum_pg_database_datname		1
 #define Anum_pg_database_datdba			2
 #define Anum_pg_database_encoding		3
@@ -77,14 +76,9 @@ typedef FormData_pg_database *Form_pg_database;
 #define Anum_pg_database_datfrozenxid	10
 #define Anum_pg_database_datminmxid		11
 #define Anum_pg_database_dattablespace	12
-#define Anum_pg_database_hashmethod		13
-#define Anum_pg_database_datacl			14
+#define Anum_pg_database_datacl			13
 
-/*
- * The value for hashmethod col is defined in cdb/cdbhash.h
- * the magic number 1 here means JUMP_HASH_METHOD
- */
-DATA(insert OID = 1 (  template1 PGUID ENCODING "LC_COLLATE" "LC_CTYPE" t t -1 0 0 1 1663 1 _null_));
+DATA(insert OID = 1 (  template1 PGUID ENCODING "LC_COLLATE" "LC_CTYPE" t t -1 0 0 1 1663 _null_));
 SHDESCR("default template for new databases");
 #define TemplateDbOid			1
 

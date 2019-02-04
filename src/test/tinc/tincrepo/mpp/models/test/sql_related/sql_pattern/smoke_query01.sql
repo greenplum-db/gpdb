@@ -1,2 +1,0 @@
--- @tags long
-select 'foo';

@@ -35,6 +35,11 @@ permutation "rdtbl" "lto" "locktbl"
 permutation "rdtbl" "lsto" "locktbl"
 # statement timeout expires first, table-level lock
 permutation "rdtbl" "slto" "locktbl"
+
+# With introducing the GUC for Global Deadlock Detector, if the GUC
+# is disabled, the UPDATE/DELETE execute serially, So we can not
+# trigger the row lock in QE.
+
 # statement timeout, row-level lock
 permutation "wrtbl" "sto" "update"
 # lock timeout, row-level lock

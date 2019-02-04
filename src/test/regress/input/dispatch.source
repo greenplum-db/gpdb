@@ -19,15 +19,6 @@ select gp_inject_fault_infinite('fts_probe', 'skip', 1);
 select gp_request_fts_probe_scan();
 select gp_wait_until_triggered_fault('fts_probe', 1, 1);
 
--- skip GDD scan always
-select gp_inject_fault_infinite('gdd_probe', 'skip', 1);
--- acting like gp_request_fts_probe_scan() to wake up GDD backend so
--- 'gdd_probe' can be triggered as soon as possible
--- start_ignore
-\! gpstop -u
--- end_ignore
-select gp_wait_until_triggered_fault('gdd_probe', 1, 1);
-
 -- Test quoting of GUC values and database names when they're sent to segments
 set client_min_messages='warning';
 DROP DATABASE IF EXISTS "funny""db'with\\quotes";
@@ -402,8 +393,6 @@ select gp_inject_fault('cleanup_qe', 'reset', 1);
 
 -- resume FTS probes
 select gp_inject_fault('fts_probe', 'reset', 1);
--- resume GDD scan 
-select gp_inject_fault('gdd_probe', 'reset', 1);
 
 --
 -- Test portal cleanup

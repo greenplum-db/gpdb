@@ -118,6 +118,6 @@ function wait_until_standby_streaming_state {
    do
       PGOPTIONS=${PGOPTIONS_UTILITY} $STANDBY_PSQL -c "SELECT state FROM pg_stat_replication;" | grep 'streaming' > /dev/null && break
       retry=$[$retry-1]
-      sleep 0.2
+      sleep 0.5
    done
 }

@@ -73,7 +73,8 @@ static bool adjustPlanFlow(Plan *plan,
 			   bool stable,
 			   bool rescannable,
 			   Movement req_move,
-			   List *hashExpr,
+			   List *hashExprs,
+			   List *hashOpfamilies,
 			   int numsegments);
 
 static void motion_sanity_check(PlannerInfo *root, Plan *plan);
@@ -976,12 +977,15 @@ pull_up_Flow(Plan *plan, Plan *subplan)
 
 	/* Pull up hash key exprs, if they're all present in the plan's result. */
 	else if (model_flow->flotype == FLOW_PARTITIONED &&
-			 model_flow->hashExpr)
+			 model_flow->hashExprs)
 	{
 		if (!is_projection_capable_plan(plan) ||
-			cdbpullup_isExprCoveredByTargetlist((Expr *) model_flow->hashExpr,
+			cdbpullup_isExprCoveredByTargetlist((Expr *) model_flow->hashExprs,
 												plan->targetlist))
-			new_flow->hashExpr = copyObject(model_flow->hashExpr);
+		{
+			new_flow->hashExprs = copyObject(model_flow->hashExprs);
+			new_flow->hashOpfamilies = copyObject(model_flow->hashOpfamilies);
+		}
 	}
 
 	new_flow->locustype = model_flow->locustype;
@@ -1040,7 +1044,7 @@ focusPlan(Plan *plan, bool stable, bool rescannable)
 		plan->flow->locustype != CdbLocusType_SegmentGeneral)
 		return true;
 
-	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_FOCUS, NIL,
+	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_FOCUS, NIL, NIL,
 						  plan->flow->numsegments);
 }
 
@@ -1061,7 +1065,7 @@ broadcastPlan(Plan *plan, bool stable, bool rescannable, int numsegments)
 		plan->flow->numsegments >= numsegments)
 		return true;
 
-	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_BROADCAST, NIL,
+	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_BROADCAST, NIL, NIL,
 						  numsegments);
 }
 
@@ -1102,22 +1106,25 @@ loci_compatible(List *hashExpr1, List *hashExpr2)
  */
 bool
 repartitionPlan(Plan *plan, bool stable, bool rescannable,
-				List *hashExpr, int numsegments)
+				List *hashExprs, List *hashOpfamilies, int numsegments)
 {
 	Assert(plan->flow);
 	Assert(plan->flow->flotype == FLOW_PARTITIONED ||
 		   plan->flow->flotype == FLOW_SINGLETON);
 
 	/* Already partitioned on the given hashExpr?  Do nothing. */
-	if (hashExpr && plan->flow->numsegments == numsegments &&
+	if (hashExprs && plan->flow->numsegments == numsegments &&
 		plan->flow->locustype == CdbLocusType_Hashed)
 	{
-		if (loci_compatible(hashExpr, plan->flow->hashExpr))
+		if (equal(hashOpfamilies, plan->flow->hashOpfamilies) &&
+			loci_compatible(hashExprs, plan->flow->hashExprs))
+		{
 			return true;
+		}
 	}
 
 	return adjustPlanFlow(plan, stable, rescannable, MOVEMENT_REPARTITION,
-						  hashExpr, numsegments);
+						  hashExprs, hashOpfamilies, numsegments);
 }
 
 /*
@@ -1135,7 +1142,8 @@ adjustPlanFlow(Plan *plan,
 			   bool stable,
 			   bool rescannable,
 			   Movement req_move,
-			   List *hashExpr,
+			   List *hashExprs,
+			   List *hashOpfamilies,
 			   int numsegments)
 {
 	Flow	   *flow = plan->flow;
@@ -1239,7 +1247,8 @@ adjustPlanFlow(Plan *plan,
 							stable && !reorder,
 							rescannable,
 							req_move,
-							hashExpr,
+							hashExprs,
+							hashOpfamilies,
 							numsegments))
 			return false;
 
@@ -1248,7 +1257,8 @@ adjustPlanFlow(Plan *plan,
 
 		flow->flotype = kidflow->flotype;
 		flow->segindex = kidflow->segindex;
-		flow->hashExpr = copyObject(kidflow->hashExpr);
+		flow->hashExprs = copyObject(kidflow->hashExprs);
+		flow->hashOpfamilies = copyObject(kidflow->hashOpfamilies);
 		flow->numsegments = kidflow->numsegments;
 		plan->dispatch = plan->lefttree->dispatch;
 
@@ -1300,21 +1310,24 @@ adjustPlanFlow(Plan *plan,
 		case MOVEMENT_FOCUS:
 			/* Converge to a single QE (or QD; that choice is made later). */
 			flow->flotype = FLOW_SINGLETON;
-			flow->hashExpr = NIL;
+			flow->hashExprs= NIL;
+			flow->hashOpfamilies = NIL;
 			flow->numsegments = numsegments;
 			flow->segindex = 0;
 			break;
 
 		case MOVEMENT_BROADCAST:
 			flow->flotype = FLOW_REPLICATED;
-			flow->hashExpr = NIL;
+			flow->hashExprs = NIL;
+			flow->hashOpfamilies = NIL;
 			flow->numsegments = numsegments;
 			flow->segindex = 0;
 			break;
 
 		case MOVEMENT_REPARTITION:
 			flow->flotype = FLOW_PARTITIONED;
-			flow->hashExpr = copyObject(hashExpr);
+			flow->hashExprs = copyObject(hashExprs);
+			flow->hashOpfamilies = copyObject(hashOpfamilies);
 			flow->numsegments = numsegments;
 			flow->segindex = 0;
 			break;

@@ -125,11 +125,16 @@ drop domain dia;
 create type comptype as (r float8, i float8);
 create domain dcomptypea as comptype[];
 create table dcomptable (d1 dcomptypea unique);
+-- GPDB: marking the column as 'unique' fails, because a unique column needs
+-- to be part of the distribution key, and composite types can't be used as
+-- distribution keys because they have no hash opclasses.
+create table dcomptable (d1 dcomptypea /*unique*/);
+create index on dcomptable (d1);
 
 insert into dcomptable values (array[row(1,2)]::dcomptypea);
 insert into dcomptable values (array[row(3,4), row(5,6)]::comptype[]);
 insert into dcomptable values (array[row(7,8)::comptype, row(9,10)::comptype]);
-insert into dcomptable values (array[row(1,2)]::dcomptypea);  -- fail on uniqueness
+--insert into dcomptable values (array[row(1,2)]::dcomptypea);  -- fail on uniqueness
 insert into dcomptable (d1[1]) values(row(9,10));
 insert into dcomptable (d1[1].r) values(11);
 

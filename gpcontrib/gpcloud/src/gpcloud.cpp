@@ -116,8 +116,6 @@ static const char *getFormatStr(FunctionCallInfo fcinfo) {
 
     if (fmttype_is_text(fmtcode)) return "txt";
     if (fmttype_is_csv(fmtcode)) return "csv";
-    if (fmttype_is_avro(fmtcode)) return "avro";
-    if (fmttype_is_parquet(fmtcode)) return "parquet";
     return S3_DEFAULT_FORMAT;
 }
 

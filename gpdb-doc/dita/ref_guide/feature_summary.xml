@@ -198,14 +198,16 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
   <topic id="topic8" xml:lang="en">
     <title id="ik264019">Greenplum and PostgreSQL Compatibility</title>
     <body>
-      <p>Greenplum Database is based on PostgreSQL 8.3 with additional features from newer
-        PostgreSQL releases. To support the distributed nature and typical workload of a Greenplum
-        Database system, some SQL commands have been added or modified, and there are a few
-        PostgreSQL features that are not supported. Greenplum has also added features not found in
-        PostgreSQL, such as physical data distribution, parallel query optimization, external
-        tables, resource queues, and enhanced table partitioning. For full SQL syntax and
-        references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic" format="dita"
-        />.</p>
+      <p>Greenplum Database is based on PostgreSQL 9.4. To support the distributed nature and
+        typical workload of a Greenplum Database system, some SQL commands have been added or
+        modified, and there are a few PostgreSQL features that are not supported. Greenplum has also
+        added features not found in PostgreSQL, such as physical data distribution, parallel query
+        optimization, external tables, resource queues, and enhanced table partitioning. For full
+        SQL syntax and references, see the <xref href="sql_commands/sql_ref.xml#topic1" type="topic"
+          format="dita"/>.<note>Greenplum Database does not support the PostgreSQL <xref
+            href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+            scope="external">large object facility</xref> for streaming user data that is stored in
+          large-object structures.</note></p>
       <table id="ik213423">
         <title>SQL Support in Greenplum Database</title>
         <tgroup cols="3">
@@ -471,6 +473,12 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>CREATE LANGUAGE</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
+            </row>
+            <row>
+              <entry><codeph>CREATE MATERIALIZED VIEW</codeph></entry>
+              <entry>NO</entry>
+              <entry>Greenplum Database does not support materialized views (a PostgreSQL
+                extension).</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>CREATE OPERATOR</codeph></entry>
@@ -819,6 +827,12 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col1"><codeph>REASSIGN OWNED</codeph></entry>
               <entry colname="col2">YES</entry>
               <entry colname="col3"/>
+            </row>
+            <row>
+              <entry><codeph>REFRESH MATERIALIZED VIEW</codeph></entry>
+              <entry>NO</entry>
+              <entry>Greenplum Database does not support materialized views (a PostgreSQL
+                extension).</entry>
             </row>
             <row>
               <entry colname="col1"><codeph>REINDEX</codeph></entry>

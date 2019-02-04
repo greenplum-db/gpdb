@@ -283,7 +283,7 @@ namespace gpdxl
 
 			// get the distribution columns
 			static
-			ULongPtrArray *RetrieveRelDistrbutionCols(IMemoryPool *mp, GpPolicy *gp_policy, CMDColumnArray *mdcol_array, ULONG size);
+			ULongPtrArray *RetrieveRelDistributionCols(IMemoryPool *mp, GpPolicy *gp_policy, CMDColumnArray *mdcol_array, ULONG size);
 
 			// construct a mapping GPDB attnos -> position in the column array
 			static

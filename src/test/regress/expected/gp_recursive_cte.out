@@ -538,3 +538,33 @@ select * from recursive_table_4 where a > ALL (
  1 | 2
 (1 row)
 
+with recursive x(i) as (
+    select 1
+),
+y(i) as (
+    select sum(i) from x
+    union all
+    select i + 1 from y
+),
+z(i) as (
+    select avg(i) from x
+    union all
+    select i + 1 from z
+)
+(select * from y limit 5)
+union
+(select * from z limit 10);
+            i            
+-------------------------
+                       1
+                       2
+                       3
+                       4
+                       5
+  6.00000000000000000000
+  7.00000000000000000000
+  8.00000000000000000000
+  9.00000000000000000000
+ 10.00000000000000000000
+(10 rows)
+

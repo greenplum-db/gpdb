@@ -19,8 +19,8 @@
  */
 #include "postgres.h"
 
+#include "access/hash.h"
 #include "access/skey.h"
-#include "cdb/cdbhash.h"
 #include "nodes/makefuncs.h"
 #include "nodes/nodeFuncs.h"
 #include "nodes/plannodes.h"
@@ -35,6 +35,7 @@
 #include "parser/parse_oper.h" /* for compatible_oper_opid() */
 #include "utils/lsyscache.h"
 
+#include "cdb/cdbhash.h"
 #include "cdb/cdbpullup.h"		/* cdbpullup_expr(), cdbpullup_make_var() */
 
 static PathKey *make_canonical_pathkey(PlannerInfo *root,
@@ -1195,24 +1196,16 @@ build_join_pathkeys(PlannerInfo *root,
  *	  Returns a DistributionKey which represents an equivalence class of
  *	  expressions that must be equal to the given expression.
  *
- *	  The caller specifies the name of the equality operator thus:
- *			list_make1(makeString("="))
- *
- *	  The 'opfamily' field of resulting PathKey is filled with the operator
- *	  family that would be used for a merge join with another expr of the
- *	  same data type, using the equality operator whose name is given.
- *	  Partitioning doesn't itself use the sort operator, but its Oid is
- *	  needed to associate the PathKey with the same equivalence class
- *	  (canonical pathkey) as any other expressions to which
- *	  our expr is constrained by compatible merge-joinable
- *	  equality operators.  (We assume, in what may be a temporary
- *	  excess of optimism, that our hashed partitioning function
- *	  implements the same notion of equality as these operators.)
+ *	  The 'opfamily' argument specifies a hash operator family, which
+ *	  determines the hash function used. The = operator for the expression's
+ *	  datatype is used to look up a compatible btree operator family, which
+ *	  is recorded in the EquivalenceClass that becomes part of the
+ *	  distribution key.
  */
 DistributionKey *
 cdb_make_distkey_for_expr(PlannerInfo *root,
 						  Node *expr,
-						  List *eqopname)
+						  Oid opfamily /* hash opfamily */)
 {
 	Oid			typeoid;
 	Oid			eqopoid;
@@ -1222,17 +1215,21 @@ cdb_make_distkey_for_expr(PlannerInfo *root,
 	Oid			lefttype;
 	Oid			righttype;
 
+	Assert(OidIsValid(opfamily));
+
 	/* Get the expr's data type. */
 	typeoid = exprType(expr);
 
-	/* Get Oid of the equality operator applied to two values of that type. */
-	eqopoid = compatible_oper_opid(eqopname, typeoid, typeoid, true);
+	/* If it's a domain, look at the base type instead */
+	typeoid = getBaseType(typeoid);
+
+	eqopoid = cdb_eqop_in_hash_opfamily(opfamily, typeoid);
 
 	/*
 	 * Get Oid of the sort operator that would be used for a sort-merge
 	 * equijoin on a pair of exprs of the same type.
 	 */
-	if (eqopoid == InvalidOid || !op_mergejoinable(eqopoid, typeoid))
+	if (!op_mergejoinable(eqopoid, typeoid))
 		elog(ERROR, "could not find mergejoinable = operator for type %u", typeoid);
 
 	mergeopfamilies = get_mergejoin_opfamilies(eqopoid);
@@ -1261,6 +1258,7 @@ cdb_make_distkey_for_expr(PlannerInfo *root,
 
 	dk = makeNode(DistributionKey);
 	dk->dk_eclasses = list_make1(eclass);
+	dk->dk_opfamily = opfamily;
 
 	return dk;
 }
@@ -1432,24 +1430,27 @@ make_pathkeys_for_sortclauses(PlannerInfo *root,
  * *partition_dist_exprs to a corresponding list of plain expressions.
  */
 void
-make_distribution_pathkeys_for_groupclause(PlannerInfo *root, List *groupclause, List *tlist,
-										   List **partition_dist_pathkeys,
-										   List **partition_dist_exprs)
+make_distribution_exprs_for_groupclause(PlannerInfo *root, List *groupclause, List *tlist,
+										List **partition_dist_pathkeys,
+										List **partition_dist_exprs,
+										List **partition_dist_opfamilies)
 {
 	List	   *pathkeys = NIL;
 	List	   *exprs = NIL;
+	List	   *opfamilies = NIL;
 	ListCell   *l;
 
 	foreach(l, groupclause)
 	{
 		SortGroupClause *sortcl = (SortGroupClause *) lfirst(l);
-		Expr	   *expr;
 		PathKey	   *pathkey;
+		Expr	   *expr;
+		Oid			opfamily;
+
+		if (!sortcl->hashable)
+			continue;
 
 		expr = (Expr *) get_sortgroupclause_expr(sortcl, tlist);
-
-		if (!isGreenplumDbHashable(exprType((Node *) expr)))
-			continue;
 
 		pathkey = make_pathkey_from_sortop(root,
 										   expr,
@@ -1459,12 +1460,16 @@ make_distribution_pathkeys_for_groupclause(PlannerInfo *root, List *groupclause,
 										   sortcl->tleSortGroupRef,
 										   true);
 
+		opfamily = get_compatible_hash_opfamily(sortcl->eqop);
+
 		pathkeys = lappend(pathkeys, pathkey);
 		exprs = lappend(exprs, expr);
+		opfamilies = lappend_oid(opfamilies, opfamily);
 	}
 
 	*partition_dist_pathkeys = pathkeys;
 	*partition_dist_exprs = exprs;
+	*partition_dist_opfamilies = opfamilies;
 }
 
 /****************************************************************************

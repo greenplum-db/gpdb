@@ -2064,7 +2064,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 
 				if (pMotion->sendSorted || pMotion->motionType == MOTIONTYPE_HASH)
 					show_motion_keys(planstate,
-									 pMotion->hashExpr,
+									 pMotion->hashExprs,
 									 pMotion->numSortCols,
 									 pMotion->sortColIdx,
 									 "Merge Key",

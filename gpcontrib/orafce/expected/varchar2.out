@@ -16,7 +16,7 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as
 DROP TABLE foo;
 -- OK
 CREATE TABLE foo (a VARCHAR2(5));
-NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause, and no column type is suitable for a distribution key. Creating a NULL policy entry.
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
 CREATE INDEX ON foo(a);
 --
 -- test that no value longer than maxlen is allowed

@@ -461,7 +461,7 @@ def checkDistribPolicy():
       join pg_class rel on (pk.conrelid = rel.oid)
       join pg_namespace n on (rel.relnamespace = n.oid)
       join gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in('p', 'u') and d.policytype = 'p' and d.attrnums is null
+    where pk.contype in('p', 'u') and d.policytype = 'p' and d.distkey = ''
     '''
 
     db = connect2(GV.cfg[1])
@@ -503,8 +503,8 @@ def checkDistribPolicy():
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
     where pk.contype in ('p', 'u') and d.policytype = 'p' and
-          (d.attrnums is null or not
-           d.attrnums operator(pg_catalog.<@) pk.conkey)
+          (d.distkey = '' or not
+           d.distkey::int2[] operator(pg_catalog.<@) pk.conkey)
     '''
     try:
         curs = db.query(qry)
@@ -626,8 +626,8 @@ def checkPartitionIntegrity():
     select
       parrelid,
       parchildrelid,
-      d1.attrnums as parpolicy,
-      d2.attrnums as parchildpolicy
+      d1.distkey as parpolicy,
+      d2.distkey as parchildpolicy
     from
       (
         select distinct
@@ -643,8 +643,8 @@ def checkPartitionIntegrity():
                      from (
                        select
                          localoid,
-                         unnest(attrnums) as offset,
-                         generate_series(1, array_upper(attrnums, 1)) as index
+                         unnest(distkey) as offset,
+                         generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
                       ) d
@@ -662,8 +662,8 @@ def checkPartitionIntegrity():
                      from (
                        select
                          localoid,
-                         unnest(attrnums) as offset,
-                         generate_series(1, array_upper(attrnums, 1)) as index
+                         unnest(distkey) as offset,
+                         generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
                       ) d
@@ -678,7 +678,7 @@ def checkPartitionIntegrity():
       ) p
     join gp_distribution_policy d1 on (d1.localoid = p.parrelid)
     join gp_distribution_policy d2 on (d2.localoid = p.parchildrelid)
-    where d2.attrnums is not null
+    where d2.distkey <> ''
     '''
     try:
         curs = db.query(qry)
@@ -1008,7 +1008,7 @@ partitionRegularityChecks = {
                         select
                             k.tableid,
                             d.attrcnt,
-                            d.attrnums,
+                            d.distkey,
                             sum(k.partkeylen),
                             array_agg(k.partkey[g.g])
                         from
@@ -1057,18 +1057,18 @@ partitionRegularityChecks = {
                             (
                                 select
                                     localoid::regclass,
-                                    attrnums,
-                                    coalesce(1+array_upper(attrnums,1)-array_lower(attrnums,1),0)
+                                    distkey,
+                                    coalesce(1+array_length(distkey,1),0)
                                 from
                                     gp_distribution_policy
-                            ) as d(relid, attrnums, attrcnt)
+                            ) as d(relid, distkey, attrcnt)
                         where
                             g.g < k.partkeylen and
                             k.tableid = d.relid
                         group by
                             k.tableid,
                             d.attrcnt,
-                            d.attrnums
+                            d.distkey
                     ) as k(tableid, distkeylen, distkey, partkeylen, partkey) ,
                     (
                         select
@@ -1112,7 +1112,7 @@ partitionRegularityChecks = {
                     c.relid = k.tableid and
                     i.indrelid = k.tableid and
                     i.indexrelid = c.indexid and
-                    not i.indkey::smallint[] @> array_cat(k.distkey, k.partkey)
+                    not i.indkey::smallint[] @> array_cat(k.distkey::smallint[], k.partkey)
             ) as x(tableid, distkey, partkey, conid, conname, contype, indrelid, indkey) ,
             (
                 select

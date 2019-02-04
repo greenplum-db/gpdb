@@ -27,65 +27,22 @@ import os
 
 logger = gplog.get_default_logger()
 
+#
+# Segment state flags. These must correspond to the allowed values for the
+# 'role', 'mode', and 'status' columns in gp_segment_configuration.
+#
+
 ROLE_PRIMARY = 'p'
 ROLE_MIRROR  = 'm'
 VALID_ROLES  = [ROLE_PRIMARY, ROLE_MIRROR]
-
-# Map gp_segment_configuration role values to values from gp_primarymirror.
-ROLE_TO_MODE_MAP = {}
-SEG_MODE_PRIMARY = "PrimarySegment"
-SEG_MODE_MIRROR  = "MirrorSegment"
-ROLE_TO_MODE_MAP[ROLE_PRIMARY] = SEG_MODE_PRIMARY
-ROLE_TO_MODE_MAP[ROLE_MIRROR]  = SEG_MODE_MIRROR
-
 
 STATUS_UP    = 'u'
 STATUS_DOWN  = 'd'
 VALID_STATUS = [STATUS_UP, STATUS_DOWN]
 
-MODE_NOT_INITIALIZED = ''               # no mirroring
-MODE_CHANGELOGGING = 'c'                # filerep logging
-MODE_SYNCHRONIZED = 's'                 # filerep synchronized
-MODE_NOT_SYNC = 'n'
-MODE_RESYNCHRONIZATION = 'r'            #
-
-# Map gp_segment_configuration mode values to values retured from gp_primarymirror.
-MODE_TO_DATA_STATE_MAP = {}
-SEG_DATA_STATE_NOT_INITIALIZED    = "NotInitialized"
-SEG_DATA_STATE_IN_CHANGE_TRACKING = "InChangeTracking"
-SEG_DATA_STATE_SYNCHRONIZED       = "InSync"
-SEG_DATA_STATE_IN_RESYNC          = "InResync"
-MODE_TO_DATA_STATE_MAP[MODE_NOT_INITIALIZED]   = SEG_DATA_STATE_NOT_INITIALIZED
-MODE_TO_DATA_STATE_MAP[MODE_CHANGELOGGING]     = SEG_DATA_STATE_IN_CHANGE_TRACKING
-MODE_TO_DATA_STATE_MAP[MODE_SYNCHRONIZED]      = SEG_DATA_STATE_SYNCHRONIZED
-MODE_TO_DATA_STATE_MAP[MODE_RESYNCHRONIZATION] = SEG_DATA_STATE_IN_RESYNC
-
-# SegmentState values returned from gp_primarymirror.
-SEGMENT_STATE_NOT_INITIALIZED               = "NotInitialized"
-SEGMENT_STATE_INITIALIZATION                = "Initialization"
-SEGMENT_STATE_IN_CHANGE_TRACKING_TRANSITION = "InChangeTrackingTransition"
-SEGMENT_STATE_IN_RESYNCTRANSITION           = "InResyncTransition"
-SEGMENT_STATE_IN_SYNC_TRANSITION            = "InSyncTransition"
-SEGMENT_STATE_READY                         = "Ready"
-SEGMENT_STATE_CHANGE_TRACKING_DISABLED      = "ChangeTrackingDisabled"
-SEGMENT_STATE_FAULT                         = "Fault"
-SEGMENT_STATE_SHUTDOWN_BACKENDS             = "ShutdownBackends"
-SEGMENT_STATE_SHUTDOWN                      = "Shutdown"
-SEGMENT_STATE_IMMEDIATE_SHUTDOWN            = "ImmediateShutdown"
-
-
-VALID_MODE = [
-    MODE_SYNCHRONIZED,
-    MODE_NOT_SYNC,
-    MODE_CHANGELOGGING,
-    MODE_RESYNCHRONIZATION,
-]
-MODE_LABELS = {
-    MODE_CHANGELOGGING: "Change Tracking",
-    MODE_SYNCHRONIZED: "Synchronized",
-    MODE_RESYNCHRONIZATION: "Resynchronizing",
-    MODE_NOT_SYNC: "Not In Sync"
-}
+MODE_SYNCHRONIZED = 's'
+MODE_NOT_SYNC     = 'n'
+VALID_MODE = [MODE_SYNCHRONIZED, MODE_NOT_SYNC]
 
 # These are all the valid states primary/mirror pairs can
 # be in.  Any configuration other than this will cause the
@@ -94,18 +51,20 @@ MODE_LABELS = {
 # to the segments current role, not the preferred_role.
 #
 # The format of the tuples are:
-#    (<primary status>, <prmary mode>, <mirror status>, <mirror_mode>)
+#    (<primary status>, <primary mode>, <mirror status>, <mirror mode>)
 VALID_SEGMENT_STATES = [
-    (STATUS_UP, MODE_CHANGELOGGING, STATUS_DOWN, MODE_SYNCHRONIZED),
-    (STATUS_UP, MODE_CHANGELOGGING, STATUS_DOWN, MODE_RESYNCHRONIZATION),
-    (STATUS_UP, MODE_RESYNCHRONIZATION, STATUS_UP, MODE_RESYNCHRONIZATION),
     (STATUS_UP, MODE_SYNCHRONIZED, STATUS_UP, MODE_SYNCHRONIZED),
     (STATUS_UP, MODE_NOT_SYNC, STATUS_UP, MODE_NOT_SYNC),
-    (STATUS_UP, MODE_NOT_SYNC, STATUS_DOWN, MODE_NOT_SYNC)
+    (STATUS_UP, MODE_NOT_SYNC, STATUS_DOWN, MODE_NOT_SYNC),
 ]
 
+_MODE_LABELS = {
+    MODE_SYNCHRONIZED: "Synchronized",
+    MODE_NOT_SYNC:     "Not In Sync",
+}
+
 def getDataModeLabel(mode):
-    return MODE_LABELS[mode]
+    return _MODE_LABELS[mode]
 
 MASTER_CONTENT_ID = -1
 
@@ -337,14 +296,8 @@ class Segment:
     def isSegmentDown(self):
         return self.status == STATUS_DOWN
 
-    def isSegmentModeInChangeLogging(self):
-        return self.mode == MODE_CHANGELOGGING
-
     def isSegmentModeSynchronized(self):
         return self.mode == MODE_SYNCHRONIZED
-
-    def isSegmentModeInResynchronization(self):
-        return self.mode == MODE_RESYNCHRONIZATION
 
     # --------------------------------------------------------------------
     # getters

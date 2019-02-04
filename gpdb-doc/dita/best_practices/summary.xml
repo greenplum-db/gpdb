@@ -30,8 +30,8 @@
         <li>Avoid performing singleton <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
             <codeph>DELETE</codeph> operations on append-optimized tables. </li>
         <li>Avoid performing concurrent batch <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>
-          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph>
-          operations are acceptable. </li>
+          operations on append-optimized tables. Concurrent batch <codeph>INSERT</codeph> operations
+          are acceptable. </li>
       </ul>
       <p>See <xref href="schema.xml#storage_model/heap_vs_ao"/>.</p>
     </section>
@@ -197,7 +197,7 @@
     <section id="_Toc286661612">
       <title>ANALYZE</title>
       <ul id="ul_spn_src_3r">
-        <li>Determine if  analyzing the database is actually needed. Analyzing is not needed if
+        <li>Determine if analyzing the database is actually needed. Analyzing is not needed if
             g<codeph>p_autostats_mode</codeph> is set to <codeph>on_no_stats</codeph> (the default)
           and the table is not partitioned.</li>
         <li>Use <codeph>analyzedb</codeph> in preference to <codeph>ANALYZE</codeph> when dealing
@@ -256,34 +256,6 @@
       <p>See <xref href="data_loading.xml#topic_fj5_b1x_r4"/>.</p>
     </section>
     <section>
-      <title>gptransfer</title>
-      <ul id="ul_c2p_tl4_1s">
-        <li>Avoid using the <codeph>--full</codeph> or <codeph>--schema-only</codeph> options.
-          Instead, copy schemas to the destination database using a different method, and then
-          transfer the table data.</li>
-        <li>Drop indexes before transferring tables and recreate them when the transfer is complete. </li>
-        <li>Transfer smaller tables to the destination database using the SQL <codeph>COPY</codeph>
-          command.</li>
-        <li>Transfer larger tables in batches using <codeph>gptransfer</codeph>.</li>
-        <li>Test running <codeph>gptransfer</codeph> before performing a production migration.
-          Experiment with the <codeph>--batch-size</codeph> and <codeph>--sub-batch-size</codeph>
-          options to obtain maximum parallelism. Determine proper batching of tables for iterative
-            <codeph>gptransfer</codeph> runs.</li>
-        <li>Use only fully qualified table names. Periods (.), whitespace, quotes (') and double
-          quotes (") in table names may cause problems. </li>
-        <li>If you use the <codeph>--validation</codeph> option to validate the data after transfer,
-          be sure to also use the <codeph>-x</codeph> option to place an exclusive lock on the
-          source table.</li>
-        <li>Ensure any roles, functions, and resource queues are created in the destination
-          database. These objects are not transferred when you use the <codeph>gptransfer
-            -t</codeph> option. </li>
-        <li>Copy the <codeph>postgresql.conf</codeph> and <codeph>pg_hba.conf</codeph> configuration
-          files from the source to the destination cluster. </li>
-        <li>Install needed extensions in the destination database with <codeph>gppkg</codeph>.</li>
-      </ul>
-      <p>See <xref href="gptransfer.xml#topic_gptransfer"/>.</p>
-    </section>
-    <section>
       <title>Security</title>
       <ul id="ul_ocm_zsx_kr">
         <li> Secure the <codeph>gpadmin</codeph> user id and only allow essential system
@@ -296,7 +268,7 @@
           Attributes" in the <i>Greenplum Database Administrator Guide</i>. </li>
         <li>Database users should never log on as <codeph>gpadmin</codeph>, and ETL or production
           workloads should never run as <codeph>gpadmin</codeph>. </li>
-        <li>Assign a distinct Greenplum Database role to each user, application, or  service that
+        <li>Assign a distinct Greenplum Database role to each user, application, or service that
           logs in. </li>
         <li>For applications or web services, consider creating a distinct role for each application
           or service. </li>
@@ -360,9 +332,10 @@
           sources.</li>
         <li>If backups are saved to local cluster storage, move the files to a safe, off-cluster
           location when the backup is complete. </li>
-        <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon to
-          prevent IO bottlenecks.</li>
-        <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain enterprise backup platform.</li>
+        <li>If backups are saved to NFS mounts, use a scale-out NFS solution such as Dell EMC Isilon
+          to prevent IO bottlenecks.</li>
+        <li>Consider using Greenplum integration to stream backups to the Dell EMC Data Domain
+          enterprise backup platform.</li>
       </ul>
       <p>See <xref href="ha.xml#topic_q5g_pmj_s4"/>.</p>
     </section>

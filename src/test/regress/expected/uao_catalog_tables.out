@@ -279,8 +279,8 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_a
  __gp_aovisimap_hidden_info 
 ----------------------------
  (1,0,5)
- (1,0,3)
- (1,0,2)
+ (1,0,1)
+ (1,0,4)
 (3 rows)
 
 delete from uao_table_check_hidden_tup_count_after_delete;
@@ -288,8 +288,8 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_a
  __gp_aovisimap_hidden_info 
 ----------------------------
  (1,5,5)
- (1,3,3)
- (1,2,2)
+ (1,1,1)
+ (1,4,4)
 (3 rows)
 
 vacuum full uao_table_check_hidden_tup_count_after_delete;
@@ -310,9 +310,9 @@ insert into uao_table_check_hidden_tup_count_after_update select i,'aa'||i,i+10 
 select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_after_update'::regclass) from gp_dist_random('gp_id');
  __gp_aovisimap_hidden_info 
 ----------------------------
- (1,0,3)
- (1,0,2)
+ (1,0,4)
  (1,0,5)
+ (1,0,1)
 (3 rows)
 
 update uao_table_check_hidden_tup_count_after_update set j = 'test21';
@@ -320,8 +320,8 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_a
  __gp_aovisimap_hidden_info 
 ----------------------------
  (1,5,10)
- (1,3,6)
- (1,2,4)
+ (1,1,2)
+ (1,4,8)
 (3 rows)
 
 vacuum full uao_table_check_hidden_tup_count_after_update;
@@ -329,10 +329,10 @@ select gp_toolkit.__gp_aovisimap_hidden_info('uao_table_check_hidden_tup_count_a
  __gp_aovisimap_hidden_info 
 ----------------------------
  (1,0,0)
- (2,0,3)
- (1,0,0)
  (2,0,5)
  (1,0,0)
- (2,0,2)
+ (2,0,4)
+ (1,0,0)
+ (2,0,1)
 (6 rows)
 

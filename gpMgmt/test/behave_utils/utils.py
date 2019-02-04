@@ -15,7 +15,7 @@ from datetime import datetime
 from gppylib.commands.base import Command, ExecutionError, REMOTE
 from gppylib.commands.gp import chk_local_db_running
 from gppylib.db import dbconn
-from gppylib.gparray import GpArray, MODE_SYNCHRONIZED, MODE_RESYNCHRONIZATION
+from gppylib.gparray import GpArray, MODE_SYNCHRONIZED
 from pygresql import pg
 
 PARTITION_START_DATE = '2010-01-01'
@@ -579,15 +579,6 @@ def are_segments_synchronized():
     return True
 
 
-def is_any_segment_resynchronized():
-    gparray = GpArray.initFromCatalog(dbconn.DbURL())
-    segments = gparray.getDbList()
-    for seg in segments:
-        if seg.mode == MODE_RESYNCHRONIZATION:
-            return True
-    return False
-
-
 def check_row_count(context, tablename, dbname, nrows):
     NUM_ROWS_QUERY = 'select count(*) from %s' % tablename
     # We want to bubble up the exception so that if table does not exist, the test fails
@@ -600,32 +591,6 @@ def check_row_count(context, tablename, dbname, nrows):
         result = dbconn.execSQLForSingleton(conn, NUM_ROWS_QUERY)
     if result != nrows:
         raise Exception('%d rows in table %s.%s, expected row count = %d' % (result, dbname, tablename, nrows))
-
-
-def match_table_select(context, src_tablename, src_dbname, dest_tablename, dest_dbname, orderby=None, options=''):
-    if orderby != None:
-        dest_tbl_qry = 'psql -d %s -c \'select * from %s order by %s\' %s' % (
-        dest_dbname, dest_tablename, orderby, options)
-        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s order by %s\' %s''' % (
-            os.environ.get('GPTRANSFER_SOURCE_PORT'),
-            os.environ.get('GPTRANSFER_SOURCE_HOST'),
-            os.environ.get('GPTRANSFER_SOURCE_USER'),
-            src_dbname, src_tablename, orderby, options)
-    else:
-        dest_tbl_qry = 'psql -d %s -c \'select * from %s\' %s' % (dest_dbname, dest_tablename, options)
-        src_tbl_qry = '''psql -p %s -h %s -U %s -d %s -c \'select * from %s\' %s''' % (
-            os.environ.get('GPTRANSFER_SOURCE_PORT'),
-            os.environ.get('GPTRANSFER_SOURCE_HOST'),
-            os.environ.get('GPTRANSFER_SOURCE_USER'),
-            src_dbname, src_tablename, options)
-
-    (_, dest_content, _) = run_cmd(dest_tbl_qry)
-    (_, src_content, _) = run_cmd(src_tbl_qry)
-    if src_content != dest_content:
-        raise Exception('''table %s in database %s of source system does not match rows with table %s in database %s of destination system.\n
-                         destination table content:\n%s\n
-                         source table content:\n%s\n''' % (
-            src_tablename, src_dbname, dest_tablename, dest_dbname, dest_content, src_content))
 
 
 def get_master_hostname(dbname='template1'):

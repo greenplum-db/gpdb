@@ -424,8 +424,44 @@ CREATE FUNCTION hyperloglog_add_item_agg_default(counter hyperloglog_estimator, 
 
 CREATE FUNCTION hyperloglog_accum(anyelement) RETURNS hyperloglog_estimator LANGUAGE internal IMMUTABLE AS 'aggregate_dummy' WITH (OID=7164, proisagg="t", DESCRIPTION="Adds every data value to a hyperloglog counter and returns the counter");
 
+CREATE FUNCTION pg_get_table_distributedby(oid) RETURNS text LANGUAGE internal STABLE STRICT AS 'pg_get_table_distributedby' WITH (OID=6232, DESCRIPTION="deparse DISTRIBUTED BY clause for a given relation");
+
 -- hash functions for a few built-in datatypes that are missing hash support
 -- in upstream for some reason.
 CREATE FUNCTION hashtid(tid) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'hashtid' WITH (OID=6114, DESCRIPTION="hash function for tid");
 CREATE FUNCTION bithash(bit) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'bithash' WITH (OID=6117, DESCRIPTION="hash function for bit");
 CREATE FUNCTION bithash(varbit) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'bithash' WITH (OID=6118, DESCRIPTION="hash function for bit varbit");
+
+-- Legacy cdbhash functions.
+CREATE FUNCTION cdblegacyhash_int2(int2) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_int2' WITH (OID=6140, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_int4(int4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_int4' WITH (OID=6141, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_int8(int8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_int8' WITH (OID=6142, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_float4(float4) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_float4' WITH (OID=6143, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_float8(float8) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_float8' WITH (OID=6144, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_numeric(numeric) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_numeric' WITH (OID=6145, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_char(char) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_char' WITH (OID=6146, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_text(text) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_text' WITH (OID=6147, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_bpchar(bpchar) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_text' WITH (OID=6148, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_bytea(bytea) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_bytea' WITH (OID=6149, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_name(name) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_name' WITH (OID=6150, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_oid(oid) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_oid' WITH (OID=6151, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_tid(tid) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_tid' WITH (OID=6152, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_timestamp(timestamp) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_timestamp' WITH (OID=6153, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_timestamptz(timestamptz) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_timestamptz' WITH (OID=6154, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_date(date) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_date' WITH (OID=6155, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_time(time) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_time' WITH (OID=6156, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_timetz(timetz) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_timetz' WITH (OID=6157, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_interval(interval) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_interval' WITH (OID=6158, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_abstime(abstime) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_abstime' WITH (OID=6159, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_reltime(reltime) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_reltime' WITH (OID=6160, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_tinterval(tinterval) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_tinterval' WITH (OID=6161, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_inet(inet) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_inet' WITH (OID=6162, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_macaddr(macaddr) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_macaddr' WITH (OID=6163, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_bit(bit) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_bit' WITH (OID=6164, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_bool(bool) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_bool' WITH (OID=6165, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_array(anyarray) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_array' WITH (OID=6166, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_oidvector(oidvector) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_oidvector' WITH (OID=6167, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_cash(money) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_cash' WITH (OID=6168, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_complex(complex) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_complex' WITH (OID=6169, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_uuid(uuid) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_uuid' WITH (OID=6170, DESCRIPTION="Legacy cdbhash function");
+CREATE FUNCTION cdblegacyhash_anyenum(anyenum) RETURNS int4 LANGUAGE internal IMMUTABLE STRICT AS 'cdblegacyhash_anyenum' WITH (OID=6171, DESCRIPTION="Legacy cdbhash function");

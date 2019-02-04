@@ -112,8 +112,6 @@ int			max_prepared_xacts = 0;
  */
 #define GIDSIZE 200
 
-extern List *expectedTLIs;
-
 typedef struct GlobalTransactionData
 {
 	GlobalTransaction next;		/* list link for free list */
@@ -1414,15 +1412,6 @@ FinishPreparedTransaction(const char *gid, bool isCommit, bool raiseErrorIfNotFo
 
 	elog((Debug_print_full_dtm ? LOG : DEBUG5),
 		 "FinishPreparedTransaction(): got xid %d for gid '%s'", xid, gid);
-
-    /*
-     * Check for recovery control file, and if so set up state for offline
-     * recovery
-     */
-	readRecoveryCommandFile();
-
-    /* Now we can determine the list of expected TLIs */
-    expectedTLIs = readTimeLineHistory(ThisTimeLineID);
 
     /* get the two phase information from the xlog */
 	/*

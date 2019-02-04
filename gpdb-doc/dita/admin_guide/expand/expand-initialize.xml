@@ -2,15 +2,17 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="expand-initialize" xml:lang="en">
-
   <title id="no160120">Initializing New Segments</title>
-  <shortdesc>Use the <codeph>gpexpand</codeph> utility to initialize the new segments, create the
-    expansion schema, and set a system-wide random distribution policy for the database. </shortdesc>
+  <shortdesc>Use the <codeph>gpexpand</codeph> utility to create and initialize the new segment
+    instances and create the expansion schema. </shortdesc>
   <body>
-    <p>The first time you run <codeph>gpexpand</codeph> with a valid input file it creates the
-      expansion schema and sets the distribution policy for all tables to <codeph>DISTRIBUTED
-        RANDOMLY</codeph>. After these steps are completed, running <codeph>gpexpand</codeph>
-      detects if the expansion schema has been created and, if so, performs table redistribution. </p>
+    <draft-comment author="msk">GPDB 6 -online expand <p>remove change of distribution
+      policy</p></draft-comment>
+    <p>The first time you run <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
+          >gpexand</xref></codeph> with a valid input file it creates and initializes segment
+      instances and creates the expansion schema. After these steps are completed, running
+        <codeph>gpexpand</codeph> detects if the expansion schema has been created and, if so,
+      performs table redistribution. </p>
     <ul id="ul_od1_h1v_mr">
       <li>
         <xref href="#topic23" format="dita"/>
@@ -113,8 +115,8 @@
     <topic id="topic25" xml:lang="en">
       <title id="no165820">Expansion Input File Format</title>
       <body>
-        <p>Use the interactive interview process to create your own input file
-          unless your expansion scenario has atypical needs. </p>
+        <p>Use the interactive interview process to create your own input file unless your expansion
+          scenario has atypical needs. </p>
         <p>The format for expansion input files is:</p>
         <codeblock>hostname:address:port:datadir:dbid:content:preferred_role</codeblock>
         <p>For example:</p>
@@ -151,8 +153,8 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
               <row>
                 <entry colname="col1">datadir</entry>
                 <entry colname="col2">Directory name</entry>
-                <entry colname="col3">The data directory location for a segment as per
-                  the gp_segment_configuration system catalog.</entry>
+                <entry colname="col3">The data directory location for a segment as per the
+                  gp_segment_configuration system catalog.</entry>
               </row>
               <row>
                 <entry colname="col1">dbid</entry>
@@ -160,9 +162,9 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
                   values.</entry>
                 <entry colname="col3">Database ID for the segment. The values you enter should be
                   incremented sequentially from existing <i>dbid</i> values shown in the system
-                  catalog <codeph>gp_segment_configuration</codeph>. For example, to add four nodes
-                  to an existing ten-segment array with <i>dbid </i> values of 1-10, list new
-                    <i>dbid</i> values of 11, 12, 13 and 14.</entry>
+                  catalog <codeph>gp_segment_configuration</codeph>. For example, to add four
+                  segment instances to an existing ten-segment array with <i>dbid </i> values of
+                  1-10, list new <i>dbid</i> values of 11, 12, 13 and 14.</entry>
               </row>
               <row>
                 <entry colname="col1">content</entry>
@@ -191,8 +193,7 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
     <title id="no164605">Running gpexpand to Initialize New Segments</title>
     <body>
       <p>After you have created an input file, run <codeph>gpexpand</codeph> to initialize new
-        segments. The utility automatically stops Greenplum Database segment initialization and
-        restarts the system when the process finishes.</p>
+        segment instances. </p>
       <section id="no160378">
         <title>To run gpexpand with an input file</title>
         <ol>
@@ -219,7 +220,9 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
   <topic id="topic27" xml:lang="en">
     <title>Rolling Back a Failed Expansion Setup</title>
     <body>
-      <p>You can roll back an expansion setup operation only if the operation fails. </p>
+      <draft-comment author="msk">Is rollback true for online expand?</draft-comment>
+      <p>You can roll back an expansion setup operation (adding segment instances and segment hosts)
+        only if the operation fails. </p>
       <p>If the expansion fails during the initialization step, while the database is down, you must
         first restart the database in master-only mode by running the <codeph>gpstart -m</codeph>
         command. </p>

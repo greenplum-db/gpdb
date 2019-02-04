@@ -27,6 +27,7 @@
 #include "cdb/partitionselection.h"
 #include "utils/guc.h"
 #include "utils/lsyscache.h"
+#include "utils/typcache.h"
 #include "utils/uri.h"
 #include "gpos/base.h"
 
@@ -195,6 +196,7 @@ CTranslatorDXLToPlStmt::GetPlannedStmtFromDXL
 	List *oids_list = NIL;
 
 	ListCell *lc_rte = NULL;
+
 	ForEach (lc_rte, m_dxl_to_plstmt_context->GetRTableEntriesList())
 	{
 		RangeTblEntry *pRTE = (RangeTblEntry *) lfirst(lc_rte);
@@ -1896,6 +1898,7 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 		// translate hash expr list
 		List *hash_expr_list = NIL;
 		List *hash_expr_types_list = NIL;
+		int numHashExprs;
 
 		if (EdxlopPhysicalMotionRedistribute == motion_dxlop->GetDXLOperator())
 		{
@@ -1911,9 +1914,23 @@ CTranslatorDXLToPlStmt::TranslateDXLMotion
 				);
 		}
 		GPOS_ASSERT(gpdb::ListLength(hash_expr_list) == gpdb::ListLength(hash_expr_types_list));
+		numHashExprs = gpdb::ListLength(hash_expr_list);
 
-		motion->hashExpr = hash_expr_list;
-		motion->hashDataTypes = hash_expr_types_list;
+		int i = 0;
+		ListCell *lc;
+		Oid *hashFuncs = (Oid *) gpdb::GPDBAlloc(numHashExprs * sizeof(Oid));
+		foreach(lc, hash_expr_list)
+		{
+			Node	   *expr = (Node *) lfirst(lc);
+			Oid typeoid = gpdb::ExprType(expr);
+
+			hashFuncs[i] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(typeoid);
+
+			i++;
+		  }
+
+		motion->hashExprs = hash_expr_list;
+		motion->hashFuncs = hashFuncs;
 	}
 
 	// cleanup
@@ -2075,16 +2092,18 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 
 		result->numHashFilterCols = length;
 		result->hashFilterColIdx = (AttrNumber *) gpdb::GPDBAlloc(length * sizeof(AttrNumber));
+		result->hashFilterFuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
+
 		for (ULONG ul = 0; ul < length; ul++)
 		{
 			CDXLNode *hash_expr_dxlnode = (*hash_expr_list_dxlnode)[ul];
 			CDXLNode *expr_dxlnode = (*hash_expr_dxlnode)[0];
-			
-			INT resno = gpos::int_max;
+			const TargetEntry *target_entry;
+
 			if (EdxlopScalarIdent == expr_dxlnode->GetOperator()->GetDXLOperator())
 			{
 				ULONG colid = CDXLScalarIdent::Cast(expr_dxlnode->GetOperator())->GetDXLColRef()->Id();
-				resno = output_context->GetTargetEntry(colid)->resno;
+				target_entry = output_context->GetTargetEntry(colid);
 			}
 			else
 			{
@@ -2106,20 +2125,15 @@ CTranslatorDXLToPlStmt::TranslateDXLRedistributeMotionToResultHashFilters
 
 				// create a target entry for the hash filter
 				CWStringConst str_unnamed_col(GPOS_WSZ_LIT("?column?"));
-				TargetEntry *target_entry = gpdb::MakeTargetEntry
-											(
-											expr,
-											gpdb::ListLength(plan->targetlist) + 1,
-											CTranslatorUtils::CreateMultiByteCharStringFromWCString(str_unnamed_col.GetBuffer()),
-											false /* resjunk */
-											);
-				plan->targetlist = gpdb::LAppend(plan->targetlist, target_entry);
-
-				resno = target_entry->resno;
+				target_entry = gpdb::MakeTargetEntry(expr,
+								     gpdb::ListLength(plan->targetlist) + 1,
+								     CTranslatorUtils::CreateMultiByteCharStringFromWCString(str_unnamed_col.GetBuffer()),
+								     false /* resjunk */);
+				plan->targetlist = gpdb::LAppend(plan->targetlist, (void *) target_entry);
 			}
-			GPOS_ASSERT(gpos::int_max != resno);
 
-			result->hashFilterColIdx[ul] = resno;
+			result->hashFilterColIdx[ul] = target_entry->resno;
+			result->hashFilterFuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(gpdb::ExprType((Node *) target_entry->expr));
 		}
 	}
 	else
@@ -3926,20 +3940,25 @@ CTranslatorDXLToPlStmt::GetDXLDatumGPDBHash
 	)
 {
 	List *consts_list = NIL;
+	Oid *hashfuncs;
 	
 	const ULONG length = dxl_datum_array->Size();
-	
+
+	hashfuncs = (Oid *) gpdb::GPDBAlloc(length * sizeof(Oid));
+
 	for (ULONG ul = 0; ul < length; ul++)
 	{
 		CDXLDatum *datum_dxl = (*dxl_datum_array)[ul];
 		
 		Const *const_expr = (Const *) m_translator_dxl_to_scalar->TranslateDXLDatumToScalar(datum_dxl);
 		consts_list = gpdb::LAppend(consts_list, const_expr);
+		hashfuncs[ul] = m_dxl_to_plstmt_context->GetDistributionHashFuncForType(const_expr->consttype);
 	}
 
-	ULONG hash = gpdb::CdbHashConstList(consts_list, m_num_of_segments);
+	ULONG hash = gpdb::CdbHashConstList(consts_list, m_num_of_segments, hashfuncs);
 
 	gpdb::ListFreeDeep(consts_list);
+	gpdb::GPDBFree(hashfuncs);
 	
 	return hash;
 }
@@ -5060,7 +5079,7 @@ CTranslatorDXLToPlStmt::TranslateDXLCtas
 
 	//IntoClause *into_clause = TranslateDXLPhyCtasToIntoClause(phy_ctas_dxlop);
 	IntoClause *into_clause = NULL;
-	GpPolicy *distr_policy = TranslateDXLPhyCtasToDistrPolicy(phy_ctas_dxlop);
+	GpPolicy *distr_policy = TranslateDXLPhyCtasToDistrPolicy(phy_ctas_dxlop, target_list);
 	m_dxl_to_plstmt_context->AddCtasInfo(into_clause, distr_policy);
 	
 	GPOS_ASSERT(IMDRelation::EreldistrMasterOnly != phy_ctas_dxlop->Ereldistrpolicy());
@@ -5151,7 +5170,8 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToIntoClause
 GpPolicy *
 CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy
 	(
-	const CDXLPhysicalCTAS *dxlop
+	const CDXLPhysicalCTAS *dxlop,
+	List *target_list
 	)
 {
 	ULongPtrArray *distr_col_pos_array = dxlop->GetDistrColPosArray();
@@ -5192,7 +5212,11 @@ CTranslatorDXLToPlStmt::TranslateDXLPhyCtasToDistrPolicy
 		for (ULONG ul = 0; ul < num_of_distr_cols; ul++)
 		{
 			ULONG col_pos_idx = *((*distr_col_pos_array)[ul]);
+			TargetEntry *tle = (TargetEntry *) gpdb::ListNth(target_list, col_pos_idx);
+			Oid typeoid = gpdb::ExprType((Node *) tle->expr);
+
 			distr_policy->attrs[ul] = col_pos_idx + 1;
+			distr_policy->opclasses[ul] = m_dxl_to_plstmt_context->GetDistributionHashOpclassForType(typeoid);
 		}
 	}
 	return distr_policy;

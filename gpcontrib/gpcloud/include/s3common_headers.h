@@ -7,7 +7,7 @@
 #include <libxml/tree.h>
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
-#include <openssl/ssl.h>
+#include <openssl/sha.h>
 #include <pthread.h>
 #include <zlib.h>
 #include <algorithm>

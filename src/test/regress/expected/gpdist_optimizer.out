@@ -283,7 +283,7 @@ SELECT * from customer_off a, customer_off b where a.gp_segment_id <> b.gp_segme
 -----------+--------+-----------+-------------+---------+-----------+--------------+-----------+-----------+--------+-----------+-------------+---------+-----------+--------------+-----------
 (0 rows)
 
--- Test partitioned tables which have child with different distribution policies
+-- Test partitioned tables which have child with same distribution policies
 set gp_enable_fast_sri to on;
 -- single level case
 create table pt (i int, j int, k int) distributed by (i) partition by range(k)
@@ -294,12 +294,14 @@ NOTICE:  CREATE TABLE will create partition "pt_1_prt_3" for table "pt"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_4" for table "pt"
 NOTICE:  CREATE TABLE will create partition "pt_1_prt_5" for table "pt"
 alter table pt_1_prt_1 set distributed by (j);
-ERROR:  cannot SET DISTRIBUTED BY for pt_1_prt_1
-HINT:  Leaf distribution policy must be random or match that of the entire partitioned table.
+ERROR:  can't set the distribution policy of "pt_1_prt_1"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 alter table pt_1_prt_2 set distributed randomly;
+ERROR:  can't set the distribution policy of "pt_1_prt_2"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 alter table pt_1_prt_2 set distributed by (k);
-ERROR:  cannot SET DISTRIBUTED BY for pt_1_prt_2
-HINT:  Leaf distribution policy must be random or match that of the entire partitioned table.
+ERROR:  can't set the distribution policy of "pt_1_prt_2"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into pt values(1, 1, 1);
 insert into pt values(2, 2, 2);
 insert into pt values(3, 3, 3);
@@ -394,8 +396,8 @@ select gp_segment_id, * from pt_2;
 (0 rows)
 
 alter table pt_1_prt_2_2_prt_1 set distributed by (j);
-ERROR:  cannot SET DISTRIBUTED BY for pt_1_prt_2_2_prt_1
-HINT:  Leaf distribution policy must be random or match that of the entire partitioned table.
+ERROR:  can't set the distribution policy of "pt_1_prt_2_2_prt_1"
+HINT:  Distribution policy can be set for an entire partitioned table, not for one of its leaf parts or an interior branch.
 insert into pt values(45, 45, 45, 'A');
 insert into pt values(45, 46, 46, 'A');
 insert into pt values(45, 47, 47, 'A');
@@ -487,23 +489,23 @@ create table distby_with_constraint18 (col1 int4, col2 int4, PRIMARY KEY (col1, 
 create table distby_with_constraint21 (col1 int4, col2 int4, col3 int4, UNIQUE      (col1, col2), UNIQUE (col3, col1));
 create table distby_with_constraint22 (col1 int4, col2 int4, col3 int4, UNIQUE      (col1, col2), PRIMARY KEY (col3, col1));
 -- Check what distribution key was chosen for all the cases above.
-select c.relname, policytype, attrnums from pg_class c, gp_distribution_policy p where c.oid = p.localoid and relname LIKE 'distby_with_%' order by relname;
-         relname          | policytype | attrnums 
---------------------------+------------+----------
- distby_with_constraint01 | p          | {1}
- distby_with_constraint02 | p          | {1}
+select c.relname, policytype, distkey from pg_class c, gp_distribution_policy p where c.oid = p.localoid and relname LIKE 'distby_with_%' order by relname;
+         relname          | policytype | distkey 
+--------------------------+------------+---------
+ distby_with_constraint01 | p          | 1
+ distby_with_constraint02 | p          | 1
  distby_with_constraint03 | r          | 
  distby_with_constraint04 | r          | 
- distby_with_constraint11 | p          | {1}
- distby_with_constraint12 | p          | {1}
- distby_with_constraint13 | p          | {2}
- distby_with_constraint14 | p          | {2}
- distby_with_constraint15 | p          | {2,1}
- distby_with_constraint16 | p          | {2,1}
- distby_with_constraint17 | p          | {1,2}
- distby_with_constraint18 | p          | {1,2}
- distby_with_constraint21 | p          | {1}
- distby_with_constraint22 | p          | {1}
+ distby_with_constraint11 | p          | 1
+ distby_with_constraint12 | p          | 1
+ distby_with_constraint13 | p          | 2
+ distby_with_constraint14 | p          | 2
+ distby_with_constraint15 | p          | 2 1
+ distby_with_constraint16 | p          | 2 1
+ distby_with_constraint17 | p          | 1 2
+ distby_with_constraint18 | p          | 1 2
+ distby_with_constraint21 | p          | 1
+ distby_with_constraint22 | p          | 1
 (14 rows)
 
 --
@@ -747,3 +749,25 @@ select * from a full join b on (a.i=b.i) full join c on (b.i=c.i);
  3 | 3 | 3
 (7 rows)
 
+--
+-- 'xid' datatype has a hash opclass, but no b-tree operators. Test that.
+--
+-- While we don't particularly care about 'xid' datatype as such, let alone
+-- using it as distribution key, this case might arise for user-defined
+-- datatypes, too.
+--
+create table xidtab (x xid) distributed by (x);
+insert into xidtab select g::text::xid from generate_series(1,5) g;
+select * from xidtab a, xidtab b, xidtab c where a.x=b.x and b.x = c.x;
+ x | x | x 
+---+---+---
+ 1 | 1 | 1
+ 2 | 2 | 2
+ 3 | 3 | 3
+ 4 | 4 | 4
+ 5 | 5 | 5
+(5 rows)
+
+select * from xidtab group by x;
+ERROR:  could not identify an ordering operator for type xid
+HINT:  Use an explicit ordering operator or modify the query.

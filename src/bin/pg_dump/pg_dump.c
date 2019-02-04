@@ -341,6 +341,7 @@ static bool testAttributeEncodingSupport(Archive *fout);
 
 static char *nextToken(register char **stringp, register const char *delim);
 static void addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
+static void addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts);
 static bool isGPDB4300OrLater(Archive *fout);
 static bool isGPDB(Archive *fout);
 static bool isGPDB5000OrLater(Archive *fout);
@@ -14358,9 +14359,7 @@ dumpTableSchema(Archive *fout, TableInfo *tbinfo)
 		/* START MPP ADDITION */
 
 		/*
-		 * Dump distributed by clause. We skip this in binary-upgrade mode,
-		 * because that runs against a single segment server, and we don't
-		 * store the distribution policy information in segments.
+		 * Dump distributed by clause.
 		 */
 		if (dumpPolicy && tbinfo->relkind != RELKIND_FOREIGN_TABLE)
 			addDistributedBy(fout, q, tbinfo, actual_atts);
@@ -16820,22 +16819,42 @@ testExtProtocolSupport(Archive *fout)
 static void
 addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
 {
+	if (isGPDB6000OrLater(fout))
+	{
+		PQExpBuffer query = createPQExpBuffer();
+		PGresult   *res;
+
+		appendPQExpBuffer(query,
+						  "SELECT pg_catalog.pg_get_table_distributedby(%u)",
+						  tbinfo->dobj.catId.oid);
+
+		res = ExecuteSqlQueryForSingleRow(fout, query->data);
+
+		appendPQExpBuffer(q, " %s", PQgetvalue(res, 0, 0));
+
+		PQclear(res);
+		destroyPQExpBuffer(query);
+	}
+	else
+		addDistributedByOld(fout, q, tbinfo, actual_atts);
+}
+
+/*
+ * This is used with GPDB 5 and older, where pg_get_table_distributedby()
+ * backend function is not available.
+ */
+static void
+addDistributedByOld(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_atts)
+{
 	PQExpBuffer query = createPQExpBuffer();
 	PGresult   *res;
-	char	   policytype;
 	char	   *policydef;
 	char	   *policycol;
 
-	if (isGPDB6000OrLater(fout))
-		appendPQExpBuffer(query,
-						  "SELECT attrnums, policytype FROM gp_distribution_policy as p "
-						  "WHERE p.localoid = %u",
-						  tbinfo->dobj.catId.oid);
-	else
-		appendPQExpBuffer(query,
-						  "SELECT attrnums, 'p' as policytype FROM gp_distribution_policy as p "
-						  "WHERE p.localoid = %u",
-						  tbinfo->dobj.catId.oid);
+	appendPQExpBuffer(query,
+					  "SELECT attrnums FROM pg_catalog.gp_distribution_policy as p "
+					  "WHERE p.localoid = %u",
+					  tbinfo->dobj.catId.oid);
 
 	res = ExecuteSqlQuery(fout, query->data, PGRES_TUPLES_OK);
 
@@ -16877,25 +16896,27 @@ addDistributedBy(Archive *fout, PQExpBuffer q, TableInfo *tbinfo, int actual_att
 		 * one or NULL).
 		 */
 		policydef = PQgetvalue(res, 0, 0);
-		policytype = *(char *)PQgetvalue(res, 0, 1);
 
-		if (policytype == SYM_POLICYTYPE_REPLICATED)
+		if (strlen(policydef) > 0)
 		{
-			/* policy type is 'r' - distribute replicated */
-			appendPQExpBufferStr(q, " DISTRIBUTED REPLICATED");
-		}
-		else if (strlen(policydef) > 0)
-		{
+			bool		isfirst = true;
+			char	   *separator;
+
+			appendPQExpBuffer(q, " DISTRIBUTED BY (");
+
 			/* policy indicates one or more columns to distribute on */
 			policydef[strlen(policydef) - 1] = '\0';
 			policydef++;
-			policycol = nextToken(&policydef, ",");
-			appendPQExpBuffer(q, " DISTRIBUTED BY (%s",
-							  fmtId(tbinfo->attnames[atoi(policycol) - 1]));
+			separator = ",";
+
 			while ((policycol = nextToken(&policydef, ",")) != NULL)
 			{
-				appendPQExpBuffer(q, ", %s",
-							   fmtId(tbinfo->attnames[atoi(policycol) - 1]));
+				if (!isfirst)
+					appendPQExpBuffer(q, ", ");
+				isfirst = false;
+
+				appendPQExpBuffer(q, "%s",
+								  fmtId(tbinfo->attnames[atoi(policycol) - 1]));
 			}
 			appendPQExpBufferChar(q, ')');
 		}

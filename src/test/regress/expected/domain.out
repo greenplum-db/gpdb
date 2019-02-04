@@ -202,12 +202,17 @@ drop domain dia;
 create type comptype as (r float8, i float8);
 create domain dcomptypea as comptype[];
 create table dcomptable (d1 dcomptypea unique);
+ERROR:  data type dcomptypea has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
+-- GPDB: marking the column as 'unique' fails, because a unique column needs
+-- to be part of the distribution key, and composite types can't be used as
+-- distribution keys because they have no hash opclasses.
+create table dcomptable (d1 dcomptypea /*unique*/);
+create index on dcomptable (d1);
 insert into dcomptable values (array[row(1,2)]::dcomptypea);
 insert into dcomptable values (array[row(3,4), row(5,6)]::comptype[]);
 insert into dcomptable values (array[row(7,8)::comptype, row(9,10)::comptype]);
-insert into dcomptable values (array[row(1,2)]::dcomptypea);  -- fail on uniqueness
-ERROR:  duplicate key value violates unique constraint "dcomptable_d1_key"
-DETAIL:  Key (d1)=({"(1,2)"}) already exists.
+--insert into dcomptable values (array[row(1,2)]::dcomptypea);  -- fail on uniqueness
 insert into dcomptable (d1[1]) values(row(9,10));
 insert into dcomptable (d1[1].r) values(11);
 select * from dcomptable;
@@ -284,19 +289,15 @@ select * from dcomptable;
 explain (verbose, costs off)
   update dcomptable set d1[1].r = d1[1].r - 1, d1[1].i = d1[1].i + 1
     where d1[1].i > 0;
-                                                                           QUERY PLAN                                                                           
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
  Update on public.dcomptable
-   ->  Redistribute Motion 3:3  (slice1; segments: 3)
-         Output: (((d1[1].r := (d1[1].r - 1::double precision))[1].i := (d1[1].i + 1::double precision))::dcomptypea), d1, ctid, gp_segment_id, (DMLAction)
-         Hash Key: (((d1[1].r := (d1[1].r - 1::double precision))[1].i := (d1[1].i + 1::double precision))::dcomptypea)
-         ->  Split
-               Output: (((d1[1].r := (d1[1].r - 1::double precision))[1].i := (d1[1].i + 1::double precision))::dcomptypea), d1, ctid, gp_segment_id, DMLAction
-               ->  Seq Scan on public.dcomptable
-                     Output: (d1[1].r := (d1[1].r - 1::double precision))[1].i := (d1[1].i + 1::double precision), d1, ctid, gp_segment_id
-                     Filter: (dcomptable.d1[1].i > 0::double precision)
+   ->  Seq Scan on public.dcomptable
+         Output: (d1[1].r := (d1[1].r - 1::double precision))[1].i := (d1[1].i + 1::double precision), ctid, gp_segment_id
+         Filter: (dcomptable.d1[1].i > 0::double precision)
  Optimizer: legacy query optimizer
-(10 rows)
+ Settings: optimizer=off
+(6 rows)
 
 create rule silly as on delete to dcomptable do instead
   update dcomptable set d1[1].r = d1[1].r - 1, d1[1].i = d1[1].i + 1
@@ -307,12 +308,12 @@ create rule silly as on delete to dcomptable do instead
 --------+------------+-----------+----------+--------------+-------------
  d1     | dcomptypea |           | extended |              | 
 Indexes:
-    "dcomptable_d1_key" UNIQUE CONSTRAINT, btree (d1)
+    "dcomptable_d1_idx" btree (d1)
 Rules:
     silly AS
     ON DELETE TO dcomptable DO INSTEAD  UPDATE dcomptable SET d1[1].r = dcomptable.d1[1].r - 1::double precision, d1[1].i = dcomptable.d1[1].i + 1::double precision
   WHERE dcomptable.d1[1].i > 0::double precision
-Distributed by: (d1)
+Distributed randomly
 
 drop table dcomptable;
 drop type comptype cascade;

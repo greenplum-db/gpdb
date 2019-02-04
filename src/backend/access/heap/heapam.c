@@ -1209,7 +1209,8 @@ CdbTryOpenRelation(Oid relid, LOCKMODE reqmode, bool noWait, bool *lockUpgraded)
 			return NULL;
 
 		if (Gp_role == GP_ROLE_DISPATCH &&
-			RelationIsAppendOptimized(rel))
+			(!gp_enable_global_deadlock_detector ||
+			 RelationIsAppendOptimized(rel)))
 		{
 			lockmode = ExclusiveLock;
 			if (lockUpgraded != NULL)

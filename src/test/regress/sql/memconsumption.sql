@@ -72,7 +72,7 @@ $$ LANGUAGE SQL STRICT VOLATILE;
 
 -- Create a table with tuples only on one segement
 CREATE TABLE all_tuples_on_seg0(i int);
-INSERT INTO all_tuples_on_seg0 VALUES (0), (0), (0);
+INSERT INTO all_tuples_on_seg0 VALUES (2), (2), (2);
 SELECT gp_segment_id, count(*) FROM all_tuples_on_seg0 GROUP BY 1;
 
 -- The X_NestedExecutor account is only created if we create an executor.

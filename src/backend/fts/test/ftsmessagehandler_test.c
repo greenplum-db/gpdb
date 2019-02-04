@@ -148,7 +148,7 @@ test_HandleFtsWalRepPromoteMirror(void **state)
 	max_replication_slots = 1;
 	am_mirror = true;
 
-	will_return(GetCurrentDBState, DB_IN_STANDBY_MODE);
+	will_return(GetCurrentDBState, DB_IN_ARCHIVE_RECOVERY);
 	will_be_called(UnsetSyncStandbysDefined);
 	will_be_called(SignalPromote);
 

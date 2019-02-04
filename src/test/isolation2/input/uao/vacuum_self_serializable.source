@@ -4,7 +4,7 @@ DROP TABLE IF EXISTS ao;
 CREATE TABLE ao (a INT, b INT) WITH (appendonly=true, orientation=@orientation@);
 INSERT INTO ao SELECT i as a, i as b FROM generate_series(1, 100) AS i;
 
-DELETE FROM ao WHERE a < 20;
+DELETE FROM ao WHERE a <= 30;
 SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
 SELECT COUNT(*) FROM ao;
 SELECT segno, tupcount FROM gp_ao_or_aocs_seg('ao');

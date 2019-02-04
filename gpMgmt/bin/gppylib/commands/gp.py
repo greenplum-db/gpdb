@@ -529,19 +529,12 @@ class GpGetSegmentStatusValues(Command):
 
 SEGSTART_ERROR_UNKNOWN_ERROR = -1
 SEGSTART_SUCCESS = 0
-SEGSTART_ERROR_MIRRORING_FAILURE = 1
-SEGSTART_ERROR_POSTMASTER_DIED = 2
-SEGSTART_ERROR_INVALID_STATE_TRANSITION = 3
-SEGSTART_ERROR_SERVER_IS_IN_SHUTDOWN = 4
 SEGSTART_ERROR_STOP_RUNNING_SEGMENT_FAILED = 5
 SEGSTART_ERROR_DATA_DIRECTORY_DOES_NOT_EXIST = 6
-SEGSTART_ERROR_SERVER_DID_NOT_RESPOND = 7
 SEGSTART_ERROR_PG_CTL_FAILED = 8
-SEGSTART_ERROR_CHECKING_CONNECTION_AND_LOCALE_FAILED = 9
 SEGSTART_ERROR_PING_FAILED = 10 # not actually done inside GpSegStartCmd, done instead by caller
 SEGSTART_ERROR_PG_CONTROLDATA_FAILED = 11
 SEGSTART_ERROR_CHECKSUM_MISMATCH = 12
-SEGSTART_ERROR_OTHER = 1000
 
 
 class GpSegStartArgs(CmdArgs):
@@ -1202,7 +1195,7 @@ def is_pid_postmaster(datadir, pid, remoteHost=None):
     is_postmaster = True
     if (validate_command ('pgrep', datadir, ctxt, remoteHost) and
             validate_command ('pwdx', datadir, ctxt, remoteHost)):
-        cmdStr = 'pgrep postgres | xargs -i pwdx {} | grep "%s" | grep "^%s:" | cat' % (datadir, pid)
+        cmdStr = 'pgrep postgres | xargs -I{} pwdx {} | grep "%s" | grep "^%s:" | cat' % (datadir, pid)
         cmd = Command("search for postmaster process", cmdStr, ctxt=ctxt, remoteHost=remoteHost)
         res = None
         try:

@@ -57,6 +57,9 @@ namespace gpdxl
 			// does the query have any distributed tables?
 			BOOL m_has_distributed_tables;
 
+			// What operator classes are used in the distribution keys?
+			DistributionHashOpsKind m_distribution_hashops;
+
 		public:
 			// ctor
 			CContextQueryToDXL

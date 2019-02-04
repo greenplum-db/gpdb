@@ -52,6 +52,13 @@ namespace gpdxl
 {
 	using namespace gpopt;
 
+	enum DistributionHashOpsKind
+	{
+		DistrHashOpsNotDeterminedYet,
+		DistrUseDefaultHashOps,
+		DistrUseLegacyHashOps
+	};
+
 	//---------------------------------------------------------------------------
 	//	@class:
 	//		CTranslatorUtils

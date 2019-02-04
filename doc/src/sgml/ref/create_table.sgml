@@ -33,7 +33,7 @@ CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXI
 [ WITH ( <replaceable class="PARAMETER">storage_parameter</replaceable> [= <replaceable class="PARAMETER">value</replaceable>] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <replaceable class="PARAMETER">tablespace_name</replaceable> ]
-[ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
+[ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
 [ PARTITION BY partition_type (column)
        [ SUBPARTITION BY partition_type (column) ] 
           [ SUBPARTITION TEMPLATE ( template_spec ) ]
@@ -56,7 +56,7 @@ CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED] TABLE [ IF NOT EXISTS ] 
 [ WITH ( <replaceable class="PARAMETER">storage_parameter</replaceable> [= <replaceable class="PARAMETER">value</replaceable>] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <replaceable class="PARAMETER">tablespace_name</replaceable> ]
-[ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
+[ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED]
 [ PARTITION BY partition_type (column)
        [ SUBPARTITION BY partition_type (column) ]
           [ SUBPARTITION TEMPLATE ( template_spec ) ]

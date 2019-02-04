@@ -100,7 +100,7 @@ class GpMirrorBuildCalculator:
             preferred_role=gparray.ROLE_MIRROR,
             dbid=self.__nextDbId,
             role=gparray.ROLE_MIRROR,
-            mode=gparray.MODE_RESYNCHRONIZATION,
+            mode=gparray.MODE_NOT_SYNC,
             status=gparray.STATUS_UP,
             hostname=targetHost,
             address=address,
@@ -109,7 +109,7 @@ class GpMirrorBuildCalculator:
 
         self.__gpArray.addSegmentDb(mirror)
 
-        primary.setSegmentMode(gparray.MODE_RESYNCHRONIZATION)
+        primary.setSegmentMode(gparray.MODE_NOT_SYNC)
 
         resultOut.append(GpMirrorToBuild(None, primary, mirror, True))
 

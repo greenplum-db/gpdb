@@ -26,7 +26,7 @@ UPDATE 100
 SET
 -- Check the age of the table just before vacuum (use BETWEEN to mask minor
 -- differences that might happen if e.g. autovacuum kicks in)
-1: select age(relfrozenxid) between 7 and 9, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
+1: select age(relfrozenxid) between 6 and 9, regexp_replace(replace(relname, 'ao_@orientation@_vacuum_cleanup2'::regclass::oid::text, '<oid>'), 'ao.*seg', '<seg>') from gp_dist_random('pg_class') where relkind in ('r','t','o','b','M') and relstorage not in ('x','f','v') and (relname like '%' || 'ao_@orientation@_vacuum_cleanup2'::regclass::oid || '%') and gp_segment_id = 0;
  ?column? | regexp_replace     
 ----------+--------------------
  t        | pg_<seg>_<oid>     
@@ -116,11 +116,11 @@ VACUUM
 1: SELECT gp_ao_or_aocs_seg('ao_@orientation@_vacuum_cleanup3') from gp_dist_random('gp_id');
  gp_ao_or_aocs_seg 
 -------------------
- (1,28,1,3,2)      
+ (1,25,1,3,2)      
  (2,0,1,3,1)       
- (1,32,1,3,2)      
+ (1,37,1,3,2)      
  (2,0,1,3,1)       
- (1,40,1,3,2)      
+ (1,38,1,3,2)      
  (2,0,1,3,1)       
 (6 rows)
 

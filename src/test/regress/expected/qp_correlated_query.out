@@ -3684,17 +3684,17 @@ INSERT INTO qp_non_eq_b VALUES (3, '0'), (1, '-0');
 EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.f = qp_non_eq_b.f AND qp_non_eq_a.f::text <> '-0';
                                              QUERY PLAN                                              
 -----------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)  (cost=1.08..3.18 rows=4 width=24)
-   ->  Hash Join  (cost=1.08..3.18 rows=2 width=24)
-         Hash Cond: qp_non_eq_a.f = qp_non_eq_b.f
+ Gather Motion 3:1  (slice3; segments: 3)  (cost=2.07..4.17 rows=4 width=24)
+   ->  Hash Join  (cost=2.07..4.17 rows=2 width=24)
+         Hash Cond: (qp_non_eq_b.f = qp_non_eq_a.f)
          ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..2.06 rows=1 width=12)
-               Hash Key: qp_non_eq_a.f
-               ->  Seq Scan on qp_non_eq_a  (cost=0.00..2.04 rows=1 width=12)
-                     Filter: f::text <> '-0'::text
-         ->  Hash  (cost=1.06..1.06 rows=1 width=12)
-               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..1.06 rows=1 width=12)
-                     Hash Key: qp_non_eq_b.f
-                     ->  Seq Scan on qp_non_eq_b  (cost=0.00..1.02 rows=1 width=12)
+               Hash Key: qp_non_eq_b.f
+               ->  Seq Scan on qp_non_eq_b  (cost=0.00..2.02 rows=1 width=12)
+         ->  Hash  (cost=2.06..2.06 rows=1 width=12)
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..2.06 rows=1 width=12)
+                     Hash Key: qp_non_eq_a.f
+                     ->  Seq Scan on qp_non_eq_a  (cost=0.00..2.04 rows=1 width=12)
+                           Filter: ((f)::text <> '-0'::text)
  Optimizer: legacy query optimizer
 (12 rows)
 
@@ -3752,13 +3752,13 @@ SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND q
 EXPLAIN SELECT * FROM qp_non_eq_a, qp_non_eq_b WHERE qp_non_eq_a.i = qp_non_eq_b.i AND qp_non_eq_a.i = ANY('{1,2,3}'::numeric[]);
                                   QUERY PLAN                                  
 ------------------------------------------------------------------------------
- Gather Motion 3:1  (slice1; segments: 3)  (cost=1.04..3.12 rows=4 width=24)
-   ->  Hash Join  (cost=1.04..3.12 rows=2 width=24)
-         Hash Cond: qp_non_eq_a.i = qp_non_eq_b.i
-         ->  Seq Scan on qp_non_eq_a  (cost=0.00..2.03 rows=1 width=12)
-               Filter: i::numeric = ANY ('{1,2,3}'::numeric[])
-         ->  Hash  (cost=1.02..1.02 rows=1 width=12)
-               ->  Seq Scan on qp_non_eq_b  (cost=0.00..1.02 rows=1 width=12)
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=2.05..4.12 rows=4 width=24)
+   ->  Hash Join  (cost=2.05..4.12 rows=2 width=24)
+         Hash Cond: (qp_non_eq_b.i = qp_non_eq_a.i)
+         ->  Seq Scan on qp_non_eq_b  (cost=0.00..2.02 rows=1 width=12)
+         ->  Hash  (cost=2.03..2.03 rows=1 width=12)
+               ->  Seq Scan on qp_non_eq_a  (cost=0.00..2.03 rows=1 width=12)
+                     Filter: ((i)::numeric = ANY ('{1,2,3}'::numeric[]))
  Optimizer: legacy query optimizer
 (8 rows)
 

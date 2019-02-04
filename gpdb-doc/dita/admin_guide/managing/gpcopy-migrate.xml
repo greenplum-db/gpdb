@@ -2,14 +2,17 @@
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_isj_khw_sbs" otherprops="pivotal">
   <title>Migrating Data with gpcopy</title>
-  <shortdesc>This topic describes how to use the <codeph>gpcopy</codeph> utility to transfer data
-    between databases in different Greenplum Database clusters.</shortdesc>
+  <shortdesc>You can use the <codeph>gpcopy</codeph> utility to transfer data between databases in
+    different Greenplum Database clusters.</shortdesc>
   <body>
-    <p><codeph>gpcopy</codeph> is a high-performance utility that can copy metadata and data from
-      one Greenplum database to another Greenplum database. You can migrate the entire contents of a
-      database, or just selected tables. The clusters can have different Greenplum Database
-      versions. For example, you can use <codeph>gpcopy</codeph> to migrate data from a version 4.x
-      Greenplum Database to version 5.x.</p>
+    <p><codeph><xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy</xref></codeph> is
+      a high-performance utility that can copy metadata and data from one Greenplum database to
+      another Greenplum database. You can migrate the entire contents of a database, or just
+      selected tables. The clusters can have different Greenplum Database versions. For example, you
+      can use <codeph>gpcopy</codeph> to migrate data from Greenplum Database version 5.9.0 or later
+      to version 6.0.</p>
+    <note> The <codeph>gpcopy</codeph> utility is available only in the commercial release of
+      Pivotal Greenplum Database.</note>
     <p>The <codeph>gpcopy</codeph> interface includes options to transfer one or more full
       databases, or one or more database tables. A full database transfer includes the database
       schema, table data, indexes, views, roles, user-defined functions, resource queues, and
@@ -19,13 +22,13 @@
         <codeph>pg_hba.conf</codeph>, must be transferred manually by an administrator. Extensions
       installed in the database with <codeph>gppkg</codeph>, such as MADlib and programming language
       extensions, must be installed in the destination database by an administrator. </p>
-    <p><codeph>gpcopy</codeph> uses many of the same command-line options as the earlier
-        <codeph>gptransfer</codeph> utility. <codeph>gpcopy</codeph> provides several improvements
-      as compared to <codeph>gptransfer</codeph>:<ul id="ul_ibs_vsp_zdb">
-        <li><codeph>gpcopy</codeph> performs significantly faster than <codeph>gptransfer</codeph>
-          when copying large amounts of data.</li>
-        <li><codeph>gpcopy</codeph> provides more detailed reporting and summary information about
-          all aspects of the copy operation.</li>
+    <p><codeph>gpcopy</codeph> is a command-line tool that includes these features:<ul
+        id="ul_ibs_vsp_zdb">
+        <li><codeph>gpcopy</codeph> can migrate data between Greenplum Database systems where the
+          source and destination systems are configured with a different number of segment
+          instances.</li>
+        <li><codeph>gpcopy</codeph> provides detailed reporting and summary information about all
+          aspects of the copy operation.</li>
         <li>
           <p><codeph>gpcopy</codeph> allows the source table data to change while the data is being
             copied. A lock is not acquired on the source table when data is copied. </p>
@@ -54,8 +57,8 @@
         cluster to a Greenplum Database 5.9 or later cluster. However Greenplum Database 4.3.26 and
         later do not include the actual <codeph>gpcopy</codeph> utility. You must manually copy the
           <codeph>gpcopy</codeph> utility from your version 5.9 or later cluster into the older
-        version cluster to migrate data.. For
-        example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></p>
+        version cluster to migrate data. For
+        example:<codeblock>$ cp /usr/local/greenplum-db-5.9.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></p>
     </body>
   </topic>
   <topic id="topic_qwl_2rp_zdb">
@@ -157,15 +160,15 @@
           <li>Start both the source and destination clusters.</li>
           <li>Perform a full database backup in the source Greenplum Database system. See <xref
               href="backup-gpbackup.xml#topic_yrr_hqw_sbb"/>.</li>
-          <li>While Greenplum Database 4.3.26 and later support migration with
-              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+          <li>(Migrating from 4.3.x) While Greenplum Database 4.3.26 and later support migration
+            with <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
               <codeph>gpcopy</codeph> utility. If you are migrating from a version 4.3.x system,
             Pivotal recommends that you copy the utility from your Greenplum Database 5.x
             installation to the 4.3.x installation. For
-            example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
-          <li>As a best practice, source the <codeph>greenplum_path.sh</codeph> file in the source
-            Greenplum Database 4.3.x installation, so that you execute <codeph>gpcopy</codeph> from
-            the source system. For
+            example:<codeblock>$ cp /usr/local/greenplum-db-6.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
+          <li>(Migrating from 4.3.x) As a best practice, source the
+              <codeph>greenplum_path.sh</codeph> file in the source Greenplum Database 4.3.x
+            installation, so that you execute <codeph>gpcopy</codeph> from the source system. For
             example:<codeblock>$ source /usr/local/greenplum-db-4.3.26.0/greenplum_path.sh</codeblock></li>
           <li>Use <codeph>gpcopy</codeph> with the <codeph>--full</codeph> option to migrate your
             data to the destination system. A full migration automatically copies all database
@@ -193,18 +196,18 @@
           <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
             Greenplum Database extensions, third party jar files, and shared object files. You must
             recreate these external objects as necessary to match the source system. </li>
-          <li>Greenplum Database 5.x removes automatic implicit casts between the text type and
-            other data types. After you migrate from Greenplum Database version 4.3.x to version
-            5.x, this change in behavior may impact existing applications and queries. Refer to
-              <xref href="../../install_guide/43x_to_5x.xml" format="dita" scope="peer">About
-              Implicit Text Casting in Greenplum Database</xref> in the <cite>Greenplum Database
-              Installation Guide</cite> for information, including a discussion about supported and
-            unsupported workarounds.</li>
+          <li>(Migrating from 4.3.x) Greenplum Database 5.0 and later removes automatic implicit
+            casts between the text type and other data types. After you migrate from Greenplum
+            Database version 4.3.x to version 6.0, this change in behavior may impact existing
+            applications and queries. Refer to <xref href="../../install_guide/43x_to_5x.xml"
+              format="dita" scope="peer">About Implicit Text Casting in Greenplum Database</xref> in
+            the <cite>Greenplum Database Installation Guide</cite> for information, including a
+            discussion about supported and unsupported workarounds.</li>
           <li>After migrating data you may need to modify SQL scripts, administration scripts, and
             user-defined functions as necessary to account for changes in Greenplum Database version
-            5.x. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
+            6.0. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
               format="html" href="https://gpdb.docs.pivotal.io/latest/relnotes/">Pivotal Greenplum
-              5.x Release Notes</xref> for features that may necessitate post-migration tasks.</li>
+              6.0 Release Notes</xref> for features that may necessitate post-migration tasks.</li>
         </ol></p>
       <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
           page</xref>
@@ -270,15 +273,15 @@ ORDER BY 4 DESC LIMIT 5;
               free enough disk space to cover the sum of the table sizes shown in the above query,
               or consider using a smaller <codeph>--jobs</codeph> value to reduce the free space
               requirements.</p></li>
-          <li>While Greenplum Database 4.3.26 and later support migration with
-              <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
+          <li>(Migrating from 4.3.x) While Greenplum Database 4.3.26 and later support migration
+            with <codeph>gpcopy</codeph>, Greenplum Database 4.3.x does not include the
               <codeph>gpcopy</codeph> utility. If you are migrating from a version 4.3.x system,
-            Pivotal recommends that you copy the utility from your Greenplum Database 5.x
+            Pivotal recommends that you copy the utility from your Greenplum Database 6.0
             installation to the 4.3.x installation. For
-            example:<codeblock>$ cp /usr/local/greenplum-db-5.8.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
-          <li>As a best practice, source the <codeph>greenplum_path.sh</codeph> file in the source
-            Greenplum Database 4.3.x installation, so that you execute <codeph>gpcopy</codeph> from
-            the source system. For
+            example:<codeblock>$ cp /usr/local/greenplum-db-6.0/bin/gpcopy /usr/local/greenplum-db-4.3.26.0/bin/</codeblock></li>
+          <li>(Migrating from 4.3.x) As a best practice, source the
+              <codeph>greenplum_path.sh</codeph> file in the source Greenplum Database 4.3.x
+            installation, so that you execute <codeph>gpcopy</codeph> from the source system. For
             example:<codeblock>$ source /usr/local/greenplum-db-4.3.26.0/greenplum_path.sh</codeblock></li>
           <li>Use a <codeph>gpcopy</codeph> with the <codeph>--truncate-source-after</codeph> and
               <codeph>--validate</codeph> options to migrate your data to the destination system. A
@@ -309,18 +312,18 @@ ORDER BY 4 DESC LIMIT 5;
           <li>The <systemoutput>gpcopy</systemoutput> utility does not copy external objects such as
             Greenplum Database extensions, third party jar files, and shared object files. You must
             recreate these external objects as necessary to match the source system. </li>
-          <li>Greenplum Database 5.x removes automatic implicit casts between the text type and
-            other data types. After you migrate from Greenplum Database version 4.3.x to version
-            5.x, this change in behavior may impact existing applications and queries. Refer to
-              <xref href="../../install_guide/43x_to_5x.xml" format="dita" scope="peer">About
-              Implicit Text Casting in Greenplum Database</xref> in the <cite>Greenplum Database
-              Installation Guide</cite> for information, including a discussion about supported and
-            unsupported workarounds.</li>
+          <li>(Migrating from 4.3.x) Greenplum Database 5.0 and later removes automatic implicit
+            casts between the text type and other data types. After you migrate from Greenplum
+            Database version 4.3.x to version 6.0, this change in behavior may impact existing
+            applications and queries. Refer to <xref href="../../install_guide/43x_to_5x.xml"
+              format="dita" scope="peer">About Implicit Text Casting in Greenplum Database</xref> in
+            the <cite>Greenplum Database Installation Guide</cite> for information, including a
+            discussion about supported and unsupported workarounds.</li>
           <li>After migrating data you may need to modify SQL scripts, administration scripts, and
             user-defined functions as necessary to account for changes in Greenplum Database version
-            5.x. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
+            6.0. Look for <b>Upgrade Action Required</b> entries in the <xref scope="external"
               format="html" href="https://gpdb.docs.pivotal.io/latest/relnotes/">Pivotal Greenplum
-              5.x Release Notes</xref> for features that may necessitate post-migration tasks.</li>
+              6.0 Release Notes</xref> for features that may necessitate post-migration tasks.</li>
         </ol></p>
       <p>See the <xref href="../../utility_guide/admin_utilities/gpcopy.xml">gpcopy reference
           page</xref>

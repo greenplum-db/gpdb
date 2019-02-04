@@ -66,19 +66,9 @@ typedef struct XLogRecord
 #define XLogRecGetData(record)	((char*) (record) + SizeOfXLogRecord)
 
 /*
- * XLOG uses only low 4 bits of xl_info. High 4 bits may be used by rmgr.
- * XLR_CHECK_CONSISTENCY bits can be passed by XLogInsert caller.
+ * XLOG uses only low 4 bits of xl_info.  High 4 bits may be used by rmgr.
  */
 #define XLR_INFO_MASK			0x0F
-
-/*
- * Enforces consistency checks of replayed WAL at recovery. If enabled,
- * each record will log a full-page write for each block modified by the
- * record and will reuse it afterwards for consistency checks. The caller
- * of XLogInsert can use this value if necessary, but if
- * wal_consistency_checking is enabled for a rmgr this is set unconditionally.
- */
-#define XLR_CHECK_CONSISTENCY 0x02
 
 /*
  * If we backed up any disk blocks with the XLOG record, we use flag bits in
@@ -207,9 +197,6 @@ extern char *XLogArchiveCommand;
 extern bool EnableHotStandby;
 extern bool gp_keep_all_xlog;
 
-extern bool *wal_consistency_checking;
-extern char *wal_consistency_checking_string;
-
 extern bool fullPageWrites;
 extern bool wal_log_hints;
 extern bool log_checkpoints;
@@ -300,12 +287,6 @@ typedef struct CheckpointStatsData
 
 extern CheckpointStatsData CheckpointStats;
 
-/* File path names (all relative to $PGDATA) */
-#define RECOVERY_COMMAND_FILE	"recovery.conf"
-#define RECOVERY_COMMAND_DONE	"recovery.done"
-#define PROMOTE_SIGNAL_FILE "promote"
-#define FALLBACK_PROMOTE_SIGNAL_FILE "fallback_promote"
-
 extern XLogRecPtr XLogInsert(RmgrId rmid, uint8 info, XLogRecData *rdata);
 extern XLogRecPtr XLogInsert_OverrideXid(RmgrId rmid, uint8 info, XLogRecData *rdata, TransactionId overrideXid);
 extern XLogRecPtr XLogLastInsertBeginLoc(void);
@@ -334,7 +315,6 @@ extern void UnpackCheckPointRecord(struct XLogRecord *record, CheckpointExtended
 
 extern void issue_xlog_fsync(int fd, XLogSegNo segno);
 
-
 extern bool RecoveryInProgress(void);
 extern bool HotStandbyActive(void);
 extern bool HotStandbyActiveInReplay(void);
@@ -357,8 +337,6 @@ extern Size XLOGShmemSize(void);
 extern void XLOGShmemInit(void);
 extern void BootStrapXLOG(void);
 extern void StartupXLOG(void);
-extern bool XLogStartupMultipleRecoveryPassesNeeded(void);
-extern bool XLogStartupIntegrityCheckNeeded(void);
 extern void ShutdownXLOG(int code, Datum arg);
 extern void InitXLOGAccess(void);
 extern void CreateCheckPoint(int flags);
@@ -395,11 +373,13 @@ extern void do_pg_abort_backup(void);
 #define BACKUP_LABEL_OLD		"backup_label.old"
 
 /* Greenplum additions */
-extern void readRecoveryCommandFile(void);
 extern List *XLogReadTimeLineHistory(TimeLineID targetTLI);
 extern bool IsStandbyMode(void);
 extern DBState GetCurrentDBState(void);
 extern XLogRecPtr last_xlog_replay_location(void);
 extern void wait_for_mirror(void);
+extern bool IsRoleMirror(void);
+extern void SignalPromote(void);
+
 
 #endif   /* XLOG_H */

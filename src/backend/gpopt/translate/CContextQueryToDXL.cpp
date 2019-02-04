@@ -27,7 +27,8 @@ CContextQueryToDXL::CContextQueryToDXL
 	)
   :
   m_mp(mp),
-  m_has_distributed_tables(false)
+  m_has_distributed_tables(false),
+  m_distribution_hashops(DistrHashOpsNotDeterminedYet)
 {
 	// map that stores gpdb att to optimizer col mapping
 	m_colid_counter = GPOS_NEW(mp) CIdGenerator(GPDXL_COL_ID_START);

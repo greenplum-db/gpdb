@@ -100,4 +100,4 @@ col_with_constraint numeric UNIQUE
 
 create table bfv_legacy_B as select * from bfv_legacy_A;
 
-select localoid::regclass, attrnums from gp_distribution_policy p left join pg_class c on (p.localoid = c.oid) where c.relname in ('bfv_legacy_a', 'bfv_legacy_b') order by 1,2;
+select localoid::regclass, distkey from gp_distribution_policy p left join pg_class c on (p.localoid = c.oid) where c.relname in ('bfv_legacy_a', 'bfv_legacy_b') order by 1,2;

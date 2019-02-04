@@ -13,7 +13,7 @@
    [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
    [TABLESPACE <varname>tablespace</varname>]
    AS <varname>query</varname>
-   [DISTRIBUTED BY (<varname>column</varname>, [ ... ] ) | DISTRIBUTED RANDOMLY 
+   [DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY
       | DISTRIBUTED REPLICATED ]</codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   APPENDONLY={TRUE|FALSE}
@@ -133,7 +133,8 @@
             </codeph>query.</pd>
         </plentry>
         <plentry>
-          <pt>DISTRIBUTED BY (<varname>column</varname>, [ ... ] )</pt>
+          <pt>DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ]
+            )</pt>
           <pt>DISTRIBUTED RANDOMLY</pt>
           <pt>DISTRIBUTED REPLICATED</pt>
           <pd>Used to declare the Greenplum Database distribution policy for the table.

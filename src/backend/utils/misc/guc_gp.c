@@ -25,6 +25,7 @@
 #include "access/xlog_internal.h"
 #include "cdb/cdbappendonlyam.h"
 #include "cdb/cdbdisp.h"
+#include "cdb/cdbhash.h"
 #include "cdb/cdbsreh.h"
 #include "cdb/cdbvars.h"
 #include "cdb/memquota.h"
@@ -276,13 +277,6 @@ bool		gp_allow_rename_relation_without_lock = false;
 /* ignore EXCLUDE clauses in window spec for backwards compatibility */
 bool		gp_ignore_window_exclude = false;
 
-/* Hadoop Integration GUCs */
-char	   *gp_hadoop_connector_jardir;
-char	   *gp_hadoop_connector_version = "";	/* old GUC; now it's a global
-												 * var. */
-char	   *gp_hadoop_target_version;
-char	   *gp_hadoop_home;
-
 /* Time based authentication GUC */
 char	   *gp_auth_time_override_str = NULL;
 
@@ -467,6 +461,9 @@ bool		gp_external_enable_filter_pushdown = true;
 bool		gp_enable_mk_sort = true;
 bool		gp_enable_motion_mk_sort = true;
 
+/* Enable GDD */
+bool		gp_enable_global_deadlock_detector = false;
+
 static const struct config_enum_entry gp_log_format_options[] = {
 	{"text", 0},
 	{"csv", 1},
@@ -630,6 +627,17 @@ struct config_bool ConfigureNamesBool_gp[] =
 			GUC_SUPERUSER_ONLY | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
 		&gp_maintenance_conn,
+		false,
+		NULL, NULL, NULL
+	},
+
+	{
+		{"gp_use_legacy_hashops", PGC_USERSET, COMPAT_OPTIONS_PREVIOUS,
+			gettext_noop("If set, new tables will use legacy distribution hashops by default"),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_use_legacy_hashops,
 		false,
 		NULL, NULL, NULL
 	},
@@ -3023,6 +3031,15 @@ struct config_bool ConfigureNamesBool_gp[] =
 		false, NULL, NULL
 	},
 
+	{
+		{"gp_enable_global_deadlock_detector", PGC_POSTMASTER, CUSTOM_OPTIONS,
+			gettext_noop("Enables the Global Deadlock Detector."),
+			NULL
+		},
+		&gp_enable_global_deadlock_detector,
+		false, NULL, NULL
+	},
+
 	/* End-of-list marker */
 	{
 		{NULL, 0, 0, NULL, NULL}, NULL, false, NULL, NULL
@@ -4587,39 +4604,6 @@ struct config_string ConfigureNamesString_gp[] =
 			GUC_GPDB_ADDOPT | GUC_NOT_IN_SAMPLE
 		},
 		&pljava_classpath,
-		"",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_connector_jardir", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The directory of the Hadoop connector JAR, relative to $GPHOME."),
-			NULL,
-			GUC_GPDB_ADDOPT | GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
-		},
-		&gp_hadoop_connector_jardir,
-		"lib//hadoop",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_target_version", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The distro/version of Hadoop that external table is connecting to."),
-			gettext_noop("See release notes or gppkg readme for details."),
-			GUC_GPDB_ADDOPT
-		},
-		&gp_hadoop_target_version,
-		"hadoop",
-		NULL, NULL, NULL
-	},
-
-	{
-		{"gp_hadoop_home", PGC_USERSET, CUSTOM_OPTIONS,
-			gettext_noop("The location where Hadoop is installed in each segment."),
-			NULL,
-			GUC_GPDB_ADDOPT
-		},
-		&gp_hadoop_home,
 		"",
 		NULL, NULL, NULL
 	},

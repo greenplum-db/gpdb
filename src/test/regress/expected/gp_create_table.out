@@ -31,20 +31,18 @@ ERROR:  UNIQUE and DISTRIBUTED RANDOMLY are incompatible
 drop table distrand; 
 -- Make sure distribution policy determined from CTAS actually works, MPP-101
 create table distpol as select random(), 1 as a, 2 as b distributed by (random);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
- attrnums 
-----------
- {1}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
+ distkey | distclass 
+---------+-----------
+ 1       | 10022
 (1 row)
 
 drop table distpol;
 create table distpol as select random(), 2 as foo distributed by (foo);
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10027
 (1 row)
 
 drop table distpol;
@@ -52,11 +50,10 @@ drop table distpol;
 create table distpol (i int, j int, k int) distributed by (i);
 alter table distpol add primary key (j);
 NOTICE:  updating distribution policy to match new primary key
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10027
 (1 row)
 
 -- make sure we can't overwrite it
@@ -66,11 +63,10 @@ ERROR:  UNIQUE index must contain all columns in the distribution key of relatio
 alter table distpol drop constraint distpol_pkey;
 create unique index distpol_uidx on distpol(k);
 NOTICE:  updating distribution policy to match new unique index
-select attrnums from gp_distribution_policy where 
-  localoid = 'distpol'::regclass;
- attrnums 
-----------
- {3}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol'::regclass;
+ distkey | distclass 
+---------+-----------
+ 3       | 10027
 (1 row)
 
 drop index distpol_uidx;
@@ -86,6 +82,12 @@ ERROR:  UNIQUE index must contain all columns in the distribution key of relatio
 alter table distpol add primary key (i);
 ERROR:  PRIMARY KEY must contain all columns in the distribution key of relation "distpol"
 drop table distpol;
+-- if the datatype of the index column is not hashable, can't update distribution
+-- key to it.
+create table distpol_ts (i int4, t tsvector) distributed by (i);
+create unique index on distpol_ts(t);
+ERROR:  UNIQUE index must contain all columns in the distribution key of relation "distpol_ts"
+drop table distpol_ts;
 -- Make sure that distribution policy is derived correctly from PRIMARY KEY
 -- or UNIQUE index. Even with gp_create_table_random_default_distribution=on
 SET gp_create_table_random_default_distribution=on;
@@ -94,15 +96,15 @@ NOTICE:  using default RANDOM distribution since no distribution was specified
 HINT:  Consider including the 'DISTRIBUTED BY' clause to determine the distribution of rows.
 create table distpol_with_pk (i int, j int, k int, PRIMARY KEY (i));
 create table distpol_with_unique (i int, j int, k int, CONSTRAINT uconn UNIQUE (i, j));
-select localoid::regclass, attrnums from gp_distribution_policy where
+select localoid::regclass, distkey, distclass from gp_distribution_policy where
   localoid IN ('distpol_no_pk'::regclass,
                'distpol_with_pk'::regclass,
 	       'distpol_with_unique'::regclass);
-      localoid       | attrnums 
----------------------+----------
- distpol_no_pk       | 
- distpol_with_pk     | {1}
- distpol_with_unique | {1,2}
+      localoid       | distkey |  distclass  
+---------------------+---------+-------------
+ distpol_no_pk       |         | 
+ distpol_with_pk     | 1       | 10027
+ distpol_with_unique | 1 2     | 10027 10027
 (3 rows)
 
 -- If a table is previously DISTRIBUTED RANDOMLY, you cannot add a primary key
@@ -121,21 +123,19 @@ NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'i' as
 HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 create table distpol3 as select i, j from distpol1 union 
   select i, j from distpol2 distributed by (j);
-select attrnums from gp_distribution_policy where
-  localoid = 'distpol3'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol3'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10027
 (1 row)
 
 drop table distpol3;
 create table distpol3 as (select i, j from distpol1 union
   select i, j from distpol2) distributed by (j);
-select attrnums from gp_distribution_policy where
-  localoid = 'distpol3'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid = 'distpol3'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10027
 (1 row)
 
 -- MPP-7268: CTAS produces incorrect distribution.
@@ -145,20 +145,20 @@ drop table if exists bar;
 NOTICE:  table "bar" does not exist, skipping
 create table foo (a varchar(15), b int) distributed by (b);
 create table bar as select * from foo distributed by (b);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10027
 (1 row)
 
 drop table if exists foo;
 drop table if exists bar;
 create table foo (a int, b varchar(15)) distributed by (b);
 create table bar as select * from foo distributed by (b);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
- attrnums 
-----------
- {2}
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
+ distkey | distclass 
+---------+-----------
+ 2       | 10043
 (1 row)
 
 drop table if exists foo;
@@ -169,10 +169,10 @@ col_with_default_drop_default character varying(30) DEFAULT 'test1',
 col_with_constraint numeric UNIQUE
 ) DISTRIBUTED BY (col_with_constraint);
 CREATE TABLE bar AS SELECT * FROM foo distributed by (col_with_constraint);
-select attrnums from gp_distribution_policy where localoid='bar'::regclass;
- attrnums 
-----------
- {3}
+select distkey, distclass from gp_distribution_policy where localoid='bar'::regclass;
+ distkey | distclass 
+---------+-----------
+ 3       | 10035
 (1 row)
 
 drop table if exists foo;
@@ -203,10 +203,10 @@ ERROR:  duplicate column in DISTRIBUTED BY clause
 LINE 1: ...te table foo (a int, b int, c int) distributed by (c, c, b);
                                                                  ^
 create table foo ("I" int, i int) distributed by ("I",I);
-select attrnums from gp_distribution_policy where localoid='foo'::regclass;
- attrnums 
-----------
- {1,2}
+select distkey, distclass from gp_distribution_policy where localoid='foo'::regclass;
+ distkey |  distclass  
+---------+-------------
+ 1 2     | 10027 10027
 (1 row)
 
 create table fooctas as select * from foo distributed by (i,i);

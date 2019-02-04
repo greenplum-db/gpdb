@@ -788,10 +788,7 @@ select * from qp_misc_jiras.tbl_694_1 join qp_misc_jiras.tbl_694_2 on qp_misc_ji
 
 drop table qp_misc_jiras.tbl_694_1;
 drop table qp_misc_jiras.tbl_694_2;
--- Postgres timestamp
-select '20081225 130000'::timestamp;
--- Teradata timestamp
-select '20081225130000'::timestamp;
+
 select * from ( select 'a' as a) x join (select 'a' as b) y on a=b;
 select * from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
 select x.b from ( ( select 'a' as a ) xx join (select 'a' as b) yy on a = b ) x join (select 'a' as c) y on a=c;
@@ -1051,12 +1048,12 @@ drop table qp_misc_jiras.tbl6833_vac;
 drop table if exists qp_misc_jiras_foo;
 create table qp_misc_jiras_foo(x int) distributed by (x);
 
-SELECT t.attrnums, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
+SELECT t.distkey, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
 a.attnotnull, a.attnum, pg_catalog.col_description(a.attrelid, a.attnum)
 FROM pg_catalog.pg_class c
 LEFT outer JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 left outer join pg_catalog.gp_distribution_policy t on localoid = c.oid
-left outer join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attnum in (select unnest(t.attrnums))
+left outer join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attnum in (select unnest(t.distkey))
 WHERE c.relname ~ '^(qp_misc_jiras_foo)$';
 
 
@@ -2276,14 +2273,14 @@ partition by range (partition_key)
 default partition default_partition,
 partition d_2010_09_28 start (date '2010-09-28') end (date '2010-09-29')
 );
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%';
 -- start_ignore
 alter table qp_misc_jiras.tbl1_tbl_11257 split default partition
 start (date '2010-09-27' )
 end (date '2010-09-28')
 into (partition d_2010_09_27, partition default_partition);
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl1_tbl_11257%';
 
 
 
@@ -2304,7 +2301,7 @@ select * from qp_misc_jiras.tbl2_tbl_11257;
 delete from qp_misc_jiras.tbl2_tbl_11257 where a=1 and b=2 and c=3;
 select * from qp_misc_jiras.tbl2_tbl_11257;
 insert into qp_misc_jiras.tbl2_tbl_11257 values(1,2,3); 
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%';
 
 -- start_ignore
 alter table qp_misc_jiras.tbl2_tbl_11257 split default partition
@@ -2312,7 +2309,7 @@ start (3)
 end (4)
 into (partition p2, partition default_partition);
 -- end_ignore
-select relname, attrnums as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%' ;
+select relname, distkey as distribution_attributes from gp_distribution_policy p, pg_class c where p.localoid = c.oid and relname like 'tbl2_tbl_11257%';
 
 delete from qp_misc_jiras.tbl2_tbl_11257 where a=1 and b=2 and c=3;
 select * from qp_misc_jiras.tbl2_tbl_11257;

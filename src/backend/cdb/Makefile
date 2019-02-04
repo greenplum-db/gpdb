@@ -24,6 +24,7 @@ OBJS = cdbappendonlystorageformat.o \
 	   cdbfts.o \
 	   cdbgroup.o \
 	   cdbhash.o \
+	   cdblegacyhash.o \
 	   cdbllize.o cdblocaldistribxact.o \
 	   cdbappendonlyxlog.o \
 	   cdbmutate.o \

@@ -255,26 +255,6 @@ Drop table if exists inetmac;
 RESET ALL;
 
 -- ----------------------------------------------------------------------
--- Test: query11.sql
--- ----------------------------------------------------------------------
-
--- This test case is to check if it works fine for money and int data type
---start_ignore
-Drop table if exists money;
---end_ignore
-create table money (money1 money, b int);
-insert into money values ('34.23',5);
-set test_print_direct_dispatch_info=on;
-insert into money values ('34.23',2);
-alter table money set distributed by (money1, b);
-insert into money values ('34.13',2);
-select * from money where money1='34.13' and b =2;
---start_ignore
-Drop table if exists money;
---end_ignore
-RESET ALL;
-
--- ----------------------------------------------------------------------
 -- Test: query12.sql
 -- ----------------------------------------------------------------------
 

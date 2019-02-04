@@ -1137,9 +1137,38 @@ select c1 from t1 where c1 not in (select c2 from t2 where c2 > 4) and c1 > 2;
   9
 (7 rows)
 
+-- Test if the equality operator is implemented by a SQL function
+--
+--q45
+--
+create domain absint as int4;
+create function iszero(absint) returns bool as $$ begin return $1::int4 = 0; end; $$ language plpgsql immutable strict;
+create or replace function abseq (absint, absint) returns bool as $$ select iszero(abs($1) - abs($2)); $$ language sql immutable strict;
+create operator = (PROCEDURE = abseq, leftarg=absint, rightarg=absint);
+explain select c1 from t1 where c1::absint not in
+	(select c1n::absint from t1n);
+                                                  QUERY PLAN                                                  
+--------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=10000000000.00..10000000062.89 rows=4 width=4)
+   ->  Nested Loop Left Anti Semi (Not-In) Join  (cost=10000000000.00..10000000062.89 rows=2 width=4)
+         Join Filter: iszero(((abs(((t1.c1)::absint)::integer) - abs(((t1n.c1n)::absint)::integer)))::absint)
+         ->  Seq Scan on t1  (cost=0.00..3.10 rows=4 width=4)
+         ->  Materialize  (cost=0.00..3.45 rows=7 width=4)
+               ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..3.35 rows=7 width=4)
+                     ->  Seq Scan on t1n  (cost=0.00..3.07 rows=3 width=4)
+ Planning time: 0.865 ms
+ Optimizer: legacy query optimizer
+(9 rows)
+
+select c1 from t1 where c1::absint not in
+	(select c1n::absint from t1n);
+ c1 
+----
+(0 rows)
+
 reset search_path;
 drop schema notin cascade;
-NOTICE:  drop cascades to 7 other objects
+NOTICE:  drop cascades to 11 other objects
 DETAIL:  drop cascades to table notin.t1
 drop cascades to table notin.t2
 drop cascades to table notin.t3
@@ -1147,3 +1176,7 @@ drop cascades to table notin.t4
 drop cascades to table notin.t1n
 drop cascades to table notin.g1
 drop cascades to table notin.l1
+drop cascades to type notin.absint
+drop cascades to function notin.iszero(notin.absint)
+drop cascades to function notin.abseq(notin.absint,notin.absint)
+drop cascades to operator notin.=(notin.absint,notin.absint)

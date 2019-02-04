@@ -318,6 +318,7 @@ _outResult(StringInfo str, const Result *node)
 
 	WRITE_INT_FIELD(numHashFilterCols);
 	WRITE_INT_ARRAY(hashFilterColIdx, node->numHashFilterCols, AttrNumber);
+	WRITE_OID_ARRAY(hashFilterFuncs, node->numHashFilterCols);
 }
 
 static void
@@ -563,15 +564,14 @@ _outSetOp(StringInfo str, SetOp *node)
 static void
 _outMotion(StringInfo str, Motion *node)
 {
-
 	WRITE_NODE_TYPE("MOTION");
 
 	WRITE_INT_FIELD(motionID);
 	WRITE_ENUM_FIELD(motionType, MotionType);
 	WRITE_BOOL_FIELD(sendSorted);
 
-	WRITE_NODE_FIELD(hashExpr);
-	WRITE_NODE_FIELD(hashDataTypes);
+	WRITE_NODE_FIELD(hashExprs);
+	WRITE_OID_ARRAY(hashFuncs, list_length(node->hashExprs));
 
 	WRITE_INT_FIELD(isBroadcast);
 
@@ -583,6 +583,23 @@ _outMotion(StringInfo str, Motion *node)
 
 	WRITE_INT_FIELD(segidColIdx);
 
+	_outPlanInfo(str, (Plan *) node);
+}
+
+/*
+ * _outReshuffle
+ */
+static void
+_outReshuffle(StringInfo str, const Reshuffle *node)
+{
+	WRITE_NODE_TYPE("Reshuffle");
+
+	WRITE_INT_FIELD(tupleSegIdx);
+	WRITE_INT_FIELD(numPolicyAttrs);
+	WRITE_INT_ARRAY(policyAttrs, node->numPolicyAttrs, AttrNumber);
+	WRITE_OID_ARRAY(policyHashFuncs, node->numPolicyAttrs);
+	WRITE_INT_FIELD(oldSegs);
+	WRITE_INT_FIELD(ptype);
 	_outPlanInfo(str, (Plan *) node);
 }
 
@@ -1252,6 +1269,7 @@ _outGpPolicy(StringInfo str, GpPolicy *node)
 	WRITE_INT_FIELD(numsegments);
 	WRITE_INT_FIELD(nattrs);
 	WRITE_INT_ARRAY(attrs, node->nattrs, AttrNumber);
+	WRITE_INT_ARRAY(opclasses, node->nattrs, Oid);
 }
 
 static void
@@ -1277,14 +1295,14 @@ _outAlterTableSpaceOptionsStmt(StringInfo str, AlterTableSpaceOptionsStmt *node)
 }
 
 static void
-_outReshuffleExprFast(StringInfo str, ReshuffleExpr *node)
+_outReshuffleExpr(StringInfo str, ReshuffleExpr *node)
 {
 	WRITE_NODE_TYPE("RESHUFFLEEXPR");
 
 	WRITE_INT_FIELD(newSegs);
 	WRITE_INT_FIELD(oldSegs);
 	WRITE_NODE_FIELD(hashKeys);
-	WRITE_NODE_FIELD(hashTypes);
+	WRITE_NODE_FIELD(hashFuncs);
 	WRITE_INT_FIELD(ptype);
 }
 
@@ -2239,7 +2257,7 @@ _outNode(StringInfo str, void *obj)
 				_outAlterTableSpaceOptionsStmt(str, obj);
 				break;
 			case T_ReshuffleExpr:
-                _outReshuffleExprFast(str, obj);
+				_outReshuffleExpr(str, obj);
 				break;
 			default:
 				elog(ERROR, "could not serialize unrecognized node type: %d",

@@ -501,6 +501,8 @@ InitProcess(void)
 	/* Set wait portal (do not check if resource scheduling is enabled) */
 	MyProc->waitPortalId = INVALID_PORTALID;
 
+	MyProc->queryCommandId = -1;
+
 	/* Init gxact */
 	initGxact(MyTmGxact);
 
@@ -667,6 +669,8 @@ InitAuxiliaryProcess(void)
 	 * necessary anymore, but seems like a good idea for cleanliness.)
 	 */
 	PGSemaphoreReset(&MyProc->sem);
+
+	MyProc->queryCommandId = -1;
 
 	/*
 	 * Arrange to clean up at process exit.

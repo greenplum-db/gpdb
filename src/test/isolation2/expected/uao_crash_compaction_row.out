@@ -141,8 +141,8 @@ DETAIL:
 1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_cleanup_phase');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 3        | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 1     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 INSERT 2
@@ -164,8 +164,8 @@ UPDATE 1
 1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_cleanup_phase');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 6        | 0             | 0                | 4        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 1     | 0   | 7        | 0             | 0                | 4        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 1:VACUUM crash_before_cleanup_phase;
 VACUUM
@@ -173,8 +173,8 @@ VACUUM
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 1        | 0             | 0                | 4        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
- 3     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
+ 3     | 0   | 5        | 0             | 0                | 0        | 3             | 1     
 (3 rows)
 1:INSERT INTO crash_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 INSERT 2
@@ -200,7 +200,7 @@ UPDATE 1
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 10       | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 1:INSERT INTO crash_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 INSERT 2
@@ -223,15 +223,15 @@ UPDATE 1
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 10       | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 7        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 6        | 0             | 0                | 2        | 3             | 1     
 (2 rows)
 1:VACUUM crash_before_segmentfile_drop;
 VACUUM
 1:SELECT * FROM gp_toolkit.__gp_aoseg('crash_before_segmentfile_drop');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 3        | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 5        | 0             | 0                | 2        | 3             | 1     
+ 1     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
  3     | 0   | 1        | 0             | 0                | 0        | 3             | 1     
 (3 rows)
 1:INSERT INTO crash_before_segmentfile_drop VALUES(21, 1, 'c'), (26, 1, 'c');
@@ -369,8 +369,8 @@ server closed the connection unexpectedly
 4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 3        | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 1     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(1, 1, 'c'), (25, 6, 'c');
 INSERT 2
@@ -392,8 +392,8 @@ UPDATE 1
 4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_cleanup_phase');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 6        | 0             | 0                | 4        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 1     | 0   | 7        | 0             | 0                | 4        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 4:VACUUM crash_master_before_cleanup_phase;
 VACUUM
@@ -401,8 +401,8 @@ VACUUM
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 1        | 0             | 0                | 4        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
- 3     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
+ 3     | 0   | 5        | 0             | 0                | 0        | 3             | 1     
 (3 rows)
 4:INSERT INTO crash_master_before_cleanup_phase VALUES(21, 1, 'c'), (26, 1, 'c');
 INSERT 2
@@ -428,7 +428,7 @@ UPDATE 1
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 10       | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 4        | 0             | 0                | 0        | 3             | 1     
+ 2     | 0   | 3        | 0             | 0                | 0        | 3             | 1     
 (2 rows)
 4:INSERT INTO crash_master_before_segmentfile_drop VALUES(1, 1, 'c'), (25, 6, 'c');
 INSERT 2
@@ -451,15 +451,15 @@ UPDATE 1
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
  1     | 0   | 10       | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 7        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 6        | 0             | 0                | 2        | 3             | 1     
 (2 rows)
 4:VACUUM crash_master_before_segmentfile_drop;
 VACUUM
 4:SELECT * FROM gp_toolkit.__gp_aoseg('crash_master_before_segmentfile_drop');
  segno | eof | tupcount | varblockcount | eof_uncompressed | modcount | formatversion | state 
 -------+-----+----------+---------------+------------------+----------+---------------+-------
- 1     | 0   | 3        | 0             | 0                | 2        | 3             | 1     
- 2     | 0   | 5        | 0             | 0                | 2        | 3             | 1     
+ 1     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
+ 2     | 0   | 4        | 0             | 0                | 2        | 3             | 1     
  3     | 0   | 1        | 0             | 0                | 0        | 3             | 1     
 (3 rows)
 4:INSERT INTO crash_master_before_segmentfile_drop VALUES(21, 1, 'c'), (26, 1, 'c');

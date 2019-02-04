@@ -38,7 +38,7 @@ function configure() {
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
         ./configure --prefix=/usr/local/greenplum-db-devel --with-python --with-libxml --enable-orafce --disable-orca ${CONFIGURE_FLAGS}
       else
-        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --disable-orca ${CONFIGURE_FLAGS}
+        ./configure --prefix=/usr/local/greenplum-db-devel --with-perl --with-python --with-libxml --enable-mapreduce --enable-orafce --enable-tap-tests --disable-orca ${CONFIGURE_FLAGS}
       fi
   popd
 }

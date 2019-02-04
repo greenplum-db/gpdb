@@ -27,7 +27,6 @@ CREATE [READABLE] EXTERNAL [TEMPORARY | TEMP] TABLE table_name
         | ('gpfdist://filehost[:port]/file_pattern[#transform]'
         | ('gpfdists://filehost[:port]/file_pattern[#transform]'
             [, ...])
-        | ('gphdfs://hdfs_host[:port]/path/file')
       FORMAT 'TEXT' 
             [( [HEADER]
                [DELIMITER [AS] 'delimiter' | 'OFF']
@@ -81,7 +80,6 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE table_name
      LOCATION('gpfdist://outputhost[:port]/filename[#transform]'
       | ('gpfdists://outputhost[:port]/file_pattern[#transform]'
           [, ...])
-      | ('gphdfs://hdfs_host[:port]/path')
       FORMAT 'TEXT' 
                [( [DELIMITER [AS] 'delimiter']
                [NULL [AS] 'null string']
@@ -94,7 +92,7 @@ CREATE WRITABLE EXTERNAL [TEMPORARY | TEMP] TABLE table_name
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
     [ ENCODING 'write_encoding' ]
-    [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+    [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
     ( column_name data_type [, ...] | LIKE other_table )
     EXECUTE 'command' [ON ALL]
@@ -110,7 +108,7 @@ CREATE WRITABLE EXTERNAL WEB [TEMPORARY | TEMP] TABLE table_name
                [ESCAPE [AS] 'escape'] )]
            | 'CUSTOM' (Formatter=<formatter specifications>)
     [ ENCODING 'write_encoding' ]
-    [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY ]
+    [ DISTRIBUTED BY (column [opclass], [ ... ] ) | DISTRIBUTED RANDOMLY ]
 
 </synopsis>
 

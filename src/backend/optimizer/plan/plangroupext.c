@@ -932,7 +932,7 @@ make_list_aggs_for_rollup(PlannerInfo *root,
 				groupExprs = lappend(groupExprs, copyObject(tle->expr));
 			}
 		
-			agg_node = (Plan *)make_motion_hash(root, agg_node, groupExprs);
+			agg_node = (Plan *) make_motion_hash_exprs(root, agg_node, groupExprs);
 			agg_node->total_cost += motion_cost_per_row * agg_node->plan_rows;
 		}
 
@@ -1351,18 +1351,23 @@ generate_dqa_plan(PlannerInfo *root,
 		 * target list.
 		 */
 		if (agg_plan->flow != NULL &&
-			agg_plan->flow->hashExpr != NULL)
+			agg_plan->flow->hashExprs != NULL)
 		{
-			ListCell *hashexpr_lc;
-			List *new_hashExpr = NIL;
-			
-			foreach (hashexpr_lc, agg_plan->flow->hashExpr)
+			ListCell   *hashexpr_lc;
+			ListCell   *hashopf_lc;
+			List	   *new_hashExprs = NIL;
+			List	   *new_hashOpfamilies = NIL;
+
+			forboth (hashexpr_lc, agg_plan->flow->hashExprs,
+					 hashopf_lc, agg_plan->flow->hashOpfamilies)
 			{
-				Node *hashexpr = lfirst(hashexpr_lc);
+				Node	   *hashexpr = lfirst(hashexpr_lc);
+				Oid			opfamily = lfirst_oid(hashopf_lc);
 				
 				if (tlist_member(hashexpr, agg_plan->targetlist))
 				{
-					new_hashExpr = lappend(new_hashExpr, hashexpr);
+					new_hashExprs = lappend(new_hashExprs, hashexpr);
+					new_hashOpfamilies = lappend_oid(new_hashOpfamilies, opfamily);
 				}
 				else
 				{
@@ -1370,8 +1375,10 @@ generate_dqa_plan(PlannerInfo *root,
 				}
 			}
 
-			list_free(agg_plan->flow->hashExpr);
-			agg_plan->flow->hashExpr = new_hashExpr;
+			list_free(agg_plan->flow->hashExprs);
+			list_free(agg_plan->flow->hashOpfamilies);
+			agg_plan->flow->hashExprs = new_hashExprs;
+			agg_plan->flow->hashOpfamilies = new_hashOpfamilies;
 		}
 
 		/*
@@ -1807,8 +1814,10 @@ add_first_agg(PlannerInfo *root,
 	 * be done by simplying re-order the entries in flow->hashExpr since
 	 * some grouping columns may not be in flow->hashExpr at all.
 	 */
-	list_free_deep(agg_node->flow->hashExpr);
-	agg_node->flow->hashExpr = NULL;
+	list_free_deep(agg_node->flow->hashExprs);
+	list_free(agg_node->flow->hashOpfamilies);
+	agg_node->flow->hashExprs = NIL;
+	agg_node->flow->hashOpfamilies = NIL;
 
 	return agg_node;
 }

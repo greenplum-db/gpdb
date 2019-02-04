@@ -3432,6 +3432,27 @@ EvalPlanQual(EState *estate, EPQState *epqstate,
 	Assert(rti > 0);
 
 	/*
+	 * If GDD is enabled, the lock of table may downgrade to RowExclusiveLock,
+	 * (see CdbTryOpenRelation function), then EPQ would be triggered, EPQ will
+	 * execute the subplan in the executor, so it will create a new EState,
+	 * but there are no slice tables in the new EState and we can not AssignGangs
+	 * on the QE. In this case, we raise an error.
+	 */
+	if (gp_enable_global_deadlock_detector)
+	{
+		Plan *subPlan = epqstate->plan;
+
+		Assert(subPlan != NULL);
+
+		if (subPlan->nMotionNodes > 0)
+		{
+			ereport(ERROR,
+					(errcode(ERRCODE_T_R_SERIALIZATION_FAILURE),
+					 errmsg("EvalPlanQual can not handle subPlan with Motion node")));
+		}
+	}
+
+	/*
 	 * Get and lock the updated version of the row; if fail, return NULL.
 	 */
 	copyTuple = EvalPlanQualFetch(estate, relation, lockmode, false /* wait */,

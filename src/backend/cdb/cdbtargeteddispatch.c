@@ -28,7 +28,7 @@
 #include "utils/syscache.h"
 
 #include "cdb/cdbdisp_query.h"
-#include "cdb/cdbhash.h"		/* isGreenplumDbHashable() */
+#include "cdb/cdbhash.h"
 #include "cdb/cdbllize.h"
 #include "cdb/cdbmutate.h"
 #include "cdb/cdbplan.h"

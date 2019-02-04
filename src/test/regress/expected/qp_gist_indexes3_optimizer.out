@@ -245,15 +245,19 @@ CREATE UNIQUE INDEX ShouldNotExist ON gisttable_pktest USING GiST (bullseye);
 ERROR:  access method "gist" does not support unique indexes
 -- Test whether geometric types can be part of a distribution key.
 CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED BY (property);
-ERROR:  type "box" cannot be a part of a distribution key
+ERROR:  data type box has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
 CREATE TABLE GistTable2 (id INTEGER, poli POLYGON) DISTRIBUTED BY (poli);
-ERROR:  type "polygon" cannot be a part of a distribution key
+ERROR:  data type polygon has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
 CREATE TABLE GistTable2 (id INTEGER, bullseye CIRCLE) DISTRIBUTED BY (bullseye);
-ERROR:  type "circle" cannot be a part of a distribution key
+ERROR:  data type circle has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
 -- Same with ALTER TABLE.
 CREATE TABLE GistTable2 (id INTEGER, property BOX) DISTRIBUTED RANDOMLY;
 ALTER TABLE GistTable2 SET DISTRIBUTED BY (property);
-ERROR:  type "box" cannot be a part of a distribution key
+ERROR:  data type box has no default operator class for access method "hash"
+HINT:  You must specify an operator class or define a default operator class for the data type.
 -- ----------------------------------------------------------------------
 -- Test: test09NegativeTests.sql
 -- ----------------------------------------------------------------------
@@ -266,12 +270,12 @@ ERROR:  type "box" cannot be a part of a distribution key
 -- Try to create GiST indexes on non-geometric data types.
 CREATE INDEX ShouldNotExist ON gisttable_pktest USING GiST (id);
 ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+HINT:  You must specify an operator class or define a default operator class for the data type.
 -- Try to create GiST indexes on a mix of geometric and
 -- non-geometric types.
 CREATE INDEX ShouldNotExist ON gisttable_pktest USING GiST (id, property);
 ERROR:  data type integer has no default operator class for access method "gist"
-HINT:  You must specify an operator class for the index or define a default operator class for the data type.
+HINT:  You must specify an operator class or define a default operator class for the data type.
 -- ----------------------------------------------------------------------
 -- Test: test14Hash.sql
 -- ----------------------------------------------------------------------

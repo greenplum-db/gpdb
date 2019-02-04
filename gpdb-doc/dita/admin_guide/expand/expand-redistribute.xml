@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-
 <topic id="topic28" xml:lang="en">
   <title id="expand-redistribute">Redistributing Tables</title>
   <shortdesc>Redistribute tables to balance existing data over the newly expanded cluster. </shortdesc>
   <body>
-    <p>After creating an expansion schema, you can bring Greenplum Database back online and
-      redistribute tables across the entire array with <codeph>gpexpand</codeph>. Aim to run this
-      during low-use hours when the utility's CPU usage and table locks have minimal impact on
-      operations. Rank tables to redistribute the largest or most critical tables first.</p>
+    <p>After creating an expansion schema, you can redistribute tables across the entire system with
+          <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
+        >gpexand</xref></codeph>. Aim to run this during low-use hours when the utility's CPU usage
+      and table locks have minimal impact on operations. Rank tables to redistribute the largest or
+      most critical tables first.</p>
     <note>When redistributing data, Greenplum Database must be running in production mode. Greenplum
-      Database cannot be restricted mode or in master mode. The <codeph>gpstart</codeph> options
+      Database cannot be restricted mode or in master mode. The <codeph><xref
+          href="../../utility_guide/admin_utilities/gpstart.xml">gpstart</xref></codeph> options
         <codeph>-R</codeph> or <codeph>-m</codeph> cannot be specified to start Greenplum
       Database.</note>
     <p>While table redistribution is underway, any new tables or partitions created are distributed
@@ -34,13 +35,15 @@
   <topic id="topic29" xml:lang="en">
     <title id="no161370">Ranking Tables for Redistribution</title>
     <body>
-      <p>For large systems, you can control the table redistribution order. Adjust
-        tables' <codeph>rank</codeph> values in the expansion schema to prioritize heavily-used
-        tables and minimize performance impact. Available free disk space can affect table ranking;
-        see <xref href="expand-planning.xml#topic11" type="topic" format="dita"/>.</p>
-      <p>To rank tables for redistribution by updating <codeph>rank</codeph> values in
-          <i>gpexpand.status_detail</i>, connect to Greenplum Database using <codeph>psql</codeph>
-        or another supported client. Update <i>gpexpand.status_detail</i> with commands such as:</p>
+      <p>For large systems, you can control the table redistribution order. Adjust tables'
+          <codeph>rank</codeph> values in the expansion schema to prioritize heavily-used tables and
+        minimize performance impact. Available free disk space can affect table ranking; see <xref
+          href="expand-planning.xml#topic11" type="topic" format="dita"/>.</p>
+      <p>To rank tables for redistribution by updating <codeph>rank</codeph> values in <i><xref
+            href="../../ref_guide/system_catalogs/gp_expansion_tables.xml"
+            >gpexpand.status_detail</xref></i>, connect to Greenplum Database using
+          <codeph>psql</codeph> or another supported client. Update <i>gpexpand.status_detail</i>
+        with commands such as:</p>
       <codeblock>=&gt; UPDATE gpexpand.status_detail SET rank=10;
 
 =&gt; UPDATE gpexpand.status_detail SET rank=1 WHERE fq_name = 'public.lineitem';
@@ -56,19 +59,21 @@
   <topic id="topic30" xml:lang="en">
     <title>Redistributing Tables Using gpexpand</title>
     <body>
+      <draft-comment author="msk">There are two redistribute methods see GUC
+        gp_expand_method</draft-comment>
       <section id="no162282">
         <title>To redistribute tables with gpexpand</title>
         <ol>
           <li id="no162285">Log in on the master host as the user who will run your Greenplum
             Database system, for example, <codeph>gpadmin</codeph>.</li>
-
           <li id="no162763">Run the <codeph>gpexpand</codeph> utility. You can use the
               <codeph>-d</codeph> or <codeph>-e</codeph> option to define the expansion session time
             period. For example, to run the utility for up to 60 consecutive
               hours:<codeblock>$ gpexpand -d 60:00:00</codeblock><p>The utility redistributes tables
               until the last table in the schema completes or it reaches the specified duration or
-              end time. <codeph>gpexpand</codeph> updates the status and time in
-                <i>gpexpand.status</i> when a session starts and finishes.</p></li>
+              end time. <codeph>gpexpand</codeph> updates the status and time in <i><xref
+                  href="../../ref_guide/system_catalogs/gp_expansion_status.xml"
+                  >gpexpand.status</xref></i> when a session starts and finishes.</p></li>
         </ol>
       </section>
     </body>
@@ -77,9 +82,11 @@
     <title>Monitoring Table Redistribution</title>
     <body>
       <p>You can query the expansion schema during the table redistribution process. The view
-          <i>gpexpand.expansion_progress</i> provides a current progress summary, including the
-        estimated rate of table redistribution and estimated time to completion. You can query the
-        table <i>gpexpand.status_detail</i> for per-table status information.</p>
+            <i><xref href="../../ref_guide/system_catalogs/gpexpand_expansion_progress.xml"
+            >gpexpand.expansion_progress</xref></i> provides a current progress summary, including
+        the estimated rate of table redistribution and estimated time to completion. You can query
+        the table <i><xref href="../../ref_guide/system_catalogs/gp_expansion_tables.xml"
+            >gpexpand.status_detail</xref></i> for per-table status information.</p>
     </body>
     <topic id="topic32" xml:lang="en">
       <title>Viewing Expansion Status</title>
@@ -87,7 +94,7 @@
         <p>After the first table completes redistribution, <i>gpexpand.expansion_progress</i>
           calculates its estimates and refreshes them based on all tables' redistribution rates.
           Calculations restart each time you start a table redistribution session with
-            <codeph>gpexpand</codeph>. To monitor progress, connect to Greenplum Database using
+            <codeph>gpexpand</codeph>. To monitor progress, connect to Greenplum Data\base using
             <codeph>psql</codeph> or another supported client; query
             <i>gpexpand.expansion_progress</i> with a command like the following:</p>
         <p>

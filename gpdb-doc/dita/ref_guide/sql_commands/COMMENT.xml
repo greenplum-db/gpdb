@@ -104,6 +104,12 @@ IS '<varname>text</varname>'</codeblock>
         <plentry>
           <pt><varname>large_object_oid</varname></pt>
           <pd>The OID of the large object. </pd>
+          <pd>
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note>
+          </pd>
         </plentry>
         <plentry>
           <pt>PROCEDURAL</pt>

@@ -336,6 +336,11 @@ namespace gpdxl
 				ULONG //current_query_level
 				);
 
+			void NoteDistributionPolicyOpclasses
+				(
+				const RangeTblEntry *rte
+				);
+
 			// generate a DXL node from column values, where each column value is
 			// either a datum or scalar expression represented as a project element.
 			CDXLNode *TranslateColumnValuesToDXL
@@ -468,6 +473,12 @@ namespace gpdxl
 			BOOL HasDistributedTables() const
 			{
 				return m_context->m_has_distributed_tables;
+			}
+
+			// does query have distributed tables
+			DistributionHashOpsKind GetDistributionHashOpsKind() const
+			{
+				return m_context->m_distribution_hashops;
 			}
 
 			// main translation routine for Query -> DXL tree

@@ -1491,6 +1491,7 @@ _readResult(void)
 
 	READ_INT_FIELD(numHashFilterCols);
 	READ_INT_ARRAY(hashFilterColIdx, local_node->numHashFilterCols, AttrNumber);
+	READ_OID_ARRAY(hashFilterFuncs, local_node->numHashFilterCols);
 
 	READ_DONE();
 }
@@ -2224,7 +2225,8 @@ _readFlow(void)
 	READ_INT_FIELD(segindex);
 	READ_INT_FIELD(numsegments);
 
-	READ_NODE_FIELD(hashExpr);
+	READ_NODE_FIELD(hashExprs);
+	READ_NODE_FIELD(hashOpfamilies);
 	READ_NODE_FIELD(flow_before_req_move);
 
 	READ_DONE();
@@ -2245,8 +2247,8 @@ _readMotion(void)
 
 	READ_BOOL_FIELD(sendSorted);
 
-	READ_NODE_FIELD(hashExpr);
-	READ_NODE_FIELD(hashDataTypes);
+	READ_NODE_FIELD(hashExprs);
+	READ_OID_ARRAY(hashFuncs, list_length(local_node->hashExprs));
 
 	READ_INT_FIELD(isBroadcast);
 
@@ -2309,7 +2311,9 @@ _readReshuffle(void)
 	READ_LOCALS(Reshuffle);
 
 	READ_INT_FIELD(tupleSegIdx);
-	READ_NODE_FIELD(policyAttrs);
+	READ_INT_FIELD(numPolicyAttrs);
+	READ_INT_ARRAY(policyAttrs, local_node->numPolicyAttrs, AttrNumber);
+	READ_OID_ARRAY(policyHashFuncs, local_node->numPolicyAttrs);
 	READ_INT_FIELD(oldSegs);
 	READ_INT_FIELD(ptype);
 	readPlanInfo((Plan *)local_node);
@@ -2800,7 +2804,7 @@ _readDistributedBy(void)
 
 	READ_ENUM_FIELD(ptype, GpPolicyType);
 	READ_INT_FIELD(numsegments);
-	READ_NODE_FIELD(keys);
+	READ_NODE_FIELD(keyCols);
 
 	READ_DONE();
 }
@@ -2928,14 +2932,14 @@ _readLockRows(void)
 }
 
 static ReshuffleExpr *
-_readReshuffleExprfFast(void)
+_readReshuffleExpr(void)
 {
 	READ_LOCALS(ReshuffleExpr);
 
 	READ_INT_FIELD(newSegs);
 	READ_INT_FIELD(oldSegs);
 	READ_NODE_FIELD(hashKeys);
-	READ_NODE_FIELD(hashTypes);
+	READ_NODE_FIELD(hashFuncs);
 	READ_INT_FIELD(ptype);
 	READ_DONE();
 }
@@ -3008,6 +3012,7 @@ _readGpPolicy(void)
 
 	READ_INT_FIELD(nattrs);
 	READ_INT_ARRAY(attrs, local_node->nattrs, AttrNumber);
+	READ_INT_ARRAY(opclasses, local_node->nattrs, Oid);
 
 	READ_DONE();
 }
@@ -3883,7 +3888,7 @@ readNodeBinary(void)
 				return_value = _readAlterTableMoveAllStmt();
 				break;
 			case T_ReshuffleExpr:
-				return_value = _readReshuffleExprfFast();
+				return_value = _readReshuffleExpr();
 				break;
 			default:
 				return_value = NULL; /* keep the compiler silent */

@@ -1,4 +1,0 @@
-composite	0	(1,test)
-composite	1	(2,"")
-composite	2	(3,)
-composite	3	(12345,composittype)

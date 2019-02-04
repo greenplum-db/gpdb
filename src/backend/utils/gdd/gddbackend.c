@@ -153,7 +153,6 @@ NON_EXEC_STATIC void
 GlobalDeadLockDetectorMain(int argc, char *argv[])
 {
 	sigjmp_buf	local_sigjmp_buf;
-	Port		portbuf;
 	char	   *fullpath;
 
 	IsUnderPostmaster = true;
@@ -329,12 +328,6 @@ GlobalDeadLockDetectorMain(int argc, char *argv[])
 	RelationCacheInitializePhase3();
 
 	InitializeSessionUserIdStandalone();
-
-	memset(&portbuf, 0, sizeof(portbuf));
-	MyProcPort = &portbuf;
-	MyProcPort->user_name = MemoryContextStrdup(TopMemoryContext,
-												GetUserNameFromId(GetAuthenticatedUserId()));
-	MyProcPort->database_name = DB_FOR_COMMON_ACCESS;
 
 	/* close the transaction we started above */
 	CommitTransactionCommand();

@@ -3,8 +3,10 @@
 -- Currently greenplum sets random_page_cost as 100 while postgres sets it as 4.
 -- This makes some BitmapOps cases are not tested as expected, so I'm
 -- temporarily settting random_page_cost as 4 to test those functionalities.
--- Also add explain tests to make sure BitmapOps are tested.
+-- Also bump up the statistics target, so that the plans are more stable,
+-- and add explain tests to make sure BitmapOps are tested.
 SET random_page_cost  = 4;
+SET default_statistics_target=1000;
 
 
 -- Generate enough data that we can test the lossy bitmaps.

@@ -1788,6 +1788,12 @@ DETAIL:  drop cascades to view rw_view1
 drop cascades to view rw_view2
 -- security barrier view
 CREATE TABLE base_tbl (person text, visibility text);
+-- GPDB: The tests below which throw NOTICEs, throw them in indeterminate
+-- order, if the rows are hashed to different segments. Force all the rows
+-- to the same segment, by adding a dummy column and using it as the
+-- distribution key.
+alter table base_tbl add column distkey int;
+alter table base_tbl set distributed by (distkey);
 INSERT INTO base_tbl VALUES ('Tom', 'public'),
                             ('Dick', 'private'),
                             ('Harry', 'public');

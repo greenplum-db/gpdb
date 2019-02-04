@@ -1,4 +1,0 @@
-# Global excludes across all subdirectories
-*.pyc
-*.log
-*.swp

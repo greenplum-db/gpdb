@@ -75,9 +75,9 @@
     DISTRIBUTED BY (a);</codeblock>
         </p>
         <p><codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not allowed on append-optimized
-          tables in a serializable transaction and will cause the transaction to abort.
-            <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers are not
-          supported with append-optimized tables.</p>
+          tables in a repeatable read  or serizalizable transaction and will cause the transaction
+          to abort. <codeph>CLUSTER</codeph>, <codeph>DECLARE...FOR UPDATE</codeph>, and triggers
+          are not supported with append-optimized tables.</p>
       </section>
     </body>
   </topic>

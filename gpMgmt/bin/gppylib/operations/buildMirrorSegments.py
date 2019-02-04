@@ -246,7 +246,7 @@ class GpMirrorListToBuild:
 
                 seg = toRecover.getFailoverSegment()
             seg.setSegmentStatus(gparray.STATUS_DOWN)  # down initially, we haven't started it yet
-            seg.setSegmentMode(gparray.MODE_RESYNCHRONIZATION)
+            seg.setSegmentMode(gparray.MODE_NOT_SYNC)
 
         # figure out what needs to be started or transitioned
         mirrorsToStart = []
@@ -270,10 +270,9 @@ class GpMirrorListToBuild:
                and seg.getSegmentRole() == gparray.ROLE_MIRROR:
                 rewindInfo.append((seg, primarySeg.getSegmentHostName(), primarySeg.getSegmentPort()))
 
-            # The change in configuration to of the mirror to down requires
-            # that the primary also be change to change tracking if required.
-            if primarySeg.getSegmentMode() != gparray.MODE_CHANGELOGGING:
-                primarySeg.setSegmentMode(gparray.MODE_CHANGELOGGING)
+            # The change in configuration to of the mirror to down requires that
+            # the primary also be marked as unsynchronized.
+            primarySeg.setSegmentMode(gparray.MODE_NOT_SYNC)
             primariesToConvert.append(primarySeg)
             convertPrimaryUsingFullResync.append(toRecover.isFullSynchronization())
 

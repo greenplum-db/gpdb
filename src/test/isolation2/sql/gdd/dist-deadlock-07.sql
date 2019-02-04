@@ -2,8 +2,8 @@ DROP TABLE IF EXISTS t07a;
 DROP TABLE IF EXISTS t07b;
 CREATE TABLE t07a (c1 int, c2 int);
 CREATE TABLE t07b (c1 int, c2 int);
-INSERT INTO t07a (c1, c2) SELECT i, i FROM generate_series(1, 20) i;
-INSERT INTO t07b (c1, c2) SELECT i, i FROM generate_series(1, 20) i;
+INSERT INTO t07a (c1, c2) SELECT i, i FROM generate_series(1, 100) i;
+INSERT INTO t07b (c1, c2) SELECT i, i FROM generate_series(1, 100) i;
 
 10: BEGIN;
 20: BEGIN;

@@ -13,10 +13,10 @@
  */
 #include "postgres.h"
 
-#include "access/skey.h"
+#include "access/htup_details.h"
+#include "catalog/pg_amop.h"
+#include "catalog/pg_opclass.h"
 #include "catalog/pg_operator.h"
-#include "catalog/pg_proc.h"	/* CDB_PROC_TIDTOI8 */
-#include "catalog/pg_type.h"	/* INT8OID */
 #include "nodes/makefuncs.h"	/* makeFuncExpr() */
 #include "nodes/relation.h"		/* PlannerInfo, RelOptInfo */
 #include "optimizer/cost.h"		/* cpu_tuple_cost */
@@ -27,11 +27,12 @@
 #include "parser/parse_expr.h"	/* exprType() */
 #include "parser/parse_oper.h"
 
+#include "utils/catcache.h"
+#include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
 #include "cdb/cdbdef.h"			/* CdbSwap() */
-#include "cdb/cdbhash.h"		/* isGreenplumDbHashable() */
-
+#include "cdb/cdbhash.h"
 #include "cdb/cdbpath.h"		/* me */
 #include "cdb/cdbutil.h"
 #include "cdb/cdbvars.h"
@@ -50,13 +51,7 @@ cdbpath_cost_motion(PlannerInfo *root, CdbMotionPath *motionpath)
 	double		recvrows;
 	double		sendrows;
 
-	/* GPDB_94_MERGE_FIXME: I removed the IndexPath check in pg 94 stable merge.
-	 * It seems that we should remove checking code for BitmapHeapPath,
-	 * BitmapAppendOnlyPath and UniquePath also?
-	 */
-	if (! IsA(subpath, BitmapHeapPath) &&
-		! IsA(subpath, UniquePath) &&
-		CdbPathLocus_IsReplicated(motionpath->path.locus))
+	if (CdbPathLocus_IsReplicated(motionpath->path.locus))
 		/* FIXME: should use other.numsegments instead of cdbpath_segments */
 		motionpath->path.rows = subpath->rows * root->config->cdbpath_segments;
 	else
@@ -406,23 +401,26 @@ typedef struct
  * A helper function to create a DistributionKey for an EquivalenceClass.
  */
 static DistributionKey *
-makeDistributionKeyForEC(EquivalenceClass *eclass)
+makeDistributionKeyForEC(EquivalenceClass *eclass, Oid opfamily)
 {
 	DistributionKey *dk = makeNode(DistributionKey);
 
+	Assert(OidIsValid(opfamily));
+
 	dk->dk_eclasses = list_make1(eclass);
+	dk->dk_opfamily = opfamily;
 
 	return dk;
 }
 
 /*
- * cdbpath_eclass_constant_isGreenplumDbHashable
+ * cdbpath_eclass_constant_is_hashable
  *
  * Iterates through a list of equivalence class members and determines if
- * expression in pseudoconstant are GreenplumDbHashable.
+ * expression in pseudoconstant are hashable.
  */
 static bool
-cdbpath_eclass_constant_isGreenplumDbHashable(EquivalenceClass *ec)
+cdbpath_eclass_constant_is_hashable(EquivalenceClass *ec)
 {
 	ListCell   *j;
 
@@ -431,7 +429,7 @@ cdbpath_eclass_constant_isGreenplumDbHashable(EquivalenceClass *ec)
 		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
 
 		/* Fail on non-hashable expression types */
-		if (em->em_is_const && !isGreenplumDbHashable(exprType((Node *) em->em_expr)))
+		if (em->em_is_const && !cdb_default_distribution_opfamily_for_type(exprType((Node *) em->em_expr)))
 			return false;
 	}
 
@@ -469,7 +467,7 @@ cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 		EquivalenceClass *ec = (EquivalenceClass *) lfirst(cell);
 
 		if (CdbEquivClassIsConstant(ec) &&
-			cdbpath_eclass_constant_isGreenplumDbHashable(ec))
+			cdbpath_eclass_constant_is_hashable(ec))
 		{
 			codistkey = distkey;
 			break;
@@ -506,7 +504,7 @@ cdbpath_match_preds_to_distkey_tail(CdbpathMatchPredsContext *ctx,
 				EquivalenceClass *dk_eclass = (EquivalenceClass *) lfirst(i);
 
 				if (dk_eclass == a_ec)
-					codistkey = makeDistributionKeyForEC(b_ec); /* break earlier? */
+					codistkey = makeDistributionKeyForEC(b_ec, distkey->dk_opfamily); /* break earlier? */
 			}
 
 			if (codistkey)
@@ -629,6 +627,9 @@ cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 		DistributionKey *inner_dk = (DistributionKey *) lfirst(innercell);
 		ListCell   *rcell;
 
+		if (outer_dk->dk_opfamily != inner_dk->dk_opfamily)
+			return false;	/* incompatible hashing scheme */
+
 		foreach(rcell, mergeclause_list)
 		{
 			bool		not_found = false;
@@ -682,31 +683,6 @@ cdbpath_match_preds_to_both_distkeys(PlannerInfo *root,
 	return true;
 }								/* cdbpath_match_preds_to_both_distkeys */
 
-
-/*
- * cdb_pathkey_isGreenplumDbHashable
- *
- * Iterates through a list of equivalence class members and determines if all
- * of them are GreenplumDbHashable.
- */
-static bool
-cdbpath_eclass_isGreenplumDbHashable(EquivalenceClass *ec)
-{
-	ListCell   *j;
-
-	foreach(j, ec->ec_members)
-	{
-		EquivalenceMember *em = (EquivalenceMember *) lfirst(j);
-
-		/* Fail on non-hashable expression types */
-		if (!isGreenplumDbHashable(exprType((Node *) em->em_expr)))
-			return false;
-	}
-
-	return true;
-}
-
-
 /*
  * cdbpath_distkeys_from_preds
  *
@@ -732,6 +708,9 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
 	foreach(rcell, mergeclause_list)
 	{
 		RestrictInfo *rinfo = (RestrictInfo *) lfirst(rcell);
+		Oid			lhs_opno;
+		Oid			rhs_opno;
+		Oid			opfamily;
 
 		Assert(rinfo->left_ec != NULL);
 		Assert(rinfo->right_ec != NULL);
@@ -741,11 +720,16 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
 		/*
 		 * skip non-hashable keys
 		 */
-		if (!cdbpath_eclass_isGreenplumDbHashable(rinfo->left_ec) ||
-			!cdbpath_eclass_isGreenplumDbHashable(rinfo->right_ec))
-		{
+		if (!rinfo->hashjoinoperator)
 			continue;
-		}
+
+		/*
+		 * look up a hash operator family that is compatible for the left and right datatypes
+		 * of the hashjoin = operator
+		 */
+		if (!get_compatible_hash_operators_and_family(rinfo->hashjoinoperator,
+													  &lhs_opno, &rhs_opno, &opfamily))
+			continue;
 
 		/* Left & right pathkeys are usually the same... */
 		if (!b_distkeys && rinfo->left_ec == rinfo->right_ec)
@@ -773,7 +757,7 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
 			}
 			if (!found)
 			{
-				DistributionKey *a_dk = makeDistributionKeyForEC(rinfo->left_ec);
+				DistributionKey *a_dk = makeDistributionKeyForEC(rinfo->left_ec, opfamily);
 				a_distkeys = lappend(a_distkeys, a_dk);
 			}
 		}
@@ -848,8 +832,8 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
 
 			if (!found)
 			{
-				DistributionKey *a_dk = makeDistributionKeyForEC(a_ec);
-				DistributionKey *b_dk = makeDistributionKeyForEC(b_ec);
+				DistributionKey *a_dk = makeDistributionKeyForEC(a_ec, opfamily);
+				DistributionKey *b_dk = makeDistributionKeyForEC(b_ec, opfamily);
 
 				a_distkeys = lappend(a_distkeys, a_dk);
 				b_distkeys = lappend(b_distkeys, b_dk);
@@ -1592,7 +1576,6 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 	List	   *other_vars = NIL;
 	List	   *other_operators = NIL;
 	List	   *distkeys = NIL;
-	List	   *eq = NIL;
 	ListCell   *cell;
 	bool		save_need_segment_id = ctx->need_segment_id;
 
@@ -1665,10 +1648,12 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 			if (uniquePath->must_repartition)
 			{
 				DistributionKey *cdistkey;
+				Oid			opfamily;
 
-				if (!eq)
-					eq = list_make1(makeString("="));
-				cdistkey = cdb_make_distkey_for_expr(ctx->root, (Node *) var, eq);
+				opfamily = get_compatible_hash_opfamily(TIDEqualOperator);
+
+				cdistkey = cdb_make_distkey_for_expr(ctx->root,_(Node *) var,
+													 opfamily);
 				distkeys = lappend(distkeys, cdistkey);
 			}
 		}
@@ -1709,7 +1694,6 @@ cdbpath_dedup_fixup_unique(UniquePath *uniquePath, CdbpathDedupFixupContext *ctx
 		uniquePath->path.locus = uniquePath->subpath->locus;
 		uniquePath->path.motionHazard = uniquePath->subpath->motionHazard;
 		uniquePath->path.rescannable = uniquePath->subpath->rescannable;
-		list_free_deep(eq);
 	}
 
 	/* Prune row id var list to remove items not needed downstream. */
@@ -2047,34 +2031,6 @@ cdbpath_contains_wts(Path *path)
 bool
 has_redistributable_clause(RestrictInfo *restrictinfo)
 {
-	Expr	   *clause = restrictinfo->clause;
-	Oid			opno;
-
-	/**
-	 * If this is a IS NOT FALSE boolean test, we can peek underneath.
-	 */
-	if (IsA(clause, BooleanTest))
-	{
-		BooleanTest *bt = (BooleanTest *) clause;
-
-		if (bt->booltesttype == IS_NOT_FALSE)
-		{
-			clause = bt->arg;
-		}
-	}
-
-	if (restrictinfo->pseudoconstant)
-		return false;
-	if (!is_opclause(clause))
-		return false;
-	if (list_length(((OpExpr *) clause)->args) != 2)
-		return false;
-
-	opno = ((OpExpr *) clause)->opno;
-
-	if (isGreenplumDbOprRedistributable(opno))
-		return true;
-	else
-		return false;
+	return restrictinfo->hashjoinoperator != InvalidOid;
 }
 

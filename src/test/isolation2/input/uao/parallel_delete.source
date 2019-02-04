@@ -8,11 +8,11 @@ insert into ao select generate_series(1,100);
 -- The actual test begins
 1: BEGIN;
 2: BEGIN;
-2: DELETE FROM ao WHERE a = 1;
+2: DELETE FROM ao WHERE a = 2;
 2: SELECT * FROM locktest_master WHERE coalesce = 'ao';
 2: SELECT * FROM locktest_segments WHERE coalesce = 'ao';
--- The case here should delete a tuple at the same seg with(1).
--- Under jump hash, (3) and (1) are on the same seg(seg2).
+-- The case here should delete a tuple at the same seg with(2).
+-- Under jump hash, (2) and (3) are on the same seg(seg0).
 1&: DELETE FROM ao WHERE a = 3;
 2: COMMIT;
 1<:
@@ -20,4 +20,4 @@ insert into ao select generate_series(1,100);
 3: BEGIN;
 3: SELECT * FROM ao WHERE a < 5 ORDER BY a;
 3: COMMIT;
-2U: SELECT * FROM gp_toolkit.__gp_aovisimap('ao');
+0U: SELECT * FROM gp_toolkit.__gp_aovisimap('ao');

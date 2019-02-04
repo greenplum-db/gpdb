@@ -2,8 +2,8 @@ DROP TABLE IF EXISTS t107;
 DROP
 CREATE TABLE t107 (id int, val int);
 CREATE
-INSERT INTO t107 (id, val) SELECT i, i FROM generate_series(1, 20) i;
-INSERT 20
+INSERT INTO t107 (id, val) SELECT i, i FROM generate_series(1, 100) i;
+INSERT 100
 
 10: BEGIN;
 BEGIN

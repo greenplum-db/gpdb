@@ -39,6 +39,8 @@
 #include "utils/lsyscache.h"
 #include "utils/xml.h"
 
+#include "cdb/cdbhash.h"
+
 
 bool		Transform_null_equals = false;
 
@@ -404,13 +406,13 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 			case T_ReshuffleExpr:
 			{
 				ReshuffleExpr *sr = (ReshuffleExpr *)expr;
-				Oid relid = InvalidOid;
-				int i;
+				Oid			relid;
+				int			i;
 
-				GpPolicy *policy = NULL;
-				Relation rel = NULL;
-				TupleDesc desc = NULL;
-				int rtidx = 0;
+				GpPolicy   *policy;
+				Relation	rel;
+				TupleDesc	desc;
+				int			rtidx;
 
 				if(NULL == pstate->p_target_rangetblentry)
 					elog(ERROR, "we only use this expression in the UPDATE");
@@ -434,20 +436,23 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 
 				for(i = 0; i < policy->nattrs; i++)
 				{
+					AttrNumber	attrnum = policy->attrs[i];
+					Oid			opclass = policy->opclasses[i];
+					Oid			hashfunc;
+					Var		   *var;
 
-					int16 attrnum = policy->attrs[i];
+					var = makeVar(rtidx,
+								  attrnum,
+								  desc->attrs[attrnum - 1]->atttypid,
+								  desc->attrs[attrnum - 1]->atttypmod,
+								  0,
+								  0);
 
-					Var *var = makeVar(rtidx,
-									   attrnum,
-									   desc->attrs[attrnum - 1]->atttypid,
-									   desc->attrs[attrnum - 1]->atttypmod,
-									   0,
-									   0);
+					hashfunc = cdb_hashproc_in_opfamily(get_opclass_family(opclass),
+														var->vartype);
 
 					sr->hashKeys = lappend(sr->hashKeys, var);
-					sr->hashTypes = lappend_oid(sr->hashTypes,
-												desc->attrs[attrnum - 1]->atttypid);
-
+					sr->hashFuncs = lappend_oid(sr->hashFuncs, hashfunc);
 				}
 				result = (Node*)sr;
 

@@ -304,6 +304,7 @@ create aggregate mysum_prefunc(int4) (
 );
 select mysum_prefunc(a::int4) from aggtest;
 NOTICE:  combinefunc called
+NOTICE:  combinefunc called
  mysum_prefunc 
 ---------------
            198

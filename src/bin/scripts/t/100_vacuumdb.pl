@@ -15,9 +15,9 @@ issues_sql_like(
 	qr/statement: VACUUM;/,
 	'SQL VACUUM run');
 issues_sql_like(
-	[ 'vacuumdb', '-f', 'postgres' ],
-	qr/statement: VACUUM \(FULL\);/,
-	'vacuumdb -f');
+		[ 'vacuumdb', '-f', 'postgres' ],
+		qr/statement: VACUUM \(FULL\);/,
+		'vacuumdb -f');
 issues_sql_like(
 	[ 'vacuumdb', '-F', 'postgres' ],
 	qr/statement: VACUUM \(FREEZE\);/,

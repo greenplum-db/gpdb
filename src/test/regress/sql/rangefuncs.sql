@@ -427,6 +427,24 @@ DROP FUNCTION foo();
 
 create temp table tt(f1 serial, data text);
 
+-- GPDB: The tests below which throw NOTICEs, throw them in indeterminate
+-- order, if the rows are hashed to different segments. Force the rows
+-- that have problem to be hashed to the same segment, using a custom hash
+-- function.
+CREATE OPERATOR FAMILY dummy_int_hash_ops USING hash;
+
+CREATE FUNCTION dummy_hashfunc(int) RETURNS int AS $$
+begin
+  return CASE WHEN $1 BETWEEN 7 AND 15 THEN 0 ELSE $1 END;
+end; $$ LANGUAGE plpgsql STRICT IMMUTABLE;
+
+CREATE OPERATOR CLASS dummy_int_hash_ops FOR TYPE int4
+  USING hash FAMILY dummy_int_hash_ops AS
+  OPERATOR 1 =,
+  FUNCTION 1 dummy_hashfunc(int);
+
+ALTER TABLE tt SET DISTRIBUTED BY (f1 dummy_int_hash_ops);
+
 create function insert_tt(text) returns int as
 $$ insert into tt(data) values($1) returning f1 $$
 language sql;
@@ -456,14 +474,6 @@ select * from tt;
 select insert_tt2('foolish','barrish') limit 1;
 select * from tt;
 
--- add two dummy tuples to make the following
--- cases' insert tuples are (13,14) which
--- will be on the same seg under current
--- jump consistent hash. This will make the
--- case not flaky.
-insert into tt(data) values ('nextisright');--11
-insert into tt(data) values ('previswrong');--12
-
 -- triggers will fire, too
 create function noticetrigger() returns trigger as $$
 begin
@@ -476,14 +486,6 @@ execute procedure noticetrigger();
 select insert_tt2('foolme','barme') limit 1;
 select * from tt;
 
--- add two dummy tuples to make the following
--- cases' insert tuples are (17,18) which
--- will be on the same seg under current
--- jump consistent hash. This will make the
--- case not flaky.
-insert into tt(data) values ('nextiswrong');--15
-insert into tt(data) values ('previsright');--16
-
 -- and rules work
 create temp table tt_log(f1 int, data text);
 
@@ -492,7 +494,6 @@ create rule insert_tt_rule as on insert to tt do also
 
 select insert_tt2('foollog','barlog') limit 1;
 select * from tt;
-
 -- note that nextval() gets executed a second time in the rule expansion,
 -- which is expected.
 select * from tt_log;

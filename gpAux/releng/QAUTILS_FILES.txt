@@ -1,6 +1,4 @@
 bin/explain.pl
 bin/explain.pm
-bin/gpfaultinjector
 bin/gptorment.pl
 bin/pgbench
-lib/python/gppylib/programs/clsInjectFault.py

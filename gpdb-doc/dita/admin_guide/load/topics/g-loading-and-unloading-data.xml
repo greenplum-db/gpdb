@@ -29,6 +29,10 @@
           interfaces and access them in parallel. </li>
         <li>The <codeph>gpload</codeph> utility automates the steps of a load task using
             <codeph>gpfdist</codeph> and a YAML-formatted control file. </li>
+        <li>You can create readable and writable external tables with the Greenplum
+           Platform Extension Framework (PXF), and use these tables to load data into,
+           or offload data from, Greenplum Database. For information about using
+           PXF, refer to <xref href="../../external/pxf-overview.xml" format="dita" scope="peer">Accessing External Data with PXF</xref>.</li>
         <li otherprops="pivotal">The Greenplum-Kafka Integration provides high-speed, parallel
            data transfer from Kafka to Greenplum Database. For information about using
            these tools, refer to the documentation at <xref

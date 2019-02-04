@@ -240,9 +240,9 @@
         <li id="ix155584"><codeph>SAVEPOINT</codeph> marks a place in a transaction and enables
           partial rollback. You can roll back commands executed after a savepoint while maintaining
           commands executed before the savepoint.</li>
-        <li id="ix155585"><codeph>ROLLBACK TO SAVEPOINT </codeph>rolls back a transaction to a
+        <li id="ix155585"><codeph>ROLLBACK TO SAVEPOINT</codeph> rolls back a transaction to a
           savepoint. </li>
-        <li id="ix155589"><codeph>RELEASE SAVEPOINT </codeph>destroys a savepoint within a
+        <li id="ix155589"><codeph>RELEASE SAVEPOINT</codeph> destroys a savepoint within a
           transaction.</li>
       </ul>
     </body>
@@ -251,72 +251,76 @@
       <body>
         <p>Greenplum Database accepts the standard SQL transaction levels as follows:</p>
         <ul>
-          <li id="ix153961"><i>read uncommitted</i> and <i>read committed </i> behave like the
-            standard <i>read committed</i></li>
-          <li><i>repeatable read</i> is disallowed. If the behavior of <i>repeatable read</i> is
-            required, use <i>serializable</i>.</li>
-          <li id="ix153971"><i>serializable</i> behaves in a manner similar to SQL standard
-              <i>serializable</i></li>
+          <li id="ix153961"><codeph>READ UNCOMMITTED</codeph> and <codeph>READ COMMITTED</codeph>
+            behave like the standard <codeph>READ COMMITTED</codeph>.</li>
+          <li><codeph>REPEATABLE READ</codeph> and <codeph>SERIALIZABLE</codeph> behave like
+              <codeph>REPEATABLE READ</codeph>.</li>
         </ul>
-        <p>The following information describes the behavior of the Greenplum transaction levels:</p>
-        <ul>
-          <li id="ix153954"><b>read committed/read uncommitted</b> — Provides fast, simple, partial
-            transaction isolation. With read committed and read uncommitted transaction isolation,
-              <codeph>SELECT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph>
-            transactions operate on a snapshot of the database taken when the query started.</li>
-        </ul>
-        <p> A <codeph>SELECT</codeph> query:</p>
-        <ul>
-          <li id="ix154052">Sees data committed before the query starts.</li>
-          <li id="ix154063">Sees updates executed within the transaction.</li>
-          <li id="ix154073">Does not see uncommitted data outside the transaction.</li>
-          <li id="ix154080">Can possibly see changes that concurrent transactions made if the
-            concurrent transaction is committed after the initial read in its own transaction.</li>
-        </ul>
-        <p>Successive <codeph>SELECT</codeph> queries in the same transaction can see different data
-          if other concurrent transactions commit changes before the queries start.
-            <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands find only rows committed
-          before the commands started. </p>
-        <p>Read committed or read uncommitted transaction isolation allows concurrent transactions
-          to modify or lock a row before <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> finds
-          the row. Read committed or read uncommitted transaction isolation may be inadequate for
-          applications that perform complex queries and updates and require a consistent view of the
-          database.</p>
-        <ul>
-          <li id="ix141722"><b>serializable</b> — Provides strict transaction isolation in which
-            transactions execute as if they run one after another rather than concurrently.
-            Applications on the serializable level must be designed to retry transactions in case of
-            serialization failures. In Greenplum Database, <codeph>SERIALIZABLE</codeph> prevents
-            dirty reads, non-repeatable reads, and phantom reads without expensive locking, but
-            there are other interactions that can occur between some <codeph>SERIALIZABLE</codeph>
-            transactions in Greenplum Database that prevent them from being truly serializable.
-            Transactions that run concurrently should be examined to identify interactions that are
-            not prevented by disallowing concurrent updates of the same data. Problems identified
-            can be prevented by using explicit table locks or by requiring the conflicting
-            transactions to update a dummy row introduced to represent the conflict. </li>
-        </ul>
-        <p>A <codeph>SELECT</codeph> query:</p>
-        <ul>
-          <li id="ix154139">Sees a snapshot of the data as of the start of the transaction (not as
-            of the start of the current query within the transaction).</li>
-          <li id="ix155116">Sees only data committed before the query starts.</li>
-          <li id="ix154149">Sees updates executed within the transaction.</li>
-          <li id="ix154156">Does not see uncommitted data outside the transaction.</li>
-          <li id="ix154163">Does not see changes that concurrent transactions made.<p>Successive
-                <codeph>SELECT</codeph> commands within a single transaction always see the same
-              data.</p><p><codeph>UPDATE</codeph>, <codeph>DELETE, SELECT FOR UPDATE,</codeph> and
-                <codeph>SELECT FOR SHARE</codeph> commands find only rows committed before the
-              command started. If a concurrent transaction has already updated, deleted, or locked a
-              target row when the row is found, the serializable or repeatable read transaction
-              waits for the concurrent transaction to update the row, delete the row, or roll
-              back.</p><p>If the concurrent transaction updates or deletes the row, the serializable
-              or repeatable read transaction rolls back. If the concurrent transaction rolls back,
-              then the serializable or repeatable read transaction updates or deletes the
-            row.</p></li>
-        </ul>
-        <p id="ix141505">The default transaction isolation level in Greenplum Database is <i>read
-            committed</i>. To change the isolation level for a transaction, declare the isolation
-          level when you <codeph>BEGIN</codeph> the transaction or use the <codeph>SET
+        <p>The following information describes the behavior of the Greenplum transaction levels.</p>
+        <section>
+          <title>Read Uncommitted and Read Committed</title>
+          <p>Greenplum Database does not allow any command to see an uncommitted update in another
+            concurrent transaction, so <codeph>READ UNCOMMITTED</codeph> behaves the same as
+              <codeph>READ COMMITTED</codeph>. <codeph>READ COMMITTED</codeph> provides fast,
+            simple, partial transaction isolation. <codeph>SELECT</codeph>, <codeph>UPDATE</codeph>,
+            and <codeph>DELETE</codeph> commands operate on a snapshot of the database taken when
+            the query started.</p>
+          <p> A <codeph>SELECT</codeph> query:</p>
+          <ul id="ul_vgl_55p_lgb">
+            <li id="ix154052">Sees data committed before the query starts.</li>
+            <li id="ix154063">Sees updates executed within the transaction.</li>
+            <li id="ix154073">Does not see uncommitted data outside the transaction.</li>
+            <li id="ix154080">Can possibly see changes that concurrent transactions made if the
+              concurrent transaction is committed after the initial read in its own
+              transaction.</li>
+          </ul>
+          <p>Successive <codeph>SELECT</codeph> queries in the same transaction can see different
+            data if other concurrent transactions commit changes between the successive queries.
+              <codeph>UPDATE</codeph> and <codeph>DELETE</codeph> commands find only rows committed
+            before the commands started.</p>
+          <p><codeph>READ COMMITTED</codeph> transaction isolation allows concurrent transactions to
+            modify or lock a row before <codeph>UPDATE</codeph> or <codeph>DELETE</codeph> find the
+            row. <codeph>READ COMMITTED</codeph> transaction isolation may be inadequate for
+            applications that perform complex queries and updates and require a consistent view of
+            the database.</p>
+        </section>
+        <section>
+          <title>Repeatable Read and Serializable</title>
+          <p><codeph>SERIALIZABLE</codeph> transaction isolation, as defined by the SQL standard,
+            ensures that transactions that run concurrently produce the same results as if they were
+            run one after another.  If you specify <codeph>SERIALIZABLE</codeph> Greenplum Database
+            falls back to <codeph>REPEATABLE READ</codeph>. <codeph>REPEATABLE READ</codeph>
+            transactions prevent dirty reads, non-repeatable reads, and phantom reads without
+            expensive locking, but Greenplum Database does not detect all serializability
+            interactions that can occur during concurrent transaction execution. Concurrent
+            transactions should be examined to identify interactions that are not prevented by
+            disallowing concurrent updates of the same data. You can prevent these interactions by
+            using explicit table locks or by requiring the conflicting transactions to update a
+            dummy row introduced to represent the conflict.</p>
+          <p>With <codeph>REPEATABLE READ</codeph> transactions, a <codeph>SELECT</codeph>
+            query:</p>
+          <ul id="ul_mpy_55p_lgb">
+            <li id="ix154139">Sees a snapshot of the data as of the start of the transaction (not as
+              of the start of the current query within the transaction).</li>
+            <li id="ix155116">Sees only data committed before the query starts.</li>
+            <li id="ix154149">Sees updates executed within the transaction.</li>
+            <li id="ix154156">Does not see uncommitted data outside the transaction.</li>
+            <li id="ix154163">Does not see changes that concurrent transactions make.</li>
+            <li>Successive <codeph>SELECT</codeph> commands within a single transaction always see
+              the same data.</li>
+            <li><codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>SELECT FOR
+              UPDATE</codeph>, and <codeph>SELECT FOR SHARE</codeph> commands find only rows
+              committed before the command started. If a concurrent transaction has updated,
+              deleted, or locked a target row, the <codeph>REPEATABLE READ</codeph> transaction
+              waits for the concurrent transaction to commit or roll back the change. If the
+              concurrent transaction commits the change, the <codeph>REPEATABLE READ</codeph>
+              transaction rolls back. If the concurrent transaction rolls back its change,
+                the<codeph>REPEATABLE READ</codeph> transaction can commit its changes. </li>
+          </ul>
+        </section>
+        <p id="ix141505">The default transaction isolation level in Greenplum Database is
+            <codeph>READ COMITTED</codeph>. To change the isolation level for a transaction, declare
+          the isolation level when you <codeph>BEGIN</codeph> the transaction or use the <codeph>SET
             TRANSACTION</codeph> command after the transaction starts.</p>
       </body>
     </topic>

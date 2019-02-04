@@ -12,7 +12,7 @@
 SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname> 
      [READ ONLY | READ WRITE]</codeblock>
       <p>where <varname>transaction_mode</varname> is one of:</p>
-      <codeblock>   ISOLATION LEVEL {SERIALIZABLE | READ COMMITTED | READ UNCOMMITTED}</codeblock>
+      <codeblock>   ISOLATION LEVEL {SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED}</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -25,15 +25,14 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
       <ul>
         <li id="em137940"><b>READ COMMITTED</b> — A statement can only see rows committed before it
           began. This is the default. </li>
-        <li id="em137943"><b>SERIALIZABLE</b> — All statements of the current transaction can only
-          see rows committed before the first query or data-modification statement was executed in
-          this transaction.</li>
+        <li id="em137943"><b>REPEATABLE READ</b> — All statements in the current transaction can
+          only see rows committed before the first query or data-modification statement executed in
+          the transaction.</li>
       </ul>
       <p>The SQL standard defines two additional levels, <codeph>READ UNCOMMITTED</codeph> and
-          <codeph>REPEATABLE READ</codeph>. In Greenplum Database <codeph>READ UNCOMMITTED</codeph>
-        is treated as <codeph>READ COMMITTED</codeph>. <codeph>REPEATABLE READ</codeph> is not
-        supported; use <codeph>SERIALIZABLE</codeph> if <codeph>REPEATABLE READ</codeph> behavior is
-        required. </p>
+          <codeph>SERIALIZABLE</codeph>. In Greenplum Database <codeph>READ UNCOMMITTED</codeph> is
+        treated as <codeph>READ COMMITTED</codeph>. If you specify <codeph>SERIALIZABLE</codeph>,
+        Greenplum Database falls back to <codeph>REPEATABLE READ</codeph>.</p>
       <p>The transaction isolation level cannot be changed after the first query or
         data-modification statement (<codeph>SELECT</codeph>, <codeph>INSERT</codeph>,
           <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, <codeph>FETCH</codeph>, or
@@ -57,20 +56,33 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
             session.</pd>
         </plentry>
         <plentry>
-          <pt>SERIALIZABLE</pt>
-          <pt>READ COMMITTED</pt>
           <pt>READ UNCOMMITTED</pt>
+          <pt>READ COMMITTED</pt>
+          <pt>REPEATABLE READ</pt>
+          <pt>SERIALIZABLE</pt>
           <pd>The SQL standard defines four transaction isolation levels: <codeph>READ
-              COMMITTED</codeph>, <codeph>READ UNCOMMITTED</codeph>, <codeph>SERIALIZABLE</codeph>,
-            and <codeph>REPEATABLE READ</codeph>. The default behavior is that a statement can only
-            see rows committed before it began (<codeph>READ COMMITTED</codeph>). In Greenplum
-            Database <codeph>READ UNCOMMITTED</codeph> is treated the same as <codeph>READ
-              COMMITTED</codeph>.  <codeph>REPEATABLE READ</codeph> is not supported; use
-              <codeph>SERIALIZABLE</codeph> instead. <codeph>SERIALIZABLE</codeph> is the strictest
-            transaction isolation. This level emulates serial transaction execution, as if
-            transactions had been executed one after another, serially, rather than concurrently.
-            Applications using this level must be prepared to retry transactions due to
-            serialization failures.</pd>
+              UNCOMMITTED</codeph>, <codeph>READ COMMITTED</codeph>, <codeph>REPEATABLE
+              READ</codeph>, and <codeph>SERIALIZABLE</codeph>.</pd>
+          <pd><codeph>READ UNCOMMITTED</codeph> allows transactions to see changes made by
+            uncomitted concurrent transactions. This is not possible in Greenplum Database, so
+              <codeph>READ UNCOMMITTED</codeph> is treated the same as <codeph>READ
+              COMMITTED</codeph>.</pd>
+          <pd><codeph>READ COMMITTED</codeph>, the default isolation level in Greenplum Database,
+            guarantees that a statement can only see rows committed before it began. The same
+            statement executed twice in a transaction can produce different results if another
+            concurrent transaction commits after the statement is executed the first time. </pd>
+          <pd>The <codeph>REPEATABLE READ</codeph> isolation level guarantees that a transaction can
+            only see rows committed before it began. <codeph>REPEATABLE READ</codeph> is the
+            strictest transaction isolation level Greenplum Database supports. Applications that use
+            the <codeph>REPEATABLE READ</codeph> isolation level must be prepared to retry
+            transactions due to serialization failures.</pd>
+          <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that
+            executing multiple concurrent transactions produces the same effects as running the same
+            transactions one at a time. Greenplum Database does not fully support
+              <codeph>SERIALIZABLE</codeph> as defined by the standard, so if you specify
+              <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to <codeph>REPEATABLE
+              READ</codeph>. See <xref href="#topic1/section7" format="dita"/> for more information
+            about transaction serializability in Greenplum Database.</pd>
         </plentry>
         <plentry>
           <pt>READ WRITE</pt>
@@ -91,7 +103,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
       <p>If <codeph>SET TRANSACTION</codeph> is executed without a prior <codeph>START
           TRANSACTION</codeph> or <codeph>BEGIN</codeph>, it will appear to have no effect. </p>
       <p>It is possible to dispense with <codeph>SET TRANSACTION</codeph> by instead specifying the
-        desired transaction_modes in <codeph>BEGIN</codeph> or <codeph>START TRANSACTION</codeph>. </p>
+        desired transaction modes in <codeph>BEGIN</codeph> or <codeph>START TRANSACTION</codeph>. </p>
       <p>The session default transaction modes can also be set by setting the configuration
         parameters <varname>default_transaction_isolation</varname> and
           <varname>default_transaction_read_only</varname>.</p>
@@ -100,17 +112,22 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
       <title>Examples</title>
       <p>Set the transaction isolation level for the current transaction:</p>
       <codeblock>BEGIN;
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;</codeblock>
+SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>
       <p>Both commands are defined in the SQL standard. <codeph>SERIALIZABLE</codeph> is the default
         transaction isolation level in the standard. In Greenplum Database the default is
-          <codeph>READ COMMITTED</codeph>. Because of lack of predicate locking, the
-          <codeph>SERIALIZABLE</codeph> level is not truly serializable. Essentially, a
-        predicate-locking system prevents phantom reads by restricting what is written, whereas a
-        multi-version concurrency control model (MVCC) as used in Greenplum Database prevents them
-        by restricting what is read. </p>
+          <codeph>READ COMMITTED</codeph>. Due to lack of predicate locking, Greenplum Database does
+        not fully support the <codeph>SERIALIZABLE</codeph> level, so it falls back to the
+          <codeph>REPEATABLE READ</codeph> level when <codeph>SERIAL</codeph> is specified.
+        Essentially, a predicate-locking system prevents phantom reads by restricting what is
+        written, whereas a multi-version concurrency control model (MVCC) as used in Greenplum
+        Database prevents them by restricting what is read. </p>
+      <p>PostgreSQL provides a true serializable isolation level, called serializable snapshot
+        isolation (SSI), which monitors concurrent transactions and rolls back transactions that
+        could introduce serialization anomalies. Greenplum Database does not implement this
+        isolation mode. </p>
       <p>In the SQL standard, there is one other transaction characteristic that can be set with
         these commands: the size of the diagnostics area. This concept is specific to embedded SQL,
         and therefore is not implemented in the Greenplum Database server. </p>

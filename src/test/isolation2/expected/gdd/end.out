@@ -1,0 +1,5 @@
+0: show gp_enable_global_deadlock_detector;
+ gp_enable_global_deadlock_detector 
+------------------------------------
+ off                                
+(1 row)

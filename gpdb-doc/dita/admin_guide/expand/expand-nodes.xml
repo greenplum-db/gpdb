@@ -2,22 +2,27 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1" xml:lang="en">
-  <title>Preparing and Adding Nodes</title>
-  <shortdesc>Verify your new nodes are ready for integration into the existing Greenplum system. </shortdesc>
+  <title>Preparing and Adding Hosts</title>
+  <shortdesc>Verify your new host systems are ready for integration into the existing Greenplum
+    system. </shortdesc>
   <body>
-    <p>To prepare new system nodes for expansion, install the Greenplum Database software binaries,
+    <draft-comment author="msk">GPDB 6 updates for online expand</draft-comment>
+    <p>To prepare new host systems for expansion, install the Greenplum Database software binaries,
       exchange the required SSH keys, and run performance tests. </p>
-    <p>Run performance tests first on the new nodes and then all nodes. Run
-      the tests on all nodes with the system offline so user activity does not distort results.</p>
-    <p>Generally, you should run performance tests when an administrator modifies node
-      networking or other special conditions in the system. For example, if you will run the
-      expanded system on two network clusters, run tests on each cluster.</p>
+    <p>Run performance tests first on the new hosts and then all hosts. Run the tests on all hosts
+      with the system offline so user activity does not distort results.</p>
+    <p>Generally, you should run performance tests when an administrator modifies host networking or
+      other special conditions in the system. For example, if you will run the expanded system on
+      two network clusters, run tests on each cluster.</p>
   </body>
   <topic id="topic18" xml:lang="en">
-    <title id="no159311">Adding New Nodes to the Trusted Host Environment</title>
+    <title id="no159311">Adding New Hosts to the Trusted Host Environment</title>
     <body>
-      <p>New nodes must exchange SSH keys with the existing nodes to enable Greenplum administrative
-        utilities to connect to all segments without a password prompt. Perform the key exchange process twice.</p>
+      <p>New hosts must exchange SSH keys with the existing hosts to enable Greenplum administrative
+        utilities to connect to all segments without a password prompt. Perform the key exchange
+        process twice with the <codeph><xref
+            href="../../utility_guide/admin_utilities/gpssh-exkeys.xml">gpssh-exkeys</xref></codeph>
+        utility.</p>
       <p>First perform the process as <codeph>root</codeph>, for administration convenience, and
         then as the user <codeph>gpadmin</codeph>, for management utilities. Perform the following
         tasks in order:</p>
@@ -79,9 +84,10 @@ sdw3-4</codeblock></li>
       <section id="no160595">
         <title>To create the <codeph>gpadmin</codeph> user</title>
         <ol id="ol_amb_xjr_g4">
-          <li id="no160603">Use <codeph>gpssh</codeph> to create the <codeph>gpadmin</codeph> user
-            on all the new segment hosts (if it does not exist already). Use the list of new hosts
-            you created for the key exchange. For
+          <li id="no160603">Use <codeph><xref href="../../utility_guide/admin_utilities/gpssh.xml"
+                >gpssh</xref></codeph> to create the <codeph>gpadmin</codeph> user on all the new
+            segment hosts (if it does not exist already). Use the list of new hosts you created for
+            the key exchange. For
             example:<codeblock># gpssh -f <i>new_hosts_file</i> '/usr/sbin/useradd <i>gpadmin</i> -d 
 /home/<i>gpadmin</i> -s /bin/bash'</codeblock></li>
           <li id="no160614">Set a password for the new <codeph>gpadmin</codeph> user. On Linux, you
@@ -111,8 +117,9 @@ gpadmin --stdin'</codeblock></li>
   <topic id="topic19" xml:lang="en">
     <title id="no159124">Verifying OS Settings</title>
     <body>
-      <p>Use the <codeph>gpcheck</codeph> utility to verify all new hosts in your array have the
-        correct OS settings to run Greenplum Database software. </p>
+      <p>Use the <codeph><xref href="../../utility_guide/admin_utilities/gpcheck.xml"
+          >gpcheck</xref></codeph> utility to verify all new hosts in your array have the correct OS
+        settings to run Greenplum Database software. </p>
       <section id="no159174">
         <title>To run gpcheck</title>
         <ol>
@@ -128,7 +135,8 @@ gpadmin --stdin'</codeblock></li>
   <topic id="topic20" xml:lang="en">
     <title id="no159219">Validating Disk I/O and Memory Bandwidth</title>
     <body>
-      <p>Use the <codeph>gpcheckperf</codeph> utility to test disk I/O and memory bandwidth. </p>
+      <p>Use the <codeph><xref href="../../utility_guide/admin_utilities/gpcheckperf.xml"
+            >gpcheckperf</xref></codeph> utility to test disk I/O and memory bandwidth. </p>
       <section id="no159247">
         <title>To run gpcheckperf</title>
         <ol>
@@ -150,7 +158,7 @@ gpadmin --stdin'</codeblock></li>
     <body>
       <p>Before initializing the system with the new segments, shut down the system with
           <codeph>gpstop</codeph> to prevent user activity from skewing performance test results.
-        Then, repeat the performance tests using host files that include <i>all</i> nodes, existing
+        Then, repeat the performance tests using host files that include <i>all</i> hosts, existing
         and new:</p>
       <ul>
         <li id="no158731">

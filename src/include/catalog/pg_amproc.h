@@ -500,4 +500,42 @@ DATA(insert (	7077   27 27 1 6114 ));
 DATA(insert (	7078   1560 1560 1 6117 ));
 DATA(insert (	7079   1562 1562 1 6118 ));
 
+/*
+ *	legacy cdbhash ops
+ */
+DATA(insert (	7100 21 21 1 6140 ));		/* int2 */
+DATA(insert (	7100 23 23 1 6141));		/* int4 */
+DATA(insert (	7100 20 20 1 6142));		/* int8 */
+DATA(insert (	7101 700 700 1 6143));		/* float4 */
+DATA(insert (	7102 701 701 1 6144));		/* float8 */
+DATA(insert (	7103 1700 1700 1 6145));	/* numeric */
+DATA(insert (	7104 18 18 1 6146));		/* char */
+DATA(insert (	7105 25 25 1 6147));		/* text */
+DATA(insert (	7105 1043 1043 1 6147));	/* varchar */
+DATA(insert (	7106 1042 1042 1 6148));	/* bpchar */
+DATA(insert (	7107 17 17 1 6149));		/* bytea */
+DATA(insert (	7108 19 19 1 6150));		/* name */
+DATA(insert (	7109 26 26 1 6151));		/* oid */
+DATA(insert (	7110 27 27 1 6152));		/* tid */
+DATA(insert (	7111 1114 1114 1 6153));	/* timestamp */
+DATA(insert (	7112 1184 1184 1 6154));	/* timestamptz */
+DATA(insert (	7113 1082 1082 1 6155));	/* date */
+DATA(insert (	7114 1083 1083 1 6156));	/* time */
+DATA(insert (	7115 1266 1266 1 6157));	/* timetz */
+DATA(insert (	7116 1186 1186 1 6158));	/* interval */
+DATA(insert (	7117 702 702 1 6159));		/* abstime */
+DATA(insert (	7118 703 703 1 6160));		/* reltime */
+DATA(insert (	7119 704 704 1 6161));		/* tinterval */
+DATA(insert (	7120 869 869 1 6162));		/* inet */
+DATA(insert (	7121 829 829 1 6163));		/* macaddr */
+DATA(insert (	7122 1560 1560 1 6164));	/* bit */
+DATA(insert (	7123 1562 1562 1 6164));	/* varbit */
+DATA(insert (	7124 16 16 1 6165));		/* bool */
+DATA(insert (	7125 2277 2277 1 6166));	/* anyarray */
+DATA(insert (	7126 30 30 1 6167));		/* oidvector */
+DATA(insert (	7127 790 790 1 6168));		/* money */
+DATA(insert (	7128 7198 7198 1 6169));	/* complex */
+DATA(insert (	7129 2950 2950 1 6170));	/* uuid */
+DATA(insert (	7130 3500 3500 1 6171));	/* enum */
+
 #endif   /* PG_AMPROC_H */
