@@ -98,7 +98,8 @@ ROLLBACK;</codeblock></note>
         <plentry>
           <pt>ANALYZE</pt>
           <pd>Carry out the command and show the actual run times. This parameter defaults to
-              <codeph>FALSE</codeph>. </pd>
+              <codeph>FALSE</codeph> if you omit it; specify <codeph>ANALYZE true</codeph> to enable
+            it. </pd>
         </plentry>
         <plentry>
           <pt>VERBOSE</pt>
@@ -106,13 +107,15 @@ ROLLBACK;</codeblock></note>
             column list for each node in the plan tree, schema-qualify table and function names,
             always label variables in expressions with their range table alias, and always print the
             name of each trigger for which statistics are displayed. This parameter defaults to
-              <codeph>FALSE</codeph>.</pd>
+              <codeph>FALSE</codeph>if you omit it; specify <codeph>VERBOSE true</codeph> to enable
+            it.</pd>
         </plentry>
         <plentry>
           <pt>COSTS</pt>
           <pd>Include information on the estimated startup and total cost of each plan node, as well
             as the estimated number of rows and the estimated width of each row. This parameter
-            defaults to <codeph>TRUE</codeph>.</pd>
+            defaults to <codeph>TRUE</codeph> if you omit it; specify <codeph>COSTS false</codeph>
+            to disable it.</pd>
         </plentry>
         <plentry>
           <pt>BUFFERS</pt>
@@ -123,7 +126,8 @@ ROLLBACK;</codeblock></note>
             in sort and materialized plans, respectively. The number of blocks shown for an
             upper-level node includes those used by all its child nodes. In text format, only
             non-zero values are printed. This parameter may only be used with the
-              <codeph>ANALYZE</codeph> parameter. It defaults to <codeph>FALSE</codeph>.</pd>
+              <codeph>ANALYZE</codeph> parameter. This parameter defaults to <codeph>FALSE</codeph>
+            if you omit it; specify <codeph>BUFFERS true</codeph> to enable it.</pd>
         </plentry>
         <plentry>
           <pt>FORMAT</pt>
