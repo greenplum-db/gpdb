@@ -35,6 +35,11 @@
                     <codeph>RETURNING</codeph> list is identical to that of the output list of
                     <codeph>SELECT</codeph>.</p>
             <p>You must have the <codeph>DELETE</codeph> privilege on the table to delete from it. </p>
+            <note>As the default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on
+                tables for <codeph>DELETE</codeph> operations on heap tables. When the Global
+                Deadlock Detector is enabled, the lock mode for <codeph>DELETE</codeph> operations
+                on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
+                    href="../../admin_guide/dml.xml#topic_gdd" format="dita"/>.</note>
             <sectiondiv id="section4">
                 <b>Outputs</b>
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
@@ -106,7 +111,10 @@
                 </plentry>
                 <plentry>
                     <pt><varname>output_expression</varname></pt>
-                    <pd>An expression to be computed and returned by the <codeph>DELETE</codeph> command after each row is deleted. The expression can use any column names of the table or table(s) listed in <codeph>USING</codeph>. Write * to return all columns.</pd>
+                    <pd>An expression to be computed and returned by the <codeph>DELETE</codeph>
+                        command after each row is deleted. The expression can use any column names
+                        of the table or table(s) listed in <codeph>USING</codeph>. Write * to return
+                        all columns.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>output_name</varname></pt>

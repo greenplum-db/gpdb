@@ -58,13 +58,14 @@
             <row>
               <entry colname="col1">ROW SHARE</entry>
               <entry colname="col2">
-                <codeph>SELECT FOR SHARE, SELECT FOR UPDATE</codeph>
+                <codeph>SELECT FOR SHARE, SELECT...FOR UPDATE</codeph>
               </entry>
               <entry colname="col3">EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
               <entry colname="col1">ROW EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph></entry>
+              <entry colname="col2"><codeph>INSERT</codeph>, <codeph>COPY</codeph><p>See <xref
+                    href="#topic2/lock_note" format="dita">Note</xref>.</p></entry>
               <entry colname="col3">SHARE, SHARE ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
             <row>
@@ -90,9 +91,9 @@
             </row>
             <row>
               <entry colname="col1">EXCLUSIVE</entry>
-              <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, <codeph>SELECT
-                  FOR UPDATE</codeph>, See <xref href="#topic2/lock_note" format="dita"
-                >Note</xref></entry>
+              <entry colname="col2"><codeph>DELETE</codeph>, <codeph>UPDATE</codeph>,
+                  <codeph>SELECT...FOR UPDATE</codeph><p>See <xref href="#topic2/lock_note"
+                    format="dita">Note</xref>.</p></entry>
               <entry colname="col3">ROW SHARE, ROW EXCLUSIVE, SHARE UPDATE EXCLUSIVE, SHARE, SHARE
                 ROW EXCLUSIVE, EXCLUSIVE, ACCESS EXCLUSIVE</entry>
             </row>
@@ -108,9 +109,13 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">Greenplum Database acquires the more restrictive EXCLUSIVE lock (rather
-        than ROW EXCLUSIVE in PostgreSQL) for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
-        <codeph>SELECT FOR UPDATE</codeph>.</note>
+      <note id="lock_note">Greenplum Database acquires the more restrictive
+          <codeph>EXCLUSIVE</codeph> lock (rather than <codeph>ROW EXCLUSIVE</codeph> in PostgreSQL)
+        for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT...FOR
+          UPDATE</codeph>.<p>When the Global Deadlock Detector is enabled, the lock mode for
+            <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, and <codeph>SELECT...FOR
+            UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
+            href="#topic_gdd" format="dita"/>.</p></note>
     </body>
   </topic>
   <topic id="topic3" xml:lang="en">
@@ -288,7 +293,7 @@
           <title>Repeatable Read and Serializable</title>
           <p><codeph>SERIALIZABLE</codeph> transaction isolation, as defined by the SQL standard,
             ensures that transactions that run concurrently produce the same results as if they were
-            run one after another.  If you specify <codeph>SERIALIZABLE</codeph> Greenplum Database
+            run one after another. If you specify <codeph>SERIALIZABLE</codeph> Greenplum Database
             falls back to <codeph>REPEATABLE READ</codeph>. <codeph>REPEATABLE READ</codeph>
             transactions prevent dirty reads, non-repeatable reads, and phantom reads without
             expensive locking, but Greenplum Database does not detect all serializability
@@ -328,30 +333,37 @@
   <topic id="topic_gdd" xml:lang="en">
     <title>Global Deadlock Detector</title>
     <body>
-      <p>The Greenplum Database Global Deadlock Detector backend
-        process collects lock information on all segments and uses a directed algorithm to detect the
-        existence of local and global deadlocks. This algorithm allows Greenplum Database to relax
-        concurrent update and delete restrictions on heap tables. (Greenplum Database still employs table-level
-       locking on AO/CO tables, restricting concurrent <codeph>UPDATE</codeph>,
-       <codeph>DELETE</codeph>, and <codeph>SELECT ... FOR UPDATE</codeph> operations.)</p>
-      <p>If the Global Deadlock Detector determines that deadlock exists,
-        it breaks the deadlock by cancelling one or more backend processes associated with the youngest 
-        transaction(s) involved.</p>
-      <p>The Global Deadlock Detector backend process is automatically started on the master host when
-        you start Greenplum Database. You configure the interval at which the Global Deadlock Detector
-        collects and analyzes lock waiting data via the
-         <codeph><xref href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period" type="section">gp_global_deadlock_detector_period</xref></codeph>
-         server configuration parameter.</p>
-      <note>Greenplum Database uses the interval specified in the <codeph><xref href="../ref_guide/config_params/guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref></codeph>
-        server configuration parameter for local deadlock detection. Because the local and
-        global deadlock detection algorithms differ, the cancelled process(es) may differ
-        depending upon which detector (local or global) Greenplum Database triggers first.</note>
-      <p>To view lock waiting information for all segments, run the <codeph>pg_dist_wait_status()</codeph>
-        user-defined function. You can use the output of this function to determine which transactions
-        are waiting on locks, which transactions are holding locks, and which segments are executing
-        the transactions.  Sample output of the <codeph>pg_dist_wait_status()</codeph> function
-        follows:</p>
-<codeblock>SELECT * FROM pg_dist_wait_status();
+      <p>The Greenplum Database Global Deadlock Detector backend process collects lock information
+        on all segments and uses a directed algorithm to detect the existence of local and global
+        deadlocks. This algorithm allows Greenplum Database to relax concurrent update and delete
+        restrictions on heap tables. (Greenplum Database still employs table-level locking on AO/CO
+        tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
+          <codeph>SELECT...FOR UPDATE</codeph> operations.) By default, the Global Deadlock Detector
+        is disabled. You can enable the Global Deadlock Detector by setting the server configuration
+        parameter <xref
+          href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
+            ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
+      <p>If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by
+        cancelling one or more backend processes associated with the youngest transaction(s)
+        involved.</p>
+      <p>The Global Deadlock Detector backend process is automatically started on the master host
+        when you start Greenplum Database. You configure the interval at which the Global Deadlock
+        Detector collects and analyzes lock waiting data via the <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#gp_global_deadlock_detector_period"
+            type="section">gp_global_deadlock_detector_period</xref></codeph> server configuration
+        parameter.</p>
+      <note>Greenplum Database uses the interval specified in the <codeph><xref
+            href="../ref_guide/config_params/guc-list.xml#deadlock_timeout" type="section"
+            >deadlock_timeout</xref></codeph> server configuration parameter for local deadlock
+        detection. Because the local and global deadlock detection algorithms differ, the cancelled
+        process(es) may differ depending upon which detector (local or global) Greenplum Database
+        triggers first.</note>
+      <p>To view lock waiting information for all segments, run the
+          <codeph>pg_dist_wait_status()</codeph> user-defined function. You can use the output of
+        this function to determine which transactions are waiting on locks, which transactions are
+        holding locks, and which segments are executing the transactions. Sample output of the
+          <codeph>pg_dist_wait_status()</codeph> function follows:</p>
+      <codeblock>SELECT * FROM pg_dist_wait_status();
  segid | waiter_dxid | holder_dxid | holdTillEndXact 
 -------+-------------+-------------+-----------------
     -1 |          29 |          28 | t
@@ -360,9 +372,18 @@
      1 |          26 |          27 | t
 (4 rows)
 </codeblock>
-      <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports
-         the following error message:</p>
-<codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
+      <p>When it cancels a transaction to break a deadlock, the Global Deadlock Detector reports the
+        following error message:</p>
+      <codeblock>ERROR:  canceling statement due to user request: "cancelled by global deadlock detector"</codeblock>
+      <p>When the Global Deadlock Detector is enabled, Greenplum Database returns an error for these
+        types of concurrent operations.</p>
+      <ul id="ul_trv_qqr_qgb">
+        <li>Concurrent update operations on a table distribution key</li>
+        <li>Concurrent update operations where a subplan in a query plan contains a motion
+          operation.</li>
+      </ul>
+      <p>When the Global Deadlock Detector is disabled, Greenplum Database executes the concurrent
+        operations serially. </p>
     </body>
   </topic>
   <topic id="topic9" xml:lang="en">

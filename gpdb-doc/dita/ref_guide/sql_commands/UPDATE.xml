@@ -28,9 +28,15 @@
       <p>If the <codeph>WHERE CURRENT OF</codeph> clause is specified, the row that is updated is
         the one most recently fetched from the specified cursor. </p>
       <p>The <codeph>WHERE CURRENT OF</codeph> clause is not supported with replicated tables.</p>
-      <p>You must have the <codeph>UPDATE</codeph> privilege on the table, or at least on the column(s) that are listed to be updated. You must also have
-        the <codeph>SELECT</codeph> privilege on any column whose values are read in the <varname>expression</varname>s
-        or <varname>condition</varname>.</p>
+      <p>You must have the <codeph>UPDATE</codeph> privilege on the table, or at least on the
+        column(s) that are listed to be updated. You must also have the <codeph>SELECT</codeph>
+        privilege on any column whose values are read in the <varname>expression</varname>s or
+          <varname>condition</varname>.</p>
+      <note>As the default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables
+        for <codeph>UPDATE</codeph> operations on heap tables. When the Global Deadlock Detector is
+        enabled, the lock mode for <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW
+          EXCLUSIVE</codeph>. See <xref href="../../admin_guide/dml.xml#topic_gdd" format="dita"
+        />.</note>
       <sectiondiv id="section4">
         <b>Outputs</b>
         <p>On successful completion, an <codeph>UPDATE</codeph> command returns a command tag of the
@@ -105,21 +111,17 @@
           <pt>
             <varname>cursor_name</varname>
           </pt>
-          <pd>The name of the cursor to use in a <codeph>WHERE CURRENT
-              OF</codeph> condition. The row to be updated is the one most
-            recently fetched from the cursor. The cursor must be a non-grouping
-            query on the <codeph>UPDATE</codeph> command target table. See
-                <codeph><xref href="DECLARE.xml#topic1" type="topic"
-                format="dita"/></codeph> for more information about creating
-            cursors. </pd>
+          <pd>The name of the cursor to use in a <codeph>WHERE CURRENT OF</codeph> condition. The
+            row to be updated is the one most recently fetched from the cursor. The cursor must be a
+            non-grouping query on the <codeph>UPDATE</codeph> command target table. See
+                <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
+            more information about creating cursors. </pd>
           <pd><codeph>WHERE CURRENT OF</codeph> cannot be specified together with a Boolean
             condition. </pd>
-          <pd>Note that <codeph>WHERE CURRENT OF</codeph> cannot be specified
-            together with a Boolean condition. The <codeph>UPDATE...WHERE
-              CURRENT OF</codeph> statement can only be executed on the server,
-            for example in an interactive psql session or a script. Language
-            extensions such as PL/pgSQL do not have support for updatable
-            cursors.</pd>
+          <pd>Note that <codeph>WHERE CURRENT OF</codeph> cannot be specified together with a
+            Boolean condition. The <codeph>UPDATE...WHERE CURRENT OF</codeph> statement can only be
+            executed on the server, for example in an interactive psql session or a script. Language
+            extensions such as PL/pgSQL do not have support for updatable cursors.</pd>
           <pd>See <codeph><xref href="DECLARE.xml#topic1" type="topic" format="dita"/></codeph> for
             more information about creating cursors.</pd>
         </plentry>

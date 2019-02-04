@@ -61,11 +61,10 @@
             <parml>
                 <plentry>
                     <pt><varname>name</varname></pt>
-                    <pd>The name (optionally schema-qualified) of an existing
-                        table to lock. If <codeph>ONLY</codeph> is specified,
-                        only that table is locked. If <codeph>ONLY</codeph> is
-                        not specified, the table and all its descendant tables
-                        (if any) are locked.</pd>
+                    <pd>The name (optionally schema-qualified) of an existing table to lock. If
+                            <codeph>ONLY</codeph> is specified, only that table is locked. If
+                            <codeph>ONLY</codeph> is not specified, the table and all its descendant
+                        tables (if any) are locked.</pd>
                     <pd>If multiple tables are given, tables are locked one-by-one in the order
                         specified in the <codeph>LOCK TABLE</codeph> command.</pd>
                 </plentry>
@@ -93,7 +92,8 @@
                                     <codeph>INSERT</codeph> and <codeph>COPY</codeph> automatically
                                 acquire this lock mode on the target table (in addition to
                                     <codeph>ACCESS SHARE</codeph> locks on any other referenced
-                                tables). </li>
+                                tables) See <xref href="#topic1/lock_note" format="dita"
+                                >Note</xref>. </li>
                             <li id="dv157745">SHARE UPDATE EXCLUSIVE — Conflicts with the
                                     <codeph>SHARE UPDATE EXCLUSIVE</codeph>, <codeph>SHARE</codeph>,
                                     <codeph>SHARE ROW EXCLUSIVE</codeph>,
@@ -124,7 +124,8 @@
                                 holding this lock mode. This lock mode is automatically acquired for
                                     <codeph>UPDATE</codeph>, <codeph>SELECT FOR UPDATE</codeph>, and
                                     <codeph>DELETE</codeph> in Greenplum Database (which is more
-                                restrictive locking than in regular PostgreSQL).</li>
+                                restrictive locking than in regular PostgreSQL). See <xref
+                                    href="#topic1/lock_note" format="dita">Note</xref>.</li>
                             <li id="dv157757">ACCESS EXCLUSIVE — Conflicts with locks of all modes
                                     (<codeph>ACCESS SHARE</codeph>, <codeph>ROW SHARE</codeph>,
                                     <codeph>ROW EXCLUSIVE</codeph>, <codeph>SHARE UPDATE
@@ -134,14 +135,22 @@
                                     EXCLUSIVE</codeph>). This mode guarantees that the holder is the
                                 only transaction accessing the table in any way. Acquired
                                 automatically by the <codeph>ALTER TABLE</codeph>, <codeph>DROP
-                                    TABLE</codeph>, <codeph>TRUNCATE</codeph>, <codeph>REINDEX</codeph>,
-                                    <codeph>CLUSTER</codeph>, and <codeph>VACUUM FULL</codeph>
-                                commands. This is the default lock mode for <codeph>LOCK
-                                    TABLE</codeph> statements that do not specify a mode explicitly.
-                                This lock is also briefly acquired by <codeph>VACUUM</codeph>
-                                (without <codeph>FULL</codeph>) on append-optimized tables during
-                                processing. </li>
-                        </ul></pd>
+                                    TABLE</codeph>, <codeph>TRUNCATE</codeph>,
+                                    <codeph>REINDEX</codeph>, <codeph>CLUSTER</codeph>, and
+                                    <codeph>VACUUM FULL</codeph> commands. This is the default lock
+                                mode for <codeph>LOCK TABLE</codeph> statements that do not specify
+                                a mode explicitly. This lock is also briefly acquired by
+                                    <codeph>VACUUM</codeph> (without <codeph>FULL</codeph>) on
+                                append-optimized tables during processing. </li>
+                        </ul>
+                        <note id="lock_note">As the default, Greenplum Database acquires an
+                                <codeph>EXCLUSIVE</codeph> lock on tables for
+                                <codeph>DELETE</codeph>, <codeph>UPDATE</codeph>, and <codeph>SELECT
+                                FOR UPDATE</codeph> operations on heap tables. When the Global
+                            Deadlock Detector is enabled, the lock mode for the operations on heap
+                            tables is <codeph>ROW EXCLUSIVE</codeph>. See <xref
+                                href="../../admin_guide/dml.xml#topic_gdd" format="dita"
+                        />.</note></pd>
                 </plentry>
                 <plentry>
                     <pt>NOWAIT</pt>
@@ -153,17 +162,15 @@
         </section>
         <section id="section5">
             <title>Notes</title>
-            <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires
-                    <codeph>SELECT</codeph> privileges on the target table. All
-                other forms of <codeph>LOCK</codeph> require
+            <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires <codeph>SELECT</codeph>
+                privileges on the target table. All other forms of <codeph>LOCK</codeph> require
                     <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or
-                    <codeph>TRUNCATE</codeph>privileges.</p>
-            <p><codeph>LOCK TABLE</codeph> is useless outside of a transaction
-                block: the lock would be held only to the completion of the
-                    <codeph>LOCK</codeph> statement. Therefore, Greenplum
-                Database reports an error if <codeph>LOCK</codeph> is used
-                outside of a transaction block. Use <codeph>BEGIN</codeph> and
-                    <codeph>END</codeph> to define a transaction block. </p>
+                <codeph>TRUNCATE</codeph>privileges.</p>
+            <p><codeph>LOCK TABLE</codeph> is useless outside of a transaction block: the lock would
+                be held only to the completion of the <codeph>LOCK</codeph> statement. Therefore,
+                Greenplum Database reports an error if <codeph>LOCK</codeph> is used outside of a
+                transaction block. Use <codeph>BEGIN</codeph> and <codeph>END</codeph> to define a
+                transaction block. </p>
             <p><codeph>LOCK TABLE</codeph> only deals with table-level locks, and so the mode names
                 involving <codeph>ROW</codeph> are all misnomers. These mode names should generally
                 be read as indicating the intention of the user to acquire row-level locks within

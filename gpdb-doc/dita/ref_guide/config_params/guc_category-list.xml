@@ -1069,8 +1069,8 @@
           <stentry>
             <p>
               <xref href="guc-list.xml#deadlock_timeout" type="section">deadlock_timeout</xref>
-            </p>
-            <p>
+            </p><xref href="guc-list.xml#gp_enable_global_deadlock_detector" type="section"
+              >gp_enable global_deadlock_detector</xref><p>
               <xref href="guc-list.xml#gp_global_deadlock_detector_period" type="section"
                 >gp_global_deadlock_detector_period</xref>
             </p>
