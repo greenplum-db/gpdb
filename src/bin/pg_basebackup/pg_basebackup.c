@@ -1169,22 +1169,22 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 		strlcpy(current_path, basedir, sizeof(current_path));
 	else
 	{
-		/*
-		 * Reconstruct the current path replacing the source tablespace path's
-		 * dbid with the dbid provided from --target-gp-dbid option.
-		 */
 		strlcpy(current_path, get_tablespace_mapping(PQgetvalue(res, rownum, 1)), sizeof(current_path));
-		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%s_db%d",
-				 current_path,
-				 GP_TABLESPACE_VERSION_DIRECTORY,
-				 target_gp_dbid);
-
+		
 		if (target_gp_dbid < 1)
 		{
 			fprintf(stderr, _("%s: cannot restore user-defined tablespaces without the --target-gp-dbid option\n"),
 					progname);
 			disconnect_and_exit(1);
 		}
+		
+		/* 
+		 * Construct the new tablespace path using the given target gp dbid
+		 */
+		snprintf(gp_tablespace_filename, sizeof(filename), "%s/%s_db%d",
+				 current_path,
+				 GP_TABLESPACE_VERSION_DIRECTORY,
+				 target_gp_dbid);
 	}
 
 	/*
