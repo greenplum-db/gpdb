@@ -1030,6 +1030,8 @@ jobs:
       resource: libquicklz-centos6
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos6
+    - get: python-tarball
+      resource: python-centos6
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
     image: centos6-build-gpdb6
