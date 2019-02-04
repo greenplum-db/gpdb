@@ -1315,7 +1315,10 @@ ReceiveAndUnpackTarFile(PGconn *conn, PGresult *res, int rownum)
 					}
 
 					bool is_gp_tablespace_directory = strcmp(gp_tablespace_filename, filename) == 0;
-					if (is_gp_tablespace_directory) {
+					if (is_gp_tablespace_directory && !forceoverwrite) {
+						/* 
+						 * This directory has already been created during beginning of BaseBackup().
+						 */
 						continue;
 					}
 					else if (mkdir(filename, S_IRWXU) != 0)
