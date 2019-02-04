@@ -1096,7 +1096,10 @@ dumpRoles(PGconn *conn)
 				i_is_current_user;
 	int			i;
 	bool		exttab_auth = (server_version >= 80214);
-	bool		hdfs_auth = (server_version >= 80215);
+	/*
+	 * Support for gphdfs was removed in Greenplum 6
+	 */
+	bool		hdfs_auth = (server_version >= 80215 && server_version < 80400);
 	char	   *resq_col = resource_queues ? ", (SELECT rsqname FROM pg_resqueue WHERE "
 	"  pg_resqueue.oid = rolresqueue) AS rolqueuename " : "";
 	char	   *resgroup_col = resource_groups ? ", (SELECT rsgname FROM pg_resgroup WHERE "
@@ -1107,8 +1110,6 @@ dumpRoles(PGconn *conn)
 	/*
 	 * Query to select role info get resqueue if version support it get
 	 * external table auth on gpfdist, gpfdists and http if version support it get
-	 * external table auth on gphdfs if version support it note: rolconfig is
-	 * dumped later
 	 */
 
 	/* note: rolconfig is dumped later */
