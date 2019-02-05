@@ -95,6 +95,8 @@ script:
   - gpssh --version
   - gpmapreduce --version
   - gpfdist --version
+  - make -C gpAux/gpdemo
+  - make installcheck-world
 
 ## ----------------------------------------------------------------------
 ## Notification
