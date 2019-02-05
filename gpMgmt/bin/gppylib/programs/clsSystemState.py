@@ -57,6 +57,7 @@ CATEGORY__MIRRORING_INFO = "Mirroring Info"
 VALUE__CURRENT_ROLE = FieldDefinition("Current role", "role", "text") # can't use current_role as name -- it's a reserved word
 VALUE__PREFERRED_ROLE = FieldDefinition("Preferred role", "preferred_role", "text")
 VALUE__MIRROR_STATUS = FieldDefinition("Mirror status", "mirror_status", "text")
+VALUE__MIRROR_RECOVERY_START = FieldDefinition("Mirror recovery start", "mirror_recovery_start", "text")
 
 CATEGORY__ERROR_GETTING_SEGMENT_STATUS = "Error Getting Segment Status"
 VALUE__ERROR_GETTING_SEGMENT_STATUS = FieldDefinition("Error Getting Segment Status", "error_getting_status", "text")
@@ -123,7 +124,8 @@ class GpStateData:
         self.__entriesByCategory[CATEGORY__MIRRORING_INFO] = \
                 [VALUE__CURRENT_ROLE,
                 VALUE__PREFERRED_ROLE,
-                VALUE__MIRROR_STATUS]
+                VALUE__MIRROR_STATUS,
+                VALUE__MIRROR_RECOVERY_START]
 
         self.__entriesByCategory[CATEGORY__ERROR_GETTING_SEGMENT_STATUS] = \
                 [VALUE__ERROR_GETTING_SEGMENT_STATUS]
@@ -695,6 +697,7 @@ class GpSystemStateProgram:
                 VALUE__CURRENT_ROLE,
                 VALUE__PREFERRED_ROLE,
                 VALUE__MIRROR_STATUS,
+                VALUE__MIRROR_RECOVERY_START,
 
                 VALUE__MASTER_REPORTS_STATUS,
                 VALUE__SEGMENT_STATUS,
@@ -884,7 +887,8 @@ class GpSystemStateProgram:
                            "flush_location, "
                            "sent_location - flush_location AS flush_left, "
                            "replay_location, "
-                           "sent_location - replay_location AS replay_left "
+                           "sent_location - replay_location AS replay_left, "
+                           "backend_start "
                     "FROM pg_stat_replication;"
                 )
 
@@ -904,6 +908,7 @@ class GpSystemStateProgram:
             row = backup_connections[0]
             data.switchSegment(primary)
             data.addValue(VALUE__MIRROR_STATUS, replication_state_to_string(row[1]))
+            data.addValue(VALUE__MIRROR_RECOVERY_START, (row[7]))
 
         # Now fill in the information for the standby connection. There should
         # be exactly one such entry; otherwise we bail.
@@ -924,6 +929,7 @@ class GpSystemStateProgram:
             flush_left=row[4],
             replay_location=row[5],
             replay_left=row[6],
+            backend_start=row[7]
         )
 
     @staticmethod
@@ -945,6 +951,7 @@ class GpSystemStateProgram:
         flush_left = kwargs.pop('flush_left', None)
         replay_location = kwargs.pop('replay_location', None)
         replay_left = kwargs.pop('replay_left', None)
+        backend_start = kwargs.pop('backend_start', None)
 
         if kwargs:
             raise TypeError('unexpected keyword argument {!r}'.format(kwargs.keys()[0]))

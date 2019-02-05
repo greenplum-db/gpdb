@@ -77,6 +77,7 @@ class ReplicationInfoTestCase(unittest.TestCase):
             kwargs.get('flush_left', 0),
             kwargs.get('replay_location', '0/0'),
             kwargs.get('replay_left', 0),
+            kwargs.get('backend_start', None)
         )
 
     def test_add_replication_info_adds_unknowns_if_primary_is_down(self):
@@ -211,6 +212,26 @@ class ReplicationInfoTestCase(unittest.TestCase):
         GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
 
         self.assertEqual('Copying files from primary', self.data.getStrValue(self.primary, VALUE__MIRROR_STATUS))
+
+    @mock.patch('gppylib.db.dbconn.execSQL', autospec=True)
+    @mock.patch('gppylib.db.dbconn.connect', autospec=True)
+    def test_add_replication_info_displays_full_backup_start_timestamp_on_primary(self, mock_connect, mock_execSQL):
+        self.mock_pg_stat_replication(mock_execSQL, [
+            self.stub_replication_entry(
+                application_name='some_backup_utility',
+                state='backup',
+                sent_location='0/0', # this matches the real-world behavior but is unimportant to the test
+                flush_location=None,
+                flush_left=None,
+                replay_location=None,
+                replay_left=None,
+                backend_start='1970-01-01 00:00:00.000000-00'
+            )
+        ])
+
+        GpSystemStateProgram._add_replication_info(self.data, self.primary, self.mirror)
+
+        self.assertEqual('1970-01-01 00:00:00.000000-00', self.data.getStrValue(self.primary, VALUE__MIRROR_RECOVERY_START))
 
     @mock.patch('gppylib.db.dbconn.execSQL', autospec=True)
     @mock.patch('gppylib.db.dbconn.connect', autospec=True)
