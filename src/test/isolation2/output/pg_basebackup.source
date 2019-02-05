@@ -1,17 +1,9 @@
 include: helpers/gp_management_utils_helpers.sql;
 CREATE
 
--- Given a segment running without a replication slot
-0U: select * from pg_drop_replication_slot('some_replication_slot');
-ERROR:  replication slot "some_replication_slot" does not exist
-!\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
--- start_ignore
-
--- end_ignore
-(exited with code 0)
 
 -- When pg_basebackup runs with --slot and stream as xlog-method
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false) from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -28,14 +20,14 @@ select pg_basebackup(address, dbid, port, 'some_replication_slot', '/tmp/some_is
 (1 row)
 
 -- When another basebackup is run with the same slot name
-select pg_basebackup(address, dbid, port, 'some_replication_slot', '/tmp/some_other_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, 'some_replication_slot', '@testtablespace@/some_other_isolation2_pg_basebackup', false) from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
 (1 row)
 
 -- Then the backup should exist on the filesystem, ready for mirroring
-!\retcode cat /tmp/some_other_isolation2_pg_basebackup/recovery.conf;
+!\retcode cat @testtablespace@/some_other_isolation2_pg_basebackup/recovery.conf;
 -- start_ignore
 standby_mode = 'on'
 primary_conninfo = 'user=adamberlin host=adamberlin-linux port=25432 sslmode=disable sslcompression=1 application_name=gp_walreceiver'
@@ -57,19 +49,19 @@ primary_slot_name = 'some_replication_slot'
 --------------------------
                           
 (1 row)
-!\retcode rm -rf /tmp/some_isolation2_pg_basebackup;
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
 -- start_ignore
 
 -- end_ignore
 (exited with code 0)
-!\retcode rm -rf /tmp/some_other_isolation2_pg_basebackup;
+!\retcode rm -rf @testtablespace@/some_other_isolation2_pg_basebackup;
 -- start_ignore
 
 -- end_ignore
 (exited with code 0)
 
 -- When pg_basebackup runs without --slot
-select pg_basebackup(address, dbid, port, null, '/tmp/some_isolation2_pg_basebackup') from gp_segment_configuration where content = 0 and role = 'p';
+select pg_basebackup(address, dbid, port, null, '@testtablespace@/some_isolation2_pg_basebackup', false) from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
 ---------------
                
@@ -81,4 +73,12 @@ select pg_basebackup(address, dbid, port, null, '/tmp/some_isolation2_pg_basebac
 -------
  0     
 (1 row)
+
+
+-- Cleanup things we've created
+!\retcode rm -rf /home/adamberlin/workspace/gpdb/src/test/isolation2/testtablespace/some_isolation2_pg_basebackup;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
 

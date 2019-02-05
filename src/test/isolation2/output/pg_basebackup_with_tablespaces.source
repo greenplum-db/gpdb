@@ -1,0 +1,67 @@
+include: helpers/gp_management_utils_helpers.sql;
+CREATE
+
+-- Given a segment with a database that has a tablespace
+!\retcode mkdir -p @testtablespace@/some_isolation2_pg_basebackup_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
+drop tablespace if exists some_isolation2_pg_basebackup_tablespace;
+DROP
+create tablespace some_isolation2_pg_basebackup_tablespace location '@testtablespace@/some_isolation2_pg_basebackup_tablespace';
+CREATE
+
+-- And a database using the tablespace
+drop database if exists some_database_with_tablespace;
+DROP
+create database some_database_with_tablespace tablespace some_isolation2_pg_basebackup_tablespace;
+CREATE
+
+-- When we create a full backup
+select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false) from gp_segment_configuration where content = 0 and role = 'p';
+ pg_basebackup 
+---------------
+               
+(1 row)
+
+-- Then we should have a backup of the source segment files in the newly created target tablespace
+select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db100/');
+ count_of_items_in_directory 
+-----------------------------
+ 1                           
+(1 row)
+
+-- When we create a full backup using force overwrite
+select pg_basebackup(address, 200, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', true) from gp_segment_configuration where content = 0 and role = 'p';
+ pg_basebackup 
+---------------
+               
+(1 row)
+
+-- Then we should have a backup of the source segment files in the newly created target tablespace
+select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db200/');
+ count_of_items_in_directory 
+-----------------------------
+ 1                           
+(1 row)
+
+
+-- Cleanup things we've created
+0U: select pg_drop_replication_slot('some_replication_slot');
+ pg_drop_replication_slot 
+--------------------------
+                          
+(1 row)
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup_tablespace;
+-- start_ignore
+
+-- end_ignore
+(exited with code 0)
+
