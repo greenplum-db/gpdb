@@ -76,7 +76,7 @@ select pg_basebackup(address, dbid, port, null, '@testtablespace@/some_isolation
 
 
 -- Cleanup things we've created
-!\retcode rm -rf /home/adamberlin/workspace/gpdb/src/test/isolation2/testtablespace/some_isolation2_pg_basebackup;
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
 -- start_ignore
 
 -- end_ignore
