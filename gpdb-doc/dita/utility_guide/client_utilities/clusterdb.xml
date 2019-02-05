@@ -16,8 +16,8 @@ SQL command, and clusters them again on the same index that was last
 used. Tables that have never been clustered are not affected. </p><p><codeph>clusterdb</codeph> is a wrapper around the SQL command <codeph>CLUSTER</codeph>.
 Although clustering a table in this way is supported in Greenplum Database,
 it is not recommended because the <codeph>CLUSTER</codeph> operation
-itself is extremely slow. </p><p>If you do need to order a table in this way to improve your query performance, Greenplum
-        recommends using a <codeph>CREATE TABLE AS</codeph> statement to reorder the table on disk
+itself is extremely slow. </p><p>If you do need to order a table in this way to improve your query performance,
+        use a <codeph>CREATE TABLE AS</codeph> statement to reorder the table on disk
         rather than using <codeph>CLUSTER</codeph>. If you do 'cluster' a table in this way, then
           <codeph>clusterdb</codeph> would not be relevant.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Cluster all databases. </pd></plentry><plentry><pt>[-d | --dbname] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt><pd>Specifies the name of the database to be clustered. If this is not
 specified, the database name is read from the environment variable <codeph>PGDATABASE</codeph>.

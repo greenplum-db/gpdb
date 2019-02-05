@@ -20,8 +20,9 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>vacuumdb</codeph> is a utility for cleaning a PostgreSQL database. vacuumdb will
-        also generate internal statistics used by the PostgreSQL query optimizer. </p>
+      <p><codeph>vacuumdb</codeph> is a utility for cleaning a Greenplum Database database.
+        <codeph>vacuumdb</codeph> will
+        also generate internal statistics used by the Greenplum Database query optimizer.</p>
       <p><codeph>vacuumdb</codeph> is a wrapper around the SQL command <codeph>VACUUM</codeph>.
         There is no effective difference between vacuuming databases via this utility and via other
         methods for accessing the server. </p>
