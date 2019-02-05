@@ -109,7 +109,7 @@
           </tbody>
         </tgroup>
       </table>
-      <note id="lock_note">Greenplum Database acquires the more restrictive
+      <note id="lock_note">By default, Greenplum Database acquires the more restrictive
           <codeph>EXCLUSIVE</codeph> lock (rather than <codeph>ROW EXCLUSIVE</codeph> in PostgreSQL)
         for <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and <codeph>SELECT...FOR
           UPDATE</codeph>.<p>When the Global Deadlock Detector is enabled, the lock mode for
@@ -380,7 +380,7 @@
       <ul id="ul_trv_qqr_qgb">
         <li>Concurrent update operations on a table distribution key</li>
         <li>Concurrent update operations where a subplan in a query plan contains a motion
-          operation.</li>
+          operation</li>
       </ul>
       <p>When the Global Deadlock Detector is disabled, Greenplum Database executes the concurrent
         operations serially. </p>

@@ -164,8 +164,8 @@
             <title>Notes</title>
             <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires <codeph>SELECT</codeph>
                 privileges on the target table. All other forms of <codeph>LOCK</codeph> require
-                    <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or
-                <codeph>TRUNCATE</codeph>privileges.</p>
+                    <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>TRUNCATE</codeph>
+                privileges.</p>
             <p><codeph>LOCK TABLE</codeph> is useless outside of a transaction block: the lock would
                 be held only to the completion of the <codeph>LOCK</codeph> statement. Therefore,
                 Greenplum Database reports an error if <codeph>LOCK</codeph> is used outside of a
