@@ -4,7 +4,6 @@
 <topic id="topic1">
   <title id="kt20941">gpexpand</title>
   <body>
-    <draft-comment author="msk">GPDB 6 - online expand</draft-comment>
     <p>Expands an existing Greenplum Database across new hosts in the system.</p>
     <section id="section2">
       <title>Synopsis</title>
@@ -69,8 +68,6 @@
         to rebalance the data across the old and new segment instances.</p>
       <note>Data redistribution should be performed during low-use hours. Redistribution can divided
         into batches over an extended period.</note>
-      <draft-comment author="msk">Reference to time is for default expand method. mention
-        gp_expand_method GUC. Recommendations? </draft-comment>
       <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
         options. If you specify an end time or duration, then the utility redistributes tables in

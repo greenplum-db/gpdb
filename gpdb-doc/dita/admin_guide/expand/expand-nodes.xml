@@ -6,7 +6,6 @@
   <shortdesc>Verify your new host systems are ready for integration into the existing Greenplum
     system. </shortdesc>
   <body>
-    <draft-comment author="msk">GPDB 6 updates for online expand</draft-comment>
     <p>To prepare new host systems for expansion, install the Greenplum Database software binaries,
       exchange the required SSH keys, and run performance tests. </p>
     <p>Run performance tests first on the new hosts and then all hosts. Run the tests on all hosts

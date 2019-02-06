@@ -6,8 +6,6 @@
   <shortdesc>Use the <codeph>gpexpand</codeph> utility to create and initialize the new segment
     instances and create the expansion schema. </shortdesc>
   <body>
-    <draft-comment author="msk">GPDB 6 -online expand <p>remove change of distribution
-      policy</p></draft-comment>
     <p>The first time you run <codeph><xref href="../../utility_guide/admin_utilities/gpexpand.xml"
           >gpexand</xref></codeph> with a valid input file it creates and initializes segment
       instances and creates the expansion schema. After these steps are completed, running
@@ -220,7 +218,6 @@ sdw5:sdw5-1:60012:/gpdata/mirror/gp10:14:10:m</codeblock>
   <topic id="topic27" xml:lang="en">
     <title>Rolling Back a Failed Expansion Setup</title>
     <body>
-      <draft-comment author="msk">Is rollback true for online expand?</draft-comment>
       <p>You can roll back an expansion setup operation (adding segment instances and segment hosts)
         only if the operation fails. </p>
       <p>If the expansion fails during the initialization step, while the database is down, you must

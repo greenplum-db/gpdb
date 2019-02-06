@@ -59,8 +59,6 @@
   <topic id="topic30" xml:lang="en">
     <title>Redistributing Tables Using gpexpand</title>
     <body>
-      <draft-comment author="msk">There are two redistribute methods see GUC
-        gp_expand_method</draft-comment>
       <section id="no162282">
         <title>To redistribute tables with gpexpand</title>
         <ol>

@@ -4,7 +4,6 @@
 <topic id="topic1" xml:lang="en">
   <title id="hx156255">pg_tablespace</title>
   <body>
-    <draft-comment author="msk">6.0 remove spclocation, spcfsoid add spcoptions</draft-comment>
     <p>The <codeph>pg_tablespace</codeph> system catalog table stores information about the
       available tablespaces. Tables can be placed in particular tablespaces to aid administration of
       disk layout. Unlike most system catalogs, <codeph>pg_tablespace</codeph> is shared across all
