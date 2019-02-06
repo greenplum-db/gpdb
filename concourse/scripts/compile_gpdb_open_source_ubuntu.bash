@@ -31,7 +31,7 @@ function build_gpdb() {
         # TODO: remove this flag after adding zstd to the ubuntu build images
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
         CWD=$(pwd)
-        LD_LIBRARY_PATH=${CWD}/depends/build/lib CC=$(which gcc) CXX=$(which g++) ./configure --enable-mapreduce --enable-orafce --with-gssapi --with-perl --with-libxml \
+        LD_LIBRARY_PATH=${CWD}/depends/build/lib ./configure --enable-mapreduce --enable-orafce --with-gssapi --with-perl --with-libxml \
           --with-python \
           --with-libraries=${CWD}/depends/build/lib \
           --with-includes=${CWD}/depends/build/include \
