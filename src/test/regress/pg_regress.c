@@ -119,7 +119,6 @@ static _stringlist *extraroles = NULL;
 static _stringlist *extra_install = NULL;
 static char *initfile = NULL;
 static char *aodir = NULL;
-static char *resgroupdir = NULL;
 static char *config_auth_datadir = NULL;
 static bool  ignore_plans = false;
 
@@ -822,6 +821,7 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 				   *outfile;
 		char		line[1024];
 		bool		has_tokens = false;
+		struct stat fst;
 
 		if (aodir && strncmp(*name, aodir, strlen(aodir)) == 0 &&
 			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
@@ -832,8 +832,16 @@ convert_sourcefiles_in(char *source_subdir, char *dest_dir, char *dest_subdir, c
 			continue;
 		}
 
-		if (resgroupdir && strncmp(*name, resgroupdir, strlen(resgroupdir)) == 0 &&
-			(strlen(*name) < 8 || strcmp(*name + strlen(*name) - 7, ".source") != 0))
+		snprintf(srcfile, MAXPGPATH, "%s/%s",  indir, *name);
+		if (stat(srcfile, &fst) < 0)
+		{
+			fprintf(stderr, _("\n%s: stat failed for \"%s\"\n"),
+					progname, srcfile);
+			exit(2);
+		}
+
+		/* recurse if it's a directory */
+		if (S_ISDIR(fst.st_mode))
 		{
 			snprintf(srcfile, MAXPGPATH, "%s/%s", source_subdir, *name);
 			snprintf(destfile, MAXPGPATH, "%s/%s", dest_subdir, *name);
@@ -2713,7 +2721,6 @@ help(void)
     printf(_(" --init-file=GPD_INIT_FILE  init file to be used for gpdiff\n"));
 	printf(_("  --ao-dir=DIR              directory name prefix containing generic\n"));
 	printf(_("                            UAO row and column tests\n"));
-	printf(_("  --resgroup-dir=DIR        directory name prefix containing resgroup tests\n"));
 	printf(_("  --ignore-plans            ignore any explain plan diffs\n"));
 	printf(_("\n"));
 	printf(_("Options for \"temp-install\" mode:\n"));
@@ -2764,12 +2771,11 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
 		{"load-extension", required_argument, NULL, 22},
 		{"extra-install", required_argument, NULL, 23},
 		{"config-auth", required_argument, NULL, 24},
-        {"init-file", required_argument, NULL, 25},
-        {"ao-dir", required_argument, NULL, 26},
-        {"resgroup-dir", required_argument, NULL, 27},
-        {"exclude-tests", required_argument, NULL, 28},
-		{"ignore-plans", no_argument, NULL, 29},
-		{"prehook", required_argument, NULL, 30},
+		{"init-file", required_argument, NULL, 25},
+		{"ao-dir", required_argument, NULL, 26},
+		{"exclude-tests", required_argument, NULL, 27},
+		{"ignore-plans", no_argument, NULL, 28},
+		{"prehook", required_argument, NULL, 29},
 		{NULL, 0, NULL, 0}
 	};
 
@@ -2894,15 +2900,12 @@ regression_main(int argc, char *argv[], init_function ifunc, test_function tfunc
                 aodir = strdup(optarg);
                 break;
             case 27:
-                resgroupdir = strdup(optarg);
-                break;
-            case 28:
                 split_to_stringlist(strdup(optarg), ", ", &exclude_tests);
                 break;
-			case 29:
+			case 28:
 				ignore_plans = true;
 				break;
-			case 30:
+			case 29:
 				prehook = strdup(optarg);
 				break;
 			default:
