@@ -7,7 +7,10 @@ if [ ! -f "/opt/gpdb/greenplum_path.sh" ]; then
 		software-properties-common \
 		python-software-properties \
 		less \
-		ssh
+		ssh \
+		sudo \
+		time \
+		libzstd1-dev
 	add-apt-repository -y ppa:greenplum/db
 	apt update
 

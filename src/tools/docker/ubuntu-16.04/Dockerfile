@@ -9,7 +9,7 @@ RUN groupadd -r postgres --gid=999 && useradd -m -r -g postgres --uid=999 postgr
 
 # Install initial dependencies
 RUN apt-get update \
- && apt-get install -y dirmngr software-properties-common python-software-properties less ssh sudo
+ && apt-get install -y dirmngr software-properties-common python-software-properties less ssh sudo time libzstd1-dev
 
 # Install GreenPlum
 RUN wget -qO- https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
