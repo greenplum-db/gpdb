@@ -54,6 +54,10 @@ select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_baseback
 --------------------------
                           
 (1 row)
+drop database some_database_with_tablespace;
+DROP
+drop tablespace some_isolation2_pg_basebackup_tablespace;
+DROP
 !\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
 -- start_ignore
 

@@ -25,6 +25,8 @@ select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_baseback
 
 -- Cleanup things we've created
 0U: select pg_drop_replication_slot('some_replication_slot');
+drop database some_database_with_tablespace;
+drop tablespace some_isolation2_pg_basebackup_tablespace;
 !\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup;
 !\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup_tablespace;
 
