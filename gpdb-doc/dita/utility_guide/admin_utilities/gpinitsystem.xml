@@ -26,7 +26,7 @@
 
 <b>gpinitsystem</b> <b>-v | --version</b>
 
-<b>gpinitsystem</b> <b>-? | -h</b></codeblock>
+<b>gpinitsystem</b> <b>-? | --help</b></codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -271,7 +271,7 @@
                     <pd>Print the <codeph>gpinitsystem</codeph> version and exit.</pd>
                 </plentry>
                 <plentry>
-                    <pt>-? | -h</pt>
+                    <pt>-? | --help</pt>
                     <pd>Show help about <codeph>gpinitsystem</codeph> command line arguments, and exit.</pd>
                 </plentry>
             </parml>
