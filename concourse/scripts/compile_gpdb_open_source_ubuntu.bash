@@ -32,6 +32,7 @@ function build_gpdb() {
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --without-zstd"
         CWD=$(pwd)
         LD_LIBRARY_PATH=${CWD}/depends/build/lib ./configure \
+          --enable-debug \
           --enable-mapreduce \
           --enable-orafce \
           --with-gssapi \
@@ -41,7 +42,8 @@ function build_gpdb() {
           --with-libraries=${CWD}/depends/build/lib \
           --with-includes=${CWD}/depends/build/include \
           --prefix=${GREENPLUM_INSTALL_DIR} \
-          ${CONFIGURE_FLAGS}
+          ${CONFIGURE_FLAGS} \
+          CFLAGS="-O3 -fno-omit-frame-pointer"
         make -j4 -s
         LD_LIBRARY_PATH=${CWD}/depends/build/lib make install
     popd
