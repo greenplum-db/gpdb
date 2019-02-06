@@ -7,97 +7,96 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
 TRIGGER | TRUNCATE } [,...] | ALL [PRIVILEGES] }
-    ON { [TABLE] <varname>tablename</varname> [, ...]
-         | ALL TABLES IN SCHEMA <varname>schemaname</varname> [, ...] }
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON { [TABLE] <varname>table_name</varname> [, ...]
+         | ALL TABLES IN SCHEMA <varname>schema_name</varname> [, ...] }
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...] [ WITH GRANT OPTION ] 
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <varname>columnname</varname> [, ...] )
     [,...] | ALL [ PRIVILEGES ] ( <varname>columnname</varname> [, ...] ) }
-    ON [ TABLE ] <varname>tablename</varname> [, ...]
-    TO { <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    ON [ TABLE ] <varname>table_name</varname> [, ...]
+    TO { <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { {USAGE | SELECT | UPDATE} [,...] | ALL [PRIVILEGES] }
-    ON { SEQUENCE <varname>sequencename</varname> [, ...]
-         | ALL SEQUENCES IN SCHEMA <varname>schemaname</varname> [, ...] }
-    TO { <varname>rolename</varname> | PUBLIC } [, ...] [WITH GRANT OPTION]
+    ON { SEQUENCE <varname>sequence_name</varname> [, ...]
+         | ALL SEQUENCES IN SCHEMA <varname>schema_name</varname> [, ...] }
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ] 
 
 GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [,...] | ALL 
 [PRIVILEGES] }
-    ON DATABASE <varname>dbname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON DATABASE <varname>database_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN DATA WRAPPER <varname>fdwname</varname> [, ...]
-    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    ON FOREIGN DATA WRAPPER <varname>fdw_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
-    ON FOREIGN SERVER <varname>servername</varname> [, ...]
-    TO { [ GROUP ] <varname>rolename</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+    ON FOREIGN SERVER <varname>server_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { EXECUTE | ALL [PRIVILEGES] }
-    ON { FUNCTION <varname>funcname</varname> ( [ [<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...] 
+    ON { FUNCTION <varname>function_name</varname> ( [ [ <varname>argmode</varname> ] [ <varname>argname</varname> ] <varname>argtype</varname> [, ...] 
 ] ) [, ...]
-        | ALL FUNCTIONS IN SCHEMA <varname>schemaname</varname> [, ...] }
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+        | ALL FUNCTIONS IN SCHEMA <varname>schema_name</varname> [, ...] }
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [PRIVILEGES] }
-    ON LANGUAGE <varname>langname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON LANGUAGE <varname>lang_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
-GRANT { {CREATE | USAGE} [,...] | ALL [PRIVILEGES] }
-    ON SCHEMA <varname>schemaname</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+GRANT { { CREATE | USAGE } [,...] | ALL [PRIVILEGES] }
+    ON SCHEMA <varname>schema_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC}  [, ...] [ WITH GRANT OPTION ]
 
 GRANT { CREATE | ALL [PRIVILEGES] }
-    ON TABLESPACE <varname>tablespacename</varname> [, ...]
-    TO {<varname>rolename</varname> | PUBLIC} [, ...] [WITH GRANT OPTION]
+    ON TABLESPACE <varname>tablespace_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT <varname>parent_role</varname> [, ...] 
     TO <varname>member_role</varname> [, ...] [WITH ADMIN OPTION]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
     ON PROTOCOL <varname>protocolname</varname>
-    TO <varname>username</varname></codeblock></section><section id="section3"><title>Description</title><p>The <codeph>GRANT</codeph> command has two basic variants: one that
+    TO <varname>username</varname></codeblock></section><section id="section3"><title>Description</title>
+      <p>Greenplum Database unifies the concepts of users and groups into a single kind of entity
+        called a role. It is therefore not necessary to use the keyword <codeph>GROUP</codeph> to
+        identify whether a grantee is a user or a group. <codeph>GROUP</codeph> is still allowed in
+        the command, but it is a noise word.</p><p>The <codeph>GRANT</codeph> command has two basic variants: one that
 grants privileges on a database object (table, column, view, foreign table, sequence, database, foreign-data wrapper, foreign server,
 function, procedural language, schema, or tablespace), and one that grants
-membership in a role.</p><sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the <codeph>GRANT</codeph> command gives specific privileges
-on a database object to one or more roles. These privileges are added
-to those already granted, if any. </p>
-  <p>The <codeph>GRANT</codeph> command also includes an option to grant
-    privileges on all objects of the same type within one or more schemas.
-    While this functionality is currently supported only for tables, sequences,
-    and functions, note that <codeph>ALL TABLES</codeph> is considered to
-    include views and foreign tables.</p>
-  <p>The keyword <codeph>PUBLIC</codeph> indicates that the privileges
-are to be granted to all roles, including those that may be created later.
-<codeph>PUBLIC</codeph> may be thought of as an implicitly defined group-level
-role that always includes all roles. Any particular role will have the
-sum of privileges granted directly to it, privileges granted to any role
-it is presently a member of, and privileges granted to <codeph>PUBLIC</codeph>.
-</p><p>If <codeph>WITH GRANT OPTION</codeph> is specified, the recipient
-of the privilege may in turn grant it to others. Without a grant option,
-the recipient cannot do that. Grant options cannot be granted to <codeph>PUBLIC</codeph>.
-</p><p>There is no need to grant privileges to the owner of an object (usually
-the role that created it), as the owner has all privileges by default.
-The right to drop an object, or to alter its definition in any way is
-not described by a grantable privilege; it is inherent in the owner,
-and cannot be granted or revoked. The owner implicitly has all grant
-options for the object, too.</p>
-  <p>Greenplum Database grants default privileges on some types of objects
-    to <codeph>PUBLIC</codeph>. No privileges are granted to <codeph>PUBLIC</codeph>
-    by default on tables, table columns, sequences, foreign data wrappers,
-    foreign servers, large objects, schemas, or tablespaces. For other types
-    of objects, the default privileges granted to <codeph>PUBLIC</codeph>
-    are as follows:</p>
-    <ul>
-      <li><codeph>CONNECT</codeph> and <codeph>TEMPORARY</codeph> (create temporary
-        tables) privileges for databases,</li>
-      <li><codeph>EXECUTE</codeph> privilege for functions, and</li>
-      <li><codeph>USAGE</codeph> privilege for languages and data types (including domains).</li>
-    </ul>
-  <p>The object owner can, of course, <codeph>REVOKE</codeph> both default and
-    expressly granted privileges.</p>
-</sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
+membership in a role.</p><sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the
+            <codeph>GRANT</codeph> command gives specific privileges on a database object to one or
+  more roles. These privileges are added to those already granted, if any. </p><p>There is also an option to grant privileges on all objects of the same
+    type within one or more schemas.  This functionality is currently supported
+    only for tables, sequences, and functions (but note that <codeph>ALL
+      TABLES</codeph> is considered to include views).</p><p>The
+          keyword <codeph>PUBLIC</codeph> indicates that the privileges are to be granted to all
+          roles, including those that may be created later. <codeph>PUBLIC</codeph> may be thought
+          of as an implicitly defined group-level role that always includes all roles. Any
+          particular role will have the sum of privileges granted directly to it, privileges granted
+          to any role it is presently a member of, and privileges granted to
+          <codeph>PUBLIC</codeph>. </p><p>If <codeph>WITH GRANT OPTION</codeph> is specified, the
+          recipient of the privilege may in turn grant it to others. Without a grant option, the
+          recipient cannot do that. Grant options cannot be granted to <codeph>PUBLIC</codeph>.
+          </p><p>There is no need to grant privileges to the owner of an object (usually the role
+          that created it), as the owner has all privileges by default. (The owner could, however,
+          choose to revoke some of his own privileges for safety.)</p><p>The right to drop an
+          object, or to alter its definition in any way is not treated as a grantable privilege; it
+          is inherent in the owner, and cannot be granted or revoked.  (However, a similar effect
+          can be obtained by granting or revoking membership in the role that owns the object; see
+          below.) The owner implicitly has all grant options for the object, too.</p><p>Greenplum
+          Database grants default privileges on some types of objects to <codeph>PUBLIC</codeph>. No
+          privileges are granted to <codeph>PUBLIC</codeph> by default on tables, table columns,
+          sequences, foreign data wrappers, foreign servers, large objects, schemas, or tablespaces.
+          For other types of objects, the default privileges granted to <codeph>PUBLIC</codeph> are
+          as follows:</p><ul>
+          <li><codeph>CONNECT</codeph> and <codeph>TEMPORARY</codeph> (create temporary tables)
+            privileges for databases,</li>
+          <li><codeph>EXECUTE</codeph> privilege for functions, and</li>
+          <li><codeph>USAGE</codeph> privilege for languages and data types (including
+            domains).</li>
+        </ul><p>The object owner can, of course, <codeph>REVOKE</codeph> both default and expressly
+          granted privileges.</p></sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
 in a role to one or more other roles. Membership in a role is significant
 because it conveys the privileges granted to a role to each of its members.
 </p><p>If <codeph>WITH ADMIN OPTION</codeph> is specified, the member may

@@ -7,7 +7,14 @@
     <p id="sql_command_desc">Shows the query plan of a statement.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
+      <codeblock id="sql_command_synopsis">EXPLAIN [ ( <varname>option</varname> [, ...] ) ] <varname>statement</varname>
+EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
+      <p>where option can be one
+        of:<codeblock>    ANALYZE [ <varname>boolean</varname> ]
+    VERBOSE [ <varname>boolean</varname> ]
+    COSTS [ <varname>boolean</varname> ]
+    BUFFERS [ <varname>boolean</varname> ]
+    FORMAT { TEXT | XML | JSON | YAML }</codeblock></p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -75,26 +82,67 @@ workfile
             <i>&lt;time&gt; to end</i>.</li>
       </ul>
       <note type="important">Keep in mind that the statement is actually executed when
-          <codeph>EXPLAIN ANALYZE</codeph> is used. Although <codeph>EXPLAIN ANALYZE</codeph> will
-        discard any output that a <codeph>SELECT</codeph> would return, other side effects of the
-        statement will happen as usual. If you wish to use <codeph>EXPLAIN ANALYZE</codeph> on a DML
-        statement without letting the command affect your data, use this
+          <codeph>ANALYZE</codeph> is used. Although <codeph>EXPLAIN ANALYZE</codeph> will discard
+        any output that a <codeph>SELECT</codeph> would return, other side effects of the statement
+        will happen as usual. If you wish to use <codeph>EXPLAIN ANALYZE</codeph> on a DML statement
+        without letting the command affect your data, use this
         approach:<codeblock>BEGIN;
 EXPLAIN ANALYZE ...;
 ROLLBACK;</codeblock></note>
-      <p><codeph>EXPLAIN VERBOSE</codeph> includes the output column list for each node in the plan
-        tree.</p>
+      <p>Only the <codeph>ANALYZE</codeph> and <codeph>VERBOSE</codeph> options can be specified,
+        and only in that order, without surrounding the option list in parentheses.</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
       <parml>
         <plentry>
           <pt>ANALYZE</pt>
-          <pd>Carry out the command and show the actual run times. </pd>
+          <pd>Carry out the command and show the actual run times. This parameter defaults to
+              <codeph>FALSE</codeph> if you omit it; specify <codeph>ANALYZE true</codeph> to enable
+            it. </pd>
         </plentry>
         <plentry>
           <pt>VERBOSE</pt>
-          <pd>Include the output column list for each node in the plan tree.</pd>
+          <pd>Display additional information regarding the plan. Specifically, include the output
+            column list for each node in the plan tree, schema-qualify table and function names,
+            always label variables in expressions with their range table alias, and always print the
+            name of each trigger for which statistics are displayed. This parameter defaults to
+              <codeph>FALSE</codeph>if you omit it; specify <codeph>VERBOSE true</codeph> to enable
+            it.</pd>
+        </plentry>
+        <plentry>
+          <pt>COSTS</pt>
+          <pd>Include information on the estimated startup and total cost of each plan node, as well
+            as the estimated number of rows and the estimated width of each row. This parameter
+            defaults to <codeph>TRUE</codeph> if you omit it; specify <codeph>COSTS false</codeph>
+            to disable it.</pd>
+        </plentry>
+        <plentry>
+          <pt>BUFFERS</pt>
+          <pd>Include information on buffer usage. Specifically, include the number of shared blocks
+            hits, reads, and writes, the number of local blocks hits, reads, and writes, and the
+            number of temp blocks reads and writes. Shared blocks, local blocks, and temp blocks
+            contain tables and indexes, temporary tables and temporary indexes, and disk blocks used
+            in sort and materialized plans, respectively. The number of blocks shown for an
+            upper-level node includes those used by all its child nodes. In text format, only
+            non-zero values are printed. This parameter may only be used with the
+              <codeph>ANALYZE</codeph> parameter. This parameter defaults to <codeph>FALSE</codeph>
+            if you omit it; specify <codeph>BUFFERS true</codeph> to enable it.</pd>
+        </plentry>
+        <plentry>
+          <pt>FORMAT</pt>
+          <pd>Specify the output format, which can be <codeph>TEXT</codeph>, <codeph>XML</codeph>,
+              <codeph>JSON</codeph>, or <codeph>YAML</codeph>. Non-text output contains the same
+            information as the text output format, but is easier for programs to parse. This
+            parameter defaults to <codeph>TEXT</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>boolean</varname></pt>
+          <pd>Specifies whether the selected option should be turned on or off. You can write
+              <codeph>TRUE</codeph>, <codeph>ON</codeph>, or <codeph>1</codeph> to enable the
+            option, and <codeph>FALSE</codeph>, <codeph>OFF</codeph>, or <codeph>0</codeph> to
+            disable it. The boolean value can also be omitted, in which case <codeph>TRUE</codeph>
+            is assumed.</pd>
         </plentry>
         <plentry>
           <pt><varname>statement</varname></pt>

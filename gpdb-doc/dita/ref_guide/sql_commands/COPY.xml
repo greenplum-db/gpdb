@@ -7,34 +7,29 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>tablename</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
-     [ [WITH]  
-       [ON SEGMENT]
-       [BINARY]
-       [OIDS]
-       [HEADER]
-       [DELIMITER [ AS ] '<varname>delimiter</varname>']
-       [NULL [ AS ] '<varname>null string</varname>']
-       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
-       [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
-       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
-            [FORCE NOT NULL <varname>column</varname> [, ...]]
-       [FILL MISSING FIELDS]
-       [[LOG ERRORS]  
-       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+      <codeblock id="sql_command_synopsis">COPY <varname>table_name</varname> [(<varname>column</varname> [, ...])] 
+     FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+     [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
+     [ ON SEGMENT ]
 
-COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
-      [ [WITH] 
-        [ON SEGMENT]
-        [BINARY]
-        [OIDS]
-        [HEADER]
-        [DELIMITER [ AS ] 'delimiter']
-        [NULL [ AS ] 'null string']
-        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
-        [CSV [QUOTE [ AS ] 'quote'] 
-             [FORCE QUOTE column [, ...]] | * ]
-      [IGNORE EXTERNAL PARTITIONS ]</codeblock>
+COPY { <varname>table_name</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
+     TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+     [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
+     [ ON SEGMENT ]</codeblock>
+      <p>where <varname>option</varname> can be one
+        of:<codeblock>
+FORMAT <varname>format_name</varname>
+OIDS [ <varname>boolean</varname> ]
+DELIMITER '<varname>delimiter_character</varname>'
+NULL '<varname>null string</varname>'
+HEADER [ <varname>boolean</varname> ]
+QUOTE '<varname>quote_character</varname>'
+ESCAPE '<varname>escape_character</varname>'
+FORCE_QUOTE { ( <varname>column</varname> [, ...] ) | * }
+FORCE_NOT_NULL ( <varname>column</varname> [, ...] )
+FILL MISSING FIELDS
+LOG ERRORS [ SEGMENT REJECT LIMIT <varname>count</varname> [ ROWS | PERCENT ] ]
+IGNORE EXTERNAL PARTITIONS</codeblock></p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -102,7 +97,7 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
       <parml>
         <plentry>
           <pt>
-            <varname>tablename</varname>
+            <varname>table_name</varname>
           </pt>
           <pd>The name (optionally schema-qualified) of an existing table. </pd>
         </plentry>
@@ -124,9 +119,12 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
         </plentry>
         <plentry>
           <pt>
-            <varname>file</varname>
+            <varname>filename</varname>
           </pt>
-          <pd>The absolute path name of the input or output file.</pd>
+          <pd>The absolute path name of the input or output file. An input file name can be an
+            absolute or relative path, but an output file name must be an absolute path. Windows
+            users might need to use an <codeph>E''</codeph> string and double any backslashes used
+            in the path name.</pd>
         </plentry>
         <plentry>
           <pt>PROGRAM '<varname>command</varname>'</pt>
@@ -157,6 +155,80 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
           <pt>STDOUT</pt>
           <pd>Specifies that output goes to the client application. The <codeph>ON SEGMENT</codeph>
             clause is not supported with <codeph>STDOUT</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt><varname>boolean</varname></pt>
+          <pd>Specifies whether the selected option should be turned on or off. You can write
+              <codeph>TRUE</codeph>, <codeph>ON</codeph>, or <codeph>1</codeph> to enable the
+            option, and <codeph>FALSE</codeph>, <codeph>OFF</codeph>, or <codeph>0</codeph> to
+            disable it. The boolean value can also be omitted, in which case <codeph>TRUE</codeph>
+            is assumed.</pd>
+        </plentry>
+        <plentry>
+          <pt>FORMAT</pt>
+          <pd>Selects the data format to be read or written: <codeph>text</codeph>,
+              <codeph>csv</codeph> (Comma Separated Values), or <codeph>binary</codeph>. The default
+            is <codeph>text</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>OIDS</pt>
+          <pd>Specifies copying the OID for each row. (An error is raised if OIDS is specified for a
+            table that does not have OIDs, or in the case of copying a query.) </pd>
+        </plentry>
+        <plentry>
+          <pt>DELIMITER </pt>
+          <pd>Specifies the character that separates columns within each row (line) of the file. The
+            default is a tab character in <codeph>text</codeph> format, a comma in
+              <codeph>CSV</codeph> format. This must be a single one-byte character. This option is
+            not allowed when using <codeph>binary</codeph> format.</pd>
+        </plentry>
+        <plentry>
+          <pt>NULL</pt>
+          <pd>Specifies the string that represents a null value. The default is <codeph>\N</codeph>
+            (backslash-N) in <codeph>text</codeph> format, and an unquoted empty string in
+              <codeph>CSV</codeph> format. You might prefer an empty string even in
+              <codeph>text</codeph> format for cases where you don't want to distinguish nulls from
+            empty strings. This option is not allowed when using <codeph>binary</codeph>
+              format.<note>When using <codeph>COPY FROM</codeph>, any data item that matches this
+              string will be stored as a null value, so you should make sure that you use the same
+              string as you used with <codeph>COPY TO</codeph>.</note></pd>
+        </plentry>
+        <plentry>
+          <pt>HEADER</pt>
+          <pd>Specifies that a file contains a header line with the names of each column in the
+            file. On output, the first line contains the column names from the table, and on input,
+            the first line is ignored. This option is allowed only when using <codeph>CSV</codeph>
+            format.</pd>
+        </plentry>
+        <plentry>
+          <pt>QUOTE</pt>
+          <pd>Specifies the quoting character to be used when a data value is quoted. The default is
+            double-quote. This must be a single one-byte character. This option is allowed only when
+            using <codeph>CSV</codeph> format.</pd>
+        </plentry>
+        <plentry>
+          <pt>ESCAPE</pt>
+          <pd>Specifies the character that should appear before a data character that matches the
+              <codeph>QUOTE</codeph> value. The default is the same as the <codeph>QUOTE</codeph>
+            value (so that the quoting character is doubled if it appears in the data). This must be
+            a single one-byte character. This option is allowed only when using <codeph>CSV</codeph>
+            format. </pd>
+        </plentry>
+        <plentry>
+          <pt>FORCE_QUOTE</pt>
+          <pd>Forces quoting to be used for all non-<codeph>NULL</codeph> values in each specified
+            column. <codeph>NULL</codeph> output is never quoted. If <codeph>* </codeph>is
+            specified, non-<codeph>NULL</codeph> values will be quoted in all columns. This option
+            is allowed only in <codeph>COPY TO</codeph>, and only when using <codeph>CSV</codeph>
+            format.</pd>
+        </plentry>
+        <plentry>
+          <pt>FORCE_NOT_NULL</pt>
+          <pd>Do not match the specified columns' values against the null string. In the default
+            case where the null string is empty, this means that empty values will be read as
+            zero-length strings rather than nulls, even when they are not quoted. This option is
+            allowed only in <codeph>COPY FROM</codeph>, and only when using <codeph>CSV</codeph>
+            format.</pd>
         </plentry>
         <plentry>
           <pt>ON SEGMENT</pt>
@@ -207,52 +279,6 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
               format="dita">Notes</xref>.</pd>
         </plentry>
         <plentry>
-          <pt>BINARY</pt>
-          <pd>Causes all data to be stored or read in binary format rather than as text. You cannot
-            specify the <codeph>DELIMITER</codeph>, <codeph>NULL</codeph>, or <codeph>CSV</codeph>
-            options in binary mode. See <xref href="#topic1/section10" format="dita">Binary
-              Format</xref>.</pd>
-          <pd>When copying in binary format, a row of data can be up to 1GB. </pd>
-        </plentry>
-        <plentry>
-          <pt>OIDS</pt>
-          <pd>Specifies copying the OID for each row. (An error is raised if OIDS is specified for a
-            table that does not have OIDs, or in the case of copying a query.) </pd>
-        </plentry>
-        <plentry>
-          <pt>
-            <varname>delimiter</varname>
-          </pt>
-          <pd>The single ASCII character that separates columns within each row (line) of the file.
-            The default is a tab character in text mode, a comma in <codeph>CSV</codeph> mode. </pd>
-        </plentry>
-        <plentry>
-          <pt>
-            <varname>null string</varname>
-          </pt>
-          <pd>The string that represents a null value. The default is <codeph>\N</codeph>
-            (backslash-N) in text mode, and a empty value with no quotes in <codeph>CSV</codeph>
-            mode. You might prefer an empty string even in text mode for cases where you don't want
-            to distinguish nulls from empty strings. When using <codeph>COPY FROM</codeph>, any data
-            item that matches this string will be stored as a null value, so you should make sure
-            that you use the same string as you used with <codeph>COPY TO</codeph>. </pd>
-        </plentry>
-        <plentry>
-          <pt>
-            <varname>escape</varname>
-          </pt>
-          <pd>Specifies the single character that is used for C escape sequences (such as
-              <codeph>\n</codeph>,<codeph>\t</codeph>,<codeph>\100</codeph>, and so on) and for
-            quoting data characters that might otherwise be taken as row or column delimiters. Make
-            sure to choose an escape character that is not used anywhere in your actual column data.
-            The default escape character is <codeph>\</codeph> (backslash) for text files or
-              <codeph>"</codeph> (double quote) for CSV files, however it is possible to specify any
-            other character to represent an escape. It is also possible to disable escaping on
-            text-formatted files by specifying the value '<codeph>OFF'</codeph> as the escape value.
-            This is very useful for data such as web log data that has many embedded backslashes
-            that are not intended to be escapes.</pd>
-        </plentry>
-        <plentry>
           <pt>NEWLINE</pt>
           <pd>Specifies the newline used in your data files — <codeph>LF</codeph> (Line feed, 0x0A),
               <codeph>CR</codeph> (Carriage return, 0x0D), or <codeph>CRLF</codeph> (Carriage return
@@ -264,32 +290,6 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
           <pt>CSV</pt>
           <pd>Selects Comma Separated Value (CSV) mode. See<xref href="#topic1/section9"
               format="dita">CSV Format</xref>.</pd>
-        </plentry>
-        <plentry>
-          <pt>HEADER</pt>
-          <pd>Specifies that a file contains a header line with the names of each column in the
-            file. On output, the first line contains the column names from the table, and on input,
-            the first line is ignored. </pd>
-        </plentry>
-        <plentry>
-          <pt>
-            <varname>quote</varname>
-          </pt>
-          <pd>Specifies the quotation character in CSV mode. The default is double-quote. </pd>
-        </plentry>
-        <plentry>
-          <pt>FORCE QUOTE</pt>
-          <pd>In <codeph>CSV COPY TO</codeph> mode, forces quoting to be used for all
-              non-<codeph>NULL</codeph> values in each specified column. If <codeph>*</codeph>
-              is specified then non-<codeph>NULL</codeph> values will be quoted in all columns.
-              <codeph>NULL</codeph> output is never quoted. </pd>
-        </plentry>
-        <plentry>
-          <pt>FORCE NOT NULL</pt>
-          <pd>In <codeph>CSV COPY FROM</codeph> mode, process each specified column as though it
-            were quoted and hence not a <codeph>NULL</codeph> value. For the default null string in
-              <codeph>CSV</codeph> mode (nothing between two delimiters), this causes missing values
-            to be evaluated as zero-length strings.</pd>
         </plentry>
         <plentry>
           <pt>FILL MISSING FIELDS</pt>
@@ -352,11 +352,16 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
       </p>When the <codeph>ON SEGMENT</codeph> clause is specified, the <codeph>COPY</codeph>
       command does not support specifying a <codeph>SELECT</codeph> statement in the <codeph>COPY
         TO</codeph> command. For example, this command is not
-        supported.<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT</codeblock><p>To
-        copy data from a partitioned table with a leaf child partition that is an external table,
-        use an SQL query to copy the data. For example, if the table <codeph>my_sales</codeph>
-        contains a with a leaf child partition that is an external table, this command <codeph>COPY
-          my_sales TO stdout</codeph> returns an error. This command sends the data to
+          supported.<codeblock>COPY (SELECT * FROM testtbl) TO '/tmp/mytst&lt;SEGID>' ON SEGMENT</codeblock><p><codeph>COPY</codeph>
+        only deals with the specific table named; it does not copy data to or from child tables.
+        Thus for example <codeph>COPY <varname>table</varname> TO</codeph> shows the same data as
+          <codeph>SELECT * FROM ONLY <codeph>table</codeph></codeph>. But <codeph>COPY (SELECT *
+          FROM <varname>table</varname>) TO ...</codeph> can be used to dump all of the data in an
+        inheritance hierarchy.</p><p>Similarly, to copy data from a partitioned table with a leaf
+        child partition that is an external table, use an SQL query to copy the data. For example,
+        if the table <codeph>my_sales</codeph> contains a with a leaf child partition that is an
+        external table, this command <codeph>COPY my_sales TO stdout</codeph> returns an error. This
+        command sends the data to
         stdout:<codeblock>COPY (SELECT * from my_sales ) TO stdout</codeblock></p><p>The
           <codeph>BINARY</codeph> key word causes all data to be stored/read as binary format rather
         than as text. It is somewhat faster than the normal text mode, but a binary-format file is
@@ -377,30 +382,32 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
         isolation mode.</p><p><codeph>COPY</codeph> input and output is affected by
           <codeph>DateStyle</codeph>. To ensure portability to other Greenplum Database
         installations that might use non-default <codeph>DateStyle</codeph> settings,
-          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>.
-            It is also a good idea to avoid dumping
-            data with <varname>IntervalStyle</varname> set to
-            <codeph>sql_standard</codeph>, because negative interval values might be
-              misinterpreted by a server that has a different setting for
-              <varname>IntervalStyle</varname>.        </p><p>When copying XML data from a file in text mode, the server configuration parameter
-            <codeph><xref href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph>
-        affects the validation of the XML data that is copied. If the value is
-          <codeph>content</codeph> (the default), XML data is validated as an XML content fragment.
-        If the parameter value is <codeph>document</codeph>, XML data is validated as an XML
-        document. If the XML data is not valid, <codeph>COPY</codeph> returns an error.</p><p>By
-        default, <codeph>COPY</codeph> stops operation at the first error. This should not lead to
-        problems in the event of a <codeph>COPY TO</codeph>, but the target table will already have
-        received earlier rows in a <codeph>COPY FROM</codeph>. These rows will not be visible or
-        accessible, but they still occupy disk space. This may amount to a considerable amount of
-        wasted disk space if the failure happened well into a large <codeph>COPY FROM</codeph>
-        operation. You may wish to invoke <codeph>VACUUM</codeph> to recover the wasted space.
-        Another option would be to use single row error isolation mode to filter out error rows
-        while still loading good rows. </p><p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command
-        is run, the server configuration parameter <codeph>gp_enable_segment_copy_checking</codeph>
-        controls whether the table distribution policy (from the table <codeph>DISTRIBUTED</codeph>
-        clause) is checked when data is copied into the table. The default is to check the
-        distribution policy. An error is returned if the row of data violates the distribution
-        policy for the segment instance. For information about the parameter, see <xref
+          <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>. It
+        is also a good idea to avoid dumping data with <varname>IntervalStyle</varname> set to
+          <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
+        a server that has a different setting for <varname>IntervalStyle</varname>. </p><p>Input
+        data is interpreted according to the current client encoding, and output data is encoded in
+        the current client encoding, even if the data does not pass through the client but is read
+        from or written to a file directly by the server.</p><p>When copying XML data from a file in
+        text mode, the server configuration parameter <codeph><xref
+            href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph> affects the
+        validation of the XML data that is copied. If the value is <codeph>content</codeph> (the
+        default), XML data is validated as an XML content fragment. If the parameter value is
+          <codeph>document</codeph>, XML data is validated as an XML document. If the XML data is
+        not valid, <codeph>COPY</codeph> returns an error.</p><p>By default, <codeph>COPY</codeph>
+        stops operation at the first error. This should not lead to problems in the event of a
+          <codeph>COPY TO</codeph>, but the target table will already have received earlier rows in
+        a <codeph>COPY FROM</codeph>. These rows will not be visible or accessible, but they still
+        occupy disk space. This may amount to a considerable amount of wasted disk space if the
+        failure happened well into a large <codeph>COPY FROM</codeph> operation. You may wish to
+        invoke <codeph>VACUUM</codeph> to recover the wasted space. Another option would be to use
+        single row error isolation mode to filter out error rows while still loading good rows.
+        </p><p>When a <codeph>COPY FROM...ON SEGMENT</codeph> command is run, the server
+        configuration parameter <codeph>gp_enable_segment_copy_checking</codeph> controls whether
+        the table distribution policy (from the table <codeph>DISTRIBUTED</codeph> clause) is
+        checked when data is copied into the table. The default is to check the distribution policy.
+        An error is returned if the row of data violates the distribution policy for the segment
+        instance. For information about the parameter, see <xref
           href="../config_params/guc_config.xml#topic1"/>. </p><p>Data from a table that is
         generated by a <codeph>COPY TO...ON SEGMENT</codeph> command can be used to restore table
         data with <codeph>COPY FROM...ON SEGMENT</codeph>. However, data restored to the segments is
@@ -460,15 +467,14 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
       <p> File formats supported by <codeph>COPY</codeph>.</p>
       <sectiondiv id="section8">
         <b>Text Format</b>
-        <p>When <codeph>COPY</codeph> is used without the <codeph>BINARY</codeph> or
-            <codeph>CSV</codeph> options, the data read or written is a text file with one line per
-          table row. Columns in a row are separated by the <varname>delimiter</varname> character
-          (tab by default). The column values themselves are strings generated by the output
-          function, or acceptable to the input function, of each attribute's data type. The
-          specified null string is used in place of columns that are null. <codeph>COPY
-            FROM</codeph> will raise an error if any line of the input file contains more or fewer
-          columns than are expected. If <codeph>OIDS</codeph> is specified, the OID is read or
-          written as the first column, preceding the user data columns.</p>
+        <p>When the <codeph>text</codeph> format is used, the data read or written is a text file
+          with one line per table row. Columns in a row are separated by the
+            <varname>delimiter_character</varname> (tab by default). The column values themselves
+          are strings generated by the output function, or acceptable to the input function, of each
+          attribute's data type. The specified null string is used in place of columns that are
+          null. <codeph>COPY FROM</codeph> will raise an error if any line of the input file
+          contains more or fewer columns than are expected. If <codeph>OIDS</codeph> is specified,
+          the OID is read or written as the first column, preceding the user data columns.</p>
         <p>The data file has two reserved characters that have special meaning to
             <codeph>COPY</codeph>:</p>
         <ul>
@@ -495,7 +501,7 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
           <li id="bk138845">vertical bar = |</li>
           <li id="bk138887">backslash = \</li>
         </ul>
-        <p>Your designated <varname>delimiter</varname> character is <codeph>|</codeph> (pipe
+        <p>Your designated <varname>delimiter_character</varname> is <codeph>|</codeph> (pipe
           character), and your designated <varname>escape</varname> character is <codeph>*</codeph>
           (asterisk). The formatted row in your data file would look like this:</p>
         <codeblock>percentage sign = % | vertical bar = <b>*|</b> | backslash = \</codeblock>
@@ -509,25 +515,26 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
       </sectiondiv>
       <sectiondiv id="section9">
         <b>CSV Format</b>
-        <p>This format is used for importing and exporting the Comma Separated Value (CSV) file
-          format used by many other programs, such as spreadsheets. Instead of the escaping used by
-          Greenplum Database standard text mode, it produces and recognizes the common CSV escaping
-          mechanism. </p>
+        <p>This format option is used for importing and exporting the Comma Separated Value (CSV)
+          file format used by many other programs, such as spreadsheets. Instead of the escaping
+          rules used by Greenplum Database standard text format, it produces and recognizes the
+          common CSV escaping mechanism. </p>
         <p>The values in each record are separated by the <codeph>DELIMITER</codeph> character. If
           the value contains the delimiter character, the <codeph>QUOTE</codeph> character, the
             <codeph>ESCAPE</codeph> character (which is double quote by default), the
             <codeph>NULL</codeph> string, a carriage return, or line feed character, then the whole
           value is prefixed and suffixed by the <codeph>QUOTE</codeph> character. You can also use
-            <codeph>FORCE QUOTE</codeph> to force quotes when outputting non-<codeph>NULL</codeph>
+            <codeph>FORCE_QUOTE</codeph> to force quotes when outputting non-<codeph>NULL</codeph>
           values in specific columns. </p>
         <p>The CSV format has no standard way to distinguish a <codeph>NULL</codeph> value from an
           empty string. Greenplum Database <codeph>COPY</codeph> handles this by quoting. A
-            <codeph>NULL</codeph> is output as the <codeph>NULL</codeph> string and is not quoted,
-          while a data value matching the <codeph>NULL</codeph> string is quoted. Therefore, using
-          the default settings, a <codeph>NULL</codeph> is written as an unquoted empty string,
-          while an empty string is written with double quotes (""). Reading values follows similar
-          rules. You can use <codeph>FORCE NOT NULL</codeph> to prevent <codeph>NULL</codeph> input
-          comparisons for specific columns.</p>
+            <codeph>NULL</codeph> is output as the <codeph>NULL</codeph> parameter string and is not
+          quoted, while a non-<codeph>NULL</codeph> value matching the <codeph>NULL</codeph> string
+          is quoted. For example, with the default settings, a <codeph>NULL</codeph> is written as
+          an unquoted empty string, while an empty string data value is written with double quotes
+            (<codeph>""</codeph>). Reading values follows similar rules. You can use
+            <codeph>FORCE_NOT_NULL</codeph> to prevent <codeph>NULL</codeph> input comparisons for
+          specific columns.</p>
         <p>Because backslash is not a special character in the <codeph>CSV</codeph> format,
             <codeph>\.</codeph>, the end-of-data marker, could also appear as a data value. To avoid
           any misinterpretation, a <codeph>\.</codeph> data value appearing as a lone entry on a
@@ -535,22 +542,27 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
           end-of-data marker. If you are loading a file created by another application that has a
           single unquoted column and might have a value of <codeph>\.</codeph>, you might need to
           quote that value in the input file.</p>
-        <note>In <codeph>CSV</codeph> mode, all characters are significant. A quoted value
+        <note>In <codeph>CSV</codeph> format, all characters are significant. A quoted value
           surrounded by white space, or any characters other than <codeph>DELIMITER</codeph>, will
           include those characters. This can cause errors if you import data from a system that pads
           CSV lines with white space out to some fixed width. If such a situation arises you might
           need to preprocess the CSV file to remove the trailing white space, before importing the
-          data into Greenplum Database. <p><codeph>CSV</codeph> mode will both recognize and produce
-            CSV files with quoted values containing embedded carriage returns and line feeds. Thus
-            the files are not strictly one line per table row like text-mode files
+          data into Greenplum Database. <p><codeph>CSV</codeph> format will both recognize and
+            produce CSV files with quoted values containing embedded carriage returns and line
+            feeds. Thus the files are not strictly one line per table row like text-format files
           </p></note><note>Many programs produce strange and occasionally perverse CSV files, so the
           file format is more a convention than a standard. Thus you might encounter some files that
           cannot be imported using this mechanism, and <codeph>COPY</codeph> might produce files
           that other programs cannot process. </note></sectiondiv>
       <sectiondiv id="section10">
         <b>Binary Format</b>
-        <p>The <codeph>BINARY</codeph> format consists of a file header, zero or more tuples
-          containing the row data, and a file trailer. Headers and data are in network byte order. </p>
+        <p>The <codeph>binary</codeph> format option causes all data to be stored/read as binary
+          format rather than as text. It is somewhat faster than the text and <codeph>CSV</codeph>
+          formats, but a binary-format file is less portable across machine architectures and
+          Greenplum Database versions. Also, the binary format is very data type specific; for
+          example it will not work to output binary data from a <codeph>smallint</codeph> column and
+          read it into an <codeph>integer</codeph> column, even though that would work fine in text
+          format.</p><p>The binary file format consists of a file header, zero or more tuples containing the row data, and a file trailer. Headers and data are in network byte order.</p>
         <ul>
           <li id="bk139298"><b>File Header</b> — The file header consists of 15 bytes of fixed
             fields, followed by a variable-length header extension area. The fixed fields are: <ul
@@ -585,13 +597,13 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
             word does not include itself, and can be zero.) As a special case, -1 indicates a NULL
             field value. No value bytes follow in the NULL case. <p>There is no alignment padding or
               any other extra data between fields. </p><p>Presently, all data values in a
-                <codeph>COPY BINARY</codeph> file are assumed to be in binary format (format code
-              one). It is anticipated that a future extension may add a header field that allows
-              per-column format codes to be specified. </p><p>If OIDs are included in the file, the
-              OID field immediately follows the field-count word. It is a normal field except that
-              it is not included in the field-count. In particular it has a length word — this will
-              allow handling of 4-byte vs. 8-byte OIDs without too much pain, and will allow OIDs to
-              be shown as null if that ever proves desirable. </p></li>
+              binary-format file are assumed to be in binary format (format code one). It is
+              anticipated that a future extension may add a header field that allows per-column
+              format codes to be specified. </p><p>If OIDs are included in the file, the OID field
+              immediately follows the field-count word. It is a normal field except that it is not
+              included in the field-count. In particular it has a length word — this will allow
+              handling of 4-byte vs. 8-byte OIDs without too much pain, and will allow OIDs to be
+              shown as null if that ever proves desirable. </p></li>
           <li id="bk139334"><b>File Trailer</b> — The file trailer consists of a 16-bit integer word
             containing <codeph>-1</codeph>. This is easily distinguished from a tuple's field-count
             word. A reader should report an error if a field-count word is neither
@@ -603,7 +615,7 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
     <section id="section11">
       <title>Examples</title>
       <p>Copy a table to the client using the vertical bar (|) as the field delimiter:</p>
-      <codeblock>COPY country TO STDOUT WITH DELIMITER '|';</codeblock>
+      <codeblock>COPY country TO STDOUT (DELIMITER '|');</codeblock>
       <p>Copy data from a file into the <codeph>country</codeph> table:</p>
       <codeblock>COPY country FROM '/home/usr1/sql/country_data';</codeblock>
       <p>Copy into a file just the countries whose names start with 'A':</p>
@@ -667,6 +679,39 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
     <section id="section12">
       <title>Compatibility</title>
       <p>There is no <codeph>COPY</codeph> statement in the SQL standard. </p>
+      <p>The following syntax was used in earlier versions of Greenplum Database and is still
+        supported:
+        <codeblock>COPY <varname>tablename</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+     [ [WITH]  
+       [ON SEGMENT]
+       [BINARY]
+       [OIDS]
+       [HEADER]
+       [DELIMITER [ AS ] '<varname>delimiter_character</varname>']
+       [NULL [ AS ] '<varname>null string</varname>']
+       [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+       [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
+       [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
+            [FORCE NOT NULL <varname>column</varname> [, ...]]
+       [FILL MISSING FIELDS]
+       [[LOG ERRORS]  
+       SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
+
+COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+      [ [WITH] 
+        [ON SEGMENT]
+        [BINARY]
+        [OIDS]
+        [HEADER]
+        [DELIMITER [ AS ] 'delimiter_character']
+        [NULL [ AS ] 'null string']
+        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
+        [CSV [QUOTE [ AS ] 'quote'] 
+             [FORCE QUOTE column [, ...]] | * ]
+      [IGNORE EXTERNAL PARTITIONS ]</codeblock>
+      </p>
+      <p>Note that in this syntax, <codeph>BINARY</codeph> and <codeph>CSV</codeph> are treated as
+        independent keywords, not as arguments of a FORMAT option.</p>
     </section>
     <section id="section13">
       <title>See Also</title>

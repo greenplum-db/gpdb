@@ -6,16 +6,21 @@ savepoint was established. The savepoint remains valid and can be rolled
 back to again later, if needed. </p><p><codeph>ROLLBACK TO SAVEPOINT</codeph> implicitly destroys all savepoints
 that were established after the named savepoint.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt>WORK</pt><pt>TRANSACTION</pt><pd>Optional key words. They have no effect.</pd></plentry><plentry><pt><varname>savepoint_name</varname></pt><pd>The name of a savepoint to roll back to.</pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Use <codeph>RELEASE SAVEPOINT</codeph> to destroy a savepoint without
 discarding the effects of commands executed after it was established.
-</p><p>Specifying a savepoint name that has not been established is an error.</p><p>Cursors have somewhat non-transactional behavior with respect to savepoints.
-Any cursor that is opened inside a savepoint will be closed when the
-savepoint is rolled back. If a previously opened cursor is affected by
-a <codeph>FETCH</codeph> command inside a savepoint that is later rolled
-back, the cursor position remains at the position that <codeph>FETCH</codeph>
-left it pointing to (that is, <codeph>FETCH</codeph> is not rolled back).
-Closing a cursor is not undone by rolling back, either. A cursor whose
-execution causes a transaction to abort is put in a can't-execute state,
-so while the transaction can be restored using <codeph>ROLLBACK TO SAVEPOINT</codeph>,
-the cursor can no longer be used.</p></section><section id="section6"><title>Examples</title><p>To undo the effects of the commands executed after <codeph>my_savepoint</codeph> was
+</p><p>Specifying a savepoint name that has not been established is an error.</p><p>Cursors have somewhat non-transactional behavior with respect to savepoints. Any cursor that is
+                                opened inside a savepoint will be closed when the savepoint is
+                                rolled back. If a previously opened cursor is affected by a
+                                        <codeph>FETCH</codeph> command inside a savepoint that is
+                                later rolled back, the cursor remains at the position that
+                                        <codeph>FETCH</codeph> left it pointing to (that is, cursor
+                                motion caused by <codeph>FETCH</codeph> is not rolled back). Closing
+                                a cursor is not undone by rolling back, either. However, other
+                                side-effects caused by the cursor's query (such as side-effects of
+                                volatile functions called by the query) are rolled back if they
+                                occur during a savepoint that is later rolled back. A cursor whose
+                                execution causes a transaction to abort is put in a cannot-execute
+                                state, so while the transaction can be restored using
+                                        <codeph>ROLLBACK TO SAVEPOINT</codeph>, the cursor can no
+                                longer be used.</p></section><section id="section6"><title>Examples</title><p>To undo the effects of the commands executed after <codeph>my_savepoint</codeph> was
                                 established:</p><codeblock>ROLLBACK TO SAVEPOINT my_savepoint;</codeblock><p>Cursor positions are not affected by a savepoint rollback:</p><codeblock>BEGIN;
 DECLARE foo CURSOR FOR SELECT 1 UNION SELECT 2;
 SAVEPOINT foo;
