@@ -212,10 +212,9 @@ Feature: gpcheckcat tests
         When the user runs "gpcheckcat -R distribution_policy constraint_db"
         Then gpcheckcat should return a return code of 1
         Then validate and run gpcheckcat repair
-        When the user runs "gpcheckcat -R constraint constraint_db"
-        Then the path "gpcheckcat.repair.*" is found in cwd "0" times
+        When the user runs "gpcheckcat -R distribution_policy constraint_db"
+        Then gpcheckcat should return a return code of 0
         And the user runs "dropdb constraint_db"
-        And the path "gpcheckcat.repair.*" is removed from current working directory
 
     @policy
     Scenario: gpcheckcat should report and repair invalid policy issues

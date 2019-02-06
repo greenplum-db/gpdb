@@ -1585,9 +1585,12 @@ def impl(context, path, num):
 
 @then('run all the repair scripts in the dir "{dir}"')
 def impl(context, dir):
-    command = "cd {0} ; for i in *.sh ; do bash $i; done".format(dir)
-    run_command(context, command)
+    bash_files = glob.glob("%s/*.sh" % dir)
+    for file in bash_files:
+        run_command(context, "bash %s" % file)
 
+        if context.ret_code != 0:
+            raise Exception("Error running repair script %s: %s" % (file, context.stdout_message))
 
 @when(
     'the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}"')
