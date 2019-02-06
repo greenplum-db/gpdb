@@ -16,9 +16,9 @@ create extension if not exists gp_inject_fault;
 -- Allow extra time for mirror promotion to complete recovery to avoid
 -- gprecoverseg BEGIN failures due to gang creation failure as some primaries
 -- are not up. Setting these increase the number of retries in gang creation in
--- case segment is in recovery. Approximately we want to wait 30 seconds.
-!\retcode gpconfig -c gp_gang_creation_retry_count -v 127 --skipvalidation --masteronly;
-!\retcode gpconfig -c gp_gang_creation_retry_timer -v 250 --skipvalidation --masteronly;
+-- case segment is in recovery. Approximately we want to wait 120 seconds.
+!\retcode gpconfig -c gp_gang_creation_retry_count -v 120 --skipvalidation --masteronly;
+!\retcode gpconfig -c gp_gang_creation_retry_timer -v 1000 --skipvalidation --masteronly;
 !\retcode gpstop -u;
 
 include: helpers/server_helpers.sql;
