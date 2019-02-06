@@ -133,15 +133,6 @@
               tablespace. All non-shared system catalogs will also be there.</entry>
           </row>
           <row>
-            <entry colname="col1"><codeph>hashmethod</codeph></entry>
-            <entry colname="col2">integer</entry>
-            <entry colname="col3"/>
-            <entry colname="col4">
-              <p>The value is either <codeph>1</codeph> for jump consistent hash or
-                  <codeph>0</codeph> for modulo hash.</p>
-            </entry>
-          </row>
-          <row>
             <entry colname="col1">
               <codeph>datacl</codeph>
             </entry>
