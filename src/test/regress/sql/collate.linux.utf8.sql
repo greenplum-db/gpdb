@@ -1,3 +1,6 @@
+-- start_ignore
+SET gp_recursive_cte_prototype TO ON;
+-- end_ignore
 /*
  * This test is for Linux/glibc systems and assumes that a full set of
  * locales is installed.  It must be run in a database with UTF-8 encoding,

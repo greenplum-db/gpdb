@@ -1,3 +1,6 @@
+-- start_ignore
+SET gp_recursive_cte_prototype TO ON;
+-- end_ignore
 --
 -- Test inheritance features
 --

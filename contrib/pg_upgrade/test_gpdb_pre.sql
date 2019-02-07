@@ -70,3 +70,9 @@ DROP VIEW IF EXISTS v_xpect_triangle_de CASCADE;
 -- negative. This may indicate a bug in pg_dump's sort priority for PROTOCOLs.
 DROP PROTOCOL IF EXISTS demoprot_untrusted;
 DROP PROTOCOL IF EXISTS demoprot_untrusted2;
+
+-- This is a recursive view which can only be restored in case the recursive
+-- CTE guc has been turned on. Until we ship with recursive CTEs on by default
+-- we need to drop this view.
+DROP VIEW IF EXISTS nums CASCADE;
+DROP VIEW IF EXISTS sums_1_100 CASCADE;

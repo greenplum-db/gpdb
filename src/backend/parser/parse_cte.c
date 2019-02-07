@@ -16,6 +16,7 @@
 
 #include "catalog/pg_collation.h"
 #include "catalog/pg_type.h"
+#include "cdb/cdbvars.h"
 #include "nodes/nodeFuncs.h"
 #include "parser/analyze.h"
 #include "parser/parse_cte.h"
@@ -111,6 +112,16 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	/* Only one WITH clause per query level */
 	Assert(pstate->p_ctenamespace == NIL);
 	Assert(pstate->p_future_ctes == NIL);
+
+	/*
+	 * WITH RECURSIVE is disabled if gp_recursive_cte_prototype is not set
+	 * to allow recursive CTEs.
+	 */
+	if (withClause->recursive && !gp_recursive_cte_prototype)
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("RECURSIVE clauses in WITH queries are currently disabled"),
+				 errhint("In order to use recursive CTEs, \"gp_recursive_cte_prototype\" must be turned on.")));
 
 	/*
 	 * For either type of WITH, there must not be duplicate CTE names in the

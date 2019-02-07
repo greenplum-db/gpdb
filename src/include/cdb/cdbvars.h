@@ -741,10 +741,10 @@ extern int gp_sort_max_distinct;
  */
 extern bool gp_dynamic_partition_pruning;
 
-/**
- * Sharing of plan fragments for common table expressions
- */
+/* Sharing of plan fragments for common table expressions */
 extern bool gp_cte_sharing;
+/* Enable RECURSIVE clauses in common table expressions */
+extern bool gp_recursive_cte_prototype;
 
 /* Priority for the segworkers relative to the postmaster's priority */
 extern int gp_segworker_relative_priority;
