@@ -22,6 +22,7 @@
             <topicref href="managing/startstop.xml" navtitle="Starting and Stopping Greenplum"/>
             <topicref href="access_db/access_db.ditamap" format="ditamap"/>
             <topicref href="configure.ditamap" format="ditamap"/>
+            <topicref href="managing/compression.xml"/>
             <topicref href="highavail/highavail.ditamap" format="ditamap"/>
             <topicref href="managing/backup.ditamap" format="ditamap"/>
             <topicref href="expand/expand.ditamap" format="ditamap"/>

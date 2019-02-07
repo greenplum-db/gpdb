@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
+<topic id="topic1" xml:lang="en">
+  <title id="in198679">Enabling Compression</title>
+  <abstract><shortdesc>You can configure Greenplum Database to use data compression with some
+      database features. Compression can also be configured with some utilities.
+    </shortdesc>Greenplum Database supports gzip, zstd (Zstandard), QuickLZ, and RLE
+    compression.</abstract>
+  <body>
+    <draft-comment author="msk">compression used by GPDB in 6 NEEDS EDIT move to schema.xml,
+        summary.xml?<p>Question about installing zstd statement in workfile GUC definition. REMOVE
+        see <xref href="https://pivotal.slack.com/archives/C04EBU32Y/p1549567810145100"
+          format="html" scope="external">slack thread</xref></p></draft-comment>
+    <p>Compression reduces disk usage and improves I/O across the system, however, it adds some
+      overhead when compressing and decompressing data. You can configure Greenplum Database to use
+      data compression for these features and utilities. <ul id="ul_a4l_h3c_sgb">
+        <li>Append-optimized tables support compressing table data with zstd, zlib, QuickLZ, or RLE
+          compression. See <codeph><xref href="../../ref_guide/sql_commands/CREATE_TABLE.xml"
+              format="dita"/></codeph>.</li>
+        <li>User-defined types can be defined to use zstd, zlib, QuickLZ, or RLE compression. See
+              <codeph><xref href="../../ref_guide/sql_commands/CREATE_TYPE.xml" format="dita"
+            /></codeph>.</li>
+        <li>The external table protocols <codeph><xref
+              href="../../admin_guide/external/g-gpfdist-protocol.xml" format="dita"
+            >gpfdist</xref></codeph>
+          <codeph>(<xref href="../../admin_guide/external/g-gpfdists-protocol.xml" format="dita"
+              >gpfdists</xref></codeph>), <codeph><xref
+              href="../../admin_guide/external/g-s3-protocol.xml" format="dita">s3</xref></codeph>,
+          and <codeph><xref href="../../admin_guide/external/pxf-overview.xml" format="dita"
+              >pxf</xref></codeph> support gzip compression when accessing external data. For
+          information about external tables, see <codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_EXTERNAL_TABLE.xml" format="dita"
+          /></codeph>.</li>
+        <li>Workfiles, (temporary spill files that are created when executing a query that requires
+          more memory than it is allocated) can compress workfiles with zstd compression. See the
+          server configuration parameter <codeph><xref
+              href="../../ref_guide/config_params/guc-list.xml#gp_workfile_compression"
+              format="dita"/></codeph>. </li>
+        <li>The Greenplum Database utilities <codeph><xref
+              href="../../utility_guide/admin_utilities/gpbackup.xml" format="dita"/></codeph>,
+              <codeph><xref href="../../utility_guide/admin_utilities/gprestore.xml" format="dita"
+            /></codeph>, <codeph><xref href="../../utility_guide/admin_utilities/gpload.xml"
+              format="dita"/></codeph>, and <codeph><xref
+              href="../../utility_guide/admin_utilities/gplogfilter.xml" format="dita"/></codeph>
+          support gzip compression.</li>
+      </ul></p>
+  </body>
+</topic>

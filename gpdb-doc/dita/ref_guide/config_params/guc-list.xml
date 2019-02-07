@@ -5273,11 +5273,9 @@
     <title>gp_workfile_compression</title>
     <body>
       <p>Specifies whether the temporary files created, when a hash aggregation or hash join
-         operation spills to disk, are compressed. If enabled, zstd
-        library must be installed on all hosts in the Greenplum Database cluster. </p>
+        operation spills to disk, are compressed. </p>
       <p>If your Greenplum Database installation uses serial ATA (SATA) disk drives, enabling
-        compression might help to avoid overloading the disk
-        subsystem with IO operations.</p>
+        compression might help to avoid overloading the disk subsystem with IO operations.</p>
       <table id="gp_workfile_compression_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
