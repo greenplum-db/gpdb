@@ -7,6 +7,7 @@ inputs:
   - name: gpAux_ext
   - name: libquicklz-installer
   - name: libquicklz-devel-installer
+  - name: libsigar-gcs
   - name: python-tarball
 outputs:
   - name: gpdb_artifacts

@@ -15,18 +15,21 @@ function expand_glob_ensure_exists() {
   echo "${glob[0]}"
 }
 
-function install_deps_for_centos() {
-  # quicklz is proprietary code that we cannot put in our public Docker images.
-  rpm -i libquicklz-installer/libquicklz-*.rpm
-  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
-}
-
 function prep_env_for_centos() {
   case "${TARGET_OS_VERSION}" in
     6|7) BLD_ARCH=rhel${TARGET_OS_VERSION}_x86_64 ;;
     *) echo "TARGET_OS_VERSION not set or recognized for Centos/RHEL" ; exit 1 ;;
   esac
 }
+
+function install_deps_for_centos() {
+  # quicklz is proprietary code that we cannot put in our public Docker images.
+  rpm -i libquicklz-installer/libquicklz-*.rpm
+  rpm -i libquicklz-devel-installer/libquicklz-*.rpm
+  # install libsigar from tar.gz
+  tar zxf libsigar-gcs/sigar-*.targz -C gpdb_src/gpAux/ext
+}
+
 
 function link_tools_for_centos() {
   tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
@@ -161,8 +164,8 @@ function _main() {
 
   case "${TARGET_OS}" in
     centos)
-      install_deps_for_centos
       prep_env_for_centos
+      install_deps_for_centos
       link_tools_for_centos
       ;;
     sles)

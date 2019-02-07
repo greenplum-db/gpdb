@@ -422,6 +422,13 @@ resources:
     json_key: ((gcs-key))
     regexp: centos6/libquicklz-devel-(\d.*)\.el6\.x86_64\.rpm
 
+- name: libsigar-centos6-gcs
+  type: gcs
+  source:
+    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
+    json_key: ((gcs-key))
+    regexp: centos6/sigar-rhel6_x86_64-(.*)\.targz
+
 {% endif %}
 {% if "centos7" in os_types %}
 - name: libquicklz-centos7
@@ -437,6 +444,13 @@ resources:
     bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
     json_key: ((gcs-key))
     regexp: centos7/libquicklz-devel-(\d.*)\.el7\.x86_64\.rpm
+
+- name: libsigar-centos7-gcs
+  type: gcs
+  source:
+    bucket: ((pivotal-gp-internal-artifacts-gcs-bucket))
+    json_key: ((gcs-key))
+    regexp: centos7/sigar-rhel7_x86_64-(.*)\.targz
 
 {% endif %}
 {% if "centos6" in os_types %}
@@ -840,6 +854,8 @@ jobs:
       resource: libquicklz-centos6
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos6
+    - get: libsigar-gcs
+      resource: libsigar-centos6-gcs
     - get: python-tarball
       resource: python-centos6
   - task: sync_tools
@@ -882,6 +898,8 @@ jobs:
       resource: libquicklz-centos7
     - get: libquicklz-devel-installer
       resource: libquicklz-devel-centos7
+    - get: libsigar-gcs
+      resource: libsigar-centos7-gcs
     - get: python-tarball
       resource: python-centos7
   - task: sync_tools
