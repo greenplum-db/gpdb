@@ -12,6 +12,9 @@
       <li id="ad139888">
         <xref href="./ALTER_AGGREGATE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="li_i3p_pv3_sgb">
+        <xref href="./ALTER_COLLATION.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad139889">
         <xref href="./ALTER_CONVERSION.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -127,6 +130,9 @@
       <li id="ad139916">
         <xref href="./CREATE_CAST.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="ad239918">
+        <xref href="./CREATE_COLLATION.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad139918">
         <xref href="./CREATE_CONVERSION.xml#topic1" type="topic" format="dita"/>
       </li>
@@ -234,6 +240,9 @@
       </li>
       <li id="ad140603">
         <xref href="./DROP_CAST.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li id="ad179918">
+        <xref href="./DROP_COLLATION.xml#topic1" type="topic" format="dita"/>
       </li>
       <li id="ad140607">
         <xref href="./DROP_CONVERSION.xml#topic1" type="topic" format="dita"/>

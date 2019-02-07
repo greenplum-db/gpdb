@@ -10,6 +10,7 @@
 			<topicref href="GPReferenceSQLSummaryLOP.xml"/>
 			<topicref href="sql_commands/ABORT.xml"/>
 			<topicref href="sql_commands/ALTER_AGGREGATE.xml"/>
+      <topicref href="sql_commands/ALTER_COLLATION.xml"/>
 			<topicref href="sql_commands/ALTER_CONVERSION.xml"/>
 			<topicref href="sql_commands/ALTER_DATABASE.xml"/>
 			<topicref href="sql_commands/ALTER_DEFAULT_PRIVILEGES.xml"/>
@@ -53,6 +54,7 @@
 			<topicref href="sql_commands/COPY.xml"/>
 			<topicref href="sql_commands/CREATE_AGGREGATE.xml"/>
 			<topicref href="sql_commands/CREATE_CAST.xml"/>
+      <topicref href="sql_commands/CREATE_COLLATION.xml"/>
 			<topicref href="sql_commands/CREATE_CONVERSION.xml"/>
 			<topicref href="sql_commands/CREATE_DATABASE.xml"/>
 			<topicref href="sql_commands/CREATE_DOMAIN.xml"/>
@@ -94,6 +96,7 @@
 			<topicref href="sql_commands/DO.xml"/>
 			<topicref href="sql_commands/DROP_AGGREGATE.xml"/>
 			<topicref href="sql_commands/DROP_CAST.xml"/>
+      <topicref href="sql_commands/DROP_COLLATION.xml"/>
 			<topicref href="sql_commands/DROP_CONVERSION.xml"/>
 			<topicref href="sql_commands/DROP_DATABASE.xml"/>
 			<topicref href="sql_commands/DROP_DOMAIN.xml"/>
