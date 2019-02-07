@@ -35,7 +35,7 @@
           <pd>Vacuums all databases.</pd>
         </plentry>
         <plentry>
-          <pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt>
+          <pt>[-d] <varname>dbname</varname> | [--dbname=] <varname>dbname</varname></pt>
           <pd>The name of the database to vacuum. If this is not specified and <codeph>-all</codeph>
             is not used, the database name is read from the environment variable
               <codeph>PGDATABASE</codeph>. If that is not set, the user name specified for the
