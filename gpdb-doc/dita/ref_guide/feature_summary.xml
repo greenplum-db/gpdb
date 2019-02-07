@@ -546,7 +546,7 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
                       (<i>column</i>, [ ... ] ) |</codeph></p><p><codeph>DISTRIBUTED
                     RANDOMLY</codeph></p><p><codeph>PARTITION BY <i>type</i> (<i>column</i> [, ...])
                        ( <i>partition_specification</i>, [...] )</codeph></p><p><codeph>WITH
-                    (appendonly=true      [,compresslevel=value,blocksize=value]
+                    (appendoptimized=true      [,compresslevel=value,blocksize=value]
                 )</codeph></p></entry>
             </row>
             <row>

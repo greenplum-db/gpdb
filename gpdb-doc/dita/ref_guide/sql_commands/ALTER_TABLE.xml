@@ -102,7 +102,7 @@ ALTER TABLE <varname>name</varname>
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
                         <p>where <varname>storage_parameter</varname> is:</p>
-                        <codeblock>   APPENDONLY={TRUE|FALSE}
+                        <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}

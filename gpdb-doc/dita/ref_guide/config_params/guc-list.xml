@@ -2692,7 +2692,12 @@
     <body>
       <p>Set the default values for the following table storage options when a table is created with
         the <cmdname>CREATE TABLE</cmdname> command.<ul id="ul_r4t_nxx_5p">
-          <li><cmdname>APPENDONLY</cmdname>
+          <li><cmdname>APPENDOPTIMIZED</cmdname>
+            <note>You use the <codeph>appendoptimized=<varname>value</varname></codeph> syntax
+              to specify the append-optimized table storage type. <codeph>appendoptimized</codeph>
+              is a thin alias for the <codeph>appendonly</codeph> storage option. Greenplum
+              Database stores <codeph>appendonly</codeph> in the catalog, and displays the
+              same when listing the storage options for append-optimized tables.</note>
           </li>
           <li><cmdname>BLOCKSIZE</cmdname>
           </li>
@@ -2726,9 +2731,9 @@
           Database system with the <cmdname>gpconfig</cmdname> utility</li>
       </ol>
       <p>The parameter value is not cumulative. For example, if the parameter specifies the
-          <cmdname>APPENDONLY</cmdname> and <cmdname>COMPRESSTYPE</cmdname> options for a database
+          <cmdname>APPENDOPTIMIZED</cmdname> and <cmdname>COMPRESSTYPE</cmdname> options for a database
         and a user logs in and sets the parameter to specify the value for the
-          <cmdname>ORIENTATION</cmdname> option, the <cmdname>APPENDONLY</cmdname>, and
+          <cmdname>ORIENTATION</cmdname> option, the <cmdname>APPENDOPTIMIZED</cmdname>, and
           <cmdname>COMPRESSTYPE</cmdname> values set at the database level are ignored. </p>
       <p>This example <cmdname>ALTER DATABASE</cmdname> command sets the default
           <cmdname>ORIENTATION</cmdname> and <cmdname>COMPRESSTYPE</cmdname> table storage options
@@ -2736,11 +2741,11 @@
         <codeblock>ALTER DATABASE mytest SET gp_default_storage_options = 'orientation=column, compresstype=rle_type'</codeblock></p>
       <p>To create an append-optimized table in the <codeph>mytest</codeph> database with
         column-oriented table and RLE compression. The user needs to specify only
-          <codeph>APPENDONLY=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
+          <codeph>APPENDOPTIMIZED=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
       <p>This example <cmdname>gpconfig</cmdname> utility command sets the default storage option
         for a Greenplum Database system. If you set the defaults for multiple table storage options,
         the value must be enclosed in single
-        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v 'appendonly=true, orientation=column'</codeblock></p>
+        quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v 'appendoptimized=true, orientation=column'</codeblock></p>
       <p>This example <cmdname>gpconfig</cmdname> utility command shows the value of the parameter.
         The parameter value must be consistent across the Greenplum Database master and all
         segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
@@ -2758,7 +2763,7 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1"><cmdname>APPENDONLY</cmdname>= <codeph>TRUE</codeph> |
+              <entry colname="col1"><cmdname>APPENDOPTIMIZED</cmdname>= <codeph>TRUE</codeph> |
                   <codeph>FALSE</codeph><p><cmdname>BLOCKSIZE</cmdname>= integer between 8192 and
                   2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
@@ -2769,7 +2774,7 @@
                     19</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
                     <codeph>COLUMN</codeph>
                 </p></entry>
-              <entry colname="col2"><cmdname>APPENDONLY</cmdname>=<codeph>FALSE</codeph>
+              <entry colname="col2"><cmdname>APPENDOPTIMIZED</cmdname>=<codeph>FALSE</codeph>
                 <p><cmdname>BLOCKSIZE</cmdname>=<codeph>32768</codeph>
                 </p><p><cmdname>CHECKSUM</cmdname>=<codeph>TRUE</codeph>
                 </p><p><cmdname>COMPRESSTYPE</cmdname>=<codeph>none</codeph>

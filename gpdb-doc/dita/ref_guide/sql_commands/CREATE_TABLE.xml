@@ -51,7 +51,7 @@
     [COMPRESSLEVEL={0-9} ]
     [BLOCKSIZE={8192-2097152} ]</codeblock>
       <p>where <varname>storage_parameter</varname> for the table is:</p>
-      <codeblock>   APPENDONLY={TRUE|FALSE}
+      <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
@@ -124,7 +124,7 @@
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
       <p>where <varname>storage_parameter</varname> for a partition is:</p>
-      <codeblock>   APPENDONLY={TRUE|FALSE}
+      <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
    BLOCKSIZE={8192-2097152}
    ORIENTATION={COLUMN|ROW}
    CHECKSUM={TRUE|FALSE}
@@ -454,7 +454,7 @@
             about setting default storage options, see <xref href="#topic1/section5" format="dita"
             />. </pd>
           <pd>The following storage options are available:</pd>
-          <pd><b>APPENDONLY</b> — Set to <codeph>TRUE</codeph> to create the table as an
+          <pd><b>APPENDOPTIMIZED</b> — Set to <codeph>TRUE</codeph> to create the table as an
             append-optimized table. If <codeph>FALSE</codeph> or not declared, the table will be
             created as a regular heap-storage table.</pd>
           <pd><b>BLOCKSIZE</b> — Set to the size, in bytes, for each block in a table. The
@@ -462,9 +462,9 @@
             of 8192. The default is 32768.</pd>
           <pd><b>ORIENTATION</b> — Set to <codeph>column</codeph> for column-oriented storage, or
               <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
-            if <codeph>APPENDONLY=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
+            if <codeph>APPENDOPTIMIZED=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
           <pd><b>CHECKSUM</b> — This option is valid only for append-optimized tables
-              (<codeph>APPENDONLY=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
+              (<codeph>APPENDOPTIMIZED=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
             enables CRC checksum validation for append-optimized tables. The checksum is calculated
             during block creation and is stored on disk. Checksum validation is performed during
             block reads. If the checksum calculated during the read does not match the stored
@@ -477,7 +477,7 @@
 	      for both speed or a good compression ratio, tunable with the <codeph>COMPRESSLEVEL</codeph> option.
 	      QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
               compression types on usual workloads. The <codeph>COMPRESSTYPE</codeph> option
-            is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
+            is only valid if <codeph>APPENDOPTIMIZED=TRUE</codeph>.<p>
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note>
             </p><p>The value <codeph>RLE_TYPE</codeph> is supported only if
@@ -499,7 +499,7 @@
             compression level can only be set to 1. If not declared, the default is 1. For
               <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value from 1
             (fastest compression) to 4 (highest compression ratio). </pd>
-          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
+          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if <codeph>APPENDOPTIMIZED=TRUE</codeph>.</pd>
           <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
           <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
@@ -731,7 +731,7 @@
         <li>The default values for these table storage options can be specified with the server
           configuration parameter <codeph>gp_default_storage_option</codeph>.<ul id="ul_hr1_3m1_tt">
             <li>
-              <cmdname>APPENDONLY</cmdname>
+              <cmdname>APPENDOPTIMIZED</cmdname>
             </li>
             <li>
               <cmdname>BLOCKSIZE</cmdname>
@@ -782,7 +782,7 @@ name   varchar(40) NOT NULL CHECK (name &lt;&gt; '')
 );</codeblock>
       <p>Create a gzip-compressed, append-optimized table:</p>
       <codeblock>CREATE TABLE sales (txn_id int, qty int, date date) 
-WITH (appendonly=true, compresslevel=5) 
+WITH (appendoptimized=true, compresslevel=5) 
 DISTRIBUTED BY (txn_id);</codeblock>
       <p>Create a three level partitioned table using subpartition templates and default partitions
         at each level:</p>
