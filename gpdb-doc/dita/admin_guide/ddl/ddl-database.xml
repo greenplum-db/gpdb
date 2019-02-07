@@ -14,22 +14,22 @@
       databases.</p>
   </body>
   <topic id="topic3" xml:lang="en">
-    <title id="im140508">About Template Databases</title>
+    <title id="im140508">About Template and Default Databases</title>
     <body>
-      <p>Greenplum Database provides some default template databases, <i>template1</i>,
-          <i>postgres</i>, and <i>template0</i>.</p>
-      <p>Each new database you create is based on a <i>template</i> database. Greenplum Database
-        uses <i>template1</i> to create databases unless you specify another template. Creating
-        objects in <i>template1</i> is not recommended. The objects will be in every database you
-        create using the default template database. </p>
-      <p>You can use <i>postgres</i> database to connect to Greenplum Database for the first time.
-        Greenplum Database uses <i>postgres</i> as the default database for administrative
-        connections. For example, <i>postgres</i> is used by startup processes, the Global Deadlock
-        Detector process, and the FTS (Fault Tolerance Server) process for catalog access.</p>
+      <p>Greenplum Database provides some template databases and a default database,
+          <i>template1</i>, <i>template0</i>, and <i>postgres</i>.</p>
+      <p>By default, each new database you create is based on a <i>template</i> database. Greenplum
+        Database uses <i>template1</i> to create databases unless you specify another template.
+        Creating objects in <i>template1</i> is not recommended. The objects will be in every
+        database you create using the default template database. </p>
       <p>Greenplum Database uses another database template, <i>template0</i>, internally. Do not
         drop or modify <i>template0</i>. You can use <i>template0</i> to create a completely clean
         database containing only the standard objects predefined by Greenplum Database at
         initialization.</p>
+      <p>You can use <i>postgres</i> database to connect to Greenplum Database for the first time.
+        Greenplum Database uses <i>postgres</i> as the default database for administrative
+        connections. For example, <i>postgres</i> is used by startup processes, the Global Deadlock
+        Detector process, and the FTS (Fault Tolerance Server) process for catalog access.</p>
     </body>
   </topic>
   <topic id="topic4" xml:lang="en">
