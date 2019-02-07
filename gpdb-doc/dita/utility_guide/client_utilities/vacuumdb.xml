@@ -35,7 +35,7 @@
           <pd>Vacuums all databases.</pd>
         </plentry>
         <plentry>
-          <pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt>
+          <pt>[-d] <varname>dbname</varname> | [--dbname=] <varname>dbname</varname></pt>
           <pd>The name of the database to vacuum. If this is not specified and <codeph>-all</codeph>
             is not used, the database name is read from the environment variable
               <codeph>PGDATABASE</codeph>. If that is not set, the user name specified for the
@@ -61,7 +61,7 @@
           <pd>Do not display a response.</pd>
         </plentry>
         <plentry>
-          <pt>-t <varname>table</varname> [(<varname>column</varname>)] | --table
+          <pt>-t <varname>table</varname> [(<varname>column</varname>)] | --table=
               <varname>table</varname> [(<varname>column</varname>)]</pt>
           <pd>Clean or analyze this table only. Column names may be specified only in conjunction
             with the <codeph>--analyze</codeph> or <codeph>--analyze-all</codeph> options. If you specify columns, you probably have to
@@ -92,19 +92,19 @@
         <b>Connection Options</b>
         <parml>
           <plentry>
-            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+            <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
             <pd>Specifies the host name of the machine on which the Greenplum master database server is running. If not specified,
               reads from the environment variable <codeph>PGHOST</codeph> or defaults to
               localhost.</pd>
           </plentry>
           <plentry>
-            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+            <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
             <pd>Specifies the TCP port on which the Greenplum master
               database server is listening for connections. If not specified, reads from the
               environment variable <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
-            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
+            <pt>-U <varname>username</varname> | --username=<varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system user name.</pd>
           </plentry>
