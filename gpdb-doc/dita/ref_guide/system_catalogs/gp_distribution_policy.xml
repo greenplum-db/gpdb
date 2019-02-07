@@ -57,7 +57,7 @@
               <codeph>distkey</codeph>
             </entry>
             <entry colname="col2">int2vector</entry>
-            <entry colname="col3">pg_attribute.distkey</entry>
+            <entry colname="col3">pg_attribute.attnum</entry>
             <entry colname="col4">The column number(s) of the distribution column(s).</entry>
           </row>
           <row>
@@ -65,7 +65,7 @@
               <codeph>distclass</codeph>
             </entry>
             <entry colname="col2">oidvector</entry>
-            <entry colname="col3">pg_attribute.distclass</entry>
+            <entry colname="col3">pg_opclass.oid</entry>
             <entry colname="col4">The operator class identifier(s) of the distribution
               column(s).</entry>
           </row>
