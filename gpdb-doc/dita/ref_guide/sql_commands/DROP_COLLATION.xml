@@ -8,6 +8,10 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">DROP COLLATION [ IF EXISTS ] <varname>name</varname> [ CASCADE | RESTRICT ]</codeblock>
     </section>
+    <section id="section3">
+      <title>Description</title>
+      <p> To be able to drop a collation, you must own the collation.</p>
+    </section>
     <section id="section4">
       <title>Parameters</title>
       <parml>
