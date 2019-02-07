@@ -1043,8 +1043,8 @@ doNotifyingAbort(void)
 			setCurrentGxactState( DTX_STATE_RETRY_ABORT_PREPARED );
 			setDistributedTransactionContext(DTX_CONTEXT_QD_RETRY_PHASE_2);
 			releaseTmLock();
+			retryAbortPrepared();
 		}
-		retryAbortPrepared();
 	}
 
 	SIMPLE_FAULT_INJECTOR(DtmBroadcastAbortPrepared);
