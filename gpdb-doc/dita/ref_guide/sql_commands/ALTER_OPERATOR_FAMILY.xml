@@ -2,18 +2,20 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="as20941">ALTER OPERATOR FAMILY</title><body><p id="sql_command_desc">Changes the definition of an operator family.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> ADD
-  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> )
+  {  OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) [ FOR SEARCH | FOR ORDER BY <varname>sort_family_name</varname> ]
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) ] <varname>funcname</varname> ( <varname>argument_type</varname> [, ...] )
   } [, ... ]
 
 ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> DROP
-  {  OPERATOR s<varname>trategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
+  {  OPERATOR <varname>strategy_number</varname> ( <varname>op_type</varname>, <varname>op_type</varname> ) 
     | FUNCTION <varname>support_number</varname> [ ( <varname>op_type</varname> [ , <varname>op_type</varname> ] ) 
   } [, ... ]
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>newname</varname>
+ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> RENAME TO <varname>new_name</varname>
 
-ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>newowner</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You can add
+ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> OWNER TO <varname>new_owner</varname>
+
+ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER OPERATOR FAMILY</codeph> changes the definition of an operator family. You can add
         operators and support functions to the family, remove them from the family, or change the
         family's name or owner.</p>
       <p>When operators and support functions are added to a family with <codeph>ALTER OPERATOR
@@ -61,6 +63,14 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
             specified.</pd>
         </plentry>
         <plentry>
+          <pt><varname>sort_family_name</varname></pt>
+          <pd>The name (optionally schema-qualified) of an existing <codeph>btree</codeph> operator
+            family that describes the sort ordering associated with an ordering operator.
+          </pd>
+          <pd>If neither <codeph>FOR SEARCH</codeph> nor <codeph>FOR ORDER BY</codeph> is
+            specified, <codeph>FOR SEARCH</codeph> is the default.</pd>
+        </plentry>
+        <plentry>
           <pt>support_number</pt>
           <pd>The index method's support procedure number for a function associated with the
             operator family.</pd>
@@ -73,7 +83,11 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         <plentry>
           <pt>argument_types</pt>
           <pd>The parameter data type(s) of the function.</pd>
-        </plentry><plentry><pt><varname>newname</varname></pt><pd>The new name of the operator family. </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new owner of the operator family. </pd></plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>ALTER OPERATOR FAMILY</codeph> statement in the SQL standard. </p></section>
+        </plentry><plentry><pt><varname>new_name</varname></pt><pd>The new name of the operator family. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner of the operator family. </pd></plentry>
+        <plentry>
+          <pt><varname>new_schema</varname></pt>
+          <pd>The new schema for the operator family. </pd>
+        </plentry></parml></section><section id="section5"><title>Compatibility</title><p>There is no <codeph>ALTER OPERATOR FAMILY</codeph> statement in the SQL standard. </p></section>
     <section id="section6">
       <title>Notes</title>
       <p>Notice that the <codeph>DROP</codeph> syntax only specifies the "slot" in the operator
@@ -91,7 +105,7 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         query matches an index.</p>
       <p>Before Greenplum Database 6.0, the <codeph>OPERATOR</codeph> clause could include a
         <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum
-        Database now determines whether an index operator is "lossy" on-the-fly at runtime. This
+        Database now determines whether an index operator is "lossy" on-the-fly at run time. This
         allows more efficient handling of cases where an operator might or might not be
         lossy.</p>
     </section>
