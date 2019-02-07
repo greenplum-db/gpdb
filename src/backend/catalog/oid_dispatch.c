@@ -559,8 +559,6 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
 	{
-		bool		missing_ok = false;
-
 		/*
 		 * When binary-upgrading the QD node, we must preserve the OIDs of types,
 		 * relations from the old cluster, so we should have pre-assigned OIDs for
@@ -569,45 +567,14 @@ GetPreassignedOidForTuple(Relation catalogrel, HeapTuple tuple)
 		 * When binary-upgrading a QE node, we should have pre-assigned OIDs for
 		 * all objects, to ensure that the same OIDs are used for all objects
 		 * between the QD and the QEs.
+		 *
+		 * That said, in general the new cluster might have a need to create
+		 * any type of object when binary-upgrading.  As we have no effective
+		 * way of tracking which objects are newly created in the new cluster
+		 * (versus binary-upgraded from the old cluster), we allow the new
+		 * cluster to create any object it wants.
 		 */
-		if (IsBinaryUpgrade && !IsBinaryUpgradeQE())
-		{
-			if (RelationGetRelid(catalogrel) == NamespaceRelationId)
-			{
-				/*
-				 * OIDs of schemas must be preserved. (Only because namespace
-				 * OIDs are part of the key of types and relations.) The only
-				 * exception is pg_temp which we exempt (by definition).
-				 */
-				if (strncmp(searchkey.objname, "pg_temp", strlen("pg_temp")) == 0 ||
-					strncmp(searchkey.objname, "pg_toast_temp", strlen("pg_toast_temp")) == 0)
-					missing_ok = true;
-				else
-					missing_ok = false;
-			}
-			else if (RelationGetRelid(catalogrel) == TypeRelationId)
-			{
-				/* No need to preserve the rowtype OIDs of these special relations. */
-				if (searchkey.namespaceOid == PG_BITMAPINDEX_NAMESPACE)
-					missing_ok = true;
-				if (searchkey.namespaceOid == PG_TOAST_NAMESPACE)
-					missing_ok = true;
-				if (searchkey.namespaceOid == PG_AOSEGMENT_NAMESPACE)
-					missing_ok = true;
-			}
-			else if (RelationGetRelid(catalogrel) == RelationRelationId)
-			{
-				/* pg_upgrading indexes is currently not supported, so this is OK */
-				if (searchkey.namespaceOid == PG_BITMAPINDEX_NAMESPACE)
-					missing_ok = true;
-			}
-			else
-			{
-				missing_ok = true;
-			}
-		}
-
-		if (!missing_ok)
+		if (!IsBinaryUpgrade)
 			elog(ERROR, "no pre-assigned OID for %s tuple \"%s\" (namespace:%u keyOid1:%u keyOid2:%u)",
 				 RelationGetRelationName(catalogrel), searchkey.objname ? searchkey.objname : "",
 				 searchkey.namespaceOid, searchkey.keyOid1, searchkey.keyOid2);
@@ -652,20 +619,12 @@ GetPreassignedOidForRelation(Oid namespaceOid, const char *relname)
 	if ((oid = GetPreassignedOid(&searchkey)) == InvalidOid)
 	{
 		/*
-		 * Special handling for binary upgrading the QD node. See
+		 * Special handling for binary upgrading. See 
 		 * GetPreassignedOidForTuple().
 		 */
-		if (IsBinaryUpgrade && !IsBinaryUpgradeQE())
-		{
-			if (namespaceOid == PG_BITMAPINDEX_NAMESPACE)
-				return InvalidOid;
+		if (IsBinaryUpgrade)
+			return InvalidOid;
 
-			if (namespaceOid == PG_TOAST_NAMESPACE)
-				return InvalidOid;
-
-			if (namespaceOid == PG_AOSEGMENT_NAMESPACE)
-				return InvalidOid;
-		}
 		elog(ERROR, "no pre-assigned OID for relation \"%s\"", relname);
 	}
 	return oid;
