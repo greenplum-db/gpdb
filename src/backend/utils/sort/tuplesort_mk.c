@@ -123,7 +123,6 @@
 #include "utils/builtins.h"
 #include "utils/tuplesort_mk.h"
 #include "utils/tuplesort_mk_details.h"
-#include "utils/string_wrapper.h"
 #include "utils/faultinjector.h"
 
 #include "cdb/cdbvars.h"
@@ -404,21 +403,6 @@ is_under_sort_or_exec_ctxt(Tuplesortstate_mk *state)
 }
 #endif
 
-/**
- * Any strings that are STRXFRM_INPUT_LENGTH_LIMIT or larger will store only the
- *	  first STRXFRM_INPUT_LENGTH_LIMIT bytes of the transformed string.
- *
- * Note that this is actually less transformed data in some cases than if the string were
- *	 just a little smaller than STRXFRM_INPUT_LENGTH_LIMIT.  We can probably make the
- *	 transition more gradual but will still want this fading off -- for long strings
- *	 that differ within the first STRXFRM_INPUT_LENGTH_LIMIT bytes then the prefix
- *	 will be sufficient for all but equal cases -- in which case a longer prefix does
- *	 not help (we must resort to datum for comparison)
- *
- * If less than the whole transformed size is stored then the transformed string itself is also
- *	 not copied -- so for large strings we must resort to datum-based comparison.
- */
-#define STRXFRM_INPUT_LENGTH_LIMIT (512)
 #define COPYTUP(state,stup,tup) ((*(state)->copytup) (state, stup, tup))
 #define WRITETUP(state,tape,stup)	((*(state)->writetup) (state, tape, stup))
 #define READTUP(state,pos,stup,tape,len) ((*(state)->readtup) (state, pos, stup, tape, len))
@@ -432,7 +416,7 @@ LACKMEM_WITH_ESTIMATE(Tuplesortstate_mk *state)
 	 */
 	Assert(state->status == TSS_INITIAL);
 
-	return MemoryContextGetCurrentSpace(state->sortcontext) + state->mkctxt.estimatedExtraForPrep > state->memAllowed;
+	return MemoryContextGetCurrentSpace(state->sortcontext) > state->memAllowed;
 }
 
 /*
@@ -504,21 +488,13 @@ static void freetup_datum(MKEntry *e);
 static void readtup_datum(Tuplesortstate_mk *state, TuplesortPos_mk *pos, MKEntry *e,
 			  LogicalTape *lt, uint32 len);
 
-static void tupsort_prepare_char(MKEntry *a, bool isChar);
-static int	tupsort_compare_char(MKEntry *v1, MKEntry *v2, MKLvContext *lvctxt, MKContext *mkContext);
-
 static Datum tupsort_fetch_datum_mtup(MKEntry *a, MKContext *mkctxt, MKLvContext *lvctxt, bool *isNullOut);
 static Datum tupsort_fetch_datum_itup(MKEntry *a, MKContext *mkctxt, MKLvContext *lvctxt, bool *isNullOut);
-
-static int32 estimateMaxPrepareSizeForEntry(MKEntry *a, struct MKContext *mkctxt);
-static int32 estimatePrepareSpaceForChar(struct MKContext *mkContext, MKEntry *e, Datum d, bool isCHAR);
 
 static void tuplesort_inmem_limit_insert(Tuplesortstate_mk *state, MKEntry *e);
 static void tuplesort_inmem_nolimit_insert(Tuplesortstate_mk *state, MKEntry *e);
 static void tuplesort_heap_insert(Tuplesortstate_mk *state, MKEntry *e);
 static void tuplesort_limit_sort(Tuplesortstate_mk *state);
-
-static void tupsort_refcnt(void *vp, int ref);
 
 /* Declare the following as extern so that older dtrace will not complain */
 extern void inittapes_mk(Tuplesortstate_mk *state, const char *rwfile_prefix);
@@ -682,9 +658,6 @@ create_mksort_context(MKContext *mkctxt,
 
 	mkctxt->cpfr = tupsort_cpfr;
 	mkctxt->freeTup = freeTupleFn;
-	mkctxt->estimatedExtraForPrep = 0;
-
-	lc_guess_strxfrm_scaling_factor(&mkctxt->strxfrmScaleFactor, &mkctxt->strxfrmConstantFactor);
 
 	for (i = 0; i < nkeys; ++i)
 	{
@@ -741,18 +714,6 @@ create_mksort_context(MKContext *mkctxt,
 
 			if (sinfo->scanKey.sk_func.fn_addr == btint4cmp)
 				sinfo->lvtype = MKLV_TYPE_INT32;
-
-			/* GPDB_91_MERGE_FIXME: these MKLV_TYPE_CHAR and MKLV_TYPE_TEXT
-			 * fastpaths only work with the default collation of the database.
-			 */
-			if (!lc_collate_is_c(sinfo->scanKey.sk_collation) &&
-				sinfo->scanKey.sk_collation == DEFAULT_COLLATION_OID)
-			{
-				if (sinfo->scanKey.sk_func.fn_addr == bpcharcmp)
-					sinfo->lvtype = MKLV_TYPE_CHAR;
-				else if (sinfo->scanKey.sk_func.fn_addr == bttextcmp)
-					sinfo->lvtype = MKLV_TYPE_TEXT;
-			}
 		}
 		else
 		{
@@ -1099,14 +1060,12 @@ tuplesort_finalize_stats_mk(Tuplesortstate_mk *state)
 			 * the array size (3) the prorated number of bytes for all tuples,
 			 * estimated from the memUsedBeforeSpill. Note that because of our
 			 * memory allocation algorithm, the used memory for tuples may be
-			 * much larger than the actual bytes needed for tuples. (4) the
-			 * prorated number of bytes for extra space needed.
+			 * much larger than the actual bytes needed for tuples.
 			 */
 			uint64		memwanted =
 			sizeof(Tuplesortstate_mk) /* (1) */ +
 			state->totalNumTuples * sizeof(MKEntry) /* (2) */ +
-			(uint64) (tupleRatio * (double) (state->memUsedBeforeSpill - mem_for_metadata)) /* (3) */ +
-			(uint64) (tupleRatio * (double) state->mkctxt.estimatedExtraForPrep) /* (4) */ ;
+			(uint64) (tupleRatio * (double) (state->memUsedBeforeSpill - mem_for_metadata)) /* (3) */;
 
 			state->instrument->workmemwanted =
 				Max(state->instrument->workmemwanted, memwanted);
@@ -1256,12 +1215,11 @@ grow_unsorted_array(Tuplesortstate_mk *state)
 
 	uint64		availMem = state->memAllowed - MemoryContextGetCurrentSpace(state->sortcontext);
 	uint64		avgTupSize = (uint64) (((double) state->totalTupleBytes) / ((double) state->totalNumTuples));
-	uint64		avgExtraForPrep = (uint64) (((double) state->mkctxt.estimatedExtraForPrep) / ((double) state->totalNumTuples));
 
-	if ((availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep)) == 0)
+	if ((availMem / (sizeof(MKEntry) + avgTupSize)) == 0)
 		return false;
 
-	uint64		maxNumEntries = state->entry_allocsize + (availMem / (sizeof(MKEntry) + avgTupSize + avgExtraForPrep));
+	uint64		maxNumEntries = state->entry_allocsize + (availMem / (sizeof(MKEntry) + avgTupSize));
 	uint64		newNumEntries = Min(maxNumEntries, state->entry_allocsize * 2);
 
 	uint64 allocsize = newNumEntries * sizeof(MKEntry);
@@ -3117,22 +3075,6 @@ readtup_datum(Tuplesortstate_mk *state, TuplesortPos_mk *pos, MKEntry *e,
 	}
 }
 
-typedef struct refcnt_locale_str
-{
-	int			ref;
-	short		xfrm_pos;
-	char		isPrefixOnly;
-	char		data[1];
-} refcnt_locale_str;
-
-typedef struct refcnt_locale_str_k
-{
-	int			ref;
-	short		xfrm_pos;
-	char		isPrefixOnly;
-	char		data[16000];
-} refcnt_locale_str_k;
-
 /**
  * Compare the datums for the given level.  It is assumed that each entry has been prepared
  *	 for the given level.
@@ -3160,8 +3102,6 @@ tupsort_compare_datum(MKEntry *v1, MKEntry *v2, MKLvContext *lvctxt, MKContext *
 
 				return ((lvctxt->scanKey.sk_flags & SK_BT_DESC) != 0) ? -result : result;
 			}
-		default:
-			return tupsort_compare_char(v1, v2, lvctxt, context);
 	}
 
 	Assert(!"Never reach here");
@@ -3172,17 +3112,10 @@ void
 tupsort_cpfr(MKEntry *dst, MKEntry *src, MKLvContext *lvctxt)
 {
 	Assert(dst);
-	if (mke_is_refc(dst))
-	{
-		Assert(dst->d != 0);
-		Assert(!mke_is_copied(dst));
-		tupsort_refcnt(DatumGetPointer(dst->d), -1);
-	}
 
 	if (mke_is_copied(dst))
 	{
 		Assert(dst->d != 0);
-		Assert(!mke_is_refc(dst));
 		pfree(DatumGetPointer(dst->d));
 	}
 
@@ -3193,9 +3126,7 @@ tupsort_cpfr(MKEntry *dst, MKEntry *src, MKLvContext *lvctxt)
 		*dst = *src;
 		if (!mke_is_null(src))
 		{
-			if (mke_is_refc(src))
-				tupsort_refcnt(DatumGetPointer(dst->d), 1);
-			else if (!lvctxt->typByVal)
+			if (!lvctxt->typByVal)
 			{
 				Assert(src->d != 0);
 				dst->d = datumCopy(src->d, lvctxt->typByVal, lvctxt->typLen);
@@ -3203,141 +3134,6 @@ tupsort_cpfr(MKEntry *dst, MKEntry *src, MKLvContext *lvctxt)
 			}
 		}
 	}
-}
-
-static void
-tupsort_refcnt(void *vp, int ref)
-{
-	refcnt_locale_str *p = (refcnt_locale_str *) vp;
-
-	Assert(p && p->ref > 0);
-	Assert(ref == 1 || ref == -1);
-
-	if (ref == 1)
-		++p->ref;
-	else
-	{
-		if (--p->ref == 0)
-			pfree(p);
-	}
-}
-
-static int
-tupsort_compare_char(MKEntry *v1, MKEntry *v2, MKLvContext *lvctxt, MKContext *mkContext)
-{
-	int			result = 0;
-
-	refcnt_locale_str *p1 = (refcnt_locale_str *) DatumGetPointer(v1->d);
-	refcnt_locale_str *p2 = (refcnt_locale_str *) DatumGetPointer(v2->d);
-
-	Assert(!mke_is_null(v1));
-	Assert(!mke_is_null(v2));
-
-	Assert(!lc_collate_is_c(lvctxt->scanKey.sk_collation));
-	Assert(mkContext->fetchForPrep);
-
-	Assert(p1->ref > 0 && p2->ref > 0);
-
-	if (p1 == p2)
-	{
-		Assert(p1->ref >= 2);
-		result = 0;
-	}
-	else
-	{
-		result = strcmp(p1->data + p1->xfrm_pos, p2->data + p2->xfrm_pos);
-
-		if (result == 0)
-		{
-			if (p1->isPrefixOnly || p2->isPrefixOnly)
-			{
-				/*
-				 * only prefixes were equal so we must compare more of the
-				 * strings
-				 *
-				 * do this by getting the true datum and calling the built-in
-				 * comparison function
-				 */
-				Datum		p1Original,
-							p2Original;
-				bool		p1IsNull,
-							p2IsNull;
-
-				p1Original = (mkContext->fetchForPrep) (v1, mkContext, lvctxt, &p1IsNull);
-				p2Original = (mkContext->fetchForPrep) (v2, mkContext, lvctxt, &p2IsNull);
-
-				Assert(!p1IsNull);		/* should not have been prepared if
-										 * null */
-				Assert(!p2IsNull);
-
-				result = inlineApplySortFunction(&lvctxt->scanKey.sk_func,
-												 lvctxt->scanKey.sk_flags,
-												 lvctxt->scanKey.sk_collation,
-												 p1Original, false,
-												 p2Original, false);
-			}
-			else
-			{
-				/*
-				 * See varstr_cmp for comment on comparing str with locale.
-				 * Essentially, for some locale, strcoll may return eq even if
-				 * original str are different.
-				 */
-				result = strcmp(p1->data, p2->data);
-			}
-		}
-
-		/* The values were equal -- de-dupe them */
-		if (result == 0)
-		{
-			if (p1->ref >= p2->ref)
-			{
-				v2->d = v1->d;
-				tupsort_refcnt(p1, 1);
-				tupsort_refcnt(p2, -1);
-			}
-			else
-			{
-				v1->d = v2->d;
-				tupsort_refcnt(p2, 1);
-				tupsort_refcnt(p1, -1);
-			}
-		}
-	}
-
-	return ((lvctxt->scanKey.sk_flags & SK_BT_DESC) != 0) ? -result : result;
-}
-
-static int32
-estimateMaxPrepareSizeForEntry(MKEntry *a, struct MKContext *mkContext)
-{
-	int			result = 0;
-	int			lv;
-
-	Assert(mkContext->fetchForPrep != NULL);
-
-	for (lv = 0; lv < mkContext->total_lv; lv++)
-	{
-		MKLvContext *level = mkContext->lvctxt + lv;
-		MKLvType	levelType = level->lvtype;
-
-		if (levelType == MKLV_TYPE_CHAR ||
-			levelType == MKLV_TYPE_TEXT)
-		{
-			bool		isnull;
-			Datum		d = (mkContext->fetchForPrep) (a, mkContext, level, &isnull);
-
-			if (!isnull)
-			{
-				int			amountThisDatum = estimatePrepareSpaceForChar(mkContext, a, d, levelType == MKLV_TYPE_CHAR);
-
-				if (amountThisDatum > result)
-					result = amountThisDatum;
-			}
-		}
-	}
-
-	return result;
 }
 
 static Datum
@@ -3382,238 +3178,6 @@ tupsort_prepare(MKEntry *a, MKContext *mkctxt, int lv)
 		mke_set_not_null(a);
 	else
 		mke_set_null(a, (lvctxt->scanKey.sk_flags & SK_BT_NULLS_FIRST) != 0);
-
-	if (lvctxt->lvtype == MKLV_TYPE_CHAR)
-		tupsort_prepare_char(a, true);
-	else if (lvctxt->lvtype == MKLV_TYPE_TEXT)
-		tupsort_prepare_char(a, false);
-}
-
-/* "True" length (not counting trailing blanks) of a BpChar */
-static inline int
-bcTruelen(char *p, int len)
-{
-	int			i;
-
-	for (i = len - 1; i >= 0; i--)
-	{
-		if (p[i] != ' ')
-			break;
-	}
-	return i + 1;
-}
-
-/**
- * should only be called for non-null Datum (caller must check the isnull flag from the fetch)
- */
-static int32
-estimatePrepareSpaceForChar(struct MKContext *mkContext, MKEntry *e, Datum d, bool isCHAR)
-{
-	int			len,
-				transformedLength,
-				retlen;
-
-	if (isCHAR)
-	{
-		char	   *p;
-		void	   *toFree;
-
-		varattrib_untoast_ptr_len(d, &p, &len, &toFree);
-		len = bcTruelen(p, len);
-
-		if (toFree)
-			pfree(toFree);
-	}
-	else
-	{
-		/*
-		 * since we don't need the data for checking the true length, just
-		 * unpack enough to get the length this may avoid decompression
-		 */
-		len = varattrib_untoast_len(d);
-	}
-
-	/* figure out how much space transformed version will take */
-	transformedLength = len * mkContext->strxfrmScaleFactor + mkContext->strxfrmConstantFactor;
-	if (len > STRXFRM_INPUT_LENGTH_LIMIT)
-	{
-		if (transformedLength > STRXFRM_INPUT_LENGTH_LIMIT)
-			transformedLength = STRXFRM_INPUT_LENGTH_LIMIT;
-
-		/*
-		 * we do not store the raw data for long input strings (in part
-		 * because of compression producing a long input string from a much
-		 * smaller datum)
-		 */
-		len = 0;
-	}
-
-	retlen = offsetof(refcnt_locale_str, data) + len + 1 + transformedLength + 1;
-	return retlen;
-}
-
-/**
- * Prepare a character string by copying the datum out to a null-terminated string and
- *	 then also keeping a strxfrmed copy of it.
- *
- * If the string is long then the copied out value is not kept and only the prefix of the strxfrm
- *	 is kept.
- *
- * Note that this must be in sync with the estimation function.
- */
-static void
-tupsort_prepare_char(MKEntry *a, bool isCHAR)
-{
-	char	   *p;
-	void	   *tofree = NULL;
-	int			len;
-	int			lenToStore;
-	int			transformedLenToStore;
-	int			retlen;
-
-	refcnt_locale_str *ret;
-	refcnt_locale_str_k kstr;
-	int			avail = sizeof(kstr.data);
-	bool		storePrefixOnly;
-
-	if (mke_is_null(a))
-		return;
-
-	varattrib_untoast_ptr_len(a->d, &p, &len, &tofree);
-
-	if (isCHAR)
-		len = bcTruelen(p, len);
-
-	if (len > STRXFRM_INPUT_LENGTH_LIMIT)
-	{
-		/*
-		 * too long?  store prefix of strxfrm only and DON'T store copy of
-		 * original string
-		 */
-		storePrefixOnly = true;
-		lenToStore = 0;
-	}
-	else
-	{
-		storePrefixOnly = false;
-		lenToStore = len;
-	}
-
-	/*
-	 * This assertion is true because avail is larger than
-	 * STRXFRM_INPUT_LENGTH_LIMIT, which is the max of lenToStore ...
-	 */
-	Assert(lenToStore <= avail - 2);
-	Assert(lenToStore < 32768); /* so it will fit in a short (xfrm_pos field) */
-	Assert(STRXFRM_INPUT_LENGTH_LIMIT < 32768); /* so it will fit in a short
-												 * (xfrm_pos field) */
-
-	kstr.ref = 1;
-	kstr.xfrm_pos = lenToStore + 1;
-	kstr.isPrefixOnly = storePrefixOnly ? 1 : 0;
-	memcpy(kstr.data, p, lenToStore);
-	kstr.data[lenToStore] = '\0';
-
-	avail -= lenToStore + 1;
-	Assert(avail > 0);
-
-	/*
-	 * String transformation.
-	 */
-	if (storePrefixOnly)
-	{
-		/*
-		 * prefix only: we haven't copied from p into a null-terminated string
-		 * so do that now
-		 */
-		char	   *possibleStr = kstr.data + kstr.xfrm_pos + STRXFRM_INPUT_LENGTH_LIMIT + 2;
-		char	   *str;
-
-		if (avail >= STRXFRM_INPUT_LENGTH_LIMIT + 1 + len + 1)
-		{
-			/*
-			 * will segment this so first part is xformed string and next is
-			 * the throw-away string to be passed to strxfrm
-			 */
-			str = possibleStr;
-		}
-		else
-		{
-			str = palloc(len + 1);
-		}
-		memcpy(str, p, len);
-		str[len] = '\0';
-
-		/*
-		 * transform, but limit length of transformed string
-		 */
-		Assert(avail >= STRXFRM_INPUT_LENGTH_LIMIT + 1);
-		transformedLenToStore = (int) gp_strxfrm(kstr.data + kstr.xfrm_pos, str, STRXFRM_INPUT_LENGTH_LIMIT + 1);
-
-		if (transformedLenToStore > STRXFRM_INPUT_LENGTH_LIMIT)
-		{
-			transformedLenToStore = STRXFRM_INPUT_LENGTH_LIMIT;
-
-			/*
-			 * this is required for linux -- when there is not enough room
-			 * then linux does NOT write the \0
-			 */
-			kstr.data[kstr.xfrm_pos + transformedLenToStore] = '\0';
-		}
-
-		if (str != possibleStr)
-			pfree(str);
-	}
-	else
-		transformedLenToStore = (int) gp_strxfrm(kstr.data + kstr.xfrm_pos, kstr.data, avail);
-
-	/*
-	 * Copy or transform into the result as needed
-	 */
-	retlen = offsetof(refcnt_locale_str, data) + lenToStore + 1 + transformedLenToStore + 1;
-
-	ret = (refcnt_locale_str *) palloc(retlen);
-
-	if (transformedLenToStore < avail)
-	{
-		memcpy(ret, &kstr, retlen);
-		Assert(ret->ref == 1);
-		Assert(ret->data[ret->xfrm_pos - 1] == '\0');
-		Assert(ret->data[ret->xfrm_pos + transformedLenToStore] == '\0');
-	}
-	else
-	{
-		/*
-		 * note that when avail (determined by refcnt_locale_str_k.data) is
-		 * much larger than STRXFRM_INPUT_LENGTH_LIMIT then this code won't be
-		 * hit.
-		 */
-		memcpy(ret, &kstr, offsetof(refcnt_locale_str, data) + lenToStore + 1);
-		avail = retlen - offsetof(refcnt_locale_str, data) - lenToStore - 1;
-		Assert(avail > transformedLenToStore);
-		Assert(ret->ref == 1);
-		Assert(ret->xfrm_pos == len + 1);
-		Assert(ret->data[len] == '\0');
-
-		transformedLenToStore = (int) gp_strxfrm(ret->data + ret->xfrm_pos, kstr.data, avail);
-		Assert(transformedLenToStore < avail);
-		Assert(ret->data[ret->xfrm_pos + transformedLenToStore] == '\0');
-	}
-
-	if (tofree)
-		pfree(tofree);
-
-	/*
-	 * data string is length zero in this case (could just not even store it
-	 * and have xfrm_pos == 0 but that complicates code more)
-	 */
-	AssertImply(storePrefixOnly, ret->data[0] == '\0');
-
-	/*
-	 * finalize result
-	 */
-	a->d = PointerGetDatum(ret);
-	mke_set_refc(a);
 }
 
 /*
@@ -3695,11 +3259,6 @@ tuplesort_inmem_nolimit_insert(Tuplesortstate_mk *state, MKEntry *entry)
 	Assert(state->entry_count < state->entry_allocsize);
 
 	state->entries[state->entry_count] = *entry;
-	if (state->mkctxt.fetchForPrep)
-	{
-		state->mkctxt.estimatedExtraForPrep += estimateMaxPrepareSizeForEntry(&state->entries[state->entry_count],
-															 &state->mkctxt);
-	}
 	state->entry_count++;
 	state->numTuplesInMem++;
 

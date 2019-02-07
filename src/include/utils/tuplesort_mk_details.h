@@ -37,7 +37,6 @@
 /* Top bit is always unused */
 
 /* flags, not comp */ 
-#define MKE_F_RefCnt          1
 #define MKE_F_Copied          2 
 #define MKE_F_Reader          0xFFFC               
 #define MKE_MAX_READER        0x3FFF
@@ -160,19 +159,6 @@ static inline void mke_set_comp_max(MKEntry *e)
     e->compflags = MKE_CF_MAX;
 }
 
-static inline void mke_set_refc(MKEntry *e)
-{
-    i_set_flag(&e->flags, MKE_F_RefCnt);
-}
-static inline void mke_clear_refc(MKEntry *e)
-{
-    i_clear_flag(&e->flags, MKE_F_RefCnt);
-}
-static inline bool mke_is_refc(MKEntry *e)
-{
-    return i_test_flag(&e->flags, MKE_F_RefCnt);
-}
-
 static inline void mke_set_copied(MKEntry *e)
 {
     i_set_flag(&e->flags, MKE_F_Copied);
@@ -188,7 +174,7 @@ static inline bool mke_is_copied(MKEntry *e)
 
 static inline void mke_clear_refc_copied(MKEntry *e)
 {
-    i_clear_flag(&e->flags, MKE_F_RefCnt | MKE_F_Copied);
+    i_clear_flag(&e->flags, MKE_F_Copied);
 }
 
 static inline int32 mke_get_reader(MKEntry *e)
@@ -218,9 +204,7 @@ extern void tupsort_prepare(MKEntry *a, struct MKContext *ctxt, int lv);
 typedef enum MKLvType
 {
     MKLV_TYPE_NONE,  /* this level has not yet been assigned a type: todo: verify meaning */
-    MKLV_TYPE_INT32, /* this level contains int32 values */
-    MKLV_TYPE_CHAR,  /* this level contains char (blank padded) values */
-    MKLV_TYPE_TEXT,  /* this level contains text values */
+    MKLV_TYPE_INT32 /* this level contains int32 values */
 } MKLvType;
 
 typedef struct MKLvContext
@@ -265,18 +249,6 @@ typedef struct MKContext {
      * state->availMem by the amount of memory space thereby released.
      */
     MKFreeTuple freeTup;
-
-
-    /* as calculated by estimateExtraSpace.  This is only valid before we've switched to buildruns mode
-     *   It is only calculate when the fetchForPrep fn is set as well
-     */
-    long estimatedExtraForPrep;
-
-    /* strxfrm's scale factor (multiplies by length), depends on the current collation */
-    int strxfrmScaleFactor;
-
-    /* strxfrm's constant factor, depends on the current collation */
-    int strxfrmConstantFactor;
 
     TupleDesc tupdesc;
     Relation heapRel;

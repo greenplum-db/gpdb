@@ -137,11 +137,7 @@ static void mk_qsort_part3(MKEntry *a, int left, int right, int lv, MKContext *m
 	pv = mkqs_choose_pivot(a, left, right, lv, lvctxt, mkqs_ctxt);
 
 	/* Save pivot in v */ 
-	/* Hacking a ref count */
-	if(mke_is_refc(pv))
-		mkqs_ctxt->cpfr(&v, pv, lvctxt);
-	else 
-		v = *pv;
+	v = *pv;
 
 	while(1)
 	{
@@ -252,10 +248,6 @@ static void mk_qsort_part3(MKEntry *a, int left, int right, int lv, MKContext *m
 	Assert(leftIndex >= left-1 && leftIndex < right);
 	Assert(rightIndex > left && rightIndex <= right+1);
 	Assert(rightIndex >= leftIndex+2);
-
-	/* Hack ref count */
-	if(mke_is_refc(&v))
-		mkqs_ctxt->cpfr(&v, NULL, lvctxt);
 
 	*lastInLowOut = leftIndex;
 	*firstInHighOut = rightIndex;
