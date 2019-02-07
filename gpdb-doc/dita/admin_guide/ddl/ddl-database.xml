@@ -26,7 +26,7 @@
         drop or modify <i>template0</i>. You can use <i>template0</i> to create a completely clean
         database containing only the standard objects predefined by Greenplum Database at
         initialization.</p>
-      <p>You can use <i>postgres</i> database to connect to Greenplum Database for the first time.
+      <p>You can use the <i>postgres</i> database to connect to Greenplum Database for the first time.
         Greenplum Database uses <i>postgres</i> as the default database for administrative
         connections. For example, <i>postgres</i> is used by startup processes, the Global Deadlock
         Detector process, and the FTS (Fault Tolerance Server) process for catalog access.</p>
