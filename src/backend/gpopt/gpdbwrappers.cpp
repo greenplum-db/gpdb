@@ -3220,4 +3220,25 @@ gpdb::MakeGpPolicy
 	}
 	GP_WRAP_END;
 }
+
+uint32
+gpdb::HashBpChar(Datum d)
+{
+	GP_WRAP_START;
+	{
+		return DatumGetUInt32(DirectFunctionCall1(hashbpchar, d));
+	}
+	GP_WRAP_END;
+}
+
+uint32
+gpdb::HashText(Datum d)
+{
+	GP_WRAP_START;
+	{
+		return DatumGetUInt32(DirectFunctionCall1(hashtext, d));
+	}
+	GP_WRAP_END;
+}
+
 // EOF

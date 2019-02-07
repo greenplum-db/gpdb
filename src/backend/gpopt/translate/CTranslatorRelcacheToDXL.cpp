@@ -2511,55 +2511,42 @@ CTranslatorRelcacheToDXL::RetrieveColStats
 	CDouble distinct_remaining(0.0);
 	CDouble freq_remaining(0.0);
 
-	// We only want to create statistics buckets if the column is NOT a text, varchar, char or bpchar type
-	// For the above column types we will use NDVRemain and NullFreq to do cardinality estimation.
-	if (CTranslatorUtils::ShouldCreateStatsBucket(att_type))
+	// transform all the bits and pieces from pg_statistic
+	// to a single bucket structure
+	CDXLBucketArray *dxl_stats_bucket_array_transformed =
+	TransformStatsToDXLBucketArray
+	(
+	 mp,
+	 att_type,
+	 num_distinct,
+	 null_freq,
+	 mcv_slot.values,
+	 mcv_slot.numbers,
+	 ULONG(mcv_slot.nvalues),
+	 hist_slot.values,
+	 ULONG(hist_slot.nvalues)
+	 );
+
+	GPOS_ASSERT(NULL != dxl_stats_bucket_array_transformed);
+
+	const ULONG num_buckets = dxl_stats_bucket_array_transformed->Size();
+	for (ULONG ul = 0; ul < num_buckets; ul++)
 	{
-		// transform all the bits and pieces from pg_statistic
-		// to a single bucket structure
-		CDXLBucketArray *dxl_stats_bucket_array_transformed =
-		TransformStatsToDXLBucketArray
-		(
-		 mp,
-		 att_type,
-		 num_distinct,
-		 null_freq,
-		 mcv_slot.values,
-		 mcv_slot.numbers,
-		 ULONG(mcv_slot.nvalues),
-		 hist_slot.values,
-		 ULONG(hist_slot.nvalues)
-		 );
-
-		GPOS_ASSERT(NULL != dxl_stats_bucket_array_transformed);
-
-		const ULONG num_buckets = dxl_stats_bucket_array_transformed->Size();
-		for (ULONG ul = 0; ul < num_buckets; ul++)
-		{
-			CDXLBucket *dxl_bucket = (*dxl_stats_bucket_array_transformed)[ul];
-			num_ndv_buckets = num_ndv_buckets + dxl_bucket->GetNumDistinct();
-			num_freq_buckets = num_freq_buckets + dxl_bucket->GetFrequency();
-		}
-
-		CUtils::AddRefAppend(dxl_stats_bucket_array, dxl_stats_bucket_array_transformed);
-		dxl_stats_bucket_array_transformed->Release();
-
-		// there will be remaining tuples if the merged histogram and the NULLS do not cover
-		// the total number of distinct values
-		if ((1 - CStatistics::Epsilon > num_freq_buckets + null_freq) &&
-			(0 < num_distinct - num_ndv_buckets))
-		{
-			distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets));
-			freq_remaining = std::max(CDouble(0.0), (1 - num_freq_buckets - null_freq));
-		}
+		CDXLBucket *dxl_bucket = (*dxl_stats_bucket_array_transformed)[ul];
+		num_ndv_buckets = num_ndv_buckets + dxl_bucket->GetNumDistinct();
+		num_freq_buckets = num_freq_buckets + dxl_bucket->GetFrequency();
 	}
-	else
+
+	CUtils::AddRefAppend(dxl_stats_bucket_array, dxl_stats_bucket_array_transformed);
+	dxl_stats_bucket_array_transformed->Release();
+
+	// there will be remaining tuples if the merged histogram and the NULLS do not cover
+	// the total number of distinct values
+	if ((1 - CStatistics::Epsilon > num_freq_buckets + null_freq) &&
+		(0 < num_distinct - num_ndv_buckets))
 	{
-		// in case of text, varchar, char or bpchar, there are no stats buckets, so the
-		// remaining frequency is everything excluding NULLs, and distinct remaining is the
-		// stadistinct as available in pg_statistic
-		distinct_remaining = num_distinct;
- 		freq_remaining = 1 - null_freq;
+		distinct_remaining = std::max(CDouble(0.0), (num_distinct - num_ndv_buckets));
+		freq_remaining = std::max(CDouble(0.0), (1 - num_freq_buckets - null_freq));
 	}
 
 	// free up allocated datum and float4 arrays
@@ -2878,7 +2865,11 @@ CTranslatorRelcacheToDXL::TransformStatsToDXLBucketArray
 	{
 		hist_freq = CDouble(1.0) - null_freq - mcv_freq;
 	}
-	BOOL has_hist = 1 < num_hist_values && CStatistics::Epsilon < hist_freq;
+	
+	BOOL is_text_type = mdid_atttype->Equals(&CMDIdGPDB::m_mdid_varchar)
+			 || mdid_atttype->Equals(&CMDIdGPDB::m_mdid_bpchar)
+			 || mdid_atttype->Equals(&CMDIdGPDB::m_mdid_text);
+	BOOL has_hist = !is_text_type && 1 < num_hist_values && CStatistics::Epsilon < hist_freq;
 
 	CHistogram *histogram = NULL;
 

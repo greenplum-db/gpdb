@@ -655,6 +655,11 @@ namespace gpdb {
 	GpPolicy *MakeGpPolicy(GpPolicyType ptype, int nattrs,
 						   int numsegments);
 
+
+	uint32 HashBpChar(Datum d);
+
+	uint32 HashText(Datum d);
+
 } //namespace gpdb
 
 #define ForEach(cell, l)	\
