@@ -31,7 +31,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
-    | REPLICATE | NOREPLICATION
+    | REPLICATION | NOREPLICATION
     | CONNECTION LIMIT <varname>connlimit</varname>
     | [ENCRYPTED | UNENCRYPTED] PASSWORD '<varname>password</varname>'
     | VALID UNTIL '<varname>timestamp</varname>'
@@ -91,7 +91,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
               href="REVOKE.xml#topic1">REVOKE</xref></codeph> for that.) Attributes not mentioned in
           the command retain their previous settings. Database superusers can change any of these
           settings for any role. Roles having <codeph>CREATEROLE</codeph> privilege can change any
-          of these settings, but only for non-superuser roles. Ordinary roles can only change their
+          of these settings, but only for non-superuser and non-replication roles. Ordinary roles can only change their
           own password.</li>
       </ul>
     </section>
@@ -122,7 +122,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
             removed for the given role and database only. Whenever the role subsequently starts a
             new session, the specified value becomes the session default, overriding whatever
             setting is present in <codeph>postgresql.conf</codeph> or has been received from the
-            command line.</pd>
+            <codeph>postgres</codeph> command line.</pd>
           <pd>Role-specific variable settings take effect only at login; <codeph>SET
                 ROLE</codeph> and <codeph><xref
                 href="SET_SESSION_AUTHORIZATION.xml#topic1"/></codeph> do not process role-specific
@@ -170,6 +170,8 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
         <plentry>
           <pt>INHERIT | NOINHERIT</pt>
           <pt>LOGIN | NOLOGIN</pt>
+          <pt>REPLICATION</pt>
+          <pt>NOREPLICATION</pt>
           <pt>CONNECTION LIMIT connlimit </pt>
           <pt>PASSWORD password</pt>
           <pt>ENCRYPTED | UNENCRYPTED</pt>
