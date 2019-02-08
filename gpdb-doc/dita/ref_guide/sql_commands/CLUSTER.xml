@@ -50,29 +50,38 @@ indexed value that has multiple rows that match, <codeph>CLUSTER</codeph>
 will help because once the index identifies the table page for the first
 row that matches, all other rows that match are probably already on the
 same table page, and so you save disk accesses and speed up the query.
-</p><p>During the cluster operation, a temporary copy of the table is created
-that contains the table data in the index order. Temporary copies of
-each index on the table are created as well. Therefore, you need free
-space on disk at least equal to the sum of the table size and the index
-sizes. </p><p>Because the query optimizer records statistics about the ordering of tables, it is advisable to
+                                </p>
+                        <p><codeph>CLUSTER</codeph> can re-sort the table using either an index scan
+                                on the specified index, or (if the index is a b-tree) a sequential
+                                scan followed by sorting. It will attempt to choose the method that
+                                will be faster, based on planner cost parameters and available
+                                statistical information. </p>
+                        <p> When an index scan is used, a temporary copy of the table is created
+                                that contains the table data in the index order. Temporary copies of
+                                each index on the table are created as well. Therefore, you need
+                                free space on disk at least equal to the sum of the table size and
+                                the index sizes. </p>
+                        <p> When a sequential scan and sort is used, a temporary sort file is also
+                                created, so that the peak temporary space requirement is as much as
+                                double the table size, plus the index sizes. This method is often
+                                faster than the index scan method, but if the disk space requirement
+                                is intolerable, you can disable this choice by temporarily setting
+                                the <xref href="../config_params/guc-list.xml#enable_sort"
+                                        >enable_sort</xref> configuraition parameter to
+                                        <codeph>off</codeph>. </p>
+                        <p> It is advisable to set <xref
+                                        href="../config_params/guc-list.xml#maintenance_work_mem"/>
+                                configuration parameter to a reasonably large value (but not more
+                                than the amount of RAM you can dedicate to the
+                                        <codeph>CLUSTER</codeph> operation) before clustering. </p>
+                                        <p>Because the query optimizer records statistics about the ordering of tables, it is advisable to
         run <codeph>ANALYZE</codeph> on the newly clustered table. Otherwise, the planner may make
-        poor choices of query plans. </p><p>There is another way to cluster data. The <codeph>CLUSTER</codeph>
-command reorders the original table by scanning it using the index you
-specify. This can be slow on large tables because the rows are fetched
-from the table in index order, and if the table is disordered, the entries
-are on random pages, so there is one disk page retrieved for every row
-moved. (Greenplum Database has a cache, but the majority of a big table
-will not fit in the cache.) The other way to cluster a table is to use
-a statement such as:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;</codeblock><p>This uses the Greenplum Database sorting code to produce the desired
-order, which is usually much faster than an index scan for disordered
-data. Then you drop the old table, use <codeph>ALTER TABLE ... RENAME</codeph>
-to rename <varname>newtable</varname> to the old name, and recreate the table's
-indexes. The big disadvantage of this approach is that it does not preserve
-OIDs, constraints, granted privileges, and other ancillary properties
-of the table — all such items must be manually recreated. Another disadvantage
-is that this way requires a sort temporary file about the same size as
-the table itself, so peak disk usage is about three times the table size
-instead of twice the table size.</p><note><codeph>CLUSTER</codeph> is not supported with append-optimized tables.</note></section><section id="section6"><title>Examples</title><p>Cluster the table <codeph>employees</codeph> on the basis of its index
+                                                poor choices of query plans. </p>
+                        <p>Because <codeph>CLUSTER</codeph> remembers which indexes are clustered,
+                                you can cluster the tables you want clustered manually the first
+                                time, then set up a periodic maintenance script that executes
+                                        <codeph>CLUSTER</codeph> without any parameters, so that the
+                                desired tables are periodically reclustered.</p><note><codeph>CLUSTER</codeph> is not supported with append-optimized tables.</note></section><section id="section6"><title>Examples</title><p>Cluster the table <codeph>employees</codeph> on the basis of its index
         <codeph>emp_ind</codeph>:</p><codeblock>CLUSTER emp_ind ON emp;</codeblock><p>Cluster a large table by recreating it and loading it in the correct index
 order:</p><codeblock>CREATE TABLE newtable AS SELECT * FROM table ORDER BY column;
 DROP table;
