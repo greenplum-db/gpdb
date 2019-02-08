@@ -35,14 +35,15 @@
                 concurrent holders of <codeph>ROW EXCLUSIVE</codeph> mode locks commit or roll back.
                 Thus, once you obtain the lock, there are no uncommitted writes outstanding;
                 furthermore none can begin until you release the lock.</p>
-            <p>To achieve a similar effect when running a transaction at the <i>Serializable</i>
-                isolation level, you have to execute the <codeph>LOCK TABLE</codeph> statement
-                before executing any <codeph>SELECT</codeph> or data modification statement. A
-                serializable transaction's view of data will be frozen when its first
-                    <codeph>SELECT</codeph> or data modification statement begins. A <codeph>LOCK
-                    TABLE</codeph> later in the transaction will still prevent concurrent writes —
-                but it won't ensure that what the transaction reads corresponds to the latest
-                committed values.</p>
+            <p>To achieve a similar effect when running a transaction at the <codeph>REPEATABLE
+                    READ</codeph> or <codeph>SERIALIZABLE</codeph> isolation level, you have to
+                execute the <codeph>LOCK TABLE</codeph> statement before executing any
+                    <codeph>SELECT</codeph> or data modification statement. A <codeph>REPEATBLE
+                    READ</codeph> or <codeph>SERIALIZABLE</codeph> transaction's view of data will
+                be frozen when its first <codeph>SELECT</codeph> or data modification statement
+                begins. A <codeph>LOCK TABLE</codeph> later in the transaction will still prevent
+                concurrent writes — but it won't ensure that what the transaction reads corresponds
+                to the latest committed values.</p>
             <p>If a transaction of this sort is going to change the data in the table, then it
                 should use <codeph>SHARE ROW EXCLUSIVE</codeph> lock mode instead of
                     <codeph>SHARE</codeph> mode. This ensures that only one transaction of this type
@@ -164,8 +165,8 @@
             <title>Notes</title>
             <p><codeph>LOCK TABLE ... IN ACCESS SHARE MODE</codeph> requires <codeph>SELECT</codeph>
                 privileges on the target table. All other forms of <codeph>LOCK</codeph> require
-                    <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>TRUNCATE</codeph>
-                privileges.</p>
+                table-level <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or
+                    <codeph>TRUNCATE</codeph> privileges.</p>
             <p><codeph>LOCK TABLE</codeph> is useless outside of a transaction block: the lock would
                 be held only to the completion of the <codeph>LOCK</codeph> statement. Therefore,
                 Greenplum Database reports an error if <codeph>LOCK</codeph> is used outside of a
@@ -188,10 +189,10 @@
                 to perform inserts into the <codeph>films_user_comments</codeph> table:</p>
             <codeblock>BEGIN WORK;
 LOCK TABLE films IN SHARE MODE;
-SELECT id FROM films 
+SELECT id FROM films
     WHERE name = 'Star Wars: Episode I - The Phantom Menace';
 -- Do ROLLBACK if record was not returned
-INSERT INTO films_user_comments VALUES 
+INSERT INTO films_user_comments VALUES
     (_id_, 'GREAT! I was waiting for it for so long!');
 COMMIT WORK;</codeblock>
             <p>Take a <codeph>SHARE ROW EXCLUSIVE</codeph> lock on a table when performing a delete
