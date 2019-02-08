@@ -117,6 +117,14 @@ function include_quicklz() {
   popd
 }
 
+function include_libstdcxx() {
+  pushd /opt/gcc-6*/lib64
+    if [ "${TARGET_OS}" == "centos" ] ; then
+      cp libstdc++.so.* ${GREENPLUM_INSTALL_DIR}/lib/.
+    fi
+  popd
+}
+
 function export_gpdb() {
   TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_BIN_FILENAME}"
   pushd ${GREENPLUM_INSTALL_DIR}
@@ -203,6 +211,7 @@ function _main() {
   fi
   include_zstd
   include_quicklz
+  include_libstdcxx
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
