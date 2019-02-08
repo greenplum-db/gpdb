@@ -2,9 +2,8 @@
 Feature: expand the cluster by adding more segments
 
     @gpexpand_no_mirrors
-    @gpexpand_ranks
     @gpexpand_timing
-    Scenario: after resuming a duration interrupted redistribution, tables were restored in the user defined order
+    Scenario: after resuming a duration interrupted redistribution, tables are restored
         Given a working directory of the test as '/data/gpdata/gpexpand'
         And the database is killed on hosts "mdw,sdw1"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -16,19 +15,17 @@ Feature: expand the cluster by adding more segments
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then the number of segments have been saved
-        And user has created expansionranktest tables
-        And 4000000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
+        And user has created expansiontest tables
+        And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
-        Then user has fixed the expansion order for tables
-        When the user runs gpexpand against database "gptest" to redistribute with duration "00:00:02"
+         And the user runs gpexpand against database "gptest" to redistribute with duration "00:00:02"
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
         And verify that the cluster has 2 new segments
         When the user runs gpexpand against database "gptest" to redistribute
-        Then the tables were expanded in the specified order
+        Then the tables have finished expanding
         And verify that the master pid has not been changed
 
     @gpexpand_no_mirrors
-    @gpexpand_ranks
     @gpexpand_timing
     @gpexpand_standby
     Scenario: after a duration interrupted redistribution, state file on standby matches master
@@ -42,17 +39,15 @@ Feature: expand the cluster by adding more segments
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
-        Then user has created expansionranktest tables
-        And 4000000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
+        Then user has created expansiontest tables
+        And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         When the user runs gpexpand against database "gptest" to redistribute with duration "00:00:02"
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
 
-
     @gpexpand_no_mirrors
-    @gpexpand_ranks
     @gpexpand_timing
-    Scenario: after resuming an end time interrupted redistribution, tables were restored in the user defined order
+    Scenario: after resuming an end time interrupted redistribution, tables are restored
         Given a working directory of the test as '/data/gpdata/gpexpand'
         And the database is killed on hosts "mdw,sdw1"
         And a temporary directory under "/data/gpdata/gpexpand/expandedData" to expand into
@@ -63,15 +58,14 @@ Feature: expand the cluster by adding more segments
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
         When the user runs gpexpand interview to add 2 new segment and 0 new host "ignored.host"
         Then the number of segments have been saved
-        And user has created expansionranktest tables
-        And 4000000 rows are inserted into table "expansionranktest8" in schema "public" with column type list "int"
+        And user has created expansiontest tables
+        And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
-        Then user has fixed the expansion order for tables
-        When the user runs gpexpand against database "gptest" to redistribute with the --end flag
+         And the user runs gpexpand against database "gptest" to redistribute with the --end flag
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
         And verify that the cluster has 2 new segments
         When the user runs gpexpand against database "gptest" to redistribute
-        Then the tables were expanded in the specified order
+        Then the tables have finished expanding
 
     @gpexpand_no_mirrors
     @gpexpand_segment

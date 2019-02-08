@@ -2327,56 +2327,28 @@ def impl(context, hostnames):
                       remoteHost=host)
         cmd.run(validateAfter=True)
 
-@given('user has created expansionranktest tables')
-@then('user has created expansionranktest tables')
+@given('user has created expansiontest tables')
+@then('user has created expansiontest tables')
 def impl(context):
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        for i in range(7,10):
-            query = """drop table if exists expansionranktest%s""" % (i)
+        for i in range(3):
+            query = """drop table if exists expansiontest%s""" % (i)
             dbconn.execSQL(conn, query)
-            query = """create table expansionranktest%s(a int)""" % (i)
-            dbconn.execSQL(conn, query)
-        conn.commit()
-
-@given('user has fixed the expansion order for tables')
-@when('user has fixed the expansion order for tables')
-@then('user has fixed the expansion order for tables')
-def impl(context):
-    dbname = 'gptest'
-    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        for i in range(7,10):
-            query = """UPDATE gpexpand.status_detail SET rank=%s WHERE fq_name = 'public.expansionranktest%s'""" % (i,i)
+            query = """create table expansiontest%s(a int)""" % (i)
             dbconn.execSQL(conn, query)
         conn.commit()
 
-@then('the tables were expanded in the specified order')
+@then('the tables have finished expanding')
 def impl(context):
-# select rank from gpexpand.status_detail WHERE rank IN (7,8,9) ORDER BY expansion_started;
     dbname = 'gptest'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
-        query = """select rank from gpexpand.status_detail WHERE rank IN (7,8,9) ORDER BY expansion_started"""
+        query = """select fq_name from gpexpand.status_detail WHERE expansion_finished IS NULL"""
         cursor = dbconn.execSQL(conn, query)
 
-        rank = cursor.fetchone()[0]
-        if rank != 7:
-            raise Exception("Expected table with gpexpand.status rank 7 to have "
-                            "started expanding first instead got table with rank "
-                            "%d") % rank
-
-        rank = cursor.fetchone()[0]
-        if rank != 8:
-            raise Exception("Expected table with gpexpand.status rank 8 to have "
-                            "started expanding second instead got table with rank "
-                            "%d") % rank
-
-        rank = cursor.fetchone()[0]
-        if rank != 9:
-            raise Exception("Expected table with gpexpand.status rank 9 to have "
-                            "started expanding third instead got table with rank "
-                            "%d") % rank
-
-        return
+        row = cursor.fetchone()
+        if row:
+            raise Exception("table %s has not finished expanding" % row[0])
 
 @given('an FTS probe is triggered')
 @when('an FTS probe is triggered')
