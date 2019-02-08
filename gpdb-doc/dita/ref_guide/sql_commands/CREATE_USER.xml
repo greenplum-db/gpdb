@@ -21,12 +21,16 @@
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | REPLICATION | NOREPLICATION
     | CONNECTION LIMIT <varname>connlimit</varname>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>' 
-    | IN ROLE <varname>rolename</varname> [, ...]
-    | ROLE <varname>rolename</varname> [, ...]
-    | ADMIN <varname>rolename</varname> [, ...]
+    | VALID UNTIL '<varname>timestamp</varname>'
+    | IN ROLE <varname>role_name</varname> [, ...]
+    | IN GROUP <varname>role_name</varname>
+    | ROLE <varname>role_name</varname> [, ...]
+    | ADMIN <varname>role_name</varname> [, ...]
+    | USER <varname>role_name</varname> [, ...]
+    | SYSID <varname>uid</varname>
     | RESOURCE QUEUE <varname>queue_name</varname>
     | RESOURCE GROUP <varname>group_name</varname>
     | [ DENY <varname>deny_point</varname> ]
