@@ -63,7 +63,7 @@ DROP
 
 -- end_ignore
 (exited with code 0)
-!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup_tablespace;
+!\retcode rm -rf @testtablespace@/some_isolation2_pg_basebackup_tablespace/*;
 -- start_ignore
 
 -- end_ignore
