@@ -7,7 +7,8 @@
         <p id="sql_command_desc">Deletes rows from a table.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
+            <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE ] <varname>with_query</varname> [, ...] ]
+DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
       [USING <varname>usinglist</varname>]
       [WHERE <varname>condition</varname> | WHERE CURRENT OF <varname>cursor_name</varname>]
       [RETURNING * | <varname>output_expression</varname> [[AS] <varname>output_name</varname>] [, …]]</codeblock>
@@ -52,6 +53,15 @@
         <section id="section5">
             <title>Parameters</title>
             <parml>
+                <plentry>
+                    <pt><varname>with_query</varname></pt>
+                    <pd>The <codeph>WITH</codeph> clause allows you to specify one or more
+                        subqueries that can be referenced by name in the <codeph>DELETE</codeph>
+                        query. See <xref
+                            href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
+                        and <xref href="SELECT.xml#topic1"/> for details. </pd>
+                </plentry>
+                
                 <plentry>
                     <pt>ONLY</pt>
                     <pd>If specified, delete rows from the named table only. When not specified, any
@@ -162,8 +172,9 @@ name = 'Hannah';</codeblock>
         </section>
         <section id="section8">
             <title>Compatibility</title>
-            <p>This command conforms to the SQL standard, except that the <codeph>USING</codeph>
-                clause is a Greenplum Database extension.</p>
+            <p>This command conforms to the SQL standard, except that the <codeph>USING</codeph> and
+                    <codeph>RETURNING</codeph> clauses are Greenplum Database extensions, as is the
+                ability to use <codeph>WITH</codeph> with <codeph>DELETE</codeph>.</p>
         </section>
         <section id="section9">
             <title>See Also</title>
