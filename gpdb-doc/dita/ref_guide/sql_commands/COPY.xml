@@ -26,7 +26,8 @@ HEADER [ <varname>boolean</varname> ]
 QUOTE '<varname>quote_character</varname>'
 ESCAPE '<varname>escape_character</varname>'
 FORCE_QUOTE { ( <varname>column</varname> [, ...] ) | * }
-FORCE_NOT_NULL ( <varname>column</varname> [, ...] )
+FORCE_NOT_NULL ( <varname>column</varname> [, ...] ) 
+ENCODING '<varname>encoding_name</varname>'       
 FILL MISSING FIELDS
 LOG ERRORS [ SEGMENT REJECT LIMIT <varname>count</varname> [ ROWS | PERCENT ] ]
 IGNORE EXTERNAL PARTITIONS</codeblock></p>
@@ -231,6 +232,12 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             format.</pd>
         </plentry>
         <plentry>
+          <pt>ENCODING</pt>
+          <pd>Specifies that the file is encoded in the <varname>encoding_name</varname>. If this
+            option is omitted, the current client encoding is used. See the Notes below for more
+            details.</pd>
+        </plentry>
+        <plentry>
           <pt>ON SEGMENT</pt>
           <pd>Specify individual, segment data files on the segment hosts. Each file contains the
             table data that is managed by the primary segment instance. For example, when copying
@@ -385,10 +392,11 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>. It
         is also a good idea to avoid dumping data with <varname>IntervalStyle</varname> set to
           <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
-        a server that has a different setting for <varname>IntervalStyle</varname>. </p><p>Input
-        data is interpreted according to the current client encoding, and output data is encoded in
-        the current client encoding, even if the data does not pass through the client but is read
-        from or written to a file directly by the server.</p><p>When copying XML data from a file in
+          a server that has a different setting for <varname>IntervalStyle</varname>. </p>
+      <p>Input data is interpreted according to <codeph>ENCODING</codeph> option or the current
+        client encoding, and output data is encoded in <literal>ENCODING</literal> or the current
+        client encoding, even if the data does not pass through the client but is read from or
+        written to a file directly by the server.</p><p>When copying XML data from a file in
         text mode, the server configuration parameter <codeph><xref
             href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph> affects the
         validation of the XML data that is copied. If the value is <codeph>content</codeph> (the
