@@ -10,7 +10,7 @@
 <b>droplang</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>droplang</codeph> removes an existing procedural language from
 a database. </p>
 <p><codeph>droplang</codeph> is a wrapper for the SQL command <codeph><xref href="../../ref_guide/sql_commands/DROP_EXTENSION.xml#topic1"/></codeph>.</p>
-<note type="warning"><codeph>droplang</codeph> is deprecated and may be removed
+<note><codeph>droplang</codeph> is deprecated and may be removed
   in a future Greenplum Database release. Use the <codeph>DROP EXTENSION</codeph>
   command instead.</note>
 
