@@ -58,41 +58,12 @@
                                 /></codeph>. </pd>
                     </plentry>
                     <plentry>
-                        <pt>--binary-upgrade</pt>
-                        <pd>This option is for use by in-place upgrade utilities. Its use for other
-                            purposes is not recommended or supported. The behavior of the option may
-                            change in future releases without notice.</pd>
-                    </plentry>
-                    <plentry>
                         <pt>-c | --clean</pt>
                         <pd>Output commands to clean (drop) database objects prior to (the commands
                             for) creating them. This option is only meaningful for the plain-text
                             format. For the archive formats, you may specify the option when you
                             call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
                                     format="dita"/></codeph>. </pd>
-                    </plentry>
-                    <plentry>
-                        <pt>--inserts</pt>
-                        <pd>Dump data as <codeph>INSERT</codeph> commands (rather than
-                                <codeph>COPY</codeph>). This will make restoration very slow; it is
-                            mainly useful for making dumps that can be loaded into
-                            non-PostgreSQL-based databases. Also, since this option generates a
-                            separate command for each row, an error in reloading a row causes only
-                            that row to be lost rather than the entire table contents. Note that the
-                            restore may fail altogether if you have rearranged column order. The
-                                <codeph>--column-inserts</codeph> option is safe against column
-                            order changes, though even slower. </pd>
-                    </plentry>
-                    <plentry>
-                        <pt>--column-inserts | --attribute-inserts</pt>
-                        <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
-                                <codeph>(INSERT INTO <varname>table</varname>
-                                    (<varname>column</varname>, ...) VALUES ...)</codeph>. This will
-                            make restoration very slow; it is mainly useful for making dumps that
-                            can be loaded into non-PostgreSQL-based databases. Also, since this
-                            option generates a separate command for each row, an error in reloading
-                            a row causes only that row to be lost rather than the entire table
-                            contents.</pd>
                     </plentry>
                     <plentry>
                         <pt>-f <varname>filename</varname> | --file=<varname>filename</varname></pt>
@@ -111,16 +82,6 @@
                             running previous releases of Greenplum Database (or
                             PostgreSQL), but very old versions may not be supported anymore. Use
                             this option if you need to override the version check.</pd>
-                    </plentry>
-                    <plentry>
-                        <pt>--lock-wait-timeout=<varname>timeout</varname></pt>
-                        <pd>Do not wait forever to acquire shared table locks at the beginning of
-                            the dump. Instead, fail if unable to lock a table within the specified
-                                <varname>timeout</varname>. The timeout may be specified in any of
-                            the formats accepted by <codeph>SET statement_timeout</codeph>. Allowed
-                            values vary depending on the server version you are dumping from, but an
-                            integer number of milliseconds is accepted by all Greenplum Database
-                            versions.</pd>
                     </plentry>
                     <plentry>
                         <pt>-o | --oids</pt>
@@ -143,6 +104,10 @@
                             formats, you may specify the option when you call <codeph><xref
                                     href="./pg_restore.xml#topic1" type="topic" format="dita"
                                 /></codeph>.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>-r | --roles-only</pt>
+                        <pd>Dump only roles, not databases, or tablespaces.</pd>
                     </plentry>
                     <plentry>
                         <pt>-s | --schema-only</pt>
@@ -178,6 +143,23 @@
                             commands).</pd>
                     </plentry>
                     <plentry>
+                        <pt>--binary-upgrade</pt>
+                        <pd>This option is for use by in-place upgrade utilities. Its use for other
+                            purposes is not recommended or supported. The behavior of the option may
+                            change in future releases without notice.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--column-inserts | --attribute-inserts</pt>
+                        <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
+                                <codeph>(INSERT INTO <varname>table</varname>
+                                    (<varname>column</varname>, ...) VALUES ...)</codeph>. This will
+                            make restoration very slow; it is mainly useful for making dumps that
+                            can be loaded into non-PostgreSQL-based databases. Also, since this
+                            option generates a separate command for each row, an error in reloading
+                            a row causes only that row to be lost rather than the entire table
+                            contents.</pd>
+                    </plentry>
+                    <plentry>
                         <pt>--disable-dollar-quoting</pt>
                         <pd>This option disables the use of dollar quoting for function bodies, and
                             forces them to be quoted using SQL standard string syntax.</pd>
@@ -196,22 +178,63 @@
                                 support user-defined triggers.</note></pd>
                     </plentry>
                     <plentry>
-                        <pt>--resource-queues</pt>
-                        <pd>Dump resource queue definitions.</pd>
+                        <pt>--inserts</pt>
+                        <pd>Dump data as <codeph>INSERT</codeph> commands (rather than
+                                <codeph>COPY</codeph>). This will make restoration very slow; it is
+                            mainly useful for making dumps that can be loaded into
+                            non-PostgreSQL-based databases. Also, since this option generates a
+                            separate command for each row, an error in reloading a row causes only
+                            that row to be lost rather than the entire table contents. Note that the
+                            restore may fail altogether if you have rearranged column order. The
+                                <codeph>--column-inserts</codeph> option is safe against column
+                            order changes, though even slower. </pd>
                     </plentry>
                     <plentry>
-                        <pt>--resource-groups</pt>
-                        <pd>Dump resource group definitions.</pd>
+                        <pt>--lock-wait-timeout=<varname>timeout</varname></pt>
+                        <pd>Do not wait forever to acquire shared table locks at the beginning of
+                            the dump. Instead, fail if unable to lock a table within the specified
+                                <varname>timeout</varname>. The timeout may be specified in any of
+                            the formats accepted by <codeph>SET statement_timeout</codeph>. Allowed
+                            values vary depending on the server version you are dumping from, but an
+                            integer number of milliseconds is accepted by all Greenplum Database
+                            versions.</pd>
                     </plentry>
                     <plentry>
-                        <pt>--roles-only</pt>
-                        <pd>Dump only roles, not databases, or tablespaces.</pd>
+                        <pt>--no-security-labels</pt>
+                        <pd>Do not dump security labels.</pd>
                     </plentry>
                     <plentry>
                         <pt>--no-tablespaces</pt>
                         <pd>Do not output commands to select tablespaces. With this option, all
                             objects will be created in whichever tablespace is the default during
                             restore.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--no-unlogged-table-data</pt>
+                        <pd>Do not dump the contents of unlogged tables. This option has no
+                          effect on whether or not the table definitions (schema) are dumped;
+                           it only suppresses dumping the table data.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--quote-all-identifiers</pt>
+                        <pd>Force quoting of all identifiers. This option is recommended when
+                          dumping a database from a server whose Greenplum Database major
+                          version is different from <codeph>pg_dumpall</codeph>'s, or when
+                          the output is intended to be loaded into a server of a different
+                           major version. By default, <codeph>pg_dumpall</codeph> quotes only
+                           identifiers that are reserved words in its own major version. This
+                           sometimes results in compatibility issues when dealing with servers
+                           of other versions that may have slightly different sets of reserved
+                           words. Using <codeph>--quote-all-identifiers</codeph> prevents such
+                           issues, at the price of a harder-to-read dump script.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--resource-queues</pt>
+                        <pd>Dump resource queue definitions.</pd>
+                    </plentry>
+                    <plentry>
+                        <pt>--resource-groups</pt>
+                        <pd>Dump resource group definitions.</pd>
                     </plentry>
                     <plentry>
                         <pt>--use-set-session-authorization</pt>
@@ -306,7 +329,7 @@
                 query planner has useful statistics. You can also run <codeph>vacuumdb -a
                     -z</codeph> to analyze all databases. </p>
             <p><codeph>pg_dumpall</codeph> requires all needed tablespace directories to
-                exist before the restore; otherwise database creation will fail for
+                exist before the restore; otherwise, database creation will fail for
                 databases in non-default locations.</p>
         </section>
         <section id="section8">
