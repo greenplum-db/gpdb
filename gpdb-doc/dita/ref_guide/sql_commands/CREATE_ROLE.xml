@@ -20,6 +20,7 @@
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | REPLICATION | NOREPLICATION
     | CONNECTION LIMIT <varname>connlimit</varname>
     | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
     | VALID UNTIL '<varname>timestamp</varname>' 
@@ -90,7 +91,7 @@
                     <pd>If <codeph>CREATEEXTTABLE</codeph> is specified, the role being defined is
                         allowed to create external tables. The default <codeph>type</codeph> is
                             <codeph>readable</codeph> and the default <codeph>protocol</codeph> is
-                            <codeph>gpfdist</codeph>, if not specified.  Valid types are
+                            <codeph>gpfdist</codeph>, if not specified. Valid types are
                             <codeph>gpfdist</codeph>, <codeph>gpfdists</codeph>,
                             <codeph>http</codeph>, and <codeph>https</codeph>.
                             <codeph>NOCREATEEXTTABLE</codeph> (the default type) denies the role the
@@ -99,8 +100,8 @@
                         created by superusers. </pd>
                     <pd>Use the <codeph>GRANT...ON PROTOCOL</codeph> command to allow users to
                         create and use external tables with a custom protocol type, including the
-                            <codeph>s3</codeph> and <codeph>pxf</codeph>
-                        protocols included with Greenplum Database.</pd>
+                            <codeph>s3</codeph> and <codeph>pxf</codeph> protocols included with
+                        Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>INHERIT</pt>
@@ -118,6 +119,16 @@
                         A role having the <codeph>LOGIN</codeph> attribute can be thought of as a
                         user. Roles with <codeph>NOLOGIN</codeph> (the default) are useful for
                         managing database privileges, and can be thought of as groups. </pd>
+                </plentry>
+                <plentry>
+                    <pt>REPLICATION</pt>
+                    <pt>NOREPLICATION</pt>
+                    <pd>These clauses determine whether a role is allowed to initiate streaming
+                        replication or put the system in and out of backup mode. A role having the
+                            <codeph>REPLICATION</codeph> attribute is a very highly privileged role,
+                        and should only be used on roles actually used for replication. If not
+                        specified, <codeph>NOREPLICATION</codeph> is the default for all roles
+                        except superusers.</pd>
                 </plentry>
                 <plentry>
                     <pt>CONNECTION LIMIT <varname>connlimit</varname></pt>
