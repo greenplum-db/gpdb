@@ -42,7 +42,8 @@
           <pt>
             <varname>filename</varname>
           </pt>
-          <pd>Specifies the location of the archive file to be restored. If not specified, the
+          <pd>Specifies the location of the archive file (or directory, for a
+            directory-format archive) to be restored. If not specified, the
             standard input is used.</pd>
         </plentry>
       </parml>
@@ -82,11 +83,11 @@
                 <codeph>-l</codeph>. Default is the standard output.</pd>
           </plentry>
           <plentry>
-            <pt>-F t |c | --format=tar | custom</pt>
+            <pt>-F c|d|t | --format={custom | directory | tar}</pt>
             <pd>The format of the archive produced by <codeph><xref href="pg_dump.xml#topic1"
                   type="topic" format="dita"/></codeph>. It is not necessary to specify the format,
               since <codeph>pg_restore</codeph> will determine the format automatically. Format can
-              be either <codeph>tar</codeph> or <codeph>custom</codeph>.</pd>
+              be <codeph>custom</codeph>, <codeph>directory</codeph>, or <codeph>tar</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-i | --ignore-version</pt>
@@ -104,7 +105,7 @@
               — those which load data, create indexes, or create constraints —
               using multiple concurrent jobs. This option can dramatically
               reduce the time to restore a large database to a server running on
-              a multi-processor machine.</pd>
+              a multiprocessor machine.</pd>
             <pd>Each job is one process or one thread, depending on the
               operating system, and uses a separate connection to the
               server.</pd>
@@ -147,11 +148,6 @@
               database is made by a superuser (or the same user that owns all of the objects in the
               script). With <codeph>-O</codeph>, any user name can be used for the initial
               connection, and this user will own all the created objects.</pd>
-          </plentry>
-          <plentry>
-            <pt>--no-tablespaces</pt>
-            <pd>Do not output commands to select tablespaces. With this option, all objects will be
-              created in whichever tablespace is the default during restore.</pd>
           </plentry>
           <plentry>
             <pt>-P '<varname>function-name</varname>(<varname>argtype</varname> [, ...])' |
@@ -197,6 +193,12 @@
               commands).</pd>
           </plentry>
           <plentry>
+            <pt>-1 | --single-transaction</pt>
+            <pd>Execute the restore as a single transaction. This ensures that
+              either all the commands complete successfully, or no changes are
+              applied.</pd>
+          </plentry>
+          <plentry>
             <pt>--disable-triggers</pt>
             <pd>This option is only relevant when performing a data-only restore. It instructs
                 <codeph>pg_restore</codeph> to execute commands to temporarily disable triggers on
@@ -217,10 +219,22 @@
               when producing SQL script output.</pd>
           </plentry>
           <plentry>
-            <pt>-1 | --single-transaction</pt>
-            <pd>Execute the restore as a single transaction. This ensures that
-              either all the commands complete successfully, or no changes are
-              applied.</pd>
+            <pt>--no-security-labels</pt>
+            <pd>Do not output commands to restore security labels, even if the archive
+              contains them.</pd>
+          </plentry>
+          <plentry>
+            <pt>--no-tablespaces</pt>
+            <pd>Do not output commands to select tablespaces. With this option, all objects will be
+              created in whichever tablespace is the default during restore.</pd>
+          </plentry>
+          <plentry>
+            <pt>--use-set-session-authorization</pt>
+            <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph>
+              commands instead of <codeph>ALTER OWNER</codeph> commands to
+              determine object ownership. This makes the dump more
+              standards-compatible, but depending on the history of the objects
+              in the dump, might not restore properly.</pd>
           </plentry>
           <plentry>
             <pt>-? | --help</pt>
