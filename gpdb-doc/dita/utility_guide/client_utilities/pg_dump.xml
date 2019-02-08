@@ -52,10 +52,7 @@
           <codeph>pg_restore </codeph>can be used to examine the archive and/or select which parts
         of the database are to be restored. The most flexible output file format is the
           <varname>custom</varname> format (<codeph>-Fc</codeph>). It allows for selection and
-        reordering of all archived items, and is compressed by default. The tar format
-          (<codeph>-Ft</codeph>) is not compressed and has restrictions on reordering data when
-        loading, but it is otherwise quite flexible. It can be manipulated with standard UNIX tools
-        such as <codeph>tar</codeph>.</p>
+        reordering of all archived items, and is compressed by default.</p>
       <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
         future release.</note>
     </section>
@@ -92,15 +89,10 @@
             </pd>
           </plentry>
           <plentry>
-            <pt>--binary-upgrade</pt>
-            <pd>This option is for use by in-place upgrade utilities. Its use for other purposes is
-              not recommended or supported. The behavior of the option may change in future releases
-              without notice.</pd>
-          </plentry>
-          <plentry>
             <pt>-c | --clean</pt>
-            <pd>Adds commands to the text output file to clean (drop) database objects prior to (the
-              commands for) creating them. Note that objects are not dropped before the dump
+            <pd>Adds commands to the text output file to clean (drop) database objects prior to 
+              outputting the commands for creating them. (Restore might generate some harmless
+              errors.) Note that objects are not dropped before the dump
               operation begins, but <codeph>DROP</codeph> commands are added to the DDL dump output
               files so that when you use those files to do a restore, the <codeph>DROP</codeph>
               commands are run prior to the <codeph>CREATE</codeph> commands. This option is only
@@ -118,26 +110,6 @@
               /></codeph>. </pd>
           </plentry>
           <plentry>
-            <pt>--inserts</pt>
-            <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
-              This will make restoration very slow; it is mainly useful for making dumps that can be
-              loaded into non-PostgreSQL-based databases. However, since this option generates a
-              separate command for each row, an error in reloading a row causes only that row to be
-              lost rather than the entire table contents. Note that the restore may fail altogether
-              if you have rearranged column order. The <codeph>--column-inserts</codeph> option is
-              safe against column order changes, though even slower. </pd>
-          </plentry>
-          <plentry>
-            <pt>--column-inserts | --attribute-inserts</pt>
-            <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
-                <codeph>(INSERT
-                INTO</codeph><varname>table</varname><codeph>(</codeph><varname>column</varname><codeph>,
-                ...) VALUES ...)</codeph>. This will make restoration very slow; it is mainly useful
-              for making dumps that can be loaded into non-PostgreSQL-based databases. However, since
-              this option generates a separate command for each row, an error in reloading a row
-              causes only that row to be lost rather than the entire table contents.</pd>
-          </plentry>
-          <plentry>
             <pt>-E <varname>encoding</varname> | --encoding=<varname>encoding</varname></pt>
             <pd>Create the dump in the specified character set encoding. By default, the dump is
               created in the database encoding. (Another way to get the same result is to set the
@@ -146,24 +118,38 @@
           </plentry>
           <plentry>
             <pt>-f <varname>file</varname> | --file=<varname>file</varname></pt>
-            <pd>Send output to the specified file. If this is omitted, the standard output is used.
-            </pd>
+            <pd>Send output to the specified file. This parameter can be omitted for
+              file-based output formats, in which case the standard output is used.
+              It must be given for the directory output format however, where it
+              specifies the target directory instead of a file. In this case the
+              directory is created by <codeph>pg_dump</codeph> and must not exist
+              before.</pd>
           </plentry>
           <plentry>
-            <pt>-F p|c|t | --format=plain|custom|tar</pt>
+            <pt>-F p|c|d|t | --format=plain|custom|directory|tar</pt>
             <pd>Selects the format of the output. format can be one of the following: </pd>
             <pd>p | plain — Output a plain-text SQL script file (the default). </pd>
             <pd>c | custom — Output a custom archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. This is the
-              most flexible format in that it allows manual selection and reordering
-              of archived items during restore. This format is also compressed by default. </pd>
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
+              Together with the directory output format, this is the most flexible
+              output format in that it allows manual selection and reordering of
+              archived items during restore. This format is also compressed by
+              default. </pd>
+            <pd>d | directory — Output a directory-format archive suitable for input into
+              <codeph>pg_restore</codeph>. This will create a directory with one file for
+              each table and blob being dumped, plus a so-called Table of Contents file
+              describing the dumped objects in a machine-readable format that 
+              <codeph>pg_restore</codeph> can read. A directory format archive can be
+              manipulated with standard Unix tools; for example, files in an uncompressed
+              archive can be compressed with the <codeph>gzip</codeph> tool. This format
+              is compressed by default.</pd>
             <pd>t | tar — Output a tar-format archive suitable for input into <codeph><xref
                   href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
-              This output format allows manual selection and reordering of
-              archived items during restore, but there is a restriction: the
-              relative order of table data items cannot be changed during
-              restore.  Also, tar format does not support compression
-              and has a limit of 8 GB on the size of individual tables.</pd>
+              The tar-format is compatible with the directory-format; extracting a
+              tar-format archive produces a valid directory-format archive. However, the
+              tar-format does not support compression and has a limit of 8 GB on the size
+              of individual tables. Also, the relative order of table data items cannot be
+              changed during restore.</pd>
           </plentry>
           <plentry>
             <pt>-i | --ignore-version</pt>
@@ -277,6 +263,32 @@
             <pd>Prevent dumping of access privileges (<codeph>GRANT/REVOKE</codeph> commands).</pd>
           </plentry>
           <plentry>
+            <pt>-Z 0..9 | --compress=0..9</pt>
+            <pd>Specify the compression level to use. Zero means no compression. For the custom
+              archive format, this specifies compression of individual table-data segments, and the
+              default is to compress at a moderate level.</pd>
+            <pd>For plain text output, setting a non-zero compression level causes the entire output
+              file to be compressed, as though it had been fed through <codeph>gzip</codeph>; but
+              the default is not to compress. The tar archive format currently does not support
+              compression at all.</pd>
+          </plentry>
+          <plentry>
+            <pt>--binary-upgrade</pt>
+            <pd>This option is for use by in-place upgrade utilities. Its use for other purposes is
+              not recommended or supported. The behavior of the option may change in future releases
+              without notice.</pd>
+          </plentry>
+          <plentry>
+            <pt>--column-inserts | --attribute-inserts</pt>
+            <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
+                <codeph>(INSERT
+                INTO</codeph><varname>table</varname><codeph>(</codeph><varname>column</varname><codeph>,
+                ...) VALUES ...)</codeph>. This will make restoration very slow; it is mainly useful
+              for making dumps that can be loaded into non-PostgreSQL-based databases. However, since
+              this option generates a separate command for each row, an error in reloading a row
+              causes only that row to be lost rather than the entire table contents.</pd>
+          </plentry>
+          <plentry>
             <pt>--disable-dollar-quoting</pt>
             <pd>This option disables the use of dollar quoting for function bodies, and forces them
               to be quoted using SQL standard string syntax.</pd>
@@ -296,6 +308,16 @@
               triggers.</note></pd>
           </plentry>
           <plentry>
+            <pt>--inserts</pt>
+            <pd>Dump data as <codeph>INSERT</codeph> commands (rather than <codeph>COPY</codeph>).
+              This will make restoration very slow; it is mainly useful for making dumps that can be
+              loaded into non-PostgreSQL-based databases. However, since this option generates a
+              separate command for each row, an error in reloading a row causes only that row to be
+              lost rather than the entire table contents. Note that the restore may fail altogether
+              if you have rearranged column order. The <codeph>--column-inserts</codeph> option is
+              safe against column order changes, though even slower. </pd>
+          </plentry>
+          <plentry>
             <pt>--lock-wait-timeout=<varname>timeout</varname></pt>
             <pd>Do not wait forever to acquire shared table locks at the beginning of the dump.
               Instead, fail if unable to lock a table within the specified
@@ -303,11 +325,54 @@
               milliseconds.</pd>
           </plentry>
           <plentry>
+            <pt>--no-security-labels</pt>
+            <pd>Do not dump security labels.</pd>
+          </plentry>
+          <plentry>
             <pt>--no-tablespaces</pt>
             <pd>Do not output commands to select tablespaces. With this option, all objects will be
               created in whichever tablespace is the default during restore.</pd>
             <pd>This option is only meaningful for the plain-text format. For the archive formats,
               you can specify the option when you call <codeph>pg_restore</codeph>.</pd>
+          </plentry>
+          <plentry>
+            <pt>--no-unlogged-table-data</pt>
+            <pd>Do not dump the contents of unlogged tables. This option has no effect
+               on whether or not the table definitions (schema) are dumped; it only
+               suppresses dumping the table data. Data in unlogged tables is always
+               excluded when dumping from a standby server.</pd>
+          </plentry>
+          <plentry>
+            <pt>--quote-all-identifiers</pt>
+            <pd>Force quoting of all identifiers. This option is recommended when dumping
+               a database from a server whose Greenplum Database major version is different
+               from <codeph>pg_dump</codeph>'s, or when the output is intended to be loaded
+               into a server of a different major version. By default,
+               <codeph>pg_dump</codeph> quotes only identifiers that are reserved words in
+               its own major version. This sometimes results in compatibility issues when
+               dealing with servers of other versions that may have slightly different sets
+               of reserved words. Using <codeph>--quote-all-identifiers</codeph> prevents
+               such issues, at the price of a harder-to-read dump script.</pd>
+          </plentry>
+          <plentry>
+            <pt>--serializable-deferrable</pt>
+            <pd>Use a serializable transaction for the dump, to ensure that the snapshot
+              used is consistent with later database states; but do this by waiting for
+              a point in the transaction stream at which no anomalies can be present, so
+              that there isn't a risk of the dump failing or causing other transactions
+              to roll back with a serialization_failure.</pd>
+            <pd>This option is not beneficial for a dump which is intended only for
+              disaster recovery. It could be useful for a dump used to load a copy of the
+              database for reporting or other read-only load sharing while the original
+              database continues to be updated. Without it the dump may reflect a state
+              which is not consistent with any serial execution of the transactions
+              eventually committed. For example, if batch processing techniques are used,
+              a batch may show as closed in the dump without all of the items which are
+              in the batch appearing.</pd>
+            <pd>This option will make no difference if there are no read-write transactions
+              active when <codeph>pg_dump</codeph> is started. If read-write transactions
+              are active, the start of the dump may be delayed for an indeterminate length
+              of time. Once running, performance with or without the switch is the same.</pd>
           </plentry>
           <plentry>
             <pt>--use-set-session-authorization</pt>
@@ -341,16 +406,6 @@
               identifiers. <note>This option is provided solely for use by other administration
               utilities; its use for any other purpose is not recommended or supported. The
               behaviour of the option may change in future releases without notice.</note></pd>
-          </plentry>
-          <plentry>
-            <pt>-Z 0..9 | --compress=0..9</pt>
-            <pd>Specify the compression level to use. Zero means no compression. For the custom
-              archive format, this specifies compression of individual table-data segments, and the
-              default is to compress at a moderate level.</pd>
-            <pd>For plain text output, setting a non-zero compression level causes the entire output
-              file to be compressed, as though it had been fed through <codeph>gzip</codeph>; but
-              the default is not to compress. The tar archive format currently does not support
-              compression at all.</pd>
           </plentry>
           <plentry>
             <pt>-? | --help</pt>
@@ -431,6 +486,8 @@
       <codeblock>pg_dump -Ft --gp-syntax mydb &gt; db.tar</codeblock>
       <p>To dump a database into a custom-format archive file: </p>
       <codeblock>pg_dump -Fc mydb &gt; db.dump</codeblock>
+      <p>To dump a database into a directory-format archive: </p>
+      <codeblock>pg_dump -Fd mydb -f dumpdir</codeblock>
       <p>To reload an archive file into a (freshly created) database named <codeph>newdb</codeph>: </p>
       <codeblock>pg_restore -d newdb db.dump</codeblock>
       <p>To dump a single table named <codeph>mytab</codeph>: </p>
