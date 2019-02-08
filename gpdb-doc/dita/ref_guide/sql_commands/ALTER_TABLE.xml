@@ -26,18 +26,21 @@ ALTER TABLE <varname>name</varname>
    | FOR (<varname>value</varname>) } <varname>partition_action</varname> [...] ] 
    <varname>partition_action</varname></codeblock>
                         <p>where <varname>action</varname> is one of:</p>
-                        <codeblock>  ADD [COLUMN] <varname>column_name type</varname> [ DEFAULT <varname>default_expr</varname> ]
+                        <codeblock>  ADD [COLUMN] <varname>column_name data_type</varname> [ DEFAULT <varname>default_expr</varname> ]
       [<varname>column_constraint</varname> [ ... ]]
+      [ COLLATE <varname>collation</varname> ]
       [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
   DROP [COLUMN] [IF EXISTS] <varname>column</varname> [RESTRICT | CASCADE]
-  ALTER [COLUMN] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname> [USING <varname>expression</varname>]
+  ALTER [COLUMN] <varname>column</varname> [ SET DATA ] TYPE <varname>type</varname> [COLLATE <varname>collation</varname>] [USING <varname>expression</varname>]
   ALTER [COLUMN] <varname>column</varname> SET DEFAULT <varname>expression</varname>
   ALTER [COLUMN] <varname>column</varname> DROP DEFAULT
   ALTER [COLUMN] <varname>column</varname> { SET | DROP } NOT NULL
   ALTER [COLUMN] <varname>column</varname> SET STATISTICS <varname>integer</varname>
   ALTER [COLUMN] column SET ( <varname>attribute_option</varname> = <varname>value</varname> [, ... ] )
   ALTER [COLUMN] column RESET ( <varname>attribute_option</varname> [, ... ] )
-  ADD <varname>table_constraint</varname>
+  ADD <varname>table_constraint</varname> [NOT VALID]
+  ADD <varname>table_constraint_using_index</varname>
+  VALIDATE CONSTRAINT <varname>constraint_name</varname>
   DROP CONSTRAINT [IF EXISTS] <varname>constraint_name</varname> [RESTRICT | CASCADE]
   DISABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
   ENABLE TRIGGER [<varname>trigger_name</varname> | ALL | USER]
@@ -49,6 +52,8 @@ ALTER TABLE <varname>name</varname>
   RESET (FILLFACTOR)
   INHERIT <varname>parent_table</varname>
   NO INHERIT <varname>parent_table</varname>
+  OF <codeph>type_name</codeph>
+  NOT OF
   OWNER TO <varname>new_owner</varname>
   SET TABLESPACE <varname>new_tablespace</varname></codeblock>
                         <p>where <varname>partition_action</varname> is one of:</p>
@@ -137,7 +142,10 @@ ALTER TABLE <varname>name</varname>
                                         partitioning keys. Indexes and simple table constraints
                                         involving the column will be automatically converted to use
                                         the new column type by reparsing the originally supplied
-                                        expression. The optional <codeph>USING</codeph> clause
+                                        expression. The optional <codeph>COLLATE</codeph> clause 
+                                        specifies a collation for the new column; if omitted, the 
+                                        collation is the default for the new column type.
+                                        The optional <codeph>USING</codeph> clause
                                         specifies how to compute the new column value from the old.
                                         If omitted, the default conversion is the same as an
                                         assignment cast from old data type to new. A
@@ -165,17 +173,17 @@ ALTER TABLE <varname>name</varname>
                                         <p><b>SET ( <varname>attribute_option</varname> =
                                                   <varname>value</varname> [, ... ]) </b></p>
                                         <p><b>RESET ( <varname>attribute_option [, ...]
-                                                  )</varname></b>— Sets or resets attribute-level
-                                                options. Currently, the only defined attribute-level
+                                                  )</varname></b>— Sets or resets per-attribute
+                                                options. Currently, the only defined per-attribute
                                                 options are <codeph>n_distinct</codeph> and
                                                   <codeph>n_distinct_inherited</codeph>, which
-                                                override the number-of-distinct-values estimate made
-                                                by subsequent <codeph><xref
+                                                override the number-of-distinct-values estimates
+                                                made by subsequent <codeph><xref
                                                   href="ANALYZE.xml#topic1">ANALYZE</xref></codeph>
                                                 operations. <codeph>n_distinct</codeph> affects the
                                                 statistics for the table itself, while
                                                   <codeph>n_distinct_inherited</codeph> affects the
-                                                statistics gathered for the table and its
+                                                statistics gathered for the table plus its
                                                 inheritance children. When set to a positive value,
                                                   <codeph>ANALYZE</codeph> will assume that the
                                                 column contains exactly the specified number of
@@ -196,9 +204,54 @@ ALTER TABLE <varname>name</varname>
                                                 revert to estimating the number of distinct values
                                                 normally.</p>
                                 </li>
-                                <li id="ay137022"><b>ADD <varname>table_constraint</varname></b> —
-                                        Adds a new constraint to a table (not just a partition)
-                                        using the same syntax as <codeph>CREATE TABLE</codeph>. </li>
+                                <li id="ay137022"><b>ADD <varname>table_constraint</varname> [NOT
+                                                VALID]</b> — Adds a new constraint to a table (not
+                                        just a partition) using the same syntax as <codeph>CREATE
+                                                TABLE</codeph>. Newly added foreign key constraints
+                                        can also be defined as <codeph>NOT VALID</codeph> to avoid
+                                        the potentially lengthy initial check that must otherwise be
+                                        performed. Constraint checks are skipped at create table
+                                        time, so <xref href="CREATE_TABLE.xml#topic1"/> does not
+                                        contain this option. </li>
+                                <li><b>VALIDATE CONSTRAINT</b> — This form validates a foreign key
+                                        constraint that was previously created as <codeph>NOT
+                                                VALID</codeph>. Constraints already marked valid do
+                                        not cause an error response. </li>
+                                <li><b>ADD <varname>table_constraint_using_index</varname></b> —
+                                        Adds a new <codeph>PRIMARY KEY</codeph> or
+                                                <codeph>UNIQUE</codeph> constraint to a table based
+                                        on an existing unique index. All the columns of the index
+                                        will be included in the constraint. The index cannot have
+                                        expression columns nor be a partial index. Also, it must be
+                                        a b-tree index with default sort ordering. These
+                                        restrictions ensure that the index is equivalent to one that
+                                        would be built by a regular <codeph>ADD PRIMARY KEY</codeph>
+                                        or <codeph>ADD UNIQUE</codeph> command. <p>If
+                                                  <codeph>PRIMARY KEY</codeph> is specified, and the
+                                                index's columns are not already marked <codeph>NOT
+                                                  NULL</codeph>, then this command will attempt to
+                                                do <codeph>ALTER COLUMN SET NOT NULL</codeph>
+                                                against each such column. That requires a full table
+                                                scan to verify the column(s) contain no nulls. In
+                                                all other cases, this is a fast operation. </p><p>If
+                                                a constraint name is provided then the index will be
+                                                renamed to match the constraint name. Otherwise the
+                                                constraint will be named the same as the
+                                                index.</p><p>After this command is executed, the
+                                                index is "owned" by the constraint, in the same way
+                                                as if the index had been built by a regular
+                                                  <codeph>ADD PRIMARY KEY</codeph> or <codeph>ADD
+                                                  UNIQUE</codeph> command. In particular, dropping
+                                                the constraint will make the index disappear
+                                                too.</p><note> Adding a constraint using an existing
+                                                index can be helpful in situations where a new
+                                                constraint needs to be added without blocking table
+                                                updates for a long time. To do that, create the
+                                                index using <codeph>CREATE INDEX
+                                                  CONCURRENTLY</codeph>, and then install it as an
+                                                official constraint using this syntax. See the
+                                                example below.</note>
+                                </li>
                                 <li id="ay137038"><b>DROP CONSTRAINT [IF EXISTS]</b> — Drops the
                                         specified constraint on a table. If <codeph>IF EXISTS</codeph> is specified and the constraint
                                         does not exist, no error is thrown. In this case a notice is issued instead.</li>
@@ -264,7 +317,10 @@ ALTER TABLE <varname>name</varname>
                                         the best choice, but in heavily updated tables smaller
                                         fillfactors are appropriate. Note that the table contents
                                         will not be modified immediately by this command. You will
-                                        need to rewrite the table to get the desired effects.</li>
+                                        need to rewrite the table to get the desired effects. That
+                                        can be done with <xref href="VACUUM.xml#topic1"/> or one of
+                                        the forms of <xref href="#topic1" format="dita"/> that
+                                        forces a table rewrite.</li>
                                 <li id="ay141947"><b>SET DISTRIBUTED</b> — Changes the distribution
                                         policy of a table. Changing a hash distribution policy, or
                                         changing to or from a replicated policy, will cause the
@@ -284,6 +340,17 @@ ALTER TABLE <varname>name</varname>
                                         child-table constraints for all <codeph>CHECK</codeph>
                                         constraints of the parent. Neither the target table nor the
                                         parent table may be replicated tables.</li>
+                                <li>OF <varname>type_name</varname> — This form links the table to a
+                                        composite type as though <codeph>CREATE TABLE OF</codeph>
+                                        had formed it. The table's list of column names and types
+                                        must precisely match that of the composite type; the
+                                        presence of an <codeph>oid</codeph> system column is
+                                        permitted to differ. The table must not inherit from any
+                                        other table. These restrictions ensure that <codeph>CREATE
+                                                TABLE OF</codeph> would permit an equivalent table
+                                        definition. </li>
+                                <li><b>NOT OF</b> — This form dissociates a typed table from its
+                                        type. </li>
                                 <li id="ay137262"><b>OWNER</b> — Changes the owner of the table,
                                         sequence, or view to the specified user. </li>
                                 <li id="ay137271"><b>SET TABLESPACE</b> — Changes the table's
@@ -783,12 +850,16 @@ ALTER TABLE <varname>name</varname>
                                 rows in the table are initialized with the column's default value,
                                 or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
                                 specified. Adding a column with a non-null default or changing the
-                                type of an existing column will require the entire table and indexes 
-                                to be
-                                rewritten. This may take a significant amount of time for a large
-                                table; and it will temporarily require double the disk space. Adding
-                                or removing a system <codeph>oid</codeph> column also requires
-                                rewriting the entire table.</p>
+                                type of an existing column will require the entire table and indexes
+                                to be rewritten. As an exception, if the <codeph>USING</codeph>
+                                clause does not change the column contents and the old type is
+                                either binary coercible to the new type or an unconstrained domain
+                                over the new type, a table rewrite is not needed, but any indexes on
+                                the affected columns must still be rebuilt. Adding or removing a
+                                system <codeph>oid</codeph> column also requires rewriting the
+                                entire table. Table and/or index rebuilds may take a significant
+                                amount of time for a large table; and will temporarily require as
+                                much as double the disk space. </p>
                         <p>You can specify multiple changes in a single <codeph>ALTER TABLE</codeph>
                                 command, which will be done in a single pass over the table. </p>
                         <p>The <codeph>DROP COLUMN</codeph> form does not physically remove the
@@ -800,16 +871,27 @@ ALTER TABLE <varname>name</varname>
                                 reclaimed over time as existing rows are updated. If you drop the
                                 system <codeph>oid</codeph> column, however, the table is rewritten
                                 immediately.</p>
-                        <p>The fact that <codeph>ALTER TYPE</codeph> requires rewriting the whole
-                                table is sometimes an advantage, because the rewriting process
-                                eliminates any dead space in the table. For example, to reclaim the
-                                space occupied by a dropped column immediately, the fastest way is:
-                                        <codeph>ALTER TABLE table ALTER COLUMN anycol TYPE
-                                        sametype;</codeph> where <varname>anycol</varname> is any
-                                remaining table column and <varname>sametype</varname> is the same
-                                type that column already has. This results in no
-                                semantically-visible change in the table, but the command forces
-                                rewriting, which gets rid of no-longer-useful data.</p>
+                        <p> To force an immediate rewrite of the table, you can use <codeph>VACUUM
+                                        FULL</codeph>, <codeph>CLUSTER</codeph>, or one of the forms
+                                of <codeph>ALTER TABLE</codeph> that forces a rewrite. This results
+                                in no semantically-visible change in the table, but gets rid of
+                                no-longer-useful data. </p>
+                        <p> The <codeph>USING</codeph> option of <codeph>SET DATA TYPE</codeph> can
+                                actually specify any expression involving the old values of the row;
+                                that is, it can refer to other columns as well as the one being
+                                converted. This allows very general conversions to be done with the
+                                        <codeph>SET DATA TYPE</codeph> syntax. Because of this
+                                flexibility, the <codeph>USING</codeph> expression is not applied to
+                                the column's default value (if any); the result might not be a
+                                constant expression as required for a default. This means that when
+                                there is no implicit or assignment cast from old to new type,
+                                        <codeph>SET DATA TYPE</codeph> might fail to convert the
+                                default even though a <codeph>USING</codeph> clause is supplied. In
+                                such cases, drop the default with <codeph>DROP DEFAULT</codeph>,
+                                perform the <codeph>ALTER TYPE</codeph>, and then use <codeph>SET
+                                        DEFAULT</codeph> to add a suitable new default. Similar
+                                considerations apply to indexes and constraints involving the
+                                column. </p>
                         <p>If a table is partitioned or has any descendant tables, it is not
                                 permitted to add or drop a column, to rename a column, or to change
                                 the type of a column in the parent table without doing the same to
@@ -904,12 +986,19 @@ INTO (PARTITION jan09, PARTITION other);</codeblock>
                         <codeblock>ALTER TABLE sales SPLIT PARTITION FOR ('2016-01-01')
 AT ('2016-01-16')
 INTO (PARTITION jan081to15, PARTITION jan0816to31);</codeblock>
+                        <p> To recreate a primary key constraint, without blocking updates while the
+                                index is rebuilt: </p>
+                        <codeblock>CREATE UNIQUE INDEX CONCURRENTLY dist_id_temp_idx ON distributors (dist_id);
+ALTER TABLE distributors DROP CONSTRAINT distributors_pkey,
+ADD CONSTRAINT distributors_pkey PRIMARY KEY USING INDEX dist_id_temp_idx;
+                        </codeblock>
                 </section>
                 <section id="section7">
                         <title>Compatibility</title>
-                        <p>The forms <codeph>ADD</codeph>, <codeph>DROP</codeph>, <codeph>SET
-                                        DEFAULT</codeph>, and <codeph>SET DATA TYPE</codeph>
-                                (without <codeph>USING</codeph>) conform with the SQL standard. The
+                        <p>The forms <codeph>ADD</codeph> (without <codeph>USING INDEX</codeph>),
+                                        <codeph>DROP</codeph>, <codeph>SET DEFAULT</codeph>, and
+                                        <codeph>SET DATA TYPE</codeph> (without
+                                        <codeph>USING</codeph>) conform with the SQL standard. The
                                 other forms are Greenplum Database extensions of the SQL standard.
                                 Also, the ability to specify more than one manipulation in a single
                                         <codeph>ALTER TABLE</codeph> command is an extension.</p>
