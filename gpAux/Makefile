@@ -594,7 +594,7 @@ Darwin_LOADERS_LIBS=libcrypto.*.dylib libssl.*.dylib libpq.*.dylib* libkrb5.*.dy
 HP-UX_LOADERS_LIBS=libcrypto.so* libssl.so.* libz.so* libpq.so* libapr* libyaml*so*
 # TODO: Remove the condition below once libldap is installed on SLES images
 ifeq ($(BLD_ARCH),$(filter $(BLD_ARCH),rhel7_x86_64 rhel6_x86_64))
-Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so*
+Linux_LOADERS_LIBS=libpq.so*
 else
 Linux_LOADERS_LIBS=libcrypto.so* libssl.so.*  libpq.so* libcom_err.so* liblber*.so* libldap_r-*so* libyaml*so*
 endif
@@ -954,7 +954,7 @@ copylibs : thirdparty-dist
 	    done ; \
 	fi
 	if [ `uname -s` != 'Darwin' -a `uname -s` != 'AIX' ] ; then \
-	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'libssl|libcrypto|libcom_err|curl|readline|numa' | awk '{print $$3}' | sort -u`; do \
+	    for lib in `ldd $(INSTLOC)/bin/psql | egrep 'readline|numa' | awk '{print $$3}' | sort -u`; do \
 	        if [ x"`dirname $$lib`" = x"$(INSTLOC)/lib" ]; then continue; fi; \
 	        if [ -f $(INSTLOC)/lib/`basename $$lib` -a ! -w $(INSTLOC)/lib/`basename $$lib` ]; then chmod u+w $(INSTLOC)/lib/`basename $$lib`; fi; \
 	        echo "cp -p $$lib $(INSTLOC)/lib" ; \
