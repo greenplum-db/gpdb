@@ -17,9 +17,13 @@
     </section>
     <section id="section3">
       <title>Description</title>
-      <p>The <codeph>createlang</codeph> utility adds a new programming language to a database.
+      <p>The <codeph>createlang</codeph> utility adds a new procedural language to a database.
           <codeph>createlang</codeph> is a wrapper around the <codeph>SQL</codeph> command
-          <codeph>CREATE LANGUAGE</codeph>.</p>
+          <codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>.</p>
+      <note type="warning"><codeph>createlang</codeph> is deprecated and may be removed
+  in a future Greenplum Database release. Use the <codeph>CREATE EXTENSION</codeph>
+  command instead.</note>
       <p>The procedural language packages included in the standard Greenplum Database
         distribution are:</p>
       <ul>
@@ -39,10 +43,10 @@
     <section id="section4"><title>Options</title><parml>
         <plentry>
           <pt>langname</pt>
-          <pd>Specifies the name of the procedural programming language to be defined. </pd>
+          <pd>Specifies the name of the procedural language to be installed. </pd>
         </plentry>
         <plentry>
-          <pt>[-d] <varname>dbname</varname> | [--dbname] <varname>dbname</varname></pt>
+          <pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt>
           <pd>Specifies the database to which the language should be added. The default is to use the
               <codeph>PGDATABASE</codeph> environment variable setting, or the same name as the
             current system user.</pd>
@@ -66,19 +70,19 @@
         </plentry>
       </parml><sectiondiv id="section5"><b>Connection Options</b><parml>
           <plentry>
-            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+            <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
             <pd>The host name of the machine on which the Greenplum
               master database server is running. If not specified, reads from the environment
               variable <codeph>PGHOST</codeph> or defaults to localhost.</pd>
           </plentry>
           <plentry>
-            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+            <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
             <pd>The TCP port on which the Greenplum master database
               server is listening for connections. If not specified, reads from the environment
               variable <codeph>PGPORT</codeph> or defaults to <codeph>5432</codeph>.</pd>
           </plentry>
           <plentry>
-            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
+            <pt>-U <varname>username</varname> | --username=<varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
           </plentry>
@@ -102,13 +106,11 @@
     </section>
     <section id="section7">
       <title>See Also</title>
-      <p><ph otherprops="op-print"><codeph>CREATE LANGUAGE</codeph> and <codeph>DROP
-            LANGUAGE</codeph> in the <i>Greenplum Database Reference Guide</i></ph><ph
-          otherprops="op-help"><codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_LANGUAGE.xml#topic1"/></codeph>,
-              <codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"
-          /></codeph>,
-              <codeph><xref href="droplang.xml#topic1"/></codeph></ph></p>
+      <p> <ph otherprops="op-help">
+        <codeph><xref href="droplang.xml#topic1"/></codeph>,
+        <codeph><xref href="../../ref_guide/sql_commands/CREATE_EXTENSION.xml#topic1"/></codeph>,
+        <codeph><xref href="../../ref_guide/sql_commands/CREATE_LANGUAGE.xml#topic1"/></codeph>,
+        <codeph><xref href="../../ref_guide/sql_commands/DROP_LANGUAGE.xml#topic1"/></codeph></ph></p>
     </section>
   </body>
 </topic>
