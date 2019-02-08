@@ -4,6 +4,7 @@
 #
 
 import os
+import pipes
 
 from gppylib.gplog import *
 from gppylib.gparray import *
@@ -174,8 +175,7 @@ class PgControlData(Command):
 
 
 class PgBaseBackup(Command):
-    def __init__(self, pgdata, host, port, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0,
-                 ):
+    def __init__(self, pgdata, host, port, replication_slot_name=None, excludePaths=[], ctxt=LOCAL, remoteHost=None, forceoverwrite=False, target_gp_dbid=0, logfile=None):
         cmd_tokens = ['pg_basebackup', '-R', '-c', 'fast']
         cmd_tokens.append('-D')
         cmd_tokens.append(pgdata)
@@ -207,6 +207,12 @@ class PgBaseBackup(Command):
             for path in excludePaths:
                 cmd_tokens.append('-E')
                 cmd_tokens.append(path)
+
+        cmd_tokens.append('--progress')
+        cmd_tokens.append('--verbose')
+
+        if logfile:
+            cmd_tokens.append('> %s 2>&1' % pipes.quote(logfile))
 
         cmd_str = ' '.join(cmd_tokens)
 

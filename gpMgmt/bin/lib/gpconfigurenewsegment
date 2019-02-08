@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import datetime
 import sys
 import os
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
@@ -121,21 +122,30 @@ class ConfExpSegCmd(Command):
                    return
 
                 if not self.isPrimary:
+                    # Log pg_basebackup output to the same directory as gpconfigurenewsegment
+                    pgbasebackup_start_time = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
+                    pgbasebackup_progress_temp_file = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
+                                                                                          pgbasebackup_start_time,
+                                                                                          self.dbid)
                     # Create a mirror based on the primary
                     cmd = PgBaseBackup(pgdata=self.datadir,
                                        host=self.syncWithSegmentHostname,
                                        port=str(self.syncWithSegmentPort),
                                        replication_slot_name=self.replicationSlotName,
                                        forceoverwrite=self.forceoverwrite,
-                                       target_gp_dbid=self.dbid)
+                                       target_gp_dbid=self.dbid,
+                                       logfile=pgbasebackup_progress_temp_file)
                     try:
+                        logger.info("Running pg_basebackup with progress output temporarily in %s" % pgbasebackup_progress_temp_file)
                         cmd.run(validateAfter=True)
+
                         self.set_results(CommandResult(0, '', '', True, False))
+                        os.remove(pgbasebackup_progress_temp_file)
                     except Exception, e:
                         self.set_results(CommandResult(1,'',e,True,False))
                         raise
 
-                    logger.info("ran pg_backbackup: %s" % cmd.cmdStr)
+                    logger.info("Successfully ran pg_basebackup: %s" % cmd.cmdStr)
                     return
 
                 logger.info("Create or update data directories for new segment")
