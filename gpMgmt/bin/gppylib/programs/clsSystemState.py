@@ -1044,7 +1044,7 @@ class GpSystemStateProgram:
                 data.addValue(VALUE__LOCK_FILES_EXIST, "t" if found else "f", isWarning=not found)
 
                 if pidData['error'] is None:
-                    data.addValue(VALUE__ACTIVE_PID, pidData["pid"])
+                    data.addValue(VALUE__ACTIVE_PID, abs(pidData["pid"]))
                     data.addValue(VALUE__ACTIVE_PID_INT, pidValueForSql)
                 else:
                     data.addValue(VALUE__ACTIVE_PID, "Not found", True)
