@@ -706,8 +706,6 @@ class GpStart:
                 host = self.gparray.standbyMaster.hostname
                 datadir = self.gparray.standbyMaster.datadir
                 port = self.gparray.standbyMaster.port
-                dbid = self.gparray.standbyMaster.dbid
-                ncontents = self.gparray.getNumSegmentContents()
                 return gp.start_standbymaster(host, datadir, port, era=self.era,
                                               wrapper=self.wrapper,
                                               wrapper_args=self.wrapper_args)
