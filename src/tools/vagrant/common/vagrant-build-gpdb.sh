@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -e
 
 setup_ssh_config() {
   mkdir -p ~/.ssh
@@ -20,15 +20,17 @@ if [[ ! -d $GPDB_DIR ]]; then
   git config user.name "$CURRENT_GIT_USER_NAME"
   git config user.email "$CURRENT_GIT_USER_EMAIL"
   # add all remotes found in git repo
-  for path in "${!GIT_REMOTE_PATH_@}"; do
-    eval git remote add "${path#GIT_REMOTE_PATH_}" "\$$path"
+  for remote_path in "${!GIT_REMOTE_PATH_@}"; do
+    remote_name=${remote_path/PATH/NAME}
+    eval git remote add "\$$remote_name" "\$$remote_path"
   done
   # 'git checkout' same remote and branch as user
   if [[ $CURRENT_GIT_REMOTE != origin ]]; then
-    [[ $CURRENT_GIT_REMOTE_PATH =~ ^https?:// ]] || setup_ssh_config
+    CURRENT_GIT_REMOTE_PATH=$(git remote get-url "$CURRENT_GIT_REMOTE")
+    [[ $CURRENT_GIT_REMOTE_PATH =~ ^(https?|git):// ]] || setup_ssh_config
     git fetch "$CURRENT_GIT_REMOTE" "$CURRENT_GIT_BRANCH"
-    git checkout "$CURRENT_GIT_BRANCH"
   fi
+  git checkout "$CURRENT_GIT_BRANCH"
   popd
   popd
 fi

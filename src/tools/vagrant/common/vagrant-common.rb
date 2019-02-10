@@ -34,12 +34,12 @@ def name_vm(config, name)
 end
 
 def all_remotes
-  hash = {}
-  `git remote -v`.split(/\n/).each do |x|
-    arr = x.split(/\t/)
-    hash[arr[0]] = arr[1].split(/ /)[0]
+  remotes = []
+  `git remote -v`.split(/\n/).each do |remote|
+    remote_arr = remote.split(/\t/)
+    remotes << { name: remote_arr[0], path: remote_arr[1].split(/ /)[0] }
   end
-  hash
+  remotes.uniq
 end
 
 # returns a hash with { ENV_NAME: value }
@@ -48,18 +48,18 @@ def current_git_data
   current = `git branch -vv | grep '^*' | grep -o '\\[.*\\]'`.chomp "]\n"
   current[0] = ''
   r_and_b = current.split(%r{[:/]})
-  remotes = all_remotes
   env_vars = {
     CURRENT_GIT_REMOTE: r_and_b[0],
     CURRENT_GIT_BRANCH: r_and_b[1],
-    CURRENT_GIT_REMOTE_PATH: remotes[r_and_b[0]],
     CURRENT_GIT_USER_NAME: `git config user.name`.strip,
     CURRENT_GIT_USER_EMAIL: `git config user.email`.strip
   }
-  remotes.each do |name, path|
-    var_name = 'GIT_REMOTE_PATH_' + name
-    next if name == 'origin'
-    env_vars[var_name.to_sym] = path
+  all_remotes.each_with_index do |remote, index|
+    next if remote[:name] == 'origin'
+    remote_name_var = 'GIT_REMOTE_NAME_' + index.to_s
+    remote_path_var = 'GIT_REMOTE_PATH_' + index.to_s
+    env_vars[remote_name_var.to_sym] = remote[:name]
+    env_vars[remote_path_var.to_sym] = remote[:path]
   end
   env_vars
 end
