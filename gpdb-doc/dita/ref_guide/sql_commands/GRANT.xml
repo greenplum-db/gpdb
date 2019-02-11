@@ -1,27 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ds20941">GRANT</title><body>
+<topic id="topic1">
+  <title id="ds20941">GRANT</title>
+  <body>
     <p id="sql_command_desc">Defines access privileges.</p>
     <section id="section2">
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">GRANT { {SELECT | INSERT | UPDATE | DELETE | REFERENCES | 
-TRIGGER | TRUNCATE } [,...] | ALL [PRIVILEGES] }
+TRIGGER | TRUNCATE } [, ...] | ALL [PRIVILEGES] }
     ON { [TABLE] <varname>table_name</varname> [, ...]
          | ALL TABLES IN SCHEMA <varname>schema_name</varname> [, ...] }
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC} [, ...] [ WITH GRANT OPTION ] 
 
 GRANT { { SELECT | INSERT | UPDATE | REFERENCES } ( <varname>columnname</varname> [, ...] )
-    [,...] | ALL [ PRIVILEGES ] ( <varname>columnname</varname> [, ...] ) }
+    [, ...] | ALL [ PRIVILEGES ] ( <varname>columnname</varname> [, ...] ) }
     ON [ TABLE ] <varname>table_name</varname> [, ...]
     TO { <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
-GRANT { {USAGE | SELECT | UPDATE} [,...] | ALL [PRIVILEGES] }
+GRANT { {USAGE | SELECT | UPDATE} [, ...] | ALL [PRIVILEGES] }
     ON { SEQUENCE <varname>sequence_name</varname> [, ...]
          | ALL SEQUENCES IN SCHEMA <varname>schema_name</varname> [, ...] }
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ] 
 
-GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [,...] | ALL 
+GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [, ...] | ALL 
 [PRIVILEGES] }
     ON DATABASE <varname>database_name</varname> [, ...]
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
@@ -44,7 +46,7 @@ GRANT { USAGE | ALL [PRIVILEGES] }
     ON LANGUAGE <varname>lang_name</varname> [, ...]
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
-GRANT { { CREATE | USAGE } [,...] | ALL [PRIVILEGES] }
+GRANT { { CREATE | USAGE } [, ...] | ALL [PRIVILEGES] }
     ON SCHEMA <varname>schema_name</varname> [, ...]
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC}  [, ...] [ WITH GRANT OPTION ]
 
@@ -57,19 +59,25 @@ GRANT <varname>parent_role</varname> [, ...]
 
 GRANT { SELECT | INSERT | ALL [PRIVILEGES] } 
     ON PROTOCOL <varname>protocolname</varname>
-    TO <varname>username</varname></codeblock></section><section id="section3"><title>Description</title>
+    TO <varname>username</varname></codeblock>
+    </section>
+    <section id="section3">
+      <title>Description</title>
       <p>Greenplum Database unifies the concepts of users and groups into a single kind of entity
         called a role. It is therefore not necessary to use the keyword <codeph>GROUP</codeph> to
         identify whether a grantee is a user or a group. <codeph>GROUP</codeph> is still allowed in
-        the command, but it is a noise word.</p><p>The <codeph>GRANT</codeph> command has two basic variants: one that
-grants privileges on a database object (table, column, view, foreign table, sequence, database, foreign-data wrapper, foreign server,
-function, procedural language, schema, or tablespace), and one that grants
-membership in a role.</p><sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the
+        the command, but it is a noise word.</p>
+      <p>The <codeph>GRANT</codeph> command has two basic variants: one that grants privileges on a
+        database object (table, column, view, foreign table, sequence, database, foreign-data
+        wrapper, foreign server, function, procedural language, schema, or tablespace), and one that
+        grants membership in a role.</p>
+      <sectiondiv id="section4"><b>GRANT on Database Objects</b><p>This variant of the
             <codeph>GRANT</codeph> command gives specific privileges on a database object to one or
-  more roles. These privileges are added to those already granted, if any. </p><p>There is also an option to grant privileges on all objects of the same
-    type within one or more schemas.  This functionality is currently supported
-    only for tables, sequences, and functions (but note that <codeph>ALL
-      TABLES</codeph> is considered to include views).</p><p>The
+          more roles. These privileges are added to those already granted, if any. </p><p>There is
+          also an option to grant privileges on all objects of the same type within one or more
+          schemas. This functionality is currently supported only for tables, sequences, and
+          functions (but note that <codeph>ALL TABLES</codeph> is considered to include views and
+          foreign tables).</p><p>The
           keyword <codeph>PUBLIC</codeph> indicates that the privileges are to be granted to all
           roles, including those that may be created later. <codeph>PUBLIC</codeph> may be thought
           of as an implicitly defined group-level role that always includes all roles. Any
