@@ -9,8 +9,8 @@
       enforced.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP}] TABLE <varname>table_name</varname> ( 
-[ { <varname>column_name</varname> <varname>data_type</varname> [ DEFAULT <varname>default_expr</varname> ] 
+      <codeblock id="sql_command_synopsis">CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP} } | UNLOGGED] TABLE <varname>table_name</varname> ( 
+[ { <varname>column_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ DEFAULT <varname>default_expr</varname> ] 
    [<varname>column_constraint</varname> [ ... ] [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
 ] 
    | <varname>table_constraint</varname>
@@ -203,6 +203,16 @@
             table are automatically temporary as well.</pd>
         </plentry>
         <plentry>
+          <pt>UNLOGGED</pt>
+          <pd>If specified, the table is created as an unlogged table. Data written to unlogged
+            tables is not written to the write-ahead (WAL) log, which makes them considerably faster
+            than ordinary tables. However, the contents of an unlogged table are not replicated to
+            mirror segment instances. Also an unlogged table is not crash-safe. After a segment
+            instance crash or unclean shutdown, the data for the unlogged table on that segment is
+            truncated. Any indexes created on an unlogged table are automatically unlogged as
+            well.</pd>
+        </plentry>
+        <plentry>
           <pt>
             <varname>table_name</varname>
           </pt>
@@ -226,6 +236,12 @@
             (space characters added after the last non-space character) as significant characters,
             the data type <codeph>CHAR</codeph> does not. See <xref href="#topic1/section5"
               format="dita"/>.</pd>
+        </plentry>
+        <plentry>
+          <pt>COLLATE <varname>collation</varname></pt>
+          <pd>The <codeph>COLLATE</codeph> clause assigns a collation to the column (which must be
+            of a collatable data type). If not specified, the column data type's default collation
+            is used.</pd>
         </plentry>
         <plentry>
           <pt>DEFAULT <varname>default_expr</varname></pt>
