@@ -521,6 +521,9 @@ CConfigParamMapping::PackConfigParamInBitset
 		traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::ExfJoinAssociativity));
 	}
 
+	// disable eager agg xform
+	traceflag_bitset->ExchangeSet(GPOPT_DISABLE_XFORM_TF(CXform::EopttraceEnableEagerAgg));
+
 	return traceflag_bitset;
 }
 
