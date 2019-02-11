@@ -207,7 +207,9 @@ sub restart_test_server
 {
 	print("### Restarting test server\n");
 	system_log('pg_ctl', '-D', $test_server_datadir, '-w', '-l',
-	  $test_server_logfile, 'restart');
+	  $test_server_logfile, '-o',
+	  "--log-statement=all -c gp_role=utility --gp_dbid=-1 --gp_contentid=-1 --logging-collector=off",
+	  'restart');
 }
 
 END

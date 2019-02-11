@@ -52,8 +52,8 @@ clean distclean maintainer-clean:
 	rm -rf tmp_check
 
 check: all
-	echo "pg_basebackup check temporarily disabled"
+	$(prove_check)
 
 installcheck:
-	echo "pg_basebackup installcheck temporarily disabled"
+	$(prove_installcheck)
 
