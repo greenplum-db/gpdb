@@ -47,18 +47,18 @@
             [ key_match_type ]
             [ key_action ]</codeblock>
       <p>where <varname>storage_directive</varname> for a column is:</p>
-      <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
-    [COMPRESSLEVEL={0-9} ]
-    [BLOCKSIZE={8192-2097152} ]</codeblock>
+      <codeblock>   compresstype={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
+    [compresslevel={0-9} ]
+    [blocksize={8192-2097152} ]</codeblock>
       <p>where <varname>storage_parameter</varname> for the table is:</p>
-      <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
-   BLOCKSIZE={8192-2097152}
-   ORIENTATION={COLUMN|ROW}
-   CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   COMPRESSLEVEL={0-9}
-   FILLFACTOR={10-100}
-   OIDS[=TRUE|FALSE]</codeblock>
+      <codeblock>   appendoptimized={TRUE|FALSE}
+   blocksize={8192-2097152}
+   orientation={COLUMN|ROW}
+   checksum={TRUE|FALSE}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={0-9}
+   fillfactor={10-100}
+   oids[=TRUE|FALSE]</codeblock>
       <p>and <varname>table_constraint</varname> is:</p>
       <codeblock>   [CONSTRAINT <varname>constraint_name</varname>]
    UNIQUE ( <varname>column_name</varname> [, ... ] )
@@ -124,14 +124,14 @@
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
       <p>where <varname>storage_parameter</varname> for a partition is:</p>
-      <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
-   BLOCKSIZE={8192-2097152}
-   ORIENTATION={COLUMN|ROW}
-   CHECKSUM={TRUE|FALSE}
-   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   COMPRESSLEVEL={1-19}
-   FILLFACTOR={10-100}
-   OIDS[=TRUE|FALSE]</codeblock>
+      <codeblock>   appendoptimized={TRUE|FALSE}
+   blocksize={8192-2097152}
+   orientation={COLUMN|ROW}
+   checksum={TRUE|FALSE}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={1-19}
+   fillfactor={10-100}
+   oids[=TRUE|FALSE]</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -240,8 +240,8 @@
           <pt> ENCODING ( <varname>storage_directive</varname> [, ...] ) </pt>
           <pd>For a column, the optional <codeph>ENCODING</codeph> clause specifies the type of
             compression and block size for the column data. See <xref href="#topic1/with_storage"
-              format="dita">storage_options</xref> for <codeph>COMPRESSTYPE</codeph>,
-              <codeph>COMPRESSLEVEL</codeph>, and <codeph>BLOCKSIZE</codeph> values.</pd>
+              format="dita">storage_options</xref> for <codeph>compresstype</codeph>,
+              <codeph>compresslevel</codeph>, and <codeph>blocksize</codeph> values.</pd>
           <pd>The clause is valid only for append-optimized, column-oriented tables.</pd>
           <pd>Column compression settings are inherited from the table level to the partition level
             to the subpartition level. The lowest-level settings have priority.</pd>
@@ -454,55 +454,55 @@
             about setting default storage options, see <xref href="#topic1/section5" format="dita"
             />. </pd>
           <pd>The following storage options are available:</pd>
-          <pd><b>APPENDOPTIMIZED</b> — Set to <codeph>TRUE</codeph> to create the table as an
+          <pd><b>appendoptimized</b> — Set to <codeph>TRUE</codeph> to create the table as an
             append-optimized table. If <codeph>FALSE</codeph> or not declared, the table will be
             created as a regular heap-storage table.</pd>
-          <pd><b>BLOCKSIZE</b> — Set to the size, in bytes, for each block in a table. The
-              <codeph>BLOCKSIZE</codeph> must be between 8192 and 2097152 bytes, and be a multiple
+          <pd><b>blocksize</b> — Set to the size, in bytes, for each block in a table. The
+              <codeph>blocksize</codeph> must be between 8192 and 2097152 bytes, and be a multiple
             of 8192. The default is 32768.</pd>
-          <pd><b>ORIENTATION</b> — Set to <codeph>column</codeph> for column-oriented storage, or
+          <pd><b>orientation</b> — Set to <codeph>column</codeph> for column-oriented storage, or
               <codeph>row</codeph> (the default) for row-oriented storage. This option is only valid
-            if <codeph>APPENDOPTIMIZED=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
-          <pd><b>CHECKSUM</b> — This option is valid only for append-optimized tables
-              (<codeph>APPENDOPTIMIZED=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
+            if <codeph>appendoptimized=TRUE</codeph>. Heap-storage tables can only be row-oriented.</pd>
+          <pd><b>checksum</b> — This option is valid only for append-optimized tables
+              (<codeph>appendoptimized=TRUE</codeph>). The value <codeph>TRUE</codeph> is the default and
             enables CRC checksum validation for append-optimized tables. The checksum is calculated
             during block creation and is stored on disk. Checksum validation is performed during
             block reads. If the checksum calculated during the read does not match the stored
             checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
             disable checksum validation, checking the table data for on-disk corruption will not be
             performed.</pd>
-          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
+          <pd><b>compresstype</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
               <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
               of compression used. The value <codeph>NONE</codeph> disables compression. Zstd provides
-	      for both speed or a good compression ratio, tunable with the <codeph>COMPRESSLEVEL</codeph> option.
+	      for both speed or a good compression ratio, tunable with the <codeph>compresslevel</codeph> option.
 	      QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
-              compression types on usual workloads. The <codeph>COMPRESSTYPE</codeph> option
-            is only valid if <codeph>APPENDOPTIMIZED=TRUE</codeph>.<p>
+              compression types on usual workloads. The <codeph>compresstype</codeph> option
+            is only valid if <codeph>appendoptimized=TRUE</codeph>.<p>
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note>
             </p><p>The value <codeph>RLE_TYPE</codeph> is supported only if
-                <codeph>ORIENTATION</codeph> =<codeph>column</codeph> is specified, Greenplum
+                <codeph>orientation</codeph> =<codeph>column</codeph> is specified, Greenplum
               Database uses the run-length encoding (RLE) compression algorithm. RLE compresses data
               better than the zlib or QuickLZ compression algorithm when the same data value occurs
               in many consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,
                 <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
                 <codeph>TIMESTAMP</codeph>, delta compression is also applied if the
-                <codeph>COMPRESSTYPE</codeph> option is set to <codeph>RLE_TYPE</codeph>
+                <codeph>compresstype</codeph> option is set to <codeph>RLE_TYPE</codeph>
               compression. The delta compression algorithm is based on the delta between column
               values in consecutive rows and is designed to improve compression when data is loaded
               in sorted order or the compression is applied to column data that is in sorted
               order.</p><p>For information about using table compression, see "Choosing the Table
               Storage Model" in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
-              <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
+              <pd><b>compresslevel</b> — For Zstd compression of append-optimized tables, set to an
 	      integer value from 1 (fastest compression) to 19 (highest compression ratio).
 	      For zlib compression, the valid range is from 1 to 9. QuickLZ
             compression level can only be set to 1. If not declared, the default is 1. For
               <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value from 1
             (fastest compression) to 4 (highest compression ratio). </pd>
-          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if <codeph>APPENDOPTIMIZED=TRUE</codeph>.</pd>
-          <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
+          <pd>The <codeph>compresslevel</codeph> option is valid only if <codeph>appendoptimized=TRUE</codeph>.</pd>
+          <pd><b>fillfactor</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
-          <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
+          <pd><b>oids</b> — Set to <codeph>oids=FALSE</codeph> (the default) so that rows do not
             have object identifiers assigned to them. Greenplum strongly recommends that you do not
             enable OIDS when creating a table. On large tables, such as those in a typical Greenplum
             Database system, using OIDs for table rows can cause wrap-around of the 32-bit OID
@@ -731,22 +731,22 @@
         <li>The default values for these table storage options can be specified with the server
           configuration parameter <codeph>gp_default_storage_option</codeph>.<ul id="ul_hr1_3m1_tt">
             <li>
-              <cmdname>APPENDOPTIMIZED</cmdname>
+              <cmdname>appendoptimized</cmdname>
             </li>
             <li>
-              <cmdname>BLOCKSIZE</cmdname>
+              <cmdname>blocksize</cmdname>
             </li>
             <li>
-              <cmdname>CHECKSUM</cmdname>
+              <cmdname>checksum</cmdname>
             </li>
             <li>
-              <cmdname>COMPRESSTYPE</cmdname>
+              <cmdname>compresstype</cmdname>
             </li>
             <li>
-              <cmdname>COMPRESSLEVEL</cmdname>
+              <cmdname>compresslevel</cmdname>
             </li>
             <li>
-              <cmdname>ORIENTATION</cmdname>
+              <cmdname>orientation</cmdname>
             </li>
           </ul><p>The defaults can be set for the system, a database, or a user. For information about
             setting storage options, see the server configuration parameter <codeph><xref

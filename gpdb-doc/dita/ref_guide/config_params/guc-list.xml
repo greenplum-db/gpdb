@@ -2691,62 +2691,62 @@
     <title>gp_default_storage_options</title>
     <body>
       <p>Set the default values for the following table storage options when a table is created with
-        the <cmdname>CREATE TABLE</cmdname> command.<ul id="ul_r4t_nxx_5p">
-          <li><cmdname>APPENDOPTIMIZED</cmdname>
+        the <codeph>CREATE TABLE</codeph> command.<ul id="ul_r4t_nxx_5p">
+          <li><cmdname>appendoptimized</cmdname>
             <note>You use the <codeph>appendoptimized=<varname>value</varname></codeph> syntax
               to specify the append-optimized table storage type. <codeph>appendoptimized</codeph>
-              is a thin alias for the <codeph>appendonly</codeph> storage option. Greenplum
+              is a thin alias for the <codeph>appendonly</codeph> legacy storage option. Greenplum
               Database stores <codeph>appendonly</codeph> in the catalog, and displays the
               same when listing the storage options for append-optimized tables.</note>
           </li>
-          <li><cmdname>BLOCKSIZE</cmdname>
+          <li><cmdname>blocksize</cmdname>
           </li>
-          <li><cmdname>CHECKSUM</cmdname></li>
-          <li><cmdname>COMPRESSTYPE</cmdname>
+          <li><cmdname>checksum</cmdname></li>
+          <li><cmdname>compresstype</cmdname>
           </li>
-          <li><cmdname>COMPRESSLEVEL</cmdname>
+          <li><cmdname>compresslevel</cmdname>
           </li>
-          <li><cmdname>ORIENTATION</cmdname>
+          <li><cmdname>orientation</cmdname>
           </li>
         </ul></p>
       <p>Specify multiple storage option values as a comma separated list.</p>
       <p>You can set the storage options with this parameter instead of specifying the table storage
-        options in the <cmdname>WITH</cmdname> of the <cmdname>CREATE TABLE</cmdname> command. The
-        table storage options that are specified with the <cmdname>CREATE TABLE</cmdname> command
+        options in the <codeph>WITH</codeph> of the <codeph>CREATE TABLE</codeph> command. The
+        table storage options that are specified with the <codeph>CREATE TABLE</codeph> command
         override the values specified by this parameter. </p>
       <p>Not all combinations of storage option values are valid. If the specified storage options
-        are not valid, an error is returned. See the <cmdname>CREATE TABLE</cmdname> command for
+        are not valid, an error is returned. See the <codeph>CREATE TABLE</codeph> command for
         information about table storage options. </p>
       <p>The defaults can be set for a database and user. If the server configuration parameter is
         set at different levels, this the order of precedence, from highest to lowest, of the table
         storage values when a user logs into a database and creates a table:</p>
       <ol id="ol_fy1_fty_5p">
-        <li>The values specified in a <cmdname>CREATE TABLE</cmdname> command with the
-            <cmdname>WITH</cmdname> clause or <cmdname>ENCODING</cmdname> clause</li>
+        <li>The values specified in a <codeph>CREATE TABLE</codeph> command with the
+            <codeph>WITH</codeph> clause or <codeph>ENCODING</codeph> clause</li>
         <li>The value of <codeph>gp_default_storage_options</codeph> that set for the user with the
-            <cmdname>ALTER ROLE...SET</cmdname> command</li>
+            <codeph>ALTER ROLE...SET</codeph> command</li>
         <li>The value of <codeph>gp_default_storage_options</codeph> that is set for the database
-          with the <cmdname>ALTER DATABASE...SET</cmdname> command</li>
+          with the <codeph>ALTER DATABASE...SET</codeph> command</li>
         <li>The value of <codeph>gp_default_storage_options</codeph> that is set for the Greenplum
-          Database system with the <cmdname>gpconfig</cmdname> utility</li>
+          Database system with the <codeph>gpconfig</codeph> utility</li>
       </ol>
       <p>The parameter value is not cumulative. For example, if the parameter specifies the
-          <cmdname>APPENDOPTIMIZED</cmdname> and <cmdname>COMPRESSTYPE</cmdname> options for a database
+          <codeph>appendoptimized</codeph> and <codeph>compresstype</codeph> options for a database
         and a user logs in and sets the parameter to specify the value for the
-          <cmdname>ORIENTATION</cmdname> option, the <cmdname>APPENDOPTIMIZED</cmdname>, and
-          <cmdname>COMPRESSTYPE</cmdname> values set at the database level are ignored. </p>
-      <p>This example <cmdname>ALTER DATABASE</cmdname> command sets the default
-          <cmdname>ORIENTATION</cmdname> and <cmdname>COMPRESSTYPE</cmdname> table storage options
-        for the database <codeph>mystest</codeph>.
+          <codeph>orientation</codeph> option, the <codeph>appendoptimized</codeph>, and
+          <codeph>compresstype</codeph> values set at the database level are ignored. </p>
+      <p>This example <codeph>ALTER DATABASE</codeph> command sets the default
+          <codeph>orientation</codeph> and <codeph>compresstype</codeph> table storage options
+        for the database <codeph>mytest</codeph>.
         <codeblock>ALTER DATABASE mytest SET gp_default_storage_options = 'orientation=column, compresstype=rle_type'</codeblock></p>
       <p>To create an append-optimized table in the <codeph>mytest</codeph> database with
         column-oriented table and RLE compression. The user needs to specify only
-          <codeph>APPENDOPTIMIZED=TRUE</codeph> in the <cmdname>WITH</cmdname> clause.</p>
-      <p>This example <cmdname>gpconfig</cmdname> utility command sets the default storage option
+          <codeph>appendoptimized=TRUE</codeph> in the <codeph>WITH</codeph> clause.</p>
+      <p>This example <codeph>gpconfig</codeph> utility command sets the default storage option
         for a Greenplum Database system. If you set the defaults for multiple table storage options,
         the value must be enclosed in single
         quotes.<codeblock>gpconfig -c 'gp_default_storage_options' -v 'appendoptimized=true, orientation=column'</codeblock></p>
-      <p>This example <cmdname>gpconfig</cmdname> utility command shows the value of the parameter.
+      <p>This example <codeph>gpconfig</codeph> utility command shows the value of the parameter.
         The parameter value must be consistent across the Greenplum Database master and all
         segments.<codeblock>gpconfig -s 'gp_default_storage_options'</codeblock></p>
       <table id="gp_default_storage_option_table">
@@ -2763,23 +2763,23 @@
           </thead>
           <tbody>
             <row>
-              <entry colname="col1"><cmdname>APPENDOPTIMIZED</cmdname>= <codeph>TRUE</codeph> |
-                  <codeph>FALSE</codeph><p><cmdname>BLOCKSIZE</cmdname>= integer between 8192 and
-                  2097152 </p><p><cmdname>CHECKSUM</cmdname>= <codeph>TRUE</codeph> |
+              <entry colname="col1"><codeph>appendoptimized</codeph>= <codeph>TRUE</codeph> |
+                  <codeph>FALSE</codeph><p><codeph>blocksize</codeph>= integer between 8192 and
+                  2097152 </p><p><codeph>checksum</codeph>= <codeph>TRUE</codeph> |
                     <codeph>FALSE</codeph>
-                </p><p><cmdname>COMPRESSTYPE</cmdname>= <codeph>ZLIB</codeph> |
+                </p><p><codeph>compresstype</codeph>= <codeph>ZLIB</codeph> |
                     <codeph>ZSTD</codeph> | <codeph>QUICKLZ</codeph><sup>2</sup> |
                     <codeph>RLE</codeph>_<codeph>TYPE</codeph> | <codeph>NONE</codeph>
-                </p><p><cmdname>COMPRESSLEVEL</cmdname>= integer between 0 and
-                    19</p><p><cmdname>ORIENTATION</cmdname>= <codeph>ROW</codeph> |
+                </p><p><codeph>compresslevel</codeph>= integer between 0 and
+                    19</p><p><codeph>orientation</codeph>= <codeph>ROW</codeph> |
                     <codeph>COLUMN</codeph>
                 </p></entry>
-              <entry colname="col2"><cmdname>APPENDOPTIMIZED</cmdname>=<codeph>FALSE</codeph>
-                <p><cmdname>BLOCKSIZE</cmdname>=<codeph>32768</codeph>
-                </p><p><cmdname>CHECKSUM</cmdname>=<codeph>TRUE</codeph>
-                </p><p><cmdname>COMPRESSTYPE</cmdname>=<codeph>none</codeph>
-                </p><p><cmdname>COMPRESSLEVEL</cmdname>=<codeph>0</codeph>
-                </p><p><cmdname>ORIENTATION</cmdname>=<codeph>ROW</codeph></p></entry>
+              <entry colname="col2"><codeph>appendoptimized</codeph>=<codeph>FALSE</codeph>
+                <p><codeph>blocksize</codeph>=<codeph>32768</codeph>
+                </p><p><codeph>checksum</codeph>=<codeph>TRUE</codeph>
+                </p><p><codeph>compresstype</codeph>=<codeph>none</codeph>
+                </p><p><codeph>compresslevel</codeph>=<codeph>0</codeph>
+                </p><p><codeph>orientation</codeph>=<codeph>ROW</codeph></p></entry>
               <entry colname="col3">master<p>session</p><p>reload</p></entry>
             </row>
           </tbody>
@@ -2787,7 +2787,7 @@
       </table>
       <note>
         <sup>1</sup>The set classification when the parameter is set at the system level with the
-          <cmdname>gpconfig</cmdname> utility.</note>
+          <codeph>gpconfig</codeph> utility.</note>
       <note>
         <sup>2</sup>QuickLZ compression is available only in the commercial release of Pivotal
         Greenplum Database.</note>

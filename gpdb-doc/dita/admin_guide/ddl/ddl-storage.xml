@@ -76,7 +76,7 @@
         </p>
         <note>You use the <codeph>appendoptimized=<varname>value</varname></codeph> syntax to
           specify the append-optimized table storage type. <codeph>appendoptimized</codeph> is
-          a thin alias for the <codeph>appendonly</codeph> storage option. Greenplum Database
+          a thin alias for the <codeph>appendonly</codeph> legacy storage option. Greenplum Database
           stores <codeph>appendonly</codeph> in the catalog, and displays the same when 
           listing storage options for append-optimized tables.</note>
         <p><codeph>UPDATE</codeph> and <codeph>DELETE</codeph> are not allowed on append-optimized
@@ -359,7 +359,7 @@
           <tbody>
             <row>
               <entry colname="col1">
-                <codeph>COMPRESSTYPE</codeph>
+                <codeph>compresstype</codeph>
               </entry>
               <entry colname="col2">Type of compression.</entry>
               <entry colname="col3"><codeph>zstd: </codeph>ZStandard
@@ -371,7 +371,7 @@
             </row>
             <row>
               <entry colname="col1" morerows="3">
-                <codeph>COMPRESSLEVEL</codeph>
+                <codeph>compresslevel</codeph>
               </entry>
               <entry colname="col2" morerows="3">Compression level.</entry>
               <entry colname="col3"><codeph>zlib</codeph> compression:
@@ -404,7 +404,7 @@
             </row>
             <row>
               <entry colname="col1">
-                <codeph>BLOCKSIZE</codeph>
+                <codeph>blocksize</codeph>
               </entry>
               <entry colname="col2">The size in bytes for each block in the table</entry>
               <entry colname="col3">
@@ -554,7 +554,7 @@
       <topic id="topic51" xml:lang="en">
         <title>Example 4</title>
         <body>
-          <p>In this example, <codeph>CREATE TABLE</codeph> assigns the <codeph>zlib</codeph> compresstype storage
+          <p>In this example, <codeph>CREATE TABLE</codeph> assigns the <codeph>zlib</codeph> <codeph>compresstype</codeph> storage
             directive to <codeph>c1</codeph>. Column <codeph>c2</codeph> has no storage directive
             and inherits the compression type (<codeph>quicklz</codeph>) and block size
               (<codeph>65536</codeph>) from the <codeph>DEFAULT COLUMN ENCODING</codeph> clause.</p>
@@ -634,7 +634,7 @@
         <p>When you specify <codeph>int33</codeph> as a column type in a <codeph>CREATE TABLE</codeph>
           command, the column is created with the storage directives you specified for the type:</p>
         <codeblock>CREATE TABLE t2 (c1 int33)
-    WITH (APPENDOPTIMIZED=true, ORIENTATION=column);</codeblock>
+    WITH (appendoptimized=true, orientation=column);</codeblock>
         <p>Table- or column- level storage attributes that you specify in a table definition override
            type-level storage attributes. For information about creating and adding compression
            attributes to a type, see
@@ -755,7 +755,7 @@ GRANT SELECT ON sales TO guest;
           <p>
             <codeblock>ALTER TABLE T1
       ADD COLUMN c4 int DEFAULT 0
-      ENCODING (COMPRESSTYPE=zlib);
+      ENCODING (compresstype=zlib);
 </codeblock>
           </p>
         </body>
@@ -771,15 +771,15 @@ GRANT SELECT ON sales TO guest;
           <p>
             <codeblock>CREATE TABLE ccddl (i int, j int, k int, l int)
   WITH
-    (APPENDOPTIMIZED = TRUE, ORIENTATION=COLUMN)
+    (appendoptimized = TRUE, orientation=COLUMN)
   PARTITION BY range(j)
   SUBPARTITION BY list (k)
   SUBPARTITION template(
     SUBPARTITION sp1 values(1, 2, 3, 4, 5),
-    COLUMN i ENCODING(COMPRESSTYPE=ZLIB),
-    COLUMN j ENCODING(COMPRESSTYPE=QUICKLZ),
-    COLUMN k ENCODING(COMPRESSTYPE=ZLIB),
-    COLUMN l ENCODING(COMPRESSTYPE=ZLIB))
+    COLUMN i ENCODING(compresstype=ZLIB),
+    COLUMN j ENCODING(compresstype=QUICKLZ),
+    COLUMN k ENCODING(compresstype=ZLIB),
+    COLUMN l ENCODING(compresstype=ZLIB))
   (PARTITION p1 START(1) END(10),
    PARTITION p2 START(10) END(20))
 ;

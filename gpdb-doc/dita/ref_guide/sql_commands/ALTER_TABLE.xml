@@ -102,13 +102,13 @@ ALTER TABLE <varname>name</varname>
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
                         <p>where <varname>storage_parameter</varname> is:</p>
-                        <codeblock>   APPENDOPTIMIZED={TRUE|FALSE}
-   BLOCKSIZE={8192-2097152}
-   ORIENTATION={COLUMN|ROW}
-   COMPRESSTYPE={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
-   COMPRESSLEVEL={0-9}
-   FILLFACTOR={10-100}
-   OIDS[=TRUE|FALSE]</codeblock>
+                        <codeblock>   appendoptimized={TRUE|FALSE}
+   blocksize={8192-2097152}
+   orientation={COLUMN|ROW}
+   compresstype={ZLIB|ZSTD|QUICKLZ|RLE_TYPE|NONE}
+   compresslevel={0-9}
+   fillfactor={10-100}
+   oids[=TRUE|FALSE]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>

@@ -12,7 +12,7 @@
 
 <b>gpreload</b> <b>--version</b></codeblock></section>
     <section id="section3"><title>Description</title><p>The <codeph>gpreload</codeph> utility reloads table data with column data sorted. For tables that
-        were created with the table storage option <codeph>APPENDOPTIMIZED=TRUE</codeph> and compression
+        were created with the table storage option <codeph>appendoptimized=TRUE</codeph> and compression
         enabled, reloading the data with sorted data can improve table compression. You specify a
         list of tables to be reloaded and the table columns to be sorted in a text file. </p><p>Compression is improved by sorting data
         when the data in the column has a relatively low number of distinct values when compared to
