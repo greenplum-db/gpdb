@@ -44,7 +44,7 @@
     <p>For some compression algorithms (such as zlib) Greenplum Database requires software packages
       installed on the host system.<ph otherprops="pivotal"> For information about required software
         packages, see the <cite>Greenplum Database Installation Guide</cite></ph>.<ph
-        otherprops="oss-only"> The support of some compression algorithms (such as zstd) depend on
+        otherprops="oss-only"> The support of some compression algorithms (such as zstd) depends on
         the configuration options specified when building Greenplum Database.</ph></p>
   </body>
 </topic>
