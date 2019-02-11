@@ -38,9 +38,14 @@ function _main() {
         ;;
   esac
 
+  # We have moved out of ivy for Centos{6,7}, so make sync_tools
+  # will not create the necessary directory for centos.
+  if [ "${TARGET_OS}" = centos ]; then
+    mkdir -p ${GPDB_SRC_PATH}/gpAux/ext/${BLD_ARCH}
+  fi
   make_sync_tools
 
-  # Move ext directory to output dir
+  # Move ext directory to output dir.
   mv ${GPDB_SRC_PATH}/gpAux/ext gpAux_ext/
 
 }
