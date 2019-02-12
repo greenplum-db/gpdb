@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
 <topic id="topic_z5g_l5h_kr">
-  <title>gphdfs:// Protocol</title>
+  <title>gphdfs:// Protocol (Deprecated)</title>
   <shortdesc>The <codeph>gphdfs://</codeph> protocol specifies an external file path on a Hadoop
     Distributed File System (HDFS). </shortdesc>
   <body>
+    <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be removed
+      in the next major release of Greenplum Database. Consider using the Greenplum Platform
+      Extension Framework (PXF) <codeph>pxf</codeph> external table protocol to access data
+      stored in a Hadoop file system.</note>
     <p>The protocol allows specifying external files in Hadoop clusters configured with or without
       Hadoop HA (high availability) and in MapR clusters. File names may contain wildcard characters
       and the files can be in <codeph>CSV</codeph>, <codeph>TEXT</codeph>, or custom formats. </p>

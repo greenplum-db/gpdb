@@ -26,8 +26,11 @@
       <title>Accessing a Kerberized Hadoop Cluster</title>
       <p>Greenplum Database can read or write external tables in a Hadoop file system. If the Hadoop
         cluster is secured with Kerberos ("Kerberized"), Greenplum Database must be configured to
-        allow external table owners to authenticate with Kerberos. See <xref
-          href="kerberos-hdfs.xml#topic_lhr_yrf_qr"/> for the steps to perform this setup. </p>
+        allow external table owners to authenticate with Kerberos. See <xref 
+          href="../../pxf/pxf_kerbhdfs.html" format="html" scope="peer">Configuring PXF for Secure HDFS</xref>
+        for the configuration procedure for PXF. See <xref
+          href="kerberos-hdfs.xml#topic_lhr_yrf_qr"/> for the steps to perform this setup for
+        <codeph>gphdfs</codeph> (deprecated). </p>
     </section>
     <section>
       <title>Platform Hardening</title>

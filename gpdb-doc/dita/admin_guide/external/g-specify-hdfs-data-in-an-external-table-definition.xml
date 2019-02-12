@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic22">
-   <title>Specify gphdfs Protocol in an External Table Definition</title>
+   <title>Specify gphdfs Protocol in an External Table Definition (Deprecated)</title>
    <body>
       <p>The <codeph>gphdfs</codeph>
          <codeph>LOCATION</codeph> clause of the <codeph>CREATE EXTERNAL TABLE</codeph> command for

@@ -3,10 +3,14 @@
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic19">
    <!-- hack for HTML/PDF -->
-   <title>Accessing HDFS Data with gphdfs</title>
+   <title>Accessing HDFS Data with gphdfs (Deprecated)</title>
    <shortdesc>Greenplum Database leverages the parallel architecture of a Hadoop Distributed File
       System to read and write data files efficiently using the <codeph>gphdfs</codeph> protocol. </shortdesc>
    <body>
+      <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be removed
+      in the next major release of Greenplum Database. Consider using the Greenplum Platform
+      Extension Framework (PXF) <codeph>pxf</codeph> external table protocol to access data
+      stored in a Hadoop file system.</note>
       <p>There are three steps to using the gphdfs protocol with HDFS:</p>
       <ul otherprops="op-print">
          <li id="du228490">

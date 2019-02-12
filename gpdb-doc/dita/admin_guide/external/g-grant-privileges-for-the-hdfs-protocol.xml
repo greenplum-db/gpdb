@@ -2,7 +2,7 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic21">
-   <title>Grant Privileges for the gphdfs Protocol</title>
+   <title>Grant Privileges for the gphdfs Protocol (Deprecated)</title>
    <body>
       <p>To enable privileges required to create external tables that access files on HDFS using
             <codeph>gphdfs</codeph>:</p>

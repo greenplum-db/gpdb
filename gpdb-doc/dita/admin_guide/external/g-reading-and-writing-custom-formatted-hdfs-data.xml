@@ -2,8 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic25">
-    <title>Reading and Writing Custom-Formatted HDFS Data</title>
+    <title>Reading and Writing Custom-Formatted HDFS Data with gphdfs (Deprecated)</title>
     <body>
+        <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be
+        removed in the next major release of Greenplum Database.</note>
         <p>Use MapReduce and the <codeph>CREATE EXTERNAL TABLE</codeph> command to read and write
             data with custom formats on HDFS.</p>
         <p>To read custom-formatted data:</p>

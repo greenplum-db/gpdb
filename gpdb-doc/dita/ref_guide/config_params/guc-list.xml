@@ -4178,7 +4178,7 @@
     <title>gp_hadoop_home</title>
     <body>
       <p>Specifies the installation directory for the Greenplum Database <codeph>gphdfs</codeph>
-        Hadoop target.</p>
+        protocol (deprecated) Hadoop target.</p>
       <table id="gp_hadoop_home_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
@@ -4205,7 +4205,8 @@
   <topic id="gp_hadoop_target_version">
     <title>gp_hadoop_target_version</title>
     <body>
-      <p>The installed version of the Greenplum Database <codeph>gphdfs</codeph> Hadoop target.</p>
+      <p>The installed version of the Greenplum Database <codeph>gphdfs</codeph> protocol
+        (deprecated) Hadoop target.</p>
       <table id="gp_hadoop_target_version_table">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

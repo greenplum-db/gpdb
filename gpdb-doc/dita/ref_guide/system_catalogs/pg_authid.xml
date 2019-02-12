@@ -168,7 +168,7 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">Privilege to create read external tables with the
-                <codeph>gphdfs</codeph> protocol</entry>
+                <codeph>gphdfs</codeph> protocol (deprecated)</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -177,7 +177,7 @@
             <entry colname="col2">boolean</entry>
             <entry colname="col3"/>
             <entry colname="col4">Privilege to create write external tables with the
-                <codeph>gphdfs</codeph> protocol</entry>
+                <codeph>gphdfs</codeph> protocol (deprecated)</entry>
           </row>
           <row>
             <entry colname="col1">

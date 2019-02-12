@@ -2,8 +2,11 @@
 <!DOCTYPE dita PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <dita>
   <topic id="topic_fstrm">
-    <title>Support for Parquet Files</title>
+    <title>gphdfs Support for Parquet Files (Deprecated)</title>
     <body>
+      <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be
+        removed in the next major release of Greenplum Database. You can use the Greenplum
+        Platform Extension Framework (PXF) to access Parquet-format data.</note>
       <p>You can use the Greenplum Database <codeph>gphdfs</codeph> protocol to access Parquet files
         on a Hadoop file system (HDFS).</p>
     </body>

@@ -4,6 +4,8 @@
 <topic id="topic49">
    <title>Example 5—TEXT Format on a Hadoop Distributed File Server</title>
    <body>
+      <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be
+        removed in the next major release of Greenplum Database.</note>
       <p>Creates a readable external table, <i>ext_expenses,</i> using the
                             <codeph>gphdfs</codeph> protocol. The column delimiter is a pipe ( |
                         ).</p>

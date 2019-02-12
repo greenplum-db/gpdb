@@ -2,8 +2,10 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="amazon-emr">
-   <title>Using Amazon EMR with Greenplum Database installed on AWS </title>
+   <title>Using Amazon EMR with Greenplum Database installed on AWS (Deprecated) </title>
    <body>
+      <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will be
+        removed in the next major release of Greenplum Database.</note>
       <p>Amazon Elastic MapReduce (EMR) is a managed cluster platform that can run big data
          frameworks, such as Apache Hadoop and Apache Spark, on Amazon Web Services (AWS) to process
          and analyze data. For a Greenplum Database system that is installed on Amazon Web Services

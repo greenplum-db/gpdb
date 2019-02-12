@@ -20,23 +20,23 @@
             <li><codeph>gpfdists://</codeph> is the secure version of <codeph>gpfdist</codeph>. See
                   <xref href="g-gpfdists-protocol.xml#topic_sny_yph_kr"/>.</li>
             <li><codeph>gphdfs://</codeph> accesses files on a Hadoop Distributed File System
-               (HDFS). See <xref href="g-gphdfs-protocol.xml#topic_z5g_l5h_kr"/>.<p>The files can be
-                  stored on an Amazon EMR instance HDFS. See <xref
-                     href="g-hdfs-emr-config.xml#amazon-emr"/>.</p></li>
+               (HDFS). See <xref href="g-gphdfs-protocol.xml#topic_z5g_l5h_kr"/>.
+               <note>The <codeph>gphdfs</codeph> external table protocol is deprecated and will
+                 be removed in the next major release of Greenplum Database.</note>      </li>
             <li><codeph>s3://</codeph> accesses files in an Amazon S3 bucket. See <xref
                   href="g-s3-protocol.xml#amazon-emr"/>.</li>
 
             <li>The <codeph>pxf://</codeph> protocol accesses external HDFS files and HBase and Hive tables using the Greenplum Platform Extension Framework (PXF). See <xref href="g-pxf-protocol.xml"></xref>.</li>
          </ul></p>
       <note>
-         <p>The <codeph>gphdfs://</codeph>, <codeph>s3://</codeph>, and <codeph>pxf://</codeph>
+         <p>The <codeph>gphdfs://</codeph> (deprecated), <codeph>s3://</codeph>, and <codeph>pxf://</codeph>
             protocols are custom data access protocols, where the <codeph>file://</codeph>,
                <codeph>gpfdist://</codeph>, and <codeph>gpfdists://</codeph> protocols are
             implemented internally in Greenplum Database. The custom and internal protocols differ
             in these ways:</p>
          <ul id="ul_ifb_crh_qfb">
             <li>Custom protocols must be registered using the <codeph>CREATE PROTOCOL</codeph>
-               command. The <codeph>gphdfs://</codeph> protocol is preregistered when you install
+               command. The <codeph>gphdfs://</codeph> protocol (deprecated) is preregistered when you install
                Greenplum Database. Registering the PXF extension in a database creates the
                   <codeph>pxf://</codeph> protocol. (See <xref
                   href="pxf-overview.xml#topic_u14_wtd_dbb"/>.) You can optionally register the
@@ -58,10 +58,10 @@
       </note>
       <p>External tables access external files from within the database as if they are regular
          database tables. External tables defined with the
-            <codeph>gpfdist</codeph>/<codeph>gpfdists</codeph>, <codeph>gphdfs</codeph>, and
+            <codeph>gpfdist</codeph>/<codeph>gpfdists</codeph>, <codeph>gphdfs</codeph> (deprecated), and
             <codeph>s3</codeph> protocols utilize Greenplum parallelism by using the resources of
          all Greenplum Database segments to load or unload data. The <codeph>gphdfs</codeph>
-         protocol leverages the parallel architecture of the Hadoop Distributed File System to
+         protocol (deprecated) leverages the parallel architecture of the Hadoop Distributed File System to
          access files on that system. The <codeph>s3</codeph> protocol utilizes the Amazon Web
          Services (AWS) capabilities. </p>
       <p>You can query external table data directly and in parallel using SQL commands such as
@@ -76,7 +76,7 @@
                <li id="du220318">Start the Greenplum Database file server(s) when using the
                      <codeph>gpfdist</codeph> or <codeph>gpdists</codeph> protocols. </li>
                <li id="du220319">Verify that you have already set up the required one-time
-                  configuration for the <codeph>gphdfs</codeph> protocol.</li>
+                  configuration for the <codeph>gphdfs</codeph> protocol (deprecated).</li>
                <li>Verify the Greenplum Database configuration for the <codeph>s3</codeph>
                   protocol.</li>
             </ul></li>

@@ -6,7 +6,7 @@
     <body>
         <p>Writable external tables that output data to files use the Greenplum parallel file server program,
                 <cmdname>gpfdist</cmdname>, or the Hadoop Distributed File System interface,
-                <codeph>gphdfs</codeph>. </p>
+                <codeph>gphdfs</codeph> (deprecated). </p>
         <p>Use the <codeph>CREATE WRITABLE EXTERNAL TABLE</codeph> command to define the external
             table and specify the location and format of the output files. <ph>See <xref
                     href="../../external/g-using-the-greenplum-parallel-file-server--gpfdist-.xml#topic13"
