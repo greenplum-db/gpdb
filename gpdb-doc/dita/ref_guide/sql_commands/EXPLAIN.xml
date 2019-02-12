@@ -9,7 +9,7 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">EXPLAIN [ ( <varname>option</varname> [, ...] ) ] <varname>statement</varname>
 EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
-      <p>where option can be one
+      <p>where <varname>option</varname> can be one
         of:<codeblock>    ANALYZE [ <varname>boolean</varname> ]
     VERBOSE [ <varname>boolean</varname> ]
     COSTS [ <varname>boolean</varname> ]
@@ -169,27 +169,102 @@ ROLLBACK;</codeblock></note>
       <title>Examples</title>
       <p>To illustrate how to read an <codeph>EXPLAIN</codeph> query plan, consider the following
         example for a very simple query:</p>
-      <codeblock>EXPLAIN SELECT * FROM names WHERE name = 'Joelle';
-                     QUERY PLAN
-------------------------------------------------------------
-Gather Motion 2:1 (slice1) (cost=0.00..20.88 rows=1 width=13)
+      <codeblock>                                  QUERY PLAN
+-------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.27 rows=1 width=58)
+   ->  Seq Scan on names  (cost=0.00..431.27 rows=1 width=58)
+         Filter: (name = 'Joelle'::text)
+ Optimizer: PQO version 3.23.0
+(4 rows)</codeblock>
 
-   -&gt; Seq Scan on 'names' (cost=0.00..20.88 rows=1 width=13)
-         Filter: name::text ~~ 'Joelle'::text</codeblock>
       <p>If we read the plan from the bottom up, the query optimizer starts by doing a sequential
         scan of the <codeph>names</codeph> table. Notice that the <codeph>WHERE</codeph> clause is
         being applied as a <i>filter</i> condition. This means that the scan operation checks the
         condition for each row it scans, and outputs only the ones that pass the condition. </p>
       <p>The results of the scan operation are passed up to a <i>gather motion</i> operation. In
         Greenplum Database, a gather motion is when segments send rows up to the master. In this
-        case we have 2 segment instances sending to 1 master instance (2:1). This operation is
+        case we have 3 segment instances sending to 1 master instance (3:1). This operation is
         working on <codeph>slice1</codeph> of the parallel query execution plan. In Greenplum
         Database a query plan is divided into <i>slices</i> so that portions of the query plan can
         be worked on in parallel by the segments.</p>
       <p>The estimated startup cost for this plan is <codeph>00.00</codeph> (no cost) and a total
-        cost of <codeph>20.88</codeph> disk page fetches. The planner is estimating that this query
-        will return one row.</p>
-    </section>
+        cost of <codeph>431.27</codeph>. The planner is estimating that this query will return one
+        row.</p>
+      <p>Here is the same query, with JSON formatting:</p>
+      <codeblock>EXPLAIN (FORMAT JSON) SELECT * FROM names WHERE name = 'Joelle';
+                  QUERY PLAN
+-----------------------------------------------
+ [                                            +
+   {                                          +
+     "Plan": {                                +
+       "Node Type": "Gather Motion",          +
+       "Senders": 3,                          +
+       "Receivers": 1,                        +
+       "Slice": 1,                            +
+       "Segments": 3,                         +
+       "Gang Type": "primary reader",         +
+       "Startup Cost": 0.00,                  +
+       "Total Cost": 431.27,                  +
+       "Plan Rows": 1,                        +
+       "Plan Width": 58,                      +
+       "Plans": [                             +
+         {                                    +
+           "Node Type": "Seq Scan",           +
+           "Parent Relationship": "Outer",    +
+           "Slice": 1,                        +
+           "Segments": 3,                     +
+           "Gang Type": "primary reader",     +
+           "Relation Name": "names",          +
+           "Alias": "names",                  +
+           "Startup Cost": 0.00,              +
+           "Total Cost": 431.27,              +
+           "Plan Rows": 1,                    +
+           "Plan Width": 58,                  +
+           "Filter": "(name = 'Joelle'::text)"+
+         }                                    +
+       ]                                      +
+     },                                       +
+     "Settings": {                            +
+       "Optimizer": "PQO version 3.23.0"      +
+     }                                        +
+   }                                          +
+ ]
+(1 row)</codeblock>
+      <p>If there is an index and we use a query with an indexable <codeph>WHERE</codeph> condition,
+          <codeph>EXPLAIN</codeph> might show a different plan. This query generates a plan with an
+        index scan, with YAML
+        formatting:<codeblock>EXPLAIN (FORMAT YAML) SELECT * FROM NAMES WHERE LOCATION='Sydney, Australia';
+                          QUERY PLAN
+--------------------------------------------------------------
+ - Plan:                                                     +
+     Node Type: "Gather Motion"                              +
+     Senders: 3                                              +
+     Receivers: 1                                            +
+     Slice: 1                                                +
+     Segments: 3                                             +
+     Gang Type: "primary reader"                             +
+     Startup Cost: 0.00                                      +
+     Total Cost: 10.81                                       +
+     Plan Rows: 10000                                        +
+     Plan Width: 70                                          +
+     Plans:                                                  +
+       - Node Type: "Index Scan"                             +
+         Parent Relationship: "Outer"                        +
+         Slice: 1                                            +
+         Segments: 3                                         +
+         Gang Type: "primary reader"                         +
+         Scan Direction: "Forward"                           +
+         Index Name: "names_idx_loc"                         +
+         Relation Name: "names"                              +
+         Alias: "names"                                      +
+         Startup Cost: 0.00                                  +
+         Total Cost: 7.77                                    +
+         Plan Rows: 10000                                    +
+         Plan Width: 70                                      +
+         Index Cond: "(location = 'Sydney, Australia'::text)"+
+   Settings:                                                 +
+     Optimizer: "PQO version 3.23.0"
+(1 row)</codeblock></p>    </section>
     <section id="section7">
       <title>Compatibility</title>
       <p>There is no <codeph>EXPLAIN</codeph> statement defined in the SQL standard.</p>
