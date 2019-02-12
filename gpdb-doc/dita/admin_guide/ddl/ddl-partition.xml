@@ -688,6 +688,8 @@ PARTITION other;
           partition swaps one table in place of an existing partition. You can exchange partitions
           only at the lowest level of your partition hierarchy (only partitions that contain data
           can be exchanged). </p>
+        <p>You cannot exchange a partition with a replicated table. You cannot exchange a partition
+          with a partitioned table or a child partition of a partitioned table.</p>
         <p>Partition exchange can be useful for data loading. For example, load a staging table and
           swap the loaded table into your partition design. You can use partition exchange to change
           the storage type of older partitions to append-optimized tables. For example:</p>
@@ -705,7 +707,6 @@ WITH TABLE jan12;
           ensure that the data in table that you are exchanging for an existing partition is valid
           against the constraints on the partition. Otherwise, queries against the partitioned table
           might return incorrect results.</note>
-        <p>You cannot exchange a partition with a replicated table. </p>
         <p>The Greenplum Database server configuration parameter
             <codeph>gp_enable_exchange_default_partition</codeph> controls availability of the
             <codeph>EXCHANGE DEFAULT PARTITION</codeph> clause. The default value for the parameter

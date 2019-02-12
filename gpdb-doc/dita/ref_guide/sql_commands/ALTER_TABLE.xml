@@ -314,8 +314,8 @@ ALTER TABLE <varname>name</varname>
                         <note>If you add a partition to a table that has subpartition encodings, the
                                 new partition inherits the storage directives for the subpartitions.
                                 For more information about the precedence of compression settings,
-                                see "Using Compression" in the Greenplum Database Administrator
-                                Guide.</note>
+                                see "Using Compression" in the <cite>Greenplum Database
+                                        Administrator Guide</cite>.</note>
                         <p>You must own the table to use <codeph>ALTER TABLE</codeph>. To change the
                                 schema of a table, you must also have <codeph>CREATE</codeph>
                                 privilege on the new schema. To add the table as a new child of a
@@ -671,6 +671,10 @@ ALTER TABLE <varname>name</varname>
                                                 is not supported if the partitioned table contains a
                                                 column with a check constraint or a <codeph>NOT
                                                   NULL</codeph> constraint.</pd>
+                                        <pd>You cannot exchange a partition with a replicated table.
+                                                You cannot exchange a partition with a partitioned
+                                                table or a child partition of a partitioned
+                                                table.</pd>
                                         <pd><b>WITH</b> | <b>WITHOUT VALIDATION</b> - Validates that
                                                 the data in the table matches the
                                                   <codeph>CHECK</codeph> constraint of the partition
