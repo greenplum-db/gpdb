@@ -236,6 +236,7 @@ def parseargs():
     parser.add_option("-V", "--validation-only", dest="validationOnly", action='store_true', default=False)
     parser.add_option("-W", "--write-gpid-file-only", dest="writeGpidFileOnly", action='store_true', default=False)
     parser.add_option('-f', '--force-overwrite', dest='forceoverwrite', action='store_true', default=False)
+    parser.add_option('-l', '--log-dir', dest="logfileDirectory", type="string")
 
     parser.set_defaults(verbose=False, filters=[], slice=(None, None))
 
@@ -284,9 +285,11 @@ def parseargs():
     return options, args, seg_info
 
 try:
-    logger = gplog.setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName())
-
     (options, args, seg_info) = parseargs()
+
+    logger = gplog.setup_tool_logging(EXECNAME, unix.getLocalHostname(), unix.getUserName(),
+                                      logdir=options.logfileDirectory)
+
     if options.verbose:
         gplog.enable_verbose_logging()
 

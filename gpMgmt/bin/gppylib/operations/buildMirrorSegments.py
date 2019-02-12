@@ -437,8 +437,10 @@ class GpMirrorListToBuild:
         def createConfigureNewSegmentCommand(hostName, cmdLabel, validationOnly):
             segmentInfo = newSegmentInfo[hostName]
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
+
             return gp.ConfigureNewSegment(cmdLabel,
                                           segmentInfo,
+                                          gplog.get_logger_dir(),
                                           newSegments=True,
                                           verbose=gplog.logging_is_verbose(),
                                           batchSize=self.__parallelDegree,
@@ -697,6 +699,7 @@ class GpMirrorListToBuild:
             checkNotNone("segmentInfo for %s" % hostName, segmentInfo)
             cmd = gp.ConfigureNewSegment("update gpid file",
                                          segmentInfo,
+                                         gplog.get_logger_dir(),
                                          newSegments=False,
                                          verbose=gplog.logging_is_verbose(),
                                          batchSize=self.__parallelDegree,

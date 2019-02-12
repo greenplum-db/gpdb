@@ -8,6 +8,7 @@ TODO: docs!
 """
 import os, pickle, base64, time
 import os.path
+import pipes
 
 import re, socket
 
@@ -852,10 +853,10 @@ class ConfigureNewSegment(Command):
       etc.
     """
 
-    def __init__(self, name, confinfo, newSegments=False, tarFile=None,
+    def __init__(self, name, confinfo, logdir, newSegments=False, tarFile=None,
                  batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
                  forceoverwrite=False):
-        cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\"' % (confinfo)
+        cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -l %s' % (confinfo, pipes.quote(logdir))
         if newSegments:
             cmdStr += ' -n'
         if tarFile:

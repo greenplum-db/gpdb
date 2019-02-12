@@ -723,7 +723,9 @@ class SegmentTemplate:
                                                                              primaryMirror='primary')
         self.logger.info(new_segment_info)
         for host in iter(new_segment_info):
-            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments', confinfo=new_segment_info[host],
+            segCfgCmd = ConfigureNewSegment(name='gpexpand configure new segments',
+                                            confinfo=new_segment_info[host],
+                                            logdir=get_logger_dir(),
                                             tarFile=self.segTarFile, newSegments=True,
                                             verbose=gplog.logging_is_verbose(), batchSize=self.batch_size,
                                             ctxt=REMOTE, remoteHost=host)

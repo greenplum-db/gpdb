@@ -57,6 +57,8 @@ def get_default_logger():
 
     return _LOGGER
 
+def get_logger_dir():
+    return os.path.dirname(_FILENAME)
 
 def get_unittest_logger():
     """
@@ -241,7 +243,6 @@ def _set_file_logging(filename):
     _FILE_HANDLER = EncodingFileHandler(filename, 'a')
     _FILE_HANDLER.setFormatter(_get_default_formatter())
     _LOGGER.addHandler(_FILE_HANDLER)
-
 
 def _get_default_formatter():
     """
