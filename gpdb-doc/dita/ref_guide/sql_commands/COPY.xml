@@ -394,7 +394,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
           a server that has a different setting for <varname>IntervalStyle</varname>. </p>
       <p>Input data is interpreted according to <codeph>ENCODING</codeph> option or the current
-        client encoding, and output data is encoded in <literal>ENCODING</literal> or the current
+        client encoding, and output data is encoded in <codeph>ENCODING</codeph> or the current
         client encoding, even if the data does not pass through the client but is read from or
         written to a file directly by the server.</p><p>When copying XML data from a file in
         text mode, the server configuration parameter <codeph><xref
