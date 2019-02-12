@@ -2,16 +2,29 @@
 
 # contrib/pg_upgrade/test_gpdb.sh
 #
-# Test driver for upgrading a Greenplum cluster with pg_upgrade within the same
-# major version. Upgrading within the same major version is obviously not
-# testing the full functionality of pg_upgrade, but it's a good compromise for
-# being able to test pg_upgrade in a normal CI pipeline. Testing an actual
-# major version upgrade need another setup. For test data, this script assumes
-# the gpdemo cluster in gpAux/gpdemo/datadirs contains the end-state of an ICW
-# test run. The test first performs a pg_dumpall, then initializes a parallel
-# gpdemo cluster and upgrades it against the ICW cluster. After the upgrade it
-# performs another pg_dumpall, if the two dumps match then the upgrade created
-# a new identical copy of the cluster.
+# Test driver for upgrading a Greenplum cluster with pg_upgrade.
+# The upgraded cluster will be a newly created gpdemo
+# cluster created by this script.  This test assumes that all pre-upgrade 
+# clusters, whether for 5 or 6, have been created as standard gpdemo clusters.
+# This test is independent of the user data contents of the pre-upgrade 
+# database, though of course you can run ICW into the gpdemo cluster before
+# upgrading to get some coverage of object types.
+#
+# The test first performs a pg_dumpall, then initializes a new
+# gpdemo cluster and upgrades the pre-upgrade cluster into it. After the 
+# upgrade it performs another pg_dumpall, if the two dumps match then the 
+# upgrade created a new identical copy of the cluster.
+
+# Here are two example runs, one for a 6 cluster and then one for a 5 cluster:
+# bash test_gpdb.sh -b /usr/local/gpdb/bin -o ~/workspace/gpdb/gpAux/gpdemo/datadirs
+# bash test_gpdb.sh -b /usr/local/gpdb/bin -o ~/workspace/gpdb5/gpAux/gpdemo/datadirs
+#                   -B /usr/local/gpdb5/bin
+#
+# Keep in mind this script is relatively fragile since it depends on specific
+# paths and locations relative to the standard gpdemo cluster.
+#
+# It has been tested on demo clusters transitioning from (6 to 6)
+# or from (5 to 6; on a private branch).
 
 OLD_BINDIR=
 OLD_DATADIR=
@@ -198,8 +211,9 @@ usage()
 {
 	local appname=`basename $0`
 	echo "usage: $appname -o <dir> -b <dir> [options]"
-	echo " -o <dir>     Directory containing old datadir"
-	echo " -b <dir>     Directory containing binaries"
+	echo " -o <dir>     old cluster data directory"
+	echo " -b <dir>     new cluster executable directory"
+	echo " -B <dir>     old cluster executable directory (defaults to new binaries)"
 	echo " -s           Run smoketest only"
 	echo " -C           Skip gpcheckcat test"
 	echo " -k           Add checksums to new cluster"
@@ -250,13 +264,14 @@ diff_and_exit() {
 	# of that file can collide between the gpdemo clusters, perform it manually
 	export PGPORT=17432
 	export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
-	gpstart -a ${args}
+	${NEW_BINDIR}/gpstart -a ${args}
 
 	echo -n 'Dumping database schema after upgrade... '
 	PGOPTIONS="${pgopts}" ${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump2.sql"
 	echo done
 
-	gpstop -a ${args}
+	${NEW_BINDIR}/gpstop -a ${args}
+	
 	export PGPORT=15432
 	export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
 
@@ -294,16 +309,21 @@ print_delta_seconds()
 }
 
 main() {
+
+	########################## START: script setup
+
 	local temp_root=`pwd`/tmp_check
 	local base_dir=`pwd`
 	
-	while getopts ":o:b:sCkKmrp" opt; do
+	while getopts ":o:b:B:sCkKmrp" opt; do
 		case ${opt} in
 			o )
 				realpath OLD_DATADIR "${OPTARG}"
 				;;
 			b )
 				realpath NEW_BINDIR "${OPTARG}"
+				;;
+			B )
 				realpath OLD_BINDIR "${OPTARG}"
 				;;
 			s )
@@ -340,6 +360,9 @@ main() {
 		esac
 	done
 	
+	OLD_BINDIR=${OLD_BINDIR:-$NEW_BINDIR}
+	NEW_DATADIR="${temp_root}/datadirs"
+	
 	if [ -z "${OLD_DATADIR}" ] || [ -z "${NEW_BINDIR}" ]; then
 		usage
 	fi
@@ -361,6 +384,14 @@ main() {
 	
 	trap restore_cluster EXIT
 	
+	########################## END: script setup
+	
+	########################## START: OLD cluster checks
+	
+	. ${OLD_BINDIR}/../greenplum_path.sh
+	export MASTER_DATA_DIRECTORY="${OLD_DATADIR}/qddir/demoDataDir-1"
+	export PGPORT=15432
+
 	# The cluster should be running by now, but in case it isn't, issue a restart.
 	# Since we expect the testcluster to be a stock standard gpdemo, we test for
 	# the presence of it. Worst case we powercycle once for no reason, but it's
@@ -368,15 +399,15 @@ main() {
 	if [ -f "/tmp/.s.PGSQL.15432.lock" ]; then
 		ps aux | grep  `head -1 /tmp/.s.PGSQL.15432.lock` | grep -q postgres
 		if (( $? )) ; then
-			gpstart -a
+			${OLD_BINDIR}/gpstart -a
 		fi
 	else
-		gpstart -a
+		${OLD_BINDIR}/gpstart -a
 	fi
 	
 	# Run any pre-upgrade tasks to prep the cluster
 	if [ -f "test_gpdb_pre.sql" ]; then
-		if ! psql -f test_gpdb_pre.sql -v ON_ERROR_STOP=1 postgres; then
+		if ! ${OLD_BINDIR}/psql -f test_gpdb_pre.sql -v ON_ERROR_STOP=1 postgres; then
 			echo "ERROR: unable to execute pre-upgrade cleanup"
 			exit 1
 		fi
@@ -386,39 +417,55 @@ main() {
 	# (limited) catalog checking inside pg_upgrade, it won't catch all issues, and
 	# upgrading a faulty catalog won't work.
 	if (( $gpcheckcat )) ; then
-		gpcheckcat
+		${OLD_BINDIR}/gpcheckcat
 		if (( $? )) ; then
 			echo "ERROR: gpcheckcat reported catalog issues, fix before upgrading"
 			exit 1
 		fi
 	fi
 	
+	# yes, use pg_dumpall from NEW_BINDIR
 	if (( !$perf_test )) ; then
 		echo -n 'Dumping database schema before upgrade... '
 		${NEW_BINDIR}/pg_dumpall ${DUMP_OPTS} -f "$temp_root/dump1.sql"
 		echo done
 	fi
 	
-	gpstop -a
+	${OLD_BINDIR}/gpstop -a
 	
-	# Create a new gpdemo cluster in the temproot. Using the old datadir for the
+	MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
+	PGPORT=""; unset PGPORT
+	
+	########################## END: OLD cluster checks
+	
+	########################## START: NEW cluster creation
+	
+	echo "Switching to gpdb-6 env..."
+	. ${NEW_BINDIR}/../greenplum_path.sh
+	
+	# Create a new gpdemo cluster in the NEW_DATADIR. Using the new datadir for the
 	# path to demo_cluster.sh is a bit of a hack, but since this test relies on
-	# gpdemo having been used for ICW it will do for now.
+	# using a demo cluster anyway, this is acceptable.
 	export MASTER_DEMO_PORT=17432
 	export DEMO_PORT_BASE=27432
 	export NUM_PRIMARY_MIRROR_PAIRS=3
 	export MASTER_DATADIR=${temp_root}
 	cp ${OLD_DATADIR}/../lalshell .
-	BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${OLD_DATADIR}/../demo_cluster.sh ${DEMOCLUSTER_OPTS}
 	
-	NEW_DATADIR="${temp_root}/datadirs"
-	
+	BLDWRAP_POSTGRES_CONF_ADDONS=fsync=off ${temp_root}/../../../gpAux/gpdemo/demo_cluster.sh ${DEMOCLUSTER_OPTS}
+
 	export MASTER_DATA_DIRECTORY="${NEW_DATADIR}/qddir/demoDataDir-1"
 	export PGPORT=17432
-	gpstop -a
+	
+	${NEW_BINDIR}/gpstop -a
+	
 	MASTER_DATA_DIRECTORY=""; unset MASTER_DATA_DIRECTORY
 	PGPORT=""; unset PGPORT
 	PGOPTIONS=""; unset PGOPTIONS
+
+	########################## END: NEW cluster creation	
+	
+	########################## START: The actual upgrade process
 	
 	local epoch_for_perf_start=`date +%s`
 	
@@ -474,6 +521,8 @@ main() {
 	if (( !$perf_test )) ; then
 		diff_and_exit
 	fi
+
+	########################## END: The actual upgrade process
 }
 
 main "$@"
