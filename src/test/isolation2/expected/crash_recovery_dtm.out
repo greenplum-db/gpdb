@@ -7,7 +7,13 @@
 -- m/(PANIC):.*unable to complete*/
 -- s/gid \=\s*\d+-\d+/gid \= DUMMY/gm
 --
+-- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
+-- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
+--
 -- end_matchsubs
+
+include: helpers/server_helpers.sql;
+CREATE
 
 -- This function is used to loop until master shutsdown, to make sure
 -- next command executed is only after restart and doesn't go through
@@ -186,8 +192,13 @@ INSERT 10
 11: CHECKPOINT;
 CHECKPOINT
 -- Set to maximum number of 2PC retries to avoid any failures.
-11: SET dtx_phase2_retry_count=9;
-SET
+11: alter system set dtx_phase2_retry_count to 15;
+ALTER
+11: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
+(1 row)
 -- skip FTS probes always
 11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
  gp_inject_fault_infinite 
@@ -204,17 +215,46 @@ SET
 -------------------------------
  t                             
 (1 row)
-11: SET debug_abort_after_segment_prepared = true;
-SET
-11: DELETE FROM QE_panic_test_table;
-ERROR:  Raise an error as directed by Debug_abort_after_segment_prepared  (seg0 127.0.0.1:40000 pid=547)
-11: SELECT count(*) from QE_panic_test_table;
+11: SELECT gp_inject_fault('end_prepare_two_phase', 'infinite_loop', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_inject_fault 
+-----------------
+ t               
+(1 row)
+-- statement to trigger fault after writing prepare record
+12&: DELETE FROM QE_panic_test_table;  <waiting ...>
+11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t                             
+(1 row)
+11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
+ pg_ctl                                                                                               
+------------------------------------------------------------------------------------------------------
+ waiting for server to shut down done
+server stopped
+waiting for server to start done
+server started
+ 
+(1 row)
+12<:  <... completed>
+ERROR:  Error on receive from seg0 127.0.1.1:25432 pid=16146: server closed the connection unexpectedly
+DETAIL:  
+	This probably means the server terminated abnormally
+	before or while processing the request.
+13: SELECT count(*) from QE_panic_test_table;
  count 
 -------
  10    
 (1 row)
-11: SELECT gp_inject_fault('fts_probe', 'reset', 1);
+13: SELECT gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
  t               
+(1 row)
+13: alter system reset dtx_phase2_retry_count;
+ALTER
+13: select pg_reload_conf();
+ pg_reload_conf 
+----------------
+ t              
 (1 row)

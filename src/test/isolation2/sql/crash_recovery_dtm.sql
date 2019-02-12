@@ -7,7 +7,12 @@
 -- m/(PANIC):.*unable to complete*/
 -- s/gid \=\s*\d+-\d+/gid \= DUMMY/gm
 --
+-- m/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/
+-- s/^ERROR:  Error on receive from seg0.*: server closed the connection unexpectedly/ERROR: server closed the connection unexpectedly/
+--
 -- end_matchsubs
+
+include: helpers/server_helpers.sql;
 
 -- This function is used to loop until master shutsdown, to make sure
 -- next command executed is only after restart and doesn't go through
@@ -99,12 +104,19 @@ $$ LANGUAGE plpgsql;
 -- To help speedy recovery
 11: CHECKPOINT;
 -- Set to maximum number of 2PC retries to avoid any failures.
-11: SET dtx_phase2_retry_count=9;
+11: alter system set dtx_phase2_retry_count to 15;
+11: select pg_reload_conf();
 -- skip FTS probes always
 11: SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
 11: SELECT gp_request_fts_probe_scan();
 11: select gp_wait_until_triggered_fault('fts_probe', 1, 1);
-11: SET debug_abort_after_segment_prepared = true;
-11: DELETE FROM QE_panic_test_table;
-11: SELECT count(*) from QE_panic_test_table;
-11: SELECT gp_inject_fault('fts_probe', 'reset', 1);
+11: SELECT gp_inject_fault('end_prepare_two_phase', 'infinite_loop', dbid) from gp_segment_configuration where role = 'p' and content = 0;
+-- statement to trigger fault after writing prepare record
+12&: DELETE FROM QE_panic_test_table;
+11: SELECT gp_wait_until_triggered_fault('end_prepare_two_phase', 1, dbid) from gp_segment_configuration where role = 'p' and content = 0;
+11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
+12<:
+13: SELECT count(*) from QE_panic_test_table;
+13: SELECT gp_inject_fault('fts_probe', 'reset', 1);
+13: alter system reset dtx_phase2_retry_count;
+13: select pg_reload_conf();

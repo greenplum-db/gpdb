@@ -1159,14 +1159,6 @@ EndPrepare(GlobalTransaction gxact)
 
 	XLogFlush(gxact->prepare_lsn);
 
-	/* If we crash now, we have prepared: WAL replay will fix things */
-	if (Debug_abort_after_segment_prepared)
-	{
-		ereport(PANIC,
-				(errcode(ERRCODE_FAULT_INJECT),
-				 errmsg("Raise an error as directed by Debug_abort_after_segment_prepared")));
-	}
-
 	/*
 	 * Now we may update the CLOG, if we wrote COMMIT record above
 	 */
@@ -1201,7 +1193,7 @@ EndPrepare(GlobalTransaction gxact)
 	 */
 	MyPgXact->delayChkpt = false;
 
-	SIMPLE_FAULT_INJECTOR(EndPreparedTwoPhaseSleep);
+	SIMPLE_FAULT_INJECTOR(EndPreparedTwoPhase);
 
 	/*
 	 * Wait for synchronous replication, if required.
