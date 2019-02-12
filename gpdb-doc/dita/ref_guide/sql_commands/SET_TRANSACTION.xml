@@ -21,6 +21,9 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
         transaction. It has no effect on any subsequent transactions.</p>
       <p>The available transaction characteristics are the transaction isolation level, the
         transaction access mode (read/write or read-only), and the deferrable mode. </p>
+      <note>Deferrable transactions require the transaction to be serializable. Greenplum Database
+        does not support serializable transactions, so including the <codeph>DEFERRABLE</codeph>
+        clause has no effect.</note>
       <p>The isolation level of a transaction determines what data the transaction can see when
         other transactions are running concurrently.</p>
       <ul>
@@ -52,8 +55,9 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
         properties are set on a transaction, the transaction may block when first acquiring its
         snapshot, after which it is able to run without the normal overhead of a
           <codeph>SERIALIZABLE</codeph> transaction and without any risk of contributing to or being
-        cancelled by a serialization failure. This mode is well suited for long-running reports or
-        backups. </p>
+        cancelled by a serialization failure. Because Greenplum Database does not support
+        serializable transactions, the <codeph>DEFERRABLE</codeph> transaction property has no
+        effect in Greenplum Database. </p>
     </section>
     <section id="section4">
       <title>Parameters</title>
