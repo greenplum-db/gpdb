@@ -54,12 +54,40 @@ The PXF connectors to Azure, Google Cloud Storage, Minio, and S3 expose the foll
 | AvroSequenceFile | wasbs:AvroSequenceFile | adl:AvroSequenceFile | gs:AvroSequenceFile | s3:AvroSequenceFile |
 | [SequenceFile](objstore_seqfile.html) | wasbs:SequenceFile | adl:SequenceFile | gs:SequenceFile | s3:SequenceFile |
 
-You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a file or directory in the specific object store. For example, the following command creates an external table that specifies the profile named `s3:text`:
+You provide the profile name when you specify the `pxf` protocol on a `CREATE EXTERNAL TABLE` command to create a Greenplum Database external table that references a file or directory in the specific object store.
+
+## <a id="sample_ddl"></a>Sample CREATE EXTERNAL TABLE Commands
+
+The following command creates an external table referencing a text file on S3. It specifies the profile named `s3:text` and the server configuration named `s3srvcfg`:
 
 <pre>
 CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, total_sales float8)
-  LOCATION ('pxf://S3_BUCKET/pxf_examples/pxf_s3_simple.txt?<b>PROFILE=s3:text</b>&SERVER=s3srvcfg')
+  LOCATION ('pxf://S3_BUCKET/pxf_examples/pxf_s3_simple.txt?<b>PROFILE=s3:text&SERVER=s3srvcfg</b>')
 FORMAT 'TEXT' (delimiter=E',');
+</pre>
+
+The following command creates an external table referencing a text file on Azure Blob Storage. It specifies the profile named `wasbs:text` and the server configuration named `wasbs_srvcfg`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_wasbs_text(location text, month text, num_orders int, total_sales float8)
+  LOCATION ('pxf://AZURE_CONTAINER@YOUR_AZURE_BLOB_STORAGE_ACCOUNT_NAME.blob.core.windows.net/path/to/blob?<b>PROFILE=wasbs:text&SERVER=wasbs_srvcfg</b>')
+FORMAT 'TEXT';
+</pre>
+
+The following command creates an external table referencing a text file on Azure Data Lake. It specifies the profile named `adl:text` and the server configuration named `adl_srvcfg`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_adl_text(location text, month text, num_orders int, total_sales float8)
+  LOCATION ('pxf://YOUR_ADL_ACCOUNT_NAME.azuredatalakestore.net/path/to/file?<b>PROFILE=adl:text&SERVER=adl_srvcfg</b>')
+FORMAT 'TEXT';
+</pre>
+
+The following command creates an external table referencing a JSON file on Google Cloud Storage. It specifies the profile named `gs:json` and the server configuration named `gcs_srvcfg`:
+
+<pre>
+CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, total_sales float8)
+  LOCATION ('pxf://dir/subdir/file.json?<b>PROFILE=gs:json&SERVER=gcs_srvcfg</b>')
+FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 </pre>
 
 ## <a id="s3_override"></a>Overriding the S3 Server Configuration
