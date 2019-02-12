@@ -55,7 +55,10 @@ def current_git_data
     CURRENT_GIT_USER_EMAIL: `git config user.email`.strip
   }
   all_remotes.each_with_index do |remote, index|
-    next if remote[:name] == 'origin'
+    if remote[:name] == 'origin'
+      env_vars[:GIT_ORIGIN_PATH] = remote[:path]
+      next
+    end
     remote_name_var = 'GIT_REMOTE_NAME_' + index.to_s
     remote_path_var = 'GIT_REMOTE_PATH_' + index.to_s
     env_vars[remote_name_var.to_sym] = remote[:name]

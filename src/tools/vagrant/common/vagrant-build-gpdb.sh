@@ -2,6 +2,7 @@
 set -e
 
 setup_ssh_config() {
+  grep 'Host github.com' ~/.ssh/config && return
   mkdir -p ~/.ssh
   cat <<EOF>>~/.ssh/config
 Host github.com
@@ -15,8 +16,9 @@ EOF
 GPDB_DIR=~/gpdb
 if [[ ! -d $GPDB_DIR ]]; then
   pushd ~
-  git clone https://github.com/greenplum-db/gpdb
-  pushd $GPDB_DIR
+  [[ $GIT_ORIGIN_PATH =~ ^(https?|git):// ]] || setup_ssh_config
+  git clone "$GIT_ORIGIN_PATH" "$GPDB_DIR"
+  pushd "$GPDB_DIR"
   git config user.name "$CURRENT_GIT_USER_NAME"
   git config user.email "$CURRENT_GIT_USER_EMAIL"
   # add all remotes found in git repo
@@ -25,11 +27,9 @@ if [[ ! -d $GPDB_DIR ]]; then
     eval git remote add "\$$remote_name" "\$$remote_path"
   done
   # 'git checkout' same remote and branch as user
-  if [[ $CURRENT_GIT_REMOTE != origin ]]; then
-    CURRENT_GIT_REMOTE_PATH=$(git remote get-url "$CURRENT_GIT_REMOTE")
-    [[ $CURRENT_GIT_REMOTE_PATH =~ ^(https?|git):// ]] || setup_ssh_config
-    git fetch "$CURRENT_GIT_REMOTE" "$CURRENT_GIT_BRANCH"
-  fi
+  CURRENT_GIT_REMOTE_PATH=$(git remote get-url "$CURRENT_GIT_REMOTE")
+  [[ $CURRENT_GIT_REMOTE_PATH =~ ^(https?|git):// ]] || setup_ssh_config
+  git fetch "$CURRENT_GIT_REMOTE" "$CURRENT_GIT_BRANCH"
   git checkout "$CURRENT_GIT_BRANCH"
   popd
   popd
