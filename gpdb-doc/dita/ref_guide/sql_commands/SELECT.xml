@@ -90,6 +90,7 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           window frame.</li>
         <li id="eg138848">The actual output rows are computed using the <codeph>SELECT</codeph>
           output expressions for each selected row.</li>
+
         <li id="eg138856">Using the operators <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>,
           and <codeph>EXCEPT</codeph>, the output of more than one <codeph>SELECT</codeph> statement
           can be combined to form a single result set. The <codeph>UNION</codeph> operator returns
