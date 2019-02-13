@@ -58,7 +58,7 @@ You provide the profile name when you specify the `pxf` protocol on a `CREATE EX
 
 ## <a id="sample_ddl"></a>Sample CREATE EXTERNAL TABLE Commands
 
-The following command creates an external table referencing a text file on S3. It specifies the profile named `s3:text` and the server configuration named `s3srvcfg`:
+The following command creates an external table that references a text file on S3. It specifies the profile named `s3:text` and the server configuration named `s3srvcfg`:
 
 <pre>
 CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, total_sales float8)
@@ -66,7 +66,7 @@ CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, tot
 FORMAT 'TEXT' (delimiter=E',');
 </pre>
 
-The following command creates an external table referencing a text file on Azure Blob Storage. It specifies the profile named `wasbs:text` and the server configuration named `wasbssrvcfg`. You would provide the Azure Blob Storage container identifier and your Azure Blob Storage account name.
+The following command creates an external table that references a text file on Azure Blob Storage. It specifies the profile named `wasbs:text` and the server configuration named `wasbssrvcfg`. You would provide the Azure Blob Storage container identifier and your Azure Blob Storage account name.
 
 <pre>
 CREATE EXTERNAL TABLE pxf_wasbs_text(location text, month text, num_orders int, total_sales float8)
@@ -74,7 +74,7 @@ CREATE EXTERNAL TABLE pxf_wasbs_text(location text, month text, num_orders int, 
 FORMAT 'TEXT';
 </pre>
 
-The following command creates an external table referencing a text file on Azure Data Lake. It specifies the profile named `adl:text` and the server configuration named `adlsrvcfg`. You would provide your Azure Data Lake account name.
+The following command creates an external table that references a text file on Azure Data Lake. It specifies the profile named `adl:text` and the server configuration named `adlsrvcfg`. You would provide your Azure Data Lake account name.
 
 <pre>
 CREATE EXTERNAL TABLE pxf_adl_text(location text, month text, num_orders int, total_sales float8)
@@ -82,7 +82,7 @@ CREATE EXTERNAL TABLE pxf_adl_text(location text, month text, num_orders int, to
 FORMAT 'TEXT';
 </pre>
 
-The following command creates an external table referencing a JSON file on Google Cloud Storage. It specifies the profile named `gs:json` and the server configuration named `gcssrvcfg`:
+The following command creates an external table that references a JSON file on Google Cloud Storage. It specifies the profile named `gs:json` and the server configuration named `gcssrvcfg`:
 
 <pre>
 CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, total_sales float8)
