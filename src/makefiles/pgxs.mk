@@ -257,6 +257,11 @@ distclean maintainer-clean: clean
 
 ifdef REGRESS
 
+# GPDB: make sure to use the same init_file for contrib tests as is used
+# for the normal regress tests. This way we can reuse the match rules for
+# generic constructs.
+REGRESS_OPTS += --init-file=$(top_srcdir)/src/test/regress/init_file
+
 # Select database to use for running the tests
 ifneq ($(USE_MODULE_DB),)
   REGRESS_OPTS += --dbname=$(CONTRIB_TESTDB_MODULE)
