@@ -53,12 +53,10 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
         The Access Exclusive lock guarantees that the holder is the only transaction accessing the
         table in any way.
       </p>
-      <p>When the option list is surrounded by parentheses, the options can be
-        written in any order.  Without parentheses, options must be specified
-        in exactly the order shown above.
-        In earlier Greenplum Database releases, the unparenthesized syntax was the only supported 
-        syntax. It is expected that all new options will be supported only with the parenthesized syntax.
-      </p>
+      <p>When the option list is surrounded by parentheses, the options can be written in any order.
+        Without parentheses, options must be specified in exactly the order shown above. The
+        parenthesized syntax was added in Greenplum Database 6.0; the unparenthesized syntax is
+        deprecated.</p>
       <note type="important">For information on the use of <codeph>VACUUM</codeph>, <codeph>VACUUM
           FULL</codeph>, and <codeph>VACUUM ANALYZE</codeph>, see <xref href="#topic1/section6"
           type="section" format="dita"/>.
