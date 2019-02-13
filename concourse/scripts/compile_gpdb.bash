@@ -27,7 +27,7 @@ function install_deps_for_centos() {
   rpm -i libquicklz-installer/libquicklz-*.rpm
   rpm -i libquicklz-devel-installer/libquicklz-*.rpm
   # install libsigar from tar.gz
-  tar zxf libsigar-gcs/sigar-*.targz -C gpdb_src/gpAux/ext
+  tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
 
 
