@@ -116,13 +116,14 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
         </plentry>
         <plentry>
           <pt>[NOT] DEFERRABLE</pt>
-          <pd>The <codeph>DEFERRABLE</codeph> transaction property has no effect unless the
-            transaction is also <codeph>SERIALIZABLE</codeph> and <codeph>READ ONLY</codeph>. When
-            all of these properties are set on a transaction, the transaction may block when first
-            acquiring its snapshot, after which it is able to run without the normal overhead of a
-              <codeph>SERIALIZABLE</codeph> transaction and without any risk of contributing to or
-            being cancelled by a serialization failure. This mode is well suited for long-running
-            reports or backups.</pd>
+          <pd>The <codeph>DEFERRABLE</codeph> transaction property has no effect in Greenplum
+            Database because <codeph>SERIALIZABLE</codeph> transactions are not supported. If
+              <codeph>DEFERRABLE</codeph> is specified and the transaction is also
+              <codeph>SERIALIZABLE</codeph> and <codeph>READ ONLY</codeph>, the transaction may
+            block when first acquiring its snapshot, after which it is able to run without the
+            normal overhead of a <codeph>SERIALIZABLE</codeph> transaction and without any risk of
+            contributing to or being cancelled by a serialization failure. This mode is well suited
+            for long-running reports or backups.</pd>
         </plentry>
       </parml>
     </section>
@@ -137,8 +138,8 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
         parameters <xref href="../config_params/guc-list.xml#default_transaction_isolation"
             ><varname>default_transaction_isolation</varname></xref>, <xref
           href="../config_params/guc-list.xml#default_transaction_read_only"
-            ><varname>default_transaction_read_only</varname></xref>, and
-          <varname>default_transaction_deferrable</varname>.</p>
+            ><varname>default_transaction_read_only</varname></xref>, and <xref
+          href="../config_params/guc-list.xml#default_transaction_deferrable"/>.</p>
     </section>
     <section id="section6">
       <title>Examples</title>

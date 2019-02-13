@@ -963,26 +963,22 @@
                   >default_tablespace</xref>
               </p>
               <p>
+                <xref href="guc-list.xml#default_transaction_deferrable"/>
+              </p>
+              <p>
                 <xref href="guc-list.xml#default_transaction_isolation" type="section"
                   >default_transaction_isolation</xref>
               </p>
-              <p>
-                <xref href="guc-list.xml#default_transaction_read_only" type="section"
-                  >default_transaction_read_only</xref>
-              </p>
             </stentry>
-            <stentry>
-              <p>
+            <stentry><xref href="guc-list.xml#default_transaction_read_only" type="section"
+                >default_transaction_read_only</xref><p>
                 <xref href="guc-list.xml#search_path" type="section">search_path</xref>
-              </p>
-              <p>
+              </p><p>
                 <xref href="guc-list.xml#statement_timeout" type="section">statement_timeout</xref>
-              </p>
-              <p>
+              </p><p>
                 <xref href="guc-list.xml#vacuum_freeze_min_age" type="section"
                   >vacuum_freeze_min_age</xref>
-              </p>
-            </stentry>
+              </p></stentry>
           </strow>
         </simpletable>
       </body>
