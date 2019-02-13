@@ -103,7 +103,9 @@ $$ LANGUAGE plpgsql;
 11: INSERT INTO QE_panic_test_table SELECT * from generate_series(0, 9);
 -- To help speedy recovery
 11: CHECKPOINT;
--- Set to maximum number of 2PC retries to avoid any failures.
+-- Set to maximum number of 2PC retries to avoid any failures. Alter
+-- system is required to set the GUC and can't be set on session level
+-- as session reset happens for every abort retry.
 11: alter system set dtx_phase2_retry_count to 15;
 11: select pg_reload_conf();
 -- skip FTS probes always
@@ -117,6 +119,7 @@ $$ LANGUAGE plpgsql;
 11: SELECT pg_ctl(datadir, 'restart') from gp_segment_configuration where role = 'p' and content = 0;
 12<:
 13: SELECT count(*) from QE_panic_test_table;
+13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
 13: SELECT gp_inject_fault('fts_probe', 'reset', 1);
 13: alter system reset dtx_phase2_retry_count;
 13: select pg_reload_conf();

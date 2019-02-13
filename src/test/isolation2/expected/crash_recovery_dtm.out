@@ -191,7 +191,9 @@ INSERT 10
 -- To help speedy recovery
 11: CHECKPOINT;
 CHECKPOINT
--- Set to maximum number of 2PC retries to avoid any failures.
+-- Set to maximum number of 2PC retries to avoid any failures. Alter
+-- system is required to set the GUC and can't be set on session level
+-- as session reset happens for every abort retry.
 11: alter system set dtx_phase2_retry_count to 15;
 ALTER
 11: select pg_reload_conf();
@@ -246,6 +248,10 @@ DETAIL:
 -------
  10    
 (1 row)
+13: SELECT * FROM gp_dist_random('pg_prepared_xacts');
+ transaction | gid | prepared | owner | database 
+-------------+-----+----------+-------+----------
+(0 rows)
 13: SELECT gp_inject_fault('fts_probe', 'reset', 1);
  gp_inject_fault 
 -----------------
