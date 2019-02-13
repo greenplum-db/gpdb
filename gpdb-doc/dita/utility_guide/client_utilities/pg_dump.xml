@@ -373,6 +373,9 @@
               active when <codeph>pg_dump</codeph> is started. If read-write transactions
               are active, the start of the dump may be delayed for an indeterminate length
               of time. Once running, performance with or without the switch is the same.</pd>
+            <pd><note>Because Greenplum Database does not support serializable transactions,
+              the <codeph>--serializable-deferrable</codeph> option has no effect in
+              Greenplum Database.</note></pd>
           </plentry>
           <plentry>
             <pt>--use-set-session-authorization</pt>
