@@ -74,12 +74,15 @@ SELECT count(*) FROM float4tmp WHERE a >  -179.0::float4;
 
 EXPLAIN (COSTS OFF)
 SELECT a, a <-> '-179.0' FROM float4tmp ORDER BY a <-> '-179.0' LIMIT 3;
-                  QUERY PLAN                   
------------------------------------------------
+                        QUERY PLAN                         
+-----------------------------------------------------------
  Limit
-   ->  Index Scan using float4idx on float4tmp
-         Order By: (a <-> (-179)::real)
-(3 rows)
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Merge Key: ((a <-> (-179)::real))
+         ->  Limit
+               ->  Index Scan using float4idx on float4tmp
+                     Order By: (a <-> (-179)::real)
+(7 rows)
 
 SELECT a, a <-> '-179.0' FROM float4tmp ORDER BY a <-> '-179.0' LIMIT 3;
     a     | ?column? 

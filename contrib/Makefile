@@ -4,10 +4,18 @@ subdir = contrib
 top_builddir = ..
 include $(top_builddir)/src/Makefile.global
 
+# Greenplum specific changes to the targetlist:
+# tsearch2 and postgres_fdw are currently disabled due to test failures.
+# cube and the related earthdistance are disabled since GPDB define CUBE
+# as a keyword
+
 SUBDIRS = \
+		adminpack	\
 		auth_delay	\
 		auto_explain	\
 		btree_gin	\
+		btree_gist	\
+		chkpass		\
 		citext		\
 		dblink		\
 		dict_int	\
@@ -16,7 +24,12 @@ SUBDIRS = \
 		file_fdw	\
 		fuzzystrmatch	\
 		hstore		\
+		intagg		\
 		intarray	\
+		isn		\
+		lo		\
+		ltree		\
+		oid2name	\
 		pageinspect	\
 		passwordcheck	\
 		pg_archivecleanup \
@@ -35,21 +48,17 @@ SUBDIRS = \
 		pgrowlocks	\
 		pgstattuple	\
 		pg_xlogdump	\
-		postgres_fdw	\
 		seg		\
 		spi		\
+		tablefunc	\
 		tcn		\
 		test_decoding	\
 		test_parser	\
 		test_shm_mq	\
-		tsearch2	\
-		unaccent
-# GPDB_92_MERGE_FIXME: Why some files (especially Makefile) are missing under
-# these directories?
-#               seg         \
-#		tablefunc	\
-#		vacuumlo
-#		worker_spi 
+		unaccent	\
+		vacuumlo	\
+		worker_spi
+
 
 # Greenplum-specific additions (to ease merge pain).
 SUBDIRS += \
