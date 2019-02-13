@@ -36,6 +36,7 @@ try:
     from gppylib.parseutils import line_reader, parse_gpexpand_segment_line, \
         canonicalize_address
     from gppylib.heapchecksum import HeapChecksum
+    from gppylib.commands.pg import PgBaseBackup
 
 except ImportError, e:
     sys.exit('ERROR: Cannot import modules.  Please check that you have sourced greenplum_path.sh.  Detail: ' + str(e))
@@ -629,8 +630,6 @@ class SegmentTemplate:
         """Creates the schema template that is used by new segments"""
         self.logger.info('Creating segment template')
 
-        MakeDirectory.local('gpexpand create temp dir', self.tempDir)
-
         self._select_src_segment()
 
         self.oldSegCount = self.gparray.get_segment_count()
@@ -639,7 +638,12 @@ class SegmentTemplate:
 
         try:
             masterSeg = self.gparray.master
-            masterSeg.createTemplate(dstDir=self.tempDir)
+            cmd = PgBaseBackup(pgdata=self.tempDir,
+                               host=masterSeg.getSegmentHostName(),
+                               port=str(masterSeg.getSegmentPort()),
+                               recovery_mode=False,
+                               target_gp_dbid=masterSeg.getSegmentDbId())
+            cmd.run(validateAfter=True)
         except Exception, msg:
             raise SegmentTemplateError(msg)
 
@@ -758,25 +762,6 @@ class SegmentTemplate:
                     dstFile=self.tempDir, dstHost=localHostname,ctxt=REMOTE,
                     remoteHost=self.srcSegHostname)
         cpCmd.run(validateAfter=True)
-
-        # Don't need log files and gpperfmon files in template.
-        rmCmd = RemoveDirectory('gpexpand remove gppermfon data from template',
-                                self.tempDir + '/gpperfmon/data')
-        rmCmd.run(validateAfter=True)
-        rmCmd = RemoveDirectoryContents('gpexpand remove logs from template',
-                                        self.tempDir + '/pg_log')
-        rmCmd.run(validateAfter=True)
-
-        # other files not needed
-        rmCmd = RemoveFile('gpexpand remove postmaster.opt from template',
-                            self.tempDir + '/postmaster.opts')
-        rmCmd.run(validateAfter=True)
-        rmCmd = RemoveFile('gpexpand remove postmaster.pid from template',
-                            self.tempDir + '/postmaster.pid')
-        rmCmd.run(validateAfter=True)
-        rmCmd = RemoveGlob('gpexpand remove gpexpand files from template',
-                            self.tempDir + '/gpexpand.*')
-        rmCmd.run(validateAfter=True)
 
     def _tar_template(self):
         """Tars up the template files"""
