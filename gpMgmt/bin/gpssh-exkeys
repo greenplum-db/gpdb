@@ -46,7 +46,7 @@ warnings.simplefilter('ignore', DeprecationWarning)
 sys.path.append(sys.path[0] + '/lib')
 try:
     import paramiko
-    import getopt, time, getpass, logging
+    import getopt, getpass, logging
     import tempfile, filecmp
     import array, socket, subprocess
     from gppylib.commands import unix
@@ -522,7 +522,7 @@ try:
     parseCommandLine()
 
     # Assemble a list of names used by the current host.  SSH is sensitive to both name
-    # and address so recognizing each name can prevent an SSH authenticitiy challenge.
+    # and address so recognizing each name can prevent an SSH authenticity challenge.
     #
     # We start out with the names presented by gethostname and getfqdn (which may be the
     # same or localhost) and add to this list using gethostbyaddr to discover possible
@@ -697,7 +697,7 @@ try:
     ######################
     #  step 2
     #
-    #    Interogate each host for its host key and add to the known_hosts file.
+    #    Interrogate each host for its host key and add to the known_hosts file.
     #
     #    ssh-keyscan fails when supplied a non-existent host name so each host
     #    is polled separately.  Also, ssh-keyscan may not report all "hostname"
@@ -726,9 +726,8 @@ try:
             GV.allHosts.remove(h)
             if h in GV.existingHosts: GV.existingHosts.remove(h)
             if h in GV.newHosts: GV.newHosts.remove(h)
-    else:
-        if len(badHosts):
-            sys.exit('[ERROR] cannot process one or more hosts')
+    if len(badHosts):
+        sys.exit('[ERROR] cannot process one or more hosts')
 
     ######################
     #  step 3
@@ -823,7 +822,7 @@ try:
     #    id_rsa{,.pub} files are copied from this host.  For
     #    existing hosts, the existing authorized_keys and known_hosts
     #    files from the existing host is merged with the files from
-    #    this nost
+    #    this host
     #
     print;
     print '[STEP 4 of 5] determine common authentication file content'
@@ -836,8 +835,8 @@ try:
     except IOError:
         sys.exit('[ERROR] cannot read/write known_hosts file')
 
-    # eliminate duploicates in authorized_keys file
-    # TODO: improve handing of keys with optional elements
+    # eliminate duplicates in authorized_keys file
+    # TODO: improve handling of keys with optional elements
     try:
         tab = readAuthorizedKeys()
         # Now add any discovered user keys to the local authorized_keys file
