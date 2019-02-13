@@ -10,12 +10,12 @@
             <codeblock id="sql_command_synopsis">[ WITH [ RECURSIVE<sup>1</sup> ] <varname>with_query</varname> [, ...] ]
 SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
     * | <varname>expression</varname> [AS <varname>output_name</varname>] [, ...]
-    INTO [TEMPORARY | TEMP] [TABLE] <varname>new_table</varname>
+    INTO [TEMPORARY | TEMP | UNLOGGED ] [TABLE] <varname>new_table</varname>
     [FROM <varname>from_item</varname> [, ...]]
     [WHERE <varname>condition</varname>]
     [GROUP BY <varname>expression</varname> [, ...]]
     [HAVING <varname>condition</varname> [, ...]]
-    [{UNION | INTERSECT | EXCEPT} [ALL] <varname>select</varname>]
+    [{UNION | INTERSECT | EXCEPT} [ALL | DISTINCT ] <varname>select</varname>]
     [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...]]
     [LIMIT {<varname>count</varname> | ALL}]
     [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
@@ -49,6 +49,17 @@ SELECT [ALL | DISTINCT [ON ( <varname>expression</varname> [, ...] )]]
                     <pt>TEMPORARY</pt>
                     <pt>TEMP</pt>
                     <pd>If specified, the table is created as a temporary table.</pd>
+                </plentry>
+                <plentry>
+                    <pt>UNLOGGED</pt>
+                    <pd>If specified, the table is created as an unlogged table. Data written to
+                        unlogged tables is not written to the write-ahead (WAL) log, which makes
+                        them considerably faster than ordinary tables. However, the contents of an
+                        unlogged table are not replicated to mirror segment instances. Also an
+                        unlogged table is not crash-safe. After a segment instance crash or unclean
+                        shutdown, the data for the unlogged table on that segment is truncated. Any
+                        indexes created on an unlogged table are automatically unlogged as
+                        well.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>new_table</varname></pt>
