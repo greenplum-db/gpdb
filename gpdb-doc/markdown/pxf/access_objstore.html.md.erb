@@ -66,27 +66,27 @@ CREATE EXTERNAL TABLE pxf_s3_text(location text, month text, num_orders int, tot
 FORMAT 'TEXT' (delimiter=E',');
 </pre>
 
-The following command creates an external table referencing a text file on Azure Blob Storage. It specifies the profile named `wasbs:text` and the server configuration named `wasbs_srvcfg`:
+The following command creates an external table referencing a text file on Azure Blob Storage. It specifies the profile named `wasbs:text` and the server configuration named `wasbssrvcfg`. You would provide the Azure Blob Storage container identifier and your Azure Blob Storage account name.
 
 <pre>
 CREATE EXTERNAL TABLE pxf_wasbs_text(location text, month text, num_orders int, total_sales float8)
-  LOCATION ('pxf://AZURE_CONTAINER@YOUR_AZURE_BLOB_STORAGE_ACCOUNT_NAME.blob.core.windows.net/path/to/blob?<b>PROFILE=wasbs:text&SERVER=wasbs_srvcfg</b>')
+  LOCATION ('pxf://<b>AZURE_CONTAINER@YOUR_AZURE_BLOB_STORAGE_ACCOUNT_NAME</b>.blob.core.windows.net/path/to/blob/file?<b>PROFILE=wasbs:text&SERVER=wasbssrvcfg</b>')
 FORMAT 'TEXT';
 </pre>
 
-The following command creates an external table referencing a text file on Azure Data Lake. It specifies the profile named `adl:text` and the server configuration named `adl_srvcfg`:
+The following command creates an external table referencing a text file on Azure Data Lake. It specifies the profile named `adl:text` and the server configuration named `adlsrvcfg`. You would provide your Azure Data Lake account name.
 
 <pre>
 CREATE EXTERNAL TABLE pxf_adl_text(location text, month text, num_orders int, total_sales float8)
-  LOCATION ('pxf://YOUR_ADL_ACCOUNT_NAME.azuredatalakestore.net/path/to/file?<b>PROFILE=adl:text&SERVER=adl_srvcfg</b>')
+  LOCATION ('pxf://<b>YOUR_ADL_ACCOUNT_NAME</b>.azuredatalakestore.net/path/to/file?<b>PROFILE=adl:text&SERVER=adlsrvcfg</b>')
 FORMAT 'TEXT';
 </pre>
 
-The following command creates an external table referencing a JSON file on Google Cloud Storage. It specifies the profile named `gs:json` and the server configuration named `gcs_srvcfg`:
+The following command creates an external table referencing a JSON file on Google Cloud Storage. It specifies the profile named `gs:json` and the server configuration named `gcssrvcfg`:
 
 <pre>
 CREATE EXTERNAL TABLE pxf_gsc_json(location text, month text, num_orders int, total_sales float8)
-  LOCATION ('pxf://dir/subdir/file.json?<b>PROFILE=gs:json&SERVER=gcs_srvcfg</b>')
+  LOCATION ('pxf://dir/subdir/file.json?<b>PROFILE=gs:json&SERVER=gcssrvcfg</b>')
 FORMAT 'CUSTOM' (FORMATTER='pxfwritable_import');
 </pre>
 
