@@ -184,7 +184,10 @@ SELECT gp_wait_until_triggered_fault('compaction_before_cleanup_phase', 1, 1);
 
 -- Scenario for validating mirror replays fine and doesn't crash on
 -- truncate record replay even if file is missing.
-
+-- skip FTS probes to avoid marking primary status down.
+4:SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+4:SELECT gp_request_fts_probe_scan();
+4:SELECT gp_wait_until_triggered_fault('fts_probe', 1, 1);
 4:SET gp_default_storage_options="appendonly=true,orientation=column";
 4:CREATE TABLE crash_vacuum_in_appendonly_insert_1 (a INT, b INT, c CHAR(20));
 -- just sanity check to make sure appendonly table is created
@@ -214,3 +217,4 @@ where c.role='p' and c.content=0), 'restart');
 -- records generated and doesn't encounter the "WAL contains
 -- references to invalid pages" PANIC.
 6:SELECT * from wait_for_replication_replay(5000);
+6:SELECT gp_inject_fault('fts_probe', 'reset', 1);

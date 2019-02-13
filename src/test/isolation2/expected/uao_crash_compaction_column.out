@@ -568,7 +568,22 @@ UPDATE 1
 
 -- Scenario for validating mirror replays fine and doesn't crash on
 -- truncate record replay even if file is missing.
-
+-- skip FTS probes to avoid marking primary status down.
+4:SELECT gp_inject_fault_infinite('fts_probe', 'skip', 1);
+ gp_inject_fault_infinite 
+--------------------------
+ t                        
+(1 row)
+4:SELECT gp_request_fts_probe_scan();
+ gp_request_fts_probe_scan 
+---------------------------
+ t                         
+(1 row)
+4:SELECT gp_wait_until_triggered_fault('fts_probe', 1, 1);
+ gp_wait_until_triggered_fault 
+-------------------------------
+ t                             
+(1 row)
 4:SET gp_default_storage_options="appendonly=true,orientation=column";
 SET
 4:CREATE TABLE crash_vacuum_in_appendonly_insert_1 (a INT, b INT, c CHAR(20));
@@ -639,4 +654,9 @@ VACUUM
  wait_for_replication_replay 
 -----------------------------
  t                           
+(1 row)
+6:SELECT gp_inject_fault('fts_probe', 'reset', 1);
+ gp_inject_fault 
+-----------------
+ t               
 (1 row)
