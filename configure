@@ -19703,6 +19703,8 @@ done
 
 
 
+
+
 # Make sure we have perl
 if test -z "$PERL"; then
 # Extract the first word of "perl", so it can be a program name with args.
@@ -19746,7 +19748,7 @@ fi
 
 if test "x$PERL" != x; then
   ax_perl_modules_failed=0
-  for ax_perl_module in 'IPC::Run' ; do
+  for ax_perl_module in 'IPC::Run' 'Test::More 0.82' ; do
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for perl module $ax_perl_module" >&5
 $as_echo_n "checking for perl module $ax_perl_module... " >&6; }
 
@@ -19768,7 +19770,7 @@ $as_echo "ok" >&6; };
 
   else
     :
-    as_fn_error $? "Perl module IPC::Run is required to run TAP tests" "$LINENO" 5
+    as_fn_error $? "Perl modules IPC::Run and Test::More 0.82 are required to run TAP tests" "$LINENO" 5
   fi
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: could not find perl" >&5
