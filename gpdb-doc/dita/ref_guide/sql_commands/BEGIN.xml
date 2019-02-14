@@ -68,6 +68,11 @@
                         running the same transactions one at a time. If you specify
                             <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to
                             <codeph>REPEATABLE READ</codeph>.</pd>
+                    <pd>Specifying <codeph>DEFERRABLE</codeph> has no effect in Greenplum Database,
+                        but the syntax is supported for compatibility with PostgreSQL. A transaction
+                        can only be deferred if it is <codeph>READ ONLY</codeph> and
+                            <codeph>SERIALIZABLE</codeph>, and Greenplum Database does not support
+                            <codeph>SERIALIAZABLE</codeph> transactions. </pd>
                 </plentry>
             </parml>
         </section>
@@ -86,8 +91,8 @@
             <title>Examples</title>
             <p>To begin a transaction block: </p>
             <codeblock>BEGIN;</codeblock>
-            <p>To begin a transaction block with the serializable isolation level:</p>
-            <codeblock>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</codeblock>
+            <p>To begin a transaction block with the repeatable read isolation level:</p>
+            <codeblock>BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>
