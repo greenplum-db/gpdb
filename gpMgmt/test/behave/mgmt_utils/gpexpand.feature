@@ -356,3 +356,24 @@ Feature: expand the cluster by adding more segments
         And run rollback with database "gptest"
         And verify the gp_segment_configuration has been restored
         And unset fault inject
+
+    @gpexpand_no_mirrors
+    @gpexpand_with_special_character
+    Scenario: create database,schema,table with special character
+        Given a working directory of the test as '/tmp/gpexpand_behave'
+        And the database is killed on hosts "mdw,sdw1"
+        And the user runs command "rm -rf /tmp/gpexpand_behave/*"
+        And a temporary directory under "/tmp/gpexpand_behave/expandedData" to expand into
+        And the database is not running
+        And a cluster is created with no mirrors on "mdw" and "sdw1"
+        And database "gptest" exists
+        And create database schema table with special character
+        And there are no gpexpand_inputfiles
+        And the cluster is setup for an expansion on hosts "mdw,sdw1"
+        And the number of segments have been saved
+        And the user runs gpexpand interview to add 1 new segment and 0 new host "ignored.host"
+        When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
+        Then gpexpand should return a return code of 0
+        And verify that the cluster has 1 new segments
+        When the user runs gpexpand against database "gptest" to redistribute
+        Then the tables have finished expanding

@@ -2565,3 +2565,53 @@ def impl(context, database):
     ret_code, std_err, std_out = gpexpand.rollback()
     if ret_code != 0:
         raise Exception("rollback exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
+
+@given('create database schema table with special character')
+@then('create database schema table with special character')
+def impl(context):
+    dbname = ' a b."\'\\\\'
+    escape_dbname = dbname.replace('\\', '\\\\').replace('"', '\\"')
+    createdb_cmd = "createdb \"%s\"" % escape_dbname
+    run_command(context, createdb_cmd)
+
+    with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
+        #special char table
+        query = 'create table " a b.""\'\\\\"(c1 int);'
+        dbconn.execSQL(conn, query)
+        query = 'create schema " a b.""\'\\\\";'
+        dbconn.execSQL(conn, query)
+        #special char schema and table
+        query = 'create table " a b.""\'\\\\"." a b.""\'\\\\"(c1 int);'
+        dbconn.execSQL(conn, query)
+
+        #special char partition table
+        query = """
+CREATE TABLE \" a b.'\"\"\\\\\" (id int, year int, month int, day int,
+region text)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (year)
+
+  SUBPARTITION BY RANGE (month)
+    SUBPARTITION TEMPLATE (
+       START (1) END (13) EVERY (4),
+       DEFAULT SUBPARTITION other_months )
+( START (2008) END (2016) EVERY (1),
+  DEFAULT PARTITION outlying_years);
+"""
+        dbconn.execSQL(conn, query)
+        #special char schema and partition table
+        query = """
+CREATE TABLE \" a b.\"\"'\\\\\".\" a b.'\"\"\\\\\" (id int, year int, month int, day int,
+region text)
+DISTRIBUTED BY (id)
+PARTITION BY RANGE (year)
+
+  SUBPARTITION BY RANGE (month)
+    SUBPARTITION TEMPLATE (
+       START (1) END (13) EVERY (4),
+       DEFAULT SUBPARTITION other_months )
+( START (2008) END (2016) EVERY (1),
+  DEFAULT PARTITION outlying_years);
+"""
+        dbconn.execSQL(conn, query)
+        conn.commit()
