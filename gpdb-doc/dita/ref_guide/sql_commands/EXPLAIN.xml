@@ -169,7 +169,8 @@ ROLLBACK;</codeblock></note>
       <title>Examples</title>
       <p>To illustrate how to read an <codeph>EXPLAIN</codeph> query plan, consider the following
         example for a very simple query:</p>
-      <codeblock>                                  QUERY PLAN
+      <codeblock>EXPLAIN SELECT * FROM names WHERE name = 'Joelle';
+                                  QUERY PLAN
 -------------------------------------------------------------------------------
  Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.27 rows=1 width=58)
    ->  Seq Scan on names  (cost=0.00..431.27 rows=1 width=58)
