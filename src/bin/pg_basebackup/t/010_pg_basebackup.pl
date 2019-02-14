@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Cwd;
 use TestLib;
-use Test::More tests => 33;
+use Test::More tests => 34;
 
 program_help_ok('pg_basebackup');
 program_version_ok('pg_basebackup');
@@ -27,6 +27,9 @@ if (open BADCHARS, ">>$tempdir/pgdata/FOO\xe0\xe0\xe0BAR")
 
 configure_hba_for_replication "$tempdir/pgdata";
 system_or_bail 'pg_ctl', '-D', "$tempdir/pgdata", 'reload';
+
+command_fails(['pg_basebackup', '-D', "$tempdir/backup"],
+	'pg_basebackup fails without specifiying the target greenplum db id');
 
 open CONF, ">>$tempdir/pgdata/postgresql.conf";
 print CONF "max_wal_senders = 0\n";
