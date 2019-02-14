@@ -346,13 +346,11 @@ resources:
 {% endif %}
 {% if "centos6" in os_types and "ICW" in test_sections %}
 - name: icw_gporca_centos6_dump
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{test-data-bucket-name}}
-    secret_access_key: {{bucket-secret-access-key}}
-    region_name: {{aws-region}}
-    versioned_file: gpdb6/icw_gporca_centos6/dump.sql.xz
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/icw_gporca_centos6_dump/dump.sql.xz
 
 {% endif %}
 {% if "aix7" in os_types %}
@@ -514,13 +512,11 @@ resources:
 {% endif %}
 {% if "centos6" in os_types %}
 - name: bin_gpdb_centos6
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{bin_gpdb_centos_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_centos6/bin_gpdb.tar.gz
 
 {% endif %}
 {% if pipeline_type == "prod" %}
@@ -563,77 +559,63 @@ resources:
 {% endif %}
 {% if "ubuntu16" in os_types %}
 - name: compiled_bits_ubuntu16
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{compiled_bits_ubuntu16_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/compiled_bits_ubuntu16/compiled_bits_ubuntu16.tar.gz
 
 {% endif %}
 {% if "centos6" in os_types %}
 - name: binary_swap_gpdb_centos6
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{binary_swap_gpdb_centos_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/binary_swap_gpdb_centos6/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "centos7" in os_types %}
 - name: bin_gpdb_centos7
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{bin_gpdb_centos7_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_centos7/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "sles" in os_types %}
 - name: bin_gpdb_sles11
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{bin_gpdb_sles11_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/bin_gpdb_sles11/bin_gpdb.tar.gz
 
 {% endif %}
 {% if "aix7" in os_types %}
 - name: installer_aix7_gpdb_clients
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-clients-(.*)-aix7_ppc_64.zip
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: ((pipeline-name))/installer_aix7_gpdb_clients/greenplum-clients-(.*)-aix7_ppc_64.zip
 
 - name: installer_aix7_gpdb_loaders
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    regexp: deliverables/greenplum-loaders-(.*)-aix7_ppc_64.zip
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    regexp: ((pipeline-name))/installer_aix7_gpdb_loaders/greenplum-loaders-(.*)-aix7_ppc_64.zip
 
 {% endif %}
 {% if "ubuntu16" in os_types %}
 - name: deb_package_ubuntu16
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{bucket-name}}
-    region_name: {{aws-region}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file: {{deb_package_ubuntu16_versioned_file}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/deb_package_ubuntu16/greenplum-db.deb
 
 {% endif %}
 {% if "aix7" in os_types %}
@@ -661,13 +643,11 @@ resources:
     private_key: {{madlib-ci-git-key}}
 
 - name: madlib_gppkg
-  type: s3
+  type: gcs
   source:
-    access_key_id: {{bucket-access-key-id}}
-    bucket: {{madlib-bucket-name}}
-    secret_access_key: {{bucket-secret-access-key}}
-    versioned_file:  {{madlib-gppkg-versioned-file}}
-    region_name: {{madlib-s3-region}}
+    bucket: ((gcs-bucket-intermediates))
+    json_key: ((concourse-gcs-resources-service-account-key))
+    versioned_file: ((pipeline-name))/madlib_gppkg/madlib-master-gp6-rhel6-x86_64.gppkg
 
 - name: cmake_tar
   type: s3
