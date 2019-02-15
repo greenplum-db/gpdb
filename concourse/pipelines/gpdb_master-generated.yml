@@ -1000,7 +1000,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -1019,7 +1019,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
       DUMP_DB: "true"
@@ -1041,7 +1041,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       BLDWRAP_POSTGRES_CONF_ADDONS: optimizer_use_gpdb_allocators=on
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -1060,7 +1060,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c gp_interconnect_type=tcp -c optimizer=off' installcheck-world
       TEST_OS: centos
 
 - name: icw_gporca_centos7
@@ -1077,7 +1077,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: centos
       CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -1095,7 +1095,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -1114,7 +1114,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos7-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: centos
       TEST_BINARY_SWAP: false
       CONFIGURE_FLAGS: {{configure_flags}}
@@ -1133,7 +1133,7 @@ jobs:
   - task: ic_gpdb
     file: gpdb_src/concourse/tasks/ic_gpdb_sles11.yml
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: sles
       CONFIGURE_FLAGS: {{configure_flags}}
 
@@ -1170,7 +1170,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
     image: ccp-image
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=on' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=on' installcheck-world
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
@@ -1210,7 +1210,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb_sles12.yml
     image: ccp-image
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       TEST_OS: sles12
     on_success:
       <<: *ccp_destroy
@@ -1230,7 +1230,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb_ubuntu.yml
     image: ubuntu-gpdb-dev-16
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off' installcheck-world
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off' installcheck-world
       CONFIGURE_FLAGS: {{configure_flags}}
 
 - name: icw_gporca_conan_ubuntu16
@@ -1321,7 +1321,7 @@ jobs:
     file: gpdb_src/concourse/tasks/ic_gpdb.yml
     image: gpdb6-centos6-test
     params:
-      MAKE_TEST_COMMAND: -k PGOPTIONS='-c optimizer=off'
+      MAKE_TEST_COMMAND: PGOPTIONS='-c optimizer=off'
         BUILD_TYPE=((rc-build-type)) -C src/test/regress installcheck-icudp
       TEST_OS: centos
 
