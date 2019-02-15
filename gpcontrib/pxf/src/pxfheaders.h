@@ -26,6 +26,7 @@
 #include "libchurl.h"
 #include "pxfuriparser.h"
 
+#include "nodes/execnodes.h"
 #include "utils/rel.h"
 
 /*
@@ -33,10 +34,12 @@
  */
 typedef struct sPxfInputData
 {
-	CHURL_HEADERS headers;
-	GPHDUri    *gphduri;
-	Relation	rel;
-	char *filterstr;
+	CHURL_HEADERS  headers;
+	GPHDUri        *gphduri;
+	Relation       rel;
+	char           *filterstr;
+	ProjectionInfo *proj_info;
+	List           *quals;
 } PxfInputData;
 
 /*

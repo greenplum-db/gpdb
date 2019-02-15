@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "pxffilters.h"
 #include "pxfheaders.h"
 #include "access/fileam.h"
 #include "catalog/pg_exttable.h"
@@ -27,6 +28,7 @@ static void add_alignment_size_httpheader(CHURL_HEADERS headers);
 static void add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel);
 static void add_location_options_httpheader(CHURL_HEADERS headers, GPHDUri *gphduri);
 static char *get_format_name(char fmtcode);
+static void add_projection_desc_httpheader(CHURL_HEADERS headers, ProjectionInfo *projInfo, List *qualsAttributes);
 
 /*
  * Add key/value pairs to connection header.
@@ -36,11 +38,12 @@ static char *get_format_name(char fmtcode);
 void
 build_http_headers(PxfInputData *input)
 {
-	extvar_t	ev;
-	CHURL_HEADERS headers = input->headers;
-	GPHDUri    *gphduri = input->gphduri;
-	Relation	rel = input->rel;
-	char *filterstr = input->filterstr;
+	extvar_t       ev;
+	CHURL_HEADERS  headers    = input->headers;
+	GPHDUri        *gphduri   = input->gphduri;
+	Relation       rel        = input->rel;
+	char           *filterstr = input->filterstr;
+	ProjectionInfo *proj_info = input->proj_info;
 
 	if (rel != NULL)
 	{
@@ -48,12 +51,31 @@ build_http_headers(PxfInputData *input)
 		ExtTableEntry *exttbl = GetExtTableEntry(rel->rd_id);
 
 		/* pxf treats CSV as TEXT */
-		char	   *format = get_format_name(exttbl->fmtcode);
+		char *format = get_format_name(exttbl->fmtcode);
 
 		churl_headers_append(headers, "X-GP-FORMAT", format);
 
 		/* Record fields - name and type of each field */
 		add_tuple_desc_httpheader(headers, rel);
+	}
+
+	if (proj_info != NULL)
+	{
+		bool qualsAreSupported = true;
+		List *qualsAttributes =
+			     extractPxfAttributes(input->quals, &qualsAreSupported);
+		/* projection information is incomplete if columns from WHERE clause wasn't extracted */
+		/* if any of expressions in WHERE clause is not supported - do not send any projection information at all*/
+		if (qualsAreSupported &&
+			(qualsAttributes != NIL || list_length(input->quals) == 0))
+		{
+			add_projection_desc_httpheader(headers, proj_info, qualsAttributes);
+		}
+		else
+		{
+			elog(DEBUG2,
+			     "Query will not be optimized to use projection information");
+		}
 	}
 
 	/* GP cluster configuration */
@@ -84,13 +106,13 @@ build_http_headers(PxfInputData *input)
 	churl_headers_append(headers, "X-GP-URI", gphduri->uri);
 
 	/* filters */
-	if (filterstr == NULL) {
-		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
-	}
-	else {
-		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+	if (filterstr != NULL)
 		churl_headers_append(headers, "X-GP-FILTER", filterstr);
-	}
+
+	if (list_length(input->quals) > 0)
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+	else
+		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
 }
 
 /* Report alignment size to remote component
@@ -122,9 +144,9 @@ add_alignment_size_httpheader(CHURL_HEADERS headers)
 static void
 add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
 {
-	char		long_number[sizeof(int32) * 8];
+	char           long_number[sizeof(int32) * 8];
 	StringInfoData formatter;
-	TupleDesc	tuple;
+	TupleDesc      tuple;
 
 	initStringInfo(&formatter);
 
@@ -233,6 +255,57 @@ add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
 		}
 	}
 
+	pfree(formatter.data);
+}
+
+/*
+ * Report projection description to the remote component
+ */
+static void
+add_projection_desc_httpheader(CHURL_HEADERS headers,
+                               ProjectionInfo *projInfo,
+                               List *qualsAttributes)
+{
+	int            i;
+	int            number;
+	char           long_number[sizeof(int32) * 8];
+	int            *varNumbers = projInfo->pi_varNumbers;
+	StringInfoData formatter;
+
+	number = projInfo->pi_numSimpleVars + list_length(qualsAttributes);
+	if (number == 0)
+		return;
+
+	initStringInfo(&formatter);
+
+	/* Convert the number of projection columns to a string */
+	pg_ltoa(number, long_number);
+	churl_headers_append(headers, "X-GP-ATTRS-PROJ", long_number);
+
+	for (i = 0; i < projInfo->pi_numSimpleVars; i++)
+	{
+		number = varNumbers[i] - 1;
+		pg_ltoa(number, long_number);
+		resetStringInfo(&formatter);
+		appendStringInfo(&formatter, "X-GP-ATTRS-PROJ-IDX");
+
+		churl_headers_append(headers, formatter.data, long_number);
+	}
+
+	ListCell *attribute = NULL;
+
+	foreach(attribute, qualsAttributes)
+	{
+		AttrNumber attrNumber = (AttrNumber) lfirst_int(attribute);
+
+		pg_ltoa(attrNumber, long_number);
+		resetStringInfo(&formatter);
+		appendStringInfo(&formatter, "X-GP-ATTRS-PROJ-IDX");
+
+		churl_headers_append(headers, formatter.data, long_number);
+	}
+
+	list_free(qualsAttributes);
 	pfree(formatter.data);
 }
 

@@ -30,7 +30,7 @@ int readable_external_table_timeout = 0;
  * On error, ereport()s
  */
 URL_FILE *
-url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter_quals)
+url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, ExternalSelectDesc desc)
 {
 	/*
 	 * if 'url' starts with "execute:" then it's a command to execute and
@@ -43,7 +43,7 @@ url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter
 	else if (IS_HTTP_URI(url) || IS_GPFDIST_URI(url) || IS_GPFDISTS_URI(url))
 		return url_curl_fopen(url, forwrite, ev, pstate);
 	else
-		return url_custom_fopen(url, forwrite, ev, pstate, filter_quals);
+		return url_custom_fopen(url, forwrite, ev, pstate, desc);
 }
 
 /*
@@ -136,7 +136,10 @@ url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen)
 }
 
 size_t
-url_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate)
+url_fread(void *ptr,
+          size_t size,
+          URL_FILE *file,
+          CopyState pstate)
 {
     switch (file->type)
     {

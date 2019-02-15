@@ -116,7 +116,7 @@ ExternalNext(ExternalScanState *node)
 	ScanDirection direction;
 	TupleTableSlot *slot;
 	bool		scanNext = true;
-	List	   *filter_quals = NIL;
+	ExternalSelectDesc externalSelectDesc;
 
 	/*
 	 * get information from the estate and scan state
@@ -126,15 +126,16 @@ ExternalNext(ExternalScanState *node)
 	direction = estate->es_direction;
 	slot = node->ss.ss_ScanTupleSlot;
 
-	if (gp_external_enable_filter_pushdown)
-		filter_quals = node->ss.ps.plan->qual;
+	externalSelectDesc = external_getnext_init(&(node->ss.ps));
 
+	if (gp_external_enable_filter_pushdown)
+		externalSelectDesc->filter_quals = node->ss.ps.plan->qual;
 	/*
 	 * get the next tuple from the file access methods
 	 */
 	while(scanNext)
 	{
-		tuple = external_getnext(scandesc, direction, filter_quals);
+		tuple = external_getnext(scandesc, direction, externalSelectDesc);
 
 		/*
 		 * save the tuple and the buffer returned to us by the access methods in
@@ -169,6 +170,7 @@ ExternalNext(ExternalScanState *node)
 		}
 		scanNext = false;
 	}
+	pfree(externalSelectDesc);
 
 	return slot;
 }
