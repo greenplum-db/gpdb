@@ -178,10 +178,12 @@
           <pd>Optional. Specifies a table to include in the backup. The table must be in the format
               <codeph>&lt;schema-name>.&lt;table-name></codeph>. If a table or schema name uses any
             character other than a lowercase letter, number, or an underscore character, then you
-            must include that name in double quotes. You can specify this option multiple times. You
-            cannot combine this option with a schema filtering option such as
-              <codeph>--include-schema</codeph>, or another table filtering option such as
-              <codeph>--exclude-table-file</codeph>.</pd>
+            must include that name single quotes. See <xref href="#topic1/table_names" format="dita"
+              >Schema and Table Names</xref> for information about characters that are supported in
+            schema and table names.</pd>
+          <pd>You can specify this option multiple times. You cannot combine this option with a
+            schema filtering option such as <codeph>--include-schema</codeph>, or another table
+            filtering option such as <codeph>--exclude-table-file</codeph>.</pd>
           <pd>You can also specify the qualified name of a sequence or a view. </pd>
           <pd>If you specify this option, the utility does not automatically back up dependent
             objects. You must also explicitly specify dependent objects that are required. For
@@ -342,6 +344,20 @@
             information.</li>
           <li><b>2</b> – Backup failed with a fatal error. See log file for more information.</li>
         </ul></p>
+    </section>
+    <section id="table_names">
+      <title>Schema and Table Names</title>
+      <p>When specifying the table filtering option <codeph>--include-table</codeph> that lists a
+        table on the command line, the <codeph>gpbackup</codeph> utility supports backing up schemas
+        or tables when the name contains upper-case characters or these special characters. </p>
+      <p><codeph> ~ # $ % ^ &amp; * ( ) _ - + [ ] { } > &lt; \ | ; : / ? ! ,</codeph>
+      </p>
+      <p>If a name contains an upper-case or support special character and is specified on the
+        command line, the name must be enclosed in single quotes.
+        <codeblock>gpbackup --dbname test --include-table 'my#1schema'.'my_$42_Table'</codeblock></p>
+      <note>The <codeph>--include-table</codeph> option does not support schema or table names that
+        contain the character double quote (<codeph>"</codeph>), period (<codeph>.</codeph>) ,
+        newline (<codeph>\n</codeph>), or space (<codeph> </codeph>).</note>
     </section>
     <section>
       <title>Examples</title>
