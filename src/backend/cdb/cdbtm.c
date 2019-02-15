@@ -54,6 +54,7 @@ extern struct Port *MyProcPort;
 
 #define DTM_DEBUG3 (Debug_print_full_dtm ? LOG : DEBUG3)
 #define DTM_DEBUG5 (Debug_print_full_dtm ? LOG : DEBUG5)
+#define DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS 100
 
 /*
  * Directory where Utility Mode DTM REDO file reside within PGDATA
@@ -810,6 +811,13 @@ doNotifyingCommitPrepared(void)
 
 	while (!succeeded && dtx_phase2_retry_count > retry++)
 	{
+		/*
+		 * sleep for brief duration before retry, to increase chances of
+		 * success if first try failed due to segment panic/restart. Otherwise
+		 * all the retries complete in less than a sec, defeating the purpose
+		 * of the retry.
+		 */
+		pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
 		elog(WARNING, "the distributed transaction 'Commit Prepared' broadcast "
 			 "failed to one or more segments for gid = %s.  Retrying ... try %d",
 			 currentGxact->gid, retry);
@@ -874,7 +882,17 @@ retryAbortPrepared(void)
 		 * segment instances.  And, we will abort the transactions in the
 		 * segments. What's left are possibily prepared transactions.
 		 */
-		elog(NOTICE, "Releasing segworker groups to retry broadcast.");
+		if (retry > 1)
+		{
+			elog(NOTICE, "Releasing segworker groups to retry broadcast.");
+			/*
+			 * sleep for brief duration before retry, to increase chances of
+			 * success if first try failed due to segment panic/restart. Otherwise
+			 * all the retries complete in less than a sec, defeating the purpose
+			 * of the retry.
+			 */
+			pg_usleep(DTX_PHASE2_SLEEP_TIME_BETWEEN_RETRIES_MSECS * 1000);
+		}
 		DisconnectAndDestroyAllGangs(true);
 
 		/*

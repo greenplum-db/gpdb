@@ -47,7 +47,6 @@ INSERT INTO distxact1_1 VALUES (7);
 INSERT INTO distxact1_1 VALUES (8);
 SET debug_abort_after_distributed_prepared = true;
 COMMIT;
-NOTICE:  Releasing segworker groups to retry broadcast.
 ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 RESET debug_abort_after_distributed_prepared;
 SELECT * FROM distxact1_1;
@@ -72,7 +71,6 @@ SET debug_dtm_action = "fail_begin_command";
 SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "prepare";
 COMMIT;
-NOTICE:  Releasing segworker groups to retry broadcast.
 ERROR:  The distributed transaction 'Prepare' broadcast failed to one or more segments for gid = 1259106572-0000015083. (cdbtm.c:633)
 RESET debug_dtm_action;
 RESET debug_dtm_action_target;
@@ -136,7 +134,6 @@ SET debug_dtm_action_target = "protocol";
 SET debug_dtm_action_protocol = "abort_prepared";
 COMMIT;
 WARNING:  the distributed transaction 'Abort Prepared' broadcast failed to one or more segments for gid = 1477546849-0000000078.  Retrying ... try 1
-NOTICE:  Releasing segworker groups to retry broadcast.
 ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 SELECT * FROM distxact1_4;
  a 
@@ -800,7 +797,6 @@ select count(*) = 5 as passed from subt_reindex_co;
 \c postgres
 SET debug_abort_after_distributed_prepared = true;
 reindex table pg_class;
-NOTICE:  Releasing segworker groups to retry broadcast.
 ERROR:  Raise an error as directed by Debug_abort_after_distributed_prepared
 RESET debug_abort_after_distributed_prepared;
 \c regression
