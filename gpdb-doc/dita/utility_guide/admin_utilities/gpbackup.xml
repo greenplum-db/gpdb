@@ -353,9 +353,8 @@
         contains upper-case characters or these special characters. </p>
       <p><codeph> ~ # $ % ^ &amp; * ( ) _ - + [ ] { } > &lt; \ | ; : / ? ! ,</codeph>
       </p>
-      <p>If a name contains an upper-case or support special character and is specified on the
-        command line with <codeph>--include-table</codeph>, the name must be enclosed in single
-        quotes.
+      <p>If a name contains an upper-case or special character and is specified on the command line
+        with <codeph>--include-table</codeph>, the name must be enclosed in single quotes.
         <codeblock>gpbackup --dbname test --include-table 'my#1schema'.'my_$42_Table'</codeblock></p>
       <p>When the table is listed in a file for use with <codeph>--include-table-file</codeph>,
         single quotes are not required. For example, this is the contents of a text file that is
