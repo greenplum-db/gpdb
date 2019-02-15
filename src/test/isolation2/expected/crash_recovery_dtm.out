@@ -194,7 +194,7 @@ CHECKPOINT
 -- Set to maximum number of 2PC retries to avoid any failures. Alter
 -- system is required to set the GUC and can't be set on session level
 -- as session reset happens for every abort retry.
-11: alter system set dtx_phase2_retry_count to 15;
+11: alter system set dtx_phase2_retry_count to 1500;
 ALTER
 11: select pg_reload_conf();
  pg_reload_conf 
