@@ -80,7 +80,9 @@ test: dtm_retry
 
 # The appendonly test cannot be run concurrently with tests that have
 # serializable transactions (may conflict with AO vacuum operations).
-test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish partial_table subselect_gp_indexes
+test: rangefuncs_cdb gp_dqa subselect_gp subselect_gp2 gp_transactions olap_group olap_window_seq sirv_functions appendonly create_table_distpol alter_distpol_dropped query_finish subselect_gp_indexes
+
+test: partial_table
 
 # 'partition' runs for a long time, so try to keep it together with other
 # long-running tests.
