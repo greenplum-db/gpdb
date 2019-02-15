@@ -352,12 +352,18 @@ Feel free to ask on the mailing list to learn more about the Greenplum release p
 
 Once you are ready to share your work with the Greenplum core team and the rest of
 the Greenplum community, you should push all the commits to a branch in your own
-repository forked from the official Greenplum and [send us a pull request](https://help.github.com/articles/about-pull-requests/).
+repository forked from the official Greenplum and
+[send us a pull request](https://help.github.com/articles/about-pull-requests/).
 
-For now, we require all pull requests to be submitted against the main master
-branch, but over time, once there are many supported open source releases of Greenplum
-in the wild, you may decide to submit your pull requests against an active
-release branch if the change is only applicable to a given release.
+We welcome submissions which are work in-progress in order to get feedback early
+in the development process.  When opening the pull request, select "Draft" in
+the dropdown menu when creating the PR to clearly mark the intent of the pull
+request. Prefixing the title with "WIP:" is also good practice.
+
+All new features should be submitted against the main master branch. Bugfixes
+should too be submitted against master unless they only exist in a supported
+back-branch. If the bug exist in both master and back-branches, explain this
+in the PR description.
 
 ### Validation checks and CI
 
