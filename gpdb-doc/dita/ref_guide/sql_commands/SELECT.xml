@@ -90,7 +90,6 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
           window frame.</li>
         <li id="eg138848">The actual output rows are computed using the <codeph>SELECT</codeph>
           output expressions for each selected row.</li>
-
         <li id="eg138856">Using the operators <codeph>UNION</codeph>, <codeph>INTERSECT</codeph>,
           and <codeph>EXCEPT</codeph>, the output of more than one <codeph>SELECT</codeph> statement
           can be combined to form a single result set. The <codeph>UNION</codeph> operator returns
@@ -123,9 +122,9 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
         <p>The optional <codeph>WITH</codeph> clause allows you to specify one or more subqueries
           that can be referenced by name in the primary query. The subqueries effectively act as
           temporary tables or views for the duration of the primary query. Each subquery can be a
-            <codeph>SELECT</codeph>, <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
+            <codeph>SELECT</codeph>, <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
             <codeph>DELETE</codeph> statement. When writing a data-modifying statement
-            (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>) in
+            (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>) in
             <codeph>WITH</codeph>, it is usual to include a <codeph>RETURNING</codeph> clause. It is
           the output of <codeph>RETURNING</codeph>, <i>not</i> the underlying table that the
           statement modifies, that forms the temporary table that is read by the primary query. If
@@ -233,7 +232,6 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
         <p>If <codeph>SELECT DISTINCT</codeph> is specified, all duplicate rows are removed from the
           result set (one row is kept from each group of duplicates). <codeph>SELECT ALL</codeph>
           specifies the opposite: all rows are kept; that is the default. </p>
-          
         <p>
           <codeph>SELECT DISTINCT ON ( <varname>expression</varname> [, ...] )</codeph> keeps only
           the first row of each set of rows where the given expressions evaluate to equal. The
