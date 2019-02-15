@@ -540,6 +540,7 @@ INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
 UPDATE fkc_foreign_table1 SET b = 'foo';
 DELETE FROM fkc_primary_table1 WHERE a = 1;
 COMMIT;
+UPDATE fkc_primary_table1 SET a = 3 where a = 2;
 
 BEGIN;
 -- Test with an ao table and heap table
@@ -554,3 +555,4 @@ INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
 UPDATE fkc_foreign_table2 SET b = 'foo';
 DELETE FROM fkc_primary_table2 WHERE a = 1;
 COMMIT;
+UPDATE fkc_primary_table2 SET a = 3 where a = 2;

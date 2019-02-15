@@ -711,6 +711,8 @@ INSERT INTO fkc_foreign_table1 VALUES (2, 'bar');
 UPDATE fkc_foreign_table1 SET b = 'foo';
 DELETE FROM fkc_primary_table1 WHERE a = 1;
 COMMIT;
+UPDATE fkc_primary_table1 SET a = 3 where a = 2;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
 BEGIN;
 -- Test with an ao table and heap table
 CREATE TABLE fkc_primary_table2(a int PRIMARY KEY, b text) DISTRIBUTED BY (a);
@@ -724,3 +726,5 @@ INSERT INTO fkc_foreign_table2 VALUES (2, 'bar');
 UPDATE fkc_foreign_table2 SET b = 'foo';
 DELETE FROM fkc_primary_table2 WHERE a = 1;
 COMMIT;
+UPDATE fkc_primary_table2 SET a = 3 where a = 2;
+ERROR:  UPDATE on distributed key column not allowed on relation with update triggers
