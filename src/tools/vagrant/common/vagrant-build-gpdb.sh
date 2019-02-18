@@ -29,8 +29,12 @@ if [[ ! -d $GPDB_DIR ]]; then
   # 'git checkout' same remote and branch as user
   CURRENT_GIT_REMOTE_PATH=$(git remote get-url "$CURRENT_GIT_REMOTE")
   [[ $CURRENT_GIT_REMOTE_PATH =~ ^(https?|git):// ]] || setup_ssh_config
-  git fetch "$CURRENT_GIT_REMOTE" "$CURRENT_GIT_BRANCH"
-  git checkout "$CURRENT_GIT_BRANCH"
+  if git fetch "$CURRENT_GIT_REMOTE" "$CURRENT_GIT_BRANCH"; then
+    git checkout "$CURRENT_GIT_BRANCH"
+  else
+    echo "${BASH_SOURCE[0]}: couldn't checkout user's current remote/branch." >&2
+    echo "${BASH_SOURCE[0]}: staying on origin/master" >&2
+  fi
   popd
   popd
 fi

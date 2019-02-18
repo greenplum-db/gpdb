@@ -35,11 +35,11 @@ end
 
 def all_remotes
   remotes = []
-  `git remote -v`.split(/\n/).each do |remote|
+  `git remote -v | grep '\(fetch\)$'`.split(/\n/).each do |remote|
     remote_arr = remote.split(/\t/)
     remotes << { name: remote_arr[0], path: remote_arr[1].split(/ /)[0] }
   end
-  remotes.uniq
+  remotes
 end
 
 # returns a hash with { ENV_NAME: value }
