@@ -137,6 +137,7 @@ main(int argc, char *argv[])
 		{"column-inserts", no_argument, &column_inserts, 1},
 		{"disable-dollar-quoting", no_argument, &disable_dollar_quoting, 1},
 		{"disable-triggers", no_argument, &disable_triggers, 1},
+		{"extra-float-digits", required_argument, NULL, 5},
 		{"if-exists", no_argument, &if_exists, 1},
 		{"inserts", no_argument, &inserts, 1},
 		{"resource-queues", no_argument, &resource_queues, 1},
@@ -350,6 +351,11 @@ main(int argc, char *argv[])
 				appendPQExpBufferStr(pgdumpopts, " --no-sync");
 				break;
 
+			case 5:
+				appendPQExpBufferStr(pgdumpopts, " --extra-float-digits ");
+				appendShellString(pgdumpopts, optarg);
+				break;
+
 				/* START MPP ADDITION */
 			case 1000:
 				/* gp-format */
@@ -365,7 +371,6 @@ main(int argc, char *argv[])
 				break;
 
 				/* END MPP ADDITION */
-
 
 			default:
 				fprintf(stderr, _("Try \"%s --help\" for more information.\n"), progname);
@@ -700,6 +705,7 @@ help(void)
 	printf(_("  --column-inserts             dump data as INSERT commands with column names\n"));
 	printf(_("  --disable-dollar-quoting     disable dollar quoting, use SQL standard quoting\n"));
 	printf(_("  --disable-triggers           disable triggers during data-only restore\n"));
+	printf(_("  --extra-float-digits=NUM     override default setting for extra_float_digits\n"));
 	printf(_("  --if-exists                  use IF EXISTS when dropping objects\n"));
 	printf(_("  --inserts                    dump data as INSERT commands, rather than COPY\n"));
 	printf(_("  --no-comments                do not dump comments\n"));
