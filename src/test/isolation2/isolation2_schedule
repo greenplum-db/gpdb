@@ -184,10 +184,10 @@ test: concurrent_update_epq
 test: upgrade_numsegments
 # Memory accounting tests
 
-# Sleep and OOM tests start
+# OOM tests start
 test: create_memory_accounting_tables 
 test: setup_memory_accounting
-test: oom_sleep oom_query
+test: oom_query
 test: oom_mixed_1 oom_mixed_2 oom_simple
 test: restore_memory_accounting_default
 # Sleep and OOM tests end
