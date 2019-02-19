@@ -244,16 +244,28 @@ start_postmaster(ClusterInfo *cluster, bool throw_error)
 	 * crash, the new cluster has to be recreated anyway.  fsync=off is a big
 	 * win on ext4.
 	 */
+	char *version_opts = "";
+	if (GET_MAJOR_VERSION(cluster->major_version) >= 904)
+		version_opts = "-c synchronous_standby_names='' --xid_warn_limit=10000000";
+	else
+	{
+		if (user_opts.segment_mode == DISPATCHER)
+			version_opts =
+				"-c gp_dbid=1 -c gp_contentid=-1 -c gp_num_contents_in_cluster=1";
+		else
+			version_opts =
+				"-c gp_dbid=1 -c gp_contentid=0 -c gp_num_contents_in_cluster=1";
+	}
+
 	snprintf(cmd, sizeof(cmd),
-		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility -c synchronous_standby_names='' --xid_warn_limit=10000000 %s%s %s%s \" start",
+		  "\"%s/pg_ctl\" -w -l \"%s\" -D \"%s\" -o \"-p %d -c gp_role=utility %s%s %s%s %s\" start",
 		  cluster->bindir, SERVER_LOG_FILE, cluster->pgconfig, cluster->port,
 			 (cluster->controldata.cat_ver >=
 			  BINARY_UPGRADE_SERVER_FLAG_CAT_VER) ? " -b" :
 			 " -c autovacuum=off -c autovacuum_freeze_max_age=2000000000",
 			 (cluster == &new_cluster) ?
 	  " -c synchronous_commit=off -c fsync=off -c full_page_writes=off" : "",
-			 cluster->pgopts ? cluster->pgopts : "", socket_string);
-
+			 cluster->pgopts ? cluster->pgopts : "", socket_string, version_opts);
 	/*
 	 * Don't throw an error right away, let connecting throw the error because
 	 * it might supply a reason for the failure.

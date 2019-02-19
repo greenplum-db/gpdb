@@ -63,7 +63,7 @@ old_8_3_check_for_name_data_type_usage(ClusterInfo *cluster)
 		/* exclude possible orphaned temp tables */
 								"		n.nspname !~ '^pg_temp_' AND "
 						 "		n.nspname !~ '^pg_toast_temp_' AND "
-								"		n.nspname NOT IN ('pg_catalog', 'information_schema')");
+								"		n.nspname NOT IN ('pg_catalog', 'information_schema', 'gp_toolkit')");
 
 		ntups = PQntuples(res);
 		i_nspname = PQfnumber(res, "nspname");
@@ -580,8 +580,8 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 		/* find bpchar_pattern_ops indexes */
 
 		/*
-		 * Do only non-hash, non-gin indexees;	we already invalidated them
-		 * above; no need to reindex twice
+		 * Do only non-hash, non-gin and non-bitmap indexes; we already 
+		 * invalidated them above; no need to reindex twice
 		 */
 		res = executeQueryOrDie(conn,
 								"SELECT n.nspname, c.relname "
@@ -594,7 +594,7 @@ old_8_3_invalidate_bpchar_pattern_ops_indexes(ClusterInfo *cluster,
 								"			SELECT	o.oid "
 				   "			FROM	pg_catalog.pg_opclass o, "
 				  "					pg_catalog.pg_am a"
-		"			WHERE	a.amname NOT IN ('hash', 'gin') AND "
+		"			WHERE	a.amname NOT IN ('hash', 'gin', 'bitmap') AND "
 			"					a.oid = o.opcmethod AND "
 								"					o.opcname = 'bpchar_pattern_ops') "
 								"		= ANY (i.indclass) AND "

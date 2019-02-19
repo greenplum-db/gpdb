@@ -404,7 +404,7 @@ old_GPDB5_check_for_unsupported_distribution_key_data_types(void)
 								"                      'pg_catalog.tinterval'::regtype, "
 								"                      'pg_catalog.money'::regtype, "
 								"                      'pg_catalog.anyarray'::regtype) AND "
-								"       attnum = any (p.distkey::int2[]) AND "
+								"       attnum = any (p.attrnums) AND "
 								"       c.relnamespace = n.oid AND "
 		/* exclude possible orphaned temp tables */
 								"  		n.nspname !~ '^pg_temp_'");
