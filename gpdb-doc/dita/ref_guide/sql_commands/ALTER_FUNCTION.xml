@@ -19,7 +19,7 @@ ALTER FUNCTION <varname>name</varname> ( [ [<varname>argmode</varname>] [<varnam
    SET SCHEMA <varname>new_schema</varname></codeblock><p>where
           <varname>action</varname> is one
       of:</p><codeblock>{CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT}
-{IMMUTABLE | STABLE | VOLATILE}
+{IMMUTABLE | STABLE | VOLATILE | [ NOT ] LEAKPROOF}
 {[EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER}
 EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
 COST <varname>execution_cost</varname>
@@ -98,6 +98,11 @@ RESET ALL</codeblock></section>
           <pd>Change whether the function is a security definer or not. The key word
               <codeph>EXTERNAL</codeph> is ignored for SQL conformance. See <codeph>CREATE
               FUNCTION</codeph> for more information about this capability.</pd>
+        </plentry>
+        <plentry>
+          <pt>LEAKPROOF</pt>
+          <pd> Change whether the function is considered leakproof or not. See <xref
+              href="CREATE_FUNCTION.xml#topic1"/> for more information about this capability. </pd>
         </plentry>
         <plentry>
           <pt>EXECUTE ON ANY</pt>
