@@ -3019,14 +3019,22 @@
           otherprops="op-print"> in the <cite>Greenplum Database Administrator Guide</cite></ph>.
         The default is <codeph>off</codeph>, the Global Deadlock Detector is disabled. </p>
       <p>If the Global Deadlock Detector is disabled (the default), Greenplum Database executes
-        these types of concurrent operations serially.</p>
-      <ul id="ul_trv_qqr_qgb">
-        <li>Concurrent update operations on a table distribution key</li>
-        <li>Concurrent update operations where a subplan in a query plan contains a motion
-          operation</li>
-      </ul>
-      <p>If the Global Deadlock Detector is enabled, Greenplum Database returns an error for the
-        concurrent operations if a deadlock is detected.</p>
+        concurrent update and delete operations on a heap table serially.</p>
+      <p>If the Global Deadlock Detector is enabled, it can determine that a deadlock exists, and
+        breaks the deadlock by cancelling one or more backend processes associated with the youngest
+        transaction(s) involved. </p>
+      <p>When the Global Deadlock Detector manages the following types of concurrent update or
+        delete transactions. Only one of the concurrent transactions will succeed. The other
+        transactions will fail with an error indicating concurrent updates on the same row is not
+          allowed.<ul id="ul_bxf_mpp_5gb">
+          <li>Concurrent update or delete transactions on the same row of a heap table where a
+            command contains a join condition where table rows are not co-located (a subplan in the
+            query plan contains a motion operation).</li>
+          <li>Concurrent update transactions on the same distribution key of a heap table that are
+            executed by the Greenplum Database legacy query optimizer.</li>
+          <li>Concurrent update transactions on the same row of a hash table that are executed by
+            the GPORCA optimizer.</li>
+        </ul></p>
       <p>The parameter can be set for a database system, an individual database, or a session.</p>
       <table id="table_vcm_p3r_qgb">
         <tgroup cols="3">
