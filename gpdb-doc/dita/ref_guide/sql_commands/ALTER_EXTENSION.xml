@@ -169,7 +169,7 @@ and <varname>aggregate_signature</varname> is:
           <pt><varname>left_type</varname></pt>
           <pt><varname>right_type</varname></pt>
           <pd>
-            <p>The data types (optionally schema-qualified) of the operator arguments. Specify
+            <p>The data types of the operator's arguments (optionally schema-qualified) . Specify
                 <codeph>NONE</codeph> for the missing argument of a prefix or postfix operator.</p>
           </pd>
         </plentry>
