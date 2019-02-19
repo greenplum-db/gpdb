@@ -9,12 +9,12 @@
       enforced.</note>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP} } | UNLOGGED] TABLE <varname>table_name</varname> ( 
+      <codeblock id="sql_command_synopsis">CREATE [[GLOBAL | LOCAL] {TEMPORARY | TEMP} } | UNLOGGED] TABLE [IF NOT EXISTS] <varname>table_name</varname> ( 
 [ { <varname>column_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ DEFAULT <varname>default_expr</varname> ] 
    [<varname>column_constraint</varname> [ ... ] [ ENCODING ( <varname>storage_directive</varname> [,...] ) ]
 ] 
    | <varname>table_constraint</varname>
-   | LIKE <varname>other_table</varname> [ <varname>like_option</varname> ... }
+   | LIKE <varname>source_table</varname> [ <varname>like_option</varname> ... ] }
      [, ... ] ]
    )
    [ INHERITS ( <varname>parent_table</varname> [, ... ] ) ]
@@ -42,10 +42,24 @@
             [WITH ( FILLFACTOR = <varname>value</varname> )]
    | PRIMARY KEY [USING INDEX TABLESPACE <varname>tablespace</varname>] 
                  [WITH ( FILLFACTOR = <varname>value</varname> )]
-   | CHECK ( <varname>expression</varname> )
+   | CHECK [ NO INHERIT ] ( <varname>expression</varname> )
    | REFERENCES table_name [ ( column_name [, ... ] ) ] 
             [ key_match_type ]
             [ key_action ]</codeblock>
+      <p>and <varname>table_constraint</varname> is:</p>
+      <codeblock>   [CONSTRAINT <varname>constraint_name</varname>]
+   UNIQUE ( <varname>column_name</varname> [, ... ] )
+          [USING INDEX TABLESPACE <varname>tablespace</varname>] 
+          [WITH ( FILLFACTOR=<varname>value</varname> )] 
+   | PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) 
+                 [USING INDEX TABLESPACE <varname>tablespace</varname>] 
+                 [WITH ( FILLFACTOR=<varname>value</varname> )] 
+   | CHECK [ NO INHERIT ] ( <varname>expression</varname> )
+   | FOREIGN KEY ( <varname>column_name</varname> [, ... ] )
+            REFERENCES <varname>table_name</varname> [ ( <varname>column_name</varname> [, ... ] ) ]
+            [ <varname>key_match_type</varname> ]
+            [ <varname>key_action</varname> ]
+            [ <varname>key_checking_mode</varname> ]</codeblock>
       <p>where <varname>storage_directive</varname> for a column is:</p>
       <codeblock>   COMPRESSTYPE={ZLIB | ZSTD | QUICKLZ | RLE_TYPE | NONE}
     [COMPRESSLEVEL={0-9} ]
@@ -59,20 +73,6 @@
    COMPRESSLEVEL={0-9}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
-      <p>and <varname>table_constraint</varname> is:</p>
-      <codeblock>   [CONSTRAINT <varname>constraint_name</varname>]
-   UNIQUE ( <varname>column_name</varname> [, ... ] )
-          [USING INDEX TABLESPACE <varname>tablespace</varname>] 
-          [WITH ( FILLFACTOR=<varname>value</varname> )] 
-   | PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) 
-                 [USING INDEX TABLESPACE <varname>tablespace</varname>] 
-                 [WITH ( FILLFACTOR=<varname>value</varname> )] 
-   | CHECK ( <varname>expression</varname> )
-   | FOREIGN KEY ( <varname>column_name</varname> [, ... ] )
-            REFERENCES <varname>table_name</varname> [ ( <varname>column_name</varname> [, ... ] ) ]
-            [ <varname>key_match_type</varname> ]
-            [ <varname>key_action</varname> ]
-            [ <varname>key_checking_mode</varname> ]</codeblock>
       <p>where <i>like_option</i>
         is:<codeblock>{ INCLUDING | EXCLUDING } 
          { DEFFAULTS | CONSTRAINTS | INDEXES | STORAGE | COMMENTS | ALL }</codeblock></p>
@@ -108,6 +108,7 @@
      END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ <varname>column_reference_storage_directive</varname> [, ...] ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
       <p>where <varname>subpartition_spec</varname> or <varname>template_spec</varname> is:</p>
       <codeblock><varname>subpartition_element</varname> [, ...]</codeblock>
@@ -122,6 +123,7 @@
      END ([<varname>datatype</varname>] '<varname>end_value</varname>') [INCLUSIVE | EXCLUSIVE]
      [ EVERY ([<varname>datatype</varname>] [<varname>number | </varname>INTERVAL] '<varname>interval_value</varname>') ]
 [ WITH ( <varname>partition_storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
+[ <varname>column_reference_storage_directive</varname> [, ...] ]
 [ TABLESPACE <varname>tablespace</varname> ]</codeblock>
       <p>where <varname>storage_parameter</varname> for a partition is:</p>
       <codeblock>   APPENDONLY={TRUE|FALSE}
@@ -132,16 +134,24 @@
    COMPRESSLEVEL={1-19}
    FILLFACTOR={10-100}
    OIDS[=TRUE|FALSE]</codeblock>
+      <p>where <varname>column_reference_storage_directive</varname> is:</p>
+      <codeblock>    COLUMN <varname>column_name</varname> ENCODING ( <varname>storage_directive</varname> [, ... ] ), ...
+  | DEFAULT COLUMN ENCODING ( <varname>storage_directive</varname> [, ...] )</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>CREATE TABLE</codeph> creates an initially empty table in the current database. The
         user who issues the command owns the table.</p>
+      <p>To be able to create a table, you must have <codeph>USAGE</codeph> privilege on all column
+        types or the type in the <codeph>OF</codeph> clause, respectively. </p>
       <p>If you specify a schema name, Greenplum creates the table in the specified schema.
         Otherwise Greenplum creates the table in the current schema. Temporary tables exist in a
         special schema, so you cannot specify a schema name when creating a temporary table. Table
         names must be distinct from the name of any other table, external table, sequence, index,
         view, or foreign table in the same schema.</p>
+      <p><codeph>CREATE TABLE</codeph> also automatically creates a data type that represents the
+        composite type corresponding to one row of the table. Therefore, tables cannot have the same
+        name as any existing data type in the same schema.</p>
       <p>The optional constraint clauses specify conditions that new or updated rows must satisfy
         for an insert or update operation to succeed. A constraint is an SQL object that helps
         define the set of valid values in the table in various ways. Constraints apply to tables,
@@ -191,7 +201,7 @@
         <plentry>
           <pt>GLOBAL | LOCAL</pt>
           <pd>These keywords are present for SQL standard compatibility, but have no effect in
-            Greenplum Database. </pd>
+            Greenplum Database and are deprecated.</pd>
         </plentry>
         <plentry>
           <pt>TEMPORARY | TEMP</pt>
@@ -287,13 +297,14 @@
             if multiple parent tables or the new table definition contain identically-named
               <codeph>constraints</codeph>, these constraints must all have the same check
             expression, or an error will be reported. Constraints having the same name and
-            expression will be merged into one copy. Notice that an unnamed <codeph>CHECK</codeph>
+            expression will be merged into one copy. A constraint marked <codeph>NO INHERIT</codeph>
+            in a parent will not be considered. Notice that an unnamed <codeph>CHECK</codeph>
             constraint in the new table will never be merged, since a unique name will always be
             chosen for it.</pd>
           <pd>Column <codeph>STORAGE</codeph> settings are also copied from parent tables.</pd>
         </plentry>
         <plentry>
-          <pt>LIKE <varname>other_table</varname>
+          <pt>LIKE <varname>source_table</varname>
             <varname>like_option</varname>
             <codeph>...</codeph>]</pt>
           <pd>The <codeph>LIKE</codeph> clause specifies a table from which the new table
@@ -312,31 +323,28 @@
             requested, all check constraints are copied. </pd>
           <pd>Any indexes on the original table will not be created on the new table, unless the
               <codeph>INCLUDING INDEXES</codeph> clause is specified.</pd>
-          <pd><codeph>STORAGE</codeph> settings for the copied column definitions will only
-            be copied if <codeph>INCLUDING STORAGE</codeph> is specified. The
-            default behavior is to exclude <codeph>STORAGE</codeph> settings, resulting
-            in the copied columns in the new table having type-specific default
-            settings. 
-           </pd>
-           <pd>
-             Comments for the copied columns, constraints, and indexes
-             will only be copied if <codeph>INCLUDING COMMENTS</codeph>
-             is specified. The default behavior is to exclude comments, resulting in
-             the copied columns and constraints in the new table having no comments.
-           </pd>
-           <pd>
-             <codeph>INCLUDING ALL</codeph> is an abbreviated form of
-             <codeblock>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
+          <pd><codeph>STORAGE</codeph> settings for the copied column definitions will only be
+            copied if <codeph>INCLUDING STORAGE</codeph> is specified. The default behavior is to
+            exclude <codeph>STORAGE</codeph> settings, resulting in the copied columns in the new
+            table having type-specific default settings. </pd>
+          <pd> Comments for the copied columns, constraints, and indexes will only be copied if
+              <codeph>INCLUDING COMMENTS</codeph> is specified. The default behavior is to exclude
+            comments, resulting in the copied columns and constraints in the new table having no
+            comments. </pd>
+          <pd>
+            <codeph>INCLUDING ALL</codeph> is an abbreviated form of
+            <codeblock>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
                INCLUDING STORAGE INCLUDING COMMENTS</codeblock>
-            </pd>
-            <pd>
-              Note also that unlike <codeph>INHERITS</codeph>, columns and
-              constraints copied by <codeph>LIKE</codeph> are not merged with similarly
-              named columns and constraints.
-              If the same name is specified explicitly or in another
-              <codeph>LIKE</codeph> clause, an error is signalled.
-            </pd>
-          </plentry>
+          </pd>
+          <pd> Note also that unlike <codeph>INHERITS</codeph>, columns and constraints copied by
+              <codeph>LIKE</codeph> are not merged with similarly named columns and constraints. If
+            the same name is specified explicitly or in another <codeph>LIKE</codeph> clause, an
+            error is signalled. </pd>
+          <pd>The <codeph>LIKE</codeph> clause can also be used to copy columns from
+            views, foreign tables, or composite types. Inapplicable options (e.g., 
+            <codeph>INCLUDING INDEXES</codeph> from a view) are ignored.
+          </pd>
+        </plentry>
         <plentry>
           <pt>CONSTRAINT <varname>constraint_name</varname></pt>
           <pd>An optional name for a column or table constraint. If the constraint is violated, the
@@ -355,23 +363,20 @@
               <codeph>NULL</codeph> is the default.</pd>
         </plentry>
         <plentry>
-          <pt>CHECK( <varname>expression</varname> )</pt>
-          <pd>The <varname>CHECK</varname> clause specifies an expression producing a
-            Boolean result which new or updated rows must satisfy for an
-            insert or update operation to succeed. Expressions evaluating
-            to <codeph>TRUE</codeph> or <codeph>UNKNOWN</codeph> succeed. Should any row of an insert or
-            update operation produce a <codeph>FALSE</codeph> result an error exception is
-            raised and the insert or update does not alter the database.  A
-            check constraint specified as a column constraint should
-            reference that column's value only, while an expression
-            appearing in a table constraint can reference multiple columns.
-          </pd>
-          <pd>
-            Currently, <varname>CHECK</varname> expressions cannot contain
-            subqueries nor refer to variables other than columns of the
-            current row.
-          </pd>
-        </plentry>          
+          <pt>CHECK [ NO INHERIT] ( <varname>expression</varname> )</pt>
+          <pd>The <varname>CHECK</varname> clause specifies an expression producing a Boolean result
+            which new or updated rows must satisfy for an insert or update operation to succeed.
+            Expressions evaluating to <codeph>TRUE</codeph> or <codeph>UNKNOWN</codeph> succeed.
+            Should any row of an insert or update operation produce a <codeph>FALSE</codeph> result
+            an error exception is raised and the insert or update does not alter the database. A
+            check constraint specified as a column constraint should reference that column's value
+            only, while an expression appearing in a table constraint can reference multiple
+            columns. </pd>
+          <pd>A constraint marked with <codeph>NO INHERIT</codeph> will not propagate to child
+            tables. </pd>
+          <pd> Currently, <varname>CHECK</varname> expressions cannot contain subqueries nor refer
+            to variables other than columns of the current row. </pd>
+        </plentry>
         <plentry>
           <pt>UNIQUE ( <varname>column constraint</varname> )</pt>
           <pt>UNIQUE ( <varname>column_name</varname> [, ... ] ) ( <varname>table
@@ -389,43 +394,31 @@
               href="#topic1/section5" format="dita"/>.</pd>
         </plentry>
         <plentry>
-          <pt>EXCLUDE [ USING <varname>index_method</varname> ] ( <varname>exclude_element</varname> WITH <varname>operator</varname> [, ... ] ) <varname>index_parameters</varname> [ WHERE ( <varname>predicate</varname> ) ]</pt>
-          <pd>The <codeph>EXCLUDE</codeph> clause defines an exclusion
-            constraint, which guarantees that if
-            any two rows are compared on the specified column(s) or
-            expression(s) using the specified operator(s), not all of these
-            comparisons will return <codeph>TRUE</codeph>. If all of the
-            specified operators test for equality, this is equivalent to a
-              <codeph>UNIQUE</codeph> constraint, although an ordinary unique constraint
-            will be faster. However, exclusion constraints can specify
-            constraints that are more general than simple equality.
-            For example, you can specify a constraint that
-            no two rows in the table contain overlapping circles
-            by using the <codeph>&amp;&amp;</codeph> operator.
-          </pd>
-          <pd>
-            Exclusion constraints are implemented using
-            an index, so each specified operator must be associated with an
-            appropriate operator class for the index access
-            method <codeph>index_method</codeph>.
-            The operators are required to be commutative.
-            Each <codeph>exclude_element</codeph>
-            can optionally specify an operator class and/or ordering options;
-            these are described fully under
-            <xref href="CREATE_INDEX.xml" format="dita"></xref>.
-          </pd>
-          <pd>
-            The access method must support <codeph>amgettuple</codeph>; at present this means GIN
-            cannot be used.  Although it's allowed, there is little point in using
-            btree or hash indexes with an exclusion constraint, because this
-            does nothing that an ordinary unique constraint doesn't do better.
-            So in practice the access method will always be GiST.
-          </pd>
-          <pd>
-             The <codeph>predicate</codeph> allows you to specify an
-             exclusion constraint on a subset of the table; internally this creates a
-             partial index. Note that parentheses are required around the predicate.                     
-          </pd>
+          <pt>EXCLUDE [ USING <varname>index_method</varname> ] ( <varname>exclude_element</varname>
+            WITH <varname>operator</varname> [, ... ] ) <varname>index_parameters</varname> [ WHERE
+            ( <varname>predicate</varname> ) ]</pt>
+          <pd>The <codeph>EXCLUDE</codeph> clause defines an exclusion constraint, which guarantees
+            that if any two rows are compared on the specified column(s) or expression(s) using the
+            specified operator(s), not all of these comparisons will return <codeph>TRUE</codeph>.
+            If all of the specified operators test for equality, this is equivalent to a
+              <codeph>UNIQUE</codeph> constraint, although an ordinary unique constraint will be
+            faster. However, exclusion constraints can specify constraints that are more general
+            than simple equality. For example, you can specify a constraint that no two rows in the
+            table contain overlapping circles by using the <codeph>&amp;&amp;</codeph> operator. </pd>
+          <pd> Exclusion constraints are implemented using an index, so each specified operator must
+            be associated with an appropriate operator class for the index access method
+              <codeph>index_method</codeph>. The operators are required to be commutative. Each
+              <codeph>exclude_element</codeph> can optionally specify an operator class and/or
+            ordering options; these are described fully under <xref href="CREATE_INDEX.xml"
+              format="dita"/>. </pd>
+          <pd> The access method must support <codeph>amgettuple</codeph>; at present this means GIN
+            cannot be used. Although it's allowed, there is little point in using btree or hash
+            indexes with an exclusion constraint, because this does nothing that an ordinary unique
+            constraint doesn't do better. So in practice the access method will always be GiST or
+            SP-GiST.</pd>
+          <pd> The <codeph>predicate</codeph> allows you to specify an exclusion constraint on a
+            subset of the table; internally this creates a partial index. Note that parentheses are
+            required around the predicate. </pd>
         </plentry>
         <plentry>
           <pt>PRIMARY KEY ( <varname>column constraint</varname> )</pt>
@@ -450,8 +443,9 @@
             ]</pt>
           <pt>[<varname>key_match_type</varname>] [<varname>key_action</varname>]</pt>
           <pt>FOREIGN KEY (<varname>column_name</varname> [, ...])</pt>
-          <pt>  REFERENCES <varname>table_name</varname> [(<varname>column_name</varname> [, ...])</pt>
-          <pt>  [key_match_type] [key_action] [key_checking_mode]</pt>
+          <pt> REFERENCES <varname>table_name</varname> [(<varname>column_name</varname> [,
+            ...])</pt>
+          <pt> [key_match_type] [key_action] [key_checking_mode]</pt>
           <pd>The <codeph>REFERENCES</codeph> and <codeph>FOREIGN KEY</codeph> clauses specify
             referential integrity constraints (foreign key constraints). Greenplum accepts
             referential integrity constraints as specified in PostgreSQL syntax but does not enforce
@@ -462,9 +456,9 @@
           <pt>WITH ( <varname>storage_option=value</varname> )</pt>
           <pd>The <codeph>WITH</codeph> clause can specify storage parameters for tables, and for
             indexes associated with a <codeph>UNIQUE</codeph>, <codeph>PRIMARY</codeph>, or
-            <codeph>EXCLUDE</codeph> constraint. Note that you can also set storage parameters on a particular partition or
-            subpartition by declaring the <codeph>WITH</codeph> clause in the partition
-            specification. The lowest-level settings have priority.</pd>
+              <codeph>EXCLUDE</codeph> constraint. Note that you can also set storage parameters on
+            a particular partition or subpartition by declaring the <codeph>WITH</codeph> clause in
+            the partition specification. The lowest-level settings have priority.</pd>
           <pd>The defaults for some of the table storage options can be specified with the server
             configuration parameter <codeph>gp_default_storage_options</codeph>. For information
             about setting default storage options, see <xref href="#topic1/section5" format="dita"
@@ -487,13 +481,14 @@
             checksum, the transaction is aborted. If you set the value to <codeph>FALSE</codeph> to
             disable checksum validation, checking the table data for on-disk corruption will not be
             performed.</pd>
-          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default), <codeph>ZSTD</codeph>,
-              <codeph>RLE_TYPE</codeph>, or <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type
-              of compression used. The value <codeph>NONE</codeph> disables compression. Zstd provides
-	      for both speed or a good compression ratio, tunable with the <codeph>COMPRESSLEVEL</codeph> option.
-	      QuickLZ and zlib are provided for backwards-compatibility. Zstd outperforms these
-              compression types on usual workloads. The <codeph>COMPRESSTYPE</codeph> option
-            is only valid if <codeph>APPENDONLY=TRUE</codeph>.<p>
+          <pd><b>COMPRESSTYPE</b> — Set to <codeph>ZLIB</codeph> (the default),
+              <codeph>ZSTD</codeph>, <codeph>RLE_TYPE</codeph>, or
+              <codeph>QUICKLZ</codeph><sup>1</sup> to specify the type of compression used. The
+            value <codeph>NONE</codeph> disables compression. Zstd provides for both speed or a good
+            compression ratio, tunable with the <codeph>COMPRESSLEVEL</codeph> option. QuickLZ and
+            zlib are provided for backwards-compatibility. Zstd outperforms these compression types
+            on usual workloads. The <codeph>COMPRESSTYPE</codeph> option is only valid if
+              <codeph>APPENDONLY=TRUE</codeph>.<p>
               <note type="note"><sup>1</sup>QuickLZ compression is available only in the commercial
                 release of Pivotal Greenplum Database.</note>
             </p><p>The value <codeph>RLE_TYPE</codeph> is supported only if
@@ -509,13 +504,14 @@
               in sorted order or the compression is applied to column data that is in sorted
               order.</p><p>For information about using table compression, see "Choosing the Table
               Storage Model" in the <cite>Greenplum Database Administrator Guide</cite>.</p></pd>
-              <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
-	      integer value from 1 (fastest compression) to 19 (highest compression ratio).
-	      For zlib compression, the valid range is from 1 to 9. QuickLZ
-            compression level can only be set to 1. If not declared, the default is 1. For
-              <codeph>RLE_TYPE</codeph>, the compression level can be set an integer value from 1
-            (fastest compression) to 4 (highest compression ratio). </pd>
-          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if <codeph>APPENDONLY=TRUE</codeph>.</pd>
+          <pd><b>COMPRESSLEVEL</b> — For Zstd compression of append-optimized tables, set to an
+            integer value from 1 (fastest compression) to 19 (highest compression ratio). For zlib
+            compression, the valid range is from 1 to 9. QuickLZ compression level can only be set
+            to 1. If not declared, the default is 1. For <codeph>RLE_TYPE</codeph>, the compression
+            level can be set an integer value from 1 (fastest compression) to 4 (highest compression
+            ratio). </pd>
+          <pd>The <codeph>COMPRESSLEVEL</codeph> option is valid only if
+              <codeph>APPENDONLY=TRUE</codeph>.</pd>
           <pd><b>FILLFACTOR</b> — See <codeph><xref href="CREATE_INDEX.xml#topic1" type="topic"
                 format="dita"/></codeph> for more information about this index storage parameter. </pd>
           <pd><b>OIDS</b> — Set to <codeph>OIDS=FALSE</codeph> (the default) so that rows do not
@@ -549,9 +545,9 @@
         <plentry>
           <pt>USING INDEX TABLESPACE <varname>tablespace</varname></pt>
           <pd>This clause allows selection of the tablespace in which the index associated with a
-              <codeph>UNIQUE</codeph>, <codeph>PRIMARY KEY</codeph>, or <codeph>EXCLUDE</codeph> 
-            constraint will be created. If
-            not specified, the database's default tablespace is used. </pd>
+              <codeph>UNIQUE</codeph>, <codeph>PRIMARY KEY</codeph>, or <codeph>EXCLUDE</codeph>
+            constraint will be created. If not specified, the database's default tablespace is used.
+          </pd>
         </plentry>
         <plentry>
           <pt>DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] )</pt>
@@ -667,7 +663,7 @@
                 <pd><b><codeph>WITH</codeph>
                   </b>— Sets the table storage options for a partition. For example, you may want
                   older partitions to be append-optimized tables and newer partitions to be regular
-                  heap tables.</pd>
+                  heap tables. </pd>
                 <pd><b><codeph>TABLESPACE</codeph></b> — The name of the tablespace in which the
                   partition is to be created. </pd>
               </plentry>
@@ -764,10 +760,10 @@
             <li>
               <cmdname>ORIENTATION</cmdname>
             </li>
-          </ul><p>The defaults can be set for the system, a database, or a user. For information about
-            setting storage options, see the server configuration parameter <codeph><xref
-              href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
-          >gp_default_storage_options</xref></codeph>.</p></li>
+          </ul><p>The defaults can be set for the system, a database, or a user. For information
+            about setting storage options, see the server configuration parameter <codeph><xref
+                href="../../ref_guide/config_params/guc-list.xml#gp_default_storage_options"
+                >gp_default_storage_options</xref></codeph>.</p></li>
       </ul>
       <note type="important">The current Greenplum Database legacy optimizer allows list partitions
         with multi-column (composite) partition keys. GPORCA does not support composite keys, so
