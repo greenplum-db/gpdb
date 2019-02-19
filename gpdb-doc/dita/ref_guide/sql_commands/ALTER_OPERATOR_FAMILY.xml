@@ -53,14 +53,13 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
           <pd>In an  <codeph>OPERATOR</codeph> clause, the operand data type(s) of the operator, or
               <codeph>NONE</codeph> to signify a left-unary or right-unary operator. Unlike the
             comparable syntax in <codeph>CREATE OPERATOR CLASS</codeph>, the operand data types must
-            always be specified.In an <codeph>ADD FUNCTION</codeph> clause, the operand data type(s)
+            always be specified. In an <codeph>ADD FUNCTION</codeph> clause, the operand data type(s)
             the function is intended to support, if different from the input data type(s) of the
-            function. For B-tree and hash indexes it is not necessary to specify op_type since the
-            function's input data type(s) are always the correct ones to use. For
-              <codeph>GIN</codeph> and <codeph>GiST</codeph> indexes it is necessary to specify the
-            input data type the function is to be used with.In a <codeph>DROP FUNCTION</codeph>
-            clause, the operand data type(s) the function is intended to support must be
-            specified.</pd>
+            function. For B-tree comparison functions and hash indexes it is not necessary to specify <varname>op_type</varname> since the
+            function's input data type(s) are always the correct ones to use.  For B-tree sort
+            support functions and all functions in GiST, SP-GiST and GIN operator
+            classes, it is necessary to specify the operand data type(s) the function
+            is to be used with.</pd> 
         </plentry>
         <plentry>
           <pt><varname>sort_family_name</varname></pt>
@@ -94,8 +93,8 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         family, by strategy or support number and input data type(s). The name of the operator or
         function occupying the slot is not mentioned. Also, for <codeph>DROP FUNCTION</codeph> the
         type(s) to specify are the input data type(s) the function is intended to support; for
-          <codeph>GIN</codeph> and <codeph>GiST</codeph> indexes this might have nothing to do with
-        the actual input argument types of the function. </p>
+          <codeph>GiST</codeph>, <codeph>SP_GiST</codeph> and <codeph>GIN</codeph> indexes this
+        might have nothing to do with the actual input argument types of the function. </p>
       <p>Because the index machinery does not check access permissions on functions before using
         them, including a function or operator in an operator family is tantamount to granting
         public execute permission on it. This is usually not an issue for the sorts of functions
@@ -104,10 +103,9 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
         inlined into the calling query, which will prevent the optimizer from recognizing that the
         query matches an index.</p>
       <p>Before Greenplum Database 6.0, the <codeph>OPERATOR</codeph> clause could include a
-        <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum
-        Database now determines whether an index operator is "lossy" on-the-fly at run time. This
-        allows more efficient handling of cases where an operator might or might not be
-        lossy.</p>
+          <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum Database
+        now determines whether an index operator is "lossy" on-the-fly at run time. This allows more
+        efficient handling of cases where an operator might or might not be lossy.</p>
     </section>
     <section id="section7">
       <title>Examples</title>
