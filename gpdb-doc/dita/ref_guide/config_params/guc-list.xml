@@ -4379,15 +4379,17 @@
     <title>gp_recursive_cte_prototype</title>
     <body>
       <p>Controls the availability of the experimental keyword <codeph>RECURSIVE</codeph> in the
-          <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph> command. The keyword
-        allows a subquery in the <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph>
-        command to reference itself. The default value is <codeph>false</codeph>, the keyword is not
-        allowed in the <codeph>WITH</codeph> clause a <codeph>SELECT[ INTO]</codeph> command.</p>
+          <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph> command, or a
+          <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
+        keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
+        itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword
+        is not allowed in the <codeph>WITH</codeph> clause of a command.</p>
       <note type="warning">The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is
         not intended for use in a production environment. Experimental features are subject to
         change without notice in future releases.</note>
       <p>For information about the experimental keyword <codeph>RECURSIVE</codeph>, see the
-          <codeph>SELECT</codeph> command.</p>
+            <codeph><xref href="../sql_commands/SELECT.xml">SELECT</xref></codeph> command and <xref
+          href="../../admin_guide/query/topics/CTE-query.xml"/>.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <note>This parameter will be removed if the <codeph>RECURSIVE</codeph> keyword is promoted
