@@ -1510,7 +1510,8 @@ cdbcomponent_getCdbComponentsList(void)
 int
 getgpsegmentCount(void)
 {
-	int32 numsegments = -1;
+	/* 1 represents a singleton postgresql in utility mode */
+	int32 numsegments = 1;
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		numsegments = cdbcomponent_getCdbComponents(true)->total_segments;

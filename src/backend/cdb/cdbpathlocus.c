@@ -345,7 +345,7 @@ cdbpathlocus_from_subquery(struct PlannerInfo *root,
 				break;
 			}
 		default:
-			CdbPathLocus_MakeNull(&locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+			CdbPathLocus_MakeNull(&locus, GP_POLICY_INVALID_NUMSEGMENTS());
 			Insist(0);
 	}
 	return locus;

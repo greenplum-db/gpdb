@@ -408,7 +408,7 @@ ExecInitResult(Result *node, EState *estate, int eflags)
 			 * For ORCA generated plan we could distribute to ALL as partially
 			 * distributed tables are not supported by ORCA yet.
 			 */
-			numSegments = GP_POLICY_ALL_NUMSEGMENTS;
+			numSegments = getgpsegmentCount();
 		}
 
 		resstate->hashFilter = makeCdbHash(numSegments, node->numHashFilterCols, node->hashFilterFuncs);

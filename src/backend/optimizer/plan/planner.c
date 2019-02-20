@@ -1705,7 +1705,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 	gp_motion_cost_per_row :
 	2.0 * cpu_tuple_cost;
 
-	CdbPathLocus_MakeNull(&current_locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+	CdbPathLocus_MakeNull(&current_locus, GP_POLICY_INVALID_NUMSEGMENTS());
 
 	/* Tweak caller-supplied tuple_fraction if have LIMIT/OFFSET */
 	if (parse->limitCount || parse->limitOffset)
@@ -2342,7 +2342,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 
 				/* Hashed aggregation produces randomly-ordered results */
 				current_pathkeys = NIL;
-				CdbPathLocus_MakeNull(&current_locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+				CdbPathLocus_MakeNull(&current_locus, GP_POLICY_INVALID_NUMSEGMENTS());
 			}
 			else if (!grpext && (parse->hasAggs || parse->groupClause))
 			{
@@ -2407,7 +2407,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 												  0);
 				}
 
-				CdbPathLocus_MakeNull(&current_locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+				CdbPathLocus_MakeNull(&current_locus, GP_POLICY_INVALID_NUMSEGMENTS());
 			}
 			else if (grpext && (parse->hasAggs || parse->groupClause))
 			{
@@ -2467,7 +2467,7 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 							make_pathkeys_for_sortclauses(root,
 														  parse->sortClause,
 														  result_plan->targetlist);
-					CdbPathLocus_MakeNull(&current_locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+					CdbPathLocus_MakeNull(&current_locus, GP_POLICY_INVALID_NUMSEGMENTS());
 				}
 			}
 			else if (root->hasHavingQual)
@@ -2492,8 +2492,8 @@ grouping_planner(PlannerInfo *root, double tuple_fraction)
 												   NULL);
 				/* Result will be only one row anyway; no sort order */
 				current_pathkeys = NIL;
-				mark_plan_general(result_plan, GP_POLICY_ALL_NUMSEGMENTS);
-				CdbPathLocus_MakeNull(&current_locus, __GP_POLICY_EVIL_NUMSEGMENTS);
+				mark_plan_general(result_plan, getgpsegmentCount());
+				CdbPathLocus_MakeNull(&current_locus, GP_POLICY_INVALID_NUMSEGMENTS());
 			}
 		}						/* end of non-minmax-aggregate case */
 

@@ -356,7 +356,7 @@ get_partitioned_policy_from_flow(Plan *plan)
 	 */
 	return createHashPartitionedPolicy(policykeys,
 									   policyopclasses,
-									   GP_POLICY_DEFAULT_NUMSEGMENTS);
+									   GP_POLICY_DEFAULT_NUMSEGMENTS());
 }
 
 
@@ -385,7 +385,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 	ApplyMotionState state;
 	bool		needToAssignDirectDispatchContentIds = false;
 	bool		bringResultToDispatcher = false;
-	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	int			numsegments = getgpsegmentCount();
 
 	/* Initialize mutator context. */
 
@@ -432,7 +432,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 				}
 				else if (gp_create_table_random_default_distribution)
 				{
-					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS);
+					targetPolicy = createRandomPartitionedPolicy(GP_POLICY_DEFAULT_NUMSEGMENTS());
 					ereport(NOTICE,
 							(errcode(ERRCODE_SUCCESSFUL_COMPLETION),
 							 errmsg("using default RANDOM distribution since no distribution was specified"),
@@ -474,7 +474,7 @@ apply_motion(PlannerInfo *root, Plan *plan, Query *query)
 						}
 						targetPolicy = createHashPartitionedPolicy(policykeys,
 																   policyopclasses,
-																   GP_POLICY_DEFAULT_NUMSEGMENTS);
+																   GP_POLICY_DEFAULT_NUMSEGMENTS());
 					}
 
 					/* If we deduced the policy from the query, give a NOTICE */
@@ -977,7 +977,7 @@ add_slice_to_motion(Motion *motion,
 	int			i;
 
 	Assert(numsegments > 0);
-	if (numsegments == __GP_POLICY_EVIL_NUMSEGMENTS)
+	if (numsegments == GP_POLICY_INVALID_NUMSEGMENTS())
 	{
 		Assert(!"what's the proper value of numsegments?");
 	}

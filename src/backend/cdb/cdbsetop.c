@@ -418,7 +418,7 @@ make_motion_hash_all_targets(PlannerInfo *root, Plan *subplan)
 								  hashexprs,
 								  hashopfamilies,
 								  false /* useExecutorVarFormat */,
-								  GP_POLICY_ALL_NUMSEGMENTS);
+								  getgpsegmentCount());
 	}
 	else
 	{
@@ -499,7 +499,7 @@ mark_append_locus(Plan *plan, GpSetOpType optype)
 	/*
 	 * FIXME: for append we forcely collect data on all segments
 	 */
-	int			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	int			numsegments = getgpsegmentCount();
 
 	switch (optype)
 	{
@@ -605,7 +605,7 @@ void
 mark_plan_entry(Plan *plan)
 {
 	Assert(is_plan_node((Node *) plan) && plan->flow == NULL);
-	plan->flow = makeFlow(FLOW_SINGLETON, GP_POLICY_ENTRY_NUMSEGMENTS);
+	plan->flow = makeFlow(FLOW_SINGLETON, getgpsegmentCount());
 	plan->flow->segindex = -1;
 	plan->flow->locustype = CdbLocusType_Entry;
 }

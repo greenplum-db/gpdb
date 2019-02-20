@@ -1359,12 +1359,12 @@ set_append_path_locus(PlannerInfo *root, Path *pathnode, RelOptInfo *rel,
 	{
 		/* FIXME: do not hard code to ALL */
 		CdbPathLocus_MakeGeneral(&pathnode->locus,
-								 GP_POLICY_ALL_NUMSEGMENTS);
+								 getgpsegmentCount());
 		return;
 	}
 
 	/* By default put Append node on all the segments */
-	numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+	numsegments = getgpsegmentCount();
 	foreach(l, subpaths)
 	{
 		Path	   *subpath = (Path *) lfirst(l);
@@ -1538,7 +1538,7 @@ create_result_path(List *quals)
 	pathnode->path.total_cost = cpu_tuple_cost;
 
 	/* Result can be on any segments */
-	CdbPathLocus_MakeGeneral(&pathnode->path.locus, GP_POLICY_ALL_NUMSEGMENTS);
+	CdbPathLocus_MakeGeneral(&pathnode->path.locus, getgpsegmentCount());
 	pathnode->path.motionHazard = false;
 	pathnode->path.rescannable = true;
 
@@ -2637,14 +2637,14 @@ create_functionscan_path(PlannerInfo *root, RelOptInfo *rel,
 				CdbPathLocus_MakeEntry(&pathnode->locus);
 			else
 				CdbPathLocus_MakeGeneral(&pathnode->locus,
-										 GP_POLICY_ALL_NUMSEGMENTS);
+										 getgpsegmentCount());
 			break;
 		case PROEXECLOCATION_MASTER:
 			CdbPathLocus_MakeEntry(&pathnode->locus);
 			break;
 		case PROEXECLOCATION_ALL_SEGMENTS:
 			CdbPathLocus_MakeStrewn(&pathnode->locus,
-									GP_POLICY_ALL_NUMSEGMENTS);
+									getgpsegmentCount());
 			break;
 		default:
 			elog(ERROR, "unrecognized proexeclocation '%c'", exec_location);
@@ -2738,7 +2738,7 @@ create_valuesscan_path(PlannerInfo *root, RelOptInfo *rel,
 		/*
 		 * ValuesScan can be on any segment.
 		 */
-		CdbPathLocus_MakeGeneral(&pathnode->locus, GP_POLICY_ALL_NUMSEGMENTS);
+		CdbPathLocus_MakeGeneral(&pathnode->locus, getgpsegmentCount());
 
 	pathnode->motionHazard = false;
 	pathnode->rescannable = true;
@@ -2798,7 +2798,7 @@ create_worktablescan_path(PlannerInfo *root, RelOptInfo *rel,
 	if (rel->cdbpolicy)
 		numsegments = rel->cdbpolicy->numsegments;
 	else
-		numsegments = GP_POLICY_ALL_NUMSEGMENTS; /* FIXME */
+		numsegments = getgpsegmentCount(); /* FIXME */
 
 	if (ctelocus == CdbLocusType_Entry)
 		CdbPathLocus_MakeEntry(&result);
@@ -2891,10 +2891,10 @@ create_foreignscan_path(PlannerInfo *root, RelOptInfo *rel,
 	switch (rel->ftEntry->exec_location)
 	{
 		case FTEXECLOCATION_ANY:
-			CdbPathLocus_MakeGeneral(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			CdbPathLocus_MakeGeneral(&(pathnode->path.locus), getgpsegmentCount());
 			break;
 		case FTEXECLOCATION_ALL_SEGMENTS:
-			CdbPathLocus_MakeStrewn(&(pathnode->path.locus), GP_POLICY_ALL_NUMSEGMENTS);
+			CdbPathLocus_MakeStrewn(&(pathnode->path.locus), getgpsegmentCount());
 			break;
 		case FTEXECLOCATION_MASTER:
 			CdbPathLocus_MakeEntry(&(pathnode->path.locus));

@@ -65,35 +65,16 @@ typedef FormData_gp_policy *Form_gp_policy;
  * A magic number, setting GpPolicy.numsegments to this value will cause a
  * failed assertion at runtime, which allows developers to debug with gdb.
  */
-#define __GP_POLICY_EVIL_NUMSEGMENTS		(666)
-
-/*
- * All the segments.  getgpsegmentCount() should not be used directly as it
- * will return 0 in utility mode, but a valid numsegments should always be
- * greater than 0.
- */
-#define GP_POLICY_ALL_NUMSEGMENTS			Max(1, getgpsegmentCount())
-
-/*
- * Minimal set of segments.
- */
-#define GP_POLICY_MINIMAL_NUMSEGMENTS		1
-
-/*
- * A random set of segments, the value is different on each call.
- */
-#define GP_POLICY_RANDOM_NUMSEGMENTS		\
-	(GP_POLICY_MINIMAL_NUMSEGMENTS + \
-	 random() % (GP_POLICY_ALL_NUMSEGMENTS - GP_POLICY_MINIMAL_NUMSEGMENTS + 1))
+#define GP_POLICY_INVALID_NUMSEGMENTS()		(-1)
 
 /*
  * Default set of segments, the value is controlled by the variable
  * gp_create_table_default_numsegments.
  */
-#define GP_POLICY_DEFAULT_NUMSEGMENTS		\
-( gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_FULL    ? GP_POLICY_ALL_NUMSEGMENTS \
-: gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_RANDOM  ? GP_POLICY_RANDOM_NUMSEGMENTS \
-: gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_MINIMAL ? GP_POLICY_MINIMAL_NUMSEGMENTS \
+#define GP_POLICY_DEFAULT_NUMSEGMENTS()		\
+( gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_FULL    ? getgpsegmentCount() \
+: gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_RANDOM  ? (1 + random() % getgpsegmentCount()) \
+: gp_create_table_default_numsegments == GP_DEFAULT_NUMSEGMENTS_MINIMAL ? 1 \
 : gp_create_table_default_numsegments )
 
 /*
@@ -109,16 +90,6 @@ enum
 	GP_DEFAULT_NUMSEGMENTS_RANDOM  = -2,
 	GP_DEFAULT_NUMSEGMENTS_MINIMAL = -3,
 };
-
-/*
- * The segments suitable for Entry locus, which include both master and all
- * the segments.
- *
- * FIXME: in fact numsegments only describe a range of segments from 0 to
- * `numsegments-1`, master is not described by it at all.  So far this does
- * not matter.
- */
-#define GP_POLICY_ENTRY_NUMSEGMENTS			GP_POLICY_ALL_NUMSEGMENTS
 
 /*
  * GpPolicyType represents a type of policy under which a relation's
