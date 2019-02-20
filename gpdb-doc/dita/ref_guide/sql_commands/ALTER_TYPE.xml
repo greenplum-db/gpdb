@@ -63,13 +63,13 @@ where <varname>action</varname> is one of:
         several attributes in a single command. </p>
       <p>You can change the name, the owner, and the schema of a type. You can also add or update
         storage options for a scalar type.<note>Greenplum Database does not support adding storage
-          options for row or composite types.</note></p><p>You must own the type to use
-          <codeph>ALTER TYPE</codeph>. To change the schema of a type, you must also have
-          <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you must also be
-        a direct or indirect member of the new owning role, and that role must have
+          options for row or composite types.</note></p><p>You must own the type to use <codeph>ALTER TYPE</codeph>. To change the schema of a type, you
+        must also have <codeph>CREATE</codeph> privilege on the new schema. To alter the owner, you
+        must also be a direct or indirect member of the new owning role, and that role must have
           <codeph>CREATE</codeph> privilege on the type's schema. (These restrictions enforce that
         altering the owner does not do anything that could be done by dropping and recreating the
-        type. However, a superuser can alter ownership of any type.)</p>
+        type. However, a superuser can alter ownership of any type.) To add an attribute or alter an attribute type, you must also
+        have <codeph>USAGE</codeph> privilege on the data type.</p>
       <p><codeph>ALTER TYPE ... ADD VALUE</codeph> (the form that adds a new value to an enum type)
         cannot be executed inside a transaction block.</p>
       <p> Comparisons involving an added enum value will sometimes be slower than comparisons
