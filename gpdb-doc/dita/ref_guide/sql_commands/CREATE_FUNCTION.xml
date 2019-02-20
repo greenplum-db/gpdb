@@ -12,7 +12,7 @@
         | RETURNS TABLE ( <varname>column_name</varname> <varname>column_type</varname> [, ...] ) ]
     { LANGUAGE <varname>langname</varname>
     | WINDOW
-    | IMMUTABLE | STABLE | VOLATILE
+    | IMMUTABLE | STABLE | VOLATILE | [NOT] LEAKPROOF
     | CALLED ON NULL INPUT | RETURNS NULL ON NULL INPUT | STRICT
     | [EXTERNAL] SECURITY INVOKER | [EXTERNAL] SECURITY DEFINER
     | EXECUTE ON { ANY | MASTER | ALL SEGMENTS }
@@ -22,36 +22,40 @@
     | AS '<varname>obj_file</varname>', '<varname>link_symbol</varname>' } ...
     [ WITH ({ DESCRIBE = describe_function
            } [, ...] ) ]</codeblock></section>
-        <section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines a new function. <codeph>CREATE OR REPLACE
-                    FUNCTION</codeph> will either create a new function, or replace an existing
-                definition.</p><p>The name of the new function must not match any existing function with the same input argument
-                types in the same schema. However, functions of different argument types may share a
-                name (overloading). </p><p>To update the definition of an existing function, use <codeph>CREATE OR REPLACE
-                FUNCTION</codeph>. It is not possible to change the name or argument types of a
-                function this way (this would actually create a new, distinct function). Also,
-                    <codeph>CREATE OR REPLACE FUNCTION</codeph> will not let you change the return
-                type of an existing function. To do that, you must drop and recreate the function.
-                When using <codeph>OUT</codeph> parameters, that means you cannot change the types of
-                any <codeph>OUT</codeph> parameters except by dropping the function.  If you drop
-                and then recreate a function, you will have to drop existing objects (rules, views,
-                triggers, and so on) that refer to the old function. Use <codeph>CREATE OR REPLACE
-                    FUNCTION</codeph> to change a function definition without breaking objects that
-                refer to the function.</p><p>For more
-                information about creating functions, see the <xref
+        <section id="section3"><title>Description</title><p><codeph>CREATE FUNCTION</codeph> defines
+                a new function. <codeph>CREATE OR REPLACE FUNCTION</codeph> either creates a new
+                function, or replaces an existing definition.</p><p>The name of the new function
+                must not match any existing function with the same input argument types in the same
+                schema. However, functions of different argument types may share a name
+                (overloading). </p><p>To update the definition of an existing function, use
+                    <codeph>CREATE OR REPLACE FUNCTION</codeph>. It is not possible to change the
+                name or argument types of a function this way (this would actually create a new,
+                distinct function). Also, <codeph>CREATE OR REPLACE FUNCTION</codeph> will not let
+                you change the return type of an existing function. To do that, you must drop and
+                recreate the function. When using <codeph>OUT</codeph> parameters, that means you
+                cannot change the types of any <codeph>OUT</codeph> parameters except by dropping
+                the function. If you drop and then recreate a function, you will have to drop
+                existing objects (rules, views, triggers, and so on) that refer to the old function.
+                Use <codeph>CREATE OR REPLACE FUNCTION</codeph> to change a function definition
+                without breaking objects that refer to the function.</p>
+            <p>The user that creates the function becomes the owner of the function.</p>
+            <p>To be able to create a function, you must have <codeph>USAGE</codeph> privilege on
+                the argument types and the return type.</p>
+            <p>For more information about creating functions, see the <xref
                     href="https://www.postgresql.org/docs/8.3/xfunc.html" scope="external"
                     format="html">User Defined Functions</xref> section of the PostgreSQL
-                documentation.</p><sectiondiv id="section4"><b>Limited Use of VOLATILE and STABLE Functions</b><p>To prevent data from
-                    becoming out-of-sync across the segments in Greenplum Database, any function
-                    classified as <codeph>STABLE</codeph> or <codeph>VOLATILE</codeph> cannot be
-                    executed at the segment level if it contains SQL or modifies the database in any
-                    way. For example, functions such as <codeph>random()</codeph> or
-                        <codeph>timeofday()</codeph> are not allowed to execute on distributed data
-                    in Greenplum Database because they could potentially cause inconsistent data
-                    between the segment instances.</p><p>To ensure data consistency,
-                        <codeph>VOLATILE</codeph> and <codeph>STABLE</codeph> functions can safely
-                    be used in statements that are evaluated on and execute from the master. For
-                    example, the following statements are always executed on the master (statements
-                    without a <codeph>FROM</codeph>
+                documentation.</p><sectiondiv id="section4"><b>Limited Use of VOLATILE and STABLE
+                    Functions</b><p>To prevent data from becoming out-of-sync across the segments in
+                    Greenplum Database, any function classified as <codeph>STABLE</codeph> or
+                        <codeph>VOLATILE</codeph> cannot be executed at the segment level if it
+                    contains SQL or modifies the database in any way. For example, functions such as
+                        <codeph>random()</codeph> or <codeph>timeofday()</codeph> are not allowed to
+                    execute on distributed data in Greenplum Database because they could potentially
+                    cause inconsistent data between the segment instances.</p><p>To ensure data
+                    consistency, <codeph>VOLATILE</codeph> and <codeph>STABLE</codeph> functions can
+                    safely be used in statements that are evaluated on and execute from the master.
+                    For example, the following statements are always executed on the master
+                    (statements without a <codeph>FROM</codeph>
                     clause):</p><codeblock>SELECT setval('myseq', 201);
 SELECT foo();</codeblock><p>In
                     cases where a statement has a <codeph>FROM</codeph> clause containing a
@@ -183,6 +187,7 @@ SELECT foo();</codeblock><p>In
                     <pt>IMMUTABLE</pt>
                     <pt>STABLE</pt>
                     <pt>VOLATILE</pt>
+                    <pt>LEAKPROOF</pt>
                     <pd>These attributes inform the query optimizer about the behavior of the
                         function. At most one choice may be specified. If none of these appear,
                             <codeph>VOLATILE</codeph> is the default assumption. Since Greenplum
@@ -210,6 +215,16 @@ SELECT foo();</codeblock><p>In
                         any function that has side-effects must be classified volatile, even if its
                         result is quite predictable, to prevent calls from being optimized away; an
                         example is <codeph>setval()</codeph>.</pd>
+                    <pd><codeph>LEAKPROOF</codeph> indicates that the function has no side effects.
+                        It reveals no information about its arguments other than by its return
+                        value. For example, a function that throws an error message for some
+                        argument values but not others, or that includes the argument values in any
+                        error message, is not leakproof. The query planner may push leakproof
+                        functions (but not others) into views created with the
+                            <codeph>security_barrier</codeph> option. See <xref
+                            href="CREATE_VIEW.xml#topic1">CREATE VIEW</xref> and <xref
+                            href="CREATE_RULE.xml#topic1"/>. This option can only be set by the
+                        superuser.</pd>
                 </plentry>
                 <plentry>
                     <pt>CALLED ON NULL INPUT</pt>
