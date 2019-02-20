@@ -62,11 +62,22 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pt><varname>with_query</varname></pt>
                     <pd>The <codeph>WITH</codeph> clause allows you to specify one or more
                         subqueries that can be referenced by name in the <codeph>DELETE</codeph>
-                        query. See <xref
+                        query. </pd>
+                    <pd>For an <codeph>DELETE</codeph> command that includes a <codeph>WITH</codeph>
+                        clause, the clause can only contain <codeph>SELECT</codeph> statements, the
+                            <codeph>WITH</codeph> clause cannot contain a data-modifying command
+                            (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+                            <codeph>DELETE</codeph>). </pd>
+                    <pd>The <codeph>RECURSIVE</codeph> keyword is an experimental feature. By
+                        default, The <codeph>RECURSIVE</codeph> keyword is not available. The
+                        keyword can be enabled by setting the server configuration parameter
+                                <codeph><xref
+                                href="../config_params/guc-list.xml#gp_recursive_cte_prototype"
+                            /></codeph> to <codeph>true</codeph>. </pd>
+                    <pd>See <xref
                             href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>
-                        and <xref href="SELECT.xml#topic1"/> for details. </pd>
+                        and <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
                 </plentry>
-                
                 <plentry>
                     <pt>ONLY</pt>
                     <pd>If specified, delete rows from the named table only. When not specified, any
