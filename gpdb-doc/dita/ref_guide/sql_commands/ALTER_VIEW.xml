@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes properties of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname>
+<topic id="topic1"><title id="am137232">ALTER VIEW</title><body><p id="sql_command_desc">Changes properties of a view.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER VIEW [ IF EXISTS ] <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname>
  SET DEFAULT <varname>expression</varname>
 
-ALTER VIEW <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname> DROP DEFAULT
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> ALTER [ COLUMN ] <varname>column</varname> DROP DEFAULT
 
-ALTER VIEW <varname>name</varname> OWNER TO <varname>new_owner</varname>
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> OWNER TO <varname>new_owner</varname>
 
-ALTER VIEW <varname>name</varname> RENAME TO <varname>new_name</varname>
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
 
-ALTER VIEW <varname>name</varname> SET SCHEMA <varname>new_schema</varname></codeblock></section><section id="section3">
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
+
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> SET ( <varname>view_option_name</varname> [= <varname>view_option_value</varname>] [, ... ] )
+
+ALTER VIEW [ IF EXISTS ] <varname>name</varname> RESET ( <varname>view_option_name</varname> [, ... ] )</codeblock></section><section id="section3">
       <title>Description</title>
       <p><codeph>ALTER VIEW</codeph> changes various auxiliary properties of a view. (If you want to
         modify the view's defining query, use <codeph>CREATE OR REPLACE VIEW</codeph>. </p>
@@ -20,17 +24,44 @@ ALTER VIEW <varname>name</varname> SET SCHEMA <varname>new_schema</varname></cod
           <codeph>CREATE</codeph> privilege on the view's schema. These restrictions enforce that
         altering the owner does not do anything you could not do by dropping and recreating the
         view. However, a superuser can alter ownership of any view.</p>
-    </section><section id="section4"><title>Parameters</title><parml><plentry><pt><codeph>SET</codeph>/<codeph>DROP DEFAULT</codeph></pt><pd>These forms set or remove the default value for a column. A default value associated with a view
+    </section><section id="section4"><title>Parameters</title><parml>
+        <plentry>
+          <pt><varname>name</varname></pt>
+          <pd>The name (optionally schema-qualified) of an existing view.</pd>
+        </plentry>
+        <plentry>
+          <pt><codeph>IF EXISTS</codeph></pt>
+          <pd>Do not throw an error if the view does not exist. A notice is issued in this
+            case.</pd>
+        </plentry><plentry><pt><codeph>SET</codeph>/<codeph>DROP DEFAULT</codeph></pt><pd>These forms set or remove the default value for a column. A default value associated with a view
             column is inserted into <codeph>INSERT</codeph> statements on the view before the view's
               <codeph>ON INSERT</codeph> rule is applied, if the <codeph>INSERT</codeph> does not
-            specify a value for the column. </pd></plentry><plentry><pt><varname>newowner</varname></pt><pd>The new schema for the view. </pd></plentry>
+            specify a value for the column. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new schema for the view. </pd></plentry>
         <plentry>
-          <pt><varname>newname</varname></pt>
+          <pt><varname>new_name</varname></pt>
           <pd>The new name of the view.</pd>
         </plentry>
         <plentry>
           <pt><varname>new_schema</varname></pt>
           <pd>The new schema for the view.</pd>
+        </plentry>
+        <plentry>
+          <pt><codeph>SET ( <varname>view_option_name</varname> [=
+                <varname>view_option_value</varname>] [, ... ] )</codeph></pt>
+          <pt><codeph>RESET ( <varname>view_option_name</varname> [, ... ] )</codeph></pt>
+          <pd>Sets or resets a view option. Currently supported options are:<parml>
+              <plentry>
+                <pt><codeph>check_option</codeph> (string)</pt>
+                <pd>Changes the check option of the view. The value must be <codeph>local</codeph>
+                  or <codeph>cascaded</codeph>.</pd>
+              </plentry>
+            </parml><parml>
+              <plentry>
+                <pt><codeph>security_barrier</codeph> (boolean)</pt>
+                <pd>Changes the security-barrier property of the view. The value must be Boolean
+                  value, such as <codeph>true</codeph> or <codeph>false</codeph>.</pd>
+              </plentry>
+            </parml></pd>
         </plentry></parml></section>
     <section>
       <title>Notes</title>
