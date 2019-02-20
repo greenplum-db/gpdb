@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
-        [<b>-O</b> <varname>owner</varname>] [<b>-T</b> <varname>template</varname>] [<b>-e</b>] [<varname>dbname</varname> ['<varname>description</varname>']]
-        [<b>{-l | --locale}</b> <varname>locale</varname>] [<b>--lc-collate</b> <varname>locale</varname>] [<b>--lc-type</b> <varname>locale</varname>]
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<varname>option</varname> ...] [<varname>dbname</varname> ['<varname>description</varname>']]
 
 <b>createdb</b> <b>-? | --help</b>
 
@@ -12,11 +10,12 @@ owner of the new database. However, a different owner can be specified
 via the <codeph>-O</codeph> option, if the executing user has appropriate
 privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph><xref
               href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/>
-</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>dbname</pt><pd>The name of the database to be created. The name must be unique among all other databases in the
+</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>dbname</varname></pt><pd>The name of the database to be created. The name must be unique among all other databases in the
               Greenplum system. If not specified, reads from the
             environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
-            defaults to the current system user.</pd></plentry><plentry><pt>description</pt><pd>A comment to be associated with the newly created database. Descriptions
-containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace=<varname>tablespace</varname></pt><pd>The default tablespace for the database. </pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry>
+            defaults to the current system user.</pd></plentry><plentry><pt><varname>description</varname></pt><pd>A comment to be associated with the newly created database. Descriptions
+              containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace=<varname>tablespace</varname></pt><pd>Specifies the default tablespace for the database. (This name
+                is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry>
         <plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
               <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
             use the default encoding. <ph>See the Greenplum Database Reference
@@ -35,9 +34,18 @@ containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D
           <pt>--lc-ctype <varname>locale</varname></pt>
           <pd>Specifies the LC_CTYPE setting to be used in this database.</pd>
         </plentry>
+        <plentry>
+          <pt>--maintenance-db=<varname>dbname</varname></pt>
+          <pd>Specifies the name of the database to connect to when creating the new database. If
+            not specified, the <codeph>postgres</codeph> database will be used; if that does not
+            exist (or if it is the name of the new database being created),
+              <codeph>template1</codeph> will be used.</pd>
+        </plentry>
         <plentry><pt>-O <varname>owner</varname> | --owner=<varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
-to the user executing this command. </pd></plentry><plentry><pt>-T <varname>template</varname> | --template=<varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
-              <codeph>template1</codeph>. </pd></plentry>
+          to the user executing this command. (This name
+          is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-T <varname>template</varname> | --template=<varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
+            <codeph>template1</codeph>. (This name
+            is processed as a double-quoted identifier.)</pd></plentry>
         <plentry>
           <pt>-V | --version</pt>
           <pd>Print the <codeph>createdb</codeph> version and exit.</pd>
