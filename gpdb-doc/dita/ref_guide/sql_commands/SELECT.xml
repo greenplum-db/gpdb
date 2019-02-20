@@ -25,7 +25,7 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
 TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
 </codeblock>
       <p>where <varname>with_query:</varname> is:</p>
-      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname>  | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
+      <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
 (select) [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]<varname>
@@ -123,14 +123,17 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
         <p>The optional <codeph>WITH</codeph> clause allows you to specify one or more subqueries
           that can be referenced by name in the primary query. The subqueries effectively act as
           temporary tables or views for the duration of the primary query. Each subquery can be a
-            <codeph>SELECT</codeph>, <codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
+            <codeph>SELECT</codeph>, <codeph>VALUES</codeph> ,<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
             <codeph>DELETE</codeph> statement. When writing a data-modifying statement
             (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or <codeph>DELETE</codeph>) in
             <codeph>WITH</codeph>, it is usual to include a <codeph>RETURNING</codeph> clause. It is
           the output of <codeph>RETURNING</codeph>, <i>not</i> the underlying table that the
           statement modifies, that forms the temporary table that is read by the primary query. If
             <codeph>RETURNING</codeph> is omitted, the statement is still executed, but it produces
-          no output so it cannot be referenced as a table by the primary query. </p><p>A
+          no output so it cannot be referenced as a table by the primary query. </p><p>For a <codeph>SELECT</codeph> command that includes a
+            <codeph>WITH</codeph> clause, the clause can contain at most a single clause that
+          modifies table data (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph> or
+            <codeph>DELETE</codeph> command).</p><p>A
             <varname>with_query_name</varname> without schema qualification must be specified for
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
@@ -192,7 +195,8 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
             <codeph>WITH</codeph> cannot be seen from other parts of the query, other than by
           reading its <codeph>RETURNING</codeph> output. If two such data-modifying statements
           attempt to modify the same row, the results are unspecified. </p>
-        <p>See <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
+        <p>See <xref
+            href="../../admin_guide/query/topics/CTE-query.xml"/><ph
             otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph>
           for additional information.</p>
       </sectiondiv>
@@ -219,16 +223,17 @@ SELECT * FROM foo LIMIT 5;</codeblock></p>
             <codeph>AS</codeph> or double-quote the output name.) If you do not specify a column
           name, Greenplum Database chooses a name is automatically. If the column's expression is a
           simple column reference then the chosen name is the same as that column's name. In more
-          complex cases a generated name looking like<codeph> ?column<varname>N</varname>?</codeph>
-          is usually chosen. </p><p>An output column's name can be used to refer to the column's
-          value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph> clauses, but not in the
-            <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there you must write out the
-          expression instead.</p><p>Instead of an expression, <codeph>*</codeph> can be written in
-          the output list as a shorthand for all the columns of the selected rows. Also, you can
-          write <codeph><varname>table_name</varname>.*</codeph> as a shorthand for the columns
-          coming from just that table. In these cases it is not possible to specify new names with
-            <codeph>AS</codeph>; the output column names will be the same as the table columns'
-          names.</p></sectiondiv>
+          complex cases, a function or type name may be used, or the system may fall back on a
+          generated name such as <codeph>?column?</codeph> or
+            <codeph>column<varname>N</varname></codeph>. </p><p>An output column's name can be used to
+          refer to the column's value in <codeph>ORDER BY</codeph> and <codeph>GROUP BY</codeph>
+          clauses, but not in the <codeph>WHERE</codeph> or <codeph>HAVING</codeph> clauses; there
+          you must write out the expression instead.</p><p>Instead of an expression,
+            <codeph>*</codeph> can be written in the output list as a shorthand for all the columns
+          of the selected rows. Also, you can write <codeph><varname>table_name</varname>.*</codeph>
+          as a shorthand for the columns coming from just that table. In these cases it is not
+          possible to specify new names with <codeph>AS</codeph>; the output column names will be
+          the same as the table columns' names.</p></sectiondiv>
       <sectiondiv><b>The DISTINCT Clause</b>
         <p>If <codeph>SELECT DISTINCT</codeph> is specified, all duplicate rows are removed from the
           result set (one row is kept from each group of duplicates). <codeph>SELECT ALL</codeph>
@@ -562,7 +567,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
                 <li><codeph>UNBOUNDED PRECEDING</codeph></li>
                 <li><codeph><varname>value</varname> PRECEDING</codeph></li>
                 <li><codeph>CURRENT ROW</codeph></li>
-                <li><codeph><varname>value</varname></codeph> FOLLOWING</li>
+                <li><codeph><varname>value</varname> FOLLOWING</codeph></li>
                 <li><codeph>UNBOUNDED FOLLOWING</codeph></li>
               </ul></pd>
             <pd>If <codeph><varname>frame_end</varname></codeph> is omitted it defaults to
@@ -771,7 +776,13 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           only to the expression they follow; for example <codeph>ORDER BY x, y DESC</codeph> does
           not mean the same thing as <codeph>ORDER BY x DESC, y
           DESC</codeph>.</p><p>Character-string data is sorted according to the locale-specific
-          collation order that was established when the database was created.</p></sectiondiv>
+          collation order that was established when the database was created.</p><p>Character-string data is sorted
+          according to the collation that applies to the column being sorted. That can be overridden
+          as needed by including a <codeph>COLLATE</codeph> clause in the
+            <varname>expression</varname>, for example <codeph>ORDER BY mycolumn COLLATE
+            "en_US"</codeph>. For information about defining collations, see <codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_COLLATION.xml">CREATE
+            COLLATION</xref></codeph>.</p></sectiondiv>
       <sectiondiv><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two
           independent
           sub-clauses:</p><codeblock>LIMIT {<varname>count</varname> | ALL}
@@ -785,21 +796,21 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>OFFSET 0</codeph>.</p><p>SQL:2008 introduced a different syntax to achieve the
           same result, which Greenplum Database also supports. It is:
           <codeblock>OFFSET <varname>start</varname> [ ROW | ROWS ]
-            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>According
-          to the standard, the <codeph>OFFSET</codeph> clause must come before the
-            <codeph>FETCH</codeph> clause if both are present; but Greenplum Database is laxer and
-          allows either order. <codeph>ROW</codeph> and <codeph>ROWS</codeph>, as well as
-            <codeph>FIRST</codeph> and <codeph>NEXT</codeph>, are noise words that do not influence
-          the effects of these clauses. When using expressions other than constants for the offset
-          or fetch count, parentheses will be necessary in most cases. If the fetch count is
-          omitted, it defaults to 1.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to
-          use an <codeph>ORDER BY</codeph> clause that constrains the result rows into a unique
-          order. Otherwise you will get an unpredictable subset of the query's rows — you may be
-          asking for the tenth through twentieth rows, but tenth through twentieth in what ordering?
-          You don't know what ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The
-          query optimizer takes <codeph>LIMIT</codeph> into account when generating a query plan, so
-          you are very likely to get different plans (yielding different row orders) depending on
-          what you use for <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
+            FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY</codeblock></p><p>In this syntax, to write
+          anything except a simple integer constant for start or count, you must write parentheses
+          around it. If count is omitted in a <codeph>FETCH</codeph> clause, it defaults to 1.
+            <codeph>ROW</codeph> and <codeph>ROWS</codeph> as well as <codeph>FIRST</codeph> and
+            <codeph>NEXT</codeph> are noise words that don't influence the effects of these clauses.
+          According to the standard, the <codeph>OFFSET</codeph> clause must come before the
+            <codeph>FETCH</codeph> clause if both are present; but Greenplum Database allows either
+          order.</p><p>When using <codeph>LIMIT</codeph>, it is a good idea to use an <codeph>ORDER
+            BY</codeph> clause that constrains the result rows into a unique order. Otherwise you
+          will get an unpredictable subset of the query's rows — you may be asking for the tenth
+          through twentieth rows, but tenth through twentieth in what ordering? You don't know what
+          ordering unless you specify <codeph>ORDER BY</codeph>. </p><p>The query optimizer takes
+            <codeph>LIMIT</codeph> into account when generating a query plan, so you are very likely
+          to get different plans (yielding different row orders) depending on what you use for
+            <codeph>LIMIT</codeph> and <codeph>OFFSET</codeph>. Thus, using different
             <codeph>LIMIT/OFFSET</codeph> values to select different subsets of a query result will
           give inconsistent results unless you enforce a predictable result ordering with
             <codeph>ORDER BY</codeph>. This is not a defect; it is an inherent consequence of the
@@ -815,7 +826,7 @@ OFFSET <varname>start</varname></codeblock><p>where
           Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
             <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
           Global Deadlock Detector is enabled by setting the <xref
-            href="../config_params/guc-list.xml#gp_global_deadlock_detector_period"
+            href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See<xref
             href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
             <cite>Greenplum Database Administrator Guide</cite> for information about the Global
@@ -862,39 +873,43 @@ OFFSET <varname>start</varname></codeblock><p>where
           a table is processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses
           affecting it.</p><p><codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> cannot be
           used in contexts where returned rows cannot be clearly identified with individual table
-          rows; for example they cannot be used with aggregation.</p><p>When <codeph>FOR
-            UPDATE</codeph> or <codeph>FOR SHARE</codeph> appears at the top level of a
-            <codeph>SELECT</codeph> query, the rows that are locked are exactly those that are
-          returned by the query; in the case of a join query, the rows locked are those that
-          contribute to returned join rows. In addition, rows that satisfied the query conditions as
-          of the query snapshot will be locked, although they will not be returned if they were
-          updated after the snapshot and no longer satisfy the query conditions. If a
-            <codeph>LIMIT</codeph> is used, locking stops once enough rows have been returned to
-          satisfy the limit (but note that rows skipped over by <codeph>OFFSET</codeph> will get
-          locked). Similarly, if <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> is used
-          in a cursor's query, only rows actually fetched or stepped past by the cursor will be
-          locked.</p><p>When <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> appears in a
-            sub-<codeph>SELECT</codeph>, the rows locked are those returned to the outer query by
-          the sub-query. This might involve fewer rows than inspection of the sub-query alone would
-          suggest, since conditions from the outer query might be used to optimize execution of the
-          sub-query. For example,
+          rows; for example they cannot be used with aggregation.</p><p>When <codeph>FOR UPDATE</codeph> or <codeph>FOR
+            SHARE</codeph> appears at the top level of a <codeph>SELECT</codeph> query, the rows
+          that are locked are exactly those that are returned by the query; in the case of a join
+          query, the rows locked are those that contribute to returned join rows. In addition, rows
+          that satisfied the query conditions as of the query snapshot will be locked, although they
+          will not be returned if they were updated after the snapshot and no longer satisfy the
+          query conditions. If a <codeph>LIMIT</codeph> is used, locking stops once enough rows have
+          been returned to satisfy the limit (but note that rows skipped over by
+            <codeph>OFFSET</codeph> will get locked). Similarly, if <codeph>FOR UPDATE</codeph> or
+            <codeph>FOR SHARE</codeph> is used in a cursor's query, only rows actually fetched or
+          stepped past by the cursor will be locked.</p><p>When <codeph>FOR UPDATE</codeph> or
+            <codeph>FOR SHARE</codeph> appears in a sub-<codeph>SELECT</codeph>, the rows locked are
+          those returned to the outer query by the sub-query. This might involve fewer rows than
+          inspection of the sub-query alone would suggest, since conditions from the outer query
+          might be used to optimize execution of the sub-query. For example,
           <codeblock>SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss WHERE col1 = 5;</codeblock>
           will lock only rows having <codeph>col1 = 5</codeph>, even though that condition is not
           textually within the sub-query. </p><p>It is possible for a <codeph>SELECT</codeph>
-          command using <codeph>ORDER BY</codeph> and <codeph>FOR UPDATE/SHARE</codeph> to return
-          rows out of order. This is because <codeph>ORDER BY</codeph> is applied first. The command
-          sorts the result, but might then block trying to obtain a lock on one or more of the rows.
-          Once the <codeph>SELECT</codeph> unblocks, some of the ordering column values might have
-          been modified, leading to those rows appearing to be out of order (though they are in
-          order in terms of the original column values). This can be worked around at need by
-          placing the <codeph>FOR UPDATE/SHARE</codeph> clause in a sub-query, for example
-          <codeblock>SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss ORDER BY column1;</codeblock>
-          Note that this will result in locking all rows of <codeph>mytable</codeph>, whereas
-            <codeph>FOR UPDATE</codeph> at the top level would lock only the actually returned rows.
-          This can make for a significant performance difference, particularly if the <codeph>ORDER
+          command running at the <codeph>READ COMMITTED</codeph> transaction isolation level and
+          using <codeph>ORDER BY</codeph> and <codeph>FOR UPDATE/SHARE</codeph> to return rows out
+          of order. This is because <codeph>ORDER BY</codeph> is applied first. The command sorts
+          the result, but might then block trying to obtain a lock on one or more of the rows. Once
+          the <codeph>SELECT</codeph> unblocks, some of the ordering column values might have been
+          modified, leading to those rows appearing to be out of order (though they are in order in
+          terms of the original column values). This can be worked around at need by placing the
+            <codeph>FOR UPDATE/SHARE</codeph> clause in a sub-query, for example
+          <codeblock>SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss ORDER BY column1;</codeblock>Note
+          that this will result in locking all rows of <codeph>mytable</codeph>, whereas <codeph>FOR
+            UPDATE</codeph> at the top level would lock only the actually returned rows. This can
+          make for a significant performance difference, particularly if the <codeph>ORDER
             BY</codeph> is combined with <codeph>LIMIT</codeph> or other restrictions. So this
           technique is recommended only if concurrent updates of the ordering columns are expected
-          and a strictly sorted result is required. </p></sectiondiv>
+          and a strictly sorted result is required. </p><p>At the <codeph>REPEATABLE READ</codeph> or
+            <codeph>SERIALIZABLE</codeph> transaction isolation level this would cause a
+          serialization failure (with a <codeph>SQLSTATE</codeph> of <codeph>40001</codeph>), so
+          there is no possibility of receiving rows out of order under these isolation
+        levels.</p></sectiondiv>
     </section>
     <section id="table-command">
       <title>The TABLE Command</title>
