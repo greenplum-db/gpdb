@@ -172,10 +172,18 @@ a valid operator class. </p><p>You must be a superuser to create an operator cla
                 </plentry>
                 <plentry>
                     <pt><varname>op_type</varname></pt>
-                    <pd>The operand data type(s) of an operator, or <codeph>NONE</codeph> to signify
-                        a left-unary or right-unary operator. The operand data types may be omitted
-                        in the normal case where they are the same as the operator class data type.
-                    </pd>
+                    <pd>In an <codeph>OPERATOR</codeph> clause, the operand data type(s) of the
+                        operator, or <codeph>NONE</codeph> to signify a left-unary or right-unary
+                        operator. The operand data types can be omitted in the normal case where
+                        they are the same as the operator class's data type. </pd>
+                    <pd>In a <codeph>FUNCTION</codeph> clause, the operand data type(s) the function
+                        is intended to support, if different from the input data type(s) of the
+                        function (for B-tree comparison functions and hash functions) or the class's
+                        data type (for B-tree sort support functions and all functions in GiST,
+                        SP-GiST and GIN operator classes). These defaults are correct, and so
+                            <varname>op_type</varname> need not be specified in
+                            <codeph>FUNCTION</codeph> clauses, except for the case of a B-tree sort
+                        support function that is meant to support cross-data-type comparisons.</pd>
                 </plentry>
                 <plentry>
                     <pt><varname>support_number</varname></pt>
@@ -271,9 +279,9 @@ a valid operator class. </p><p>You must be a superuser to create an operator cla
                 <plentry>
                     <pt><varname>storage_type</varname></pt>
                     <pd>The data type actually stored in the index. Normally this is the same as the
-                        column data type, but the GiST index method allows it to be different. The
-                            <codeph>STORAGE</codeph> clause must be omitted unless the index method
-                        allows a different type to be used. </pd>
+                        column data type, but some index methods (currently GiST and GIN) allow it
+                        to be different. The <codeph>STORAGE</codeph> clause must be omitted unless
+                        the index method allows a different type to be used. </pd>
                 </plentry>
             </parml></section><section id="section5"><title>Notes</title><p>Because the index machinery does not check access permissions on functions
 before using them, including a function or operator in an operator class
