@@ -11,78 +11,77 @@ CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
 
 CREATE CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>)
        WITH INOUT 
-       [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new cast. A cast specifies how
-to perform a conversion between two data types. For example,</p><codeblock>SELECT CAST(42 AS float8);</codeblock><p>converts the integer constant <codeph>42</codeph> to type <codeph>float8</codeph> by invoking a
-        previously specified function, in this case <codeph>float8(int4)</codeph>. If no suitable cast
-        has been defined, the conversion fails. </p><p>Two types may be binary
-        coercible, which means that the types can be converted
-into one another without invoking any function. This requires that corresponding
-values use the same internal representation. For instance, the types
-<codeph>text</codeph> and <codeph>varchar</codeph> are binary coercible in
-  both directions. Binary coercibility is not necessarily a symmetric
-  relationship. For example, the cast from <codeph>xml</codeph> to
-  <codeph>text</codeph> can be performed for free in the present
-  implementation, but the reverse direction requires a function that
-  performs at least a syntax check. (Two types that are binary coercible
-  both ways are also referred to as binary compatible.)</p>
-<p>You can define a cast as an <i>I/O conversion cast</i> by using the
-  <codeph>WITH INOUT</codeph> syntax. An I/O conversion cast is performed
-  by invoking the output function of the source data type, and passing the
-  resulting string to the input function of the target data type. In many
-  common cases, this feature avoids the need to write a separate cast
-  function for conversion. An I/O conversion cast acts the same as a
-  regular function-based cast; only the implementation is different.</p>
-<p>By default, a cast can be invoked only by an explicit cast request, that is an explicit
+       [AS ASSIGNMENT | AS IMPLICIT]</codeblock></section>
+    <section id="section3"><title>Description</title><p><codeph>CREATE CAST</codeph> defines a new
+        cast. A cast specifies how to perform a conversion between two data types. For
+        example,</p><codeblock>SELECT CAST(42 AS float8);</codeblock><p>converts the integer
+        constant <codeph>42</codeph> to type <codeph>float8</codeph> by invoking a previously
+        specified function, in this case <codeph>float8(int4)</codeph>. If no suitable cast has been
+        defined, the conversion fails. </p><p>Two types may be binary coercible, which means that
+        the types can be converted into one another without invoking any function. This requires
+        that corresponding values use the same internal representation. For instance, the types
+          <codeph>text</codeph> and <codeph>varchar</codeph> are binary coercible in both
+        directions. Binary coercibility is not necessarily a symmetric relationship. For example,
+        the cast from <codeph>xml</codeph> to <codeph>text</codeph> can be performed for free in the
+        present implementation, but the reverse direction requires a function that performs at least
+        a syntax check. (Two types that are binary coercible both ways are also referred to as
+        binary compatible.)</p>
+      <p>You can define a cast as an <i>I/O conversion cast</i> by using the <codeph>WITH
+          INOUT</codeph> syntax. An I/O conversion cast is performed by invoking the output function
+        of the source data type, and passing the resulting string to the input function of the
+        target data type. In many common cases, this feature avoids the need to write a separate
+        cast function for conversion. An I/O conversion cast acts the same as a regular
+        function-based cast; only the implementation is different.</p>
+      <p>By default, a cast can be invoked only by an explicit cast request, that is an explicit
           <codeph>CAST(x AS </codeph>
-        <varname>typename</varname><codeph>)</codeph> or <codeph>x:: <varname>typename</varname></codeph> construct.</p><p>If the cast is marked <codeph>AS ASSIGNMENT</codeph> then it can be invoked implicitly when
-        assigning a value to a column of the target data type. For example, supposing that
-          <codeph>foo.f1</codeph> is a column of type <codeph>text</codeph>, then:</p><codeblock>INSERT INTO foo (f1) VALUES (42);</codeblock><p>will be allowed if the cast from type <codeph>integer</codeph> to type <codeph>text</codeph> is
-        marked <codeph>AS ASSIGNMENT</codeph>, otherwise not. The term <i>assignment cast</i> is
-        typically used to describe this kind of cast.</p><p>If the cast is marked <codeph>AS IMPLICIT</codeph> then it can be invoked implicitly in any
-        context, whether assignment or internally in an expression. The term <i>implicit cast</i> is
-        typically used to describe this kind of cast. For example, consider this query:</p>
-        <codeblock>SELECT 2 + 4.0;</codeblock><p>The parser initially marks the
-        constants as being of type <codeph>integer</codeph> and
-        <codeph>numeric</codeph>, respectively. There is no
-        <codeph>integer + numeric</codeph> operator in the system catalogs,
-        but there is a <codeph>numeric + numeric</codeph> operator. This
-        query succeeds if a cast from <codeph>integer</codeph> to
-        <codeph>numeric</codeph> exists (it does) and is marked <codeph>AS IMPLICIT</codeph>,
-        which in fact it is. The parser applies only the implicit cast and
-        resolves the query as if it had been written as the following:</p>
-        <codeblock>SELECT CAST ( 2 AS numeric ) + 4.0;</codeblock>
-    <p>The catalogs also provide a cast from <codeph>numeric</codeph> to
-      <codeph>integer</codeph>. If that cast were marked <codeph>AS IMPLICIT</codeph>,
-       which it is not, then the parser would be faced with choosing between
-       the above interpretation and the alternative of casting the
-       <codeph>numeric</codeph> constant to <codeph>integer</codeph> and
-       applying the <codeph>integer + integer</codeph> operator. Lacking any
-       knowledge of which choice to prefer, the parser would give up and
-       declare the query ambiguous. The fact that only one of the two casts
-       is implicit is the way in which we teach the parser to prefer resolution
-       of a mixed <codeph>numeric</codeph>-and-<codeph>integer</codeph>
-       expression as <codeph>numeric</codeph>; the parser has no built-in
-       knowledge about that.</p>
-<p>It is wise to be conservative about marking casts as implicit. An overabundance
-of implicit casting paths can cause Greenplum Database to choose surprising
-interpretations of commands, or to be unable to resolve commands at all
-because there are multiple possible interpretations. A good rule of thumb
-is to make a cast implicitly invokable only for information-preserving
-transformations between types in the same general type category. For
-example, the cast from <codeph>int2</codeph> to <codeph>int4</codeph>
-can reasonably be implicit, but the cast from <codeph>float8</codeph>
-to <codeph>int4</codeph> should probably be assignment-only. Cross-type-category
-casts, such as <codeph>text</codeph> to <codeph>int4</codeph>, are best
-made explicit-only. </p>
-<note>Sometimes it is necessary for usability or standards-compliance
-  reasons to provide multiple implicit casts among a set of types,
-  resulting in ambiguity that cannot be avoided as described above. The
-  parser uses a fallback heuristic based on type categories and preferred
-  types that helps to provide desired behavior in such cases. See <codeph><xref href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph>
-  for more information.</note>
-<p>To be able to create a cast, you must own the source or the target
-  data type and have <codeph>USAGE</codeph> privilege on the other type. To
-  create a binary-coercible cast, you must be superuser.</p></section>
+        <varname>typename</varname><codeph>)</codeph> or <codeph>x::
+          <varname>typename</varname></codeph> construct.</p><p>If the cast is marked <codeph>AS
+          ASSIGNMENT</codeph> then it can be invoked implicitly when assigning a value to a column
+        of the target data type. For example, supposing that <codeph>foo.f1</codeph> is a column of
+        type <codeph>text</codeph>,
+        then:</p><codeblock>INSERT INTO foo (f1) VALUES (42);</codeblock><p>will be allowed if the
+        cast from type <codeph>integer</codeph> to type <codeph>text</codeph> is marked <codeph>AS
+          ASSIGNMENT</codeph>, otherwise not. The term <i>assignment cast</i> is typically used to
+        describe this kind of cast.</p><p>If the cast is marked <codeph>AS IMPLICIT</codeph> then it
+        can be invoked implicitly in any context, whether assignment or internally in an expression.
+        The term <i>implicit cast</i> is typically used to describe this kind of cast. For example,
+        consider this query:</p>
+      <codeblock>SELECT 2 + 4.0;</codeblock><p>The parser initially marks the constants as being of
+        type <codeph>integer</codeph> and <codeph>numeric</codeph>, respectively. There is no
+          <codeph>integer + numeric</codeph> operator in the system catalogs, but there is a
+          <codeph>numeric + numeric</codeph> operator. This query succeeds if a cast from
+          <codeph>integer</codeph> to <codeph>numeric</codeph> exists (it does) and is marked
+          <codeph>AS IMPLICIT</codeph>, which in fact it is. The parser applies only the implicit
+        cast and resolves the query as if it had been written as the following:</p>
+      <codeblock>SELECT CAST ( 2 AS numeric ) + 4.0;</codeblock>
+      <p>The catalogs also provide a cast from <codeph>numeric</codeph> to <codeph>integer</codeph>.
+        If that cast were marked <codeph>AS IMPLICIT</codeph>, which it is not, then the parser
+        would be faced with choosing between the above interpretation and the alternative of casting
+        the <codeph>numeric</codeph> constant to <codeph>integer</codeph> and applying the
+          <codeph>integer + integer</codeph> operator. Lacking any knowledge of which choice to
+        prefer, the parser would give up and declare the query ambiguous. The fact that only one of
+        the two casts is implicit is the way in which we teach the parser to prefer resolution of a
+        mixed <codeph>numeric</codeph>-and-<codeph>integer</codeph> expression as
+          <codeph>numeric</codeph>; the parser has no built-in knowledge about that.</p>
+      <p>It is wise to be conservative about marking casts as implicit. An overabundance of implicit
+        casting paths can cause Greenplum Database to choose surprising interpretations of commands,
+        or to be unable to resolve commands at all because there are multiple possible
+        interpretations. A good rule of thumb is to make a cast implicitly invokable only for
+        information-preserving transformations between types in the same general type category. For
+        example, the cast from <codeph>int2</codeph> to <codeph>int4</codeph> can reasonably be
+        implicit, but the cast from <codeph>float8</codeph> to <codeph>int4</codeph> should probably
+        be assignment-only. Cross-type-category casts, such as <codeph>text</codeph> to
+          <codeph>int4</codeph>, are best made explicit-only. </p>
+      <note>Sometimes it is necessary for usability or standards-compliance reasons to provide
+        multiple implicit casts among a set of types, resulting in ambiguity that cannot be avoided
+        as described above. The parser uses a fallback heuristic based on type categories and
+        preferred types that helps to provide desired behavior in such cases. See <codeph><xref
+            href="./CREATE_TYPE.xml#topic1" type="topic" format="dita"/></codeph> for more
+        information.</note>
+      <p>To be able to create a cast, you must own the source or the target data type and have
+          <codeph>USAGE</codeph> privilege on the other type. To create a binary-coercible cast, you
+        must be superuser.(This restriction is made because an erroneous binary-coercible cast
+        conversion can easily crash the server.)</p></section>
 <section id="section4"><title>Parameters</title><parml><plentry><pt><varname>sourcetype</varname></pt><pd>The name of the source data type of the cast. </pd></plentry><plentry><pt><varname>targettype</varname></pt><pd>The name of the target data type of the cast. </pd></plentry><plentry><pt><varname>funcname</varname>(<varname>argtype</varname> [, ...])</pt>
   <pd>The function used to perform the cast. The function name may be schema-qualified.
 If it is not, Greenplum Database looks for the function in the schema search path.
@@ -107,7 +106,8 @@ type to another and applies a length coercion in a single step. When
 no such entry is available, coercion to a type that uses a type modifier
 involves two steps, one to convert between data types and a second to
 apply the modifier.</pd>
-  <pd>A cast to or from a domain type currently has no effect. Casting to or from a domain uses the casts associated with its underlying type.</pd></plentry>
+          <pd>A cast to or from a domain type currently has no effect. Casting to or from a domain
+            uses the casts associated with its underlying type. </pd></plentry>
     <plentry><pt>WITHOUT FUNCTION</pt><pd>Indicates that the source type is binary-coercible to the target type,
 so no function is required to perform the cast.</pd></plentry>
     <plentry><pt>WITH INOUT</pt><pd>Indicates that the cast is an I/O conversion
