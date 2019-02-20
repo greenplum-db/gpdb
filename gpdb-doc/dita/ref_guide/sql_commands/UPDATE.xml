@@ -56,18 +56,22 @@ UPDATE [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
         <plentry>
           <pt><varname>with_query</varname></pt>
           <pd>The <codeph>WITH</codeph> clause allows you to specify one or more subqueries that can
-            be referenced by name in the <codeph>UPDATE</codeph> command. </pd>
+            be referenced by name in the <codeph>UPDATE</codeph> query. </pd>
+          <pd>For an <codeph>UPDATE</codeph> command that includes a <codeph>WITH</codeph> clause,
+            the clause can only contain <codeph>SELECT</codeph> commands, the <codeph>WITH</codeph>
+            clause cannot contain a data-modifying command (<codeph>INSERT</codeph>,
+              <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>). </pd>
           <pd>It is possible for the query (<codeph>SELECT</codeph> statement) to also contain a
               <codeph>WITH</codeph> clause. In such a case both sets of
-              <varname>with_query</varname> can be referenced within the query, but the second one
-            takes precedence since it is more closely nested.</pd>
+              <varname>with_query</varname> can be referenced within the <codeph>UPDATE</codeph>
+            query, but the second one takes precedence since it is more closely nested.</pd>
           <pd>The <codeph>RECURSIVE</codeph> keyword is an experimental feature. By default, The
               <codeph>RECURSIVE</codeph> keyword is not available. The keyword can be enabled by
             setting the server configuration parameter <codeph><xref
                 href="../config_params/guc-list.xml#gp_recursive_cte_prototype"/></codeph> to
               <codeph>true</codeph>. </pd>
-          <pd>For information about the <codeph>WITH</codeph> clause, see <xref
-              href="../../admin_guide/query/topics/CTE-query.xml"/>.</pd>
+          <pd>See <xref href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/> and
+                <codeph><xref href="SELECT.xml#topic1"/></codeph> for details. </pd>
         </plentry>
         <plentry>
           <pt>ONLY</pt>
