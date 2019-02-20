@@ -32,7 +32,11 @@ that use the operator. But if you provide them, you must be sure that
 they are correct. Incorrect use of an optimization clause can result
 in server process crashes, subtly wrong output, or other unexpected results.
 You can always leave out an optimization clause if you are not sure about
-it.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The (optionally schema-qualified) name of the operator to be defined.
+it.</p>
+            <p>To be able to create an operator, you must have <codeph>USAGE</codeph> privilege on
+                the argument types and the return type, as well as <codeph>EXECUTE</codeph>
+                privilege on the underlying function. If a commutator or negator operator is
+                specified, you must own these operators.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The (optionally schema-qualified) name of the operator to be defined.
 Two operators in the same schema can have the same name if they operate
 on different data types.</pd></plentry><plentry><pt><varname>funcname</varname></pt><pd>The function used to implement this operator (must be an <codeph>IMMUTABLE</codeph>
 function).</pd></plentry><plentry><pt><varname>lefttype</varname></pt><pd>The data type of the operator's left operand, if any. This option
