@@ -119,8 +119,8 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
           <pt>
             <varname>table</varname>
           </pt>
-          <pd>The name (possibly schema-qualified) of a specific table to analyze. Defaults to all
-            tables in the current database. </pd>
+          <pd>The name (possibly schema-qualified) of a specific table to analyze. If omitted, all regular tables (but not foreign tables)
+            in the current database are analyzed. </pd>
         </plentry>
         <plentry>
           <pt>
@@ -132,14 +132,18 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
     </section>
     <section id="section5">
       <title>Notes</title>
+      <p>Foreign tables are analyzed only when explicitly selected. Not all foreign data wrappers
+        support <codeph>ANALYZE</codeph>. If the table's wrapper does not support
+          <codeph>ANALYZE</codeph>, the command prints a warning and does nothing.</p>
       <p>It is a good idea to run <codeph>ANALYZE</codeph> periodically, or just after making major
         changes in the contents of a table. Accurate statistics helps Greenplum Database choose the
         most appropriate query plan, and thereby improve the speed of query processing. A common
-        strategy is to run <codeph><xref href="./VACUUM.xml#topic1" type="topic" format="dita"
-          /></codeph> and <codeph>ANALYZE</codeph> once a day during a low-usage time of day. You
+        strategy for read-mostly databases is to run <codeph><xref href="./VACUUM.xml#topic1"
+            type="topic" format="dita"/></codeph> and <codeph>ANALYZE</codeph> once a day during a
+        low-usage time of day. (This will not be sufficient if there is heavy update activity.) You
         can check for tables with missing statistics using the <codeph>gp_stats_missing</codeph>
-        view, which is in the <codeph>gp_toolkit</codeph>
-        schema:<codeblock>SELECT * from gp_toolkit.gp_stats_missing;</codeblock></p>
+        view, which is in the <codeph>gp_toolkit</codeph> schema:</p>
+      <codeblock>SELECT * from gp_toolkit.gp_stats_missing;</codeblock>
       <p><codeph>ANALYZE</codeph> requires <codeph>SHARE UPDATE EXCLUSIVE</codeph> lock on the
         target table. This lock conflicts with these locks: <codeph>SHARE UPDATE EXCLUSIVE</codeph>,
           <codeph>SHARE</codeph>, <codeph>SHARE ROW EXCLUSIVE</codeph>, <codeph>EXCLUSIVE</codeph>,
@@ -151,11 +155,10 @@ ANALYZE [VERBOSE] ROOTPARTITION {ALL | <varname>root_partition</varname> [ (<var
       <p>For a partitioned table, specifying which portion of the table to analyze, the root
         partition or subpartitions (leaf child partition tables) can be useful if the partitioned
         table has a large number of partitions that have been analyzed and only a few leaf child
-        partitions have changed.
-        <note>When you create a partitioned table with the <codeph>CREATE TABLE</codeph> command,
-          Greenplum Database creates the table that you specify (the root partition or parent
-          table), and also creates a hierarchy of tables based on the partition hierarchy that you
-          specified (the child tables). </note></p>
+        partitions have changed. <note>When you create a partitioned table with the <codeph>CREATE
+            TABLE</codeph> command, Greenplum Database creates the table that you specify (the root
+          partition or parent table), and also creates a hierarchy of tables based on the partition
+          hierarchy that you specified (the child tables). </note></p>
       <ul>
         <li id="bd138200">When you run <codeph>ANALYZE</codeph> on the root partitioned table,
           statistics are collected for all the leaf child partitions. Leaf child partitions are the
