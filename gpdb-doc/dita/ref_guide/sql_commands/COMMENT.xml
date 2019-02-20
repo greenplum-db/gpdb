@@ -9,8 +9,8 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">COMMENT ON
 { TABLE <varname>object_name</varname> |
-  COLUMN <varname>table_name.column_name</varname> |
-  AGGREGATE <varname>aggregate_name</varname> (<varname>agg_type</varname> [, ...]) |
+  COLUMN <varname>relation_name.column_name</varname> |
+  AGGREGATE <varname>agg_name</varname> (<varname>agg_type</varname> [, ...]) |
   CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
   COLLATION <varname>object_name</varname>
   CONSTRAINT <varname>constraint_name</varname> ON <varname>table_name</varname> |
@@ -59,8 +59,8 @@ IS '<varname>text</varname>'</codeblock>
       <parml>
         <plentry>
           <pt><varname>object_name</varname></pt>
-          <pt><varname>table_name.column_name</varname></pt>
-          <pt><varname>aggregate_name</varname></pt>
+          <pt><varname>relation_name.column_name</varname></pt>
+          <pt><varname>agg_name</varname></pt>
           <pt><varname>constraint_name</varname></pt>
           <pt><varname>func_name</varname></pt>
           <pt><varname>operator_name</varname></pt>
@@ -69,7 +69,9 @@ IS '<varname>text</varname>'</codeblock>
           <pd>The name of the object to be commented. Names of tables, aggregates, collations,
             conversions, domains, foreign tables, functions, indexes, operators, operator classes,
             operator families, sequences, text search objects, types, and views can be
-            schema-qualified. <note>Greenplum Database does not support triggers.</note></pd>
+            schema-qualified.  When commenting on a column, <varname>relation_name</varname> must
+            refer to a table, view, composite type, or foreign table.<note>Greenplum Database does
+              not support triggers.</note></pd>
         </plentry>
         <plentry>
           <pt><varname>aggregate_type</varname></pt>
