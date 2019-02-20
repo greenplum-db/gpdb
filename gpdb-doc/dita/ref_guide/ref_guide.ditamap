@@ -271,6 +271,7 @@
 			<topicref href="datatype-datetime.xml"/>
 			<topicref href="datatype-pseudo.xml"/>
 			<topicref href="datatype-textsearch.xml"/>
+			<topicref href="datatype-range.xml"/>
 		</topicref>
 		<topicref href="character_sets.xml" navtitle="Character Set Support" id="character_sets"/>
 		<topicref href="config_params/guc_config.ditamap" navtitle="Server Configuration Parameters"
