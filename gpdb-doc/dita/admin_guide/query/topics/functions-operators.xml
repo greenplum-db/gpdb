@@ -776,12 +776,13 @@ SELECT foo();</codeblock>
         <title id="in184703">Advanced Aggregate Functions</title>
         <body>
             <p>The following built-in advanced aggregate functions are Greenplum extensions of the
-                PostgreSQL database. These functions are <i>immutable</i>. <note>The Greenplum
-                    MADlib Extension for Analytics provides additional advanced functions to perform
-                    statistical analysis and machine learning with Greenplum Database data. See
-                        <xref href="../../../ref_guide/extensions/madlib.xml#topic1">Greenplum
-                        MADlib Extension for Analytics</xref> in the <cite>Greenplum Database
-                        Reference Guide</cite>.</note></p>
+                PostgreSQL database. These functions are <i>immutable</i>. Greenplum Database does
+                not support the PostgreSQL ordered-set aggregate functions.
+                <note>The Greenplum MADlib Extension for Analytics provides additional advanced
+                    functions to perform statistical analysis and machine learning with Greenplum
+                    Database data. See <xref href="../../../ref_guide/extensions/madlib.xml#topic1"
+                        >Greenplum MADlib Extension for Analytics</xref> in the <cite>Greenplum
+                        Database Reference Guide</cite>.</note></p>
             <table id="in2073121">
                 <title>Advanced Aggregate Functions</title>
                 <tgroup cols="4">
@@ -816,54 +817,6 @@ GROUP BY department_id; </codeblock>
                             </entry>
                             <entry colname="col4">Can take a two-dimensional array as input. Treats
                                 such arrays as matrices.</entry>
-                        </row>
-                        <row>
-                            <entry colname="col1">
-                                <codeph>PERCENTILE_CONT (<i>expr</i>) WITHIN GROUP (ORDER BY
-                                        <i>expr</i> [DESC/ASC])</codeph>
-                            </entry>
-                            <entry colname="col2">
-                                <codeph>timestamp, timestamptz, interval, float</codeph>
-                            </entry>
-                            <entry colname="col3">
-                                <codeph>PERCENTILE_CONT(<i>percentage</i>) WITHIN GROUP (ORDER BY
-                                        <i>expression</i>)</codeph>
-                                <p>
-                                    <i>Example:</i>
-                                </p>
-                                <codeblock>SELECT department_id,
-PERCENTILE_CONT (0.5) WITHIN GROUP (ORDER BY salary DESC)
-"Median_cont"; 
-FROM employees GROUP BY department_id;</codeblock>
-                            </entry>
-                            <entry colname="col4">Performs an inverse distribution function that
-                                assumes a continuous distribution model. It takes a percentile value
-                                and a sort specification and returns the same datatype as the
-                                numeric datatype of the argument. This returned value is a computed
-                                result after performing linear interpolation. Null are ignored in
-                                this calculation.</entry>
-                        </row>
-                        <row>
-                            <entry colname="col1"><codeph>PERCENTILE_DISC (<i>expr</i>) WITHIN GROUP
-                                    (ORDER BY <i>expr</i> [DESC/ASC])</codeph></entry>
-                            <entry colname="col2">
-                                <codeph>timestamp, timestamptz, interval, float</codeph>
-                            </entry>
-                            <entry colname="col3">
-                                <codeph>PERCENTILE_DISC(<i>percentage</i>) WITHIN GROUP (ORDER BY
-                                        <i>expression</i>)</codeph>
-                                <p>
-                                    <i>Example:</i>
-                                </p>
-                                <codeblock>SELECT department_id, 
-PERCENTILE_DISC (0.5) WITHIN GROUP (ORDER BY salary DESC)
-"Median_desc"; 
-FROM employees GROUP BY department_id;</codeblock>
-                            </entry>
-                            <entry colname="col4">Performs an inverse distribution function that
-                                assumes a discrete distribution model. It takes a percentile value
-                                and a sort specification. This returned value is an element from the
-                                set. Null are ignored in this calculation.</entry>
                         </row>
                         <row>
                             <entry colname="col1">
