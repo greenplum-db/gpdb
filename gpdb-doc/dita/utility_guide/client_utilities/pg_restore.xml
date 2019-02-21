@@ -52,7 +52,10 @@
         <parml>
           <plentry>
             <pt>-a | --data-only</pt>
-            <pd>Restore only the data, not the schema (data definitions).</pd>
+            <pd>Restore only the data, not the schema (data definitions). Table data and sequence
+              values are restored, if present in the archive.<p>This option is similar to, but for
+                historical reasons not identical to, specifying
+              <codeph>--section=data</codeph>.</p></pd>
           </plentry>
           <plentry>
             <pt>-c | --clean</pt>
@@ -131,8 +134,12 @@
           <plentry>
             <pt>-L <varname>list-file</varname> | --use-list=<varname>list-file</varname></pt>
             <pd>Restore elements in the <varname>list-file</varname> only, and in the order they
-              appear in the file. Lines can be moved and may also be commented out by placing a
-                <codeph>;</codeph> at the start of the line.</pd>
+              appear in the file. Note that if filtering switches such as <codeph>-n</codeph> or
+                <codeph>-t</codeph> are used with <codeph>-L</codeph>, they will further restrict
+              the items restored. <p><varname>list-file</varname> is normally created by editing the
+                output of a previous <codeph>-l</codeph> operation. Lines can be moved or removed,
+                and can also be commented out by placing a semicolon (;) at the start of the line.
+                See below for examples.</p></pd>
           </plentry>
           <plentry>
             <pt>-n <varname>schema</varname> | --schema=<varname>schema</varname></pt>
@@ -159,10 +166,13 @@
           </plentry>
           <plentry>
             <pt>-s | --schema-only</pt>
-            <pd>Restore only the schema (data definitions), not the data (table contents). Current
-              sequence values will not be restored, either. (Do not confuse this with the
-                <codeph>--schema</codeph> option, which uses the word schema in a different
-              meaning.) </pd>
+            <pd>Restore only the schema (data definitions), not data, to the extent that schema
+              entries are present in the archive.<p>This option is the inverse of
+                  <codeph>--data-only</codeph>. It is similar to, but for historical reasons not
+                identical to, specifying <codeph>--section=pre-data
+                --section=post-data</codeph>.</p><p>(Do not confuse this with the
+                  <codeph>--schema</codeph> option, which uses the word "schema" in a different
+                meaning.)</p></pd>
           </plentry>
           <plentry>
             <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
@@ -227,6 +237,13 @@
             <pt>--no-tablespaces</pt>
             <pd>Do not output commands to select tablespaces. With this option, all objects will be
               created in whichever tablespace is the default during restore.</pd>
+          </plentry>
+          <plentry>
+            <pt>--section=<varname>sectionname</varname></pt>
+            <pd>Only restore the named section. The section name can be <codeph>pre-data</codeph>,
+                <codeph>data</codeph>, or <codeph>post-data</codeph>. This option can be specified
+              more than once to select multiple sections. </pd>
+            <pd>The default is to restore all sections.</pd>
           </plentry>
           <plentry>
             <pt>--use-set-session-authorization</pt>
