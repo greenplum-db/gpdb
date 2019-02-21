@@ -38,7 +38,7 @@
       <p>The subqueries, which are often referred to as Common Table Expressions or CTEs, can be
         thought of as defining temporary tables that exist just for the query. These examples show
         the <codeph>WITH</codeph> clause being used with a <codeph>SELECT</codeph> command. The
-        example <codeph>WITH</codeph> clauses can used the same way with <codeph>INSERT</codeph>,
+        example <codeph>WITH</codeph> clauses can be used the same way with <codeph>INSERT</codeph>,
           <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>. In each case, the
           <codeph>WITH</codeph> clause effectively provides temporary tables that can be referred to
         in the main command.</p>
@@ -87,10 +87,10 @@ GROUP BY region, product;
 )
 SELECT sum(n) FROM t;
 </codeblock>
-      <p>The general form of a recursive <codeph>WITH</codeph> clause is a <i>non-recursive
-        term</i>, followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a
-          <i>recursive term</i>, where only the <i>recursive term</i> can contain a reference to the
-        query output.
+      <p>The general form of a recursive <codeph>WITH</codeph> clause (a WITH clause that uses a the
+          <codeph>RECURSIVE</codeph> keyword) is a <i>non-recursive term</i>, followed by a
+          <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a <i>recursive term</i>,
+        where only the <i>recursive term</i> can contain a reference to the query output.
         <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
       <p>A recursive <codeph>WITH</codeph> query that contains a <codeph> UNION [ ALL ]</codeph> is
         executed as follows:</p>
@@ -134,10 +134,10 @@ GROUP BY sub_part
       <p>For some queries, using <codeph>UNION</codeph> instead of <codeph>UNION ALL</codeph> can
         ensure that the recursive part of the query eventually returns no tuples by discarding rows
         that duplicate previous output rows. However, often a cycle does not involve output rows
-        that are complete duplicates: it might sufficient to check just one or a few fields to see
-        if the same point has been reached before. The standard method for handling such situations
-        is to compute an array of the visited values. For example, consider the following query that
-        searches a table graph using a link field:</p>
+        that are complete duplicates: it might be sufficient to check just one or a few fields to
+        see if the same point has been reached before. The standard method for handling such
+        situations is to compute an array of the visited values. For example, consider the following
+        query that searches a table graph using a link field:</p>
       <codeblock>WITH RECURSIVE search_graph(id, link, data, depth) AS (
         SELECT g.id, g.link, g.data, 1
         FROM graph g
@@ -152,8 +152,8 @@ SELECT * FROM search_graph;
           <codeph>depth</codeph> output, changing <codeph>UNION ALL</codeph> to
           <codeph>UNION</codeph> does not eliminate the looping. Instead the query needs to
         recognize whether it has reached the same row again while following a particular path of
-        links. This modified query adds two columns <codeph>path</codeph> and <codeph>cycle</codeph>
-        to the loop-prone query:</p>
+        links. This modified query adds two columns, <codeph>path</codeph> and
+          <codeph>cycle</codeph>, to the loop-prone query:</p>
       <codeblock>WITH RECURSIVE search_graph(id, link, data, depth, path, cycle) AS (
         SELECT g.id, g.link, g.data, 1,
           ARRAY[g.id],
@@ -189,7 +189,7 @@ SELECT * FROM search_graph;
 </codeblock>
       <note type="tip">Omit the <codeph>ROW()</codeph> syntax in the case where only one field needs
         to be checked to recognize a cycle. This uses a simple array rather than a composite-type
-        array to be used, gaining efficiency.</note>
+        array, gaining efficiency.</note>
       <note type="tip">The recursive query evaluation algorithm produces its output in breadth-first
         search order. You can display the results in depth-first search order by making the outer
         query <codeph>ORDER BY</codeph> a path column constructed in this way.</note>
@@ -212,7 +212,7 @@ SELECT n FROM t LIMIT 100;</codeblock>
   <topic id="topic_zg3_bgh_5gb">
     <title>Data-Modifying Statements in a WITH clause</title>
     <body>
-      <p>For a <codeph>SELECT</codeph> command, you can use the data-modifying commands
+      <p>For a <codeph>SELECT</codeph> command, you can be use the data-modifying commands
           <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph> in a
           <codeph>WITH</codeph> clause. This allows you to perform several different operations in
         the same query. </p>
