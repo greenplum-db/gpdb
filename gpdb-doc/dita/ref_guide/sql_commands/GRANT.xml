@@ -29,6 +29,10 @@ GRANT { {CREATE | CONNECT | TEMPORARY | TEMP} [, ...] | ALL
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT { USAGE | ALL [ PRIVILEGES ] }
+    ON DOMAIN <varname>domain_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { USAGE | ALL [ PRIVILEGES ] }
     ON FOREIGN DATA WRAPPER <varname>fdw_name</varname> [, ...]
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
@@ -53,6 +57,10 @@ GRANT { { CREATE | USAGE } [, ...] | ALL [PRIVILEGES] }
 GRANT { CREATE | ALL [PRIVILEGES] }
     ON TABLESPACE <varname>tablespace_name</varname> [, ...]
     TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
+
+GRANT { USAGE | ALL [ PRIVILEGES ] }
+    ON TYPE <varname>type_name</varname> [, ...]
+    TO { [ GROUP ] <varname>role_name</varname> | PUBLIC } [, ...] [ WITH GRANT OPTION ]
 
 GRANT <varname>parent_role</varname> [, ...] 
     TO <varname>member_role</varname> [, ...] [WITH ADMIN OPTION]
@@ -198,6 +206,12 @@ columns. The privilege may be granted for all columns of a table, or just specif
           <pd>For sequences, this privilege allows the use of the
               <codeph>currval()</codeph> and <codeph>nextval()</codeph>
             function.</pd>
+          <pd>For types and domains, this privilege allow the use of the type or domain in the
+            creation of tables, functions, and other schema objects. (Note that it does not control
+            general "usage" of the type, such as values of the type appearing in queries. It only
+            prevents objects from being created that depend on the type. The main purpose of the
+            privilege is controlling which users create dependencies on a type, which could prevent
+            the owner from changing the type later.)</pd>
           <pd>For foreign-data wrappers, this privilege enables the grantee to
             create new servers using that foreign-data wrapper.</pd>
           <pd>For servers, this privilege enables the grantee to create, alter,
@@ -299,9 +313,14 @@ objects.</p>
         having been granted by the owner to himself; therefore he can revoke
         them too. In the SQL standard, the owner's privileges are granted by an
         assumed <i>system</i> entity. </p>
-      <p>The SQL standard provides for a <codeph>USAGE</codeph> privilege on
-        other kinds of objects: character sets, collations, translations,
-        domains. </p>
+      <p>The SQL standard provides for a <codeph>USAGE</codeph> privilege on other kinds of objects:
+        character sets, collations, translations. </p>
+      <p>In the SQL standard, sequences only have a <codeph>USAGE</codeph> privilege, which controls
+        the use of the <codeph>NEXT VALUE FOR</codeph> expression, which is equivalent to the
+        function <codeph>nextval</codeph> in Greenplum Database. The sequence privileges
+          <codeph>SELECT</codeph> and <codeph>UPDATE</codeph> are Greenplum Database extensions. The
+        application of the sequence <codeph>USAGE</codeph> privilege to the <codeph>currval</codeph>
+        function is also a Greenplum Database extension (as is the function itself).</p>
       <p>Privileges on databases, tablespaces, schemas, and languages are
         Greenplum Database extensions.</p>
     </section>
