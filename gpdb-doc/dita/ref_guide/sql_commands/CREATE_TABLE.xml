@@ -840,11 +840,11 @@ PARTITION BY RANGE (year)
           table name to have the same table structure. <p>The standard's distinction between global
             and local temporary tables is not in Greenplum Database. Greenplum Database will accept
             the <codeph>GLOBAL</codeph> and <codeph>LOCAL</codeph> keywords in a temporary table
-            declaration, but they have no effect. </p><p>If the <codeph>ON COMMIT</codeph> clause is
-            omitted, the SQL standard specifies that the default behavior as <codeph>ON COMMIT
-              DELETE ROWS</codeph>. However, the default behavior in Greenplum Database is
-              <codeph>ON COMMIT PRESERVE ROWS</codeph>. The <codeph>ON COMMIT DROP</codeph> option
-            does not exist in the SQL standard. </p></li>
+            declaration, but they have no effect and are deprecated.</p><p>If the <codeph>ON
+              COMMIT</codeph> clause is omitted, the SQL standard specifies that the default
+            behavior as <codeph>ON COMMIT DELETE ROWS</codeph>. However, the default behavior in
+            Greenplum Database is <codeph>ON COMMIT PRESERVE ROWS</codeph>. The <codeph>ON COMMIT
+              DROP</codeph> option does not exist in the SQL standard. </p></li>
         <li id="cd150376"><b>Column Check Constraints</b> — The SQL standard says that
             <codeph>CHECK</codeph> column constraints may only refer to the column they apply to;
           only <codeph>CHECK</codeph> table constraints may refer to multiple columns. Greenplum
