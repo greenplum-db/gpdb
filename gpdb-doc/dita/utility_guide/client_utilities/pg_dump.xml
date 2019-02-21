@@ -8,7 +8,7 @@
       file.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...] <varname>dbname</varname>
+      <codeblock id="client_util_synopsis"><b>pg_dump</b> [<varname>connection-option</varname> ...] [<varname>dump_option</varname> ...] [<varname>dbname</varname>]
 
 <b>pg_dump</b> <b>-? | --help</b>
 
@@ -71,10 +71,10 @@
         <parml>
           <plentry>
             <pt>-a | --data-only</pt>
-            <pd>Dump only the data, not the schema (data definitions). This option is only
-              meaningful for the plain-text format. For the archive formats, you may specify the
-              option when you call <codeph><xref href="./pg_restore.xml#topic1" type="topic"
-                  format="dita"/></codeph>. </pd>
+            <pd>Dump only the data, not the schema (data definitions). Table data and sequence
+              values are dumped. </pd>
+            <pd>This option is similar to, but for historical reasons not identical to, specifying
+                <codeph>--section=data</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-b | --blobs</pt>
@@ -209,6 +209,13 @@
           <plentry>
             <pt>-s | --schema-only</pt>
             <pd>Dump only the object definitions (schema), not data.</pd>
+            <pd>This option is the inverse of <codeph>--data-only</codeph>. It is similar to, but
+              for historical reasons not identical to, specifying <codeph>--section=pre-data
+                --section=post-data</codeph>.</pd>
+            <pd> (Do not confuse this with the <codeph>--schema</codeph> option, which uses the word
+              "schema" in a different meaning.) </pd>
+            <pd> To exclude table data for only a subset of tables in the database, see
+                <codeph>--exclude-table-data</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
@@ -305,6 +312,16 @@
                   <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
                 /></codeph>.<note>Greenplum Database does not support user-defined
               triggers.</note></pd>
+          </plentry>
+          <plentry>
+            <pt><codeph>--exclude-table-data=<varname>table</varname></codeph></pt>
+            <pd> Do not dump data for any tables matching the <varname>table</varname> pattern. The
+              pattern is interpreted according to the same rules as for <codeph>-t</codeph>.
+                <codeph>--exclude-table-data</codeph> can be given more than once to exclude tables
+              matching any of several patterns. This option is useful when you need the definition
+              of a particular table even though you do not need the data in it.</pd>
+            <pd> To exclude data for all tables in the database, see <codeph>--schema-only</codeph>.
+            </pd>
           </plentry>
           <plentry>
             <pt>--inserts</pt>
