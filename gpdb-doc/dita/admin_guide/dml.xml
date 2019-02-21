@@ -340,8 +340,9 @@
         tables, restricting concurrent <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, and
           <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
       <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
-        concurrent update and delete operations on a heap table serially. You can enable the Global
-        Deadlock Detector by setting the server configuration parameter <xref
+        concurrent update and delete operations on a heap table serially. You can enable these
+        concurrent updates and the have the Global Deadlock Detector determine when a deadlock
+        exists by setting the server configuration parameter <xref
           href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
       <p>When the Global Deadlock Detector is enabled, the backend process is automatically started
@@ -353,13 +354,13 @@
       <p>If the Global Deadlock Detector determines that deadlock exists, it breaks the deadlock by
         cancelling one or more backend processes associated with the youngest transaction(s)
         involved. </p>
-      <p>When the Global Deadlock Detector manages the following types of concurrent update or
-        delete transactions, only one of the concurrent transactions will succeed. The other
-        transactions will fail with an error indicating concurrent updates on the same row is not
-          allowed.<ul id="ul_bxf_mpp_5gb">
-          <li>Concurrent update or delete transactions on the same row of a heap table where a
-            command contains a join condition where table rows are not co-located (a subplan in the
-            query plan contains a motion operation).</li>
+      <p>When the Global Deadlock Detector determines a deadlock exists for the following types of
+        transactions, only one of the transactions will succeed. The other transactions will fail
+        with an error indicating that concurrent updates to the same row is not allowed.<ul
+          id="ul_bxf_mpp_5gb">
+          <li>Concurrent transactions on the same row of a heap table where the first transaction is
+            an update operation and a later transaction executes an update or delete and the query
+            plan contains a motion operator.</li>
           <li>Concurrent update transactions on the same distribution key of a heap table that are
             executed by the Greenplum Database legacy query optimizer.</li>
           <li>Concurrent update transactions on the same row of a hash table that are executed by

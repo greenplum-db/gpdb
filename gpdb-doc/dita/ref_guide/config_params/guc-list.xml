@@ -3023,13 +3023,13 @@
       <p>If the Global Deadlock Detector is enabled, it can determine that a deadlock exists, and
         breaks the deadlock by cancelling one or more backend processes associated with the youngest
         transaction(s) involved. </p>
-      <p>When the Global Deadlock Detector manages the following types of concurrent update or
-        delete transactions. Only one of the concurrent transactions will succeed. The other
-        transactions will fail with an error indicating concurrent updates on the same row is not
-          allowed.<ul id="ul_bxf_mpp_5gb">
-          <li>Concurrent update or delete transactions on the same row of a heap table where a
-            command contains a join condition where table rows are not co-located (a subplan in the
-            query plan contains a motion operation).</li>
+      <p>When the Global Deadlock Detector determines a deadlock exists for the following types of
+        transactions, only one of the transactions will succeed. The other transactions will fail
+        with an error indicating that concurrent updates to the same row is not allowed.<ul
+          id="ul_bxf_mpp_5gb">
+          <li>Concurrent transactions on the same row of a heap table where the first transaction is
+            an update operation and a later transaction executes an update or delete and the query
+            plan contains a motion operator.</li>
           <li>Concurrent update transactions on the same distribution key of a heap table that are
             executed by the Greenplum Database legacy query optimizer.</li>
           <li>Concurrent update transactions on the same row of a hash table that are executed by
@@ -3052,7 +3052,7 @@
             <row>
               <entry colname="col1">Boolean</entry>
               <entry colname="col2">off</entry>
-              <entry colname="col3">master<p>session</p><p>restart</p></entry>
+              <entry colname="col3">master<p>system</p><p>restart</p></entry>
             </row>
           </tbody>
         </tgroup>
