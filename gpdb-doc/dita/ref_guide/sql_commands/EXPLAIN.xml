@@ -14,6 +14,7 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
     VERBOSE [ <varname>boolean</varname> ]
     COSTS [ <varname>boolean</varname> ]
     BUFFERS [ <varname>boolean</varname> ]
+    TIMING [ <varname>boolean</varname> ]
     FORMAT { TEXT | XML | JSON | YAML }</codeblock></p>
     </section>
     <section id="section3">
@@ -33,11 +34,13 @@ EXPLAIN [ANALYZE] [VERBOSE] <varname>statement</varname></codeblock>
         the basic node type plus the following cost estimates that the planner made for the
         execution of that plan node:</p>
       <ul>
-        <li id="dq155475"><b>cost</b> — measured in units of disk page fetches; that is, 1.0 equals
-          one sequential disk page read. The first estimate is the start-up cost (cost of getting to
-          the first row) and the second is the total cost (cost of getting all rows). Note that the
-          total cost assumes that all rows will be retrieved, which may not always be the case (if
-          using <codeph>LIMIT</codeph> for example).</li>
+        <li id="dq155475"><b>cost</b> — the planner's guess at how long it will take to run the
+          statement (measured in cost units that are arbitrary, but conventionally
+          mean disk page fetches). Two cost numbers
+          are shown: the start-up cost before the first row can be returned, and
+          the total cost to return all the rows. Note that the total cost assumes that all
+          rows will be retrieved, which may not always be the case (if using <codeph>LIMIT</codeph>
+          for example).</li>
         <li id="dq155476"><b>rows</b> — the total number of rows output by this plan node. This is
           usually less than the actual number of rows processed or scanned by the plan node,
           reflecting the estimated selectivity of any <codeph>WHERE</codeph> clause conditions.
@@ -97,9 +100,9 @@ ROLLBACK;</codeblock></note>
       <parml>
         <plentry>
           <pt>ANALYZE</pt>
-          <pd>Carry out the command and show the actual run times. This parameter defaults to
-              <codeph>FALSE</codeph> if you omit it; specify <codeph>ANALYZE true</codeph> to enable
-            it. </pd>
+          <pd>Carry out the command and show the actual run times and other statistics. This
+            parameter defaults to <codeph>FALSE</codeph> if you omit it; specify <codeph>ANALYZE
+              true</codeph> to enable it. </pd>
         </plentry>
         <plentry>
           <pt>VERBOSE</pt>
@@ -120,14 +123,28 @@ ROLLBACK;</codeblock></note>
         <plentry>
           <pt>BUFFERS</pt>
           <pd>Include information on buffer usage. Specifically, include the number of shared blocks
-            hits, reads, and writes, the number of local blocks hits, reads, and writes, and the
-            number of temp blocks reads and writes. Shared blocks, local blocks, and temp blocks
-            contain tables and indexes, temporary tables and temporary indexes, and disk blocks used
-            in sort and materialized plans, respectively. The number of blocks shown for an
-            upper-level node includes those used by all its child nodes. In text format, only
-            non-zero values are printed. This parameter may only be used with the
-              <codeph>ANALYZE</codeph> parameter. This parameter defaults to <codeph>FALSE</codeph>
+            hit, read, dirtied, and written, the number of local blocks hit, read, dirtied, and
+            written, and the number of temp blocks read and written. A <i>hit</i> means that a read
+            was avoided because the block was found already in cache when needed. Shared blocks
+            contain data from regular tables and indexes; local blocks contain data from temporary
+            tables and indexes; while temp blocks contain short-term working data used in sorts,
+            hashes, Materialize plan nodes, and similar cases. The number of blocks <i>dirtied</i>
+            indicates the number of previously unmodified blocks that were changed by this query;
+            while the number of blocks <i>written</i> indicates the number of previously-dirtied
+            blocks evicted from cache by this backend during query processing. The number of blocks
+            shown for an upper-level node includes those used by all its child nodes. In text
+            format, only non-zero values are printed. This parameter may only be used when
+              <codeph>ANALYZE</codeph> is also enabled. This parameter defaults to <codeph>FALSE</codeph>
             if you omit it; specify <codeph>BUFFERS true</codeph> to enable it.</pd>
+        </plentry>
+        <plentry>
+          <pt>TIMING</pt>
+          <pd>Include the actual startup time and time spent in the node in the output. The
+            overhead of repeatedly reading the system clock can slow down the query significantly on
+            some systems, so it may be useful to set this parameter to <codeph>FALSE</codeph> when
+            only actual row counts, and not exact times, are needed. This parameter may only be used
+            when <codeph>ANALYZE</codeph> is also enabled. It defaults to <codeph>TRUE</codeph>.
+          </pd>
         </plentry>
         <plentry>
           <pt>FORMAT</pt>
@@ -191,6 +208,16 @@ ROLLBACK;</codeblock></note>
       <p>The estimated startup cost for this plan is <codeph>00.00</codeph> (no cost) and a total
         cost of <codeph>431.27</codeph>. The planner is estimating that this query will return one
         row.</p>
+      <p>Here is the same query, with cost estimates suppressed:</p>
+      <codeblock>EXPLAIN (COSTS FALSE) SELECT * FROM names WHERE name = 'Joelle';
+                QUERY PLAN
+------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)
+   ->  Seq Scan on names
+         Filter: (name = 'Joelle'::text)
+ Optimizer: PQO version 3.23.0
+(4 rows)</codeblock> 
+
       <p>Here is the same query, with JSON formatting:</p>
       <codeblock>EXPLAIN (FORMAT JSON) SELECT * FROM names WHERE name = 'Joelle';
                   QUERY PLAN
