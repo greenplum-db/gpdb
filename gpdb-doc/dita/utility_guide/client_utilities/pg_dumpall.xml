@@ -107,7 +107,7 @@
                     </plentry>
                     <plentry>
                         <pt>-r | --roles-only</pt>
-                        <pd>Dump only roles, not databases, or tablespaces.</pd>
+                        <pd>Dump only roles, not databases or tablespaces.</pd>
                     </plentry>
                     <plentry>
                         <pt>-s | --schema-only</pt>
@@ -151,8 +151,8 @@
                     <plentry>
                         <pt>--column-inserts | --attribute-inserts</pt>
                         <pd>Dump data as <codeph>INSERT</codeph> commands with explicit column names
-                                <codeph>(INSERT INTO <varname>table</varname>
-                                    (<varname>column</varname>, ...) VALUES ...)</codeph>. This will
+                                (<codeph>INSERT INTO <varname>table</varname>
+                                    (<varname>column</varname>, ...) VALUES ...</codeph>). This will
                             make restoration very slow; it is mainly useful for making dumps that
                             can be loaded into non-PostgreSQL-based databases. Also, since this
                             option generates a separate command for each row, an error in reloading

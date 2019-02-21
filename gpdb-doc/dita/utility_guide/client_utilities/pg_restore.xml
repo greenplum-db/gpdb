@@ -230,11 +230,10 @@
           </plentry>
           <plentry>
             <pt>--use-set-session-authorization</pt>
-            <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph>
-              commands instead of <codeph>ALTER OWNER</codeph> commands to
-              determine object ownership. This makes the dump more
-              standards-compatible, but depending on the history of the objects
-              in the dump, might not restore properly.</pd>
+            <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands instead of
+                <codeph>ALTER OWNER</codeph> commands to determine object ownership. This makes the
+              dump more standards-compatible, but depending on the history of the objects in the
+              dump, it might not restore properly.</pd>
           </plentry>
           <plentry>
             <pt>-? | --help</pt>
