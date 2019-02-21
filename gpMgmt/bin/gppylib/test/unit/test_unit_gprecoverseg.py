@@ -104,9 +104,10 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = self.config_file_path
+        options.showProgressInplace = True
 
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -176,8 +177,9 @@ class GpRecoversegTestCase(GpTestCase):
         options.masterDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -195,8 +197,9 @@ class GpRecoversegTestCase(GpTestCase):
         options.masterDataDirectory = self.temp_dir
         options.rebalanceSegments = True
         options.spareDataDirectoryFile = None
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
 
@@ -213,8 +216,9 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
@@ -235,8 +239,9 @@ class GpRecoversegTestCase(GpTestCase):
         options = Options()
         options.masterDataDirectory = self.temp_dir
         options.spareDataDirectoryFile = None
+        options.showProgressInplace = True
         # import HERE so that patches are already in place!
-        from programs.clsRecoverSegment import GpRecoverSegmentProgram
+        from gppylib.programs.clsRecoverSegment import GpRecoverSegmentProgram
         self.subject = GpRecoverSegmentProgram(options)
         self.subject.logger = Mock(spec=['log', 'warn', 'info', 'debug', 'error', 'warning', 'fatal'])
         self.mock_get_mirrors_to_build.side_effect = self._get_test_mirrors
