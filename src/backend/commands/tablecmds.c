@@ -5232,46 +5232,45 @@ ATPrepCmd(List **wqueue, Relation rel, AlterTableCmd *cmd,
 		}
 
 		case AT_PartAlter:				/* Alter */
-			if ( Gp_role == GP_ROLE_DISPATCH && recurse && ! recursing )
+		{
+			AlterTableCmd *basecmd = basic_AT_cmd(cmd);
+
+			switch (basecmd->subtype)
 			{
-				AlterTableCmd *basecmd = basic_AT_cmd(cmd);
-				
-				switch ( basecmd->subtype )
-				{
-					case AT_SetTableSpace:
+				case AT_SetTableSpace:
+					if ( Gp_role == GP_ROLE_DISPATCH && recurse && ! recursing )
+					{
 						cmd->partoids = basic_AT_oids(rel,cmd);
 						ATPartsPrepSetTableSpace(wqueue, rel, basecmd, cmd->partoids);
-						break;
-					
-					default:
-						/* Not a for-each-subsumed-part-type command. */
-						break;
-				}
-			}
-			else if (Gp_role == GP_ROLE_EXECUTE && cmd->partoids)
-			{
-				AlterTableCmd *basecmd = basic_AT_cmd(cmd);
 
-				switch ( basecmd->subtype )
-				{
-					case AT_SetTableSpace:
+					}
+					else if (Gp_role == GP_ROLE_EXECUTE && cmd->partoids)
+					{
 						ATPartsPrepSetTableSpace(wqueue, rel, basecmd, cmd->partoids);
-						break;
-						
-					default:
-						/* Not a for-each-subsumed-part-type command. */
-						break;
-				}
-			}
-			else if (Gp_role == GP_ROLE_UTILITY)
-			{
-				if (basic_AT_cmd(cmd)->subtype == AT_SetTableSpace)
-					ereport(ERROR,
-							(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							 errmsg("SET TABLESPACE is not supported in utility mode")));
+					}
+					else if (Gp_role == GP_ROLE_UTILITY)
+					{
+						if (basic_AT_cmd(cmd)->subtype == AT_SetTableSpace)
+							ereport(ERROR,
+									(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+											errmsg("SET TABLESPACE is not supported in utility mode")));
+					}
+					break;
+				case AT_PartExchange:
+					ATPartitionCheck(basecmd->subtype, rel, false, recursing);
+					if (Gp_role == GP_ROLE_UTILITY)
+						ereport(ERROR,
+								(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+										errmsg("EXCHANGE is not supported in utility mode")));
+					ATPrepExchange(rel, (AlterPartitionCmd *)basecmd->def);
+					break;
+				default:
+					/* Not a for-each-subsumed-part-type command. */
+					break;
 			}
 			pass = AT_PASS_MISC;
-			break;				
+			break;
+		}
 
 		case AT_PartSetTemplate:		/* Set Subpartition Template */
 			if (!gp_allow_non_uniform_partitioning_ddl)
