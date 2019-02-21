@@ -11,7 +11,7 @@
 a database. </p>
 <p><codeph>droplang</codeph> is a wrapper for the SQL command <codeph><xref href="../../ref_guide/sql_commands/DROP_EXTENSION.xml#topic1"/></codeph>.</p>
 
-</section><section id="section4"><title>Options</title><parml><plentry><pt>langname</pt><pd>Specifies the name of the procedural language to be removed.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies from which database the language should be removed. The
+</section><section id="section4"><title>Options</title><parml><plentry><pt>langname</pt><pd>Specifies the name of the procedural language to be removed. (This name is lower-cased.)</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies from which database the language should be removed. The
 default is to use the <codeph>PGDATABASE</codeph> environment variable
 setting, or the same name as the current system user.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>droplang</codeph> generates and sends
 to the server.</pd></plentry><plentry><pt>-l | --list</pt><pd>Show a list of already installed languages in the target database.
