@@ -117,8 +117,11 @@
                     <pt>NOLOGIN</pt>
                     <pd>If specified, <codeph>LOGIN</codeph> allows a role to log in to a database.
                         A role having the <codeph>LOGIN</codeph> attribute can be thought of as a
-                        user. Roles with <codeph>NOLOGIN</codeph> (the default) are useful for
-                        managing database privileges, and can be thought of as groups. </pd>
+                        user. Roles with <codeph>NOLOGIN</codeph> are useful for managing database
+                        privileges, and can be thought of as groups. If not specified,
+                            <codeph>NOLOGIN</codeph> is the default, except when <codeph>CREATE
+                            ROLE</codeph> is invoked through its alternative spelling <codeph><xref
+                                href="CREATE_USER.xml#topic1">CREATE USER</xref></codeph>.</pd>
                 </plentry>
                 <plentry>
                     <pt>REPLICATION</pt>
@@ -127,8 +130,7 @@
                         replication or put the system in and out of backup mode. A role having the
                             <codeph>REPLICATION</codeph> attribute is a very highly privileged role,
                         and should only be used on roles actually used for replication. If not
-                        specified, <codeph>NOREPLICATION</codeph> is the default for all roles
-                        except superusers.</pd>
+                        specified, <codeph>NOREPLICATION</codeph> is the default .</pd>
                 </plentry>
                 <plentry>
                     <pt>CONNECTION LIMIT <varname>connlimit</varname></pt>
