@@ -40,7 +40,8 @@
     <section id="section4"><title>Options</title><parml>
         <plentry>
           <pt>langname</pt>
-          <pd>Specifies the name of the procedural language to be installed. </pd>
+          <pd>Specifies the name of the procedural language to be installed. (This name is
+            lower-cased.)</pd>
         </plentry>
         <plentry>
           <pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt>
