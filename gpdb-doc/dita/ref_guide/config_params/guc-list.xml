@@ -4379,7 +4379,7 @@
     <title>gp_recursive_cte_prototype</title>
     <body>
       <p>Controls the availability of the experimental keyword <codeph>RECURSIVE</codeph> in the
-          <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph> command, or a
+          <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
           <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
         keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
         itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword

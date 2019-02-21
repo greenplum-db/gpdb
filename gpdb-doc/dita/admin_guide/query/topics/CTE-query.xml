@@ -13,14 +13,16 @@
     <p>See <xref href="#topic_zg3_bgh_5gb" format="dita"/>, for information about using
         <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph> in a
         <codeph>WITH</codeph> clause. </p>
-    <note>These are limitations for using a <codeph>WITH</codeph> clause.<p>For a
-          <codeph>SELECT</codeph> command that includes a <codeph>WITH</codeph> clause, the clause
-        can contain at most a single clause that modifies table data (<codeph>INSERT</codeph>,
-          <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph> command).</p><p>For a data-modifying
-        command (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>) that
-        includes a <codeph>WITH</codeph> clause, the clause can only contain a
-          <codeph>SELECT</codeph> command, the <codeph>WITH</codeph> clause cannot contain a
-        data-modifying command.</p></note>
+    <note>These are limitations for using a <codeph>WITH</codeph> clause.<ul id="ul_rfx_brf_wgb">
+        <li>For a <codeph>SELECT</codeph> command that includes a <codeph>WITH</codeph> clause, the
+          clause can contain at most a single clause that modifies table data
+            (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>
+          command).</li>
+        <li>For a data-modifying command (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or
+            <codeph>DELETE</codeph>) that includes a <codeph>WITH</codeph> clause, the clause can
+          only contain a <codeph>SELECT</codeph> command, the <codeph>WITH</codeph> clause cannot
+          contain a data-modifying command.</li>
+      </ul></note>
     <p>By default, the <codeph>RECURSIVE</codeph> keyword for the <codeph>WITH</codeph> clause is
       disabled. <codeph>RECURSIVE</codeph> can be enabled by setting the server configuration
       parameter <codeph><xref
@@ -36,19 +38,21 @@
       <p>The subqueries, which are often referred to as Common Table Expressions or CTEs, can be
         thought of as defining temporary tables that exist just for the query. These examples show
         the <codeph>WITH</codeph> clause being used with a <codeph>SELECT</codeph> command. The
-        example <codeph>WITH</codeph> clause can used the same way with <codeph>INSERT</codeph>,
-          <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>. In each case, it effectively provides
-        temporary tables that can be referred to in the main command.</p>
+        example <codeph>WITH</codeph> clauses can used the same way with <codeph>INSERT</codeph>,
+          <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph>. In each case, the
+          <codeph>WITH</codeph> clause effectively provides temporary tables that can be referred to
+        in the main command.</p>
       <p>A <codeph>SELECT</codeph> command in the <codeph>WITH</codeph> clause is evaluated only
         once per execution of the parent query, even if it is referred to more than once by the
         parent query or sibling <codeph>WITH</codeph> clauses. Thus, expensive calculations that are
         needed in multiple places can be placed within a <codeph>WITH</codeph> clause to avoid
         redundant work. Another possible application is to prevent unwanted multiple evaluations of
         functions with side-effects. However, the other side of this coin is that the optimizer is
-        less able to push restrictions from the parent query down into a WITH query than an ordinary
-        sub-query. The <codeph>WITH</codeph> query will generally be evaluated as written, without
-        suppression of rows that the parent query might discard afterwards. However, evaluation
-        might stop early if the references to the query demand only a limited number of rows.</p>
+        less able to push restrictions from the parent query down into a <codeph>WITH</codeph> query
+        than an ordinary sub-query. The <codeph>WITH</codeph> query will generally be evaluated as
+        written, without suppression of rows that the parent query might discard afterwards.
+        However, evaluation might stop early if the references to the query demand only a limited
+        number of rows.</p>
       <p> One use of this feature is to break down complicated queries into simpler parts. This
         example query displays per-product sales totals in only the top sales regions:</p>
       <codeblock>WITH regional_sales AS (
@@ -74,7 +78,7 @@ GROUP BY region, product;
       <p>When the optional <codeph>RECURSIVE</codeph> keyword is enabled, the <codeph>WITH</codeph>
         clause can accomplish things not otherwise possible in standard SQL. Using
           <codeph>RECURSIVE</codeph>, a query in the <codeph>WITH</codeph> clause can refer to its
-        own output. This is a simple example that computes the sum the integers from 1 through
+        own output. This is a simple example that computes the sum of integers from 1 through
         100:</p>
       <codeblock>WITH RECURSIVE t(n) AS (
     VALUES (1)
@@ -84,7 +88,7 @@ GROUP BY region, product;
 SELECT sum(n) FROM t;
 </codeblock>
       <p>The general form of a recursive <codeph>WITH</codeph> clause is a <i>non-recursive
-        term</i>, followed a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a
+        term</i>, followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a
           <i>recursive term</i>, where only the <i>recursive term</i> can contain a reference to the
         query output.
         <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
@@ -123,10 +127,10 @@ GROUP BY sub_part
 </codeblock>
       <p>When working with recursive <codeph>WITH</codeph> queries, you must ensure that the
         recursive part of the query eventually returns no tuples, or else the query loops
-        indefinitely. In the example that computes the sum the integers, the working table contains
-        a single row in each step, and it takes on the values from 1 through 100 in successive
-        steps. In the 100th step, there is no output because of the <codeph>WHERE</codeph> clause,
-        and the query terminates.</p>
+        indefinitely. In the example that computes the sum of integers, the working table contains a
+        single row in each step, and it takes on the values from 1 through 100 in successive steps.
+        In the 100th step, there is no output because of the <codeph>WHERE</codeph> clause, and the
+        query terminates.</p>
       <p>For some queries, using <codeph>UNION</codeph> instead of <codeph>UNION ALL</codeph> can
         ensure that the recursive part of the query eventually returns no tuples by discarding rows
         that duplicate previous output rows. However, often a cycle does not involve output rows
