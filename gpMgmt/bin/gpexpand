@@ -285,6 +285,7 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           fq_name text,
                           table_oid oid,
                           root_partition_name text,
+                          rank int,
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
@@ -1437,6 +1438,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     NULL as root_partition_name,
+    2 as rank,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
@@ -1509,6 +1511,7 @@ SELECT
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
+    2 as rank,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
@@ -1569,7 +1572,7 @@ ORDER BY fq_name, tableoid desc
         self.conn.commit()
 
         # read schema and queue up commands
-        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED'"
+        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
         cursor = dbconn.execSQL(self.conn, sql)
 
         for row in cursor:
@@ -1681,7 +1684,7 @@ ORDER BY fq_name, tableoid desc
             c = dbconn.connect(self.dburl, encoding='UTF8')
             self.logger.warn('Expansion has not yet completed.  Removing the expansion')
             self.logger.warn('schema now will leave the following tables unexpanded:')
-            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED'"
+            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
 
             cursor = dbconn.execSQL(c, unexpanded_tables_sql)
             unexpanded_tables_text = ''.join("\t%s\n" % row[0] for row in cursor)
@@ -1773,7 +1776,7 @@ class ExpandTable():
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
              self.root_partition_name,
-             self.status,
+             self.rank, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
         if self.fq_name == self.root_partition_name:
