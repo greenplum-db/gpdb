@@ -40,8 +40,8 @@
       <parml>
         <plentry>
           <pt>GLOBAL | LOCAL</pt>
-          <pd>These keywords are present for SQL standard compatibility, but have no effect in
-            Greenplum Database. </pd>
+          <pd>Ignored for compatibility. These keywords are deprecated; refer to <xref
+              href="CREATE_TABLE.xml#topic1"/> for details.</pd>
         </plentry>
         <plentry>
           <pt>TEMPORARY | TEMP</pt>
@@ -73,8 +73,7 @@
             <varname>column_name</varname>
           </pt>
           <pd>The name of a column in the new table. If column names are not provided, they are
-            taken from the output column names of the query. If the table is created from an
-              <codeph>EXECUTE</codeph> command, a column name list cannot be specified.</pd>
+            taken from the output column names of the query. </pd>
         </plentry>
         <plentry>
           <pt>WITH ( <varname>storage_parameter=value</varname> )</pt>
@@ -136,11 +135,12 @@
         </plentry>
         <plentry>
           <pt>AS <varname>query</varname></pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
+          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
+                <codeph><xref href="SELECT.xml#topic1/table-command">TABLE</xref></codeph>, or
                 <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
             command, or an <codeph><xref href="./EXECUTE.xml#topic1" type="topic" format="dita"
-              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or <codeph>VALUES
-            </codeph>query.</pd>
+              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or
+              <codeph>VALUES</codeph> query.</pd>
         </plentry>
         <plentry>
           <pt>DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ]

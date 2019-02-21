@@ -896,7 +896,7 @@ OFFSET <varname>start</varname></codeblock><p>where
           technique is recommended only if concurrent updates of the ordering columns are expected
           and a strictly sorted result is required. </p></sectiondiv>
     </section>
-    <section>
+    <section id="table-command">
       <title>The TABLE Command</title>
       <p>The command</p>
       <codeblock>TABLE <varname>name</varname></codeblock>
