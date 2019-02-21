@@ -8,9 +8,16 @@
 <b>dropuser</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>dropuser</codeph> removes an existing role from Greenplum Database. Only
         superusers and users with the <codeph>CREATEROLE</codeph> privilege can remove roles. To
         remove a superuser role, you must yourself be a superuser.</p><p><codeph>dropuser</codeph> is a wrapper around the SQL command <codeph>DROP
-ROLE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>role_name</varname></pt><pd>The name of the role to be removed. You will be prompted for a name
-if not specified on the command line. </pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>dropuser</codeph> generates and sends
-to the server. </pd></plentry><plentry><pt>-i | --interactive</pt><pd>Prompt for confirmation before actually removing the role.</pd></plentry>
+ROLE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>role_name</varname></pt><pd>The name of the role to be removed. You will be prompted for a name if not specified on the
+  command line and the <codeph>-i</codeph>/<codeph>--interactive</codeph> option
+  is used.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>dropuser</codeph> generates and sends
+    to the server. </pd></plentry><plentry><pt>-i | --interactive</pt><pd>Prompt for confirmation before actually removing the role, and prompt for the role name if none
+            is specified on the command line.</pd></plentry>
+        <plentry>
+          <pt>--if-exists</pt>
+          <pd>Do not throw an error if the user does not exist. A notice is
+            issued in this case.</pd>
+        </plentry>
        <plentry>
           <pt>-V | --version</pt>
           <pd>Print the <codeph>dropuser</codeph> version and exit.</pd>
