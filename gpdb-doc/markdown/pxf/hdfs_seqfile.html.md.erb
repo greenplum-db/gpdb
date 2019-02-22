@@ -214,13 +214,13 @@ public class PxfExample_CustomWritable implements Writable {
     $ ssh gpadmin@<gpmaster>
     ````
 
-5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory, and note the location. For example, if `PXF_CONF=/etc/pxf/usercfg`:
+5. Copy the `pxfex-customwritable.jar` JAR file to the user runtime library directory, and note the location. For example, if `PXF_CONF=/usr/local/greenplum-pxf`:
 
     ``` shell
-    gpadmin@gpmaster$ cp /home/gpadmin/pxfex-customwritable.jar /etc/pxf/usercfg/lib/pxfex-customwritable.jar
+    gpadmin@gpmaster$ cp /home/gpadmin/pxfex-customwritable.jar /usr/local/greenplum-pxf/lib/pxfex-customwritable.jar
     ```
 
-5. Sync the PXF configuration to each Greenplum Database segment host. For example, if `PXF_CONF=/etc/pxf/usercfg`:
+5. Synchronize the PXF configuration to each Greenplum Database segment host. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
