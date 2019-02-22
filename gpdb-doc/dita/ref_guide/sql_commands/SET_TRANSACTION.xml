@@ -9,6 +9,8 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">SET TRANSACTION [<varname>transaction_mode</varname>] [READ ONLY | READ WRITE]
 
+SET TRANSACTION SNAPSHOT <varname>snapshot_id</varname>
+
 SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname> 
      [READ ONLY | READ WRITE]
      [NOT] DEFERRABLE</codeblock>
@@ -24,6 +26,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
       <note>Deferrable transactions require the transaction to be serializable. Greenplum Database
         does not support serializable transactions, so including the <codeph>DEFERRABLE</codeph>
         clause has no effect.</note>
+      <p>Greenplum Database does not support the <codeph>SET TRANSACTION SNAPSHOT</codeph> command. </p>
       <p>The isolation level of a transaction determines what data the transaction can see when
         other transactions are running concurrently.</p>
       <ul>
@@ -88,16 +91,14 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
             strictest transaction isolation level Greenplum Database supports. Applications that use
             the <codeph>REPEATABLE READ</codeph> isolation level must be prepared to retry
             transactions due to serialization failures.</pd>
-          <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that
-            All statements of the current transaction can only see rows committed
-            before the first query or data-modification statement was executed in
-            this transaction. If a pattern of reads and writes among concurrent
-            serializable transactions would create a situation which could not
-            have occurred for any serial (one-at-a-time) execution of those
-            transactions, one of the transactions will be rolled back with a
-            <codeph>serialization_failure</codeph> <codeph>SQLSTATE</codeph>.
-            Greenplum Database does not fully support
-              <codeph>SERIALIZABLE</codeph> as defined by the standard, so if you specify
+          <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that All
+            statements of the current transaction can only see rows committed before the first query
+            or data-modification statement was executed in this transaction. If a pattern of reads
+            and writes among concurrent serializable transactions would create a situation which
+            could not have occurred for any serial (one-at-a-time) execution of those transactions,
+            one of the transactions will be rolled back with a
+              <codeph>serialization_failure</codeph> error. Greenplum Database does not fully
+            support <codeph>SERIALIZABLE</codeph> as defined by the standard, so if you specify
               <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to <codeph>REPEATABLE
               READ</codeph>. See <xref href="#topic1/section7" format="dita"/> for more information
             about transaction serializability in Greenplum Database.</pd>
@@ -164,7 +165,7 @@ SET TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock>
       <p>In the SQL standard, there is one other transaction characteristic that can be set with
         these commands: the size of the diagnostics area. This concept is specific to embedded SQL,
         and therefore is not implemented in the Greenplum Database server. </p>
-      <p>The <codeph>DEFERRABLE</codeph> transaction mode is a Greenplum  Database language
+      <p>The <codeph>DEFERRABLE</codeph> transaction mode is a Greenplum Database language
         extension.</p>
       <p>The SQL standard requires commas between successive <varname>transaction_modes</varname>,
         but for historical reasons Greenplum Database allows the commas to be omitted.</p>

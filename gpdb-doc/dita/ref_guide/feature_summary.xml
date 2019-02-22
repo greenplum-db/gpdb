@@ -919,7 +919,9 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
             <row>
               <entry colname="col1"><codeph>SET TRANSACTION</codeph></entry>
               <entry colname="col2">YES</entry>
-              <entry colname="col3"/>
+              <entry colname="col3"><b>Limitations:</b><p><codeph>DEFERRABLE</codeph> clause has no
+                  effect.</p><p><codeph>SET TRANSACTION SNAPSHOT</codeph> command is not
+                  supported.</p></entry>
             </row>
             <row>
               <entry colname="col1"><codeph>SHOW</codeph></entry>
