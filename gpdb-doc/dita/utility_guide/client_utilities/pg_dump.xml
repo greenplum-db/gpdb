@@ -144,12 +144,11 @@
               archive can be compressed with the <codeph>gzip</codeph> tool. This format
               is compressed by default.</pd>
             <pd>t | tar — Output a tar-format archive suitable for input into <codeph><xref
-                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
-              The tar-format is compatible with the directory-format; extracting a
-              tar-format archive produces a valid directory-format archive. However, the
-              tar-format does not support compression and has a limit of 8 GB on the size
-              of individual tables. Also, the relative order of table data items cannot be
-              changed during restore.</pd>
+                  href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>. The tar
+              format is compatible with the directory format; extracting a tar-format archive
+              produces a valid directory-format archive. However, the tar format does not support
+              compression and has a limit of 8 GB on the size of individual tables. Also, the
+              relative order of table data items cannot be changed during restore.</pd>
           </plentry>
           <plentry>
             <pt>-i | --ignore-version</pt>

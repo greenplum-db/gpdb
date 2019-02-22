@@ -38,7 +38,7 @@
             <p>To achieve a similar effect when running a transaction at the <codeph>REPEATABLE
                     READ</codeph> or <codeph>SERIALIZABLE</codeph> isolation level, you have to
                 execute the <codeph>LOCK TABLE</codeph> statement before executing any
-                    <codeph>SELECT</codeph> or data modification statement. A <codeph>REPEATBLE
+                    <codeph>SELECT</codeph> or data modification statement. A <codeph>REPEATABLE
                     READ</codeph> or <codeph>SERIALIZABLE</codeph> transaction's view of data will
                 be frozen when its first <codeph>SELECT</codeph> or data modification statement
                 begins. A <codeph>LOCK TABLE</codeph> later in the transaction will still prevent

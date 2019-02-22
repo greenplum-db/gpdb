@@ -67,7 +67,7 @@ same table page, and so you save disk accesses and speed up the query.
                                 faster than the index scan method, but if the disk space requirement
                                 is intolerable, you can disable this choice by temporarily setting
                                 the <xref href="../config_params/guc-list.xml#enable_sort"
-                                        >enable_sort</xref> configuraition parameter to
+                                        >enable_sort</xref> configuration parameter to
                                         <codeph>off</codeph>. </p>
                         <p> It is advisable to set <xref
                                         href="../config_params/guc-list.xml#maintenance_work_mem"/>

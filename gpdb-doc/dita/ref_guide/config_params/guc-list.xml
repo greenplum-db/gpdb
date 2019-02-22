@@ -93,7 +93,7 @@
             </li>
             <li><xref href="#default_text_search_config" format="dita"/></li>
             <li>
-              <xref href="#eefault_transction_deferrable"/>
+              <xref href="#default_transction_deferrable"/>
             </li>
             <li>
               <xref href="#default_transaction_isolation"/>

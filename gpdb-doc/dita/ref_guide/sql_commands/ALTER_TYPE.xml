@@ -8,13 +8,7 @@ ALTER TYPE <varname>name</varname> RENAME ATTRIBUTE <varname>attribute_name</var
 ALTER TYPE <varname>name</varname> RENAME TO <varname>new_name</varname> [ CASCADE | RESTRICT ]
 ALTER TYPE <varname>name</varname> SET SCHEMA <varname>new_schema</varname>
 ALTER TYPE <varname>name</varname> ADD VALUE <varname>new_enum_value</varname> [ { BEFORE | AFTER } <varname>existing_enum_value</varname> ]
-ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING ( storage_directive )
-
-where <varname>action</varname> is one of:
-  
-  ADD ATTRIBUTE <varname>attribute_name</varname> <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ CASCADE | RESTRICT ]
-  DROP ATTRIBUTE [ IF EXISTS ] <varname>attribute_name</varname> [ CASCADE | RESTRICT ]
-  ALTER ATTRIBUTE <varname>attribute_name</varname> [ SET DATA ] TYPE <varname>data_type</varname> [ COLLATE <varname>collation</varname> ] [ CASCADE | RESTRICT ]
+ALTER TYPE <varname>name</varname> SET DEFAULT ENCODING ( <varname>storage_directive</varname> )
 
 where <varname>action</varname> is one of:
   
@@ -30,23 +24,23 @@ where <varname>action</varname> is one of:
         definition of an existing type. There are several subforms:</p>
       <ul>
         <li>
-          <b><codeph>ADD ATTRIBUTE</codeph></b> — This form adds a new attribute to a composite
-          type, using the same syntax as CREATE TYPE. </li>
+          <b><codeph>ADD ATTRIBUTE</codeph></b> — Adds a new attribute to a composite
+          type, using the same syntax as <codeph>CREATE TYPE</codeph>. </li>
         <li>
-          <b><codeph>DROP ATTRIBUTE [ IF EXISTS ]</codeph></b> — This form drops an attribute from a
+          <b><codeph>DROP ATTRIBUTE [ IF EXISTS ]</codeph></b> — Drops an attribute from a
           composite type. If <codeph>IF EXISTS</codeph> is specified and the attribute does not
           exist, no error is thrown. In this case a notice is issued instead. </li>
-        <li><b><codeph>SET DATA TYPE</codeph></b> — This form changes the type of an attribute of a
+        <li><b><codeph>SET DATA TYPE</codeph></b> — Changes the type of an attribute of a
           composite type. </li>
         <li>
-          <b><codeph>OWNER</codeph></b> — This form changes the owner of the type. </li>
+          <b><codeph>OWNER</codeph></b> — Changes the owner of the type. </li>
         <li>
-          <b><codeph>RENAME</codeph></b> — This form changes the name of the type or the name of an
+          <b><codeph>RENAME</codeph></b> — Changes the name of the type or the name of an
           individual attribute of a composite type. </li>
         <li>
-          <b><codeph>SET SCHEMA</codeph></b> — This form moves the type into another schema. </li>
+          <b><codeph>SET SCHEMA</codeph></b> — Moves the type into another schema. </li>
         <li>
-          <b><codeph>ADD VALUE [ BEFORE | AFTER ]</codeph></b> — This form adds a new value to an
+          <b><codeph>ADD VALUE [ BEFORE | AFTER ]</codeph></b> — Adds a new value to an
           enum type. If the new value's place in the enum's ordering is not specified using
             <codeph>BEFORE</codeph> or <codeph>AFTER</codeph>, then the new item is placed at the
           end of the list of values. </li>
@@ -120,7 +114,7 @@ where <varname>action</varname> is one of:
             (fastest compression) to 4 (highest compression ratio). The default compression level is 1.</pd>
           <pd><b>BLOCKSIZE</b> — Set to the size, in bytes, for each block in the column. The
               <codeph>BLOCKSIZE</codeph> must be between 8192 and 2097152 bytes, and be a multiple
-            of 8192. The default block size is 32768.<note><varname>storage_directives</varname> defined at the table- or column- level override the default storage options defined for a type.</note></pd></plentry></parml></section>
+            of 8192. The default block size is 32768.<note><varname>storage_directives</varname> defined at the table- or column-level override the default storage options defined for a type.</note></pd></plentry></parml></section>
     <section id="section5"><title>Examples</title><p>To rename the data type named
           <codeph>electronic_mail</codeph>:
         </p><codeblock>ALTER TYPE electronic_mail RENAME TO email;</codeblock><p>To change the owner
