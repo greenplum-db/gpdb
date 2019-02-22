@@ -31,7 +31,13 @@ the environment variable <codeph>PGUSER</codeph> or defaults to the current
 system user name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never issue a password prompt. If the server requires password authentication
 and a password is not available by other means such as a <codeph>.pgpass</codeph>
 file, the connection attempt will fail. This option can be useful in
-batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry></parml></sectiondiv></section><section id="section6"><title>Notes</title><p><codeph>reindexdb</codeph> might need to connect several times to the
+batch jobs and scripts where no user is present to enter a password.</pd></plentry><plentry><pt>-W | --password</pt><pd>Force a password prompt.</pd></plentry>
+          <plentry>
+            <pt>--maintenance-db=<varname>dbname</varname></pt>
+            <pd>Specifies the name of the database to connect to discover what other databases
+              should be reindexed. If not specified, the <codeph>postgres</codeph> database will be
+              used, and if that does not exist, <codeph>template1</codeph> will be used.</pd>
+          </plentry></parml></sectiondiv></section><section id="section6"><title>Notes</title><p><codeph>reindexdb</codeph> might need to connect several times to the
 master server, asking for a password each time. It is convenient to have
 a <codeph>~/.pgpass</codeph> file in such cases. </p></section><section id="section7"><title>Examples</title><p>To reindex the database <codeph>mydb</codeph>:</p><codeblock>reindexdb mydb</codeblock><p>To reindex the table <codeph>foo</codeph> and the index <codeph>bar</codeph> in a database named
           <codeph>abcd</codeph>:</p><codeblock>reindexdb --table foo --index bar abcd</codeblock></section><section id="section8">
