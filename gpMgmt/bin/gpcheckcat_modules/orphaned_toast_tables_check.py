@@ -55,7 +55,9 @@ FROM (
         dbl_tst.relname AS double_orphan_parent_toast_name
     FROM
         pg_class tst
-        LEFT JOIN pg_depend dep ON tst.oid = dep.objid
+        LEFT JOIN pg_depend dep
+            ON dep.classid = 'pg_class'::regclass
+            AND tst.oid = dep.objid
         LEFT JOIN pg_class tbl ON tst.oid = tbl.reltoastrelid
         LEFT JOIN pg_class dbl
             ON trim('pg_toast.pg_toast_' FROM tst.oid::regclass::text)::int::regclass::oid = dbl.oid
@@ -85,7 +87,10 @@ FROM (
         dbl.reltoastrelid AS double_orphan_parent_toast_oid,
         dbl_tst.relname AS double_orphan_parent_toast_name
     FROM gp_dist_random('pg_class') tst
-        LEFT JOIN gp_dist_random('pg_depend') dep ON tst.oid = dep.objid AND tst.gp_segment_id = dep.gp_segment_id
+        LEFT JOIN gp_dist_random('pg_depend') dep
+            ON dep.classid = 'pg_class'::regclass
+            AND tst.oid = dep.objid
+            AND tst.gp_segment_id = dep.gp_segment_id
         LEFT JOIN gp_dist_random('pg_class') tbl ON tst.oid = tbl.reltoastrelid AND tst.gp_segment_id = tbl.gp_segment_id
         LEFT JOIN gp_dist_random('pg_class') dbl
             ON trim('pg_toast.pg_toast_' FROM tst.oid::regclass::text)::int::regclass::oid = dbl.oid 
