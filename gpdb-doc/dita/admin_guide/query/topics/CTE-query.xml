@@ -87,10 +87,11 @@ GROUP BY region, product;
 )
 SELECT sum(n) FROM t;
 </codeblock>
-      <p>The general form of a recursive <codeph>WITH</codeph> clause (a WITH clause that uses a the
-          <codeph>RECURSIVE</codeph> keyword) is a <i>non-recursive term</i>, followed by a
-          <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a <i>recursive term</i>,
-        where only the <i>recursive term</i> can contain a reference to the query output.
+      <p>The general form of a recursive <codeph>WITH</codeph> clause (a <codeph>WITH</codeph>
+        clause that uses a the <codeph>RECURSIVE</codeph> keyword) is a <i>non-recursive term</i>,
+        followed by a <codeph>UNION</codeph> (or <codeph>UNION ALL</codeph>), and then a
+          <i>recursive term</i>, where only the <i>recursive term</i> can contain a reference to the
+        query output.
         <codeblock><varname>non_recursive_term</varname> UNION [ ALL ] <varname>recursive_term</varname></codeblock></p>
       <p>A recursive <codeph>WITH</codeph> query that contains a <codeph> UNION [ ALL ]</codeph> is
         executed as follows:</p>
@@ -123,7 +124,7 @@ SELECT sum(n) FROM t;
   )
 SELECT sub_part, SUM(quantity) as total_quantity
 FROM included_parts
-GROUP BY sub_part
+GROUP BY sub_part ;
 </codeblock>
       <p>When working with recursive <codeph>WITH</codeph> queries, you must ensure that the
         recursive part of the query eventually returns no tuples, or else the query loops
@@ -212,15 +213,15 @@ SELECT n FROM t LIMIT 100;</codeblock>
   <topic id="topic_zg3_bgh_5gb">
     <title>Data-Modifying Statements in a WITH clause</title>
     <body>
-      <p>For a <codeph>SELECT</codeph> command, you can be use the data-modifying commands
+      <p>For a <codeph>SELECT</codeph> command, you can use the data-modifying commands
           <codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or <codeph>DELETE</codeph> in a
           <codeph>WITH</codeph> clause. This allows you to perform several different operations in
         the same query. </p>
       <p>A data-modifying statement in a <codeph>WITH</codeph> clause is executed exactly once, and
         always to completion, independently of whether the primary query reads all (or indeed any)
         of the output. This is different from the rule when using <codeph>SELECT</codeph> in a
-          <codeph>WITH</codeph> clause, the execution of a <codeph>SELECT</codeph> is carried only
-        as far as the primary query demands its output.</p>
+          <codeph>WITH</codeph> clause, the execution of a <codeph>SELECT</codeph> continues only as
+        long as the primary query demands its output.</p>
       <p>This simple CTE query deletes rows from <codeph>products</codeph>. The
           <codeph>DELETE</codeph> in the <codeph>WITH</codeph> clause deletes the specified rows
         from products, returning their contents by means of its <codeph>RETURNING</codeph>
