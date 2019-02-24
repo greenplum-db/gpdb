@@ -967,3 +967,10 @@ SUBPARTITION p027 VALUES ('027'),
 SUBPARTITION p141 VALUES ('141'),
 SUBPARTITION p037 VALUES ('037'));
 -- MPP-26829
+
+-- Add check test on partition exchange
+create table parttab (a int4, b int4) distributed by (a) partition by range (a) (start (1) end (5) every (2));
+create table parttab_x (a int4, b int4) distributed by (b);
+alter table parttab exchange partition for (1) with table parttab_x;
+alter table parttab alter partition for (1) exchange partition for (1) with table parttab_x;
+

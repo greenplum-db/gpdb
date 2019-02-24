@@ -2952,3 +2952,10 @@ ERROR:  syntax error at or near "TEMPLATE"
 LINE 5: SUBPARTITION TEMPLATE (START (1) END (12) EVERY (1), DEFAULT...
                      ^
 -- MPP-26829
+-- Add check test on partition exchange
+create table parttab (a int4, b int4) distributed by (a) partition by range (a) (start (1) end (5) every (2));
+create table parttab_x (a int4, b int4) distributed by (b);
+alter table parttab exchange partition for (1) with table parttab_x;
+ERROR:  distribution policy for "parttab_x" must be the same as that for "parttab"
+alter table parttab alter partition for (1) exchange partition for (1) with table parttab_x;
+ERROR:  distribution policy for "parttab_x" must be the same as that for "parttab"
