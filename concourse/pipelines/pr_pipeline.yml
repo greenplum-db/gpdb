@@ -24,6 +24,7 @@ resources:
       repository: pivotaldata/ubuntu-gpdb-dev
       tag: '16.04'
 
+      
 anchors:
   - &pr_failure
     put: gpdb_pr
@@ -44,6 +45,45 @@ anchors:
       path: gpdb_pr
       status: success
 
+      
+tasks:
+  - &icw_gporca_ubuntu16
+    task: icw_gporca_ubuntu16
+    image: image
+    file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
+    input_mapping:
+      gpdb_src: gpdb_pr
+      bin_gpdb: compiled_bits_ubuntu16
+    params:
+      TEST_SUITE: "icw"
+    timeout: 3h
+    on_failure: *pr_failure
+
+  - &icw_planner_ubuntu16
+    task: icw_planner_ubuntu16
+    image: image
+    file: gpdb_pr/concourse/tasks/test_with_planner_conan.yml
+    input_mapping:
+      gpdb_src: gpdb_pr
+      bin_gpdb: compiled_bits_ubuntu16
+    params:
+      TEST_SUITE: "icw"
+    timeout: 3h
+    on_failure: *pr_failure
+
+  - &compile_gpdb_ubuntu16
+    task: compile_gpdb_ubuntu16
+    file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
+    image: image
+    input_mapping:
+      gpdb_src: gpdb_pr
+    on_failure: *pr_failure
+    timeout: 30m
+    params:
+      BINTRAY_REMOTE: {{bintray_remote}}
+      BINTRAY_REMOTE_URL: {{bintray_remote_url}}
+      
+      
 jobs:
   - name: compile_and_test_gpdb
     public: true
@@ -57,39 +97,10 @@ jobs:
         resource: ubuntu-gpdb-dev-16
 
     - *pr_pending
-
-    - task: compile_gpdb_ubuntu16
-      file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
-      image: image
-      input_mapping:
-        gpdb_src: gpdb_pr
-      on_failure: *pr_failure
-      timeout: 30m
-      params:
-        BINTRAY_REMOTE: {{bintray_remote}}
-        BINTRAY_REMOTE_URL: {{bintray_remote_url}}
+    - *compile_gpdb_ubuntu16
 
     - aggregate:
-      - task: icw_gporca_ubuntu16
-        image: image
-        file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
-        input_mapping:
-          gpdb_src: gpdb_pr
-          bin_gpdb: compiled_bits_ubuntu16
-        params:
-          TEST_SUITE: "icw"
-        timeout: 3h
-        on_failure: *pr_failure
-
-      - task: icw_planner_ubuntu16
-        image: image
-        file: gpdb_pr/concourse/tasks/test_with_planner_conan.yml
-        input_mapping:
-          gpdb_src: gpdb_pr
-          bin_gpdb: compiled_bits_ubuntu16
-        params:
-          TEST_SUITE: "icw"
-        timeout: 3h
-        on_failure: *pr_failure
+        - *icw_gporca_ubuntu16
+        - *icw_planner_ubuntu16
 
     - *pr_success
