@@ -24,6 +24,26 @@ resources:
       repository: pivotaldata/ubuntu-gpdb-dev
       tag: '16.04'
 
+anchors:
+  - &pr_failure
+    put: gpdb_pr
+    params:
+      path: gpdb_pr
+      status: failure
+      
+  - &pr_pending
+    put: gpdb_pr
+    params:
+      path: gpdb_pr
+      status: pending
+      
+  - &pr_success
+    put: report_pr_success
+    resource: gpdb_pr
+    params:
+      path: gpdb_pr
+      status: success
+
 jobs:
   - name: compile_and_test_gpdb
     public: true
@@ -33,23 +53,17 @@ jobs:
       - get: gpdb_pr
         trigger: true
         version: every
-      - get: ubuntu-gpdb-dev-16
+      - get: image
+        resource: ubuntu-gpdb-dev-16
 
-    - put: gpdb_pr
-      params:
-        path: gpdb_pr
-        status: pending
+    - *pr_pending
 
     - task: compile_gpdb_ubuntu16
       file: gpdb_pr/concourse/tasks/compile_gpdb_open_source_ubuntu.yml
-      image: ubuntu-gpdb-dev-16
+      image: image
       input_mapping:
         gpdb_src: gpdb_pr
-      on_failure: &pr_failure
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: failure
+      on_failure: *pr_failure
       timeout: 30m
       params:
         BINTRAY_REMOTE: {{bintray_remote}}
@@ -57,7 +71,7 @@ jobs:
 
     - aggregate:
       - task: icw_gporca_ubuntu16
-        image: ubuntu-gpdb-dev-16
+        image: image
         file: gpdb_pr/concourse/tasks/test_with_orca_conan.yml
         input_mapping:
           gpdb_src: gpdb_pr
@@ -68,7 +82,7 @@ jobs:
         on_failure: *pr_failure
 
       - task: icw_planner_ubuntu16
-        image: ubuntu-gpdb-dev-16
+        image: image
         file: gpdb_pr/concourse/tasks/test_with_planner_conan.yml
         input_mapping:
           gpdb_src: gpdb_pr
@@ -78,8 +92,4 @@ jobs:
         timeout: 3h
         on_failure: *pr_failure
 
-    - put: report_pr_success
-      resource: gpdb_pr
-      params:
-        path: gpdb_pr
-        status: success
+    - *pr_success
