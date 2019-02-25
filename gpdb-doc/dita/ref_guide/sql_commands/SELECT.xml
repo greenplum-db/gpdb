@@ -780,7 +780,7 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           as needed by including a <codeph>COLLATE</codeph> clause in the
             <varname>expression</varname>, for example <codeph>ORDER BY mycolumn COLLATE
             "en_US"</codeph>. For information about defining collations, see <codeph><xref
-              href="../../ref_guide/sql_commands/CREATE_COLLATION.xml">CREATE
+              href="./CREATE_COLLATION.xml">CREATE
             COLLATION</xref></codeph>.</p></sectiondiv>
       <sectiondiv><b>The LIMIT Clause</b><p>The <codeph>LIMIT</codeph> clause consists of two
           independent

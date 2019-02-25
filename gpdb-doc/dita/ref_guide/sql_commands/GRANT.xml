@@ -206,7 +206,7 @@ columns. The privilege may be granted for all columns of a table, or just specif
           <pd>For sequences, this privilege allows the use of the
               <codeph>currval()</codeph> and <codeph>nextval()</codeph>
             function.</pd>
-          <pd>For types and domains, this privilege allow the use of the type or domain in the
+          <pd>For types and domains, this privilege allows the use of the type or domain in the
             creation of tables, functions, and other schema objects. (Note that it does not control
             general "usage" of the type, such as values of the type appearing in queries. It only
             prevents objects from being created that depend on the type. The main purpose of the

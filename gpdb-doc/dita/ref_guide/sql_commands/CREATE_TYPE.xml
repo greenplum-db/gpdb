@@ -448,7 +448,7 @@ for internally-created array type names.</p>
 <p>Greenplum Database does not support adding storage options for row or composite types.</p>
 <p>Storage options defined at the table- and column- level override the default storage options defined for a scalar type.</p>
 <p>Because there are no restrictions on use of a data type once it's been created, creating a base
-                type orrange type  is tantamount to granting public execute permission on the
+                type or range type is tantamount to granting public execute permission on the
                 functions mentioned in the type definition. (The creator of the type is therefore
                 required to own these functions.) This is usually not an issue for the sorts of
                 functions that are useful in a type definition. But you might want to think twice

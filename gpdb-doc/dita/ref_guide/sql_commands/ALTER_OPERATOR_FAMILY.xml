@@ -55,7 +55,7 @@ ALTER OPERATOR FAMILY <varname>name</varname> USING <varname>index_method</varna
             comparable syntax in <codeph>CREATE OPERATOR CLASS</codeph>, the operand data types must
             always be specified. In an <codeph>ADD FUNCTION</codeph> clause, the operand data type(s)
             the function is intended to support, if different from the input data type(s) of the
-            function. For B-tree comparison functions and hash indexes it is not necessary to specify <varname>op_type</varname> since the
+            function. For B-tree comparison functions it is not necessary to specify <varname>op_type</varname> since the
             function's input data type(s) are always the correct ones to use.  For B-tree sort
             support functions and all functions in GiST, SP-GiST and GIN operator
             classes, it is necessary to specify the operand data type(s) the function

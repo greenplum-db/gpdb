@@ -278,7 +278,7 @@
           string or a URI, which is used instead of a database name. This mechanism gives you very
           wide control over the connection. For
           example:</p><codeblock>$ psql "service=myservice sslmode=require"
-            $ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>This
+$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>This
           way you can also use LDAP for connection parameter lookup as described in <xref
             href="https://www.postgresql.org/docs/9.4/libpq-ldap.html" format="html"
             scope="external">LDAP Lookup of Connection Parameters</xref> in the PostgreSQL
@@ -878,7 +878,7 @@ lo_import 152801</codeblock>
               <varname>name</varname>. An optional prompt string, <varname>text</varname>, can be
             specified. (For multiword prompts, surround the text with single quotes.) </pd>
           <pd>By default, <codeph>\prompt</codeph> uses the terminal for input and output. However,
-            use the <codeph>-f</codeph> command line switch was used, <codeph>\prompt</codeph> uses
+            if the <codeph>-f</codeph> command line switch was used, <codeph>\prompt</codeph> uses
             standard input and standard output. </pd>
         </plentry>
         <plentry>
@@ -1186,7 +1186,7 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         <codeblock>testdb=&gt; \echo :foo
 bar</codeblock>
         <p>This works in both regular SQL commands and meta-commands; there is more detail in <xref
-            href="#topic1/section14" format="dita">SQL Interpolcation</xref>.</p><p>If you call
+            href="#topic1/section14" format="dita">SQL Interpolation</xref>.</p><p>If you call
             <codeph>\set</codeph> without a second argument, the variable is set, with an empty
           string as <varname>value</varname>. To unset (i.e., delete) a variable, use the command
             <varname>\unset</varname>. To show the values of all variables, call

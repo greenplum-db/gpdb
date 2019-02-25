@@ -36,7 +36,7 @@ ALTER VIEW [ IF EXISTS ] <varname>name</varname> RESET ( <varname>view_option_na
         </plentry><plentry><pt><codeph>SET</codeph>/<codeph>DROP DEFAULT</codeph></pt><pd>These forms set or remove the default value for a column. A default value associated with a view
             column is inserted into <codeph>INSERT</codeph> statements on the view before the view's
               <codeph>ON INSERT</codeph> rule is applied, if the <codeph>INSERT</codeph> does not
-            specify a value for the column. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new schema for the view. </pd></plentry>
+            specify a value for the column. </pd></plentry><plentry><pt><varname>new_owner</varname></pt><pd>The new owner for the view. </pd></plentry>
         <plentry>
           <pt><varname>new_name</varname></pt>
           <pd>The new name of the view.</pd>
@@ -58,7 +58,7 @@ ALTER VIEW [ IF EXISTS ] <varname>name</varname> RESET ( <varname>view_option_na
             </parml><parml>
               <plentry>
                 <pt><codeph>security_barrier</codeph> (boolean)</pt>
-                <pd>Changes the security-barrier property of the view. The value must be Boolean
+                <pd>Changes the security-barrier property of the view. The value must be a Boolean
                   value, such as <codeph>true</codeph> or <codeph>false</codeph>.</pd>
               </plentry>
             </parml></pd>

@@ -63,7 +63,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pd>The <codeph>WITH</codeph> clause allows you to specify one or more
                         subqueries that can be referenced by name in the <codeph>DELETE</codeph>
                         query. </pd>
-                    <pd>For an <codeph>DELETE</codeph> command that includes a <codeph>WITH</codeph>
+                    <pd>For a <codeph>DELETE</codeph> command that includes a <codeph>WITH</codeph>
                         clause, the clause can only contain <codeph>SELECT</codeph> statements, the
                             <codeph>WITH</codeph> clause cannot contain a data-modifying command
                             (<codeph>INSERT</codeph>, <codeph>UPDATE</codeph>, or

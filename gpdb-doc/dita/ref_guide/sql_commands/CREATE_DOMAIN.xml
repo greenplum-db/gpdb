@@ -12,8 +12,7 @@
         existing in its schema. </p>
       <p>If a schema name is given (for example, <codeph>CREATE DOMAIN myschema.mydomain
           ...</codeph>) then the domain is created in the specified schema. Otherwise it is created
-        in the current schema. The domain name must be unique among the types and domains existing
-        in its schema. </p>
+        in the current schema. </p>
   
   <p>Domains are useful for abstracting common constraints on fields into
 a single location for maintenance. For example, several tables might
