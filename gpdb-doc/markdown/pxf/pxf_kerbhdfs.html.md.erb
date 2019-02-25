@@ -23,9 +23,48 @@ Before you configure PXF for access to a secure HDFS filesystem, ensure that you
 
 ## <a id="procedure"></a>Procedure
 
-Perform the following steps to configure PXF for a secure HDFS. You will perform operations on the Kerberos KDC server and Greenplum Database segment hosts.
+Perform the following steps to configure PXF for a secure HDFS. You will perform operations on the Kerberos KDC server (either MIT Kerberos or Microsoft Active Directory) and Greenplum Database segment hosts.
 
-**Perform the following steps on Kerberos KDC server host**:
+**Perform the following steps on Active Directory domain controller**:
+Reference: https://blogs.technet.microsoft.com/heyscriptingguy/2013/08/13/add-user-principal-names-in-active-directory-via-powershell/
+
+1. Start Active Directory Users and Computers.
+2. Epand the forest domain and the top-level UNIX organizatoinal unit that fit your Greenplum user domain.
+3. Select Service Accounts, right-click, then select New->User.
+4. Type a name, eg. ServiceGreenplumPROD1, and change the logon name to gpadmin.
+5. Type and confirm the password to use for the service account in Active Directory, select the User cannot change password and Password never expires options, then click Next.
+6. Click Finish to complete the creation of the new user principal. 
+7. Open Powershell or a command prompt and run the following commands.
+	
+	``` shell
+	powershell#>ktpass -out pxf.service.keytab -princ gpadmin@EXAMPLE.COM -mapUser ServiceGreenplumPROD1 -pass ******* -crypto all -ptype KRB5_NT_PRINCIPAL
+	```
+	
+**Perform the following steps on each Greenplum Database master host**:
+
+1. Copy pxf.service.keytab to Greenplum master host $PXF_CONF
+	
+	``` shell
+	$>mv pxf.service.keytab $PXF_CONF/keytabs
+	$>chmod 400 $PXF_CONF/keytabs/pxf.service.keytab
+	```
+	
+2. Update the `PXF_KEYTAB` and `PXF_PRINCIPAL` settings, if required. Specify the location of the keytab file and the Kerberos principal, substituting your realm. *The default values for these settings are identified below*:
+
+    ``` shell
+    export PXF_KEYTAB="${PXF_CONF}/keytabs/pxf.service.keytab"
+    export PXF_PRINCIPAL="gpadmin@EXAMPLE.COM"
+    ```
+    
+3. Sync and Restart PXF
+
+    ``` shell
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster sync
+    gpadmin@master$ $GPHOME/pxf/bin/pxf cluster restart
+    ```
+
+
+**Perform the following steps on MIT Kerberos KDC server host**:
 
 1.  Log in to the Kerberos KDC server as the `root` user.
 
