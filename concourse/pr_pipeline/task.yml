@@ -1,0 +1,14 @@
+platform: linux
+inputs:
+  - name: gpdb_src
+run:
+  path: ./concourse/pr_pipeline/runner.bash
+  dir: gpdb_src
+params:
+  # default params to empty, override from pipeline
+  CONFIGURE_FLAGS:
+  MAKE_TASK:
+  PGOPTIONS:
+caches:
+  - path: gpdb_src/.ccache
+  

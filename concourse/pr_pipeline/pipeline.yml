@@ -1,0 +1,94 @@
+resource_types:
+  - name: pull-request
+    type: docker-image
+    source:
+      repository: teliaoss/github-pr-resource
+
+
+resources:
+  - name: gpdb_src
+    type: pull-request
+    source:
+      repository: greenplum-db/gpdb
+      access_token: {{gpdb-git-access-token}}
+      ignore_paths:
+      - gpdb-doc/*
+      - README*
+
+  - name: docker-image
+    type: docker-image
+    source:
+      repository: pivotaldata/greenplum-server-ubuntu-18
+      tag: latest
+
+      
+anchors:
+  - &pr_failure
+    put: report_pr_failure
+    resource: gpdb_src
+    params:
+      path: gpdb_src
+      status: failure
+      
+  - &pr_pending
+    put: report_pr_pending
+    resource: gpdb_src
+    params:
+      path: gpdb_src
+      status: pending
+      
+  - &pr_success
+    put: report_pr_success
+    resource: gpdb_src
+    params:
+      path: gpdb_src
+      status: success
+
+  - &fetch_pr
+    get: gpdb_src
+    trigger: true
+    version: every
+
+  - &fetch_image
+    get: image
+    resource: docker-image
+
+
+tasks:
+  - &task
+    image: image
+    file: gpdb_src/concourse/pr_pipeline/task.yml
+    timeout: 2h
+    
+  - &test_installcheck_world_with_planner
+    <<: *task
+    task: test_installcheck_world_with_planner
+    params:
+      PGOPTIONS: '-c optimizer=off'
+      MAKE_TASK: installcheck-world
+
+  - &test_installcheck_world_with_orca
+    <<: *task
+    task: test_installcheck_world_with_orca
+    params:
+      PGOPTIONS: '-c optimizer=on'
+      MAKE_TASK: installcheck-world
+      
+
+jobs:
+  - name: compile_and_test_gpdb
+    public: true
+    max_in_flight: 10
+    plan:
+    - aggregate:
+      - *fetch_pr
+      - *fetch_image
+      on_success: *pr_pending
+      on_failure: *pr_failure
+
+    - aggregate:
+      - *test_installcheck_world_with_orca
+      - *test_installcheck_world_with_planner
+      on_failure: *pr_failure
+
+    - *pr_success
