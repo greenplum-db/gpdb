@@ -34,7 +34,7 @@ not given, the column names are deduced from the query. </pd></plentry>
             </parml><parml>
               <plentry>
                 <pt><codeph>security_barrier</codeph> (boolean)</pt>
-                <pd>Changes the security-barrier property of the view. The value must be Boolean
+                <pd>Changes the security-barrier property of the view. The value must be a Boolean
                   value, such as <codeph>true</codeph> or <codeph>false</codeph>.</pd>
               </plentry>
             </parml></pd>

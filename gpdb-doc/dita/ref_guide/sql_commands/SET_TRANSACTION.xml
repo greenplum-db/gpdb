@@ -91,7 +91,7 @@ SET SESSION CHARACTERISTICS AS TRANSACTION <varname>transaction_mode</varname>
             strictest transaction isolation level Greenplum Database supports. Applications that use
             the <codeph>REPEATABLE READ</codeph> isolation level must be prepared to retry
             transactions due to serialization failures.</pd>
-          <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that All
+          <pd>The <codeph>SERIALIZABLE</codeph> transaction isolation level guarantees that all
             statements of the current transaction can only see rows committed before the first query
             or data-modification statement was executed in this transaction. If a pattern of reads
             and writes among concurrent serializable transactions would create a situation which

@@ -15,7 +15,7 @@ privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command 
             environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
             defaults to the current system user.</pd></plentry><plentry><pt><varname>description</varname></pt><pd>A comment to be associated with the newly created database. Descriptions
               containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace=<varname>tablespace</varname></pt><pd>Specifies the default tablespace for the database. (This name
-                is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry>
+                is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that <codeph>createdb</codeph> generates and sends to the server.</pd></plentry>
         <plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
               <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
             use the default encoding. <ph>See the Greenplum Database Reference

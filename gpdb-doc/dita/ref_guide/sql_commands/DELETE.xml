@@ -46,7 +46,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                 <p>On successful completion, a <codeph>DELETE</codeph> command returns a command tag
                     of the form</p>
                 <codeblock>DELETE <varname>count</varname></codeblock>
-                <p>The <varname>count</varname> is the number of rows deleted. If count is 0, no
+                <p>The <varname>count</varname> is the number of rows deleted. If <varname>count</varname> is 0, no
                     rows were deleted by the query (this is not considered an error).</p><p>If the
                         <codeph>DELETE</codeph> command contains a <codeph>RETURNING</codeph>
                     clause, the result will be similar to that of a <codeph>SELECT</codeph>

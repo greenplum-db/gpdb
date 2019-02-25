@@ -1096,7 +1096,7 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\unset <varname>name</varname></pt>
-          <pd>Unsets (deletes) the psql variable <varname>name</varname>. </pd>
+          <pd>Unsets (deletes) the <codeph>psql</codeph> variable <varname>name</varname>. </pd>
         </plentry>
         <plentry>
           <pt>\w {<varname>filename</varname> | |<varname>command</varname>}</pt>
@@ -1189,8 +1189,8 @@ bar</codeblock>
             href="#topic1/section14" format="dita">SQL Interpolation</xref>.</p><p>If you call
             <codeph>\set</codeph> without a second argument, the variable is set, with an empty
           string as <varname>value</varname>. To unset (i.e., delete) a variable, use the command
-            <varname>\unset</varname>. To show the values of all variables, call
-            <varname>\set</varname> without any argument.</p><note>The arguments of
+            <codeph>\unset</codeph>. To show the values of all variables, call
+            <codeph>\set</codeph> without any argument.</p><note>The arguments of
             <codeph>\set</codeph> are subject to the same substitution rules as with other commands.
           Thus you can construct interesting references such as <codeph>\set :foo
             'something'</codeph> and get 'soft links' or 'variable variables' of Perl or PHP fame,
@@ -1567,7 +1567,7 @@ $endif</codeblock>
             Examples:<codeblock>PSQL_EDITOR_LINENUMBER_ARG='+'
 PSQL_EDITOR_LINENUMBER_ARG='--line '</codeblock></pd>
           <pd>The default is <codeph>+</codeph> on Unix systems (corresponding to the default editor
-            vi, and useful for many other common editors); but there is no default on Windows
+            <codeph>vi</codeph>, and useful for many other common editors); but there is no default on Windows
             systems.</pd>
         </plentry>
         <plentry>
