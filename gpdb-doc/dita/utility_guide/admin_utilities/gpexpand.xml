@@ -37,10 +37,13 @@
         <li id="kt137052">Enough disk space on your segment hosts to temporarily hold a copy of your
           largest table. </li>
         <li>When redistributing data, Greenplum Database must be running in production mode.
-          Greenplum Database cannot be restricted mode or in master mode. The
+          Greenplum Database cannot be running in restricted mode or in master mode. The
             <codeph>gpstart</codeph> options <codeph>-R</codeph> or <codeph>-m</codeph> cannot be
-          specified to start Greenplum Database. </li>
+          specified to start Greenplum Database. </li>      
       </ul>
+      <note type="warning">Do not run the
+          <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> utilities while system expansion is
+        in process.</note>
       <p>For information about preparing a system for expansion, see <xref
           href="../../admin_guide/expand/expand-main.xml" scope="peer">Expanding a Greenplum
           System</xref><ph otherprops="op-print"> in the <cite>Greenplum Database Administrator
@@ -64,9 +67,9 @@
         <li id="kt138259">Creates an expansion schema to store the status of the expansion
           operation, including detailed status for tables.</li>
       </ul>
-      <p>In the table data redistribution phase, <codeph>gpexapand</codeph> redistributes table data
+      <p>In the table data redistribution phase, <codeph>gpexpand</codeph> redistributes table data
         to rebalance the data across the old and new segment instances.</p>
-      <note>Data redistribution should be performed during low-use hours. Redistribution can divided
+      <note>Data redistribution should be performed during low-use hours. Redistribution can be divided
         into batches over an extended period.</note>
       <p>To begin the redistribution phase, run <codeph>gpexpand</codeph> with either the
           <codeph>-d</codeph> (duration) or <codeph>-e</codeph> (end time) options, or with no
