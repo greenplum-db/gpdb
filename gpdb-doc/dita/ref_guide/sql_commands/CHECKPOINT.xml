@@ -9,5 +9,5 @@ data files will be flushed to disk.</p>
           <codeph>CHECKPOINT</codeph> is not intended for use during normal operation.</p>
   <p>If executed during recovery, the <codeph>CHECKPOINT</codeph> command
     will force a restartpoint rather than writing a new checkpoint.</p>
-  <p>Only superusers may call <codeph>CHECKPOINT</codeph>.</p></section><section id="section4"><title>Compatibility</title><p>The <codeph>CHECKPOINT</codeph> command is a Greenplum Database language
+  <p>Only superusers may call <codeph>CHECKPOINT</codeph>.</p></section><section id="section4"><title>Compatibility</title><p>The <codeph>CHECKPOINT</codeph> command is a Greenplum Database
 extension.</p></section></body></topic>
