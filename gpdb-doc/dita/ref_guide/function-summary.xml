@@ -1872,427 +1872,427 @@ SELECT sum(myvalue) FROM mymatrix;
       </table>
     </body>
   </topic>
-  <topic xml:lang="en-us" id="functions-range" outputclass="db.sect1">
-    <title outputclass="db.title">Range Functions and Operators</title>
-    <body outputclass="db.sect1">
-      <p outputclass="db.para"> See <xref href="datatype-range.xml#rangetypes"/> for an overview of
+  <topic xml:lang="en-us" id="functions-range">
+    <title>Range Functions and Operators</title>
+    <body>
+      <p> See <xref href="datatype-range.xml#rangetypes"/> for an overview of
         range types. </p>
-      <p outputclass="db.para"> The following table shows the operators available for range types. </p>
-      <table id="range-operators-table" outputclass="db.table">
-        <title outputclass="db.title">Range Operators</title>
-        <tgroup cols="4" outputclass="db.tgroup">
-          <thead outputclass="db.thead">
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">Operator</entry>
-              <entry outputclass="db.entry">Description</entry>
-              <entry outputclass="db.entry">Example</entry>
-              <entry outputclass="db.entry">Result</entry>
+      <p> The following table shows the operators available for range types. </p>
+      <table id="range-operators-table">
+        <title>Range Operators</title>
+        <tgroup cols="4">
+          <thead>
+            <row>
+              <entry>Operator</entry>
+              <entry>Description</entry>
+              <entry>Example</entry>
+              <entry>Result</entry>
             </row>
           </thead>
-          <tbody outputclass="db.tbody">
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">=</codeph>
+          <tbody>
+            <row>
+              <entry>
+                <codeph>=</codeph>
               </entry>
-              <entry outputclass="db.entry">equal</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int4range(1,5) = '[1,4]'::int4range</codeph>
+              <entry>equal</entry>
+              <entry>
+                <codeph>int4range(1,5) = '[1,4]'::int4range</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;&gt;</codeph>
+            <row>
+              <entry>
+                <codeph>&lt;&gt;</codeph>
               </entry>
-              <entry outputclass="db.entry">not equal</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">numrange(1.1,2.2) &lt;&gt;
+              <entry>not equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &lt;&gt;
                   numrange(1.1,2.3)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;</codeph>
+            <row>
+              <entry>
+                <codeph>&lt;</codeph>
               </entry>
-              <entry outputclass="db.entry">less than</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int4range(1,10) &lt; int4range(2,3)</codeph>
+              <entry>less than</entry>
+              <entry>
+                <codeph>int4range(1,10) &lt; int4range(2,3)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&gt;</codeph>
-              </entry>
-              <entry outputclass="db.entry">greater than</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int4range(1,10) &gt; int4range(1,5)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;=</codeph>
+            <row>
+              <entry>
+                <codeph>&gt;</codeph>
               </entry>
-              <entry outputclass="db.entry">less than or equal</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">numrange(1.1,2.2) &lt;= numrange(1.1,2.2)</codeph>
+              <entry>greater than</entry>
+              <entry>
+                <codeph>int4range(1,10) &gt; int4range(1,5)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&gt;=</codeph>
-              </entry>
-              <entry outputclass="db.entry">greater than or equal</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">numrange(1.1,2.2) &gt;= numrange(1.1,2.0)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">@&gt;</codeph>
+            <row>
+              <entry>
+                <codeph>&lt;=</codeph>
               </entry>
-              <entry outputclass="db.entry">contains range</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int4range(2,4) @&gt; int4range(2,3)</codeph>
+              <entry>less than or equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &lt;= numrange(1.1,2.2)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">@&gt;</codeph>
+            <row>
+              <entry>
+                <codeph>&gt;=</codeph>
               </entry>
-              <entry outputclass="db.entry">contains element</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">'[2011-01-01,2011-03-01)'::tsrange @&gt;
+              <entry>greater than or equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &gt;= numrange(1.1,2.0)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>@&gt;</codeph>
+              </entry>
+              <entry>contains range</entry>
+              <entry>
+                <codeph>int4range(2,4) @&gt; int4range(2,3)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>@&gt;</codeph>
+              </entry>
+              <entry>contains element</entry>
+              <entry>
+                <codeph>'[2011-01-01,2011-03-01)'::tsrange @&gt;
                   '2011-01-10'::timestamp</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;@</codeph>
+            <row>
+              <entry>
+                <codeph>&lt;@</codeph>
               </entry>
-              <entry outputclass="db.entry">range is contained by</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int4range(2,4) &lt;@ int4range(1,7)</codeph>
+              <entry>range is contained by</entry>
+              <entry>
+                <codeph>int4range(2,4) &lt;@ int4range(1,7)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;@</codeph>
-              </entry>
-              <entry outputclass="db.entry">element is contained by</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">42 &lt;@ int4range(1,7)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">f</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&amp;&amp;</codeph>
+            <row>
+              <entry>
+                <codeph>&lt;@</codeph>
               </entry>
-              <entry outputclass="db.entry">overlap (have points in common)</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(3,7) &amp;&amp; int8range(4,12)</codeph>
+              <entry>element is contained by</entry>
+              <entry>
+                <codeph>42 &lt;@ int4range(1,7)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>f</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&lt;&lt;</codeph>
+            <row>
+              <entry>
+                <codeph>&amp;&amp;</codeph>
               </entry>
-              <entry outputclass="db.entry">strictly left of</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(1,10) &lt;&lt;
+              <entry>overlap (have points in common)</entry>
+              <entry>
+                <codeph>int8range(3,7) &amp;&amp; int8range(4,12)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;&lt;</codeph>
+              </entry>
+              <entry>strictly left of</entry>
+              <entry>
+                <codeph>int8range(1,10) &lt;&lt;
                   int8range(100,110)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&gt;&gt;</codeph>
+            <row>
+              <entry>
+                <codeph>&gt;&gt;</codeph>
               </entry>
-              <entry outputclass="db.entry">strictly right of</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(50,60) &gt;&gt; int8range(20,30)</codeph>
+              <entry>strictly right of</entry>
+              <entry>
+                <codeph>int8range(50,60) &gt;&gt; int8range(20,30)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&amp;&lt;</codeph>
-              </entry>
-              <entry outputclass="db.entry">does not extend to the right of</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(1,20) &amp;&lt; int8range(18,20)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">&amp;&gt;</codeph>
+            <row>
+              <entry>
+                <codeph>&amp;&lt;</codeph>
               </entry>
-              <entry outputclass="db.entry">does not extend to the left of</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(7,20) &amp;&gt; int8range(5,10)</codeph>
+              <entry>does not extend to the right of</entry>
+              <entry>
+                <codeph>int8range(1,20) &amp;&lt; int8range(18,20)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">-|-</codeph>
-              </entry>
-              <entry outputclass="db.entry">is adjacent to</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">numrange(1.1,2.2) -|- numrange(2.2,3.3)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">t</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">+</codeph>
+            <row>
+              <entry>
+                <codeph>&amp;&gt;</codeph>
               </entry>
-              <entry outputclass="db.entry">union</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">numrange(5,15) + numrange(10,20)</codeph>
+              <entry>does not extend to the left of</entry>
+              <entry>
+                <codeph>int8range(7,20) &amp;&gt; int8range(5,10)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">[5,20)</codeph>
-              </entry>
-            </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">*</codeph>
-              </entry>
-              <entry outputclass="db.entry">intersection</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(5,15) * int8range(10,20)</codeph>
-              </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">[10,15)</codeph>
+              <entry>
+                <codeph>t</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">-</codeph>
+            <row>
+              <entry>
+                <codeph>-|-</codeph>
               </entry>
-              <entry outputclass="db.entry">difference</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">int8range(5,15) - int8range(10,20)</codeph>
+              <entry>is adjacent to</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) -|- numrange(2.2,3.3)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">[5,10)</codeph>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>+</codeph>
+              </entry>
+              <entry>union</entry>
+              <entry>
+                <codeph>numrange(5,15) + numrange(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[5,20)</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>*</codeph>
+              </entry>
+              <entry>intersection</entry>
+              <entry>
+                <codeph>int8range(5,15) * int8range(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[10,15)</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>-</codeph>
+              </entry>
+              <entry>difference</entry>
+              <entry>
+                <codeph>int8range(5,15) - int8range(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[5,10)</codeph>
               </entry>
             </row>
           </tbody>
         </tgroup>
       </table>
-      <p outputclass="db.para"> The simple comparison operators <codeph outputclass="db.literal"
-          >&lt;</codeph>, <codeph outputclass="db.literal">&gt;</codeph>, <codeph
-          outputclass="db.literal">&lt;=</codeph>, and <codeph outputclass="db.literal"
+      <p> The simple comparison operators <codeph
+          >&lt;</codeph>, <codeph>&gt;</codeph>, <codeph
+          >&lt;=</codeph>, and <codeph
           >&gt;=</codeph> compare the lower bounds first, and only if those are equal, compare the
         upper bounds. These comparisons are not usually very useful for ranges, but are provided to
         allow B-tree indexes to be constructed on ranges. </p>
-      <p outputclass="db.para"> The left-of/right-of/adjacent operators always return false when an
+      <p> The left-of/right-of/adjacent operators always return false when an
         empty range is involved; that is, an empty range is not considered to be either before or
         after any other range. </p>
-      <p outputclass="db.para"> The union and difference operators will fail if the resulting range
+      <p> The union and difference operators will fail if the resulting range
         would need to contain two disjoint sub-ranges, as such a range cannot be represented. </p>
-      <p outputclass="db.para"> The following table shows the functions available for use with range
+      <p> The following table shows the functions available for use with range
         types. </p>
-      <table id="range-functions-table" outputclass="db.table">
-        <title outputclass="db.title">Range Functions</title>
-        <tgroup cols="5" outputclass="db.tgroup">
-          <thead outputclass="db.thead">
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">Function</entry>
-              <entry outputclass="db.entry">Return Type</entry>
-              <entry outputclass="db.entry">Description</entry>
-              <entry outputclass="db.entry">Example</entry>
-              <entry outputclass="db.entry">Result</entry>
+      <table id="range-functions-table">
+        <title>Range Functions</title>
+        <tgroup cols="5">
+          <thead>
+            <row>
+              <entry>Function</entry>
+              <entry>Return Type</entry>
+              <entry>Description</entry>
+              <entry>Example</entry>
+              <entry>Result</entry>
             </row>
           </thead>
-          <tbody outputclass="db.tbody">
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">lower</codeph>(<codeph outputclass="db.type"
+          <tbody>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">range's element type</entry>
-              <entry outputclass="db.entry">lower bound of range</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">lower(numrange(1.1,2.2))</codeph>
+              <entry>range's element type</entry>
+              <entry>lower bound of range</entry>
+              <entry>
+                <codeph>lower(numrange(1.1,2.2))</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">1.1</codeph>
+              <entry>
+                <codeph>1.1</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">upper</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">range's element type</entry>
-              <entry outputclass="db.entry">upper bound of range</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">upper(numrange(1.1,2.2))</codeph>
+              <entry>range's element type</entry>
+              <entry>upper bound of range</entry>
+              <entry>
+                <codeph>upper(numrange(1.1,2.2))</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">2.2</codeph>
+              <entry>
+                <codeph>2.2</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">isempty</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>isempty</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">boolean</codeph>
+              <entry>
+                <codeph>boolean</codeph>
               </entry>
-              <entry outputclass="db.entry">is the range empty?</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">isempty(numrange(1.1,2.2))</codeph>
+              <entry>is the range empty?</entry>
+              <entry>
+                <codeph>isempty(numrange(1.1,2.2))</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">false</codeph>
+              <entry>
+                <codeph>false</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">lower_inc</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower_inc</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">boolean</codeph>
+              <entry>
+                <codeph>boolean</codeph>
               </entry>
-              <entry outputclass="db.entry">is the lower bound inclusive?</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">lower_inc(numrange(1.1,2.2))</codeph>
+              <entry>is the lower bound inclusive?</entry>
+              <entry>
+                <codeph>lower_inc(numrange(1.1,2.2))</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">true</codeph>
+              <entry>
+                <codeph>true</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">upper_inc</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper_inc</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">boolean</codeph>
+              <entry>
+                <codeph>boolean</codeph>
               </entry>
-              <entry outputclass="db.entry">is the upper bound inclusive?</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">upper_inc(numrange(1.1,2.2))</codeph>
+              <entry>is the upper bound inclusive?</entry>
+              <entry>
+                <codeph>upper_inc(numrange(1.1,2.2))</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">false</codeph>
+              <entry>
+                <codeph>false</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">lower_inf</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower_inf</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">boolean</codeph>
+              <entry>
+                <codeph>boolean</codeph>
               </entry>
-              <entry outputclass="db.entry">is the lower bound infinite?</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">lower_inf('(,)'::daterange)</codeph>
+              <entry>is the lower bound infinite?</entry>
+              <entry>
+                <codeph>lower_inf('(,)'::daterange)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">true</codeph>
+              <entry>
+                <codeph>true</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">upper_inf</codeph>(<codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper_inf</codeph>(<codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">boolean</codeph>
+              <entry>
+                <codeph>boolean</codeph>
               </entry>
-              <entry outputclass="db.entry">is the upper bound infinite?</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">upper_inf('(,)'::daterange)</codeph>
+              <entry>is the upper bound infinite?</entry>
+              <entry>
+                <codeph>upper_inf('(,)'::daterange)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">true</codeph>
+              <entry>
+                <codeph>true</codeph>
               </entry>
             </row>
-            <row outputclass="db.row">
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">
-                  <codeph outputclass="db.function">range_merge</codeph>(<codeph
-                    outputclass="db.type">anyrange</codeph>, <codeph outputclass="db.type"
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>range_merge</codeph>(<codeph
+                   >anyrange</codeph>, <codeph
                     >anyrange</codeph>) </codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.type">anyrange</codeph>
+              <entry>
+                <codeph>anyrange</codeph>
               </entry>
-              <entry outputclass="db.entry">the smallest range which includes both of the given
+              <entry>the smallest range which includes both of the given
                 ranges</entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">range_merge('[1,2)'::int4range,
+              <entry>
+                <codeph>range_merge('[1,2)'::int4range,
                   '[3,4)'::int4range)</codeph>
               </entry>
-              <entry outputclass="db.entry">
-                <codeph outputclass="db.literal">[1,4)</codeph>
+              <entry>
+                <codeph>[1,4)</codeph>
               </entry>
             </row>
           </tbody>
         </tgroup>
       </table>
-      <p outputclass="db.para"> The <codeph outputclass="db.function">lower</codeph> and <codeph
-          outputclass="db.function">upper</codeph> functions return null if the range is empty or
-        the requested bound is infinite. The <codeph outputclass="db.function">lower_inc</codeph>,
-          <codeph outputclass="db.function">upper_inc</codeph>, <codeph outputclass="db.function"
-          >lower_inf</codeph>, and <codeph outputclass="db.function">upper_inf</codeph> functions
+      <p> The <codeph>lower</codeph> and <codeph
+         >upper</codeph> functions return null if the range is empty or
+        the requested bound is infinite. The <codeph>lower_inc</codeph>,
+          <codeph>upper_inc</codeph>, <codeph
+          >lower_inf</codeph>, and <codeph>upper_inf</codeph> functions
         all return false for an empty range. </p>
     </body>
   </topic>
