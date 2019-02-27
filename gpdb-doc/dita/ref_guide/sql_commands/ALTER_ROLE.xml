@@ -7,7 +7,7 @@
     <p id="sql_command_desc">Changes a database role (user or group).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock>ALTER ROLE <varname>name</varname> [ [ WITH ] <varname>option</varname> [ ... ] ]
+      <codeblock id="sql_command_synopsis">ALTER ROLE <varname>name</varname> [ [ WITH ] <varname>option</varname> [ ... ] ]
 
 where <varname>option</varname> can be:
 

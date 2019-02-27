@@ -156,6 +156,13 @@
 		<codeblock conref="sql_commands/ALTER_ROLE.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/ALTER_ROLE.xml"/> for more
 			information.</p>
+		<section id="section_ssp_1hy_xgb">
+			<title>ALTER RULE</title>
+		</section>
+		<p conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_desc"/>
+	    <codeblock conref="sql_commands/ALTER_RULE.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/ALTER_RULE.xml"/> for more 
+			information.</p>
 		<section id="ae1903537">
 			<title>ALTER SCHEMA</title>
 		</section>
@@ -605,7 +612,7 @@
 		<codeblock conref="sql_commands/DROP_COLLATION.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_COLLATION.xml"/> for more
 			information.</p>
-		<section id="ae1904827">
+		<section id="section_s4r_fgy_xgb">
 			<title>DROP CONVERSION</title>
 		</section>
 		<p conref="sql_commands/DROP_CONVERSION.xml#topic1/sql_command_desc"/>

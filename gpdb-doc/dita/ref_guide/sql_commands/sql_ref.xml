@@ -65,6 +65,9 @@
       <li id="ad139898">
         <xref href="./ALTER_ROLE.xml#topic1" type="topic" format="dita"/>
       </li>
+      <li id="li_fkx_kfy_xgb">
+        <xref href="./ALTER_RULE.xml#topic1" type="topic" format="dita"/>
+      </li>
       <li id="ad140296">
         <xref href="./ALTER_SCHEMA.xml#topic1" type="topic" format="dita"/>
       </li>
