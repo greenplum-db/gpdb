@@ -33,8 +33,8 @@ Only the Greenplum Database administrative user can restart the PXF agent.
 For example, if `PXF_CONF=/usr/local/greenplum-pxf`, these commands deploy the connector across the cluster:
 
 ``` shell
-gpadmin@gpmaster$ scp my-connector.jar $PXF_CONF/lib/
-gpadmin@gpmaster$ scp connector-dependency.jar $PXF_CONF/lib/
+gpadmin@gpmaster$ cp my-connector.jar $PXF_CONF/lib/
+gpadmin@gpmaster$ cp connector-dependency.jar $PXF_CONF/lib/
 gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
 ```
 
