@@ -7,12 +7,11 @@
                 <p id="sql_command_desc">Defines a new index.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [<varname>name</varname>] ON <varname>table</varname>
-       [USING btree|bitmap|gist|spgist|gin]
-       ( {<varname>column</varname> | (<varname>expression</varname>)} [COLLATE <varname>collation</varname>] [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
-       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> ) ]
-       [TABLESPACE <varname>tablespace</varname>]
-       [WHERE <varname>predicate</varname>]</codeblock>
+                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [<varname>name</varname>] ON <varname>table_name</varname> [USING <varname>method</varname>]
+       ( {<varname>column_name</varname> | (<varname>expression</varname>)} [COLLATE <varname>parameter</varname>] [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
+       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> [, ... ] ) ]
+       [ TABLESPACE <varname>tablespace</varname> ]
+       [ WHERE <varname>predicate</varname> ]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>
@@ -82,15 +81,14 @@
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>table</varname>
+                                                <varname>table_name</varname>
                                         </pt>
                                         <pd>The name (optionally schema-qualified) of the table to
                                                 be indexed. </pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>btree | bitmap | gist | spgist |
-                                                  gin</varname>
+                                                <varname>method</varname>
                                         </pt>
                                         <pd>The name of the index method to be used. Choices are
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
@@ -107,7 +105,7 @@
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>column</varname>
+                                                <varname>column_name</varname>
                                         </pt>
                                         <pd>The name of a column of the table on which to create the
                                                 index. Only the B-tree, bitmap, GiST, and GIN index
@@ -235,7 +233,7 @@
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>tablespace</varname>
+                                                <varname>tablespace_name</varname>
                                         </pt>
                                         <pd>The tablespace in which to create the index. If not
                                                 specified, the default tablespace is used. </pd>
