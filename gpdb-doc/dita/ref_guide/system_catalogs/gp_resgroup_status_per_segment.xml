@@ -76,8 +76,8 @@
             <entry colname="col3"></entry>
             <entry colname="col4">The real-time memory usage of the resource group for
               the segment instance on the host. This total includes resource group
-              fixed and shared memory. It does not include resource group global shared
-              memory.</entry>
+              fixed and shared memory. It also includes global shared memory used by
+              the resource group.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -143,9 +143,9 @@
             <entry colname="col2">integer</entry>
             <entry colname="col3"></entry>
             <entry colname="col4">The portion of group shared memory that
-              Greenplum Database has granted to the resource group for the segment instance
-              on the host. Resource group global shared memory is not included in this
-              value.</entry>
+              Greenplum Database has allotted to the resource group for the segment
+              instance on the host. Resource group global shared memory is not
+              included in this value.</entry>
           </row>
           <row>
             <entry colname="col1">
@@ -153,10 +153,9 @@
             </entry>
             <entry colname="col2">integer</entry>
             <entry colname="col3"></entry>
-            <entry colname="col4">The total amount of group shared memory that
-              Greenplum Database has allotted to the resource group for the segment
-              instance on the host. This value will be the same for all resource group
-              and segment instance combinations on a host.</entry>
+            <entry colname="col4">The total amount of group shared memory requested
+              by the resource group on the host. This value will be the same for all
+              resource group and segment instance combinations on a host.</entry>
           </row>
         </tbody>
       </tgroup>

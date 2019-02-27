@@ -1803,7 +1803,7 @@
                 <entry colname="col1"> <codeph>memory_used</codeph> </entry>
                 <entry colname="col2">The real-time memory usage of the resource group on
                   the host. This total includes resource group fixed and shared memory.
-                  It does not include resource group global shared memory.</entry>
+                  It also includes global shared memory used by the resource group.</entry>
               </row>
               <row>
                 <entry colname="col1"> <codeph>memory_available</codeph> </entry>
@@ -1829,9 +1829,8 @@
               <row>
                 <entry colname="col1"> <codeph>memory_shared_used</codeph> </entry>
                 <entry colname="col2">The group shared memory used by the resource
-                  group on the host. If Greenplum Database has allotted any global shared
-                  memory to the resource group, this amount is included in the total as
-                  well.</entry>
+                  group on the host. If any global shared memory is used by the resource
+                  group, this amount is included in the total as well.</entry>
               </row>
               <row>
                 <entry colname="col1"> <codeph>memory_shared_available</codeph> </entry>
@@ -1842,17 +1841,23 @@
               <row>
                 <entry colname="col1"> <codeph>memory_shared_granted</codeph> </entry>
                 <entry colname="col2">The portion of group shared memory that Greenplum
-                  Database has granted to the resource group on the host. Resource group
+                  Database has allotted to the resource group on the host. Resource group
                   global shared memory is not included in this value.</entry>
               </row>
               <row>
                 <entry colname="col1"> <codeph>memory_shared_proposed</codeph> </entry>
-                <entry colname="col2">The total amount of group shared memory that
-                  Greenplum Database has allotted to the resource group on the host.</entry>
+                <entry colname="col2">The total amount of group shared memory requested
+                  by the resource group on the host.</entry>
               </row>
             </tbody>
           </tgroup>
         </table>
+        <p>The <codeph>memory_shared_granted</codeph> value may be less than
+          <codeph>memory_shared_proposed</codeph> if the cluster does not have enough
+          memory to allot. It may be greater than <codeph>memory_shared_proposed</codeph>
+          when global shared memory is in use by the resource group.
+          <codeph>memory_shared_granted</codeph> and <codeph>memory_shared_proposed</codeph>
+          should reach the same value over time.</p>
         <p>Sample output for the <codeph>gp_resgroup_status_per_host</codeph> view:</p>
         <codeblock> rsgname       | groupid | hostname   | cpu  | memory_used | memory_available | memory_quota_used | memory_quota_available | memory_quota_proposed | memory_shared_used | memory_shared_available | memory_shared_granted | memory_shared_proposed 
 ---------------+---------+------------+------+-------------+------------------+-------------------+------------------------+-----------------------+--------------------+-------------------------+-----------------------+------------------------
@@ -1910,8 +1915,8 @@
                 <entry colname="col1"> <codeph>memory_used</codeph> </entry>
                 <entry colname="col4">The real-time memory usage of the resource group for
                   the segment instance on the host. This total includes resource group
-                  fixed and shared memory. It does not include resource group global shared
-                  memory.</entry>
+                  fixed and shared memory. It also includes global shared memory used by
+                  the resource group.</entry>
               </row>
               <row>
                 <entry colname="col1"> <codeph>memory_available</codeph> </entry>
@@ -1949,16 +1954,15 @@
               <row>
                 <entry colname="col1"> <codeph>memory_shared_granted</codeph> </entry>
                 <entry colname="col4">The portion of group shared memory that
-                  Greenplum Database has granted to the resource group for the segment instance
-                  on the host. Resource group global shared memory is not included in this
-                  value.</entry>
+                  Greenplum Database has allotted to the resource group for the segment
+                  instance on the host. Resource group global shared memory is not
+                  included in this value.</entry>
               </row>
               <row>
                 <entry colname="col1"> <codeph>memory_shared_proposed</codeph> </entry>
-                <entry colname="col4">The total amount of group shared memory that
-                  Greenplum Database has allotted to the resource group for the segment
-                  instance on the host. This value will be the same for all resource group
-                  and segment instance combinations on a host.</entry>
+                <entry colname="col4">The total amount of group shared memory requested
+                  by the resource group on the host. This value will be the same for all
+                  resource group and segment instance combinations on a host.</entry>
               </row>
             </tbody>
           </tgroup>
