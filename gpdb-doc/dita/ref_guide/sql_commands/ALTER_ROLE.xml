@@ -7,93 +7,97 @@
     <p id="sql_command_desc">Changes a database role (user or group).</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">ALTER ROLE <varname>name</varname> RENAME TO <varname>newname</varname>
+      <codeblock>ALTER ROLE <varname>name</varname> [ [ WITH ] <varname>option</varname> [ ... ] ]
 
+where <varname>option</varname> can be:
+
+    SUPERUSER | NOSUPERUSER
+  | CREATEDB | NOCREATEDB
+  | CREATEROLE | NOCREATEROLE
+  | CREATEEXTTABLE | NOCREATEEXTTABLE  [ ( attribute='value' [, ...] )
+     where attributes and values are:
+       type='readable'|'writable'
+       protocol='gpfdist'|'http'
+  | INHERIT | NOINHERIT
+  | LOGIN | NOLOGIN
+  | REPLICATION | NOREPLICATION
+  | CONNECTION LIMIT <varname>connlimit</varname>
+  | [ ENCRYPTED | UNENCRYPTED ] PASSWORD '<varname>password</varname>'
+  | VALID UNTIL '<varname>timestamp</varname>'
+
+ALTER ROLE <varname>name</varname> RENAME TO <varname>new_name</varname>
+
+ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>configuration_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
+ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>configuration_parameter</varname> FROM CURRENT
+ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] RESET <varname>configuration_parameter</varname>
+ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] RESET ALL
 ALTER ROLE <varname>name</varname> RESOURCE QUEUE {<varname>queue_name</varname> | NONE}
-
 ALTER ROLE <varname>name</varname> RESOURCE GROUP {<varname>group_name</varname> | NONE}
-
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>config_parameter</varname> { TO | = } { <varname>value</varname> | DEFAULT }
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] SET <varname>config_parameter</varname> FROM CURRENT
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE <varname>database_name</varname> ] RESET <varname>config_parameter</varname>
-ALTER ROLE { <varname>name</varname> | ALL } [ IN DATABASE database_name ] RESET ALL
-
-ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]</codeblock>
-      <p>where <varname>option</varname> can be:</p>
-      <codeblock>      SUPERUSER | NOSUPERUSER
-    | CREATEDB | NOCREATEDB
-    | CREATEROLE | NOCREATEROLE
-    | CREATEUSER | NOCREATEUSER
-    | CREATEEXTTABLE | NOCREATEEXTTABLE 
-      [ ( <varname>attribute</varname>='<varname>value</varname>'[, ...] ) ]
-           where <varname>attribute</varname> and <varname>value</varname> are:
-           type='readable'|'writable'
-           protocol='gpfdist'|'http'
-    | INHERIT | NOINHERIT
-    | LOGIN | NOLOGIN
-    | REPLICATION | NOREPLICATION
-    | CONNECTION LIMIT <varname>connlimit</varname>
-    | [ENCRYPTED | UNENCRYPTED] PASSWORD '<varname>password</varname>'
-    | VALID UNTIL '<varname>timestamp</varname>'
-    | [ DENY <varname>deny_point</varname> ]
-    | [ DENY BETWEEN <varname>deny_point</varname> AND <varname>deny_point</varname>]
-    | [ DROP DENY FOR <varname>deny_point</varname> ] </codeblock>
+</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
       <p><codeph>ALTER ROLE</codeph> changes the attributes of a Greenplum Database role. There are
         several variants of this command.</p>
-      <ul>
-        <li id="av136726"><b>RENAME</b> — Changes the name of the role. Database superusers can
+      <parml>
+        <plentry>
+          <pt id="av137061"><b>WITH <varname>option</varname></b></pt>
+          <pd>Changes many of the role attributes that can be specified in <codeph><xref
+                href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>. (All of the
+            possible attributes are covered, execept that there are no options for adding or
+            removing memberships; use <codeph><xref href="GRANT.xml#topic1">GRANT</xref></codeph>
+            and <codeph><xref href="REVOKE.xml#topic1">REVOKE</xref></codeph> for that.) Attributes
+            not mentioned in the command retain their previous settings. Database superusers can
+            change any of these settings for any role. Roles having <codeph>CREATEROLE</codeph>
+            privilege can change any of these settings, but only for non-superuser and
+            non-replication roles. Ordinary roles can only change their own password.</pd>
+        </plentry>
+        <plentry id="av136726">
+          <pt><b>RENAME</b></pt>
+          <pd>Changes the name of the role. Database superusers can
           rename any role. Roles having <codeph>CREATEROLE</codeph> privilege can rename
           non-superuser roles. The current session user cannot be renamed (connect as a different
           user to rename a role). Because MD5-encrypted passwords use the role name as cryptographic
-          salt, renaming a role clears its password if the password is MD5-encrypted.</li>
-        <li id="av136604"><b>SET | RESET</b> — Changes a role's session default for a specified
-          configuration parameter, either for all databases or, when the <codeph>IN
-            DATABASE</codeph> clause is specified, only for sessions in the named database. If
-            <codeph>ALL</codeph> is specified instead of a role name, this changes the setting for
-          all roles. Using <codeph>ALL</codeph> with <codeph>IN DATABASE</codeph> is effectively the
-          same as using the command <codeph>ALTER DATABASE...SET...</codeph>. <p>Whenever the role
-            subsequently starts a new session, the specified value becomes the session default,
-            overriding whatever setting is present in the server configuration file
-              (<codeph>postgresql.conf</codeph>) or has been received from the <codeph>postgres</codeph> command
-            line. This only happens at login time; executing <xref href="SET_ROLE.xml#topic1">SET
-              ROLE</xref> or <xref href="SET_SESSION_AUTHORIZATION.xml#topic1">SET SESSION
-                AUTHORIZATION</xref> does not cause new configuration values to be set. </p>   
-          <p>Database-specific settings attched to a role override settings for all databases.</p>
-          <p>For
-            a role without <codeph>LOGIN</codeph> privilege, session defaults have no effect.
-            Ordinary roles can change their own session defaults. Superusers can change anyone's
-            session defaults. Roles having <codeph>CREATEROLE</codeph> privilege can change defaults
-            for non-superuser roles. Ordinary roles can only set defaults for themselves. Certain 
-            configuration variables cannot be set this way, or can only be set if a superuser 
-            issues the command. See the <i>Greenplum Database Reference Guide</i> for
-            information about all user-settable configuration parameters.</p></li>
-        <li id="av137058"><b>RESOURCE QUEUE</b> — Assigns the role to a resource
+          salt, renaming a role clears its password if the password is MD5-encrypted.</pd></plentry>
+        <plentry><pt id="av136604"><b>SET | RESET</b></pt><pd>Changes a role's session default for a 
+          specified configuration parameter, either for all
+            databases or, when the <codeph>IN DATABASE</codeph> clause is specified, only for
+            sessions in the named database. If <codeph>ALL</codeph> is specified instead of a role
+            name, this changes the setting for all roles. Using <codeph>ALL</codeph> with <codeph>IN
+              DATABASE</codeph> is effectively the same as using the command <codeph>ALTER
+              DATABASE...SET...</codeph>. <p>Whenever the role subsequently starts a new session,
+              the specified value becomes the session default, overriding whatever setting is
+              present in the server configuration file (<codeph>postgresql.conf</codeph>) or has
+              been received from the <codeph>postgres</codeph> command line. This only happens at
+              login time; executing <xref href="SET_ROLE.xml#topic1">SET ROLE</xref> or <xref
+                href="SET_SESSION_AUTHORIZATION.xml#topic1">SET SESSION AUTHORIZATION</xref> does
+              not cause new configuration values to be set. </p><p>Database-specific settings
+                attached to a role override settings for all databases. Settings for specific 
+                databases or specific roles override
+                settings for all roles.</p><p>For a role without
+                <codeph>LOGIN</codeph> privilege, session defaults have no effect. Ordinary roles
+              can change their own session defaults. Superusers can change anyone's session
+              defaults. Roles having <codeph>CREATEROLE</codeph> privilege can change defaults for
+              non-superuser roles. Ordinary roles can only set defaults for themselves. Certain
+              configuration variables cannot be set this way, or can only be set if a superuser
+              issues the command. See the <i>Greenplum Database Reference Guide</i> for information
+                  about all user-settable configuration parameters. Only superusers can change a setting
+                  for all roles in all databases.</p></pd>
+        </plentry>
+        <plentry><pt id="av137058"><b>RESOURCE QUEUE</b></pt><pd>Assigns the role to a resource
           queue. The role would then be subject to the limits assigned to the resource queue when
           issuing queries. Specify <codeph>NONE</codeph> to assign the role to the default resource
           queue. A role can only belong to one resource queue. For a role without
             <codeph>LOGIN</codeph> privilege, resource queues have no effect. See <codeph><xref
               href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic" format="dita"/></codeph> for
-          more information.</li>
-        <li id="av1370583"><b>RESOURCE GROUP</b> — Assigns a resource group to the role. The role
+          more information.</pd></plentry>
+        <plentry><pt id="av1370583"><b>RESOURCE GROUP</b></pt><pd>Assigns a resource group to the role. The role
           would then be subject to the concurrent transaction, memory, and CPU limits configured for
           the resource group. You can assign a single resource group to one or more roles. You
           cannot assign a resource group that you create for an external component to a role. See
               <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
-            /></codeph> for additional information.  </li>
-        <li id="av137061"><b>WITH <varname>option</varname></b> — Changes many of the role
-          attributes that can be specified in <codeph><xref href="./CREATE_ROLE.xml#topic1"
-              type="topic" format="dita"/></codeph>. (All of the possible attributes are covered,
-          execept that there are no options for adding or removing memberships; use <codeph><xref
-              href="GRANT.xml#topic1">GRANT</xref></codeph> and <codeph><xref
-              href="REVOKE.xml#topic1">REVOKE</xref></codeph> for that.) Attributes not mentioned in
-          the command retain their previous settings. Database superusers can change any of these
-          settings for any role. Roles having <codeph>CREATEROLE</codeph> privilege can change any
-          of these settings, but only for non-superuser and non-replication roles. Ordinary roles can only change their
-          own password.</li>
-      </ul>
+            /></codeph> for additional information.  </pd></plentry>
+      </parml>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -103,7 +107,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
           <pd>The name of the role whose attributes are to be altered. </pd>
         </plentry>
         <plentry>
-          <pt><varname>newname</varname></pt>
+          <pt><varname>new_name</varname></pt>
           <pd>The new name of the role. </pd>
         </plentry>
         <plentry>
@@ -262,6 +266,7 @@ ALTER ROLE <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
       <title>See Also</title>
       <p><codeph><xref href="./CREATE_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./DROP_ROLE.xml#topic1" type="topic" format="dita"/></codeph>,
+            <codeph><xref href="./ALTER_DATABASE.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./SET.xml#topic1" type="topic" format="dita"/></codeph>,
             <codeph><xref href="./CREATE_RESOURCE_GROUP.xml#topic1" type="topic" format="dita"
           /></codeph>, <codeph><xref href="./CREATE_RESOURCE_QUEUE.xml#topic1" type="topic"
