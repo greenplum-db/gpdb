@@ -135,7 +135,7 @@ To encrypt data that you write to S3 via a writable external table created speci
 
 ##### <a id="s3-sse-bucket"></a>Configuring SSE via an S3 Bucket Policy (Recommended)
 
-You can create S3 <i>Bucket Policy</i>(s) that identify the objects that you want to encrypt, the encryption key management scheme, and the write actions permitted on those objects. Refer to [Protecting Data Using Server-Side Encryption](http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html) in the AWS S3 documentation for more information about the SSE encryption key management schemes, and how to set bucket policies for each.
+You can create S3 <i>Bucket Policy</i>(s) that identify the objects that you want to encrypt, the encryption key management scheme, and the write actions permitted on those objects. Refer to [Protecting Data Using Server-Side Encryption](http://docs.aws.amazon.com/AmazonS3/latest/dev/serv-side-encryption.html) in the AWS S3 documentation for more information about the SSE encryption key management schemes. [How Do I Enable Default Encryption for an S3 Bucket?](https://docs.aws.amazon.com/AmazonS3/latest/user-guide/default-bucket-encryption.html) describes how to set default encryption bucket policies.
 
 
 ##### <a id="s3-sse-pxfs3cfg"></a>Specifying SSE Options in a PXF S3 Server Configuration
