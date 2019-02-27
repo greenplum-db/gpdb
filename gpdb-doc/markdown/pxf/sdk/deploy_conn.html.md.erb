@@ -25,7 +25,7 @@ The Greenplum Database administrator registers a third-party connector and its r
 When a Greenplum Database administrator deploys a new connector, they:
 
 - Copy the connector JAR file and the (JAR) files of any dependencies to the Greenplum Database master host
-- Synchronize PXF configuration to each Greenplum Database segment host
+- Synchronize the PXF configuration to each Greenplum Database segment host
 - Restart the PXF agent on each host
 
 Only the Greenplum Database administrative user can restart the PXF agent. 
@@ -118,7 +118,7 @@ Perform the following procedure to deploy the *Demo* connector and to verify tha
     gpadmin@gpmaster$ scp user@devsystem:/PXFDEV_BASE/demo_example/build/libs/my-demo-connector.jar $PXF_CONF/lib/my-demo-connector.jar
     ```
 
-8. Copy the JAR file to all Greenplum Database segment hosts by synchronizing PXF configuration. For example:
+8. Copy the JAR file to all Greenplum Database segment hosts by synchronizing the PXF configuration. For example:
 
     ``` shell
     gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync

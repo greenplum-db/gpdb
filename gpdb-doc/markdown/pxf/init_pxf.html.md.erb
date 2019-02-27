@@ -34,7 +34,7 @@ PXF supports both internal and user-customizable configuration properties. Initi
 
 PXF internal configuration files are located in your Greenplum Database installation in the `$GPHOME/pxf/conf` directory. You identify the PXF user configuration directory at PXF initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF may prompt you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
 
-**Note**: Choose a `$PXF_CONF` directory location that is both outside of your Greenplum Database installation, and one that you back up.
+**Note**: Choose a `$PXF_CONF` directory location that you can back up, and ensure that it resides outside of your Greenplum Database installation directory.
 
 During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [PXF User Configuration Directories](about_pxf_dir.html#usercfg) for a list of these directories and their contents.
 
