@@ -234,9 +234,9 @@
           <li><codeph>gpcheck</codeph></li>
           <li><codeph>gpcheckat</codeph></li>
         </ul></p>
-      <note type="warning">Running <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> is not
-        supported during system expansion. Locks obtained for backups can interfere with the
-        expansion process and invalid backup sets could be created. </note>
+      <note type="warning">Do not run <codeph>gpbackup</codeph> or <codeph>gprestore</codeph> during
+        system expansion. Locks obtained for backups can interfere with the expansion process and
+        invalid backup sets could be created. </note>
       <note type="important">After you begin initializing new segments, you can no longer restore
         the system using backup files created for the pre-expansion system. When initialization
         successfully completes, the expansion is committed and cannot be rolled back. </note>
