@@ -107,10 +107,10 @@ build_http_headers(PxfInputData *input)
 
 	/* filters */
 	if (filterstr != NULL)
+	{
 		churl_headers_append(headers, "X-GP-FILTER", filterstr);
-
-	if (list_length(input->quals) > 0)
 		churl_headers_append(headers, "X-GP-HAS-FILTER", "1");
+	}
 	else
 		churl_headers_append(headers, "X-GP-HAS-FILTER", "0");
 }

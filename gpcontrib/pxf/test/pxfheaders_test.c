@@ -258,7 +258,7 @@ void test__build_http_header__where_is_not_supported(void **state)
 	expect_headers_append(input_data->headers, "X-GP-URL-PORT", gphd_uri->port);
 	expect_headers_append(input_data->headers, "X-GP-DATA-DIR", gphd_uri->data);
 	expect_headers_append(input_data->headers, "X-GP-URI", gphd_uri->uri);
-	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "1");
+	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "0");
 
 	build_http_headers(input_data);
 
