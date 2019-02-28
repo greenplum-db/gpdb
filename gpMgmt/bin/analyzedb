@@ -212,12 +212,9 @@ class AnalyzeDb(Operation):
         if self.parallel_level < 1 or self.parallel_level > 10:
             raise ProgramArgumentValidationException('option -p requires a value between 1 and 10')
 
-        if self.rootstats:
-            qresult = execute_sql("SELECT version()", self.pg_port, self.dbname)
-            version = GpVersion(qresult[0][0])
-            if version < GpVersion('4.3.4.0'):
-                logger.debug("Adding --skip_root_stats option since Greenplum version is lower than 4.3.4.0")
-                self.rootstats = False
+        if not self.rootstats:
+            logger.warning("--skip_root_stats is now enabled by default and this flag will be removed in GPDB6.")
+        self.rootstats = False
 
     def _preprocess_options(self):
 
@@ -327,12 +324,6 @@ class AnalyzeDb(Operation):
                 return 0
 
             root_partition_col_dict = {}
-            # root_partition_col_dict contains the mapping between the root partitions
-            # and its corresponding columns to be analyzed
-            # key: name of the root partition whose stats needs to be refreshed
-            # value: a set of column names to be analyzed, or '-1' meaning all columns of that table
-            if self.rootstats:
-                root_partition_col_dict = self._get_root_partition_col_dict(candidates, input_col_dict)
 
             ordered_candidates = self._get_ordered_candidates(candidates, root_partition_col_dict)
             target_list = []
@@ -1185,7 +1176,7 @@ def create_parser():
     parser.add_option('-p', type='int', dest='parallel_level', default=5, metavar="<parallel level>",
                       help="Parallel level, i.e. the number of tables to be analyzed in parallel. Valid numbers are between 1 and 10. Default value is 5.")
     parser.add_option('--skip_root_stats', action='store_false', dest='rootstats', default=True,
-                      help="Skip refreshing root partition stats if any of the leaf partitions is analyzed.")
+                      help="DEPRECATED, this flag is now the default behavior. Skip refreshing root partition stats if any leaf partition is analyzed.")
     parser.add_option('--gen_profile_only', action='store_true', dest='gen_profile_only', default=False,
                       help="Create cached state files to indicate specified table or all tables have been analyzed.")
     parser.add_option('--full', action='store_true', dest='full_analyze', default=False,
