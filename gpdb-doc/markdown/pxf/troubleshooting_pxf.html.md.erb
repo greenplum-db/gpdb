@@ -219,7 +219,3 @@ You can use the `PXF_JVM_OPTS` property to set other Java options as well.
 
 As described in previous sections, you must synchronize the updated PXF configuration to each Greenplum Database segment host and restart the PXF server on each host.
 
-## <a id="pxf-segfail"></a>Greenplum Database Segment Failure
-
-If any of the PXF instances are inaccessible (due to a failure on a Greenplum Database segment host, for example), any query against an external table created with the `pxf` protocol will fail. To ensure that PXF is running on all Greenplum Database segment hosts, request the status of PXF as described in [Monitoring PXF](monitor_pxf.html).
-
