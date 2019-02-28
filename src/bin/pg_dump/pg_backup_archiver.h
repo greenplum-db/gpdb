@@ -88,7 +88,12 @@ typedef z_stream *z_streamp;
 #define K_VERS_1_11	MAKE_ARCHIVE_VERSION(1, 11, 0)	/* add toc section indicator */
 #define K_VERS_1_12	MAKE_ARCHIVE_VERSION(1, 12, 0)	/* add separate BLOB entries */
 
-/* Current archive version number (the format we can output) */
+/*
+ * Current archive version number (the format we can output)
+ *
+ * Note: If you update the current archive version, consider
+ * https://postgr.es/m/20190227123217.GA27552@alvherre.pgsql
+ */
 #define K_VERS_MAJOR 1
 #define K_VERS_MINOR 12
 #define K_VERS_REV 0
