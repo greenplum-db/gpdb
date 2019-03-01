@@ -47,9 +47,22 @@ To refer to the parameters in the prepared statement itself, use <codeph>$1</cod
           href="EXPLAIN.xml#topic1">EXPLAIN</xref>. If a generic plan is in use, it will contain
         parameter symbols <codeph>$<varname>n</varname></codeph>, while a custom plan will have the
         current actual parameter values substituted into it. </p>
-  <p>For more information on query planning and the statistics collected
-by Greenplum Database for that purpose, see the <codeph>ANALYZE</codeph>
-documentation. </p><p>You can see all prepared statements available in the session by querying the
+  <p>For more information on query planning and the statistics collected by Greenplum Database for
+        that purpose, see the <codeph>ANALYZE</codeph> documentation.</p>
+  <p>Although the main point of a prepared statement is to avoid repeated parse analysis and
+        planning of the statement, Greenplum will force re-analysis and re-planning of the statement
+        before using it whenever database objects used in the statement have undergone definitional
+        (DDL) changes since the previous use of the prepared statement. Also, if the value of
+          <codeph>search_path</codeph> changes from one use to the next, the statement will be
+        re-parsed using the new search_path. (This latter behavior is new as of Greenplum 6.) These
+        rules make use of a prepared statement semantically almost equivalent to re-submitting the
+        same query text over and over, but with a performance benefit if no object definitions are
+        changed, especially if the best plan remains the same across uses. An example of a case
+        where the semantic equivalence is not perfect is that if the statement refers to a table by
+        an unqualified name, and then a new table of the same name is created in a schema appearing
+        earlier in the <codeph>search_path</codeph>, no automatic re-parse will occur since no
+        object used in the statement changed. However, if some other change forces a re-parse, the
+        new table will be referenced in subsequent uses. </p><p>You can see all prepared statements available in the session by querying the
           <codeph>pg_prepared_statements</codeph> system view.</p></section><section id="section6"><title>Examples</title><p>Create a prepared statement for an <codeph>INSERT</codeph> statement,
 and then execute it:</p><codeblock>PREPARE fooplan (int, text, bool, numeric) AS INSERT INTO 
 foo VALUES($1, $2, $3, $4);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] <varname>name</varname> [, ...] 
+<topic id="topic1"><title id="ep20941">TRUNCATE</title><body><p id="sql_command_desc">Empties a table of all rows.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">TRUNCATE [TABLE] [ONLY] <varname>name</varname> [ * ] [, ...] 
     [ RESTART IDENTITY | CONTINUE IDENTITY ] [CASCADE | RESTRICT]</codeblock></section>
     <section id="section3"><title>Description</title><p><codeph>TRUNCATE</codeph> quickly removes
         all rows from a table or set of tables. It has the same effect as an unqualified
@@ -13,9 +13,11 @@
         operates on, which blocks all other concurrent operations on the table. When <codeph>RESTART
           IDENTITY</codeph> is specified, any sequences that are to be restarted are likewise locked
         exclusively. If concurrent access to a table is required, then the <codeph>DELETE</codeph>
-        command should be used instead. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a table to be truncated. If <codeph>ONLY</codeph> is
-            specified, only that table is truncated. If <codeph>ONLY</codeph> is not specified, the
-            table and all its descendant tables (if any) are truncated.</pd></plentry><plentry><pt>CASCADE</pt><pd>Because this key word applies to foreign key references (which are not supported in Greenplum
+          command should be used instead. </p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of a table to truncate. If <codeph>ONLY</codeph> is
+            specified before the table name, only that table is truncated. If <codeph>ONLY</codeph>
+            is not specified, the table and all its descendant tables (if any) are truncated.
+            Optionally, <codeph>*</codeph> can be specified after the table name to explicitly
+            indicate that descendant tables are included.</pd></plentry><plentry><pt>CASCADE</pt><pd>Because this key word applies to foreign key references (which are not supported in Greenplum
             Database) it has no effect.</pd></plentry>
         <plentry>
           <pt>RESTART IDENTITY</pt>

@@ -41,7 +41,8 @@
           <pd>If the command string contains multiple SQL commands, they are processed in a single
             transaction, unless there are explicit <codeph>BEGIN/COMMIT</codeph> commands included
             in the string to divide it into multiple transactions. This is different from the
-            behavior when the same string is fed to <codeph>psql</codeph>'s standard input.</pd>
+            behavior when the same string is fed to <codeph>psql</codeph>'s standard input.
+            Also, only the result of the last SQL command is returned.</pd>
         </plentry>
         <plentry>
           <pt>-d <varname>dbname</varname> | --dbname=<varname>dbname</varname></pt>
@@ -180,8 +181,9 @@
         </plentry>
         <plentry>
           <pt>-1 | --single-transaction</pt>
-          <pd>When <codeph>psql</codeph> executes a script with the <codeph>-f</codeph> option,
-            adding this option wraps <codeph>BEGIN/COMMIT</codeph> around the script to execute it
+          <pd>When <codeph>psql</codeph> executes a script, 
+            adding this option wraps <codeph>BEGIN</codeph>/<codeph>COMMIT</codeph> around the
+            script to execute it
             as a single transaction. This ensures that either all the commands complete
             successfully, or no changes are applied.</pd>
           <pd>If the script itself uses <codeph>BEGIN</codeph>, <codeph>COMMIT</codeph>, or
@@ -382,11 +384,9 @@ testdb=#</codeblock>
         </plentry>
         <plentry>
           <pt>\copy {<varname>table</varname> [(<varname>column_list</varname>)] |
-              (<varname>query</varname>)} {from | to} {'<varname>filename</varname>' | stdin |
-            stdout | pstdin | pstdout} [with] [binary] [oids] [delimiter [as]
-              '<varname>character</varname>'] [null [as] '<varname>string</varname>'] [csv [header]
-            [quote [as] 'character'] [escape [as] '<varname>character</varname>'] [force quote
-            column_list] [force not null column_list]]</pt>
+              (<varname>query</varname>)} {from | to} {'<varname>filename</varname>' | 
+            program '<varname>command</varname>' | stdin |
+            stdout | pstdin | pstdout} [with] (<varname>option</varname> [, ...]) ]</pt>
           <pd>Performs a frontend (client) copy. This is an operation that runs an SQL
             <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph>
             command, but instead of the server reading or writing the
@@ -394,11 +394,10 @@ testdb=#</codeblock>
             between the server and the local file system. This means that file accessibility and
             privileges are those of the local user, not the server, and no SQL superuser privileges
             are required.</pd>
-          <pd>The syntax of the command is similar to that of the SQL
-            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command.
-            Note that, because of this, special parsing rules apply to the <codeph>\copy</codeph>
-            command. In particular, the variable substitution rules and backslash escapes do not
-            apply. </pd>
+          <pd>When <codeph>program</codeph> is specified, <varname>command</varname> is executed
+            by <codeph>psql</codeph> and the data from or to <varname>command</varname> is routed
+            between the server and the client. This means that the execution privileges are those
+            of the local user, not the server, and no SQL superuser privileges are required.</pd>
           <pd><codeph>\copy ... from stdin | to stdout</codeph> reads/writes based on the command
             input and output respectively. All rows are read from the same source that issued the
             command, continuing until <codeph>\.</codeph> is read or the stream reaches
@@ -406,6 +405,13 @@ testdb=#</codeblock>
             read/write from <codeph>psql</codeph>'s standard input or output, use
               <codeph>pstdin</codeph> or <codeph>pstdout</codeph>. This option is useful for
             populating tables in-line within a SQL script file.</pd>
+          <pd>The syntax of the command is similar to that of the SQL
+            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command,
+            and <varname>option</varname> must indicate one of the options of the SQL
+            <codeph>COPY</codeph> command.
+            Note that, because of this, special parsing rules apply to the <codeph>\copy</codeph>
+            command. In particular, the variable substitution rules and backslash escapes do not
+            apply. </pd>
           <pd>This operation is not as efficient as the SQL <codeph>COPY</codeph> command because
             all data must pass through the client/server connection.</pd>
         </plentry>
@@ -561,7 +567,7 @@ testdb=#</codeblock>
             or <codeph>w</codeph>, to the command. If a pattern is specified, only functions
             whose names match the pattern are shown. If the form
               <codeph>\df+</codeph> is used, additional information about each function, including
-            volatility, language, source code, and description, is shown. By default, only
+            security, volatility, language, source code, and description, is shown. By default, only
             user-created objects are show; supply a pattern or the <codeph>S</codeph>
             modifier to include system objects.</pd>
         </plentry>
@@ -696,6 +702,12 @@ By
             listed. </pd>
         </plentry>
         <plentry>
+          <pt>\dy[+] [<varname>pattern</varname>]</pt>
+          <pd>Lists event triggers. If a pattern is specified, only those triggers
+            whose names match the pattern are listed. If <codeph>+</codeph> is appended
+            to the command name, each object is listed with its associated description.</pd>
+        </plentry>
+        <plentry>
           <pt>\e | \edit [<varname>filename</varname>] [<varname>line_number</varname>]</pt>
           <pd>If <varname>filename</varname> is specified, the file is edited; after the editor
             exits, its content is copied back to the query buffer. If no <varname>filename</varname>
@@ -755,9 +767,32 @@ By
         <plentry>
           <pt>\g [{<varname>filename</varname> | |<varname>command</varname> }]</pt>
           <pd>Sends the current query input buffer to the server and optionally stores the query's
-            output in <varname>filename</varname> or pipes the output to the shell command
-            <varname>command</varname>. A <codeph>\g</codeph> with argument is a 
+            output in <varname>filename</varname> or pipes the output into a separate shell
+            executing <varname>command</varname>. The file or command is written to only if
+            the query successfully returns zero or more tuples, not if the query fails or is
+            a non-data-returning SQL command.</pd>
+          <pd>A bare <codeph>\g</codeph> is essentially equivalent to a semi-colon.
+            A <codeph>\g</codeph> with argument is a 
             one-shot alternative to the <codeph>\o</codeph> command.</pd>
+        </plentry>
+        <plentry>
+          <pt>\gset [<varname>prefix</varname>]</pt>
+          <pd>Sends the current query input buffer to the server and stores the query's output
+            into <codeph>psql</codeph> variables. The query to be executed must return exactly
+            one row. Each column of the row is stored into a separate variable, named the same
+            as the column. For example:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset
+=&gt; \echo :var1 :var2
+hello 10
+</codeblock></pd>
+         <pd>If you specify a <varname>prefix</varname>, that string is prepended to the query's
+           column names to create the variable names to use:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset result_
+=&gt; \echo :result_var1 :result_var2
+hello 10</codeblock></pd>
+          <pd>If a column result is NULL, the corresponding variable is unset rather than being
+            set.</pd>
+          <pd>If the query fails or does not return one row, no variables are changed.</pd>
         </plentry>
         <plentry>
           <pt>\h | \help [<varname>sql_command</varname>]</pt>
@@ -793,9 +828,10 @@ By
             current working directory.</pd>
         </plentry>
         <plentry>
-          <pt>\l | \list | \l+ | \list+</pt>
-          <pd>List the names, owners, character set encodings, and access privileges of
-            all of the databases in the server. If <codeph>+</codeph> is appended to the
+          <pt>\l[+] | \list[+] [<varname>pattern</varname>]</pt>
+          <pd>List the databases in the server and show their names, owners, character set
+            encodings, and access privileges. If a pattern is specified, only databases whose
+            names match the pattern are listed. If <codeph>+</codeph> is appended to the
             command name, database sizes, default tablespaces, and descriptions are
             also displayed. (Size information is only available for databases that the
             current user can connect to.)</pd>
@@ -894,10 +930,12 @@ lo_import 152801</codeblock>
             printing options are: <ul id="ul_f3k_1vl_44">
               <li id="kb144087"><b><codeph>border</codeph></b> – The <varname>value</varname> must be a
                 number. In general, the higher the number the more borders and lines the tables will
-                have, but this depends on the particular format. In HTML mode, this will translate
-                directly into the <codeph>border=...</codeph> attribute, in the others only values
+                have, but this depends on the particular format. In HTML format, this will translate
+                directly into the <codeph>border=...</codeph> attribute; in the other formats only values
                   <codeph>0</codeph> (no border), <codeph>1</codeph> (internal dividing lines), and
-                  <codeph>2</codeph> (table frame) make sense.</li>
+                  <codeph>2</codeph> (table frame) make sense. <codeph>latex</codeph> and
+                 <codeph>latex-longtable</codeph> also support a <codeph>border</codeph> value of
+                 3 which adds a dividing line between each row.</li>
               <li id="kb151382"><b><codeph>columns</codeph></b> – Sets the target width for the
                   <codeph>wrapped</codeph> format, and also the width limit for determining whether
                 output is wide enough to require the pager or switch to the vertical display in expanded auto
@@ -933,24 +971,32 @@ lo_import 152801</codeblock>
                 rows) count). If <varname>value</varname> is omitted the command toggles footer
                display on or off. </li>
               <li id="kb144082"><b><codeph>format</codeph></b> – Sets the output format to one of
-                  <b>u</b><codeph>naligned</codeph>, <b>a</b><codeph>ligned</codeph>,
-                  <b>h</b><codeph>tml</codeph>, <b>l</b><codeph>atex</codeph>,
-                  <b>t</b><codeph>roff-ms</codeph>, or <b>w</b><codeph>rapped</codeph>. Unique
-                abbreviations,including one letter, are allowed. Unaligned writes all columns of a row on one line,
-                separated by the currently active field separator. This is useful for creating output
-                that might be intended to be read in by other programs. Aligned format is the
-                standard, human-readable, nicely formatted text output; this is the default. The HTML,
-                LaTeX, and Troff-ms formats put out tables that are intended to be included in documents using the
-                respective mark-up language. They are not complete documents! (This might not be so
-                dramatic in HTML, but in LaTeX you must have a complete document wrapper.) <p>The
-                  wrapped format is like <codeph>aligned</codeph>, but wraps wide data values across lines to make the output fit in the target
-                  column width. The target width is determined as described under the <codeph>columns</codeph> option. To
-                  specify the column width and select the wrapped format, use two \pset commands;
-                  for example, to set the with to 72 columns and specify wrapped format, use the
-                  commands <codeph>\pset columns 72</codeph> and then <codeph>\pset format
-                    wrapped</codeph>.</p><note>Since <codeph>psql</codeph> does not attempt to wrap
-                  column header titles, the wrapped format behaves the same as aligned if the total
-                  width needed for column headers exceeds the target. </note></li>
+                  <codeph>unaligned</codeph>, <codeph>aligned</codeph>,
+                  <codeph>html</codeph>, <codeph>latex</codeph> (uses
+                  <codeph>tabular</codeph>), <codeph>latex-longtable</codeph>,
+                  <codeph>troff-ms</codeph>, or <codeph>wrapped</codeph>. Unique
+                abbreviations, including one letter, are allowed.
+                <p><b><codeph>unaligned</codeph></b> format writes all columns of a row on one line,
+                  separated by the currently active field separator. This is useful for creating
+                  output that might be intended to be read in by other programs (for example,
+                  tab-separated or comma-separated format).</p>
+                <p><b><codeph>aligned</codeph></b> format is the standard, human-readable, nicely
+                  formatted text output; this is the default.</p>
+                <p>The <b><codeph>html</codeph></b>, <b><codeph>latex</codeph></b>,
+                  <b><codeph>latex-longtable</codeph></b>, and
+                  <b><codeph>troff-ms</codeph></b> formats put out tables that are intended to
+                  be included in documents using the respective mark-up language. They are not
+                  complete documents! (This might not be so dramatic in HTML, but in LaTeX you
+                  must have a complete document wrapper. <codeph>latex-longtable</codeph> also
+                  requires the LaTeX <codeph>longtable</codeph> and <codeph>booktabs</codeph>
+                  packages.)</p>
+                <p>The <b><codeph>wrapped</codeph></b> format is like <codeph>aligned</codeph>, but
+                  wraps wide data values across lines to make the output fit in the target
+                  column width. The target width is determined as described under the
+                  <codeph>columns</codeph> option. Note that <codeph>psql</codeph> does not
+                  attempt to wrap column header titles; the <codeph>wrapped</codeph> format
+                  behaves the same as <codeph>aligned</codeph> if the total
+                  width needed for column headers exceeds the target.</p></li>
               <li id="kb151434"><b><codeph>linestyle</codeph></b> [<b><codeph>unicode</codeph></b> |
                     <b><codeph>ascii</codeph></b> | <b><codeph>old-ascii</codeph></b>] – Sets the
                 border line drawing style to one of unicode, ascii, or old-ascii. Unique
@@ -1000,12 +1046,16 @@ lo_import 152801</codeblock>
               <li><b><codeph>recordsep_zero</codeph></b> - Sets the record separator to use in
                 unaligned output format to a zero byte.</li>
               <li id="kb147082"><b><codeph>tableattr</codeph></b> | <b><codeph>T</codeph></b>
-                  [<varname>text</varname>] – Specifies attributes to be placed
-                inside the HTML <codeph>table</codeph> tag in <codeph>html</codeph> output
-                format. This could for example be <codeph>cellpadding</codeph> or
+                  [<varname>text</varname>] – In HTML format, this specifies attributes to be placed
+                inside the HTML <codeph>table</codeph> tag. This could for example be
+                  <codeph>cellpadding</codeph> or
                   <codeph>bgcolor</codeph>. Note that you probably don't want to specify <codeph>border</codeph>
                 here, as that is already taken care of by <codeph>\pset border</codeph>. If no
-                <varname>value</varname> is given, the table attributes are unset.</li>
+                <varname>value</varname> is given, the table attributes are unset.
+                <p>In <codeph>latex-longtable</codeph> format, this controls the proportional width
+                  of each column containing a left-aligned data type. It is specified as a
+                  whitespace-separated list of values, e.g. <codeph>'0.2 0.2 0.6'</codeph>.
+                  Unspecified output columns use the last specified value.</p></li>
               <li id="kb147069"><b><codeph>title</codeph></b> [<varname>text</varname>] – Sets the
                 table title for any subsequently printed tables. This can be used to give your
                 output descriptive tags. If no <varname>value</varname> is given, the title is unset.</li>
@@ -1104,6 +1154,12 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
             or pipes it to the shell command <varname>command</varname>.</pd>
         </plentry>
         <plentry>
+          <pt>\watch [<varname>seconds</varname>]</pt>
+          <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
+            interrupted or the query fails. Wait the specified number of seconds (default 2)
+            between executions.</pd>
+        </plentry>
+        <plentry>
           <pt>\x [ on | off | auto ]</pt>
           <pd>Sets or toggles expanded table formatting mode. As such it is equivalent to
               <codeph>\pset expanded</codeph>.</pd>
@@ -1116,8 +1172,9 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
         </plentry>
         <plentry>
           <pt>\! [<varname>command</varname>]</pt>
-          <pd>Escapes to a separate shell or executes the shell command. <varname>command</varname>. The arguments are not
-            further interpreted; the shell will see them as-is.</pd>
+          <pd>Escapes to a separate shell or executes the shell command <varname>command</varname>.
+            The arguments are not further interpreted; the shell will see them as-is. In
+            particular, the variable substitution rules and backslash escapes do not apply.</pd>
         </plentry>
         <plentry>
           <pt>\?</pt>
@@ -1517,7 +1574,9 @@ testdb=> INSERT INTO my_table VALUES (:'content');</codeblock>
         <p><codeph>psql</codeph> supports the NetBSD libedit library for convenient line editing and
           retrieval. The command history is automatically saved when <codeph>psql</codeph> exits and
           is reloaded when <codeph>psql</codeph> starts up. Tab-completion is also supported,
-          although the completion logic makes no claim to be an SQL parser. If for some reason you
+          although the completion logic makes no claim to be an SQL parser. The queries generated
+          by tab-completion can also interfere with other SQL commands, e.g.
+          <codeph>SET TRANSACTION ISOLATION LEVEL</codeph>. If for some reason you
           do not like the tab completion, you can turn it off by putting this in a file named
             <codeph>.inputrc</codeph> in your home directory:</p>
         <codeblock>$if psql
@@ -1629,10 +1688,22 @@ PSQL_EDITOR_LINENUMBER_ARG='--line '</codeblock></pd>
     </section>
     <section id="section19">
       <title>Notes</title>
-      <p><codeph>psql</codeph> only works smoothly with servers of the same version. That does not
-        mean other combinations will fail outright, but subtle and not-so-subtle problems might come
-        up. Backslash commands are particularly likely to fail if the server is of a different
-        version.</p>
+      <p><codeph>psql</codeph> works best with servers of the same
+        or an older major version.  Backslash commands are particularly likely
+        to fail if the server is of a newer version than <codeph>psql</codeph>
+        itself. However, backslash commands of the <codeph>\d</codeph> family should
+        work with older server versions, though not necessarily with
+        servers newer than <codeph>psql</codeph> itself. The general
+        functionality of running SQL commands and displaying query results
+        should also work with servers of a newer major version, but this cannot
+        be guaranteed in all cases.</p>
+      <p>If you want to use <codeph>psql</codeph> to connect to several
+        servers of different major versions, it is recommended that you use the
+        newest version of <codeph>psql</codeph>. Alternatively, you
+        can keep a copy of <codeph>psql</codeph> from each major
+        version around and be sure to use the version that matches the
+        respective server. But in practice, this additional complication should
+        not be necessary.</p>
     </section>
     <section id="section20">
       <title>Notes for Windows Users</title>

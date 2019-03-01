@@ -20,23 +20,24 @@ SELECT [ALL | DISTINCT [ON (<varname>expression</varname> [, ...])]]
   [LIMIT {<varname>count</varname> | ALL}]
   [OFFSET <varname>start</varname> [ ROW | ROWS ] ]
   [FETCH { FIRST | NEXT } [ <varname>count</varname> ] { ROW | ROWS } ONLY]
-  [FOR {UPDATE | SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
+  [FOR {UPDATE | NO KEY UPDATE | SHARE | KEY SHARE} [OF <varname>table_name</varname> [, ...]] [NOWAIT] [...]]
 
 TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name</varname> }
 </codeblock>
       <p>where <varname>with_query:</varname> is:</p>
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
-      <codeblock>[ONLY] <varname>table_name</varname> [[AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
-(select) [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]<varname>
-with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] )]]
-<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) [AS] <varname>alias</varname>
-             [( <varname>column_alias</varname> [, ...] 
-                | <varname>column_definition</varname> [, ...] )]
-<varname>function_name</varname> ( [<varname>argument</varname> [, ...]] ) AS 
-              ( <varname>column_definition</varname> [, ...] )
-<varname>from_item</varname> [NATURAL] <varname>join_type</varname> <varname>from_item</varname>
-          [ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] )]</codeblock>
+      <codeblock>[ONLY] <varname>table_name</varname> [ * ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
+[ LATERAL ] ( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
+with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
+[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
+            [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
+[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
+[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
+[ LATERAL ] ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
+            [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
+<varname>from_item</varname> [ NATURAL ] <varname>join_type</varname> <varname>from_item</varname>
+          [ ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] ) ]</codeblock>
       <p>where <varname>grouping_element</varname> can be one of:</p>
       <codeblock>  ()
   <varname>expression</varname>
@@ -108,13 +109,16 @@ with_query_name</varname> [ [AS] <varname>alias</varname> [( <varname>column_ali
         <li id="eg138878">If the <codeph>LIMIT</codeph> (or <codeph>FETCH FIRST</codeph>) or
             <codeph>OFFSET</codeph> clause is specified, the <codeph>SELECT</codeph> statement only
           returns a subset of the result rows.</li>
-        <li id="eg138885">If <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> is specified,
-          the <codeph>SELECT</codeph> statement locks the entire table against concurrent
+        <li id="eg138885">If <codeph>FOR UPDATE</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
+            <codeph>FOR SHARE</codeph>,  or <codeph>FOR KEY SHARE</codeph> is specified, the
+            <codeph>SELECT</codeph> statement locks the entire table against concurrent
           updates.</li>
       </ol>
-      <p>You must have <codeph>SELECT</codeph> privilege on each column used in a <codeph>SELECT</codeph> command. The use of
-          <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph> requires <codeph>UPDATE</codeph>
-        privilege as well (for at least one column of each table so selected).</p>
+      <p>You must have <codeph>SELECT</codeph> privilege on each column used in a
+          <codeph>SELECT</codeph> command. The use of <codeph>FOR NO KEY UPDATE</codeph>,
+          <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY SHARE</codeph>
+        requires <codeph>UPDATE</codeph> privilege as well (for at least one column of each table so
+        selected).</p>
     </section>
     <section id="section4">
       <title>Parameters</title>
@@ -262,9 +266,9 @@ SELECT DISTINCT ON (location) location, time, report
       <sectiondiv id="section6"><b>The FROM Clause</b><p>The <codeph>FROM</codeph> clause specifies
           one or more source tables for the <codeph>SELECT</codeph>. If multiple sources are
           specified, the result is the Cartesian product (cross join) of all the sources. But
-          usually qualification conditions are added to restrict the returned rows to a small subset
-          of the Cartesian product. The <codeph>FROM</codeph> clause can contain the following
-          elements: </p><parml>
+          usually qualification conditions are added (via <codeph>WHERE</codeph>) to restrict the
+          returned rows to a small subset of the Cartesian product. The <codeph>FROM</codeph> clause
+          can contain the following elements: </p><parml>
           <plentry>
             <pt><varname>table_name</varname></pt>
             <pd>The name (optionally schema-qualified) of an existing table or view. If
@@ -334,13 +338,14 @@ SELECT DISTINCT ON (location) location, time, report
                 <codeph>ON <varname>join_condition</varname></codeph>, or <codeph>USING (
                   <varname>join_column</varname> [, ...])</codeph>. See below for the meaning. For
                 <codeph>CROSS JOIN</codeph>, none of these clauses may appear.</pd>
-            <pd>A <codeph>JOIN</codeph> clause combines two <codeph>FROM</codeph> items. Use
-              parentheses if necessary to determine the order of nesting. In the absence of
-              parentheses, <codeph>JOIN</codeph>s nest left-to-right. In any case
-                <codeph>JOIN</codeph> binds more tightly than the commas separating
-                <codeph>FROM</codeph> items.</pd>
+            <pd>A JOIN clause combines two <codeph>FROM</codeph> items, which for convenience we
+              will refer to as "tables", though in reality they can be any type of
+                <codeph>FROM</codeph> item. Use parentheses if necessary to determine the order of
+              nesting. In the absence of parentheses, <codeph>JOIN</codeph>s nest left-to-right. In
+              any case <codeph>JOIN</codeph> binds more tightly than the commas separating
+                <codeph>FROM</codeph>-list items. </pd>
             <pd><codeph>CROSS JOIN</codeph> and <codeph>INNER JOIN</codeph> produce a simple
-              Cartesian product, the same result as you get from listing the two items at the top
+              Cartesian product, the same result as you get from listing the two tables at the top
               level of <codeph>FROM</codeph>, but restricted by the join condition (if any).
                 <codeph>CROSS JOIN</codeph> is equivalent to <codeph>INNER JOIN
                 ON</codeph><codeph>(TRUE)</codeph>, that is, no rows are removed by qualification.
@@ -356,7 +361,7 @@ SELECT DISTINCT ON (location) location, time, report
             <pd>Conversely, <codeph>RIGHT OUTER JOIN</codeph> returns all the joined rows, plus one
               row for each unmatched right-hand row (extended with nulls on the left). This is just
               a notational convenience, since you could convert it to a <codeph>LEFT OUTER
-                JOIN</codeph> by switching the left and right inputs.</pd>
+                JOIN</codeph> by switching the left and right tables.</pd>
             <pd><codeph>FULL OUTER JOIN</codeph> returns all the joined rows, plus one row for each
               unmatched left-hand row (extended with nulls on the right), plus one row for each
               unmatched right-hand row (extended with nulls on the left).</pd>
@@ -379,6 +384,36 @@ SELECT DISTINCT ON (location) location, time, report
             <pt>NATURAL</pt>
             <pd><codeph>NATURAL</codeph> is shorthand for a <codeph>USING</codeph> list that
               mentions all columns in the two tables that have the same names.</pd>
+          </plentry>
+          <plentry>
+            <pt>LATERAL</pt>
+            <pd>The <codeph>LATERAL</codeph> keyword can precede a sub-<codeph>SELECT</codeph>
+              <codeph>FROM</codeph> item. This allows the sub-<codeph>SELECT</codeph> to refer to
+              columns of <codeph>FROM</codeph> items that appear before it in the
+                <codeph>FROM</codeph> list. (Without <codeph>LATERAL</codeph>, each
+                sub-<codeph>SELECT</codeph> is evaluated independently and so cannot cross-reference
+              any other <codeph>FROM</codeph> item.)</pd>
+            <pd><codeph>LATERAL</codeph> can also precede a function-call <codeph>FROM</codeph>
+              item, but in this case it is a noise word, because the function expression can refer
+              to earlier <codeph>FROM</codeph> items in any case.</pd>
+            <pd>A <codeph>LATERAL</codeph> item can appear at top level in the <codeph>FROM</codeph>
+              list, or within a <codeph>JOIN</codeph> tree. In the latter case it can also refer to
+              any items that are on the left-hand side of a <codeph>JOIN</codeph> that it is on the
+              right-hand side of.</pd>
+            <pd>When a <codeph>FROM</codeph> item contains <codeph>LATERAL</codeph>
+              cross-references, evaluation proceeds as follows: for each row of the
+                <codeph>FROM</codeph> item providing the cross-referenced column(s), or set of rows
+              of multiple <codeph>FROM</codeph> items providing the columns, the
+                <codeph>LATERAL</codeph> item is evaluated using that row or row set's values of the
+              columns. The resulting row(s) are joined as usual with the rows they were computed
+              from. This is repeated for each row or set of rows from the column source
+              table(s).</pd>
+            <pd>The column source table(s) must be <codeph>INNER</codeph> or <codeph>LEFT</codeph>
+              joined to the <codeph>LATERAL</codeph> item, else there would not be a well-defined
+              set of rows from which to compute each set of rows for the <codeph>LATERAL</codeph>
+              item. Thus, although a construct such as <varname>X</varname> RIGHT JOIN LATERAL
+                <varname>Y</varname> is syntactically valid, it is not actually allowed for
+                <varname>Y</varname> to reference <varname>X</varname>.</pd>
           </plentry>
         </parml></sectiondiv>
       <sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional <codeph>WHERE</codeph> clause
@@ -507,8 +542,7 @@ GROUPING SETS ((<varname>grouping_element</varname> [, ...]))</codeblock><p><cod
 GROUP BY vendor
 WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
             <codeph>WINDOW</codeph> clause has this general
-          form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where
-            <varname>window_definition</varname> can be:</p><codeblock>[<varname>existing_window_name</varname>]
+  form:</p><codeblock>WINDOW <varname>window_name</varname> AS (<varname>window_definition</varname>)</codeblock><p>where <varname>window_name</varname> is a name that can be referenced from <codeph>OVER</codeph> clauses or subsequent window definitions, and <varname>window_definition</varname> is:</p><codeblock>[<varname>existing_window_name</varname>]
 [PARTITION BY <varname>expression</varname> [, ...]]
 [ORDER BY <varname>expression</varname> [ASC | DESC | USING <varname>operator</varname>] [NULLS {FIRST | LAST}] [, ...] ]
 [<varname>frame_clause</varname>] </codeblock><parml>
@@ -673,35 +707,38 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           this general
           form:</p><codeblock><varname>select_statement</varname> UNION [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
-            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
-            <codeph>FOR SHARE</codeph> clause. (<codeph>ORDER BY</codeph> and <codeph>LIMIT</codeph>
-          can be attached to a subquery expression if it is enclosed in parentheses. Without
-          parentheses, these clauses will be taken to apply to the result of the
-            <codeph>UNION</codeph>, not to its right-hand input expression.) </p><p>The
-            <codeph>UNION</codeph> operator computes the set union of the rows returned by the
-          involved <codeph>SELECT</codeph> statements. A row is in the set union of two result sets
-          if it appears in at least one of the result sets. The two <codeph>SELECT</codeph>
-          statements that represent the direct operands of the <codeph>UNION</codeph> must produce
-          the same number of columns, and corresponding columns must be of compatible data
-          types.</p><p>The result of <codeph>UNION</codeph> does not contain any duplicate rows
-          unless the <codeph>ALL</codeph> option is specified. <codeph>ALL</codeph> prevents
-          elimination of duplicates. (Therefore, <codeph>UNION ALL</codeph> is usually significantly
-          quicker than <codeph>UNION</codeph>; use <codeph>ALL</codeph> when you can.)
-            <codeph>DISTINCT</codeph> can be written to explicitly specify the default behavior of
-          eliminating duplicate rows. </p><p>Multiple <codeph>UNION</codeph> operators in the same
-            <codeph>SELECT</codeph> statement are evaluated left to right, unless otherwise
-          indicated by parentheses. </p><p>Currently, <codeph>FOR UPDATE</codeph> and <codeph>FOR
-            SHARE</codeph> may not be specified either for a <codeph>UNION</codeph> result or for
-          any input of a <codeph>UNION</codeph>. </p></sectiondiv>
+            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
+            <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY
+            SHARE</codeph> clause. (<codeph>ORDER BY</codeph> and <codeph>LIMIT</codeph> can be
+          attached to a subquery expression if it is enclosed in parentheses. Without parentheses,
+          these clauses will be taken to apply to the result of the <codeph>UNION</codeph>, not to
+          its right-hand input expression.) </p><p>The <codeph>UNION</codeph> operator computes the
+          set union of the rows returned by the involved <codeph>SELECT</codeph> statements. A row
+          is in the set union of two result sets if it appears in at least one of the result sets.
+          The two <codeph>SELECT</codeph> statements that represent the direct operands of the
+            <codeph>UNION</codeph> must produce the same number of columns, and corresponding
+          columns must be of compatible data types.</p><p>The result of <codeph>UNION</codeph> does
+          not contain any duplicate rows unless the <codeph>ALL</codeph> option is specified.
+            <codeph>ALL</codeph> prevents elimination of duplicates. (Therefore, <codeph>UNION
+            ALL</codeph> is usually significantly quicker than <codeph>UNION</codeph>; use
+            <codeph>ALL</codeph> when you can.) <codeph>DISTINCT</codeph> can be written to
+          explicitly specify the default behavior of eliminating duplicate rows. </p><p>Multiple
+            <codeph>UNION</codeph> operators in the same <codeph>SELECT</codeph> statement are
+          evaluated left to right, unless otherwise indicated by parentheses. </p><p>Currently,
+            <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR UPDATE</codeph>, <codeph>FOR
+            SHARE</codeph>, and <codeph>FOR KEY SHARE</codeph> cannot be specified either for a
+            <codeph>UNION</codeph> result or for any input of a <codeph>UNION</codeph>.
+        </p></sectiondiv>
       <sectiondiv id="section12"><b>The INTERSECT Clause</b><p>The <codeph>INTERSECT</codeph> clause
           has this general
           form:</p><codeblock><varname>select_statement</varname> INTERSECT [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any SELECT statement without an <codeph>ORDER
-            BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or <codeph>FOR
-            SHARE</codeph> clause. </p><p>The <codeph>INTERSECT</codeph> operator computes the set
-          intersection of the rows returned by the involved <codeph>SELECT</codeph> statements. A
-          row is in the intersection of two result sets if it appears in both result sets.</p><p>The
-          result of <codeph>INTERSECT</codeph> does not contain any duplicate rows unless the
+            BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR
+            UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY SHARE</codeph> clause.
+          </p><p>The <codeph>INTERSECT</codeph> operator computes the set intersection of the rows
+          returned by the involved <codeph>SELECT</codeph> statements. A row is in the intersection
+          of two result sets if it appears in both result sets.</p><p>The result of
+            <codeph>INTERSECT</codeph> does not contain any duplicate rows unless the
             <codeph>ALL</codeph> option is specified. With <codeph>ALL</codeph>, a row that has
             <varname>m</varname> duplicates in the left table and <varname>n</varname> duplicates in
           the right table will appear min(<varname>m</varname>, <varname>n</varname>) times in the
@@ -710,19 +747,21 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           operators in the same <codeph>SELECT</codeph> statement are evaluated left to right,
           unless parentheses dictate otherwise. <codeph>INTERSECT</codeph> binds more tightly than
             <codeph>UNION</codeph>. That is, <codeph>A UNION B INTERSECT C</codeph> will be read as
-            <codeph>A UNION (B INTERSECT C)</codeph>. </p><p>Currently, <codeph>FOR UPDATE</codeph>
-          and <codeph>FOR SHARE</codeph> may not be specified either for an
+            <codeph>A UNION (B INTERSECT C)</codeph>. </p><p>Currently, <codeph>FOR NO KEY
+            UPDATE</codeph>, <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, and
+            <codeph>FOR KEY SHARE</codeph> cannot be specified either for an
             <codeph>INTERSECT</codeph> result or for any input of an <codeph>INTERSECT</codeph>.
         </p></sectiondiv>
       <sectiondiv id="section13"><b>The EXCEPT Clause</b><p>The <codeph>EXCEPT</codeph> clause has
           this general
           form:</p><codeblock><varname>select_statement</varname> EXCEPT [ALL | DISTINCT] <varname>select_statement</varname></codeblock><p>where
             <varname>select_statement</varname> is any <codeph>SELECT</codeph> statement without an
-            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR UPDATE</codeph>, or
-            <codeph>FOR SHARE</codeph> clause. </p><p>The <codeph>EXCEPT</codeph> operator computes
-          the set of rows that are in the result of the left <codeph>SELECT</codeph> statement but
-          not in the result of the right one. </p><p>The result of <codeph>EXCEPT</codeph> does not
-          contain any duplicate rows unless the <codeph>ALL</codeph> option is specified. With
+            <codeph>ORDER BY</codeph>, <codeph>LIMIT</codeph>, <codeph>FOR NO KEY UPDATE</codeph>,
+            <codeph>FOR UPDATE</codeph>, <codeph>FOR SHARE</codeph>, or <codeph>FOR KEY
+            SHARE</codeph> clause. </p><p>The <codeph>EXCEPT</codeph> operator computes the set of
+          rows that are in the result of the left <codeph>SELECT</codeph> statement but not in the
+          result of the right one. </p><p>The result of <codeph>EXCEPT</codeph> does not contain any
+          duplicate rows unless the <codeph>ALL</codeph> option is specified. With
             <codeph>ALL</codeph>, a row that has <varname>m</varname> duplicates in the left table
           and <varname>n</varname> duplicates in the right table will appear
             max(<varname>m-n</varname>,0) times in the result set. <codeph>DISTINCT</codeph> can be
@@ -730,8 +769,9 @@ WINDOW mywindow AS (ORDER BY sum(prc*qty));</codeblock><p>A
           rows.</p><p>Multiple <codeph>EXCEPT</codeph> operators in the same <codeph>SELECT</codeph>
           statement are evaluated left to right, unless parentheses dictate otherwise.
             <codeph>EXCEPT</codeph> binds at the same level as <codeph>UNION</codeph>.
-          </p><p>Currently, <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> may not be
-          specified either for an <codeph>EXCEPT</codeph> result or for any input of an
+          </p><p>Currently, <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR UPDATE</codeph>,
+            <codeph>FOR SHARE</codeph>, and <codeph>FOR KEY SHARE</codeph> cannot be specified
+          either for an <codeph>EXCEPT</codeph> result or for any input of an
             <codeph>EXCEPT</codeph>. </p></sectiondiv>
       <sectiondiv id="section14"><b>The ORDER BY Clause</b><p>The optional <codeph>ORDER BY</codeph>
           clause has this general
@@ -815,12 +855,17 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>ORDER BY</codeph>. This is not a defect; it is an inherent consequence of the
           fact that SQL does not promise to deliver the results of a query in any particular order
           unless <codeph>ORDER BY</codeph> is used to constrain the order.</p></sectiondiv>
-      <sectiondiv id="section17"><b>The FOR UPDATE/FOR SHARE Clause</b><p>The <codeph>FOR
-            UPDATE</codeph> clause has this
-          form:</p><codeblock>FOR UPDATE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><p>The
-          closely related <codeph>FOR SHARE</codeph> clause has this
-          form:</p><codeblock>FOR SHARE [OF <varname>table_name</varname> [, ...]] [NOWAIT]</codeblock><note>
-          By default, Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables for
+      <sectiondiv id="section17"><b>The Locking Clause</b><p><codeph>FOR UPDATE</codeph>,
+            <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph> and <codeph>FOR KEY
+            SHARE</codeph> are <i>locking clauses</i>; they affect how <codeph>SELECT</codeph> locks
+          rows as they are obtained from the table.</p><p>The locking clause has the general
+          form</p><codeblock>FOR <varname>lock_strength</varname> [OF <varname>table_name</varname> [ , ... ] ] [ NOWAIT ]</codeblock><p>where
+            <varname>lock_strength</varname> can be one
+          of<codeblock>UPDATE
+NO KEY UPDATE
+SHARE
+KEY SHARE</codeblock></p><note> By default,
+          Greenplum Database acquires an <codeph>EXCLUSIVE</codeph> lock on tables for
             <codeph>DELETE</codeph> and <codeph>UPDATE</codeph> operations on heap tables. When the
           Global Deadlock Detector is enabled the lock mode for <codeph>DELETE</codeph> and
             <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
@@ -833,68 +878,72 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>SELECT</codeph> statement to be locked as though for update. This prevents them
           from being modified or deleted by other transactions until the current transaction ends.
           That is, other transactions that attempt <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>,
-          or <codeph>SELECT FOR UPDATE</codeph> of these rows will be blocked until the current
-          transaction ends. Also, if an <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or
-            <codeph>SELECT FOR UPDATE</codeph> from another transaction has already locked a
-          selected row or rows, <codeph>SELECT FOR UPDATE</codeph> will wait for the other
-          transaction to complete, and will then lock and return the updated row (or no row, if the
+            <codeph>SELECT FOR UPDATE</codeph>, <codeph>SELECT FOR NO KEY UPDATE</codeph>,
+            <codeph>SELECT FOR SHARE</codeph>, or <codeph>SELECT FOR KEY SHARE</codeph> of these
+          rows will be blocked until the current transaction ends; conversely, <codeph>SELECT FOR
+            UPDATE</codeph> will wait for a concurrent transaction that has run any of those
+          commands on the same row, and will then lock and return the updated row (or no row, if the
           row was deleted). Within a <codeph>REPEATABLE READ</codeph> or
             <codeph>SERIALIZABLE</codeph> transaction, however, an error will be thrown if a row to
-          be locked has changed since the transaction started.</p><p><codeph>FOR SHARE</codeph>
-          behaves similarly, except that it acquires a shared rather than exclusive lock on each
-          retrieved row. A shared lock blocks other transactions from performing
-            <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, or <codeph>SELECT FOR UPDATE</codeph>
-          on the table, but it does not prevent them from performing <codeph>SELECT FOR
+          be locked has changed since the transaction started.</p><p><codeph>FOR NO KEY
+            UPDATE</codeph> behaves similarly to <codeph>FOR UPDATE</codeph>, except that the lock
+          acquired is weaker: this lock will not block <codeph>SELECT FOR KEY SHARE</codeph>
+          commands that attempt to acquire a lock on the same rows. This lock mode is also acquired
+          by any <codeph>UPDATE</codeph> that does not acquire a <codeph>FOR UPDATE</codeph>
+          lock.</p><p><codeph>FOR SHARE</codeph> behaves similarly, except that it acquires a shared
+          rather than exclusive lock on each retrieved row. A shared lock blocks other transactions
+          from performing <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>SELECT FOR
+            UPDATE</codeph>, or <codeph>SELECT FOR NO KEY UPDATE</codeph> on these rows, but it does
+          not prevent them from performing <codeph>SELECT FOR SHARE</codeph> or <codeph>SELECT FOR
+            KEY SHARE</codeph>.</p><p><codeph>FOR KEY SHARE</codeph> Behaves similarly to
+            <codeph>FOR SHARE</codeph>, except that the lock is weaker: <codeph>SELECT FOR
+            UPDATE</codeph> is blocked, but not <codeph>SELECT FOR NO KEY UPDATE</codeph>. A
+          key-shared lock blocks other transactions from performing <codeph>DELETE</codeph> or any
+            <codeph>UPDATE</codeph> that changes the key values, but not other
+            <codeph>UPDATE</codeph>, and neither does it prevent <codeph>SELECT FOR NO KEY
+            UPDATE</codeph>, <codeph>SELECT FOR SHARE</codeph>, or <codeph>SELECT FOR KEY
             SHARE</codeph>.</p><p>To prevent the operation from waiting for other transactions to
           commit, use the <codeph>NOWAIT</codeph> option. With <codeph>NOWAIT</codeph>, the
           statement reports an error, rather than waiting, if a selected row cannot be locked
           immediately. Note that <codeph>NOWAIT</codeph> applies only to the row-level lock(s) — the
           required <codeph>ROW SHARE</codeph> table-level lock is still taken in the ordinary way.
           You can use LOCK with the <codeph>NOWAIT</codeph> option first, if you need to acquire the
-          table-level lock without waiting.</p><p>If specific tables are named in <codeph>FOR
-            UPDATE</codeph> or <codeph>FOR SHARE</codeph>, then only those tables are locked; any
-          other tables used in the <codeph>SELECT</codeph> are simply read as usual. A <codeph>FOR
-            UPDATE</codeph> or <codeph>FOR SHARE</codeph> clause without a table list affects all
-          tables used in the statement. If <codeph>FOR UPDATE</codeph> or <codeph>FOR SHARE</codeph>
-          is applied to a view or subquery, it affects all tables used in the view or subquery.
-          However, <codeph>FOR UPDATE</codeph>/<codeph>FOR SHARE</codeph> do not apply to
-            <codeph>WITH</codeph> queries referenced by the primary query. If you want row locking
-          to occur within a <codeph>WITH</codeph> query, specify <codeph>FOR UPDATE</codeph> or
-            <codeph>FOR SHARE</codeph> within the <codeph>WITH</codeph> query.</p><p><codeph>FOR
-            UPDATE</codeph> or <codeph>FOR SHARE</codeph> do not apply to a
-            <varname>with_query</varname> referenced by the primary query. If you want row locking
-          to occur within a <varname>with_query</varname>, specify <codeph>FOR UPDATE</codeph> or
-            <codeph>FOR SHARE</codeph> within the <varname>with_query</varname>.</p><p>Multiple
-            <codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> clauses can be written if it
-          is necessary to specify different locking behavior for different tables. If the same table
-          is mentioned (or implicitly affected) by both <codeph>FOR UPDATE</codeph> and <codeph>FOR
-            SHARE</codeph> clauses, then it is processed as <codeph>FOR UPDATE</codeph>. Similarly,
-          a table is processed as <codeph>NOWAIT</codeph> if that is specified in any of the clauses
-          affecting it.</p><p><codeph>FOR UPDATE</codeph> and <codeph>FOR SHARE</codeph> cannot be
-          used in contexts where returned rows cannot be clearly identified with individual table
-          rows; for example they cannot be used with aggregation.</p><p>When <codeph>FOR UPDATE</codeph> or <codeph>FOR
-            SHARE</codeph> appears at the top level of a <codeph>SELECT</codeph> query, the rows
-          that are locked are exactly those that are returned by the query; in the case of a join
-          query, the rows locked are those that contribute to returned join rows. In addition, rows
-          that satisfied the query conditions as of the query snapshot will be locked, although they
-          will not be returned if they were updated after the snapshot and no longer satisfy the
-          query conditions. If a <codeph>LIMIT</codeph> is used, locking stops once enough rows have
-          been returned to satisfy the limit (but note that rows skipped over by
-            <codeph>OFFSET</codeph> will get locked). Similarly, if <codeph>FOR UPDATE</codeph> or
-            <codeph>FOR SHARE</codeph> is used in a cursor's query, only rows actually fetched or
-          stepped past by the cursor will be locked.</p><p>When <codeph>FOR UPDATE</codeph> or
-            <codeph>FOR SHARE</codeph> appears in a sub-<codeph>SELECT</codeph>, the rows locked are
-          those returned to the outer query by the sub-query. This might involve fewer rows than
-          inspection of the sub-query alone would suggest, since conditions from the outer query
-          might be used to optimize execution of the sub-query. For example,
+          table-level lock without waiting.</p><p>If specific tables are named in a locking clause,
+          then only rows coming from those tables are locked; any other tables used in the
+            <codeph>SELECT</codeph> are simply read as usual. A locking clause without a table list
+          affects all tables used in the statement. If a locking clause is applied to a view or
+          sub-query, it affects all tables used in the view or sub-query. However, these clauses do
+          not apply to <codeph>WITH</codeph> queries referenced by the primary query. If you want
+          row locking to occur within a <codeph>WITH</codeph> query, specify a locking clause within
+          the <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be written if it is
+          necessary to specify different locking behavior for different tables. If the same table is
+          mentioned (or implicitly affected) by both more than one locking clause, then it is
+          processed as if it was only specified by the stronges one. Similarly, a table is processed
+          as <codeph>NOWAIT</codeph> if that is specified in any of the clauses affecting
+          it.</p><p>The locking clauses cannot be used in contexts where returned rows cannot be
+          clearly identified with individual table rows; for example they cannot be used with
+          aggregation.</p><p>When a locking clause appears at the top level of a
+            <codeph>SELECT</codeph> query, the rows that are locked are exactly those that are
+          returned by the query; in the case of a join query, the rows locked are those that
+          contribute to returned join rows. In addition, rows that satisfied the query conditions as
+          of the query snapshot will be locked, although they will not be returned if they were
+          updated after the snapshot and no longer satisfy the query conditions. If a
+            <codeph>LIMIT</codeph> is used, locking stops once enough rows have been returned to
+          satisfy the limit (but note that rows skipped over by <codeph>OFFSET</codeph> will get
+          locked). Similarly, if a locking clause is used in a cursor's query, only rows actually
+          fetched or stepped past by the cursor will be locked.</p><p>When locking clause appears in
+          a sub-<codeph>SELECT</codeph>, the rows locked are those returned to the outer query by
+          the sub-query. This might involve fewer rows than inspection of the sub-query alone would
+          suggest, since conditions from the outer query might be used to optimize execution of the
+          sub-query. For example,
           <codeblock>SELECT * FROM (SELECT * FROM mytable FOR UPDATE) ss WHERE col1 = 5;</codeblock>
           will lock only rows having <codeph>col1 = 5</codeph>, even though that condition is not
           textually within the sub-query. </p><p>It is possible for a <codeph>SELECT</codeph>
           command running at the <codeph>READ COMMITTED</codeph> transaction isolation level and
-          using <codeph>ORDER BY</codeph> and <codeph>FOR UPDATE/SHARE</codeph> to return rows out
-          of order. This is because <codeph>ORDER BY</codeph> is applied first. The command sorts
-          the result, but might then block trying to obtain a lock on one or more of the rows. Once
-          the <codeph>SELECT</codeph> unblocks, some of the ordering column values might have been
+          using <codeph>ORDER BY</codeph> and a locking clause to return rows out of order. This is
+          because <codeph>ORDER BY</codeph> is applied first. The command sorts the result, but
+          might then block trying to obtain a lock on one or more of the rows. Once the
+            <codeph>SELECT</codeph> unblocks, some of the ordering column values might have been
           modified, leading to those rows appearing to be out of order (though they are in order in
           terms of the original column values). This can be worked around at need by placing the
             <codeph>FOR UPDATE/SHARE</codeph> clause in a sub-query, for example
@@ -904,8 +953,8 @@ OFFSET <varname>start</varname></codeblock><p>where
           make for a significant performance difference, particularly if the <codeph>ORDER
             BY</codeph> is combined with <codeph>LIMIT</codeph> or other restrictions. So this
           technique is recommended only if concurrent updates of the ordering columns are expected
-          and a strictly sorted result is required. </p><p>At the <codeph>REPEATABLE READ</codeph> or
-            <codeph>SERIALIZABLE</codeph> transaction isolation level this would cause a
+          and a strictly sorted result is required. </p><p>At the <codeph>REPEATABLE READ</codeph>
+          or <codeph>SERIALIZABLE</codeph> transaction isolation level this would cause a
           serialization failure (with a <codeph>SQLSTATE</codeph> of <codeph>40001</codeph>), so
           there is no possibility of receiving rows out of order under these isolation
         levels.</p></sectiondiv>
@@ -1010,6 +1059,15 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
+      <p>This example uses LATERAL to apply a set-returning function
+          <codeph>get_product_names()</codeph> for each row of the manufacturers
+        table:<codeblock>SELECT m.name AS mname, pname
+FROM manufacturers m, LATERAL get_product_names(m.id) pname;</codeblock></p>
+      <p>Manufacturers not currently having any products would not appear in the result, since it is
+        an inner join. If we wished to include the names of such manufacturers in the result, we
+        could
+        do:<codeblock>SELECT m.name AS mname, pname
+FROM manufacturers m LEFT JOIN LATERAL get_product_names(m.id) pname ON true;</codeblock></p>
     </section>
     <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
         compatible with the SQL standard, but there are some extensions and some missing features.
@@ -1034,11 +1092,14 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           standard and Greenplum Database allow <codeph>AS</codeph> to be omitted before an alias
           that is an unreserved keyword. But this is impractical for output column names, because of
           syntactic ambiguities.</p></sectiondiv>
-      <sectiondiv id="sectiondiv_ndj_ngd_cgb"><b>ONLY and Parentheses</b><p>The SQL standard
-          requires parentheses around the table name after <codeph>ONLY</codeph>:
-          <codeblock>SELECT * FROM ONLY (tab1), ONLY (tab2) WHERE ...</codeblock>Greenplum Database
-          supports that syntax as well, but the parentheses are optional. (This applies equally to
-          all SQL commands supporting the <codeph>ONLY</codeph> option.)</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
+      <sectiondiv id="sectiondiv_ndj_ngd_cgb"><b>ONLY and Inheritance</b><p>The SQL standard
+          requires parentheses around the table name when writing <codeph>ONLY</codeph>, for
+          example: <codeblock>SELECT * FROM ONLY (tab1), ONLY (tab2) WHERE ...</codeblock>Greenplum
+          Database considers these parentheses to be optional.</p><p>Greenplum Database allows a
+          trailing <codeph>* </codeph>to be written to explicitly specify the
+            non-<codeph>ONLY</codeph> behavior of including child tables. The standard does not
+          allow this.</p><p>(These points apply equally to all SQL commands supporting the
+            <codeph>ONLY</codeph> option.)</p></sectiondiv><sectiondiv id="section22"><b>Namespace Available to GROUP BY and ORDER BY</b><p>In the SQL-92
           standard, an <codeph>ORDER BY</codeph> clause may only use output column names or numbers,
           while a <codeph>GROUP BY</codeph> clause may only use expressions based on input column
           names. Greenplum Database extends each of these clauses to allow the other choice as well
@@ -1062,14 +1123,13 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           DB2. (Applications for Oracle frequently use a workaround involving the automatically
           generated <codeph>rownum</codeph> column, which is not available in Greenplum Database, to
           implement the effects of these clauses.)</p></sectiondiv>
-      <sectiondiv><b>FOR UPDATE and FOR SHARE</b>
-        <p>Although <codeph>FOR UPDATE</codeph> appears in the SQL standard, the
-        standard allows it only as an option of <codeph>DECLARE CURSOR</codeph>.
-        Greenplum Database allows it in any <codeph>SELECT</codeph> query as well as in 
-        sub-<codeph>SELECT</codeph>s, but this is an extension.
-        The <codeph>FOR SHARE</codeph> variant, and the <codeph>NOWAIT</codeph> option,
-        do not appear in the standard.
-      </p></sectiondiv>
+      <sectiondiv><b>FOR NO KEY UPDATE, FOR UPDATE, FOR SHARE, and FOR KEY SHARE</b>
+        <p>Although <codeph>FOR UPDATE</codeph> appears in the SQL standard, the standard allows it
+          only as an option of <codeph>DECLARE CURSOR</codeph>. Greenplum Database allows it in any
+            <codeph>SELECT</codeph> query as well as in sub-<codeph>SELECT</codeph>s, but this is an
+          extension. The <codeph>FOR NO KEY UPDATE</codeph>, <codeph>FOR SHARE</codeph>, and
+            <codeph>FOR KEY SHARE</codeph> variants, as well as the <codeph>NOWAIT</codeph> option,
+          do not appear in the standard. </p></sectiondiv>
       <sectiondiv><b>Data-Modifying Statements in WITH</b><p>Greenplum Database allows <codeph>INSERT</codeph>,
         <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> to be used as <codeph>WITH</codeph>
           queries. This is not found in the SQL standard.</p></sectiondiv>

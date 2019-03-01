@@ -117,10 +117,10 @@
                         <pt>-S <varname>username</varname> |
                             --superuser=<varname>username</varname></pt>
                         <pd>Specify the superuser user name to use when disabling triggers. This is
-                            only relevant if <codeph>--disable-triggers</codeph> is used. It is
+                            relevant only if <codeph>--disable-triggers</codeph> is used. It is
                             better to leave this out, and instead start the resulting script as a
-                                    superuser.<note>Greenplum Database does not
-                                support user-defined triggers.</note></pd>
+                                superuser.<note>Greenplum Database does not support user-defined
+                                triggers.</note></pd>
                     </plentry>
                     <plentry>
                         <pt>-t | --tablespaces-only</pt>
@@ -166,7 +166,7 @@
                     </plentry>
                     <plentry>
                         <pt>--disable-triggers</pt>
-                        <pd>This option is only relevant when creating a data-only dump. It
+                        <pd>This option is relevant only when creating a data-only dump. It
                             instructs <codeph>pg_dumpall</codeph> to include commands to temporarily
                             disable triggers on the target tables while the data is reloaded. Use
                             this if you have triggers on the tables that you do not want to invoke
@@ -174,8 +174,8 @@
                                 <codeph>--disable-triggers</codeph> must be done as superuser. So,
                             you should also specify a superuser name with <codeph>-S</codeph>, or
                             preferably be careful to start the resulting script as a
-                                    superuser.<note>Greenplum Database does not
-                                support user-defined triggers.</note></pd>
+                                superuser.<note>Greenplum Database does not support user-defined
+                                triggers.</note></pd>
                     </plentry>
                     <plentry>
                         <pt>--inserts</pt>
@@ -268,6 +268,20 @@
             <sectiondiv id="section6">
                 <b>Connection Options</b>
                 <parml>
+                    <plentry>
+                        <pt>-d <varname>connstr</varname> | --dbname=<varname>connstr</varname></pt>
+                        <pd>Specifies parameters used to connect to the server, as a connection
+                            string. See <xref
+                                href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING"
+                                format="html" scope="external">Connection Strings</xref> in the
+                            PostgreSQL documentation for more information.</pd>
+                        <pd>The option is called <codeph>--dbname</codeph> for consistency with
+                            other client applications, but because <codeph>pg_dumpall</codeph> needs
+                            to connect to many databases, the database name in the connection string
+                            will be ignored. Use the <codeph>-l</codeph> option to specify the name
+                            of the database used to dump global objects and to discover what other
+                            databases should be dumped.</pd>
+                    </plentry>
                     <plentry>
                         <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
                         <pd>The host name of the machine on which the Greenplum master database server is running. If

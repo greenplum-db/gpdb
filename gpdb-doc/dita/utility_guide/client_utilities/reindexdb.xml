@@ -4,17 +4,19 @@
 <topic id="topic1"><title id="pg137116">reindexdb</title><body><p id="client_util_desc">Rebuilds indexes in a database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--table</b> | <b>-t</b> <varname>table</varname> ] 
         [<b>--index</b> | <b>-i</b> <varname>index</varname> ] [<varname>dbname</varname>]
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--all</b> | <b>-a</b>]
+<b>reindexdb</b> [<varname>connection-option</varname> ...] <b>--all</b> | <b>-a</b>
 
-<b>reindexdb</b> [<varname>connection-option</varname> ...] [<b>--system</b> | <b>-s</b>] [<varname>dbname</varname>]
+<b>reindexdb</b> [<varname>connection-option</varname> ...] <b>--system</b> | <b>-s</b> [<varname>dbname</varname>]
 
 <b>reindexdb</b> <b>-? | --help</b>
 
-<b>reindexdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database, and is a wrapper around the SQL command <codeph>REINDEX</codeph>. </p></section><section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
+<b>reindexdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>reindexdb</codeph> is a utility for rebuilding indexes in Greenplum Database.</p>
+<p> <codeph>reindexdb</codeph> is a wrapper around the SQL command <codeph>REINDEX</codeph>. There is no effective difference between reindexing databases via this utility and via other methods for accessing the server. </p></section>
+<section id="section4"><title>Options</title><parml><plentry><pt>-a | --all</pt><pd>Reindex all databases.</pd></plentry><plentry><pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt><pd>Specifies the name of the database to be reindexed. If this is not specified and
               <codeph>-all</codeph> is not used, the database name is read from the environment
             variable <codeph>PGDATABASE</codeph>. If that is not set, the user name specified for
             the connection is used.</pd></plentry><plentry><pt>-e | --echo</pt><pd>Echo the commands that <codeph>reindexdb</codeph> generates and sends
-to the server.</pd></plentry><plentry><pt>-i <varname>index</varname> | --index=<varname>index</varname></pt><pd>Recreate index only.</pd></plentry><plentry><pt>-q | --quiet</pt><pd>Do not display a response.</pd></plentry><plentry><pt>-s | --system</pt><pd>Reindex system catalogs.</pd></plentry><plentry><pt>-t <varname>table</varname> | --table=<varname>table</varname></pt><pd>Reindex table only.</pd></plentry>
+to the server.</pd></plentry><plentry><pt>-i <varname>index</varname> | --index=<varname>index</varname></pt><pd>Recreate index only.</pd></plentry><plentry><pt>-q | --quiet</pt><pd>Do not display a response.</pd></plentry><plentry><pt>-s | --system</pt><pd>Reindex system catalogs.</pd></plentry><plentry><pt>-t <varname>table</varname> | --table=<varname>table</varname></pt><pd>Reindex table only. Multiple tables can be reindexed by writing multiple <codeph>-t</codeph> switches.</pd></plentry>
         <plentry>
           <pt>-V | --version</pt>
           <pd>Print the <codeph>reindexdb</codeph> version and exit.</pd>

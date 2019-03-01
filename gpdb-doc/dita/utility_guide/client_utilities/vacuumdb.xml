@@ -36,7 +36,8 @@
         </plentry>
         <plentry>
           <pt>[-d] <varname>dbname</varname> | [--dbname=]<varname>dbname</varname></pt>
-          <pd>The name of the database to vacuum. If this is not specified and <codeph>-all</codeph>
+          <pd>The name of the database to vacuum. If this is not specified and
+            <codeph>-a</codeph> (or <codeph>--all</codeph>)
             is not used, the database name is read from the environment variable
               <codeph>PGDATABASE</codeph>. If that is not set, the user name specified for the
             connection is used.</pd>
@@ -64,8 +65,9 @@
           <pt>-t <varname>table</varname> [(<varname>column</varname>)] | --table=
               <varname>table</varname> [(<varname>column</varname>)]</pt>
           <pd>Clean or analyze this table only. Column names may be specified only in conjunction
-            with the <codeph>--analyze</codeph> or <codeph>--analyze-all</codeph> options. If you specify columns, you probably have to
-            escape the parentheses from the shell.</pd>
+            with the <codeph>--analyze</codeph> or <codeph>--analyze-all</codeph> options.
+            Multiple tables can be vacuumed by writing multiple <codeph>-t</codeph> switches.
+            If you specify columns, you probably have to escape the parentheses from the shell.</pd>
         </plentry>
         <plentry>
           <pt>-v | --verbose</pt>

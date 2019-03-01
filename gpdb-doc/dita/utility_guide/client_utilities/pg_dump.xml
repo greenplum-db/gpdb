@@ -50,9 +50,12 @@
           <codeph>pg_restore</codeph>, <codeph>pg_dump</codeph> provides a flexible archival and
         transfer mechanism. <codeph>pg_dump</codeph> can be used to backup an entire database, then
           <codeph>pg_restore </codeph>can be used to examine the archive and/or select which parts
-        of the database are to be restored. The most flexible output file format is the
-          <varname>custom</varname> format (<codeph>-Fc</codeph>). It allows for selection and
-        reordering of all archived items, and is compressed by default.</p>
+        of the database are to be restored. The most flexible output file formats are the
+        <varname>custom</varname> format (<codeph>-Fc</codeph>) and the
+        <varname>directory</varname> format(<codeph>-Fd</codeph>). They allow for selection and
+        reordering of all archived items, support parallel restoration, and are compressed by
+        default. The <varname>directory</varname> format is the only format that supports parallel
+        dumps.</p>
       <note>The <codeph>--ignore-version</codeph> option is deprecated and will be removed in a
         future release.</note>
     </section>
@@ -92,7 +95,8 @@
             <pt>-c | --clean</pt>
             <pd>Adds commands to the text output file to clean (drop) database objects prior to 
               outputting the commands for creating them. (Restore might generate some harmless
-              errors.) Note that objects are not dropped before the dump
+              error messages, if any objects were not present in the destination database.)
+              Note that objects are not dropped before the dump
               operation begins, but <codeph>DROP</codeph> commands are added to the DDL dump output
               files so that when you use those files to do a restore, the <codeph>DROP</codeph>
               commands are run prior to the <codeph>CREATE</codeph> commands. This option is only
@@ -103,8 +107,10 @@
           <plentry>
             <pt>-C | --create</pt>
             <pd>Begin the output with a command to create the database itself and reconnect to the
-              created database. (With a script of this form, it doesn't matter which database you
-              connect to before running the script.) This option is only meaningful for the
+              created database. (With a script of this form, it doesn't matter which database 
+              in the destination installation you connect to before running the script.) If
+              <codeph>--clean</codeph> is also specified, the script drops and recreates the
+              target database before reconnecting to it.) This option is only meaningful for the
               plain-text format. For the archive formats, you may specify the option when you call
                   <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
               /></codeph>. </pd>
@@ -133,8 +139,8 @@
                   href="./pg_restore.xml#topic1" type="topic" format="dita"/></codeph>.
               Together with the directory output format, this is the most flexible
               output format in that it allows manual selection and reordering of
-              archived items during restore. This format is also compressed by
-              default. </pd>
+              archived items during restore. This format is compressed by default and
+              also supports parallel dumps.</pd>
             <pd>d | directory — Output a directory-format archive suitable for input into
               <codeph>pg_restore</codeph>. This will create a directory with one file for
               each table and blob being dumped, plus a so-called Table of Contents file
@@ -157,6 +163,48 @@
               database server. <codeph>pg_dump</codeph> can dump from servers running previous
               releases of Greenplum Database (or PostgreSQL), but very old versions may not be
               supported anymore. Use this option if you need to override the version check.</pd>
+          </plentry>
+          <plentry>
+            <pt>-j <varname>njobs</varname> | --jobs=<varname>njobs</varname></pt>
+            <pd>Run the dump in parallel by dumping <varname>njobs</varname> tables
+              simultaneously. This option reduces the time of the dump but it also increases
+              the load on the database server. You can only use this option with the directory
+              output format because this is the only output format where multiple processes
+              can write their data at the same time.</pd>
+            <pd><codeph>pg_dump</codeph> will open <varname>njobs</varname> + 1 connections to
+              the database, so make sure your <codeph><xref href="../../ref_guide/config_params/guc-list.xml#max_connections"
+                type="dita">max_connections</xref></codeph> setting is high enough to
+              accommodate all connections.</pd>
+            <pd>Requesting exclusive locks on database objects while running a parallel dump
+              could cause the dump to fail. The reason is that the <codeph>pg_dump</codeph>
+              master process requests shared locks on the objects that the worker processes are
+              going to dump later in order to make sure that nobody deletes them and makes them
+              go away while the dump is running. If another client then requests an exclusive
+              lock on a table, that lock will not be granted but will be queued waiting for the
+              shared lock of the master process to be released. Consequently, any other access
+              to the table will not be granted either and will queue after the exclusive lock
+              request. This includes the worker process trying to dump the table. Without any
+              precautions this would be a classic deadlock situation. To detect this conflict,
+              the <codeph>pg_dump</codeph> worker process requests another shared lock using the
+              <codeph>NOWAIT</codeph> option. If the worker process is not granted this shared
+              lock, somebody else must have requested an exclusive lock in the meantime and
+              there is no way to continue with the dump, so <codeph>pg_dump</codeph> has no
+              choice but to abort the dump.</pd>
+            <pd>For a consistent backup, the database server needs to support synchronized
+              snapshots, a feature that was introduced in Greenplum Database 6.0. With this
+              feature, database clients can ensure they see the same data set even though they
+              use different connections. <codeph>pg_dump -j</codeph> uses multiple database
+              connections; it connects to the database once with the master process and once
+              again for each worker job. Without the synchronized snapshot feature, the
+              different worker jobs wouldn't be guaranteed to see the same data in each
+              connection, which could lead to an inconsistent backup.</pd>
+            <pd>If you want to run a parallel dump of a pre-6.0 server, you need to make sure
+              that the database content doesn't change from between the time the master connects
+              to the database until the last worker job has connected to the database. The
+              easiest way to do this is to halt any data modifying processes (DDL and DML)
+              accessing the database before starting the backup. You also need to specify the
+              <codeph>--no-synchronized-snapshots</codeph> parameter when running
+              <codeph>pg_dump -j</codeph> against a pre-6.0 Greenplum Database server.</pd>
           </plentry>
           <plentry>
             <pt>-n <varname>schema</varname> | --schema=<varname>schema</varname></pt>
@@ -219,8 +267,8 @@
           </plentry>
           <plentry>
             <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
-            <pd>Specify the superuser user name to use when disabling triggers. This is only
-              relevant if <codeph>--disable-triggers</codeph> is used. It is better to leave this
+            <pd>Specify the superuser user name to use when disabling triggers. This is
+              relevant only if <codeph>--disable-triggers</codeph> is used. It is better to leave this
               out, and instead start the resulting script as a superuser.<note>Greenplum Database
                 does not support user-defined triggers.</note></pd>
           </plentry>
@@ -301,7 +349,7 @@
           </plentry>
           <plentry>
             <pt>--disable-triggers</pt>
-            <pd>This option is only relevant when creating a data-only dump. It instructs
+            <pd>This option is relevant only when creating a data-only dump. It instructs
                 <codeph>pg_dump</codeph> to include commands to temporarily disable triggers on the
               target tables while the data is reloaded. Use this if you have triggers on the tables
               that you do not want to invoke during data reload. The commands emitted for
@@ -345,6 +393,13 @@
             <pd>Do not dump security labels.</pd>
           </plentry>
           <plentry>
+            <pt>--no-synchronized-snapshots</pt>
+            <pd>This option allows running <codeph>pg_dump -j</codeph> against a pre-6.0 Greenplum
+              Database server; see the documentation of the <codeph>-j</codeph> parameter for more
+              details.</pd>
+          </plentry>
+
+          <plentry>
             <pt>--no-tablespaces</pt>
             <pd>Do not output commands to select tablespaces. With this option, all objects will be
               created in whichever tablespace is the default during restore.</pd>
@@ -369,6 +424,16 @@
                dealing with servers of other versions that may have slightly different sets
                of reserved words. Using <codeph>--quote-all-identifiers</codeph> prevents
                such issues, at the price of a harder-to-read dump script.</pd>
+          </plentry>
+          <plentry>
+            <pt>--section=<varname>sectionname</varname></pt>
+            <pd>Only dump the named section. The section name can be <codeph>pre-data</codeph>,
+              <codeph>data</codeph>, or <codeph>post-data</codeph>. This option can be specified
+              more than once to select multiple sections. The default is to dump all sections.</pd>
+            <pd>The <codeph>data</codeph> section contains actual table data and sequence values.
+               <codeph>post-data</codeph> items include definitions of indexes, triggers, rules,
+               and constraints other than validated check constraints. <codeph>pre-data</codeph>
+               items include all other data definition items.</pd>
           </plentry>
           <plentry>
             <pt>--serializable-deferrable</pt>
@@ -436,19 +501,31 @@
         <b>Connection Options</b>
         <parml>
           <plentry>
-            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+            <pt>-d <varname>ddname</varname> | --dbname=<varname>dbname</varname></pt>
+            <pd>Specifies the name of the database to connect to. This is equivalent to
+              specifying <varname>dbname</varname> as the first non-option argument on the
+              command line.</pd>
+            <pd>If this parameter contains an <codeph>=</codeph> sign or starts with a valid
+              URI prefix (<codeph>postgresql://</codeph> or <codeph>postgres://</codeph>), it
+              is treated as a <varname>conninfo</varname> string. See <xref
+              href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING"
+              format="html" scope="external">Connection Strings</xref> in the PostgreSQL
+              documentation for more information.</pd>
+          </plentry>
+          <plentry>
+            <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
             <pd>The host name of the machine on which the Greenplum Database master database server
               is running. If not specified, reads from the environment variable
                 <codeph>PGHOST</codeph> or defaults to localhost.</pd>
           </plentry>
           <plentry>
-            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+            <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
             <pd>The TCP port on which the Greenplum Database master database server is listening for
               connections. If not specified, reads from the environment variable
                 <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
-            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
+            <pt>-U <varname>username</varname> | --username=<varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
           </plentry>
@@ -507,6 +584,8 @@
       <codeblock>pg_dump -Fc mydb &gt; db.dump</codeblock>
       <p>To dump a database into a directory-format archive: </p>
       <codeblock>pg_dump -Fd mydb -f dumpdir</codeblock>
+      <p>To dump a database into a directory-format archive in parallel with 5 worker jobs: </p>
+      <codeblock>pg_dump -Fd mydb -j 5 -f dumpdir</codeblock>
       <p>To reload an archive file into a (freshly created) database named <codeph>newdb</codeph>: </p>
       <codeblock>pg_restore -d newdb db.dump</codeblock>
       <p>To dump a single table named <codeph>mytab</codeph>: </p>
