@@ -605,7 +605,7 @@
 		<codeblock conref="sql_commands/DROP_CAST.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/DROP_CAST.xml"/> for more
 			information.</p>
-		<section id="ae1904827">
+		<section>
 			<title>DROP COLLATION</title>
 		</section>
 		<p conref="sql_commands/DROP_COLLATION.xml#topic1/sql_command_desc"/>
@@ -979,6 +979,12 @@
 		<p conref="sql_commands/SET.xml#topic1/sql_command_desc"/>
 		<codeblock conref="sql_commands/SET.xml#topic1/sql_command_synopsis"/>
 		<p otherprops="op-html">See <xref href="sql_commands/SET.xml"/> for more information.</p>
+		<section id="az1905373">
+			<title>SET CONSTRAINTS</title>
+		</section>
+		<p conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_desc"/>
+		<codeblock conref="sql_commands/SET_CONSTRAINTS.xml#topic1/sql_command_synopsis"/>
+		<p otherprops="op-html">See <xref href="sql_commands/SET_CONSTRAINTS.xml"/> for more information.</p>
 		<section id="ae1905373">
 			<title>SET ROLE</title>
 		</section>
