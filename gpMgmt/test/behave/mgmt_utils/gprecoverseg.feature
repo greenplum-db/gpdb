@@ -21,6 +21,19 @@ Feature: gprecoverseg tests
         Then gprecoverseg should return a return code of 0
         And gprecoverseg should not print "Unhandled exception in thread started by <bound method Worker.__bootstrap" to stdout
 
+    Scenario: gprecoverseg displays pg_basebackup progress to the user
+        Given the database is running
+        And all the segments are running
+        And the segments are synchronized
+        And user kills all mirror processes
+        When user can start transactions
+        And the user runs "gprecoverseg -F -a -s"
+        Then gprecoverseg should return a return code of 0
+        And gprecoverseg should print "pg_basebackup: base backup completed" to stdout for each mirror
+        And gpAdminLogs directory has no "pg_basebackup*" files
+        And all the segments are running
+        And the segments are synchronized
+
     Scenario: When gprecoverseg full recovery is executed and an existing postmaster.pid on the killed primary segment corresponds to a non postgres process
         Given the database is running
         And all the segments are running

@@ -1941,14 +1941,12 @@ def impl(context, gppkg_name):
 def impl(context, gppkg_name):
     _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)
 
-
-@given('gpAdminLogs directory has no "{prefix}" files')
-def impl(context, prefix):
+@then('gpAdminLogs directory has no "{expected_file}" files')
+def impl(context, expected_file):
     log_dir = _get_gpAdminLogs_directory()
-    items = glob.glob('%s/%s_*.log' % (log_dir, prefix))
-    for item in items:
-        os.remove(item)
-
+    files_found = glob.glob('%s/%s' % (log_dir, expected_file))
+    if files_found:
+        raise Exception("expected no %s files in %s, but found %s" % (expected_file, log_dir, files_found))
 
 @given('"{filepath}" is copied to the install directory')
 def impl(context, filepath):

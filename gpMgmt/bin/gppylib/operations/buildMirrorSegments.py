@@ -150,10 +150,11 @@ class GpMirrorToBuild:
 
 
 class GpMirrorListToBuild:
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, showProgressInplace=True):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
+        self.__showProgressInplace = showProgressInplace
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
         self.__additionalWarnings = additionalWarnings or []
@@ -456,7 +457,7 @@ class GpMirrorListToBuild:
             self.__pool.join()
         else:
             if progressCmds:
-                self._join_and_show_segment_progress(progressCmds, inplace=True)
+                self._join_and_show_segment_progress(progressCmds, inplace=self.__showProgressInplace)
             else:
                 base.join_and_indicate_progress(self.__pool)
 
@@ -492,8 +493,8 @@ class GpMirrorListToBuild:
             destSegment.primaryHostname = srcSegment.getSegmentHostName()
             destSegment.primarySegmentPort = srcSegment.getSegmentPort()
             destSegment.progressFile = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
-                                                                               timeStamp,
-                                                                               destSegment.getSegmentDbId())
+                                                                           timeStamp,
+                                                                           destSegment.getSegmentDbId())
             srcSegments.append(srcSegment)
             destSegments.append(destSegment)
             isTargetReusedLocation.append(directive.isTargetReusedLocation())
