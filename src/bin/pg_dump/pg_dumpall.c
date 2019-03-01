@@ -2141,6 +2141,7 @@ dumpUserConfig(PGconn *conn, const char *username)
 {
 	PQExpBuffer buf = createPQExpBuffer();
 	int			count = 1;
+	bool		first = true;
 
 	for (;;)
 	{
@@ -2162,6 +2163,15 @@ dumpUserConfig(PGconn *conn, const char *username)
 		if (PQntuples(res) == 1 &&
 			!PQgetisnull(res, 0, 0))
 		{
+			/* comment at section start, only if needed */
+			if (first)
+			{
+				fprintf(OPF, "--\n-- User Configurations\n--\n\n");
+				first = false;
+			}
+
+			fprintf(OPF, "--\n-- User Config \"%s\"\n--\n\n", username);
+			resetPQExpBuffer(buf);
 			makeAlterConfigCommand(conn, PQgetvalue(res, 0, 0),
 								   "ROLE", username, NULL, NULL);
 			PQclear(res);
@@ -2295,6 +2305,9 @@ dumpDatabases(PGconn *conn)
 
 	res = executeQuery(conn, "SELECT datname FROM pg_database WHERE datallowconn ORDER BY 1");
 
+	if (PQntuples(res) > 0)
+		fprintf(OPF, "--\n-- Databases\n--\n\n");
+
 	for (i = 0; i < PQntuples(res); i++)
 	{
 		int			ret;
@@ -2309,6 +2322,7 @@ dumpDatabases(PGconn *conn)
 		appendPsqlMetaConnect(&connectbuf, dbname);
 		fprintf(OPF, "%s\n", connectbuf.data);
 		termPQExpBuffer(&connectbuf);
+		fprintf(OPF, "--\n-- Database \"%s\" dump\n--\n\n", dbname);
 
 		/*
 		 * Restore will need to write to the target cluster.  This connection
