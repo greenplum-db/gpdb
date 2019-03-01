@@ -7,14 +7,15 @@
     <p id="sql_command_desc">Defines a new table from the results of a query.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED] TABLE <varname>table_name</varname>
-   [(<varname>column_name</varname> [, ...] )]
-   [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-   [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
-   [TABLESPACE <varname>tablespace</varname>]
-   AS <varname>query</varname>
-   [DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY
-      | DISTRIBUTED REPLICATED ]</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE <varname>table_name</varname>
+        [ (<varname>column_name</varname> [, ...] ) ]
+        [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
+        [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+        [ TABLESPACE <varname>tablespace_name</varname> ]
+        AS <varname>query</varname>
+        [ WITH [ NO ] DATA ]
+        [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
+      </codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}
@@ -129,9 +130,10 @@
             block. </pd>
         </plentry>
         <plentry>
-          <pt>TABLESPACE <varname>tablespace</varname></pt>
-          <pd>The tablespace is the name of the tablespace in which the new table is to be created.
-            If not specified, the database's default tablespace is used.</pd>
+          <pt>TABLESPACE <varname>tablespace_name</varname></pt>
+          <pd>The <varname>tablespace_name</varname> parameter is the name of the tablespace in
+            which the new table is to be created. If not specified, the database's default
+            tablespace is used.</pd>
         </plentry>
         <plentry>
           <pt>AS <varname>query</varname></pt>

@@ -152,6 +152,7 @@
 			<topicref href="sql_commands/SELECT.xml"/>
 			<topicref href="sql_commands/SELECT_INTO.xml"/>
 			<topicref href="sql_commands/SET.xml"/>
+			<topicref href="sql_commands/SET_CONSTRAINTS.xml"/>
 			<topicref href="sql_commands/SET_ROLE.xml"/>
 			<topicref href="sql_commands/SET_SESSION_AUTHORIZATION.xml"/>
 			<topicref href="sql_commands/SET_TRANSACTION.xml"/>
@@ -297,6 +298,7 @@
 		<topicref href="extensions/gppc.xml" navtitle="Greenplum Partner Connector API" id="gppc"/>
 		<topicref href="extensions/fuzzystrmatch.xml"
 			navtitle="Greenplum Fuzzy String Match Extension" id="fuzzystrmatch"/>
+		<topicref href="extensions/bgworker.xml"/>
 		<topicref href="feature_summary.xml" navtitle="Summary of Greenplum Features"
 			id="feature_summary"/>
 	</topicref>
