@@ -105,9 +105,9 @@ function unittest_check_gpdb() {
 function include_zstd() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig/.
-      cp /usr/lib64/libzstd.so* lib/.
-      cp /usr/include/zstd*.h include/.
+      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
+      cp /usr/lib64/libzstd.so* lib
+      cp /usr/include/zstd*.h include
     fi
   popd
 }
@@ -115,7 +115,7 @@ function include_zstd() {
 function include_quicklz() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib/.
+      cp /usr/lib64/libquicklz.so* lib
     fi
   popd
 }
@@ -123,7 +123,15 @@ function include_quicklz() {
 function include_libstdcxx() {
   pushd /opt/gcc-6*/lib64
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp libstdc++.so.* ${GREENPLUM_INSTALL_DIR}/lib/.
+      for libfile in libstdc++.so.*; do
+        case $libfile in
+          *.py)
+            ;; # we don't vendor libstdc++.so.*-gdb.py
+          *)
+            cp "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            ;; # vendor everything else
+        esac
+      done
     fi
   popd
 }
