@@ -77,6 +77,8 @@ groups:
   - gpaddmirrors
   - gpexpand
   - gpcheck
+  - gpmovemirrors_concourse_cluster
+  - gpmovemirrors_demo_cluster
   - gppkg
   - check_centos
   ## --------------------------------------------------------------------
@@ -196,6 +198,8 @@ groups:
   - gpaddmirrors
   - gpexpand
   - gpcheck
+  - gpmovemirrors_concourse_cluster
+  - gpmovemirrors_demo_cluster
   - gppkg
   - check_centos
   - compile_gpdb_centos6
@@ -1790,6 +1794,16 @@ jobs:
       BEHAVE_TAGS: gpcheck_as_gpadmin
       GPCHECK_SETUP: true
 
+- name: gpmovemirrors_demo_cluster
+  plan:
+  - aggregate: *gets_for_behave
+  - task: gpmovemirrors_demo_cluster
+    file: gpdb_src/concourse/tasks/behave_gpdb.yml
+    image: gpdb6-centos6-test
+    params:
+      BEHAVE_FLAGS: --tags=gpmovemirrors --tags=demo_cluster
+      GPCHECK_SETUP: false
+
 - name: analyzedb
   plan:
   - aggregate: *gets_for_behave
@@ -1873,6 +1887,42 @@ jobs:
     image: ccp-image
     params:
       BEHAVE_FLAGS: --tags=gpaddmirrors
+    on_success:
+      <<: *ccp_destroy
+  ensure:
+    <<: *set_failed
+
+- name: gpmovemirrors_concourse_cluster
+  plan:
+  - aggregate:
+    - get: gpdb_src
+      params:
+        submodules:
+        - gpMgmt/bin/pythonSrc/ext
+      passed: [gate_cli_start]
+    - get: gpdb_binary
+      resource: bin_gpdb_centos6
+      passed: [gate_cli_start]
+      trigger: true
+    - get: ccp_src
+    - get: ccp-image
+  - put: terraform
+    params:
+      <<: *ccp_default_params
+      vars:
+        <<: *ccp_default_vars
+        number_of_nodes: 4
+  - task: gen_cluster
+    file: ccp_src/ci/tasks/gen_cluster.yml
+    params:
+      <<: *ccp_gen_cluster_default_params
+  - task: gpinitsystem
+    file: ccp_src/ci/tasks/gpinitsystem.yml
+  - task: run_tests
+    file: gpdb_src/concourse/tasks/run_behave.yml
+    image: ccp-image
+    params:
+      BEHAVE_FLAGS: --tags=gpmovemirrors --tags=concourse_cluster
     on_success:
       <<: *ccp_destroy
   ensure:
@@ -2155,6 +2205,8 @@ jobs:
       - gpaddmirrors
       - gpexpand
       - gpcheck
+      - gpmovemirrors_concourse_cluster
+      - gpmovemirrors_demo_cluster
       - gppkg
       - check_centos
       - interconnect

@@ -242,7 +242,7 @@ class Configuration:
                         raise Exception(
                             "Old mirror segment is not currently in a mirror role: address = %s, port = %s, segment data directory = %s"
                             % (oldAddress, str(oldPort), oldDataDirectory))
-                oldFilespaces = lookupFilespaces(oldGpdb)
+                oldFilespaces = {}
                 oldMirror = Mirror(address=oldAddress
                                    , port=oldPort
                                    , dataDirectory=oldDataDirectory
