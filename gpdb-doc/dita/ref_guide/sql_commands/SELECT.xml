@@ -895,7 +895,7 @@ KEY SHARE</codeblock></p><note> By default,
           from performing <codeph>UPDATE</codeph>, <codeph>DELETE</codeph>, <codeph>SELECT FOR
             UPDATE</codeph>, or <codeph>SELECT FOR NO KEY UPDATE</codeph> on these rows, but it does
           not prevent them from performing <codeph>SELECT FOR SHARE</codeph> or <codeph>SELECT FOR
-            KEY SHARE</codeph>.</p><p><codeph>FOR KEY SHARE</codeph> Behaves similarly to
+            KEY SHARE</codeph>.</p><p><codeph>FOR KEY SHARE</codeph> behaves similarly to
             <codeph>FOR SHARE</codeph>, except that the lock is weaker: <codeph>SELECT FOR
             UPDATE</codeph> is blocked, but not <codeph>SELECT FOR NO KEY UPDATE</codeph>. A
           key-shared lock blocks other transactions from performing <codeph>DELETE</codeph> or any
@@ -918,7 +918,7 @@ KEY SHARE</codeblock></p><note> By default,
           the <codeph>WITH</codeph> query.</p><p>Multiple locking clauses can be written if it is
           necessary to specify different locking behavior for different tables. If the same table is
           mentioned (or implicitly affected) by both more than one locking clause, then it is
-          processed as if it was only specified by the stronges one. Similarly, a table is processed
+          processed as if it was only specified by the strongest one. Similarly, a table is processed
           as <codeph>NOWAIT</codeph> if that is specified in any of the clauses affecting
           it.</p><p>The locking clauses cannot be used in contexts where returned rows cannot be
           clearly identified with individual table rows; for example they cannot be used with

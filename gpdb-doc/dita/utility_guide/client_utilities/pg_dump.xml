@@ -52,7 +52,7 @@
           <codeph>pg_restore </codeph>can be used to examine the archive and/or select which parts
         of the database are to be restored. The most flexible output file formats are the
         <varname>custom</varname> format (<codeph>-Fc</codeph>) and the
-        <varname>directory</varname> format(<codeph>-Fd</codeph>). They allow for selection and
+        <varname>directory</varname> format (<codeph>-Fd</codeph>). They allow for selection and
         reordering of all archived items, support parallel restoration, and are compressed by
         default. The <varname>directory</varname> format is the only format that supports parallel
         dumps.</p>
@@ -501,7 +501,7 @@
         <b>Connection Options</b>
         <parml>
           <plentry>
-            <pt>-d <varname>ddname</varname> | --dbname=<varname>dbname</varname></pt>
+            <pt>-d <varname>dbname</varname> | --dbname=<varname>dbname</varname></pt>
             <pd>Specifies the name of the database to connect to. This is equivalent to
               specifying <varname>dbname</varname> as the first non-option argument on the
               command line.</pd>

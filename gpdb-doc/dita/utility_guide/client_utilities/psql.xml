@@ -568,7 +568,7 @@ testdb=#</codeblock>
             whose names match the pattern are shown. If the form
               <codeph>\df+</codeph> is used, additional information about each function, including
             security, volatility, language, source code, and description, is shown. By default, only
-            user-created objects are show; supply a pattern or the <codeph>S</codeph>
+            user-created objects are shown; supply a pattern or the <codeph>S</codeph>
             modifier to include system objects.</pd>
         </plentry>
         <plentry>
