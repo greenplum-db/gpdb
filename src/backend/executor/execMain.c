@@ -1730,22 +1730,48 @@ InitPlan(QueryDesc *queryDesc, int eflags)
 		}
 		else
 		{
-			List	   *resultRelations = plannedstmt->resultRelations;
-			int			numResultRelations = list_length(resultRelations);
-			List	   *all_relids;
-			Oid		 relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
+			List          *resultRelations = plannedstmt->resultRelations;
+			int            numResultRelations = list_length(resultRelations);
+			List          *all_relids = NIL;
+			Oid            relid = getrelid(linitial_int(resultRelations), rangeTable);
+			bool           containRoot = false;
 
 			if (rel_is_child_partition(relid))
-			{
 				relid = rel_partition_get_master(relid);
+			else
+			{
+				/*
+				 * If root partition is in result_partitions, it must be
+				 * the first element.
+				 */
+				containRoot = true;
 			}
 
+			/* FIXME: does relid here have to be the root's OID? */
 			estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
 
 			/*
-			 * list all the relids that may take part in this insert operation
+			 * List all the relids that may take part in this insert operation.
+			 * The logic here is that:
+			 *   - If root partition is in the resultRelations, all_relids
+			 *     contains the root and all its all_inheritors
+			 *   - Otherwise, all_relids is a map of result_partitions to
+			 *     get each element's relation oid.
 			 */
-			all_relids = find_all_inheritors(relid, NoLock, NULL);
+			if (containRoot)
+				all_relids = find_all_inheritors(relid, NoLock, NULL);
+			else
+			{
+				ListCell *lc;
+				int       idx;
+
+				foreach(lc, resultRelations)
+				{
+					idx = lfirst_int(lc);
+					all_relids = lappend_oid(all_relids,
+											 getrelid(idx, rangeTable));
+				}
+			}
 
 			/*
 			 * We also assign a segno for a deletion operation.
