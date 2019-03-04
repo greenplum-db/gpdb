@@ -41,6 +41,7 @@
 #include "utils/syscache.h"
 #include "utils/fmgroids.h"
 #include "utils/numeric.h"
+#include "utils/sharedsnapshot.h"
 
 static Datum ao_compression_ratio_internal(Oid relid);
 static void UpdateFileSegInfo_internal(Relation parentrel,
@@ -2164,6 +2165,23 @@ PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bo
 
 		for (i = 0; i < snapshot->xcnt; i++)
 			appendStringInfo(msg, "%d ", snapshot->xip[i]);
+
+		appendStringInfoString(msg, "])");
+
+		/*
+		 * while we're at it, inspect the shared snapshot to see if the private
+		 * snapshot is corrupt
+		 */
+		appendStringInfo(msg, "\nshared snapshot (xmin %d, xmax %d, xcnt %d,"
+						 " curcid %d, haveDistributed %d\n in progress array [",
+						 SharedLocalSnapshotSlot->snapshot.xmin,
+						 SharedLocalSnapshotSlot->snapshot.xmax,
+						 SharedLocalSnapshotSlot->snapshot.xcnt,
+						 SharedLocalSnapshotSlot->snapshot.curcid,
+						 SharedLocalSnapshotSlot->snapshot.haveDistribSnapshot);
+
+		for (i = 0; i < SharedLocalSnapshotSlot->snapshot.xcnt; i++)
+			appendStringInfo(msg, "%d ", SharedLocalSnapshotSlot->snapshot.xip[i]);
 
 		appendStringInfoString(msg, "])");
 
