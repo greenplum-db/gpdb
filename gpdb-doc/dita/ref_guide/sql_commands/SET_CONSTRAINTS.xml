@@ -6,6 +6,8 @@
    <body>
       <section id="section1">
          <p id="sql_command_desc">Sets constraint check timing for the current transaction.</p>
+         <note type="note">Referential integrity syntax (foreign key constraints) is accepted but not
+           enforced.</note>
       </section>
       <section id="section2">
          <title>Synopsis</title>
@@ -44,7 +46,7 @@
                (<i>not</i> at the end of the statement). Uniqueness and exclusion constraints that
             have not been declared <codeph>DEFERRABLE</codeph> are also checked immediately. </p>
          <p>The firing of triggers that are declared as "constraint triggers" is also controlled by
-            this setting they fire at the same time that the associated constraint should be
+            this setting — they fire at the same time that the associated constraint should be
             checked. </p>
       </section>
       <section id="section4">

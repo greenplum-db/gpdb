@@ -132,7 +132,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <pt>PROGRAM '<varname>command</varname>'</pt>
           <pd>Specify a command to execute. In <codeph>COPY FROM</codeph>, the input is
             read from standard output of the command, and in <codeph>COPY TO</codeph>,
-              the output is written to the standard input of the command.The <varname>command</varname> must be specified from
+              the output is written to the standard input of the command. The <varname>command</varname> must be specified from
             the viewpoint of the Greenplum Database master host system, and must be executable by
             the Greenplum Database administrator user (<codeph>gpadmin</codeph>). </pd>
           <pd>The <varname>command</varname> is invoked by a shell. When passing arguments to the
