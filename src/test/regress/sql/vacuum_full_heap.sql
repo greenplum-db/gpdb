@@ -9,7 +9,10 @@ select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 
 -- show pages are truncated
+-- GPDB-specific: VACUUM FULL on heap gives proper relpages and reltuples
+select relname, relpages, reltuples, gp_segment_id from gp_dist_random('pg_class') where oid = 'vfheap'::regclass;
 vacuum full vfheap;
+select relname, relpages, reltuples, gp_segment_id from gp_dist_random('pg_class') where oid = 'vfheap'::regclass;
 select pg_relation_size('vfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 select pg_relation_size('ivfheap') from gp_dist_random('gp_id') where gp_segment_id = 1;
 
