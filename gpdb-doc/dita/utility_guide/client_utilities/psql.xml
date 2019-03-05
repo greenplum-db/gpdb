@@ -705,7 +705,8 @@ By
           <pt>\dy[+] [<varname>pattern</varname>]</pt>
           <pd>Lists event triggers. If a pattern is specified, only those triggers
             whose names match the pattern are listed. If <codeph>+</codeph> is appended
-            to the command name, each object is listed with its associated description.</pd>
+            to the command name, each object is listed with its associated description.
+            <note>Greenplum Database does not support user-defined triggers.</note></pd>
         </plentry>
         <plentry>
           <pt>\e | \edit [<varname>filename</varname>] [<varname>line_number</varname>]</pt>
@@ -986,10 +987,10 @@ lo_import 152801</codeblock>
                   <b><codeph>latex-longtable</codeph></b>, and
                   <b><codeph>troff-ms</codeph></b> formats put out tables that are intended to
                   be included in documents using the respective mark-up language. They are not
-                  complete documents! (This might not be so dramatic in HTML, but in LaTeX you
+                  complete documents! This might not be so dramatic in HTML, but in LaTeX you
                   must have a complete document wrapper. <codeph>latex-longtable</codeph> also
                   requires the LaTeX <codeph>longtable</codeph> and <codeph>booktabs</codeph>
-                  packages.)</p>
+                  packages.</p>
                 <p>The <b><codeph>wrapped</codeph></b> format is like <codeph>aligned</codeph>, but
                   wraps wide data values across lines to make the output fit in the target
                   column width. The target width is determined as described under the

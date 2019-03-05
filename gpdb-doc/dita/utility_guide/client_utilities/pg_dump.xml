@@ -110,7 +110,7 @@
               created database. (With a script of this form, it doesn't matter which database 
               in the destination installation you connect to before running the script.) If
               <codeph>--clean</codeph> is also specified, the script drops and recreates the
-              target database before reconnecting to it.) This option is only meaningful for the
+              target database before reconnecting to it. This option is only meaningful for the
               plain-text format. For the archive formats, you may specify the option when you call
                   <codeph><xref href="./pg_restore.xml#topic1" type="topic" format="dita"
               /></codeph>. </pd>
