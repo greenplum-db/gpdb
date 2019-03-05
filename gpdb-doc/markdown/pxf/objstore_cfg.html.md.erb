@@ -142,7 +142,7 @@ You can create S3 <i>Bucket Policy</i>(s) that identify the objects that you wan
 
 You must include certain properties in `s3-site.xml` to configure server-side encryption in a PXF S3 server configuration. The properties and values that you add to the file are SSE encryption key management scheme-specific.
 
-###### <a id="sse-s3"></a>SSE-S3
+**SSE-S3**
 
 To enable SSE-S3 on any file that you write to any S3 bucket, set the following encryption algorithm property and value in the `s3-site.xml` file:
 
@@ -164,7 +164,7 @@ To enable SSE-S3 for a specific S3 bucket, use the property name variant that in
 
 Replace `YOUR_BUCKET1_NAME` with the name of the S3 bucket.
 
-###### <a id="sse-kms"></a>SSE-KMS
+**SSE-KMS**
 
 To enable SSE-KMS on any file that you write to any S3 bucket, you must set both the encryption algorithm and encryption key ID. Set these properties in the `s3-site.xml` file:
 
@@ -181,6 +181,8 @@ To enable SSE-KMS on any file that you write to any S3 bucket, you must set both
 
 Substitute `YOUR_AWS_SSE_KMS_KEY_ARN` with your key resource name. If you do not specify an encryption key, the default key defined in the Amazon KMS is used. Example KMS key: `arn:aws:kms:us-west-2:123456789012:key/1a23b456-7890-12cc-d345-6ef7890g12f3`.
 
+**Note**: Be sure to create the bucket and the key in the same Amazon Availability Zone.
+
 To enable SSE-KMS for a specific S3 bucket, use property name variants that include the bucket name. For example:
 
 ``` xml
@@ -196,7 +198,7 @@ To enable SSE-KMS for a specific S3 bucket, use property name variants that incl
 
 Replace `YOUR_BUCKET2_NAME` with the name of the S3 bucket.
 
-###### <a id="sse-sc"></a>SSE-C
+**SSE-C**
 
 To enable SSE-C on any file that you write to any S3 bucket, you must set both the encryption algorithm and the encryption key (base-64 encoded). All clients must share the same key.
 
