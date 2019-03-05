@@ -157,12 +157,12 @@ To enable SSE-S3 for a specific S3 bucket, use the property name variant that in
 
 ``` xml
 <property>
-  <name>fs.s3a.bucket.YOUR_BUCKET1_NAME.server-side-encryption-algorithm</name>
+  <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption-algorithm</name>
   <value>AES256</value>
 </property>
 ```
 
-Replace `YOUR_BUCKET1_NAME` with the name of the S3 bucket.
+Replace `YOUR_BUCKET_NAME` with the name of the S3 bucket.
 
 **SSE-KMS**
 
@@ -187,16 +187,16 @@ To enable SSE-KMS for a specific S3 bucket, use property name variants that incl
 
 ``` xml
 <property>
-  <name>fs.s3a.bucket.YOUR_BUCKET2_NAME.server-side-encryption-algorithm</name>
+  <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption-algorithm</name>
   <value>SSE-KMS</value>
 </property>
 <property>
-  <name>fs.s3a.bucket.YOUR_BUCKET2_NAME.server-side-encryption.key</name>
+  <name>fs.s3a.bucket.YOUR_BUCKET_NAME.server-side-encryption.key</name>
   <value>YOUR_AWS_SSE_KMS_KEY_ARN</value>
 </property>
 ```
 
-Replace `YOUR_BUCKET2_NAME` with the name of the S3 bucket.
+Replace `YOUR_BUCKET_NAME` with the name of the S3 bucket.
 
 **SSE-C**
 
