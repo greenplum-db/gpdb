@@ -67,6 +67,7 @@
 #include "funcapi.h"
 #include "catalog/pg_type.h"
 #include "access/tuptoaster.h"
+#include "access/xact.h"
 #include "port/atomics.h"
 #include "pg_trace.h"
 
@@ -218,6 +219,10 @@ static volatile bool isSweeperProcess = false;
 static int	BackoffPriorityValueToInt(const char *priorityVal);
 static char *BackoffPriorityIntToValue(int weight);
 extern List *GetResqueueCapabilityEntry(Oid queueid);
+
+static int BackoffDefaultWeight(void);
+static int BackoffSuperuserStatementWeight(void);
+static int ResourceQueueGetPriorityWeight(Oid queueId);
 
 /*
  * Helper method that verifies setting of default priority guc.
@@ -429,7 +434,7 @@ getBackoffEntryRW(int index)
  * is the first backend entry that has the same statement id with itself.
  */
 void
-BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
+BackoffBackendEntryInit(int sessionid, int commandcount, Oid queueId)
 {
 	BackoffBackendSharedEntry *mySharedEntry = NULL;
 	BackoffBackendLocalEntry *myLocalEntry = NULL;
@@ -438,7 +443,6 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 	Assert(commandcount > -1);
 	Assert(Gp_role == GP_ROLE_DISPATCH || Gp_role == GP_ROLE_EXECUTE);
 	Assert(!isSweeperProcess);
-	Assert(weight > 0);
 
 	/* Shared information */
 	mySharedEntry = myBackoffSharedEntry();
@@ -455,7 +459,7 @@ BackoffBackendEntryInit(int sessionid, int commandcount, int weight)
 	}
 
 	mySharedEntry->groupLeaderIndex = MyBackendId;
-	mySharedEntry->weight = weight;
+	mySharedEntry->weight = ResourceQueueGetPriorityWeight(queueId);
 	mySharedEntry->groupSize = 0;
 	mySharedEntry->numFollowers = 1;
 
@@ -1458,8 +1462,8 @@ gp_list_backend_priorities(PG_FUNCTION_ARGS)
 /**
  * What is the weight assigned to superuser issued queries?
  */
-int
-BackoffSuperuserStatementWeight()
+static int
+BackoffSuperuserStatementWeight(void)
 {
 	int			wt = -1;
 
@@ -1472,8 +1476,8 @@ BackoffSuperuserStatementWeight()
 /**
  * Integer value for default weight.
  */
-int
-BackoffDefaultWeight()
+static int
+BackoffDefaultWeight(void)
 {
 	int			wt = BackoffPriorityValueToInt(gp_resqueue_priority_default_value);
 
@@ -1483,15 +1487,25 @@ BackoffDefaultWeight()
 
 /**
  * Get weight associated with queue. See queue.c.
- * TODO: tidy up interface.
+ *
+ * Attention is paid in order to avoid catalog lookups when not allowed.  The
+ * superuser() function performs catalog lookups in certain cases. Also the
+ * GetResqueueCapabilityEntry will always  do a catalog lookup. In such cases
+ * use the default weight.
  */
-int
+static int
 ResourceQueueGetPriorityWeight(Oid queueId)
 {
 	List	   *capabilitiesList = NULL;
 	List	   *entry = NULL;
 	ListCell   *le = NULL;
 	int			weight = BackoffDefaultWeight();
+
+	if (!IsTransactionState())
+		return weight;
+
+	if (superuser())
+		return BackoffSuperuserStatementWeight();
 
 	if (queueId == InvalidOid)
 		return weight;
