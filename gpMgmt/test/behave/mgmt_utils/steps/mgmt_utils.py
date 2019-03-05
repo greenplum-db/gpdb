@@ -2788,3 +2788,37 @@ def impl(context, dbname):
             UPDATE pg_class SET reltoastrelid = 0 WHERE oid = 'borked'::regclass;
         """)
         conn.commit()
+
+@then('verify status file and gp_segment_configuration backup file exist on standby')
+def impl(context):
+    status_file = 'gpexpand.status'
+    gp_segment_configuration_backup = 'gpexpand.gp_segment_configuration'
+
+    query = "select hostname, datadir from gp_segment_configuration where content = -1 order by dbid"
+    conn = dbconn.connect(dbconn.DbURL(dbname='postgres'))
+    res = dbconn.execSQL(conn, query).fetchall()
+    master = res[0]
+    standby = res[1]
+
+    master_datadir = master[1]
+    standby_host = standby[0]
+    standby_datadir = standby[1]
+
+    standby_remote_statusfile = "%s:%s/%s" % (standby_host, standby_datadir, status_file)
+    standby_local_statusfile = "%s/%s.standby" % (master_datadir, status_file)
+    standby_remote_gp_segment_configuration_file = "%s:%s/%s" % \
+            (standby_host, standby_datadir, gp_segment_configuration_backup)
+    standby_local_gp_segment_configuration_file = "%s/%s.standby" % \
+            (master_datadir, gp_segment_configuration_backup)
+
+    cmd = Command(name="Copy standby file to master", cmdStr='scp %s %s' % \
+            (standby_remote_statusfile, standby_local_statusfile))
+    cmd.run(validateAfter=True)
+    cmd = Command(name="Copy standby file to master", cmdStr='scp %s %s' % \
+            (standby_remote_gp_segment_configuration_file, standby_local_gp_segment_configuration_file))
+    cmd.run(validateAfter=True)
+
+    if not os.path.exists(standby_local_statusfile):
+        raise Exception('file "%s" is not exist' % standby_remote_statusfile)
+    if not os.path.exists(standby_local_gp_segment_configuration_file):
+        raise Exception('file "%s" is not exist' % standby_remote_gp_segment_configuration_file)

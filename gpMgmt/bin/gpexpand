@@ -208,8 +208,6 @@ def validate_options(options, args, parser):
         logger.error('Master data directory %s does not exist.' % options.master_data_directory)
         parser.exit()
 
-    options.pgport = int(os.getenv('PGPORT', 5432))
-
     return options, args
 
 
@@ -379,9 +377,12 @@ class GpExpandStatus():
         self._master_data_directory = master_data_directory
         self._master_mirror = master_mirror
         self._status_filename = master_data_directory + '/gpexpand.status'
-        self._status_standby_filename = master_data_directory + '/gpexpand.standby.status'
+        if master_mirror:
+            self._status_standby_filename = master_mirror.getSegmentDataDirectory() \
+                                            + '/gpexpand.status'
+            self._segment_configuration_standby_filename = master_mirror.getSegmentDataDirectory() \
+                                            + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE
         self._fp = None
-        self._fp_standby = None
         self._temp_dir = None
         self._input_filename = None
         self._gp_segment_configuration_backup = None
@@ -421,11 +422,6 @@ class GpExpandStatus():
         """Creates a new gpexpand status file"""
         try:
             self._fp = open(self._status_filename, 'w')
-            if self._master_mirror:
-                self._fp_standby = open(self._status_standby_filename, 'w')
-                self._fp_standby.write('UNINITIALIZED:None\n')
-                self._fp_standby.flush()
-                os.fsync(self._fp_standby)
             self._fp.write('UNINITIALIZED:None\n')
             self._fp.flush()
             os.fsync(self._fp)
@@ -434,16 +430,16 @@ class GpExpandStatus():
         except IOError:
             raise
 
-        self._sync_status_file()
+        if self._master_mirror:
+            self._sync_status_file()
 
     def _sync_status_file(self):
         """Syncs the gpexpand status file with the master mirror"""
-        if self._master_mirror:
-            cpCmd = Scp('gpexpand copying status file to master mirror',
-                        srcFile=self._status_standby_filename,
-                        dstFile=self._status_filename,
-                        dstHost=self._master_mirror.getSegmentHostName())
-            cpCmd.run(validateAfter=True)
+        cpCmd = Scp('gpexpand copying status file to master mirror',
+                    srcFile=self._status_filename,
+                    dstFile=self._status_standby_filename,
+                    dstHost=self._master_mirror.getSegmentHostName())
+        cpCmd.run(validateAfter=True)
 
     def set_status(self, status, status_info=None, force=False):
         """Sets the current status.  gpexpand status must be set in
@@ -462,16 +458,13 @@ class GpExpandStatus():
                         self._status_values[status] != self._status_values[self._status[-1]] + 1 and \
                         not force:
             raise InvalidStatusError('Invalid status transition from %s to %s' % (self._status[-1], status))
-        if self._master_mirror:
-            self._fp_standby.write('%s:%s\n' % (status, status_info))
-            self._fp_standby.flush()
-            os.fsync(self._fp_standby)
-            self._sync_status_file()
         self._fp.write('%s:%s\n' % (status, status_info))
         self._fp.flush()
         os.fsync(self._fp)
         self._status.append(status)
         self._status_info.append(status_info)
+        if self._master_mirror:
+            self._sync_status_file()
 
     def get_current_status(self):
         """Gets the current status that has been written to the gpexpand
@@ -490,17 +483,12 @@ class GpExpandStatus():
         if self._fp:
             self._fp.close()
             self._fp = None
-        if self._fp_standby:
-            self._fp_standby.close()
-            self._fp_standby = None
         if os.path.exists(self._status_filename):
             os.unlink(self._status_filename)
-        if os.path.exists(self._status_standby_filename):
-            os.unlink(self._status_standby_filename)
         if self._master_mirror:
             RemoveFile.remote('gpexpand master mirror status file cleanup',
                               self._master_mirror.getSegmentHostName(),
-                              self._status_filename)
+                              self._status_standby_filename)
 
     def remove_segment_configuration_backup_file(self):
         """ Remove the segment configuration backup file """
@@ -508,6 +496,20 @@ class GpExpandStatus():
         if self._gp_segment_configuration_backup != None and os.path.exists(
                 self._gp_segment_configuration_backup) == True:
             os.unlink(self._gp_segment_configuration_backup)
+        if self._master_mirror:
+            RemoveFile.remote('gpexpand master mirror segment configuration backup file cleanup',
+                              self._master_mirror.getSegmentHostName(),
+                              self._segment_configuration_standby_filename)
+
+    def sync_segment_configuration_backup_file(self):
+        """ Sync the segment configuration backup file to standby """
+        if self._master_mirror:
+            self.logger.debug("Sync segment configuration backup file")
+            cpCmd = Scp('gpexpand copying segment configuration backup file to master mirror',
+                        srcFile=self._gp_segment_configuration_backup,
+                        dstFile=self._segment_configuration_standby_filename,
+                        dstHost=self._master_mirror.getSegmentHostName())
+            cpCmd.run(validateAfter=True)
 
     def get_temp_dir(self):
         """Gets temp dir that was used during template creation"""
@@ -534,10 +536,6 @@ class GpExpandStatus():
         """Sets the filename of the gp_segment_configuration backup file"""
         self._gp_segment_configuration_backup = filename
 
-    def is_standby(self):
-        """Returns True if running on standby"""
-        return os.path.exists(self._master_data_directory + self._status_standby_filename)
-
     def can_rollback(self, status):
         """Return if it can rollback under current status"""
         if int(self._status_values[status]) >= int(self._status_values['UPDATE_CATALOG_DONE']):
@@ -552,8 +550,6 @@ class GpExpandStatus():
 
         if not self._fp:
             self._fp = open(self._status_filename, 'a+')
-        if self._master_mirror and not self._fp_standby:
-            self._fp_standby = open(self._status_standby_filename, 'a+')
         self.set_status(status, status_info, True)
 
 
@@ -958,9 +954,6 @@ class gpexpand:
                 raise ExpansionError('Catalog has been changed, the cluster can not rollback.')
 
             elif status[0] == 'BUILD_SEGMENT_TEMPLATE_STARTED':
-                if self.statusLogger.is_standby():
-                    self.logger.info('Running on standby master, skipping segment template rollback')
-                    continue
                 self.logger.info('Rolling back segment template build')
                 SegmentTemplate.cleanup_build_segment_template('gpexpand_schema.tar', status[1])
 
@@ -1143,6 +1136,7 @@ class gpexpand:
             self.options.master_data_directory + '/' + SEGMENT_CONFIGURATION_BACKUP_FILE)
         self.gparray.dumpToFile(self.statusLogger.get_gp_segment_configuration_backup())
         self.statusLogger.set_status('UPDATE_CATALOG_STARTED', self.statusLogger.get_gp_segment_configuration_backup())
+        self.statusLogger.sync_segment_configuration_backup_file()
 
         # Mark expansion segment primaries not in sync
         for seg in self.gparray.getExpansionSegDbList():
@@ -2230,7 +2224,7 @@ def main(options, args, parser):
             configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
         configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
 
-        dburl = dbconn.DbURL(dbname=DBNAME)
+        dburl = dbconn.DbURL(dbname=DBNAME, port=gpEnv.getMasterPort())
 
         gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl, options)
 

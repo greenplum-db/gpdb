@@ -389,10 +389,10 @@ Feature: expand the cluster by adding more segments
         And database "gptest" exists
         And there are no gpexpand_inputfiles
         And the cluster is setup for an expansion on hosts "mdw,sdw1"
-        And the gp_segment_configuration have been saved
         And set fault inject "gpexpand retry after releaseing catalog lock fault injection"
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 3
+        And verify status file and gp_segment_configuration backup file exist on standby
         And unset fault inject
         When the user runs gpexpand with a static inputfile for a single-node cluster with mirrors without ret code check
         Then gpexpand should return a return code of 0
