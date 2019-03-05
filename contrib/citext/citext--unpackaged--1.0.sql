@@ -89,7 +89,7 @@ ALTER EXTENSION citext ADD function translate(citext,citext,text);
 -- default collation is pinned.
 --
 
-SET gp_recursive_cte_prototype TO ON;
+SET gp_recursive_cte TO ON;
 
 WITH RECURSIVE typeoids(typoid) AS
   ( SELECT 'citext'::pg_catalog.regtype UNION
@@ -199,5 +199,5 @@ WHERE indclass[7] IN (
   WHERE opcintype = typeoids.typoid
 );
 
-SET gp_recursive_cte_prototype TO OFF;
+SET gp_recursive_cte TO OFF;
 -- somewhat arbitrarily, we assume no citext indexes have more than 8 columns

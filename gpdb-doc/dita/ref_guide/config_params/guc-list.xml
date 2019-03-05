@@ -342,7 +342,7 @@
             <li>
               <xref href="#gp_motion_cost_per_row"/>
             </li>
-            <li><xref href="#gp_recursive_cte_prototype"/></li>
+            <li><xref href="#gp_recursive_cte"/></li>
             <li>
               <xref href="#gp_reject_percent_threshold"/>
             </li>
@@ -4416,8 +4416,8 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_recursive_cte_prototype">
-    <title>gp_recursive_cte_prototype</title>
+  <topic id="gp_recursive_cte">
+    <title>gp_recursive_cte</title>
     <body>
       <p>Controls the availability of the <codeph>RECURSIVE</codeph> keyword (Beta) in the
           <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
@@ -4432,7 +4432,9 @@
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <note>This parameter will be removed if the <codeph>RECURSIVE</codeph> keyword is promoted
-        from Beta, or if the keyword is removed from Greenplum Database.</note>
+        from Beta, or if the keyword is removed from Greenplum Database.
+        This parameter was previously named <codeph>gp_recursive_cte_prototype</codeph>, but
+        has been renamed to reflect the current status of the implementation.</note>
       <table id="table_j4s_yyx_1bb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>

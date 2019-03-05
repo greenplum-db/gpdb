@@ -26,7 +26,7 @@
     <p>By default, the <codeph>RECURSIVE</codeph> keyword for the <codeph>WITH</codeph> clause is
       disabled. <codeph>RECURSIVE</codeph> can be enabled by setting the server configuration
       parameter <codeph><xref
-          href="../../../ref_guide/config_params/guc-list.xml#gp_recursive_cte_prototype"/></codeph>
+          href="../../../ref_guide/config_params/guc-list.xml#gp_recursive_cte"/></codeph>
       to <codeph>true</codeph>.
       <note type="warning">The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</note></p>
   </body>

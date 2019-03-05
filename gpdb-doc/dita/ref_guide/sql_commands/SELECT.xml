@@ -142,7 +142,7 @@ ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ..
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
           executed at the same time. </p><p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server configuration
-          parameter <codeph>gp_recursive_cte_prototype</codeph> to <codeph>true</codeph>. For
+          parameter <codeph>gp_recursive_cte</codeph> to <codeph>true</codeph>. For
           information about the parameter, see <xref href="../config_params/guc_config.xml#topic1"
             />.<note type="note">The <codeph>RECURSIVE</codeph> keyword is a Beta
           feature.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it

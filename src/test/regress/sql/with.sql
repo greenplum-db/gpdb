@@ -4,7 +4,7 @@
 
 --start_ignore
 set gp_cte_sharing to on;
-set gp_recursive_cte_prototype to on;
+set gp_recursive_cte to on;
 --end_ignore
 
 -- Basic WITH

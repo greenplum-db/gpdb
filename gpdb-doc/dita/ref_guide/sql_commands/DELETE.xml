@@ -71,7 +71,7 @@ DELETE FROM [ONLY] <varname>table</varname> [[AS] <varname>alias</varname>]
                     <pd>The <codeph>RECURSIVE</codeph> keyword is a Beta feature. By default, The
                             <codeph>RECURSIVE</codeph> keyword is not available. The keyword can be
                         enabled by setting the server configuration parameter <codeph><xref
-                                href="../config_params/guc-list.xml#gp_recursive_cte_prototype"
+                                href="../config_params/guc-list.xml#gp_recursive_cte"
                             /></codeph> to <codeph>true</codeph>. </pd>
                     <pd>See <xref
                             href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/>

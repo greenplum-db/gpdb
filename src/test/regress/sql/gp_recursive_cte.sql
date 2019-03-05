@@ -9,14 +9,14 @@ create table recursive_table_1(id int);
 insert into recursive_table_1 values (1), (2), (100);
 
 -- Test the featureblocking GUC for recursive CTE
-set gp_recursive_cte_prototype to off;
+set gp_recursive_cte to off;
 with recursive r(i) as (
    select 1
    union all
    select i + 1 from r
 )
 select * from recursive_table_1 where recursive_table_1.id IN (select * from r limit 10);
-set gp_recursive_cte_prototype to on;
+set gp_recursive_cte to on;
 
 -- WITH RECURSIVE ref used with IN without correlation
 with recursive r(i) as (
