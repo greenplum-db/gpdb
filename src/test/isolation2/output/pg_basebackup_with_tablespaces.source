@@ -19,6 +19,24 @@ DROP
 create database some_database_with_tablespace tablespace some_isolation2_pg_basebackup_tablespace;
 CREATE
 
+-- And a database without using the tablespace
+drop database if exists some_database_without_tablespace;
+DROP
+create database some_database_without_tablespace;
+CREATE
+
+-- And a table and index, temp table and index using the tablespace
+1:@db_name some_database_without_tablespace: CREATE TABLE test(a INT, b INT) TABLESPACE some_isolation2_pg_basebackup_tablespace;
+CREATE
+1:@db_name some_database_without_tablespace: CREATE INDEX test_index on test(a) TABLESPACE some_isolation2_pg_basebackup_tablespace;
+CREATE
+2:@db_name some_database_without_tablespace: CREATE TEMP TABLE test_tmp(a INT, b INT) TABLESPACE some_isolation2_pg_basebackup_tablespace;
+CREATE
+2:@db_name some_database_without_tablespace: CREATE INDEX test_tmp_index on test_tmp(a) TABLESPACE some_isolation2_pg_basebackup_tablespace;
+CREATE
+
+1q: ... <quitting>
+
 -- When we create a full backup
 select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespace@/some_isolation2_pg_basebackup', false) from gp_segment_configuration where content = 0 and role = 'p';
  pg_basebackup 
@@ -26,11 +44,18 @@ select pg_basebackup(address, 100, port, 'some_replication_slot', '@testtablespa
                
 (1 row)
 
--- Then we should have a backup of the source segment files in the newly created target tablespace
+-- Then we should have two directories in newly created target tablespace, some_database_with_tablespace and some_database_without_tablespace
 select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db100/');
  count_of_items_in_directory 
 -----------------------------
- 1                           
+ 2                           
+(1 row)
+
+-- Then we should have four files in newly created target tablespace under the some_database_without_tablespace, test, test_index, test_tmp, test_tmp_index
+select count_of_items_in_database_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db100/', oid) from pg_database where datname='some_database_without_tablespace';
+ count_of_items_in_database_directory 
+--------------------------------------
+ 4                                    
 (1 row)
 
 -- When we create a full backup using force overwrite
@@ -40,13 +65,21 @@ select pg_basebackup(address, 200, port, 'some_replication_slot', '@testtablespa
                
 (1 row)
 
--- Then we should have a backup of the source segment files in the newly created target tablespace
+-- Then we should have two directories in newly created target tablespace, some_database_with_tablespace and some_database_without_tablespace
 select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db200/');
  count_of_items_in_directory 
 -----------------------------
- 1                           
+ 2                           
 (1 row)
 
+-- Then we should have four files in newly created target tablespace under the some_database_without_tablespace, test, test_index, test_tmp, test_tmp_index
+select count_of_items_in_database_directory('@testtablespace@/some_isolation2_pg_basebackup_tablespace/GPDB_*db100/', oid) from pg_database where datname='some_database_without_tablespace';
+ count_of_items_in_database_directory 
+--------------------------------------
+ 4                                    
+(1 row)
+
+2q: ... <quitting>
 
 -- Cleanup things we've created
 0U: select pg_drop_replication_slot('some_replication_slot');
@@ -55,6 +88,8 @@ select count_of_items_in_directory('@testtablespace@/some_isolation2_pg_baseback
                           
 (1 row)
 drop database some_database_with_tablespace;
+DROP
+drop database some_database_without_tablespace;
 DROP
 drop tablespace some_isolation2_pg_basebackup_tablespace;
 DROP

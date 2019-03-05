@@ -36,3 +36,12 @@ create or replace function count_of_items_in_directory(user_path text) returns t
        results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
        return len([result for result in results.splitlines() if result != ''])
 $$ language plpythonu;
+
+create or replace function count_of_items_in_database_directory(user_path text, database_oid oid) returns int as $$
+       import subprocess
+       import os
+       directory = os.path.join(user_path, str(database_oid))
+       cmd = 'ls ' + directory
+       results = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True).replace('.', '')
+       return len([result for result in results.splitlines() if result != ''])
+$$ language plpythonu;
