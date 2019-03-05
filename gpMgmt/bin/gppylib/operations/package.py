@@ -523,6 +523,7 @@ class ValidateInstallPackage(Operation):
                 if 'already installed' in line.lower():
                     # if installed version is newer than currently, we use old version name
                     if 'newer than' in line.lower():
+                        # example: package json-c-0.12-1.x86_64 (which is newer than json-c-0.11-1.x86_64) is already installed
                         package_name = line.split()[6].replace(')','')
                     else:
                         package_name = line.split()[1]
