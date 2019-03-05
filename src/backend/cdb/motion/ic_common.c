@@ -744,7 +744,7 @@ adjustMasterRouting(Slice *recvSlice)
 	{
 		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
 
-		if (cdbProc)
+		if (cdbProc && MyProcPort)
 		{
 			if (cdbProc->listenerAddr == NULL)
 				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);

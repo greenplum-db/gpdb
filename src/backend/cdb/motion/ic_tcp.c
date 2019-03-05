@@ -143,7 +143,7 @@ setupTCPListeningSocket(int backlog, int *listenerSocketFd, uint16 *listenerPort
 	 * QD local connections tend to be AF_UNIX, or on 127.0.0.1 -- so bind
 	 * everything)
 	 */
-	if (Gp_role == GP_ROLE_DISPATCH ||
+	if (Gp_role == GP_ROLE_DISPATCH || MyProcPort == NULL ||
 		(MyProcPort->laddr.addr.ss_family != AF_INET &&
 		 MyProcPort->laddr.addr.ss_family != AF_INET6))
 		localname = NULL;		/* We will listen on all network adapters */
