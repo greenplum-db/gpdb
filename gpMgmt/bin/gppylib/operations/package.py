@@ -494,6 +494,7 @@ class ValidateInstallPackage(Operation):
         try:
             cmd.run(validateAfter=True)
         except ExecutionError, e:
+            already_install = False
             lines = e.cmd.get_results().stderr.splitlines()
 
             # Forking between code paths 2 and 3 depends on some meaningful stderr
@@ -520,9 +521,15 @@ class ValidateInstallPackage(Operation):
             #    package postgis-1.0-1.x86_64 is already installed
             for line in lines:
                 if 'already installed' in line.lower():
-                    package_name = line.split()[1]
+                    # if installed version is newer than currently, we use old version name
+                    if 'newer than' in line.lower():
+                        package_name = line.split()[6].replace(')','')
+                    else:
+                        package_name = line.split()[1]
                     rpm_name = "%s.rpm" % package_name
                     rpm_set.remove(rpm_name)
+                    already_install = True
+
                 # skip extra warnings given by alien--until gppkg supports installing .deb packages, we
                 # need this to be able to install Greenplum rpms on Ubuntu
                 elif 'rpm should not be used directly install rpm packages, use alien instead!' in line.lower():
@@ -531,7 +538,8 @@ class ValidateInstallPackage(Operation):
                     pass
                 else:
                     # This is unexpected, so bubble up the ExecutionError.
-                    raise
+                    if already_install is not True:
+                        raise
 
         # MPP-14359 - installation and uninstallation prechecks must also consider
         # the archive. That is, if a partial installation had added all rpms
@@ -661,7 +669,8 @@ class ValidateUninstallPackage(Operation):
             cmd = Command('Discerning culprit rpms for %s' % violated_capability,
                           'rpm -q --whatprovides %s --dbpath %s' % (violated_capability, RPM_DATABASE))
             cmd.run(validateAfter=True)
-            culprit_rpms = set(cmd.get_results().stdout.splitlines())
+            # remove the .x86_64 suffix for each rpm package to match the name in rpm_set
+            culprit_rpms = set(dep.replace('.x86_64', '') for dep in cmd.get_results().stdout.splitlines())
             rpm_set -= culprit_rpms
 
 
@@ -849,7 +858,10 @@ class InstallPackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = None
         self.segment_host_list = segment_host_list
 
     def execute(self):
@@ -933,7 +945,10 @@ class UninstallPackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = None
         self.segment_host_list = segment_host_list
 
     def execute(self):
@@ -1142,7 +1157,10 @@ class UpdatePackage(Operation):
     def __init__(self, gppkg, master_host, standby_host, segment_host_list):
         self.gppkg = gppkg
         self.master_host = master_host
-        self.standby_host = standby_host
+        if master_host != standby_host:
+            self.standby_host = standby_host
+        else:
+            self.standby_host = None
         self.segment_host_list = segment_host_list
 
     def execute(self):
