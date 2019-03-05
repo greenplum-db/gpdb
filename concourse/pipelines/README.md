@@ -89,7 +89,7 @@ fly -t gpdb-prod \
     -p gpdb_master \
     -c gpdb_master-generated.yml \
     -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.yml
+    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml
 
 fly -t gpdb-prod \
     set-pipeline \
