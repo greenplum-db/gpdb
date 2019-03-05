@@ -2168,22 +2168,30 @@ PrintPgaosegAndGprelationNodeEntries(FileSegInfo **allseginfo, int totalsegs, bo
 
 		appendStringInfoString(msg, "])");
 
-		/*
-		 * while we're at it, inspect the shared snapshot to see if the private
-		 * snapshot is corrupt
-		 */
-		appendStringInfo(msg, "\nshared snapshot (xmin %d, xmax %d, xcnt %d,"
-						 " curcid %d, haveDistributed %d\n in progress array [",
-						 SharedLocalSnapshotSlot->snapshot.xmin,
-						 SharedLocalSnapshotSlot->snapshot.xmax,
-						 SharedLocalSnapshotSlot->snapshot.xcnt,
-						 SharedLocalSnapshotSlot->snapshot.curcid,
-						 SharedLocalSnapshotSlot->snapshot.haveDistribSnapshot);
+		if (SharedLocalSnapshotSlot == NULL)
+			appendStringInfo(msg, "\nshared snapshot == NULL");
+		else if (&SharedLocalSnapshotSlot->snapshot != InvalidSnapshot &&
+			IsMVCCSnapshot(&SharedLocalSnapshotSlot->snapshot))
+		{
+			LWLockAcquire(SharedLocalSnapshotSlot->slotLock, LW_EXCLUSIVE);
+			/*
+			 * while we're at it, inspect the shared snapshot to see if the private
+			 * snapshot is corrupt
+			 */
+			appendStringInfo(msg, "\nshared snapshot (xmin %d, xmax %d, xcnt %d,"
+							 " curcid %d, haveDistributed %d\n in progress array [",
+							 SharedLocalSnapshotSlot->snapshot.xmin,
+							 SharedLocalSnapshotSlot->snapshot.xmax,
+							 SharedLocalSnapshotSlot->snapshot.xcnt,
+							 SharedLocalSnapshotSlot->snapshot.curcid,
+							 SharedLocalSnapshotSlot->snapshot.haveDistribSnapshot);
 
-		for (i = 0; i < SharedLocalSnapshotSlot->snapshot.xcnt; i++)
-			appendStringInfo(msg, "%d ", SharedLocalSnapshotSlot->snapshot.xip[i]);
+			for (i = 0; i < SharedLocalSnapshotSlot->snapshot.xcnt; i++)
+				appendStringInfo(msg, "%d ", SharedLocalSnapshotSlot->snapshot.xip[i]);
 
-		appendStringInfoString(msg, "])");
+			appendStringInfoString(msg, "])");
+			LWLockRelease(SharedLocalSnapshotSlot->slotLock);
+		}
 
 		if (snapshot->haveDistribSnapshot)
 		{
