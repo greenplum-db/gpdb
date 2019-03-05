@@ -18,7 +18,7 @@
     <p><codeph>dblink</codeph> is intended for database users to perform short ad hoc queries in
       other databases. <codeph>dblink</codeph> is not intended for use as a replacement for external
       tables or for administrative tools such as <codeph>gpcopy</codeph>.</p>
-    <p>Refer to <xref href="https://www.postgresql.org/docs/8.4/dblink.html" format="html"
+    <p>Refer to <xref href="https://www.postgresql.org/docs/9.4/dblink.html" format="html"
         scope="external">dblink</xref> in the PostgreSQL documentation for more information about
       individual <codeph>dblink</codeph> functions. </p>
   </body>
