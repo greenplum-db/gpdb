@@ -15,6 +15,7 @@ from gppylib.operations import startSegments
 from gppylib.gp_era import read_era
 from gppylib.operations.utils import ParallelOperation, RemoteOperation
 from gppylib.operations.unix import CleanSharedMem
+from gppylib.system import configurationInterface as configInterface
 from gppylib.commands.gp import is_pid_postmaster, get_pid_from_remotehost
 from gppylib.commands.unix import check_pid_on_remotehost, Scp
 
@@ -285,10 +286,15 @@ class GpMirrorListToBuild:
         # Disable Ctrl-C, going to save metadata in database and transition segments
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         try:
+            self.__logger.info("Updating configuration with new mirrors")
+            configInterface.getConfigurationProvider().updateSystemConfig(
+                gpArray,
+                "%s: segment config for resync" % programName,
+                dbIdToForceMirrorRemoveAdd=fullResyncMirrorDbIds,
+                useUtilityMode=False,
+                allowPrimary=False
+            )
             self.__logger.info("Updating mirrors")
-
-            if actionName ==  "add":
-                self.__registerMirrorsInCatalog(gpArray)
 
             if len(rewindInfo) != 0:
                 self.__logger.info("Running pg_rewind on required mirrors")
