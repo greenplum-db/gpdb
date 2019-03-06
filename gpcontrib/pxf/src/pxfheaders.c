@@ -29,7 +29,7 @@ static void add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel);
 static void add_location_options_httpheader(CHURL_HEADERS headers, GPHDUri *gphduri);
 static char *get_format_name(char fmtcode);
 static void add_projection_desc_httpheader(CHURL_HEADERS headers, ProjectionInfo *projInfo, List *qualsAttributes);
-static bool get_attnums_from_targetList(Node *node, List *attnums);
+static bool add_attnums_from_targetList(Node *node, List *attnums);
 static void add_projection_index_header(CHURL_HEADERS pVoid, StringInfoData data, int attno, char number[32]);
 
 /*
@@ -281,7 +281,7 @@ add_projection_desc_httpheader(CHURL_HEADERS headers,
 	/*
 	 * Non-simpleVars are added to the targetlist
 	 * we use expression_tree_walker to access attrno information
-	 * we do it through a helper function get_attnums_from_targetList
+	 * we do it through a helper function add_attnums_from_targetList
 	 */
 	if (projInfo->pi_targetlist)
 	{
@@ -291,7 +291,7 @@ add_projection_desc_httpheader(CHURL_HEADERS headers,
 		foreach(lc1, projInfo->pi_targetlist)
 		{
 			GenericExprState *gstate = (GenericExprState *) lfirst(lc1);
-			get_attnums_from_targetList((Node *) gstate->arg->expr, l);
+			add_attnums_from_targetList((Node *) gstate->arg->expr, l);
 		}
 
 		foreach(lc1, l)
@@ -406,7 +406,7 @@ get_format_name(char fmtcode)
  * get the list
  */
 static bool
-get_attnums_from_targetList(Node *node, List *attnums)
+add_attnums_from_targetList(Node *node, List *attnums)
 {
 	if (node == NULL)
 		return false;
@@ -429,6 +429,6 @@ get_attnums_from_targetList(Node *node, List *attnums)
 	if (IsA(node, WindowFunc))
 		return false;
 	return expression_tree_walker(node,
-								  get_attnums_from_targetList,
+								  add_attnums_from_targetList,
 								  (void *) attnums);
 }
