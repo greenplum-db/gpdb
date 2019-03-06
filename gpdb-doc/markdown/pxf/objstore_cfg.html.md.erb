@@ -111,6 +111,8 @@ The template configuration file for S3 is `$PXF_CONF/templates/s3-site.xml`. Whe
 | fs.s3a.access.key | The AWS account access key ID. | Your access key. |
 | fs.s3a.secret.key | The secret key associated with the AWS access key ID. | Your secret key. |
 
+If required, fine-tune PXF S3 connectivity by specifying properties identified in the [S3A](https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html#S3A) section of the Hadoop-AWS module documentation in your `s3-site.xml` server configuration file.
+
 You can override an S3 server configuration by directly specifying the S3 access ID and secret key via custom options in the CREATE EXTERNAL TABLE command LOCATION clause. Refer to [Overriding the S3 Server Configuration](access_objstore.html#s3_override) for additional information.
 
 
