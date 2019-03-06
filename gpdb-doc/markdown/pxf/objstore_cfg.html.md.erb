@@ -123,14 +123,14 @@ PXF supports Amazon Web Service S3 Server-Side Encryption (SSE) for S3 files tha
 PXF supports the following AWS SSE encryption key management schemes:
 
 - SSE with S3-Managed Keys (SSE-S3) - Amazon manages the data and master encryption keys.
-- SSE with Key Management Service Managed Keys (SSE-KMS) - Amazon manages the data key, you manage the encryption key in AWS KMS.
+- SSE with Key Management Service Managed Keys (SSE-KMS) - Amazon manages the data key, and you manage the encryption key in AWS KMS.
 - SSE with Customer-Provided Keys (SSE-C) - You set and manage the encryption key.
 
 Your S3 access key and secret key govern your access to all S3 bucket objects, whether the data is encrypted or not.
 
-S3 transparently decrypts data during a read operation of an encrypted file that you access via a readable external table created specifying the `pxf` protocol and an `s3:*` profile. No additional configuration is required.
+S3 transparently decrypts data during a read operation of an encrypted file that you access via a readable external table that is created by specifying the `pxf` protocol and an `s3:*` profile. No additional configuration is required.
 
-To encrypt data that you write to S3 via a writable external table created specifying the `pxf` protocol and an `s3:*` profile, you have two options, discussed below:
+To encrypt data that you write to S3 via this type of external table, you have two options:
 
 - Configure the default SSE encryption key management scheme on a per-S3-bucket basis via the AWS console or command line tools (recommended).
 - Configure SSE encryption options in your PXF S3 server `s3-site.xml` configuration file.
@@ -142,7 +142,7 @@ You can create S3 <i>Bucket Policy</i>(s) that identify the objects that you wan
 
 ##### <a id="s3-sse-pxfs3cfg"></a>Specifying SSE Options in a PXF S3 Server Configuration
 
-You must include certain properties in `s3-site.xml` to configure server-side encryption in a PXF S3 server configuration. The properties and values that you add to the file are SSE encryption key management scheme-specific.
+You must include certain properties in `s3-site.xml` to configure server-side encryption in a PXF S3 server configuration. The properties and values that you add to the file are dependent upon the SSE encryption key management scheme.
 
 **SSE-S3**
 
@@ -168,7 +168,7 @@ Replace `YOUR_BUCKET_NAME` with the name of the S3 bucket.
 
 **SSE-KMS**
 
-To enable SSE-KMS on any file that you write to any S3 bucket, you must set both the encryption algorithm and encryption key ID. Set these properties in the `s3-site.xml` file:
+To enable SSE-KMS on any file that you write to any S3 bucket, set both the encryption algorithm and encryption key ID. To set these properties in the `s3-site.xml` file:
 
 ``` xml
 <property>
@@ -202,9 +202,9 @@ Replace `YOUR_BUCKET_NAME` with the name of the S3 bucket.
 
 **SSE-C**
 
-To enable SSE-C on any file that you write to any S3 bucket, you must set both the encryption algorithm and the encryption key (base-64 encoded). All clients must share the same key.
+To enable SSE-C on any file that you write to any S3 bucket, set both the encryption algorithm and the encryption key (base-64 encoded). All clients must share the same key.
 
-Set these properties in the `s3-site.xml` file:
+To set these properties in the `s3-site.xml` file:
 
 ``` xml
 <property>
