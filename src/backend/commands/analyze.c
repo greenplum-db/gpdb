@@ -1696,11 +1696,7 @@ acquire_sample_rows_ao(Relation onerel, int elevel,
 	{
 		int			natts = RelationGetNumberOfAttributes(onerel);
 		bool	   *proj = (bool *) palloc(natts * sizeof(bool));
-		int			i;
-
-		for(i = 0; i < natts; i++)
-			proj[i] = true;
-
+		memset(proj, true, natts);
 		Assert(RelationIsAoCols(onerel));
 		aocsScanDesc = aocs_beginscan(onerel,
 									  SnapshotSelf,

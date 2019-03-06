@@ -3028,7 +3028,6 @@ CopyTo(CopyState cstate)
 				bool *proj = NULL;
 
 				int nvp = tupDesc->natts;
-				int i;
 
 				if (tupDesc->tdhasoid)
 				{
@@ -3036,9 +3035,7 @@ CopyTo(CopyState cstate)
 				}
 
 				proj = palloc(sizeof(bool) * nvp);
-				for(i = 0; i < nvp; ++i)
-				    proj[i] = true;
-
+				memset(proj, true, nvp);
 				scan = aocs_beginscan(rel, GetActiveSnapshot(),
 									  GetActiveSnapshot(),
 									  NULL /* relationTupleDesc */, proj);

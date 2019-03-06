@@ -17498,18 +17498,12 @@ split_rows(Relation intoa, Relation intob, Relation temprel)
 	else if (RelationIsAoCols(temprel))
 	{
 		int nvp = temprel->rd_att->natts;
-		int i;
-
 		aocsproj = (bool *) palloc(sizeof(bool) * nvp);
-		for(i=0; i<nvp; ++i)
-			aocsproj[i] = true;
-
+		memset(aocsproj, true, nvp);
 		aocsscan = aocs_beginscan(temprel, snapshot, snapshot, NULL /* relationTupleDesc */, aocsproj);
 	}
 	else
-	{
 		Assert(false);
-	}
 
 	oldCxt = MemoryContextSwitchTo(GetPerTupleMemoryContext(estate));
 

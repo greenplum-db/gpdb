@@ -2854,12 +2854,8 @@ IndexBuildAppendOnlyColScan(Relation parentRelation,
 								proj,
 								parentRelation->rd_att->natts);
 	}
-	
 	else
-	{
-		for (attno = 0; attno < parentRelation->rd_att->natts; attno++)
-			proj[attno] = true;
-	}
+		memset(proj, true, parentRelation->rd_att->natts);
 	
 	aocsscan = aocs_beginscan(parentRelation, snapshot, snapshot, NULL /* relationTupleDesc */, proj);
 

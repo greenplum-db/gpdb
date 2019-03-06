@@ -6777,12 +6777,7 @@ neededColumnContextWalker(Node *node, neededColumnContext *c)
 		 * set all entries in mask to true.
 		 */
 		else if (var->varattno == 0)
-		{
-			int i;
-
-			for (i=0; i < c->n; i++)
-				c->mask[i] = true;
-		}
+			memset(c->mask, true, c->n);
 
 		return false;
 	}
