@@ -171,6 +171,10 @@
               the load on the database server. You can only use this option with the directory
               output format because this is the only output format where multiple processes
               can write their data at the same time.</pd>
+            <pd><note>Parallel dumps using <codeph>pg_dump</codeph> are parallelized only
+              on the query dispatcher (master) node, not across the query executor
+              (segment) nodes as is the case when you use <codeph>gpbackup</codeph>.
+              </note></pd>
             <pd><codeph>pg_dump</codeph> will open <varname>njobs</varname> + 1 connections to
               the database, so make sure your <codeph><xref href="../../ref_guide/config_params/guc-list.xml#max_connections"
                 type="dita">max_connections</xref></codeph> setting is high enough to
