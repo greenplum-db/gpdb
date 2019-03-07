@@ -16251,6 +16251,11 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 
 		if ('r' == pNode->part->parkind)
 		{
+			if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionBoundSpec))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("cannot add list partition to range partitioned table")));
+
 			pSubSpec =
 			atpxPartAddList(rel, is_split, colencs, pNode,
 							(locPid->idtype == AT_AP_IDName) ?
@@ -16264,6 +16269,11 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 		}
 		else if ('l' == pNode->part->parkind)
 		{
+			if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionValuesSpec))
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("cannot add range partition to list partitioned table")));
+
 			pSubSpec =
 			atpxPartAddList(rel, is_split, colencs, pNode,
 							(locPid->idtype == AT_AP_IDName) ?
