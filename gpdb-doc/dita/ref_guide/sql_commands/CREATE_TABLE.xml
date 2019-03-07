@@ -530,7 +530,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             column-oriented tables.</pd>
         </plentry>
         <plentry>
-          <pt>WITH  OIDS</pt>
+          <pt>WITH OIDS</pt>
           <pt>WITHOUT OIDS</pt>
           <pd>These are obsolescent syntaxes equivalent to <codeph>WITH (OIDS)</codeph> and
               <codeph>WITH (OIDS=FALSE)</codeph>, respectively. If you wish to give both an OIDS
