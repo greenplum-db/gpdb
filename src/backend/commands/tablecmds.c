@@ -16144,7 +16144,6 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 	PgPartRule* 		 par_prule 	= NULL;	/* prule for parent if IDRule */
 	char 		 		 lRelNameBuf[(NAMEDATALEN*2)];
 	char 				*lrelname   = NULL;
-	Node 				*pSubSpec 	= NULL;
 	bool				 is_split = false;
 	bool				 bSetTemplate = (att == AT_PartSetTemplate);
 	PartitionElem *pelem;
@@ -16211,81 +16210,75 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 		prule = get_part_rule(rel, pid, true, false, NULL, false);
 	}
 
-	if (!prule)
+	Assert(!prule);
+
+	/* DEFAULT checks */
+	if (!pelem->isDefault && (pNode->default_part) &&
+		!is_split && !bSetTemplate) /* MPP-6093: ok to reset template */
+		ereport(ERROR,
+			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+			 errmsg("cannot add %s partition%s to %s with DEFAULT partition \"%s\"",
+					parTypName,
+					namBuf,
+					lrelname,
+					pNode->default_part->parname),
+			 errhint("need to SPLIT partition \"%s\"",
+					 pNode->default_part->parname)));
+
+	if (pelem->isDefault && !is_split)
 	{
-		bool isDefault = pelem->isDefault;
-
-		/* DEFAULT checks */
-		if (!isDefault && (pNode->default_part) &&
-			!is_split && !bSetTemplate) /* MPP-6093: ok to reset template */
+		/* MPP-6093: ok to reset template */
+		if (pNode->default_part && !bSetTemplate)
 			ereport(ERROR,
-				(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-				 errmsg("cannot add %s partition%s to %s with DEFAULT partition \"%s\"",
-						parTypName,
-						namBuf,
+					(errcode(ERRCODE_DUPLICATE_OBJECT),
+					 errmsg("DEFAULT partition \"%s\" for %s already exists",
+							pNode->default_part->parname,
+							lrelname)));
+
+		/* XXX XXX: move this check to gram.y ? */
+		if (pelem->boundSpec)
+			ereport(ERROR,
+					(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
+					 errmsg("invalid use of boundary specification for DEFAULT partition%s of %s",
+							namBuf,
+							lrelname)));
+	}
+
+	/* Do the real work for add ... */
+
+	if ('r' == pNode->part->parkind)
+	{
+		if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionBoundSpec))
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("cannot add list partition to range partitioned table")));
+
+		(void) atpxPartAddList(rel, is_split, colencs, pNode,
+						(locPid->idtype == AT_AP_IDName) ?
+						strVal(locPid->partiddef) : NULL, /* partition name */
+						pelem->isDefault, pelem,
+						PARTTYP_RANGE,
+						par_prule,
 						lrelname,
-						pNode->default_part->parname),
-				 errhint("need to SPLIT partition \"%s\"",
-						 pNode->default_part->parname)));
+						bSetTemplate,
+						rel->rd_rel->relowner);
+	}
+	else if ('l' == pNode->part->parkind)
+	{
+		if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionValuesSpec))
+			ereport(ERROR,
+					(errcode(ERRCODE_SYNTAX_ERROR),
+					 errmsg("cannot add range partition to list partitioned table")));
 
-		if (isDefault && !is_split)
-		{
-			/* MPP-6093: ok to reset template */
-			if (pNode->default_part && !bSetTemplate)
-				ereport(ERROR,
-						(errcode(ERRCODE_DUPLICATE_OBJECT),
-						 errmsg("DEFAULT partition \"%s\" for %s already exists",
-								pNode->default_part->parname,
-								lrelname)));
-
-			/* XXX XXX: move this check to gram.y ? */
-			if (pelem->boundSpec)
-				ereport(ERROR,
-						(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
-						 errmsg("invalid use of boundary specification for DEFAULT partition%s of %s",
-								namBuf,
-								lrelname)));
-		}
-
-		/* Do the real work for add ... */
-
-		if ('r' == pNode->part->parkind)
-		{
-			if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionBoundSpec))
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot add list partition to range partitioned table")));
-
-			pSubSpec =
-			atpxPartAddList(rel, is_split, colencs, pNode,
-							(locPid->idtype == AT_AP_IDName) ?
-							strVal(locPid->partiddef) : NULL, /* partition name */
-							isDefault, pelem,
-							PARTTYP_RANGE,
-							par_prule,
-							lrelname,
-							bSetTemplate,
-							rel->rd_rel->relowner);
-		}
-		else if ('l' == pNode->part->parkind)
-		{
-			if (!pelem->isDefault && pelem->boundSpec && !IsA(pelem->boundSpec, PartitionValuesSpec))
-				ereport(ERROR,
-						(errcode(ERRCODE_SYNTAX_ERROR),
-						 errmsg("cannot add range partition to list partitioned table")));
-
-			pSubSpec =
-			atpxPartAddList(rel, is_split, colencs, pNode,
-							(locPid->idtype == AT_AP_IDName) ?
-							strVal(locPid->partiddef) : NULL, /* partition name */
-							isDefault, pelem,
-							PARTTYP_LIST,
-							par_prule,
-							lrelname,
-							bSetTemplate,
-							rel->rd_rel->relowner);
-		}
-
+		(void) atpxPartAddList(rel, is_split, colencs, pNode,
+						(locPid->idtype == AT_AP_IDName) ?
+						strVal(locPid->partiddef) : NULL, /* partition name */
+						pelem->isDefault, pelem,
+						PARTTYP_LIST,
+						par_prule,
+						lrelname,
+						bSetTemplate,
+						rel->rd_rel->relowner);
 	}
 
 	/* MPP-6929: metadata tracking */
