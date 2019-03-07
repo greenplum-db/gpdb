@@ -215,7 +215,7 @@ ALTER FOREIGN TABLE [ IF EXISTS ] <varname>name</varname>
                 </plentry>
                 
                 <plentry>
-                    <pt><USER</codeph></pt>
+                    <pt>USER</pt>
                     <pd>
                         <p>Disable or enable all triggers belonging to the foreign table except for
                             internally generated triggers. </p>

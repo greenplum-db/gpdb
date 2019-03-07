@@ -33,6 +33,7 @@
 			<topicref href="sql_commands/ALTER_SCHEMA.xml"/>
 			<topicref href="sql_commands/ALTER_SEQUENCE.xml"/>
 			<topicref href="sql_commands/ALTER_SERVER.xml"/>
+      <topicref href="sql_commands/ALTER_SYSTEM.xml"/>
 			<topicref href="sql_commands/ALTER_TABLE.xml"/>
 			<topicref href="sql_commands/ALTER_TABLESPACE.xml"/>
 			<topicref href="sql_commands/ALTER_TEXT_SEARCH_CONFIGURATION.xml"/>
