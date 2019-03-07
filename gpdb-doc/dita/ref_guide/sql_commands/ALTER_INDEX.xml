@@ -7,13 +7,28 @@ ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET TABLESPACE <varname>tables
 
 ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET ( <varname>storage_parameter</varname> = <varname>value</varname> [, ...] )
 
-ALTER INDEX [ IF EXISTS ] <varname>name</varname> RESET ( <varname>storage_parameter</varname>  [, ...] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
+ALTER INDEX [ IF EXISTS ] <varname>name</varname> RESET ( <varname>storage_parameter</varname>  [, ...] )
+
+ALTER INDEX ALL IN TABLESPACE <varname>name</varname> [ OWNED BY <varname>role_name</varname> [, ... ] ]
+  SET TABLESPACE <varname>new_tablespace</varname> [ NOWAIT ]
+</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
 There are several subforms: </p><ul>
+<li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
+on the stored data.</li>
+        <li id="ap136521"><b>SET TABLESPACE</b> — Changes the index's tablespace to the specified
+          tablespace and moves the data file(s) associated with the index to the new tablespace. To
+          change the tablespace of an index, you must own the index and have <codeph>CREATE</codeph>
+          privilege on the new tablespace. All indexes in the current database in a tablespace can
+          be moved by using the <codeph>ALL IN TABLESPACE</codeph> form, which will lock all indexes
+          to be moved and then move each one. This form also supports <codeph>OWNED BY</codeph>,
+          which will only move indexes owned by the roles specified. If the <codeph>NOWAIT</codeph>
+          option is specified then the command will fail if it is unable to acquire all of the locks
+          required immediately. Note that system catalogs will not be moved by this command, use
+            <codeph>ALTER DATABASE</codeph> or explicit <codeph>ALTER INDEX</codeph> invocations
+          instead if desired. See also <codeph>CREATE TABLESPACE</codeph>. </li>
         <li><b>IF EXISTS</b> — Do not throw an error if the index does not exist. A notice is issued
-          in this case.</li><li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
-on the stored data.</li><li id="ap136521"><b>SET TABLESPACE</b> — Changes the index's tablespace to the specified
-tablespace and moves the data file(s) associated with the index to the
-new tablespace. See also <codeph>CREATE TABLESPACE</codeph>. </li><li id="ap136524"><b>SET</b> — Changes the index-method-specific storage parameters for the index.
+          in this case.</li>
+  <li id="ap136524"><b>SET</b> — Changes the index-method-specific storage parameters for the index.
           The built-in index methods all accept a single parameter: <varname>fillfactor</varname>.
           The fillfactor for an index is a percentage that determines how full the index method will
           try to pack index pages. Index contents will not be modified immediately by this command.
