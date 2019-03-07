@@ -6699,10 +6699,10 @@ ATRewriteTable(AlteredTableInfo *tab, Oid OIDNewHeap, LOCKMODE lockmode)
 			if (oldTupDesc)
 			{
 				Assert(oldTupDesc->natts <= nvp);
-				memset(proj, true, oldTupDesc->natts);
+				memset(proj, true, oldTupDesc->natts * sizeof(bool));
 			}
 			else
-				memset(proj, true, nvp);
+				memset(proj, true, nvp * sizeof(bool));
 
 			if(newrel)
 				idesc = aocs_insert_init(newrel, segno, false);
