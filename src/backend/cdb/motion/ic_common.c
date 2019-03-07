@@ -740,11 +740,13 @@ adjustMasterRouting(Slice *recvSlice)
 {
 	ListCell   *lc = NULL;
 
+	Assert(MyProcPort);
+
 	foreach(lc, recvSlice->primaryProcesses)
 	{
 		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);
 
-		if (cdbProc && MyProcPort)
+		if (cdbProc)
 		{
 			if (cdbProc->listenerAddr == NULL)
 				cdbProc->listenerAddr = pstrdup(MyProcPort->remote_host);
