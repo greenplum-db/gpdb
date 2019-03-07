@@ -16138,7 +16138,6 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 	AlterPartitionId 	*pid 		= (AlterPartitionId *)pc->partid;
 	PgPartRule   		*prule 		= NULL;
 	PartitionNode  		*pNode 		= NULL;
-	char           		*parTypName = NULL;
 	char			 	 namBuf[NAMEDATALEN];
 	AlterPartitionId 	*locPid 	= NULL;	/* local pid if IDRule */
 	PgPartRule* 		 par_prule 	= NULL;	/* prule for parent if IDRule */
@@ -16172,22 +16171,6 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
 				 errmsg("%s is not partitioned", lrelname)));
 
-	switch (pNode->part->parkind)
-	{
-		case 'r': /* range */
-			parTypName = "RANGE";
-			break;
-		case 'l': /* list */
-			parTypName = "LIST";
-			break;
-		default:
-			elog(ERROR, "unrecognized partitioning kind '%c'",
-				 pNode->part->parkind);
-			Assert(false);
-			break;
-	} /* end switch */
-
-
 	if (locPid->idtype == AT_AP_IDName)
 		snprintf(namBuf, sizeof(namBuf), " \"%s\"", strVal(locPid->partiddef));
 	else
@@ -16218,7 +16201,7 @@ ATPExecPartAdd(AlteredTableInfo *tab,
 		ereport(ERROR,
 			(errcode(ERRCODE_INVALID_TABLE_DEFINITION),
 			 errmsg("cannot add %s partition%s to %s with DEFAULT partition \"%s\"",
-					parTypName,
+					pNode->part->parkind == 'r' ? "RANGE" : "LIST",
 					namBuf,
 					lrelname,
 					pNode->default_part->parname),
