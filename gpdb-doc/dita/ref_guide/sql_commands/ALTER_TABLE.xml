@@ -394,10 +394,24 @@ where <varname>action</varname> is one of:
                                         file(s) associated with the table to the new tablespace.
                                         Indexes on the table, if any, are not moved; but they can be
                                         moved separately with additional <codeph>SET
-                                                TABLESPACE</codeph> commands. See also
-                                                <codeph>CREATE TABLESPACE</codeph>. If changing the
-                                        tablespace of a partitioned table, all child table
-                                        partitions will also be moved to the new tablespace. </li>
+                                                TABLESPACE</codeph> commands. All tables in the
+                                        current database in a tablespace can be moved by using the
+                                                <codeph>ALL IN TABLESPACE</codeph> form, which will
+                                        lock all tables to be moved first and then move each one.
+                                        This form also supports <codeph>OWNED BY</codeph>, which
+                                        will only move tables owned by the roles specified. If the
+                                                <codeph>NOWAIT</codeph> option is specified then the
+                                        command will fail if it is unable to acquire all of the
+                                        locks required immediately. Note that system catalogs are
+                                        not moved by this command, use <codeph>ALTER
+                                                DATABASE</codeph> or explicit <codeph>ALTER
+                                                TABLE</codeph> invocations instead if desired. The
+                                                <codeph>information_schema</codeph> relations are
+                                        not considered part of the system catalogs and will be
+                                        moved. See also <codeph>CREATE TABLESPACE</codeph>. If
+                                        changing the tablespace of a partitioned table, all child
+                                        table partitions will also be moved to the new tablespace.
+                                </li>
                                 <li id="ay137292"><b>RENAME</b> — Changes the name of a table (or an
                                         index, sequence, or view), the name of an individual column
                                         in a table, or the name of a constraint of the table. There
@@ -419,9 +433,16 @@ where <varname>action</varname> is one of:
                                 For more information about the precedence of compression settings,
                                 see "Using Compression" in the <cite>Greenplum Database
                                         Administrator Guide</cite>.</note>
+                        <p>All the forms of ALTER TABLE that act on a single table, except
+                                        <codeph>RENAME</codeph> and <codeph>SET SCHEMA</codeph>, can
+                                be combined into a list of multiple alterations to applied together.
+                                For example, it is possible to add several columns and/or alter the
+                                type of several columns in a single command. This is particularly
+                                useful with large tables, since only one pass over the table need be
+                                made. </p>
                         <p>You must own the table to use <codeph>ALTER TABLE</codeph>. To change the
-                                schema of a table, you must also have <codeph>CREATE</codeph>
-                                privilege on the new schema. To add the table as a new child of a
+                                schema or tablespace of a table, you must also have <codeph>CREATE</codeph>
+                                privilege on the new schema or tablespace. To add the table as a new child of a
                                 parent table, you must own the parent table as well. To alter the
                                 owner, you must also be a direct or indirect member of the new
                                 owning role, and that role must have <codeph>CREATE</codeph>
@@ -887,7 +908,7 @@ where <varname>action</varname> is one of:
                                 columns.</p>
                         <p>Adding a <codeph>CHECK</codeph> or <codeph>NOT NULL</codeph> constraint
                                 requires scanning the table to verify that existing rows meet the
-                                constraint.</p>
+                                constraint, but does not require a taable rewrite.</p>
                         <p>When a column is added with <codeph>ADD COLUMN</codeph>, all existing
                                 rows in the table are initialized with the column's default value,
                                 or <codeph>NULL</codeph> if no <codeph>DEFAULT</codeph> clause is
@@ -913,11 +934,18 @@ where <varname>action</varname> is one of:
                                 reclaimed over time as existing rows are updated. If you drop the
                                 system <codeph>oid</codeph> column, however, the table is rewritten
                                 immediately.</p>
-                        <p> To force an immediate rewrite of the table, you can use <codeph>VACUUM
-                                        FULL</codeph>, <codeph>CLUSTER</codeph>, or one of the forms
-                                of <codeph>ALTER TABLE</codeph> that forces a rewrite. This results
-                                in no semantically-visible change in the table, but gets rid of
-                                no-longer-useful data. </p>
+                        <p> To force immediate reclamation of space occupied by a dropped column,
+                                you can execute one of the forms of <codeph>ALTER TABLE</codeph>
+                                that performs a rewrite of the whole table. This results in
+                                reconstructing each row with the dropped column replaced by a null
+                                value. </p>
+                        <p> The rewriting forms of <codeph>ALTER TABLE</codeph> are not MVCC-safe.
+                                After a table rewrite, the table will appear empty to concurrent
+                                transactions, if they are using a snapshot taken before the rewrite
+                                occurred. See <xref
+                                        href="https://www.postgreql.org/docs/9.4/mvcc-caveats.html"
+                                        scope="external" format="html">MVCC Caveats</xref> for more
+                                details. </p>
                         <p> The <codeph>USING</codeph> option of <codeph>SET DATA TYPE</codeph> can
                                 actually specify any expression involving the old values of the row;
                                 that is, it can refer to other columns as well as the one being
@@ -955,8 +983,8 @@ where <varname>action</varname> is one of:
                                         <codeph>OWNER</codeph>, and <codeph>TABLESPACE</codeph>
                                 actions never recurse to descendant tables; that is, they always act
                                 as though <codeph>ONLY</codeph> were specified. Adding a constraint
-                                recurses only for <codeph>CHECK</codeph> constraints that are not marked 
-                                <codeph>NO INHERIT</codeph>.</p>
+                                recurses only for <codeph>CHECK</codeph> constraints that are not
+                                marked <codeph>NO INHERIT</codeph>.</p>
                         <p>These <codeph>ALTER PARTITION</codeph> operations are supported if no
                                 data is changed on a partitioned table that contains a leaf child
                                 partition that has been exchanged to use an external table.
