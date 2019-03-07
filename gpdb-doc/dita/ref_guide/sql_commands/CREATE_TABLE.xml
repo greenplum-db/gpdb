@@ -499,7 +499,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             </p><p>The value <codeph>RLE_TYPE</codeph>, which is supported only if
                 <codeph>orientation</codeph>=<codeph>column</codeph> is specified, enables the
               run-length encoding (RLE) compression algorithm. RLE compresses data better than the
-              zlib or QuickLZ compression algorithm when the same data value occurs in many
+              Zstd, zlib, or QuickLZ compression algorithms when the same data value occurs in many
               consecutive rows.</p><p>For columns of type <codeph>BIGINT</codeph>,
                 <codeph>INTEGER</codeph>, <codeph>DATE</codeph>, <codeph>TIME</codeph>, or
                 <codeph>TIMESTAMP</codeph>, delta compression is also applied if the
@@ -535,7 +535,9 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pd>These are obsolescent syntaxes equivalent to <codeph>WITH (OIDS)</codeph> and
               <codeph>WITH (OIDS=FALSE)</codeph>, respectively. If you wish to give both an OIDS
             setting and storage parameters, you must use the <codeph>WITH ( ... )</codeph> syntax;
-            see above.</pd>
+            see above. Greenplum strongly recommends that you do not enable OIDS when creating
+            tables. See the <b>oids</b> parameter description for more information about using
+            oids.</pd>
         </plentry>
         <plentry>
           <pt>ON COMMIT</pt>
