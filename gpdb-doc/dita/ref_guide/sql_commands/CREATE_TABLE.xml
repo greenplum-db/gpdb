@@ -21,7 +21,7 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP } | UNLOGGED] TABLE [IF NOT EXISTS]
 ] )
 [ INHERITS ( <varname>parent_table</varname> [, ... ] ) ]
 [ WITH ( <varname>storage_parameter</varname> [=<varname>value</varname>] [, ... ] ) 
-       | WITH OIDS | WITHOUT  OIDS ]
+       | WITH OIDS | WITHOUT OIDS ]
 [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
 [ TABLESPACE <varname>tablespace_name</varname> ]
 [ DISTRIBUTED BY (<varname>column</varname> [<varname>opclass</varname>], [ ... ] ) 
