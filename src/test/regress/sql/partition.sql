@@ -3949,3 +3949,28 @@ create table at_list (i int) partition by list(i) (partition p1 values(1));
 
 alter table at_list add partition foo2 start(6) end (10);
 alter table at_range add partition test values(5);
+
+-- Ensure array type for the non-partition table is there after partition exchange.
+CREATE TABLE pt_xchg(a int) PARTITION BY RANGE(a) (START(1) END(4) EVERY (2));
+create table xchg_tab1(a int);
+CREATE SCHEMA xchg_schema;
+create table xchg_schema.xchg_tab2(a int);
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+alter table pt_xchg exchange partition for (3) with table xchg_schema.xchg_tab2;
+
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab2' or pg_type.typname = '_xchg_tab2';
+
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+select typname from pg_type where typelem = 'xchg_schema.xchg_tab2'::regtype;
+
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;
+select typname from pg_type where typarray = 'xchg_schema._xchg_tab2'::regtype;
+
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;

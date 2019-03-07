@@ -3803,6 +3803,31 @@ AlterTypeNamespaceInternal(Oid typeOid, Oid nspOid,
 	return oldNspOid;
 }
 
+/* Modify the typarray column of a pg_type row. */
+void
+AlterTypeArray(Oid typeOid, Oid arrayOid)
+{
+	Relation     typrel;
+	HeapTuple    typtup;
+	Form_pg_type typform;
+
+	typrel = heap_open(TypeRelationId, RowExclusiveLock);
+
+	typtup = SearchSysCacheCopy1(TYPEOID, ObjectIdGetDatum(typeOid));
+	if (!HeapTupleIsValid(typtup))
+		elog(ERROR, "cache lookup failed for type %u", typeOid);
+	typform = (Form_pg_type) GETSTRUCT(typtup);
+
+	typform->typarray = arrayOid;
+
+	simple_heap_update(typrel, &typtup->t_self, typtup);
+	CatalogUpdateIndexes(typrel, typtup);
+
+	InvokeObjectPostAlterHook(TypeRelationId, typeOid, 0);
+	heap_freetuple(typtup);
+	heap_close(typrel, RowExclusiveLock);
+}
+
 /*
  * Currently, we only land here if the user has issued:
  *

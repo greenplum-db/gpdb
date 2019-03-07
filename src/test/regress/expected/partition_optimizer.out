@@ -8264,3 +8264,88 @@ alter table at_list add partition foo2 start(6) end (10);
 ERROR:  cannot add range partition to list partitioned table
 alter table at_range add partition test values(5);
 ERROR:  cannot add list partition to range partitioned table
+-- Ensure array type for the non-partition table is there after partition exchange.
+CREATE TABLE pt_xchg(a int) PARTITION BY RANGE(a) (START(1) END(4) EVERY (2));
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+NOTICE:  CREATE TABLE will create partition "pt_xchg_1_prt_1" for table "pt_xchg"
+NOTICE:  CREATE TABLE will create partition "pt_xchg_1_prt_2" for table "pt_xchg"
+create table xchg_tab1(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+CREATE SCHEMA xchg_schema;
+create table xchg_schema.xchg_tab2(a int);
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'a' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+alter table pt_xchg exchange partition for (3) with table xchg_schema.xchg_tab2;
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+ ?column? 
+----------
+ t
+(1 row)
+
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+ nspname 
+---------
+ public
+ public
+(2 rows)
+
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab2' or pg_type.typname = '_xchg_tab2';
+   nspname   
+-------------
+ xchg_schema
+ xchg_schema
+(2 rows)
+
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+  typname   
+------------
+ _xchg_tab1
+(1 row)
+
+select typname from pg_type where typelem = 'xchg_schema.xchg_tab2'::regtype;
+  typname   
+------------
+ _xchg_tab2
+(1 row)
+
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;
+  typname  
+-----------
+ xchg_tab1
+(1 row)
+
+select typname from pg_type where typarray = 'xchg_schema._xchg_tab2'::regtype;
+  typname  
+-----------
+ xchg_tab2
+(1 row)
+
+alter table pt_xchg exchange partition for (1) with table xchg_tab1;
+select a.typowner=b.typowner from pg_type a join pg_type b on true where a.typname = 'xchg_tab1' and b.typname = '_xchg_tab1';
+ ?column? 
+----------
+ t
+(1 row)
+
+select nspname from pg_namespace join pg_type on pg_namespace.oid = pg_type.typnamespace where pg_type.typname = 'xchg_tab1' or pg_type.typname = '_xchg_tab1';
+ nspname 
+---------
+ public
+ public
+(2 rows)
+
+select typname from pg_type where typelem = 'xchg_tab1'::regtype;
+  typname   
+------------
+ _xchg_tab1
+(1 row)
+
+select typname from pg_type where typarray = '_xchg_tab1'::regtype;
+  typname  
+-----------
+ xchg_tab1
+(1 row)
+

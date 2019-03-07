@@ -16646,11 +16646,11 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		List			*newcons;
 		bool			 ok;
 		bool			 validate	= intVal(pc2->arg1) ? true : false;
-		Oid				 oldnspid	= InvalidOid;
-		Oid				 newnspid	= InvalidOid;
 		Oid				 parentrelid = InvalidOid;
-		char			*newNspName = NULL;
-		char			*oldNspName = NULL;
+		Oid				 oldnspid;
+		Oid				 newnspid;
+		Oid				 newrel_owner;
+		Oid				 newrel_type;
 
 		newrel = heap_open(newrelid, AccessExclusiveLock);
 		if (RelationIsExternal(newrel) && validate)
@@ -16661,14 +16661,11 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 
 		oldrel = heap_open(oldrelid, AccessExclusiveLock);
 
+		newrel_owner = oldrel->rd_rel->relowner;
+		newrel_type = oldrel->rd_rel->reltype;
+
 		oldnspid = RelationGetNamespace(oldrel);
 		newnspid = RelationGetNamespace(newrel);
-
-		if (oldnspid != newnspid)
-		{
-			newNspName = pstrdup(get_namespace_name(newnspid));
-			oldNspName = pstrdup(get_namespace_name(oldnspid));
-		}
 
 		newname = pstrdup(RelationGetRelationName(newrel));
 		oldname = pstrdup(RelationGetRelationName(oldrel));
@@ -16710,7 +16707,7 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		RelationForgetRelation(oldrelid);
 
 		/* MPP-6979: if the namespaces are different, switch them */
-		if (newNspName)
+		if (oldnspid != newnspid)
 		{
 			ObjectAddresses *objsMoved = new_object_addresses();
 
@@ -16750,6 +16747,83 @@ ATPExecPartExchange(AlteredTableInfo *tab, Relation rel, AlterPartitionCmd *pc)
 		RelationForgetRelation(oldrelid);
 
 		CommandCounterIncrement();
+
+		/*
+		 * Add array type for newname if it does not exist. Need to create
+		 * the array type and modify the corresponding composite type to
+		 * associate with the array type oid.
+		 */
+		Oid	         array_oid;
+		char        *relarrayname;
+		Relation     typrel;
+		HeapTuple    typtup;
+		Form_pg_type typform;
+		bool         create_array;
+
+		/* Has array type already existed? */
+		typrel = heap_open(TypeRelationId, AccessShareLock);
+
+		typtup = SearchSysCache1(TYPEOID, ObjectIdGetDatum(newrel_type));
+		if (!HeapTupleIsValid(typtup))
+			elog(ERROR, "cache lookup failed for type %u", newrel_type);
+		typform = (Form_pg_type) GETSTRUCT(typtup);
+
+		create_array = (typform->typarray == 0);
+		ReleaseSysCache(typtup);
+
+		if (!create_array)
+			heap_close(typrel, AccessShareLock);
+		else
+		{
+			/* Create the array type for newname */
+			relarrayname = makeArrayTypeName(newname, newnspid);
+
+			if (Gp_role == GP_ROLE_EXECUTE)
+				array_oid = GetPreassignedOidForType(newnspid, relarrayname, true);
+			else
+				array_oid = GetNewOid(typrel);
+
+			heap_close(typrel, AccessShareLock);
+
+			TypeCreate(array_oid,		/* force the type's OID to this */
+					   relarrayname,	/* Array type name */
+					   newnspid,	/* namespace */
+					   InvalidOid,	/* Not composite, no relationOid */
+					   0,			/* relkind, also N/A here */
+					   newrel_owner,		/* owner's ID */
+					   -1,			/* Internal size (varlena) */
+					   TYPTYPE_BASE,	/* Not composite - typelem is */
+					   TYPCATEGORY_ARRAY,	/* type-category (array) */
+					   false,		/* array types are never preferred */
+					   DEFAULT_TYPDELIM,	/* default array delimiter */
+					   F_ARRAY_IN,	/* array input proc */
+					   F_ARRAY_OUT, /* array output proc */
+					   F_ARRAY_RECV,	/* array recv (bin) proc */
+					   F_ARRAY_SEND,	/* array send (bin) proc */
+					   InvalidOid,	/* typmodin procedure - none */
+					   InvalidOid,	/* typmodout procedure - none */
+					   F_ARRAY_TYPANALYZE,	/* array analyze procedure */
+					   newrel_type,	/* array element type - the rowtype */
+					   true,		/* yes, this is an array type */
+					   InvalidOid,	/* this has no array type */
+					   InvalidOid,	/* domain base type - irrelevant */
+					   NULL,		/* default value - none */
+					   NULL,		/* default binary representation */
+					   false,		/* passed by reference */
+					   'd',			/* alignment - must be the largest! */
+					   'x',			/* fully TOASTable */
+					   -1,			/* typmod */
+					   0,			/* array dimensions for typBaseType */
+					   false,		/* Type NOT NULL */
+					   InvalidOid); /* rowtypes never have a collation */
+			pfree(relarrayname);
+
+			CommandCounterIncrement();
+
+			/* Modify composite type to associate with the new array oid. */
+			AlterTypeArray(newrel_type, array_oid);
+			CommandCounterIncrement();
+		}
 
 		/* fix up partitioning rule if we're on the QD*/
 		if (Gp_role == GP_ROLE_DISPATCH)
