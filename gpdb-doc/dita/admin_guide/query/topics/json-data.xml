@@ -66,11 +66,13 @@
               for syntactic correctness (a <codeph>\u</codeph> followed by four hex digits). </li>
             <li>The Greenplum Database input function for the <codeph>jsonb</codeph> data type is
               more strict. It does not allow Unicode escapes for non-ASCII characters (those above
-                <codeph>U+007F</codeph>) unless the database encoding is UTF8. It also requires that
-              any use of Unicode surrogate pairs to designate characters outside the Unicode Basic
-              Multilingual Plane be correct. Valid Unicode escapes, except for<codeph>
-                \u0000</codeph>, are then converted to the equivalent ASCII or UTF8 character for
-              storage; this includes folding surrogate pairs into a single character.</li>
+                <codeph>U+007F</codeph>) unless the database encoding is UTF8. It also rejects
+                <codeph>\u0000</codeph> , which cannot be represented in the Greenplum Database
+                <codeph>text</codeph> type, and it requires that any use of Unicode surrogate pairs
+              to designate characters outside the Unicode Basic Multilingual Plane be correct. Valid
+              Unicode escapes, except for <codeph>\u0000</codeph>, are converted to the equivalent
+              ASCII or UTF8 character for storage; this includes folding surrogate pairs into a
+              single character.</li>
           </ul>
         </p>
         <note>Many of the JSON processing functions described in <xref href="#topic_gn4_x3w_mq"
@@ -134,10 +136,10 @@
         </table>
         <p>There are some minor constraints on what constitutes valid <codeph>jsonb</codeph> data
           that do not apply to the <codeph>json</codeph> data type, nor to JSON in the abstract,
-          corresponding to limits on what can be represented by the underlying data type.
-          Specifically, when converting data to the <codeph>jsonb</codeph> data type, numbers that
-          are outside the range of the Greenplum Database <codeph>numeric</codeph> data type are
-          rejected, while the <codeph>json</codeph> data type does not reject such numbers. </p>
+          corresponding to limits on what can be represented by the underlying data type. Notably,
+          when converting data to the <codeph>jsonb</codeph> data type, numbers that are outside the
+          range of the Greenplum Database <codeph>numeric</codeph> data type are rejected, while the
+            <codeph>json</codeph> data type does not reject such numbers. </p>
         <p>Such implementation-defined restrictions are permitted by RFC 7159. However, in practice
           such problems might occur in other implementations, as it is common to represent the JSON
             <codeph>number</codeph> primitive type as IEEE 754 double precision floating point
