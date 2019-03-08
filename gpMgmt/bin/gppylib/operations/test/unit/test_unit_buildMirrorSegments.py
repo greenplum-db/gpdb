@@ -136,24 +136,6 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.logger.warn.assert_any_call('Failed to start segment.  The fault prober will shortly mark it as down. '
                                          'Segment: sdw1:/data/primary0:content=0:dbid=2:role=p:preferred_role=p:mode=s:status=u: REASON: reason')
 
-    @patch('gppylib.operations.buildMirrorSegments.dbconn.connect')
-    @patch('gppylib.operations.buildMirrorSegments.dbconn.execSQL')
-    def test_registerMirrorsInCatalog_succeeds(self, mock1, mock2):
-        gpArray = self._createGpArrayWith2Primary2Mirrors()
-        self.buildMirrorSegs._GpMirrorListToBuild__registerMirrorsInCatalog(gpArray)
-        self.logger.info.assert_any_call("Updating gp_segment_configuration with mirror info")
-        self.logger.info.assert_any_call("Successfully updated gp_segment_configuration with mirror info")
-
-    @patch('gppylib.operations.buildMirrorSegments.dbconn.connect')
-    @patch('gppylib.operations.buildMirrorSegments.dbconn.execSQL', side_effect=Exception("boom"))
-    def test_registerMirrorsInCatalog_fails(self, mock1, mock2):
-        gpArray = self._createGpArrayWith2Primary2Mirrors()
-        with self.assertRaisesRegexp(Exception, "boom"):
-            self.buildMirrorSegs._GpMirrorListToBuild__registerMirrorsInCatalog(gpArray)
-
-        self.logger.info.assert_any_call("Updating gp_segment_configuration with mirror info")
-        self.logger.error.assert_any_call("Failed while updating mirror info in gp_segment_configuration: boom")
-
     def _createGpArrayWith2Primary2Mirrors(self):
         self.master = Segment.initFromString(
                 "1|-1|p|p|s|u|mdw|mdw|5432|/data/master")
