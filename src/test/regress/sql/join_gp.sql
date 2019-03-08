@@ -424,3 +424,46 @@ reset enable_nestloop;
 reset enable_material;
 reset enable_seqscan;
 reset enable_bitmapscan;
+
+-- test outer join for general locus
+create table trep_join_gp (c1 int, c2 int) distributed replicated;
+create table thash_join_gp (c1 int, c2 int) distributed by (c1);
+create table trand_join_gp (c1 int, c2 int) distributed randomly;
+-- start_ignore
+create extension if not exists gp_debug_numsegments;
+select gp_debug_set_create_table_default_numsegments(1);
+-- end_ignore
+create table trep1_join_gp (c1 int, c2 int) distributed replicated;
+
+insert into trep_join_gp values (1, 1), (2, 2);
+insert into thash_join_gp values (1, 1), (2, 2);
+insert into trep1_join_gp values (1, 1), (2, 2);
+
+explain select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+
+explain select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+
+explain select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+
+explain select * from trep_join_gp left join thash_join_gp using (c1);
+select * from trep_join_gp left join thash_join_gp using (c1);
+
+explain select * from trep_join_gp left join trand_join_gp using (c1);
+select * from trep_join_gp left join trand_join_gp using (c1);
+
+explain select * from trep1_join_gp join thash_join_gp using (c1);
+select * from trep1_join_gp join thash_join_gp using (c1);
+
+drop table trep_join_gp;
+drop table thash_join_gp;
+drop table trand_join_gp;
+drop table trep1_join_gp;
