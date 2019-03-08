@@ -622,7 +622,7 @@ GetResGroupCapabilities(Relation rel, Oid groupId, ResGroupCaps *resgroupCaps)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				 errmsg("Cannot find limit capabilities for resource group: %d",
+				 errmsg("cannot find limit capabilities for resource group: %d",
 						groupId)));
 	}
 }
@@ -682,8 +682,8 @@ GetResGroupIdForRole(Oid roleid)
 		 */
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
-				errmsg("Role with Oid %d was dropped", roleid),
-				errhint("Cannot execute commands anymore, please terminate this session.")));
+				errmsg("role with Oid %d was dropped", roleid),
+				errdetail("Cannot execute commands anymore, please terminate this session.")));
 	}
 
 	/* must access tuple before systable_endscan */
@@ -784,8 +784,8 @@ ResGroupCheckForRole(Oid groupId)
 	if (caps.memAuditor == RESGROUP_MEMORY_AUDITOR_CGROUP)
 		ereport(ERROR,
 				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
-				 errmsg("You cannot assign a role to this resource group because "
-					    "the memory_auditor property for this group is not the default.")));
+				 errmsg("you cannot assign a role to this resource group"),
+				 errdetail("The memory_auditor property for this group is not the default.")));
 
 	heap_close(pg_resgroupcapability_rel, AccessShareLock);
 }
@@ -981,7 +981,7 @@ checkResgroupMemAuditor(ResGroupCaps *caps)
 				(errcode(ERRCODE_GP_FEATURE_NOT_CONFIGURED),
 				 errmsg("cgroup is not properly configured for the 'cgroup' memory auditor"),
 				 errhint("Extra cgroup configurations are required to enable this feature, "
-						 "please refer to the Greenplum Documentations for details")));
+						 "please refer to the Greenplum Documentation for details")));
 	}
 }
 
@@ -1011,8 +1011,8 @@ parseStmtOptions(CreateResourceGroupStmt *stmt, ResGroupCaps *caps)
 		if (mask & (1 << type))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
-					errmsg("Find duplicate resource group resource type: %s",
-						   defel->defname)));
+					 errmsg("found duplicate resource group resource type: %s",
+							defel->defname)));
 		else
 			mask |= 1 << type;
 
@@ -1359,7 +1359,8 @@ validateCapabilities(Relation rel,
 
 			ereport(ERROR,
 					(errcode(ERRCODE_DUPLICATE_OBJECT),
-					errmsg("Find duplicate resource group id:%d", groupid)));
+					 errmsg("found duplicate resource group id: %d",
+							groupid)));
 		}
 
 		typeDatum = heap_getattr(tuple, Anum_pg_resgroupcapability_reslimittype,

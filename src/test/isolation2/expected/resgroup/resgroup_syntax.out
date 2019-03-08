@@ -111,15 +111,15 @@ CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0');
 ERROR:  must specify memory_limit
 -- can't specify the resource limit type multiple times
 CREATE RESOURCE GROUP rg_test_group WITH (concurrency=1, cpu_rate_limit=5, memory_limit=5, concurrency=1);
-ERROR:  Find duplicate resource group resource type: concurrency
+ERROR:  found duplicate resource group resource type: concurrency
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, cpu_rate_limit=5);
-ERROR:  Find duplicate resource group resource type: cpu_rate_limit
+ERROR:  found duplicate resource group resource type: cpu_rate_limit
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_limit=5);
-ERROR:  Find duplicate resource group resource type: memory_limit
+ERROR:  found duplicate resource group resource type: memory_limit
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, memory_limit=5, memory_shared_quota=70, memory_shared_quota=80);
-ERROR:  Find duplicate resource group resource type: memory_shared_quota
+ERROR:  found duplicate resource group resource type: memory_shared_quota
 CREATE RESOURCE GROUP rg_test_group WITH (cpuset='0', cpuset='0', memory_limit=5);
-ERROR:  Find duplicate resource group resource type: cpuset
+ERROR:  found duplicate resource group resource type: cpuset
 -- can't specify both cpu_rate_limit and cpuset
 CREATE RESOURCE GROUP rg_test_group WITH (cpu_rate_limit=5, cpuset='0', memory_limit=5);
 ERROR:  can't specify both cpu_rate_limit and cpuset
@@ -489,6 +489,7 @@ ALTER RESOURCE GROUP cgroup_audited_group SET CONCURRENCY 10;
 ERROR:  resource group concurrency must be 0 when group memory_auditor is cgroup
 -- negative: role should not be assigned to a cgroup audited resource group
 CREATE ROLE cgroup_audited_role RESOURCE GROUP cgroup_audited_group;
-ERROR:  You cannot assign a role to this resource group because the memory_auditor property for this group is not the default.
+ERROR:  you cannot assign a role to this resource group
+DETAIL:  The memory_auditor property for this group is not the default.
 DROP RESOURCE GROUP cgroup_audited_group;
 DROP
