@@ -826,7 +826,7 @@ OFFSET <varname>start</varname></codeblock><p>where
             <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
           Global Deadlock Detector is enabled by setting the <xref
             href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
-            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See<xref
+            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See <xref
             href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
             <cite>Greenplum Database Administrator Guide</cite> for information about the Global
           Deadlock Detector.</note><p><codeph>FOR UPDATE</codeph> causes the rows accessed by the

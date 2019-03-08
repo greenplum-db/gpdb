@@ -1438,7 +1438,7 @@ $$ LANGUAGE plcontainer;</codeblock></p>
           <li>The CentOS <codeph>extras</codeph> repository is accessible.</li>
           <li>The user has sudo privileges or is root.</li>
         </ul></p>
-      <p>See also the Docker site installation instructions for CentOS<xref
+      <p>See also the Docker site installation instructions for CentOS <xref
           href="https://docs.docker.com/engine/installation/linux/centos/" format="html"
           scope="external">https://docs.docker.com/engine/installation/linux/centos/</xref>. For a
         list of Docker commands, see the Docker engine Run Reference <xref

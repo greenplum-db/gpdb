@@ -15,7 +15,7 @@
           information about enabling SSL in Greenplum Database.</li>
         <li>Greenplum Database 4.2.1 and above allow SSL encryption of data in transit between the
           Greenplum parallel file distribution server, <codeph>gpfdist</codeph>, and segment hosts.
-            See<xref href="#topic_th5_5bf_jr/section_kjt_3kr_bs" format="dita"/>  for more
+            See <xref href="#topic_th5_5bf_jr/section_kjt_3kr_bs" format="dita"/> for more
           information. </li>
         <li>Network communications between hosts in the Greenplum Database cluster can be encrypted
           using IPsec. An authenticated, encrypted VPN is established between every pair of hosts in

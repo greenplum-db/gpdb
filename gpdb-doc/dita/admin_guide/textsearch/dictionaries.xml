@@ -238,7 +238,7 @@ SELECT * FROM ts_debug('english', 'Paris');
         asterisk is ignored when the entry is used in
           <codeph>to_tsvector()</codeph>, but when it is used in
           <codeph>to_tsquery()</codeph>, the result will be a query item with
-        the prefix match marker (see<xref
+        the prefix match marker (see <xref
           href="controlling.xml#controlling/parsing-queries"/>). For example,
         suppose we have these entries in
           <codeph>$SHAREDIR/tsearch_data/synonym_sample.syn</codeph>:</p>
