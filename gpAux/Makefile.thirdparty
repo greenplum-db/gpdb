@@ -15,9 +15,6 @@ ifeq "$(BLD_THIRDPARTY_DIR)" ""
 
 # calculate BLD_TOP in absolute path form
 BLD_TOP_ABSOLUTE:=$(shell cd $(BLD_TOP) && pwd)
-ifeq ($(BLD_ARCH),aix7_ppc_64)
-ADDON_DIR=../../gpaddon_src
-endif
 BLD_THIRDPARTY:=$(BLD_TOP_ABSOLUTE)/ext
 ifeq "$(BLD_ARCH)" ""
 BLD_ARCH:=$(shell $(BLD_TOP)/releng/set_bld_arch.sh)

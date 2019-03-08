@@ -64,7 +64,6 @@ function remote_clone() {
     cd gpdb_src
     git reset --hard $GIT_COMMIT
 EOF
-    scp -P $REMOTE_PORT -qr gpaddon_src $REMOTE_USER@$REMOTE_HOST:$GPDB_DIR/
 }
 
 function remote_compile() {

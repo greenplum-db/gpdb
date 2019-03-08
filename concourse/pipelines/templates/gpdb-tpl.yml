@@ -382,20 +382,7 @@ resources:
     - gpdb-doc/*
     - README*
 
-- name: gpaddon_src_binary_swap
-  type: git
-  source:
-    branch: master
-    private_key: {{gpaddon-git-key}}
-    uri: git@github.com:greenplum-db/gpaddon.git
-
 {% endif %}
-- name: gpaddon_src
-  type: git
-  source:
-    branch: {{gpaddon-git-branch}}
-    private_key: {{gpaddon-git-key}}
-    uri: {{gpaddon-git-remote}}
 
 {% if "ubuntu16" in os_types %}
 - name: debian_release
@@ -842,7 +829,6 @@ jobs:
       trigger: ((gpdb_src-trigger-flag))
     - get: reduced-frequency-trigger
       trigger: ((reduced-frequency-trigger-flag))
-    - get: gpaddon_src
     - get: gpdb6-centos6-build
     - get: libquicklz-installer
       resource: libquicklz-centos6
@@ -886,7 +872,6 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
-    - get: gpaddon_src
     - get: gpdb6-centos7-build
     - get: libquicklz-installer
       resource: libquicklz-centos7
@@ -930,7 +915,6 @@ jobs:
       trigger: ((reduced-frequency-trigger-flag))
     - get: gpdb_src
       trigger: ((gpdb_src-trigger-flag))
-    - get: gpaddon_src
     - get: gpdb6-centos7-build
   - task: sync_tools
     file: gpdb_src/concourse/tasks/sync_tools.yml
@@ -1016,8 +1000,6 @@ jobs:
     - get: gpdb_src
       resource: gpdb_src_binary_swap
       trigger: true
-    - get: gpaddon_src
-      resource: gpaddon_src_binary_swap
     - get: gpdb6-centos6-build
     - get: libquicklz-installer
       resource: libquicklz-centos6
@@ -1064,7 +1046,6 @@ jobs:
     - get: nightly-trigger
       trigger: true
     - get: gpdb_src
-    - get: gpaddon_src
     - get: gpdb6-centos6-build
   - task: compile_gpdb_aix7_remote
     file: gpdb_src/concourse/tasks/compile_gpdb_remote.yml
