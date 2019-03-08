@@ -851,3 +851,162 @@ reset enable_nestloop;
 reset enable_material;
 reset enable_seqscan;
 reset enable_bitmapscan;
+-- test outer join for general locus
+create table trep_join_gp (c1 int, c2 int) distributed replicated;
+create table thash_join_gp (c1 int, c2 int) distributed by (c1);
+create table trand_join_gp (c1 int, c2 int) distributed randomly;
+insert into trep_join_gp values (1, 1), (2, 2);
+insert into thash_join_gp values (1, 1), (2, 2);
+insert into trand_join_gp values (1, 1), (2, 2);
+explain select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+                                          QUERY PLAN                                          
+----------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..883162.79 rows=2020 width=20)
+   ->  Hash Left Join  (cost=0.00..883162.64 rows=674 width=20)
+         Hash Cond: (generate_series.generate_series = trep_join_gp.c1)
+         ->  Nested Loop  (cost=0.00..882731.47 rows=667 width=12)
+               Join Filter: true
+               ->  Seq Scan on thash_join_gp  (cost=0.00..431.00 rows=1 width=8)
+               ->  Materialize  (cost=0.00..0.01 rows=334 width=4)
+                     ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=2 width=8)
+               ->  Seq Scan on trep_join_gp  (cost=0.00..431.00 rows=2 width=8)
+ Optimizer: PQO version 3.23.0
+(11 rows)
+
+select * from generate_series(1, 5) g left join trep_join_gp on g = trep_join_gp.c1 join thash_join_gp on true;
+ g | c1 | c2 | c1 | c2 
+---+----+----+----+----
+ 1 |  1 |  1 |  2 |  2
+ 2 |  2 |  2 |  2 |  2
+ 3 |    |    |  2 |  2
+ 4 |    |    |  2 |  2
+ 5 |    |    |  2 |  2
+ 1 |  1 |  1 |  1 |  1
+ 2 |  2 |  2 |  1 |  1
+ 3 |    |    |  1 |  1
+ 4 |    |    |  1 |  1
+ 5 |    |    |  1 |  1
+(10 rows)
+
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=0.00..431.13 rows=1010 width=12)
+   ->  Hash Left Join  (cost=0.00..431.09 rows=337 width=12)
+         Hash Cond: (generate_series.generate_series = thash_join_gp.c1)
+         ->  Result  (cost=0.00..0.01 rows=334 width=4)
+               ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Seq Scan on thash_join_gp  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: PQO version 3.23.0
+(8 rows)
+
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c1;
+ g | c1 | c2 
+---+----+----
+ 2 |  2 |  2
+ 3 |    |   
+ 4 |    |   
+ 5 |    |   
+ 1 |  1 |  1
+(5 rows)
+
+explain select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.13 rows=1010 width=12)
+   ->  Hash Left Join  (cost=0.00..431.09 rows=337 width=12)
+         Hash Cond: (generate_series.generate_series = thash_join_gp.c2)
+         ->  Result  (cost=0.00..0.01 rows=334 width=4)
+               ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: thash_join_gp.c2
+                     ->  Seq Scan on thash_join_gp  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: PQO version 3.23.0
+(10 rows)
+
+select * from generate_series(1, 5) g left join thash_join_gp on g = thash_join_gp.c2;
+ g | c1 | c2 
+---+----+----
+ 2 |  2 |  2
+ 3 |    |   
+ 4 |    |   
+ 1 |  1 |  1
+ 5 |    |   
+(5 rows)
+
+explain select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)  (cost=0.00..431.13 rows=1010 width=12)
+   ->  Hash Left Join  (cost=0.00..431.09 rows=337 width=12)
+         Hash Cond: (generate_series.generate_series = trand_join_gp.c1)
+         ->  Result  (cost=0.00..0.01 rows=334 width=4)
+               ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+         ->  Hash  (cost=431.00..431.00 rows=1 width=8)
+               ->  Redistribute Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=1 width=8)
+                     Hash Key: trand_join_gp.c1
+                     ->  Seq Scan on trand_join_gp  (cost=0.00..431.00 rows=1 width=8)
+ Optimizer: PQO version 3.23.0
+(10 rows)
+
+select * from generate_series(1, 5) g left join trand_join_gp on g = trand_join_gp.c1;
+ g | c1 | c2 
+---+----+----
+ 2 |  2 |  2
+ 3 |    |   
+ 4 |    |   
+ 1 |  1 |  1
+ 5 |    |   
+(5 rows)
+
+explain select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice4; segments: 3)  (cost=0.00..2155.26 rows=1011 width=12)
+   ->  Result  (cost=0.00..2155.21 rows=337 width=12)
+         ->  Sequence  (cost=0.00..2155.21 rows=337 width=12)
+               ->  Shared Scan (share slice:id 4:0)  (cost=0.00..0.01 rows=334 width=1)
+                     ->  Materialize  (cost=0.00..0.01 rows=334 width=1)
+                           ->  Result  (cost=0.00..0.01 rows=334 width=4)
+                                 One-Time Filter: (gp_execution_segment() = 1)
+                                 ->  Function Scan on generate_series  (cost=0.00..0.00 rows=334 width=4)
+               ->  Sequence  (cost=0.00..2155.19 rows=337 width=12)
+                     ->  Shared Scan (share slice:id 4:1)  (cost=0.00..431.00 rows=1 width=1)
+                           ->  Materialize  (cost=0.00..431.00 rows=1 width=1)
+                                 ->  Seq Scan on trand_join_gp  (cost=0.00..431.00 rows=1 width=38)
+                     ->  Append  (cost=0.00..1724.19 rows=337 width=12)
+                           ->  Hash Left Join  (cost=0.00..862.11 rows=337 width=42)
+                                 Hash Cond: (share0_ref2.generate_series = share1_ref2.c1)
+                                 ->  Shared Scan (share slice:id 4:0)  (cost=0.00..431.00 rows=334 width=4)
+                                 ->  Hash  (cost=431.00..431.00 rows=2 width=38)
+                                       ->  Broadcast Motion 3:3  (slice1; segments: 3)  (cost=0.00..431.00 rows=2 width=38)
+                                             ->  Shared Scan (share slice:id 1:1)  (cost=0.00..431.00 rows=1 width=38)
+                           ->  Result  (cost=0.00..862.07 rows=1 width=42)
+                                 ->  Hash Anti Join  (cost=0.00..862.07 rows=1 width=38)
+                                       Hash Cond: (share1_ref3.c1 = share0_ref3.generate_series)
+                                       ->  Redistribute Motion 3:3  (slice2; segments: 3)  (cost=0.00..431.00 rows=1 width=38)
+                                             Hash Key: share1_ref3.c1
+                                             ->  Shared Scan (share slice:id 2:1)  (cost=0.00..431.00 rows=1 width=38)
+                                       ->  Hash  (cost=431.01..431.01 rows=334 width=4)
+                                             ->  Redistribute Motion 3:3  (slice3; segments: 3)  (cost=0.00..431.01 rows=334 width=4)
+                                                   Hash Key: share0_ref3.generate_series
+                                                   ->  Shared Scan (share slice:id 3:0)  (cost=0.00..431.00 rows=334 width=4)
+ Optimizer: PQO version 3.23.0
+(30 rows)
+
+select * from generate_series(1, 5) g full join trand_join_gp on g = trand_join_gp.c1;
+ g | c1 | c2 
+---+----+----
+ 1 |  1 |  1
+ 2 |  2 |  2
+ 3 |    |   
+ 4 |    |   
+ 5 |    |   
+(5 rows)
+
+drop table trep_join_gp;
+drop table thash_join_gp;
+drop table trand_join_gp;

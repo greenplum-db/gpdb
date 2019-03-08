@@ -979,31 +979,94 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	 * case, bring all the partitions to a single qExec to be joined. CDB
 	 * TODO: Can this case be handled without introducing a bottleneck?
 	 */
-	if (CdbPathLocus_IsGeneral(outer.locus))
+	if (CdbPathLocus_IsGeneral(outer.locus) ||
+		CdbPathLocus_IsGeneral(inner.locus))
 	{
-		if (!outer.ok_to_replicate &&
-			CdbPathLocus_IsPartitioned(inner.locus))
-			CdbPathLocus_MakeSingleQE(&inner.move_to,
-									  CdbPathLocus_NumSegments(inner.locus));
-		else if (!outer.ok_to_replicate &&
-			CdbPathLocus_IsSegmentGeneral(inner.locus))
-			CdbPathLocus_MakeSingleQE(&inner.move_to,
-									  CdbPathLocus_NumSegments(inner.locus));
+		/*
+		 * The logic for the join result's locus is (outer's locus is general):
+		 *   1. if outer is ok to replicated, then result's locus is the same
+		 *      as inner's locus
+		 *   2. if outer is not ok to replicated (like left join or wts cases)
+		 *      2.1 if inner's locus is hashed or hashOJ, we try to redistribute
+		 *          outer as the inner, if fails, make inner singleQE
+		 *      2.2 if inner's locus is strewn, we try to redistribute
+		 *          outer and inner, if fails, make inner singleQE
+		 *      2.3 just return the inner's locus, no motion is needed
+		 */
+		bool           general_immovable;
+		bool           other_immovable;
+		CdbpathMfjRel *general = &outer;
+		CdbpathMfjRel *other = &inner;
+		List          *general_pathkeys = outer_pathkeys;
+		List          *other_pathkeys = inner_pathkeys;
+
+		if (CdbPathLocus_IsGeneral(inner.locus))
+		{
+			general = &inner;
+			other = &outer;
+			general_pathkeys = inner_pathkeys;
+			other_pathkeys = outer_pathkeys;
+		}
+
+		general_immovable = (general->require_existing_order &&
+							 !general_pathkeys) || general->has_wts;
+		other_immovable = (other->require_existing_order &&
+						   !other_pathkeys) || other->has_wts;
+
+		if (general->ok_to_replicate)
+			return other->locus;
+
+		if (CdbPathLocus_IsHashed(other->locus) ||
+			CdbPathLocus_IsHashedOJ(other->locus))
+		{
+			if (other_immovable ||
+				!cdbpath_match_preds_to_distkey(root,
+											   redistribution_clauses,
+											   other->path,
+											   other->locus,
+											   &general->move_to))
+			{
+				if (!general_immovable && !other_immovable &&
+					cdbpath_distkeys_from_preds(root,
+												redistribution_clauses,
+												other->path,
+												&other->move_to,
+												&general->move_to))
+				{
+					numsegments = CdbPathLocus_CommonSegments(other->locus,
+															  general->locus);
+					other->move_to.numsegments = numsegments;
+					general->move_to.numsegments = numsegments;
+				}
+				else
+				{
+					CdbPathLocus_MakeSingleQE(&other->move_to,
+											  CdbPathLocus_NumSegments(other->locus));
+				}
+			}
+		}
+		else if (CdbPathLocus_IsStrewn(other->locus))
+		{
+			if (!general_immovable && !other_immovable &&
+				cdbpath_distkeys_from_preds(root,
+											redistribution_clauses,
+											other->path,
+											&other->move_to,
+											&general->move_to))
+			{
+				numsegments = CdbPathLocus_CommonSegments(other->locus,
+														  general->locus);
+				other->move_to.numsegments = numsegments;
+				general->move_to.numsegments = numsegments;
+			}
+			else
+			{
+				CdbPathLocus_MakeSingleQE(&other->move_to,
+										  CdbPathLocus_NumSegments(other->locus));
+			}
+		}
 		else
-			return inner.locus;
-	}
-	else if (CdbPathLocus_IsGeneral(inner.locus))
-	{
-		if (!inner.ok_to_replicate &&
-			CdbPathLocus_IsPartitioned(outer.locus))
-			CdbPathLocus_MakeSingleQE(&outer.move_to,
-									  CdbPathLocus_NumSegments(outer.locus));
-		else if (!inner.ok_to_replicate &&
-			CdbPathLocus_IsSegmentGeneral(outer.locus))
-			CdbPathLocus_MakeSingleQE(&outer.move_to,
-									  CdbPathLocus_NumSegments(outer.locus));
-		else
-			return outer.locus;
+			return other->locus;
 	}
 	else if (CdbPathLocus_IsSegmentGeneral(outer.locus) ||
 			 CdbPathLocus_IsSegmentGeneral(inner.locus))
@@ -2030,4 +2093,3 @@ has_redistributable_clause(RestrictInfo *restrictinfo)
 {
 	return restrictinfo->hashjoinoperator != InvalidOid;
 }
-
