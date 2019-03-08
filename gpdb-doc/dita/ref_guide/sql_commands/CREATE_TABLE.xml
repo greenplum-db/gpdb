@@ -332,33 +332,34 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
             defaults. </pd>
           <pd>Not-null constraints are always copied to the new table. <codeph>CHECK</codeph>
             constraints will be copied only if <codeph>INCLUDING CONSTRAINTS</codeph> is specified.
-            Indexes, <codeph>PRIMARY KEY</codeph>, and <codeph>UNIQUE</codeph> constraints on the
+            No distinction is made between column constraints and table constraints. </pd>
+          <pd>Indexes, <codeph>PRIMARY KEY</codeph>, and <codeph>UNIQUE</codeph> constraints on the
             original table will be created on the new table only if the <codeph>INCLUDING
-              INDEXES</codeph> clause is specified. No distinction is made between column
-            constraints and table constraints. </pd>
+              INDEXES</codeph> clause is specified. Names for the new indexes and constraints are
+            chosen according to the default rules, regardless of how the originals were named. (This
+            behavior avoids possible duplicate-name failures for the new indexes.)</pd>
           <pd>Any indexes on the original table will not be created on the new table, unless the
               <codeph>INCLUDING INDEXES</codeph> clause is specified.</pd>
-          <pd><codeph>STORAGE</codeph> settings for the copied column definitions will only be
-            copied if <codeph>INCLUDING STORAGE</codeph> is specified. The default behavior is to
+          <pd><codeph>STORAGE</codeph> settings for the copied column definitions will be copied
+            only if <codeph>INCLUDING STORAGE</codeph> is specified. The default behavior is to
             exclude <codeph>STORAGE</codeph> settings, resulting in the copied columns in the new
             table having type-specific default settings. </pd>
-          <pd> Comments for the copied columns, constraints, and indexes will only be copied if
+          <pd> Comments for the copied columns, constraints, and indexes will be copied only if
               <codeph>INCLUDING COMMENTS</codeph> is specified. The default behavior is to exclude
             comments, resulting in the copied columns and constraints in the new table having no
             comments. </pd>
           <pd>
             <codeph>INCLUDING ALL</codeph> is an abbreviated form of
-            <codeblock>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
-     INCLUDING STORAGE INCLUDING COMMENTS</codeblock>
+            <codeph>INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES 
+     INCLUDING STORAGE INCLUDING COMMENTS</codeph>
           </pd>
-          <pd> Note also that unlike <codeph>INHERITS</codeph>, columns and constraints copied by
+          <pd> Note that unlike <codeph>INHERITS</codeph>, columns and constraints copied by
               <codeph>LIKE</codeph> are not merged with similarly named columns and constraints. If
             the same name is specified explicitly or in another <codeph>LIKE</codeph> clause, an
             error is signaled. </pd>
-          <pd>The <codeph>LIKE</codeph> clause can also be used to copy columns from
-            views, foreign tables, or composite types. Inapplicable options (e.g., 
-            <codeph>INCLUDING INDEXES</codeph> from a view) are ignored.
-          </pd>
+          <pd>The <codeph>LIKE</codeph> clause can also be used to copy columns from views, foreign
+            tables, or composite types. Inapplicable options (e.g., <codeph>INCLUDING
+              INDEXES</codeph> from a view) are ignored. </pd>
         </plentry>
         <plentry>
           <pt>CONSTRAINT <varname>constraint_name</varname></pt>
@@ -412,19 +413,22 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pt>PRIMARY KEY ( <varname>column constraint</varname> )</pt>
           <pt>PRIMARY KEY ( <varname>column_name</varname> [, ... ] ) ( <varname>table
               constraint</varname> )</pt>
-          <pd>The primary key constraint specifies that a column or columns of a table may contain
-            only unique (non-duplicate), non-null values. Technically, <codeph>PRIMARY KEY</codeph>
-            is merely a combination of <codeph>UNIQUE</codeph> and <codeph>NOT NULL</codeph>, but
-            identifying a set of columns as primary key also provides metadata about the design of
-            the schema, as a primary key implies that other tables may rely on this set of columns
-            as a unique identifier for rows. For a table to have a primary key, it must be hash
-            distributed (not randomly distributed), and the primary key, the column(s) that are
-            unique, must contain all the columns of the Greenplum distribution key. In addition, the
-              <codeph>&lt;key&gt;</codeph> must contain all the columns in the partition key if the
-            table is partitioned. Note that a <codeph>&lt;key&gt;</codeph> constraint in a
-            partitioned table is not the same as a simple <codeph>UNIQUE INDEX</codeph>.</pd>
+          <pd>The <codeph>PRIMARY KEY</codeph> constraint specifies that a column or columns of a
+            table may contain only unique (non-duplicate), non-null values. Only one primary key can
+            be specified for a table, whether as a column constraint or a table constraint. </pd>
+          <pd>For a table to have a primary key, it must be hash distributed (not randomly
+            distributed), and the primary key, the column(s) that are unique, must contain all the
+            columns of the Greenplum distribution key. In addition, the <codeph>&lt;key&gt;</codeph>
+            must contain all the columns in the partition key if the table is partitioned. Note that
+            a <codeph>&lt;key&gt;</codeph> constraint in a partitioned table is not the same as a
+            simple <codeph>UNIQUE INDEX</codeph>. </pd>
+          <pd><codeph>PRIMARY KEY</codeph> enforces the same data constraints as a combination of
+              <codeph>UNIQUE</codeph> and <codeph>NOT NULL</codeph>, but identifying a set of
+            columns as the primary key also provides metadata about the design of the schema, since
+            a primary key implies that other tables can rely on this set of columns as a unique
+            identifier for rows. </pd>
           <pd>For information about primary key management and limitations, see <xref
-              href="#topic1/section5" format="dita"/>.</pd>
+              href="#topic1/section5" format="dita"/>. </pd>
         </plentry>
         <plentry>
           <pt>REFERENCES <varname>reftable</varname> [ ( <varname>refcolumn</varname> ) ] </pt>
@@ -869,6 +873,10 @@ PARTITION BY RANGE (year)
           tables are not in themselves very useful, but disallowing them creates odd special cases
           for <codeph>ALTER TABLE DROP COLUMN</codeph>, so Greenplum decided to ignore this spec
           restriction. </li>
+        <li><b>LIKE</b> — While a <codeph>LIKE</codeph> clause exists in the SQL standard, many of the
+          options that Greenplum Database accepts for it are not
+          in the standard, and some of the standard's options are not implemented
+          by Greenplum Database.</li>
         <li id="cd150435"><b>WITH clause</b> — The <codeph>WITH</codeph> clause is a Greenplum
           Database extension; neither storage parameters nor OIDs are in the standard. </li>
         <li id="cd150445"><b>Tablespaces</b> — The Greenplum Database concept of tablespaces is not
