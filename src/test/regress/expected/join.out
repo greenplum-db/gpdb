@@ -3466,7 +3466,8 @@ left join unnest(v1ys) as u1(u1y) on u1y = v2y;
          ->  Function Scan on unnest u1
          ->  Hash
                ->  Values Scan on "*VALUES*_1"
-(8 rows)
+ Optimizer: Postgres query optimizer
+(9 rows)
 
 select * from
 (values (1, array[10,20]), (2, array[20,30])) as v1(v1x,v1ys)
@@ -3585,11 +3586,11 @@ left join
 using (join_key);
                             QUERY PLAN                            
 ------------------------------------------------------------------
- Hash Right Join
+ Gather Motion 3:1  (slice3; segments: 3)
    Output: "*VALUES*".column1, i1.f1, (666)
-   Hash Cond: (i1.f1 = "*VALUES*".column1)
-   ->  Gather Motion 3:1  (slice2; segments: 3)
-         Output: i1.f1, (666)
+   ->  Hash Right Join
+         Output: "*VALUES*".column1, i1.f1, (666)
+         Hash Cond: (i1.f1 = "*VALUES*".column1)
          ->  Hash Right Join
                Output: i1.f1, 666
                Hash Cond: (i2.unique2 = i1.f1)
@@ -3602,13 +3603,15 @@ using (join_key);
                      Output: i1.f1
                      ->  Seq Scan on public.int4_tbl i1
                            Output: i1.f1
-   ->  Hash
-         Output: "*VALUES*".column1
-         ->  Values Scan on "*VALUES*"
+         ->  Hash
                Output: "*VALUES*".column1
+               ->  Redistribute Motion 1:3  (slice2; segments: 1)
+                     Output: "*VALUES*".column1
+                     Hash Key: "*VALUES*".column1
+                     ->  Values Scan on "*VALUES*"
+                           Output: "*VALUES*".column1
  Optimizer: Postgres query optimizer
- Settings: optimizer=off
-(23 rows)
+(25 rows)
 
 select foo1.join_key as foo1_id, foo3.join_key AS foo3_id, bug_field from
   (values (0),(1)) foo1(join_key)
