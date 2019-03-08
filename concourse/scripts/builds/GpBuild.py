@@ -49,6 +49,7 @@ class GpBuild(GpdbBuildBase):
         status = self.create_demo_cluster()
         if status:
             return status
+
         if option == 'world':
             return self.run_install_check_with_command('make installcheck-world')
         else:

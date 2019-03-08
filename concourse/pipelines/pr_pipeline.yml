@@ -7,6 +7,10 @@ resource_types:
     type: docker-image
     source:
       repository: teliaoss/github-pr-resource
+  - name: gcs-resource
+    type: docker-image
+    source:
+      repository: frodenas/gcs-resource
 
 resources:
   - name: gpdb_pr
@@ -23,6 +27,13 @@ resources:
     source:
       repository: pivotaldata/ubuntu-gpdb-dev
       tag: '16.04'
+
+  - name: collect-failed-jobs
+    type: gcs-resource
+    source:
+      bucket: failed-jobs
+      json_key: {{data-gpdb-server-gcs-json-key}}
+      regexp: failed-jobs/failed-job-logs-(.*).tar.gz
 
 jobs:
   - name: compile_and_test_gpdb
@@ -46,10 +57,14 @@ jobs:
       input_mapping:
         gpdb_src: gpdb_pr
       on_failure: &pr_failure
-        put: gpdb_pr
-        params:
-          path: gpdb_pr
-          status: failure
+        aggregate:
+          - put: gpdb_pr
+            params:
+              path: gpdb_pr
+              status: failure
+          - put: collect-failed-jobs
+            params:
+              file: icg_output/failed-job-logs-*.tar.gz
       timeout: 30m
       params:
         BINTRAY_REMOTE: {{bintray_remote}}

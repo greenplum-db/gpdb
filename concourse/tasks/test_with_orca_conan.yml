@@ -14,5 +14,6 @@ run:
   args:
     - --mode=orca
     - --gpdb_name=bin_gpdb
+    - --output_dir=icg_output
 params:
   TEST_SUITE: "icg"

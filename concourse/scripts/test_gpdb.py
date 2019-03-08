@@ -7,7 +7,9 @@ import stat
 import subprocess
 import sys
 
+
 from builds.GpBuild import GpBuild
+from failed_job import collect_failed_job
 
 
 def install_gpdb(dependency_name):
@@ -34,8 +36,10 @@ def copy_output():
             print(  "======================================================================\n" +
                     "DIFF FILE: " + diff_file+"\n" +
                     "----------------------------------------------------------------------")
-            with open(diff_file, 'r') as fin:
-                print fin.read()
+            if os.path.exists(diff_file):
+                with open(diff_file, 'r') as fin:
+                    print fin.read()
+
     shutil.copyfile("gpdb_src/src/test/regress/regression.diffs", "icg_output/regression.diffs")
     shutil.copyfile("gpdb_src/src/test/regress/regression.out", "icg_output/regression.out")
 
@@ -90,8 +94,13 @@ def main():
       status = gp_build.install_check()
     if status:
         copy_output()
+        collect_failed_job(
+            path="./gpdb_src/",
+            output_dir=options.output_dir
+        )
     return status
 
 
 if __name__ == "__main__":
     sys.exit(main())
+
