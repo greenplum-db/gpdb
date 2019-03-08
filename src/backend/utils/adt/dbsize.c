@@ -90,8 +90,8 @@ get_size_from_segDBs(const char * cmd)
 		while (0);
 
 		/* End recursive session. */
-		connected = false;
-		SPI_finish();
+		if (connected)
+			SPI_finish();
 
 		if (!succeeded)
 			elog(ERROR, "Unable to get sizes from segments");
