@@ -341,7 +341,7 @@
           <codeph>SELECT...FOR UPDATE</codeph> operations.) </p>
       <p>By default, the Global Deadlock Detector is disabled and Greenplum Database executes the
         concurrent update and delete operations on a heap table serially. You can enable these
-        concurrent updates and the have the Global Deadlock Detector determine when a deadlock
+        concurrent updates and have the Global Deadlock Detector determine when a deadlock
         exists by setting the server configuration parameter <xref
           href="../ref_guide/config_params/guc-list.xml#gp_enable_global_deadlock_detector"
             ><codeph>gp_enable_global_deadlock_detector</codeph></xref>. </p>
