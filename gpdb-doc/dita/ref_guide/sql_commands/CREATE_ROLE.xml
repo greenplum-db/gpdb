@@ -159,9 +159,6 @@
                             <codeph>UNENCRYPTED</codeph> is specified (since the system cannot
                         decrypt the specified encrypted password string). This allows reloading of
                         encrypted passwords during dump/restore.</pd>
-                    <pd>Note that older clients may lack support for the MD5 authentication
-                        mechanism that is needed to work with passwords that are stored encrypted.
-                    </pd>
                 </plentry>
                 <plentry>
                     <pt>VALID UNTIL <varname>'timestamp'</varname></pt>
