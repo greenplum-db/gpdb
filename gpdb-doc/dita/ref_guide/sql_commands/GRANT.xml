@@ -112,7 +112,9 @@ GRANT { SELECT | INSERT | ALL [PRIVILEGES] }
           <li><codeph>USAGE</codeph> privilege for languages and data types (including
             domains).</li>
         </ul><p>The object owner can, of course, <codeph>REVOKE</codeph> both default and expressly
-          granted privileges.</p></sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
+          granted privileges. (For maximum security, issue the <codeph>REVOKE</codeph> in the same transaction that
+            creates the object; then there is no window in which another user
+            can use the object.)</p>></sectiondiv><sectiondiv id="section5"><b>GRANT on Roles</b><p>This variant of the <codeph>GRANT</codeph> command grants membership
 in a role to one or more other roles. Membership in a role is significant
 because it conveys the privileges granted to a role to each of its members.
 </p><p>If <codeph>WITH ADMIN OPTION</codeph> is specified, the member may
