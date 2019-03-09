@@ -34,6 +34,7 @@
             <topicref href="admin_utilities/gpload.xml"/>
             <topicref href="admin_utilities/gplogfilter.xml"/>
             <topicref href="admin_utilities/gpmapreduce.xml"/>
+            <topicref href="admin_utilities/gpmovemirrors.xml"/>
             <!-- hidden until testing is complete -msk
             <topicref href="admin_utilities/gpmovemirrors.xml"/>
 -->
