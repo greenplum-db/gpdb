@@ -28,9 +28,7 @@
       parameter <codeph><xref
           href="../../../ref_guide/config_params/guc-list.xml#gp_recursive_cte_prototype"/></codeph>
       to <codeph>true</codeph>.
-      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is
-        not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note></p>
+      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</note></p>
   </body>
   <topic id="topic_xyn_dgh_5gb">
     <title>SELECT in a WITH Clause</title>
