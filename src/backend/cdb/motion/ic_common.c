@@ -740,6 +740,8 @@ adjustMasterRouting(Slice *recvSlice)
 {
 	ListCell   *lc = NULL;
 
+	Assert(MyProcPort);
+
 	foreach(lc, recvSlice->primaryProcesses)
 	{
 		CdbProcess *cdbProc = (CdbProcess *) lfirst(lc);

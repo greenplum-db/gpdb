@@ -7,8 +7,8 @@ from gppylib.commands.base import Command
 from gppylib.db import dbconn
 
 class Gpexpand:
-    def __init__(self, context, working_directory=None, database='pivotal'):
-        self.database = database
+    def __init__(self, context, working_directory=None):
+        self.database = 'postgres'
         self.working_directory = working_directory
         self.context = context
 
@@ -33,7 +33,7 @@ class Gpexpand:
 
         # If working_directory is None, then Popen will use the directory where
         # the python code is being ran.
-        p1 = Popen(["gpexpand", "-D", self.database], stdout=PIPE, stdin=PIPE,
+        p1 = Popen(["gpexpand"], stdout=PIPE, stdin=PIPE,
                    cwd=self.working_directory)
 
         # Very raw form of doing the interview part of gpexpand.
@@ -66,7 +66,7 @@ class Gpexpand:
 
     def initialize_segments(self, additional_params=''):
         input_files = sorted(glob.glob('%s/gpexpand_inputfile*' % self.working_directory))
-        return run_gpcommand(self.context, "gpexpand -D %s -i %s %s" % (self.database, input_files[-1], additional_params))
+        return run_gpcommand(self.context, "gpexpand -i %s %s" % (input_files[-1], additional_params))
 
     def get_redistribute_status(self):
         sql = 'select status from gpexpand.status order by updated desc limit 1'
@@ -90,13 +90,13 @@ class Gpexpand:
         else:
             flags = ""
 
-        rc, stderr, stdout = run_gpcommand(self.context, "gpexpand -D %s %s" % (self.database, flags))
+        rc, stderr, stdout = run_gpcommand(self.context, "gpexpand %s" % (flags))
         if rc == 0:
             rc = self.get_redistribute_status()
         return (rc, stderr, stdout)
 
     def rollback(self):
-        return run_gpcommand(self.context, "gpexpand -D %s -r" % (self.database))
+        return run_gpcommand(self.context, "gpexpand -r")
 
 if __name__ == '__main__':
     gpexpand = Gpexpand()

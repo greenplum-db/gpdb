@@ -25,7 +25,7 @@ test: gdd/local-deadlock-03
 # gdd end
 test: gdd/end
 
-test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue
+test: pg_terminate_backend deadlock_under_entry_db_singleton starve_case pg_views_concurrent_drop alter_blocks_for_update_and_viceversa drop_rename reader_waits_for_lock resource_queue misc
 
 # this case contains fault injection, must be put in a separate test group
 test: terminate_in_gang_creation

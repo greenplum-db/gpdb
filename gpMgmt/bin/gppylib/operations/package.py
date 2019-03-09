@@ -483,10 +483,10 @@ class ValidateInstallDebPackage(Operation):
         deb_packages_path = ' '.join([os.path.join(TEMP_EXTRACTION_PATH, deb_path) for deb_path in deb_set])
 
         if self.is_update:
-            deb_test_command = 'dpkg --dry-run --force-not-root --force-depends --log=/dev/null --admindir=%s ' \
+            deb_test_command = 'fakeroot dpkg --dry-run --force-not-root --force-depends --log=/dev/null --admindir=%s ' \
                                '--instdir=%s -i %s' % (DEB_DATABASE, GPHOME, deb_packages_path)
         else:
-            deb_test_command = 'dpkg --dry-run --force-not-root --log=/dev/null --admindir=%s ' \
+            deb_test_command = 'fakeroot dpkg --dry-run --force-not-root --log=/dev/null --admindir=%s ' \
                                '--instdir=%s -i %s' % (DEB_DATABASE, GPHOME, deb_packages_path)
 
         cmd = Command('Validating deb installation', deb_test_command)
@@ -507,7 +507,23 @@ class ValidateInstallDebPackage(Operation):
         if package_already_installed:
             raise AlreadyInstalledError(self.gppkg.pkg)
 
+        already_installed = self.check_existence()
+        if self.is_update:
+            if not already_installed:
+                raise NotInstalledError(self.gppkg.pkgname)
+        else:
+            if already_installed:
+                raise AlreadyInstalledError(self.gppkg.pkgname)
+
         return deb_set
+
+    def check_existence(self):
+        command = 'dpkg --force-not-root --log=/dev/null --admindir=%s --instdir=%s -l %s' % (DEB_DATABASE, GPHOME, self.gppkg.pkgname)
+        cmd = Command('Check installation of package', command)
+        logger.info(cmd)
+
+        cmd.run(validateAfter=False)
+        return cmd.results.rc == 0
 
     def prepare_deb_env(self):
         prepare_env_dir = 'mkdir -p ' + DEB_DATABASE_DIR
@@ -823,10 +839,10 @@ class InstallDebPackageLocally(Operation):
         if deb_set:
             deb_packages = " ".join([os.path.join(TEMP_EXTRACTION_PATH, deb_package) for deb_package in deb_set])
             if self.is_update:
-                deb_install_command = 'dpkg --force-not-root --force-depends --log=/dev/null --admindir=%s ' \
+                deb_install_command = 'fakeroot dpkg --force-not-root --force-depends --log=/dev/null --admindir=%s ' \
                                       '--instdir=%s -i %s' % (DEB_DATABASE, GPHOME, deb_packages)
             else:
-                deb_install_command = 'dpkg --force-not-root --log=/dev/null --admindir=%s --instdir=%s -i %s' % \
+                deb_install_command = 'fakeroot dpkg --force-not-root --log=/dev/null --admindir=%s --instdir=%s -i %s' % \
                                       (DEB_DATABASE, GPHOME, deb_packages)
 
             cmd = Command('Installing debs', deb_install_command)
@@ -921,7 +937,7 @@ class UninstallDebPackageLocally(Operation):
             return
 
         if deb_set:
-            deb_uninstall_command = 'dpkg --force-not-root --log=/dev/null --admindir=%s --instdir=%s -r %s' % (
+            deb_uninstall_command = 'fakeroot dpkg --force-not-root --log=/dev/null --admindir=%s --instdir=%s -r %s' % (
                 DEB_DATABASE, GPHOME, " ".join(deb_set))
             cmd = Command('Uninstalling debs', deb_uninstall_command)
             logger.info(cmd)

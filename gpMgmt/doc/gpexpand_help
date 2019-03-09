@@ -13,7 +13,7 @@ gpexpand
         [-analyze] [-n <parallel_processes>]
       | --rollback
       | --clean
-[-D <database_name>][--verbose] [--silent]
+[--verbose] [--silent]
 
 gpexpand -? | -h | --help 
 
@@ -110,13 +110,6 @@ OPTIONS
  Duration of the expansion session from beginning to end.
 
 
--D <database_name>
- Specifies the database in which to create the expansion schema 
- and tables. If this option is not given, the setting for the 
- environment variable PGDATABASE is used. The database templates 
- template1 and template0 cannot be used.
-
-
 -e | --end '<YYYY-MM-DD hh:mm:ss>'
  Ending date and time for the expansion session.
 
@@ -149,9 +142,7 @@ OPTIONS
 
 
 -r | --rollback
- Roll back a failed expansion setup operation. If the rollback command 
- fails, attempt again using the -D option to specify the database that 
- contains the expansion schema for the operation that you want to roll back.
+ Roll back a failed expansion setup operation.
 
 
 -s | --silent

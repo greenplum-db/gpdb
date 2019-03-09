@@ -3,3 +3,4 @@
 - [ ] Document changes
 - [ ] Communicate in the mailing list if needed
 - [ ] Pass `make installcheck`
+- [ ] Review a PR in return to support the community

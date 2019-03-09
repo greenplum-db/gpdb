@@ -18,10 +18,10 @@ Feature: expand the cluster by adding more segments
         And user has created expansiontest tables
         And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
-         And the user runs gpexpand against database "gptest" to redistribute with duration "00:00:02"
+         And the user runs gpexpand to redistribute with duration "00:00:02"
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
         And verify that the cluster has 2 new segments
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         Then the tables have finished expanding
         And verify that the master pid has not been changed
 
@@ -42,7 +42,7 @@ Feature: expand the cluster by adding more segments
         Then user has created expansiontest tables
         And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
-        When the user runs gpexpand against database "gptest" to redistribute with duration "00:00:02"
+        When the user runs gpexpand to redistribute with duration "00:00:02"
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
 
     @gpexpand_no_mirrors
@@ -61,10 +61,10 @@ Feature: expand the cluster by adding more segments
         And user has created expansiontest tables
         And 4000000 rows are inserted into table "expansiontest1" in schema "public" with column type list "int"
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
-         And the user runs gpexpand against database "gptest" to redistribute with the --end flag
+         And the user runs gpexpand to redistribute with the --end flag
         Then gpexpand should print "End time reached.  Stopping expansion." to stdout
         And verify that the cluster has 2 new segments
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         Then the tables have finished expanding
 
     @gpexpand_no_mirrors
@@ -188,7 +188,7 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile with additional parameters "--silent"
         Then verify that the cluster has 3 new segments
          And the user drops the named connection "default"
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         Then distribution information from table "public.redistribute" with data in "gptest" is verified against saved data
 
     @gpexpand_icw_db_concourse
@@ -330,7 +330,7 @@ Feature: expand the cluster by adding more segments
         And verify that the master pid has not been changed
         And verify the dml results and commit
         And verify the dml results again in a new transaction
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         # Temporarily comment the verifys until redistribute is fixed. This allows us to commit a resource to get a dump of the ICW dump for other tests to use
         # Then distribution information from table "public.redistribute" with data in "gptest" is verified against saved data
 
@@ -353,7 +353,7 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
         Then gpexpand should return a return code of 3
         And verify that the cluster has 1 new segments
-        And run rollback with database "gptest"
+        And run rollback
         And verify the gp_segment_configuration has been restored
         And unset fault inject
 
@@ -375,5 +375,5 @@ Feature: expand the cluster by adding more segments
         When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
         Then gpexpand should return a return code of 0
         And verify that the cluster has 1 new segments
-        When the user runs gpexpand against database "gptest" to redistribute
+        When the user runs gpexpand to redistribute
         Then the tables have finished expanding

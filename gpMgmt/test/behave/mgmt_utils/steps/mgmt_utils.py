@@ -637,7 +637,7 @@ def run_gpinitstandby(context, hostname, port, standby_data_dir, options='', rem
         # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
         cmd = "gpinitstandby -a -s %s" % hostname
     else:
-        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (hostname, port, standby_data_dir)
+        cmd = "gpinitstandby -a -s %s -P %s -S %s" % (hostname, port, standby_data_dir)
 
     run_gpcommand(context, cmd + ' ' + options)
 
@@ -646,6 +646,14 @@ def impl(context):
     hostname = get_master_hostname('postgres')[0][0]
     temp_data_dir = tempfile.mkdtemp() + "/standby_datadir"
     run_gpinitstandby(context, hostname, os.environ.get("PGPORT"), temp_data_dir)
+
+@when('the user initializes a standby on the same host as master and the same data directory')
+def impl(context):
+    hostname = get_master_hostname('postgres')[0][0]
+    master_port = int(os.environ.get("PGPORT"))
+
+    cmd = "gpinitstandby -a -s %s -P %d" % (hostname, master_port + 1)
+    run_gpcommand(context, cmd)
 
 @when('the user runs gpinitstandby with options "{options}"')
 @then('the user runs gpinitstandby with options "{options}"')
@@ -721,7 +729,7 @@ def impl(context):
         # We do not set port nor data dir here to test gpinitstandby's ability to autogather that info
         cmd = "gpinitstandby -a -s %s" % context.master_hostname
     else:
-        cmd = "gpinitstandby -a -s %s -P %s -F %s" % (context.master_hostname, context.master_port, master_data_dir)
+        cmd = "gpinitstandby -a -s %s -P %s -S %s" % (context.master_hostname, context.master_port, master_data_dir)
 
     context.execute_steps(u'''Then the user runs command "%s" from standby master''' % cmd)
 
@@ -1607,12 +1615,15 @@ def impl(context, path, num):
         raise Exception("expected %s items but found %s items in path %s" % (num, result, path))
 
 
+@when('the user runs all the repair scripts in the dir "{dir}"')
 @then('run all the repair scripts in the dir "{dir}"')
 def impl(context, dir):
-    command = "find {0} -name *.sh -exec bash {{}} \;".format(dir)
-    run_command(context, command)
-    if context.ret_code != 0:
-        raise Exception("Error running repair script %s: %s" % (file, context.stdout_message))
+    bash_files = glob.glob("%s/*.sh" % dir)
+    for file in bash_files:
+        run_command(context, "bash %s" % file)
+
+        if context.ret_code != 0:
+            raise Exception("Error running repair script %s: %s" % (file, context.stdout_message))
 
 @when(
     'the entry for the table "{user_table}" is removed from "{catalog_table}" with key "{primary_key}" in the database "{db_name}"')
@@ -1916,14 +1927,12 @@ def impl(context, gppkg_name):
 def impl(context, gppkg_name):
     _remove_gppkg_from_host(context, gppkg_name, is_master_host=True)
 
-
-@given('gpAdminLogs directory has no "{prefix}" files')
-def impl(context, prefix):
+@then('gpAdminLogs directory has no "{expected_file}" files')
+def impl(context, expected_file):
     log_dir = _get_gpAdminLogs_directory()
-    items = glob.glob('%s/%s_*.log' % (log_dir, prefix))
-    for item in items:
-        os.remove(item)
-
+    files_found = glob.glob('%s/%s' % (log_dir, expected_file))
+    if files_found:
+        raise Exception("expected no %s files in %s, but found %s" % (expected_file, log_dir, files_found))
 
 @given('"{filepath}" is copied to the install directory')
 def impl(context, filepath):
@@ -2088,7 +2097,7 @@ def impl(context, num_of_segments, num_of_hosts, hostnames):
     for i in range(0, num_of_segments):
         directory_pairs.append((primary_dir,mirror_dir))
 
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     output, returncode = gpexpand.do_interview(hosts=hosts,
                                                num_of_segments=num_of_segments,
                                                directory_pairs=directory_pairs,
@@ -2102,30 +2111,30 @@ def impl(context):
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile with additional parameters {additional_params}')
 def impl(context, additional_params=''):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     ret_code, std_err, std_out = gpexpand.initialize_segments(additional_params)
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
 
 @when('the user runs gpexpand with the latest gpexpand_inputfile without ret code check')
 def impl(context):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     gpexpand.initialize_segments()
 
-@when('the user runs gpexpand against database "{dbname}" to redistribute with duration "{duration}"')
-def impl(context, dbname, duration):
-    _gpexpand_redistribute(context, dbname, duration)
+@when('the user runs gpexpand to redistribute with duration "{duration}"')
+def impl(context, duration):
+    _gpexpand_redistribute(context, duration)
 
-@when('the user runs gpexpand against database "{dbname}" to redistribute with the --end flag')
-def impl(context, dbname):
-    _gpexpand_redistribute(context, dbname, endtime=True)
+@when('the user runs gpexpand to redistribute with the --end flag')
+def impl(context):
+    _gpexpand_redistribute(context, endtime=True)
 
-@when('the user runs gpexpand against database "{dbname}" to redistribute')
-def impl(context, dbname):
-    _gpexpand_redistribute(context, dbname)
+@when('the user runs gpexpand to redistribute')
+def impl(context):
+    _gpexpand_redistribute(context)
 
-def _gpexpand_redistribute(context, dbname, duration=False, endtime=False):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database=dbname)
+def _gpexpand_redistribute(context, duration=False, endtime=False):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     context.command = gpexpand
     ret_code, std_err, std_out = gpexpand.redistribute(duration, endtime)
     if duration or endtime:
@@ -2148,7 +2157,7 @@ sdw1:sdw1:21503:/tmp/gpexpand_behave/data/mirror/gpseg3:9:3:m"""
     with open(inputfile_name, 'w') as fd:
         fd.write(inputfile_contents)
 
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database='gptest')
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     ret_code, std_err, std_out = gpexpand.initialize_segments()
     if ret_code != 0:
         raise Exception("gpexpand exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))
@@ -2369,7 +2378,7 @@ def impl(context):
 
 @then('the tables have finished expanding')
 def impl(context):
-    dbname = 'gptest'
+    dbname = 'postgres'
     with dbconn.connect(dbconn.DbURL(dbname=dbname)) as conn:
         query = """select fq_name from gpexpand.status_detail WHERE expansion_finished IS NULL"""
         cursor = dbconn.execSQL(conn, query)
@@ -2555,11 +2564,11 @@ def impl(context, fault):
 def impl(context):
     os.environ['GPMGMT_FAULT_POINT'] = ""
 
-@given('run rollback with database "{database}"')
-@then('run rollback with database "{database}"')
-@when('run rollback with database "{database}"')
-def impl(context, database):
-    gpexpand = Gpexpand(context, working_directory=context.working_directory, database=database)
+@given('run rollback')
+@then('run rollback')
+@when('run rollback')
+def impl(context):
+    gpexpand = Gpexpand(context, working_directory=context.working_directory)
     ret_code, std_err, std_out = gpexpand.rollback()
     if ret_code != 0:
         raise Exception("rollback exited with return code: %d.\nstderr=%s\nstdout=%s" % (ret_code, std_err, std_out))

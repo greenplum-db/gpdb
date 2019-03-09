@@ -4899,7 +4899,7 @@ FillSliceTable(EState *estate, PlannedStmt *stmt)
 			 * segments, the catalog changes must be dispatched to all the
 			 * segments, so a full gang is required.
 			 */
-			numsegments = GP_POLICY_ALL_NUMSEGMENTS;
+			numsegments = getgpsegmentCount();
 		else
 			/* FIXME: ->lefttree or planTree? */
 			numsegments = stmt->planTree->flow->numsegments;

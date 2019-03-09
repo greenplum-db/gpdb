@@ -8,8 +8,10 @@ from gppylib.mainUtils import *
 
 from optparse import Option, OptionGroup, OptionParser, OptionValueError, SUPPRESS_USAGE
 import os, sys, getopt, socket, StringIO, signal
+import collections
 import datetime
 from contextlib import closing
+import re
 
 from pygresql import pgdb
 
@@ -551,6 +553,7 @@ class GpSystemStateProgram:
                 tabLog.info( ["Total number mirror segments acting as mirror segments", "= %d" % numMirrorsPassive])
 
             tabLog.addSeparator()
+        self.__showExpandStatusSummary(gpEnv, tabLog, showPostSep=True)
         tabLog.outputTable()
 
     def __fetchAllSegmentData(self, gpArray):
@@ -735,6 +738,86 @@ class GpSystemStateProgram:
         self.__writePipeSeparated(rows, printToLogger=False)
         return 0
 
+
+    def __showExpandProgress(self, gpEnv, st):
+        st.get_progress()
+
+        # group uncompleted tables by dbname
+        uncompleted = collections.defaultdict(int)
+        for dbname, _, _ in st.uncompleted:
+            uncompleted[dbname] += 1
+
+        tabLog = TableLogger().setWarnWithArrows(True)
+        tabLog.addSeparator()
+        tabLog.outputTable()
+        tabLog = None
+
+        if uncompleted:
+            tabLog = TableLogger().setWarnWithArrows(True)
+            logger.info("Number of tables to be redistributed")
+            tabLog.info(["  Database", "Count of Tables to redistribute"])
+            for dbname, count in uncompleted.iteritems():
+                tabLog.info(["  %s" % dbname, "%d" % count])
+            tabLog.addSeparator()
+            tabLog.outputTable()
+
+        if st.inprogress:
+            tabLog = TableLogger().setWarnWithArrows(True)
+            logger.info("Active redistributions = %d" % len(st.inprogress))
+            tabLog.info(["  Action", "Database", "Table"])
+            for dbname, fq_name, _ in st.inprogress:
+                tabLog.info(["  Redistribute", "%s" % dbname, "%s" % fq_name])
+            tabLog.addSeparator()
+            tabLog.outputTable()
+
+    def __showExpandStatus(self, gpEnv):
+        st = gp.get_gpexpand_status()
+
+        tabLog = TableLogger().setWarnWithArrows(True)
+        tabLog.addSeparator()
+        tabLog.outputTable()
+        tabLog = None
+
+        if st.phase == 0:
+            logger.info("Cluster Expansion State = No Expansion Detected")
+        elif st.phase == 1:
+            logger.info("Cluster Expansion State = Replicating Meta Data")
+            logger.info("  Some database tools and functionality")
+            logger.info("  are disabled during this process")
+        else:
+            assert st.phase == 2
+            st.get_progress()
+
+            if st.status == "SETUP DONE" or st.status == "EXPANSION STOPPED":
+                logger.info("Cluster Expansion State = Data Distribution - Paused")
+                self.__showExpandProgress(gpEnv, st)
+            elif st.status == "EXPANSION STARTED":
+                logger.info("Cluster Expansion State = Data Distribution - Active")
+                self.__showExpandProgress(gpEnv, st)
+            elif st.status == "EXPANSION COMPLETE":
+                logger.info("Cluster Expansion State = Expansion Complete")
+            else:
+                # unknown phase2 status
+                logger.info("Cluster Expansion State = Data Distribution - Unknown")
+
+        return 0
+
+    def __showExpandStatusSummary(self, gpEnv, tabLog, showPreSep=False, showPostSep=False):
+        st = gp.get_gpexpand_status()
+
+        if st.phase == 0:
+            # gpexpand is not detected
+            return
+
+        if showPreSep:
+            tabLog.addSeparator()
+
+        tabLog.info(["Cluster Expansion", "= In Progress"])
+
+        if showPostSep:
+            tabLog.addSeparator()
+
+
     def __printSampleExternalTableSqlForSegmentStatus(self, gpEnv):
         scriptName = "%s/gpstate --segmentStatusPipeSeparatedForTableUse -q -d %s" % \
                         (sys.path[0], gpEnv.getMasterDataDir()) # todo: ideally, would escape here
@@ -843,6 +926,7 @@ class GpSystemStateProgram:
             tabLog.addSeparator()
             toSuppress = {} if gpArray.hasMirrors else categoriesToIgnoreWithoutMirroring
             data.addSegmentToTableLogger(tabLog, seg, toSuppress)
+        self.__showExpandStatusSummary(gpEnv, tabLog, showPreSep=True, showPostSep=True)
         tabLog.outputTable()
         hasWarnings = hasWarnings or tabLog.hasWarnings()
 
@@ -1405,6 +1489,8 @@ class GpSystemStateProgram:
             exitCode = self.__showPortInfo(gpEnv, gpArray)
         elif self.__options.segmentStatusPipeSeparatedForTableUse:
             exitCode = self.__segmentStatusPipeSeparatedForTableUse(gpEnv, gpArray)
+        elif self.__options.showExpandStatus:
+            exitCode = self.__showExpandStatus(gpEnv)
         else:
             # self.__options.showStatusStatistics OR default:
             exitCode = self.__showStatusStatistics(gpEnv, gpArray)
@@ -1471,6 +1557,10 @@ class GpSystemStateProgram:
                          dest="showSummaryOfSegmentsWhichRequireAttention",
                          metavar="<showSummaryOfSegmentsWhichRequireAttention>",
                          help="Show summary of segments needing attention")
+        addTo.add_option("-x", None, default=False, action="store_true",
+                         dest="showExpandStatus",
+                         metavar="<showExpandStatus>",
+                         help="Show gpexpand status")
 
         #
         # two experimental options for exposing segment status as a queryable web table

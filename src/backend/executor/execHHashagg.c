@@ -89,8 +89,24 @@ typedef enum InputRecordType
 		Assert((hashtable)->mem_for_metadata > 0); \
 		Assert((hashtable)->mem_for_metadata > (hashtable)->nbuckets * OVERHEAD_PER_BUCKET); \
 		if ((hashtable)->mem_for_metadata >= (hashtable)->max_mem) \
-			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR), \
-				errmsg(ERRMSG_GP_INSUFFICIENT_STATEMENT_MEMORY)));\
+		{ \
+			if (IsResGroupEnabled()) \
+			{ \
+				elog(HHA_MSG_LVL, \
+					 "HashAgg: no enough operator memory for spilling: " \
+					 "operator memory is %.0f bytes, " \
+					 "current meta data is %.0f bytes; " \
+					 "the overuse is allowed in resource group mode", \
+					 (hashtable)->max_mem, \
+					 (hashtable)->mem_for_metadata); \
+			} \
+			else \
+			{ \
+				ereport(ERROR, \
+						(errcode(ERRCODE_INTERNAL_ERROR), \
+						 errmsg(ERRMSG_GP_INSUFFICIENT_STATEMENT_MEMORY))); \
+			} \
+		} \
 	} while (0)
 
 #define GET_TOTAL_USED_SIZE(hashtable) \
@@ -296,7 +312,24 @@ makeHashAggEntryForInput(AggState *aggstate, TupleTableSlot *inputslot, uint32 h
 
 	if (GET_TOTAL_USED_SIZE(hashtable) + MAXALIGN(MAXALIGN(tup_len) + aggs_len) >=
 		hashtable->max_mem)
-		return NULL;
+	{
+		if (IsResGroupEnabled())
+		{
+			elog(HHA_MSG_LVL,
+				 "HashAgg: no enough operator memory to store new tuple: "
+				 "operator memory is %.0f bytes, "
+				 "current used size is %.0f bytes, "
+				 "need %lu bytes to store the new tuple; "
+				 "the overuse is allowed in resource group mode",
+				 hashtable->max_mem,
+				 GET_TOTAL_USED_SIZE(hashtable),
+				 MAXALIGN(MAXALIGN(tup_len) + aggs_len));
+		}
+		else
+		{
+			return NULL;
+		}
+	}
 
 	entry->tuple_and_aggs = mpool_alloc(hashtable->group_buf,
 										MAXALIGN(MAXALIGN(tup_len) + aggs_len));
@@ -339,7 +372,24 @@ makeHashAggEntryForGroup(AggState *aggstate, void *tuple_and_aggs,
 	MemoryContext oldcxt;
 
 	if (GET_TOTAL_USED_SIZE(hashtable) + input_size >= hashtable->max_mem)
-		return NULL;
+	{
+		if (IsResGroupEnabled())
+		{
+			elog(HHA_MSG_LVL,
+				 "HashAgg: no enough operator memory to store new group keys and aggregate values: "
+				 "operator memory is %.0f bytes, "
+				 "current used size is %.0f bytes, "
+				 "need %d bytes to store the new data; "
+				 "the overuse is allowed in resource group mode",
+				 hashtable->max_mem,
+				 GET_TOTAL_USED_SIZE(hashtable),
+				 input_size);
+		}
+		else
+		{
+			return NULL;
+		}
+	}
 
 	copy_tuple_and_aggs = mpool_alloc(hashtable->group_buf, input_size);
 	memcpy(copy_tuple_and_aggs, tuple_and_aggs, input_size);
@@ -708,14 +758,9 @@ calcHashAggTableSizes(double memquota,	/* Memory quota in bytes. */
 
 		if (IsResGroupEnabled() && out_hats->memquota > orig_memquota)
 		{
-			ereport(WARNING,
-					(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
-					 errmsg("No enough memory quota reserved for AggHash operator."),
-					 errdetail("The operator needs a minimal of %.0f bytes memory, "
-							   "but only %.0f bytes are reserved.  "
-							   "Temporarily increased the memory quota to execute the operator.",
-							   out_hats->memquota, orig_memquota),
-					 errhint("Consider increase memory_spill_ratio for better performance.")));
+			elog(HHA_MSG_LVL,
+				 "HashAgg: auto enlarge operator memory from %.0f to %.0f in resource group mode",
+				 out_hats->memquota, orig_memquota);
 		}
 	}
 	
@@ -1984,8 +2029,26 @@ reCalcNumberBatches(HashAggTable *hashtable, SpillFile *spill_file)
 	
 	if (hashtable->mem_for_metadata +
 		nbatches * BATCHFILE_METADATA > hashtable->max_mem)
-		ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
-				 ERRMSG_GP_INSUFFICIENT_STATEMENT_MEMORY));
+	{
+		if (IsResGroupEnabled())
+		{
+			elog(HHA_MSG_LVL,
+				 "HashAgg: no enough operator memory for spilling: "
+				 "operator memory is %.0f bytes, "
+				 "current meta data is %.0f bytes, "
+				 "need %lu bytes for %u more batches; "
+				 "the overuse is allowed in resource group mode",
+				 hashtable->max_mem,
+				 hashtable->mem_for_metadata,
+				 nbatches * BATCHFILE_METADATA,
+				 nbatches);
+		}
+		else
+		{
+			ereport(ERROR, (errcode(ERRCODE_INTERNAL_ERROR),
+							ERRMSG_GP_INSUFFICIENT_STATEMENT_MEMORY));
+		}
+	}
 	
 	hashtable->hats.nbatches = nbatches;
 }

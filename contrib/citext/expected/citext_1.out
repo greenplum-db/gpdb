@@ -2241,6 +2241,7 @@ SELECT like_escape( name::text, ''::citext ) = like_escape( name::text, '' ) AS 
  t
 (4 rows)
 
+-- start_ignore
 -- Ensure correct behavior for citext with materialized views.
 CREATE TABLE citext_table (
   id serial primary key,
@@ -2282,3 +2283,4 @@ SELECT * FROM citext_matview ORDER BY id;
   5 | 
 (5 rows)
 
+-- end_ignore

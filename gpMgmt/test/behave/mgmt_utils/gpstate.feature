@@ -398,3 +398,139 @@ Feature: gpstate tests
 		  | \S+  | .*/dbfast3/demoDataDir2        | [0-9]+ | PostgreSQL [0-9]+\.[0-9]+\.[0-9]+ \(Greenplum Database [0-9]+\.[0-9]+\.[0-9]+.*\) |
 		  | \S+  | .*/dbfast_mirror3/demoDataDir2 | [0-9]+ | unable to retrieve version                                                        |
 		And gpstate should print "Unable to retrieve version data from all segments" to stdout
+
+    @gpexpand_status
+    Scenario: gpstate -x logs gpexpand status
+        Given the cluster is generated with "3" primaries only
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = No Expansion Detected |
+        Given the file "gpexpand.status" exists under master data directory
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Replicating Meta Data |
+             |   Some database tools and functionality         |
+             |   are disabled during this process              |
+        Given schema "gpexpand" exists in "postgres"
+          And below sql is executed in "postgres" db
+              """
+              CREATE TABLE gpexpand.status (status text, updated timestamp);
+              CREATE TABLE gpexpand.status_detail (
+                  dbname text,
+                  fq_name text,
+                  schema_oid oid,
+                  table_oid oid,
+                  distribution_policy smallint[],
+                  distribution_policy_names text,
+                  distribution_policy_coloids text,
+                  distribution_policy_type text,
+                  root_partition_name text,
+                  storage_options text,
+                  rank int,
+                  status text,
+                  expansion_started timestamp,
+                  expansion_finished timestamp,
+                  source_bytes numeric
+              );
+              INSERT INTO gpexpand.status VALUES
+                  ( 'SETUP',      '2001-01-01' ),
+                  ( 'SETUP DONE', '2001-01-02' );
+              INSERT INTO gpexpand.status_detail (dbname, fq_name, rank, status) VALUES
+                  ('fake_db', 'public.t1', 2, 'NOT STARTED'),
+                  ('fake_db', 'public.t2', 2, 'NOT STARTED');
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Replicating Meta Data |
+             |   Some database tools and functionality         |
+             |   are disabled during this process              |
+        Given the user runs command "rm $MASTER_DATA_DIRECTORY/gpexpand.status"
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Paused |
+             | Number of tables to be redistributed                 |
+             |      Database   Count of Tables to redistribute      |
+             |      fake_db    2                                    |
+        Given below sql is executed in "postgres" db
+              """
+              INSERT INTO gpexpand.status VALUES
+                  ( 'EXPANSION STARTED', '2001-01-03' );
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Active |
+             | Number of tables to be redistributed                 |
+             |      Database   Count of Tables to redistribute      |
+             |      fake_db    2                                    |
+        Given below sql is executed in "postgres" db
+              """
+              UPDATE gpexpand.status_detail SET STATUS='IN PROGRESS'
+               WHERE fq_name='public.t1';
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Active |
+             | Number of tables to be redistributed                 |
+             |      Database   Count of Tables to redistribute      |
+             |      fake_db    1                                    |
+             | Active redistributions = 1                           |
+             |      Action         Database   Table                 |
+             |      Redistribute   fake_db    public.t1             |
+        Given below sql is executed in "postgres" db
+              """
+              UPDATE gpexpand.status_detail SET STATUS='COMPLETED'
+               WHERE fq_name='public.t1';
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Active |
+             | Number of tables to be redistributed                 |
+             |      Database   Count of Tables to redistribute      |
+             |      fake_db    1                                    |
+        Given below sql is executed in "postgres" db
+              """
+              INSERT INTO gpexpand.status VALUES
+                  ( 'EXPANSION STOPPED', '2001-01-04' );
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Paused |
+             | Number of tables to be redistributed                 |
+             |      Database   Count of Tables to redistribute      |
+             |      fake_db    1                                    |
+        Given below sql is executed in "postgres" db
+              """
+              INSERT INTO gpexpand.status VALUES
+                  ( 'EXPANSION STARTED', '2001-01-05' );
+              UPDATE gpexpand.status_detail SET STATUS='IN PROGRESS'
+               WHERE fq_name='public.t2';
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Active |
+             | Active redistributions = 1                           |
+             |      Action         Database   Table                 |
+             |      Redistribute   fake_db    public.t2             |
+        Given below sql is executed in "postgres" db
+              """
+              UPDATE gpexpand.status_detail SET STATUS='COMPLETED'
+               WHERE fq_name='public.t2';
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Active |
+        Given below sql is executed in "postgres" db
+              """
+              INSERT INTO gpexpand.status VALUES
+                  ( 'EXPANSION STOPPED', '2001-01-06' );
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = Data Distribution - Paused |
+        Given below sql is executed in "postgres" db
+              """
+              DROP SCHEMA gpexpand CASCADE;
+              """
+         When the user runs "gpstate -x"
+         Then gpstate output looks like
+             | Cluster Expansion State = No Expansion Detected |

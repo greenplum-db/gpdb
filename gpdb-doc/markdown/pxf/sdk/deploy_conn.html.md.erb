@@ -2,7 +2,7 @@
 title: Deploying a Connector
 ---
 
-The Greenplum Database administrator deploys a connector to a Greenplum Database cluster by first registering the connector and its dependencies, and then copying relevant JAR and configuration files across the Greenplum Database cluster. After deploying the connector, the administrator must restart the PXF agent.
+The Greenplum Database administrator deploys a connector to a Greenplum Database cluster by first registering the connector and its dependencies, and then synchronizing the PXF configuration files across the Greenplum Database cluster. After deploying the connector, the administrator must restart the PXF agent.
 
 
 ## <a id="runtime_depends"></a> Identifying Connector Run-Time Dependencies
@@ -13,22 +13,29 @@ You must also identify any dependencies that your connector has on third-party c
 
 ## <a id="deploy_depends"></a>Registering Connector Run-Time Dependencies
 
-The PXF agent determines certain runtime dependencies from configuration files found in the `$GPHOME/pxf/conf` and `$PXF_CONF/conf` directories. Only the Greenplum Database administrative user can register PXF dependencies.
+The PXF agent determines certain runtime dependencies from files found in the `$GPHOME/pxf/conf`, `$PXF_CONF/conf`, and `$PXF_CONF/lib` directories. Only the Greenplum Database administrative user can register PXF dependencies.
 
 The `$GPHOME/pxf/conf/pxf-private.classpath` configuration file identifies the runtime dependencies for the PXF agent itself. This file also identifies the runtime dependencies for the PXF built-in HDFS, Hive, and HBase connectors.
 
-The Greenplum Database administrator registers a third-party connector and its runtime dependencies by copying the files to the `$PXF_CONF/lib` directory, and then restarting the PXF agent on each segment host.
+The Greenplum Database administrator registers a third-party connector and its runtime dependencies by copying the files to the `$PXF_CONF/lib` directory, synchronizing the PXF configuration across the cluster, and then restarting the PXF agent on each segment host.
 
 
 ## <a id="deploy_to_cluster"></a>Deploying to the Greenplum Database Cluster
 
-When a Greenplum Database administrator deploys a new connector, they copy the connector JAR file and the (JAR) files of any dependencies to each Greenplum Database segment host, and then must restart the PXF agent on each host. Only the Greenplum Database administrative user can restart the PXF agent. 
+When a Greenplum Database administrator deploys a new connector, they:
 
-For example, if `seghostfile` contains a list, one-host-per-line, of the segment hosts in your Greenplum Database cluster and `PXF_CONF=/etc/pxf/usercfg`, these commands deploy the connector across the cluster:
+- Copy the connector JAR file and the (JAR) files of any dependencies to the Greenplum Database master host
+- Synchronize the PXF configuration to each Greenplum Database segment host
+- Restart the PXF agent on each host
+
+Only the Greenplum Database administrative user can restart the PXF agent. 
+
+For example, if `PXF_CONF=/usr/local/greenplum-pxf`, these commands deploy the connector across the cluster:
 
 ``` shell
-gpadmin@gpmaster$ gpscp my-connector.jar -v -f seghostfile =:/etc/pxf/usercfg/lib
-gpadmin@gpmaster$ gpscp connector-dependency.jar -v -seghostfile /etc/pxf/usercfg/lib
+gpadmin@gpmaster$ cp my-connector.jar $PXF_CONF/lib/
+gpadmin@gpmaster$ cp connector-dependency.jar $PXF_CONF/lib/
+gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
 ```
 
 Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).
@@ -105,16 +112,16 @@ Perform the following procedure to deploy the *Demo* connector and to verify tha
     $ ssh gpadmin@<gpmaster>
     ```
 
-2. Copy the *Demo* connector JAR file that you previously built to the Greenplum Database master host. For example, to copy the JAR file to the `/tmp` directory, replace `PXFDEV_BASE` with the absolute path to your PXF development work area:
+2. Copy the *Demo* connector JAR file that you previously built to the `$PXF_CONF/lib` directory on the Greenplum Database master host. Replace `PXFDEV_BASE` with the absolute path to your PXF development work area:
 
     ``` shell
-    gpadmin@gpmaster$ scp user@devsystem:/PXFDEV_BASE/demo_example/build/libs/my-demo-connector.jar /tmp/
+    gpadmin@gpmaster$ scp user@devsystem:/PXFDEV_BASE/demo_example/build/libs/my-demo-connector.jar $PXF_CONF/lib/my-demo-connector.jar
     ```
 
-8. Copy the *Demo* connector JAR file to the PXF user runtime library directory on all Greenplum Database segment hosts. For example:
+8. Copy the JAR file to all Greenplum Database segment hosts by synchronizing the PXF configuration. For example:
 
     ``` shell
-    gpadmin@gpmaster$ gpscp -v -f seghostfile /tmp/my-demo-connector.jar =:/etc/pxf/usercfg/lib/my-demo-connector.jar
+    gpadmin@gpmaster$ $GPHOME/pxf/bin/pxf cluster sync
     ```
 
 9. Restart PXF on each Greenplum Database segment host as described in [Restarting PXF](../cfginitstart_pxf.html#restart_pxf).

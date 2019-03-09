@@ -29,6 +29,8 @@ The PXF Hive connector reads data stored in a Hive table. This section describes
 
 Before working with Hive table data using PXF, ensure that you have met the PXF Hadoop [Prerequisites](access_hdfs.html#hadoop_prereq).
 
+If you plan to use PXF filter pushdown with Hive, ensure that the `hive-site.xml` configuration parameter `hive.metastore.integral.jdo.pushdown` exists and is set to `true`.
+
 
 ## <a id="hive_fileformats"></a>Hive Data Formats
 
@@ -666,6 +668,8 @@ To take advantage of PXF partition filtering pushdown, the Hive and PXF partitio
 **Note:** The Hive connector filters only on partition columns, not on other table attributes.
 
 PXF filter pushdown is enabled by default. You configure PXF filter pushdown as described in [Configuring Filter Pushdown](using_pxf.html#filter-pushdown).
+
+To use PXF filter pushdown with Hive, the `hive-site.xml` configuration parameter `hive.metastore.integral.jdo.pushdown` must be set to `true`.
 
 
 ### <a id="hive_homog_part"></a>Example: Using the Hive Profile to Access Partitioned Homogenous Data

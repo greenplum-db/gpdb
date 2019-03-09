@@ -47,6 +47,8 @@ MAX_BATCH_SIZE = 128
 
 SEGMENT_CONFIGURATION_BACKUP_FILE = "gpexpand.gp_segment_configuration"
 
+DBNAME = 'postgres'
+
 #global var
 _gp_expand = None
 
@@ -86,16 +88,16 @@ Remaining TODO items:
               the system.  should get rid of this requirement. """
          ]
 
-_usage = """[-f hosts_file] [-D database_name]
+_usage = """[-f hosts_file]
 
-gpexpand -i input_file [-D database_name] [-B batch_size] [-V] [-t segment_tar_dir] [-S]
+gpexpand -i input_file [-B batch_size] [-V] [-t segment_tar_dir] [-S]
 
 gpexpand [-d duration[hh][:mm[:ss]] | [-e 'YYYY-MM-DD hh:mm:ss']]
-         [-a] [-n parallel_processes] [-D database_name]
+         [-a] [-n parallel_processes]
 
-gpexpand -r [-D database_name]
+gpexpand -r
 
-gpexpand -c [-D database_name]
+gpexpand -c
 
 gpexpand -? | -h | --help | --verbose | -v"""
 
@@ -126,10 +128,6 @@ def parseargs():
                       help="input expansion configuration file.", metavar="FILE")
     parser.add_option('-f', '--hosts-file', metavar='<hosts_file>',
                       help='file containing new host names used to generate input file')
-    parser.add_option('-D', '--database', dest='database',
-                      help='Database to create the gpexpand schema and tables in.  If this ' \
-                           'option is not given, PGDATABASE will be used.  The template1, ' \
-                           'template0 and postgres databases cannot be used.')
     parser.add_option('-B', '--batch-size', type='int', default=16, metavar="<batch_size>",
                       help='Expansion configuration batch size. Valid values are 1-%d' % MAX_BATCH_SIZE)
     parser.add_option('-n', '--parallel', type="int", default=1, metavar="<parallel_processes>",
@@ -210,14 +208,6 @@ def validate_options(options, args, parser):
         logger.error('Master data directory %s does not exist.' % options.master_data_directory)
         parser.exit()
 
-    if options.database and (options.database.lower() == 'template0'
-                             or options.database.lower() == 'template1'
-                             or options.database.lower() == 'postgres'):
-        logger.error('%s cannot be used to store the gpexpand schema and tables' % options.database)
-        parser.exit()
-    elif not options.database:
-        options.database = os.getenv('PGDATABASE')
-
     options.pgport = int(os.getenv('PGPORT', 5432))
 
     return options, args
@@ -285,6 +275,7 @@ status_detail_table_sql = """CREATE TABLE gpexpand.status_detail
                           fq_name text,
                           table_oid oid,
                           root_partition_name text,
+                          rank int,
                           status text,
                           expansion_started timestamp,
                           expansion_finished timestamp,
@@ -837,10 +828,6 @@ class gpexpand:
         self.gparray = gparray
         self.conn = dbconn.connect(self.dburl, utility=True, encoding='UTF8', allowSystemTableMods=True)
         self.old_segments = self.gparray.getSegDbList()
-        if dburl.pgdb == 'template0' or dburl.pgdb == 'template1' or dburl.pgdb == 'postgres':
-            raise ExpansionError("Invalid database '%s' specified.  Cannot use a template database.\n"
-                                 "Please set the environment variable PGDATABASE to a different "
-                                 "database or use the -D option to specify a database and re-run" % dburl.pgdb)
 
         datadir = self.gparray.master.getSegmentDataDirectory()
         self.statusLogger = GpExpandStatus(logger=logger,
@@ -915,32 +902,6 @@ class gpexpand:
                 if count > 0:
                     raise ExpansionError(
                         "Existing expansion state could not be determined, but a gpexpand schema already exists. Cannot proceed.")
-
-            # now determine whether gpexpand schema merely resides in another DB
-            status_conn = dbconn.connect(dburl, encoding='UTF8')
-            db_list = catalog.getDatabaseList(status_conn)
-            status_conn.close()
-
-            for db in db_list:
-                dbname = db[0]
-                if dbname in ['template0', 'template1', 'postgres', dburl.pgdb]:
-                    continue
-                logger.debug('Looking for gpexpand schema in %s' % dbname.decode('utf-8'))
-                test_url = copy.deepcopy(dburl)
-                test_url.pgdb = dbname
-                c = dbconn.connect(test_url, encoding='UTF8')
-                try:
-                    cursor = dbconn.execSQL(c, 'SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1')
-                except:
-                    # Not in here
-                    pass
-                else:
-                    raise ExpansionError("""gpexpand schema exists in database %s, not in %s.
-Set PGDATABASE or use the -D option to specify the correct database to use.""" % (
-                        dbname.decode('utf-8'), options.database))
-                finally:
-                    if c:
-                        c.close()
 
         return gpexpand_db_status
 
@@ -1437,6 +1398,7 @@ Set PGDATABASE or use the -D option to specify the correct database to use.""" %
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     NULL as root_partition_name,
+    2 as rank,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
@@ -1509,6 +1471,7 @@ SELECT
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as fq_name,
     c.oid as tableoid,
     quote_ident(n.nspname) || '.' || quote_ident(c.relname) as root_partition_name,
+    2 as rank,
     '%s' as undone_status,
     NULL as expansion_started,
     NULL as expansion_finished,
@@ -1569,7 +1532,7 @@ ORDER BY fq_name, tableoid desc
         self.conn.commit()
 
         # read schema and queue up commands
-        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED'"
+        sql = "SELECT * FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
         cursor = dbconn.execSQL(self.conn, sql)
 
         for row in cursor:
@@ -1681,7 +1644,7 @@ ORDER BY fq_name, tableoid desc
             c = dbconn.connect(self.dburl, encoding='UTF8')
             self.logger.warn('Expansion has not yet completed.  Removing the expansion')
             self.logger.warn('schema now will leave the following tables unexpanded:')
-            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED'"
+            unexpanded_tables_sql = "SELECT fq_name FROM gpexpand.status_detail WHERE status = 'NOT STARTED' ORDER BY rank"
 
             cursor = dbconn.execSQL(c, unexpanded_tables_sql)
             unexpanded_tables_text = ''.join("\t%s\n" % row[0] for row in cursor)
@@ -1773,7 +1736,7 @@ class ExpandTable():
         if row is not None:
             (self.dbname, self.fq_name, self.table_oid,
              self.root_partition_name,
-             self.status,
+             self.rank, self.status,
              self.expansion_started, self.expansion_finished,
              self.source_bytes) = row
         if self.fq_name == self.root_partition_name:
@@ -2197,8 +2160,8 @@ before continuing by re-running this utility and providing the input file. """
 
     print outFileStr
     print """Please review the file and make sure that it is correct then re-run
-with: gpexpand -i %s %s
-                """ % (outfile, '-D %s' % options.database if options.database else '')
+with: gpexpand -i %s
+                """ % (outfile)
 
 
 def sig_handler(sig):
@@ -2246,9 +2209,7 @@ def main(options, args, parser):
             configurationImplGpdb.GpConfigurationProviderUsingGpdbCatalog())
         configurationInterface.getConfigurationProvider().initializeProvider(gpEnv.getMasterPort())
 
-        dburl = dbconn.DbURL()
-        if options.database:
-            dburl.pgdb = options.database
+        dburl = dbconn.DbURL(dbname=DBNAME)
 
         gpexpand_db_status = gpexpand.prepare_gpdb_state(logger, dburl, options)
 
@@ -2349,8 +2310,7 @@ def main(options, args, parser):
         if _gp_expand is not None:
             if not (gpexpand_db_status is None and _gp_expand.get_state() is None):
                 if _gp_expand.pastThePointOfNoReturn == False:
-                    logger.error('Please run \'gpexpand -r%s\' to rollback to the original state.' % (
-                        '' if not options.database else ' -D %s' % options.database))
+                    logger.error('Please run \'gpexpand -r\' to rollback to the original state.')
             _gp_expand.shutdown()
         sys.exit(3)
     except KeyboardInterrupt:

@@ -108,15 +108,8 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
               connection to the secondary master host to replicate the master's log to the standby
               master. </entry>
           </row>
-          <row otherprops="pivotal">
-            <entry>Greenplum Control Center (GPCC)</entry>
-            <entry>TCP 28080, HTTP/HTTPS</entry>
-            <entry>Default listen port for the GPCC console web server, which is usually installed
-              on the master host. Configured in the <filepath>lighttpd.conf</filepath> file in the
-              GPCC instance.</entry>
-          </row>
           <row>
-            <entry>Greenplum database file load and transfer utilities: gpfdist, gpload.</entry>
+            <entry>Greenplum Database file load and transfer utilities: gpfdist, gpload.</entry>
             <entry>TCP 8080, HTTP<p>TCP 9000, HTTPS</p></entry>
             <entry>The gpfdist file serving utility can run on Greenplum hosts or external hosts.
               Specify the connection port with the <codeph>-p</codeph> option when starting the
@@ -124,10 +117,11 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
                 ranges specified in a configuration file.</p></entry>
           </row>
           <row>
-            <entry>GPCC agents</entry>
+            <entry>Gpperfmon agents</entry>
             <entry>TCP 8888</entry>
-            <entry>Connection port for GPCC agents executing on each Greenplum host. Configure by
-              setting the <codeph>gpperfmon_port</codeph> configuration variable in
+            <entry>Connection port for gpperfmon agents (<codeph>gpmmon</codeph> and
+                <codeph>gpsmon</codeph>) executing on Greenplum Database hosts. Configure by setting
+              the <codeph>gpperfmon_port</codeph> configuration variable in
                 <filepath>postgresql.conf</filepath> on master and segment hosts.</entry>
           </row>
           <row>
@@ -151,18 +145,34 @@ MIRROR_REPLICATION_PORT_BASE = 9000</codeblock></note>
               host.</entry>
           </row>
           <row otherprops="pivotal">
-            <entry morerows="2">Greenplum Workload Manager (GP-WLM)</entry>
-            <entry>TCP 4369, epmd</entry>
-            <entry>Erlang port mapper (epmd) allows nodes in the cluster to resolve node names.
-            </entry>
+            <entry morerows="2">Greenplum Command Center (GPCC)</entry>
+            <entry>TCP 28080, HTTP/HTTPS</entry>
+            <entry>The GPCC web server (<codeph>gpccws</codeph> process) executes on the Greenplum Database master
+              host or standby master host. The port number is configured at installation
+              time.</entry>
           </row>
           <row otherprops="pivotal">
-            <entry>TCP 25672</entry>
-            <entry>rabbitmq clustering</entry>
+            <entry>TCP 8899, rcp port</entry>
+            <entry>A GPCC agent (<codeph>ccagent</codeph> process) on each Greenplum Database segment host connects
+              to the GPCC rpc backend at port number 8899 on the GPCC web server host.</entry>
           </row>
           <row otherprops="pivotal">
-            <entry>TCP 7777</entry>
-            <entry>rabbitmq main port</entry>
+            <entry>UNIX domain socket, agent</entry>
+            <entry>Greenplum Database processes transmit datagrams to the GPCC agent (<codeph>ccagent</codeph>
+              process) on each segment host using a UNIX domain socket.</entry>
+          </row>
+          <row otherprops="pivotal">
+            <entry morerows="1">GPText</entry>
+            <entry>TCP 2188 (base port)</entry>
+            <entry>ZooKeeper client ports. ZooKeeper uses a range of ports beginning at the base port
+              number. The base port number and maximum port number are set in the GPText installation 
+              configuration file at installation time. The default base port number is 2188.</entry>
+          </row>
+          <row otherprops="pivotal">
+            <entry>TCP 18983 (base port)</entry>
+            <entry>GPText (Apache Solr) nodes. GPText nodes use a range of ports beginning at the base 
+              port number. The base port number and maximum port number are set in the GPText installation 
+              configuration file at installation time. The default base port number is 18983.</entry>
           </row>
           <row otherprops="pivotal">
             <entry morerows="3">EMC Data Domain and DD Boost</entry>

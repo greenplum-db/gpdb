@@ -8,6 +8,14 @@ Feature: Tests for gpinitstandby feature
         Then gpinitstandby should return a return code of 2
         And gpinitstandby should print "cannot create standby on the same host and port" to stdout
 
+    Scenario: gpinitstandby fails if given same host and datadir as master segment
+        Given the database is running
+          And the standby is not initialized
+         When the user initializes a standby on the same host as master and the same data directory
+         Then gpinitstandby should return a return code of 2
+          And gpinitstandby should print "master data directory exists" to stdout
+          And gpinitstandby should print "use -S and -P to specify a new data directory and port" to stdout
+
     Scenario: gpinitstandby exclude dirs
         Given the database is running
         And the standby is not initialized

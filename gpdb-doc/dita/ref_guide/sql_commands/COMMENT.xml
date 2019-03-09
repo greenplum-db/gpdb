@@ -9,19 +9,21 @@
       <title>Synopsis</title>
       <codeblock id="sql_command_synopsis">COMMENT ON
 { TABLE <varname>object_name</varname> |
-  COLUMN <varname>table_name.column_name</varname> |
+  COLUMN <varname>relation_name.column_name</varname> |
   AGGREGATE <varname>agg_name</varname> (<varname>agg_type</varname> [, ...]) |
-  CAST (<varname>sourcetype</varname> AS <varname>targettype</varname>) |
+  CAST (<varname>source_type</varname> AS <varname>target_type</varname>) |
+  COLLATION <varname>object_name</varname>
   CONSTRAINT <varname>constraint_name</varname> ON <varname>table_name</varname> |
   CONVERSION <varname>object_name</varname> |
   DATABASE <varname>object_name</varname> |
   DOMAIN <varname>object_name</varname> |
+  EXTENSION <varname>object_name</varname> |
   FOREIGN DATA WRAPPER <varname>object_name</varname> |
   FOREIGN TABLE <varname>object_name</varname> |
   FUNCTION <varname>func_name</varname> ([[<varname>argmode</varname>] [<varname>argname</varname>] <varname>argtype</varname> [, ...]]) |
   INDEX <varname>object_name</varname> |
   LARGE OBJECT <varname>large_object_oid</varname> |
-  OPERATOR <varname>op</varname> (<varname>leftoperand_type</varname>, <varname>rightoperand_type</varname>) |
+  OPERATOR <varname>operator_name</varname> (<varname>left_type</varname>, <varname>right_type</varname>) |
   OPERATOR CLASS <varname>object_name</varname> USING <varname>index_method</varname> |
   [PROCEDURAL] LANGUAGE <varname>object_name</varname> |
   RESOURCE GROUP <varname>object_name</varname> |
@@ -39,10 +41,13 @@ IS '<varname>text</varname>'</codeblock>
     </section>
     <section id="section3">
       <title>Description</title>
-      <p><codeph>COMMENT</codeph> stores a comment about a database object. To modify a comment,
-        issue a new <codeph>COMMENT</codeph> command for the same object. Only one comment string is
-        stored for each object. To remove a comment, write <codeph>NULL</codeph> in place of the
+      <p><codeph>COMMENT</codeph> stores a comment about a database object. Only one comment string
+        is stored for each object. To remove a comment, write <codeph>NULL</codeph> in place of the
         text string. Comments are automatically dropped when the object is dropped.</p>
+      <p>For most kinds of object, only the object's owner can set the comment. Roles don't have
+        owners, so the rule for <codeph>COMMENT ON ROLE</codeph> is that you must be superuser to
+        comment on a superuser role, or have the <codeph>CREATEROLE</codeph> privilege to comment on
+        non-superuser roles. Of course, a superuser can comment on anything. </p>
       <p>Comments can be easily retrieved with the psql meta-commands <codeph>\dd</codeph>,
           <codeph>\d+</codeph>, and <codeph>\l+</codeph>. Other user interfaces to retrieve comments
         can be built atop the same built-in functions that psql uses, namely
@@ -54,30 +59,32 @@ IS '<varname>text</varname>'</codeblock>
       <parml>
         <plentry>
           <pt><varname>object_name</varname></pt>
-          <pt><varname>table_name.column_name</varname></pt>
+          <pt><varname>relation_name.column_name</varname></pt>
           <pt><varname>agg_name</varname></pt>
           <pt><varname>constraint_name</varname></pt>
           <pt><varname>func_name</varname></pt>
-          <pt><varname>op</varname></pt>
+          <pt><varname>operator_name</varname></pt>
           <pt><varname>rule_name</varname></pt>
           <pt><varname>trigger_name</varname></pt>
-          <pd>The name of the object to be commented. Names of tables, aggregates, domains, foreign
-            tables, functions, indexes, operators, operator classes, sequences, types, and views may
-            be schema-qualified.
-            <note>Greenplum Database does not support triggers.</note></pd>
+          <pd>The name of the object to be commented. Names of tables, aggregates, collations,
+            conversions, domains, foreign tables, functions, indexes, operators, operator classes,
+            operator families, sequences, text search objects, types, and views can be
+            schema-qualified.  When commenting on a column, <varname>relation_name</varname> must
+            refer to a table, view, composite type, or foreign table.<note>Greenplum Database does
+              not support triggers.</note></pd>
         </plentry>
         <plentry>
-          <pt><varname>agg_type</varname></pt>
+          <pt><varname>aggregate_type</varname></pt>
           <pd>An input data type on which the aggregate function operates. To reference a
             zero-argument aggregate function, write <codeph>*</codeph> in place of the list of input
             data types. </pd>
         </plentry>
         <plentry>
-          <pt><varname>sourcetype</varname></pt>
+          <pt><varname>source_type</varname></pt>
           <pd>The name of the source data type of the cast. </pd>
         </plentry>
         <plentry>
-          <pt><varname>targettype</varname></pt>
+          <pt><varname>target_type</varname></pt>
           <pd>The name of the target data type of the cast. </pd>
         </plentry>
         <plentry>
@@ -112,6 +119,12 @@ IS '<varname>text</varname>'</codeblock>
           </pd>
         </plentry>
         <plentry>
+          <pt><varname>left_type</varname></pt>
+          <pt><varname>right_type</varname></pt>
+          <pd>The data type(s) of the operator's arguments (optionally schema-qualified). Write
+              <codeph>NONE</codeph> for the missing argument of a prefix or postfix operator. </pd>
+        </plentry>
+        <plentry>
           <pt>PROCEDURAL</pt>
           <pd>This is a noise word. </pd>
         </plentry>
@@ -124,12 +137,11 @@ IS '<varname>text</varname>'</codeblock>
     </section>
     <section id="section5">
       <title>Notes</title>
-      <p>There is presently no security mechanism for comments: any user connected to a database can
-        see all the comments for objects in that database (although only superusers can change
-        comments for objects that they do not own). For shared objects such as databases, roles, and
-        tablespaces comments are stored globally and any user connected to any database can see all
-        the comments for shared objects. Therefore, do not put security-critical information in
-        comments.</p>
+      <p>There is presently no security mechanism for viewing comments: any user connected to a
+        database can see all the comments for objects in that database. For shared objects such as
+        databases, roles, and tablespaces, comments are stored globally so any user connected to any
+        database in the cluster can see all the comments for shared objects. Therefore, do not put
+        security-critical information in comments.</p>
     </section>
     <section id="section6">
       <title>Examples</title>
@@ -137,6 +149,40 @@ IS '<varname>text</varname>'</codeblock>
       <codeblock>COMMENT ON TABLE mytable IS 'This is my table.';</codeblock>
       <p>Remove it again: </p>
       <codeblock>COMMENT ON TABLE mytable IS NULL;</codeblock>
+      <p>Some more examples:</p>
+      <codeblock>COMMENT ON AGGREGATE my_aggregate (double precision) IS 'Computes sample variance';
+COMMENT ON CAST (text AS int4) IS 'Allow casts from text to int4';
+COMMENT ON COLLATION "fr_CA" IS 'Canadian French';
+COMMENT ON COLUMN my_table.my_column IS 'Employee ID number';
+COMMENT ON CONVERSION my_conv IS 'Conversion to UTF8';
+COMMENT ON CONSTRAINT bar_col_cons ON bar IS 'Constrains column col';
+COMMENT ON DATABASE my_database IS 'Development Database';
+COMMENT ON DOMAIN my_domain IS 'Email Address Domain';
+COMMENT ON EXTENSION hstore IS 'implements the hstore data type';
+COMMENT ON FOREIGN DATA WRAPPER mywrapper IS 'my foreign data wrapper';
+COMMENT ON FOREIGN TABLE my_foreign_table IS 'Employee Information in other database';
+COMMENT ON FUNCTION my_function (timestamp) IS 'Returns Roman Numeral';
+COMMENT ON INDEX my_index IS 'Enforces uniqueness on employee ID';
+COMMENT ON LANGUAGE plpython IS 'Python support for stored procedures';
+COMMENT ON LARGE OBJECT 346344 IS 'Planning document';
+COMMENT ON OPERATOR ^ (text, text) IS 'Performs intersection of two texts';
+COMMENT ON OPERATOR - (NONE, integer) IS 'Unary minus';
+COMMENT ON OPERATOR CLASS int4ops USING btree IS '4 byte integer operators for btrees';
+COMMENT ON OPERATOR FAMILY integer_ops USING btree IS 'all integer operators for btrees';
+COMMENT ON ROLE my_role IS 'Administration group for finance tables';
+COMMENT ON RULE my_rule ON my_table IS 'Logs updates of employee records';
+COMMENT ON SCHEMA my_schema IS 'Departmental data';
+COMMENT ON SEQUENCE my_sequence IS 'Used to generate primary keys';
+COMMENT ON SERVER myserver IS 'my foreign server';
+COMMENT ON TABLE my_schema.my_table IS 'Employee Information';
+COMMENT ON TABLESPACE my_tablespace IS 'Tablespace for indexes';
+COMMENT ON TEXT SEARCH CONFIGURATION my_config IS 'Special word filtering';
+COMMENT ON TEXT SEARCH DICTIONARY swedish IS 'Snowball stemmer for swedish language';
+COMMENT ON TEXT SEARCH PARSER my_parser IS 'Splits text into words';
+COMMENT ON TEXT SEARCH TEMPLATE snowball IS 'Snowball stemmer';
+COMMENT ON TRIGGER my_trigger ON my_table IS 'Used for RI';
+COMMENT ON TYPE complex IS 'Complex number data type';
+COMMENT ON VIEW my_view IS 'View of departmental costs';</codeblock>
     </section>
     <section id="section7">
       <title>Compatibility</title>

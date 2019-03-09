@@ -49,6 +49,7 @@ Before working with Hadoop data using PXF, ensure that:
 - You have configured and initialized PXF on your Greenplum Database segment hosts, and PXF is running on each host. See [Configuring PXF](instcfg_pxf.html) for additional information.
 - You have configured the PXF Hadoop Connectors that you plan to use on each Greenplum Database segment host. Refer to [Configuring PXF Hadoop Connectors](client_instcfg.html) for instructions. If you plan to access JSON-formatted data stored in a Cloudera Hadoop cluster, PXF requires a Cloudera version 5.8 or later Hadoop distribution.
 - If user impersonation is enabled (the default), ensure that you have granted read (and write as appropriate) permission to the HDFS files and directories that will be accessed as external tables in Greenplum Database to each Greenplum Database user/role name that will access the HDFS files and directories. If user impersonation is not enabled, you must grant this permission to the `gpadmin` user.
+- Time is synchronized between the Greenplum Database segment hosts and the external Hadoop systems.
 
 
 ## <a id="hdfs_cmdline"></a>HDFS Shell Command Primer

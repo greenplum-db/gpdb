@@ -1047,9 +1047,10 @@ pqFlush(PGconn *conn)
 int
 pqFlushNonBlocking(PGconn *conn)
 {
+	int			ret;
 	bool old = conn->nonblocking;
 	conn->nonblocking = TRUE;
-	int ret = pqFlush(conn);
+	ret = pqFlush(conn);
 	conn->nonblocking = old;
 	return ret;
 }

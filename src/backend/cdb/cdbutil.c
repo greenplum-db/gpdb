@@ -75,6 +75,8 @@ static int	CdbComponentDatabaseInfoCompare(const void *p1, const void *p2);
 static void getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel);
 static HTAB *hostSegsHashTableInit(void);
 
+static int nextQEIdentifer(CdbComponentDatabases *cdbs);
+
 static HTAB *segment_ip_cache_htab = NULL;
 
 int numsegmentsFromQD = -1;
@@ -159,6 +161,7 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	component_databases->numActiveQEs = 0;
 	component_databases->numIdleQEs = 0;
 	component_databases->qeCounter = 0;
+	component_databases->freeCounterList = NIL;
 
 	component_databases->segment_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * segment_array_size);
@@ -693,7 +696,7 @@ cdbcomponent_allocateIdleQE(int contentId, SegmentType segmentType)
 		 * 2. for first QE, it must be a writer.
 		 */
 		isWriter = contentId == -1 ? false: (cdbinfo->numIdleQEs == 0 && cdbinfo->numActiveQEs == 0);
-		segdbDesc = cdbconn_createSegmentDescriptor(cdbinfo, cdbinfo->cdbs->qeCounter++, isWriter);
+		segdbDesc = cdbconn_createSegmentDescriptor(cdbinfo, nextQEIdentifer(cdbinfo->cdbs), isWriter);
 	}
 
 	cdbconn_setQEIdentifier(segdbDesc, -1);
@@ -801,6 +804,19 @@ destroy_segdb:
 	}
 
 	MemoryContextSwitchTo(oldContext);
+}
+
+static int
+nextQEIdentifer(CdbComponentDatabases *cdbs)
+{
+	int result;
+
+	if (!cdbs->freeCounterList)
+		return cdbs->qeCounter++;
+
+	result = linitial_int(cdbs->freeCounterList);
+	cdbs->freeCounterList = list_delete_first(cdbs->freeCounterList);
+	return result;
 }
 
 bool
@@ -1139,7 +1155,8 @@ getAddressesForDBid(CdbComponentDatabaseInfo *c, int elevel)
 	memset(c->hostaddrs, 0, COMPONENT_DBS_MAX_ADDRS * sizeof(char *));
 
 #ifdef FAULT_INJECTOR
-	if (SIMPLE_FAULT_INJECTOR(GetDnsCachedAddress) == FaultInjectorTypeSkip)
+	if (am_ftsprobe &&
+		SIMPLE_FAULT_INJECTOR(GetDnsCachedAddress) == FaultInjectorTypeSkip)
 	{
 		/* inject a dns error for primary of segment 0 */
 		if (c->segindex == 0 &&
@@ -1510,7 +1527,8 @@ cdbcomponent_getCdbComponentsList(void)
 int
 getgpsegmentCount(void)
 {
-	int32 numsegments = -1;
+	/* 1 represents a singleton postgresql in utility mode */
+	int32 numsegments = 1;
 
 	if (Gp_role == GP_ROLE_DISPATCH)
 		numsegments = cdbcomponent_getCdbComponents(true)->total_segments;

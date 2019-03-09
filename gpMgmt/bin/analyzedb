@@ -41,7 +41,6 @@ STATEFILE_DIR = 'db_analyze'
 logger = gplog.get_default_logger()
 WRITE_LOCK_FILE_NAME = "write_lock_semaphore"
 ANALYZE_SQL = """analyze %s"""
-ANALYZE_ROOT_SQL = """analyze rootpartition %s"""
 
 PG_PARTITIONS_SURROGATE = """
 SELECT n.nspname AS schemaname, cl.relname AS tablename, n2.nspname AS partitionschemaname, cl2.relname AS partitiontablename, cl3.relname AS parentpartitiontablename
@@ -133,11 +132,6 @@ SELECT n.nspname, c.relname, orig_name
 FROM pg_class c
 INNER JOIN pg_namespace n ON c.relnamespace = n.oid
 INNER JOIN (VALUES %s) o(orig_name) ON c.oid = o.orig_name::regclass
-"""
-
-GET_LEAF_ROOT_MAPPING_SQL = """
-SELECT n.nspname, c2.relname, n.nspname, c.relname from pg_class c, pg_class c2, pg_namespace n, pg_partition pp, pg_partition_rule ppr
-WHERE ppr.parchildrelid in (%s) AND ppr.paroid = pp.oid AND pp.parrelid = c.oid AND c.relnamespace = n.oid AND ppr.parchildrelid = c2.oid;
 """
 
 GET_ALL_ROOT_PARTITION_TABLES_SQL = """
@@ -258,7 +252,6 @@ class AnalyzeDb(Operation):
         self.full_analyze = options.full_analyze
         self.dry_run = options.dry_run
         self.parallel_level = options.parallel_level
-        self.rootstats = options.rootstats
         self.silent = options.silent
         self.verbose = options.verbose
         self.clean_last = options.clean_last
@@ -294,13 +287,6 @@ class AnalyzeDb(Operation):
 
         if self.parallel_level < 1 or self.parallel_level > 10:
             raise ProgramArgumentValidationException('option -p requires a value between 1 and 10')
-
-        if self.rootstats:
-            qresult = execute_sql("SELECT version()", self.pg_port, self.dbname)
-            version = GpVersion(qresult[0][0])
-            if version < GpVersion('4.3.4.0'):
-                logger.debug("Adding --skip_root_stats option since Greenplum version is lower than 4.3.4.0")
-                self.rootstats = False
 
     def _preprocess_options(self):
 
@@ -404,26 +390,14 @@ class AnalyzeDb(Operation):
                 logger.warning("There are no tables or partitions to be analyzed. Exiting...")
                 return 0
 
-            root_partition_col_dict = {}
-            # root_partition_col_dict contains the mapping between the root partitions
-            # and its corresponding columns to be analyzed
-            # key: name of the root partition whose stats needs to be refreshed
-            # value: a set of column names to be analyzed, or '-1' meaning all columns of that table
-            if self.rootstats:
-                root_partition_col_dict = self._get_root_partition_col_dict(candidates, input_col_dict)
-
-            ordered_candidates = self._get_ordered_candidates(candidates, root_partition_col_dict)
+            ordered_candidates = self._get_ordered_candidates(candidates)
             target_list = []
             logger.info("---------------------------------------------------")
             logger.info("Tables or partitions to be analyzed")
             logger.info("---------------------------------------------------")
             for can in ordered_candidates:
-                can_schema = can[0]
-                can_table = can[1]
-                if can in candidates:
-                    target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
-                else:  # can in root_partition_col_dict
-                    target = self._get_tablename_with_cols(can_schema, can_table, root_partition_col_dict)
+                can_schema, can_table = can[0], can[1]
+                target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
                 logger.info(target)
                 target_list.append(target)
             logger.info("---------------------------------------------------")
@@ -440,11 +414,11 @@ class AnalyzeDb(Operation):
                         subject = can_schema, can_table
                         self.success_list.append(subject)
                 else:
-                    self.run_analyze(logger, ordered_candidates, candidates, input_col_dict, root_partition_col_dict)
+                    self.run_analyze(logger, ordered_candidates, candidates, input_col_dict)
 
             finally:
                 self._write_report(curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
-                                   root_partition_col_dict, dirty_partitions, target_list)
+                                   dirty_partitions, target_list)
                 logger.info("Done.")
         except Exception, ex:
             logger.exception(ex)
@@ -456,19 +430,14 @@ class AnalyzeDb(Operation):
 
         return 0
 
-    def run_analyze(self, logger, ordered_candidates, candidates, input_col_dict, root_partition_col_dict):
+    def run_analyze(self, logger, ordered_candidates, candidates, input_col_dict):
         logger.info("Starting analyze with %d workers..." % self.parallel_level)
         pool = AnalyzeWorkerPool(numWorkers=self.parallel_level)
 
         for can in ordered_candidates:
             can_schema, can_table = can[0], can[1]
-            if can in candidates:
-                target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
-                cmd = create_psql_command(self.dbname, ANALYZE_SQL % target)
-
-            else:  # can in root_partition_col_dict
-                target = self._get_tablename_with_cols(can_schema, can_table, root_partition_col_dict)
-                cmd = create_psql_command(self.dbname, ANALYZE_ROOT_SQL % target)
+            target = self._get_tablename_with_cols(can_schema, can_table, input_col_dict)
+            cmd = create_psql_command(self.dbname, ANALYZE_SQL % target)
 
             # Also stash the name of the target table in the object, so that it can be extracted
             # from it later.
@@ -658,7 +627,7 @@ class AnalyzeDb(Operation):
         return ret
 
     def _write_back(self, curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
-                    input_col_dict, prev_col_dict, root_partition_col_dict, is_full, dirty_partitions, target_list):
+                    input_col_dict, prev_col_dict, is_full, dirty_partitions, target_list):
 
         current_time = generate_timestamp() # timestamp used for output directory
         validate_dir("%s/%s/%s/%s" % (self.master_datadir, self.analyze_dir, self.dbname, current_time))
@@ -669,7 +638,7 @@ class AnalyzeDb(Operation):
         prev_last_op_dict = create_last_op_dict(prev_last_op)
 
         for schema_table in (x for x in self.success_list if
-                             x not in heap_partitions and x not in root_partition_col_dict):
+                             x not in heap_partitions):
             # update modcount for tables that are successfully analyzed
             new_modcount = curr_ao_state_dict[schema_table]
             prev_ao_state_dict[schema_table] = new_modcount
@@ -799,45 +768,14 @@ class AnalyzeDb(Operation):
                 ret.append(tup)
             return ret
 
-    def _get_root_partition_col_dict(self, candidates, input_col_dict):
+    def _get_ordered_candidates(self, candidates):
         """
-        Examine the candidates and figure out the root partitions whose stats need refreshing and
-        what columns need to be analyzed on those root partitions.
-        If the program is invoked on whole schema or whole database, then we know all columns have
-        been requested. Thus we can use one query to obtain the root partitions associated with the
-        candidates.
-        If the program is invoked by '-t' or '-f', we need to either look up the partition_dict or
-        issue a query to get the leaf-root relationship. Then the columns to be analyzed on the root
-        level are the set union of the columns to be analyzed for all leaf partitions.
-        """
-        logger.debug("getting mapping between leaf and root partition tables...")
-        ret = {}
-        # The leaf_root_dict keeps track of the mapping between a leaf partition and its root partition
-        # for the use of refreshing root stats.
-        leaf_root_dict = {}
-        oid_str = get_oid_str(candidates)
-        qresult = run_sql(self.conn, GET_LEAF_ROOT_MAPPING_SQL % oid_str)
-        for mapping in qresult:
-            leaf_root_dict[(mapping[0], mapping[1])] = (mapping[2], mapping[3])
-
-        for can in candidates:
-            if can in leaf_root_dict:  # this is a leaf partition
-                if leaf_root_dict[can] not in ret:
-                    ret[leaf_root_dict[can]] = input_col_dict[can].copy()
-                else:
-                    ret[leaf_root_dict[can]] |= input_col_dict[can].copy()
-        ## TODO: do we need column expansion here?
-        return ret
-
-    def _get_ordered_candidates(self, candidates, root_partition_col_dict):
-        """
-        Take all tables in candidates and root_partition_col_dict and order them
-        by descending order of their OIDs. This gives us two important benefits:
-        1. The root partition will be analyzed right after the leaves
-        2. The leaf partitions (if range partitioned, especially by date) will be ordered in descending
+        Take all tables in candidates order them by descending order of their
+        OIDs. This gives us an important benefit:
+        The leaf partitions (if range partitioned, especially by date) will be ordered in descending
            order of the partition key, so that newer partitions can be analyzed first.
         """
-        candidate_regclass_str = get_oid_str(candidates + root_partition_col_dict.keys())
+        candidate_regclass_str = get_oid_str(candidates)
         qresult = run_sql(self.conn, ORDER_CANDIDATES_BY_OID_SQL % candidate_regclass_str)
         ordered_candidates = []
         for schema_tbl in qresult:
@@ -864,7 +802,7 @@ class AnalyzeDb(Operation):
         return lock_file_path
 
     def _write_report(self, curr_ao_state, curr_last_op, heap_partitions, input_col_dict,
-                      root_partition_col_dict, dirty_partitions, target_list):
+                      dirty_partitions, target_list):
         lock_file_path = self.ensure_semaphore_file_exists()
 
         with open(lock_file_path, 'r') as lock_file:
@@ -881,7 +819,7 @@ class AnalyzeDb(Operation):
                     time.sleep(2)
 
                 self._write_back(curr_ao_state, curr_last_op, prev_ao_state, prev_last_op, heap_partitions,
-                                 input_col_dict, prev_col_dict, root_partition_col_dict, self.full_analyze,
+                                 input_col_dict, prev_col_dict, self.full_analyze,
                                  dirty_partitions, target_list)
             finally:
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
@@ -1262,8 +1200,6 @@ def create_parser():
                       help="List the tables to be analyzed without actually running analyze (dry run).")
     parser.add_option('-p', type='int', dest='parallel_level', default=5, metavar="<parallel level>",
                       help="Parallel level, i.e. the number of tables to be analyzed in parallel. Valid numbers are between 1 and 10. Default value is 5.")
-    parser.add_option('--skip_root_stats', action='store_false', dest='rootstats', default=True,
-                      help="Skip refreshing root partition stats if any of the leaf partitions is analyzed.")
     parser.add_option('--gen_profile_only', action='store_true', dest='gen_profile_only', default=False,
                       help="Create cached state files to indicate specified table or all tables have been analyzed.")
     parser.add_option('--full', action='store_true', dest='full_analyze', default=False,

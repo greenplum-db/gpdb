@@ -240,7 +240,10 @@ test: oid_wraparound
 test: fts_recovery_in_progress
 test: autovacuum-template0
 
-# Online expand introduce the partial tables, check them if they can run correctly
+# gpexpand introduce the partial tables, check them if they can run correctly
 test: gangsize
+
+# some utilities do not work while doing gpexpand, check them can print correct message
+test: run_utility_gpexpand_phase1
 
 # end of tests

@@ -27,10 +27,14 @@ static void pxf_array_element_end(void *state, bool isnull);
  * Returns selected fragments that have been allocated to the current segment
  */
 void
-get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
+get_fragments(GPHDUri *uri,
+              Relation relation,
+              char *filter_string,
+              ProjectionInfo *proj_info,
+              List *quals)
 {
 
-	List	   *data_fragments = NIL;
+	List	   *data_fragments;
 
 	/* Context for the Fragmenter API */
 	ClientContext client_context;
@@ -46,10 +50,12 @@ get_fragments(GPHDUri *uri, Relation relation, char* filter_string)
 	/*
 	 * Enrich the curl HTTP header
 	 */
-	inputData.headers = client_context.http_headers;
-	inputData.gphduri = uri;
-	inputData.rel = relation;
+	inputData.headers   = client_context.http_headers;
+	inputData.gphduri   = uri;
+	inputData.rel       = relation;
 	inputData.filterstr = filter_string;
+	inputData.proj_info = proj_info;
+	inputData.quals     = quals;
 	build_http_headers(&inputData);
 
 	/*

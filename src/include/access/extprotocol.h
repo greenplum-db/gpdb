@@ -23,20 +23,23 @@
 
 /* ------------------------- I/O function API -----------------------------*/
 
+struct ExternalSelectDescData;
+typedef struct ExternalSelectDescData *ExternalSelectDesc;
+
 /*
  * ExtProtocolData is the node type that is passed as fmgr "context" info
  * when a function is called by the External Table protocol manager.
  */
 typedef struct ExtProtocolData
 {
-	NodeTag			type;				  /* see T_ExtProtocolData */
-	Relation		prot_relation;
-	char*			prot_url;
-	char*			prot_databuf;
-	int				prot_maxbytes;
-	void*			prot_user_ctx;
-	bool			prot_last_call;
-	List*			filter_quals;
+	NodeTag            type;                  /* see T_ExtProtocolData */
+	Relation           prot_relation;
+	char               *prot_url;
+	char               *prot_databuf;
+	int                prot_maxbytes;
+	void               *prot_user_ctx;
+	bool               prot_last_call;
+	ExternalSelectDesc desc;
 } ExtProtocolData;
 
 typedef ExtProtocolData *ExtProtocol;
@@ -49,7 +52,7 @@ typedef ExtProtocolData *ExtProtocol;
 #define EXTPROTOCOL_GET_DATABUF(fcinfo)    (((ExtProtocolData*) fcinfo->context)->prot_databuf)
 #define EXTPROTOCOL_GET_DATALEN(fcinfo)    (((ExtProtocolData*) fcinfo->context)->prot_maxbytes)
 #define EXTPROTOCOL_GET_USER_CTX(fcinfo)   (((ExtProtocolData*) fcinfo->context)->prot_user_ctx)
-#define EXTPROTOCOL_GET_FILTER_QUALS(fcinfo) (((ExtProtocolData*) fcinfo->context)->filter_quals)
+#define EXTPROTOCOL_GET_EXTERNAL_SELECT_DESC(fcinfo) (((ExtProtocolData*) fcinfo->context)->desc)
 #define EXTPROTOCOL_IS_LAST_CALL(fcinfo)   (((ExtProtocolData*) fcinfo->context)->prot_last_call)
 
 #define EXTPROTOCOL_SET_LAST_CALL(fcinfo)  (((ExtProtocolData*) fcinfo->context)->prot_last_call = true)

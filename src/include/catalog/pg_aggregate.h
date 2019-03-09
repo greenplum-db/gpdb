@@ -348,7 +348,7 @@ DATA(insert ( 3538	n 0 string_agg_transfn				string_agg_finalfn						-	-	-	-		-	
 DATA(insert ( 3545	n 0 bytea_string_agg_transfn		bytea_string_agg_finalfn				-	-	-	-		-		-		f f	0	2281	0	0		0	_null_ _null_ ));
 
 /* hyperloglog */
-DATA(insert ( 7164	n 0 hyperloglog_add_item_agg_default hyperloglog_comp		hyperloglog_merge	-	-	-		-		-		f f 0	7157	0	0		0	_null_ _null_ ));
+DATA(insert ( 7164	n 0 gp_hyperloglog_add_item_agg_default gp_hyperloglog_comp		gp_hyperloglog_merge	-	-	-		-		-		f f 0	7157	0	0		0	_null_ _null_ ));
 
 /* json */
 DATA(insert ( 3175	n 0 json_agg_transfn				json_agg_finalfn						-	-	-	-		-		-		f f 0	2281	0	0		0	_null_ _null_ ));

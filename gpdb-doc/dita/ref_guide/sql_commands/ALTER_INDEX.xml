@@ -1,25 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX <varname>name</varname> RENAME TO <varname>new_name</varname>
+<topic id="topic1"><title id="ap20941">ALTER INDEX</title><body><p id="sql_command_desc">Changes the definition of an index.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">ALTER INDEX [ IF EXISTS ] <varname>name</varname> RENAME TO <varname>new_name</varname>
 
-ALTER INDEX <varname>name</varname> SET TABLESPACE <varname>tablespace_name</varname>
+ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET TABLESPACE <varname>tablespace_name</varname>
 
-ALTER INDEX <varname>name</varname> SET ( <varname>storage_parameter</varname> = <varname>value</varname> )
+ALTER INDEX [ IF EXISTS ] <varname>name</varname> SET ( <varname>storage_parameter</varname> = <varname>value</varname> [, ...] )
 
-ALTER INDEX <varname>name</varname> RESET ( <varname>storage_parameter</varname> )</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
-There are several subforms: </p><ul><li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
+ALTER INDEX [ IF EXISTS ] <varname>name</varname> RESET ( <varname>storage_parameter</varname>  [, ...] )</codeblock></section><section id="section3"><title>Description</title><p><codeph>ALTER INDEX</codeph> changes the definition of an existing index.
+There are several subforms: </p><ul>
+        <li><b>IF EXISTS</b> — Do not throw an error if the index does not exist. A notice is issued
+          in this case.</li><li id="ap136518"><b>RENAME</b> — Changes the name of the index. There is no effect
 on the stored data.</li><li id="ap136521"><b>SET TABLESPACE</b> — Changes the index's tablespace to the specified
 tablespace and moves the data file(s) associated with the index to the
-new tablespace. See also <codeph>CREATE TABLESPACE</codeph>. </li><li id="ap136524"><b>SET FILLFACTOR</b> — Changes the index-method-specific storage
-parameters for the index. The built-in index methods all accept a single
-parameter: <codeph>FILLFACTOR</codeph>. The fillfactor for an index is
-a percentage that determines how full the index method will try to pack
-index pages. Index contents will not be modified immediately by this
-command. Use <codeph>REINDEX</codeph> to rebuild the index to get the
-desired effects. </li><li id="ap136527"><b>RESET FILLFACTOR</b> — Resets <codeph>FILLFACTOR</codeph> to the
-default. As with <codeph>SET</codeph>, a <codeph>REINDEX</codeph> may
-be needed to update the index entirely.</li></ul></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing index to alter.
+new tablespace. See also <codeph>CREATE TABLESPACE</codeph>. </li><li id="ap136524"><b>SET</b> — Changes the index-method-specific storage parameters for the index.
+          The built-in index methods all accept a single parameter: <varname>fillfactor</varname>.
+          The fillfactor for an index is a percentage that determines how full the index method will
+          try to pack index pages. Index contents will not be modified immediately by this command.
+          Use <codeph>REINDEX</codeph> to rebuild the index to get the desired effects. </li><li id="ap136527"><b>RESET</b> — Resets storage parameters for the index to their defaults. The
+          build-in index methods all accept a single parameter: <varname>fillfactor</varname>. As
+          with <codeph>SET</codeph>, a <codeph>REINDEX</codeph> may be needed to update the index
+          entirely.</li></ul></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of an existing index to alter.
 </pd></plentry><plentry><pt><varname>new_name</varname></pt><pd>New name for the index. </pd></plentry><plentry><pt><varname>tablespace_name</varname></pt><pd>The tablespace to which the index will be moved. </pd></plentry><plentry><pt><varname>storage_parameter</varname></pt>
   <pd>The name of an index-method-specific storage parameter.</pd></plentry>
         <plentry>

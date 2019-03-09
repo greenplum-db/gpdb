@@ -64,8 +64,8 @@
             <li>New segments are immediately available and participate in new queries and data
               loads. The existing data, however, is skewed. It is concentrated on the original
               segments and must be redistributed across the new total number of primary segments. </li>
-            <li>Because some the table data is skewed, some queries might be less efficient because
-              more data motion operations might be needed. </li>
+            <li>Because some of the table data is skewed, some queries might be less efficient
+              because more data motion operations might be needed. </li>
           </ul></li>
         <li>The last step of the software phase is redistributing table data. Using the expansion
           control tables in the <i>gpexpand</i> schema as a guide, tables are redistributed. For

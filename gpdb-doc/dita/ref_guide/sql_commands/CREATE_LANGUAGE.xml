@@ -18,7 +18,14 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
             <title>Description</title>
             <p><codeph>CREATE LANGUAGE</codeph> registers a new procedural language with a Greenplum
                 database. Subsequently, functions and trigger procedures can be defined in this new
-                language. </p>
+                language.</p> 
+            <note>Some procedural languages for Greenplum Database have been made into "extensions,"
+                and should therefore be installed with <xref href="CREATE_EXTENSION.xml#topic1"/>,
+                not <codeph>CREATE LANGUAGE</codeph>. Using <codeph>CREATE LANGUAGE</codeph>
+                directly should be restricted to extension installation scripts. If you have a
+                "bare" language in your database, perhaps as a result of an upgrade, you can convert
+                it to an extension using <codeph>CREATE EXTENSION <varname>langname</varname> FROM
+                    unpackaged</codeph>. </note>
             <p>Superusers can register a new language with a Greenplum database. A database owner
                 can also register within that database any language listed in the
                     <codeph>pg_pltemplate</codeph> catalog in which the
@@ -96,13 +103,12 @@ CREATE [ OR REPLACE ] [ TRUSTED ] [ PROCEDURAL ] LANGUAGE <varname>name</varname
                     <pt>
                         <varname>name</varname>
                     </pt>
-                    <pd>The name of the new procedural language. The language name is case
-                        insensitive. The name must be unique among the languages in the database.
-                        Built-in support is included for <codeph>plpgsql</codeph>,
-                            <codeph>plperl</codeph>, <codeph>plpythonu</codeph>, and
-                            <codeph>plr</codeph>. The languages <codeph>plpgsql</codeph> (PL/pgSQL)
-                        and <codeph>plpythonu</codeph> (PL/Python) are installed by default in
-                        Greenplum Database.</pd>
+                    <pd>The name of the new procedural language. The name must be unique among the
+                        languages in the database. Built-in support is included for
+                            <codeph>plpgsql</codeph>, <codeph>plperl</codeph>,
+                            <codeph>plpythonu</codeph>, and <codeph>plr</codeph>. The languages
+                            <codeph>plpgsql</codeph> (PL/pgSQL) and <codeph>plpythonu</codeph>
+                        (PL/Python) are installed by default in Greenplum Database.</pd>
                 </plentry>
                 <plentry>
                     <pt>HANDLER <varname>call_handler</varname></pt>

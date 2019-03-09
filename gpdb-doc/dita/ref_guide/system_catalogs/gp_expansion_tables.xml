@@ -63,6 +63,16 @@
           </row>
           <row>
             <entry colname="col1">
+              <codeph>rank</codeph>
+            </entry>
+            <entry colname="col2">int</entry>
+            <entry colname="col3"/>
+            <entry colname="col4">Rank determines the order in which tables are expanded. The
+              expansion utility will sort on rank and expand the lowest-ranking tables
+              first.</entry>
+          </row>
+          <row>
+            <entry colname="col1">
               <codeph>status</codeph>
             </entry>
             <entry colname="col2">text</entry>

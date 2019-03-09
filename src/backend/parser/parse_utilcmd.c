@@ -1703,7 +1703,7 @@ transformCreateExternalStmt(CreateExternalStmt *stmt, const char *queryString)
 			stmt->distributedBy = makeNode(DistributedBy);
 			stmt->distributedBy->ptype = POLICYTYPE_PARTITIONED;
 			stmt->distributedBy->keyCols = NIL;
-			stmt->distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+			stmt->distributedBy->numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS();
 		}
 		else
 		{
@@ -1769,7 +1769,7 @@ transformDistributedBy(CreateStmtContext *cxt,
 		numsegments = distributedBy->numsegments;
 	else
 		/* Otherwise use DEFAULT as numsegments */
-		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS;
+		numsegments = GP_POLICY_DEFAULT_NUMSEGMENTS();
 
 	/* Explictly specified distributed randomly, no futher check needed */
 	if (distributedBy &&

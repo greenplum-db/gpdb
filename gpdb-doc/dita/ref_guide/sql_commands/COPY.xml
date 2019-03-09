@@ -7,12 +7,12 @@
     <p id="sql_command_desc">Copies data between a file and a table.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">COPY <varname>table_name</varname> [(<varname>column</varname> [, ...])] 
+      <codeblock id="sql_command_synopsis">COPY <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] 
      FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
      [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
      [ ON SEGMENT ]
 
-COPY { <varname>table_name</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} 
+COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] | (<varname>query</varname>)} 
      TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
      [ [ WITH ] ( <varname>option</varname> [, ...] ) ]
      [ ON SEGMENT ]</codeblock>
@@ -20,13 +20,15 @@ COPY { <varname>table_name</varname> [(<varname>column</varname> [, ...])] | (<v
         of:<codeblock>
 FORMAT <varname>format_name</varname>
 OIDS [ <varname>boolean</varname> ]
+FREEZE [ <varname>boolean</varname> ]
 DELIMITER '<varname>delimiter_character</varname>'
 NULL '<varname>null string</varname>'
 HEADER [ <varname>boolean</varname> ]
 QUOTE '<varname>quote_character</varname>'
 ESCAPE '<varname>escape_character</varname>'
-FORCE_QUOTE { ( <varname>column</varname> [, ...] ) | * }
-FORCE_NOT_NULL ( <varname>column</varname> [, ...] )
+FORCE_QUOTE { ( <varname>column_name</varname> [, ...] ) | * }
+FORCE_NOT_NULL ( <varname>column_name</varname> [, ...] ) 
+ENCODING '<varname>encoding_name</varname>'       
 FILL MISSING FIELDS
 LOG ERRORS [ SEGMENT REJECT LIMIT <varname>count</varname> [ ROWS | PERCENT ] ]
 IGNORE EXTERNAL PARTITIONS</codeblock></p>
@@ -103,7 +105,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         </plentry>
         <plentry>
           <pt>
-            <varname>column</varname>
+            <varname>column_name</varname>
           </pt>
           <pd>An optional list of columns to be copied. If no column list is specified, all columns
             of the table will be copied. </pd>
@@ -121,19 +123,18 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <pt>
             <varname>filename</varname>
           </pt>
-          <pd>The absolute path name of the input or output file. An input file name can be an
-            absolute or relative path, but an output file name must be an absolute path. Windows
-            users might need to use an <codeph>E''</codeph> string and double any backslashes used
-            in the path name.</pd>
+          <pd>The path name of the input or output file.  An input file name can be
+            an absolute or relative path, but an output file name must be an absolute
+            path. Windows users might need to use an <codeph>E''</codeph> string and
+              double any backslashes used in the path name.</pd>
         </plentry>
         <plentry>
           <pt>PROGRAM '<varname>command</varname>'</pt>
-          <pd>Specify a command to execute. The <varname>command</varname> must be specified from
+          <pd>Specify a command to execute. In <codeph>COPY FROM</codeph>, the input is
+            read from standard output of the command, and in <codeph>COPY TO</codeph>,
+              the output is written to the standard input of the command. The <varname>command</varname> must be specified from
             the viewpoint of the Greenplum Database master host system, and must be executable by
-            the Greenplum Database administrator user (<codeph>gpadmin</codeph>). The <codeph>COPY
-              FROM</codeph> command reads the input from the standard output of the command, and for
-            the <codeph>COPY TO</codeph> command, the output is written to the standard input of the
-            command.</pd>
+            the Greenplum Database administrator user (<codeph>gpadmin</codeph>). </pd>
           <pd>The <varname>command</varname> is invoked by a shell. When passing arguments to the
             shell, strip or escape any special characters that have a special meaning for the shell.
             For security reasons, it is best to use a fixed command string, or at least avoid
@@ -174,6 +175,16 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <pt>OIDS</pt>
           <pd>Specifies copying the OID for each row. (An error is raised if OIDS is specified for a
             table that does not have OIDs, or in the case of copying a query.) </pd>
+        </plentry>
+        <plentry><pt>FREEZE</pt>
+          <pd>Requests copying the data with rows already frozen, just as they would be after
+            running the <codeph>VACUUM FREEZE</codeph> command. This is intended as a performance
+            option for initial data loading. Rows will be frozen only if the table being loaded has
+            been created or truncated in the current subtransaction, there are no cursors open, and
+            there are no older snapshots held by this transaction. </pd>
+          <pd>Note that all other sessions will immediately be able to see the data once it has
+            been successfully loaded. This violates the normal rules of MVCC visibility and users
+            specifying this option should be aware of the potential problems this might cause. </pd>
         </plentry>
         <plentry>
           <pt>DELIMITER </pt>
@@ -229,6 +240,12 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
             zero-length strings rather than nulls, even when they are not quoted. This option is
             allowed only in <codeph>COPY FROM</codeph>, and only when using <codeph>CSV</codeph>
             format.</pd>
+        </plentry>
+        <plentry>
+          <pt>ENCODING</pt>
+          <pd>Specifies that the file is encoded in the <varname>encoding_name</varname>. If this
+            option is omitted, the current client encoding is used. See the Notes below for more
+            details.</pd>
         </plentry>
         <plentry>
           <pt>ON SEGMENT</pt>
@@ -385,10 +402,11 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
           <codeph>DateStyle</codeph> should be set to ISO before using <codeph>COPY TO</codeph>. It
         is also a good idea to avoid dumping data with <varname>IntervalStyle</varname> set to
           <codeph>sql_standard</codeph>, because negative interval values might be misinterpreted by
-        a server that has a different setting for <varname>IntervalStyle</varname>. </p><p>Input
-        data is interpreted according to the current client encoding, and output data is encoded in
-        the current client encoding, even if the data does not pass through the client but is read
-        from or written to a file directly by the server.</p><p>When copying XML data from a file in
+          a server that has a different setting for <varname>IntervalStyle</varname>. </p>
+      <p>Input data is interpreted according to <codeph>ENCODING</codeph> option or the current
+        client encoding, and output data is encoded in <codeph>ENCODING</codeph> or the current
+        client encoding, even if the data does not pass through the client but is read from or
+        written to a file directly by the server.</p><p>When copying XML data from a file in
         text mode, the server configuration parameter <codeph><xref
             href="../config_params/guc-list.xml#xmloption">xmloption</xref></codeph> affects the
         validation of the XML data that is copied. If the value is <codeph>content</codeph> (the
@@ -681,7 +699,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
       <p>There is no <codeph>COPY</codeph> statement in the SQL standard. </p>
       <p>The following syntax was used in earlier versions of Greenplum Database and is still
         supported:
-        <codeblock>COPY <varname>tablename</varname> [(<varname>column</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
+        <codeblock>COPY <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] FROM {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDIN}
      [ [WITH]  
        [ON SEGMENT]
        [BINARY]
@@ -692,12 +710,12 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
        [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
        [NEWLINE [ AS ] 'LF' | 'CR' | 'CRLF']
        [CSV [QUOTE [ AS ] '<varname>quote</varname>'] 
-            [FORCE NOT NULL <varname>column</varname> [, ...]]
+            [FORCE NOT NULL <varname>column_name</varname> [, ...]]
        [FILL MISSING FIELDS]
        [[LOG ERRORS]  
        SEGMENT REJECT LIMIT <varname>count</varname> [ROWS | PERCENT] ]
 
-COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
+COPY { <varname>table_name</varname> [(<varname>column_name</varname> [, ...])] | (<varname>query</varname>)} TO {'<varname>filename</varname>' | PROGRAM '<varname>command</varname>' | STDOUT}
       [ [WITH] 
         [ON SEGMENT]
         [BINARY]
@@ -707,7 +725,7 @@ COPY { <varname>tablename</varname> [(<varname>column</varname> [, ...])] | (<va
         [NULL [ AS ] 'null string']
         [ESCAPE [ AS ] '<varname>escape</varname>' | 'OFF']
         [CSV [QUOTE [ AS ] 'quote'] 
-             [FORCE QUOTE column [, ...]] | * ]
+             [FORCE QUOTE <varname>column_name</varname> [, ...]] | * ]
       [IGNORE EXTERNAL PARTITIONS ]</codeblock>
       </p>
       <p>Note that in this syntax, <codeph>BINARY</codeph> and <codeph>CSV</codeph> are treated as

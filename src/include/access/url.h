@@ -14,6 +14,8 @@
 #ifndef URL_H
 #define URL_H
 
+#include "access/extprotocol.h"
+
 #include "commands/copy.h"
 
 /*
@@ -72,7 +74,7 @@ typedef struct extvar_t
 #define EXEC_URL_PREFIX "execute:"
 
 /* exported functions */
-extern URL_FILE *url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter_quals);
+extern URL_FILE *url_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, ExternalSelectDesc desc);
 extern void url_fclose(URL_FILE *file, bool failOnError, const char *relname);
 extern bool url_feof(URL_FILE *file, int bytesread);
 extern bool url_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);
@@ -102,7 +104,7 @@ extern bool url_execute_ferror(URL_FILE *file, int bytesread, char *ebuf, int eb
 extern size_t url_execute_fread(void *ptr, size_t size, URL_FILE *file, CopyState pstate);
 extern size_t url_execute_fwrite(void *ptr, size_t size, URL_FILE *file, CopyState pstate);
 
-extern URL_FILE *url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, List* filter_quals);
+extern URL_FILE *url_custom_fopen(char *url, bool forwrite, extvar_t *ev, CopyState pstate, ExternalSelectDesc desc);
 extern void url_custom_fclose(URL_FILE *file, bool failOnError, const char *relname);
 extern bool url_custom_feof(URL_FILE *file, int bytesread);
 extern bool url_custom_ferror(URL_FILE *file, int bytesread, char *ebuf, int ebuflen);

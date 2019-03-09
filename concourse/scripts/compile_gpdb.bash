@@ -3,11 +3,12 @@ set -exo pipefail
 
 GREENPLUM_INSTALL_DIR=/usr/local/greenplum-db-devel
 export GPDB_ARTIFACTS_DIR=$(pwd)/${OUTPUT_ARTIFACT_DIR}
-
 CWDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
 GPDB_SRC_PATH=${GPDB_SRC_PATH:=gpdb_src}
+
 GPDB_BIN_FILENAME=${GPDB_BIN_FILENAME:="bin_gpdb.tar.gz"}
+GREENPLUM_CL_INSTALL_DIR=/usr/local/greenplum-clients-devel
+GPDB_CL_FILENAME=${GPDB_CL_FILENAME:="gpdb-clients-${TARGET_OS}${TARGET_OS_VERSION}.tar.gz"}
 
 function expand_glob_ensure_exists() {
   local -a glob=($*)
@@ -29,7 +30,6 @@ function install_deps_for_centos() {
   # install libsigar from tar.gz
   tar zxf libsigar-installer/sigar-*.targz -C gpdb_src/gpAux/ext
 }
-
 
 function link_tools_for_centos() {
   tar xf python-tarball/python-*.tar.gz -C $(pwd)/${GPDB_SRC_PATH}/gpAux/ext
@@ -105,9 +105,9 @@ function unittest_check_gpdb() {
 function include_zstd() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig/.
-      cp /usr/lib64/libzstd.so* lib/.
-      cp /usr/include/zstd*.h include/.
+      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
+      cp /usr/lib64/libzstd.so* lib
+      cp /usr/include/zstd*.h include
     fi
   popd
 }
@@ -115,7 +115,7 @@ function include_zstd() {
 function include_quicklz() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib/.
+      cp /usr/lib64/libquicklz.so* lib
     fi
   popd
 }
@@ -123,7 +123,15 @@ function include_quicklz() {
 function include_libstdcxx() {
   pushd /opt/gcc-6*/lib64
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp libstdc++.so.* ${GREENPLUM_INSTALL_DIR}/lib/.
+      for libfile in libstdc++.so.*; do
+        case $libfile in
+          *.py)
+            ;; # we don't vendor libstdc++.so.*-gdb.py
+          *)
+            cp "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            ;; # vendor everything else
+        esac
+      done
     fi
   popd
 }
@@ -156,6 +164,16 @@ function export_gpdb_win32_ccl() {
         cp greenplum-*.msi "${GPDB_ARTIFACTS_DIR}/"
     fi
     popd
+}
+
+function export_gpdb_clients() {
+  TARBALL="${GPDB_ARTIFACTS_DIR}/${GPDB_CL_FILENAME}"
+  pushd ${GREENPLUM_CL_INSTALL_DIR}
+    source ./greenplum_clients_path.sh
+    python -m compileall -q -x test .
+    chmod -R 755 .
+    tar -czf "${TARBALL}" ./*
+  popd
 }
 
 function _main() {
@@ -218,6 +236,11 @@ function _main() {
   export_gpdb
   export_gpdb_extensions
   export_gpdb_win32_ccl
+
+  if echo "${BLD_TARGETS}" | grep -qwi "clients"
+  then
+      export_gpdb_clients
+  fi
 }
 
 _main "$@"

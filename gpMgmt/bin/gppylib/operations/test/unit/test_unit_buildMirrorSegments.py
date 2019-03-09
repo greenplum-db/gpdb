@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 #
-# Copyright (c) Greenplum Inc 2008. All Rights Reserved. 
+# Copyright (c) Greenplum Inc 2008. All Rights Reserved.
 #
 from gppylib.gparray import Segment, GpArray
 from gppylib.test.unit.gp_unittest import *
-import tempfile, os, shutil
-from gppylib.commands.base import CommandResult
+import logging
+import os
+import shutil
+import StringIO
+import tempfile
+from gppylib.commands import base
 from mock import patch, MagicMock, Mock
 from gppylib.operations.buildMirrorSegments import GpMirrorListToBuild
 from gppylib.operations.startSegments import StartSegmentsResult
@@ -19,8 +23,8 @@ class buildMirrorSegmentsTestCase(GpTestCase):
 
         self.buildMirrorSegs = GpMirrorListToBuild(
             toBuild = [],
-            pool = None, 
-            quiet = True, 
+            pool = None,
+            quiet = True,
             parallelDegree = 0,
             logger=self.logger
             )
@@ -33,7 +37,7 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         expected_output = []
         segs = self.buildMirrorSegs._get_running_postgres_segments(toBuild)
         self.assertEquals(segs, expected_output)
-        
+
     @patch('gppylib.operations.buildMirrorSegments.get_pid_from_remotehost')
     @patch('gppylib.operations.buildMirrorSegments.is_pid_postmaster', return_value=True)
     @patch('gppylib.operations.buildMirrorSegments.check_pid_on_remotehost', return_value=True)
@@ -81,14 +85,14 @@ class buildMirrorSegmentsTestCase(GpTestCase):
         self.assertEquals(segs, expected_output)
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(rc=0, stdout='/tmp/seg0', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=0, stdout='/tmp/seg0', stderr='', completed=True, halt=False))
     def test_dereference_remote_symlink_valid_symlink(self, mock1, mock2):
         datadir = '/tmp/link/seg0'
         host = 'h1'
         self.assertEqual(self.buildMirrorSegs.dereference_remote_symlink(datadir, host), '/tmp/seg0')
 
     @patch('gppylib.commands.base.Command.run')
-    @patch('gppylib.commands.base.Command.get_results', return_value=CommandResult(rc=1, stdout='', stderr='', completed=True, halt=False))
+    @patch('gppylib.commands.base.Command.get_results', return_value=base.CommandResult(rc=1, stdout='', stderr='', completed=True, halt=False))
     def test_dereference_remote_symlink_unable_to_determine_symlink(self, mock1, mock2):
         datadir = '/tmp/seg0'
         host = 'h1'
@@ -159,6 +163,105 @@ class buildMirrorSegmentsTestCase(GpTestCase):
             "5|1|m|m|s|u|sdw1|sdw1|50001|/data/mirror1")
 
         return GpArray([self.master, self.primary0, self.primary1, mirror0, mirror1])
+
+class SegmentProgressTestCase(GpTestCase):
+    """
+    Test case for GpMirrorListToBuild._join_and_show_segment_progress().
+    """
+    def setUp(self):
+        self.pool = Mock(spec=base.WorkerPool)
+        self.buildMirrorSegs = GpMirrorListToBuild(
+            toBuild=[],
+            pool=self.pool,
+            quiet=True,
+            parallelDegree=0,
+            logger=Mock(spec=logging.Logger)
+        )
+
+    def test_command_output_is_displayed_once_after_worker_pool_completes(self):
+        cmd = Mock(spec=base.Command)
+        cmd.remoteHost = 'localhost'
+        cmd.dbid = 2
+        cmd.get_results.return_value.stdout = "string 1\n"
+
+        cmd2 = Mock(spec=base.Command)
+        cmd2.remoteHost = 'host2'
+        cmd2.dbid = 4
+        cmd2.get_results.return_value.stdout = "string 2\n"
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
+
+        results = outfile.getvalue()
+        self.assertEqual(results, (
+            'localhost (dbid 2): string 1\n'
+            'host2 (dbid 4): string 2\n'
+        ))
+
+    def test_command_output_is_displayed_once_for_every_blocked_join(self):
+        cmd = Mock(spec=base.Command)
+        cmd.remoteHost = 'localhost'
+        cmd.dbid = 2
+
+        cmd.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
+
+        outfile = StringIO.StringIO()
+        self.pool.join.side_effect = [False, True]
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd], outfile=outfile)
+
+        results = outfile.getvalue()
+        self.assertEqual(results, (
+            'localhost (dbid 2): string 1\n'
+            'localhost (dbid 2): string 2\n'
+        ))
+
+    def test_inplace_display_uses_ansi_escapes_to_overwrite_previous_output(self):
+        cmd = Mock(spec=base.Command)
+        cmd.remoteHost = 'localhost'
+        cmd.dbid = 2
+        cmd.get_results.side_effect = [Mock(stdout="string 1"), Mock(stdout="string 2")]
+
+        cmd2 = Mock(spec=base.Command)
+        cmd2.remoteHost = 'host2'
+        cmd2.dbid = 4
+        cmd2.get_results.side_effect = [Mock(stdout="string 3"), Mock(stdout="string 4")]
+
+        outfile = StringIO.StringIO()
+        self.pool.join.side_effect = [False, True]
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], inplace=True, outfile=outfile)
+
+        results = outfile.getvalue()
+        self.assertEqual(results, (
+            'localhost (dbid 2): string 1\x1b[K\n'
+            'host2 (dbid 4): string 3\x1b[K\n'
+            '\x1b[2A'
+            'localhost (dbid 2): string 2\x1b[K\n'
+            'host2 (dbid 4): string 4\x1b[K\n'
+        ))
+
+    def test_errors_during_command_execution_are_displayed(self):
+        cmd = Mock(spec=base.Command)
+        cmd.remoteHost = 'localhost'
+        cmd.dbid = 2
+        cmd.get_results.return_value.stderr = "some error\n"
+        cmd.run.side_effect = base.ExecutionError("Some exception", cmd)
+
+        cmd2 = Mock(spec=base.Command)
+        cmd2.remoteHost = 'host2'
+        cmd2.dbid = 4
+        cmd2.get_results.return_value.stderr = ''
+        cmd2.run.side_effect = base.ExecutionError("Some exception", cmd2)
+
+        outfile = StringIO.StringIO()
+        self.pool.join.return_value = True
+        self.buildMirrorSegs._join_and_show_segment_progress([cmd, cmd2], outfile=outfile)
+
+        results = outfile.getvalue()
+        self.assertEqual(results, (
+            'localhost (dbid 2): some error\n'
+            'host2 (dbid 4): \n'
+        ))
 
 if __name__ == '__main__':
     run_tests()

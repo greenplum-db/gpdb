@@ -2,9 +2,8 @@
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
 <topic id="topic1"><title id="bx20941">CREATE OPERATOR CLASS</title><body><p id="sql_command_desc">Defines a new operator class.</p><section id="section2"><title>Synopsis</title><codeblock id="sql_command_synopsis">CREATE OPERATOR CLASS <varname>name</varname> [DEFAULT] FOR TYPE <varname>data_type</varname>  
-  USING <varname>index_method</varname> AS 
-  { 
-  OPERATOR <varname>strategy_number</varname> <varname>op_name</varname> [(<varname>op_type</varname>, <varname>op_type</varname>)]
+  USING <varname>index_method</varname> [ FAMILY <varname>family_name</varname> ] AS 
+  { OPERATOR <varname>strategy_number</varname> <varname>operator_name</varname> [ ( <varname>op_type</varname>, <varname>op_type</varname> ) ] [ FOR SEARCH | FOR ORDER BY <varname>sort_family_name</varname> ]
   | FUNCTION <varname>support_number</varname> <varname>funcname</varname> (<varname>argument_type</varname> [, ...] )
   | STORAGE <varname>storage_type</varname>
   } [, ... ]</codeblock></section><section id="section3"><title>Description</title><p><codeph>CREATE OPERATOR CLASS</codeph> creates a new operator class.
@@ -19,22 +18,48 @@ the operator class must be defined as <codeph>IMMUTABLE</codeph>.</p><p><codeph>
 the operator class definition includes all the operators and functions
 required by the index method, nor whether the operators and functions
 form a self-consistent set. It is the user's responsibility to define
-a valid operator class. </p><p>You must be a superuser to create an operator class.</p></section><section id="section4"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The (optionally schema-qualified) name of the operator class to be
-defined. Two operator classes in the same schema can have the same name
-only if they are for different index methods. </pd></plentry><plentry><pt>DEFAULT</pt><pd>Makes the operator class the default operator class for its data
-type. At most one operator class can be the default for a specific data
-type and index method.</pd></plentry><plentry><pt><varname>data_type</varname></pt><pd>The column data type that this operator class is for. </pd></plentry><plentry><pt><varname>index_method</varname></pt><pd>The name of the index method this operator class is for. Choices
-are <codeph>btree</codeph>, <codeph>bitmap</codeph>, and <codeph>gist</codeph>.
-</pd></plentry><plentry><pt><varname>strategy_number</varname></pt><pd>The operators associated with an operator class are identified by <i>strategy numbers</i>, which
-                        serve to identify the semantics of each operator within the context of its
-                        operator class. For example, B-trees impose a strict ordering on keys,
-                        lesser to greater, and so operators like <i>less than</i> and <i>greater
-                            than or equal to</i> are interesting with respect to a B-tree. These
-                        strategies can be thought of as generalized operators. Each operator class
-                        specifies which actual operator corresponds to each strategy for a
-                        particular data type and interpretation of the index semantics. The
-                        corresponding strategy numbers for each index method are as follows:<table
-                            id="bx145491">
+a valid operator class. </p><p>You must be a superuser to create an operator class.</p></section><section id="section4"><title>Parameters</title>
+            <parml>
+                <plentry>
+                    <pt><varname>name</varname></pt>
+                    <pd>The (optionally schema-qualified) name of the operator class to be defined.
+                        Two operator classes in the same schema can have the same name only if they
+                        are for different index methods. </pd>
+                </plentry>
+                <plentry>
+                    <pt>DEFAULT</pt>
+                    <pd>Makes the operator class the default operator class for its data type. At
+                        most one operator class can be the default for a specific data type and
+                        index method.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>data_type</varname></pt>
+                    <pd>The column data type that this operator class is for. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>index_method</varname></pt>
+                    <pd>The name of the index method this operator class is for. Choices are
+                            <codeph>btree</codeph>, <codeph>bitmap</codeph>, and
+                            <codeph>gist</codeph>. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>family_name</varname></pt>
+                    <pd>The name of the existing operator family to add this operator class to. If
+                        not specified, a family named the same as the operator class is used
+                        (creating it, if it doesn't already exist). </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>strategy_number</varname></pt>
+                    <pd>The operators associated with an operator class are identified by
+                            <i>strategy numbers</i>, which serve to identify the semantics of each
+                        operator within the context of its operator class. For example, B-trees
+                        impose a strict ordering on keys, lesser to greater, and so operators like
+                            <i>less than</i> and <i>greater than or equal to</i> are interesting
+                        with respect to a B-tree. These strategies can be thought of as generalized
+                        operators. Each operator class specifies which actual operator corresponds
+                        to each strategy for a particular data type and interpretation of the index
+                        semantics. The corresponding strategy numbers for each index method are as
+                            follows:<table id="bx145491">
                             <title>B-tree and Bitmap Strategies</title>
                             <tgroup cols="2">
                                 <colspec colnum="1" colname="col1" colwidth="110pt"/>
@@ -130,17 +155,45 @@ are <codeph>btree</codeph>, <codeph>bitmap</codeph>, and <codeph>gist</codeph>.
                                     </row>
                                 </tbody>
                             </tgroup>
-                        </table></pd></plentry><plentry><pt><varname>operator_name</varname></pt><pd>The name (optionally schema-qualified) of an operator associated
-with the operator class. </pd></plentry><plentry><pt><varname>op_type</varname></pt><pd>The operand data type(s) of an operator, or <codeph>NONE</codeph>
-to signify a left-unary or right-unary operator. The operand data types
-may be omitted in the normal case where they are the same as the operator
-class data type. </pd></plentry><plentry><pt><varname>support_number</varname></pt><pd>Index methods require additional support routines in order to work. These operations are
-                        administrative routines used internally by the index methods. As with
-                        strategies, the operator class identifies which specific functions should
-                        play each of these roles for a given data type and semantic interpretation.
-                        The index method defines the set of functions it needs, and the operator
-                        class identifies the correct functions to use by assigning them to the
-                            <i>support function numbers</i> as follows:<table id="bx145974">
+                        </table></pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>sort_family_name</varname></pt>
+                    <pd>The name (optionally schema-qualified) of an existing
+                            <codeph>btree</codeph> operator family that describes the sort ordering
+                        associated with an ordering operator.</pd>
+                    <pd>If neither <codeph>FOR SEARCH</codeph> nor <codeph>FOR ORDER BY</codeph> is
+                        specified, <codeph>FOR SEARCH</codeph> is the default. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>operator_name</varname></pt>
+                    <pd>The name (optionally schema-qualified) of an operator associated with the
+                        operator class. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>op_type</varname></pt>
+                    <pd>In an <codeph>OPERATOR</codeph> clause, the operand data type(s) of the
+                        operator, or <codeph>NONE</codeph> to signify a left-unary or right-unary
+                        operator. The operand data types can be omitted in the normal case where
+                        they are the same as the operator class's data type. </pd>
+                    <pd>In a <codeph>FUNCTION</codeph> clause, the operand data type(s) the function
+                        is intended to support, if different from the input data type(s) of the
+                        function (for B-tree comparison functions and hash functions) or the class's
+                        data type (for B-tree sort support functions and all functions in GiST,
+                        SP-GiST and GIN operator classes). These defaults are correct, and so
+                            <varname>op_type</varname> need not be specified in
+                            <codeph>FUNCTION</codeph> clauses, except for the case of a B-tree sort
+                        support function that is meant to support cross-data-type comparisons.</pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>support_number</varname></pt>
+                    <pd>Index methods require additional support routines in order to work. These
+                        operations are administrative routines used internally by the index methods.
+                        As with strategies, the operator class identifies which specific functions
+                        should play each of these roles for a given data type and semantic
+                        interpretation. The index method defines the set of functions it needs, and
+                        the operator class identifies the correct functions to use by assigning them
+                        to the <i>support function numbers</i> as follows:<table id="bx145974">
                             <title>B-tree and Bitmap Support Functions</title>
                             <tgroup cols="2">
                                 <colspec colnum="1" colname="col1" colwidth="275pt"/>
@@ -212,11 +265,25 @@ class data type. </pd></plentry><plentry><pt><varname>support_number</varname></
                                     </row>
                                 </tbody>
                             </tgroup>
-                        </table></pd></plentry><plentry><pt><varname>funcname</varname></pt><pd>The name (optionally schema-qualified) of a function that is an index
-method support procedure for the operator class. </pd></plentry><plentry><pt><varname>argument_types</varname></pt><pd>The parameter data type(s) of the function. </pd></plentry><plentry><pt><varname>storage_type</varname></pt><pd>The data type actually stored in the index. Normally this is the
-same as the column data type, but the GiST index method allows it to
-be different. The <codeph>STORAGE</codeph> clause must be omitted unless
-the index method allows a different type to be used. </pd></plentry></parml></section><section id="section5"><title>Notes</title><p>Because the index machinery does not check access permissions on functions
+                        </table></pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>funcname</varname></pt>
+                    <pd>The name (optionally schema-qualified) of a function that is an index method
+                        support procedure for the operator class. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>argument_types</varname></pt>
+                    <pd>The parameter data type(s) of the function. </pd>
+                </plentry>
+                <plentry>
+                    <pt><varname>storage_type</varname></pt>
+                    <pd>The data type actually stored in the index. Normally this is the same as the
+                        column data type, but some index methods (currently GiST and GIN) allow it
+                        to be different. The <codeph>STORAGE</codeph> clause must be omitted unless
+                        the index method allows a different type to be used. </pd>
+                </plentry>
+            </parml></section><section id="section5"><title>Notes</title><p>Because the index machinery does not check access permissions on functions
 before using them, including a function or operator in an operator class
 is the same as granting public execute permission on it. This is usually
 not an issue for the sorts of functions that are useful in an operator
@@ -226,10 +293,11 @@ optimizer from recognizing that the query matches an index.</p><p>Any functions 
 as <codeph>IMMUTABLE</codeph>.</p>
             <p>Before Greenplum Database 6.0, the <codeph>OPERATOR</codeph> clause could include a
                     <codeph>RECHECK</codeph> option. This option is no longer supported. Greenplum
-                Database now determines whether an index operator is "lossy" on-the-fly at runtime. This
+                Database now determines whether an index operator is "lossy" on-the-fly at run time. This
                 allows more efficient handling of cases where an operator might or might not be
                 lossy.</p></section><section id="section6"><title>Examples</title><p>The following example command defines a GiST index operator class for the data type
-                    <codeph>_int4</codeph> (array of int4): </p><codeblock>CREATE OPERATOR CLASS gist__int_ops
+                    <codeph>_int4</codeph> (array of int4). See the 
+                <codeph>intarray</codeph> contrib module for the complete example.</p><codeblock>CREATE OPERATOR CLASS gist__int_ops
     DEFAULT FOR TYPE _int4 USING gist AS
         OPERATOR 3 &amp;&amp;,
         OPERATOR 6 = (anyarray, anyarray),

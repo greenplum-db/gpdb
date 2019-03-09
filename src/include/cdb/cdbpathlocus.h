@@ -208,7 +208,7 @@ typedef struct CdbPathLocus
 #define CdbPathLocus_MakeNull(plocus, numsegments_)                   \
             CdbPathLocus_MakeSimple((plocus), CdbLocusType_Null, (numsegments_))
 #define CdbPathLocus_MakeEntry(plocus)                  \
-            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Entry, GP_POLICY_ENTRY_NUMSEGMENTS)
+            CdbPathLocus_MakeSimple((plocus), CdbLocusType_Entry, getgpsegmentCount())
 #define CdbPathLocus_MakeSingleQE(plocus, numsegments_)               \
             CdbPathLocus_MakeSimple((plocus), CdbLocusType_SingleQE, (numsegments_))
 #define CdbPathLocus_MakeGeneral(plocus, numsegments_)                \

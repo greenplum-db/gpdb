@@ -87,7 +87,9 @@ ffunc( internal-state ) ---&gt; aggregate-value</codeblock><p>You
           <codeph>MAX</codeph>. Note that the optimization will never actually take effect unless
         the specified operator is the "less than" or "greater than" strategy member of a B-tree
         index operator class.</p>
-
+      <p> To be able to create an aggregate function, you must have <codeph>USAGE</codeph> privilege
+        on the argument types, the state type, and the return type, as well as
+          <codeph>EXECUTE</codeph> privilege on the transition and final functions. </p>
 </section><section id="section5"><title>Parameters</title><parml><plentry><pt><varname>name</varname></pt><pd>The name (optionally schema-qualified) of the aggregate function
 to create.</pd></plentry><plentry><pt><varname>input_data_type</varname></pt><pd>An input data type on which this aggregate function operates. To
 create a zero-argument aggregate function, write * in place of the list

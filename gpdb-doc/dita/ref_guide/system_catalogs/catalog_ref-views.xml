@@ -23,6 +23,12 @@
         <xref href="./gp_resgroup_status.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>
+        <xref href="./gp_resgroup_status_per_host.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
+        <xref href="./gp_resgroup_status_per_segment.xml#topic1" type="topic" format="dita"/>
+      </li>
+      <li>
         <xref href="./gp_resqueue_status.xml#topic1" type="topic" format="dita"/>
       </li>
       <li>

@@ -1,0 +1,20 @@
+-- start_matchsubs
+-- m/^\S+ (.*):.*:.*-(\[\S+\]):-/
+-- s/^\S+ (.*):.*:.*-(\[\S+\]):-/TIMESTAMP $1:HOST:USER-$2:-/
+-- end_matchsubs
+\! echo 'EXPANSION_PREPARE_STARTED:<path> to inputfile' > $MASTER_DATA_DIRECTORY/gpexpand.status
+\! gpcheckcat
+ERROR: Usage of gpcheckcat is not supported while the cluster is in a reconfiguration state, exit gpcheckcat
+\! gpconfig -r gp_debug_linger
+20190116:16:55:31:057863 gpconfig:zlv:gpadmin-[ERROR]:-ERROR: Usage of gpconfig is not supported while the cluster is in a reconfiguration state, exit gpconfig
+-- most gppkg actions should be disallowed while gpexpand is in progress
+\! gppkg --query no-such-package
+20190220:10:23:39:016760 gppkg:nyu-vm-desktop:u-[INFO]:-Starting gppkg with args: --query no-such-package
+20190220:10:23:39:016760 gppkg:nyu-vm-desktop:u-[ERROR]:-gppkg error: ERROR: Usage of gppkg is not supported while the cluster is in a reconfiguration state, exit gppkg
+-- the only exception is 'build' which has no interaction with the cluster
+\! gppkg --build no-such-package
+20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[INFO]:-Starting gppkg with args: --build no-such-package
+20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[INFO]:-Building gppkg
+20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[ERROR]:-no-such-package is an Invalid directory
+20190307:15:08:14:017703 gppkg:nyu-vm-desktop:u-[CRITICAL]:-gppkg failed. (Reason='') exiting...
+\! rm $MASTER_DATA_DIRECTORY/gpexpand.status

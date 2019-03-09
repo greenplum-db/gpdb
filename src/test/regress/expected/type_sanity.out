@@ -425,12 +425,12 @@ WHERE t.typbasetype = 0 AND
     (t.typanalyze = 'array_typanalyze'::regproc) !=
     (typelem != 0 AND typlen < 0)
 ORDER BY 1;
- oid  |        typname         | typanalyze 
-------+------------------------+------------
-   22 | int2vector             | -
-   30 | oidvector              | -
- 7165 | _hyperloglog_estimator | -
- 7199 | _complex               | -
+ oid  |          typname          | typanalyze 
+------+---------------------------+------------
+   22 | int2vector                | -
+   30 | oidvector                 | -
+ 7165 | _gp_hyperloglog_estimator | -
+ 7199 | _complex                  | -
 (4 rows)
 
 -- **************** pg_class ****************

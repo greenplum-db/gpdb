@@ -856,7 +856,9 @@ class ConfigureNewSegment(Command):
     def __init__(self, name, confinfo, logdir, newSegments=False, tarFile=None,
                  batchSize=None, verbose=False,ctxt=LOCAL, remoteHost=None, validationOnly=False, writeGpIdFileOnly=False,
                  forceoverwrite=False):
+
         cmdStr = '$GPHOME/bin/lib/gpconfigurenewsegment -c \"%s\" -l %s' % (confinfo, pipes.quote(logdir))
+
         if newSegments:
             cmdStr += ' -n'
         if tarFile:
@@ -899,7 +901,6 @@ class ConfigureNewSegment(Command):
                         : <segment dbid>
         """
         result = {}
-
         for segIndex, seg in enumerate(segments):
             if primaryMirror == 'primary' and seg.isSegmentPrimary() == False:
                continue
@@ -923,13 +924,16 @@ class ConfigureNewSegment(Command):
                 isPrimarySegment = "false"
                 isTargetReusedLocationString = "false"
 
-            result[hostname] += '%s:%d:%s:%s:%d:%d:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
+            progressFile = getattr(seg, 'progressFile', "")
+
+            result[hostname] += '%s:%d:%s:%s:%d:%d:%s:%s:%s' % (seg.getSegmentDataDirectory(), seg.getSegmentPort(),
                                                           isPrimarySegment,
                                                           isTargetReusedLocationString,
                                                           seg.getSegmentDbId(),
                                                           seg.getSegmentContentId(),
                                                           primaryHostname,
-                                                          primarySegmentPort
+                                                          primarySegmentPort,
+                                                          progressFile
             )
         return result
 
@@ -1113,6 +1117,150 @@ def check_permissions(username):
 
 
 
+class _GpExpandStatus(object):
+    '''
+    Internal class to store gpexpand status, note it's different with the
+    GpExpandStatus class inside the gpexpand command.
+    '''
+
+    dbname = 'postgres'
+
+    # status information
+    phase = 0
+    status = 'NO EXPANSION DETECTED'
+
+    # progress information, arrays of (dbname, relname, status)
+    uncompleted = []
+    completed = []
+    inprogress = []
+
+    def _get_phase1_status(self):
+        # first assume no expansion is in progress
+        self.phase = 0
+        self.status = 'NO EXPANSION DETECTED'
+
+        datadir = get_masterdatadir()
+        filename = os.path.join(datadir, 'gpexpand.status')
+        try:
+            with open(filename, 'r') as f:
+                # it is phase1 as long as the status file exists
+                self.phase = 1
+                self.status = 'UNKNOWN PHASE1 STATUS'
+
+                lines = f.readlines()
+        except IOError:
+            return self.phase > 0
+
+        if lines and lines[-1].split(':')[0]:
+            self.status = lines[-1].split(':')[0]
+
+        return True
+
+    def _get_phase2_status(self):
+        # first assume no expansion is in progress
+        self.phase = 0
+        self.status = 'NO EXPANSION DETECTED'
+
+        sql = '''
+            SELECT status FROM gpexpand.status ORDER BY updated DESC LIMIT 1
+        '''
+
+        try:
+            dburl = dbconn.DbURL(dbname=self.dbname)
+            with dbconn.connect(dburl, encoding='UTF8') as conn:
+                status = dbconn.execSQLForSingleton(conn, sql)
+        except Exception:
+            # schema table not found
+            return False
+
+        # it is phase2 as long as the schema table exists
+        self.phase = 2
+        if status:
+            self.status = status
+        else:
+            self.status = 'UNKNOWN PHASE2 STATUS'
+        return True
+
+    def _get_phase2_progress(self):
+        self.uncompleted = []
+        self.completed = []
+        self.inprogress = []
+
+        sql = '''
+            SELECT quote_ident(dbname) AS fq_dbname, fq_name, status
+              FROM gpexpand.status_detail
+        '''
+
+        try:
+            dburl = dbconn.DbURL(dbname=self.dbname)
+            with dbconn.connect(dburl, encoding='UTF8') as conn:
+                cursor = dbconn.execSQL(conn, sql)
+                rows = cursor.fetchall()
+        except Exception:
+            return False
+
+        for row in rows:
+            _, _, status = row
+            if status == 'COMPLETED':
+                self.completed.append(row)
+            elif status == 'IN PROGRESS':
+                self.inprogress.append(row)
+            else:
+                self.uncompleted.append(row)
+
+        return True
+
+    def get_status(self):
+        '''
+        Get gpexpand status, such as whether an expansion is in progress,
+        which expansion phase it is.
+        '''
+
+        if self._get_phase1_status():
+            pass
+        elif self._get_phase2_status():
+            pass
+
+        return self
+
+    def get_progress(self):
+        '''
+        Get data redistribution progress of phase 2.
+        '''
+
+        self._get_phase2_progress()
+
+        return self
+
+def get_gpexpand_status():
+    '''
+    Get gpexpand status
+    '''
+    status = _GpExpandStatus()
+    status.get_status()
+    return status
+
+def conflict_with_gpexpand(utility, refuse_phase1=True, refuse_phase2=False):
+    '''
+    Generate error message when gpexpand is running in specified phases.
+    Some utilities can not run in parallel with gpexpand, this function can be
+    used to simplify the checks on gpexpand status.
+    '''
+    status = get_gpexpand_status()
+
+    if status.phase == 1 and refuse_phase1:
+        err_msg = ("ERROR: Usage of {utility} is not supported while the "
+                   "cluster is in a reconfiguration state, "
+                   "exit {utility}")
+        return (False, err_msg.format(utility=utility))
+
+    if status.phase == 2 and refuse_phase2:
+        err_msg = ("ERROR: Usage of {utility} is not supported while the "
+                   "cluster has tables waiting for expansion, "
+                   "exit {utility}")
+        return (False, err_msg.format(utility=utility))
+
+    return (True, "")
 
 #=-=-=-=-=-=-=-=-=-= Bash Migration Helper Functions =-=-=-=-=-=-=-=-
 

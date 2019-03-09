@@ -166,14 +166,7 @@ autoIncOpMemForResGroup(uint64 *opMemKB, int numOps)
 	if (*opMemKB >= minOpMemKB)
 		return;
 
-	/*
-	 * FIXME: a `SET hello<TAB>` auto completion will trigger this WARNING if
-	 * the group memory setting is low, which causes a messy command line
-	 * prompt.
-	 *
-	 * Is there any way to hide this WARNING for auto completion?
-	 */
-	ereport(WARNING,
+	ereport(DEBUG2,
 			(errcode(ERRCODE_INSUFFICIENT_RESOURCES),
 			 errmsg("No enough operator memory for current query."),
 			 errdetail("Current query contains %d operators, "

@@ -50,6 +50,12 @@ gpbridge_cleanup(gphadoop_context *context)
 		freeGPHDUri(context->gphd_uri);
 		context->gphd_uri = NULL;
 	}
+
+	if (context->filterstr != NULL)
+	{
+		pfree(context->filterstr);
+		context->filterstr = NULL;
+	}
 }
 
 /*
@@ -193,10 +199,12 @@ add_querydata_to_http_headers(gphadoop_context *context)
 {
 	PxfInputData inputData = {0};
 
-	inputData.headers = context->churl_headers;
-	inputData.gphduri = context->gphd_uri;
-	inputData.rel = context->relation;
+	inputData.headers   = context->churl_headers;
+	inputData.gphduri   = context->gphd_uri;
+	inputData.rel       = context->relation;
 	inputData.filterstr = context->filterstr;
+	inputData.proj_info = context->proj_info;
+	inputData.quals     = context->quals;
 	build_http_headers(&inputData);
 }
 

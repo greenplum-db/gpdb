@@ -14,7 +14,7 @@ class GpExpandTestCase(unittest.TestCase):
     GPMGMT_FAULT_POINT = 'GPMGMT_FAULT_POINT'
     MASTER_DATA_DIRECTORY = os.environ['MASTER_DATA_DIRECTORY']
     SEGMENTS = 1
-    TEST_DB = 'testdb'
+    TEST_DB = 'postgres'
     NUM_TABLES = 10
 
     primary_host_name = None
@@ -23,7 +23,6 @@ class GpExpandTestCase(unittest.TestCase):
     mirror_host_address = None
 
     def setUp(self):
-        self._create_test_db()
         self._create_expansion_input_file()
 
     def tearDown(self):
@@ -102,18 +101,6 @@ class GpExpandTestCase(unittest.TestCase):
                     next_dbid += 1
                     next_content += 1
         
-    def _create_test_db(self):
-
-        testdb_exists = True
-        with dbconn.connect(dbconn.DbURL()) as conn:
-            row = dbconn.execSQLForSingletonRow(conn, "select count(*) from pg_database where datname='%s'" % self.TEST_DB)
-          
-        if row[0] == 0: 
-          testdb_exists = False 
-       
-        if not testdb_exists:             
-            Command('create a test database', 'createdb %s' % self.TEST_DB).run(validateAfter=True)
-    
     def _create_tables(self):
         with dbconn.connect(dbconn.DbURL()) as conn:
             for i in range(self.NUM_TABLES):
@@ -138,7 +125,7 @@ class GpExpandTestCase(unittest.TestCase):
     def test00_pg_hba_conf_file(self):
         os.environ[self.GP_COMMAND_FAULT_POINT] = 'gpexpand tar segment template'
 
-        cmd = Command(name='run gpexpand', cmdStr='gpexpand -D %s -i %s' % (self.TEST_DB, self.EXPANSION_INPUT_FILE))
+        cmd = Command(name='run gpexpand', cmdStr='gpexpand -i %s' % (self.EXPANSION_INPUT_FILE))
         with self.assertRaisesRegexp(ExecutionError, 'Fault Injection'):
             cmd.run(validateAfter=True)
         
@@ -165,7 +152,7 @@ class GpExpandTestCase(unittest.TestCase):
         self.assertEqual(actual_values, expected_values)
 
         GpStart(name='start the database in master only mode', masterOnly=True).run(validateAfter=True)
-        Command(name='rollback the expansion', cmdStr='gpexpand -r -D %s' % self.TEST_DB).run(validateAfter=True)
+        Command(name='rollback the expansion', cmdStr='gpexpand -r').run(validateAfter=True)
         GpStart(name='start the database').run(validateAfter=True)
 
     def test01_distribution_policy(self):
@@ -175,11 +162,11 @@ class GpExpandTestCase(unittest.TestCase):
         try:
             os.environ[self.GPMGMT_FAULT_POINT] = 'gpexpand MPP-14620 fault injection'
             original_dist_policies = self._get_dist_policies()
-            cmd = Command(name='run gpexpand', cmdStr='gpexpand -D %s -i %s' % (self.TEST_DB, self.EXPANSION_INPUT_FILE))
+            cmd = Command(name='run gpexpand', cmdStr='gpexpand -i %s' % (self.EXPANSION_INPUT_FILE))
             with self.assertRaisesRegexp(ExecutionError, 'Fault Injection'):
                 cmd.run(validateAfter=True)
 
-            rollback = Command(name='rollback expansion', cmdStr='gpexpand -r -D %s' % self.TEST_DB)
+            rollback = Command(name='rollback expansion', cmdStr='gpexpand -r')
             rollback.run(validateAfter=True)
     
             dist_policies = self._get_dist_policies() 

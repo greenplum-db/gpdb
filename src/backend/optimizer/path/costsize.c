@@ -3887,19 +3887,6 @@ adjust_selectivity_for_nulltest(Selectivity selec,
 				{
 					double	nullfrac = 1 - selec;
 	
-#if 0
-					/*
-					 * GPDB_92_MERGE_FIXME
-					 * Param 'left' and 'right' are not passed in.
-					 */
-					/* 
-					 * a pushed qual must be applied on the inner side only; type implies 
-					 * where to find the var in the inputs
-					 */
-					Assert(!(JOIN_RIGHT == jointype) || bms_is_member(var->varno, left->relids));
-					Assert(!(JOIN_LEFT == jointype) || bms_is_member(var->varno, right->relids));
-#endif
-
 					/* adjust selectivity according to test */
 					switch (((NullTest *) clause)->nulltesttype)
 					{

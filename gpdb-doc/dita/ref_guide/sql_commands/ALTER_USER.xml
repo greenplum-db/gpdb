@@ -30,6 +30,7 @@ ALTER USER <varname>name</varname> [ [WITH] <varname>option</varname> [ ... ] ]<
            protocol='gpfdist'|'http'
     | INHERIT | NOINHERIT
     | LOGIN | NOLOGIN
+    | REPLICATION | NOREPLICATION
     | CONNECTION LIMIT <varname>connlimit</varname>
     | [ENCRYPTED | UNENCRYPTED] PASSWORD '<varname>password</varname>'
     | VALID UNTIL '<varname>timestamp</varname>'

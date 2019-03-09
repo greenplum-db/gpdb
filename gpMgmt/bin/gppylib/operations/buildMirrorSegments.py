@@ -1,4 +1,6 @@
+import datetime
 import os
+import pipes
 import signal
 import time
 
@@ -147,10 +149,11 @@ class GpMirrorToBuild:
 
 
 class GpMirrorListToBuild:
-    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False):
+    def __init__(self, toBuild, pool, quiet, parallelDegree, additionalWarnings=None, logger=logger, forceoverwrite=False, showProgressInplace=True):
         self.__mirrorsToBuild = toBuild
         self.__pool = pool
         self.__quiet = quiet
+        self.__showProgressInplace = showProgressInplace
         self.__parallelDegree = parallelDegree
         self.__forceoverwrite = forceoverwrite
         self.__additionalWarnings = additionalWarnings or []
@@ -158,6 +161,17 @@ class GpMirrorListToBuild:
             raise Exception('logger argument cannot be None')
 
         self.__logger = logger
+
+    class ProgressCommand(gp.Command):
+        """
+        A Command, but with an associated DBID and log file path for use by
+        _join_and_show_segment_progress(). This class is tightly coupled to that
+        implementation.
+        """
+        def __init__(self, name, cmdStr, dbid, filePath, ctxt, remoteHost):
+            super(GpMirrorListToBuild.ProgressCommand, self).__init__(name, cmdStr, ctxt, remoteHost)
+            self.dbid = dbid
+            self.filePath = filePath
 
     def getMirrorsToBuild(self):
         """
@@ -391,14 +405,56 @@ class GpMirrorListToBuild:
                         (hostName, dbid, usedDataDirectories.get(path), path))
                 usedDataDirectories[path] = dbid
 
-    def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False):
+    def _join_and_show_segment_progress(self, cmds, inplace=False, outfile=sys.stdout, interval=0.1):
+        written = False
+
+        def print_progress():
+            if written and inplace:
+                outfile.write("\x1B[%dA" % len(cmds))
+
+            output = []
+            for cmd in cmds:
+                try:
+                    # since print_progress is called multiple times,
+                    # cache cmdStr to reset it after being mutated by cmd.run()
+                    cmd_str = cmd.cmdStr
+                    cmd.run(validateAfter=True)
+                    cmd.cmdStr = cmd_str
+                    results = cmd.get_results().stdout.rstrip()
+                except ExecutionError:
+                    lines = cmd.get_results().stderr.splitlines()
+                    if lines:
+                        results = lines[0]
+                    else:
+                        results = ''
+
+                output.append("%s (dbid %d): %s" % (cmd.remoteHost, cmd.dbid, results))
+                if inplace:
+                    output.append("\x1B[K")
+                output.append("\n")
+
+            outfile.write("".join(output))
+            outfile.flush()
+
+        while not self.__pool.join(interval):
+            print_progress()
+            written = True
+
+        # Make sure every line is updated with the final status.
+        print_progress()
+
+    def __runWaitAndCheckWorkerPoolForErrorsAndClear(self, cmds, actionVerb, suppressErrorCheck=False,
+                                                     progressCmds=[]):
         for cmd in cmds:
             self.__pool.addCommand(cmd)
 
         if self.__quiet:
             self.__pool.join()
         else:
-            base.join_and_indicate_progress(self.__pool)
+            if progressCmds:
+                self._join_and_show_segment_progress(progressCmds, inplace=self.__showProgressInplace)
+            else:
+                base.join_and_indicate_progress(self.__pool)
 
         if not suppressErrorCheck:
             self.__pool.check_results()
@@ -425,12 +481,15 @@ class GpMirrorListToBuild:
         srcSegments = []
         destSegments = []
         isTargetReusedLocation = []
+        timeStamp = datetime.datetime.today().strftime('%Y%m%d_%H%M%S')
         for directive in directives:
             srcSegment = directive.getSrcSegment()
             destSegment = directive.getDestSegment()
             destSegment.primaryHostname = srcSegment.getSegmentHostName()
             destSegment.primarySegmentPort = srcSegment.getSegmentPort()
-
+            destSegment.progressFile = '%s/pg_basebackup.%s.dbid%s.out' % (gplog.get_logger_dir(),
+                                                                           timeStamp,
+                                                                           destSegment.getSegmentDbId())
             srcSegments.append(srcSegment)
             destSegments.append(destSegment)
             isTargetReusedLocation.append(directive.isTargetReusedLocation())
@@ -452,7 +511,6 @@ class GpMirrorListToBuild:
                                           remoteHost=hostName,
                                           validationOnly=validationOnly,
                                           forceoverwrite=self.__forceoverwrite)
-
         #
         # validate directories for target segments
         #
@@ -484,14 +542,47 @@ class GpMirrorListToBuild:
         if validationErrors:
             raise ExceptionNoStackTraceNeeded("\n" + ("\n".join(validationErrors)))
 
+        # Configure a new segment
         #
-        # unpack and configure new segments
+        # Recover segments using gpconfigurenewsegment, which
+        # uses pg_basebackup. gprecoverseg generates a log filename which is
+        # passed to gpconfigurenewsegment as a confinfo parameter. gprecoverseg
+        # tails this file to show recovery progress to the user, and removes the
+        # file when one done. A new file is generated for each run of
+        # gprecoverseg based on a timestamp.
         #
+        # There is race between when the pg_basbackup log file is created and
+        # when the progress command is run. Thus, the progress command touches
+        # the file to ensure its present before tailing.
         self.__logger.info('Configuring new segments')
         cmds = []
+        progressCmds = []
+        removeCmds= []
         for hostName in destSegmentByHost.keys():
-            cmds.append(createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
-        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory")
+            for segment in destSegmentByHost[hostName]:
+                progressCmds.append(
+                    GpMirrorListToBuild.ProgressCommand("tail the last line of the file",
+                                       "set -o pipefail; touch -a {0}; tail -1 {0} | tr '\\r' '\\n' | tail -1".format(
+                                           pipes.quote(segment.progressFile)),
+                                       segment.getSegmentDbId(),
+                                       segment.progressFile,
+                                       ctxt=base.REMOTE,
+                                       remoteHost=hostName))
+                removeCmds.append(
+                    base.Command("remove file",
+                                 "rm -f %s" % pipes.quote(segment.progressFile),
+                                 ctxt=base.REMOTE,
+                                 remoteHost=hostName))
+
+            cmds.append(
+                createConfigureNewSegmentCommand(hostName, 'configure blank segments', False))
+
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(cmds, "unpacking basic segment directory",
+                                                          suppressErrorCheck=False,
+                                                          progressCmds=progressCmds)
+
+        self.__runWaitAndCheckWorkerPoolForErrorsAndClear(removeCmds, "removing pg_basebackup progres logfiles",
+                                                          suppressErrorCheck=False)
 
         #
         # copy dump files from old segment to new segment

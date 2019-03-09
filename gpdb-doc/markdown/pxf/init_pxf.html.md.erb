@@ -32,9 +32,9 @@ PXF provides two management commands that you can use for initialization:
 
 PXF supports both internal and user-customizable configuration properties. Initializing PXF generates PXF internal configuration files, setting default properties specific to your configuration. Initializing PXF also generates configuration file templates for user-customizable settings such as custom profiles and PXF runtime and logging settings.
 
-PXF internal configuration files are located in `$GPHOME/pxf/conf`. You identify the PXF user configuration directory at initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF may prompt you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
+PXF internal configuration files are located in your Greenplum Database installation in the `$GPHOME/pxf/conf` directory. You identify the PXF user configuration directory at PXF initialization time via an environment variable named `$PXF_CONF`. If you do not set `$PXF_CONF` prior to initializing PXF, PXF may prompt you to accept or decline the default user configuration directory, `$HOME/pxf`, during the initialization process.
 
-**Note**: The `gpadmin` user must have permission to either create, or write to, the specified `$PXF_CONF` directory.
+**Note**: Choose a `$PXF_CONF` directory location that you can back up, and ensure that it resides outside of your Greenplum Database installation directory.
 
 During initialization, PXF creates the `$PXF_CONF` directory if necessary, and then populates it with subdirectories and template files. Refer to [PXF User Configuration Directories](about_pxf_dir.html#usercfg) for a list of these directories and their contents.
 
@@ -44,7 +44,7 @@ During initialization, PXF creates the `$PXF_CONF` directory if necessary, and t
 Before initializing PXF in your Greenplum Database cluster, ensure that:
 
 - Your Greenplum Database cluster is up and running.
-- You have identified the PXF user configuration directory filesystem location, `$PXF_CONF`.
+- You have identified the PXF user configuration directory filesystem location, `$PXF_CONF`, and that the `gpadmin` user has the necessary permissions to create, or write to, this directory.
  
 ### <a id="init-pxf-steps" class="no-quick-link"></a>Procedure
 
@@ -56,10 +56,10 @@ Perform the following procedure to initialize PXF on each segment host in your G
     $ ssh gpadmin@<gpmaster>
     ```
 
-4. Run the `pxf cluster init` command to initialize the PXF service on the master and on each segment host. For example, the following command specifies `/etc/pxf/usercfg` as the PXF user configuration directory for initialization.)
+4. Run the `pxf cluster init` command to initialize the PXF service on the master and on each segment host. For example, the following command specifies `/usr/local/greenplum-pxf` as the PXF user configuration directory for initialization:
 
     ``` shell
-    gpadmin@gpmaster$ PXF_CONF=/etc/pxf/usercfg $GPHOME/pxf/bin/pxf cluster init
+    gpadmin@gpmaster$ PXF_CONF=/usr/local/greenplum-pxf $GPHOME/pxf/bin/pxf cluster init
     ```
 
     The `init` command creates the PXF web application and initializes the internal PXF configuration. The `init` command also creates the `$PXF_CONF` user configuration directory if it does not exist, and populates the directory with user-customizable configuration templates.

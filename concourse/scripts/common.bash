@@ -81,8 +81,7 @@ function make_cluster() {
     # no test case restarting the cluster
     su gpadmin -c "head -n 1 $MASTER_DATA_DIRECTORY/postmaster.pid > master.pid.bk"
     gen_gpexpand_input
-    su gpadmin -c "createdb gpstatus"
-    su gpadmin -c "gpexpand -i input -D gpstatus"
+    su gpadmin -c "gpexpand -i input"
   else
     su gpadmin -c "make create-demo-cluster"
   fi

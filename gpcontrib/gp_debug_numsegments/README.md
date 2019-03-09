@@ -4,9 +4,9 @@ could check or change the default behavior.
 How does it work?  Each table has a property numsegments to record how many
 segments its data is distributed one, the value is decided on `CREATE TABLE`
 according to an internal variable `gp_create_table_default_numsegments`, its
-value can be an integer number between `GP_POLICY_MINIMAL_NUMSEGMENTS` (always
-be 1 in current implementation) and `GP_POLICY_ALL_NUMSEGMENTS` (all the
-primary segments in the cluster), or one of below magic numbsers (policies):
+value can be an integer number between 1 (the minimal segment count) and
+`getgpsegmentCount()` (all the primary segments in the cluster), or one of
+below magic numbsers (policies):
 
 - `GP_DEFAULT_NUMSEGMENTS_FULL`: all the segments;
 - `GP_DEFAULT_NUMSEGMENTS_MINIMAL`: the minimal set of segments;

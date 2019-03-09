@@ -461,9 +461,7 @@ pxf_serialize_filter_list(List *expressionItems)
 	ListCell   *lc = NULL;
 
 	if (list_length(expressionItems) == 0)
-	{
 		return NULL;
-	}
 
 	resbuf = makeStringInfo();
 
@@ -1342,78 +1340,78 @@ add_extra_and_expression_items(List *expressionItems, int extraAndOperatorsNum)
 List *
 extractPxfAttributes(List *quals, bool *qualsAreSupported)
 {
-
 	if (!(*qualsAreSupported))
-	{
 		return NIL;
-	}
-	ListCell   *lc = NULL;
-	List	   *attributes = NIL;
-	bool		expressionIsSupported;
-
+	ListCell *lc         = NULL;
+	List     *attributes = NIL;
+	bool     expressionIsSupported;
 	*qualsAreSupported = true;
 
 	if (list_length(quals) == 0)
 		return NIL;
 
-	foreach(lc, quals)
+	foreach (lc, quals)
 	{
-		Node	   *node = (Node *) lfirst(lc);
-		NodeTag		tag = nodeTag(node);
+		Node    *node = (Node *) lfirst(lc);
+		NodeTag tag   = nodeTag(node);
 
 		switch (tag)
 		{
 			case T_OpExpr:
 			case T_ScalarArrayOpExpr:
+			{
+				Expr *expr  = (Expr *) node;
+				List *attrs = get_attrs_from_expr(expr, &expressionIsSupported);
+				if (!expressionIsSupported)
 				{
-					Expr	   *expr = (Expr *) node;
-					List	   *attrs = get_attrs_from_expr(expr, &expressionIsSupported);
-
-					if (!expressionIsSupported)
-					{
-						*qualsAreSupported = false;
-						return NIL;
-					}
-					attributes = list_concat(attributes, attrs);
-					break;
-				}
-			case T_BoolExpr:
-				{
-					BoolExpr   *expr = (BoolExpr *) node;
-					bool		innerBoolQualsAreSupported = true;
-					List	   *inner_result = extractPxfAttributes(expr->args, &innerBoolQualsAreSupported);
-
-					if (!innerBoolQualsAreSupported)
-					{
-						*qualsAreSupported = false;
-						return NIL;
-					}
-					attributes = list_concat(attributes, inner_result);
-					break;
-				}
-			case T_NullTest:
-				{
-					NullTest   *expr = (NullTest *) node;
-
-					attributes = append_attr_from_var((Var *) expr->arg, attributes);
-					break;
-				}
-			case T_BooleanTest:
-				{
-					BooleanTest *expr = (BooleanTest *) node;
-
-					attributes = append_attr_from_var((Var *) expr->arg, attributes);
-					break;
-				}
-			default:
-				{
-					/*
-					 * tag is not supported, it's risk of having: 1)
-					 * false-positive tuples 2) unable to join tables 3) etc
-					 */
-					elog(INFO, "extractPxfAttributes: unsupported node tag %d, unable to extract attribute from qualifier", tag);
+					*qualsAreSupported = false;
 					return NIL;
 				}
+				attributes = list_concat(attributes, attrs);
+				break;
+			}
+			case T_BoolExpr:
+			{
+				BoolExpr *expr                      = (BoolExpr *) node;
+				bool     innerBoolQualsAreSupported = true;
+				List     *inner_result              =
+					         extractPxfAttributes(expr->args,
+					                              &innerBoolQualsAreSupported);
+				if (!innerBoolQualsAreSupported)
+				{
+					*qualsAreSupported = false;
+					return NIL;
+				}
+				attributes = list_concat(attributes, inner_result);
+				break;
+			}
+			case T_NullTest:
+			{
+				NullTest *expr = (NullTest *) node;
+				attributes =
+					append_attr_from_var((Var *) expr->arg, attributes);
+				break;
+			}
+			case T_BooleanTest:
+			{
+				BooleanTest *expr = (BooleanTest *) node;
+				attributes        =
+					append_attr_from_var((Var *) expr->arg, attributes);
+				break;
+			}
+			default:
+			{
+				/*
+				 * tag is not supported, it's risk of having:
+				 * 1) false-positive tuples
+				 * 2) unable to join tables
+				 * 3) etc
+				 */
+				elog(INFO,
+				     "extractPxfAttributes: unsupported node tag %d, unable to extract attribute from qualifier",
+				     tag);
+				return NIL;
+			}
 		}
 	}
 

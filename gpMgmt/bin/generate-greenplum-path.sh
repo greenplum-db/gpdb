@@ -87,7 +87,10 @@ fi
 
 # openssl configuration file path
 cat <<EOF
+if [ -e \$GPHOME/etc/openssl.cnf ]; then
 OPENSSL_CONF=\$GPHOME/etc/openssl.cnf
+export OPENSSL_CONF
+fi
 EOF
 
 cat <<EOF
@@ -100,6 +103,3 @@ export PYTHONPATH
 export PYTHONHOME
 EOF
 
-cat <<EOF
-export OPENSSL_CONF
-EOF

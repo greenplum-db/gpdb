@@ -23,6 +23,27 @@ create extension if not exists gp_inject_fault;
 
 include: helpers/server_helpers.sql;
 
+-- Helper function
+CREATE or REPLACE FUNCTION wait_until_segments_are_down(num_segs int)
+RETURNS bool AS
+$$
+declare
+retries int; /* in func */
+begin /* in func */
+  retries := 1200; /* in func */
+  loop /* in func */
+    if (select count(*) = num_segs from gp_segment_configuration where status = 'd') then /* in func */
+      return true; /* in func */
+    end if; /* in func */
+    if retries <= 0 then /* in func */
+      return false; /* in func */
+    end if; /* in func */
+    perform pg_sleep(0.1); /* in func */
+    retries := retries - 1; /* in func */
+  end loop; /* in func */
+end; /* in func */
+$$ language plpgsql;
+
 -- no segment down.
 select count(*) from gp_segment_configuration where status = 'd';
 
@@ -53,10 +74,19 @@ select gp_inject_fault_infinite('get_dns_cached_address', 'skip', 1);
 -- trigger failover
 select gp_request_fts_probe_scan();
 
-select gp_inject_fault_infinite('get_dns_cached_address', 'reset', 1);
+-- Since both gp_request_fts_probe_scan() and gp_inject_fault() will
+-- call the cdbcomponent_updateCdbComponents(), there is a plausible
+-- race condition between the fts_probes and the reset of the fault
+-- injector; if the reset triggers the fault before the fts probe
+-- completes, the primary will be taken down without removing the fault
+-- To avoid the race condition, the test waits until both the segments
+-- go down before removing the fault.
+-- The test expect the following 2 segments to go down:
+-- 1. pg_ctl stop for dbid=3(content 1, primary)
+-- 2. get_dns_cached_address fault injected for dbid=2(content 0, primary)
+-1U: select wait_until_segments_are_down(2);
 
--- verify a segment is down
-select count(*) from gp_segment_configuration where status = 'd';
+select gp_inject_fault('get_dns_cached_address', 'reset', 1);
 
 -- session 1: in no transaction and no temp table created, it's safe to
 --            update cdb_component_dbs and use the new promoted primary 

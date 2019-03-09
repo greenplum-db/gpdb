@@ -31,7 +31,7 @@ pushd gpdb_src
   GPDB_SRC_VERSION=$(git rev-parse HEAD)
 popd
 
-for bin_gpdb in bin_gpdb_* ; do
+for bin_gpdb in bin_gpdb_centos{6,7} ; do
   compare_bin_gpdb_version_with_gpdb_src "${bin_gpdb}"
 done
 

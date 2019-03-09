@@ -2629,7 +2629,7 @@ CopyToDispatch(CopyState cstate)
 	/* We use fe_msgbuf as a per-row buffer regardless of copy_dest */
 	cstate->fe_msgbuf = makeStringInfo();
 
-	cdbCopy = makeCdbCopy(false);
+	cdbCopy = makeCdbCopy(cstate, false);
 
 	/* XXX: lock all partitions */
 
@@ -2912,15 +2912,6 @@ CopyTo(CopyState cstate)
 
 	if (cstate->rel)
 	{
-		/* For replicated table, choose only one segment to scan data */
-		if (Gp_role == GP_ROLE_EXECUTE && !cstate->on_segment &&
-				GpPolicyIsReplicated(cstate->rel->rd_cdbpolicy) &&
-				gp_session_id % getgpsegmentCount() != GpIdentity.segindex)
-		{
-			MemoryContextDelete(cstate->rowcontext);
-			return 0;
-		}
-
 		foreach(lc, target_rels)
 		{
 			Relation rel = lfirst(lc);
@@ -3722,9 +3713,7 @@ CopyFrom(CopyState cstate)
 		 * - dispatch the modified COPY command to all segment databases.
 		 * - prepare cdbhash for hashing on row values.
 		 */
-		cdbCopy = makeCdbCopy(true);
-
-		((volatile CopyState) cstate)->cdbCopy = cdbCopy;
+		cdbCopy = makeCdbCopy(cstate, true);
 
 		/*
 		 * Dispatch the COPY command.

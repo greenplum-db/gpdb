@@ -34,143 +34,154 @@
 /* include mock files */
 #include "mock/libchurl_mock.c"
 #include "mock/pxfutils_mock.c"
+#include "mock/pxffilters_mock.c"
+
+static GPHDUri         *gphd_uri   = NULL;
+static PxfInputData    *input_data = NULL;
+static struct extvar_t mock_extvar;
 
 /* helper functions */
 static void expect_headers_append(CHURL_HEADERS headers_handle, const char *header_key, const char *header_value);
 
+void setup_gphd_uri();
+void setup_input_data();
+void setup_external_vars();
+void expect_external_vars();
+
+void
+common_setup(void **state)
+{
+	setup_gphd_uri();
+	setup_input_data();
+	setup_external_vars();
+}
+
+/*
+ * Common resource cleanup
+ */
+void
+common_teardown(void **state)
+{
+	if (input_data->rel != NULL)
+		pfree(input_data->rel);
+	pfree(input_data->headers);
+	pfree(input_data);
+	pfree(gphd_uri);
+}
+
+void
+setup_gphd_uri()
+{
+	gphd_uri = palloc0(sizeof(GPHDUri));
+	gphd_uri->host = "there's a place you're always welcome";
+	gphd_uri->port = "it's as nice as it can be";
+	gphd_uri->data = "everyone can get in";
+	gphd_uri->uri = "'cos it's absolutely free";
+}
+
+void
+setup_input_data()
+{
+	Relation      rel      = (Relation) palloc0(sizeof(RelationData));
+	CHURL_HEADERS *headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
+	input_data = palloc0(sizeof(PxfInputData));
+	input_data->gphduri   = gphd_uri;
+	input_data->headers   = headers;
+	input_data->proj_info = NULL;
+	input_data->quals     = NIL;
+	input_data->rel       = rel;
+}
+
+void
+setup_external_vars()
+{
+	mock_extvar.GP_USER = "pxfuser";
+	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
+	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
+	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
+}
+
+void expect_external_vars()
+{
+	expect_any(external_set_env_vars, extvar);
+	expect_string(external_set_env_vars, uri, gphd_uri->uri);
+	expect_value(external_set_env_vars, csv, false);
+	expect_value(external_set_env_vars, escape, NULL);
+	expect_value(external_set_env_vars, quote, NULL);
+	expect_value(external_set_env_vars, header, false);
+	expect_value(external_set_env_vars, scancounter, 0);
+	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
+	will_be_called(external_set_env_vars);
+}
+
 void
 test_build_http_headers(void **state)
 {
-
-	/* setup mock data and expectations */
-	PxfInputData *input = (PxfInputData *) palloc0(sizeof(PxfInputData));
-	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-	GPHDUri    *gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	Relation	rel = (Relation) palloc0(sizeof(RelationData));
-
-	ExtTableEntry ext_tbl;
+	char		alignment[3];
+	ExtTableEntry    ext_tbl;
 	struct tupleDesc tuple;
-
-	input->headers = headers;
-	input->gphduri = gphd_uri;
-	input->rel = rel;
-
-	gphd_uri->host = "testhost";
-	gphd_uri->port = "101";
-	gphd_uri->data = "this is test data";
-	gphd_uri->uri = "testuri";
+	pg_ltoa(sizeof(char *), alignment);
 
 	OptionData *option_data1 = (OptionData *) palloc0(sizeof(OptionData));
-
-	option_data1->key = "key1";
+	option_data1->key   = "key1";
 	option_data1->value = "value1";
-	OptionData *option_data2 = (OptionData *) palloc0(sizeof(OptionData));
 
-	option_data2->key = "key2";
+	OptionData *option_data2 = (OptionData *) palloc0(sizeof(OptionData));
+	option_data2->key   = "key2";
 	option_data2->value = "value2";
+
 	gphd_uri->options = list_make2(option_data1, option_data2);
 
 	tuple.natts = 0;
 	ext_tbl.fmtcode = 'c';
-	rel->rd_id = 56;
-	rel->rd_att = &tuple;
+	input_data->rel->rd_id = 56;
+	input_data->rel->rd_att = &tuple;
 
-	expect_value(GetExtTableEntry, relid, rel->rd_id);
+	expect_external_vars();
+
+	expect_value(GetExtTableEntry, relid, input_data->rel->rd_id);
 	will_return(GetExtTableEntry, &ext_tbl);
-	expect_headers_append(headers, "X-GP-FORMAT", TextFormatName);
-	expect_headers_append(headers, "X-GP-ATTRS", "0");
+	expect_headers_append(input_data->headers, "X-GP-FORMAT", TextFormatName);
+	expect_headers_append(input_data->headers, "X-GP-ATTRS", "0");
 
-	expect_any(external_set_env_vars, extvar);
-	expect_string(external_set_env_vars, uri, gphd_uri->uri);
-	expect_value(external_set_env_vars, csv, false);
-	expect_value(external_set_env_vars, escape, NULL);
-	expect_value(external_set_env_vars, quote, NULL);
-	expect_value(external_set_env_vars, header, false);
-	expect_value(external_set_env_vars, scancounter, 0);
+	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
+	expect_headers_append(input_data->headers, "X-GP-SEGMENT-ID", "SegId");
+	expect_headers_append(input_data->headers, "X-GP-SEGMENT-COUNT", "10");
+	expect_headers_append(input_data->headers, "X-GP-XID", "20");
 
-	struct extvar_t mock_extvar;
-	mock_extvar.GP_USER = "user";
-	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
-	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
-	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
-	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
-	will_be_called(external_set_env_vars);
-
-	expect_headers_append(headers, "X-GP-USER", "user");
-	expect_headers_append(headers, "X-GP-SEGMENT-ID", "SegId");
-	expect_headers_append(headers, "X-GP-SEGMENT-COUNT", "10");
-	expect_headers_append(headers, "X-GP-XID", "20");
-
-	char		alignment[3];
-
-	pg_ltoa(sizeof(char *), alignment);
-	expect_headers_append(headers, "X-GP-ALIGNMENT", alignment);
-	expect_headers_append(headers, "X-GP-URL-HOST", gphd_uri->host);
-	expect_headers_append(headers, "X-GP-URL-PORT", gphd_uri->port);
-	expect_headers_append(headers, "X-GP-DATA-DIR", gphd_uri->data);
-
+	expect_headers_append(input_data->headers, "X-GP-ALIGNMENT", alignment);
+	expect_headers_append(input_data->headers, "X-GP-URL-HOST", gphd_uri->host);
+	expect_headers_append(input_data->headers, "X-GP-URL-PORT", gphd_uri->port);
+	expect_headers_append(input_data->headers, "X-GP-DATA-DIR", gphd_uri->data);
 
 	expect_string(normalize_key_name, key, "key1");
 	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-KEY1"));
-	expect_headers_append(headers, "X-GP-OPTIONS-KEY1", "value1");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-KEY1", "value1");
 
 	expect_string(normalize_key_name, key, "key2");
 	will_return(normalize_key_name, pstrdup("X-GP-OPTIONS-KEY2"));
-	expect_headers_append(headers, "X-GP-OPTIONS-KEY2", "value2");
-
-	expect_headers_append(headers, "X-GP-URI", gphd_uri->uri);
-	expect_headers_append(headers, "X-GP-HAS-FILTER", "0");
+	expect_headers_append(input_data->headers, "X-GP-OPTIONS-KEY2", "value2");
+	expect_headers_append(input_data->headers, "X-GP-URI", gphd_uri->uri);
+	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "0");
 
 	/* call function under test */
-	build_http_headers(input);
+	build_http_headers(input_data);
 
 	/* no asserts as the function just calls to set headers */
-
-	/* cleanup */
-	pfree(rel);
-	pfree(gphd_uri);
-	pfree(headers);
-	pfree(input);
 }
 
 void
-test_build_http_headers_no_user_error(void **state) {
-
-	/* setup mock data and expectations */
-	PxfInputData *input = (PxfInputData *) palloc0(sizeof(PxfInputData));
-	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-	GPHDUri *gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	Relation rel = (Relation) palloc0(sizeof(RelationData));
-
-	ExtTableEntry ext_tbl;
-	struct tupleDesc tuple;
-
-	input->headers = headers;
-	input->gphduri = gphd_uri;
-	input->rel = NULL;
-
-	gphd_uri->uri = "testuri";
-
-	expect_any(external_set_env_vars, extvar);
-	expect_string(external_set_env_vars, uri, gphd_uri->uri);
-	expect_value(external_set_env_vars, csv, false);
-	expect_value(external_set_env_vars, escape, NULL);
-	expect_value(external_set_env_vars, quote, NULL);
-	expect_value(external_set_env_vars, header, false);
-	expect_value(external_set_env_vars, scancounter, 0);
-
-	struct extvar_t mock_extvar;
+test_build_http_headers_no_user_error(void **state)
+{
+	pfree(input_data->rel);
+	input_data->rel = NULL;
 	mock_extvar.GP_USER = NULL;
-	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
-	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
-	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
-	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
-	will_be_called(external_set_env_vars);
+	expect_external_vars();
 
 	MemoryContext old_context = CurrentMemoryContext;
 	PG_TRY();
 	{
-		build_http_headers(input);
+		build_http_headers(input_data);
 		assert_false("Expected Exception");
 	}
 	PG_CATCH();
@@ -188,43 +199,17 @@ test_build_http_headers_no_user_error(void **state) {
 }
 
 void
-test_build_http_headers_empty_user_error(void **state) {
-
-	/* setup mock data and expectations */
-	PxfInputData *input = (PxfInputData *) palloc0(sizeof(PxfInputData));
-	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
-	GPHDUri *gphd_uri = (GPHDUri *) palloc0(sizeof(GPHDUri));
-	Relation rel = (Relation) palloc0(sizeof(RelationData));
-
-	ExtTableEntry ext_tbl;
-	struct tupleDesc tuple;
-
-	input->headers = headers;
-	input->gphduri = gphd_uri;
-	input->rel = NULL;
-
-	gphd_uri->uri = "testuri";
-
-	expect_any(external_set_env_vars, extvar);
-	expect_string(external_set_env_vars, uri, gphd_uri->uri);
-	expect_value(external_set_env_vars, csv, false);
-	expect_value(external_set_env_vars, escape, NULL);
-	expect_value(external_set_env_vars, quote, NULL);
-	expect_value(external_set_env_vars, header, false);
-	expect_value(external_set_env_vars, scancounter, 0);
-
-	struct extvar_t mock_extvar;
+test_build_http_headers_empty_user_error(void **state)
+{
+	pfree(input_data->rel);
+	input_data->rel = NULL;
 	mock_extvar.GP_USER = "";
-	snprintf(mock_extvar.GP_SEGMENT_ID, sizeof(mock_extvar.GP_SEGMENT_ID), "SegId");
-	snprintf(mock_extvar.GP_SEGMENT_COUNT, sizeof(mock_extvar.GP_SEGMENT_COUNT), "10");
-	snprintf(mock_extvar.GP_XID, sizeof(mock_extvar.GP_XID), "20");
-	will_assign_memory(external_set_env_vars, extvar, &mock_extvar, sizeof(extvar_t));
-	will_be_called(external_set_env_vars);
+	expect_external_vars();
 
 	MemoryContext old_context = CurrentMemoryContext;
 	PG_TRY();
 	{
-		build_http_headers(input);
+		build_http_headers(input_data);
 		assert_false("Expected Exception");
 	}
 	PG_CATCH();
@@ -239,12 +224,50 @@ test_build_http_headers_empty_user_error(void **state) {
 		pfree(expected_message);
 	}
 	PG_END_TRY();
+}
+
+/**
+ * Query has valid projection info,
+ * but some of expression in WHERE clause is not supported
+ * Make sure we are not sending any projection information at all,
+ * to avoid incorrect results.
+ */
+void test__build_http_header__where_is_not_supported(void **state)
+{
+	char		alignment[3];
+	pg_ltoa(sizeof(char *), alignment);
+
+	input_data->proj_info = palloc0(sizeof(ProjectionInfo));
+	input_data->quals = list_make1("unsupported quals");
+
+	pfree(input_data->rel);
+	input_data->rel = NULL;
+
+	expect_external_vars();
+
+	expect_value(extractPxfAttributes, quals, input_data->quals);
+//	expect_any(extractPxfAttributes, qualsAreSupported);
+	will_return(extractPxfAttributes, NULL);
+
+	expect_headers_append(input_data->headers, "X-GP-USER", "pxfuser");
+	expect_headers_append(input_data->headers, "X-GP-SEGMENT-ID", mock_extvar.GP_SEGMENT_ID);
+	expect_headers_append(input_data->headers, "X-GP-SEGMENT-COUNT", mock_extvar.GP_SEGMENT_COUNT);
+	expect_headers_append(input_data->headers, "X-GP-XID", mock_extvar.GP_XID);
+	expect_headers_append(input_data->headers, "X-GP-ALIGNMENT", alignment);
+	expect_headers_append(input_data->headers, "X-GP-URL-HOST", gphd_uri->host);
+	expect_headers_append(input_data->headers, "X-GP-URL-PORT", gphd_uri->port);
+	expect_headers_append(input_data->headers, "X-GP-DATA-DIR", gphd_uri->data);
+	expect_headers_append(input_data->headers, "X-GP-URI", gphd_uri->uri);
+	expect_headers_append(input_data->headers, "X-GP-HAS-FILTER", "0");
+
+	build_http_headers(input_data);
+
+	pfree(input_data->proj_info);
 }
 
 void
 test_add_tuple_desc_httpheader(void **state)
 {
-
 	/* setup mock data and expectations */
 	CHURL_HEADERS headers = (CHURL_HEADERS) palloc0(sizeof(CHURL_HEADERS));
 	Relation	rel = (Relation) palloc0(sizeof(RelationData));
@@ -415,9 +438,10 @@ main(int argc, char *argv[])
 
 	const		UnitTest tests[] = {
 		unit_test(test_get_format_name),
-		unit_test(test_build_http_headers),
-		unit_test(test_build_http_headers_no_user_error),
-		unit_test(test_build_http_headers_empty_user_error),
+		unit_test_setup_teardown(test_build_http_headers, common_setup, common_teardown),
+		unit_test_setup_teardown(test_build_http_headers_no_user_error, common_setup, common_teardown),
+		unit_test_setup_teardown(test_build_http_headers_empty_user_error, common_setup, common_teardown),
+		unit_test_setup_teardown(test__build_http_header__where_is_not_supported, common_setup, common_teardown),
 		unit_test(test_add_tuple_desc_httpheader)
 	};
 

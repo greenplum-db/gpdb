@@ -7,14 +7,15 @@
     <p id="sql_command_desc">Defines a new table from the results of a query.</p>
     <section id="section2">
       <title>Synopsis</title>
-      <codeblock id="sql_command_synopsis">CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} ] TABLE <varname>table_name</varname>
-   [(<varname>column_name</varname> [, ...] )]
-   [ WITH ( <varname>storage_parameter</varname>=<varname>value</varname> [, ... ] ) ]
-   [ON COMMIT {PRESERVE ROWS | DELETE ROWS | DROP}]
-   [TABLESPACE <varname>tablespace</varname>]
-   AS <varname>query</varname>
-   [DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ] ) | DISTRIBUTED RANDOMLY
-      | DISTRIBUTED REPLICATED ]</codeblock>
+      <codeblock id="sql_command_synopsis">CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE <varname>table_name</varname>
+        [ (<varname>column_name</varname> [, ...] ) ]
+        [ WITH ( <varname>storage_parameter</varname> [= <varname>value</varname>] [, ... ] ) | WITH OIDS | WITHOUT OIDS ]
+        [ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+        [ TABLESPACE <varname>tablespace_name</varname> ]
+        AS <varname>query</varname>
+        [ WITH [ NO ] DATA ]
+        [ DISTRIBUTED BY (column [, ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
+      </codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   appendoptimized={TRUE|FALSE}
    blocksize={8192-2097152}
@@ -40,8 +41,8 @@
       <parml>
         <plentry>
           <pt>GLOBAL | LOCAL</pt>
-          <pd>These keywords are present for SQL standard compatibility, but have no effect in
-            Greenplum Database. </pd>
+          <pd>Ignored for compatibility. These keywords are deprecated; refer to <xref
+              href="CREATE_TABLE.xml#topic1"/> for details.</pd>
         </plentry>
         <plentry>
           <pt>TEMPORARY | TEMP</pt>
@@ -51,6 +52,16 @@
             name are not visible to the current session while the temporary table exists, unless
             they are referenced with schema-qualified names. Any indexes created on a temporary
             table are automatically temporary as well.</pd>
+        </plentry>
+        <plentry>
+          <pt>UNLOGGED</pt>
+          <pd>If specified, the table is created as an unlogged table. Data written to unlogged
+            tables is not written to the write-ahead (WAL) log, which makes them considerably faster
+            than ordinary tables. However, the contents of an unlogged table are not replicated to
+            mirror segment instances. Also an unlogged table is not crash-safe. After a segment
+            instance crash or unclean shutdown, the data for the unlogged table on that segment is
+            truncated. Any indexes created on an unlogged table are automatically unlogged as
+            well.</pd>
         </plentry>
         <plentry>
           <pt>
@@ -63,8 +74,7 @@
             <varname>column_name</varname>
           </pt>
           <pd>The name of a column in the new table. If column names are not provided, they are
-            taken from the output column names of the query. If the table is created from an
-              <codeph>EXECUTE</codeph> command, a column name list cannot be specified.</pd>
+            taken from the output column names of the query. </pd>
         </plentry>
         <plentry>
           <pt>WITH ( <varname>storage_parameter=value</varname> )</pt>
@@ -120,17 +130,19 @@
             block. </pd>
         </plentry>
         <plentry>
-          <pt>TABLESPACE <varname>tablespace</varname></pt>
-          <pd>The tablespace is the name of the tablespace in which the new table is to be created.
-            If not specified, the database's default tablespace is used.</pd>
+          <pt>TABLESPACE <varname>tablespace_name</varname></pt>
+          <pd>The <varname>tablespace_name</varname> parameter is the name of the tablespace in
+            which the new table is to be created. If not specified, the database's default
+            tablespace is used.</pd>
         </plentry>
         <plentry>
           <pt>AS <varname>query</varname></pt>
-          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph> or
+          <pd>A <codeph><xref href="./SELECT.xml#topic1" type="topic" format="dita"/></codeph>,
+                <codeph><xref href="SELECT.xml#topic1/table-command">TABLE</xref></codeph>, or
                 <codeph><xref href="./VALUES.xml#topic1" type="topic" format="dita"/></codeph>
             command, or an <codeph><xref href="./EXECUTE.xml#topic1" type="topic" format="dita"
-              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or <codeph>VALUES
-            </codeph>query.</pd>
+              /></codeph> command that runs a prepared <codeph>SELECT</codeph> or
+              <codeph>VALUES</codeph> query.</pd>
         </plentry>
         <plentry>
           <pt>DISTRIBUTED BY ({<varname>column</varname> [<varname>opclass</varname>]}, [ ... ]

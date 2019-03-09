@@ -42,7 +42,8 @@
           <pt>
             <varname>filename</varname>
           </pt>
-          <pd>Specifies the location of the archive file to be restored. If not specified, the
+          <pd>Specifies the location of the archive file (or directory, for a
+            directory-format archive) to be restored. If not specified, the
             standard input is used.</pd>
         </plentry>
       </parml>
@@ -51,7 +52,10 @@
         <parml>
           <plentry>
             <pt>-a | --data-only</pt>
-            <pd>Restore only the data, not the schema (data definitions).</pd>
+            <pd>Restore only the data, not the schema (data definitions). Table data and sequence
+              values are restored, if present in the archive.<p>This option is similar to, but for
+                historical reasons not identical to, specifying
+              <codeph>--section=data</codeph>.</p></pd>
           </plentry>
           <plentry>
             <pt>-c | --clean</pt>
@@ -82,11 +86,11 @@
                 <codeph>-l</codeph>. Default is the standard output.</pd>
           </plentry>
           <plentry>
-            <pt>-F t |c | --format=tar | custom</pt>
+            <pt>-F c|d|t | --format={custom | directory | tar}</pt>
             <pd>The format of the archive produced by <codeph><xref href="pg_dump.xml#topic1"
                   type="topic" format="dita"/></codeph>. It is not necessary to specify the format,
               since <codeph>pg_restore</codeph> will determine the format automatically. Format can
-              be either <codeph>tar</codeph> or <codeph>custom</codeph>.</pd>
+              be <codeph>custom</codeph>, <codeph>directory</codeph>, or <codeph>tar</codeph>.</pd>
           </plentry>
           <plentry>
             <pt>-i | --ignore-version</pt>
@@ -104,7 +108,7 @@
               — those which load data, create indexes, or create constraints —
               using multiple concurrent jobs. This option can dramatically
               reduce the time to restore a large database to a server running on
-              a multi-processor machine.</pd>
+              a multiprocessor machine.</pd>
             <pd>Each job is one process or one thread, depending on the
               operating system, and uses a separate connection to the
               server.</pd>
@@ -130,8 +134,12 @@
           <plentry>
             <pt>-L <varname>list-file</varname> | --use-list=<varname>list-file</varname></pt>
             <pd>Restore elements in the <varname>list-file</varname> only, and in the order they
-              appear in the file. Lines can be moved and may also be commented out by placing a
-                <codeph>;</codeph> at the start of the line.</pd>
+              appear in the file. Note that if filtering switches such as <codeph>-n</codeph> or
+                <codeph>-t</codeph> are used with <codeph>-L</codeph>, they will further restrict
+              the items restored. <p><varname>list-file</varname> is normally created by editing the
+                output of a previous <codeph>-l</codeph> operation. Lines can be moved or removed,
+                and can also be commented out by placing a semicolon (;) at the start of the line.
+                See below for examples.</p></pd>
           </plentry>
           <plentry>
             <pt>-n <varname>schema</varname> | --schema=<varname>schema</varname></pt>
@@ -149,11 +157,6 @@
               connection, and this user will own all the created objects.</pd>
           </plentry>
           <plentry>
-            <pt>--no-tablespaces</pt>
-            <pd>Do not output commands to select tablespaces. With this option, all objects will be
-              created in whichever tablespace is the default during restore.</pd>
-          </plentry>
-          <plentry>
             <pt>-P '<varname>function-name</varname>(<varname>argtype</varname> [, ...])' |
                 --function='<varname>function-name</varname>(<varname>argtype</varname> [,
               ...])'</pt>
@@ -163,10 +166,13 @@
           </plentry>
           <plentry>
             <pt>-s | --schema-only</pt>
-            <pd>Restore only the schema (data definitions), not the data (table contents). Current
-              sequence values will not be restored, either. (Do not confuse this with the
-                <codeph>--schema</codeph> option, which uses the word schema in a different
-              meaning.) </pd>
+            <pd>Restore only the schema (data definitions), not data, to the extent that schema
+              entries are present in the archive.<p>This option is the inverse of
+                  <codeph>--data-only</codeph>. It is similar to, but for historical reasons not
+                identical to, specifying <codeph>--section=pre-data
+                --section=post-data</codeph>.</p><p>(Do not confuse this with the
+                  <codeph>--schema</codeph> option, which uses the word "schema" in a different
+                meaning.)</p></pd>
           </plentry>
           <plentry>
             <pt>-S <varname>username</varname> | --superuser=<varname>username</varname></pt>
@@ -197,6 +203,12 @@
               commands).</pd>
           </plentry>
           <plentry>
+            <pt>-1 | --single-transaction</pt>
+            <pd>Execute the restore as a single transaction. This ensures that
+              either all the commands complete successfully, or no changes are
+              applied.</pd>
+          </plentry>
+          <plentry>
             <pt>--disable-triggers</pt>
             <pd>This option is only relevant when performing a data-only restore. It instructs
                 <codeph>pg_restore</codeph> to execute commands to temporarily disable triggers on
@@ -217,10 +229,28 @@
               when producing SQL script output.</pd>
           </plentry>
           <plentry>
-            <pt>-1 | --single-transaction</pt>
-            <pd>Execute the restore as a single transaction. This ensures that
-              either all the commands complete successfully, or no changes are
-              applied.</pd>
+            <pt>--no-security-labels</pt>
+            <pd>Do not output commands to restore security labels, even if the archive
+              contains them.</pd>
+          </plentry>
+          <plentry>
+            <pt>--no-tablespaces</pt>
+            <pd>Do not output commands to select tablespaces. With this option, all objects will be
+              created in whichever tablespace is the default during restore.</pd>
+          </plentry>
+          <plentry>
+            <pt>--section=<varname>sectionname</varname></pt>
+            <pd>Only restore the named section. The section name can be <codeph>pre-data</codeph>,
+                <codeph>data</codeph>, or <codeph>post-data</codeph>. This option can be specified
+              more than once to select multiple sections. </pd>
+            <pd>The default is to restore all sections.</pd>
+          </plentry>
+          <plentry>
+            <pt>--use-set-session-authorization</pt>
+            <pd>Output SQL-standard <codeph>SET SESSION AUTHORIZATION</codeph> commands instead of
+                <codeph>ALTER OWNER</codeph> commands to determine object ownership. This makes the
+              dump more standards-compatible, but depending on the history of the objects in the
+              dump, it might not restore properly.</pd>
           </plentry>
           <plentry>
             <pt>-? | --help</pt>

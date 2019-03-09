@@ -102,6 +102,7 @@ struct CdbComponentDatabases
 	int			numActiveQEs;
 	int			numIdleQEs;
 	int			qeCounter;
+	List		*freeCounterList;
 };
 
 //

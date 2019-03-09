@@ -41,11 +41,7 @@ typedef struct {
  *
  * All macros take an (SvecType *) as argument
  */
-/*
- * GPDB_93_MERGE_FIXME: Shouldn't this just be sizeof(int32) + sizeof(int32). OR
- * use similar to other header routines use offset of data.
- */
-#define SVECHDRSIZE	(VARHDRSZ + sizeof(int32))
+#define SVECHDRSIZE	(offsetof(SvecType, data))
 /* Beginning of the serialized SparseData */
 #define SVEC_SDATAPTR(x)	((char *)(x)+SVECHDRSIZE)
 #define SVEC_SIZEOFSERIAL(x)	(SVECHDRSIZE+SIZEOF_SPARSEDATASERIAL((SparseData)SVEC_SDATAPTR(x)))

@@ -838,10 +838,15 @@ test__pxf_serialize_filter_list__manyFilters(void **state)
 
     result = pxf_serialize_filter_list(expressionItems);
     assert_string_equal(result, "a0c25s4d1984o5a1c25s13dGeorge Orwello5a2c25s7dWinstono5a3c25s6dEric-%o7a4c25s25d\"Ugly\" string with quoteso5a5c25s0do5a6o9");
-    pfree(result);
+	pfree(result);
 
-    pxf_free_expression_items_list(expressionItems);
-    expressionItems = NIL;
+	int trivialExpressionItems = expressionItems->length;
+	add_extra_and_expression_items(expressionItems, trivialExpressionItems - 1);
+
+	assert_int_equal(expressionItems->length, 2 * trivialExpressionItems - 1);
+
+	pxf_free_expression_items_list(expressionItems);
+	expressionItems = NIL;
 }
 
 void

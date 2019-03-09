@@ -1,21 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE topic
   PUBLIC "-//OASIS//DTD DITA Composite//EN" "ditabase.dtd">
-<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<b>-D</b> <varname>tablespace</varname>] [<b>-E</b> <varname>encoding</varname>] 
-        [<b>-O</b> <varname>owner</varname>] [<b>-T</b> <varname>template</varname>] [<b>-e</b>] [<varname>dbname</varname> ['<varname>description</varname>']]
-        [<b>{-l | --locale}</b> <varname>locale</varname>] [<b>--lc-collate</b> <varname>locale</varname>] [<b>--lc-type</b> <varname>locale</varname>]
+<topic id="topic1"><title id="oz137116">createdb</title><body><p id="client_util_desc">Creates a new database.</p><section id="section2"><title>Synopsis</title><codeblock id="client_util_synopsis"><b>createdb</b> [<varname>connection-option</varname> ...] [<varname>option</varname> ...] [<varname>dbname</varname> ['<varname>description</varname>']]
 
 <b>createdb</b> <b>-? | --help</b>
 
 <b>createdb</b> <b>-V | --version</b></codeblock></section><section id="section3"><title>Description</title><p><codeph>createdb</codeph> creates a new database in a Greenplum Database system. </p><p>Normally, the database user who executes this command becomes the
 owner of the new database. However, a different owner can be specified
 via the <codeph>-O</codeph> option, if the executing user has appropriate
-privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph>CREATE
-DATABASE</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt>dbname</pt><pd>The name of the database to be created. The name must be unique among all other databases in the
+privileges.</p><p><codeph>createdb</codeph> is a wrapper around the SQL command <codeph><xref
+              href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1"/>
+</codeph>.</p></section><section id="section4"><title>Options</title><parml><plentry><pt><varname>dbname</varname></pt><pd>The name of the database to be created. The name must be unique among all other databases in the
               Greenplum system. If not specified, reads from the
             environment variable <codeph>PGDATABASE</codeph>, then <codeph>PGUSER</codeph> or
-            defaults to the current system user.</pd></plentry><plentry><pt>description</pt><pd>A comment to be associated with the newly created database. Descriptions
-containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace <varname>tablespace</varname></pt><pd>The default tablespace for the database. </pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that createdb generates and sends to the server.</pd></plentry>
+            defaults to the current system user.</pd></plentry><plentry><pt><varname>description</varname></pt><pd>A comment to be associated with the newly created database. Descriptions
+              containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D <varname>tablespace</varname> | --tablespace=<varname>tablespace</varname></pt><pd>Specifies the default tablespace for the database. (This name
+                is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-e echo</pt><pd>Echo the commands that <codeph>createdb</codeph> generates and sends to the server.</pd></plentry>
+        <plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
+              <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
+            use the default encoding. <ph>See the Greenplum Database Reference
+              Guide for information about supported character sets.</ph></pd>
+        </plentry>
         <plentry>
           <pt>-l <varname>locale</varname> | --locale <varname>locale</varname></pt>
           <pd>Specifies the locale to be used in this database. This is equivalent to specifying
@@ -28,12 +33,19 @@ containing white space must be enclosed in quotes.</pd></plentry><plentry><pt>-D
         <plentry>
           <pt>--lc-ctype <varname>locale</varname></pt>
           <pd>Specifies the LC_CTYPE setting to be used in this database.</pd>
-        </plentry><plentry><pt>-E <varname>encoding</varname> | --encoding <varname>encoding</varname></pt><pd>Character set encoding to use in the new database. Specify a string constant (such as
-              <codeph>'UTF8'</codeph>), an integer encoding number, or <codeph>DEFAULT</codeph> to
-            use the default encoding. <ph>See the Greenplum Database Reference
-              Guide for information about supported character sets.</ph></pd></plentry><plentry><pt>-O <varname>owner</varname> | --owner <varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
-to the user executing this command. </pd></plentry><plentry><pt>-T <varname>template</varname> | --template <varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
-              <codeph>template1</codeph>. </pd></plentry>
+        </plentry>
+        <plentry>
+          <pt>--maintenance-db=<varname>dbname</varname></pt>
+          <pd>Specifies the name of the database to connect to when creating the new database. If
+            not specified, the <codeph>postgres</codeph> database will be used; if that does not
+            exist (or if it is the name of the new database being created),
+              <codeph>template1</codeph> will be used.</pd>
+        </plentry>
+        <plentry><pt>-O <varname>owner</varname> | --owner=<varname>owner</varname></pt><pd>The name of the database user who will own the new database. Defaults
+          to the user executing this command. (This name
+          is processed as a double-quoted identifier.)</pd></plentry><plentry><pt>-T <varname>template</varname> | --template=<varname>template</varname></pt><pd>The name of the template from which to create the new database. Defaults to
+            <codeph>template1</codeph>. (This name
+            is processed as a double-quoted identifier.)</pd></plentry>
         <plentry>
           <pt>-V | --version</pt>
           <pd>Print the <codeph>createdb</codeph> version and exit.</pd>
@@ -48,11 +60,11 @@ to the user executing this command. </pd></plentry><plentry><pt>-T <varname>temp
         SQL command <codeph>CREATE DATABASE</codeph>; see <ph><codeph><xref
             href="../../ref_guide/sql_commands/CREATE_DATABASE.xml#topic1" otherprops="op-help"
           /></codeph></ph><ph otherprops="op-print"><codeph>CREATE DATABASE</codeph> in the <i>Greenplum
-            Database Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host <varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
+            Database Reference Guide</i></ph> for more information about them. </p><sectiondiv id="section5"><b>Connection Options</b><parml><plentry><pt>-h <varname>host</varname> | --host=<varname>host</varname></pt><pd>The host name of the machine on which the Greenplum master database
               server is running. If not specified, reads from the environment variable
-                <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port <varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is
+                <codeph>PGHOST</codeph> or defaults to localhost.</pd></plentry><plentry><pt>-p <varname>port</varname> | --port=<varname>port</varname></pt><pd>The TCP port on which the Greenplum master database server is
               listening for connections. If not specified, reads from the environment variable
-                <codeph>PGPORT</codeph> or defaults to 5432.</pd></plentry><plentry><pt>-U <varname>username</varname> | --username <varname>username</varname></pt><pd>The database role name to connect as. If not specified, reads from
+                <codeph>PGPORT</codeph> or defaults to 5432.</pd></plentry><plentry><pt>-U <varname>username</varname> | --username=<varname>username</varname></pt><pd>The database role name to connect as. If not specified, reads from
 the environment variable <codeph>PGUSER</codeph> or defaults to the current
 system role name.</pd></plentry><plentry><pt>-w | --no-password</pt><pd>Never issue a password prompt. If the server requires password authentication
 and a password is not available by other means such as a <codeph>.pgpass</codeph>

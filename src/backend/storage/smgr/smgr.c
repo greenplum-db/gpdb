@@ -33,6 +33,16 @@
 #include "utils/inval.h"
 
 /*
+ * Hook for plugins to collect statistics from storage functions
+ * For example, disk quota extension will use these hooks to
+ * detect active tables.
+ */
+file_create_hook_type file_create_hook = NULL;
+file_extend_hook_type file_extend_hook = NULL;
+file_truncate_hook_type file_truncate_hook = NULL;
+file_unlink_hook_type file_unlink_hook = NULL;
+
+/*
  * Each backend has a hashtable that stores all extant SMgrRelation objects.
  * In addition, "unowned" SMgrRelation objects are chained together in a list.
  */
@@ -343,6 +353,9 @@ smgrcreate(SMgrRelation reln, ForkNumber forknum, bool isRedo)
 							isRedo);
 
 	mdcreate(reln, forknum, isRedo);
+
+	if (file_create_hook)
+		(*file_create_hook)(reln->smgr_rnode);
 }
 
 /*
@@ -357,6 +370,8 @@ void
 smgrcreate_ao(RelFileNodeBackend rnode, int32 segmentFileNum, bool isRedo)
 {
 	mdcreate_ao(rnode, segmentFileNum, isRedo);
+	if (file_create_hook)
+		(*file_create_hook)(rnode);
 }
 
 /*
@@ -502,6 +517,10 @@ smgrdounlinkall(SMgrRelation *rels, int nrels, bool isRedo, char *relstorages)
 			mdunlink(rnodes[i], forknum, isRedo, relstorages[i]);
 	}
 
+	if (file_unlink_hook)
+		for (i = 0; i < nrels; i++)
+			(*file_unlink_hook)(rnodes[i]);
+
 	pfree(rnodes);
 }
 
@@ -520,6 +539,8 @@ smgrextend(SMgrRelation reln, ForkNumber forknum, BlockNumber blocknum,
 		   char *buffer, bool skipFsync)
 {
 	mdextend(reln, forknum, blocknum, buffer, skipFsync);
+	if (file_extend_hook)
+		(*file_extend_hook)(reln->smgr_rnode);
 }
 
 /*
@@ -609,6 +630,9 @@ smgrtruncate(SMgrRelation reln, ForkNumber forknum, BlockNumber nblocks)
 	 * Do the truncation.
 	 */
 	mdtruncate(reln, forknum, nblocks);
+
+	if (file_truncate_hook)
+		(*file_truncate_hook)(reln->smgr_rnode);
 }
 
 /*

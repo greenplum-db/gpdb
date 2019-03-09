@@ -114,6 +114,7 @@ def run_gpcommand(context, command, cmd_prefix=''):
     context.ret_code = result.rc
     context.stdout_message = result.stdout
     context.error_message = result.stderr
+    context.stdout_position = 0
 
     return (result.rc, result.stderr, result.stdout)
 

@@ -108,3 +108,13 @@ def runCommandOnRemoteSegment(context, cid, sql_cmd):
     host = host.strip()
     psql_cmd = "PGDATABASE=\'template1\' PGOPTIONS=\'-c gp_session_role=utility\' psql -h %s -p %s -c \"%s\"; " % (host, port, sql_cmd)
     Command(name='Running Remote command: %s' % psql_cmd, cmdStr = psql_cmd).run(validateAfter=True)
+
+@then('gprecoverseg should print "{output}" to stdout for each mirror')
+def impl(context, output):
+    gparray = GpArray.initFromCatalog(dbconn.DbURL())
+    segments = gparray.getDbList()
+
+    for segment in segments:
+        if segment.isSegmentMirror():
+            expected = r'\(dbid {}\): {}'.format(segment.dbid, output)
+            check_stdout_msg(context, expected)

@@ -7,10 +7,11 @@
         <p id="sql_command_desc">Starts a transaction block.</p>
         <section id="section2">
             <title>Synopsis</title>
-            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [<varname>transaction_mode</varname>]
-      [READ ONLY | READ WRITE]</codeblock>
+            <codeblock id="sql_command_synopsis">BEGIN [WORK | TRANSACTION] [<varname>transaction_mode</varname>]</codeblock>
             <p>where <varname>transaction_mode</varname> is:</p>
-            <codeblock>ISOLATION LEVEL {READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE}</codeblock>
+            <codeblock>   ISOLATION LEVEL {READ UNCOMMITTED | READ COMMITTED | REPEATABLE READ | SERIALIZABLE}
+   READ WRITE | READ ONLY
+   [ NOT ] DEFERRABLE</codeblock>
         </section>
         <section id="section3">
             <title>Description</title>
@@ -26,9 +27,10 @@
                 statements inside a transaction is also useful to ensure consistency when making
                 several related changes: other sessions will be unable to see the intermediate
                 states wherein not all the related updates have been done. </p>
-            <p>If the isolation level or read/write mode is specified, the new transaction has those
-                characteristics, as if <codeph><xref href="./SET_TRANSACTION.xml#topic1"
-                        type="topic" format="dita"/></codeph> was executed. </p>
+            <p>If the isolation level, read/write mode, or deferrable mode is specified, the new
+                transaction has those characteristics, as if <codeph><xref
+                        href="./SET_TRANSACTION.xml#topic1" type="topic" format="dita"/></codeph>
+                was executed. </p>
         </section>
         <section id="section4">
             <title>Parameters</title>
@@ -66,6 +68,11 @@
                         running the same transactions one at a time. If you specify
                             <codeph>SERIALIZABLE</codeph>, Greenplum Database falls back to
                             <codeph>REPEATABLE READ</codeph>.</pd>
+                    <pd>Specifying <codeph>DEFERRABLE</codeph> has no effect in Greenplum Database,
+                        but the syntax is supported for compatibility with PostgreSQL. A transaction
+                        can only be deferred if it is <codeph>READ ONLY</codeph> and
+                            <codeph>SERIALIZABLE</codeph>, and Greenplum Database does not support
+                            <codeph>SERIALIAZABLE</codeph> transactions. </pd>
                 </plentry>
             </parml>
         </section>
@@ -84,14 +91,16 @@
             <title>Examples</title>
             <p>To begin a transaction block: </p>
             <codeblock>BEGIN;</codeblock>
-            <p>To begin a transaction block with the serializable isolation level:</p>
-            <codeblock>BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;</codeblock>
+            <p>To begin a transaction block with the repeatable read isolation level:</p>
+            <codeblock>BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;</codeblock>
         </section>
         <section id="section7">
             <title>Compatibility</title>
             <p><codeph>BEGIN</codeph> is a Greenplum Database language extension. It is equivalent
                 to the SQL-standard command <codeph><xref href="./START_TRANSACTION.xml#topic1"
                         type="topic" format="dita"/></codeph>.</p>
+            <p><codeph>DEFERRABLE</codeph>
+                <varname>transaction_mode</varname> is a Greenplum Database language extension.</p>
             <p>Incidentally, the <codeph>BEGIN</codeph> key word is used for a different purpose in
                 embedded SQL. You are advised to be careful about the transaction semantics when
                 porting database applications.</p>

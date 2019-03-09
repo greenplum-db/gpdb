@@ -18,6 +18,7 @@
 #include "catalog/pg_control.h"
 #include "lib/stringinfo.h"
 #include "storage/buf.h"
+#include "storage/fd.h"
 #include "utils/pg_crc.h"
 #include "utils/relcache.h"
 #include "cdb/cdbpublic.h"

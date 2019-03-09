@@ -30,7 +30,7 @@
           <pd>Switches to unaligned output mode. (The default output mode is aligned.) </pd>
         </plentry>
         <plentry>
-          <pt>-c '<varname>command</varname>' | --command '<varname>command'</varname></pt>
+          <pt>-c '<varname>command</varname>' | --command='<varname>command'</varname></pt>
           <pd>Specifies that <codeph>psql</codeph> is to execute the specified command string, and
             then exit. This is useful in shell scripts. <varname>command</varname> must be either a
             command string that is completely parseable by the server, or a single backslash
@@ -41,15 +41,19 @@
           <pd>If the command string contains multiple SQL commands, they are processed in a single
             transaction, unless there are explicit <codeph>BEGIN/COMMIT</codeph> commands included
             in the string to divide it into multiple transactions. This is different from the
-            behavior when the same string is fed to <codeph>psql</codeph>'s standard input.</pd>
+            behavior when the same string is fed to <codeph>psql</codeph>'s standard input.
+            Also, only the result of the last SQL command is returned.</pd>
         </plentry>
         <plentry>
-          <pt>-d <varname>dbname</varname> | --dbname <varname>dbname</varname></pt>
+          <pt>-d <varname>dbname</varname> | --dbname=<varname>dbname</varname></pt>
           <pd>Specifies the name of the database to connect to. This is equivalent to specifying
             dbname as the first non-option argument on the command line.</pd>
-          <pd>If this parameter contains an equals sign, it is treated as a
-              <codeph>conninfo</codeph> string; for example you can pass <codeph>'dbname=postgres
-              user=username password=mypass'</codeph> as <codeph>dbname</codeph>.</pd>
+          <pd>If this parameter contains an <codeph>=</codeph> sign or starts with a valid URI
+            prefix (<codeph>postgresql://</codeph> or <codeph>postgres://</codeph>), it is treated
+            as a <codeph>conninfo</codeph> string. See <xref
+              href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-CONNSTRING"
+              format="html" scope="external">Connection Strings</xref> in the PostgreSQL
+            documentation for more information.</pd>
         </plentry>
         <plentry>
           <pt>-e | --echo-queries</pt>
@@ -61,16 +65,23 @@
             You can use this to study <codeph>psql</codeph>'s internal operations.</pd>
         </plentry>
         <plentry>
-          <pt>-f <varname>filename</varname> | --file <varname>filename</varname></pt>
-          <pd>Use a file as the source of commands instead of reading commands interactively. After
-            the file is processed, <codeph>psql</codeph> terminates. If <varname>filename</varname>
-            is <codeph>-</codeph> (hyphen), then standard input is read. Using this option is subtly
-            different from writing <codeph>psql &lt;</codeph><varname>filename</varname>. In
-            general, both will do what you expect, but using <codeph>-f</codeph> enables some nice
-            features such as error messages with line numbers.</pd>
+          <pt>-f <varname>filename</varname> | --file=<varname>filename</varname></pt>
+          <pd>Use the file <varname>filename</varname> as the source of commands instead of reading
+            commands interactively. After the file is processed, <codeph>psql</codeph> terminates.
+            This is in many ways equivalent to the meta-command <codeph>\i</codeph>.</pd>
+          <pd>If filename is <codeph>-</codeph> (hyphen), then standard input is read until an EOF
+            indication or <codeph>\q</codeph> meta-command. Note however that Readline is not used
+            in this case (much as if <codeph>-n</codeph> had been specified). </pd>
+          <pd>Using this option is subtly different from writing <codeph>psql &lt;
+                <varname>filename</varname></codeph>. In general, both will do what you expect, but
+            using <codeph>-f</codeph> enables some nice features such as error messages with line
+            numbers. There is also a slight chance that using this option will reduce the start-up
+            overhead. On the other hand, the variant using the shell's input redirection is (in
+            theory) guaranteed to yield exactly the same output you would have received had you
+            entered everything by hand.</pd>
         </plentry>
         <plentry>
-          <pt>-F <varname>separator</varname> | --field-separator <varname>separator</varname></pt>
+          <pt>-F <varname>separator</varname> | --field-separator=<varname>separator</varname></pt>
           <pd>Use the specified separator as the field separator for unaligned output. </pd>
         </plentry>
         <plentry>
@@ -83,20 +94,26 @@
             ignored.</pd>
         </plentry>
         <plentry>
-          <pt>-L <varname>filename</varname> | --log-file <varname>filename</varname></pt>
+          <pt>-L <varname>filename</varname> | --log-file=<varname>filename</varname></pt>
           <pd>Write all query output into the specified log file, in addition to the normal output
             destination.</pd>
         </plentry>
         <plentry>
-          <pt>-o <varname>filename</varname> | --output <varname>filename</varname></pt>
+          <pt>-n | --no-readline</pt>
+          <pd>Do not use Readline for line editing and do not use the command history. This can be useful to turn off tab expansion when cutting and pasting.
+            
+          </pd>
+        </plentry>
+        <plentry>
+          <pt>-o <varname>filename</varname> | --output=<varname>filename</varname></pt>
           <pd>Put all query output into the specified file.</pd>
         </plentry>
         <plentry>
-          <pt>-P <varname>assignment</varname> | --pset <varname>assignment</varname></pt>
+          <pt>-P <varname>assignment</varname> | --pset=<varname>assignment</varname></pt>
           <pd>Allows you to specify printing options in the style of <codeph>\pset</codeph> on the
             command line. Note that here you have to separate name and value with an equal sign
-            instead of a space. Thus to set the output format to LaTeX, you could write <codeph>-P
-              format=latex</codeph>. </pd>
+            instead of a space. Thus to set the output format to <codeph>LaTeX</codeph>, you could
+            write <codeph>-P format=latex</codeph>. </pd>
         </plentry>
         <plentry>
           <pt>-q | --quiet</pt>
@@ -105,7 +122,7 @@
             happens. This is useful with the <codeph>-c</codeph> option.</pd>
         </plentry>
         <plentry>
-          <pt>-R <varname>separator</varname> | --record-separator <varname>separator</varname></pt>
+          <pt>-R <varname>separator</varname> | --record-separator=<varname>separator</varname></pt>
           <pd>Use <varname>separator</varname> as the record separator for unaligned output.</pd>
         </plentry>
         <plentry>
@@ -125,19 +142,19 @@
             equivalent to <codeph>\pset tuples_only</codeph> and is provided for convenience. </pd>
         </plentry>
         <plentry>
-          <pt>-T <varname>table_options</varname> | --table-attr
+          <pt>-T <varname>table_options</varname> | --table-attr=
             <varname>table_options</varname></pt>
           <pd>Allows you to specify options to be placed within the HTML table tag. See
               <codeph>\pset</codeph> for details. </pd>
         </plentry>
         <plentry>
-          <pt>-v <varname>assignment</varname> | --set <varname>assignment</varname> | --variable
+          <pt>-v <varname>assignment</varname> | --set=<varname>assignment</varname> | --variable=
               <varname>assignment</varname></pt>
-          <pd>Perform a variable assignment, like the <codeph>\set</codeph> internal command. Note
-            that you must separate name and value, if any, by an equal sign on the command line. To
-            unset a variable, leave off the equal sign. To just set a variable without a value, use
-            the equal sign but leave off the value. These assignments are done during a very early
-            stage of start-up, so variables reserved for internal purposes might get overwritten
+          <pd>Perform a variable assignment, like the <codeph>\set</codeph> meta command. Note that
+            you must separate name and value, if any, by an equal sign on the command line. To unset
+            a variable, leave off the equal sign. To set a variable with an empty value, use the
+            equal sign but leave off the value. These assignments are done during a very early stage
+            of start-up, so variables reserved for internal purposes might get overwritten
             later.</pd>
         </plentry>
         <plentry>
@@ -154,9 +171,19 @@
             nor the user's <codeph>~/.psqlrc</codeph> file). </pd>
         </plentry>
         <plentry>
+          <pt>-z | --field-separator-zero</pt>
+          <pd>Set the field separator for unaligned output to a zero byte.</pd>
+        </plentry>
+        <plentry>
+          <pt>-0 | --record-separator-zero</pt>
+          <pd>Set the record separator for unaligned output to a zero byte. This is useful for
+            interfacing, for example, with <codeph>xargs -0</codeph>.</pd>
+        </plentry>
+        <plentry>
           <pt>-1 | --single-transaction</pt>
-          <pd>When <codeph>psql</codeph> executes a script with the <codeph>-f</codeph> option,
-            adding this option wraps <codeph>BEGIN/COMMIT</codeph> around the script to execute it
+          <pd>When <codeph>psql</codeph> executes a script, 
+            adding this option wraps <codeph>BEGIN</codeph>/<codeph>COMMIT</codeph> around the
+            script to execute it
             as a single transaction. This ensures that either all the commands complete
             successfully, or no changes are applied.</pd>
           <pd>If the script itself uses <codeph>BEGIN</codeph>, <codeph>COMMIT</codeph>, or
@@ -174,7 +201,7 @@
         <b>Connection Options</b>
         <parml>
           <plentry>
-            <pt>-h <varname>host</varname> | --host <varname>host</varname></pt>
+            <pt>-h <varname>host</varname> | --host=<varname>host</varname></pt>
             <pd>The host name of the machine on which the Greenplum master database server is
               running. If not specified, reads from the environment variable <codeph>PGHOST</codeph>
               or defaults to localhost.</pd> 
@@ -182,13 +209,13 @@
               value begins with a slash, it is used as the directory for the UNIX-domain socket.</pd>
           </plentry>
           <plentry>
-            <pt>-p <varname>port</varname> | --port <varname>port</varname></pt>
+            <pt>-p <varname>port</varname> | --port=<varname>port</varname></pt>
             <pd>The TCP port on which the Greenplum master database server is listening for
               connections. If not specified, reads from the environment variable
                 <codeph>PGPORT</codeph> or defaults to 5432.</pd>
           </plentry>
           <plentry>
-            <pt>-U <varname>username</varname> | --username <varname>username</varname></pt>
+            <pt>-U <varname>username</varname> | --username=<varname>username</varname></pt>
             <pd>The database role name to connect as. If not specified, reads from the environment
               variable <codeph>PGUSER</codeph> or defaults to the current system role name.</pd>
           </plentry>
@@ -253,9 +280,23 @@
           string or a URI, which is used instead of a database name. This mechanism gives you very
           wide control over the connection. For
           example:</p><codeblock>$ psql "service=myservice sslmode=require"
-$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>If
-          the connection could not be made for any reason (insufficient privileges, server is not
-          running, etc.), <codeph>psql</codeph> will return an error and terminate.</p></sectiondiv>
+$ psql postgresql://gpmaster:5433/mydb?sslmode=require</codeblock><p>This
+          way you can also use LDAP for connection parameter lookup as described in <xref
+            href="https://www.postgresql.org/docs/9.4/libpq-ldap.html" format="html"
+            scope="external">LDAP Lookup of Connection Parameters</xref> in the PostgreSQL
+          documentation. See <xref
+            href="https://www.postgresql.org/docs/9.4/libpq-connect.html#LIBPQ-PARAMKEYWORDS"
+            format="html" scope="external">Parameter Keywords</xref> in the PostgreSQL documentation
+          for more information on all the available connection options.</p><p>If the connection
+          could not be made for any reason (insufficient privileges, server is not running, etc.),
+            <codeph>psql</codeph> will return an error and terminate.</p>
+        <p>If at least one of standard input or standard output are a terminal, then
+            <codeph>psql</codeph> sets the client encoding to <codeph>auto</codeph>, which will
+          detect the appropriate client encoding from the locale settings (<codeph>LC_CTYPE</codeph>
+          environment variable on Unix systems). If this doesn't work out as expected, the client
+          encoding can be overridden using the environment variable
+            <codeph>PGCLIENTENCODING</codeph>.</p>
+      </sectiondiv>
       <sectiondiv id="section9">
         <b>Entering SQL Commands</b>
         <p>In normal operation, <codeph>psql</codeph> provides a prompt with the name of the
@@ -279,17 +320,20 @@ testdb=#</codeblock>
       <p>The format of a <codeph>psql</codeph> command is the backslash, followed immediately by a
         command verb, then any arguments. The arguments are separated from the command verb and each
         other by any number of whitespace characters.</p>
-      <p>To include whitespace into an argument you may quote it with a single quote. To include a
-        single quote into such an argument, use two single quotes. Anything contained in single
-        quotes is furthermore subject to C-like substitutions for <codeph>\n</codeph> (new line),
-          <codeph>\t</codeph> (tab), <codeph>\digits</codeph> (octal), and <codeph>\xdigits</codeph>
-        (hexadecimal). </p>
-      <p>If an unquoted argument begins with a colon (<codeph>:</codeph>), it is taken as a
-          <codeph>psql</codeph> variable and the value of the variable is used as the argument
-        instead.</p>
-      <p>Arguments that are enclosed in backquotes (<codeph>`</codeph>) are taken as a command line
-        that is passed to the shell. The output of the command (with any trailing newline removed)
-        is taken as the argument value. The above escape sequences also apply in backquotes. </p>
+      <p>To include whitespace into an argument you may quote it with single quotes. To include a
+        single quote into such an argument, write two single quotes within single-quoted text.
+        Anything contained in single quotes is furthermore subject to C-like substitutions for
+          <codeph>\n</codeph> (new line), <codeph>\t</codeph> (tab), <codeph>\b</codeph>
+        (backspace), <codeph>\r</codeph> (carriage return), <codeph>\f</codeph> (form feed),
+          <codeph>\digits</codeph> (octal), and <codeph>\xdigits</codeph> (hexadecimal). A backslash
+        preceding any other character within single-quoted text quotes that single character,
+        whatever it is.</p>
+      <p>Within an argument, text that is enclosed in backquotes (<codeph>`</codeph>) is taken as a
+        command line that is passed to the shell. The output of the command (with any trailing
+        newline removed) replaces the backquoted text.</p>
+      <p>If an unquoted colon (<codeph>:</codeph>) followed by a <codeph>psql</codeph> variable name
+        appears within an argument, it is replaced by the variable's value, as described in <xref
+          href="#topic1/section14" format="dita">SQL Interpolation</xref>. </p>
       <p>Some commands take an SQL identifier (such as a table name) as argument. These arguments
         follow the syntax rules of SQL: Unquoted letters are forced to lowercase, while double
         quotes (<codeph>"</codeph>) protect letters from case conversion and allow incorporation of
@@ -311,17 +355,6 @@ testdb=#</codeblock>
             See <codeph>\pset</codeph> for a more general solution. </pd>
         </plentry>
         <plentry>
-          <pt>\cd [<varname>directory</varname>]</pt>
-          <pd>Changes the current working directory. Without argument, changes to the current user's
-            home directory. To print your current working directory, use <codeph>\!pwd</codeph>.
-          </pd>
-        </plentry>
-        <plentry>
-          <pt>\C [<varname>title</varname>]</pt>
-          <pd>Sets the title of any tables being printed as the result of a query or unset any such
-            title. This command is equivalent to <codeph>\pset title</codeph>.</pd>
-        </plentry>
-        <plentry>
           <pt>\c | \connect [<varname>dbname</varname> [<varname>username</varname>]
               [<varname>host</varname>] [<varname>port</varname>]]</pt>
           <pd>Establishes a new connection. If the new connection is successfully made, the previous
@@ -333,6 +366,17 @@ testdb=#</codeblock>
             mechanism that scripts are not accidentally acting on the wrong database.</pd>
         </plentry>
         <plentry>
+          <pt>\C [<varname>title</varname>]</pt>
+          <pd>Sets the title of any tables being printed as the result of a query or unset any such
+            title. This command is equivalent to <codeph>\pset title</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>\cd [<varname>directory</varname>]</pt>
+          <pd>Changes the current working directory. Without argument, changes to the current user's
+            home directory. To print your current working directory, use <codeph>\!pwd</codeph>.
+          </pd>
+        </plentry>
+        <plentry>
           <pt>\conninfo</pt>
           <pd>Displays information about the current connection including the database name, the
             user name, the type of connection (UNIX domain socket, <codeph>TCP/IP</codeph>, etc.),
@@ -340,11 +384,9 @@ testdb=#</codeblock>
         </plentry>
         <plentry>
           <pt>\copy {<varname>table</varname> [(<varname>column_list</varname>)] |
-              (<varname>query</varname>)} {from | to} {'<varname>filename</varname>' | stdin |
-            stdout | pstdin | pstdout} [with] [binary] [oids] [delimiter [as]
-              '<varname>character</varname>'] [null [as] '<varname>string</varname>'] [csv [header]
-            [quote [as] 'character'] [escape [as] '<varname>character</varname>'] [force quote
-            column_list] [force not null column_list]]</pt>
+              (<varname>query</varname>)} {from | to} {'<varname>filename</varname>' | 
+            program '<varname>command</varname>' | stdin |
+            stdout | pstdin | pstdout} [with] (<varname>option</varname> [, ...]) ]</pt>
           <pd>Performs a frontend (client) copy. This is an operation that runs an SQL
             <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph>
             command, but instead of the server reading or writing the
@@ -352,11 +394,10 @@ testdb=#</codeblock>
             between the server and the local file system. This means that file accessibility and
             privileges are those of the local user, not the server, and no SQL superuser privileges
             are required.</pd>
-          <pd>The syntax of the command is similar to that of the SQL
-            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command.
-            Note that, because of this, special parsing rules apply to the <codeph>\copy</codeph>
-            command. In particular, the variable substitution rules and backslash escapes do not
-            apply. </pd>
+          <pd>When <codeph>program</codeph> is specified, <varname>command</varname> is executed
+            by <codeph>psql</codeph> and the data from or to <varname>command</varname> is routed
+            between the server and the client. This means that the execution privileges are those
+            of the local user, not the server, and no SQL superuser privileges are required.</pd>
           <pd><codeph>\copy ... from stdin | to stdout</codeph> reads/writes based on the command
             input and output respectively. All rows are read from the same source that issued the
             command, continuing until <codeph>\.</codeph> is read or the stream reaches
@@ -364,6 +405,13 @@ testdb=#</codeblock>
             read/write from <codeph>psql</codeph>'s standard input or output, use
               <codeph>pstdin</codeph> or <codeph>pstdout</codeph>. This option is useful for
             populating tables in-line within a SQL script file.</pd>
+          <pd>The syntax of the command is similar to that of the SQL
+            <codeph><xref href="../../ref_guide/sql_commands/COPY.xml#topic1"/></codeph> command,
+            and <varname>option</varname> must indicate one of the options of the SQL
+            <codeph>COPY</codeph> command.
+            Note that, because of this, special parsing rules apply to the <codeph>\copy</codeph>
+            command. In particular, the variable substitution rules and backslash escapes do not
+            apply. </pd>
           <pd>This operation is not as efficient as the SQL <codeph>COPY</codeph> command because
             all data must pass through the client/server connection.</pd>
         </plentry>
@@ -375,65 +423,76 @@ testdb=#</codeblock>
         <plentry>
           <pt>\d [<varname>relation_pattern</varname>]  | \d+ [<varname>relation_pattern</varname>]
             | \dS [<varname>relation_pattern</varname>]</pt>
-          <pd>For each relation (table, external table, view, index, or sequence) matching the
-            relation pattern, show all columns, their types, the tablespace (if not the default) and
-            any special attributes such as <codeph>NOT NULL</codeph> or defaults, if any. Associated
-            indexes, constraints, rules, and triggers are also shown.<ul id="ul_qda_zxh_no">
+          <pd>For each relation (table, external table, view, index, sequence, or foreign table) or
+            composite type matching the relation pattern, show all columns, their types, the
+            tablespace (if not the default) and any special attributes such as <codeph>NOT
+              NULL</codeph> or defaults. Associated indexes, constraints, rules, and triggers are
+            also shown. For foreign tables, the associated foreign server is shown as well.<ul
+              id="ul_qda_zxh_no">
+              <li>For some types of relation, <codeph>\d</codeph> shows additional information for
+                each column: column values for sequences, indexed expressions for indexes, and
+                foreign data wrapper options for foreign tables.</li>
               <li id="kb143931">The command form <codeph>\d+</codeph> is identical, except that more
                 information is displayed: any comments associated with the columns of the table are
-                shown, as is the presence of OIDs in the table, and the view definition if the relation is a view.<p>For partitioned tables, the
-                  command <codeph>\d</codeph> or <codeph>\d+</codeph> specified with the root
-                  partition table or child partition table displays information about the table
-                  including partition keys on the current level of the partition table. The command
-                    <codeph>\d+</codeph> also displays the immediate child partitions of the table
-                  and whether the child partition is an external table or regular table. </p><p>For
-                  append-optimized tables and column-oriented tables, <codeph>\d+</codeph> displays
-                  the storage options for a table. For append-optimized tables, the options are
-                  displayed for the table. For column-oriented tables, storage options are displayed
-                  for each column. </p></li>
-              <li id="kb151095">The command form <codeph>\dS</codeph> is identical, except that
-                system objects are displayed as well as user objects. For example,
-                  <codeph>\dt</codeph> displays user tables, but not system tables;
-                  <codeph>\dtS</codeph> displays both user and system tables. Both of these commands
-                can take the <codeph>+</codeph> parameter to display additional information, as in
-                  <codeph>\dt+</codeph> and <codeph>\dtS+</codeph>.<p>If <codeph>\d</codeph> is used
-                  without a pattern argument, it is equivalent to <codeph>\dtvs</codeph> which will
-                  show a list of all visible tables, views, and sequences.</p></li>
+                shown, as is the presence of OIDs in the table, the view definition if the relation
+                is a view.<p>For partitioned tables, the command <codeph>\d</codeph> or
+                    <codeph>\d+</codeph> specified with the root partition table or child partition
+                  table displays information about the table including partition keys on the current
+                  level of the partition table. The command <codeph>\d+</codeph> also displays the
+                  immediate child partitions of the table and whether the child partition is an
+                  external table or regular table. </p><p>For append-optimized tables and
+                  column-oriented tables, <codeph>\d+</codeph> displays the storage options for a
+                  table. For append-optimized tables, the options are displayed for the table. For
+                  column-oriented tables, storage options are displayed for each column. </p></li>
+              <li id="kb151095">By default, only user-created objects are shown; supply a pattern or
+                the <codeph>S</codeph> modifier to include system objects. <note>If
+                    <codeph>\d</codeph> is used without a pattern argument, it is equivalent to
+                    <codeph>\dtvsE</codeph> which will show a list of all visible tables, views,
+                  sequences, and foreign tables.</note></li>
             </ul></pd>
         </plentry>
         <plentry>
-          <pt>\da [<varname>aggregate_pattern</varname>]</pt>
+          <pt>\da[S] [<varname>aggregate_pattern</varname>]</pt>
           <pd>Lists aggregate functions, together with the data types they operate on.
             If a pattern is specified, only aggregates whose names match the pattern are shown.
+            By default, only user-created objects are shown; supply a pattern or the
+           <codeph>S</codeph> modifier to include system objects.
           </pd>
         </plentry>
         <plentry>
-          <pt>\db [<varname>tablespace_pattern</varname>] | \db+
-              [<varname>tablespace_pattern</varname>]</pt>
+          <pt>\db[+] [<varname>tablespace_pattern</varname>]</pt>
           <pd>Lists all available tablespaces and their corresponding paths. If
             pattern is specified, only tablespaces whose names match the pattern are shown. If + is
             appended to the command name, each object is listed with its associated permissions.
           </pd>
         </plentry>
         <plentry>
-          <pt>\dc [<varname>conversion_pattern</varname>]</pt>
-          <pd>Lists all available conversions between character-set encodings. If pattern is
-            specified, only conversions whose names match the pattern are listed. </pd>
+          <pt>\dc[S+] [<varname>conversion_pattern</varname>]</pt>
+          <pd>Lists conversions between character-set encodings. If a pattern is specified, only
+            conversions whose names match the pattern are listed. By default, only user-created
+            objects are shown; supply a pattern or the <codeph>S</codeph> modifier to include system
+            objects. If <codeph>+</codeph> is appended to the command name, each object is listed
+            with its associated description.</pd>
         </plentry>
         <plentry>
-          <pt>\dC</pt>
-          <pd>Lists all available type casts. </pd>
+          <pt>\dC[+] [<varname>pattern</varname>]</pt>
+          <pd>Lists type casts. If a pattern is specified, only casts whose source or target types
+            match the pattern are listed. If <codeph>+</codeph> is appended to the command name,
+            each object is listed with its associated description.</pd>
         </plentry>
         <plentry>
           <pt>\dd[S] [<varname>pattern</varname>]</pt>
-          <pd>Shows the descriptions of objects matching the <varname>pattern</varname>,
-            or of all visible objects if no argument is given. But in either case, only
-            objects that have a description are listed. (Use the
-            <codeph><xref href="../../ref_guide/sql_commands/COMMENT.xml#topic1"/></codeph>
-            SQL command to add a description for an object.) By default, only user-created
-            objects are shown; supply a pattern or the <codeph>S</codeph> modifier to
-            include system objects. "Object" covers aggregates, functions, operators,
-            types, relations (tables, views, indexes, sequences), rules, and triggers.</pd>
+          <pd>Shows the descriptions of objects of type <codeph>constraint</codeph>,
+              <codeph>operator class</codeph>, <codeph>operator family</codeph>,
+              <codeph>rule</codeph>, and <codeph>trigger</codeph>. All other comments may be viewed
+            by the respective backslash commands for those object types. </pd>
+          <pd><codeph>\dd</codeph> displays descriptions for objects matching the pattern, or of
+            visible objects of the appropriate type if no argument is given. But in either case,
+            only objects that have a description are listed. By default, only user-created objects
+            are shown; supply a pattern or the <codeph>S</codeph> modifier to include system
+            objects. </pd>
+          <pd>Descriptions for objects can be created with the <codeph>COMMENT</codeph> SQL
+            command.</pd>
         </plentry>
         <plentry>
           <pt>\ddp [<varname>pattern</varname>]</pt>
@@ -450,46 +509,19 @@ testdb=#</codeblock>
               href="../../ref_guide/sql_commands/GRANT.xml#topic1">GRANT</xref>. </pd>
         </plentry>
         <plentry>
-          <pt>\dD [<varname>domain_pattern</varname>]</pt>
-          <pd>Lists all available domains. If pattern is specified, only matching domains are
-            shown.</pd>
+          <pt>\dD[S+] [<varname>domain_pattern</varname>]</pt>
+          <pd>Lists domains. If a pattern is specified, only domains whose names match the pattern
+            are shown. By default, only user-created objects are shown; supply a pattern or the
+              <codeph>S</codeph> modifier to include system objects. If <codeph>+</codeph> is
+            appended to the command name, each object is listed with its associated permissions and
+            description.</pd>
         </plentry>
         <plentry>
-          <pt>\det[S+] [<varname>foreign_table_pattern</varname>] </pt>
-          <pd>Lists all foreign tables. If a pattern is specified, only those foreign tables
-            whose names match the pattern are listed. If <codeph>+</codeph> is appended to
-            the command name, foreign data wrapper options and the foreign table description
-            are displayed. By default, only user-created objects are shown; supply a
-            pattern or the <codeph>S</codeph> modifier to include system objects.</pd>
-        </plentry>
-        <plentry>
-          <pt>\dE [<varname>relation_pattern</varname>]</pt>
-          <pd>Lists all external tables, or only those that match the pattern.</pd>
-        </plentry>
-        <plentry>
-          <pt>\df [<varname>function_pattern</varname>] | \df+ [<varname>function_pattern
-            </varname>]</pt>
-          <pd>Lists available functions, together with their argument and return types. If pattern
-            is specified, only functions whose names match the pattern are shown. If the form
-              <codeph>\df+</codeph> is used, additional information about each function, including
-            language and description, is shown. To reduce clutter, <codeph>\df </codeph>does not
-            show data type I/O functions. This is implemented by ignoring functions that accept or
-            return type <codeph>cstring</codeph>.</pd>
-        </plentry>
-        <plentry>
-          <pt>\dg [<varname>role_pattern</varname>]</pt>
-          <pd>Lists all database roles. If pattern is specified, only those roles whose names match
-            the pattern are listed. (This command is now effectively the same as
-            <codeph>\du</codeph>).  If the form <codeph>\dg+</codeph> is used,
-            additional information is shown about each role, including the comment for
-            each role.</pd>
-        </plentry>
-        <plentry>
-          <pt>\distPvE[S+] [<varname>index | sequence | table | parent table | view | external_table</varname>] </pt>
-          <pd>This is not the actual command name: the letters <codeph>i</codeph>,
-              <codeph>s</codeph>, <codeph>t</codeph>, <codeph>P</codeph>, <codeph>v</codeph>,
-            and <codeph>E</codeph> stand for index, sequence, table, parent table,
-            view, and external table, respectively. You can specify any or all of
+          <pt>\dEistPv[S+] [<varname>external_table | index | sequence | table | parent table | view</varname>] </pt>
+          <pd>This is not the actual command name: the letters <codeph>E</codeph>, <codeph>i</codeph>,
+              <codeph>s</codeph>, <codeph>t</codeph>, <codeph>P</codeph>, and <codeph>v</codeph>
+            stand for external table, index, sequence, table, parent table, and view,
+            respectively. You can specify any or all of
             these letters, in any order, to obtain a listing of objects of these types.
             For example, <codeph>\dit</codeph> lists indexes and tables.  If <codeph>+</codeph> is
             appended to the command name, each object is listed with its physical size
@@ -497,6 +529,84 @@ testdb=#</codeblock>
             only objects whose names match the pattern are listed. By default, only
             user-created objects are shown; supply a pattern or the <codeph>S</codeph>
             modifier to include system objects.</pd>
+        </plentry>
+        <plentry>
+          <pt>\des[+] [<varname>foreign_server_pattern</varname>] </pt>
+          <pd>Lists foreign servers. If a pattern is specified, only those servers whose name
+            matches the pattern are listed. If the form <codeph>\des+</codeph> is used, a full
+            description of each server is shown, including the server's ACL, type, version, options,
+            and description.</pd>
+        </plentry>
+        <plentry>
+          <pt>\det[+] [<varname>foreign_table_pattern</varname>] </pt>
+          <pd>Lists all foreign tables. If a pattern is specified, only entries whose table name or
+            schema name matches the pattern are listed. If the form <codeph>\det+</codeph> is used,
+            generic options and the foreign table description are also displayed.</pd>
+        </plentry>
+        <plentry>
+          <pt>\deu[+] [<varname>user_mapping_pattern</varname>] </pt>
+          <pd>Lists user mappings. If a pattern is specified, only those mappings whose
+            user names match the pattern are listed. If the form <codeph>\deu+</codeph>
+            is used, additional information about each mapping is shown.<note type="warning">
+            <codeph>\deu+</codeph> might also display the user name and password of the
+            remote user, so care should be taken not to disclose them.</note></pd>
+        </plentry>
+        <plentry>
+          <pt>\dew[+] [<varname>foreign_data_wrapper_pattern</varname>] </pt>
+          <pd>Lists foreign-data wrappers. If a pattern is specified, only those foriegn-data
+            wrappers whose name matches the pattern are listed. If the form <codeph>\dew+</codeph>
+            is used, the ACL, options, and description of the foreign-data wrapper are also
+            shown.</pd>
+        </plentry>
+        <plentry>
+          <pt>\df[antwS+] [<varname>function_pattern</varname>]</pt>
+          <pd>Lists functions, together with their arguments, return types, and function
+            types, which are classified as "agg" (aggregate), "normal", "trigger", or
+            "window". To display only functions of a specific type(s), add the
+            corresponding letters <codeph>a</codeph>, <codeph>n</codeph>, <codeph>t</codeph>,
+            or <codeph>w</codeph>, to the command. If a pattern is specified, only functions
+            whose names match the pattern are shown. If the form
+              <codeph>\df+</codeph> is used, additional information about each function, including
+            security, volatility, language, source code, and description, is shown. By default, only
+            user-created objects are shown; supply a pattern or the <codeph>S</codeph>
+            modifier to include system objects.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dF[+] [<varname>pattern</varname>] </pt>
+          <pd>Lists text search configurations. If a pattern is specified, only
+            configurations whose names match the pattern are shown. If the form
+            <codeph>\dF+</codeph> is used, a full description of each configuration is
+            shown, including the underlying text search parser and the dictionary list
+            for each parser token type.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dFd[+] [<varname>pattern</varname>] </pt>
+          <pd>Lists text search dictionaries. If a pattern is specified, only dictionaries
+            whose names match the pattern are shown. If the form <codeph>\dFd+</codeph>
+            is used, additional information is shown about each selected dictionary,
+            including the underlying text search template and the option values.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dFp[+] [<varname>pattern</varname>] </pt>
+          <pd>Lists text search parsers. If a pattern is specified, only parsers whose
+            names match the pattern are shown. If the form <codeph>\dFp+</codeph> is
+            used, a full description of each parser is shown, including the underlying
+            functions and the list of recognized token types.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dFt[+] [<varname>pattern</varname>] </pt>
+          <pd>Lists text search templates. If a pattern is specified, only templates
+            whose names match the pattern are shown. If the form <codeph>\dFt+</codeph>
+            is used, additional information is shown about each template, including the
+            underlying function names.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dg[+] [<varname>role_pattern</varname>]</pt>
+          <pd>Lists database roles. (Since the concepts of "users" and "groups" have been unified
+            into "roles", this command is now equivalent to <codeph>\du</codeph>.) If a pattern is
+            specified, only those roles whose names match the pattern are listed. If the form
+              <codeph>\dg+</codeph> is used, additional information is shown about each role;
+            currently this adds the comment for each role. </pd>
         </plentry>
         <plentry>
           <pt>\dl</pt>
@@ -510,22 +620,45 @@ testdb=#</codeblock>
           </pd>
         </plentry>
         <plentry>
-          <pt>\dn [<varname>schema_pattern</varname>] | \dn+
-            [<varname>schema_pattern</varname>]</pt>
-          <pd>Lists all available schemas (namespaces). If pattern is specified, only schemas whose
-            names match the pattern are listed. Non-local temporary schemas are suppressed. If
-              <codeph>+</codeph> is appended to the command name, each object is listed with its
-            associated permissions and description, if any.</pd>
+          <pt>\dL[S+] [<varname>pattern</varname>]</pt>
+          <pd>Lists procedural languages. If a pattern is specified, only languages whose
+            names match the pattern are listed. By default, only user-created languages
+            are shown; supply the <codeph>S</codeph> modifier to include system objects.
+            If <codeph>+</codeph> is appended to the command name, each language is
+            listed with its call handler, validator, access privileges, and whether it
+            is a system object.</pd>
         </plentry>
         <plentry>
-          <pt>\do [<varname>operator_pattern</varname>]</pt>
-          <pd>Lists available operators with their operand and return types. If pattern is
-            specified, only operators whose names match the pattern are listed.</pd>
+          <pt>\dn[S+] [<varname>schema_pattern</varname>]</pt>
+          <pd>Lists all available schemas (namespaces). If a pattern is specified, only
+            schemas whose names match the pattern are listed. By default, only user-
+            create objects are show; supply a pattern or the <codeph>S</codeph> modifier
+            to include system objects. If <codeph>+</codeph> is appended to the command
+            name, each object is listed with its associated permissions and description,
+            if any.</pd>
+        </plentry>
+        <plentry>
+          <pt>\do[S] [<varname>operator_pattern</varname>]</pt>
+          <pd>Lists available operators with their operand and return types. If a pattern
+            is specified, only operators whose names match the pattern are listed.
+By
+            default, only user-created objects are shown; supply a pattern or the
+            <codeph>S</codeph> modifier to include system objects.</pd>
+        </plentry>
+        <plentry>
+          <pt>\dO[S+] [<varname>pattern</varname>]</pt>
+          <pd>Lists collations. If a pattern is specified, only collations whose names
+            match the pattern are listed. By default, only user-created objects are shown;
+            supply a pattern or the <codeph>S</codeph> modifier to include system objects.
+            If <codeph>+</codeph> is appended to the command name, each collation is
+            listed with its associated description, if any. Note that only collations
+            usable with the current database's encoding are shown, so the results may
+            vary in different databases of the same installation.</pd>
         </plentry>
         <plentry>
           <pt>\dp [<varname>relation_pattern_to_show_privileges</varname>]</pt>
-          <pd>Produces a list of all available tables, views and sequences with their associated
-            access privileges. If pattern is specified, only tables, views and sequences whose names
+          <pd>Lists tables, views, and sequences with their associated access privileges.
+            If a pattern is specified, only tables, views, and sequences whose names
             match the pattern are listed. The
             <codeph><xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"/></codeph> and
             <codeph><xref href="../../ref_guide/sql_commands/REVOKE.xml#topic1"/></codeph>
@@ -533,54 +666,81 @@ testdb=#</codeblock>
             is explained under <codeph><xref href="../../ref_guide/sql_commands/GRANT.xml#topic1"/></codeph>.</pd>
         </plentry>
         <plentry>
-          <pt>\drds [<varname>role-pattern</varname>]</pt>
+          <pt>\drds [<varname>role-pattern</varname> [database-pattern]]</pt>
           <pd>Lists defined configuration settings.  These settings can be role-specific,
             database-specific, or both.  <varname>role-pattern</varname> and
             <varname>database-pattern</varname> are used to select
-            specific roles and database to list, respectively; if omitted, or * is specified,
-            all settings are listed, including those not role-specific or database-specific,
-            respectively.
+            specific roles and database to list, respectively. If omitted, or if <codeph>*</codeph> is
+            specified, all settings are listed, including those not role-specific or
+            database-specific, respectively.
           </pd>
           <pd>The <xref format="dita" href="../../ref_guide/sql_commands/ALTER_ROLE.xml">ALTER ROLE</xref> and <xref format="dita"
               href="../../ref_guide/sql_commands/ALTER_DATABASE.xml">ALTER DATABASE</xref> commands
-            are used to define per-database role configuration settings. </pd>
+            are used to define per-role and per-database role configuration settings. </pd>
         </plentry>
         <plentry>
-          <pt>\dT [<varname>datatype_pattern</varname>] | \dT+
-            [<varname>datatype_pattern</varname>]</pt>
-          <pd>Lists all data types or only those that match pattern. The command form
-              <codeph>\dT+</codeph> shows extra information.</pd>
+          <pt>\dT[S+] [<varname>datatype_pattern</varname>]</pt>
+          <pd>Lists data types. If a pattern is specified, only types whose names match the pattern
+            are listed. If <codeph>+</codeph> is appended to the command name, each type is listed
+            with its internal name and size, its allowed values if it is an <codeph>enum</codeph>
+            type, and its associated permissions. By default, only user-created objects are shown;
+            supply a pattern or the <codeph>S</codeph> modifier to include system objects.</pd>
         </plentry>
         <plentry>
-          <pt>\du [<varname>role_pattern</varname>]</pt>
-          <pd>Lists all database roles, or only those that match pattern.</pd>
+          <pt>\du[+] [<varname>role_pattern</varname>]</pt>
+          <pd>Lists database roles. (Since the concepts of "users" and "groups" have been unified
+            into "roles", this command is now equivalent to <codeph>\dg</codeph>.) If a pattern is
+            specified, only those roles whose names match the pattern are listed. If the form
+              <codeph>\du+</codeph> is used, additional information is shown about each role;
+            currently this adds the comment for each role.</pd>
         </plentry>
         <plentry>
-          <pt>\dx [<varname>extension_pattern</varname>] | \dx+
-              [<varname>extension_pattern</varname>]</pt>
-          <pd>Lists all installed extensions, or only those that match the pattern.
-              <codeph>\dx</codeph> and <codeph>\dx+</codeph> are functionally equivalent.</pd>
+          <pt>\dx[+] [<varname>extension_pattern</varname>]</pt>
+          <pd>Lists installed extensions. If a pattern is specified, only those extensions
+            whose names match the pattern are listed. If the form <codeph>\dx+</codeph>
+            is used, all of the objects belonging to each matching extension are
+            listed. </pd>
         </plentry>
         <plentry>
-          <pt>\e | \edit [<varname>filename</varname>]</pt>
-          <pd>If a file name is specified, the file is edited; after the editor exits, its content
-            is copied back to the query buffer. If no argument is given, the current query buffer is
-            copied to a temporary file which is then edited in the same fashion. The new query
-            buffer is then re-parsed according to the normal rules of <codeph>psql</codeph>, where
-            the whole buffer is treated as a single line. (Thus you cannot make scripts this way.
-            Use <codeph>\i</codeph> for that.) This means also that if the query ends with (or
-            rather contains) a semicolon, it is immediately executed. In other cases it will merely
-            wait in the query buffer. </pd>
-          <pd><codeph>psql</codeph> searches the environment variables <codeph>PSQL_EDITOR</codeph>,
-              <codeph>EDITOR</codeph>, and <codeph>VISUAL</codeph> (in that order) for an editor to
-            use. If all of them are unset, <codeph>vi</codeph> is used on UNIX systems,
-              <codeph>notepad.exe</codeph> on Windows systems.</pd>
+          <pt>\dy[+] [<varname>pattern</varname>]</pt>
+          <pd>Lists event triggers. If a pattern is specified, only those triggers
+            whose names match the pattern are listed. If <codeph>+</codeph> is appended
+            to the command name, each object is listed with its associated description.
+            <note>Greenplum Database does not support user-defined triggers.</note></pd>
         </plentry>
         <plentry>
-          <pt>\ef <varname>function_description</varname></pt>
+          <pt>\e | \edit [<varname>filename</varname>] [<varname>line_number</varname>]</pt>
+          <pd>If <varname>filename</varname> is specified, the file is edited; after the editor
+            exits, its content is copied back to the query buffer. If no <varname>filename</varname>
+            is given, the current query buffer is copied to a temporary file which is then edited in
+            the same fashion. </pd>
+          <pd>The new query buffer is then re-parsed according to the normal rules of
+              <codeph>psql</codeph>, where the whole buffer is treated as a single line. (Thus you
+            cannot make scripts this way. Use <codeph>\i</codeph> for that.) This means also that if
+            the query ends with (or rather contains) a semicolon, it is immediately executed. In
+            other cases it will merely wait in the query buffer; type semicolon or
+              <codeph>\g</codeph> to send it, or <codeph>\r</codeph> to cancel. </pd>
+          <pd>If a line number is specified, <codeph>psql</codeph> will position the
+            cursor on the specified line of the file or query buffer. Note that if a
+            single all-digits argument is given, <codeph>psql</codeph> assumes it is a
+            line number, not a file name.</pd>
+          <pd>See <xref href="#topic1/section17" format="dita"/> for information about configuring
+            and customizing your editor.</pd>
+        </plentry>
+        <plentry>
+          <pt>\echo <varname>text</varname> [ ... ]</pt>
+          <pd>Prints the arguments to the standard output, separated by one space and
+            followed by a newline. This can be useful to intersperse information in the
+            output of scripts. If the first argument is an unquoted <codeph>-n</codeph>,
+            the trailing newline is not written.<note>If you use the <codeph>\o</codeph>
+            command to redirect your query output you might wish to use 
+            <codeph>\qecho</codeph> instead of this command.</note></pd>
+        </plentry>
+        <plentry>
+          <pt>\ef [<varname>function_description</varname> [<varname>line_number</varname>]]</pt>
           <pd>This command fetches and edits the definition of the named function, in the form of a
               <codeph>CREATE OR REPLACE FUNCTION</codeph> command. Editing is done in the same way
-            as for <codeph>\e</codeph>. After the editor exits, the updated command waits in the
+            as for <codeph>\edit</codeph>. After the editor exits, the updated command waits in the
             query buffer; type semicolon or <codeph>\g</codeph> to send it, or <codeph>\r</codeph>
             to cancel.</pd>
           <pd>The target function can be specified by name alone, or by name and arguments, for
@@ -588,13 +748,11 @@ testdb=#</codeblock>
             is more than one function with the same name.</pd>
           <pd>If no function is specified, a blank <codeph>CREATE FUNCTION</codeph> template is
             presented for editing.</pd>
-        </plentry>
-        <plentry>
-          <pt>\echo <varname>text</varname> [ ... ]</pt>
-          <pd>Prints the arguments to the standard output, separated by one space and followed by a
-            newline. This can be useful to intersperse information in the output of scripts.</pd>
-          <pd>If you use the <codeph>\o</codeph> command to redirect your query output you may wish
-            to use <codeph>\qecho</codeph> instead of this command.</pd>
+          <pd>If a line number is specified, <codeph>psql</codeph> will position the cursor
+            on the specified line of the function body. (Note that the function body
+            typically does not begin on the first line of the file.)</pd>
+          <pd>See <xref href="#topic1/section17" format="dita"/> for information about configuring
+            and customizing your editor.</pd>
         </plentry>
         <plentry>
           <pt>\encoding [<varname>encoding</varname>]</pt>
@@ -610,34 +768,74 @@ testdb=#</codeblock>
         <plentry>
           <pt>\g [{<varname>filename</varname> | |<varname>command</varname> }]</pt>
           <pd>Sends the current query input buffer to the server and optionally stores the query's
-            output in a file or pipes the output into a separate UNIX shell executing command. A
-            bare <codeph>\g</codeph> is virtually equivalent to a semicolon. A <codeph>\g</codeph>
-            with argument is a one-shot alternative to the <codeph>\o</codeph> command.</pd>
+            output in <varname>filename</varname> or pipes the output into a separate shell
+            executing <varname>command</varname>. The file or command is written to only if
+            the query successfully returns zero or more tuples, not if the query fails or is
+            a non-data-returning SQL command.</pd>
+          <pd>A bare <codeph>\g</codeph> is essentially equivalent to a semi-colon.
+            A <codeph>\g</codeph> with argument is a 
+            one-shot alternative to the <codeph>\o</codeph> command.</pd>
+        </plentry>
+        <plentry>
+          <pt>\gset [<varname>prefix</varname>]</pt>
+          <pd>Sends the current query input buffer to the server and stores the query's output
+            into <codeph>psql</codeph> variables. The query to be executed must return exactly
+            one row. Each column of the row is stored into a separate variable, named the same
+            as the column. For example:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset
+=&gt; \echo :var1 :var2
+hello 10
+</codeblock></pd>
+         <pd>If you specify a <varname>prefix</varname>, that string is prepended to the query's
+           column names to create the variable names to use:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset result_
+=&gt; \echo :result_var1 :result_var2
+hello 10</codeblock></pd>
+          <pd>If a column result is NULL, the corresponding variable is unset rather than being
+            set.</pd>
+          <pd>If the query fails or does not return one row, no variables are changed.</pd>
         </plentry>
         <plentry>
           <pt>\h | \help [<varname>sql_command</varname>]</pt>
           <pd>Gives syntax help on the specified SQL command. If a command is not specified, then
               <codeph>psql</codeph> will list all the commands for which syntax help is available.
-            Use an asterisk (*) to show syntax help on all SQL commands. To simplify typing,
+            If <varname>command</varname> is an asterisk (<codeph>*</codeph>) then syntax help on all SQL
+            commands is shown. To simplify typing,
             commands that consist of several words do not have to be quoted.</pd>
         </plentry>
         <plentry>
-          <pt>\H</pt>
+          <pt>\H | \html</pt>
           <pd>Turns on HTML query output format. If the HTML format is already on, it is switched
             back to the default aligned text format. This command is for compatibility and
             convenience, but see <codeph>\pset</codeph> about setting other output options.</pd>
         </plentry>
         <plentry>
-          <pt>\i <varname>input_filename</varname></pt>
-          <pd>Reads input from a file and executes it as though it had been typed on the keyboard.
-            If you want to see the lines on the screen as they are read you must set the variable
-              <codeph>ECHO</codeph> to all. </pd>
+          <pt>\i | \include <varname>filename</varname></pt>
+          <pd>Reads input from the file <varname>filename</varname> and executes it as
+            though it had been typed on the keyboard.</pd>
+          <pd> If <varname>filename</varname> is <codeph>-</codeph> (hyphen), then standard input is read
+            until an EOF indication or <codeph>\q</codeph> meta-command. This can be used
+            to intersperse interactive input with input from files. Note that Readline
+            behavior will be used only if it is active at the outermost level.</pd>
+          <pd>If you want to see the lines on the screen as they are read you must set
+            the variable <codeph>ECHO</codeph> to <codeph>all</codeph>. </pd>
         </plentry>
         <plentry>
-          <pt>\l | \list | \l+ | \list+</pt>
-          <pd>List the names, owners, and character set encodings of all the databases in the
-            server. If <codeph>+</codeph> is appended to the command name, database descriptions are
-            also displayed. </pd>
+          <pt>\ir | \include_relative <varname>filename</varname></pt>
+          <pd>The <codeph>\ir</codeph> command is similar to <codeph>\i</codeph>, but resolves
+            relative file names differently. When executing in interactive mode, the two commands
+            behave identically. However, when invoked from a script, <codeph>\ir</codeph> interprets
+            file names relative to the directory in which the script is located, rather than the
+            current working directory.</pd>
+        </plentry>
+        <plentry>
+          <pt>\l[+] | \list[+] [<varname>pattern</varname>]</pt>
+          <pd>List the databases in the server and show their names, owners, character set
+            encodings, and access privileges. If a pattern is specified, only databases whose
+            names match the pattern are listed. If <codeph>+</codeph> is appended to the
+            command name, database sizes, default tablespaces, and descriptions are
+            also displayed. (Size information is only available for databases that the
+            current user can connect to.)</pd>
         </plentry>
         <plentry>
           <pt>\lo_export <varname>loid</varname>
@@ -646,7 +844,11 @@ testdb=#</codeblock>
             it to <varname>filename</varname>. Note that this is subtly different from the server
             function <codeph>lo_export</codeph>, which acts with the permissions of the user that
             the database server runs as and on the server's file system. Use
-              <codeph>\lo_list</codeph> to find out the large object's OID.</pd>
+              <codeph>\lo_list</codeph> to find out the large object's OID.
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note></pd>
         </plentry>
         <plentry>
           <pt>\lo_import <varname>large_object_filename</varname> [<varname>comment</varname>]</pt>
@@ -662,26 +864,39 @@ lo_import 152801</codeblock>
             recommended to always associate a human-readable comment with every object. Those can
             then be seen with the <codeph>\lo_list</codeph> command. Note that this command is
             subtly different from the server-side <codeph>lo_import</codeph> because it acts as the
-            local user on the local file system, rather than the server's user and file system.</pd>
+            local user on the local file system, rather than the server's user and file system.
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note></pd>
         </plentry>
         <plentry>
           <pt>\lo_list</pt>
           <pd>Shows a list of all large objects currently stored in the database, along with any
-            comments provided for them.</pd>
+            comments provided for them.
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note></pd>
         </plentry>
         <plentry>
           <pt>\lo_unlink <varname>largeobject_oid</varname></pt>
           <pd>Deletes the large object of the specified OID from the database. Use
-              <codeph>\lo_list</codeph> to find out the large object's OID.</pd>
+              <codeph>\lo_list</codeph> to find out the large object's OID.
+            <note>Greenplum Database does not support the PostgreSQL <xref
+                href="https://www.postgresql.org/docs/9.4/largeobjects.html" format="html"
+                scope="external">large object facility</xref> for streaming user data that is stored
+              in large-object structures.</note></pd>
         </plentry>
         <plentry>
-          <pt>\o [ {<varname>query_result_filename</varname> | |<varname>command</varname>} ]</pt>
-          <pd>Saves future query results to a file or pipes them into a UNIX shell command. If no
-            arguments are specified, the query output will be reset to the standard output. Query
+          <pt>\o [ {<varname>filename</varname> | |<varname>command</varname>} ]</pt>
+          <pd>Saves future query results to the file <varname>filename</varname> or pipes
+            future results to the shell command <varname>command</varname>. If no
+            argument is specified, the query output is reset to the standard output. Query
             results include all tables, command responses, and notices obtained from the database
             server, as well as output of various backslash commands that query the database (such as
               <codeph>\d</codeph>), but not error messages. To intersperse text output in between
-            query results, use <codeph>'echo</codeph>.</pd>
+            query results, use <codeph>\qecho</codeph>.</pd>
         </plentry>
         <plentry>
           <pt>\p</pt>
@@ -696,56 +911,93 @@ lo_import 152801</codeblock>
         </plentry>
         <plentry>
           <pt>\prompt [ <varname>text</varname> ] <varname>name</varname></pt>
-          <pd>Prompts the user to set a variable <varname>name</varname>. Optionally, you can
-            specify a prompt. Enclose prompts longer than one word in single quotes. </pd>
-          <pd>By default, \prompt uses the terminal for input and output. However, use the -f
-            command line switch to specify standard input and standard output. </pd>
+          <pd>Prompts the user to supply text, which is assigned to the variable
+              <varname>name</varname>. An optional prompt string, <varname>text</varname>, can be
+            specified. (For multiword prompts, surround the text with single quotes.) </pd>
+          <pd>By default, <codeph>\prompt</codeph> uses the terminal for input and output. However,
+            if the <codeph>-f</codeph> command line switch was used, <codeph>\prompt</codeph> uses
+            standard input and standard output. </pd>
         </plentry>
         <plentry>
           <pt>\pset <varname>print_option</varname> [<varname>value</varname>]</pt>
           <pd>This command sets options affecting the output of query result tables.
-              <varname>print_option</varname> describes which option is to be set. Adjustable
+              <varname>print_option</varname> describes which option is to be set. The
+             semantics of <varname>value</varname> vary depending on the selected option.
+             For some options, omitting <varname>value</varname> causes the option to be
+             toggled or unset, as described under the particular option. If no such behavior
+             is mentioned, then omitting <varname>value</varname> just results in the
+             current setting being displayed.</pd>
+          <pd>Adjustable
             printing options are: <ul id="ul_f3k_1vl_44">
-              <li id="kb144082"><b><codeph>format</codeph></b> – Sets the output format to one of
-                  <b>u</b><codeph>naligned</codeph>, <b>a</b><codeph>ligned</codeph>,
-                  <b>h</b><codeph>tml</codeph>, <b>l</b><codeph>atex</codeph>,
-                  <b>t</b><codeph>roff-ms</codeph>, or <b>w</b><codeph>rapped</codeph>. First letter
-                abbreviations are allowed. Unaligned writes all columns of a row on a line,
-                separated by the currently active field separator. This is intended to create output
-                that might be intended to be read in by other programs. Aligned mode is the
-                standard, human-readable, nicely formatted text output; this is the default. The HTML and
-                LaTeX modes put out tables that are intended to be included in documents using the
-                respective mark-up language. They are not complete documents! (This might not be so
-                dramatic in HTML, but in LaTeX you must have a complete document wrapper.) <p>The
-                  wrapped option sets the output format like the <codeph>aligned</codeph> parameter
-                  , but wraps wide data values across lines to make the output fit in the target
-                  column width. The target width is set with the <codeph>columns</codeph> option. To
-                  specify the column width and select the wrapped format, use two \pset commands;
-                  for example, to set the with to 72 columns and specify wrapped format, use the
-                  commands <codeph>\pset columns 72</codeph> and then <codeph>\pset format
-                    wrapped</codeph>.</p><note>Since <codeph>psql</codeph> does not attempt to wrap
-                  column header titles, the wrapped format behaves the same as aligned if the total
-                  width needed for column headers exceeds the target. </note></li>
-              <li id="kb144087"><b><codeph>border</codeph></b> – The second argument must be a
+              <li id="kb144087"><b><codeph>border</codeph></b> – The <varname>value</varname> must be a
                 number. In general, the higher the number the more borders and lines the tables will
-                have, but this depends on the particular format. In HTML mode, this will translate
-                directly into the <codeph>border=...</codeph> attribute, in the others only values
+                have, but this depends on the particular format. In HTML format, this will translate
+                directly into the <codeph>border=...</codeph> attribute; in the other formats only values
                   <codeph>0</codeph> (no border), <codeph>1</codeph> (internal dividing lines), and
-                  <codeph>2</codeph> (table frame) make sense.</li>
+                  <codeph>2</codeph> (table frame) make sense. <codeph>latex</codeph> and
+                 <codeph>latex-longtable</codeph> also support a <codeph>border</codeph> value of
+                 3 which adds a dividing line between each row.</li>
               <li id="kb151382"><b><codeph>columns</codeph></b> – Sets the target width for the
                   <codeph>wrapped</codeph> format, and also the width limit for determining whether
-                output is wide enough to require the pager. The default is <varname>zero</varname>.
+                output is wide enough to require the pager or switch to the vertical display in expanded auto
+                mode. The default is <varname>zero</varname>.
                 Zero causes the target width to be controlled by the environment variable
                   <codeph>COLUMNS</codeph>, or the detected screen width if <codeph>COLUMNS</codeph>
                 is not set. In addition, if <codeph>columns</codeph> is zero then the wrapped format
                 affects screen output only. If columns is nonzero then file and pipe output is
                 wrapped to that width as well. <p>After setting the target width, use the command
                     <codeph>\pset format wrapped</codeph> to enable the wrapped format.</p></li>
-              <li id="kb144090"><b><codeph>expanded</codeph></b> | <b><codeph>x</codeph></b> –
-                Toggles between regular and expanded format. When expanded format is enabled, query
-                results are displayed in two columns, with the column name on the left and the data
-                on the right. This mode is useful if the data would not fit on the screen in the
-                normal horizontal mode. Expanded mode is supported by all four output formats.</li>
+              <li id="kb144090"><b><codeph>expanded</codeph></b> | <b><codeph>x</codeph></b> – If
+                  <varname>value</varname> is specified it must be either <codeph>on</codeph> or
+                  <codeph>off</codeph>, which will enable or disable expanded mode, or
+                  <codeph>auto</codeph>. If <varname>value</varname> is omitted the command toggles
+                between the <codeph>on</codeph> and <codeph>off</codeph> settings. When expanded
+                mode is enabled, query results are displayed in two columns, with the column name on
+                the left and the data on the right. This mode is useful if the data wouldn't fit on
+                the screen in the normal "horizontal" mode. In the <codeph>auto</codeph> setting,
+                the expanded mode is used whenever the query output is wider than the screen,
+                otherwise the regular mode is used. The <codeph>auto</codeph> setting is only
+                effective in the aligned and wrapped formats. In other formats, it always behaves as
+                if the expanded mode is <codeph>off</codeph>.</li>
+              <li id="kb147007"><b><codeph>fieldsep</codeph></b> – Specifies the field separator to
+                be used in unaligned output mode. That way one can create, for example, tab- or
+                comma-separated output, which other programs might prefer. To set a tab as field
+                separator, type <codeph>\pset fieldsep '\t'</codeph>. The default field separator is
+                  <codeph>'|'</codeph> (a vertical bar). </li>
+              <li><b><codeph>fieldsep_zero</codeph></b> - Sets the field separator to use in
+                unaligned output format to a zero byte.</li>
+              <li id="kb147023"><b><codeph>footer</codeph></b> – If <varname>value</varname> is
+                specified it must be either <codeph>on</codeph> or <codeph>off</codeph> which
+                will enable or disable display of the table footer (the (<varname>n</varname>
+                rows) count). If <varname>value</varname> is omitted the command toggles footer
+               display on or off. </li>
+              <li id="kb144082"><b><codeph>format</codeph></b> – Sets the output format to one of
+                  <codeph>unaligned</codeph>, <codeph>aligned</codeph>,
+                  <codeph>html</codeph>, <codeph>latex</codeph> (uses
+                  <codeph>tabular</codeph>), <codeph>latex-longtable</codeph>,
+                  <codeph>troff-ms</codeph>, or <codeph>wrapped</codeph>. Unique
+                abbreviations, including one letter, are allowed.
+                <p><b><codeph>unaligned</codeph></b> format writes all columns of a row on one line,
+                  separated by the currently active field separator. This is useful for creating
+                  output that might be intended to be read in by other programs (for example,
+                  tab-separated or comma-separated format).</p>
+                <p><b><codeph>aligned</codeph></b> format is the standard, human-readable, nicely
+                  formatted text output; this is the default.</p>
+                <p>The <b><codeph>html</codeph></b>, <b><codeph>latex</codeph></b>,
+                  <b><codeph>latex-longtable</codeph></b>, and
+                  <b><codeph>troff-ms</codeph></b> formats put out tables that are intended to
+                  be included in documents using the respective mark-up language. They are not
+                  complete documents! This might not be so dramatic in HTML, but in LaTeX you
+                  must have a complete document wrapper. <codeph>latex-longtable</codeph> also
+                  requires the LaTeX <codeph>longtable</codeph> and <codeph>booktabs</codeph>
+                  packages.</p>
+                <p>The <b><codeph>wrapped</codeph></b> format is like <codeph>aligned</codeph>, but
+                  wraps wide data values across lines to make the output fit in the target
+                  column width. The target width is determined as described under the
+                  <codeph>columns</codeph> option. Note that <codeph>psql</codeph> does not
+                  attempt to wrap column header titles; the <codeph>wrapped</codeph> format
+                  behaves the same as <codeph>aligned</codeph> if the total
+                  width needed for column headers exceeds the target.</p></li>
               <li id="kb151434"><b><codeph>linestyle</codeph></b> [<b><codeph>unicode</codeph></b> |
                     <b><codeph>ascii</codeph></b> | <b><codeph>old-ascii</codeph></b>] – Sets the
                 border line drawing style to one of unicode, ascii, or old-ascii. Unique
@@ -753,14 +1005,14 @@ lo_import 152801</codeblock>
                 setting is <codeph>ascii</codeph>. This option only affects the
                   <codeph>aligned</codeph> and <codeph>wrapped</codeph> output formats.
                       <p><b><codeph>ascii</codeph></b> – uses plain ASCII characters. Newlines in
-                  data are shown using a + symbol in the right-hand margin. When the wrapped format
-                  wraps data from one line to the next without a newline character, a dot (.) is
+                  data are shown using a <codeph>+</codeph> symbol in the right-hand margin. When the wrapped format
+                  wraps data from one line to the next without a newline character, a dot (<codeph>.</codeph>) is
                   shown in the right-hand margin of the first line, and again in the left-hand
                   margin of the following line. </p><p><b><codeph>old-ascii</codeph></b> – style
                   uses plain ASCII characters, using the formatting style used in PostgreSQL 8.4 and
-                  earlier. Newlines in data are shown using a : symbol in place of the left-hand
+                  earlier. Newlines in data are shown using a <codeph>:</codeph> symbol in place of the left-hand
                   column separator. When the data is wrapped from one line to the next without a
-                  newline character, a ; symbol is used in place of the left-hand column separator.
+                  newline character, a <codeph>;</codeph> symbol is used in place of the left-hand column separator.
                       </p><p><b><codeph>unicode</codeph></b> – style uses Unicode box-drawing
                   characters. Newlines in data are shown using a carriage return symbol in the
                   right-hand margin. When the data is wrapped from one line to the next without a
@@ -771,51 +1023,59 @@ lo_import 152801</codeblock>
                   characters work everywhere, but Unicode characters look nicer on displays that
                   recognize them. </p></li>
               <li id="kb144095"><b><codeph>null 'string'</codeph></b> – The second argument is a
-                string to print whenever a column is null. The default is not to print anything,
-                which can easily be mistaken for an empty string. For example, the command
-                  <codeph>\pset</codeph><codeph>null '(empty)' </codeph>displays
-                  <varname>(empty)</varname> in null columns.</li>
-              <li id="kb147007"><b><codeph>fieldsep</codeph></b> – Specifies the field separator to
-                be used in unaligned output mode. That way one can create, for example, tab- or
-                comma-separated output, which other programs might prefer. To set a tab as field
-                separator, type <codeph>\pset fieldsep '\t'</codeph>. The default field separator is
-                  <codeph>'|'</codeph> (a vertical bar). </li>
-              <li id="kb147023"><b><codeph>footer</codeph></b> – Toggles the display of the default
-                footer (<varname>x</varname> rows). </li>
-              <li id="kb147036"><b><codeph>numericlocale</codeph></b> – Toggles the display of a
-                locale-aware character to separate groups of digits to the left of the decimal
-                marker. It also enables a locale-aware decimal marker. </li>
+                string to print whenever a column is null. The default is to print nothing,
+                which can easily be mistaken for an empty string. For example, one might prefer
+                  <codeph>\pset null '(null)'</codeph>.</li>
+              <li id="kb147036"><b><codeph>numericlocale</codeph></b> – If <varname>value</varname>
+                is specified it must be either <codeph>on</codeph> or <codeph>off</codeph> which
+                will enable or disable display of a locale-specific character to separate groups
+                of digits to the left of the decimal marker. If <varname>value</varname> is
+                omitted the command toggles between regular and locale-specific numberic
+                output. </li>
+              <li id="kb147128"><b><codeph>pager</codeph></b> – Controls the use of a pager for
+                query and <codeph>psql</codeph> help output. If the environment variable
+                <codeph>PAGER</codeph> is set, the output is piped to the
+                specified program. Otherwise a platform-dependent default (such as
+                  <codeph>more</codeph>) is used. When <codeph>off</codeph>, the pager program is not used.
+                When <codeph>on</codeph>, the pager is used only when appropriate, i.e. when
+                the output is to a terminal and will not fit on the screen. Pager can also be
+                set to <codeph>always</codeph>, which causes the pager to be used for all
+                terminal output regardless of whether it fits on the screen. <codeph>\pset pager</codeph>
+                without a <varname>value</varname> toggles pager use on and off.</li>
               <li id="kb147046"><b><codeph>recordsep</codeph></b> – Specifies the record (line)
                 separator to use in unaligned output mode. The default is a newline character. </li>
+              <li><b><codeph>recordsep_zero</codeph></b> - Sets the record separator to use in
+                unaligned output format to a zero byte.</li>
+              <li id="kb147082"><b><codeph>tableattr</codeph></b> | <b><codeph>T</codeph></b>
+                  [<varname>text</varname>] – In HTML format, this specifies attributes to be placed
+                inside the HTML <codeph>table</codeph> tag. This could for example be
+                  <codeph>cellpadding</codeph> or
+                  <codeph>bgcolor</codeph>. Note that you probably don't want to specify <codeph>border</codeph>
+                here, as that is already taken care of by <codeph>\pset border</codeph>. If no
+                <varname>value</varname> is given, the table attributes are unset.
+                <p>In <codeph>latex-longtable</codeph> format, this controls the proportional width
+                  of each column containing a left-aligned data type. It is specified as a
+                  whitespace-separated list of values, e.g. <codeph>'0.2 0.2 0.6'</codeph>.
+                  Unspecified output columns use the last specified value.</p></li>
               <li id="kb147069"><b><codeph>title</codeph></b> [<varname>text</varname>] – Sets the
                 table title for any subsequently printed tables. This can be used to give your
-                output descriptive tags. If no argument is given, the title is unset.</li>
-              <li id="kb147082"><b><codeph>tableattr</codeph></b> | <b><codeph>T</codeph></b>
-                  [<varname>text</varname>] – Allows you to specify any attributes to be placed
-                inside the HTML table tag. This could for example be <codeph>cellpadding</codeph> or
-                  <codeph>bgcolor</codeph>. Note that you probably don't want to specify border
-                here, as that is already taken care of by <codeph>\pset border</codeph>. </li>
+                output descriptive tags. If no <varname>value</varname> is given, the title is unset.</li>
               <li id="kb151808"><b><codeph>tuples_only</codeph></b> | <b><codeph>t </codeph></b>
                   [<varname>novalue</varname> | <varname>on</varname> | <varname>off</varname>] –
-                The <codeph>\pset tuples_only</codeph> command by itself toggles between tuples only
-                and full display. The values <varname>on</varname> and <varname>off</varname> set
-                the tuples display, regardless of the current setting. Full display may show extra
-                information such as column headers, titles, and various footers. In tuples only
-                mode, only actual table data is shown The <codeph>\t</codeph> command is equivalent
+                If <varname>value</varname> is specified, it must be either <codeph>on</codeph>
+                or <codeph>off</codeph> which will enable or disable tuples-only mode. If
+                <varname>value</varname> is omitted the command toggles between regular and
+                tuples-only output. Regular output includes extra information such as column
+                headers, titles, and various footers. In tuples-only mode, only actual table
+                data is shown. The <codeph>\t</codeph> command is equivalent
                 to <codeph>\pset</codeph><codeph>tuples_only</codeph> and is provided for
                 convenience.</li>
-              <li id="kb147128"><b><codeph>pager</codeph></b> – Controls the use of a pager for
-                query and <codeph>psql</codeph> help output. When <codeph>on</codeph>, if the
-                environment variable <codeph>PAGER</codeph> is set, the output is piped to the
-                specified program. Otherwise a platform-dependent default (such as
-                  <codeph>more</codeph>) is used. When <codeph>off</codeph>, the pager is not used.
-                When <codeph>on</codeph>, the pager is used only when appropriate. Pager can also be
-                set to <codeph>always</codeph>, which causes the pager to be always used.</li>
             </ul></pd>
         </plentry>
         <plentry>
-          <pt>\q</pt>
-          <pd>Quits the <codeph>psql</codeph> program. </pd>
+          <pt>\q | \quit</pt>
+          <pd>Quits the <codeph>psql</codeph> program. In a script file, only execution
+            of that script is terminated.</pd>
         </plentry>
         <plentry>
           <pt>\qecho <varname>text</varname> [ ... ] </pt>
@@ -827,23 +1087,45 @@ lo_import 152801</codeblock>
           <pd>Resets (clears) the query buffer.</pd>
         </plentry>
         <plentry>
-          <pt>\s [<varname>history_filename</varname>]</pt>
+          <pt>\s [<varname>filename</varname>]</pt>
           <pd>Print or save the command line history to <varname>filename</varname>. If
               <varname>filename</varname> is omitted, the history is written to the standard
-            output.</pd>
+            output (using the pager if appropriate).</pd>
         </plentry>
         <plentry>
           <pt>\set [<varname>name</varname> [<varname>value</varname> [ ... ]]]</pt>
-          <pd>Sets the internal variable <varname>name</varname> to <varname>value</varname> or, if
-            more than one value is given, to the concatenation of all of them. If no second argument
-            is given, the variable is just set with no value. To unset a variable, use the
-              <codeph>\unset</codeph> command. </pd>
+          <pd>Sets the <codeph>psql</codeph> variable <varname>name</varname> to
+              <varname>value</varname>, or if more than one value is given, to the concatenation of
+            all of them. If only one argument is given, the variable is just set with an empty
+            value. To unset a variable, use the <codeph>\unset</codeph> command. </pd>
+          <pd><codeph>\set</codeph> without any arguments displays the names and values of all
+            currently-set <codeph>psql</codeph> variables. </pd>
           <pd>Valid variable names can contain characters, digits, and underscores. See "Variables"
             in <xref href="#topic1/section12" format="dita"/>. Variable names are case-sensitive. </pd>
           <pd>Although you are welcome to set any variable to anything you want,
               <codeph>psql</codeph> treats several variables as special. They are documented in the
             topic about variables.</pd>
-          <pd>This command is totally separate from the SQL command <codeph><xref href="../../ref_guide/sql_commands/SET.xml#topic1"/></codeph>.</pd>
+          <pd>This command is unrelated to the SQL command <codeph><xref
+                href="../../ref_guide/sql_commands/SET.xml#topic1"/></codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>\setenv <varname>name</varname> [ <varname>value</varname> ]</pt>
+          <pd>Sets the environment variable <varname>name</varname> to <varname>value</varname>, or
+            if the <varname>value</varname> is not supplied, unsets the environment variable.
+            Example:
+            <codeblock>testdb=> \setenv PAGER less
+testdb=> \setenv LESS -imx4F</codeblock></pd>
+        </plentry>
+        <plentry>
+          <pt>\sf[+] <varname>function_description</varname></pt>
+          <pd>This command fetches and shows the definition of the named function, in the form
+            of a <codeph>CREATE OR REPLACE FUNCTION</codeph> command. The definition is printed
+            to the current query output channel, as set by <codeph>\o</codeph>.</pd>
+          <pd>The target function can be specified by name alone, or by name and arguments, for
+            example <codeph>foo(integer, text)</codeph>. The argument types must be given if
+            there is more than one function of the same name.</pd>
+          <pd>If <codeph>+</codeph> is appended to the command name, then the output lines are
+            numbered, with the first line of the function body being line 1.</pd>
         </plentry>
         <plentry>
           <pt>\t [novalue | on | off]</pt>
@@ -854,33 +1136,46 @@ lo_import 152801</codeblock>
         </plentry>
         <plentry>
           <pt>\T <varname>table_options</varname></pt>
-          <pd>Allows you to specify attributes to be placed within the table tag in HTML tabular
-            output mode.</pd>
+          <pd>Specifies attributes to be placed within the <codeph>table</codeph> tag in HTML
+            output format. This command is equivalent to <codeph>\pset tableattr <varname>table_options</varname></codeph></pd>
         </plentry>
         <plentry>
           <pt>\timing [novalue | on | off]</pt>
-          <pd>The <codeph>\timing</codeph> command by itself toggles a display of how long each SQL
+          <pd>Without a parameter, toggles a display of how long each SQL
             statement takes, in milliseconds. The values <codeph>on</codeph> and
               <codeph>off</codeph> set the time display, regardless of the current setting. </pd>
         </plentry>
         <plentry>
+          <pt>\unset <varname>name</varname></pt>
+          <pd>Unsets (deletes) the <codeph>psql</codeph> variable <varname>name</varname>. </pd>
+        </plentry>
+        <plentry>
           <pt>\w {<varname>filename</varname> | |<varname>command</varname>}</pt>
-          <pd>Outputs the current query buffer to a file or pipes it to a UNIX command.</pd>
+          <pd>Outputs the current query buffer to the file <varname>filename</varname>
+            or pipes it to the shell command <varname>command</varname>.</pd>
         </plentry>
         <plentry>
-          <pt>\x</pt>
-          <pd>Toggles expanded table formatting mode.</pd>
+          <pt>\watch [<varname>seconds</varname>]</pt>
+          <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
+            interrupted or the query fails. Wait the specified number of seconds (default 2)
+            between executions.</pd>
         </plentry>
         <plentry>
-          <pt>\z [<varname>relation_to_show_privileges</varname>]</pt>
-          <pd>Produces a list of all available tables, views and sequences with their associated
+          <pt>\x [ on | off | auto ]</pt>
+          <pd>Sets or toggles expanded table formatting mode. As such it is equivalent to
+              <codeph>\pset expanded</codeph>.</pd>
+        </plentry>
+        <plentry>
+          <pt>\z [<varname>pattern</varname>]</pt>
+          <pd>Lists tables, views, and sequences with their associated
             access privileges. If a pattern is specified, only tables, views and sequences whose
             names match the pattern are listed. This is an alias for <codeph>\dp</codeph>.</pd>
         </plentry>
         <plentry>
           <pt>\! [<varname>command</varname>]</pt>
-          <pd>Escapes to a separate UNIX shell or executes the UNIX command. The arguments are not
-            further interpreted, the shell will see them as is.</pd>
+          <pd>Escapes to a separate shell or executes the shell command <varname>command</varname>.
+            The arguments are not further interpreted; the shell will see them as-is. In
+            particular, the variable substitution rules and backslash escapes do not apply.</pd>
         </plentry>
         <plentry>
           <pt>\?</pt>
@@ -940,32 +1235,34 @@ lo_import 152801</codeblock>
         <b>Variables</b>
         <p><codeph>psql</codeph> provides variable substitution features similar to common UNIX
           command shells. Variables are simply name/value pairs, where the value can be any string
-          of any length. To set variables, use the <codeph>psql</codeph> meta-command
-            <codeph>\set</codeph>:</p>
+          of any length. The name must consist of letters (including non-Latin letters), digits, and
+          underscores.</p><p>To set a variable, use the psql meta-command <codeph>\set</codeph>. For
+          example,</p>
         <codeblock>testdb=&gt; \set foo bar</codeblock>
         <p>sets the variable <codeph>foo</codeph> to the value <codeph>bar</codeph>. To retrieve the
-          content of the variable, precede the name with a colon and use it as the argument of any
-          slash command:</p>
+          content of the variable, precede the name with a colon, for example:</p>
         <codeblock>testdb=&gt; \echo :foo
 bar</codeblock>
-        <note>The arguments of <codeph>\set</codeph> are subject to the same substitution rules as
-          with other commands. Thus you can construct interesting references such as <codeph>\set
-            :foo 'something'</codeph> and get 'soft links' or 'variable variables' of Perl or PHP
-          fame, respectively. Unfortunately, there is no way to do anything useful with these
-          constructs. On the other hand, <codeph>\set bar :foo</codeph> is a perfectly valid way to
-          copy a variable.</note>
-        <p>If you call <codeph>\set</codeph> without a second argument, the variable is set, with an
-          empty string as <varname>value</varname>. To unset (or delete) a variable, use the command
-            <codeph>\unset</codeph>.</p>
-        <p><codeph>psql</codeph>'s internal variable names can consist of letters, numbers, and
-          underscores in any order and any number of them. A number of these variables are treated
-          specially by <codeph>psql</codeph>. They indicate certain option settings that can be
-          changed at run time by altering the value of the variable or represent some state of the
-          application. Although you can use these variables for any other purpose, this is not
-          recommended, as the program behavior might behave unexpectedly. By convention, all
-          specially treated variables consist of all upper-case letters (and possibly numbers and
+        <p>This works in both regular SQL commands and meta-commands; there is more detail in <xref
+            href="#topic1/section14" format="dita">SQL Interpolation</xref>.</p><p>If you call
+            <codeph>\set</codeph> without a second argument, the variable is set, with an empty
+          string as <varname>value</varname>. To unset (i.e., delete) a variable, use the command
+            <codeph>\unset</codeph>. To show the values of all variables, call
+            <codeph>\set</codeph> without any argument.</p><note>The arguments of
+            <codeph>\set</codeph> are subject to the same substitution rules as with other commands.
+          Thus you can construct interesting references such as <codeph>\set :foo
+            'something'</codeph> and get 'soft links' or 'variable variables' of Perl or PHP fame,
+          respectively. Unfortunately, there is no way to do anything useful with these constructs.
+          On the other hand, <codeph>\set bar :foo</codeph> is a perfectly valid way to copy a
+          variable.</note>
+        <p>A number of these variables are treated specially by <codeph>psql</codeph>. They
+          represent certain option settings that can be changed at run time by altering the value of
+          the variable, or in some cases represent changeable state of <codeph>psql</codeph>.
+          Although you can use these variables for other purposes, this is not recommended, as the
+          program behavior might grow really strange really quickly. By convention, all specially
+          treated variables' names consist of all upper-case ASCII letters (and possibly digits and
           underscores). To ensure maximum compatibility in the future, avoid using such variable
-          names for your own purposes. A list of all specially treated variables are as follows:</p>
+          names for your own purposes. A list of all specially treated variables follows.</p>
         <parml>
           <plentry>
             <pt>AUTOCOMMIT</pt>
@@ -984,6 +1281,15 @@ bar</codeblock>
             <pd>The autocommit-on mode is PostgreSQL's traditional behavior, but autocommit-off is
               closer to the SQL spec. If you prefer autocommit-off, you may wish to set it in your
                 <codeph>~/.psqlrc</codeph> file.</pd>
+          </plentry>
+          <plentry>
+            <pt>COMP_KEYWORD_CASE</pt>
+            <pd>Determines which letter case to use when completing an SQL key word. If set to
+                <codeph>lower</codeph> or <codeph>upper</codeph>, the completed word will be in
+              lower or upper case, respectively. If set to <codeph>preserve-lower</codeph> or
+                <codeph>preserve-upper</codeph> (the default), the completed word will be in the
+              case of the word already entered, but words being completed without anything entered
+              will be in lower or upper case, respectively.</pd>
           </plentry>
           <plentry>
             <pt>DBNAME</pt>
@@ -1063,7 +1369,7 @@ bar</codeblock>
           <plentry>
             <pt>LASTOID</pt>
             <pd>The value of the last affected OID, as returned from an <codeph>INSERT</codeph> or
-                <codeph>lo_insert</codeph> command. This variable is only guaranteed to be valid
+                <codeph>lo_import</codeph> command. This variable is only guaranteed to be valid
               until after the result of the next SQL command has been displayed. </pd>
           </plentry>
           <plentry>
@@ -1078,14 +1384,15 @@ bar</codeblock>
           </plentry>
           <plentry>
             <pt>ON_ERROR_STOP</pt>
-            <pd>By default, if non-interactive scripts encounter an error, such as a malformed SQL
-              command or internal meta-command, processing continues. This has been the traditional
-              behavior of <codeph>psql</codeph> but it is sometimes not desirable. If this variable
-              is set, script processing will immediately terminate. If the script was called from
-              another script it will terminate in the same fashion. If the outermost script was not
-              called from an interactive <codeph>psql</codeph> session but rather using the
-                <codeph>-f</codeph> option, <codeph>psql</codeph> will return error code 3, to
-              distinguish this case from fatal error conditions (error code 1).</pd>
+            <pd>By default, command processing continues after an error. When this variable is set
+              to <codeph>on</codeph>, processing will instead stop immediately. In interactive mode,
+                <codeph>psql</codeph> will return to the command prompt; otherwise,
+                <codeph>psql</codeph> will exit, returning error code 3 to distinguish this case
+              from fatal error conditions, which are reported using error code 1. In either case,
+              any currently running scripts (the top-level script, if any, and any other scripts
+              which it may have in invoked) will be terminated immediately. If the top-level command
+              string contained multiple SQL commands, processing will stop with the current
+              command.</pd>
           </plentry>
           <plentry>
             <pt>PORT</pt>
@@ -1125,41 +1432,44 @@ bar</codeblock>
           </plentry>
         </parml>
       </sectiondiv>
-      <sectiondiv id="section14">
-        <b>SQL Interpolation</b>
-        <p>An additional useful feature of <codeph>psql</codeph> variables is that you can
-          substitute (interpolate) them into regular SQL statements. The syntax for this is again to
-          prepend the variable name with a colon (<codeph>:</codeph>).</p>
+      <sectiondiv id="section14"><b>SQL Interpolation</b>
+        <p>A key feature of <codeph>psql</codeph> variables is that you can substitute
+          ("interpolate") them into regular SQL statements, as well as the arguments of
+          meta-commands. Furthermore, <codeph>psql</codeph> provides facilities for ensuring that
+          variable values used as SQL literals and identifiers are properly quoted. The syntax for
+          interpolating a value without any quoting is to prepend the variable name with a colon
+            (<codeph>:</codeph>). For example,</p>
         <codeblock>testdb=&gt; \set foo 'my_table'
 testdb=&gt; SELECT * FROM :foo;</codeblock>
-        <p>would then query the table <codeph>my_table</codeph>. The value of the variable is copied
-          literally, so it can even contain unbalanced quotes or backslash commands. You must make
-          sure that it makes sense where you put it. Variable interpolation will not be performed
-          into quoted SQL entities.</p>
-        <p>A popular application of this facility is to refer to the last inserted OID in subsequent
-          statements to build a foreign key scenario. Another possible use of this mechanism is to
-          copy the contents of a file into a table column. First load the file into a variable and
-          then proceed as above.</p>
-        <codeblock>testdb=&gt; \set content '''' `cat my_file.txt` ''''
-testdb=&gt; INSERT INTO my_table VALUES (:content);</codeblock>
-        <p>One problem with this approach is that <codeph>my_file.txt</codeph> might contain single
-          quotes. These need to be escaped so that they don't cause a syntax error when the second
-          line is processed. This could be done with the program <codeph>sed</codeph>:</p>
-        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" &lt; my_file.txt` 
-''''</codeblock>
-        <p>If you are using non-standard-conforming strings then you'll also need to double
-          backslashes. This is a bit tricky:</p>
-        <codeblock>testdb=&gt; \set content '''' `sed -e "s/'/''/g" -e 
-'s/\\/\\\\/g' &lt; my_file.txt` ''''</codeblock>
-        <p>Note the use of different shell quoting conventions so that neither the single quote
-          marks nor the backslashes are special to the shell. Backslashes are still special to
-            <codeph>sed</codeph>, however, so we need to double them.</p>
-        <p>Since colons may legally appear in SQL commands, the following rule applies: the
-          character sequence <codeph>":name"</codeph> is not changed unless <codeph>"name"</codeph>
-          is the name of a variable that is currently set. In any case you can escape a colon with a
-          backslash to protect it from substitution. (The colon syntax for variables is standard SQL
-          for embedded query languages, such as ECPG. The colon syntax for array slices and type
-          casts are Greenplum Database extensions, hence the conflict.)</p>
+        <p>would query the table <codeph>my_table</codeph>. Note that this may be unsafe: the value
+          of the variable is copied literally, so it can contain unbalanced quotes, or even
+          backslash commands. You must make sure that it makes sense where you put it.</p>
+        <p>When a value is to be used as an SQL literal or identifier, it is safest to arrange for
+          it to be quoted. To quote the value of a variable as an SQL literal, write a colon
+          followed by the variable name in single quotes. To quote the value as an SQL identifier,
+          write a colon followed by the variable name in double quotes. These constructs deal
+          correctly with quotes and other special characters embedded within the variable value. The
+          previous example would be more safely written this
+          way:<codeblock>testdb=> \set foo 'my_table'
+testdb=> SELECT * FROM :"foo";</codeblock></p>
+        <p>Variable interpolation will not be performed within quoted SQL literals and identifiers.
+          Therefore, a construction such as <codeph>':foo'</codeph> doesn't work to produce a quoted
+          literal from a variable's value (and it would be unsafe if it did work, since it wouldn't
+          correctly handle quotes embedded in the value).</p><p>One example use of this mechanism is
+          to copy the contents of a file into a table column. First load the file into a variable
+          and then interpolate the variable's value as a quoted string:</p><codeblock>testdb=> \set content `cat my_file.txt`
+testdb=> INSERT INTO my_table VALUES (:'content');</codeblock>
+        <p>(Note that this still won't work if <codeph>my_file.txt</codeph> contains
+            <codeph>NUL</codeph> bytes. <codeph>psql</codeph> does not support embedded
+            <codeph>NUL</codeph> bytes in variable values.)</p><p>Since colons can legally appear in
+          SQL commands, an apparent attempt at interpolation (that is, <codeph>:name</codeph>,
+            <codeph>:'name'</codeph>, or <codeph>:"name"</codeph>) is not replaced unless the named
+          variable is currently set. In any case, you can escape a colon with a backslash to protect
+          it from substitution.</p><p>The colon syntax for variables is standard SQL for embedded
+          query languages, such as ECPG. The colon syntaxes for array slices and type casts are
+          Greenplum Database extensions, which can sometimes conflict with the standard usage. The
+          colon-quote syntax for escaping a variable's value as an SQL literal or identifier is a
+            <codeph>psql</codeph> extension.</p>
       </sectiondiv>
       <sectiondiv id="section15">
         <b>Prompting</b>
@@ -1265,7 +1575,9 @@ testdb=&gt; INSERT INTO my_table VALUES (:content);</codeblock>
         <p><codeph>psql</codeph> supports the NetBSD libedit library for convenient line editing and
           retrieval. The command history is automatically saved when <codeph>psql</codeph> exits and
           is reloaded when <codeph>psql</codeph> starts up. Tab-completion is also supported,
-          although the completion logic makes no claim to be an SQL parser. If for some reason you
+          although the completion logic makes no claim to be an SQL parser. The queries generated
+          by tab-completion can also interfere with other SQL commands, e.g.
+          <codeph>SET TRANSACTION ISOLATION LEVEL</codeph>. If for some reason you
           do not like the tab completion, you can turn it off by putting this in a file named
             <codeph>.inputrc</codeph> in your home directory:</p>
         <codeblock>$if psql
@@ -1276,6 +1588,12 @@ $endif</codeblock>
     <section id="section17">
       <title>Environment</title>
       <parml>
+        <plentry>
+          <pt>COLUMNS</pt>
+          <pd>If <codeph>\pset columns</codeph> is zero, controls the width for the wrapped format
+            and width for determining if wide output requires the pager or should be switched to the
+            vertical format in expanded auto mode.</pd>
+        </plentry>
         <plentry>
           <pt>PAGER</pt>
           <pd>If the query results do not fit on the screen, they are piped through this command.
@@ -1294,8 +1612,33 @@ $endif</codeblock>
           <pt>PSQL_EDITOR</pt>
           <pt>EDITOR</pt>
           <pt>VISUAL</pt>
-          <pd>Editor used by the <codeph>\e</codeph> command. The variables are examined in the
-            order listed; the first that is set is used.</pd>
+          <pd>Editor used by the <codeph>\e</codeph> and <codeph>\ef</codeph> commands. The
+            variables are examined in the order listed; the first that is set is used.</pd>
+          <pd>The built-in default editors are <codeph>vi</codeph> on Unix systems and
+              <codeph>notepad.exe</codeph> on Windows systems.</pd>
+        </plentry>
+        <plentry>
+          <pt>PSQL_EDITOR_LINENUMBER_ARG</pt>
+          <pd>When <codeph>\e</codeph> or <codeph>\ef</codeph> is used with a line number argument,
+            this variable specifies the command-line argument used to pass the starting line number
+            to the user's editor. For editors such as Emacs or <codeph>vi</codeph>, this is a plus
+            sign. Include a trailing space in the value of the variable if there needs to be space
+            between the option name and the line number.
+            Examples:<codeblock>PSQL_EDITOR_LINENUMBER_ARG='+'
+PSQL_EDITOR_LINENUMBER_ARG='--line '</codeblock></pd>
+          <pd>The default is <codeph>+</codeph> on Unix systems (corresponding to the default editor
+            <codeph>vi</codeph>, and useful for many other common editors); but there is no default on Windows
+            systems.</pd>
+        </plentry>
+        <plentry>
+          <pt>PSQL_HISTORY</pt>
+          <pd>Alternative location for the command history file. Tilde (<codeph>~</codeph>)
+            expansion is performed.</pd>
+        </plentry>
+        <plentry>
+          <pt>PSQLRC</pt>
+          <pd>Alternative location of the user's <codeph>.psqlrc</codeph> file. Tilde
+              (<codeph>~</codeph>) expansion is performed.</pd>
         </plentry>
         <plentry>
           <pt>SHELL</pt>
@@ -1309,19 +1652,62 @@ $endif</codeblock>
     </section>
     <section id="section18">
       <title>Files</title>
-      <p>Before starting up, <codeph>psql</codeph> attempts to read and execute commands from the
-        user's <codeph>~/.psqlrc</codeph> file.</p>
-      <p>The command-line history is stored in the file <codeph>~/.psql_history</codeph>.</p>
+      <parml>
+        <plentry>
+          <pt>psqlrc and ~/.psqlrc</pt>
+          <pd>Unless it is passed an <codeph>-X</codeph> or <codeph>-c</codeph> option,
+              <codeph>psql</codeph> attempts to read and execute commands from the system-wide
+            startup file (<codeph>psqlrc</codeph>) and then the user's personal startup file
+              (<codeph>~/.psqlrc</codeph>), after connecting to the database but before accepting
+            normal commands. These files can be used to set up the client and/or the server to
+            taste, typically with <codeph>\set</codeph> and <codeph>SET</codeph> commands. </pd>
+          <pd>The system-wide startup file is named <codeph>psqlrc</codeph> and is sought in the
+            installation's "system configuration" directory, which is most reliably identified by
+            running <codeph>pg_config --sysconfdir</codeph>. By default this directory will
+              be<codeph> ../etc/</codeph> relative to the directory containing the Greenplum
+            Database executables. The name of this directory can be set explicitly via the
+              <codeph>PGSYSCONFDIR</codeph> environment variable. </pd>
+          <pd>The user's personal startup file is named <codeph>.psqlrc</codeph> and is sought in
+            the invoking user's home directory. On Windows, which lacks such a concept, the personal
+            startup file is named <codeph>%APPDATA%\postgresql\psqlrc.conf</codeph>. The location of
+            the user's startup file can be set explicitly via the <codeph>PSQLRC</codeph>
+            environment variable. </pd>
+          <pd>Both the system-wide startup file and the user's personal startup file can be made
+            psql-version-specific by appending a dash and the underlying PostgreSQL major or minor
+            release number to the file name, for example <codeph>~/.psqlrc-9.4</codeph>. The most
+            specific version-matching file will be read in preference to a non-version-specific
+            file.</pd>
+        </plentry>
+        <plentry>
+          <pt>.psql_history</pt>
+          <pd>The command-line history is stored in the file <codeph>~/.psql_history</codeph>,
+              or<codeph> %APPDATA%\postgresql\psql_history</codeph> on Windows. </pd>
+          <pd>The location of the history file can be set explicitly via the
+              <codeph>PSQL_HISTORY</codeph> environment variable.</pd>
+        </plentry>
+      </parml>
     </section>
     <section id="section19">
       <title>Notes</title>
-      <p><codeph>psql</codeph> only works smoothly with servers of the same version. That does not
-        mean other combinations will fail outright, but subtle and not-so-subtle problems might come
-        up. Backslash commands are particularly likely to fail if the server is of a different
-        version.</p>
+      <p><codeph>psql</codeph> works best with servers of the same
+        or an older major version.  Backslash commands are particularly likely
+        to fail if the server is of a newer version than <codeph>psql</codeph>
+        itself. However, backslash commands of the <codeph>\d</codeph> family should
+        work with older server versions, though not necessarily with
+        servers newer than <codeph>psql</codeph> itself. The general
+        functionality of running SQL commands and displaying query results
+        should also work with servers of a newer major version, but this cannot
+        be guaranteed in all cases.</p>
+      <p>If you want to use <codeph>psql</codeph> to connect to several
+        servers of different major versions, it is recommended that you use the
+        newest version of <codeph>psql</codeph>. Alternatively, you
+        can keep a copy of <codeph>psql</codeph> from each major
+        version around and be sure to use the version that matches the
+        respective server. But in practice, this additional complication should
+        not be necessary.</p>
     </section>
     <section id="section20">
-      <title>Notes for Windows users</title>
+      <title>Notes for Windows Users</title>
       <p><codeph>psql</codeph> is built as a console application. Since the Windows console windows
         use a different encoding than the rest of the system, you must take special care when using
         8-bit characters within <codeph>psql</codeph>. If <codeph>psql</codeph> detects a

@@ -16,21 +16,19 @@
   <topic id="topic_kgn_vxl_vp">
     <title>Unsupported SQL Query Features</title>
     <body>
-
       <p>These are unsupported features when GPORCA is enabled (the default): <ul id="ul_ndm_gyl_vp">
           <li>Indexed expressions (an index defined as expression based on one or more columns of
             the table)</li>
           <li>GIN indexing method. GPORCA supports only B-tree, bitmap, and GiST indexes. GPORCA
             ignores indexes created with unsupported methods.</li>
-          <li><cmdname>PERCENTILE</cmdname> window function</li>
           <li>External parameters</li>
           <li>These types of partitioned tables:<ul id="ul_v2m_mmc_bt">
               <li>Non-uniform partitioned tables.</li>
               <li>Partitioned tables that have been altered to use an external table as a leaf child
                 partition.</li>
             </ul></li>
-          <li>SortMergeJoin (SMJ)</li>
-          <li>Ordered aggregations</li>
+          <li>SortMergeJoin (SMJ).</li>
+          <li>Ordered aggregations.</li>
           <li>These analytics extensions:<ul id="ul_iwr_3yl_vp">
               <li>CUBE</li>
               <li>Multiple grouping sets</li>
@@ -40,14 +38,16 @@
               <li><cmdname>ROWCOMPARE</cmdname></li>
               <li><cmdname>FIELDSELECT</cmdname></li>
             </ul></li>
-          <li>Aggregate functions that take set operators as input arguments</li>
-          <li>Inverse distribution functions</li>
+          <li>Aggregate functions that take set operators as input arguments.</li>
+          <li><cmdname>percentile_*</cmdname> window functions (Greenplum Database does not support
+            ordered-set aggregate functions).</li>
+          <li>Inverse distribution functions.</li>
           <li>Queries that execute functions that are defined with the <codeph>ON MASTER</codeph> or
-              <codeph>ON ALL SEGMENTS</codeph> attribute</li>
+              <codeph>ON ALL SEGMENTS</codeph> attribute.</li>
           <li>Queries that contain UNICODE characters in metadata names, such as table names, and
-            the characters are not compatible with the host system locale</li>
+            the characters are not compatible with the host system locale.</li>
           <li><codeph>SELECT</codeph>, <codeph>UPDATE</codeph>, and <codeph>DELETE</codeph> commands
-            where a table name is qualified by the <codeph>ONLY</codeph> keyword</li>
+            where a table name is qualified by the <codeph>ONLY</codeph> keyword.</li>
         </ul></p>
     </body>
   </topic>

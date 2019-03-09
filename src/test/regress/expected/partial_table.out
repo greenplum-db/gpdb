@@ -4223,3 +4223,71 @@ rollback;
 -- to perform distributed commit on the other segments.
 --
 insert into r1 (c4) values (pg_relation_size('r2'));
+--
+-- copy to a partial replicated table from file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+create table partial_rpt_from (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+copy partial_rpt_from (c1, c2) from stdin with delimiter ',';
+select * from gp_dist_random('partial_rpt_from');
+ c1 | c2 
+----+----
+  1 |  2
+  1 |  2
+(2 rows)
+
+--
+-- copy from a partial replicated table to file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+ gp_debug_set_create_table_default_numsegments 
+-----------------------------------------------
+ 2
+(1 row)
+
+create table partial_rpt_to (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+ gp_debug_reset_create_table_default_numsegments 
+-------------------------------------------------
+ 
+(1 row)
+
+insert into partial_rpt_to values (1,1);
+copy partial_rpt_to to stdout;
+1	1
+-- change a replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
+1	1
+-- change to another replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
+1	1
+-- start_ignore
+-- We need to do a cluster expansion which will check if there are partial
+-- tables, we need to drop the partial tables to keep the cluster expansion
+-- run correctly.
+reset search_path;
+drop schema test_partial_table cascade;
+NOTICE:  drop cascades to 7 other objects
+DETAIL:  drop cascades to table test_partial_table.t1
+drop cascades to table test_partial_table.d1
+drop cascades to table test_partial_table.r1
+drop cascades to table test_partial_table.t2
+drop cascades to table test_partial_table.d2
+drop cascades to table test_partial_table.r2
+drop cascades to table test_partial_table.partial_rpt
+-- end_ignore

@@ -15,4 +15,3 @@ inputs:
 
 run:
   path: gpdb_src/concourse/scripts/verify_gpdb_versions.sh
-

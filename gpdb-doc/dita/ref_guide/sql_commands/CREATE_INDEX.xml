@@ -7,12 +7,11 @@
                 <p id="sql_command_desc">Defines a new index.</p>
                 <section id="section2">
                         <title>Synopsis</title>
-                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [<varname>name</varname>] ON <varname>table</varname>
-       [USING btree|bitmap|gist|gin]
-       ( {<varname>column</varname> | (<varname>expression</varname>)} [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
-       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> ) ]
-       [TABLESPACE <varname>tablespace</varname>]
-       [WHERE <varname>predicate</varname>]</codeblock>
+                        <codeblock id="sql_command_synopsis">CREATE [UNIQUE] INDEX [<varname>name</varname>] ON <varname>table_name</varname> [USING <varname>method</varname>]
+       ( {<varname>column_name</varname> | (<varname>expression</varname>)} [COLLATE <varname>parameter</varname>] [<varname>opclass</varname>] [ ASC | DESC ] [ NULLS { FIRST | LAST } ] [, ...] )
+       [ WITH ( <varname>storage_parameter</varname> = <varname>value</varname> [, ... ] ) ]
+       [ TABLESPACE <varname>tablespace</varname> ]
+       [ WHERE <varname>predicate</varname> ]</codeblock>
                 </section>
                 <section id="section3">
                         <title>Description</title>
@@ -30,9 +29,9 @@
                                 For example, an index computed on <codeph>upper(col)</codeph> would
                                 allow the clause <codeph>WHERE upper(col) = 'JIM'</codeph> to use an
                                 index. </p>
-                        <p>Greenplum Database provides the index methods B-tree, bitmap, GiST, and
-                                GIN. Users can also define their own index methods, but that is
-                                fairly complicated. </p>
+                        <p>Greenplum Database provides the index methods B-tree, bitmap, GiST,
+                                SP-GiST, and GIN. Users can also define their own index methods, but
+                                that is fairly complicated. </p>
                         <p>When the <codeph>WHERE</codeph> clause is present, a partial index is
                                 created. A partial index is an index that contains entries for only
                                 a portion of a table, usually a portion that is more useful for
@@ -75,27 +74,27 @@
                                                 <varname>name</varname>
                                         </pt>
                                         <pd>The name of the index to be created. The index is always
-                                                created in the same schema as its parent table. If the 
-                                                name is omitted, Greenplum Database chooses a
-                                                suitable name based on the parent table's name and the 
-                                                indexed column name(s).
-                                        </pd>
+                                                created in the same schema as its parent table. If
+                                                the name is omitted, Greenplum Database chooses a
+                                                suitable name based on the parent table's name and
+                                                the indexed column name(s). </pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>table</varname>
+                                                <varname>table_name</varname>
                                         </pt>
                                         <pd>The name (optionally schema-qualified) of the table to
                                                 be indexed. </pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>btree | bitmap | gist | gin</varname>
+                                                <varname>method</varname>
                                         </pt>
                                         <pd>The name of the index method to be used. Choices are
                                                   <codeph>btree</codeph>, <codeph>bitmap</codeph>,
-                                                  <codeph>gist</codeph>, and <codeph>gin</codeph>.
-                                                The default method is <codeph>btree</codeph>. </pd>
+                                                  <codeph>gist</codeph>, <codeph>spgist</codeph>,
+                                                and <codeph>gin</codeph>. The default method is
+                                                  <codeph>btree</codeph>. </pd>
                                         <pd>Currently, only the B-tree, GiST, and GIN index methods
                                                 support multicolumn indexes. Up to 32 fields can be
                                                 specified by default. Only B-tree currently supports
@@ -106,7 +105,7 @@
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>column</varname>
+                                                <varname>column_name</varname>
                                         </pt>
                                         <pd>The name of a column of the table on which to create the
                                                 index. Only the B-tree, bitmap, GiST, and GIN index
@@ -121,6 +120,16 @@
                                                 surrounding parentheses, as shown in the syntax.
                                                 However, the parentheses may be omitted if the
                                                 expression has the form of a function call.</pd>
+                                </plentry>
+                                <plentry>
+                                        <pt><varname>collation</varname></pt>
+                                        <pd> The name of the collation to use for the index. By
+                                                default, the index uses the collation declared for
+                                                the column to be indexed or the result collation of
+                                                the expression to be indexed. Indexes with
+                                                non-default collations can be useful for queries
+                                                that involve expressions using non-default
+                                                collations. </pd>
                                 </plentry>
                                 <plentry>
                                         <pt>
@@ -168,11 +177,10 @@
                                         <pt><varname>storage_parameter</varname></pt>
                                         <pd>The name of an index-method-specific storage parameter.
                                                 Each index method has its own set of allowed storage
-                                                parameters. B-tree, hash, bitmap, and GiST index methods all
-                                                accept a single parameter, <codeph>FILLFACTOR</codeph>.
-                                                GIN indexes accept a different parameter,
-                                                <codeph>FASTUPDATE</codeph>.</pd>
-                                        <pd>The <codeph>FILLFACTOR</codeph> for an index is a
+                                                parameters.</pd>
+                                        <pd><codeph>FILLFACTOR</codeph> - B-tree, bitmap, GiST, and
+                                                SP-GiST index methods all accept this parameter. The
+                                                  <codeph>FILLFACTOR</codeph> for an index is a
                                                 percentage that determines how full the index method
                                                 will try to pack index pages. For B-trees, leaf
                                                 pages are filled to this percentage during initial
@@ -180,20 +188,39 @@
                                                 the right (adding new largest key values). If pages
                                                 subsequently become completely full, they will be
                                                 split, leading to gradual degradation in the index's
-                                                efficiency. </pd>
-                                        <pd>B-trees use a default fillfactor of 90, but any integer 
-                                                value from 10 to 100 can be selected. If the table is
-                                                static then fillfactor 100 is best to minimize the
-                                                index's physical size, but for heavily updated
-                                                tables a smaller fillfactor is better to minimize
-                                                the need for page splits. The other index methods
-                                                use fillfactor in different but roughly analogous
-                                                ways; the default fillfactor varies between methods. </pd>
-                                        <pd><codeph>FASTUPDATE</codeph> is a Boolean parameter that
-                                                disables or enables the GIN index fast update
-                                                technique. A value of ON enables fast update (the
-                                                default), and OFF disables it. See <xref
-                                                  href="https://www.postgresql.org/docs/8.4/gin-implementation.html#GIN-FAST-UPDATE"
+                                                efficiency. B-trees use a default fillfactor of 90,
+                                                but any integer value from 10 to 100 can be
+                                                selected. If the table is static then fillfactor 100
+                                                is best to minimize the index's physical size, but
+                                                for heavily updated tables a smaller fillfactor is
+                                                better to minimize the need for page splits. The
+                                                other index methods use fillfactor in different but
+                                                roughly analogous ways; the default fillfactor
+                                                varies between methods.</pd>
+                                        <pd><codeph>BUFFERING</codeph> - In addition to
+                                                  <codeph>FILLFACTOR</codeph>, GiST indexes
+                                                additionally accept the <codeph>BUFFERING</codeph>
+                                                parameter. <codeph>BUFFERING</codeph> determines
+                                                whether Greenplum Database builds the index using
+                                                the buffering build technique described in <xref
+                                                  href="https://www.postgresql.org/docs/9.4/gist-implementation.html"
+                                                  format="html" scope="external">GiST buffering
+                                                  build</xref> in the PostgreSQL documentation. With
+                                                  <codeph>OFF</codeph> it is disabled, with
+                                                  <codeph>ON</codeph> it is enabled, and with
+                                                  <codeph>AUTO</codeph> it is initially disabled,
+                                                but turned on on-the-fly once the index size reaches
+                                                  <xref
+                                                  href="../config_params/guc-list.xml#effective_cache_size"
+                                                  >effective-cache-size</xref>. The default is
+                                                  <codeph>AUTO</codeph>.</pd>
+                                        <pd><codeph>FASTUPDATE</codeph> - The GIN index method
+                                                accepts the <codeph>FASTUPDATE</codeph> storage
+                                                parameter. <codeph>FASTUPDATE</codeph> is a Boolean
+                                                parameter that disables or enables the GIN index
+                                                fast update technique. A value of ON enables fast
+                                                update (the default), and OFF disables it. See <xref
+                                                  href="https://www.postgresql.org/docs/9.4/gin-implementation.html#GIN-FAST-UPDATE"
                                                   format="html" scope="external">GIN fast update
                                                   technique</xref> in the PostgreSQL documentation
                                                 for more information.<note>Turning
@@ -206,7 +233,7 @@
                                 </plentry>
                                 <plentry>
                                         <pt>
-                                                <varname>tablespace</varname>
+                                                <varname>tablespace_name</varname>
                                         </pt>
                                         <pd>The tablespace in which to create the index. If not
                                                 specified, the default tablespace is used. </pd>
@@ -307,6 +334,8 @@
                         <p>(In this example we have chosen to omit the index name, so the system
                                 will choose a name, typically <codeph>films_lower_idx</codeph>.)
                         </p>
+                        <p> To create an index with non-default collation: </p>
+                        <codeblock>CREATE INDEX title_idx_german ON films (title COLLATE "de_DE");</codeblock>
                         <p>To create an index with non-default fill factor:</p>
                         <codeblock>CREATE UNIQUE INDEX title_idx ON films (title) WITH 
 (fillfactor = 70);</codeblock>

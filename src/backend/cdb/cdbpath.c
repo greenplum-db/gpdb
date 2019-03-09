@@ -112,7 +112,7 @@ cdbpath_create_motion_path(PlannerInfo *root,
 			CdbPathLocus_IsEntry(locus))
 		{
 			/* FIXME: how to reach here? what's the proper value for numsegments? */
-			subpath->locus.numsegments = GP_POLICY_ENTRY_NUMSEGMENTS;
+			subpath->locus.numsegments = getgpsegmentCount();
 			return subpath;
 		}
 		/* singleQE-->singleQE?  No motion needed. */
@@ -846,9 +846,9 @@ cdbpath_distkeys_from_preds(PlannerInfo *root,
 	 * Callers of this functions must correct numsegments themselves
 	 */
 
-	CdbPathLocus_MakeHashed(a_locus, a_distkeys, __GP_POLICY_EVIL_NUMSEGMENTS);
+	CdbPathLocus_MakeHashed(a_locus, a_distkeys, GP_POLICY_INVALID_NUMSEGMENTS());
 	if (b_distkeys)
-		CdbPathLocus_MakeHashed(b_locus, b_distkeys, __GP_POLICY_EVIL_NUMSEGMENTS);
+		CdbPathLocus_MakeHashed(b_locus, b_distkeys, GP_POLICY_INVALID_NUMSEGMENTS());
 	else
 		*b_locus = *a_locus;
 	return true;
@@ -1518,7 +1518,7 @@ cdbpath_motion_for_join(PlannerInfo *root,
 	return cdbpathlocus_join(jointype, outer.path->locus, inner.path->locus);
 
 fail:							/* can't do this join */
-	CdbPathLocus_MakeNull(&outer.move_to, __GP_POLICY_EVIL_NUMSEGMENTS);
+	CdbPathLocus_MakeNull(&outer.move_to, GP_POLICY_INVALID_NUMSEGMENTS());
 	return outer.move_to;
 }								/* cdbpath_motion_for_join */
 

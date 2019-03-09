@@ -14,3 +14,10 @@ SUBPARTITION TEMPLATE
    EVERY (INTERVAL '1 month'), 
    DEFAULT PARTITION outlying_dates );
 update gp_distribution_policy set distkey = '2' where localoid in (select localoid from gp_distribution_policy order by random() limit 3);
+
+-- Corrupt a partition's distribution opclass
+CREATE TABLE test (a int, b int)
+    DISTRIBUTED BY (a, b)
+    PARTITION BY RANGE(a) (START(1) END(2) EVERY(1));
+UPDATE gp_distribution_policy SET distclass=ARRAY[0, 0]::oidvector
+    WHERE localoid='test_1_prt_1'::regclass;

@@ -1,28 +1,36 @@
-if [ `uname -s` = "HP-UX" ]; then
-    set +o nounset
-fi
-
 GPHOME_CLIENTS=`pwd`
-PATH=${GPHOME_CLIENTS}/bin:${PATH}
+PATH=${GPHOME_CLIENTS}/bin:${GPHOME_CLIENTS}/ext/python/bin:${PATH}
+PYTHONPATH=${GPHOME_CLIENTS}/bin/ext:${PYTHONPATH}
 
 export GPHOME_CLIENTS
 export PATH
+export PYTHONPATH
 
 # Mac OSX uses a different library path variable
 if [ xDarwin = x`uname -s` ]; then
-  DYLD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${DYLD_LIBRARY_PATH}
+  DYLD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${DYLD_LIBRARY_PATH}
   export DYLD_LIBRARY_PATH
 else
     if [ -f /etc/SuSE-release ] && [ -d /lib64 ]; then
-        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:/lib64:${LD_LIBRARY_PATH}
+        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:/lib64:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
     else
-        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${LD_LIBRARY_PATH}
+        LD_LIBRARY_PATH=${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib:${LD_LIBRARY_PATH}
     fi
   export LD_LIBRARY_PATH
 fi
 
 # AIX uses yet another library path variable
+# Also, Python on AIX requires special copies of some libraries.  Hence, lib/pware.
 if [ xAIX = x`uname -s` ]; then
-  LIBPATH=${GPHOME_CLIENTS}/lib:${LIBPATH}
+  LIBPATH=${GPHOME_CLIENTS}/lib/pware:${GPHOME_CLIENTS}/lib:${GPHOME_CLIENTS}/ext/python/lib64:/usr/lib/threads:${LIBPATH}
   export LIBPATH
+  GP_LIBPATH_FOR_PYTHON=${GPHOME_CLIENTS}/lib/pware
+  export GP_LIBPATH_FOR_PYTHON
+fi
+
+if [ "$1" != "-q" ]; then
+  type python >/dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Warning: Python not found.  Python-2.5.1 or better is required to run gpload."
+  fi
 fi

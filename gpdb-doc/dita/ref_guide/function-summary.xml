@@ -24,6 +24,7 @@
           <xref format="dita" href="#topic31" type="topic"/>
         </li>
         <li><xref href="#topic_vpj_ss1_lfb" format="dita"/></li>
+        <li><xref href="#functions-range" format="dita"/></li>
       </ul>
     </p>
   </body>
@@ -133,8 +134,8 @@ SELECT foo();
             <row>
               <entry colname="col1">
                 <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-logical.html"
-                  scope="external">Logical Operators</xref>
+                  href="https://www.postgresql.org/docs/9.4/functions-logical.html" scope="external"
+                  >Logical Operators</xref>
               </entry>
               <entry colname="col2"/>
               <entry colname="col3"/>
@@ -152,8 +153,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-math.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-math.html"
                   scope="external">
                   <ph>Mathematical Functions and Operators</ph>
                 </xref>
@@ -164,8 +164,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-string.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-string.html"
                   scope="external">
                   <ph>String Functions and Operators</ph>
                 </xref>
@@ -239,8 +238,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-enum.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-enum.html"
                   scope="external"> Enum Support Functions </xref>
               </entry>
               <entry colname="col2"/>
@@ -261,8 +259,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-net.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-net.html"
                   scope="external">
                   <ph>Network Address Functions and Operators</ph>
                 </xref>
@@ -297,8 +294,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-array.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-array.html"
                   scope="external">
                   <ph>Array Functions and Operators</ph>
                 </xref>
@@ -347,8 +343,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-srf.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-srf.html"
                   scope="external">
                   <ph>Set Returning Functions</ph>
                 </xref>
@@ -359,8 +354,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-info.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-info.html"
                   scope="external">
                   <ph>System Information Functions</ph>
                 </xref>
@@ -383,8 +377,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/functions-admin.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.4/functions-admin.html"
                   scope="external">
                   <ph>System Administration Functions</ph>
                 </xref>
@@ -398,8 +391,7 @@ SELECT foo();
             </row>
             <row>
               <entry colname="col1">
-                <xref format="html"
-                  href="https://www.postgresql.org/docs/9.1/functions-xml.html"
+                <xref format="html" href="https://www.postgresql.org/docs/9.1/functions-xml.html"
                   scope="external">XML Functions</xref> and function-like expressions </entry>
               <entry colname="col2"/>
               <entry colname="col3">
@@ -1236,8 +1228,8 @@ SELECT foo();
   <topic id="topic30" xml:lang="en">
     <title id="in179666">Window Functions</title>
     <body>
-      <p>The following are Greenplum Database built-in window functions. All window functions are 
-        <i>immutable</i>. For more information about window functions, see "Window Expressions" in 
+      <p>The following are Greenplum Database built-in window functions. All window functions are
+          <i>immutable</i>. For more information about window functions, see "Window Expressions" in
         the <cite>Greenplum Database Administrator Guide</cite>.</p>
       <table id="in164369">
         <title>Window functions</title>
@@ -1554,8 +1546,8 @@ SELECT sum(myvalue) FROM mymatrix;
               </entry>
               <entry colname="col4">Transforms a one dimensional array into rows. Returns a set of
                   <codeph>anyelement</codeph>, a polymorphic <xref format="html"
-                  href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html"
-                  scope="external"><ph>pseudotype in PostgreSQL</ph></xref>.</entry>
+                  href="https://www.postgresql.org/docs/9.4/datatype-pseudo.html" scope="external"
+                    ><ph>pseudotype in PostgreSQL</ph></xref>.</entry>
             </row>
           </tbody>
         </tgroup>
@@ -1869,6 +1861,411 @@ SELECT sum(myvalue) FROM mymatrix;
           </tbody>
         </tgroup>
       </table>
+    </body>
+  </topic>
+  <topic xml:lang="en-us" id="functions-range">
+    <title>Range Functions and Operators</title>
+    <body>
+      <p> See <xref href="datatype-range.xml#rangetypes"/> for an overview of range types. </p>
+      <p> The following table shows the operators available for range types. </p>
+      <table id="range-operators-table">
+        <title>Range Operators</title>
+        <tgroup cols="4">
+          <thead>
+            <row>
+              <entry>Operator</entry>
+              <entry>Description</entry>
+              <entry>Example</entry>
+              <entry>Result</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>
+                <codeph>=</codeph>
+              </entry>
+              <entry>equal</entry>
+              <entry>
+                <codeph>int4range(1,5) = '[1,4]'::int4range</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;&gt;</codeph>
+              </entry>
+              <entry>not equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &lt;&gt; numrange(1.1,2.3)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;</codeph>
+              </entry>
+              <entry>less than</entry>
+              <entry>
+                <codeph>int4range(1,10) &lt; int4range(2,3)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&gt;</codeph>
+              </entry>
+              <entry>greater than</entry>
+              <entry>
+                <codeph>int4range(1,10) &gt; int4range(1,5)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;=</codeph>
+              </entry>
+              <entry>less than or equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &lt;= numrange(1.1,2.2)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&gt;=</codeph>
+              </entry>
+              <entry>greater than or equal</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) &gt;= numrange(1.1,2.0)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>@&gt;</codeph>
+              </entry>
+              <entry>contains range</entry>
+              <entry>
+                <codeph>int4range(2,4) @&gt; int4range(2,3)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>@&gt;</codeph>
+              </entry>
+              <entry>contains element</entry>
+              <entry>
+                <codeph>'[2011-01-01,2011-03-01)'::tsrange @&gt; '2011-01-10'::timestamp</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;@</codeph>
+              </entry>
+              <entry>range is contained by</entry>
+              <entry>
+                <codeph>int4range(2,4) &lt;@ int4range(1,7)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;@</codeph>
+              </entry>
+              <entry>element is contained by</entry>
+              <entry>
+                <codeph>42 &lt;@ int4range(1,7)</codeph>
+              </entry>
+              <entry>
+                <codeph>f</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&amp;&amp;</codeph>
+              </entry>
+              <entry>overlap (have points in common)</entry>
+              <entry>
+                <codeph>int8range(3,7) &amp;&amp; int8range(4,12)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&lt;&lt;</codeph>
+              </entry>
+              <entry>strictly left of</entry>
+              <entry>
+                <codeph>int8range(1,10) &lt;&lt; int8range(100,110)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&gt;&gt;</codeph>
+              </entry>
+              <entry>strictly right of</entry>
+              <entry>
+                <codeph>int8range(50,60) &gt;&gt; int8range(20,30)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&amp;&lt;</codeph>
+              </entry>
+              <entry>does not extend to the right of</entry>
+              <entry>
+                <codeph>int8range(1,20) &amp;&lt; int8range(18,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>&amp;&gt;</codeph>
+              </entry>
+              <entry>does not extend to the left of</entry>
+              <entry>
+                <codeph>int8range(7,20) &amp;&gt; int8range(5,10)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>-|-</codeph>
+              </entry>
+              <entry>is adjacent to</entry>
+              <entry>
+                <codeph>numrange(1.1,2.2) -|- numrange(2.2,3.3)</codeph>
+              </entry>
+              <entry>
+                <codeph>t</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>+</codeph>
+              </entry>
+              <entry>union</entry>
+              <entry>
+                <codeph>numrange(5,15) + numrange(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[5,20)</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>*</codeph>
+              </entry>
+              <entry>intersection</entry>
+              <entry>
+                <codeph>int8range(5,15) * int8range(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[10,15)</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>-</codeph>
+              </entry>
+              <entry>difference</entry>
+              <entry>
+                <codeph>int8range(5,15) - int8range(10,20)</codeph>
+              </entry>
+              <entry>
+                <codeph>[5,10)</codeph>
+              </entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p> The simple comparison operators <codeph>&lt;</codeph>, <codeph>&gt;</codeph>,
+          <codeph>&lt;=</codeph>, and <codeph>&gt;=</codeph> compare the lower bounds first, and
+        only if those are equal, compare the upper bounds. These comparisons are not usually very
+        useful for ranges, but are provided to allow B-tree indexes to be constructed on ranges. </p>
+      <p> The left-of/right-of/adjacent operators always return false when an empty range is
+        involved; that is, an empty range is not considered to be either before or after any other
+        range. </p>
+      <p> The union and difference operators will fail if the resulting range would need to contain
+        two disjoint sub-ranges, as such a range cannot be represented. </p>
+      <p> The following table shows the functions available for use with range types. </p>
+      <table id="range-functions-table">
+        <title>Range Functions</title>
+        <tgroup cols="5">
+          <thead>
+            <row>
+              <entry>Function</entry>
+              <entry>Return Type</entry>
+              <entry>Description</entry>
+              <entry>Example</entry>
+              <entry>Result</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>range's element type</entry>
+              <entry>lower bound of range</entry>
+              <entry>
+                <codeph>lower(numrange(1.1,2.2))</codeph>
+              </entry>
+              <entry>
+                <codeph>1.1</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>range's element type</entry>
+              <entry>upper bound of range</entry>
+              <entry>
+                <codeph>upper(numrange(1.1,2.2))</codeph>
+              </entry>
+              <entry>
+                <codeph>2.2</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>isempty</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>
+                <codeph>boolean</codeph>
+              </entry>
+              <entry>is the range empty?</entry>
+              <entry>
+                <codeph>isempty(numrange(1.1,2.2))</codeph>
+              </entry>
+              <entry>
+                <codeph>false</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower_inc</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>
+                <codeph>boolean</codeph>
+              </entry>
+              <entry>is the lower bound inclusive?</entry>
+              <entry>
+                <codeph>lower_inc(numrange(1.1,2.2))</codeph>
+              </entry>
+              <entry>
+                <codeph>true</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper_inc</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>
+                <codeph>boolean</codeph>
+              </entry>
+              <entry>is the upper bound inclusive?</entry>
+              <entry>
+                <codeph>upper_inc(numrange(1.1,2.2))</codeph>
+              </entry>
+              <entry>
+                <codeph>false</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>lower_inf</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>
+                <codeph>boolean</codeph>
+              </entry>
+              <entry>is the lower bound infinite?</entry>
+              <entry>
+                <codeph>lower_inf('(,)'::daterange)</codeph>
+              </entry>
+              <entry>
+                <codeph>true</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>upper_inf</codeph>(<codeph>anyrange</codeph>) </codeph>
+              </entry>
+              <entry>
+                <codeph>boolean</codeph>
+              </entry>
+              <entry>is the upper bound infinite?</entry>
+              <entry>
+                <codeph>upper_inf('(,)'::daterange)</codeph>
+              </entry>
+              <entry>
+                <codeph>true</codeph>
+              </entry>
+            </row>
+            <row>
+              <entry>
+                <codeph>
+                  <codeph>range_merge</codeph>(<codeph>anyrange</codeph>, <codeph>anyrange</codeph>)
+                </codeph>
+              </entry>
+              <entry>
+                <codeph>anyrange</codeph>
+              </entry>
+              <entry>the smallest range which includes both of the given ranges</entry>
+              <entry>
+                <codeph>range_merge('[1,2)'::int4range, '[3,4)'::int4range)</codeph>
+              </entry>
+              <entry>
+                <codeph>[1,4)</codeph>
+              </entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <p> The <codeph>lower</codeph> and <codeph>upper</codeph> functions return null if the range
+        is empty or the requested bound is infinite. The <codeph>lower_inc</codeph>,
+          <codeph>upper_inc</codeph>, <codeph>lower_inf</codeph>, and <codeph>upper_inf</codeph>
+        functions all return false for an empty range. </p>
     </body>
   </topic>
 </topic>

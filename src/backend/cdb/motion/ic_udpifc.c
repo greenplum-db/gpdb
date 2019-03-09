@@ -5745,6 +5745,13 @@ dispatcherAYT(void)
 	ssize_t		ret;
 	char		buf;
 
+	/*
+	 * For background worker or auxiliary process like gdd, there is no client.
+	 * As a result, MyProcPort is NULL. We should skip dispatcherAYT check here.
+	 */
+	if (MyProcPort == NULL)
+		return true;
+
 	if (MyProcPort->sock < 0)
 		return false;
 
