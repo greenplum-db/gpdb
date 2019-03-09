@@ -28,13 +28,13 @@ TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name<
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [ * ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] ( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
+( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
 with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
             [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
-[ LATERAL ] ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
+ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
             [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
 <varname>from_item</varname> [ NATURAL ] <varname>join_type</varname> <varname>from_item</varname>
           [ ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] ) ]</codeblock>
@@ -384,36 +384,6 @@ SELECT DISTINCT ON (location) location, time, report
             <pt>NATURAL</pt>
             <pd><codeph>NATURAL</codeph> is shorthand for a <codeph>USING</codeph> list that
               mentions all columns in the two tables that have the same names.</pd>
-          </plentry>
-          <plentry>
-            <pt>LATERAL</pt>
-            <pd>The <codeph>LATERAL</codeph> keyword can precede a sub-<codeph>SELECT</codeph>
-              <codeph>FROM</codeph> item. This allows the sub-<codeph>SELECT</codeph> to refer to
-              columns of <codeph>FROM</codeph> items that appear before it in the
-                <codeph>FROM</codeph> list. (Without <codeph>LATERAL</codeph>, each
-                sub-<codeph>SELECT</codeph> is evaluated independently and so cannot cross-reference
-              any other <codeph>FROM</codeph> item.)</pd>
-            <pd><codeph>LATERAL</codeph> can also precede a function-call <codeph>FROM</codeph>
-              item, but in this case it is a noise word, because the function expression can refer
-              to earlier <codeph>FROM</codeph> items in any case.</pd>
-            <pd>A <codeph>LATERAL</codeph> item can appear at top level in the <codeph>FROM</codeph>
-              list, or within a <codeph>JOIN</codeph> tree. In the latter case it can also refer to
-              any items that are on the left-hand side of a <codeph>JOIN</codeph> that it is on the
-              right-hand side of.</pd>
-            <pd>When a <codeph>FROM</codeph> item contains <codeph>LATERAL</codeph>
-              cross-references, evaluation proceeds as follows: for each row of the
-                <codeph>FROM</codeph> item providing the cross-referenced column(s), or set of rows
-              of multiple <codeph>FROM</codeph> items providing the columns, the
-                <codeph>LATERAL</codeph> item is evaluated using that row or row set's values of the
-              columns. The resulting row(s) are joined as usual with the rows they were computed
-              from. This is repeated for each row or set of rows from the column source
-              table(s).</pd>
-            <pd>The column source table(s) must be <codeph>INNER</codeph> or <codeph>LEFT</codeph>
-              joined to the <codeph>LATERAL</codeph> item, else there would not be a well-defined
-              set of rows from which to compute each set of rows for the <codeph>LATERAL</codeph>
-              item. Thus, although a construct such as <varname>X</varname> RIGHT JOIN LATERAL
-                <varname>Y</varname> is syntactically valid, it is not actually allowed for
-                <varname>Y</varname> to reference <varname>X</varname>.</pd>
           </plentry>
         </parml></sectiondiv>
       <sectiondiv id="section7"><b>The WHERE Clause</b><p>The optional <codeph>WHERE</codeph> clause
@@ -1059,15 +1029,6 @@ SELECT distance, employee_name FROM employee_recursive;</codeblock>
           href="../../admin_guide/query/topics/CTE-query.xml#topic_zhs_r1s_w1b"/><ph
           otherprops="pivotal"> in the <cite>Greenplum Database Administrator Guide</cite></ph> for
         more examples.</p>
-      <p>This example uses LATERAL to apply a set-returning function
-          <codeph>get_product_names()</codeph> for each row of the manufacturers
-        table:<codeblock>SELECT m.name AS mname, pname
-FROM manufacturers m, LATERAL get_product_names(m.id) pname;</codeblock></p>
-      <p>Manufacturers not currently having any products would not appear in the result, since it is
-        an inner join. If we wished to include the names of such manufacturers in the result, we
-        could
-        do:<codeblock>SELECT m.name AS mname, pname
-FROM manufacturers m LEFT JOIN LATERAL get_product_names(m.id) pname ON true;</codeblock></p>
     </section>
     <section id="section19"><title>Compatibility</title><p>The <codeph>SELECT</codeph> statement is
         compatible with the SQL standard, but there are some extensions and some missing features.
