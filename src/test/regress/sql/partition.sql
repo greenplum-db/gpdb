@@ -3911,6 +3911,42 @@ alter table sales exchange partition for (101) with table newpart2;
 select * from sales order by pkid;
 drop table sales cascade;
 
+-- Exchage partiton table with a table having dropped column
+create table exchange_part(a int, b int) partition by range(b) (start (0) end (10) every (1));
+create table exchange1(a int, c int, b int);
+alter table exchange1 drop column c;
+alter table exchange_part exchange partition for (1) with table exchange1;
+copy exchange_part from STDIN DELIMITER as '|';
+9794 | 1
+9795 | 2
+9797 | 3
+9799 | 4
+9801 | 5
+9802 | 6
+9803 | 7
+9806 | 8
+9807 | 9
+9808 | 1
+9810 | 2
+9814 | 3
+9815 | 4
+9817 | 5
+9818 | 6
+9822 | 7
+9824 | 8
+9825 | 9
+9827 | 1
+9828 | 2
+9831 | 3
+9832 | 4
+9836 | 5
+9840 | 6
+9843 | 7
+9844 | 8
+\.
+select * from exchange_part;
+drop table exchange_part;
+drop table exchange1;
 -- Ensure that new partitions get the correct attributes (MPP17110)
 CREATE TABLE pt_tab_encode (a int, b text)
 with (appendonly=true, orientation=column, compresstype=zlib, compresslevel=1)
