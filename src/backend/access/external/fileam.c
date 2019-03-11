@@ -1473,7 +1473,7 @@ external_scan_error_callback(void *arg)
 
 		errcontext("External table %s, line %s of %s, column %s",
 				   cstate->cur_relname,
-				   linenumber_atoi(buffer, cstate->cur_lineno),
+				   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 				   scan->fs_uri,
 				   cstate->cur_attname);
 	}
@@ -1489,7 +1489,7 @@ external_scan_error_callback(void *arg)
 
 			errcontext("External table %s, line %s of %s: \"%s\"",
 					   cstate->cur_relname,
-					   linenumber_atoi(buffer, cstate->cur_lineno),
+					   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 					   scan->fs_uri, line_buf);
 			pfree(line_buf);
 		}
@@ -1510,7 +1510,7 @@ external_scan_error_callback(void *arg)
 			if (cstate->cur_lineno > 0)
 				errcontext("External table %s, line %s of file %s",
 						   cstate->cur_relname,
-						   linenumber_atoi(buffer, cstate->cur_lineno),
+						   linenumber_atoi(buffer, sizeof(buffer), cstate->cur_lineno),
 						   scan->fs_uri);
 			else
 				errcontext("External table %s, file %s",
@@ -1600,12 +1600,12 @@ justifyDatabuf(StringInfo buf)
 }
 
 char *
-linenumber_atoi(char buffer[20], int64 linenumber)
+linenumber_atoi(char *buffer, size_t bufsz, int64 linenumber)
 {
 	if (linenumber < 0)
-		return "N/A";
-
-	snprintf(buffer, 20, INT64_FORMAT, linenumber);
+		snprintf(buffer, bufsz, "%s", "N/A");
+	else
+		snprintf(buffer, bufsz, INT64_FORMAT, linenumber);
 
 	return buffer;
 }
