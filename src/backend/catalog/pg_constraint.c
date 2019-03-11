@@ -479,7 +479,7 @@ ChooseConstraintName(const char *name1, const char *name2,
 	conDesc = heap_open(ConstraintRelationId, AccessShareLock);
 
 	/* try the unmodified label first */
-	StrNCpy(modlabel, label, sizeof(modlabel));
+	strlcpy(modlabel, label, sizeof(modlabel));
 
 	for (;;)
 	{

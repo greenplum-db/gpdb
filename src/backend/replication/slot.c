@@ -267,7 +267,7 @@ ReplicationSlotCreate(const char *name, bool db_specific,
 
 	/* first initialize persistent data */
 	memset(&slot->data, 0, sizeof(ReplicationSlotPersistentData));
-	StrNCpy(NameStr(slot->data.name), name, NAMEDATALEN);
+	strlcpy(NameStr(slot->data.name), name, NAMEDATALEN);
 	slot->data.database = db_specific ? MyDatabaseId : InvalidOid;
 	slot->data.persistency = persistency;
 

@@ -218,7 +218,7 @@ namestrcpy(Name name, const char *str)
 {
 	if (!name || !str)
 		return -1;
-	StrNCpy(NameStr(*name), str, NAMEDATALEN);
+	strlcpy(NameStr(*name), str, NAMEDATALEN);
 	return 0;
 }
 

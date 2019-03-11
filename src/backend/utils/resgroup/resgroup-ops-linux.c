@@ -974,7 +974,7 @@ readStr(Oid group, BaseType base,
 
 	readData(path, data, datasize);
 
-	StrNCpy(str, data, len);
+	strlcpy(str, data, len);
 }
 
 /*
@@ -1590,7 +1590,7 @@ ResGroupOps_AssignGroup(Oid group, ResGroupCaps *caps, int pid)
 	if (caps != NULL)
 	{
 		oldCaps.cpuRateLimit = caps->cpuRateLimit;
-		StrNCpy(oldCaps.cpuset, caps->cpuset, sizeof(oldCaps.cpuset));
+		strlcpy(oldCaps.cpuset, caps->cpuset, sizeof(oldCaps.cpuset));
 	}
 }
 

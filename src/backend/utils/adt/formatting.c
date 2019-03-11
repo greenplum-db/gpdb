@@ -3237,7 +3237,7 @@ DCH_cache_getnew(char *str)
 #ifdef DEBUG_TO_FROM_CHAR
 		elog(DEBUG_elog_output, "OLD: '%s' AGE: %d", old->str, old->age);
 #endif
-		StrNCpy(old->str, str, DCH_CACHE_SIZE + 1);
+		strlcpy(old->str, str, DCH_CACHE_SIZE + 1);
 		/* old->format fill parser */
 		old->age = (++DCHCounter);
 		return old;
@@ -3248,7 +3248,7 @@ DCH_cache_getnew(char *str)
 		elog(DEBUG_elog_output, "NEW (%d)", n_DCHCache);
 #endif
 		ent = DCHCache + n_DCHCache;
-		StrNCpy(ent->str, str, DCH_CACHE_SIZE + 1);
+		strlcpy(ent->str, str, DCH_CACHE_SIZE + 1);
 		/* ent->format fill parser */
 		ent->age = (++DCHCounter);
 		++n_DCHCache;
@@ -3883,7 +3883,7 @@ NUM_cache_getnew(char *str)
 #ifdef DEBUG_TO_FROM_CHAR
 		elog(DEBUG_elog_output, "OLD: \"%s\" AGE: %d", old->str, old->age);
 #endif
-		StrNCpy(old->str, str, NUM_CACHE_SIZE + 1);
+		strlcpy(old->str, str, NUM_CACHE_SIZE + 1);
 		/* old->format fill parser */
 		old->age = (++NUMCounter);
 		ent = old;
@@ -3894,7 +3894,7 @@ NUM_cache_getnew(char *str)
 		elog(DEBUG_elog_output, "NEW (%d)", n_NUMCache);
 #endif
 		ent = NUMCache + n_NUMCache;
-		StrNCpy(ent->str, str, NUM_CACHE_SIZE + 1);
+		strlcpy(ent->str, str, NUM_CACHE_SIZE + 1);
 		/* ent->format fill parser */
 		ent->age = (++NUMCounter);
 		++n_NUMCache;

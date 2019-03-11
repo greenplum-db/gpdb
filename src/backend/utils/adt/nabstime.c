@@ -132,7 +132,7 @@ abstime2tm(AbsoluteTime _time, int *tzp, struct pg_tm * tm, char **tzn)
 			 * Copy no more than MAXTZLEN bytes of timezone to tzn, in case it
 			 * contains an error message, which doesn't fit in the buffer
 			 */
-			StrNCpy(*tzn, tm->tm_zone, MAXTZLEN + 1);
+			strlcpy(*tzn, tm->tm_zone, MAXTZLEN + 1);
 			if (strlen(tm->tm_zone) > MAXTZLEN)
 				ereport(WARNING,
 						(errcode(ERRCODE_INVALID_PARAMETER_VALUE),

@@ -159,20 +159,20 @@ RestoreArchivedFile(char *path, const char *xlogfname,
 				case 'p':
 					/* %p: relative path of target file */
 					sp++;
-					StrNCpy(dp, xlogpath, endp - dp);
+					strlcpy(dp, xlogpath, endp - dp);
 					make_native_path(dp);
 					dp += strlen(dp);
 					break;
 				case 'f':
 					/* %f: filename of desired file */
 					sp++;
-					StrNCpy(dp, xlogfname, endp - dp);
+					strlcpy(dp, xlogfname, endp - dp);
 					dp += strlen(dp);
 					break;
 				case 'r':
 					/* %r: filename of last restartpoint */
 					sp++;
-					StrNCpy(dp, lastRestartPointFname, endp - dp);
+					strlcpy(dp, lastRestartPointFname, endp - dp);
 					dp += strlen(dp);
 					break;
 				case '%':
@@ -367,7 +367,7 @@ ExecuteRecoveryCommand(char *command, char *commandName, bool failOnSignal)
 				case 'r':
 					/* %r: filename of last restartpoint */
 					sp++;
-					StrNCpy(dp, lastRestartPointFname, endp - dp);
+					strlcpy(dp, lastRestartPointFname, endp - dp);
 					dp += strlen(dp);
 					break;
 				case '%':

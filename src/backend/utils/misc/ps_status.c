@@ -261,7 +261,7 @@ init_ps_display(const char *username, const char *dbname,
 	Assert(dbname);
 	Assert(host_info);
 
-	StrNCpy(ps_username, username, sizeof(ps_username));    /*CDB*/
+	strlcpy(ps_username, username, sizeof(ps_username));    /*CDB*/
 
 #ifndef PS_USE_NONE
 	/* no ps display for stand-alone backend */

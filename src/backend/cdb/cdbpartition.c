@@ -8299,7 +8299,7 @@ ChooseConstraintNameForPartitionCreate(const char *rname,
 		cname = NULL;
 
 	/* try the unmodified label first */
-	StrNCpy(modlabel, label, sizeof(modlabel));
+	strlcpy(modlabel, label, sizeof(modlabel));
 
 	for (;;)
 	{

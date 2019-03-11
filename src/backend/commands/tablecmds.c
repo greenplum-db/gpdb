@@ -585,7 +585,7 @@ DefineRelation(CreateStmt *stmt, char relkind, Oid ownerId, char relstorage, boo
 	 * Truncate relname to appropriate length (probably a waste of time, as
 	 * parser should have done this already).
 	 */
-	StrNCpy(relname, stmt->relation->relname, NAMEDATALEN);
+	strlcpy(relname, stmt->relation->relname, NAMEDATALEN);
 
 	/*
 	 * Check consistency of arguments
@@ -16833,7 +16833,7 @@ ATPExecPartRename(Relation rel,
 		targetrelation = relation_open(prule->topRule->parchildrelid,
 									   AccessExclusiveLock);
 
-		StrNCpy(targetrelname, RelationGetRelationName(targetrelation),
+		strlcpy(targetrelname, RelationGetRelationName(targetrelation),
 				NAMEDATALEN);
 
 		namespaceId = RelationGetNamespace(targetrelation);
@@ -16842,8 +16842,7 @@ ATPExecPartRename(Relation rel,
 
 		if (0 == prule->topRule->parparentoid)
 		{
-			StrNCpy(parentname,
-					RelationGetRelationName(rel), NAMEDATALEN);
+			strlcpy(parentname, RelationGetRelationName(rel), NAMEDATALEN);
 		}
 		else
 		{
@@ -16853,7 +16852,7 @@ ATPExecPartRename(Relation rel,
 				/* look in the parent prule */
 				parentrelation =
 					RelationIdGetRelation(par_prule->topRule->parchildrelid);
-				StrNCpy(parentname,
+				strlcpy(parentname,
 						RelationGetRelationName(parentrelation), NAMEDATALEN);
 				RelationClose(parentrelation);
 			}

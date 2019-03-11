@@ -851,7 +851,7 @@ cdb_define_pseudo_column(PlannerInfo   *root,
     rci->attr_width = width;
 
     /* If colname isn't unique, add suffix "_2", "_3", etc. */
-    StrNCpy(rci->colname, colname, sizeof(rci->colname));
+	strlcpy(rci->colname, colname, sizeof(rci->colname));
     for (i = 1;;)
     {
         CdbRelColumnInfo   *rci2;

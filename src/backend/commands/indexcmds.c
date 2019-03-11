@@ -2017,7 +2017,7 @@ ChooseRelationNameWithCache(const char *name1, const char *name2,
 		elog(ERROR, "relation names cannot be chosen on QE");
 
 	/* try the unmodified label first */
-	StrNCpy(modlabel, label, sizeof(modlabel));
+	strlcpy(modlabel, label, sizeof(modlabel));
 
 	for (;;)
 	{
