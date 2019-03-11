@@ -1488,7 +1488,6 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	 * we do this information exchange here, via the parseTree. For now
 	 * this is used for partitioned and append-only tables.
 	 */
-	
 	if (Gp_role == GP_ROLE_EXECUTE)
 	{
 		estate->es_result_partitions = plannedstmt->result_partitions;
@@ -1497,22 +1496,49 @@ InitializeResultRelations(PlannedStmt *plannedstmt, EState *estate, CmdType oper
 	else
 	{
 		List 	*all_relids = NIL;
-		Oid		 relid = getrelid(linitial_int(plannedstmt->resultRelations), rangeTable);
+		Oid		 relid = getrelid(linitial_int(resultRelations), rangeTable);
+		bool     containRoot = false;
 
 		if (rel_is_child_partition(relid))
-		{
 			relid = rel_partition_get_master(relid);
+		else
+		{
+			/*
+			 * If root partition is in result_partitions, it must be
+			 * the first element.
+			 */
+			containRoot = true;
 		}
 
 		estate->es_result_partitions = BuildPartitionNodeFromRoot(relid);
-		
+
 		/*
-		 * list all the relids that may take part in this insert operation
+		 * List all the relids that may take part in this insert operation.
+		 * The logic here is that:
+		 *   - If root partition is in the resultRelations, all_relids
+		 *     contains the root and all its all_inheritors
+		 *   - Otherwise, all_relids is a map of result_partitions to
+		 *     get each element's relation oid.
 		 */
-		all_relids = lappend_oid(all_relids, relid);
-		all_relids = list_concat(all_relids,
-								 all_partition_relids(estate->es_result_partitions));
-		
+		if (containRoot)
+		{
+			all_relids = lappend_oid(all_relids, relid);
+			all_relids = list_concat(all_relids,
+									 all_partition_relids(estate->es_result_partitions));
+		}
+		else
+		{
+			ListCell *lc;
+			int       idx;
+
+			foreach(lc, resultRelations)
+			{
+				idx = lfirst_int(lc);
+				all_relids = lappend_oid(all_relids,
+										 getrelid(idx, rangeTable));
+			}
+		}
+
         /* 
          * We also assign a segno for a deletion operation.
          * That segno will later be touched to ensure a correct
