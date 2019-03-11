@@ -169,6 +169,8 @@ VACUUM [FULL] [FREEZE] [VERBOSE] ANALYZE
     </section>
     <section id="section7">
       <title>Examples</title>
+      <p>To clean a single table <codeph>onek</codeph>, analyze it for the optimizer and print a
+      detailed vacuum activity report:</p>
       <codeblock>VACUUM (VERBOSE, ANALYZE) onek;</codeblock>
       <p>Vacuum all tables in the current database:</p>
       <codeblock>VACUUM;</codeblock>
