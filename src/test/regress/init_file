@@ -113,10 +113,6 @@ s/ERROR:  ANALYZE cannot merge since not all non-empty leaf partitions have cons
 m/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/
 s/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge.*/ERROR:  Cannot run ANALYZE MERGE since not all non-empty leaf partitions have available statistics for the merge (analyze.c:XXX)/
 
-# Mask out schema name of the reshuffle notice
-m/NOTICE:  Do not need to reshuffle /
-s/NOTICE:  Do not need to reshuffle .*\./NOTICE:  Do not need to reshuffle SCHEMA./
-
 # Mask out gp_execution_segment()
 m/One-Time Filter: \(gp_execution_segment\(\) = \d+/
 s/One-Time Filter: \(gp_execution_segment\(\) = \d+/One-Time Filter: \(gp_execution_segment\(\) = ###/

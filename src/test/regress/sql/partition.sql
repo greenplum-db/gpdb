@@ -3929,3 +3929,10 @@ select gp_segment_id, attrelid::regclass, attnum, attoptions from gp_dist_random
 
 select oid::regclass, relkind, relstorage, reloptions from pg_class where oid = 'pt_tab_encode_1_prt_s_abc'::regclass;
 select oid::regclass, relkind, relstorage, reloptions from pg_class where oid = 'pt_tab_encode_1_prt_s_xyz'::regclass;
+
+-- Ensure that only the correct type of partitions can be added
+create table at_range (a int) partition by range (a) (start(1) end(5));
+create table at_list (i int) partition by list(i) (partition p1 values(1));
+
+alter table at_list add partition foo2 start(6) end (10);
+alter table at_range add partition test values(5);

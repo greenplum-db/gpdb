@@ -3416,7 +3416,8 @@ die(SIGNAL_ARGS)
 				 * lock(though we can handle this using pq_send_mutex_lock() now, it
 				 * is better to avoid the unnecessary cost).
 				 */
-				close(MyProcPort->sock);
+				if (MyProcPort)
+					close(MyProcPort->sock);
 				whereToSendOutput = DestNone;
 			}
 

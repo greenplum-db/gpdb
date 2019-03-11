@@ -615,6 +615,10 @@ ExecSquelchNode(PlanState *node)
 			ExecSquelchMotion((MotionState *) node);
 			break;
 
+		case T_ModifyTableState:
+			ExecSquelchModifyTable((ModifyTableState *) node);
+			return;
+
 			/*
 			 * Node types that need custom code to recurse.
 			 */

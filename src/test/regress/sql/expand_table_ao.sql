@@ -4,9 +4,9 @@
 create extension if not exists gp_debug_numsegments;
 -- end_ignore
 
-drop schema if exists test_reshuffle_ao cascade;
-create schema test_reshuffle_ao;
-set search_path=test_reshuffle_ao,public;
+drop schema if exists test_expand_table_ao cascade;
+create schema test_expand_table_ao;
+set search_path=test_expand_table_ao,public;
 set gp_default_storage_options='appendonly=true,orientation=row';
 set allow_system_table_mods=true;
 
@@ -303,7 +303,7 @@ Select count(*) > 0 from part_t1 where gp_segment_id=2;
 select numsegments from gp_distribution_policy where localoid='part_t1'::regclass;
 drop table part_t1;
 
--- only reshuffle leaf partitions, not allowed now
+-- only expand leaf partitions, not allowed now
 select gp_debug_set_create_table_default_numsegments(2);
 CREATE TABLE part_t1(a int, b int, c int, d int, e int)
 DISTRIBUTED BY(a)
@@ -331,7 +331,7 @@ select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
 alter table part_t1_1_prt_other_b_2_prt_2_3_prt_others_d expand table;
 select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
 
--- try to reshuffle root partition, should success
+-- try to expand root partition, should success
 Alter table part_t1 expand table;
 Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
 

@@ -676,6 +676,13 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 	TupleDesc	desc = RelationGetDescr(rel);
 
 	/*
+	 * POLICYTYPE_ENTRY normally means it's a system table or a table created
+	 * in utility mode, so unique/primary key is allowed anywhere.
+	 */
+	if (GpPolicyIsEntry(rel->rd_cdbpolicy))
+		return;
+
+	/*
 	 * Firstly, unique/primary key indexes aren't supported if we're
 	 * distributing randomly.
 	 */
@@ -687,9 +694,11 @@ checkPolicyForUniqueIndex(Relation rel, AttrNumber *indattr, int nidxatts,
 						isprimary ? "PRIMARY KEY" : "UNIQUE")));
 	}
 
-	/* replicated table support unique/primary key indexes */
+	/* Replicated table support unique/primary key indexes */
 	if (GpPolicyIsReplicated(rel->rd_cdbpolicy))
 		return;
+
+	Assert(GpPolicyIsHashPartitioned(rel->rd_cdbpolicy));
 
 	/*
 	 * We use bitmaps to make intersection tests easier. As noted, order is

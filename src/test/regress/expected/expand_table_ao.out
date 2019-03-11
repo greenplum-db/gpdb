@@ -1,11 +1,11 @@
-\set has_oids false
+\set has_oids true
 -- start_ignore
 create extension if not exists gp_debug_numsegments;
 -- end_ignore
-drop schema if exists test_reshuffle_aoco cascade;
-create schema test_reshuffle_aoco;
-set search_path=test_reshuffle_aoco,public;
-set gp_default_storage_options='appendonly=true,orientation=column';
+drop schema if exists test_expand_table_ao cascade;
+create schema test_expand_table_ao;
+set search_path=test_expand_table_ao,public;
+set gp_default_storage_options='appendonly=true,orientation=row';
 set allow_system_table_mods=true;
 -- Hash distributed tables
 select gp_debug_set_create_table_default_numsegments(2);
@@ -30,8 +30,8 @@ Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
              0 |    38
-             1 |    37
              2 |    25
+             1 |    37
 (3 rows)
 
 abort;
@@ -65,6 +65,8 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 Create table t1(a int, b int, c int) with (OIDS=:has_oids) distributed by (a,b);
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into t1 select i,i,0 from generate_series(1,100) I;
 Update t1 set c = gp_segment_id;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
@@ -75,12 +77,14 @@ Select gp_segment_id, count(*) from t1 group by gp_segment_id;
 
 begin;
 Alter table t1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
-             1 |    30
              0 |    33
              2 |    37
+             1 |    30
 (3 rows)
 
 abort;
@@ -91,6 +95,8 @@ Select gp_segment_id, count(*) from t1 group by gp_segment_id;
 (1 row)
 
 Alter table t1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
@@ -152,9 +158,9 @@ Alter table t1 expand table;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
+             0 |     3
              1 |     1
              2 |     4
-             0 |     3
 (3 rows)
 
 select numsegments from gp_distribution_policy where localoid='t1'::regclass;
@@ -186,9 +192,9 @@ Alter table t1 expand table;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
-             2 |    25
              0 |    38
              1 |    37
+             2 |    25
 (3 rows)
 
 abort;
@@ -202,9 +208,9 @@ Alter table t1 expand table;
 Select gp_segment_id, count(*) from t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
-             0 |    38
-             1 |    37
              2 |    25
+             1 |    37
+             0 |    38
 (3 rows)
 
 select numsegments from gp_distribution_policy where localoid='t1'::regclass;
@@ -290,6 +296,8 @@ select gp_debug_set_create_table_default_numsegments(2);
 (1 row)
 
 Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed randomly;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Update r1 set c = gp_segment_id;
 Select count(*) from r1;
@@ -306,6 +314,8 @@ Select count(*) > 0 from r1 where gp_segment_id=2;
 
 begin;
 Alter table r1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from r1;
  count 
 -------
@@ -332,6 +342,8 @@ Select count(*) > 0 from r1 where gp_segment_id=2;
 (1 row)
 
 Alter table r1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from r1;
  count 
 -------
@@ -473,6 +485,8 @@ select gp_debug_set_create_table_default_numsegments(1);
 (1 row)
 
 Create table r1(a int, b int, c int) with (OIDS=:has_oids) distributed replicated;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 insert into r1 select i,i,0 from generate_series(1,100) I;
 Select count(*) from gp_dist_random('r1');
  count 
@@ -482,6 +496,8 @@ Select count(*) from gp_dist_random('r1');
 
 begin;
 Alter table r1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from gp_dist_random('r1');
  count 
 -------
@@ -496,6 +512,8 @@ Select count(*) from gp_dist_random('r1');
 (1 row)
 
 Alter table r1 expand table;
+NOTICE:  OIDS=TRUE is not recommended for user-created tables
+HINT:  Use OIDS=FALSE to prevent wrap-around of the OID counter.
 Select count(*) from gp_dist_random('r1');
  count 
 -------
@@ -536,7 +554,7 @@ NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_other_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
+NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
@@ -594,8 +612,8 @@ Alter table part_t1 expand table;
 Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
  gp_segment_id | count 
 ---------------+-------
-             2 |    25
              0 |    38
+             2 |    25
              1 |    37
 (3 rows)
 
@@ -633,7 +651,7 @@ NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_other_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
+NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
@@ -721,7 +739,7 @@ select numsegments from gp_distribution_policy where localoid='part_t1'::regclas
 (1 row)
 
 drop table part_t1;
--- only reshuffle leaf partitions, not allowed now.
+-- only expand leaf partitions, not allowed now
 select gp_debug_set_create_table_default_numsegments(2);
  gp_debug_set_create_table_default_numsegments 
 -----------------------------------------------
@@ -748,7 +766,7 @@ NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others_c_3_prt_three" for table "part_t1_1_prt_other_b_2_prt_others_c"
-NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_other_3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
+NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_others__3_prt_others_d" for table "part_t1_1_prt_other_b_2_prt_others_c"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2" for table "part_t1_1_prt_other_b"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_one" for table "part_t1_1_prt_other_b_2_prt_2"
 NOTICE:  CREATE TABLE will create partition "part_t1_1_prt_other_b_2_prt_2_3_prt_two" for table "part_t1_1_prt_other_b_2_prt_2"
@@ -805,7 +823,7 @@ select gp_segment_id, * from part_t1_1_prt_other_b_2_prt_2_3_prt_others_d;
              1 | 89 | 2 | 1 | 4 | 1
 (7 rows)
 
--- try to reshuffle root partition, should success
+-- try to expand root partition, should success
 Alter table part_t1 expand table;
 Select gp_segment_id, count(*) from part_t1 group by gp_segment_id;
  gp_segment_id | count 

@@ -185,7 +185,7 @@ def how_to_use_generated_pipeline_message():
         msg += '    -p gpdb_master \\\n'
         msg += '    -c %s \\\n' % ARGS.output_filepath
         msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
-        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.yml \\\n'
+        msg += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_master-ci-secrets.prod.yml \\\n'
         msg += '    -v pipeline-name=gpdb_master\n\n'
 
         msg += 'fly -t gpdb-prod \\\n'

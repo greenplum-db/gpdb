@@ -1223,31 +1223,6 @@ _outSplitUpdate(StringInfo str, const SplitUpdate *node)
 }
 
 /*
- * _outReshuffle
- */
-#ifndef COMPILING_BINARY_FUNCS
-static void
-_outReshuffle(StringInfo str, const Reshuffle *node)
-{
-	int			i;
-
-	WRITE_NODE_TYPE("Reshuffle");
-
-	WRITE_INT_FIELD(tupleSegIdx);
-	WRITE_INT_FIELD(numPolicyAttrs);
-	appendStringInfoLiteral(str, " :policyAttrs");
-	for (i = 0; i < node->numPolicyAttrs; i++)
-		appendStringInfo(str, " %d", node->policyAttrs[i]);
-	appendStringInfoLiteral(str, " :policyHashFuncs");
-	for (i = 0; i < node->numPolicyAttrs; i++)
-		appendStringInfo(str, " %u", node->policyHashFuncs[i]);
-	WRITE_INT_FIELD(oldSegs);
-	WRITE_INT_FIELD(ptype);
-	_outPlanInfo(str, (Plan *) node);
-}
-#endif
-
-/*
  * _outRowTrigger
  */
 static void
@@ -3116,11 +3091,6 @@ static void
 _outExpandStmtSpec(StringInfo str, const ExpandStmtSpec *node)
 {
 	WRITE_NODE_TYPE("EXPANDSTMTSPEC");
-	WRITE_ENUM_FIELD(method, ExpandMethod);
-	WRITE_BITMAPSET_FIELD(ps_none);
-	WRITE_BITMAPSET_FIELD(ps_root);
-	WRITE_BITMAPSET_FIELD(ps_interior);
-	WRITE_BITMAPSET_FIELD(ps_leaf);
 	WRITE_OID_FIELD(backendId);
 }
 
@@ -3495,7 +3465,6 @@ _outUpdateStmt(StringInfo str, const UpdateStmt *node)
 	WRITE_NODE_FIELD(fromClause);
 	WRITE_NODE_FIELD(returningList);
 	WRITE_NODE_FIELD(withClause);
-	WRITE_BOOL_FIELD(needReshuffle);
 }
 
 static void
@@ -3825,7 +3794,6 @@ _outQuery(StringInfo str, const Query *node)
 	WRITE_NODE_FIELD(setOperations);
 	WRITE_NODE_FIELD(constraintDeps);
 	WRITE_BOOL_FIELD(parentStmtType);
-	WRITE_BOOL_FIELD(needReshuffle);
 
 	/* Don't serialize policy */
 }
@@ -4653,19 +4621,6 @@ _outAlterTSDictionaryStmt(StringInfo str, const AlterTSDictionaryStmt *node)
 
 #ifndef COMPILING_BINARY_FUNCS
 static void
-_outReshuffleExpr(StringInfo str, const ReshuffleExpr *node)
-{
-	WRITE_NODE_TYPE("RESHUFFLEEXPR");
-
-	WRITE_INT_FIELD(newSegs);
-	WRITE_INT_FIELD(oldSegs);
-	WRITE_NODE_FIELD(hashKeys);
-	WRITE_NODE_FIELD(hashFuncs);
-	WRITE_INT_FIELD(ptype);
-}
-
-
-static void
 _outTupleDescNode(StringInfo str, const TupleDescNode *node)
 {
 	int			i;
@@ -4868,9 +4823,6 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_SplitUpdate:
 				_outSplitUpdate(str, obj);
-				break;
-			case T_Reshuffle:
-				_outReshuffle(str, obj);
 				break;
 			case T_RowTrigger:
 				_outRowTrigger(str, obj);
@@ -5609,9 +5561,6 @@ _outNode(StringInfo str, const void *obj)
 				break;
 			case T_AlterTSDictionaryStmt:
 				_outAlterTSDictionaryStmt(str, obj);
-				break;
-			case T_ReshuffleExpr:
-                _outReshuffleExpr(str, obj);
 				break;
 			default:
 

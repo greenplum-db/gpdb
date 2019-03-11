@@ -29,6 +29,8 @@ static void add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel);
 static void add_location_options_httpheader(CHURL_HEADERS headers, GPHDUri *gphduri);
 static char *get_format_name(char fmtcode);
 static void add_projection_desc_httpheader(CHURL_HEADERS headers, ProjectionInfo *projInfo, List *qualsAttributes);
+static bool add_attnums_from_targetList(Node *node, List *attnums);
+static void add_projection_index_header(CHURL_HEADERS pVoid, StringInfoData data, int attno, char number[32]);
 
 /*
  * Add key/value pairs to connection header.
@@ -63,7 +65,7 @@ build_http_headers(PxfInputData *input)
 	{
 		bool qualsAreSupported = true;
 		List *qualsAttributes =
-			     extractPxfAttributes(input->quals, &qualsAreSupported);
+				 extractPxfAttributes(input->quals, &qualsAreSupported);
 		/* projection information is incomplete if columns from WHERE clause wasn't extracted */
 		/* if any of expressions in WHERE clause is not supported - do not send any projection information at all*/
 		if (qualsAreSupported &&
@@ -74,7 +76,7 @@ build_http_headers(PxfInputData *input)
 		else
 		{
 			elog(DEBUG2,
-			     "Query will not be optimized to use projection information");
+				 "Query will not be optimized to use projection information");
 		}
 	}
 
@@ -263,20 +265,53 @@ add_tuple_desc_httpheader(CHURL_HEADERS headers, Relation rel)
  */
 static void
 add_projection_desc_httpheader(CHURL_HEADERS headers,
-                               ProjectionInfo *projInfo,
-                               List *qualsAttributes)
+							   ProjectionInfo *projInfo,
+							   List *qualsAttributes)
 {
 	int            i;
 	int            number;
+	int            numberTargetList;
 	char           long_number[sizeof(int32) * 8];
 	int            *varNumbers = projInfo->pi_varNumbers;
 	StringInfoData formatter;
 
-	number = projInfo->pi_numSimpleVars + list_length(qualsAttributes);
+	initStringInfo(&formatter);
+	numberTargetList = 0;
+
+	/*
+	 * Non-simpleVars are added to the targetlist
+	 * we use expression_tree_walker to access attrno information
+	 * we do it through a helper function add_attnums_from_targetList
+	 */
+	if (projInfo->pi_targetlist)
+	{
+		List     *l = lappend_int(NIL, 0);
+		ListCell *lc1;
+
+		foreach(lc1, projInfo->pi_targetlist)
+		{
+			GenericExprState *gstate = (GenericExprState *) lfirst(lc1);
+			add_attnums_from_targetList((Node *) gstate->arg->expr, l);
+		}
+
+		foreach(lc1, l)
+		{
+			int attno = lfirst_int(lc1);
+			if (attno > InvalidAttrNumber)
+			{
+				add_projection_index_header(headers,
+											formatter, attno - 1, long_number);
+				numberTargetList++;
+			}
+		}
+
+		list_free(l);
+	}
+
+	number = numberTargetList + projInfo->pi_numSimpleVars +
+		list_length(qualsAttributes);
 	if (number == 0)
 		return;
-
-	initStringInfo(&formatter);
 
 	/* Convert the number of projection columns to a string */
 	pg_ltoa(number, long_number);
@@ -284,29 +319,39 @@ add_projection_desc_httpheader(CHURL_HEADERS headers,
 
 	for (i = 0; i < projInfo->pi_numSimpleVars; i++)
 	{
-		number = varNumbers[i] - 1;
-		pg_ltoa(number, long_number);
-		resetStringInfo(&formatter);
-		appendStringInfo(&formatter, "X-GP-ATTRS-PROJ-IDX");
-
-		churl_headers_append(headers, formatter.data, long_number);
+		add_projection_index_header(headers,
+									formatter, varNumbers[i] - 1, long_number);
 	}
 
 	ListCell *attribute = NULL;
 
+	/*
+	 * AttrNumbers coming from quals
+	 */
 	foreach(attribute, qualsAttributes)
 	{
 		AttrNumber attrNumber = (AttrNumber) lfirst_int(attribute);
-
-		pg_ltoa(attrNumber, long_number);
-		resetStringInfo(&formatter);
-		appendStringInfo(&formatter, "X-GP-ATTRS-PROJ-IDX");
-
-		churl_headers_append(headers, formatter.data, long_number);
+		add_projection_index_header(headers,
+									formatter, attrNumber, long_number);
 	}
 
 	list_free(qualsAttributes);
 	pfree(formatter.data);
+}
+
+/*
+ * Adds the projection index header for the given attno
+ */
+static void
+add_projection_index_header(CHURL_HEADERS headers,
+							StringInfoData str,
+							int attno,
+							char long_number[32])
+{
+	pg_ltoa(attno, long_number);
+	resetStringInfo(&str);
+	appendStringInfo(&str, "X-GP-ATTRS-PROJ-IDX");
+	churl_headers_append(headers, str.data, long_number);
 }
 
 /*
@@ -353,4 +398,37 @@ get_format_name(char fmtcode)
 	}
 
 	return formatName;
+}
+
+/*
+ * Gets a list of attnums from the given Node
+ * it uses expression_tree_walker to recursively
+ * get the list
+ */
+static bool
+add_attnums_from_targetList(Node *node, List *attnums)
+{
+	if (node == NULL)
+		return false;
+	if (IsA(node, Var))
+	{
+		Var        *variable = (Var *) node;
+		AttrNumber attnum    = variable->varattno;
+
+		lappend_int(attnums, attnum);
+		return false;
+	}
+
+	/*
+	 * Don't examine the arguments or filters of Aggrefs or WindowFuncs,
+	 * because those do not represent expressions to be evaluated within the
+	 * overall targetlist's econtext.
+	 */
+	if (IsA(node, Aggref))
+		return false;
+	if (IsA(node, WindowFunc))
+		return false;
+	return expression_tree_walker(node,
+								  add_attnums_from_targetList,
+								  (void *) attnums);
 }

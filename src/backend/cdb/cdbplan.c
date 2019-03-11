@@ -860,17 +860,6 @@ plan_tree_mutator(Node *node,
 			}
 			break;
 
-		case T_Reshuffle:
-			{
-				Reshuffle	*reshuffle = (Reshuffle *) node;
-				Reshuffle	*newReshuffle;
-
-				FLATCOPY(newReshuffle, reshuffle, Reshuffle);
-				PLANMUTATE(newReshuffle, reshuffle);
-				return (Node *) newReshuffle;
-			}
-			break;
-
 			/*
 			 * The following cases are handled by expression_tree_mutator.	In
 			 * addition, we let expression_tree_mutator handle unrecognized

@@ -1185,11 +1185,6 @@ cdbpath_motion_for_join(PlannerInfo *root,
 												   other->locus,
 												   &segGeneral->move_to))    /* OUT */
 				{
-					/*
-					 * XXX: if we require replicated tables to be reshuffled
-					 * before any other tables, then we could avoid such a case
-					 */
-
 					/* the result is distributed on the same segments with other */
 					AssertEquivalent(CdbPathLocus_NumSegments(other->locus),
 									 CdbPathLocus_NumSegments(segGeneral->move_to));

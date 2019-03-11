@@ -507,9 +507,8 @@ def checkDistribPolicy():
       join  pg_class rel on (pk.conrelid = rel.oid)
       join  pg_namespace n on (rel.relnamespace = n.oid)
       join  gp_distribution_policy d on (rel.oid = d.localoid)
-    where pk.contype in ('p', 'u') and d.policytype = 'p' and
-          (d.distkey = '' or not
-           d.distkey::int2[] operator(pg_catalog.<@) pk.conkey)
+    where pk.contype in ('p', 'u') and d.policytype = 'p'
+      and not d.distkey::int2[] operator(pg_catalog.<@) pk.conkey
     '''
     try:
         curs = db.query(qry)
@@ -631,8 +630,10 @@ def checkPartitionIntegrity():
     select
       parrelid,
       parchildrelid,
-      d1.distkey as parpolicy,
-      d2.distkey as parchildpolicy
+      d1.distkey as parpolicykey,
+      d1.distclass as parpolicyclass,
+      d2.distkey as parchildpolicykey,
+      d2.distclass as parchildpolicyclass
     from
       (
         select distinct
@@ -640,15 +641,16 @@ def checkPartitionIntegrity():
           coalesce(p1.parchildrelid, p2.parchildrelid)::regclass as parchildrelid
         from
           (
-            select parrelid, parchildrelid, g1.attname, g1.index
+            select parrelid, parchildrelid, g1.attname, g1.distclass, g1.index
             from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
-                     select localoid, attname, index
+                     select localoid, attname, distclass, index
                      from (
                        select
                          localoid,
                          unnest(distkey) as offset,
+                         unnest(distclass) as distclass,
                          generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
@@ -659,15 +661,16 @@ def checkPartitionIntegrity():
           ) p1
           full outer join
           (
-            select parrelid, parchildrelid, g2.attname, g2.index
+            select parrelid, parchildrelid, g2.attname, g2.distclass, g2.index
             from   pg_partition_rule pr
                    join pg_partition p on (pr.paroid = p.oid)
                    join (
-                     select localoid, attname, index
+                     select localoid, attname, distclass, index
                      from (
                        select
                          localoid,
                          unnest(distkey) as offset,
+                         unnest(distclass) as distclass,
                          generate_series(1, array_length(distkey, 1)) as index
                        from
                          gp_distribution_policy
@@ -679,7 +682,7 @@ def checkPartitionIntegrity():
           on (p1.parrelid = p2.parrelid and
               p1.parchildrelid = p2.parchildrelid and
               p1.index = p2.index)
-        where p1.attname is distinct from p2.attname
+        where p1.attname is distinct from p2.attname or p1.distclass is distinct from p2.distclass
       ) p
     join gp_distribution_policy d1 on (d1.localoid = p.parrelid)
     join gp_distribution_policy d2 on (d2.localoid = p.parchildrelid)
@@ -687,7 +690,15 @@ def checkPartitionIntegrity():
     '''
     try:
         curs = db.query(qry)
-        cols = ('parrelid', 'parchildrelid', 'parpolicy', 'parchildpolicy')
+        cols = ('parrelid', 'parchildrelid', 'parpolicykey', 'parpolicyclass', 'parchildpolicykey', 'parchildpolicyclass')
+        col_names = {
+            'parrelid': 'table',
+            'parchildrelid': 'affected child',
+            'parpolicykey': 'table distribution key',
+            'parpolicyclass': 'table distribution class',
+            'parchildpolicykey': 'child distribution key',
+            'parchildpolicyclass': 'child distribution class',
+        }
 
         err = []
         for row in curs.dictresult():
@@ -703,14 +714,22 @@ def checkPartitionIntegrity():
             if len(err) > 100:
                 logger.error(qry)
 
+            myprint(
+                '[ERROR]: child partition(s) are distributed differently from '
+                'the root partition, and must be manually redistributed, for '
+                'some tables. Check the gpcheckcat log for details.'
+            )
+            logger.error('The following tables must be manually redistributed:')
+
             count = 0
             for e in err:
                 cfg = e[0]
                 col = e[1]
                 row = e[2]
 
-                # generate repair script for this row
-                distributeRandomly(row['parchildrelid'])
+                # TODO: generate a repair script for this row. This is
+                # difficult, since we can't redistribute child partitions
+                # directly.
 
                 # report at most 100 rows, for brevity
                 if count == 100:
@@ -721,11 +740,17 @@ def checkPartitionIntegrity():
 
                 if count == 0:
                     logger.error("--------")
-                    logger.error("  " + " | ".join(map(str, col)))
-                    logger.error("  " + "-+-".join(['-' * len(x) for x in col]))
+                    logger.error("  " + " | ".join(map(col_names.get, col)))
+                    logger.error("  " + "-+-".join(['-' * len(col_names[x]) for x in col]))
 
                 logger.error("  " + " | ".join([str(row[x]) for x in col]))
                 count += 1
+
+            logger.error(
+                'Execute an ALTER TABLE ... SET DISTRIBUTED BY statement, with '
+                'the desired distribution key, on the partition root for each '
+                'affected table.'
+            )
 
     except Exception, e:
         setError(ERROR_NOREPAIR)
@@ -1961,10 +1986,6 @@ def removeFastSequence(db):
 def removeIndexConstraint(nspname, relname, constraint):
     GV.Constraints.append('ALTER TABLE "%s"."%s" DROP CONSTRAINT "%s" CASCADE;' % \
                           (nspname, relname, constraint))
-
-
-def distributeRandomly(rel):
-    GV.Policies.append('ALTER TABLE %s SET DISTRIBUTED RANDOMLY;' % rel)
 
 
 def buildRemove(seg, name, table, cols, objname):

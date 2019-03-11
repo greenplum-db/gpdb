@@ -8,7 +8,6 @@
 /largeobject.sql
 /misc.sql
 /oid_wraparound.sql
-/reshuffle_helper.sql
 /security_label.sql
 /tablespace.sql
 

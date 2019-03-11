@@ -256,7 +256,6 @@ _readQuery(void)
 	READ_NODE_FIELD(setOperations);
 	READ_NODE_FIELD(constraintDeps);
 	READ_BOOL_FIELD(parentStmtType);
-	READ_BOOL_FIELD(needReshuffle);
 
 	/* policy not serialized */
 
@@ -701,7 +700,6 @@ _readUpdateStmt(void)
 	READ_NODE_FIELD(fromClause);
 	READ_NODE_FIELD(returningList);
 	READ_NODE_FIELD(withClause);
-	READ_BOOL_FIELD(needReshuffle);
 	READ_DONE();
 }
 
@@ -1225,11 +1223,6 @@ _readExpandStmtSpec(void)
 {
 	READ_LOCALS(ExpandStmtSpec);
 
-	READ_ENUM_FIELD(method, ExpandMethod);
-	READ_BITMAPSET_FIELD(ps_none);
-	READ_BITMAPSET_FIELD(ps_root);
-	READ_BITMAPSET_FIELD(ps_interior);
-	READ_BITMAPSET_FIELD(ps_leaf);
 	READ_OID_FIELD(backendId);
 
 	READ_DONE();
@@ -2304,25 +2297,6 @@ _readSplitUpdate(void)
 }
 
 /*
- * _readReshuffle
- */
-static Reshuffle *
-_readReshuffle(void)
-{
-	READ_LOCALS(Reshuffle);
-
-	READ_INT_FIELD(tupleSegIdx);
-	READ_INT_FIELD(numPolicyAttrs);
-	READ_INT_ARRAY(policyAttrs, local_node->numPolicyAttrs, AttrNumber);
-	READ_OID_ARRAY(policyHashFuncs, local_node->numPolicyAttrs);
-	READ_INT_FIELD(oldSegs);
-	READ_INT_FIELD(ptype);
-	readPlanInfo((Plan *)local_node);
-
-	READ_DONE();
-}
-
-/*
  * _readRowTrigger
  */
 static RowTrigger *
@@ -2932,20 +2906,6 @@ _readLockRows(void)
 	READ_DONE();
 }
 
-static ReshuffleExpr *
-_readReshuffleExpr(void)
-{
-	READ_LOCALS(ReshuffleExpr);
-
-	READ_INT_FIELD(newSegs);
-	READ_INT_FIELD(oldSegs);
-	READ_NODE_FIELD(hashKeys);
-	READ_NODE_FIELD(hashFuncs);
-	READ_INT_FIELD(ptype);
-	READ_DONE();
-}
-
-
 static Node *
 _readValue(NodeTag nt)
 {
@@ -3229,9 +3189,6 @@ readNodeBinary(void)
 				break;
 			case T_SplitUpdate:
 				return_value = _readSplitUpdate();
-				break;
-			case T_Reshuffle:
-				return_value = _readReshuffle();
 				break;
 			case T_RowTrigger:
 				return_value = _readRowTrigger();
@@ -3887,9 +3844,6 @@ readNodeBinary(void)
 				break;
 			case T_AlterTableMoveAllStmt:
 				return_value = _readAlterTableMoveAllStmt();
-				break;
-			case T_ReshuffleExpr:
-				return_value = _readReshuffleExpr();
 				break;
 			default:
 				return_value = NULL; /* keep the compiler silent */

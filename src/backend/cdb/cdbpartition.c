@@ -4899,6 +4899,9 @@ get_part_rule(Relation rel,
 	char		relnamBuf[(NAMEDATALEN * 2)];
 	char	   *relname;
 
+	if (!pid)
+		return NULL;
+
 	snprintf(relnamBuf, sizeof(relnamBuf), "relation \"%s\"",
 			 RelationGetRelationName(rel));
 
@@ -4912,9 +4915,6 @@ get_part_rule(Relation rel,
 							  pid,
 							  bExistError, bMustExist,
 							  pSearch, pNode, relname, NULL);
-
-	if (!pid)
-		return NULL;
 
 	if (pid->idtype == AT_AP_IDRule)
 	{
@@ -4932,20 +4932,8 @@ get_part_rule(Relation rel,
 
 		pid2 = (AlterPartitionId *) lfirst(lc);
 
-		prule2 = get_part_rule1(rel,
-								pid2,
-								bExistError, bMustExist,
-								pSearch, pNode, pstrdup(prule2->relname), &pNode2);
-
-		pNode = pNode2;
-
-		if (!pNode)
-		{
-			if (prule2 && prule2->topRule && prule2->topRule->children)
-				pNode = prule2->topRule->children;
-		}
-
-		return prule2;
+		return get_part_rule1(rel, pid2, bExistError, bMustExist, pSearch,
+							  pNode, pstrdup(prule2->relname), &pNode2);
 	}
 
 	if (pid->idtype == AT_AP_IDList)

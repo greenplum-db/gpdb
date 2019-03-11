@@ -32,8 +32,8 @@ def singleton_side_effect(unused1, unused2):
 class GpConfig(GpTestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.postgressql_conf = self.temp_dir + "/postgresql.conf"
-        with open(self.postgressql_conf, "w") as postgresql:
+        postgresql_conf = self.temp_dir + "/postgresql.conf"
+        with open(postgresql_conf, "w") as postgresql:
             postgresql.close()
 
         # because gpconfig does not have a .py extension,

@@ -479,7 +479,6 @@ plan_tree_walker(Node *node,
 
 		case T_DML:
 		case T_SplitUpdate:
-		case T_Reshuffle:
 		case T_RowTrigger:
 		case T_AssertOp:
 			if (walk_plan_node_fields((Plan *) node, walker, context))

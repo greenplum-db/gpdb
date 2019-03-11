@@ -243,7 +243,7 @@ FI_IDENT(CollateLocaleOsLookup, "collate_locale_os_lookup")
 FI_IDENT(CreateResourceGroupFail, "create_resource_group_fail")
 /* inject fault before auto vacuum worker calls do_autovacuum */
 FI_IDENT(AutoVacWorkerBeforeDoAutovacuum, "auto_vac_worker_before_do_autovacuum")
-/* inject fault when search DNS cache */
+/* inject fault when search DNS cache (only works for fts probe) */
 FI_IDENT(GetDnsCachedAddress, "get_dns_cached_address")
 /* inject fault before aquiring lock during AlterTableCreateAoBlkdirTable */
 FI_IDENT(BeforeAcquireLockDuringCreateAoBlkdirTable, "before_acquire_lock_during_create_ao_blkdir_table")

@@ -24,7 +24,6 @@ partindex_test.out
 qp_gist_indexes2.out
 qp_gist_indexes2_optimizer.out
 qp_regexp.out
-/reshuffle_helper.out
 resource_queue_function.out
 resource_queue_function_resgroup.out
 /security_label.out

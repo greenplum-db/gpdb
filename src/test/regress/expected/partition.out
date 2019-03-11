@@ -8228,3 +8228,12 @@ select oid::regclass, relkind, relstorage, reloptions from pg_class where oid = 
  pt_tab_encode_1_prt_s_xyz | r       | c          | {appendonly=true,orientation=column,compresstype=zlib,compresslevel=1}
 (1 row)
 
+-- Ensure that only the correct type of partitions can be added
+create table at_range (a int) partition by range (a) (start(1) end(5));
+NOTICE:  CREATE TABLE will create partition "at_range_1_prt_1" for table "at_range"
+create table at_list (i int) partition by list(i) (partition p1 values(1));
+NOTICE:  CREATE TABLE will create partition "at_list_1_prt_p1" for table "at_list"
+alter table at_list add partition foo2 start(6) end (10);
+ERROR:  cannot add range partition to list partitioned table
+alter table at_range add partition test values(5);
+ERROR:  cannot add list partition to range partitioned table

@@ -1218,8 +1218,6 @@ MemoryAccounting_GetOwnerName(MemoryOwnerType ownerType)
 		return "X_RecursiveUnion";
 	case MEMORY_OWNER_TYPE_Exec_CteScan:
 		return "X_CteScan";
-	case MEMORY_OWNER_TYPE_Exec_Reshuffle:
-		return "X_Reshuffle";
 	case MEMORY_OWNER_TYPE_Exec_WorkTableScan:
 		return "X_WorkTableScan";
 	case MEMORY_OWNER_TYPE_Exec_ForeignScan:

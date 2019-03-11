@@ -1,0 +1,20 @@
+CREATE FUNCTION test_encoding_name() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+CREATE FUNCTION test_reset_current_memory() RETURNS bool AS '$libdir/gppc_test' LANGUAGE c;
+CREATE FUNCTION test_reset_child_memory() RETURNS bool AS '$libdir/gppc_test' LANGUAGE c;
+CREATE FUNCTION test_interrupt(bool) RETURNS void AS '$libdir/gppc_test' LANGUAGE c;
+SELECT test_reset_current_memory();
+ test_reset_current_memory 
+---------------------------
+ t
+(1 row)
+
+SELECT test_reset_child_memory();
+ test_reset_child_memory 
+-------------------------
+ t
+(1 row)
+
+SELECT test_interrupt(NULL);
+ERROR:  GppcCheckForInterrupts did not catch error (gppc.c:1340)
+SELECT test_interrupt(pg_cancel_backend(pg_backend_pid()));
+ERROR:  canceling statement due to user request

@@ -65,11 +65,16 @@ chmod 600 ~/.ssh/authorized_keys
 echo export LD_LIBRARY_PATH=/usr/local/lib:\$LD_LIBRARY_PATH \
   >>/usr/local/gpdb/greenplum_path.sh
 
-pushd "${GPDB_DIR}/gpAux/gpdemo"
+# source greenplum_path in ~/.bashrc
+GPDEMO_ENV=${GPDB_DIR}/gpAux/gpdemo/gpdemo-env.sh
+cat <<EOF >>~/.bashrc
 source /usr/local/gpdb/greenplum_path.sh
+if [[ -r $GPDEMO_ENV ]]; then
+  source "$GPDEMO_ENV"
+fi
+EOF
+
+pushd "${GPDB_DIR}/gpAux/gpdemo"
+source ~/.bashrc
 make
 popd
-
-#cd /vagrant/src/pl/plspython/tests
-#make containers
-#sudo -u postgres make

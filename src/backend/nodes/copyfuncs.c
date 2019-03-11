@@ -1353,28 +1353,6 @@ _copySplitUpdate(const SplitUpdate *from)
 }
 
 /*
- * _copyReshuffle
- */
-static Reshuffle *
-_copyReshuffle(const Reshuffle *from)
-{
-	Reshuffle *newnode = makeNode(Reshuffle);
-
-	/*
-	 * copy node superclass fields
-	 */
-	CopyPlanFields((Plan *) from, (Plan *) newnode);
-
-	COPY_SCALAR_FIELD(tupleSegIdx);
-	COPY_SCALAR_FIELD(numPolicyAttrs);
-	COPY_NODE_FIELD(policyAttrs);
-	COPY_POINTER_FIELD(policyHashFuncs, from->numPolicyAttrs * sizeof(Oid));
-	COPY_SCALAR_FIELD(oldSegs);
-	COPY_SCALAR_FIELD(ptype);
-	return newnode;
-}
-
-/*
  * _copyRowTrigger
  */
 static RowTrigger *
@@ -3191,7 +3169,6 @@ _copyQuery(const Query *from)
 	COPY_NODE_FIELD(constraintDeps);
 	COPY_NODE_FIELD(intoPolicy);
 	COPY_SCALAR_FIELD(parentStmtType);
-	COPY_SCALAR_FIELD(needReshuffle);
 
 	return newnode;
 }
@@ -3235,7 +3212,6 @@ _copyUpdateStmt(const UpdateStmt *from)
 	COPY_NODE_FIELD(fromClause);
 	COPY_NODE_FIELD(returningList);
 	COPY_NODE_FIELD(withClause);
-	COPY_SCALAR_FIELD(needReshuffle);
 
 	return newnode;
 }
@@ -3619,11 +3595,6 @@ _copyExpandStmtSpec(const ExpandStmtSpec *from)
 {
 	ExpandStmtSpec *newnode = makeNode(ExpandStmtSpec);
 
-	COPY_SCALAR_FIELD(method);
-	COPY_BITMAPSET_FIELD(ps_none);
-	COPY_BITMAPSET_FIELD(ps_root);
-	COPY_BITMAPSET_FIELD(ps_interior);
-	COPY_BITMAPSET_FIELD(ps_leaf);
 	COPY_SCALAR_FIELD(backendId);
 
 	return newnode;
@@ -5035,19 +5006,6 @@ _copyDistributedBy(const DistributedBy *from)
 	return newnode;
 }
 
-
-static ReshuffleExpr *
-_copyReshuffleExpr(const ReshuffleExpr *from)
-{
-	ReshuffleExpr *newnode = makeNode(ReshuffleExpr);
-	newnode->newSegs = from->newSegs;
-	newnode->oldSegs = from->oldSegs;
-	COPY_NODE_FIELD(hashKeys);
-	COPY_NODE_FIELD(hashFuncs);
-	newnode->ptype = from->ptype;
-	return newnode;
-}
-
 /* ****************************************************************
  *					pg_list.h copy functions
  * ****************************************************************
@@ -5300,9 +5258,6 @@ copyObject(const void *from)
 			break;
 		case T_SplitUpdate:
 			retval = _copySplitUpdate(from);
-			break;
-		case T_Reshuffle:
-			retval = _copyReshuffle(from);
 			break;
 		case T_RowTrigger:
 			retval = _copyRowTrigger(from);
@@ -6072,9 +6027,6 @@ copyObject(const void *from)
 
 		case T_DistributedBy:
 			retval = _copyDistributedBy(from);
-			break;
-		case T_ReshuffleExpr:
-			retval = _copyReshuffleExpr(from);
 			break;
 
 		default:

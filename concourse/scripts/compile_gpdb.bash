@@ -105,9 +105,9 @@ function unittest_check_gpdb() {
 function include_zstd() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig/.
-      cp /usr/lib64/libzstd.so* lib/.
-      cp /usr/include/zstd*.h include/.
+      cp /usr/lib64/pkgconfig/libzstd.pc lib/pkgconfig
+      cp /usr/lib64/libzstd.so* lib
+      cp /usr/include/zstd*.h include
     fi
   popd
 }
@@ -115,7 +115,7 @@ function include_zstd() {
 function include_quicklz() {
   pushd ${GREENPLUM_INSTALL_DIR}
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp /usr/lib64/libquicklz.so* lib/.
+      cp /usr/lib64/libquicklz.so* lib
     fi
   popd
 }
@@ -123,7 +123,15 @@ function include_quicklz() {
 function include_libstdcxx() {
   pushd /opt/gcc-6*/lib64
     if [ "${TARGET_OS}" == "centos" ] ; then
-      cp libstdc++.so.* ${GREENPLUM_INSTALL_DIR}/lib/.
+      for libfile in libstdc++.so.*; do
+        case $libfile in
+          *.py)
+            ;; # we don't vendor libstdc++.so.*-gdb.py
+          *)
+            cp "$libfile" ${GREENPLUM_INSTALL_DIR}/lib
+            ;; # vendor everything else
+        esac
+      done
     fi
   popd
 }
@@ -203,16 +211,7 @@ function _main() {
     BLD_TARGET_OPTION=("")
   fi
 
-  # Copy gpaddon_src into gpAux/addon directory and set the ADDON_DIR
-  # environment variable, so that quicklz support is available in enterprise
-  # builds.
-  export ADDON_DIR=addon
   export CONFIGURE_FLAGS=${CONFIGURE_FLAGS}
-  # We cannot symlink the addon directory here because `make -C` resolves the
-  # symlink and `cd`s to the actual directory. Currently the Makefile in the
-  # addon directory assumes that it is located in a particular location under
-  # the source tree and hence needs to be copied over.
-  rsync -au gpaddon_src/ ${GPDB_SRC_PATH}/gpAux/${ADDON_DIR}
 
   build_gpdb "${BLD_TARGET_OPTION[@]}"
   git_info

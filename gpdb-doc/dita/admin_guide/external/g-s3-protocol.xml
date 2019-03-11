@@ -280,13 +280,13 @@ server_side_encryption = sse-s3
       <section id="s3_proxy">
          <title>s3 Protocol Proxy Support </title>
          <p>You can specify a URL that is the proxy that S3 uses to connect to a data source. S3
-            supports these protocols: HTTP, HTTPS, and SOCKS (4, 4a, 5, 5h). You can specify a proxy
+            supports these protocols: HTTP and HTTPS. You can specify a proxy
             with the <codeph>s3</codeph> protocol configuration parameter <codeph>proxy</codeph> or
             an environment variable. If the configuration parameter is set, the environment
             variables are ignored. </p>
          <p>To specify proxy with an environment variable, you set the environment variable based on
-            the protocol: <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
-               <codeph>socks_proxy</codeph>. You can specify a different URL for each protocol by
+            the protocol: <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph>.
+               You can specify a different URL for each protocol by
             setting the appropriate environment variable. S3 supports these environment
                variables.<ul id="ul_cy3_km2_r1b">
                <li><codeph>all_proxy</codeph> specifies the proxy URL that is used if an environment
@@ -432,13 +432,13 @@ chunksize = 67108864</codeblock></p>
                <plentry>
                   <pt>proxy</pt>
                   <pd>Specify a URL that is the proxy that S3 uses to connect to a data source. S3
-                     supports these protocols: HTTP, HTTPS, and SOCKS (4, 4a, 5, 5h). This is the
+                     supports these protocols: HTTP and HTTPS. This is the
                      format for the
                      parameter.<codeblock>proxy = <varname>protocol</varname>://[<varname>user</varname>:<varname>password</varname>@]<varname>proxyhost</varname>[:<varname>port</varname>]</codeblock></pd>
                   <pd>If this parameter is not set or is an empty string (<codeph>proxy =
                         ""</codeph>), S3 uses the proxy specified by the environment variable
-                        <codeph>http_proxy</codeph>, <codeph>https_proxy</codeph>, or
-                        <codeph>socks_proxy</codeph> (and the environment variables
+                        <codeph>http_proxy</codeph> or <codeph>https_proxy</codeph>
+                        (and the environment variables
                         <codeph>all_proxy</codeph> and <codeph>no_proxy</codeph>). The environment
                      variable that S3 uses depends on the protocol. For information about the
                      environment variables, see <xref href="g-s3-protocol.xml#amazon-emr/s3_proxy"

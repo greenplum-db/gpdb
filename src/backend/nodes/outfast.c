@@ -586,24 +586,6 @@ _outMotion(StringInfo str, Motion *node)
 	_outPlanInfo(str, (Plan *) node);
 }
 
-/*
- * _outReshuffle
- */
-static void
-_outReshuffle(StringInfo str, const Reshuffle *node)
-{
-	WRITE_NODE_TYPE("Reshuffle");
-
-	WRITE_INT_FIELD(tupleSegIdx);
-	WRITE_INT_FIELD(numPolicyAttrs);
-	WRITE_INT_ARRAY(policyAttrs, node->numPolicyAttrs, AttrNumber);
-	WRITE_OID_ARRAY(policyHashFuncs, node->numPolicyAttrs);
-	WRITE_INT_FIELD(oldSegs);
-	WRITE_INT_FIELD(ptype);
-	_outPlanInfo(str, (Plan *) node);
-}
-
-
 /*****************************************************************************
  *
  *	Stuff from primnodes.h.
@@ -900,7 +882,6 @@ _outQuery(StringInfo str, Query *node)
 	WRITE_NODE_FIELD(setOperations);
 	WRITE_NODE_FIELD(constraintDeps);
 	WRITE_BOOL_FIELD(parentStmtType);
-	WRITE_BOOL_FIELD(needReshuffle);
 
 	/* Don't serialize policy */
 }
@@ -1294,18 +1275,6 @@ _outAlterTableSpaceOptionsStmt(StringInfo str, AlterTableSpaceOptionsStmt *node)
 	WRITE_BOOL_FIELD(isReset);
 }
 
-static void
-_outReshuffleExpr(StringInfo str, ReshuffleExpr *node)
-{
-	WRITE_NODE_TYPE("RESHUFFLEEXPR");
-
-	WRITE_INT_FIELD(newSegs);
-	WRITE_INT_FIELD(oldSegs);
-	WRITE_NODE_FIELD(hashKeys);
-	WRITE_NODE_FIELD(hashFuncs);
-	WRITE_INT_FIELD(ptype);
-}
-
 /*
  * _outNode -
  *	  converts a Node into binary string and append it to 'str'
@@ -1484,9 +1453,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_SplitUpdate:
 				_outSplitUpdate(str, obj);
-				break;
-			case T_Reshuffle:
-				_outReshuffle(str, obj);
 				break;
 			case T_RowTrigger:
 				_outRowTrigger(str, obj);
@@ -2255,9 +2221,6 @@ _outNode(StringInfo str, void *obj)
 				break;
 			case T_AlterTableSpaceOptionsStmt:
 				_outAlterTableSpaceOptionsStmt(str, obj);
-				break;
-			case T_ReshuffleExpr:
-				_outReshuffleExpr(str, obj);
 				break;
 			default:
 				elog(ERROR, "could not serialize unrecognized node type: %d",

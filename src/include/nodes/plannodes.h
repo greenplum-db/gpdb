@@ -1333,21 +1333,6 @@ typedef struct SplitUpdate
 } SplitUpdate;
 
 /*
- * Reshuffle Node
- * More details please read the description in the nodeReshuffle.c
- */
-typedef struct Reshuffle
-{
-	Plan		plan;
-	AttrNumber	tupleSegIdx;
-	int			numPolicyAttrs;
-	AttrNumber *policyAttrs;
-	Oid		   *policyHashFuncs;
-	int			oldSegs;
-	GpPolicyType ptype;
-} Reshuffle;
-
-/*
  * AssertOp Node
  *
  */

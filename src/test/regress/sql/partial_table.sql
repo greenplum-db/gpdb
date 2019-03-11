@@ -586,6 +586,34 @@ rollback;
 --
 insert into r1 (c4) values (pg_relation_size('r2'));
 
+--
+-- copy to a partial replicated table from file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+create table partial_rpt_from (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+copy partial_rpt_from (c1, c2) from stdin with delimiter ',';
+1,2
+\.
+select * from gp_dist_random('partial_rpt_from');
+
+--
+-- copy from a partial replicated table to file should work
+--
+select gp_debug_set_create_table_default_numsegments(2);
+create table partial_rpt_to (c1 int, c2 int) distributed replicated;
+select gp_debug_reset_create_table_default_numsegments();
+insert into partial_rpt_to values (1,1);
+copy partial_rpt_to to stdout;
+-- change a replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
+-- change to another replica to provide data
+\c
+set search_path=test_partial_table,public;
+copy partial_rpt_to to stdout;
+
 -- start_ignore
 -- We need to do a cluster expansion which will check if there are partial
 -- tables, we need to drop the partial tables to keep the cluster expansion

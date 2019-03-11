@@ -1,22 +1,19 @@
 /*-------------------------------------------------------------------------
  *
  * gppc_test.c
- *	  libgppc test program
+ *	  libgppc client program
  *
  * Portions Copyright (c) 2012, Greenplum Inc.
  * Portions Copyright (c) 2012-Present Pivotal Software, Inc.
  *
  *
  * IDENTIFICATION
- *	    src/interfaces/gppc/test/gppc_test/gppc_test.c
+ *	    src/interfaces/gppc/test/gppc_demo/gppc_demo.c
  *
  *-------------------------------------------------------------------------
  */
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include <signal.h>
-#include <sys/types.h>
 #include "gppc.h"
 
 GPPC_FUNCTION_INFO(oidcheckfunc);
@@ -279,6 +276,41 @@ GppcDatum errfunc1(GPPC_FUNCTION_ARGS)
 	GPPC_RETURN_NULL();
 }
 
+GPPC_FUNCTION_INFO(errfunc_varchar);
+GppcDatum errfunc_varchar(GPPC_FUNCTION_ARGS);
+
+GppcDatum errfunc_varchar(GPPC_FUNCTION_ARGS)
+{
+        GppcVarChar tempBuf ;
+        GppcVarChar    arg1 = GPPC_GETARG_VARCHAR(0);
+        size_t          len = GppcGetVarCharLength(arg1);
+        tempBuf = GppcAllocVarChar(len);
+        char       *cstr;
+
+        cstr = GppcVarCharGetCString(arg1);
+        GppcReport(GPPC_INFO, "%s", cstr);
+
+        /* Test GppcFree() */
+        memcpy(GppcGetVarCharPointer(tempBuf), GppcGetVarCharPointer(arg1), len);
+        GppcFree(tempBuf);
+
+        GPPC_RETURN_NULL();
+}
+
+GPPC_FUNCTION_INFO(errfunc_bpchar);
+GppcDatum errfunc_bpchar(GPPC_FUNCTION_ARGS);
+
+GppcDatum errfunc_bpchar(GPPC_FUNCTION_ARGS)
+{
+        GppcBpChar    arg1 = GPPC_GETARG_BPCHAR(0);
+        char       *cstr;
+
+        cstr = GppcBpCharGetCString(arg1);
+        GppcReport(GPPC_WARNING, "%s", cstr);
+
+        GPPC_RETURN_NULL();
+}
+
 GPPC_FUNCTION_INFO(argisnullfunc);
 GppcDatum argisnullfunc(GPPC_FUNCTION_ARGS);
 
@@ -290,13 +322,109 @@ GppcDatum argisnullfunc(GPPC_FUNCTION_ARGS)
 		GPPC_RETURN_BOOL(false);
 }
 
+GPPC_FUNCTION_INFO(gppc_func_text);
+GppcDatum gppc_func_text(GPPC_FUNCTION_ARGS);
+
+GppcDatum gppc_func_text(GPPC_FUNCTION_ARGS)
+{
+    if (GppcGetDatabaseEncoding() != GPPC_UTF8) {
+        GppcReport(GPPC_ERROR, "Database encoding must be UTF8.");
+        GPPC_RETURN_NULL();
+    }
+    /* Using GppcDatabaseEncodingMaxLength() */
+    int len = GppcDatabaseEncodingMaxLength();
+    if (GPPC_NARGS() < 1) {
+        GppcText        res;
+        char           *buf;
+        /* Using GppcAlloc0(size_t); */
+        buf = GppcAlloc0(len);
+        char tempChar[] = "This gppc_func_text call has no arguments.";
+        buf = tempChar;
+        /* build GppcText from C string and reset the length of 
+           variable length data */
+        res = GppcCStringGetText(buf);
+        GPPC_RETURN_TEXT(res);
+    } else {
+        GppcText        res;
+        GppcText        arg1 = GPPC_GETARG_TEXT(0);
+        GppcBool        arg2 = true;
+        size_t          clen = GppcGetTextLength(arg1);
+        if (GPPC_NARGS() > 1) { /* has 2nd argument */
+            arg2 = GPPC_GETARG_BOOL(1); /* assuming 2nd arg is a boolean */
+        }
+        char tempChar[] = "This gppc_func_text call has one or more arguments. ";
+        int cstrlen = strlen(tempChar);
+
+        /* Initialize using GppcAllocText */
+        if (arg2) {
+            res = GppcAllocText(cstrlen + clen);
+            /* Note GppcAllocText only initializes and allocates GppcText
+               without filling its content.
+               Need to use memcpy to fill the content. 
+               Using GppcGetTextPointer() and GppcCStringGetText() */
+            memcpy(GppcGetTextPointer(res), GppcGetTextPointer(GppcCStringGetText(tempChar)), cstrlen);
+            memcpy(GppcGetTextPointer(res) + cstrlen, GppcGetTextPointer(arg1), clen);
+        } else {
+            res = GppcAllocText(cstrlen);
+            memcpy(GppcGetTextPointer(res), GppcGetTextPointer(GppcCStringGetText(tempChar)), cstrlen);
+        }
+        GPPC_RETURN_TEXT(res);
+    }
+}
+
+GPPC_FUNCTION_INFO(gppc_func_varchar);
+GppcDatum gppc_func_varchar(GPPC_FUNCTION_ARGS);
+
+GppcDatum gppc_func_varchar(GPPC_FUNCTION_ARGS)
+{   
+    GppcVarChar        res;
+    /* Using GppcDatabaseEncodingMaxLength()   */
+    int len = GppcDatabaseEncodingMaxLength();
+    if (GPPC_NARGS() < 1) {
+        char *buf;
+        /* Using GppcAlloc0(size_t) */
+        buf = GppcAlloc0(len);
+        char tempChar[] = "This gppc_func_varchar call has no arguments.";
+        buf = tempChar;
+        res = GppcCStringGetVarChar(buf);
+        GPPC_RETURN_VARCHAR(res);
+    } else { 
+        char *buf;
+        /* Using GppcAlloc(size_t) */
+        buf = GppcAlloc(len);
+        /* Using GppcRealloc(char *, size_t) */
+        buf = GppcRealloc(buf, len * 2);
+        char tempChar[] = "This gppc_func_varchar call has one or more arguments.";
+        buf = tempChar;
+        /* build GppcText from C string and reset the length of 
+           variable length data */
+        res = GppcCStringGetVarChar(buf);
+        GPPC_RETURN_VARCHAR(res);
+    }
+}
+
 GPPC_FUNCTION_INFO(byteafunc1);
 GppcDatum byteafunc1(GPPC_FUNCTION_ARGS);
 
 GppcDatum byteafunc1(GPPC_FUNCTION_ARGS)
 {
-	GppcBytea		bytea = GPPC_GETARG_BYTEA_COPY(0);
+	GppcBytea	    bytea = GPPC_GETARG_BYTEA_COPY(0);
 	char		   *mem = GppcGetByteaPointer(bytea);
+
+	mem[0]++;
+        /* bytea2 should not be changed */
+	GppcBytea	    bytea2 = GPPC_GETARG_BYTEA(0);
+
+	GPPC_RETURN_BYTEA(bytea2);
+}
+
+GPPC_FUNCTION_INFO(byteafunc2);
+GppcDatum byteafunc2(GPPC_FUNCTION_ARGS);
+
+GppcDatum byteafunc2(GPPC_FUNCTION_ARGS)
+{
+	GppcBytea	bytea = GPPC_GETARG_BYTEA_COPY(0);
+	char	   *mem = GppcGetByteaPointer(bytea);
 
 	mem[0]++;
 
@@ -314,7 +442,7 @@ GppcDatum numericfunc1(GPPC_FUNCTION_ARGS)
 	str = GppcNumericGetCString(numeric);
 	if (strlen(str) > 0 && ('0' <= str[0] && str[0] <= '8'))
 		str[0]++;
-
+	
 	GPPC_RETURN_NUMERIC(GppcCStringGetNumeric(str));
 }
 
@@ -371,6 +499,76 @@ GppcDatum datefunc1(GPPC_FUNCTION_ARGS)
 	GPPC_RETURN_DATE(GppcTmGetDate(&tm));
 }
 
+GPPC_FUNCTION_INFO(datefunc1_nochange);
+GppcDatum datefunc1_nochange(GPPC_FUNCTION_ARGS);
+
+GppcDatum datefunc1_nochange(GPPC_FUNCTION_ARGS)
+{
+        GppcDate                arg = GPPC_GETARG_DATE(0);
+        GppcTm                  tm;
+
+        GppcDateGetTm(arg, &tm);
+
+        GPPC_RETURN_DATE(GppcTmGetDate(&tm));
+}
+
+GPPC_FUNCTION_INFO(datefunc2);
+GppcDatum datefunc2(GPPC_FUNCTION_ARGS);
+
+GppcDatum datefunc2(GPPC_FUNCTION_ARGS)
+{
+        GppcDate                arg = GPPC_GETARG_DATE(0);
+        GppcTm                  tm;
+
+        GppcDateGetTm(arg, &tm);
+        tm.tm_year -= 1;
+        tm.tm_mon -= 1;
+        tm.tm_mday -= 1;
+
+        GPPC_RETURN_DATE(GppcTmGetDate(&tm));
+}
+
+GPPC_FUNCTION_INFO(datefunc3_year);
+GppcDatum datefunc3_year(GPPC_FUNCTION_ARGS);
+
+GppcDatum datefunc3_year(GPPC_FUNCTION_ARGS)
+{
+        GppcDate                arg = GPPC_GETARG_DATE(0);
+        GppcTm                  tm;
+
+        GppcDateGetTm(arg, &tm);
+        tm.tm_year -= 1;
+
+        GPPC_RETURN_DATE(GppcTmGetDate(&tm));
+}
+
+GPPC_FUNCTION_INFO(datefunc3_mon);
+GppcDatum datefunc3_mon(GPPC_FUNCTION_ARGS);
+
+GppcDatum datefunc3_mon(GPPC_FUNCTION_ARGS)
+{
+        GppcDate                arg = GPPC_GETARG_DATE(0);
+        GppcTm                  tm;
+
+        GppcDateGetTm(arg, &tm);
+        tm.tm_mon -= 1;
+
+        GPPC_RETURN_DATE(GppcTmGetDate(&tm));
+}
+
+GPPC_FUNCTION_INFO(datefunc3_mday);
+GppcDatum datefunc3_mday(GPPC_FUNCTION_ARGS);
+
+GppcDatum datefunc3_mday(GPPC_FUNCTION_ARGS)
+{
+        GppcDate                arg = GPPC_GETARG_DATE(0);
+        GppcTm                  tm;
+
+        GppcDateGetTm(arg, &tm);
+        tm.tm_mday -= 1;
+
+        GPPC_RETURN_DATE(GppcTmGetDate(&tm));
+}
 GPPC_FUNCTION_INFO(timefunc1);
 GppcDatum timefunc1(GPPC_FUNCTION_ARGS);
 
@@ -514,7 +712,7 @@ GppcDatum spifunc3(GPPC_FUNCTION_ARGS)
 	char		   *query = GppcTextGetCString(GPPC_GETARG_TEXT(0));
 	GppcInt4		attno = GPPC_GETARG_INT4(1);
 	GppcSPIResult	result;
-	GppcDatum		datum = (GppcDatum) 0;
+	GppcDatum		datum = 0;
 	bool			isnull = true;
 
 	if (GppcSPIConnect() < 0)
@@ -546,7 +744,7 @@ GppcDatum spifunc4(GPPC_FUNCTION_ARGS)
 	char		   *query = GppcTextGetCString(GPPC_GETARG_TEXT(0));
 	char		   *attname = GppcTextGetCString(GPPC_GETARG_TEXT(1));
 	GppcSPIResult	result;
-	GppcDatum		datum = (GppcDatum) 0;
+	GppcDatum		datum = 0;
 	bool			isnull = true;
 
 	if (GppcSPIConnect() < 0)
@@ -568,18 +766,138 @@ GppcDatum spifunc4(GPPC_FUNCTION_ARGS)
 }
 
 /*
+ * SPI test 5: select query, using tcount
+ */
+GPPC_FUNCTION_INFO(spifunc5);
+GppcDatum spifunc5(GPPC_FUNCTION_ARGS);
+
+GppcDatum spifunc5(GPPC_FUNCTION_ARGS)
+{
+        char               *query = GppcTextGetCString(GPPC_GETARG_TEXT(0));
+        GppcInt4                attno = GPPC_GETARG_INT4(1);
+        GppcInt4                tcount = GPPC_GETARG_INT4(2);
+        GppcSPIResult   result;
+        char               *val = NULL;
+
+        if (GppcSPIConnect() < 0)
+                GppcReport(GPPC_ERROR, "connect error");
+
+        result = GppcSPIExec(query, tcount);
+        while (result->current < result->processed)
+        {
+                val = GppcSPIGetValue(result, attno, true);
+                result->current++;
+        }
+
+        GppcSPIFinish();
+
+        if (val)
+                GPPC_RETURN_TEXT(GppcCStringGetText(val));
+        else
+                GPPC_RETURN_NULL();
+}
+
+/*
+ * SPI test 5a: select query, using tcount, set makecopy = false
+ */
+GPPC_FUNCTION_INFO(spifunc5a);
+GppcDatum spifunc5a(GPPC_FUNCTION_ARGS);
+
+GppcDatum spifunc5a(GPPC_FUNCTION_ARGS)
+{
+        char               *query = GppcTextGetCString(GPPC_GETARG_TEXT(0));
+        GppcInt4            attno = GPPC_GETARG_INT4(1);
+        GppcInt4            tcount = GPPC_GETARG_INT4(2);
+        GppcSPIResult       result;
+        char               *val = NULL;
+        GppcInt4            count = 0;  // count the total number of chars in the result set.
+
+        if (GppcSPIConnect() < 0)
+                GppcReport(GPPC_ERROR, "connect error");
+
+        result = GppcSPIExec(query, tcount);
+        while (result->current < result->processed)
+        {
+                val = GppcSPIGetValue(result, attno, false); //set makcopy = false
+                count += strlen(val);
+                result->current++;
+        }
+
+        GppcSPIFinish();
+
+        GPPC_RETURN_INT4(count);
+}
+
+
+/*
+ * SPI test 6: run DML query, using tcount, return NULL
+ */
+GPPC_FUNCTION_INFO(spifunc6);
+GppcDatum spifunc6(GPPC_FUNCTION_ARGS);
+
+GppcDatum spifunc6(GPPC_FUNCTION_ARGS)
+{
+        char               *query = GppcTextGetCString(GPPC_GETARG_TEXT(0));
+        GppcInt4            tcount = GPPC_GETARG_INT4(1);
+        /* connTestFlag for connection test
+         * 1: connect again when already connected
+         * 2: try to execute without connection
+         * 3: close connection again when it has been closed already
+         */
+        GppcInt4            connTestFlag = GPPC_GETARG_INT4(2);
+        GppcSPIResult   result;
+
+        if (GppcSPIConnect() < 0)
+                GppcReport(GPPC_ERROR, "connect error");
+
+        if (connTestFlag == 1)
+        {
+		if (GppcSPIConnect() < 0)
+			GppcReport(GPPC_ERROR, "connect error: already connected and cannot connect again.");
+        }
+        else if (connTestFlag == 2)
+        {
+		GppcSPIFinish(); 
+        }
+
+        result = GppcSPIExec(query, tcount);
+        
+        if (result->rescode < 0)
+        {
+		GppcReport(GPPC_ERROR, "query execution error: Connection has been closed unexpectedly." );
+        }
+
+        GppcSPIFinish();
+        if (connTestFlag == 3)
+        {
+		if (GppcSPIFinish() < 0)
+			GppcReport(GPPC_ERROR, "connect error: connection has been closed and cannot be closed again.");
+        }
+
+        GPPC_RETURN_NULL();
+}
+
+/*
  * The error handler.  We can call GppcReport with INFO when ERROR, since it's not
  * infinite recursion.  For test purpose, set 'x' to message when WARNING.
  */
 static void
 errorcallback(GppcReportInfo info, void *arg)
 {
-	GppcReportLevel		elevel = GppcGetReportLevel(info);
+	GppcText	message;
+	GppcReportLevel elevel = GppcGetReportLevel(info);
+	const char *rptMessage = GppcGetReportMessage(info);
+	size_t		len = strlen(rptMessage);
 
+	message = GppcAllocText(len);
+	memcpy(GppcGetTextPointer(message), rptMessage, len);
+ 
 	if (elevel == GPPC_WARNING && arg)
 		memset(GppcGetTextPointer(arg), 'x', GppcGetTextLength(arg));
 	else if (elevel == GPPC_ERROR && arg)
 		GppcReport(GPPC_INFO, "inside callback: %s", GppcTextGetCString(arg));
+	else if (elevel == GPPC_NOTICE && arg)
+		GppcReport(GPPC_INFO, "inside callback message is: %s", rptMessage);
 }
 
 GPPC_FUNCTION_INFO(errorcallbackfunc1);
@@ -598,6 +916,8 @@ errorcallbackfunc1(GPPC_FUNCTION_ARGS)
 		GppcReport(GPPC_INFO, "info emit");
 	else if (strcmp(carg, "warning") == 0)
 		GppcReport(GPPC_WARNING, "warning emit");
+	else if (strcmp(carg, "notice") == 0)
+		GppcReport(GPPC_NOTICE, "notice emit");
 	else if (strcmp(carg, "error") == 0)
 		GppcReport(GPPC_ERROR, "error emit");
 
@@ -606,12 +926,14 @@ errorcallbackfunc1(GPPC_FUNCTION_ARGS)
 	GPPC_RETURN_TEXT(arg);
 }
 
+#if GP_VERSION_NUM >= 40200
 GPPC_FUNCTION_INFO(tablefunc_describe);
 GppcDatum tablefunc_describe(GPPC_FUNCTION_ARGS);
 
 GppcDatum
 tablefunc_describe(GPPC_FUNCTION_ARGS)
 {
+	GppcText arg = GppcCStringGetText("Error callback in describe function");
 	GppcTupleDesc	tdesc;
 	GppcInt4		avalue;
 	bool			isnull, iserror;
@@ -619,7 +941,7 @@ tablefunc_describe(GPPC_FUNCTION_ARGS)
 	GppcReportCallbackState	cbstate;
 
 	/* For a test purpose to make sure it's working in the describe func */
-	cbstate = GppcInstallReportCallback(errorcallback, NULL);
+	cbstate = GppcInstallReportCallback(errorcallback, arg);
 
 	/* Fetch and validate input */
 	if (GPPC_NARGS() != 1 || GPPC_ARGISNULL(0))
@@ -641,7 +963,7 @@ tablefunc_describe(GPPC_FUNCTION_ARGS)
 		GppcReport(GPPC_ERROR, "invalid column position %d", avalue);
 
 	/* Print out the attlen -- just an excuse to use GppcTupleDescAttrLen() */
-	GppcReport(GPPC_INFO, "attlen is %d", GppcTupleDescAttrLen(tdesc, avalue - 1));
+	GppcReport(GPPC_NOTICE, "attlen is %d", GppcTupleDescAttrLen(tdesc, avalue - 1));
 
 	/* Build an output tuple a single column based on the column number above */
 	odesc = GppcCreateTemplateTupleDesc(1);
@@ -881,6 +1203,7 @@ GppcDatum project_errorcallback(GPPC_FUNCTION_ARGS)
 	result = GppcBuildHeapTupleDatum(odesc, values, isnull);
 	GPPC_SRF_RETURN_NEXT(fctx, result);
 }
+#endif  /* GP_VERSION_NUM >= 40200 */
 
 GPPC_FUNCTION_INFO(test_encoding_name);
 GppcDatum test_encoding_name(GPPC_FUNCTION_ARGS);
@@ -888,80 +1211,12 @@ GppcDatum test_encoding_name(GPPC_FUNCTION_ARGS);
 GppcDatum
 test_encoding_name(GPPC_FUNCTION_ARGS)
 {
-	GppcText res;
-	const char *str = GppcDatabaseEncodingName(GPPC_UTF8);
-	size_t len = strlen(str);
+        GppcText res;
+        const char *str = GppcDatabaseEncodingName((GppcEncoding) GPPC_GETARG_INT4(0));
+        size_t len = strlen(str);
 
-	res = GppcAllocText(len);
-	memcpy(GppcGetTextPointer(res), str, len);
-	
-	GPPC_RETURN_TEXT(res);
-}
+        res = GppcAllocText(len);
+        memcpy(GppcGetTextPointer(res), str, len);
 
-static void
-allocate_a_lot(GppcMemoryContext context)
-{
-	void   *ptr;
-	int		i;
-	GppcMemoryContext oldcontext;
-
-	oldcontext = GppcMemoryContextSwitchTo(context);
-
-	for (i = 0; i < 20; i++)
-	{
-		/*
-		 * 900M bytes, completely depending on the default setting,
-		 * but it's fairly reasonable, I believe...
-		 */
-		ptr = (int *) GppcAlloc(900 * 1000 * 1000);
-
-		GppcMemoryContextReset(context);
-	}
-
-	GppcMemoryContextSwitchTo(oldcontext);
-}
-
-GPPC_FUNCTION_INFO(test_reset_current_memory);
-GppcDatum test_reset_current_memory(GPPC_FUNCTION_ARGS);
-
-GppcDatum
-test_reset_current_memory(GPPC_FUNCTION_ARGS)
-{
-	allocate_a_lot(GppcGetCurrentMemoryContext());
-
-	GPPC_RETURN_BOOL(true);
-}
-
-GPPC_FUNCTION_INFO(test_reset_child_memory);
-GppcDatum test_reset_child_memory(GPPC_FUNCTION_ARGS);
-
-GppcDatum
-test_reset_child_memory(GPPC_FUNCTION_ARGS)
-{
-	GppcMemoryContext current, child;
-	int	   *my_ptr;
-
-	current = GppcGetCurrentMemoryContext();
-	child = GppcMemoryContextCreate(current);
-
-	my_ptr = (int *) GppcAlloc(10 * sizeof(int));
-	my_ptr[0] = 42;
-
-	allocate_a_lot(child);
-
-	/* Should still be valid. */
-	GPPC_RETURN_BOOL(my_ptr[0] == 42);
-}
-
-GPPC_FUNCTION_INFO(test_interrupt);
-GppcDatum test_interrupt(GPPC_FUNCTION_ARGS);
-
-GppcDatum
-test_interrupt(GPPC_FUNCTION_ARGS)
-{
-	GppcCheckForInterrupts();
-
-	GppcReport(GPPC_ERROR, "GppcCheckForInterrupts did not catch error");
-
-	GPPC_RETURN_NULL();
+        GPPC_RETURN_TEXT(res);
 }

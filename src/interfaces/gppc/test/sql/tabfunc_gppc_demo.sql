@@ -65,7 +65,7 @@ SELECT * FROM history order  by id, time;
     DROP FUNCTION IF EXISTS transform(anytable);
     CREATE OR REPLACE FUNCTION transform(a anytable)
     RETURNS SETOF outtable
-    AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+    AS '$libdir/gppc_test', 'mytransform'
     LANGUAGE C;
 
     \df transform
@@ -78,7 +78,7 @@ SELECT * FROM history order  by id, time;
     DROP FUNCTION IF EXISTS transform(anytable);
     CREATE OR REPLACE FUNCTION transform(a anytable)
     RETURNS SETOF RECORD
-    AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+    AS '$libdir/gppc_test', 'mytransform'
     LANGUAGE C;
 
     SELECT * FROM transform( 
@@ -89,7 +89,7 @@ SELECT * FROM history order  by id, time;
     DROP FUNCTION IF EXISTS transform(anytable);
     CREATE OR REPLACE FUNCTION transform(a anytable)
     RETURNS TABLE (a text, b int)
-    AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+    AS '$libdir/gppc_test', 'mytransform'
     LANGUAGE C;
 
     SELECT * FROM transform(
@@ -100,7 +100,7 @@ SELECT * FROM history order  by id, time;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -108,7 +108,7 @@ SELECT * FROM history order  by id, time;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer) 
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project' 
+    AS '$libdir/gppc_test', 'project' 
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -121,19 +121,19 @@ SELECT * FROM history order  by id, time;
     -- Negative: CREATE FUNCTION tabfunc_bad1 (x SETOF targettable) RETURNS ...
     CREATE OR REPLACE FUNCTION transform3(a SETOF intable)
       RETURNS SETOF outtable
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     -- Negative: CREATE FUNCTION tabfunc_bad2 (x TABLE(a int) ) RETURNS ...
     CREATE OR REPLACE FUNCTION transform3(x TABLE(a int, b text))
       RETURNS SETOF outtable
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
     -- Create ETF using TABLE return syntax.
     DROP FUNCTION IF EXISTS transform(anytable);
     CREATE OR REPLACE FUNCTION transform(a anytable)
     RETURNS TABLE (a text, b int)
-    AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+    AS '$libdir/gppc_test', 'mytransform'
     LANGUAGE C;
 
 SELECT * FROM transform( 
@@ -143,7 +143,7 @@ SELECT * FROM transform(
     -- create ETF with output table "hai10" does not exist at the moment
     CREATE OR REPLACE FUNCTION transform_new(a anytable)
       RETURNS SETOF hai10
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     \df transform_new
@@ -153,13 +153,13 @@ SELECT * FROM transform(
     DROP FUNCTION IF EXISTS transform(anytable);
     CREATE OR REPLACE FUNCTION transform (a anytable)
       RETURNS TABLE (LIKE outtable_nonexist)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
 -- Create ETF using return syntax: TABLE LIKE table
     CREATE OR REPLACE FUNCTION transform(a anytable)
       RETURNS TABLE (LIKE outtable)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
 -- Verify ETF can be called successfully
@@ -181,21 +181,21 @@ CREATE TABLE outtable(a text, b int) distributed randomly;
 -- Recreate transform function
 CREATE OR REPLACE FUNCTION transform (a anytable)
       RETURNS TABLE (a text, b int)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 -- Create ETF using return syntax: TABLE (argname argtype).
 --    CREATE FUNCTION tabfunc2(t anytable) 
 --    RETURNS TABLE (x int, y text) ...
     CREATE OR REPLACE FUNCTION transform3(a anytable)
       RETURNS TABLE (b text, a int)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     select * from transform3(TABLE(select * from intable where id<3));
 -- Currently ETF can take one only one anytable type input.
     CREATE OR REPLACE FUNCTION transform3(a anytable, b anytable)
       RETURNS TABLE (b text, a int)
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 -- Missing SETOF keyword in RETURNS
 -- Note this is stll valid.
@@ -204,7 +204,7 @@ CREATE OR REPLACE FUNCTION transform (a anytable)
 DROP FUNCTION IF EXISTS transform_outtable(anytable);
 CREATE OR REPLACE FUNCTION transform_outtable(a anytable)
 RETURNS TABLE (a text, b int)
-AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+AS '$libdir/gppc_test', 'mytransform'
 LANGUAGE C;
 
 select * from transform_outtable(TABLE(select * from intable)) order by b;
@@ -214,7 +214,7 @@ drop function if exists transform_outtable(anytable);
 -- Missing TABLE keyword in RETURNS
 CREATE OR REPLACE FUNCTION transform(a anytable)
 RETURNS (a text, b int)
-AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+AS '$libdir/gppc_test', 'mytransform'
 LANGUAGE C;
 
 -- Negative: create ETF with distribution and/or ordering defined at function create time.
@@ -223,37 +223,37 @@ LANGUAGE C;
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       scatter randomly
       RETURNS SETOF outtable
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       RETURNS SETOF outtable
       scatter randomly
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       order by a
       RETURNS SETOF outtable
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       RETURNS SETOF outtable
       order by a
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       partition by a
       RETURNS SETOF outtable
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION transform_tmp(a anytable)
       RETURNS SETOF outtable
       partition by a
-      AS '$libdir/tabfunc_gppc_demo', 'mytransform'
+      AS '$libdir/gppc_test', 'mytransform'
       LANGUAGE C;
 
 -- TABLE value expression can only be used inside ETF call
@@ -1350,7 +1350,7 @@ drop function if exists find_operator(query text, operator_name text);
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1358,7 +1358,7 @@ drop function if exists find_operator(query text, operator_name text);
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1398,33 +1398,33 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- explicit return type not suitable for dynamic type resolution
     CREATE FUNCTION x() returns int
-      AS '$libdir/tabfunc_gppc_demo', 'project'
+      AS '$libdir/gppc_test', 'project'
       LANGUAGE C 
       WITH (describe = project_desc);
     -- ERROR:  DESCRIBE only supported for functions returning "record"
 
     -- explicit return type (setof) not suitable for dynamic type resolution
     CREATE FUNCTION x() returns setof int
-      AS '$libdir/tabfunc_gppc_demo', 'project'
+      AS '$libdir/gppc_test', 'project'
       LANGUAGE C 
       WITH (describe = project_desc);
     -- ERROR:  DESCRIBE only supported for functions returning "record"
 
     -- explicit return type (TABLE) not suitable for dynamic type resolution
     CREATE FUNCTION x() returns TABLE(id integer, "time" timestamp, sessionnum integer)
-      AS '$libdir/tabfunc_gppc_demo', 'project'
+      AS '$libdir/gppc_test', 'project'
       LANGUAGE C 
       WITH (describe = project_desc);
     -- ERROR:  DESCRIBE is not supported for functions that return TABLE
 
     -- explicit return type (OUT PARAMS) not suitable for dynamic type resolution
     CREATE FUNCTION x(OUT id integer, OUT "time" timestamp, OUT sessionnum integer)
-      AS '$libdir/tabfunc_gppc_demo', 'project'
+      AS '$libdir/gppc_test', 'project'
       LANGUAGE C 
       WITH (describe = project_desc);
     -- ERROR:  DESCRIBE is not supported for functions with OUT parameters
@@ -1432,7 +1432,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1440,7 +1440,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1463,7 +1463,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1471,7 +1471,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1488,7 +1488,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1496,7 +1496,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1507,7 +1507,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1515,7 +1515,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1527,7 +1527,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1535,7 +1535,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1553,7 +1553,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1561,7 +1561,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1577,7 +1577,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1585,7 +1585,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1604,7 +1604,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1612,7 +1612,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1629,7 +1629,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1637,7 +1637,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1675,7 +1675,7 @@ ORDER BY oid;
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1683,7 +1683,7 @@ ORDER BY oid;
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1697,7 +1697,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1705,7 +1705,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1733,7 +1733,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1741,7 +1741,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1762,7 +1762,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- WITHOUT using the callback function
     CREATE OR REPLACE FUNCTION project_plain (anytable, integer) 
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project' 
+    AS '$libdir/gppc_test', 'project' 
     LANGUAGE C;
 
     -- Create a view using table function project_plain
@@ -1777,7 +1777,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- i.e. using callback function        
     CREATE OR REPLACE FUNCTION project_plain(anytable, integer) 
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project' 
+    AS '$libdir/gppc_test', 'project' 
     LANGUAGE C
     WITH (describe = project_desc);
     -- ERROR:  cannot add DESCRIBE callback to function used in view(s)
@@ -1787,7 +1787,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1795,18 +1795,18 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
     -- Negative: $1 is not a constant
     PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM history ), $1);
-    -- ERROR:  unable to resolve type for function (tabfunc_gppc_demo.c:174)
+    -- ERROR:  unable to resolve type for function
     -- LINE 1: PREPARE p4 AS SELECT * FROM project( TABLE( SELECT * FROM hi...
 
     -- Negative: $1 is not a constant
     PREPARE p5(integer) AS SELECT * FROM project( TABLE( SELECT * FROM history ), $1);
-    -- ERROR:  unable to resolve type for function (tabfunc_gppc_demo.c:174)
+    -- ERROR:  unable to resolve type for function
     -- LINE 1: PREPARE p5(integer) AS SELECT * FROM project( TABLE( SELECT ...
 
     -- Positive: can prepare with a dynamic result set MPP-16643
@@ -1830,7 +1830,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION project_desc(internal)
     RETURNS internal
-    AS '$libdir/tabfunc_gppc_demo', 'project_describe'
+    AS '$libdir/gppc_test', 'project_describe'
     LANGUAGE C;
 
     -- create dynamic return type (drt) table function
@@ -1838,7 +1838,7 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION project(anytable, integer)
     RETURNS setof record
-    AS '$libdir/tabfunc_gppc_demo', 'project'
+    AS '$libdir/gppc_test', 'project'
     LANGUAGE C
     WITH (describe = project_desc);
 
@@ -1871,11 +1871,11 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     FROM generate_series(1,10) i;
 
     CREATE OR REPLACE FUNCTION ud_describe(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe'
+      AS '$libdir/gppc_test', 'userdata_describe'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION ud_project1(anytable) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C
       WITH (describe = ud_describe);
 
@@ -1883,11 +1883,11 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     select * from ud_project1( table(select * from drt_test) );
 
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -1904,28 +1904,28 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
 
     -- explicit return type not suitable for dynamic type resolution
     CREATE FUNCTION x() returns int
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C 
       WITH (describe = ud_describe);
     -- ERROR:  DESCRIBE only supported for functions returning "record"
 
     -- explicit return type (setof) not suitable for dynamic type resolution
     CREATE FUNCTION x() returns setof int
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C 
       WITH (describe = ud_describe);
     -- ERROR:  DESCRIBE only supported for functions returning "record"
 
     -- explicit return type (TABLE) not suitable for dynamic type resolution
     CREATE FUNCTION x() returns TABLE(id integer, "time" timestamp, sessionnum integer)
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C 
       WITH (describe = ud_describe);
     -- ERROR:  DESCRIBE is not supported for functions that return TABLE
 
     -- explicit return type (OUT PARAMS) not suitable for dynamic type resolution
     CREATE FUNCTION x(OUT id integer, OUT "time" timestamp, OUT sessionnum integer)
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C 
       WITH (describe = ud_desc);
     -- ERROR:  DESCRIBE is not supported for functions with OUT parameters
@@ -1945,14 +1945,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2024,14 +2024,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2060,14 +2060,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2087,11 +2087,11 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     FROM generate_series(1,10) i;
 
     CREATE OR REPLACE FUNCTION ud_describe(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe'
+      AS '$libdir/gppc_test', 'userdata_describe'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION ud_project(anytable) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C
       WITH (describe = ud_describe);
 
@@ -2101,14 +2101,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2147,14 +2147,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2178,14 +2178,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2211,14 +2211,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2244,14 +2244,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2276,14 +2276,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2320,14 +2320,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2400,14 +2400,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2435,14 +2435,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2460,14 +2460,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2494,11 +2494,11 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     FROM generate_series(1,10) i;
 
     CREATE OR REPLACE FUNCTION ud_describe(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe'
+      AS '$libdir/gppc_test', 'userdata_describe'
       LANGUAGE C;
 
     CREATE OR REPLACE FUNCTION ud_project(anytable) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project'
+      AS '$libdir/gppc_test', 'userdata_project'
       LANGUAGE C
       WITH (describe = ud_describe);
 
@@ -2508,14 +2508,14 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     -- create describe (callback) function with User Context
     -- both input and output type must be internal
     CREATE OR REPLACE FUNCTION ud_describe2(internal) RETURNS internal
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_describe2'
+      AS '$libdir/gppc_test', 'userdata_describe2'
       LANGUAGE C;
 
     -- create dynamic return type (drt) table function
     -- using the callback function with user context
     -- the return type must be defined as set of record
     CREATE OR REPLACE FUNCTION ud_project2(anytable, text) RETURNS setof RECORD
-      AS '$libdir/tabfunc_gppc_demo', 'userdata_project2'
+      AS '$libdir/gppc_test', 'userdata_project2'
       LANGUAGE C
       WITH (describe = ud_describe2);
 
@@ -2540,20 +2540,20 @@ SELECT id FROM project( TABLE( SELECT time,id FROM history ), 1);
     DEALLOCATE userdata_pre;
 -- Calling the error callback function (tfcallback()) from table function (project_errorcallback())
 
-CREATE OR REPLACE FUNCTION project_errorcallback(anytable, OUT int, OUT int) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
+CREATE OR REPLACE FUNCTION project_errorcallback(anytable, OUT int, OUT int) RETURNS SETOF record AS '$libdir/gppc_test' LANGUAGE c;
 
 SELECT * FROM project_errorcallback(TABLE(SELECT CASE WHEN a < 10 THEN a END, a FROM generate_series(1, 10)a SCATTER BY a));
 
 SELECT * FROM project_errorcallback(TABLE(SELECT a, a FROM generate_series(1, 5)a SCATTER BY a)) ORDER BY 1;
 -- Calling error callback function errorcallback from ETF describe function (tablefunc_describe)
 
-CREATE OR REPLACE FUNCTION tablefunc_describe(internal) RETURNS internal AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
-CREATE OR REPLACE FUNCTION tablefunc_project(anytable, int) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c WITH(describe=tablefunc_describe);
+CREATE OR REPLACE FUNCTION tablefunc_describe(internal) RETURNS internal AS '$libdir/gppc_test' LANGUAGE c;
+CREATE OR REPLACE FUNCTION tablefunc_project(anytable, int) RETURNS SETOF record AS '$libdir/gppc_test' LANGUAGE c WITH(describe=tablefunc_describe);
 SELECT * FROM tablefunc_project(TABLE(SELECT a, a / 10 FROM generate_series(1, 10)a SCATTER BY a), 2) ORDER BY 1;
 --  ETF using SPI with describe function and user context
 
-CREATE OR REPLACE FUNCTION describe_spi(internal) RETURNS internal AS '$libdir/tabfunc_gppc_demo' LANGUAGE c;
-CREATE OR REPLACE FUNCTION project_spi(anytable, text) RETURNS SETOF record AS '$libdir/tabfunc_gppc_demo' LANGUAGE c WITH(describe=describe_spi);
+CREATE OR REPLACE FUNCTION describe_spi(internal) RETURNS internal AS '$libdir/gppc_test' LANGUAGE c;
+CREATE OR REPLACE FUNCTION project_spi(anytable, text) RETURNS SETOF record AS '$libdir/gppc_test' LANGUAGE c WITH(describe=describe_spi);
 SELECT * FROM project_spi(TABLE(SELECT a::text FROM generate_series(1, 10)a SCATTER BY a), 'SELECT $$foo$$') ORDER BY 1;
 
 -- Negative: Test system behavior and error message when sub query is non-SELECT query

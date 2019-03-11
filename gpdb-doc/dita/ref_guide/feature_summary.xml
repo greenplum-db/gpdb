@@ -789,6 +789,11 @@ NEXT 10 ROWS ONLY; </codeblock><p>Greenplum
               <entry colname="col3"/>
             </row>
             <row>
+              <entry><codeph>LATERAL</codeph> Join Type</entry>
+              <entry><b>NO</b></entry>
+              <entry/>
+            </row>
+            <row>
               <entry colname="col1"><codeph>LISTEN</codeph></entry>
               <entry colname="col2"><b otherprops="red">NO</b></entry>
               <entry colname="col3"/>

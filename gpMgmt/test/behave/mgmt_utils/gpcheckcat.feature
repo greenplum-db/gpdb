@@ -217,16 +217,25 @@ Feature: gpcheckcat tests
         And the user runs "dropdb constraint_db"
 
     @policy
-    Scenario: gpcheckcat should report and repair invalid policy issues
+    Scenario: gpcheckcat should report, but not repair, invalid policy issues
         Given database "policy_db" is dropped and recreated
-        And the path "gpcheckcat.repair.*" is removed from current working directory
-        And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_inconsistent_policy.sql"
-        Then psql should return a return code of 0
-        When the user runs "gpcheckcat -R part_integrity policy_db"
-        Then gpcheckcat should return a return code of 1
-        Then validate and run gpcheckcat repair
-        And the user runs "dropdb policy_db"
-        And the path "gpcheckcat.repair.*" is removed from current working directory
+          And the path "gpcheckcat.repair.*" is removed from current working directory
+          And the user runs "psql policy_db -f test/behave/mgmt_utils/steps/data/gpcheckcat/create_inconsistent_policy.sql"
+         Then psql should return a return code of 0
+
+         When the user runs "gpcheckcat -R part_integrity -g repair_dir policy_db"
+         Then gpcheckcat should return a return code of 1
+          And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+          And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+
+         When the user runs all the repair scripts in the dir "repair_dir"
+          And the user runs "gpcheckcat -R part_integrity -g repair_dir policy_db"
+         Then gpcheckcat should return a return code of 1
+          And gpcheckcat should print "child partition\(s\) are distributed differently from the root partition, and must be manually redistributed, for some tables" to stdout
+          And gpcheckcat should print "Failed test\(s\) that are not reported here: part_integrity" to stdout
+
+         Then the user runs "dropdb policy_db"
+          And the path "gpcheckcat.repair.*" is removed from current working directory
 
     @foreignkey_extra
     Scenario: gpcheckcat foreign key check should report missing catalog entries. Also test missing_extraneous for the same case.

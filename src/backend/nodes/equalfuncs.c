@@ -932,7 +932,6 @@ _equalQuery(const Query *a, const Query *b)
 		return false;
 
 	COMPARE_SCALAR_FIELD(parentStmtType);
-	COMPARE_SCALAR_FIELD(needReshuffle);
 
 	return true;
 }
@@ -970,7 +969,6 @@ _equalUpdateStmt(const UpdateStmt *a, const UpdateStmt *b)
 	COMPARE_NODE_FIELD(fromClause);
 	COMPARE_NODE_FIELD(returningList);
 	COMPARE_NODE_FIELD(withClause);
-	COMPARE_SCALAR_FIELD(needReshuffle);
 
 	return true;
 }
@@ -2725,17 +2723,6 @@ _equalXmlSerialize(const XmlSerialize *a, const XmlSerialize *b)
 	return true;
 }
 
-static bool
-_equalReshuffleExpr(const ReshuffleExpr *a, const ReshuffleExpr *b)
-{
-	COMPARE_SCALAR_FIELD(newSegs);
-	COMPARE_SCALAR_FIELD(oldSegs);
-	COMPARE_NODE_FIELD(hashKeys);
-	COMPARE_NODE_FIELD(hashFuncs);
-	COMPARE_SCALAR_FIELD(ptype);
-	return true;
-}
-
 /*
  * Stuff from pg_list.h
  */
@@ -3511,9 +3498,6 @@ equal(const void *a, const void *b)
 			break;
 		case T_DistributedBy:
 			retval = _equalDistributedBy(a, b);
-			break;
-		case T_ReshuffleExpr:
-			retval = _equalReshuffleExpr(a,b);
 			break;
 		default:
 			elog(ERROR, "unrecognized node type: %d",

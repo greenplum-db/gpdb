@@ -403,63 +403,6 @@ transformExprRecurse(ParseState *pstate, Node *expr)
 			}
 			break;
 
-			case T_ReshuffleExpr:
-			{
-				ReshuffleExpr *sr = (ReshuffleExpr *)expr;
-				Oid			relid;
-				int			i;
-
-				GpPolicy   *policy;
-				Relation	rel;
-				TupleDesc	desc;
-				int			rtidx;
-
-				if(NULL == pstate->p_target_rangetblentry)
-					elog(ERROR, "we only use this expression in the UPDATE");
-
-				rtidx = RTERangeTablePosn(pstate,
-										  pstate->p_target_rangetblentry,
-										  NULL);
-
-				relid = pstate->p_target_rangetblentry->relid;
-
-				policy = GpPolicyFetch(relid);
-
-				/*
-				 * Now we can assume that the relation was locked because
-				 * this expression only used in the Alter table statement.
-				 * ReshuffleExpr is an internal expression which users can
-				 * not use it directly, so NoLock seems good now.
-				 */
-				rel = heap_open(relid, NoLock);
-				desc = rel->rd_att;
-
-				for(i = 0; i < policy->nattrs; i++)
-				{
-					AttrNumber	attrnum = policy->attrs[i];
-					Oid			opclass = policy->opclasses[i];
-					Oid			hashfunc;
-					Var		   *var;
-
-					var = makeVar(rtidx,
-								  attrnum,
-								  desc->attrs[attrnum - 1]->atttypid,
-								  desc->attrs[attrnum - 1]->atttypmod,
-								  0,
-								  0);
-
-					hashfunc = cdb_hashproc_in_opfamily(get_opclass_family(opclass),
-														var->vartype);
-
-					sr->hashKeys = lappend(sr->hashKeys, var);
-					sr->hashFuncs = lappend_oid(sr->hashFuncs, hashfunc);
-				}
-				result = (Node*)sr;
-
-				heap_close(rel, NoLock);
-			}
-			break;
-
 			/*********************************************
 			 * Quietly accept node types that may be presented when we are
 			 * called on an already-transformed tree.

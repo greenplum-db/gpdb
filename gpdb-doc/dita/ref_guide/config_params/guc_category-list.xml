@@ -1260,7 +1260,6 @@
             </p>
             <p><xref href="guc-list.xml#gp_enable_segment_copy_checking"
                 >gp_enable_segment_copy_checking</xref></p>
-            <p><xref href="guc-list.xml#gp_expand_method">gp_expand_method</xref></p>
             <p>
               <xref href="guc-list.xml#gp_use_legacy_hashops" type="section"
                 >gp_use_legacy_hashops</xref></p>

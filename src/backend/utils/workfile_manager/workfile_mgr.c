@@ -66,7 +66,7 @@ int			gp_workfile_max_entries = 8192;
  *
  * One workfile_set per workfile. Each workfile_set entry is owned by a backend.
  *
- * Per-query summary. These could be computed by scanning the workifle_set array,
+ * Per-query summary. These could be computed by scanning the workfile_set array,
  * but we keep a summary in a separate hash table so that we can quickly detect
  * if the per-query limit is exceeded. This is needed to enforce
  * gp_workfile_limit_files_per_query
@@ -74,9 +74,7 @@ int			gp_workfile_max_entries = 8192;
  * Local:
  *
  * In addition to the bookkeeping in shared memory, we keep an array in backend
- * private memory. The array is indeed by the virtual file descriptor, File.
- *
- *
+ * private memory. The array is indexed by the virtual file descriptor, File.
  */
 
 typedef struct WorkFileUsagePerQuery
@@ -363,7 +361,7 @@ UpdateWorkFileSize(File file, uint64 newsize)
 	Assert(perquery->active);
 
 	/*
-	 * If the file is being enlraged, enforce the limits.
+	 * If the file is being enlarged, enforce the limits.
 	 */
 	if (diff > 0)
 	{

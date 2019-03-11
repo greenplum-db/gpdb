@@ -115,8 +115,8 @@ test: resource_group_cpuset
 test: resource_group_gucs
 test: wrkloadadmin
 
-# reshuffle tests may affect the result of 'gp_explain', keep them below that
-test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats reshuffle reshuffle_ao reshuffle_aoco
+# expand_table tests may affect the result of 'gp_explain', keep them below that
+test: gp_toolkit_ao_funcs trig auth_constraint role portals_updatable plpgsql_cache timeseries pg_stat_last_operation pg_stat_last_shoperation gp_numeric_agg partindex_test partition_pruning runtime_stats expand_table expand_table_ao expand_table_aoco
 test: rle rle_delta dsp not_out_of_shmem_exit_slots
 
 # direct dispatch tests

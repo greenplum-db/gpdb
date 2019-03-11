@@ -92,31 +92,46 @@ getCdbCopyPrimaryGang(CdbCopy *c)
  * information and state needed by the backend COPY.
  */
 CdbCopy *
-makeCdbCopy(bool is_copy_in)
+makeCdbCopy(CopyState cstate, bool is_copy_in)
 {
-	CdbCopy    *c;
+	CdbCopy		*c;
+	GpPolicy	*policy;
+
+	policy = cstate->rel->rd_cdbpolicy;
+	Assert(policy);
 
 	c = palloc0(sizeof(CdbCopy));
 
 	/* fresh start */
 	c->total_segs = 0;
 	c->copy_in = is_copy_in;
-	c->outseglist = NIL;
+	c->seglist = NIL;
 	c->dispatcherState = NULL;
 	initStringInfo(&(c->copy_out_buf));
 
 	/* init total_segs */
-	c->total_segs = getgpsegmentCount();
 	c->aotupcounts = NULL;
 
-	/* init seg list for copy out */
-	if (!c->copy_in)
+	/*
+	 * COPY replicated table TO file, pick only one replica, otherwise, duplicate
+	 * rows will be copied.
+	 */
+	if (!is_copy_in && GpPolicyIsReplicated(policy) && !cstate->on_segment)
+	{
+		c->total_segs = 1;
+		c->seglist = list_make1_int(gp_session_id % c->total_segs);
+	}
+	else
 	{
 		int			i;
 
+		c->total_segs = policy->numsegments;
+
 		for (i = 0; i < c->total_segs; i++)
-			c->outseglist = lappend_int(c->outseglist, i);
+			c->seglist = lappend_int(c->seglist, i);
 	}
+
+	cstate->cdbCopy = c;
 
 	return c;
 }
@@ -285,7 +300,7 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 		ListCell   *cur;
 
 		/* iterate through all the segments that still have data to give */
-		foreach(cur, c->outseglist)
+		foreach(cur, c->seglist)
 		{
 			int			source_seg = lfirst_int(cur);
 
@@ -305,7 +320,7 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 		ListCell   *cur;
 
 		/* iterate through all the segments that still have data to give */
-		foreach(cur, c->outseglist)
+		foreach(cur, c->seglist)
 		{
 			int			source_seg = lfirst_int(cur);
 			char	   *buffer;
@@ -343,9 +358,9 @@ cdbCopyGetData(CdbCopy *c, bool copy_cancel, uint64 *rows_processed)
 			 */
 			else if (nbytes == -1)
 			{
-				c->outseglist = list_delete_int(c->outseglist, source_seg);
+				c->seglist = list_delete_int(c->seglist, source_seg);
 
-				if (list_length(c->outseglist) == 0)
+				if (list_length(c->seglist) == 0)
 					return true;	/* all segments are done */
 
 				/* start over from first seg as we just changed the seg list */

@@ -672,8 +672,8 @@ DROP RESOURCE GROUP rg_concurrency_test;
 DROP
 
 61<:  <... completed>
-ERROR:  Role with Oid 213301 was dropped
-HINT:  Cannot execute commands anymore, please terminate this session.
+ERROR:  role with Oid 213301 was dropped
+DETAIL:  Cannot execute commands anymore, please terminate this session.
 61q: ... <quitting>
 
 -- cleanup

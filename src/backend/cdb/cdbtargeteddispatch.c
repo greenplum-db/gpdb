@@ -625,7 +625,6 @@ AssignContentIdsToPlanData_Walker(Node *node, void *context)
 														 * so disable */
 				break;
 			case T_SplitUpdate:
-			case T_Reshuffle:
 				break;
 			default:
 				elog(ERROR, "Invalid plan node %d", nodeTag(node));

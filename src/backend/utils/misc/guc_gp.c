@@ -309,7 +309,7 @@ bool		gp_dynamic_partition_pruning = true;
 bool		gp_log_dynamic_partition_pruning = false;
 bool		gp_cte_sharing = false;
 bool		gp_enable_relsize_collection = false;
-bool		gp_recursive_cte_prototype = false;
+bool		gp_recursive_cte = false;
 
 /* Optimizer related gucs */
 bool		optimizer;
@@ -2075,12 +2075,22 @@ struct config_bool ConfigureNamesBool_gp[] =
 	},
 
 	{
-		{"gp_recursive_cte_prototype", PGC_USERSET, QUERY_TUNING_METHOD,
+		{"gp_recursive_cte_prototype", PGC_USERSET, DEPRECATED_OPTIONS,
+			gettext_noop("Enable RECURSIVE clauses in CTE queries (deprecated option, use \"gp_recursive_cte\" instead)."),
+			NULL,
+			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
+		},
+		&gp_recursive_cte,
+		false, NULL, NULL
+	},
+
+	{
+		{"gp_recursive_cte", PGC_USERSET, QUERY_TUNING_METHOD,
 			gettext_noop("Enable RECURSIVE clauses in CTE queries."),
 			NULL,
 			GUC_NO_SHOW_ALL | GUC_NOT_IN_SAMPLE
 		},
-		&gp_recursive_cte_prototype,
+		&gp_recursive_cte,
 		false, NULL, NULL
 	},
 

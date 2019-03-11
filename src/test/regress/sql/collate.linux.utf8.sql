@@ -1,5 +1,5 @@
 -- start_ignore
-SET gp_recursive_cte_prototype TO ON;
+SET gp_recursive_cte TO ON;
 -- end_ignore
 /*
  * This test is for Linux/glibc systems and assumes that a full set of

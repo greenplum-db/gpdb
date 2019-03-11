@@ -1670,14 +1670,6 @@ SELECT * FROM y;
  21
 (11 rows)
 
---start_ignore
--- GPDB_91_MERGE_FIXME: MPP does not allow > 1 writer gang for one session while the
--- case below (writable CTE introduced in pg 9.1) violates this. If we run the case we
--- will see error as below.
--- ERROR:  INSERT/UPDATE/DELETE must be executed by a writer segworker group: 2 0 (nodeModifyTable.c:1336)
--- Besides writable CTE might need additional effort, so ignoring all of the cases (
--- all are for writable CTE) since the first error introduces cascading errors.
-
 -- forward reference
 WITH RECURSIVE t AS (
 	INSERT INTO y
@@ -1689,46 +1681,24 @@ WITH RECURSIVE t AS (
 SELECT * FROM t
 UNION ALL
 SELECT * FROM t2;
- a  
-----
- 11
- 12
- 13
- 14
- 15
-  0
-  1
-  2
-  3
-  4
-  5
-  6
-  7
-  8
-  9
- 10
-(16 rows)
-
+ERROR:  only one modifying WITH clause allowed per query
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause.
+HINT:  Rewrite the query to only include one writable CTE clause.
 SELECT * FROM y;
  a  
 ----
-  0
-  1
-  2
-  3
-  4
-  5
-  6
  11
-  7
  12
-  8
  13
-  9
  14
- 10
  15
-(16 rows)
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+(11 rows)
 
 -- unconditional DO INSTEAD rule
 CREATE RULE y_rule AS ON DELETE TO y DO INSTEAD
@@ -1745,24 +1715,19 @@ SELECT * FROM t;
 SELECT * FROM y;
  a  
 ----
-  0
-  1
-  2
-  3
-  4
-  5
-  6
  11
-  7
  12
-  8
  13
-  9
  14
- 10
  15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
  42
-(17 rows)
+(12 rows)
 
 DROP RULE y_rule ON y;
 -- check merging of outer CTE with CTE in a rule action
@@ -1778,6 +1743,9 @@ SELECT * FROM bug6051;
 
 WITH t1 AS ( DELETE FROM bug6051 RETURNING * )
 INSERT INTO bug6051 SELECT * FROM t1;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 SELECT * FROM bug6051;
  i 
 ---
@@ -1792,18 +1760,21 @@ CREATE RULE bug6051_ins AS ON INSERT TO bug6051 DO INSTEAD
  SELECT NEW.i;
 WITH t1 AS ( DELETE FROM bug6051 RETURNING * )
 INSERT INTO bug6051 SELECT * FROM t1;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 SELECT * FROM bug6051;
- i 
----
-(0 rows)
-
-SELECT * FROM bug6051_2;
  i 
 ---
  1
  2
  3
 (3 rows)
+
+SELECT * FROM bug6051_2;
+ i 
+---
+(0 rows)
 
 -- a truly recursive CTE in the same list
 WITH RECURSIVE t(a) AS (
@@ -1817,39 +1788,29 @@ WITH RECURSIVE t(a) AS (
 SELECT * FROM t2 JOIN y USING (a) ORDER BY a;
  a 
 ---
- 0
- 1
- 2
- 3
- 4
-(5 rows)
+(0 rows)
 
 SELECT * FROM y;
  a  
 ----
-  0
-  1
-  2
-  3
-  4
-  5
-  6
  11
-  7
  12
-  8
  13
-  9
  14
- 10
  15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
  42
   0
   1
   2
   3
   4
-(22 rows)
+(17 rows)
 
 -- data-modifying WITH in a modifying statement
 WITH t AS (
@@ -1858,98 +1819,71 @@ WITH t AS (
     RETURNING *
 )
 INSERT INTO y SELECT -a FROM t RETURNING *;
-  a  
------
-   0
-  -1
-  -2
-  -3
-  -4
-  -5
-  -6
-  -7
-  -8
-  -9
- -10
-   0
-  -1
-  -2
-  -3
-  -4
-(16 rows)
-
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 SELECT * FROM y;
-  a  
------
-  11
-  12
-  13
-  14
-  15
-  42
-   0
-  -1
-  -2
-  -3
-  -4
-  -5
-  -6
-  -7
-  -8
-  -9
- -10
-   0
-  -1
-  -2
-  -3
-  -4
-(22 rows)
+ a  
+----
+  0
+  1
+  2
+  3
+  4
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 42
+(17 rows)
 
 -- check that WITH query is run to completion even if outer query isn't
 WITH t AS (
     UPDATE y SET a = a * 100 RETURNING *
 )
-SELECT * FROM t LIMIT 10;
+SELECT a BETWEEN 0 AND 4200 FROM t LIMIT 10;
+ ?column? 
+----------
+ t
+ t
+ t
+ t
+ t
+ t
+ t
+ t
+ t
+ t
+(10 rows)
+
+SELECT * FROM y;
   a   
 ------
+    0
+  100
+  200
+  300
+  400
  1100
  1200
  1300
  1400
  1500
+ 1600
+ 1700
+ 1800
+ 1900
+ 2000
+ 2100
  4200
-    0
- -100
- -200
- -300
-(10 rows)
-
-SELECT * FROM y;
-   a   
--------
-  1100
-  1200
-  1300
-  1400
-  1500
-  4200
-     0
-  -100
-  -200
-  -300
-  -400
-  -500
-  -600
-  -700
-  -800
-  -900
- -1000
-     0
-  -100
-  -200
-  -300
-  -400
-(22 rows)
+(17 rows)
 
 -- check that run to completion happens in proper ordering
 TRUNCATE TABLE y;
@@ -1961,23 +1895,10 @@ WITH RECURSIVE t1 AS (
   INSERT INTO yy SELECT * FROM t1 RETURNING *
 )
 SELECT 1;
- ?column? 
-----------
-        1
-(1 row)
-
+ERROR:  only one modifying WITH clause allowed per query
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause.
+HINT:  Rewrite the query to only include one writable CTE clause.
 SELECT * FROM y;
- a 
----
- 1
- 2
- 3
- 1
- 2
- 3
-(6 rows)
-
-SELECT * FROM yy;
  a 
 ---
  1
@@ -1985,48 +1906,36 @@ SELECT * FROM yy;
  3
 (3 rows)
 
+SELECT * FROM yy;
+ a 
+---
+(0 rows)
+
 WITH RECURSIVE t1 AS (
   INSERT INTO yy SELECT * FROM t2 RETURNING *
 ), t2 AS (
   INSERT INTO y SELECT * FROM y RETURNING *
 )
 SELECT 1;
- ?column? 
-----------
-        1
-(1 row)
-
+ERROR:  only one modifying WITH clause allowed per query
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause.
+HINT:  Rewrite the query to only include one writable CTE clause.
 SELECT * FROM y;
  a 
 ---
  1
  2
  3
- 1
- 2
- 3
- 1
- 2
- 3
- 1
- 2
- 3
-(12 rows)
+(3 rows)
 
 SELECT * FROM yy;
  a 
 ---
- 1
- 2
- 3
- 1
- 2
- 3
- 1
- 2
- 3
-(9 rows)
+(0 rows)
 
+-- start_ignore
+-- These tests actually seem to work, but they have unstable return order
+-- in an MPP environment so they are ignored until atmsort can handle this 
 -- triggers
 TRUNCATE TABLE y;
 INSERT INTO y SELECT generate_series(1, 10);
@@ -2168,6 +2077,7 @@ SELECT * FROM y;
 
 DROP TRIGGER y_trig ON y;
 DROP FUNCTION y_trigger();
+-- end_ignore
 -- WITH attached to inherited UPDATE or DELETE
 CREATE TEMP TABLE parent ( id int, val text );
 CREATE TEMP TABLE child1 ( ) INHERITS ( parent );
@@ -2175,6 +2085,9 @@ CREATE TEMP TABLE child2 ( ) INHERITS ( parent );
 INSERT INTO parent VALUES ( 1, 'p1' );
 INSERT INTO child1 VALUES ( 11, 'c11' ),( 12, 'c12' );
 INSERT INTO child2 VALUES ( 23, 'c21' ),( 24, 'c22' );
+-- start_ignore
+-- This query fails due to the 2 stage agg having issues with inherited tables:
+-- ERROR:  incompatible loci in target inheritance set (planner.c:1426)
 WITH rcte AS ( SELECT sum(id) AS totalid FROM parent )
 UPDATE parent SET id = id + totalid FROM rcte;
 SELECT * FROM parent;
@@ -2187,85 +2100,54 @@ SELECT * FROM parent;
  95 | c22
 (5 rows)
 
+-- end_ignore
 WITH wcte AS ( INSERT INTO child1 VALUES ( 42, 'new' ) RETURNING id AS newid )
 UPDATE parent SET id = id + newid FROM wcte;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 SELECT * FROM parent;
- id  | val 
------+-----
- 114 | p1
-  42 | new
- 124 | c11
- 125 | c12
- 136 | c21
- 137 | c22
-(6 rows)
+ id | val 
+----+-----
+  1 | p1
+ 11 | c11
+ 12 | c12
+ 23 | c21
+ 24 | c22
+(5 rows)
 
 WITH rcte AS ( SELECT max(id) AS maxid FROM parent )
 DELETE FROM parent USING rcte WHERE id = maxid;
 SELECT * FROM parent;
- id  | val 
------+-----
- 114 | p1
-  42 | new
- 124 | c11
- 125 | c12
- 136 | c21
-(5 rows)
+ id | val 
+----+-----
+  1 | p1
+ 11 | c11
+ 12 | c12
+ 23 | c21
+(4 rows)
 
 WITH wcte AS ( INSERT INTO child2 VALUES ( 42, 'new2' ) RETURNING id AS newid )
 DELETE FROM parent USING wcte WHERE id = newid;
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 SELECT * FROM parent;
- id  | val  
------+------
- 114 | p1
- 124 | c11
- 125 | c12
- 136 | c21
-  42 | new2
-(5 rows)
+ id | val 
+----+-----
+  1 | p1
+ 11 | c11
+ 12 | c12
+ 23 | c21
+(4 rows)
 
 -- check EXPLAIN VERBOSE for a wCTE with RETURNING
 EXPLAIN (VERBOSE, COSTS OFF)
 WITH wcte AS ( INSERT INTO int8_tbl VALUES ( 42, 47 ) RETURNING q2 )
 DELETE FROM a USING wcte WHERE aa = q2;
-                   QUERY PLAN                   
-------------------------------------------------
- Delete on public.a
-   CTE wcte
-     ->  Insert on public.int8_tbl
-           Output: int8_tbl.q2
-           ->  Result
-                 Output: 42::bigint, 47::bigint
-   ->  Nested Loop
-         Output: a.ctid, wcte.*
-         Join Filter: (a.aa = wcte.q2)
-         ->  Seq Scan on public.a
-               Output: a.ctid, a.aa
-         ->  CTE Scan on wcte
-               Output: wcte.*, wcte.q2
-   ->  Nested Loop
-         Output: b.ctid, wcte.*
-         Join Filter: (b.aa = wcte.q2)
-         ->  Seq Scan on public.b
-               Output: b.ctid, b.aa
-         ->  CTE Scan on wcte
-               Output: wcte.*, wcte.q2
-   ->  Nested Loop
-         Output: c.ctid, wcte.*
-         Join Filter: (c.aa = wcte.q2)
-         ->  Seq Scan on public.c
-               Output: c.ctid, c.aa
-         ->  CTE Scan on wcte
-               Output: wcte.*, wcte.q2
-   ->  Nested Loop
-         Output: d.ctid, wcte.*
-         Join Filter: (d.aa = wcte.q2)
-         ->  Seq Scan on public.d
-               Output: d.ctid, d.aa
-         ->  CTE Scan on wcte
-               Output: wcte.*, wcte.q2
-(34 rows)
-
+ERROR:  writable CTE queries cannot be themselves writable
+DETAIL:  Greenplum Database currently only support CTEs with one writable clause, called in a non-writable context.
+HINT:  Rewrite the query to only include one writable clause.
 -- error cases
 -- data-modifying WITH tries to use its own output
 WITH RECURSIVE t AS (
@@ -2300,6 +2182,3 @@ WITH t AS (
 VALUES(FALSE);
 ERROR:  conditional DO INSTEAD rules are not supported for data-modifying statements in WITH
 DROP RULE y_rule ON y;
-
--- Match previous start_ignore with GPDB_91_MERGE_FIXME
---end_ignore

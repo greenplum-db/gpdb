@@ -99,7 +99,14 @@ cdbconn_createSegmentDescriptor(struct CdbComponentDatabaseInfo *cdbinfo, int id
 void
 cdbconn_termSegmentDescriptor(SegmentDatabaseDescriptor *segdbDesc)
 {
+	CdbComponentDatabases *cdbs;
+
 	Assert(CdbComponentsContext);
+
+	cdbs = segdbDesc->segment_database_info->cdbs;
+
+	/* put qe identifier to free list for reuse */
+	cdbs->freeCounterList = lappend_int(cdbs->freeCounterList, segdbDesc->identifier);
 
 	cdbconn_disconnect(segdbDesc);
 

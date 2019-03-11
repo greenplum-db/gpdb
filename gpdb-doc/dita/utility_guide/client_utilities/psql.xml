@@ -721,6 +721,13 @@ testdb=#</codeblock>
             object is listed with its associated description.</pd>
         </plentry>
         <plentry>
+          <pt>\dy[+] [<varname>pattern</varname>]</pt>
+          <pd>Lists event triggers. If a pattern is specified, only those triggers
+            whose names match the pattern are listed. If <codeph>+</codeph> is appended
+            to the command name, each object is listed with its associated description.
+            <note>Greenplum Database does not support user-defined triggers.</note></pd>
+        </plentry>
+        <plentry>
           <pt>\e | \edit [<varname>filename</varname>] [<varname>line_number</varname>]</pt>
           <pd>If <varname>filename</varname> is specified, the file is edited; after the editor
             exits, its content is copied back to the query buffer. If no <varname>filename</varname>
@@ -802,6 +809,25 @@ hello 10
           <pd>If you specify a <varname>prefix</varname>, that string is prepended to the query's
             column names to create the variable names to
             use:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset result_
+=&gt; \echo :result_var1 :result_var2
+hello 10</codeblock></pd>
+          <pd>If a column result is NULL, the corresponding variable is unset rather than being
+            set.</pd>
+          <pd>If the query fails or does not return one row, no variables are changed.</pd>
+        </plentry>
+        <plentry>
+          <pt>\gset [<varname>prefix</varname>]</pt>
+          <pd>Sends the current query input buffer to the server and stores the query's output
+            into <codeph>psql</codeph> variables. The query to be executed must return exactly
+            one row. Each column of the row is stored into a separate variable, named the same
+            as the column. For example:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
+-&gt; \gset
+=&gt; \echo :var1 :var2
+hello 10
+</codeblock></pd>
+         <pd>If you specify a <varname>prefix</varname>, that string is prepended to the query's
+           column names to create the variable names to use:<codeblock>=&gt; SELECT 'hello' AS var1, 10 AS var2;
 -&gt; \gset result_
 =&gt; \echo :result_var1 :result_var2
 hello 10</codeblock></pd>
@@ -1182,6 +1208,12 @@ testdb=> \setenv LESS -imx4F</codeblock></pd>
           <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
             interrupted or the query fails. Wait the specified number of seconds (default 2) between
             executions.</pd>
+        </plentry>
+        <plentry>
+          <pt>\watch [<varname>seconds</varname>]</pt>
+          <pd>Repeatedly execute the current query buffer (like <codeph>\g</codeph>) until
+            interrupted or the query fails. Wait the specified number of seconds (default 2)
+            between executions.</pd>
         </plentry>
         <plentry>
           <pt>\x [ on | off | auto ]</pt>

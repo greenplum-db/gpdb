@@ -6368,7 +6368,6 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 	bool		all_subplans_entry = true,
 				all_subplans_replicated = true;
 	int			numsegments = -1;
-	Query		*qry = root->parse;
 
 	if (node->operation == CMD_INSERT)
 	{
@@ -6561,9 +6560,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 				 * e.g. because the input was eliminated by constraint
 				 * exclusion, we can skip it.
 				 */
-				if ((is_split_update ||
-					 (targetPolicy->nattrs == 0 && qry->needReshuffle)) &&
-					 !is_dummy_plan(subplan))
+				if (is_split_update && !is_dummy_plan(subplan))
 				{
 					List	   *hashExprs;
 					List	   *hashOpfamilies;
@@ -6579,36 +6576,24 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 								 errmsg("cannot update distribution key columns in utility mode")));
 					}
 
-					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte, !qry->needReshuffle);
+					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte);
 
-					/*
-					 * if need reshuffle, add the Reshuffle node onto the
-					 * SplitUpdate node and Specify the explicit motion
-					 */
-					if(qry->needReshuffle)
+					hashExprs = getExprListFromTargetList(new_subplan->targetlist,
+														  targetPolicy->nattrs,
+														  targetPolicy->attrs,
+														  false);
+					hashOpfamilies = NIL;
+					for (i = 0; i < targetPolicy->nattrs; i++)
 					{
-						new_subplan = (Plan *) make_reshuffle(root, new_subplan, rte, rti);
-						request_explicit_motion(new_subplan, rti, root->glob->finalrtable);
+						hashOpfamilies = lappend_oid(hashOpfamilies,
+													 get_opclass_family(targetPolicy->opclasses[i]));
 					}
-					else
-					{
-						/* Only update hash keys and do not need reshuffle */
-						hashExprs = getExprListFromTargetList(new_subplan->targetlist,
-															  targetPolicy->nattrs,
-															  targetPolicy->attrs,
-															  false);
-						hashOpfamilies = NIL;
-						for (i = 0; i < targetPolicy->nattrs; i++)
-						{
-							hashOpfamilies = lappend_oid(hashOpfamilies,
-														 get_opclass_family(targetPolicy->opclasses[i]));
-						}
-						if (!repartitionPlan(new_subplan, false, false,
-											 hashExprs, hashOpfamilies,
-											 targetPolicy->numsegments))
-							ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
-											errmsg("Cannot parallelize that UPDATE yet")));
-					}
+					if (!repartitionPlan(new_subplan, false, false,
+										 hashExprs, hashOpfamilies,
+										 targetPolicy->numsegments))
+						ereport(ERROR, (errcode(ERRCODE_GP_FEATURE_NOT_YET),
+										errmsg("Cannot parallelize that UPDATE yet")));
+
 					lcp->data.ptr_value = new_subplan;
 				}
 				else
@@ -6661,21 +6646,6 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 			}
 			else if (targetPolicyType == POLICYTYPE_REPLICATED)
 			{
-				if (node->operation == CMD_UPDATE &&
-					qry->needReshuffle)
-				{
-					Plan	*new_subplan;
-
-					new_subplan = (Plan *) make_splitupdate(root, (ModifyTable *) node, subplan, rte, !qry->needReshuffle);
-					new_subplan = (Plan *) make_reshuffle(root, new_subplan, rte, rti);
-					request_explicit_motion(new_subplan, rti, root->glob->finalrtable);
-
-					lcp->data.ptr_value = new_subplan;
-
-					all_subplans_replicated = false;
-
-					continue;
-				}
 				node->action_col_idxes = lappend_int(node->action_col_idxes, -1);
 				node->ctid_col_idxes = lappend_int(node->ctid_col_idxes, -1);
 				node->oid_col_idxes = lappend_int(node->oid_col_idxes, 0);
@@ -6702,10 +6672,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 	if (all_subplans_entry)
 	{
 		mark_plan_entry((Plan *) node);
-		if(!qry->needReshuffle)
-		{
-			((Plan *) node)->flow->numsegments = numsegments;
-		}
+		((Plan *) node)->flow->numsegments = numsegments;
 	}
 	else if (all_subplans_replicated)
 	{
@@ -6713,10 +6680,7 @@ adjust_modifytable_flow(PlannerInfo *root, ModifyTable *node, List *is_split_upd
 	}
 	else
 	{
-		if(!qry->needReshuffle)
-			mark_plan_strewn((Plan *) node, numsegments);
-		else
-			mark_plan_strewn((Plan *) node, getgpsegmentCount());
+		mark_plan_strewn((Plan *) node, numsegments);
 
 		if (list_length(node->plans) == 1)
 		{

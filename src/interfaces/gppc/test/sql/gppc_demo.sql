@@ -29,34 +29,34 @@ DROP FUNCTION IF EXISTS gppc_func_varchar(varchar,bool);
 DROP FUNCTION IF EXISTS gppc_func_varchar(varchar);
 DROP FUNCTION IF EXISTS gppc_func_varchar();
 
-CREATE OR REPLACE FUNCTION oidcheckfunc(text) RETURNS int4 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION boolfunc(bool) RETURNS bool AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION charfunc("char") RETURNS "char" AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION int2mulfunc(int2, int2) RETURNS int2 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION int4func1(int) RETURNS int AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION int4func1() RETURNS int AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION int4func1(int, int) RETURNS int AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION int8plusfunc(int8, int8) RETURNS int8 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION float4func1(float4) RETURNS float4 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION float8func1(float8) RETURNS float8 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION textdoublefunc(text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION textgenfunc() RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION textcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION varchardoublefunc(varchar) RETURNS varchar AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION varchargenfunc() RETURNS varchar AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION varcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION bpchardoublefunc(char) RETURNS char AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION bpchargenfunc() RETURNS char AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION bpcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION byteafunc1(bytea) RETURNS bytea AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION byteafunc2(bytea) RETURNS bytea AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION argisnullfunc(int) RETURNS bool AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE;
-CREATE OR REPLACE FUNCTION gppc_func_text(text, bool) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION gppc_func_text(text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION gppc_func_text() RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar, bool) RETURNS varchar AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar) RETURNS varchar AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION gppc_func_varchar() RETURNS varchar AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION oidcheckfunc(text) RETURNS int4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION boolfunc(bool) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION charfunc("char") RETURNS "char" AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int2mulfunc(int2, int2) RETURNS int2 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1(int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1() RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int4func1(int, int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION int8plusfunc(int8, int8) RETURNS int8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION float4func1(float4) RETURNS float4 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION float8func1(float8) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textdoublefunc(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textgenfunc() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION textcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varchardoublefunc(varchar) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varchargenfunc() RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION varcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpchardoublefunc(char) RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpchargenfunc() RETURNS char AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION bpcharcopyfunc(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION byteafunc1(bytea) RETURNS bytea AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION byteafunc2(bytea) RETURNS bytea AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION argisnullfunc(int) RETURNS bool AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
+CREATE OR REPLACE FUNCTION gppc_func_text(text, bool) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_text(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_text() RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar, bool) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar(varchar) RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION gppc_func_varchar() RETURNS varchar AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
 
 SELECT oidcheckfunc('bool'),
         oidcheckfunc('char'),
@@ -101,6 +101,7 @@ SELECT gppc_func_varchar('This function has one argument.');
 SELECT gppc_func_text('This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.This function has one argument.');
 SELECT gppc_func_varchar('white', true), gppc_func_varchar('black', false);
 SELECT byteafunc1(E'\\244\\233abc');
+SELECT byteafunc2(E'\\244\\233abc');
 
 -- Numeric type
 
@@ -109,10 +110,10 @@ DROP FUNCTION IF EXISTS numericfunc2(numeric);
 DROP FUNCTION IF EXISTS numericfunc3(float8);
 DROP FUNCTION IF EXISTS numericdef1(int4);
 
-CREATE OR REPLACE FUNCTION numericfunc1(numeric) RETURNS numeric AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION numericfunc2(numeric) RETURNS float8 AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION numericfunc3(float8) RETURNS numeric AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION numericdef1(int4) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericfunc1(numeric) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericfunc2(numeric) RETURNS float8 AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericfunc3(float8) RETURNS numeric AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION numericdef1(int4) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
 
 DROP TABLE IF EXISTS numerictable;
 CREATE TABLE numerictable(
@@ -128,7 +129,7 @@ SELECT attname, numericdef1(atttypmod) FROM pg_attribute
 	WHERE attrelid = 'numerictable'::regclass and atttypid = 'numeric'::regtype;
 -- Encoding name
 DROP FUNCTION IF EXISTS test_encoding_name(int);
-CREATE OR REPLACE FUNCTION test_encoding_name(int) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE;
+CREATE OR REPLACE FUNCTION test_encoding_name(int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE;
 SELECT
        test_encoding_name(0),
        test_encoding_name(1),
@@ -171,10 +172,10 @@ DROP FUNCTION IF EXISTS errfunc_varchar(varchar);
 DROP FUNCTION IF EXISTS errfunc_bpchar(char);
 DROP FUNCTION IF EXISTS errorcallbackfunc1(text);
 
-CREATE OR REPLACE FUNCTION errfunc1(text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION errfunc_varchar(varchar) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION errfunc_bpchar(char) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION errorcallbackfunc1(text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION errfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errfunc_varchar(varchar) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errfunc_bpchar(char) RETURNS text AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION errorcallbackfunc1(text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
 
 SELECT errfunc1('The quick brown fox jumps over the lazy dog');
 SELECT errfunc_varchar('This is to test INFO message using varchar.');
@@ -195,16 +196,16 @@ DROP FUNCTION IF EXISTS timetzfunc1(timetz);
 DROP FUNCTION IF EXISTS timestampfunc1(timestamp);
 DROP FUNCTION IF EXISTS timestamptzfunc1(timestamptz);
 
-CREATE OR REPLACE FUNCTION datefunc1_nochange(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION datefunc1(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION datefunc2(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION datefunc3_year(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION datefunc3_mon(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION datefunc3_mday(date) RETURNS date AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION timefunc1(time) RETURNS time AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION timetzfunc1(timetz) RETURNS timetz AS '$libdir/gppc_demo' LANGUAGE c STABLE STRICT;
-CREATE OR REPLACE FUNCTION timestampfunc1(timestamp) RETURNS timestamp AS '$libdir/gppc_demo' LANGUAGE c IMMUTABLE STRICT;
-CREATE OR REPLACE FUNCTION timestamptzfunc1(timestamptz) RETURNS timestamptz AS '$libdir/gppc_demo' LANGUAGE c STABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc1_nochange(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc1(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc2(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_year(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_mon(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION datefunc3_mday(date) RETURNS date AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timefunc1(time) RETURNS time AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timetzfunc1(timetz) RETURNS timetz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
+CREATE OR REPLACE FUNCTION timestampfunc1(timestamp) RETURNS timestamp AS '$libdir/gppc_test' LANGUAGE c IMMUTABLE STRICT;
+CREATE OR REPLACE FUNCTION timestamptzfunc1(timestamptz) RETURNS timestamptz AS '$libdir/gppc_test' LANGUAGE c STABLE STRICT;
 
 SELECT datefunc1_nochange('1900-01-01');
 SELECT datefunc1('1898-12-31');
@@ -232,13 +233,13 @@ DROP FUNCTION IF EXISTS spifunc5(text, int, int);
 DROP FUNCTION IF EXISTS spifunc5a(text, int, int);
 DROP FUNCTION IF EXISTS spifunc6(text, int, int);
 
-CREATE OR REPLACE FUNCTION spifunc1(text, int) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc2(text, text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc3(text, int) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc4(text, text) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc5(text, int, int) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc5a(text, int, int) RETURNS int AS '$libdir/gppc_demo' LANGUAGE c STRICT;
-CREATE OR REPLACE FUNCTION spifunc6(text, int, int) RETURNS text AS '$libdir/gppc_demo' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc1(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc2(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc3(text, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc4(text, text) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc5(text, int, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc5a(text, int, int) RETURNS int AS '$libdir/gppc_test' LANGUAGE c STRICT;
+CREATE OR REPLACE FUNCTION spifunc6(text, int, int) RETURNS text AS '$libdir/gppc_test' LANGUAGE c STRICT;
 
 SELECT spifunc1($$select i, i * 2 from generate_series(1, 10)i order by 1$$, 2);
 SELECT spifunc2($$select i, i * 2 as val from generate_series(1, 10)i order by 1$$, 'val');

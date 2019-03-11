@@ -1322,18 +1322,6 @@ typedef struct CoerceToDomainState
 	List	   *constraints;	/* list of DomainConstraintState nodes */
 } CoerceToDomainState;
 
-/* ----------------
- *		ReshuffleExprState node
- * ----------------
- */
-typedef struct ReshuffleExprState
-{
-	ExprState	xprstate;
-	ExprState  *arg;
-	List	   *hashKeys;		/* ExprState nodes */
-	struct CdbHash *cdbhash;	/* hash api object */
-} ReshuffleExprState;
-
 /*
  * DomainConstraintState - one item to check during CoerceToDomain
  *
@@ -2906,23 +2894,5 @@ typedef struct PartitionSelectorState
 	TupleTableSlot *partTabSlot;
 	ProjectionInfo *partTabProj;
 } PartitionSelectorState;
-
-/*
- * ExecNode for ReshuffleState.
- * This operator contains a Plannode in PlanState.
- * It is used by the Reshuffle operator, which is used
- * to reshuffle table data.
- */
-typedef struct ReshuffleState
-{
-	PlanState ps;
-	List	   *destList;
-	int			newTargetIdx;
-
-	struct CdbHash *cdbhash;	/* hash api object for computing new segment */
-	struct CdbHash *oldcdbhash;	/* hash api object for computing old segment */
-
-	TupleTableSlot *savedSlot;
-} ReshuffleState;
 
 #endif   /* EXECNODES_H */

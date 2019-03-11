@@ -28,13 +28,13 @@ TABLE { [ ONLY ] <varname>table_name</varname> [ * ] | <varname>with_query_name<
       <codeblock>  <varname>with_query_name</varname> [( <varname>column_name</varname> [, ...] )] AS ( <varname>select</varname> | <varname>values</varname> | <varname>insert</varname> | <varname>update</varname> | <varname >delete</varname> )</codeblock>
       <p>where <varname>from_item</varname> can be one of:</p>
       <codeblock>[ONLY] <varname>table_name</varname> [ * ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] ( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
+( <varname>select</varname> ) [ AS ] <varname>alias</varname> [( <varname>column_alias</varname> [, ...] ) ]<varname>
 with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] )
             [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
-[ LATERAL ] <varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
-[ LATERAL ] ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) [ AS ] <varname>alias</varname> ( <varname>column_definition</varname> [, ...] )
+<varname>function_name</varname> ( [ <varname>argument</varname> [, ...] ] ) AS ( <varname>column_definition</varname> [, ...] )
+ROWS FROM( function_name ( [ argument [, ...] ] ) [ AS ( column_definition [, ...] ) ] [, ...] )
             [ WITH ORDINALITY ] [ [ AS ] <varname>alias</varname> [ ( <varname>column_alias</varname> [, ...] ) ] ]
 <varname>from_item</varname> [ NATURAL ] <varname>join_type</varname> <varname>from_item</varname>
           [ ON <varname>join_condition</varname> | USING ( <varname>join_column</varname> [, ...] ) ]</codeblock>
@@ -60,8 +60,7 @@ with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_
   UNBOUNDED FOLLOWING
 </codeblock></p>
       <p><b>Note:</b>
-        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not
-        recommended for production use.</p>
+        <sup>1</sup>The <codeph>RECURSIVE</codeph> keyword is A Beta feature.</p>
     </section>
     <section id="section3">
       <title>Description</title>
@@ -142,13 +141,11 @@ with_query_name</varname> [ [ AS ] <varname>alias</varname> [ ( <varname>column_
           each query in the <codeph>WITH</codeph> clause. Optionally, a list of column names can be
           specified; if the list of column names is omitted, the names are inferred from the
           subquery. The primary query and the <codeph>WITH</codeph> queries are all (notionally)
-          executed at the same time. </p><p>The <codeph>RECURSIVE</codeph> keyword can be enabled by
-          setting the server configuration parameter <codeph>gp_recursive_cte_prototype</codeph> to
-            <codeph>true</codeph>. For information about the parameter, see <xref
-            href="../config_params/guc_config.xml#topic1"/>.<note type="warning">The
-              <codeph>RECURSIVE</codeph> keyword is an experimental feature and is not intended for
-            use in a production environment. Experimental features are subject to change without
-            notice in future releases.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it
+          executed at the same time. </p><p>The <codeph>RECURSIVE</codeph> keyword can be enabled by setting the server configuration
+          parameter <codeph>gp_recursive_cte</codeph> to <codeph>true</codeph>. For
+          information about the parameter, see <xref href="../config_params/guc_config.xml#topic1"
+            />.<note type="note">The <codeph>RECURSIVE</codeph> keyword is a Beta
+          feature.</note></p><p>If <codeph>RECURSIVE</codeph> is specified, it
           allows a <codeph>SELECT</codeph> subquery to reference itself by name. Such a subquery has
           the general
           form</p><codeblock><varname>non_recursive_term</varname> UNION [ALL | DISTINCT] <varname>recursive_term</varname></codeblock><p>where
@@ -889,7 +886,7 @@ KEY SHARE</codeblock></p><note> By default,
             <codeph>UPDATE</codeph> operations on heap tables is <codeph>ROW EXCLUSIVE</codeph>. The
           Global Deadlock Detector is enabled by setting the <xref
             href="../config_params/guc-list.xml#gp_enable_global_deadlock_detector"
-            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See<xref
+            >gp_enable_global_deadlock_detector</xref> configuration parameter to true. See <xref
             href="../../admin_guide/dml.xml#topic_gdd"> Global Deadlock Detector</xref> in the
             <cite>Greenplum Database Administrator Guide</cite> for information about the Global
           Deadlock Detector.</note><p>For more information on each row-level lock mode, refer to

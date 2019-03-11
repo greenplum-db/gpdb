@@ -305,7 +305,7 @@ IGNORE EXTERNAL PARTITIONS</codeblock></p>
         </plentry>
         <plentry>
           <pt>CSV</pt>
-          <pd>Selects Comma Separated Value (CSV) mode. See<xref href="#topic1/section9"
+          <pd>Selects Comma Separated Value (CSV) mode. See <xref href="#topic1/section9"
               format="dita">CSV Format</xref>.</pd>
         </plentry>
         <plentry>

@@ -212,14 +212,6 @@ typedef struct Query
 	 * would always be dispatched in parallel.
 	 */
 	ParentStmtType	parentStmtType;
-
-	/*
-	 *  Do we need to reshuffle data, we use an UpdateStmt
-	 *  to reshuffle table data, so we should to know if the
-	 *  UpdateStmt is used to reshuffle or to update.
-	 */
-	bool	   needReshuffle;
-
 } Query;
 
 /****************************************************************************
@@ -1212,12 +1204,6 @@ typedef struct UpdateStmt
 	List	   *fromClause;		/* optional from clause for more tables */
 	List	   *returningList;	/* list of expressions to return */
 	WithClause *withClause;		/* WITH clause */
-
-	/*
-	 *  Do we need to reshuffle data, we should to know if the
-	 *  UpdateStmt is used to reshuffle or to update.
-	 */
-	bool	    needReshuffle;
 } UpdateStmt;
 
 /* ----------------------
@@ -2114,27 +2100,9 @@ typedef struct PartitionSpec			/* a Partition Specification */
 	int					location;		/* token location, or -1 if unknown */
 } PartitionSpec;
 
-typedef enum ExpandMethod
-{
-	EXPANDMETHOD_NONE = 0,
-	EXPANDMETHOD_CTAS,
-	EXPANDMETHOD_RESHUFFLE
-} ExpandMethod;
-
 typedef struct ExpandStmtSpec
 {
 	NodeTag				type;
-	/* method to move data internal */
-	ExpandMethod		method;
-	/*
-	 * QEs has empty pg_partition and pg_partitions
-	 * so we need to pass necessary partition related
-	 * info to QEs.
-	 */
-	Bitmapset			*ps_none;
-	Bitmapset			*ps_root;
-	Bitmapset			*ps_interior;
-	Bitmapset			*ps_leaf;
 	/* for ctas method */
 	Oid					backendId;
 } ExpandStmtSpec;

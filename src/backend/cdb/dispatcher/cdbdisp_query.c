@@ -1433,8 +1433,7 @@ CdbDispatchCopyStart(struct CdbCopy *cdbCopy, Node *stmt, int flags)
 	/*
 	 * Allocate a primary QE for every available segDB in the system.
 	 */
-	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER,
-										cdbcomponent_getCdbComponentsList());
+	primaryGang = AllocateGang(ds, GANGTYPE_PRIMARY_WRITER, cdbCopy->seglist);
 	Assert(primaryGang);
 
 	cdbdisp_makeDispatchResults(ds, 1, flags & DF_CANCEL_ON_ERROR);

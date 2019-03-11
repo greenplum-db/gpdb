@@ -23,7 +23,6 @@
 #include "nodes/pg_list.h"
 #include "nodes/params.h"  /* For ParamListInfoData */
 #include "cdb/cdbpathlocus.h" /* For CdbLocusType */
-#include "catalog/gp_policy.h" /* For ReshuffleExpr */
 
 
 /* ----------------------------------------------------------------
@@ -1597,22 +1596,5 @@ typedef struct PartListNullTestExpr
 	int			level;			/* partitioning level */
 	NullTestType nulltesttype;	/* IS NULL, IS NOT NULL */
 } PartListNullTestExpr;
-
-/*
- * ReshuffleExpr
- *
- * Represents the expression that determines which data needs to be
- * reshuffled, when the number of segments is changed.
- */
-typedef struct ReshuffleExpr
-{
-	Expr		xpr;
-	int			newSegs;
-	int			oldSegs;
-	List	   *hashKeys;		/* Expr nodes */
-	List	   *hashFuncs;		/* list of corresponding hash func OIDs */
-	GpPolicyType ptype;
-} ReshuffleExpr;
-
 
 #endif   /* PRIMNODES_H */

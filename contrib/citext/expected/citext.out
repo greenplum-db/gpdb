@@ -216,12 +216,10 @@ SELECT citext_cmp('B'::citext, 'a'::citext) > 0 AS true;
 
 -- Do some tests using a table and index.
 CREATE TEMP TABLE try (
-   a text,
-   name citext,
-   UNIQUE (a, name)
-) DISTRIBUTED BY (a);
-INSERT INTO try (a, name)
-VALUES ('a', 'a'), ('a','ab'), ('â','â'), ('aba','aba'), ('b','b'), ('ba','ba'), ('bab','bab'), ('AZ','AZ');
+   name citext PRIMARY KEY
+);
+INSERT INTO try (name)
+VALUES ('a'), ('ab'), ('â'), ('aba'), ('b'), ('ba'), ('bab'), ('AZ');
 SELECT name, 'a' = name AS eq_a   FROM try WHERE name <> 'â';
  name | eq_a 
 ------+------
@@ -1057,6 +1055,8 @@ CREATE TABLE caster (
     tsquery     tsquery,
     uuid        uuid
 );
+NOTICE:  Table doesn't have 'DISTRIBUTED BY' clause -- Using column named 'citext' as the Greenplum Database data distribution key for this table.
+HINT:  The 'DISTRIBUTED BY' clause determines the distribution of data. Make sure column(s) chosen are the optimal data distribution key to minimize skew.
 INSERT INTO caster (text)          VALUES ('foo'::citext);
 INSERT INTO caster (citext)        VALUES ('foo'::text);
 INSERT INTO caster (varchar)       VALUES ('foo'::text);
@@ -2245,6 +2245,7 @@ SELECT like_escape( name::text, ''::citext ) = like_escape( name::text, '' ) AS 
  t
 (4 rows)
 
+-- start_ignore
 -- Ensure correct behavior for citext with materialized views.
 CREATE TABLE citext_table (
   id serial primary key,
@@ -2286,3 +2287,4 @@ SELECT * FROM citext_matview ORDER BY id;
   5 | 
 (5 rows)
 
+-- end_ignore

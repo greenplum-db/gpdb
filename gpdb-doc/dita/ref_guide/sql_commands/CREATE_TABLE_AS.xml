@@ -14,7 +14,7 @@
         [ TABLESPACE <varname>tablespace_name</varname> ]
         AS <varname>query</varname>
         [ WITH [ NO ] DATA ]
-        [ DISTRIBUTED BY (column, [ ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
+        [ DISTRIBUTED BY (column [, ... ] ) | DISTRIBUTED RANDOMLY | DISTRIBUTED REPLICATED ]
       </codeblock>
       <p>where <varname>storage_parameter</varname> is:</p>
       <codeblock>   appendoptimized={TRUE|FALSE}

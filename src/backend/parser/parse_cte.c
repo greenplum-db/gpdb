@@ -114,14 +114,14 @@ transformWithClause(ParseState *pstate, WithClause *withClause)
 	Assert(pstate->p_future_ctes == NIL);
 
 	/*
-	 * WITH RECURSIVE is disabled if gp_recursive_cte_prototype is not set
+	 * WITH RECURSIVE is disabled if gp_recursive_cte is not set
 	 * to allow recursive CTEs.
 	 */
-	if (withClause->recursive && !gp_recursive_cte_prototype)
+	if (withClause->recursive && !gp_recursive_cte)
 		ereport(ERROR,
 				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 				 errmsg("RECURSIVE clauses in WITH queries are currently disabled"),
-				 errhint("In order to use recursive CTEs, \"gp_recursive_cte_prototype\" must be turned on.")));
+				 errhint("In order to use recursive CTEs, \"gp_recursive_cte\" must be turned on.")));
 
 	/*
 	 * For either type of WITH, there must not be duplicate CTE names in the

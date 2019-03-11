@@ -1209,8 +1209,6 @@ contain_volatile_functions_walker(Node *node, void *context)
 								 contain_volatile_functions_walker,
 								 context, 0);
 	}
-	else if (IsA(node, ReshuffleExpr))
-		return true;
 
 	return expression_tree_walker(node, contain_volatile_functions_walker,
 								  context);

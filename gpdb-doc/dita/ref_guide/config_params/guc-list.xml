@@ -249,8 +249,6 @@
             <li>
               <xref href="#gp_enable_sort_limit"/>
             </li>
-            <li><xref href="#gp_expand_method"/>
-            </li>
           </ul>
         </stentry>
         <stentry>
@@ -342,7 +340,7 @@
             <li>
               <xref href="#gp_motion_cost_per_row"/>
             </li>
-            <li><xref href="#gp_recursive_cte_prototype"/></li>
+            <li><xref href="#gp_recursive_cte"/></li>
             <li>
               <xref href="#gp_reject_percent_threshold"/>
             </li>
@@ -3433,48 +3431,6 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_expand_method">
-    <title>gp_expand_method</title>
-    <body>
-      <p>This parameter controls how <codeph>gpexpand</codeph> redistributes table data during the
-        table data redistribution phase of a system expansion. There are two ways
-          <codeph>gpexpand</codeph> can perform table data redistribution.<ul id="ol_xdd_1py_jgb">
-          <li><codeph>rebuild</codeph> - Create a new table, copy all the data from the old to the
-            new table, and replace the old table. This is the default. The rebuild method is similar
-            to creating a new table with a <codeph>CREATE TABLE AS SELECT</codeph> command. During
-            data redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the
-            table.</li>
-          <li><codeph>move</codeph> - Scan the table data and perform an <codeph>UPDATE</codeph>
-            operation to move rows as needed to different segment instances. During data
-            redistribution an <codeph>ACCESS EXCLUSIVE</codeph> lock is acquired on the table. In
-            general, this method requires less disk space, however, it creates obsolete table rows
-            and might require a <codeph>VACUUM</codeph> operation on the table. Also, this method
-            updates indexes one row at a time, which can be much slower than rebuilding the index
-            with the <codeph>CREATE INDEX</codeph> command.</li>
-        </ul></p>
-      <table id="table_utp_zny_jgb">
-        <tgroup cols="3">
-          <colspec colnum="1" colname="col1" colwidth="1*"/>
-          <colspec colnum="2" colname="col2" colwidth="1*"/>
-          <colspec colnum="3" colname="col3" colwidth="1*"/>
-          <thead>
-            <row>
-              <entry colname="col1">Value Range</entry>
-              <entry colname="col2">Default</entry>
-              <entry colname="col3">Set Classifications</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry colname="col1">rebuild<p>move</p></entry>
-              <entry colname="col2">rebuild</entry>
-              <entry colname="col3">master<p>session</p><p>reload</p></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </table>
-    </body>
-  </topic>
   <topic id="gp_external_enable_exec">
     <title>gp_external_enable_exec</title>
     <body>
@@ -4416,23 +4372,25 @@
       </table>
     </body>
   </topic>
-  <topic id="gp_recursive_cte_prototype">
-    <title>gp_recursive_cte_prototype</title>
+  <topic id="gp_recursive_cte">
+    <title>gp_recursive_cte</title>
     <body>
-      <p>Controls the availability of the experimental keyword <codeph>RECURSIVE</codeph> in the
-          <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph> command. The keyword
-        allows a subquery in the <codeph>WITH</codeph> clause of a <codeph>SELECT[ INTO]</codeph>
-        command to reference itself. The default value is <codeph>false</codeph>, the keyword is not
-        allowed in the <codeph>WITH</codeph> clause a <codeph>SELECT[ INTO]</codeph> command.</p>
-      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is an experimental feature and is
-        not intended for use in a production environment. Experimental features are subject to
-        change without notice in future releases.</note>
-      <p>For information about the experimental keyword <codeph>RECURSIVE</codeph>, see the
-          <codeph>SELECT</codeph> command.</p>
+      <p>Controls the availability of the <codeph>RECURSIVE</codeph> keyword (Beta) in the
+          <codeph>WITH</codeph> clause of a <codeph>SELECT [INTO]</codeph> command, or a
+          <codeph>DELETE</codeph>, <codeph>INSERT</codeph> or <codeph>UPDATE</codeph> command. The
+        keyword allows a subquery in the <codeph>WITH</codeph> clause of a command to reference
+        itself. The default value is <codeph>false</codeph>, the <codeph>RECURSIVE</codeph> keyword
+        is not allowed in the <codeph>WITH</codeph> clause of a command.</p>
+      <note type="warning">The <codeph>RECURSIVE</codeph> keyword is a Beta feature.</note>
+      <p>For information about the <codeph>RECURSIVE</codeph> keyword (Beta), see the
+            <codeph><xref href="../sql_commands/SELECT.xml">SELECT</xref></codeph> command and <xref
+          href="../../admin_guide/query/topics/CTE-query.xml"/>.</p>
       <p>The parameter can be set for a database system, an individual database, or a session or
         query.</p>
       <note>This parameter will be removed if the <codeph>RECURSIVE</codeph> keyword is promoted
-        from experimental or if the keyword is removed from Greenplum Database.</note>
+        from Beta, or if the keyword is removed from Greenplum Database.
+        This parameter was previously named <codeph>gp_recursive_cte_prototype</codeph>, but
+        has been renamed to reflect the current status of the implementation.</note>
       <table id="table_j4s_yyx_1bb">
         <tgroup cols="3">
           <colspec colnum="1" colname="col1" colwidth="1*"/>
