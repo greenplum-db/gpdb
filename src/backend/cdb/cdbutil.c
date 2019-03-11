@@ -341,13 +341,13 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CARDINALITY_VIOLATION),
-				 errmsg("Greenplum Database number of segment databases cannot be 0")));
+				 errmsg("number of segment databases cannot be 0")));
 	}
 	if (component_databases->total_entry_dbs == 0)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_CARDINALITY_VIOLATION),
-				 errmsg("Greenplum Database number of entry databases cannot be 0")));
+				 errmsg("number of entry databases cannot be 0")));
 	}
 
 	/*
@@ -390,8 +390,9 @@ getCdbComponentInfo(bool DNSLookupAsError)
 	{
 		ereport(ERROR,
 				(errcode(ERRCODE_DATA_EXCEPTION),
-				 errmsg("Cannot locate entry database represented by this db in gp_segment_configuration: dbid %d content %d",
-						GpIdentity.dbid, GpIdentity.segindex)));
+				 errmsg("cannot locate entry database"),
+				 errdetail("Entry database represented by this db in gp_segment_configuration: dbid %d content %d",
+						   GpIdentity.dbid, GpIdentity.segindex)));
 	}
 
 	/*
@@ -415,16 +416,20 @@ getCdbComponentInfo(bool DNSLookupAsError)
 			{
 				ereport(ERROR,
 						(errcode(ERRCODE_DATA_EXCEPTION),
-						 errmsg("Content values not valid in %s table.  They must be in the range 0 to %d inclusive",
-								GpSegmentConfigRelationName, component_databases->total_segments - 1)));
+						 errmsg("content values not valid in %s table",
+								GpSegmentConfigRelationName),
+						 errdetail("Content values must be in the range 0 to %d inclusive.",
+								   component_databases->total_segments - 1)));
 			}
 		}
 		if (this_segindex != i)
 		{
 			ereport(ERROR,
 					(errcode(ERRCODE_DATA_EXCEPTION),
-					 errmsg("Content values not valid in %s table.  They must be in the range 0 to %d inclusive",
-							GpSegmentConfigRelationName, component_databases->total_segments - 1)));
+					 errmsg("content values not valid in %s table",
+							GpSegmentConfigRelationName),
+					 errdetail("Content values must be in the range 0 to %d inclusive",
+							   component_databases->total_segments - 1)));
 		}
 	}
 
@@ -844,9 +849,10 @@ cdbcomponent_getComponentInfo(int contentId)
 	cdbs = cdbcomponent_getCdbComponents(true);
 
 	if (contentId < -1 || contentId >= cdbs->total_segments)
-		ereport(FATAL, (errcode(ERRCODE_DATA_EXCEPTION),
-						 errmsg("Unexpected content id %d, should be [-1, %d]",
-								contentId, cdbs->total_segments - 1)));
+		ereport(FATAL,
+				(errcode(ERRCODE_DATA_EXCEPTION),
+				 errmsg("unexpected content id %d, should be [-1, %d]",
+						contentId, cdbs->total_segments - 1)));
 	/* entry db */
 	if (contentId == -1)
 	{
