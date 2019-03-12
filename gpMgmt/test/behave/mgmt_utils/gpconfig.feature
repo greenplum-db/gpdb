@@ -8,11 +8,12 @@ Feature: gpconfig integration tests
         Then gpconfig should return a return code of 0
         Given the user runs "gpconfig -c statement_mem -v 129MB"
         Then gpconfig should return a return code of 0
-        Then verify that the last line of the master postgres configuration file contains the string "129MB"
+        Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "129MB"
+        Then verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "129MB"
         Given the user runs "gpconfig -s statement_mem --file"
         Then gpconfig should return a return code of 0
         Then gpconfig should print "Master[\s]*value: 129MB" to stdout
-        # TODO verify all segments also have this string
+        Then gpconfig should print "Segment[\s]*value: 129MB" to stdout
 
     Scenario: gpconfig with an empty string passed as a value
         # As above, two calls to gpconfig -c are needed to guarantee a change.
@@ -20,9 +21,10 @@ Feature: gpconfig integration tests
         Then gpconfig should return a return code of 0
         Given the user runs "gpconfig -c unix_socket_directories -v ''"
         Then gpconfig should return a return code of 0
-        Then verify that the last line of the master postgres configuration file contains the string "unix_socket_directories=''"
+        Then verify that the last line of the file "postgresql.conf" in the master data directory contains the string "unix_socket_directories=''"
+        Then verify that the last line of the file "postgresql.conf" in each segment data directory contains the string "unix_socket_directories=''"
         Given the user runs "gpconfig -s unix_socket_directories --file"
         Then gpconfig should return a return code of 0
         Then gpconfig should print "Master[\s]*value: ''" to stdout
-        # TODO verify all segments also have this string
+        Then gpconfig should print "Segment[\s]*value: ''" to stdout
 

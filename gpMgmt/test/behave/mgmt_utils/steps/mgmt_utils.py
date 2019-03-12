@@ -1387,6 +1387,25 @@ def impl(context, filename, output):
         err_str = "Expected stdout string '%s' and found: '%s'" % (output, contents)
         raise Exception(err_str)
 
+@then('verify that the last line of the file "{filename}" in each segment data directory contains the string "{output}"')
+def impl(context, filename, output):
+    segment_info = []
+    try:
+        with dbconn.connect(dbconn.DbURL(dbname='template1')) as conn:
+            curs = dbconn.execSQL(conn, "SELECT hostname, datadir FROM gp_segment_configuration WHERE role='p' AND content > -1;")
+            result = curs.fetchall()
+            segment_info = [(result[s][0], result[s][1]) for s in range(len(result))]
+    except Exception as e:
+        raise Exception("Could not retrieve segment information: %s" % e.message)
+
+    for info in segment_info:
+        host, datadir = info
+        filepath = os.path.join(datadir, filename)
+        cmd_str = 'ssh %s "tail -n1 %s"' % (host, filepath)
+        cmd = Command(name='Running remote command: %s' % cmd_str, cmdStr=cmd_str)
+        cmd.run(validateAfter=True)
+        if output not in cmd.get_stdout():
+            raise Exception('File %s on host %s does not contain "%s"' % (filepath, host, output))
 
 @then('the user waits for "{process_name}" to finish running')
 def impl(context, process_name):
