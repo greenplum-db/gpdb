@@ -6690,17 +6690,6 @@ StartupXLOG(void)
 
 	LastRec = RecPtr = checkPointLoc;
 
-	CheckpointExtendedRecord ckptExtended;
-	UnpackCheckPointRecord(record, &ckptExtended);
-	if (ckptExtended.ptas)
-		SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
-
-	/*
-	 * Find Xacts that are distributed committed from the checkpoint record and
-	 * store them such that they can utilized later during DTM recovery.
-	 */
-	XLogProcessCheckpointRecord(record);
-
 	ereport(DEBUG1,
 			(errmsg("redo record is at %X/%X; shutdown %s",
 				  (uint32) (checkPoint.redo >> 32), (uint32) checkPoint.redo,
@@ -8206,6 +8195,26 @@ ReadCheckpointRecord(XLogReaderState *xlogreader, XLogRecPtr RecPtr,
 		}
 		return NULL;
 	}
+
+	/*
+	 * We should be wary of conflating "report" parameter.  It is currently
+	 * always true when we want to process the extended checkpoint record.
+	 * For now this seems fine as it avoids a diff with postgres.
+	 */
+	if (report)
+	{
+		CheckpointExtendedRecord ckptExtended;
+		UnpackCheckPointRecord(record, &ckptExtended);
+		if (ckptExtended.ptas)
+			SetupCheckpointPreparedTransactionList(ckptExtended.ptas);
+
+		/*
+		 * Find Xacts that are distributed committed from the checkpoint record and
+		 * store them such that they can utilized later during DTM recovery.
+		 */
+		XLogProcessCheckpointRecord(record);
+	}
+
 	return record;
 }
 
@@ -8883,6 +8892,8 @@ CreateCheckPoint(int flags)
 	 */
 	if (!shutdown && XLogStandbyInfoActive())
 		LogStandbySnapshot();
+
+	SIMPLE_FAULT_INJECTOR(CheckpointAfterRedoCalculated);
 
 	START_CRIT_SECTION();
 
