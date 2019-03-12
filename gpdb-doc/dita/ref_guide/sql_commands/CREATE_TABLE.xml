@@ -265,7 +265,9 @@ CREATE [ [GLOBAL | LOCAL] {TEMPORARY | TEMP} | UNLOGGED ] TABLE [IF NOT EXISTS]
           <pt>COLLATE <varname>collation</varname></pt>
           <pd>The <codeph>COLLATE</codeph> clause assigns a collation to the column (which must be
             of a collatable data type). If not specified, the column data type's default collation
-            is used.</pd>
+            is used.<note>GPORCA supports collation only when all columns in the query use the same
+              collation. If columns in the query use different collations, then Greenplum uses the
+              Postgres query planner.</note></pd>
         </plentry>
         <plentry>
           <pt>DEFAULT <varname>default_expr</varname></pt>

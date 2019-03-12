@@ -164,7 +164,11 @@ where <varname>action</varname> is one of:
                                         default conversion is the same as an assignment cast from
                                         old data type to new. A <codeph>USING</codeph> clause must
                                         be provided if there is no implicit or assignment cast from
-                                        old to new type.</li>
+                                        old to new type.<note>GPORCA supports collation only when
+                                                all columns in the query use the same collation. If
+                                                columns in the query use different collations, then
+                                                Greenplum uses the Postgres query
+                                        planner.</note></li>
                                 <li id="ay136904"><b>SET/DROP DEFAULT</b> — Sets or removes the
                                         default value for a column. The default values only apply to
                                         subsequent <codeph>INSERT</codeph> commands. They do not
